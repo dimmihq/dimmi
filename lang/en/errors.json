@@ -1,0 +1,16 @@
+{
+  "invalid_credentials": "These credentials do not match our records.",
+  "too_many_attempts": "Too many login attempts. Try again in {{.retry_after}} seconds.",
+  "auth_busy": "The server is busy. Try again in a moment.",
+  "reauth_user_mismatch": "Sign in as the user of this session.",
+  "grant_not_allowed": "This way of signing in is not available.",
+  "signup_closed": "Signing up is closed on this server.",
+  "email_taken": "The email has already been taken.",
+  "first_party_only": "This route is only available to the signed-in user, not to access tokens.",
+  "session_required": "This route needs a browser session.",
+  "workspace_not_found": "Workspace not found.",
+  "sso_required": "Sign in with your organization's single sign-on.",
+  "membership_deactivated": "Your membership of this workspace is not active.",
+  "workspace_mismatch": "This token belongs to another workspace.",
+  "two_factor_unavailable": "This account uses two-factor authentication, which this server cannot check yet."
+}

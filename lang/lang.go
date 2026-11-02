@@ -1,0 +1,28 @@
+/*
+|--------------------------------------------------------------------------
+| Translations
+|--------------------------------------------------------------------------
+|
+| The product's messages, one directory per locale and one file per
+| group, loaded over the framework's English messages. English is the
+| source; adding a language is adding a directory and listing its
+| locale in app.locales, never a code change.
+|
+*/
+
+package lang
+
+import (
+	"embed"
+	"io/fs"
+)
+
+//go:embed en
+var files embed.FS
+
+/*
+Files returns the translation files as <locale>/<group>.json.
+*/
+func Files() fs.FS {
+	return files
+}

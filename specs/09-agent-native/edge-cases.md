@@ -1,6 +1,6 @@
 # 09 Agent-native: edge cases
 
-Style: caveman. Format: "Case. Behavior." Every behavior decided. Scope trim 2026-11-02: drafts (old section I), send modes, `listen` cases removed; J157 added (raw snippet stacks, later: identity-helper-packages); sections re-lettered (old J..R now I..Q), cases renumbered. Final sweep 2026-11-02: section Q added (grant confirmation, `pre_hijack_defense`, 13-15 toolsets and CLI, centrifuge `--watch`, Valkey caches). Test names carry case ids (`H108 ...`).
+Style: caveman. Format: "Case. Behavior." Every behavior decided. Scope trim 2026-11-02: drafts (old section I), send modes, `listen` cases removed; J157 added (raw snippet stacks, later: identity-helper-packages); sections re-lettered (old J..R now I..Q), cases renumbered. Final sweep 2026-11-02: section Q added (grant confirmation, `pre_hijack_defense`, 13-15 toolsets and CLI, centrifuge `--watch`, Valkey caches). Tests named in plain words; every case covered.
 
 ## A. Authorization endpoint and consent
 

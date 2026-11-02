@@ -1,6 +1,6 @@
 # 10 Webhooks: tasks
 
-Style: caveman. Ordered. Each about 1 day, merged with tests. Requires foundation/framework (`a.Events`, River, `framework/httpclient`, `framework/webhooks`, KeyManager, `ratelimit` + `pubsub` on Valkey) and Resources from 03 for conversation/message/contact. Final sweep 2026-11-02: app logic integration-tested only (testing.md), edge case ids in test names; catalog rows for 13, 14, 15-announcements-surveys. Scope trim 2026-11-02: M6 local dev (`dimmi listen`, C6) and bulk recover (C7) removed; edge case refs renumbered.
+Style: caveman. Ordered. Each about 1 day, merged with tests. Requires foundation/framework (`a.Events`, River, `framework/httpclient`, `framework/webhooks`, KeyManager, `ratelimit` + `pubsub` on Valkey) and Resources from 03 for conversation/message/contact. Final sweep 2026-11-02: app logic integration-tested only (testing.md), tests named in plain words, every edge case covered; catalog rows for 13, 14, 15-announcements-surveys. Scope trim 2026-11-02: M6 local dev (`dimmi listen`, C6) and bulk recover (C7) removed; edge case refs renumbered.
 
 ## M1: Signing and schema
 

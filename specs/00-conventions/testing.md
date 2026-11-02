@@ -159,7 +159,7 @@ func TestCloseConversation(t *testing.T) {
 Rules:
 - Assert observable behavior: HTTP response, database rows, what listeners and jobs did, broadcasts a real subscriber received, outbound mail/HTTP captured by boundary fakes. There is no event or queue fake: a dispatched event shows in its listeners' effects, a pushed job in its River row or, after `Drain`, in what it did. Never assert that an internal function was called.
 - Factories create data through real inserts (`factories.*`), never through hand-written SQL in tests.
-- Every edge case in a spec's `edge-cases.md` maps to at least one test. Test names carry the case id: `t.Run("E42 merge into closed conversation reopens", ...)`. CI's `dimmi spec:coverage` reports edge cases with no test.
+- Every edge case in a spec's `edge-cases.md` is covered by at least one test. Tests are named for humans, in plain words that describe the behavior (`t.Run("reopens a closed conversation when another is merged into it", ...)`), never by case ids (PO 2026-11-02). Review checks the spec's edge-case list against the tests.
 - Use `t.Parallel()` everywhere except tests that take instance-global locks.
 - Suite budget: the full `go test ./...` runs in under 5 minutes on CI (8 vCPU), and one feature package runs in under 20 s locally.
 
@@ -220,7 +220,7 @@ Never fake: the database, the cache, the filesystem, actions, policies, queries,
 ## 7. CI
 
 - Service containers `pgvector/pgvector:pg18` (`max_connections=300`), `valkey/valkey:8`, `chrislusf/seaweedfs:3.97` (S3) and `axllent/mailpit:v1.27`. CI passes its own env file to `make test` (`ENV_FILE=...`), setting the same variables as `.env.testing`: `DATABASE_URL`, `REDIS_URL`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `MAIL_SMTP_URL`, `MAILPIT_API_URL`.
-- Steps: lint (code-style.md; `make lint` runs once without and once with the `dev` build tag), then `make test` (including the `tests/arch` binary-size test), then the coverage gates, then `dimmi spec:coverage`.
+- Steps: lint (code-style.md; `make lint` runs once without and once with the `dev` build tag), then `make test` (including the `tests/arch` binary-size test), then the coverage gates.
 - Coverage gates:
   - `go test -coverpkg=./app/... ./...` gives the app number; fail if any `app` package is under 95%.
   - `-coverpkg=./framework/...` gives the framework number; fail if any package is under 90% or the total is under 95%.

@@ -24,15 +24,19 @@ import (
 
 /*
 LoadConfig loads the framework configuration the options point at and
-checks it. A configuration that cannot work returns a *ConfigError.
+checks it, then loads the application's own configuration into
+opts.Config when it is set. A configuration that cannot work returns a
+*ConfigError.
 */
 func LoadConfig(ctx context.Context, opts Options) (*Config, error) {
-	cfg, err := config.Load[Config](ctx, config.LoadOptions{
+	sources := config.LoadOptions{
 		Name:      opts.Name,
 		Files:     opts.ConfigFiles,
 		EnvPrefix: opts.EnvPrefix,
 		Environ:   opts.Environ,
-	})
+	}
+
+	cfg, err := config.Load[Config](ctx, sources)
 	if err != nil {
 		return nil, &ConfigError{Err: err, Redacted: map[string]any{}}
 	}
@@ -41,6 +45,12 @@ func LoadConfig(ctx context.Context, opts Options) (*Config, error) {
 
 	if err := cfg.check(); err != nil {
 		return nil, &ConfigError{Err: err, Redacted: config.Redacted(cfg)}
+	}
+
+	if opts.Config != nil {
+		if err := config.LoadInto(ctx, sources, opts.Config); err != nil {
+			return nil, &ConfigError{Err: err, Redacted: config.Redacted(opts.Config)}
+		}
 	}
 
 	return cfg, nil

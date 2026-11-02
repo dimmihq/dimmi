@@ -233,7 +233,9 @@ func check(ctx context.Context, in any, v *validation.Factory) error {
 
 /*
 bodyFields names the body's fields as the client sent them, "name"
-rather than "Body.name"; fields outside the body keep their path.
+rather than "Body.name", both in the field path and in its message, so
+a person reads "The name ..." in any locale; fields outside the body
+keep their path.
 */
 func bodyFields(err error) error {
 	invalid, ok := errors.AsType[*validation.Error](err)
@@ -242,7 +244,9 @@ func bodyFields(err error) error {
 	}
 
 	for i, v := range invalid.Violations {
-		invalid.Violations[i].Field = strings.TrimPrefix(v.Field, "Body.")
+		name := strings.TrimPrefix(v.Field, "Body.")
+		invalid.Violations[i].Field = name
+		invalid.Violations[i].Message = strings.ReplaceAll(v.Message, v.Field, name)
 	}
 
 	return invalid

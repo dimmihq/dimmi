@@ -39,6 +39,19 @@ func TestFault(t *testing.T) {
 		assert.Equal(t, 10, limited.Meta()["limit"])
 	})
 
+	t.Run("blames a field without changing the original", func(t *testing.T) {
+		t.Parallel()
+		base := fault.New(fault.Invalid, "invalid_credentials", "No match.").With("attempts", 3)
+
+		blamed := base.OnField("email")
+
+		assert.Empty(t, base.Field())
+		assert.Equal(t, "email", blamed.Field())
+		assert.Equal(t, base.Meta(), blamed.Meta())
+		assert.Equal(t, "email", blamed.With("next", true).Field())
+		require.ErrorIs(t, blamed, base)
+	})
+
 	t.Run("matches copies of the same fault through wrapping", func(t *testing.T) {
 		t.Parallel()
 		declared := fault.New(fault.NotFound, "missing_member", "No such member.")

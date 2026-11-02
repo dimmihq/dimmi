@@ -1,6 +1,6 @@
 # 13 Changelog: tasks
 
-Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests per `00-conventions/testing.md`: business logic integration only (real App, real Postgres `pgvector/pgvector:pg18`, real Valkey, real River drained via `tc.Queue.Drain`, real event dispatcher); no unit tests with mocks, no sqlmock/embedded Postgres. Fakes only at process boundaries: `tc.Mail` (captured MIME after 04 build), `httpclienttest.New(tc.App.HTTP)` (GitHub fixtures), `llm.Fake()`, `tc.Clock`. Never real LLM, GitHub, or mail provider. Edge case ids in test names (`t.Run("E158 ...")`), `dimmi spec:coverage` clean. Starts after 08 M2 (public site) and 04 outbound core; runs parallel to 08 M3+ in build order M4.
+Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests per `00-conventions/testing.md`: business logic integration only (real App, real Postgres `pgvector/pgvector:pg18`, real Valkey, real River drained via `tc.Queue.Drain`, real event dispatcher); no unit tests with mocks, no sqlmock/embedded Postgres. Fakes only at process boundaries: `tc.Mail` (captured MIME after 04 build), `httpclienttest.New(tc.App.HTTP)` (GitHub fixtures), `llm.Fake()`, `tc.Clock`. Never real LLM, GitHub, or mail provider. Tests named in plain words; every edge case covered. Starts after 08 M2 (public site) and 04 outbound core; runs parallel to 08 M3+ in build order M4.
 
 ## M1. Data and entries core
 

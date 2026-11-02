@@ -78,29 +78,43 @@ single string given for a list field, as every environment variable
 is, is split on commas.
 */
 func Load[T any](ctx context.Context, opts LoadOptions) (*T, error) {
-	k, err := opts.merge(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("load %s config: %w", opts.Name, err)
-	}
-
 	cfg := new(T)
-	if err := applyDefaults(cfg); err != nil {
-		return nil, fmt.Errorf("apply %s defaults: %w", opts.Name, err)
-	}
-
-	if err := splitLists(k, reflect.TypeFor[T]()); err != nil {
-		return nil, fmt.Errorf("split %s lists: %w", opts.Name, err)
-	}
-
-	if err := k.UnmarshalWithConf("", cfg, koanf.UnmarshalConf{Tag: "koanf"}); err != nil {
-		return nil, fmt.Errorf("decode %s config: %w", opts.Name, err)
-	}
-
-	if err := validate(cfg); err != nil {
-		return nil, fmt.Errorf("validate %s config: %w", opts.Name, err)
+	if err := LoadInto(ctx, opts, cfg); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
+}
+
+/*
+LoadInto fills the struct the target points at from every layer, the
+way Load builds a new one. It lets a caller that already holds the
+struct, such as an application handing its own configuration to a
+framework that loads it, keep its pointer.
+*/
+func LoadInto(ctx context.Context, opts LoadOptions, target any) error {
+	k, err := opts.merge(ctx)
+	if err != nil {
+		return fmt.Errorf("load %s config: %w", opts.Name, err)
+	}
+
+	if err := applyDefaults(target); err != nil {
+		return fmt.Errorf("apply %s defaults: %w", opts.Name, err)
+	}
+
+	if err := splitLists(k, reflect.TypeOf(target)); err != nil {
+		return fmt.Errorf("split %s lists: %w", opts.Name, err)
+	}
+
+	if err := k.UnmarshalWithConf("", target, koanf.UnmarshalConf{Tag: "koanf"}); err != nil {
+		return fmt.Errorf("decode %s config: %w", opts.Name, err)
+	}
+
+	if err := validate(target); err != nil {
+		return fmt.Errorf("validate %s config: %w", opts.Name, err)
+	}
+
+	return nil
 }
 
 func validate(cfg any) error {

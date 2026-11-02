@@ -592,7 +592,7 @@ Traces: spans per stage (gate, fetch, digest, screen, map, draft_n, assemble).
 
 ## 15. Testing
 
-Policy `00-conventions/testing.md`: real App, Postgres, Valkey, River drained; fakes only at process boundary: `httpclienttest.New(tc.App.HTTP)` GitHub fixtures (PR files with patches, compare, commits/pulls, hooks, 403 with `X-Accepted-GitHub-Permissions`, rate-limit headers), `llm.Fake()` scripted JSON per purpose, `tc.Clock`. Edge ids in names (`t.Run("E221 ...")`).
+Policy `00-conventions/testing.md`: real App, Postgres, Valkey, River drained; fakes only at process boundary: `httpclienttest.New(tc.App.HTTP)` GitHub fixtures (PR files with patches, compare, commits/pulls, hooks, 403 with `X-Accepted-GitHub-Permissions`, rate-limit headers), `llm.Fake()` scripted JSON per purpose, `tc.Clock`. Tests named in plain words; every edge case covered.
 - Golden fixtures: 12 PR fixtures (UI rename, limit change, pricing, removed feature, internal refactor, dependency bump, test-only, revert, explicit `docs:` ref, huge PR 400 files, secret in diff, direct push burst) through real pipeline with scripted LLM; assert run rows, outcomes, suggestions, hunks, notes.
 - Pure (table tests allowed): anchored edit applier, glob filter, file scorer, digest budgeter, `secretscan`, sensitivity rule.
 - Arch test: packages under `app/actions/docssync` never import accept/publish actions.

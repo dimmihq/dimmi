@@ -2,7 +2,7 @@
 
 Style: caveman. Order matters. Each task about 1 day, merged with tests. Requires foundation tasks (core migrations, events, `framework/broadcasting` on centrifuge + Valkey, querybuilder, idempotency) and 00-accounts members/teams.
 
-Tests: business logic = integration only (real App, Postgres, Valkey, River, centrifuge node; testing.md): HTTP feature tests first, action/job entry with real App second. No unit tests with mocks for app code. Pure parsers in `app/support` (searchquery, templating) get fuzz tests in addition, never mocks. Every edge case maps to a test named with its id (`t.Run("E42 ...")`).
+Tests: business logic = integration only (real App, Postgres, Valkey, River, centrifuge node; testing.md): HTTP feature tests first, action/job entry with real App second. No unit tests with mocks for app code. Pure parsers in `app/support` (searchquery, templating) get fuzz tests in addition, never mocks. Every edge case has a test, named in plain words.
 
 ## M1. Schema and models
 

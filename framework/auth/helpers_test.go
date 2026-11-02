@@ -191,7 +191,7 @@ func login(t *testing.T) http.Handler {
 func confirm() http.Handler {
 	return http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		if s, ok := session.From(r.Context()); ok {
-			s.Confirm()
+			s.Confirm("password")
 		}
 	})
 }

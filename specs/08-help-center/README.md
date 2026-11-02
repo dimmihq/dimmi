@@ -704,7 +704,7 @@ database/factories/
    knowledge_source.go, knowledge_document.go (WithChunks(n), WithEmbeddings(model)), help_center_domain.go,
    github_connection.go, github_repository.go (WithWebhook(mode)), docs_sync_source.go, docs_sync_run.go (Skipped(reason), WithSuggestions(n)), article_source_ref.go
 database/seeders/help_center_seeder.go          # demo help center: 3 collections, 12 articles, 2 suggestions
-tests/  (testing.md: app logic integration only on real Postgres `pgvector/pgvector:pg18` + real Valkey; fakes only at process boundaries: `httpclienttest.New(tc.App.HTTP)` (crawl targets, GitHub, embeddings providers), `llm.Fake()`, `tc.Clock`; edge case ids in test names `t.Run("E69 ...")`)
+tests/  (testing.md: app logic integration only on real Postgres `pgvector/pgvector:pg18` + real Valkey; fakes only at process boundaries: `httpclienttest.New(tc.App.HTTP)` (crawl targets, GitHub, embeddings providers), `llm.Fake()`, `tc.Clock`; tests named in plain words, every edge case covered)
    feature/helpcenter/*_test.go (per endpoint), feature/helpcenter/ssr_test.go, seo_test.go, llms_txt_test.go, public_sections_test.go (fake provider registered),
    feature/knowledge/search_test.go (RRF + chunker through real index), crawl_test.go (`httpclienttest.New(tc.App.HTTP)` site, RFC 9309 vectors), git_sync_test.go, upload_test.go,
    feature/suggestions/*_test.go (textdiff hunks + stale rule through real accept), feature/mcp/help_center_tools_test.go, public_mcp_test.go,

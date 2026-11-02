@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"maps"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/fault"
@@ -94,6 +95,22 @@ func (e *ResponseError) GetStatus() int {
 }
 
 /*
+GetHeaders returns the headers the response carries beside its body: a
+Retry-After in whole seconds when the error says when to try again,
+through a retry_after detail, so clients and proxies need not read the
+body to back off.
+*/
+func (e *ResponseError) GetHeaders() http.Header {
+	header := http.Header{}
+
+	if seconds, ok := e.Meta["retry_after"].(int); ok && seconds > 0 {
+		header.Set("Retry-After", strconv.Itoa(seconds))
+	}
+
+	return header
+}
+
+/*
 MarshalJSON writes the body with the details beside message and code.
 The message, code and field errors always win over a detail of the same
 name.
@@ -129,6 +146,9 @@ Render writes the error as the JSON envelope.
 */
 func (e Errors) Render(w ResponseWriter, r *Request, err error) {
 	res := e.Resolve(r.Context(), err)
+
+	maps.Copy(w.Header(), res.GetHeaders())
+
 	WriteJSON(w, res.Status, res)
 }
 
@@ -152,7 +172,9 @@ func (e Errors) Resolve(ctx context.Context, err error) *ResponseError {
 	}
 
 	if f, ok := errors.AsType[*fault.Error](err); ok {
-		return localize(ctx, &ResponseError{Status: e.status(f), Message: f.Message(), Code: f.Code(), Meta: f.Meta()})
+		res := &ResponseError{Status: e.status(f), Message: f.Message(), Code: f.Code(), Meta: f.Meta()}
+
+		return blame(localize(ctx, res), f.Field())
 	}
 
 	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
@@ -189,6 +211,21 @@ func localize(ctx context.Context, res *ResponseError) *ResponseError {
 	localized.Message = message
 
 	return &localized
+}
+
+/*
+blame lists the response's message under the field a fault blames, the
+way a rejected field is reported, keeping the fault's own code.
+*/
+func blame(res *ResponseError, field string) *ResponseError {
+	if field == "" {
+		return res
+	}
+
+	blamed := *res
+	blamed.Errors = map[string][]string{field: {res.Message}}
+
+	return &blamed
 }
 
 /*

@@ -80,13 +80,17 @@ NewManager returns a manager on the store. Zero settings fall back to
 their defaults.
 */
 func NewManager(store Store, clk clock.Clock, cfg Config) *Manager {
-	cfg.Cookie = orDefault(cfg.Cookie, "session")
-	cfg.SameSite = orDefault(strings.ToLower(cfg.SameSite), "lax")
-	cfg.IdleTimeout = orDefault(cfg.IdleTimeout, 14*24*time.Hour)
-	cfg.Lifetime = orDefault(cfg.Lifetime, 30*24*time.Hour)
-	cfg.TouchInterval = orDefault(cfg.TouchInterval, 5*time.Minute)
+	return &Manager{store: store, clock: clk, cfg: withDefaults(cfg)}
+}
 
-	return &Manager{store: store, clock: clk, cfg: cfg}
+/*
+Configure replaces every setting of the manager, zero ones falling back
+to their defaults as in NewManager. An application whose own
+configuration names the cookie and lifetimes calls it while it boots,
+before any request is served, and keeps the framework's store.
+*/
+func (m *Manager) Configure(cfg Config) {
+	m.cfg = withDefaults(cfg)
 }
 
 /*
@@ -197,7 +201,7 @@ func (m *Manager) commit(ctx context.Context, w http.ResponseWriter, s *Session)
 		return m.touch(ctx, s)
 	}
 
-	s.record.LastActivityAt = s.now
+	s.record.LastActivityAt, s.record.UpdatedAt = s.now, s.now
 	if err := m.store.Save(ctx, s.record); err != nil {
 		return err
 	}
@@ -253,6 +257,7 @@ func (m *Manager) fresh(r *http.Request, now time.Time) *Session {
 			LastActivityAt: now,
 			ExpiresAt:      now.Add(m.cfg.Lifetime),
 			CreatedAt:      now,
+			UpdatedAt:      now,
 		},
 		old:      map[string]string{},
 		now:      now,
@@ -262,11 +267,12 @@ func (m *Manager) fresh(r *http.Request, now time.Time) *Session {
 }
 
 /*
-ended reports whether the session ran past its absolute lifetime or sat
-idle for longer than allowed.
+ended reports whether the session reached its absolute lifetime or sat
+idle for the whole idle timeout. Both limits are inclusive: a session
+idle exactly the timeout has ended.
 */
 func (m *Manager) ended(r Record, now time.Time) bool {
-	return !now.Before(r.ExpiresAt) || now.Sub(r.LastActivityAt) > m.cfg.IdleTimeout
+	return !now.Before(r.ExpiresAt) || now.Sub(r.LastActivityAt) >= m.cfg.IdleTimeout
 }
 
 /*
@@ -326,6 +332,16 @@ func newToken() string {
 
 func digest(token string) []byte {
 	return hashing.SHA256([]byte(token))
+}
+
+func withDefaults(cfg Config) Config {
+	cfg.Cookie = orDefault(cfg.Cookie, "session")
+	cfg.SameSite = orDefault(strings.ToLower(cfg.SameSite), "lax")
+	cfg.IdleTimeout = orDefault(cfg.IdleTimeout, 14*24*time.Hour)
+	cfg.Lifetime = orDefault(cfg.Lifetime, 30*24*time.Hour)
+	cfg.TouchInterval = orDefault(cfg.TouchInterval, 5*time.Minute)
+
+	return cfg
 }
 
 func orDefault[T comparable](value, fallback T) T {

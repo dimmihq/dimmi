@@ -2,7 +2,7 @@
 
 Style: caveman. Ordered. Each about 1 day, merged with tests. Requires foundation + framework done (events, River, broadcasting on centrifuge, `mail` named `system` mailer, `httpclient`, `routing` signed URLs, `encryption.KeyManager`, Valkey `cache`/`ratelimit`, `notifications/channels/webpush` on webpush-go).
 
-Test rule (00-conventions/testing.md): business logic tested only through integration tests (real Postgres, real Valkey, real App via `testkit`); fakes only at process boundary (`tc.Mail`, `httpclienttest.New(tc.App.HTTP)`, push service stubbed via `httpclienttest` (webpush channel sends through `a.HTTP`), `tc.Clock`). No app unit tests; "unit test" items below run as feature/action tests. Test names carry edge ids (`E06-96`).
+Test rule (00-conventions/testing.md): business logic tested only through integration tests (real Postgres, real Valkey, real App via `testkit`); fakes only at process boundary (`tc.Mail`, `httpclienttest.New(tc.App.HTTP)`, push service stubbed via `httpclienttest` (webpush channel sends through `a.HTTP`), `tc.Clock`). No app unit tests; "unit test" items below run as feature/action tests. Tests named in plain words; every edge case covered.
 
 ## M1: Schema and in-app
 

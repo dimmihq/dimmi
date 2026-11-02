@@ -313,7 +313,7 @@ database/queries/widget_sessions.sql               # FindWidgetSessionByTokenHas
 database/queries/widget_conversations.sql          # ListWidgetConversationsForContact, ListWidgetMessages, ListWidgetUpdatesSince, CountWidgetUnread, MarkWidgetMessagesRead
 database/factories/widget_settings_factory.go, widget_session_factory.go
 
-tests/feature/widget/                              # integration (real App, Postgres, centrifuge node in memory); one file per controller (config, sessions/handshake, contact, conversations, messages, attachments, typing indicators, read state, pings, realtime tokens, uni-SSE stream, updates, help, assets); action logic (session start/resume, PoW, dedupe/reopen, bot score, branding, availability, install tracker) covered through these endpoints and jobs. Test names carry edge-case ids (`E58 ...`)
+tests/feature/widget/                              # integration (real App, Postgres, centrifuge node in memory); one file per controller (config, sessions/handshake, contact, conversations, messages, attachments, typing indicators, read state, pings, realtime tokens, uni-SSE stream, updates, help, assets); action logic (session start/resume, PoW, dedupe/reopen, bot score, branding, availability, install tracker) covered through these endpoints and jobs. Tests named in plain words; every edge case covered
 tests/feature/api/widget_settings_test.go, widget_install_test.go, widget_test_session_test.go
 (origin normalize + asset manifest unit tests live with `framework/http/origin`, `framework/view/vite`)
 tests/e2e/widget_protocol_test.go                  # Node script: every handshake row, send, receive via plain EventSource on /connection/uni_sse (reconnect with offset recovers), polling fallback

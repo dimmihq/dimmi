@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"go.jetify.com/typeid"
-	"go.jetify.com/typeid/base32"
 )
 
 /*
@@ -79,7 +78,7 @@ the UUID as 26 lowercase Crockford base32 characters. It never fails; an
 id encoded with an unregistered prefix is refused by Decode.
 */
 func (r *Registry) Encode(prefix string, id UUID) string {
-	return prefix + "_" + base32.Encode(id)
+	return Encode(prefix, id)
 }
 
 /*

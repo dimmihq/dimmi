@@ -13,7 +13,7 @@ SCOPE: BACKEND ONLY. Frontend (React dashboard, Preact widget UI) comes later. S
 
 HARD RULES:
 - Reuse before build: before listing any file under `app/support`, `app/services`, `app/drivers/*/internal` or any protocol implementation, add a "Reuse check" line: library searched (Go module path, license, latest version, last push) and why used or not. Never hand-write crypto, protocol servers, provider SDKs, parsers for public standards, or security filters a vetted library provides. App code never imports third-party libs: wrapped by `framework/` or one SDK per adapter-zone dir.
-- Tests: business logic = integration tests only (real Postgres, real Valkey, real App); no unit tests with mocks for app code; edge case ids in test names (`E42 ...`). Never plan "unit test per action".
+- Tests: business logic = integration tests only (real Postgres, real Valkey, real App); no unit tests with mocks for app code; tests named in plain words describing behavior, never edge-case ids; every edge case still gets a test. Never plan "unit test per action".
 - Driver-backed enums are registry enums (`text` + format CHECK + Go registry), state machines strict CHECK. Policies check permissions (`authz.Can`), never role names. Cloud caps are entitlement catalog keys (over limit: `entitlement_limit_reached`).
 - Never redefine core tables from data-model.md. If you need columns on a core table, list them under "Core table changes" with migration name.
 - Use event names from events-and-realtime.md catalog. New events go under "New events" with realtime/webhook flags.

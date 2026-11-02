@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.jetify.com/typeid/base32"
 )
 
 /*
@@ -74,4 +75,15 @@ Nil returns the all-zero UUID, which never names a row.
 */
 func Nil() UUID {
 	return uuid.Nil
+}
+
+/*
+Encode returns the public id for the UUID: the prefix, an underscore and
+the UUID as 26 lowercase Crockford base32 characters. Encoding needs no
+registry, so code that only shows ids, such as a response, can call it
+directly; reading an id back goes through Registry.Decode, which checks
+the prefix.
+*/
+func Encode(prefix string, id UUID) string {
+	return prefix + "_" + base32.Encode(id)
 }

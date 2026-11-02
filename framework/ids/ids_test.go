@@ -62,6 +62,20 @@ func TestIDs(t *testing.T) {
 
 		assert.Equal(t, ids.UUID{}, ids.Nil())
 	})
+
+	t.Run("encodes a public id the registry reads back", func(t *testing.T) {
+		t.Parallel()
+		r := ids.NewRegistry()
+		require.NoError(t, r.Register("usr", "user"))
+		id := ids.New()
+
+		public := ids.Encode("usr", id)
+
+		assert.Equal(t, r.Encode("usr", id), public)
+		decoded, err := r.Decode("usr", public)
+		require.NoError(t, err)
+		assert.Equal(t, id, decoded)
+	})
 }
 
 func TestRegistry(t *testing.T) {

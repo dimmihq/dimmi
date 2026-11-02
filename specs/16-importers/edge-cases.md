@@ -1,6 +1,6 @@
 # 16 Importers: edge cases
 
-Style: caveman. Format: "Case. Behavior." Every behavior decided. Test names carry id (`t.Run("E52 delta inbound not billable", ...)`).
+Style: caveman. Format: "Case. Behavior." Every behavior decided. Tests named in plain words; every case covered.
 
 ## A. Credentials and connect
 

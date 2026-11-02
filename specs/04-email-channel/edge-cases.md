@@ -1,6 +1,6 @@
 # 04 Email channel: edge cases
 
-Style: caveman. Format: "Case. Behavior." Test names carry the id (`t.Run("E04-17 ...")`, testing.md). Renumbered 2026-11-02 after scope trim (IMAP adapter, unverified sender flag, non-SES inbound adapters moved to README Out).
+Style: caveman. Format: "Case. Behavior." Tests named in plain words; every case covered (testing.md). Renumbered 2026-11-02 after scope trim (IMAP adapter, unverified sender flag, non-SES inbound adapters moved to README Out).
 
 ## A. Inbound delivery and duplicates
 

@@ -2,7 +2,7 @@
 
 Style: caveman. Order matters. Each task about 1 day, merged with tests. Depends on foundation tasks done (router, huma, auth:widget slot, River, `framework/broadcasting` (embedded centrifuge, Redis broker + presence on Valkey, uni-SSE handler), Valkey, Filesystem, rate limiter). 02 tasks M1 to M3 interleave where marked.
 
-Tests: business logic = integration only (real App, Postgres, Valkey, centrifuge node; testing.md). No unit tests with mocks for app code. Every edge case in edge-cases.md maps to a test named with its id (`t.Run("E58 SSE buffered falls back to polling", ...)`).
+Tests: business logic = integration only (real App, Postgres, Valkey, centrifuge node; testing.md). No unit tests with mocks for app code. Every edge case in edge-cases.md has a test, named in plain words (`t.Run("falls back to polling when SSE is buffered", ...)`).
 
 ## M1 Schema and settings API
 

@@ -83,6 +83,7 @@ func TestTypedRoutes(t *testing.T) {
 		body := decode(t, rec.Body)
 		assert.Equal(t, "validation_failed", body["code"])
 		assert.Contains(t, body["errors"], "name")
+		assert.NotContains(t, rec.Body.String(), "Body.")
 	})
 
 	t.Run("reports schema errors in the same envelope", func(t *testing.T) {

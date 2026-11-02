@@ -57,6 +57,9 @@ func app() http.Handler {
 	})
 
 	mux.HandleFunc("DELETE /items/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			Name: "deleted", Value: "yes", Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		})
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -135,6 +138,15 @@ func TestClient(t *testing.T) {
 			AssertJSONPath("caller", "").
 			AssertJSONPath("tag", "").
 			AssertJSONPath("type", "")
+	})
+
+	t.Run("reads a cookie the response set", func(t *testing.T) {
+		t.Parallel()
+
+		res := client.Delete("/items/1")
+
+		assert.Equal(t, "yes", res.Cookie("deleted").Value)
+		assert.Equal(t, "/", res.Cookie("deleted").Path)
 	})
 
 	t.Run("sends raw bodies as they are", func(t *testing.T) {

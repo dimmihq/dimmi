@@ -232,7 +232,7 @@ func TestLogin(t *testing.T) {
 		loggedIn := a.clock.Now()
 
 		a.clock.Travel(time.Hour)
-		a.send(t, http.MethodPost, "/confirm", cookie)
+		a.send(t, http.MethodPost, "/confirm?method=password", cookie)
 
 		record, err := a.store.Find(t.Context(), hashing.SHA256([]byte(cookie.Value)))
 		require.NoError(t, err)
@@ -264,7 +264,7 @@ func TestExpiry(t *testing.T) {
 		a := newApp(t, db, session.Config{IdleTimeout: time.Hour})
 		cookie := a.login(t, ids.New())
 
-		a.clock.Travel(time.Hour + time.Second)
+		a.clock.Travel(time.Hour)
 
 		assert.Equal(t, http.StatusUnauthorized, a.send(t, http.MethodGet, "/me", cookie).Code)
 		_, err := a.store.Find(t.Context(), hashing.SHA256([]byte(cookie.Value)))

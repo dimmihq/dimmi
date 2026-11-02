@@ -73,6 +73,17 @@ func TestLocalizedErrors(t *testing.T) {
 			fr.Body.String())
 	})
 
+	t.Run("lists the localized message under the field a fault blames", func(t *testing.T) {
+		t.Parallel()
+		err := fault.New(fault.NotFound, "not_found", "Not Found.").OnField("email")
+
+		rec := renderIn(t, "fr", err)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.JSONEq(t, `{"message":"Introuvable.","code":"not_found","errors":{"email":["Introuvable."]}}`,
+			rec.Body.String())
+	})
+
 	t.Run("localizes plain status errors and hidden failures", func(t *testing.T) {
 		t.Parallel()
 

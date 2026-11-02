@@ -51,14 +51,15 @@ const (
 )
 
 /*
-Error is a domain fault: its kind, its machine code, its message and
-any details attached with With.
+Error is a domain fault: its kind, its machine code, its message, any
+details attached with With and the input field it blames, if any.
 */
 type Error struct {
 	kind    Kind
 	code    string
 	message string
 	meta    map[string]any
+	field   string
 }
 
 /*
@@ -114,7 +115,26 @@ func (e *Error) With(key string, value any) *Error {
 	maps.Copy(meta, e.meta)
 	meta[key] = value
 
-	return &Error{kind: e.kind, code: e.code, message: e.message, meta: meta}
+	return &Error{kind: e.kind, code: e.code, message: e.message, meta: meta, field: e.field}
+}
+
+/*
+OnField returns a copy of the fault that blames one input field, such as
+"email" for credentials that match no account. Transports that report
+broken fields, like the body of an HTTP 422, list the message under it
+while the code still names the failure as a whole. The receiver is left
+unchanged.
+*/
+func (e *Error) OnField(name string) *Error {
+	return &Error{kind: e.kind, code: e.code, message: e.message, meta: e.meta, field: name}
+}
+
+/*
+Field returns the input field the fault blames, or "" when it blames
+none.
+*/
+func (e *Error) Field() string {
+	return e.field
 }
 
 /*

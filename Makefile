@@ -4,11 +4,14 @@ export PATH := $(shell go env GOROOT)/bin:$(PATH)
 
 GOLANGCI_LINT := ./bin/golangci-lint
 GOLANGCI_LINT_VERSION := v2.15.0
+SQLC := ./bin/sqlc
+SQLC_VERSION := v1.30.0
 
-# Packages whose statements count toward the framework coverage gate.
+# Packages whose statements count toward the coverage gates.
 FRAMEWORK_PKGS := ./framework/...
+APP_PKGS := ./app/...
 
-.PHONY: tools fmt lint test cover services gen
+.PHONY: tools fmt lint test cover cover-app services gen sqlc
 
 APP ?= dimmi
 
@@ -17,6 +20,11 @@ services:
 
 tools:
 	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	GOBIN=$(CURDIR)/bin go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+
+# Compiles database/queries into app/models (sqlc.yaml).
+sqlc:
+	$(SQLC) generate
 
 fmt:
 	$(GOLANGCI_LINT) fmt
@@ -44,3 +52,11 @@ gen:
 cover:
 	$(WITH_ENV) go test -race -count=1 -coverpkg=$(FRAMEWORK_PKGS) -coverprofile=coverage.out ./framework/...
 	go tool cover -func=coverage.out | tail -1
+
+# Business logic is covered by the integration tests under tests/, so the
+# app gate measures app packages while those run. Generated queries are
+# left out of the profile.
+cover-app:
+	$(WITH_ENV) go test -race -count=1 -coverpkg=$(APP_PKGS) -coverprofile=coverage-app.out ./tests/...
+	grep -v -e '\.sql\.go:' -e 'app/models/db\.go:' -e 'app/models/models\.go:' coverage-app.out > coverage-app.filtered.out
+	go tool cover -func=coverage-app.filtered.out | tail -1

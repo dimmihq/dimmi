@@ -10,7 +10,8 @@ change. When this page and those files disagree, this page wins and the disagree
   third-party libraries behind small Laravel-shaped APIs. It never contains product words (`workspace`,
   `conversation`, `contact`, `inbox`, `widget`, `dimmi`, ...) in identifiers, strings, comments or file names.
   Generic words (`tenant`, `user`, `member`, `channel`, `message`) are fine.
-- `app/`, `routes/`, `config/`, `bootstrap/`, `database/`, `cmd/` hold the product. Not built yet.
+- `app/`, `routes/`, `config/`, `bootstrap/`, `database/`, `cmd/`, `lang/`, `resources/` hold the product.
+  `cmd/dimmi` only calls `bootstrap.Main`; `bootstrap` hands the framework the app's options and providers.
 - `specs/` and `research/` describe what to build. Code never refers to them.
 - The package catalog, what each package wraps and its public API: `specs/00-conventions/framework.md` section 3.2.
 
@@ -23,7 +24,8 @@ change. When this page and those files disagree, this page wins and the disagree
 - Watch binary size: prefer the small, focused module of a library (a sub-package, an HTTP exporter instead of
   gRPC) and never pull a big dependency for one helper.
 - No ORM. Queries are SQL compiled by sqlc; `framework/database` is only pool, transactions, tenant scoping and
-  error mapping.
+  error mapping. Queries live in `database/queries/*.sql`; run `make sqlc` after editing them or a migration and
+  commit the generated `app/models/*.sql.go`. Never edit generated files.
 
 ## Comments
 
@@ -86,8 +88,14 @@ package cache
   and every `Fake()` refuses to run outside the testing environment.
 - One top-level test per unit, subtests named as lowercase sentences, `t.Parallel()` everywhere, `t.Context()`
   for contexts, `require`/`assert` from testify.
-- Coverage gate: 90% of statements per framework package, measured with `make cover`.
+- App tests live in `tests/feature/<area>` and start with `tc := tests.New(t)`: the real application on its own
+  migrated database and Valkey prefix, a fake clock (`tc.Clock`), a workspace and its owner. Act through the real
+  guards with `tc.ActingAs(user)` (a real sign-in) or `tc.ActingAsToken(member, abilities...)`; create data with
+  `database/factories`.
+- Coverage gates: 90% of statements per framework package (`make cover`), 95% per app package (`make cover-app`).
 - Never run tests that call paid third-party APIs (LLMs above all) without explicit approval for that run.
+- After a milestone that adds or changes endpoints, run the release binary end to end as described in
+  `docs/testing/manual-e2e.md`, and extend its flow table in the same change.
 
 ## Commands
 
@@ -98,6 +106,8 @@ package cache
 | `make lint` | golangci-lint with zero issues allowed |
 | `make test` | All tests with `-race` against the services |
 | `make cover` | Coverage across framework packages |
+| `make cover-app` | Coverage of app packages by the integration tests |
+| `make sqlc` | Compiles `database/queries` into `app/models` |
 | `make gen ARGS="make:action Name"` | Runs a dev-only command (generators, `route:lint`, `lang:check`) |
 
 Development-only commands live in files with `//go:build dev` and are never compiled into release builds;

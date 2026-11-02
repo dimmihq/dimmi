@@ -65,6 +65,17 @@ func TestErrors(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
+	t.Run("tells the client when to retry in the header too", func(t *testing.T) {
+		t.Parallel()
+		err := fault.New(fault.RateLimited, "too_many_attempts", "Slow down.").With("retry_after", 30)
+		rec := render(t, http.Errors{}, err)
+
+		assert.Equal(t, http.StatusTooManyRequests, rec.Code)
+		assert.Equal(t, "30", rec.Header().Get("Retry-After"))
+		stale := render(t, http.Errors{}, fault.New(fault.Conflict, "stale", "Stale."))
+		assert.Empty(t, stale.Header().Get("Retry-After"))
+	})
+
 	t.Run("lets the application override statuses by code", func(t *testing.T) {
 		t.Parallel()
 		errs := http.Errors{Statuses: map[string]int{"tenant_required": http.StatusBadRequest}}

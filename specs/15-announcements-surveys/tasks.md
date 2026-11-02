@@ -1,6 +1,6 @@
 # 15 Engage: tasks
 
-Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depends on M3 (01 + 02 + 03) done. Runs parallel to M4 tracks. Tests per `00-conventions/testing.md`: integration only for app logic (real App via `testkit.New(t)`, real Postgres `pgvector/pgvector:pg18`, real dispatcher, River drained with `tc.Queue.Drain(ctx)`, real RLS, real Valkey). No unit tests with mocks, no sqlmock/pgxmock/embedded-postgres. Fakes only at process boundaries: `tc.Mail` (captured MIME), `httpclienttest.New(tc.App.HTTP)`, `tc.Clock`. Pure helpers (`urlmatch` vectors, rule parser) may use table-driven tests without mocks or I/O. Test names carry edge ids (`t.Run("E62 ...")`); `dimmi spec:coverage` reports gaps. No real LLM, no network.
+Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depends on M3 (01 + 02 + 03) done. Runs parallel to M4 tracks. Tests per `00-conventions/testing.md`: integration only for app logic (real App via `testkit.New(t)`, real Postgres `pgvector/pgvector:pg18`, real dispatcher, River drained with `tc.Queue.Drain(ctx)`, real RLS, real Valkey). No unit tests with mocks, no sqlmock/pgxmock/embedded-postgres. Fakes only at process boundaries: `tc.Mail` (captured MIME), `httpclienttest.New(tc.App.HTTP)`, `tc.Clock`. Pure helpers (`urlmatch` vectors, rule parser) may use table-driven tests without mocks or I/O. Tests named in plain words; every edge case covered. No real LLM, no network.
 
 ## E0 Foundation hooks (needs owner edits in "Required from other specs")
 
@@ -65,7 +65,7 @@ Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depen
 ## E9 Cross-feature alignment (08, 13, SDK)
 
 - [ ] 34. CTA targets + SDK mappings: `open_article` -> `show('help', {article})` with per-widget Help tab check (warning `help_tab_disabled_cta`), `open_changelog_entry` validated by 13 `changelog.FindPublishedEntry` -> `show('changelog', {entry})`, `open_messenger` -> `startConversation(prefill, {context: {announcement_id}})`, `sdk_event` -> `engage_action {id, ctaId, eventName}`. Tests: E62, E63, E129-E131; camelCase payload keys in e2e test.
-- [ ] 35. Spec coverage: every edge case id in edge-cases.md maps to a test name (`t.Run("E## ...")`); `dimmi spec:coverage` green for 15.
+- [ ] 35. Coverage review: every edge case in edge-cases.md has a test (review check).
 
 - [ ] 36. Valkey wiring per D11: otter L1 + Valkey pubsub version bust, results cache on `cache.Store` (Valkey), limiters on Valkey, receipts stay Postgres. Tests on real Valkey (compose `valkey/valkey:8` via `REDIS_URL`, per-test prefix): E132 (test's keyspace flushed mid-test: no item reappears), E133 (Valkey unreachable via in-test TCP proxy cut: lists served, limiter fails open).
 

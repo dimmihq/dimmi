@@ -401,7 +401,7 @@ database/factories/ (billing_account, usage_ledger_line, billing_window, invoice
 tests/feature/billing/metering_vectors_test.go (testdata/*.yaml vectors through real App + Postgres: messages via 03 actions, ledger asserted, then replay asserted equal; incl. 13/14/15 fixtures)
 tests/feature/billing/rating_test.go (rating, capmath, decide, forecast tables: pure funcs, no mocks, no I/O)
 tests/feature/billing/replay_property_test.go (random streams online (real DB) vs replay)
-tests/feature/billing/ (every endpoint, reply blocked 423, concurrency, webhooks, dunning, invoices with `httpclienttest.New(tc.App.HTTP)` Stripe fixtures, cross-tenant, two workspaces on one account (forced org, later-path proof), entitlements driver); test names carry edge ids (`t.Run("E69 ...")`)
+tests/feature/billing/ (every endpoint, reply blocked 423, concurrency, webhooks, dunning, invoices with `httpclienttest.New(tc.App.HTTP)` Stripe fixtures, cross-tenant, two workspaces on one account (forced org, later-path proof), entitlements driver); tests named in plain words, every edge case covered
 tests/contracts/stripe_test.go (stripe-mock; adapter only)
 ```
 

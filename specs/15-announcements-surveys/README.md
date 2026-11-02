@@ -691,7 +691,7 @@ tests/feature/widget/engage_*_test.go
 tests/feature/web/csat_rating_test.go
 tests/feature/engage/segments_test.go        # rules validation, Go evaluator, SQL compiler + parity property test (Go vs SQL on real Postgres, 10,000 factory contacts)
 tests/feature/engage/urlmatch_test.go        # shared JSON vectors with widget (pure, table-driven, no mocks)
-tests/feature/engage/*_test.go               # eligibility, frequency, throttle, branching, write-back, CSAT gating, redaction: real App (`testkit.New(t)`), real Postgres, real Valkey (per-test key prefix, never faked), real dispatcher + River (`tc.Queue.Drain`); fakes only at boundaries (`tc.Mail`, `tc.Clock`). No unit tests with mocks (testing.md). Test names carry edge ids (`t.Run("E62 ...")`)
+tests/feature/engage/*_test.go               # eligibility, frequency, throttle, branching, write-back, CSAT gating, redaction: real App (`testkit.New(t)`), real Postgres, real Valkey (per-test key prefix, never faked), real dispatcher + River (`tc.Queue.Drain`); fakes only at boundaries (`tc.Mail`, `tc.Clock`). No unit tests with mocks (testing.md). Tests named in plain words; every edge case covered
 tests/e2e/widget_engage_protocol_test.go     # Node: config flag, list, events, response, anonymous CDN list
 ```
 

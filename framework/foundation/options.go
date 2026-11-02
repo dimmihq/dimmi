@@ -37,7 +37,10 @@ printed by the command line. EnvPrefix selects the environment variables
 that override configuration, such as APP for APP_DATABASE__URL;
 ConfigFiles lists YAML files loaded in order instead of Name.yaml.
 Environ replaces the process environment when not nil, which tests use
-to boot without touching the process.
+to boot without touching the process. Config, when set, points at the
+application's own configuration struct, which is loaded from the same
+files and environment as the framework's and checked with it, so a bad
+application value stops the boot like a bad framework one.
 
 Migrations holds the application's own SQL migrations. Providers
 register and boot the application's services, and Commands add its
@@ -67,6 +70,7 @@ type Options struct {
 	EnvPrefix         string
 	ConfigFiles       []string
 	Environ           []string
+	Config            any
 	Migrations        fs.FS
 	Providers         []Provider
 	Commands          []Command

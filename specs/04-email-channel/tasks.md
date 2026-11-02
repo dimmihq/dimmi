@@ -2,7 +2,7 @@
 
 Style: caveman. Order matters. Each task about 1 day, merged with tests. `[ ]` open. Edge case numbers refer to `edge-cases.md`.
 
-Test rule (00-conventions/testing.md): actions, jobs, controllers, listeners tested as integration tests on real Postgres + real App (`testkit`); `tc.Mail`, `httpclienttest.New(tc.App.HTTP)`, `a.DNS.Fake()` at process boundary only (fakes panic outside `app.env=testing`). Pure parsing/mapping in `app/integrations/email` (Channel driver zone) may have table-driven unit tests with fixtures, no mocks. Test names carry edge ids (`E04-17`).
+Test rule (00-conventions/testing.md): actions, jobs, controllers, listeners tested as integration tests on real Postgres + real App (`testkit`); `tc.Mail`, `httpclienttest.New(tc.App.HTTP)`, `a.DNS.Fake()` at process boundary only (fakes panic outside `app.env=testing`). Pure parsing/mapping in `app/integrations/email` (Channel driver zone) may have table-driven unit tests with fixtures, no mocks. Tests named in plain words; every edge case covered.
 
 Prereqs: framework (`mail` named `system`/`customer` mailers + drivers `ses`, `smtp`, `postmark`, `resend`, `mailgun`, `sendgrid`, `log`; `mailbox` `ses` source + `Fake` + parse/authcheck/dsn/arf + drivertest; `dom`, `sanitize`, `dns`, `aws/sns`, `filesystem`, `events`, `queue`), 03 `contracts.Channel` + `conversations.ReceiveInboundMessage` + `UpdateMessageDelivery` (exact `03-shared-inbox/channel-contract.md` signatures; fake until 03 lands), 05 channel connection CRUD.
 

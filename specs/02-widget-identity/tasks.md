@@ -2,7 +2,7 @@
 
 Style: caveman. Order matters. Each task about 1 day with tests. Interleaves with 01: 02 M1 to M2 before 01 M3 JWT wiring task.
 
-Tests: `framework/jwt` = unit + fuzz (framework layer). Everything in `app/` = integration only (real App, Postgres, Valkey; testing.md), driven through endpoints or actions with real App; no mocks. Test names carry edge-case ids (`E14 ...`).
+Tests: `framework/jwt` = unit + fuzz (framework layer). Everything in `app/` = integration only (real App, Postgres, Valkey; testing.md), driven through endpoints or actions with real App; no mocks. Tests named in plain words; every edge case covered.
 
 ## M1 Verifier core
 

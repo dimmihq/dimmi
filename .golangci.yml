@@ -31,6 +31,7 @@ linters:
     # Architecture (settings in framework.md 7.1)
     - depguard
     - forbidigo
+    - importas
     - gochecknoinits
     - gochecknoglobals # no package-level mutable state
     # Size and complexity (numbers in section 3)
@@ -59,7 +60,7 @@ linters:
     - nolintlint     # //nolint names the linter and gives a reason
 
   settings:
-    # depguard and forbidigo: framework.md 7.1 (framework rules only until app/ exists).
+    # depguard, forbidigo and importas: framework.md 7.1.
     depguard:
       rules:
         framework:
@@ -214,6 +215,237 @@ linters:
             - { pkg: "github.com/disgoorg/disgo/voice", desc: "cgo" }
             - { pkg: "github.com/emersion/go-smtp", desc: "no SMTP receiver" }
 
+        # ---------------- app zone (framework.md 7.1) ----------------
+        app:
+          list-mode: strict
+          files:
+            - "**/app/**/*.go"
+            - "**/routes/**/*.go"
+            - "**/config/**/*.go"
+            - "**/bootstrap/**/*.go"
+            - "**/database/**/*.go"
+            - "**/tests/**/*.go"
+            - "**/resources/**/*.go"
+            - "**/lang/**/*.go"
+            - "!**/framework/**"
+            - "!**/app/drivers/**"
+            - "!**/app/services/**"
+            - "!**/app/support/openapiimport/**"
+            - "!**/app/support/actionschema/**"
+            - "!**/app/support/actiontemplate/**"
+            - "!**/app/support/actionresult/**"
+            - "!**/tests/arch/**"
+          allow:
+            - $gostd
+            - github.com/dimmihq/dimmi
+            - github.com/stretchr/testify   # assertions in tests; app-runtime keeps it out of the binary
+          deny: &app_std_deny
+            - { pkg: "database/sql$", desc: "framework/database" }
+            - { pkg: "database/sql/driver$", desc: "framework/database" }
+            - { pkg: "os$", desc: "framework/filesystem, framework/config" }
+            - { pkg: "os/exec$", desc: "framework/process" }
+            - { pkg: "os/signal$", desc: "framework/foundation" }
+            - { pkg: "os/user$", desc: "not needed" }
+            - { pkg: "syscall$", desc: "not needed" }
+            - { pkg: "unsafe$", desc: "not needed" }
+            - { pkg: "plugin$", desc: "not needed" }
+            - { pkg: "reflect$", desc: "no reflection; explicit code" }
+            - { pkg: "runtime$", desc: "framework/foundation" }
+            - { pkg: "runtime/debug$", desc: "framework/foundation" }
+            - { pkg: "runtime/pprof$", desc: "framework/telemetry" }
+            - { pkg: "expvar$", desc: "framework/telemetry" }
+            - { pkg: "flag$", desc: "framework/console" }
+            - { pkg: "log$", desc: "framework/log" }
+            - { pkg: "log/slog$", desc: "framework/log" }
+            - { pkg: "log/syslog$", desc: "framework/log" }
+            - { pkg: "net$", desc: "framework/dns, framework/httpclient/safedial" }
+            - { pkg: "net/http$", desc: "framework/http (server aliases), framework/httpclient" }
+            - { pkg: "net/http/httptest$", desc: "framework/testkit" }
+            - { pkg: "net/http/httputil$", desc: "framework/http" }
+            - { pkg: "net/http/httptrace$", desc: "framework/telemetry" }
+            - { pkg: "net/http/cookiejar$", desc: "framework/httpclient" }
+            - { pkg: "net/http/pprof$", desc: "framework/telemetry" }
+            - { pkg: "net/http/cgi$", desc: "not needed" }
+            - { pkg: "net/http/fcgi$", desc: "not needed" }
+            - { pkg: "net/smtp$", desc: "framework/mail" }
+            - { pkg: "net/mail$", desc: "framework/mail (ParseAddress)" }
+            - { pkg: "net/textproto$", desc: "framework/mail, framework/mailbox" }
+            - { pkg: "net/rpc$", desc: "not needed" }
+            - { pkg: "net/rpc/jsonrpc$", desc: "not needed" }
+            - { pkg: "mime$", desc: "framework/filesystem (content type), framework/mail" }
+            - { pkg: "mime/multipart$", desc: "framework/mail, framework/http" }
+            - { pkg: "mime/quotedprintable$", desc: "framework/mail" }
+            - { pkg: "html/template$", desc: "framework/view (templ)" }
+            - { pkg: "text/template$", desc: "framework/view; saved replies use app/support/templating" }
+            - { pkg: "path/filepath$", desc: "framework/filesystem" }
+            - { pkg: "math/rand$", desc: "framework/support/str.Random" }
+            - { pkg: "math/rand/v2$", desc: "framework/support/str.Random" }
+            - { pkg: "crypto$", desc: "framework/hashing, framework/encryption" }
+            - { pkg: "crypto/aes$", desc: "framework/encryption" }
+            - { pkg: "crypto/cipher$", desc: "framework/encryption" }
+            - { pkg: "crypto/des$", desc: "never" }
+            - { pkg: "crypto/dsa$", desc: "never" }
+            - { pkg: "crypto/ecdh$", desc: "framework/notifications/webpush" }
+            - { pkg: "crypto/ecdsa$", desc: "framework/jwt" }
+            - { pkg: "crypto/ed25519$", desc: "framework/jwt" }
+            - { pkg: "crypto/elliptic$", desc: "framework/jwt" }
+            - { pkg: "crypto/hkdf$", desc: "framework/encryption" }
+            - { pkg: "crypto/hmac$", desc: "framework/hashing.HMAC" }
+            - { pkg: "crypto/md5$", desc: "framework/hashing" }
+            - { pkg: "crypto/mlkem$", desc: "never" }
+            - { pkg: "crypto/pbkdf2$", desc: "framework/hashing" }
+            - { pkg: "crypto/rand$", desc: "framework/support/str.Random, framework/auth/token" }
+            - { pkg: "crypto/rc4$", desc: "never" }
+            - { pkg: "crypto/rsa$", desc: "framework/jwt" }
+            - { pkg: "crypto/sha1$", desc: "framework/hashing" }
+            - { pkg: "crypto/sha256$", desc: "framework/hashing.SHA256" }
+            - { pkg: "crypto/sha3$", desc: "framework/hashing" }
+            - { pkg: "crypto/sha512$", desc: "framework/hashing" }
+            - { pkg: "crypto/subtle$", desc: "framework/hashing.Equal" }
+            - { pkg: "crypto/tls$", desc: "framework/httpclient, framework/mail" }
+            - { pkg: "crypto/x509$", desc: "framework/jwt, framework/aws" }
+            - { pkg: "crypto/x509/pkix$", desc: "framework" }
+        app-runtime:
+          list-mode: lax
+          files:
+            - "**/app/**/*.go"
+            - "**/routes/**/*.go"
+            - "**/config/**/*.go"
+            - "**/bootstrap/**/*.go"
+            - "!$test"
+          deny:
+            - { pkg: "github.com/dimmihq/dimmi/framework/testkit", desc: "tests only" }
+            - { pkg: "github.com/dimmihq/dimmi/tests", desc: "tests only" }
+            - { pkg: "github.com/dimmihq/dimmi/database/factories", desc: "tests and seeders only" }
+            - { pkg: "github.com/stretchr/testify", desc: "tests only" }
+        app-direction:
+          list-mode: lax
+          files:
+            - "**/app/**/*.go"
+          deny:
+            - { pkg: "github.com/dimmihq/dimmi/routes", desc: "routes import app, never reverse" }
+            - { pkg: "github.com/dimmihq/dimmi/bootstrap", desc: "bootstrap wires app" }
+            - { pkg: "github.com/dimmihq/dimmi/cmd", desc: "entry point only" }
+            - { pkg: "github.com/dimmihq/dimmi/database/seeders", desc: "seeders call app, never reverse" }
+        config-direction:
+          list-mode: lax
+          files:
+            - "**/config/**/*.go"
+          deny:
+            - { pkg: "github.com/dimmihq/dimmi/app", desc: "config is data; framework types only" }
+            - { pkg: "github.com/dimmihq/dimmi/routes", desc: "config is data" }
+        cmd:
+          list-mode: strict
+          files:
+            - "**/cmd/**/*.go"
+          allow:
+            - "os$"
+            - github.com/dimmihq/dimmi/bootstrap
+
+        # ---------------- adapter zone: one SDK per dir ----------------
+        adapter-llm-openai:
+          list-mode: strict
+          files:
+            - "**/app/drivers/llm/openai/**"
+            - "**/app/drivers/llm/openaicompat/**"
+            - "**/app/drivers/llm/openrouter/**"
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/openai/openai-go]
+          deny: *app_std_deny
+        adapter-llm-anthropic:
+          list-mode: strict
+          files: ["**/app/drivers/llm/anthropic/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/anthropics/anthropic-sdk-go]
+          deny: *app_std_deny
+        adapter-llm-bedrock:
+          list-mode: strict
+          files: ["**/app/drivers/llm/bedrock/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/aws/aws-sdk-go-v2, github.com/aws/smithy-go]
+          deny: *app_std_deny
+        adapter-llm-gemini:
+          list-mode: strict
+          files: ["**/app/drivers/llm/gemini/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, google.golang.org/genai]
+          deny: *app_std_deny
+        adapter-channel-slack:
+          list-mode: strict
+          files: ["**/app/drivers/channel/slack/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/slack-go/slack]
+          deny: *app_std_deny
+        adapter-channel-discord:
+          list-mode: strict
+          files: ["**/app/drivers/channel/discord/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/disgoorg/disgo]
+          deny: *app_std_deny
+        adapter-channel-telegram:
+          list-mode: strict
+          files: ["**/app/drivers/channel/telegram/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/go-telegram/bot]
+          deny: *app_std_deny
+        adapter-github:
+          list-mode: strict
+          files: ["**/app/services/github/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/google/go-github/v93]
+          deny: *app_std_deny
+        adapter-altcha:
+          list-mode: strict
+          files: ["**/app/services/altcha/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/altcha-org/altcha-lib-go]
+          deny: *app_std_deny
+        adapter-stripe:
+          list-mode: strict
+          files: ["**/app/services/stripe/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/stripe/stripe-go/v87]
+          deny: *app_std_deny
+        adapter-ses:
+          list-mode: strict
+          files: ["**/app/services/ses/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/aws/aws-sdk-go-v2, github.com/aws/smithy-go]
+          deny: *app_std_deny
+        adapter-default:
+          list-mode: strict
+          files:
+            - "**/app/drivers/**"
+            - "**/app/services/**"
+            - "!**/app/drivers/llm/openai/**"
+            - "!**/app/drivers/llm/openaicompat/**"
+            - "!**/app/drivers/llm/openrouter/**"
+            - "!**/app/drivers/llm/anthropic/**"
+            - "!**/app/drivers/llm/bedrock/**"
+            - "!**/app/drivers/llm/gemini/**"
+            - "!**/app/drivers/channel/slack/**"
+            - "!**/app/drivers/channel/discord/**"
+            - "!**/app/drivers/channel/telegram/**"
+            - "!**/app/services/github/**"
+            - "!**/app/services/altcha/**"
+            - "!**/app/services/stripe/**"
+            - "!**/app/services/ses/**"
+          allow: [$gostd, github.com/dimmihq/dimmi]
+          deny: *app_std_deny
+        support-openapiimport:
+          list-mode: strict
+          files: ["**/app/support/openapiimport/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/pb33f/libopenapi]
+          deny: *app_std_deny
+        support-actionschema:
+          list-mode: strict
+          files: ["**/app/support/actionschema/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/google/jsonschema-go]
+          deny: *app_std_deny
+        support-actiontemplate:
+          list-mode: strict
+          files: ["**/app/support/actiontemplate/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/yosida95/uritemplate/v3]
+          deny: *app_std_deny
+        support-actionresult:
+          list-mode: strict
+          files: ["**/app/support/actionresult/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/tidwall/gjson]
+          deny: *app_std_deny
+        arch-tests:
+          list-mode: strict
+          files: ["**/tests/arch/**"]
+          allow: [$gostd, github.com/dimmihq/dimmi, github.com/stretchr/testify]
+
     forbidigo:
       analyze-types: true
       forbid:
@@ -239,6 +471,21 @@ linters:
           msg: '[panic] return an error; Must* helpers live in framework/ only'
         - pattern: '^(print|println)$'
           msg: '[print] use framework/log or console output'
+    importas:
+      no-unaliased: true
+      alias:
+        - pkg: github.com/dimmihq/dimmi/app/events
+          alias: appevents
+        - pkg: github.com/dimmihq/dimmi/app/mail
+          alias: appmail
+        - pkg: github.com/dimmihq/dimmi/app/notifications
+          alias: appnotifications
+        - pkg: github.com/dimmihq/dimmi/app/broadcasting
+          alias: appbroadcasting
+        - pkg: github.com/dimmihq/dimmi/app/http/middleware
+          alias: appmiddleware
+        - pkg: github.com/dimmihq/dimmi/app/console/commands
+          alias: commands
     govet:
       enable-all: true
       disable:

@@ -33,10 +33,21 @@ ID is the public id and TokenHash the SHA-256 digest of the cookie
 token. UserID is ids.Nil() for a visitor who has not logged in. Data holds
 the values handlers put in the session and Flash the values flashed for
 the next request. IP and UserAgent describe the device that started the
-session. AuthenticatedAt is the last full login, ConfirmedAt the last
-time the user proved their identity, by logging in or confirming their
-password. LastActivityAt is written at most once per touch interval, and
-ExpiresAt is the absolute end of the session.
+session.
+
+The sign-in record says how the user got in. AuthMethod is the primary
+method of the last full login and AuthMethods every method it passed,
+the primary one first, such as password then totp. ConfirmedMethod is
+how the user last proved their identity. DeviceID stays the same across
+every session of one device, DeviceLabel names that device for people,
+and Country is the two-letter ISO 3166 code the session started from.
+Each is empty when unknown, and always for a visitor.
+
+AuthenticatedAt is the last full login, ConfirmedAt the last time the
+user proved their identity, by logging in or confirming their password.
+LastActivityAt is written at most once per touch interval, UpdatedAt
+whenever the session itself changes, and ExpiresAt is the absolute end
+of the session.
 */
 type Record struct {
 	ID              ids.UUID
@@ -46,11 +57,18 @@ type Record struct {
 	Flash           map[string]string
 	IP              string
 	UserAgent       string
+	AuthMethod      string
+	AuthMethods     []string
+	ConfirmedMethod string
+	DeviceID        string
+	DeviceLabel     string
+	Country         string
 	AuthenticatedAt time.Time
 	ConfirmedAt     time.Time
 	LastActivityAt  time.Time
 	ExpiresAt       time.Time
 	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 /*

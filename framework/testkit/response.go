@@ -196,6 +196,25 @@ func (r *Response) String(path string) string {
 }
 
 /*
+Cookie returns the cookie the response set under the name, failing the
+test when it set none, so a test can send it with the next request.
+*/
+func (r *Response) Cookie(name string) *http.Cookie {
+	r.tb.Helper()
+
+	for _, line := range r.Header.Values("Set-Cookie") {
+		cookie, err := http.ParseSetCookie(line)
+		if err == nil && cookie.Name == name {
+			return cookie
+		}
+	}
+
+	r.tb.Fatalf("response set no %s cookie; it set %v", name, r.Header.Values("Set-Cookie"))
+
+	return nil
+}
+
+/*
 Decode decodes the body into v, failing the test when it is not valid
 JSON for v.
 */

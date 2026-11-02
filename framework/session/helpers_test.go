@@ -99,8 +99,18 @@ func routes(t *testing.T) map[string]handlerFunc {
 		"POST /login": func(w http.ResponseWriter, r *http.Request, s *session.Session) {
 			id, err := ids.Parse(r.URL.Query().Get("user"))
 			require.NoError(t, err)
-			s.Login(id)
+			s.Login(id, methodsOf(r)...)
 			_, _ = w.Write([]byte(s.ID().String()))
+		},
+		"POST /device": func(_ http.ResponseWriter, r *http.Request, s *session.Session) {
+			s.SetDevice(r.URL.Query().Get("id"), r.URL.Query().Get("label"))
+			s.SetCountry(r.URL.Query().Get("country"))
+		},
+		"GET /sign-in": func(w http.ResponseWriter, _ *http.Request, s *session.Session) {
+			_, _ = w.Write([]byte(strings.Join([]string{
+				s.AuthMethod(), strings.Join(s.AuthMethods(), "+"), s.ConfirmedMethod(),
+				s.DeviceID(), s.DeviceLabel(), s.Country(),
+			}, "|")))
 		},
 		"GET /me": func(w http.ResponseWriter, _ *http.Request, s *session.Session) {
 			id, ok := s.UserID()
@@ -119,10 +129,25 @@ func routes(t *testing.T) map[string]handlerFunc {
 			value, _ := s.Flashed("notice")
 			_, _ = w.Write([]byte(value))
 		},
-		"POST /confirm":    func(_ http.ResponseWriter, _ *http.Request, s *session.Session) { s.Confirm() },
+		"POST /confirm": func(_ http.ResponseWriter, r *http.Request, s *session.Session) {
+			s.Confirm(r.URL.Query().Get("method"))
+		},
 		"POST /regenerate": func(_ http.ResponseWriter, _ *http.Request, s *session.Session) { s.Regenerate() },
 		"POST /logout":     func(_ http.ResponseWriter, _ *http.Request, s *session.Session) { s.Destroy() },
 	}
+}
+
+/*
+methodsOf returns the login methods the request names in its methods
+query, comma separated, or none.
+*/
+func methodsOf(r *http.Request) []string {
+	joined := r.URL.Query().Get("methods")
+	if joined == "" {
+		return nil
+	}
+
+	return strings.Split(joined, ",")
 }
 
 /*

@@ -1,6 +1,6 @@
 # 11 Self-host: edge cases
 
-Style: caveman. Format: Case. Behavior. Final sweep 2026-11-02: Valkey required (decision 18), centrifuge realtime, mail final model; 107-118 added. Deployment simplification 2026-11-02: single-container cases cut, 58-61 (install.sh defaults) added, renumbered without gaps. Test names carry case ids (`E107 ...`).
+Style: caveman. Format: Case. Behavior. Final sweep 2026-11-02: Valkey required (decision 18), centrifuge realtime, mail final model; 107-118 added. Deployment simplification 2026-11-02: single-container cases cut, 58-61 (install.sh defaults) added, renumbered without gaps. Tests named in plain words; every case covered.
 
 ## First run and setup
 

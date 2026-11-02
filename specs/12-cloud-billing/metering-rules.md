@@ -256,7 +256,7 @@ Uses:
 
 ## 14. Scenario test vectors (`tests/feature/billing/testdata/*.yaml`)
 
-Run through real App + Postgres (testing.md): each vector builds facts with factories and 03/01/04 actions, `MeterMessageActivity` runs in real reply tx, ledger asserted, then `Replay` over same facts asserted equal. Test name carries vector id (`t.Run("V30 changelog_reply_billing", ...)`).
+Run through real App + Postgres (testing.md): each vector builds facts with factories and 03/01/04 actions, `MeterMessageActivity` runs in real reply tx, ledger asserted, then `Replay` over same facts asserted equal. Test named in plain words (`t.Run("bills a changelog reply once", ...)`).
 
 | # | Timeline (UTC) | Expected ledger |
 |---|---|---|

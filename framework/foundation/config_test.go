@@ -1,6 +1,7 @@
 package foundation_test
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -100,6 +101,37 @@ func TestLoadConfig(t *testing.T) {
 		assert.Equal(t, "512MiB", cfg.Runtime.MemoryLimit)
 		assert.Equal(t, "bcrypt", cfg.Hashing.Default)
 		assert.NotContains(t, cfg.Hashing.Hashers, "argon2id")
+	})
+
+	t.Run("loads the application's own configuration from the same sources", func(t *testing.T) {
+		t.Parallel()
+		own := &ownConfig{}
+		opts := options([]string{
+			"APP_DATABASE__URL=postgres://localhost/app", "APP_REDIS__URL=redis://localhost",
+			"APP_SIGNUP__MODE=open",
+		})
+		opts.Config = own
+
+		_, err := foundation.LoadConfig(t.Context(), opts)
+		require.NoError(t, err)
+
+		assert.Equal(t, "open", own.Signup.Mode)
+		assert.Equal(t, 10, own.Signup.MinLength)
+	})
+
+	t.Run("stops on an application value that cannot work", func(t *testing.T) {
+		t.Parallel()
+		opts := options([]string{
+			"APP_DATABASE__URL=postgres://localhost/app", "APP_REDIS__URL=redis://localhost",
+			"APP_SIGNUP__MIN_LENGTH=0",
+		})
+		opts.Config = &ownConfig{}
+
+		_, err := foundation.LoadConfig(t.Context(), opts)
+
+		var configErr *foundation.ConfigError
+		require.ErrorAs(t, err, &configErr)
+		assert.ErrorContains(t, err, "min_length must be positive")
 	})
 }
 
@@ -232,4 +264,23 @@ func TestAppKey(t *testing.T) {
 
 		require.Error(t, err)
 	})
+}
+
+/*
+ownConfig is an application's own configuration, loaded beside the
+framework's.
+*/
+type ownConfig struct {
+	Signup struct {
+		Mode      string `default:"closed" koanf:"mode"`
+		MinLength int    `default:"10"     koanf:"min_length"`
+	} `koanf:"signup"`
+}
+
+func (c *ownConfig) Validate() error {
+	if c.Signup.MinLength <= 0 {
+		return errors.New("min_length must be positive")
+	}
+
+	return nil
 }

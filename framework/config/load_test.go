@@ -277,3 +277,51 @@ func TestLoad(t *testing.T) {
 		assert.Equal(t, 8080, cfg.Port)
 	})
 }
+
+func TestLoadInto(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fills the struct the caller holds", func(t *testing.T) {
+		t.Parallel()
+		cfg := &appConfig{}
+
+		err := config.LoadInto(t.Context(), config.LoadOptions{
+			EnvPrefix: "APP",
+			Environ:   []string{"APP_PORT=9000", "APP_MAIL__DEFAULT=log"},
+		}, cfg)
+
+		require.NoError(t, err)
+		assert.Equal(t, 9000, cfg.Port)
+		assert.Equal(t, "log", cfg.Mail.Default)
+		assert.Equal(t, "app", cfg.Name)
+	})
+
+	t.Run("splits environment lists of the struct", func(t *testing.T) {
+		t.Parallel()
+		cfg := &listConfig{}
+
+		err := config.LoadInto(t.Context(), config.LoadOptions{
+			EnvPrefix: "APP",
+			Environ:   []string{"APP_LOCALES=en,fr"},
+		}, cfg)
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"en", "fr"}, cfg.Locales)
+	})
+
+	t.Run("refuses a target that is not a struct pointer", func(t *testing.T) {
+		t.Parallel()
+
+		err := config.LoadInto(t.Context(), config.LoadOptions{Name: "app", Environ: []string{}}, 3)
+
+		require.ErrorContains(t, err, "apply app defaults")
+	})
+
+	t.Run("checks the values of the struct", func(t *testing.T) {
+		t.Parallel()
+
+		err := config.LoadInto(t.Context(), config.LoadOptions{Name: "app", Environ: []string{}}, &checkedConfig{})
+
+		require.ErrorContains(t, err, "port is required")
+	})
+}

@@ -1,6 +1,6 @@
 # 00 Accounts: edge cases
 
-Style: caveman. Each: case. Decided behavior. Renumbered 2026-11-02 (extensibility seams: factors, providers, login/access policy, reauth, organizations, permissions). Scope trim 2026-11-02: domain join cases (old 179, 225; later: `domain-join`) removed, renumbered. Final sweep 2026-11-02: 28-30 rewritten for `http.CrossOriginProtection`; 261-270 added (CSRF, centrifuge kick, app confirmation, 13-15 permissions); 271-273 added (07 agent actions, 16 imports, 08 GitHub/docs sync permissions). Every case maps to a test named `E<n> ...` (testing.md).
+Style: caveman. Each: case. Decided behavior. Renumbered 2026-11-02 (extensibility seams: factors, providers, login/access policy, reauth, organizations, permissions). Scope trim 2026-11-02: domain join cases (old 179, 225; later: `domain-join`) removed, renumbered. Final sweep 2026-11-02: 28-30 rewritten for `http.CrossOriginProtection`; 261-270 added (CSRF, centrifuge kick, app confirmation, 13-15 permissions); 271-273 added (07 agent actions, 16 imports, 08 GitHub/docs sync permissions). Every case has a test, named in plain words (testing.md).
 
 ## Signup and identity
 

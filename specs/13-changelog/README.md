@@ -410,7 +410,7 @@ database/seeders/changelog_seeder.go               # 8 entries over 3 months, la
 app/console/commands/ changelog_rerender_command.go (`dimmi changelog:rerender`), changelog_publish_due_command.go (`dimmi changelog:publish-due`)
 tests/
    # integration only (00-conventions/testing.md): real App, real Postgres (pgvector:pg18), real Valkey, real River drained via tc.Queue.Drain;
-   # fakes only at process boundaries: tc.Mail (captured MIME), httpclienttest.New(tc.App.HTTP) (GitHub fixtures), llm.Fake(), tc.Clock. Edge ids in names: t.Run("E158 ...")
+   # fakes only at process boundaries: tc.Mail (captured MIME), httpclienttest.New(tc.App.HTTP) (GitHub fixtures), llm.Fake(), tc.Clock. tests named in plain words, every edge case covered
    feature/changelog/*_test.go (per endpoint), public_site_test.go, feeds_test.go (RSS validator + golden), seo_test.go,
    widget_changelog_test.go, subscriptions_test.go (double opt-in, scanner GET, one-click), mailings_test.go (snapshot, batches, undo, caps, feedback dedupe),
    github_release_handler_test.go (signed delivery through 08 shared route `/webhooks/github/repositories/{ghr}`, GitHub HTTP fixtures), generation_test.go (llm.Fake), mcp_changelog_tools_test.go,

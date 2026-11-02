@@ -1,0 +1,58 @@
+/*
+|--------------------------------------------------------------------------
+| Auth Config Controller
+|--------------------------------------------------------------------------
+|
+| Anyone may ask how to sign in on this server, before signing in. The
+| answer holds no secret: only what a sign-in screen needs to show.
+|
+*/
+
+package v1
+
+import (
+	"context"
+
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+
+	appauth "github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/app/http/requests"
+	"github.com/dimmihq/dimmi/app/http/resources"
+	"github.com/dimmihq/dimmi/config"
+)
+
+/*
+AuthConfigOutput is the sign-in options of the server.
+*/
+type AuthConfigOutput struct {
+	Body fhttp.Resource[resources.AuthConfig]
+}
+
+/*
+AuthConfigController serves GET /auth/config.
+*/
+type AuthConfigController struct {
+	Auth   config.AuthConfig
+	Server Server
+}
+
+/*
+Show answers with the sign-in options.
+*/
+func (c *AuthConfigController) Show(context.Context, *requests.NoInput) (*AuthConfigOutput, error) {
+	return &AuthConfigOutput{Body: fhttp.NewResource(resources.AuthConfig{
+		Object:            "auth_config",
+		Edition:           c.Server.Edition,
+		ServerVersion:     c.Server.Version,
+		APIVersion:        c.Server.APIVersion,
+		Region:            c.Server.Region,
+		SignupMode:        c.Auth.Signup.Mode,
+		PasswordLogin:     true,
+		MailConfigured:    c.Server.MailConfigured,
+		PasswordMinLength: c.Auth.Passwords.MinLength,
+		Providers:         resources.NewProviders(appauth.OfferedProviders(c.Auth)),
+		Factors:           resources.NewFactors(appauth.OfferedFactors(c.Auth)),
+		Capabilities:      []string{},
+		MinClientVersions: map[string]*string{"ios": nil, "android": nil, "cli": nil},
+	})}, nil
+}

@@ -1,6 +1,6 @@
 # 11 Self-host: tasks
 
-Style: caveman. Ordered. Each task about 1 day, merged with tests. Depends on foundation/framework skeleton (config, DB, River, Filesystem, `mail` named mailers, KeyManager, `framework/health`, `framework/testkit`). Final sweep 2026-11-02: Valkey required (decision 18), framework reuse (automemlimit, realclientip-go, goose session locker, age, go-systemd), mail final model, feedback doctor checks. App tests are integration tests on real Postgres + Valkey (services from root `compose.yaml`: `pgvector/pgvector:pg18`, `valkey/valkey:8`, SeaweedFS S3; found via `DATABASE_URL`, `REDIS_URL`, `AWS_*`); edge case ids in test names.
+Style: caveman. Ordered. Each task about 1 day, merged with tests. Depends on foundation/framework skeleton (config, DB, River, Filesystem, `mail` named mailers, KeyManager, `framework/health`, `framework/testkit`). Final sweep 2026-11-02: Valkey required (decision 18), framework reuse (automemlimit, realclientip-go, goose session locker, age, go-systemd), mail final model, feedback doctor checks. App tests are integration tests on real Postgres + Valkey (services from root `compose.yaml`: `pgvector/pgvector:pg18`, `valkey/valkey:8`, SeaweedFS S3; found via `DATABASE_URL`, `REDIS_URL`, `AWS_*`); tests named in plain words, every edge case covered.
 
 ## M1 Boot, config, first run
 

@@ -45,6 +45,22 @@ Cookie is a cookie sent or received.
 type Cookie = http.Cookie
 
 /*
+SameSite is the cross-site policy of a cookie.
+*/
+type SameSite = http.SameSite
+
+/*
+The cross-site policies a cookie can carry. Lax, the usual choice, sends
+the cookie on top-level navigation from other sites but not on their
+background requests.
+*/
+const (
+	SameSiteLaxMode    = http.SameSiteLaxMode
+	SameSiteStrictMode = http.SameSiteStrictMode
+	SameSiteNoneMode   = http.SameSiteNoneMode
+)
+
+/*
 The request methods routes are registered with.
 */
 const (

@@ -1,0 +1,5 @@
+{
+  "password": "The {{.field}} is too common. Choose another one.",
+  "password_personal": "The {{.field}} must not be your email or name.",
+  "registered": "The selected {{.field}} is invalid."
+}

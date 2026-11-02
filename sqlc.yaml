@@ -1,0 +1,54 @@
+# sqlc compiles database/queries into app/models. The schema is the
+# framework's migration set followed by the application's, the same order
+# the migration runner applies them. The overrides keep generated models
+# on standard and framework types, so application code never names a
+# database driver type.
+version: "2"
+sql:
+  - engine: postgresql
+    queries: database/queries
+    schema:
+      - framework/session
+      - framework/auth/token
+      - framework/oauth
+      - framework/customdomain/storage
+      - framework/foundation
+      - database/migrations
+    gen:
+      go:
+        package: models
+        out: app/models
+        sql_package: pgx/v5
+        emit_pointers_for_null_types: true
+        emit_json_tags: true
+        json_tags_case_style: snake
+        overrides:
+          - db_type: uuid
+            go_type: { import: github.com/dimmihq/dimmi/framework/ids, type: UUID }
+          - db_type: uuid
+            nullable: true
+            go_type: { import: github.com/dimmihq/dimmi/framework/ids, type: UUID, pointer: true }
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type: { type: time.Time, pointer: true }
+          - db_type: jsonb
+            go_type: { import: encoding/json, type: RawMessage }
+          - db_type: jsonb
+            nullable: true
+            go_type: { import: encoding/json, type: RawMessage }
+          - db_type: citext
+            go_type: string
+          - db_type: citext
+            nullable: true
+            go_type: { type: string, pointer: true }
+          - db_type: inet
+            go_type: { import: net/netip, type: Addr }
+          - db_type: inet
+            nullable: true
+            go_type: { import: net/netip, type: Addr, pointer: true }
+          - db_type: vector
+            go_type: { import: github.com/dimmihq/dimmi/framework/database, type: Vector }
+          - column: "*.*_encrypted"
+            go_type: { import: github.com/dimmihq/dimmi/framework/encryption, type: Sealed }
