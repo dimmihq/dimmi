@@ -1,0 +1,11 @@
+-- migrate: phase=expand
+
+-- +goose Up
+CREATE TABLE {{.Table}} (
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- +goose Down
+DROP TABLE {{.Table}};

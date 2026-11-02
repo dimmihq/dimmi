@@ -1,0 +1,11 @@
+package {{.Package}}
+
+import "testing"
+
+func Test{{.Name}}(t *testing.T) {
+	t.Parallel()
+
+	t.Run("states the behavior in a sentence", func(t *testing.T) {
+		t.Parallel()
+	})
+}

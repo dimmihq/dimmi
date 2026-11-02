@@ -1,0 +1,9 @@
+From: ana@sender.example
+To: help@shop.example
+Subject: Broken
+Content-Type: multipart/mixed; boundary="never-closed"
+
+--never-closed
+Content-Type: text/plain
+
+Body before the end.

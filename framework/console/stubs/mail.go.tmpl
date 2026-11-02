@@ -1,0 +1,35 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}}
+|--------------------------------------------------------------------------
+|
+| Say who receives this mail and why.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+
+	"{{.Framework}}/mail"
+)
+
+/*
+{{.Name}} is one kind of mail the application sends.
+*/
+type {{.Name}} struct{}
+
+/*
+Envelope returns the subject; the sender comes from the configuration.
+*/
+func (m {{.Name}}) Envelope() mail.Envelope {
+	return mail.Envelope{Subject: "{{.Title}}"}
+}
+
+/*
+Content returns the body.
+*/
+func (m {{.Name}}) Content(_ context.Context) (mail.Content, error) {
+	return mail.Content{Text: "{{.Title}}"}, nil
+}

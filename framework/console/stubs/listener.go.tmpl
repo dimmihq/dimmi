@@ -1,0 +1,31 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}}
+|--------------------------------------------------------------------------
+|
+| Say what this listener does when the event happens.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+{{if .Event}}
+	appevents "{{.Module}}/app/events"
+{{- else}}
+	"{{.Framework}}/events"
+{{- end}}
+)
+
+/*
+{{.Name}} reacts to the event.
+*/
+type {{.Name}} struct{}
+
+/*
+Handle reacts to one event.
+*/
+func (l *{{.Name}}) Handle(_ context.Context, _ {{if .Event}}appevents.{{.Event}}{{else}}events.Event{{end}}) error {
+	return nil
+}

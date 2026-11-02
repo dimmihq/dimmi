@@ -1,0 +1,27 @@
+# Backing services for local development and tests.
+# Host ports are offset so they never clash with other local projects.
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    command: postgres -c max_connections=300
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["15432:5432"]
+    volumes: [postgres:/var/lib/postgresql]
+
+  valkey:
+    image: valkey/valkey:8
+    ports: ["16379:6379"]
+
+  s3:
+    image: chrislusf/seaweedfs:3.97
+    command: server -s3 -dir=/data -volume.max=0
+    ports: ["18333:8333"]
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports: ["11025:1025", "18025:8025"]
+
+volumes:
+  postgres:

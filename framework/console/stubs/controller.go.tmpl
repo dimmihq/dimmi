@@ -1,0 +1,49 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}} Controller
+|--------------------------------------------------------------------------
+|
+| Say which resource this controller serves and who may call it. It stays
+| thin: it reads the request, asks the policy, runs one action and shapes
+| the response.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+
+	"{{.Framework}}/routing"
+)
+
+/*
+{{.Name}}Input is what the endpoint reads from the request: path, query
+and header fields from their tags, and Body from the JSON body.
+*/
+type {{.Name}}Input struct{}
+
+/*
+{{.Name}}Output is the response. Body is written as the JSON body and
+other tagged fields as headers.
+*/
+type {{.Name}}Output struct {
+	Body struct {
+		ID string `json:"id"`
+	}
+}
+
+/*
+{{.Name}}Controller serves the resource. Register its endpoints in the
+routes, such as routing.Get(r, path, name, c.Show).
+*/
+type {{.Name}}Controller struct{}
+
+var _ routing.Endpoint[{{.Name}}Input, {{.Name}}Output] = (*{{.Name}}Controller)(nil).Show
+
+/*
+Show answers the request with the resource.
+*/
+func (c *{{.Name}}Controller) Show(_ context.Context, _ *{{.Name}}Input) (*{{.Name}}Output, error) {
+	return &{{.Name}}Output{}, nil
+}

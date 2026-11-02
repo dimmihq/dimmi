@@ -1,0 +1,70 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}} Notification
+|--------------------------------------------------------------------------
+|
+| Say who is told about what, and why it matters to them now.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+
+	"{{.Framework}}/mail"
+	"{{.Framework}}/notifications"
+)
+
+/*
+{{.Name}}Notification is sent by mail and kept for the in-app list.
+*/
+type {{.Name}}Notification struct{}
+
+/*
+Type names the notification in queued deliveries and stored rows. It
+must not change while deliveries may be waiting.
+*/
+func (n {{.Name}}Notification) Type() string {
+	return "{{.Snake}}"
+}
+
+/*
+Via returns the channels the notification goes to for the recipient.
+*/
+func (n {{.Name}}Notification) Via(_ notifications.Notifiable) []string {
+	return []string{"mail", "database"}
+}
+
+/*
+ToMail returns the mail sent for the delivery.
+*/
+func (n {{.Name}}Notification) ToMail(_ context.Context, _ notifications.Delivery) (mail.Mailable, error) {
+	return {{.Name}}Mail{}, nil
+}
+
+/*
+ToDatabase returns the data stored for the delivery, encoded as JSON.
+*/
+func (n {{.Name}}Notification) ToDatabase(_ context.Context, _ notifications.Delivery) (any, error) {
+	return map[string]any{}, nil
+}
+
+/*
+{{.Name}}Mail is the mail the notification sends.
+*/
+type {{.Name}}Mail struct{}
+
+/*
+Envelope returns the subject; the sender comes from the configuration.
+*/
+func (m {{.Name}}Mail) Envelope() mail.Envelope {
+	return mail.Envelope{Subject: "{{.Title}}"}
+}
+
+/*
+Content returns the body.
+*/
+func (m {{.Name}}Mail) Content(_ context.Context) (mail.Content, error) {
+	return mail.Content{Text: "{{.Title}}"}, nil
+}

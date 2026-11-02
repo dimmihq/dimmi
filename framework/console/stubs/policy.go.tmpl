@@ -1,0 +1,49 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}} Policy
+|--------------------------------------------------------------------------
+|
+| Say who may act on which {{.Title}} records. A permission says what a
+| caller may do in general; these rules decide whether they may do it to
+| one record, such as editing only the ones they own.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+
+	"{{.Framework}}/auth"
+{{- if .Model}}
+
+	"{{.Module}}/app/models"
+{{- end}}
+)
+
+/*
+{{.Name}}Policy holds the rules for the {{.Permission}} permissions.
+*/
+type {{.Name}}Policy struct{}
+
+/*
+Register adds the policy's rules to the gate.
+*/
+func (p {{.Name}}Policy) Register(g *auth.Gate) {
+	auth.RegisterPolicy(g, "{{.Permission}}.update", p.Update)
+	auth.RegisterPolicy(g, "{{.Permission}}.delete", p.Delete)
+}
+
+/*
+Update reports whether the caller may change the record.
+*/
+func (p {{.Name}}Policy) Update(_ context.Context, _ auth.Principal, _ {{.Resource}}) (bool, error) {
+	return false, nil
+}
+
+/*
+Delete reports whether the caller may delete the record.
+*/
+func (p {{.Name}}Policy) Delete(_ context.Context, _ auth.Principal, _ {{.Resource}}) (bool, error) {
+	return false, nil
+}

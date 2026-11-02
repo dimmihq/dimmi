@@ -1,0 +1,393 @@
+version: "2"
+
+run:
+  relative-path-mode: gomod   # exclusion paths are relative to go.mod
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - govet          # compiler-adjacent checks (printf, copylocks, unusedresult)
+    - staticcheck    # bugs, simplifications, style (SA, S, ST, QF checks)
+    - errcheck       # every error handled or discarded with an explained `_ =`
+    - errorlint      # errors.Is/As and %w; never == or type switches on wrapped errors
+    - nilerr         # returning nil after checking err != nil
+    - nilnesserr     # returning a different, nil error after a failed check
+    - ineffassign    # assignments never read
+    - unused         # dead code
+    - unparam        # parameters that always receive the same value
+    - wastedassign   # values overwritten before use
+    - unconvert      # conversions to the type a value already has
+    - exhaustive     # every switch over an enum lists every value
+    - bodyclose      # HTTP response bodies closed (framework/httpclient)
+    - sqlclosecheck  # rows closed (database/sql and pgx v5)
+    - noctx          # outbound requests carry a context
+    - contextcheck   # functions pass the caller's ctx on
+    - containedctx   # no context.Context stored in structs
+    - gosec          # security footguns (weak crypto, file modes, string-built SQL)
+    - recvcheck      # a type uses value or pointer receivers, not both
+    - thelper        # test helpers call t.Helper()
+    - usetesting     # t.Context(), t.TempDir(), t.Setenv() in tests
+    # Architecture (settings in framework.md 7.1)
+    - depguard
+    - forbidigo
+    - gochecknoinits
+    - gochecknoglobals # no package-level mutable state
+    # Size and complexity (numbers in section 3)
+    - funlen
+    - gocognit
+    - nestif
+    - lll
+    - interfacebloat
+    # Readability
+    - revive         # Go style, file length, argument and result limits
+    - gocritic       # diagnostic, style, performance; includes commented-out code
+    - errname        # sentinels start with Err, error types end with Error
+    - inamedparam    # interface method parameters are named
+    - modernize      # current stdlib idioms (min/max, slices, maps, range over int)
+    - intrange       # `for i := range n`
+    - usestdlibvars  # http.MethodPost, http.StatusOK instead of literals
+    - tagliatelle    # JSON and YAML tags are snake_case (Laravel JSON shape)
+    - sloglint       # one log call shape: context, static message, attributes
+    - whitespace     # no blank lines at the start or end of blocks
+    - misspell       # US English
+    - dupword        # "the the"
+    # Comments (section 5)
+    - godot          # every comment is a sentence: capital letter, final period
+    - godoclint      # doc line length, link hygiene, deprecation format
+    - godox          # FIXME, XXX, HACK, BUG are not mergeable
+    - nolintlint     # //nolint names the linter and gives a reason
+
+  settings:
+    # depguard and forbidigo: framework.md 7.1 (framework rules only until app/ exists).
+    depguard:
+      rules:
+        framework:
+          list-mode: strict
+          files:
+            - "**/framework/**/*.go"
+          allow:
+            - $gostd
+            - go/ast
+            - go/build
+            - go/parser
+            - go/token
+            - github.com/dimmihq/dimmi/framework
+            # http, routing
+            - github.com/go-chi/chi/v5
+            - github.com/go-chi/httprate
+            - github.com/danielgtaylor/huma/v2
+            - github.com/rs/cors
+            - github.com/realclientip/realclientip-go
+            - github.com/medama-io/go-useragent
+            # database, queue, schedule
+            - github.com/jackc/pgx/v5
+            - github.com/jackc/puddle/v2
+            - github.com/pgvector/pgvector-go
+            - github.com/pressly/goose/v3
+            - github.com/riverqueue/river
+            - github.com/robfig/cron/v3
+            # config, foundation, console
+            - github.com/knadh/koanf
+            - github.com/KimMachineGun/automemlimit
+            - github.com/spf13/cobra
+            - github.com/spf13/pflag
+            - github.com/charmbracelet/huh
+            - github.com/charmbracelet/lipgloss
+            # cache, realtime, valkey, resilience
+            - github.com/maypok86/otter/v2
+            - github.com/centrifugal/centrifuge
+            - github.com/redis/rueidis
+            - github.com/coder/websocket
+            - github.com/sony/gobreaker/v2
+            - github.com/cenkalti/backoff/v5
+            # security
+            - golang.org/x/crypto
+            - golang.org/x/oauth2
+            - golang.org/x/sync
+            - golang.org/x/time
+            - github.com/alexedwards/argon2id
+            - github.com/tink-crypto/tink-go/v2
+            - github.com/pquerna/otp
+            - github.com/go-jose/go-jose/v4
+            - github.com/coreos/go-oidc/v3
+            - github.com/standard-webhooks/standard-webhooks/libraries
+            - github.com/SherClockHolmes/webpush-go
+            # ids, time, strings
+            - github.com/google/uuid
+            - go.jetify.com/typeid
+            - github.com/jonboulle/clockwork
+            - github.com/gosimple/slug
+            - github.com/gertd/go-pluralize
+            - github.com/iancoleman/strcase
+            # content
+            - github.com/a-h/templ
+            - github.com/olivere/vite
+            - github.com/vearutop/statigz
+            - github.com/yuin/goldmark
+            - go.abhg.dev/goldmark/toc
+            - github.com/alecthomas/chroma/v2
+            - github.com/microcosm-cc/bluemonday
+            - go.abhg.dev/goldmark/frontmatter
+            - github.com/gorilla/feeds
+            - github.com/aymanbagabas/go-udiff
+            - github.com/sergi/go-diff
+            - golang.org/x/image
+            - github.com/bep/imagemeta
+            - github.com/sergeymakinen/go-ico
+            - github.com/PuerkitoBio/goquery
+            - github.com/andybalholm/cascadia
+            - github.com/k3a/html2text
+            - github.com/JohannesKaufmann/html-to-markdown/v2
+            - codeberg.org/readeck/go-readability/v2
+            - golang.org/x/net
+            - golang.org/x/text
+            - github.com/abadojack/whatlanggo
+            # storage, mail, cloud
+            - github.com/aws/aws-sdk-go-v2
+            - github.com/aws/smithy-go
+            - github.com/jhillyerd/enmime
+            - github.com/emersion/go-message
+            - github.com/emersion/go-msgauth
+            - blitiri.com.ar/go/spf
+            - github.com/wneessen/go-mail
+            - github.com/emersion/go-sasl
+            # http client
+            - resty.dev/v3
+            - code.dny.dev/ssrf
+            - github.com/jarcoal/httpmock
+            - github.com/temoto/robotstxt
+            # custom domains, TLS
+            - github.com/caddyserver/certmagic
+            - go.uber.org/zap
+            # observability
+            - github.com/m-mizutani/masq
+            - go.opentelemetry.io/otel
+            - go.opentelemetry.io/contrib
+            - github.com/exaring/otelpgx
+            - github.com/prometheus/client_golang
+            - github.com/getsentry/sentry-go
+            # mcp (server + client)
+            - github.com/modelcontextprotocol/go-sdk
+            - github.com/google/jsonschema-go
+            - github.com/yosida95/uritemplate/v3
+            # testkit only (framework-test-only rule)
+            - github.com/stretchr/testify
+            - github.com/google/go-cmp
+            - github.com/tidwall/gjson
+          deny:
+            - pkg: "database/sql$"
+              desc: "framework/database uses pgx; database/sql/driver allowed for Valuer/Scanner"
+            - pkg: "math/rand$"
+              desc: "use crypto/rand or math/rand/v2"
+            - pkg: "log$"
+              desc: "use log/slog via framework/log"
+        framework-exec:
+          list-mode: lax
+          files:
+            - "**/framework/**/*.go"
+            - "!**/framework/process/**"
+          deny:
+            - pkg: "os/exec"
+              desc: "only framework/process runs programs"
+        framework-test-only:
+          list-mode: lax
+          files:
+            - "**/framework/**/*.go"
+            - "!**/framework/testkit/**"
+            - "!$test"
+            - "!**/framework/**/drivertest/**"   # contract suites are test code in non-test files
+          deny:
+            - pkg: "github.com/dimmihq/dimmi/framework/testkit"
+              desc: "testkit only in tests"
+            - pkg: "github.com/stretchr/testify"
+              desc: "testkit only"
+        framework-banned:
+          list-mode: lax
+          files: ["**/*.go"]
+          deny:
+            - { pkg: "github.com/fergusstrange/embedded-postgres", desc: "no pgvector; real Postgres only" }
+            - { pkg: "github.com/alicebob/miniredis", desc: "real Valkey only" }
+            - { pkg: "github.com/redis/go-redis", desc: "one Valkey client: rueidis" }
+            - { pkg: "github.com/valkey-io/valkey-go", desc: "one Valkey client: rueidis" }
+            - { pkg: "github.com/pemistahl/lingua-go", desc: "memory budget" }
+            - { pkg: "github.com/disgoorg/disgo/voice", desc: "cgo" }
+            - { pkg: "github.com/emersion/go-smtp", desc: "no SMTP receiver" }
+
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: '^time\.(Now|Since|Until|Sleep|After|AfterFunc|Tick|NewTimer|NewTicker)$'
+          pkg: '^time$'
+          msg: '[clock] use framework/clock (fakeable)'
+        - pattern: '^http\.(DefaultClient|DefaultTransport|Get|Head|Post|PostForm|Client|Transport|NewRequest|NewRequestWithContext)$'
+          pkg: '^net/http$'
+          msg: '[httpclient] use framework/httpclient (SSRF guard, fakes)'
+        - pattern: '^http\.(ListenAndServe|ListenAndServeTLS|Serve|ServeTLS|Server)$'
+          pkg: '^net/http$'
+          msg: '[httpclient] servers started by framework/foundation only'
+        - pattern: '^context\.(Background|TODO)$'
+          pkg: '^context$'
+          msg: '[ctx] pass ctx from caller; tests use t.Context()'
+        - pattern: '^fmt\.Print(f|ln)?$'
+          pkg: '^fmt$'
+          msg: '[print] use framework/log or console output'
+        - pattern: '^os\.(Getenv|LookupEnv|Environ|Setenv|Exit)$'
+          pkg: '^os$'
+          msg: '[ctx] config via framework/config; exit via foundation'
+        - pattern: '^panic$'
+          msg: '[panic] return an error; Must* helpers live in framework/ only'
+        - pattern: '^(print|println)$'
+          msg: '[print] use framework/log or console output'
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment   # field order is for readers, not for saving bytes
+        - shadow           # `err` shadowing is idiomatic
+    errcheck:
+      check-type-assertions: true
+    exhaustive:
+      check: [switch, mapliteral]
+      default-signifies-exhaustive: false   # a new enum value must surface every switch
+    funlen:
+      lines: 50
+      statements: 30
+      ignore-comments: true
+    gocognit:
+      min-complexity: 15
+    nestif:
+      min-complexity: 4
+    lll:
+      line-length: 120
+      tab-width: 4
+    interfacebloat:
+      max: 5
+    revive:
+      severity: error
+      enable-default-rules: true
+      rules:
+        - name: file-length-limit
+          arguments: [{ max: 400, skip-comments: true, skip-blank-lines: true }]
+        - name: argument-limit
+          arguments: [4]
+        - name: function-result-limit
+          arguments: [3]
+        - name: max-control-nesting
+          arguments: [3]
+        - name: max-public-structs
+          arguments: [5]
+        - name: exported            # doc on exported identifiers, starting with the name; no stutter
+          arguments: ["check-private-receivers", "check-public-interface"]
+        - name: package-comments
+        - name: bare-return         # no naked returns
+        - name: early-return
+        - name: indent-error-flow   # no else after return
+        - name: superfluous-else
+        - name: flag-parameter      # no bool parameters that switch behaviour
+        - name: context-as-argument # ctx first
+        - name: deep-exit
+        - name: confusing-naming
+        - name: import-shadowing
+        - name: redefines-builtin-id
+        - name: unexported-return
+        - name: use-any
+        - name: use-errors-new
+        - name: identical-branches
+        - name: comment-spacings    # `// text`, never `//text` (directives excepted)
+    gocritic:
+      enabled-tags: [diagnostic, style, performance]   # diagnostic includes commentedOutCode
+      disabled-checks:
+        - hugeParam        # pointer vs value is a design decision
+        - rangeValCopy     # same
+        - whyNoLint        # nolintlint already requires reasons
+        - unnamedResult    # named results only when they document
+        - importShadow     # revive import-shadowing covers it
+        - paramTypeCombine # gofumpt group-params rewrites it
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+    sloglint:
+      no-global: all        # use the logger from framework/log
+      context: all          # InfoContext, never Info (request and trace correlation)
+      static-msg: true
+      msg-style: lowercased
+      attr-only: true       # log.String, log.Err (framework/log attrs)
+      key-naming-case: snake
+      forbidden-keys: [time, level, msg, source]
+    misspell:
+      locale: US
+    godot:
+      scope: all
+      capital: true
+      exclude:
+        - '^\s*\|'   # file banners: the banner frame is not a sentence
+    godoclint:
+      default: none
+      enable: [single-pkg-doc, deprecated, max-len, no-unused-link]
+      options:
+        max-len:
+          length: 80
+    godox:
+      keywords: [FIXME, XXX, HACK, BUG]
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+  exclusions:
+    generated: strict       # sqlc and templ write the standard "Code generated ... DO NOT EDIT." header
+    warn-unused: true
+    # No presets: the "comments" preset would silence the doc comment rules.
+    paths:
+      - _templ\.go$
+      - ^app/models/.*\.sql\.go$
+    rules:
+      # framework.md 7.1 exclusion rules.
+      - path: '^framework/clock/'
+        linters: [forbidigo]
+        text: '\[clock\]'
+      - path: '^framework/httpclient/'
+        linters: [forbidigo]
+        text: '\[httpclient\]'
+      - path: '^framework/foundation/'
+        linters: [forbidigo]
+        text: 'servers started by framework/foundation only'
+      - path: '^(cmd/|framework/foundation/|framework/testkit/|framework/console/)'
+        linters: [forbidigo]
+        text: '\[ctx\]|\[print\]'
+      - path: '_test\.go$'
+        linters: [forbidigo]
+        text: '\[ctx\]'
+      - path: ^framework/
+        linters: [forbidigo]
+        text: '\[panic\]'
+      - path: ^framework/
+        linters: [interfacebloat]   # driver contracts mirror Laravel's (filesystem.Filesystem)
+      - path: _test\.go$
+        linters: [funlen]           # test tables are long by nature; gocognit still applies
+      - linters: [lll]
+        source: https?://
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable: [gofumpt, gci]
+  settings:
+    gofumpt:
+      module-path: github.com/dimmihq/dimmi
+      extra:
+        group-params: true     # func f(a, b string)
+        clothe-returns: true   # rewrites naked returns
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/dimmihq/dimmi/framework)
+        - prefix(github.com/dimmihq/dimmi)
+      custom-order: true
+  exclusions:
+    generated: strict

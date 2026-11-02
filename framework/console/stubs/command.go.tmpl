@@ -1,0 +1,49 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}} Command
+|--------------------------------------------------------------------------
+|
+| Say what an operator uses this command for.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+
+	"{{.Framework}}/console"
+)
+
+/*
+{{.Name}}Command is the {{.Signature}} command.
+*/
+type {{.Name}}Command struct{}
+
+/*
+Name is what the command is called with.
+*/
+func (c *{{.Name}}Command) Name() string {
+	return "{{.Signature}}"
+}
+
+/*
+Description is the line shown in the command list.
+*/
+func (c *{{.Name}}Command) Description() string {
+	return "{{.Title}}"
+}
+
+/*
+Flags declares the command's arguments and flags.
+*/
+func (c *{{.Name}}Command) Flags(_ *console.Flags) {}
+
+/*
+Handle runs the command.
+*/
+func (c *{{.Name}}Command) Handle(_ context.Context, _ *console.Input, out *console.Output) error {
+	out.Info("{{.Title}}: done")
+
+	return nil
+}

@@ -1,0 +1,43 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}}
+|--------------------------------------------------------------------------
+|
+| Say what work this job does in the background and why it cannot run
+| during the request.
+|
+*/
+
+package {{.Package}}
+
+import (
+	"context"
+
+	"{{.Framework}}/queue"
+)
+
+/*
+{{.Name}}Args is the job's payload. It carries ids, never whole records,
+so the worker reads current data when it runs.
+*/
+type {{.Name}}Args struct{}
+
+/*
+Kind names the job type. It must not change while jobs may be waiting.
+*/
+func ({{.Name}}Args) Kind() string {
+	return "{{.Snake}}"
+}
+
+/*
+{{.Name}}Worker runs the job. A run may be repeated after a failure, so
+it must be safe to run twice.
+*/
+type {{.Name}}Worker struct{}
+
+/*
+Handle does the job's work.
+*/
+func (w *{{.Name}}Worker) Handle(_ context.Context, _ *queue.Job[{{.Name}}Args]) error {
+	return nil
+}

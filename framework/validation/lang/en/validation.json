@@ -1,0 +1,93 @@
+{
+  "invalid": "The {{.field}} field is invalid.",
+  "summary": {
+    "one": "{{.message}} (and {{.count}} more error)",
+    "other": "{{.message}} (and {{.count}} more errors)"
+  },
+  "required": "The {{.field}} field is required.",
+  "len": {
+    "string": {
+      "one": "The {{.field}} field must be exactly {{.count}} character.",
+      "other": "The {{.field}} field must be exactly {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must be {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must contain exactly {{.count}} item.",
+      "other": "The {{.field}} field must contain exactly {{.count}} items."
+    }
+  },
+  "min": {
+    "string": {
+      "one": "The {{.field}} field must be at least {{.count}} character.",
+      "other": "The {{.field}} field must be at least {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must be at least {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must have at least {{.count}} item.",
+      "other": "The {{.field}} field must have at least {{.count}} items."
+    }
+  },
+  "max": {
+    "string": {
+      "one": "The {{.field}} field must not be longer than {{.count}} character.",
+      "other": "The {{.field}} field must not be longer than {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must not be greater than {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must not have more than {{.count}} item.",
+      "other": "The {{.field}} field must not have more than {{.count}} items."
+    }
+  },
+  "gt": {
+    "string": {
+      "one": "The {{.field}} field must be longer than {{.count}} character.",
+      "other": "The {{.field}} field must be longer than {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must be greater than {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must have more than {{.count}} item.",
+      "other": "The {{.field}} field must have more than {{.count}} items."
+    }
+  },
+  "gte": {
+    "string": {
+      "one": "The {{.field}} field must be at least {{.count}} character.",
+      "other": "The {{.field}} field must be at least {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must be greater than or equal to {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must have at least {{.count}} item.",
+      "other": "The {{.field}} field must have at least {{.count}} items."
+    }
+  },
+  "lt": {
+    "string": {
+      "one": "The {{.field}} field must be shorter than {{.count}} character.",
+      "other": "The {{.field}} field must be shorter than {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must be less than {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must have fewer than {{.count}} item.",
+      "other": "The {{.field}} field must have fewer than {{.count}} items."
+    }
+  },
+  "lte": {
+    "string": {
+      "one": "The {{.field}} field must not be longer than {{.count}} character.",
+      "other": "The {{.field}} field must not be longer than {{.count}} characters."
+    },
+    "numeric": "The {{.field}} field must be less than or equal to {{.param}}.",
+    "array": {
+      "one": "The {{.field}} field must not have more than {{.count}} item.",
+      "other": "The {{.field}} field must not have more than {{.count}} items."
+    }
+  },
+  "eq": "The {{.field}} field must be {{.param}}.",
+  "ne": "The {{.field}} field must not be {{.param}}.",
+  "oneof": "The {{.field}} field must be one of: {{.param}}.",
+  "alpha": "The {{.field}} field must only contain letters.",
+  "alphanum": "The {{.field}} field must only contain letters and numbers.",
+  "email": "The {{.field}} field must be a valid email address.",
+  "url": "The {{.field}} field must be a valid URL.",
+  "uuid": "The {{.field}} field must be a valid UUID."
+}

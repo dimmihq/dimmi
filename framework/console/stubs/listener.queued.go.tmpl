@@ -1,0 +1,34 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}}
+|--------------------------------------------------------------------------
+|
+| Say what work the event starts in the background.
+|
+*/
+
+package {{.Package}}
+
+import (
+{{- if not .Event}}
+	"{{.Framework}}/events"
+{{- end}}
+	"{{.Framework}}/queue"
+{{- if .Event}}
+
+	appevents "{{.Module}}/app/events"
+{{- end}}
+)
+
+/*
+{{.Name}} turns the event into a job, pushed in the transaction that
+dispatched it so the job exists only if the change commits.
+*/
+type {{.Name}} struct{}
+
+/*
+Job returns the job to push for the event, or nil to push none.
+*/
+func (l *{{.Name}}) Job(_ {{if .Event}}appevents.{{.Event}}{{else}}events.Event{{end}}) queue.Args {
+	return nil
+}

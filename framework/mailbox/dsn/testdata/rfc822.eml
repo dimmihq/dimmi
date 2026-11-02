@@ -1,0 +1,37 @@
+From: Mail Delivery Subsystem <mailer-daemon@mail.example>
+To: orders@shop.example
+Subject: Delivery Status Notification (Failure)
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status; boundary="g"
+
+--g
+Content-Type: multipart/alternative; boundary="alt"
+
+--alt
+Content-Type: text/plain
+
+Address not found.
+--alt
+Content-Type: text/html
+
+<p>Address not found.</p>
+--alt--
+--g
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mail.example
+
+Final-Recipient: rfc822; NoOne@Far.Example
+Action: Failed
+Status: 5.0.0
+
+--g
+Content-Type: message/rfc822
+
+From: Shop <orders@shop.example>
+To: noone@far.example
+Subject: Your order
+Message-ID: <out-2.def@shop.example>
+
+Your order is on its way.
+--g--

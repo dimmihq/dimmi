@@ -1,0 +1,29 @@
+From: ana@sender.example
+To: help@shop.example
+Subject: Invoice attached
+Message-ID: <inv@sender.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed"
+
+--mixed
+Content-Type: multipart/related; boundary="rel"
+
+--rel
+Content-Type: text/html; charset=utf-8
+
+<p>Logo <img src="cid:logo@sender.example"></p>
+--rel
+Content-Type: image/png
+Content-Disposition: inline; filename="logo.png"
+Content-ID: <logo@sender.example>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgo=
+--rel--
+--mixed
+Content-Type: application/pdf; name="invoice.pdf"
+Content-Disposition: attachment; filename="invoice.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQgaW52b2ljZQ==
+--mixed--

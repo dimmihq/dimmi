@@ -1,0 +1,32 @@
+From: feedback@isp.example
+To: abuse@shop.example
+Subject: Abuse report
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=feedback-report; boundary="f"
+
+--f
+Content-Type: text/plain
+
+This is an email abuse report for an email message received from IP 192.0.2.5.
+--f
+Content-Type: message/feedback-report
+
+Feedback-Type: Abuse
+User-Agent: ISP-FBL/1.0
+Version: 1
+Original-Mail-From: <bounces@shop.example>
+Original-Rcpt-To: <reader@isp.example>
+Arrival-Date: Mon, 02 Nov 2026 10:04:00 +0000
+Source-IP: 192.0.2.5
+Reported-Domain: shop.example
+
+--f
+Content-Type: message/rfc822
+
+From: Shop <news@shop.example>
+To: reader@isp.example
+Subject: New arrivals
+Message-ID: <out-3.ghi@shop.example>
+
+See what is new.
+--f--

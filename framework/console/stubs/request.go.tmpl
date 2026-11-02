@@ -1,0 +1,51 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}} Request
+|--------------------------------------------------------------------------
+|
+| Say which endpoint takes this request and which rules its input must
+| meet. Tags carry the rules of each field and run before the handler;
+| a request that breaks them is answered 422 with every broken field.
+|
+*/
+
+package {{.Package}}
+{{- if or .Authorize .Validate}}
+
+import (
+	"context"
+{{- if .Validate}}
+
+	"{{.Framework}}/validation"
+{{- end}}
+)
+{{- end}}
+
+/*
+{{.Name}}Request is the input of the endpoint. Body is the JSON body.
+*/
+type {{.Name}}Request struct {
+	Body struct {
+		Name string `json:"name" validate:"required,max=255"`
+	}
+}
+{{- if .Authorize}}
+
+/*
+Authorize returns nil when the caller may make the request, and a fault
+such as Forbidden when not. It runs before any rule is checked.
+*/
+func (r *{{.Name}}Request) Authorize(_ context.Context) error {
+	return nil
+}
+{{- end}}
+{{- if .Validate}}
+
+/*
+Validate checks the rules tags cannot express, such as a field required
+only when another is set. It runs after the tag rules pass.
+*/
+func (r *{{.Name}}Request) Validate(_ context.Context, _ *validation.Factory) error {
+	return nil
+}
+{{- end}}

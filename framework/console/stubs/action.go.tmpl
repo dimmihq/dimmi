@@ -1,0 +1,30 @@
+/*
+|--------------------------------------------------------------------------
+| {{.Title}}
+|--------------------------------------------------------------------------
+|
+| Say why this action exists and which business rules it must keep.
+|
+*/
+
+package {{.Package}}
+
+import "context"
+
+/*
+{{.Name}}Input carries what the action needs to run.
+*/
+type {{.Name}}Input struct{}
+
+/*
+{{.Name}} is one business operation. It owns its transaction and is the
+only place its rules are enforced, whoever calls it.
+*/
+type {{.Name}} struct{}
+
+/*
+Handle runs the action.
+*/
+func (a *{{.Name}}) Handle(_ context.Context, _ {{.Name}}Input) error {
+	return nil
+}
