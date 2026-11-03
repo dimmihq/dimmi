@@ -11,7 +11,8 @@
 | for split deployments, such as a dashboard on another host. Sensitive routes ask for a recent
 | confirmation of who is calling, within the configured window, and
 | steps that reach other people ask for a proven email where the
-| install requires one.
+| install requires one. Workspace routes run inside the workspace the
+| request names, resolved once the caller is known.
 |
 | The route files sit outside the application package, since routes
 | depend on the application and never the other way around, so the
@@ -64,6 +65,9 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	})
 	fa.Kernel.Alias("verified", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnsureEmailVerified(p.App.Config.Auth.Verification, fa.Errors), nil
+	})
+	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
+		return appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), nil
 	})
 
 	p.App.Vite = vite.New(vite.Options{

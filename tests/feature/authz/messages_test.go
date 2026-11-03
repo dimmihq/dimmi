@@ -23,6 +23,9 @@ func TestRuleMessages(t *testing.T) {
 		for name, fallback := range map[string]string{
 			"password":   rules.UncommonPassword{}.Message(),
 			"registered": rules.Registered{}.Message(),
+			"slug":       rules.Slug{}.Message(),
+			"timezone":   rules.Timezone{}.Message(),
+			"locale":     rules.Locale{}.Message(),
 		} {
 			translated := tc.App.Lang.T(ctx, "validation."+name, i18n.Args{"field": "{field}"})
 

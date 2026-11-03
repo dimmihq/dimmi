@@ -39,3 +39,53 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 	)
 	return i, err
 }
+
+const renameOrganization = `-- name: RenameOrganization :exec
+UPDATE organizations o
+SET name = $1, updated_at = $2
+WHERE o.id = $3 AND (SELECT count(*) FROM workspaces w WHERE w.organization_id = o.id) = 1
+`
+
+type RenameOrganizationParams struct {
+	Name string    `json:"name"`
+	Now  time.Time `json:"now"`
+	ID   ids.UUID  `json:"id"`
+}
+
+// RenameOrganization gives the organization the name of its workspace
+// while the workspace is its only one; an organization of several
+// workspaces keeps a name of its own.
+func (q *Queries) RenameOrganization(ctx context.Context, arg RenameOrganizationParams) error {
+	_, err := q.db.Exec(ctx, renameOrganization, arg.Name, arg.Now, arg.ID)
+	return err
+}
+
+const repairOrganization = `-- name: RepairOrganization :execrows
+UPDATE organizations o
+SET deleted_at = NULL,
+    name = CASE WHEN (SELECT count(*) FROM workspaces x WHERE x.organization_id = o.id) = 1 THEN w.name ELSE o.name END,
+    updated_at = $1
+FROM workspaces w
+WHERE w.id = $2 AND o.id = w.organization_id AND w.deleted_at IS NULL
+  AND (
+    o.deleted_at IS NOT NULL
+    OR (o.name <> w.name AND (SELECT count(*) FROM workspaces x WHERE x.organization_id = o.id) = 1)
+  )
+`
+
+type RepairOrganizationParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// RepairOrganization brings back the organization of a live workspace
+// that was deleted by mistake, and gives it the workspace's name while
+// that workspace is its only one. It changes nothing on an organization
+// already in order.
+func (q *Queries) RepairOrganization(ctx context.Context, arg RepairOrganizationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, repairOrganization, arg.Now, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

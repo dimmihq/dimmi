@@ -33,3 +33,105 @@ SET status = @status,
     deactivated_at = CASE WHEN @status::text = 'deactivated' THEN @now::timestamptz END,
     updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListWorkspaceMembers :many
+-- ListWorkspaceMembers returns a page of the workspace's members with
+-- their accounts, narrowed to the statuses and roles asked for (none
+-- means all) and to names or emails containing the search, by name or
+-- newest first.
+SELECT sqlc.embed(m), sqlc.embed(u)
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = @workspace_id
+  AND (coalesce(cardinality(@statuses::text[]), 0) = 0 OR m.status = ANY (@statuses::text[]))
+  AND (coalesce(cardinality(@roles::text[]), 0) = 0 OR m.role = ANY (@roles::text[]))
+  AND (@search::text = '' OR u.name ILIKE '%' || @search::text || '%' OR u.email ILIKE '%' || @search::text || '%')
+ORDER BY
+    CASE WHEN @newest_first::boolean THEN m.created_at END DESC,
+    CASE WHEN NOT @newest_first::boolean THEN lower(u.name) END,
+    m.id
+LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
+
+-- name: FindWorkspaceMemberWithUser :one
+-- FindWorkspaceMemberWithUser returns the member with the id in the
+-- workspace, with their account.
+SELECT sqlc.embed(m), sqlc.embed(u)
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = @workspace_id AND m.id = @id;
+
+-- name: LockWorkspaceMember :one
+-- LockWorkspaceMember returns the member and holds the row until the
+-- transaction ends.
+SELECT * FROM workspace_members WHERE workspace_id = @workspace_id AND id = @id FOR UPDATE;
+
+-- name: CountActiveOwners :one
+-- CountActiveOwners counts the workspace's active owners, the people who
+-- can still run it.
+SELECT count(*) FROM workspace_members WHERE workspace_id = @workspace_id AND role = 'owner' AND status = 'active';
+
+-- name: UpdateWorkspaceMemberRole :one
+-- UpdateWorkspaceMemberRole gives the member a new role.
+UPDATE workspace_members SET role = @role, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: DeactivateWorkspaceMember :one
+-- DeactivateWorkspaceMember ends the member's access to the workspace and
+-- records who ended it, keeping the row so their history stays theirs.
+UPDATE workspace_members
+SET status = 'deactivated', deactivated_at = @now::timestamptz, deactivated_by_member_id = @deactivated_by::uuid,
+    updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: ReactivateWorkspaceMember :one
+-- ReactivateWorkspaceMember gives the member their access back with the
+-- role.
+UPDATE workspace_members
+SET status = 'active', role = @role, deactivated_at = NULL, deactivated_by_member_id = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: TouchWorkspaceMemberAccess :exec
+-- TouchWorkspaceMemberAccess records that the member opened the
+-- workspace, at most once per interval: a member who used it since the
+-- given time is left alone, so busy members cost no write per request.
+UPDATE workspace_members SET last_accessed_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id AND (last_accessed_at IS NULL OR last_accessed_at < @since::timestamptz);
+
+-- name: ListUserMemberships :many
+-- ListUserMemberships returns the user's active memberships, the one used
+-- most recently first, through a security definer function since they
+-- span workspaces. A membership never opened says so in accessed, and
+-- its last_accessed_at is then when it began. Workspaces in the trash are left out unless trashed
+-- asks for them ("with" adds them, "only" lists nothing else), and only
+-- owners ever see one.
+SELECT
+    m.member_id::uuid AS member_id,
+    m.role::text AS role,
+    m.status::text AS status,
+    coalesce(m.joined_via, '')::text AS joined_via,
+    (m.last_accessed_at IS NOT NULL)::boolean AS accessed,
+    coalesce(m.last_accessed_at, m.created_at)::timestamptz AS last_accessed_at,
+    sqlc.embed(w)
+FROM auth_list_user_memberships(@user_id) AS m
+JOIN workspaces w ON w.id = m.workspace_id::uuid
+WHERE m.status = 'active'
+  AND CASE @trashed::text
+      WHEN 'with' THEN w.deleted_at IS NULL OR m.role = 'owner'
+      WHEN 'only' THEN w.deleted_at IS NOT NULL AND m.role = 'owner'
+      ELSE w.deleted_at IS NULL
+  END
+ORDER BY accessed DESC, last_accessed_at DESC, w.created_at;
+
+-- name: FindUserMembership :one
+-- FindUserMembership returns one of the user's own memberships, in any
+-- workspace and any state, through a security definer function since the
+-- workspace is not known yet.
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.status::text AS status
+FROM auth_list_user_memberships(@user_id) AS m
+WHERE m.member_id = @member_id::uuid;

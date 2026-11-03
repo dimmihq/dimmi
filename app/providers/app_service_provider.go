@@ -6,7 +6,9 @@
 | The first provider to run: it ties the product's application to the
 | framework's, registers the public id prefixes, the product's
 | validation rules and its mail, and once every provider has registered,
-| builds the business actions with the services each one uses.
+| builds the business actions with the services each one uses. Actions
+| that set up new workspaces share one list of initializers, which the
+| parts of the product needing defaults fill while registering.
 |
 */
 
@@ -24,6 +26,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -74,6 +77,9 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 		rules.PasswordLength{Min: p.App.Config.Auth.Passwords.MinLength},
 		rules.UncommonPassword{Common: common},
 		rules.Registered{Registries: appauth.Registries(identity.Keys())},
+		rules.Slug{},
+		rules.Timezone{},
+		rules.Locale{Supported: fa.Lang.Locales()},
 	} {
 		errs = append(errs, fa.Validator.Register(rule))
 	}
@@ -93,8 +99,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	}
 
 	a.Actions = &app.Actions{
-		CreateUser:      &users.CreateUser{DB: a.DB, Clock: a.Clock},
-		CreateWorkspace: &workspaces.CreateWorkspace{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		CreateUser: &users.CreateUser{DB: a.DB, Clock: a.Clock},
+		CreateWorkspace: &workspaces.CreateWorkspace{
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Initializers: a.WorkspaceInitializers,
+		},
 		StartSession: &auth.StartSession{
 			DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links, Devices: a.Devices, SecurityLog: a.SecurityLog,
 		},
@@ -107,6 +115,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootSignIn(a, dummy)
 	bootMailedSecrets(a)
 	bootIdentities(a)
+	bootWorkspaces(a)
 
 	return registerJobs(a)
 }
@@ -201,6 +210,28 @@ func bootIdentities(a *app.App) {
 		DB: a.DB, Clock: a.Clock, Providers: a.Providers, MagicLink: a.Config.Auth.MagicLink,
 		SecurityLog: a.SecurityLog,
 	}
+}
+
+/*
+bootWorkspaces builds the actions that work inside workspaces and on
+their members.
+*/
+func bootWorkspaces(a *app.App) {
+	acts := a.Actions
+	acts.ResolveWorkspace = &workspaces.ResolveWorkspace{
+		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Permissions: a.Permissions,
+	}
+	acts.UpdateWorkspace = &workspaces.UpdateWorkspace{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.ListMemberships = &workspaces.ListMemberships{DB: a.DB}
+	acts.RepairWorkspaces = &workspaces.RepairWorkspaces{
+		DB: a.DB, Clock: a.Clock, Initializers: a.WorkspaceInitializers,
+	}
+	acts.ListMembers = &members.ListMembers{DB: a.DB}
+	acts.ShowMember = &members.ShowMember{DB: a.DB}
+	acts.UpdateMember = &members.UpdateMember{
+		DB: a.DB, Events: a.Events, Clock: a.Clock, ConfirmWindow: a.Config.Auth.PasswordConfirmation.TTL,
+	}
+	acts.LeaveWorkspace = &members.LeaveWorkspace{DB: a.DB, Events: a.Events, Clock: a.Clock}
 }
 
 /*

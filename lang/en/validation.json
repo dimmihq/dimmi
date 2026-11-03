@@ -1,5 +1,9 @@
 {
   "password": "The {{.field}} is too common. Choose another one.",
   "password_personal": "The {{.field}} must not be your email or name.",
-  "registered": "The selected {{.field}} is invalid."
+  "registered": "The selected {{.field}} is invalid.",
+  "prohibited": "The {{.field}} field is not allowed in this request.",
+  "timezone": "The {{.field}} must be a valid time zone.",
+  "locale": "The selected {{.field}} is not a supported language.",
+  "slug": "The {{.field}} may only contain lowercase letters, numbers and single dashes."
 }

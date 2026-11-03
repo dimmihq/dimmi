@@ -9,9 +9,11 @@
 | included, so no other site can sign a browser into an account it
 | chose.
 |
-|   guest   anyone; an existing session is allowed and ignored
-|   user    the user themselves, by browser or by their own app
-|   caller  every valid credential, access tokens included
+|   guest      anyone; an existing session is allowed and ignored
+|   user       the user themselves, by browser or by their own app
+|   caller     every valid credential, access tokens included
+|   workspace  every valid credential, inside the workspace the request
+|              works in: named by a browser or app, a token's own
 |
 */
 
@@ -19,6 +21,7 @@ package routes
 
 import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
@@ -40,6 +43,9 @@ type controllers struct {
 	confirmation      *v1.UserConfirmationController
 	confirmationCodes *v1.UserConfirmationCodeController
 	identities        *v1.UserIdentityController
+	memberships       *v1.MembershipController
+	workspace         *v1.CurrentWorkspaceController
+	members           *v1.MemberController
 }
 
 /*
@@ -78,6 +84,9 @@ func API(a *app.App) {
 			routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index)
 			routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
 				Middleware("password.confirm").Status(fhttp.StatusNoContent)
+			routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
+			routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
+				Status(fhttp.StatusNoContent)
 		})
 
 		api.Group("", func(caller *routing.Router) {
@@ -85,7 +94,23 @@ func API(a *app.App) {
 
 			routing.Get(caller, "/me", "me.show", c.me.Show)
 		})
+
+		api.Group("", func(workspace *routing.Router) { workspaceRoutes(workspace, c) })
 	})
+}
+
+/*
+workspaceRoutes declares the routes that work inside the workspace a
+request names, or a token's own.
+*/
+func workspaceRoutes(workspace *routing.Router, c controllers) {
+	workspace.Middleware("csrf", "session", "auth", "workspace")
+
+	routing.Get(workspace, "/workspace", "workspace.show", c.workspace.Show)
+	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
+	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
+	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
+	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 }
 
 /*
@@ -124,6 +149,12 @@ func newControllers(a *app.App) controllers {
 		},
 		identities: &v1.UserIdentityController{
 			List: acts.ListOAuthIdentities, Unlink: acts.UnlinkOAuthIdentity, IDs: a.IDs, Cookies: a.Cookies,
+		},
+		memberships: &v1.MembershipController{List: acts.ListMemberships, Leave: acts.LeaveWorkspace, IDs: a.IDs},
+		workspace:   &v1.CurrentWorkspaceController{UpdateWorkspace: acts.UpdateWorkspace},
+		members: &v1.MemberController{
+			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
+			Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
 		},
 	}
 }
