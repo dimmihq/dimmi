@@ -5,6 +5,8 @@ const pages = [
   ["My inbox", "/d/inbox/mine"],
   ["All", "/d/inbox/all"],
   ["Mentions", "/d/inbox/mentions"],
+  ["Workflows", "/d/workflows"],
+  ["Procedures", "/d/procedures"],
   ["Agent", "/d/agent"],
   ["Docs", "/d/docs"],
   ["Feature requests", "/d/feedback"],
@@ -57,7 +59,7 @@ it.describe("the app's frame", () => {
 
     await page.getByRole("link", { name: "Members" }).click();
     await expect(page).toHaveURL(/\/d\/settings\/members$/);
-    await expect(page.getByRole("link", { name: "Agent" })).toBeHidden();
+    await expect(page.getByRole("link", { name: "Agent", exact: true })).toBeHidden();
 
     await page.getByRole("link", { name: "Back to inbox" }).click();
     await expect(page).toHaveURL(inbox);

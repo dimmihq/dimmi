@@ -14,10 +14,9 @@ import { PageOutlet } from "@/features/layout/page-outlet";
 import { type InboxView, inboxViews } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
-
+import { useWide } from "@/features/shell/use-wide";
 import { ConversationList } from "./conversation-list";
 import { conversationsIn } from "./conversations";
-import { useWide } from "./use-wide";
 
 const visible = { overflow: "visible" } as const;
 

@@ -11,16 +11,34 @@ import { cx } from "@/utils/cx";
 
 /*
  * Panel is one floating card of a page, on BoardUI's app geometry: the
- * sidebar's own card, with its secondary surface, light edge and shadow,
- * so every pane beside the sidebar reads as its sibling. A page with
- * several panes puts each in its own Panel.
+ * sidebar's own card, with its light edge and shadow, so every pane
+ * beside the sidebar reads as its sibling. A page with several panes
+ * puts each in its own Panel.
+ *
+ * BoardUI's surfaces come in one order: the full ground, secondary cards
+ * on it, and primary or tertiary things on those. Controls are drawn for
+ * that order (a switch track or a field is tertiary), so a pane that
+ * holds cards of controls sits on the ground surface, the way BoardUI's
+ * settings modal does, and its cards are secondary. Every other pane is
+ * a secondary card itself.
  */
-export function Panel({ label, className, children }: { label?: string; className?: string; children: ReactNode }) {
+export function Panel({
+  label,
+  ground = false,
+  className,
+  children,
+}: {
+  label?: string;
+  ground?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <section
       aria-label={label}
       className={cx(
-        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-3xl border border-border-button-white bg-background-secondary-default shadow-sidebar",
+        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-3xl border border-border-button-white shadow-sidebar",
+        ground ? "bg-background-full" : "bg-background-secondary-default",
         className,
       )}
     >
@@ -31,9 +49,18 @@ export function Panel({ label, className, children }: { label?: string; classNam
 
 /*
  * ScrollArea is the scrolling body of a panel, below its header. Its top
- * edge softens into the panel's surface once scrolled.
+ * edge softens into the panel's surface once scrolled; ground says the
+ * panel is on the ground surface.
  */
-export function ScrollArea({ className, children }: { className?: string; children: ReactNode }) {
+export function ScrollArea({
+  ground = false,
+  className,
+  children,
+}: {
+  ground?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
   const fade = useScrollFade();
 
   return (
@@ -41,7 +68,10 @@ export function ScrollArea({ className, children }: { className?: string; childr
       <div onScroll={fade.onScroll} className={cx("h-full overflow-y-auto [scrollbar-width:none]", className)}>
         {children}
       </div>
-      <ScrollFade progress={fade.progress} surfaceClassName="from-background-secondary-default" />
+      <ScrollFade
+        progress={fade.progress}
+        surfaceClassName={ground ? "from-background-full" : "from-background-secondary-default"}
+      />
     </div>
   );
 }

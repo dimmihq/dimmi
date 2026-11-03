@@ -105,7 +105,7 @@ function Tile({ file, onRemove }: { file: Attachment; onRemove: () => void }) {
         className={cx(
           "absolute end-[3px] top-[3px] flex size-4 cursor-pointer items-center justify-center rounded-full outline-none",
           "transition-[opacity,filter] duration-300 ease-out focus-visible:ring-2 focus-visible:ring-border-focus-ring",
-          image ? "bg-white/50 text-white backdrop-blur-[2px]" : "bg-background-tertiary-default text-text-secondary",
+          image ? "bg-white/50 text-white backdrop-blur-[2px]" : "bg-background-secondary-default text-text-secondary",
           landed ? "opacity-100 blur-0" : "pointer-events-none opacity-0 blur-[3px]",
         )}
       >

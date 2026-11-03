@@ -53,7 +53,7 @@ export function ConversationList({
                   {conversation.subject}
                 </span>
                 {conversation.example ? (
-                  <Chip variant="caption" color="neutral" className="py-0">
+                  <Chip variant="caption" color={conversation.id === openId ? "soft" : "neutral"} className="py-0">
                     Example
                   </Chip>
                 ) : null}

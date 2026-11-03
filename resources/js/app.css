@@ -10,8 +10,30 @@
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono";
 @import "./styles/globals.css";
+@import "@xyflow/react/dist/base.css" layer(base);
 
 @source "./";
+
+/*
+ * React Flow's canvas drawn in BoardUI's tokens: lines in the button
+ * hover border, a quiet dot grid in the separator colour, and the
+ * minimap as a secondary card with the ground showing through its mask,
+ * so the workflow canvas flips with dark mode like the rest of the app.
+ * React Flow's attribution link is hidden, as its MIT licence allows.
+ */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-background-pattern-color: var(--color-separator-border);
+  --xy-edge-stroke: var(--color-border-button-hover);
+  --xy-edge-stroke-width: 1;
+  --xy-minimap-background-color: var(--color-background-secondary-default);
+  --xy-minimap-mask-background-color: color-mix(in oklab, var(--color-background-full) 60%, transparent);
+  --xy-minimap-node-background-color: var(--color-border-button-hover);
+}
+
+.react-flow__attribution {
+  display: none;
+}
 
 :root {
   --font-inter: "Inter Variable";

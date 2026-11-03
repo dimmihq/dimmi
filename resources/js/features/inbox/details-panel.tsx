@@ -126,21 +126,21 @@ function Actions({ caze, me }: { caze: CaseControls; me: string }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {caze.assignee === me ? null : (
-        <Button variant="secondary" size="xs" leadingIcon={RiUserSharedLine} onClick={() => caze.assign(me)}>
+        <Button variant="secondary" size="small" leadingIcon={RiUserSharedLine} onClick={() => caze.assign(me)}>
           Assign to me
         </Button>
       )}
       {caze.status === "snoozed" ? null : (
-        <Button variant="secondary" size="xs" leadingIcon={RiTimeLine} onClick={() => caze.setStatus("snoozed")}>
+        <Button variant="secondary" size="small" leadingIcon={RiTimeLine} onClick={() => caze.setStatus("snoozed")}>
           Snooze
         </Button>
       )}
       {caze.status === "done" ? (
-        <Button variant="secondary" size="xs" onClick={() => caze.setStatus("open")}>
+        <Button variant="secondary" size="small" onClick={() => caze.setStatus("open")}>
           Reopen
         </Button>
       ) : (
-        <Button size="xs" leadingIcon={RiCheckLine} onClick={() => caze.setStatus("done")}>
+        <Button size="small" leadingIcon={RiCheckLine} onClick={() => caze.setStatus("done")}>
           Mark as done
         </Button>
       )}

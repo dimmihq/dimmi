@@ -71,7 +71,7 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
       <header className="flex items-center gap-1.5 text-body-2-medium text-text-primary">
         <RiSparkling2Line aria-hidden className="size-4 text-foreground-icon-secondary" />
         {entry.author}
-        <Chip variant="caption" color="neutral" className="py-0">
+        <Chip variant="caption" color="soft" className="py-0">
           Internal
         </Chip>
         <span className="ms-auto text-body-2-regular text-text-tertiary">{entry.at}</span>

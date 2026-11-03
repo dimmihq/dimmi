@@ -1,0 +1,236 @@
+/*
+ * What the workspace publishes and learns from: help centers, the
+ * knowledge Dimmi reads, the changelog, the feedback portal, and how
+ * often announcements and surveys may interrupt customers.
+ */
+import { RiBookOpenLine, RiFileTextLine, RiGitRepositoryLine, RiGlobalLine } from "@remixicon/react";
+
+import { Chip } from "@/components/base/badges/chip";
+
+import { Action, Choice, Colour, Danger, Field, Toggle } from "../controls";
+import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
+import { useAccount } from "../use-account";
+
+export function HelpCentersSettings() {
+  const me = useAccount();
+
+  return (
+    <SettingsPage title="Help centers" description="Public docs with their own address. Up to 3 on cloud.">
+      <Section title="Help centers" action={<Action>New help center</Action>}>
+        <Item
+          mark={<Glyph icon={RiBookOpenLine} />}
+          title={`${me.workspace.name} Help`}
+          detail={`${me.workspace.slug}.dimmi.site · English`}
+        >
+          <Chip variant="caption" color="neutral">
+            Default
+          </Chip>
+        </Item>
+      </Section>
+      <Section title={`${me.workspace.name} Help`}>
+        <Row label="Address">
+          <Field label="Subdomain" value={me.workspace.slug} width="w-40" />
+          <span className="text-body-2-regular text-text-tertiary">.dimmi.site</span>
+        </Row>
+        <Row label="Custom domain" description="Serve it from help.yourdomain.com.">
+          <Action>Add domain</Action>
+        </Row>
+        <Row label="Appearance">
+          <Choice label="Help center appearance" options={["Auto", "Light", "Dark"]} />
+        </Row>
+        <Row label="Brand colour" description="Links, buttons and the header.">
+          <Colour label="Help center colour" value="#10b981" />
+        </Row>
+        <Row label="Logo" description="SVG or PNG, shown in the header.">
+          <Action>Upload</Action>
+        </Row>
+      </Section>
+      <Section title="Features">
+        <Row label="Ask AI" description="Let readers ask a question and get an answer from your articles.">
+          <Toggle label="Ask AI" on />
+        </Row>
+        <Row label="Search engines" description="Let Google and others index your articles.">
+          <Toggle label="Search engines" on />
+        </Row>
+        <Row label="Public MCP server" description="Let AI tools read your docs.">
+          <Toggle label="Public MCP server" on />
+        </Row>
+        <Row label="Flag stale articles" description="Ask for a review after an article goes unchanged this long.">
+          <Choice label="Flag stale articles" options={["After 180 days", "After 90 days", "After a year", "Never"]} />
+        </Row>
+      </Section>
+      <Section title="Danger zone">
+        <Row label="Delete this help center" description="Owners only. Its address stops working.">
+          <Danger>Delete help center</Danger>
+        </Row>
+      </Section>
+    </SettingsPage>
+  );
+}
+
+export function KnowledgeSettings() {
+  return (
+    <SettingsPage title="Knowledge" description="What Dimmi reads to answer customers, besides your help center.">
+      <Section title="Sources" action={<Action>Add source</Action>}>
+        <Item mark={<Glyph icon={RiGlobalLine} />} title="acme.com/docs" detail="Website · Synced daily · 214 pages">
+          <Action>Sync now</Action>
+        </Item>
+        <Item mark={<Glyph icon={RiFileTextLine} />} title="Refund policy.pdf" detail="Upload · 1 document">
+          <Action>Edit</Action>
+        </Item>
+        <Item
+          mark={<Glyph icon={RiGitRepositoryLine} />}
+          title="acme/handbook"
+          detail="GitHub · Synced hourly · 38 files"
+        >
+          <Action>Sync now</Action>
+        </Item>
+      </Section>
+      <Section title="Docs sync" description="Draft article updates when code changes in a repository.">
+        <Row label="How eager" description="How small a change still deserves a docs suggestion.">
+          <Choice label="How eager" options={["Balanced", "Strict", "Eager"]} />
+        </Row>
+        <Row label="Allow new articles" description="Suggest whole new articles, not only edits.">
+          <Toggle label="Allow new articles" on />
+        </Row>
+      </Section>
+    </SettingsPage>
+  );
+}
+
+export function ChangelogSettings() {
+  return (
+    <SettingsPage title="Changelog" description="Release notes on your help center and in subscribers' inboxes.">
+      <Section title="Changelog">
+        <Row label="On" description="Show the changelog on your help center.">
+          <Toggle label="Changelog on" on />
+        </Row>
+        <Row label="Title">
+          <Field label="Changelog title" value="Changelog" />
+        </Row>
+        <Row label="Show authors">
+          <Toggle label="Show authors" on />
+        </Row>
+        <Row label="Reactions">
+          <Toggle label="Reactions" on />
+        </Row>
+      </Section>
+      <Section title="Labels" action={<Action>New label</Action>}>
+        <Row
+          label={
+            <Chip variant="caption" color="lime">
+              New
+            </Chip>
+          }
+        />
+        <Row
+          label={
+            <Chip variant="caption" color="blue">
+              Improved
+            </Chip>
+          }
+        />
+        <Row
+          label={
+            <Chip variant="caption" color="rose">
+              Fixed
+            </Chip>
+          }
+        />
+      </Section>
+      <Section title="Email">
+        <Row label="Subscriptions" description="Readers can subscribe to new entries by email.">
+          <Toggle label="Subscriptions" on />
+        </Row>
+        <Row label="What the email holds">
+          <Choice label="What the email holds" options={["The full entry", "A summary"]} />
+        </Row>
+        <Row label="Undo window" description="Time to take an entry back before it is mailed.">
+          <Choice label="Undo window" options={["5 minutes", "None", "15 minutes", "1 hour"]} />
+        </Row>
+      </Section>
+      <Section title="From GitHub releases" action={<Action>Add repository</Action>}>
+        <Row label="New releases" description="What a published release becomes.">
+          <Choice label="New releases" options={["A draft written by AI", "A plain draft", "Nothing"]} />
+        </Row>
+      </Section>
+    </SettingsPage>
+  );
+}
+
+export function FeedbackSettings() {
+  return (
+    <SettingsPage title="Feedback" description="A portal where customers post, vote and follow your roadmap.">
+      <Section title="Portal">
+        <Row label="On">
+          <Toggle label="Portal on" />
+        </Row>
+        <Row label="Who can see it">
+          <Choice label="Who can see it" options={["Anyone", "Signed-in customers"]} />
+        </Row>
+        <Row label="Anonymous votes">
+          <Toggle label="Anonymous votes" />
+        </Row>
+        <Row label="Show vote counts">
+          <Toggle label="Show vote counts" on />
+        </Row>
+        <Row label="Author names">
+          <Choice label="Author names" options={["First name", "Full name", "Anonymous"]} />
+        </Row>
+      </Section>
+      <Section title="Boards" action={<Action>New board</Action>}>
+        <Row label="Feature requests" description="Public · Open to everyone">
+          <Action>Edit</Action>
+        </Row>
+        <Row label="Bugs" description="Public · Approval for new contacts">
+          <Action>Edit</Action>
+        </Row>
+      </Section>
+      <Section title="Statuses" action={<Action>New status</Action>}>
+        {["Open", "Under review", "Planned", "In progress", "Shipped", "Declined"].map((status) => (
+          <Row key={status} label={status} />
+        ))}
+      </Section>
+      <Section title="AI">
+        <Row label="Spot duplicates" description="Suggest merging posts that ask for the same thing.">
+          <Toggle label="Spot duplicates" on />
+        </Row>
+        <Row label="Capture from conversations" description="Suggest posts from what customers ask for in the inbox.">
+          <Toggle label="Capture from conversations" />
+        </Row>
+      </Section>
+    </SettingsPage>
+  );
+}
+
+export function EngageSettings() {
+  return (
+    <SettingsPage title="Announcements & surveys" description="Keep customers informed without crowding them.">
+      <Section title="Frequency" description="Banners and posts that interrupt count toward these limits.">
+        <Row label="Interruptions per day" description="The most any one customer sees in a day.">
+          <Choice label="Interruptions per day" options={["2", "1", "3", "5"]} />
+        </Row>
+        <Row label="Time between interruptions">
+          <Choice label="Time between interruptions" options={["30 minutes", "10 minutes", "1 hour", "4 hours"]} />
+        </Row>
+        <Row label="Days between surveys">
+          <Choice label="Days between surveys" options={["14 days", "7 days", "30 days"]} />
+        </Row>
+        <Row label="Quiet while chatting" description="Hold announcements while the messenger is open.">
+          <Toggle label="Quiet while chatting" on />
+        </Row>
+      </Section>
+      <Section title="Rating after a conversation" description="Ask customers how it went once a conversation closes.">
+        <Row label="Ask for a rating">
+          <Toggle label="Ask for a rating" />
+        </Row>
+        <Row label="Ask after">
+          <Choice label="Ask after" options={["10 minutes", "Straight away", "1 hour", "1 day"]} />
+        </Row>
+        <Row label="Include conversations Dimmi solved">
+          <Toggle label="Include conversations Dimmi solved" on />
+        </Row>
+      </Section>
+    </SettingsPage>
+  );
+}

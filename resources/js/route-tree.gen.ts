@@ -26,8 +26,12 @@ import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
+import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
+import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
 import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
 import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$section'
+import { Route as DWorkflowsIndexRouteImport } from './routes/d/workflows/index'
+import { Route as DWorkflowsWorkflowRouteImport } from './routes/d/workflows/$workflow'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 
@@ -115,6 +119,16 @@ const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   path: '/inbox/$view',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DProceduresIndexRoute = DProceduresIndexRouteImport.update({
+  id: '/procedures/',
+  path: '/procedures/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DProceduresProcedureRoute = DProceduresProcedureRouteImport.update({
+  id: '/procedures/$procedure',
+  path: '/procedures/$procedure',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DSettingsIndexRoute = DSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -123,6 +137,16 @@ const DSettingsIndexRoute = DSettingsIndexRouteImport.update({
 const DSettingsSectionRoute = DSettingsSectionRouteImport.update({
   id: '/settings/$section',
   path: '/settings/$section',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DWorkflowsIndexRoute = DWorkflowsIndexRouteImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DWorkflowsWorkflowRoute = DWorkflowsWorkflowRouteImport.update({
+  id: '/workflows/$workflow',
+  path: '/workflows/$workflow',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DInboxViewIndexRoute = DInboxViewIndexRouteImport.update({
@@ -154,8 +178,12 @@ export interface FileRoutesByFullPath {
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/login/magic': typeof AuthLoginMagicRoute
+  '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
+  '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
 }
@@ -175,8 +203,12 @@ export interface FileRoutesByTo {
   '/d/notifications': typeof DNotificationsRoute
   '/d': typeof DIndexRoute
   '/login/magic': typeof AuthLoginMagicRoute
+  '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/procedures': typeof DProceduresIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
+  '/d/workflows': typeof DWorkflowsIndexRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
 }
@@ -199,8 +231,12 @@ export interface FileRoutesById {
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
+  '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
+  '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
 }
@@ -224,8 +260,12 @@ export interface FileRouteTypes {
     | '/d/'
     | '/d/inbox/$view'
     | '/login/magic'
+    | '/d/procedures/$procedure'
     | '/d/settings/$section'
+    | '/d/workflows/$workflow'
+    | '/d/procedures/'
     | '/d/settings/'
+    | '/d/workflows/'
     | '/d/inbox/$view/$conversation'
     | '/d/inbox/$view/'
   fileRoutesByTo: FileRoutesByTo
@@ -245,8 +285,12 @@ export interface FileRouteTypes {
     | '/d/notifications'
     | '/d'
     | '/login/magic'
+    | '/d/procedures/$procedure'
     | '/d/settings/$section'
+    | '/d/workflows/$workflow'
+    | '/d/procedures'
     | '/d/settings'
+    | '/d/workflows'
     | '/d/inbox/$view/$conversation'
     | '/d/inbox/$view'
   id:
@@ -268,8 +312,12 @@ export interface FileRouteTypes {
     | '/d/'
     | '/d/inbox/$view'
     | '/_auth/login_/magic'
+    | '/d/procedures/$procedure'
     | '/d/settings/$section'
+    | '/d/workflows/$workflow'
+    | '/d/procedures/'
     | '/d/settings/'
+    | '/d/workflows/'
     | '/d/inbox/$view/$conversation'
     | '/d/inbox/$view/'
   fileRoutesById: FileRoutesById
@@ -400,6 +448,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DInboxViewRouteRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/procedures/': {
+      id: '/d/procedures/'
+      path: '/procedures'
+      fullPath: '/d/procedures/'
+      preLoaderRoute: typeof DProceduresIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/procedures/$procedure': {
+      id: '/d/procedures/$procedure'
+      path: '/procedures/$procedure'
+      fullPath: '/d/procedures/$procedure'
+      preLoaderRoute: typeof DProceduresProcedureRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/': {
       id: '/d/settings/'
       path: '/settings'
@@ -412,6 +474,20 @@ declare module '@tanstack/react-router' {
       path: '/settings/$section'
       fullPath: '/d/settings/$section'
       preLoaderRoute: typeof DSettingsSectionRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/workflows/': {
+      id: '/d/workflows/'
+      path: '/workflows'
+      fullPath: '/d/workflows/'
+      preLoaderRoute: typeof DWorkflowsIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/workflows/$workflow': {
+      id: '/d/workflows/$workflow'
+      path: '/workflows/$workflow'
+      fullPath: '/d/workflows/$workflow'
+      preLoaderRoute: typeof DWorkflowsWorkflowRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/inbox/$view/': {
@@ -455,8 +531,12 @@ interface DRouteRouteChildren {
   DNotificationsRoute: typeof DNotificationsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
+  DProceduresProcedureRoute: typeof DProceduresProcedureRoute
   DSettingsSectionRoute: typeof DSettingsSectionRoute
+  DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
+  DProceduresIndexRoute: typeof DProceduresIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
+  DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
@@ -469,8 +549,12 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DNotificationsRoute: DNotificationsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
+  DProceduresProcedureRoute: DProceduresProcedureRoute,
   DSettingsSectionRoute: DSettingsSectionRoute,
+  DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
+  DProceduresIndexRoute: DProceduresIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,
+  DWorkflowsIndexRoute: DWorkflowsIndexRoute,
 }
 
 const DRouteRouteWithChildren =

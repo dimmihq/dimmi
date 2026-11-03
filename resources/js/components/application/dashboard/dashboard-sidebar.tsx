@@ -3,7 +3,9 @@
 import { useTemplateCopy } from "@/components/foundations/template-copy/template-copy";
 
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -68,6 +70,20 @@ function Collapsible({ collapsed, children, className }: { collapsed: boolean; c
   ));
 }
 
+/**
+ * Row density. `regular` is the Figma 36px row (8px padding around a 20px
+ * icon). `compact` is a 32px row with an 18px icon and tighter section
+ * spacing, for sidebars with many pages such as settings.
+ */
+export type SidebarDensity = "regular" | "compact";
+
+const DensityContext = createContext<SidebarDensity>("regular");
+
+const density = {
+  regular: { row: "p-2", icon: "size-5", rows: "gap-1", heading: "h-7" },
+  compact: { row: "px-2 py-1.5", icon: "size-[18px]", rows: "gap-0.5", heading: "h-6" },
+} as const;
+
 function NavItem({
   icon: Icon,
   label,
@@ -87,6 +103,7 @@ function NavItem({
   onClick?: () => void;
 }) {
   const localize = useTemplateCopy();
+  const sizes = density[useContext(DensityContext)];
   const Anchor = href.startsWith("/") && !onClick ? RouterAnchor : "a";
   return localize((
     <Anchor
@@ -103,7 +120,8 @@ function NavItem({
       aria-label={label}
       title={collapsed ? label : undefined}
       className={cx(
-        "flex items-center justify-between overflow-hidden rounded-2lg p-2",
+        "flex items-center justify-between overflow-hidden rounded-2lg",
+        sizes.row,
         "transition-[width,background-color] duration-300 ease-in-out",
         collapsed ? "w-9" : "w-full",
         isSelected
@@ -113,7 +131,7 @@ function NavItem({
     >
       <span className="flex min-w-0 items-center gap-2">
         <Icon
-          className={cx("size-5 shrink-0", isSelected ? "text-white" : "text-foreground-icon-secondary")}
+          className={cx(sizes.icon, "shrink-0", isSelected ? "text-white" : "text-foreground-icon-secondary")}
           aria-hidden
         />
         <Collapsible collapsed={collapsed}>
@@ -199,6 +217,7 @@ function NavSections({
   secondaryMatch: boolean;
 }) {
   const localize = useTemplateCopy();
+  const sizes = density[useContext(DensityContext)];
   const shown = sections
     .map((section) => ({
       ...section,
@@ -209,9 +228,9 @@ function NavSections({
     return localize(<p className="px-2 py-3 text-body-regular text-text-tertiary">No results</p>);
   }
   return shown.map((section) => (
-    <div key={section.key} className="flex w-full flex-col gap-1">
+    <div key={section.key} className={cx("flex w-full flex-col", sizes.rows)}>
       {section.label ? (
-        <div className={cx("flex h-7 items-center justify-between px-2", collapsed && "hidden")}>
+        <div className={cx("flex items-center justify-between px-2", sizes.heading, collapsed && "hidden")}>
           <span className="text-caption-1-medium whitespace-nowrap text-text-tertiary">{section.label}</span>
           {section.action ? (
             <button
@@ -266,6 +285,7 @@ export function DashboardSidebar({
   collapsed: collapsedProp,
   onCollapsedChange,
   flat = false,
+  density: densityProp = "regular",
   className,
 }: {
   /** Rendered inside the mobile drawer: always expanded, close button instead of collapse. */
@@ -294,6 +314,8 @@ export function DashboardSidebar({
   onCollapsedChange?: (collapsed: boolean) => void;
   /** Removes the floating panel treatment for a sidebar revealed beneath mobile content. */
   flat?: boolean;
+  /** Row height: `regular` 36px (default) or `compact` 32px. */
+  density?: SidebarDensity;
   className?: string;
 }) {
   const localize = useTemplateCopy();
@@ -359,6 +381,7 @@ export function DashboardSidebar({
   }, [activateSearch]);
 
   return localize((
+    <DensityContext.Provider value={densityProp}>
     <aside
       className={cx(
         "flex h-full shrink-0 flex-col justify-between overflow-hidden",
@@ -612,5 +635,6 @@ export function DashboardSidebar({
         />
       </div>
     </aside>
+    </DensityContext.Provider>
   ));
 }

@@ -7,22 +7,37 @@
  * feature is built.
  */
 import {
+  RiApps2Line,
   RiArrowLeftLine,
   RiAtLine,
   RiBankCardLine,
   RiBookOpenLine,
+  RiChatQuoteLine,
   RiChatSmile3Line,
   RiContactsBook3Line,
+  RiCpuLine,
+  RiDatabase2Line,
+  RiDownload2Line,
+  RiEqualizerLine,
+  RiFileList3Line,
+  RiFingerprintLine,
+  RiFlashlightLine,
+  RiGitBranchLine,
+  RiGithubLine,
   RiGroupLine,
   RiHistoryLine,
   RiInbox2Line,
   RiKey2Line,
   RiLightbulbLine,
+  RiListOrdered2,
+  RiMailLine,
   RiMegaphoneLine,
   RiNotification3Line,
   RiPlugLine,
+  RiPriceTag3Line,
   RiQuestionAnswerLine,
   RiSettings4Line,
+  RiShieldCheckLine,
   RiShieldUserLine,
   RiSparkling2Line,
   RiStackLine,
@@ -82,6 +97,20 @@ export const workspacePages = {
     "/d/agent",
     "Dimmi Agent answers customers from your docs and hands over when it should.",
   ),
+  workflows: page(
+    "workflows",
+    "Workflows",
+    RiGitBranchLine,
+    "/d/workflows",
+    "Route conversations and decide when Dimmi takes them.",
+  ),
+  procedures: page(
+    "procedures",
+    "Procedures",
+    RiListOrdered2,
+    "/d/procedures",
+    "Step-by-step instructions Dimmi follows for particular requests.",
+  ),
   docs: page(
     "docs",
     "Docs",
@@ -122,33 +151,161 @@ export const workspacePages = {
 export const settingsLink = page("settings", "Settings", RiSettings4Line, "/d/settings", "");
 
 export const settingsPages = {
-  profile: page(
-    "settings-profile",
-    "Profile",
-    RiUserLine,
-    "/d/settings/profile",
-    "Your name, photo, language and time zone.",
-  ),
-  security: page(
-    "settings-security",
-    "Security",
-    RiShieldUserLine,
-    "/d/settings/security",
-    "Password, two-factor authentication, sessions and sign-in methods.",
+  profile: page("settings-profile", "Profile", RiUserLine, "/d/settings/profile", "Your name, photo and email."),
+  preferences: page(
+    "settings-preferences",
+    "Preferences",
+    RiEqualizerLine,
+    "/d/settings/preferences",
+    "Language, time zone, theme and how the inbox behaves for you.",
   ),
   notifications: page(
     "settings-notifications",
     "Notifications",
     RiNotification3Line,
     "/d/settings/notifications",
-    "Which mail and push notifications you get, and when.",
+    "What reaches you in the app, by push, by mail and in Slack.",
+  ),
+  security: page(
+    "settings-security",
+    "Security & access",
+    RiShieldUserLine,
+    "/d/settings/security",
+    "Password, two-factor authentication, sign-in methods and sessions.",
+  ),
+  tokens: page(
+    "settings-tokens",
+    "API tokens",
+    RiKey2Line,
+    "/d/settings/tokens",
+    "Tokens for scripts, the CLI and coding agents.",
+  ),
+  inboxes: page(
+    "settings-inboxes",
+    "Inboxes",
+    RiInbox2Line,
+    "/d/settings/inboxes",
+    "Where conversations land and how they reopen.",
+  ),
+  tags: page("settings-tags", "Tags", RiPriceTag3Line, "/d/settings/tags", "Labels teammates put on conversations."),
+  "saved-replies": page(
+    "settings-saved-replies",
+    "Saved replies",
+    RiChatQuoteLine,
+    "/d/settings/saved-replies",
+    "Answers your team sends often, with variables.",
+  ),
+  messenger: page(
+    "settings-messenger",
+    "Messenger",
+    RiChatSmile3Line,
+    "/d/settings/messenger",
+    "The widget on your site: its look, texts and install.",
+  ),
+  email: page(
+    "settings-email",
+    "Email",
+    RiMailLine,
+    "/d/settings/email",
+    "Support addresses, sending domains and signatures.",
+  ),
+  connections: page(
+    "settings-connections",
+    "Connections",
+    RiPlugLine,
+    "/d/settings/connections",
+    "Slack, Discord, Telegram, WhatsApp and the other places customers write from.",
+  ),
+  agent: page(
+    "settings-agent",
+    "Dimmi agent",
+    RiSparkling2Line,
+    "/d/settings/agent",
+    "How Dimmi answers customers, when it hands over and what it may spend.",
+  ),
+  actions: page(
+    "settings-actions",
+    "Actions",
+    RiFlashlightLine,
+    "/d/settings/actions",
+    "What Dimmi can do in your own systems, such as looking up an order.",
+  ),
+  "ai-providers": page(
+    "settings-ai-providers",
+    "AI providers",
+    RiCpuLine,
+    "/d/settings/ai-providers",
+    "The model keys Dimmi and Operator run on.",
+  ),
+  "help-centers": page(
+    "settings-help-centers",
+    "Help centers",
+    RiBookOpenLine,
+    "/d/settings/help-centers",
+    "Your public docs: address, branding and domain.",
+  ),
+  knowledge: page(
+    "settings-knowledge",
+    "Knowledge",
+    RiDatabase2Line,
+    "/d/settings/knowledge",
+    "Sites, files and repositories Dimmi learns from.",
+  ),
+  changelog: page(
+    "settings-changelog",
+    "Changelog",
+    RiHistoryLine,
+    "/d/settings/changelog",
+    "How releases are published and mailed to subscribers.",
+  ),
+  feedback: page(
+    "settings-feedback",
+    "Feedback",
+    RiLightbulbLine,
+    "/d/settings/feedback",
+    "The feedback portal, its boards and statuses.",
+  ),
+  engage: page(
+    "settings-engage",
+    "Announcements & surveys",
+    RiMegaphoneLine,
+    "/d/settings/engage",
+    "How often customers may be interrupted, and the survey after a conversation.",
+  ),
+  webhooks: page(
+    "settings-webhooks",
+    "Webhooks",
+    RiWebhookLine,
+    "/d/settings/webhooks",
+    "Events sent to your own endpoints.",
+  ),
+  identity: page(
+    "settings-identity",
+    "Identity verification",
+    RiFingerprintLine,
+    "/d/settings/identity",
+    "Secrets that prove who a signed-in visitor is.",
+  ),
+  apps: page(
+    "settings-apps",
+    "Authorized apps",
+    RiApps2Line,
+    "/d/settings/apps",
+    "Agents, the CLI and other apps you have let act in Dimmi for you.",
+  ),
+  github: page(
+    "settings-github",
+    "GitHub",
+    RiGithubLine,
+    "/d/settings/github",
+    "Repositories for docs sync and release notes.",
   ),
   workspace: page(
     "settings-workspace",
-    "General",
+    "Workspace",
     RiSettings4Line,
     "/d/settings/workspace",
-    "The workspace's name, address and time zone.",
+    "The workspace's name, address, language and time zone.",
   ),
   members: page(
     "settings-members",
@@ -164,37 +321,35 @@ export const settingsPages = {
     "/d/settings/teams",
     "Groups of teammates conversations can be assigned to.",
   ),
-  channels: page(
-    "settings-channels",
-    "Channels",
-    RiPlugLine,
-    "/d/settings/channels",
-    "Email, Slack, Discord and the other places customers write from.",
+  "workspace-security": page(
+    "settings-workspace-security",
+    "Security",
+    RiShieldCheckLine,
+    "/d/settings/workspace-security",
+    "Rules every member signs in under.",
   ),
-  messenger: page(
-    "settings-messenger",
-    "Messenger",
-    RiChatSmile3Line,
-    "/d/settings/messenger",
-    "The widget on your site: its look, its install snippet and identity verification.",
+  "audit-log": page(
+    "settings-audit-log",
+    "Audit log",
+    RiFileList3Line,
+    "/d/settings/audit-log",
+    "Who changed what in the workspace, and when.",
   ),
-  tokens: page(
-    "settings-tokens",
-    "API tokens",
-    RiKey2Line,
-    "/d/settings/tokens",
-    "Tokens for scripts, the CLI and coding agents.",
+  import: page(
+    "settings-import",
+    "Import & export",
+    RiDownload2Line,
+    "/d/settings/import",
+    "Move in from another tool, or take your data with you.",
   ),
-  webhooks: page(
-    "settings-webhooks",
-    "Webhooks",
-    RiWebhookLine,
-    "/d/settings/webhooks",
-    "Events sent to your own endpoints.",
+  billing: page(
+    "settings-billing",
+    "Billing",
+    RiBankCardLine,
+    "/d/settings/billing",
+    "Your usage, spend cap and invoices.",
   ),
-  billing: page("settings-billing", "Billing", RiBankCardLine, "/d/settings/billing", "Your plan, usage and invoices."),
 } as const;
-
 export type SettingsSection = keyof typeof settingsPages;
 
 /*
@@ -204,6 +359,7 @@ export function appSections(): DashboardNavSection[] {
   return [
     { key: "you", items: [workspacePages.notifications, inboxViews.mine] },
     { key: "inbox", label: "Inbox", items: [inboxViews.unassigned, inboxViews.all, inboxViews.mentions] },
+    { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },
     {
       key: "workspace",
       label: "Workspace",
@@ -220,18 +376,20 @@ export function appSections(): DashboardNavSection[] {
 }
 
 /*
- * settingsSections lists the settings pages. Billing exists on the cloud
- * only, which a self-hosted install does not have.
+ * settingsSections lists the settings pages in the sidebar, grouped as
+ * the person thinks of them: their own account first, then the inbox and
+ * its channels, AI, content, developers, and running the workspace.
+ * Billing exists on the cloud only.
  */
 export function settingsSections(cloud: boolean): DashboardNavSection[] {
-  const workspace = [
-    settingsPages.workspace,
-    settingsPages.members,
-    settingsPages.teams,
-    settingsPages.channels,
-    settingsPages.messenger,
-    settingsPages.tokens,
-    settingsPages.webhooks,
+  const pages = settingsPages;
+  const admin = [
+    pages.workspace,
+    pages.members,
+    pages.teams,
+    pages["workspace-security"],
+    pages["audit-log"],
+    pages.import,
   ];
 
   return [
@@ -239,9 +397,18 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "account",
       label: "Account",
-      items: [settingsPages.profile, settingsPages.security, settingsPages.notifications],
+      items: [pages.profile, pages.preferences, pages.notifications, pages.security, pages.tokens],
     },
-    { key: "workspace", label: "Workspace", items: cloud ? [...workspace, settingsPages.billing] : workspace },
+    { key: "inbox", label: "Inbox", items: [pages.inboxes, pages.tags, pages["saved-replies"]] },
+    { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
+    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
+    {
+      key: "content",
+      label: "Content",
+      items: [pages["help-centers"], pages.knowledge, pages.changelog, pages.feedback, pages.engage],
+    },
+    { key: "developers", label: "Developers", items: [pages.webhooks, pages.identity, pages.apps, pages.github] },
+    { key: "administration", label: "Administration", items: cloud ? [...admin, pages.billing] : admin },
   ];
 }
 

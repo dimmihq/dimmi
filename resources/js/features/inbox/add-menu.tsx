@@ -165,6 +165,7 @@ function Picker({
         aria-label={`Search ${source.noun}`}
         placeholder={`Search ${source.noun}`}
         leadingIcon={RiSearchLine}
+        fieldClassName="bg-background-secondary-default"
         value={query}
         onChange={setQuery}
         onKeyDown={(event) => {

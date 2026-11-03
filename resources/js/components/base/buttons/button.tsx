@@ -37,6 +37,11 @@ import { directionalIconClass } from "@/utils/directional-icon";
  * `trailingIcon` props so the consumer can't pass the wrong size. Pass
  * a Remix Icon component reference (`RiAddLine`, not `<RiAddLine />`).
  *
+ * `danger-secondary` (Dimmi) is the quiet destructive button: the
+ * secondary surface and border with the error text colour, for
+ * destructive actions that sit among ordinary row actions, such as a
+ * settings danger zone. The solid `danger` stays for the confirm step.
+ *
  * For icon-only buttons:
  *   <Button iconOnly leadingIcon={RiAddLine} aria-label="Add" />
  *
@@ -44,7 +49,7 @@ import { directionalIconClass } from "@/utils/directional-icon";
  * `variant` to avoid the clash.
  */
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "danger-secondary";
 type ButtonSize = "medium" | "small" | "xs";
 
 type IconComponent = ComponentType<{
@@ -124,6 +129,14 @@ const styles = sortCx({
       "bg-button-danger text-text-white shadow-xs",
       "disabled:text-foreground-disabled-danger disabled:shadow-none",
       "aria-disabled:text-foreground-disabled-danger aria-disabled:shadow-none",
+    ].join(" "),
+    "danger-secondary": [
+      "bg-background-primary-default text-text-error-primary",
+      "border border-border-button-default shadow-xs",
+      "hover:bg-background-primary-hover hover:border-border-button-hover",
+      "active:bg-background-primary-active active:border-border-button-active",
+      "disabled:bg-background-primary-disabled disabled:border-border-button-default disabled:text-text-tertiary disabled:shadow-none",
+      "aria-disabled:bg-background-primary-disabled aria-disabled:border-border-button-default aria-disabled:text-text-tertiary aria-disabled:shadow-none",
     ].join(" "),
     secondary: [
       "bg-background-primary-default text-text-primary",

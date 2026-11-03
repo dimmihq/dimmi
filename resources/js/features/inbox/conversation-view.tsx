@@ -19,16 +19,15 @@ import { Drawer } from "@/components/base/drawer/drawer";
 import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
+import { useWide } from "@/features/shell/use-wide";
 import { meQuery } from "@/lib/api/auth";
 import { cx } from "@/utils/cx";
-
 import { useCase } from "./case";
 import type { Conversation } from "./conversations";
 import { DetailsPanel } from "./details-panel";
 import { OperatorPanel } from "./operator-panel";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
-import { useWide } from "./use-wide";
 
 const visible = { overflow: "visible" } as const;
 

@@ -4,9 +4,10 @@
  * getting-started checklist, and the person's own menu at the foot, with
  * the current page in floating panels beside it. In settings, the settings pages
  * take the sidebar's place. Below the large breakpoint the sidebar moves
- * into a drawer opened from a slim top bar. While a conversation is open
- * the sidebar folds to its rail so the conversation's panels have room;
- * unfolding it by hand holds until the person leaves the conversation.
+ * into a drawer opened from a slim top bar. While a conversation, a
+ * workflow or a procedure is open, the sidebar folds to its rail so the
+ * page's panels have room; unfolding it by hand holds until the person
+ * leaves that page.
  */
 import {
   RiAddLine,
@@ -34,15 +35,15 @@ import { GetStarted } from "./get-started";
 import { appSections, selectedKey, settingsLink, settingsPages, settingsSections } from "./navigation";
 import { useCurrentWorkspace } from "./workspace";
 
-const conversationPath = /^\/d\/inbox\/[^/]+\/[^/]+$/;
+const focusedPath = /^\/d\/(inbox\/[^/]+|workflows|procedures)\/[^/]+$/;
 
 /*
- * useRailCollapse folds the sidebar while a conversation is open. A
- * choice made by hand wins until the page switches between a
- * conversation and anything else.
+ * useRailCollapse folds the sidebar while a conversation, workflow or
+ * procedure is open. A choice made by hand wins until the page switches
+ * between one of those and anything else.
  */
 function useRailCollapse(path: string) {
-  const reading = conversationPath.test(path);
+  const reading = focusedPath.test(path);
   const [choice, setChoice] = useState<{ reading: boolean; collapsed: boolean } | null>(null);
   const collapsed = choice?.reading === reading ? choice.collapsed : reading;
 
@@ -189,6 +190,7 @@ function SignedInShell({
       account={account}
       footer={inSettings ? null : <GetStarted />}
       showThemeToggle={false}
+      density="compact"
       collapsed={mobile ? false : collapsed}
       onCollapsedChange={mobile ? undefined : setCollapsed}
       className={mobile ? "h-full w-full" : undefined}
