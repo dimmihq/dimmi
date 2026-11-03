@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -439,6 +440,63 @@ func TestChallenges(t *testing.T) {
 		_, err = challenges.Fail(ctx, token)
 		require.Error(t, err)
 		_, err = challenges.Complete(ctx, token)
+		require.Error(t, err)
+	})
+}
+
+func TestCode(t *testing.T) {
+	t.Parallel()
+
+	t.Run("make the code an authenticator app shows", func(t *testing.T) {
+		t.Parallel()
+		store, _ := newCache(t)
+		clk := newClock()
+		factor, cred, secret := enroll(t, store, clk)
+
+		code, err := twofactor.Code(secret, clk.Now())
+
+		require.NoError(t, err)
+		assert.Equal(t, codeAt(t, secret, clk.Now()), code)
+		require.NoError(t, factor.Verify(t.Context(), &cred, code))
+	})
+
+	t.Run("refuse a secret that is not base32", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := twofactor.Code("not base32!", newClock().Now())
+
+		require.Error(t, err)
+	})
+}
+
+func TestQRCodeSVG(t *testing.T) {
+	t.Parallel()
+
+	t.Run("draw every module of the code inside a quiet zone", func(t *testing.T) {
+		t.Parallel()
+		link := "otpauth://totp/Acme:ada%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Acme"
+
+		svg, err := twofactor.QRCodeSVG(link)
+
+		require.NoError(t, err)
+		side := regexp.MustCompile(`viewBox="0 0 (\d+) (\d+)"`).FindStringSubmatch(svg)
+		require.Len(t, side, 3)
+		assert.Equal(t, side[1], side[2])
+		modules, err := strconv.Atoi(side[1])
+		require.NoError(t, err)
+		assert.Zero(t, (modules-8-17)%4, "a QR code is 17 plus a multiple of 4 modules wide")
+		assert.True(t, strings.HasPrefix(svg, "<svg "))
+		assert.Contains(t, svg, "M4 4h1v1h-1z")
+		assert.Contains(t, svg, "M10 10h1v1h-1z")
+		assert.NotContains(t, svg, "M3 3h1v1h-1z")
+		assert.NotContains(t, svg, "M5 5h1v1h-1z")
+	})
+
+	t.Run("refuse a url that is not an otpauth url", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := twofactor.QRCodeSVG("%zz")
+
 		require.Error(t, err)
 	})
 }

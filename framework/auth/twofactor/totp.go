@@ -38,7 +38,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/cache"
 	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/encryption"
 )
 
 /*
@@ -63,7 +62,7 @@ TOTP is the time-based one-time password factor.
 */
 type TOTP struct {
 	issuer    string
-	encrypter encryption.Encrypter
+	encrypter Sealer
 	cache     *cache.Store
 	clock     clock.Clock
 }
@@ -75,7 +74,7 @@ NewTOTP returns the factor. The issuer names the application in
 authenticator apps; the encrypter seals seeds and the cache holds the
 steps already used.
 */
-func NewTOTP(issuer string, enc encryption.Encrypter, store *cache.Store, clk clock.Clock) *TOTP {
+func NewTOTP(issuer string, enc Sealer, store *cache.Store, clk clock.Clock) *TOTP {
 	return &TOTP{issuer: issuer, encrypter: enc, cache: store, clock: clk}
 }
 
@@ -156,6 +155,22 @@ func (t *TOTP) Verify(ctx context.Context, cred *Credential, input string) error
 	cred.Counter = step
 
 	return nil
+}
+
+/*
+Code returns the code an authenticator app shows at the time for the
+base32 secret it was set up with, the way Setup handed it out. Tests
+and tools that stand in for the app use it.
+*/
+func Code(secret string, at time.Time) (string, error) {
+	code, err := totp.GenerateCodeCustom(secret, at, totp.ValidateOpts{
+		Period: period, Digits: digits, Algorithm: otp.AlgorithmSHA1,
+	})
+	if err != nil {
+		return "", fmt.Errorf("make totp code: %w", err)
+	}
+
+	return code, nil
 }
 
 /*

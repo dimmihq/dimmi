@@ -91,6 +91,8 @@ func (c *AuthConfig) check() error {
 		{c.Sessions.AbsoluteLifetime < c.Sessions.IdleLifetime, "auth.sessions.absolute_lifetime"},
 		{c.Lockout.PerIPEmail <= 0 || c.Lockout.PerEmailSoftLock <= 0 || c.Lockout.PerIPSpray <= 0, "auth.lockout"},
 		{c.MagicLink.TTL <= 0, "auth.magic_link.ttl"},
+		{c.Factors.MaxPerUser < 2, "auth.factors.max_per_user"},
+		{c.Factors.PendingTTL <= 0, "auth.factors.pending_ttl"},
 	}
 
 	for _, p := range problems {

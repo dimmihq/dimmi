@@ -18,6 +18,7 @@ import { avatarColor } from "@/features/shell/avatar-color";
 
 import { Action, Choice, Danger, Field, Toggle } from "../controls";
 import { Empty, Glyph, Item, Logo, Row, Section, SettingsPage } from "../layout";
+import { TwoFactorSection } from "../two-factor";
 import { useAccount } from "../use-account";
 
 const languages = ["English", "Français", "Deutsch", "Español", "Português"];
@@ -200,12 +201,7 @@ export function SecuritySettings() {
           <Action>{me.hasPassword ? "Change password" : "Set a password"}</Action>
         </Row>
       </Section>
-      <Section title="Two-factor authentication" description="A code from an authenticator app at every sign-in.">
-        <Empty action={<Action>Add authenticator</Action>}>No authenticator added</Empty>
-        <Row label="Recovery codes" description="One-time codes for when your phone is not at hand." muted>
-          <span className="text-body-2-regular text-text-tertiary">After an authenticator is added</span>
-        </Row>
-      </Section>
+      <TwoFactorSection hasPassword={me.hasPassword} />
       <Section title="Sign-in methods">
         <Item mark={<Logo icon={RiGoogleFill} brand="#4285F4" />} title="Google" detail="Not linked">
           <Action>Link</Action>

@@ -229,12 +229,13 @@ func TestPasswordResetUpdate(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		user := tc.CreateUser()
-		_, err := factories.EnableTwoFactor(t.Context(), tc.App, user)
+		_, err := factories.WithTwoFactor(t.Context(), tc.App, user)
 		require.NoError(t, err)
 		id, token := resetLink(t, tc, user.Email)
 
-		redeem(tc.Client(), id, token).AssertStatus(fhttp.StatusServiceUnavailable).
-			AssertJSONPath("code", "two_factor_unavailable")
+		redeem(tc.Client(), id, token).AssertOK().
+			AssertJSONPath("data.object", "two_factor_challenge").
+			AssertJSONPath("data.methods.0.method", "totp")
 		tc.Table("sessions").AssertCount(0, testkit.Row{"user_id": user.ID})
 		tc.Table("security_events").AssertHas(testkit.Row{"user_id": user.ID, "type": "password.reset"})
 	})

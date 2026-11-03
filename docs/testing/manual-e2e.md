@@ -198,16 +198,52 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Repair | `dimmi workspace:repair acme` | `acme: defaults checked, organization in order`, exit 0; unknown slug exits 1 "Workspace not found" |
 | In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
 
+### Two-factor authentication
+
+Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an
+operator turns it off from the command line. Run these within 15 minutes of Ada's last sign-in in `a.jar`, since
+adding and removing factors need a recent confirmation (423 `password_confirmation_required` otherwise; confirm with
+`POST $B/user/confirmation` first). `totp` prints the code an authenticator shows for a secret, one step ahead
+with a second argument of `1`, since a step already used is never accepted again:
+
+```bash
+totp(){ python3 -c 'import sys,hmac,hashlib,struct,time,base64 as b
+k=b.b32decode(sys.argv[1]+"="*(-len(sys.argv[1])%8)); s=int(time.time())//30+int(sys.argv[2])
+h=hmac.new(k,struct.pack(">Q",s),hashlib.sha1).digest(); o=h[-1]&15
+print("%06d"%((struct.unpack(">I",h[o:o+4])[0]&0x7fffffff)%1000000))' "$1" "${2:-0}"; }
+F=$B/user/auth-factors; P="{\"grant\":\"password\",\"email\":\"$ADA\",\"password\":\"difference-engine-1822\"}"
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Add an authenticator | `r add -b a.jar -c a.jar -X POST -H "$O" -H "$J" $F -d '{"type":"totp"}'; FAC=$(jq -r .data.id body); SECRET=$(jq -r .data.setup.secret body)` | 201, `Cache-Control: no-store`, `status: pending`, `setup.secret` (32 base32 characters), `setup.otpauth_url` `otpauth://totp/dimmi:…&issuer=dimmi&period=30`, `setup.qr_svg` `<svg …>` |
+| Wrong first code | `r wrong -b a.jar -X PATCH -H "$O" -H "$J" $F/$FAC -d '{"code":"000000"}'` | 422 `invalid_code` on `code` |
+| Activate | `r on -b a.jar -c a.jar -X PATCH -H "$O" -H "$J" $F/$FAC -d "{\"code\":\"$(totp $SECRET)\"}"; RC=$(jq -r '.data.recovery_codes.codes[0]' body)` | 200 `status: active`, `preferred: true`, `recovery_codes` with 10 `codes`, `no-store`, a new `dimmi_session` cookie; mail "Two-factor authentication is on" |
+| Second authenticator | `r again -b a.jar -X POST -H "$O" -H "$J" $F -d '{"type":"totp"}'` | 422 `factor_limit_reached` |
+| List | `r list -b a.jar -H "$O" $F` | 200, the authenticator first, then `recovery_code` with `remaining: 10`, `total: 10`; no secrets, no codes |
+| Challenge | `r pwd -c t.jar -b t.jar -X POST -H "$O" -H "$J" $B/sessions -d "$P"` | 200 `object: two_factor_challenge`, `methods` `totp` (preferred) then `recovery_code`; `dimmi_2fa` cookie, HttpOnly, `Max-Age=299`; no session cookie |
+| No method | `r nm -b t.jar -X POST -H "$O" -H "$J" $B/sessions -d '{"grant":"two_factor","code":"000000"}'` | 422 `method` required |
+| Wrong code | same with `"method":"totp"` | 422 `invalid_code` |
+| Authenticator code | `r totp -b t.jar -c t.jar -X POST -H "$O" -H "$J" $B/sessions -d "{\"grant\":\"two_factor\",\"method\":\"totp\",\"code\":\"$(totp $SECRET 1)\"}"` | 201 `me`, `auth.auth_methods` `["password","totp"]`, `dimmi_2fa` cleared, session cookie set |
+| Challenge works once | same command again | 401 `two_factor_challenge_expired` |
+| Recovery code | new challenge in `rc.jar`, then `{"grant":"two_factor","method":"recovery_code","code":"$RC"}` | 201 `["password","recovery_code"]`; mail "A recovery code was used to sign in" saying 9 are left |
+| New recovery codes | `r regen -b a.jar -X POST -H "$O" -H "$J" $F -d '{"type":"recovery_code"}'` | 201 `remaining: 10` and 10 `codes`, `no-store`; an old code at the next challenge 422 `invalid_code` |
+| Recovery codes stay | `DELETE $F/fac_…` with the recovery set's id from the list | 409 `recovery_codes_required` |
+| Turn off | `r off -b a.jar -X DELETE -H "$O" $F/$FAC` | 204; mail "Two-factor authentication is off"; `POST $B/sessions` with `$P` 201 again |
+| Turn off all at once | turn on again, then `r alloff -b a.jar -X DELETE -H "$O" $F` | 204, the list empty |
+| Operator turns it off | turn on again, then `dimmi user:disable-2fa $ADA`, again, then `dimmi user:disable-2fa nobody@example.com` | "Two-factor authentication is off for …", exit 0; then "was already off", exit 0; then "no account has this email", exit 1 |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.
 
 | Flow | Command | Expect |
 |---|---|---|
-| Sign-in pages | `for p in /login /signup /login/magic /forgot-password /reset-password /verify-email; do curl -s -o /dev/null -D - $W$p \| grep -iE '^(cache-control\|referrer-policy)'; done` | `no-store` and `no-referrer` on each |
+| Sign-in pages | `for p in /login /signup /login/magic /login/two-factor /forgot-password /reset-password /verify-email; do curl -s -o /dev/null -D - $W$p \| grep -iE '^(cache-control\|referrer-policy)'; done` | `no-store` and `no-referrer` on each |
 | App page | `curl -s -D - $W/d \| grep -iE '^(cache-control\|content-security-policy)'` | `no-cache`; policy with `'nonce-…'`, no `unsafe-inline`, no dev server |
 | Theme | `curl -s -b dimmi_theme=dark $W/login \| grep -o '<html[^>]*>'` | `<html lang="en" class="dark">` |
 | In a browser | open `$W/signup`, create an account, open the verification mail's link, sign out, sign in by password, then by mailed code | lands on `/d` each time; provider buttons first when providers are configured; light and dark switch and survive a reload |
+| Two-factor in a browser | in `/d/settings/security` add an authenticator (scan the QR code or type the key), confirm with its code, keep the recovery codes; sign out, sign in by password, answer with the app's code; sign out again and use "Use a recovery code instead" | the codes show once; each sign-in stops at `/login/two-factor`, then lands on `/d`; the settings then say "9 of 10 left" |
 
 ## 4. Check what was stored
 

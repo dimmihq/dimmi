@@ -39,6 +39,25 @@
     "unknown": "If this was you, there is nothing to do. If not, sign that session out and change your password.",
     "action": "Review your sessions"
   },
+  "two_factor_enabled": {
+    "subject": "Two-factor authentication is on",
+    "intro": "Your account now asks for a code from your authenticator app at every sign-in, after your password or sign-in link.",
+    "unknown": "If this was not you, someone else may control your account: review your security settings and change your password.",
+    "action": "Review your security settings"
+  },
+  "two_factor_disabled": {
+    "subject": "Two-factor authentication is off",
+    "intro": "Your account no longer asks for a second factor when you sign in, and its recovery codes no longer work.",
+    "unknown": "If this was not you, change your password and turn two-factor authentication back on.",
+    "action": "Review your security settings"
+  },
+  "recovery_code_used": {
+    "subject": "A recovery code was used to sign in",
+    "intro": "A recovery code was just used to sign in to your account. Codes left: {{.remaining}}.",
+    "regenerate": "You are running out of recovery codes. Make a new set in your security settings now.",
+    "unknown": "If this was not you, change your password and make new recovery codes.",
+    "action": "Review your security settings"
+  },
   "suspicious_sign_in_attempts": {
     "subject": "Someone is trying to sign in to your Dimmi account",
     "intro": "Many wrong passwords were tried for your account in the last hour, so we locked it for unknown devices for a while.",

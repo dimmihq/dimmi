@@ -116,6 +116,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootMailedSecrets(a)
 	bootIdentities(a)
 	bootWorkspaces(a)
+	bootFactors(a)
 
 	return registerJobs(a)
 }
@@ -125,7 +126,9 @@ bootSignIn builds the actions that sign people up and in.
 */
 func bootSignIn(a *app.App, dummy string) {
 	acts := a.Actions
-	acts.CompletePrimaryAuth = &auth.CompletePrimaryAuth{StartSession: acts.StartSession, LoadMe: acts.LoadMe}
+	acts.CompletePrimaryAuth = &auth.CompletePrimaryAuth{
+		DB: a.DB, Tokens: a.Secrets, Factors: a.Factors, StartSession: acts.StartSession, LoadMe: acts.LoadMe,
+	}
 	acts.SendEmailVerification = &auth.SendEmailVerification{
 		DB: a.DB, Mail: a.Mail, Links: a.Links, Tokens: a.Secrets,
 	}

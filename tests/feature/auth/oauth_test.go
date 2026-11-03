@@ -15,6 +15,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
 
@@ -191,17 +192,21 @@ func TestOAuthSignIn(t *testing.T) {
 		tc.Table("oauth_identities").AssertCount(0)
 	})
 
-	t.Run("starts no session for an account protected by a second factor yet", func(t *testing.T) {
+	t.Run("sends an account protected by a second factor to answer it, holding the challenge", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withProviders())
-		user := tc.CreateUser()
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET two_factor_confirmed_at = now() WHERE id = $1", user.ID)
+		account, err := factories.WithTwoFactor(t.Context(), tc.App, tc.CreateUser())
 		require.NoError(t, err)
 
-		res := tc.SignInWith("github", person("583231", user.Email))
+		res := tc.SignInWith("github", person("583231", account.User.Email))
 
-		assertLands(t, res, "/login?error=two_factor_unavailable")
-		tc.Table("oauth_identities").AssertCount(1, testkit.Row{"user_id": user.ID})
+		assertLands(t, res, "/login/two-factor?redirect=%2F")
+		assert.NotEmpty(t, res.Cookie(tc.App.Cookies.TwoFactorName()).Value)
+		tc.Table("oauth_identities").AssertCount(1, testkit.Row{"user_id": account.User.ID})
+		tc.Table("sessions").AssertCount(0, testkit.Row{"user_id": account.User.ID})
+		tc.Table("one_time_tokens").AssertHas(testkit.Row{
+			"user_id": account.User.ID, "purpose": "two_factor_challenge",
+		})
 	})
 
 	t.Run("refuses an address the login policy sends to single sign-on", func(t *testing.T) {

@@ -24,7 +24,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/hashing"
 )
 
@@ -49,7 +48,7 @@ const groupLength = 5
 RecoveryCodes is the recovery code factor.
 */
 type RecoveryCodes struct {
-	encrypter encryption.Encrypter
+	encrypter Sealer
 }
 
 var _ Factor = (*RecoveryCodes)(nil)
@@ -58,7 +57,7 @@ var _ Factor = (*RecoveryCodes)(nil)
 NewRecoveryCodes returns the factor, sealing code lists with the
 encrypter.
 */
-func NewRecoveryCodes(enc encryption.Encrypter) *RecoveryCodes {
+func NewRecoveryCodes(enc Sealer) *RecoveryCodes {
 	return &RecoveryCodes{encrypter: enc}
 }
 

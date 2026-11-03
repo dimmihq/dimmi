@@ -46,6 +46,7 @@ type controllers struct {
 	memberships       *v1.MembershipController
 	workspace         *v1.CurrentWorkspaceController
 	members           *v1.MemberController
+	authFactors       *v1.AuthFactorController
 }
 
 /*
@@ -87,6 +88,7 @@ func API(a *app.App) {
 			routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
 			routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
 				Status(fhttp.StatusNoContent)
+			authFactorRoutes(user, c.authFactors)
 		})
 
 		api.Group("", func(caller *routing.Router) {
@@ -129,7 +131,8 @@ func newControllers(a *app.App) controllers {
 		users:      &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
 		me:         &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
 		sessions: &v1.SessionController{
-			AttemptLogin: acts.AttemptLogin, ConsumeMagicLink: acts.ConsumeMagicLink, ListSessions: acts.ListSessions,
+			AttemptLogin: acts.AttemptLogin, ConsumeMagicLink: acts.ConsumeMagicLink,
+			TwoFactor: acts.CompleteTwoFactorChallenge, ListSessions: acts.ListSessions,
 			EndSession: acts.EndSession, EndOtherSessions: acts.EndOtherSessions, IDs: a.IDs, Cookies: a.Cookies,
 			Server: server,
 		},
@@ -156,5 +159,25 @@ func newControllers(a *app.App) controllers {
 			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
 			Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
 		},
+		authFactors: &v1.AuthFactorController{
+			List: acts.ListAuthFactors, Add: acts.AddAuthFactor, Activate: acts.ActivateAuthFactor,
+			Change: acts.UpdateAuthFactor, Remove: acts.RemoveAuthFactor, RemoveAll: acts.RemoveAllAuthFactors,
+			IDs: a.IDs, Cookies: a.Cookies,
+		},
 	}
+}
+
+/*
+authFactorRoutes declares the caller's own auth factors. Adding and
+removing factors needs a recent confirmation; activating needs only the
+code, which proves the factor works.
+*/
+func authFactorRoutes(user *routing.Router, c *v1.AuthFactorController) {
+	routing.Get(user, "/user/auth-factors", "user.auth-factors.index", c.Index)
+	routing.Post(user, "/user/auth-factors", "user.auth-factors.store", c.Store).Middleware("password.confirm")
+	routing.Patch(user, "/user/auth-factors/{factor}", "user.auth-factors.update", c.Update)
+	routing.Delete(user, "/user/auth-factors", "user.auth-factors.destroy-many", c.DestroyMany).
+		Middleware("password.confirm").Status(fhttp.StatusNoContent)
+	routing.Delete(user, "/user/auth-factors/{factor}", "user.auth-factors.destroy", c.Destroy).
+		Middleware("password.confirm").Status(fhttp.StatusNoContent)
 }

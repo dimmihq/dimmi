@@ -28,6 +28,7 @@ export interface User {
   email: string;
   email_verified: boolean;
   has_password: boolean;
+  two_factor_enabled: boolean;
 }
 
 export interface WorkspaceSummary {
@@ -43,9 +44,41 @@ export interface Instance {
 }
 
 export interface Me {
+  object: "me";
   user: User;
   workspaces: WorkspaceSummary[];
   instance: Instance;
+}
+
+/*
+ * ChallengeMethod is one way the person may finish signing in: a second
+ * factor they hold, such as an authenticator app or their recovery codes.
+ */
+export interface ChallengeMethod {
+  method: string;
+  factor_id: string;
+  name: string;
+  preferred: boolean;
+}
+
+/*
+ * TwoFactorChallenge is the answer to a correct first step on an account
+ * protected by a second factor: no session yet, only the ways to finish.
+ */
+export interface TwoFactorChallenge {
+  object: "two_factor_challenge";
+  expires_at: string;
+  methods: ChallengeMethod[];
+}
+
+/*
+ * SignInResult is what a sign-in answers: the caller once signed in, or
+ * the challenge still to answer.
+ */
+export type SignInResult = Me | TwoFactorChallenge;
+
+export function isChallenge(result: SignInResult): result is TwoFactorChallenge {
+  return result.object === "two_factor_challenge";
 }
 
 export interface Message {
@@ -78,16 +111,20 @@ export const meQuery = queryOptions({
   retry: false,
 });
 
-export function signIn(email: string, password: string): Promise<Me> {
-  return request<Me>("POST", "/sessions", { grant: "password", email, password });
+export function signIn(email: string, password: string): Promise<SignInResult> {
+  return request<SignInResult>("POST", "/sessions", { grant: "password", email, password });
 }
 
-export function signInWithLink(token: string): Promise<Me> {
-  return request<Me>("POST", "/sessions", { grant: "magic_link", token });
+export function signInWithLink(token: string): Promise<SignInResult> {
+  return request<SignInResult>("POST", "/sessions", { grant: "magic_link", token });
 }
 
-export function signInWithCode(email: string, code: string): Promise<Me> {
-  return request<Me>("POST", "/sessions", { grant: "email_code", email, code });
+export function signInWithCode(email: string, code: string): Promise<SignInResult> {
+  return request<SignInResult>("POST", "/sessions", { grant: "email_code", email, code });
+}
+
+export function signInWithSecondFactor(method: string, code: string): Promise<Me> {
+  return request<Me>("POST", "/sessions", { grant: "two_factor", method, code });
 }
 
 export function signUp(input: { name: string; email: string; password: string }): Promise<Me> {
@@ -102,8 +139,8 @@ export function requestPasswordReset(email: string): Promise<Message> {
   return request<Message>("POST", "/password-resets", { email });
 }
 
-export function resetPassword(id: string, token: string, password: string): Promise<Me> {
-  return request<Me>("PATCH", `/password-resets/${encodeURIComponent(id)}`, { token, password });
+export function resetPassword(id: string, token: string, password: string): Promise<SignInResult> {
+  return request<SignInResult>("PATCH", `/password-resets/${encodeURIComponent(id)}`, { token, password });
 }
 
 export function verifyEmail(id: string, token: string): Promise<unknown> {

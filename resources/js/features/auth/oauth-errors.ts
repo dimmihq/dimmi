@@ -12,7 +12,7 @@ const messages: Record<string, string> = {
   identity_taken: "That account is already linked to another user.",
   provider_already_linked: "You already linked an account of this provider.",
   reauth_user_mismatch: "Sign in as the user of this session.",
-  two_factor_unavailable: "This account uses two-factor authentication, which this server cannot check yet.",
+  two_factor_challenge_expired: "Your sign-in timed out before the second step. Sign in again.",
   auth_busy: "The server is busy. Try again in a moment.",
 };
 

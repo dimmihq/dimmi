@@ -13,7 +13,9 @@
 | attempt carried an invitation, on the invitation page, which accepts
 | it or says it was sent to another address. A failure the person can
 | act on lands on the sign-in page, or the security settings for a
-| link, with its error code.
+| link, with its error code. An account protected by a second factor
+| lands on the challenge page first, holding the challenge cookie and
+| where it was going.
 |
 */
 
@@ -23,6 +25,7 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/fault"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
@@ -40,6 +43,7 @@ type OAuthCallbackController struct {
 	Attempts  appauth.OAuthAttempts
 	Cookies   appauth.Cookies
 	Callback  *auth.HandleOAuthCallback
+	Clock     clock.Clock
 	Errors    fhttp.Errors
 }
 
@@ -87,8 +91,25 @@ func (c *OAuthCallbackController) Invoke(w fhttp.ResponseWriter, r *fhttp.Reques
 		return
 	}
 
+	c.land(w, attempt, result)
+}
+
+/*
+land hands the browser its cookies and sends it where the sign-in goes:
+the challenge page first when a second factor must still answer.
+*/
+func (c *OAuthCallbackController) land(
+	w fhttp.ResponseWriter, attempt appauth.OAuthAttempt, result auth.OAuthCallbackResult,
+) {
 	if result.SignedIn.DeviceToken != "" {
 		setCookie(w, c.Cookies.DeviceCookie(result.SignedIn.DeviceToken))
+	}
+
+	if challenge := result.SignedIn.Challenge; challenge != nil {
+		setCookie(w, c.Cookies.TwoFactorCookie(challenge.Token, challenge.ExpiresAt.Sub(c.Clock.Now())))
+		redirect(w, "/login/two-factor?"+url.Values{"redirect": {landing(attempt, result)}}.Encode())
+
+		return
 	}
 
 	redirect(w, landing(attempt, result))

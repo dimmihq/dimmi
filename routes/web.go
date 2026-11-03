@@ -37,7 +37,7 @@ func Web(a *app.App) {
 	}
 	callback := &web.OAuthCallbackController{
 		Providers: a.Providers, Attempts: a.OAuthAttempts, Cookies: a.Cookies,
-		Callback: a.Actions.HandleOAuthCallback, Errors: a.Errors,
+		Callback: a.Actions.HandleOAuthCallback, Clock: a.Clock, Errors: a.Errors,
 	}
 
 	a.Router.Group("", func(pages *routing.Router) {
@@ -79,11 +79,12 @@ provider callbacks link to.
 */
 func authPages() map[string]string {
 	return map[string]string{
-		"login":           "/login",
-		"login.magic":     "/login/magic",
-		"signup":          "/signup",
-		"forgot-password": "/forgot-password",
-		"reset-password":  "/reset-password",
-		"verify-email":    "/verify-email",
+		"login":            "/login",
+		"login.magic":      "/login/magic",
+		"login.two-factor": "/login/two-factor",
+		"signup":           "/signup",
+		"forgot-password":  "/forgot-password",
+		"reset-password":   "/reset-password",
+		"verify-email":     "/verify-email",
 	}
 }

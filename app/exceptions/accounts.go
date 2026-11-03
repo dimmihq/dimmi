@@ -117,14 +117,6 @@ var (
 )
 
 /*
-ErrTwoFactorUnavailable refuses to sign in an account protected by a
-second factor on a server that cannot yet ask for it. Starting a session
-without the second factor would silently weaken the account.
-*/
-var ErrTwoFactorUnavailable = fault.New(fault.Unavailable, "two_factor_unavailable",
-	"This account uses two-factor authentication, which this server cannot check yet.")
-
-/*
 Mailed secret failures.
 
 A link or code that is unknown, wrong, or of another kind fails the

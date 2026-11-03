@@ -42,6 +42,23 @@ var (
 )
 
 /*
+Sealer seals secrets before they are stored and opens them again. The
+application's encrypter is one; a caller may bind each secret to the
+row it belongs to with a sealer of its own.
+*/
+type Sealer interface {
+	/*
+		Encrypt returns the plaintext encrypted and authenticated.
+	*/
+	Encrypt(plaintext []byte) ([]byte, error)
+
+	/*
+		Decrypt returns the plaintext of what Encrypt returned.
+	*/
+	Decrypt(ciphertext []byte) ([]byte, error)
+}
+
+/*
 Credential is a user's stored factor as verification sees it.
 
 ID is the stored factor's id and Type the kind of factor. Secret is the
