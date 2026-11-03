@@ -27,6 +27,8 @@ CREATE TABLE attachments (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE INDEX attachments_workspace_id_message_id_index ON attachments (workspace_id, message_id);
+
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY attachments_tenant ON attachments USING (workspace_id = ANY (dimmi_visible_workspaces()));
 

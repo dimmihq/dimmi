@@ -25,6 +25,8 @@ CREATE TABLE conversation_tag (
     PRIMARY KEY (conversation_id, tag_id)
 );
 
+CREATE INDEX conversation_tag_tag_id_index ON conversation_tag (tag_id);
+
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tags_tenant ON tags USING (workspace_id = ANY (dimmi_visible_workspaces()));
 

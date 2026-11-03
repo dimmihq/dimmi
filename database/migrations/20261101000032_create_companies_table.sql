@@ -1,7 +1,8 @@
 -- migrate: phase=expand
 -- A company is the organization a contact works for, as the host app or
 -- the API describes it. The host app's own id for it is unique within
--- the workspace, so the same company sent twice is one row.
+-- the workspace, so the same company sent twice is one row. A company
+-- without one is matched by its domain instead.
 
 -- +goose Up
 CREATE TABLE companies (
@@ -18,6 +19,7 @@ CREATE TABLE companies (
 
 CREATE UNIQUE INDEX companies_workspace_id_external_id_key ON companies (workspace_id, external_id)
     WHERE external_id IS NOT NULL;
+CREATE INDEX companies_workspace_id_domain_index ON companies (workspace_id, domain);
 
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 CREATE POLICY companies_tenant ON companies USING (workspace_id = ANY (dimmi_visible_workspaces()));
