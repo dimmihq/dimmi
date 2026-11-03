@@ -15,6 +15,7 @@ export interface Workspace {
   timezone: string;
   locale: string;
   test_mode: boolean;
+  require_two_factor: boolean;
 }
 
 export interface Member {
@@ -37,6 +38,7 @@ export interface WorkspaceChanges {
   name?: string;
   slug?: string;
   timezone?: string;
+  require_two_factor?: boolean;
 }
 
 export interface MemberChanges {

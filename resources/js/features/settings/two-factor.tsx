@@ -4,12 +4,15 @@
  * making new recovery codes, and turning it off. Secrets show once, in
  * the dialog that made them, and are gone when it closes.
  */
-import { RiShieldCheckLine, RiSmartphoneLine } from "@remixicon/react";
+import { RiCheckLine, RiFileCopyLine, RiShieldCheckLine, RiSmartphoneLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { HintText } from "@/components/base/input/hint-text";
+import { InputBase, TextField } from "@/components/base/input/input";
+import { Label } from "@/components/base/input/label";
 import { InputOtp } from "@/components/base/input-otp/input-otp";
 import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Notification } from "@/components/base/notification/notification";
@@ -31,6 +34,7 @@ import { Action, Danger } from "./controls";
 import { Empty, Glyph, Item, Row, Section } from "./layout";
 import { useRecentAuth } from "./recent-auth";
 import { remainingLabel, twoFactorState } from "./two-factor-state";
+import { useCopy } from "./use-copy";
 
 const dates = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
@@ -190,32 +194,21 @@ function SetupDialog({
   };
 
   return (
-    <Modal isOpen onOpenChange={(open) => !open && onClose()}>
+    <Modal size="sm" isOpen onOpenChange={(open) => !open && onClose()}>
       <form onSubmit={submit}>
         <ModalHeader
           icon={RiShieldCheckLine}
           title="Add an authenticator app"
           description="Scan the QR code with an app such as 1Password, Google Authenticator or Authy, then enter the code it shows."
         />
-        <ModalBody className="flex flex-col gap-5">
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-            <img
-              src={qrImage(factor.setup.qr_svg)}
-              alt="QR code to scan with your authenticator app"
-              className="size-40 shrink-0 rounded-xl bg-background-primary-default p-2"
-            />
-            <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-body-2-medium text-text-secondary">Can't scan it? Enter this key instead</span>
-              <code
-                dir="ltr"
-                data-testid="totp-secret"
-                className="select-all break-all rounded-md bg-background-tertiary-default px-2 py-1 font-mono text-body-2-regular text-text-primary"
-              >
-                {factor.setup.secret}
-              </code>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
+        <ModalBody className="flex flex-col items-center gap-5">
+          <img
+            src={qrImage(factor.setup.qr_svg)}
+            alt="QR code to scan with your authenticator app"
+            className="size-56 rounded-2xl bg-background-primary-default p-3"
+          />
+          <SetupKey secret={factor.setup.secret} />
+          <div className="flex w-full flex-col items-center gap-1.5">
             <span className="text-body-medium text-text-secondary">Code from the app</span>
             <InputOtp
               value={code}
@@ -228,7 +221,7 @@ function SetupDialog({
               groupEvery={3}
               isInvalid={Boolean(codeError)}
               aria-label="Code from the app"
-              className="justify-start"
+              className="justify-center"
             />
             {codeError ? (
               <HintText isInvalid role="alert">
@@ -250,9 +243,49 @@ function SetupDialog({
   );
 }
 
-function CodesDialog({ codes, onClose }: { codes: string[]; onClose: () => void }) {
+/*
+ * SetupKey stays behind a link until the person cannot scan the code,
+ * then shows the key on one line with a button that copies it.
+ */
+function SetupKey({ secret }: { secret: string }) {
+  const [shown, setShown] = useState(false);
+  const { copied, copy } = useCopy();
+
+  if (!shown) {
+    return (
+      <LinkButton variant="secondary" size="xs" onClick={() => setShown(true)}>
+        Can't scan the code?
+      </LinkButton>
+    );
+  }
+
   return (
-    <Modal isOpen isDismissable={false} onOpenChange={(open) => !open && onClose()}>
+    <TextField value={secret} isReadOnly className="w-full">
+      <Label>Enter this setup key in the app instead</Label>
+      <InputBase
+        dir="ltr"
+        data-testid="totp-secret"
+        className="font-mono text-body-2-regular"
+        trailingAddon={
+          <Button
+            variant="ghost"
+            size="xs"
+            iconOnly
+            leadingIcon={copied ? RiCheckLine : RiFileCopyLine}
+            aria-label={copied ? "Copied" : "Copy setup key"}
+            onClick={() => void copy(secret)}
+          />
+        }
+      />
+    </TextField>
+  );
+}
+
+function CodesDialog({ codes, onClose }: { codes: string[]; onClose: () => void }) {
+  const { copied, copy } = useCopy();
+
+  return (
+    <Modal size="sm" isOpen isDismissable={false} onOpenChange={(open) => !open && onClose()}>
       <ModalHeader
         icon={RiShieldCheckLine}
         title="Save your recovery codes"
@@ -273,6 +306,13 @@ function CodesDialog({ codes, onClose }: { codes: string[]; onClose: () => void 
         </ol>
       </ModalBody>
       <ModalFooter>
+        <Button
+          variant="secondary"
+          leadingIcon={copied ? RiCheckLine : RiFileCopyLine}
+          onClick={() => void copy(codes.join("\n"))}
+        >
+          {copied ? "Copied" : "Copy codes"}
+        </Button>
         <Button onClick={onClose}>I saved them</Button>
       </ModalFooter>
     </Modal>

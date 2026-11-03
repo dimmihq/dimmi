@@ -6,8 +6,10 @@
  */
 import { RiBankCardLine, RiDownload2Line, RiFileList3Line, RiTeamLine } from "@remixicon/react";
 
-import { Action, Field, Toggle } from "../controls";
+import { Action, Field } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
+import { RequireTwoFactorSection } from "../require-two-factor";
+import { useAccount } from "../use-account";
 
 export function TeamsSettings() {
   return (
@@ -25,16 +27,11 @@ export function TeamsSettings() {
 }
 
 export function WorkspaceSecuritySettings() {
+  const me = useAccount();
+
   return (
     <SettingsPage title="Security" description="Rules every member of the workspace signs in under.">
-      <Section title="Authentication">
-        <Row
-          label="Require two-factor authentication"
-          description="Members without it set it up at their next sign-in."
-        >
-          <Toggle label="Require two-factor authentication" />
-        </Row>
-      </Section>
+      <RequireTwoFactorSection workspace={me.workspace.id} hasPassword={me.hasPassword} title="Authentication" />
     </SettingsPage>
   );
 }
