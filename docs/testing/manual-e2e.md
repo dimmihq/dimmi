@@ -198,6 +198,28 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Repair | `dimmi workspace:repair acme` | `acme: defaults checked, organization in order`, exit 0; unknown slug exits 1 "Workspace not found" |
 | In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
 
+### Teams
+
+Bob (`b.jar`) owns Acme after the transfer, and Ada's membership is deactivated since she left:
+
+```bash
+ADAM=$(curl -s -b b.jar -H "$H" "$B/members?q=$ADA" | jq -r '.data[0].id')
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Create | `r tc -b b.jar -X POST -H "$O" -H "$J" -H "$H" $B/teams -d '{"name":" Support "}'; TEAM=$(jq -r .data.id body)` | 201 `object: team`, `name: Support`, `member_count: 0` |
+| Same name, any case | the same with `{"name":"SUPPORT"}` | 422 `team_name_taken` on `name` |
+| Add members | `r add -b b.jar -X POST -H "$O" -H "$J" -H "$H" $B/teams/$TEAM/members -d "{\"member_ids\":[\"$BOBM\",\"$ADAM\",\"mem_nope\",\"$BOBM\"]}"` | 200, results in order: `added`, `inactive`, `not_found`, `already_member` |
+| List | `r tl -b b.jar -H "$O" -H "$H" "$B/teams?include=members"` | 200, Support with `member_count: 1` and Bob under `members`; without `include` no `members` key |
+| Member's teams | `r mt -b b.jar -H "$O" -H "$H" "$B/members/me?include=teams"` | 200, `teams` `[{"id":"team_…","object":"team","name":"Support"}]` |
+| Rename | `PATCH $B/teams/$TEAM {"name":"Customer care"}` | 200 `name: Customer care` |
+| Unknown team | `r ut -b b.jar -H "$O" -H "$H" $B/teams/team_01jc0000000000000000000000` | 404 `not_found` |
+| Remove member | `r rm -b b.jar -X DELETE -H "$O" -H "$H" $B/teams/$TEAM/members/$BOBM`, twice | 204, then 404 |
+| Delete | `r del -b b.jar -X DELETE -H "$O" -H "$H" $B/teams/$TEAM`, then `GET $B/teams/$TEAM` | 204, then 404; `teams` lists nothing; the row stays with `deleted_at` set for the inbox to sweep |
+| Name free again | `POST $B/teams {"name":"Customer care"}` | 201 |
+| In a browser | open `$W/d/settings/teams`, create a team, add a member from the picker, rename it, remove the member, go back to all teams and delete it | the team page opens on create; the member count follows each change; delete asks first and returns to the list |
+
 ### Two-factor authentication
 
 Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an
