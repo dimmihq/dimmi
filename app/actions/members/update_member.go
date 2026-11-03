@@ -77,7 +77,8 @@ Rules:
     and has two-factor authentication where the workspace requires it;
     the caller becomes an admin unless KeepOwner.
   - A reactivated owner comes back as an admin unless a role is given.
-  - The workspace always keeps an active owner.
+  - The workspace always keeps an active owner: a change that would
+    leave none is refused before the caller's power is weighed.
   - Values equal to the current ones change nothing.
 
 Events: [appevents.MemberReactivated], [appevents.MemberRoleChanged]
@@ -183,6 +184,14 @@ plan checks the update against the caller's power and the member's
 state, and works out what it changes.
 */
 func (a *UpdateMember) plan(ctx context.Context, s subject, in UpdateMemberInput) (memberChange, error) {
+	if ownerRoleChange(in, s.target) && !in.Principal.IsFirstParty() {
+		return memberChange{}, exceptions.ErrFirstPartyOnly
+	}
+
+	if err := refuseLastOwner(ctx, s, in); err != nil {
+		return memberChange{}, err
+	}
+
 	if err := a.authorize(in, s.target); err != nil {
 		return memberChange{}, err
 	}
@@ -213,12 +222,50 @@ func (a *UpdateMember) plan(ctx context.Context, s subject, in UpdateMemberInput
 }
 
 /*
+refuseLastOwner refuses, before the caller's power is weighed, a change
+that would take the workspace's only active owner out of ownership. The
+workspace row is locked by then, so of two owners demoting each other
+at once the second is told the workspace needs its owner, whichever
+role the first left them with.
+*/
+func refuseLastOwner(ctx context.Context, s subject, in UpdateMemberInput) error {
+	if !appauth.IsOwnerRole(enums.Role(s.target.Role)) || s.target.Status != string(enums.MemberStatusActive) {
+		return nil
+	}
+
+	demoted := in.AssignedRole != nil && !appauth.IsOwnerRole(*in.AssignedRole)
+	deactivated := in.Status != nil && *in.Status == enums.MemberStatusDeactivated
+
+	if !demoted && !deactivated {
+		return nil
+	}
+
+	owners, err := s.q.CountActiveOwners(ctx, s.target.WorkspaceID)
+	if err != nil {
+		return fmt.Errorf("count owners: %w", err)
+	}
+
+	if owners <= 1 {
+		return exceptions.ErrLastOwner
+	}
+
+	return nil
+}
+
+/*
+ownerRoleChange reports whether the update moves the member into or out
+of the owner role.
+*/
+func ownerRoleChange(in UpdateMemberInput, target models.WorkspaceMember) bool {
+	return in.AssignedRole != nil && *in.AssignedRole != enums.Role(target.Role) &&
+		(appauth.IsOwnerRole(enums.Role(target.Role)) || appauth.IsOwnerRole(*in.AssignedRole))
+}
+
+/*
 authorize checks that the caller may change each field asked for on
 this member.
 */
 func (a *UpdateMember) authorize(in UpdateMemberInput, target models.WorkspaceMember) error {
-	targetIsOwner := appauth.IsOwnerRole(enums.Role(target.Role))
-
 	if in.Status != nil && !in.Membership.Can(statusPermission(target)) {
 		return exceptions.ErrForbidden
 	}
@@ -227,16 +274,12 @@ func (a *UpdateMember) authorize(in UpdateMemberInput, target models.WorkspaceMe
 		return nil
 	}
 
-	if !targetIsOwner && !appauth.IsOwnerRole(*in.AssignedRole) {
+	if !ownerRoleChange(in, target) {
 		if !in.Membership.Can("members:write") {
 			return exceptions.ErrForbidden
 		}
 
 		return nil
-	}
-
-	if !in.Principal.IsFirstParty() {
-		return exceptions.ErrFirstPartyOnly
 	}
 
 	if !in.Membership.Can("members:manage_owners") {

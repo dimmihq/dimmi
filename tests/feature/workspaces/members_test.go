@@ -129,6 +129,7 @@ func TestMembersUpdateRole(t *testing.T) {
 		member, _ := join(t, tc, enums.RoleMember)
 		admin, _ := join(t, tc, enums.RoleAdmin)
 		_, other := join(t, tc, enums.RoleMember)
+		join(t, tc, enums.RoleOwner)
 		owner := memberID(tc.Workspace.Owner)
 
 		in(tc, member).PatchJSON("/api/v1/members/"+memberID(other), testkit.JSON{"role": "admin"}).
@@ -206,8 +207,7 @@ func TestMembersUpdateRole(t *testing.T) {
 
 		wg.Wait()
 
-		assert.Contains(t, statuses, 200)
-		assert.Subset(t, []int{403, 409}, slicesWithout(statuses, 200))
+		assert.ElementsMatch(t, []int{200, 409}, statuses)
 		tc.Table("workspace_members").AssertCount(1, testkit.Row{"role": "owner", "status": "active"})
 	})
 }
