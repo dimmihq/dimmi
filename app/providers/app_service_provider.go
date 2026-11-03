@@ -8,7 +8,8 @@
 | validation rules and its mail, and once every provider has registered,
 | builds the business actions with the services each one uses. Actions
 | that set up new workspaces share one list of initializers, which the
-| parts of the product needing defaults fill while registering.
+| parts of the product needing defaults fill while registering, in the
+| order their defaults build on each other: the default inbox first.
 |
 */
 
@@ -26,6 +27,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
@@ -53,13 +55,14 @@ type AppServiceProvider struct {
 
 /*
 Register binds the framework application and registers the public id
-prefixes, the identity providers, the validation rules and the
-mailables. The providers come before the rules, since their keys are
-registry values the rules accept.
+prefixes, the identity providers, the validation rules, the mailables
+and the workspace initializers. The providers come before the rules,
+since their keys are registry values the rules accept.
 */
 func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	p.App.Application = fa
 	appmail.Register(fa.Mail)
+	p.App.WorkspaceInitializers.Register(&inboxes.EnsureDefaultInbox{Clock: fa.Clock})
 
 	identity := p.App.IdentityProviders
 	if err := identity.Register(idp.Google(fa.Social), idp.GitHub(fa.Social)); err != nil {

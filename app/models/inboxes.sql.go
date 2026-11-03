@@ -50,6 +50,33 @@ func (q *Queries) CreateInbox(ctx context.Context, arg CreateInboxParams) (Inbox
 	return i, err
 }
 
+const findDefaultInbox = `-- name: FindDefaultInbox :one
+SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at FROM inboxes AS i
+JOIN workspaces AS w ON w.id = i.workspace_id
+WHERE i.workspace_id = $1
+  AND i.deleted_at IS NULL
+  AND i.id::text = w.settings ->> 'default_inbox_id'
+`
+
+// FindDefaultInbox returns the live inbox the workspace's settings name
+// as its default, where conversations land when nothing routes them
+// elsewhere.
+func (q *Queries) FindDefaultInbox(ctx context.Context, workspaceID ids.UUID) (Inbox, error) {
+	row := q.db.QueryRow(ctx, findDefaultInbox, workspaceID)
+	var i Inbox
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.DefaultTeamID,
+		&i.Settings,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const findInbox = `-- name: FindInbox :one
 SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at FROM inboxes WHERE workspace_id = $1 AND id = $2
 `
@@ -109,4 +136,23 @@ func (q *Queries) ListInboxes(ctx context.Context, workspaceID ids.UUID) ([]Inbo
 		return nil, err
 	}
 	return items, nil
+}
+
+const setDefaultInbox = `-- name: SetDefaultInbox :exec
+UPDATE workspaces
+SET settings = jsonb_set(settings, '{default_inbox_id}', to_jsonb($1::uuid)), updated_at = $2
+WHERE id = $3
+`
+
+type SetDefaultInboxParams struct {
+	InboxID     ids.UUID  `json:"inbox_id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// SetDefaultInbox makes the inbox the workspace's default, keeping every
+// other setting.
+func (q *Queries) SetDefaultInbox(ctx context.Context, arg SetDefaultInboxParams) error {
+	_, err := q.db.Exec(ctx, setDefaultInbox, arg.InboxID, arg.Now, arg.WorkspaceID)
+	return err
 }

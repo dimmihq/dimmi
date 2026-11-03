@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/database/migrate"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
@@ -59,7 +60,7 @@ func Epoch() time.Time {
 
 /*
 TestCase is one test's running application with a workspace and its
-owner.
+owner. Database is the test's own database the application runs on.
 */
 type TestCase struct {
 	T         testing.TB
@@ -67,11 +68,14 @@ type TestCase struct {
 	Clock     *clock.Fake
 	Owner     models.User
 	Workspace workspaces.CreatedWorkspace
+	Database  testkit.Database
 	handler   fhttp.Handler
 	mail      *mail.Fake
 	mailOnce  sync.Once
 	social    *socialite.Fake
 	oauthOnce sync.Once
+	role      *database.DB
+	roleOnce  sync.Once
 	environ   []string
 	before    []func(a *app.App)
 }
@@ -155,7 +159,8 @@ func New(tb testing.TB, opts ...Option) *TestCase {
 
 	return &TestCase{
 		T: tb, App: application, Clock: fake, Owner: owner, Workspace: workspace,
-		handler: application.Kernel.Handler(routes), environ: booted.environ, before: o.before,
+		Database: booted.database, handler: application.Kernel.Handler(routes), environ: booted.environ,
+		before: o.before,
 	}
 }
 
@@ -173,13 +178,14 @@ func Boot(tb testing.TB, opts ...Option) (*app.App, *clock.Fake, error) {
 }
 
 /*
-booted is a booted application with its clock and the environment it
-read.
+booted is a booted application with its clock, its database and the
+environment it read.
 */
 type booted struct {
-	app     *app.App
-	clock   *clock.Fake
-	environ []string
+	app      *app.App
+	clock    *clock.Fake
+	database testkit.Database
+	environ  []string
 }
 
 /*
@@ -194,7 +200,8 @@ func start(tb testing.TB, o *options) (booted, error) {
 	}
 
 	fake := clock.NewFake(Epoch())
-	foundationOptions.Environ = append(environment(tb), o.env...)
+	db := MigratedDatabase(tb)
+	foundationOptions.Environ = append(environment(tb, db.URL), o.env...)
 	foundationOptions.LogWriter = cmp.Or[io.Writer](o.logs, io.Discard)
 	foundationOptions.Clock = fake
 
@@ -205,7 +212,7 @@ func start(tb testing.TB, o *options) (booted, error) {
 
 	tb.Cleanup(func() { require.NoError(tb, fa.Shutdown(context.WithoutCancel(tb.Context()))) })
 
-	return booted{app: application, clock: fake, environ: foundationOptions.Environ}, nil
+	return booted{app: application, clock: fake, database: db, environ: foundationOptions.Environ}, nil
 }
 
 /*
@@ -237,18 +244,18 @@ func (tc *TestCase) Table(table string) *testkit.TableAssertions {
 }
 
 /*
-environment returns the test's own database, Valkey prefix, data
-directory and key, with sign-up open, cheap hashing and the fake mail
-transport's log driver.
+environment returns the settings that put the application on the
+database, with its own Valkey prefix, data directory and key, sign-up
+open, cheap hashing and the fake mail transport's log driver.
 */
-func environment(tb testing.TB) []string {
+func environment(tb testing.TB, databaseURL string) []string {
 	tb.Helper()
 
 	return []string{
 		"DIMMI_APP__ENV=testing",
 		"DIMMI_APP__KEY=" + encryption.GenerateAppKey(),
 		"DIMMI_APP__DATA_DIR=" + tb.TempDir(),
-		"DIMMI_DATABASE__URL=" + MigratedDatabase(tb).URL,
+		"DIMMI_DATABASE__URL=" + databaseURL,
 		"DIMMI_DATABASE__MAX_CONNS=4",
 		"DIMMI_MIGRATIONS__AUTO=false",
 		"DIMMI_QUEUE__MAX_CONNS=2",

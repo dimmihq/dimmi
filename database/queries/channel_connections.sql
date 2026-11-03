@@ -10,3 +10,15 @@ RETURNING *;
 -- FindChannelConnection returns the connection with the id in the
 -- workspace, deleted or not.
 SELECT * FROM channel_connections WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListInboxesWithoutChannel :many
+-- ListInboxesWithoutChannel returns the workspace's live inboxes that
+-- have no live connection of the type, oldest first.
+SELECT i.* FROM inboxes AS i
+WHERE i.workspace_id = @workspace_id
+  AND i.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM channel_connections AS c
+      WHERE c.workspace_id = i.workspace_id AND c.inbox_id = i.id AND c.type = @type AND c.deleted_at IS NULL
+  )
+ORDER BY i.created_at, i.id;

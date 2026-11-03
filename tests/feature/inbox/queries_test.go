@@ -21,9 +21,9 @@ import (
 
 /*
 query runs the function in its own transaction scoped to the workspace,
-with the queries bound to it, and returns what the function returned.
-Assertions stay outside, so a failing test never leaves a transaction
-open.
+as the application role, so row level security applies, with the
+queries bound to it, and returns what the function returned. Assertions
+stay outside, so a failing test never leaves a transaction open.
 */
 func query[T any](
 	t *testing.T, tc *tests.TestCase, workspace ids.UUID, fn func(ctx context.Context, q *models.Queries) (T, error),
@@ -33,7 +33,7 @@ func query[T any](
 	var out T
 
 	ctx := tenancy.With(t.Context(), workspace.String())
-	err := tc.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	err := tc.ApplicationRole().Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 		out, err = fn(ctx, models.New(tx))
 
@@ -67,7 +67,7 @@ func seedThread(t *testing.T, tc *tests.TestCase, workspace ids.UUID) thread {
 
 		var err error
 		th.inbox, err = q.CreateInbox(ctx, models.CreateInboxParams{
-			WorkspaceID: workspace, Name: "Support", Settings: json.RawMessage(`{}`), Now: now,
+			WorkspaceID: workspace, Name: "Sales", Settings: json.RawMessage(`{}`), Now: now,
 		})
 		if err != nil {
 			return th, err
@@ -213,8 +213,10 @@ func TestInboxQueries(t *testing.T) {
 			return q.FindInbox(ctx, models.FindInboxParams{WorkspaceID: ids.New(), ID: th.inbox.ID})
 		})
 
-		assert.Equal(t, "Support", found.Name)
-		assert.Equal(t, []models.Inbox{found}, listed)
+		assert.Equal(t, "Sales", found.Name)
+		require.Len(t, listed, 2)
+		assert.Equal(t, "Support", listed[0].Name)
+		assert.Equal(t, found, listed[1])
 		require.ErrorIs(t, err, database.ErrNotFound)
 	})
 
