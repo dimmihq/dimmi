@@ -13,7 +13,11 @@
 | 40 characters. A taken slug gets -2, -3 and so on, and after -99 a
 | random suffix. Slugs that would read as part of the product, such as
 | admin or login, are never handed out, and neither is anything shorter
-| than three characters.
+| than three characters or a slug another workspace gave up recently.
+|
+| Once the workspace and its owner exist, every registered initializer
+| adds its defaults in the same transaction, so any failure among them
+| leaves nothing behind.
 |
 */
 
@@ -22,9 +26,9 @@ package workspaces
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -36,15 +40,6 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
-)
-
-/*
-The limits of a slug, and the suffix numbers tried before a random one.
-*/
-const (
-	slugMinLength = 3
-	slugMaxLength = 40
-	slugMaxSuffix = 99
 )
 
 /*
@@ -71,15 +66,17 @@ CreateWorkspace creates a workspace with its organization and owner.
 Rules:
   - The organization is created first, named after the workspace.
   - The owner joins as an active member with the owner role.
+  - The initializers run after the owner joins, in the transaction.
 
 Events: [appevents.WorkspaceCreated], [appevents.MemberJoined].
 
 Errors: a wrapped database error.
 */
 type CreateWorkspace struct {
-	DB     *database.DB
-	Events *events.Dispatcher
-	Clock  clock.Clock
+	DB           *database.DB
+	Events       *events.Dispatcher
+	Clock        clock.Clock
+	Initializers *Initializers
 }
 
 /*
@@ -103,7 +100,7 @@ func (a *CreateWorkspace) Handle(ctx context.Context, in CreateWorkspaceInput) (
 			return fmt.Errorf("create organization: %w", err)
 		}
 
-		slug, err := a.freeSlug(ctx, q, name)
+		slug, err := a.freeSlug(ctx, q, name, now)
 		if err != nil {
 			return err
 		}
@@ -121,6 +118,10 @@ func (a *CreateWorkspace) Handle(ctx context.Context, in CreateWorkspaceInput) (
 		})
 		if err != nil {
 			return fmt.Errorf("add workspace owner: %w", err)
+		}
+
+		if err := a.Initializers.Run(ctx, tx, created.Workspace); err != nil {
+			return err
 		}
 
 		return a.announce(ctx, tx, created, in.JoinedVia)
@@ -148,18 +149,20 @@ func (a *CreateWorkspace) announce(ctx context.Context, tx *database.Tx, c Creat
 /*
 freeSlug returns the first slug for the name no workspace holds.
 */
-func (a *CreateWorkspace) freeSlug(ctx context.Context, q *models.Queries, name string) (string, error) {
+func (a *CreateWorkspace) freeSlug(ctx context.Context, q *models.Queries, name string, now time.Time) (string, error) {
 	base := baseSlug(name)
 
 	for n := 1; n <= slugMaxSuffix; n++ {
 		candidate := withSuffix(base, n)
 
-		taken, err := q.CountWorkspacesWithSlug(ctx, candidate)
+		taken, err := slugTaken(ctx, q, models.CountWorkspacesWithSlugParams{
+			WorkspaceID: ids.Nil(), Slug: candidate, Now: now,
+		})
 		if err != nil {
-			return "", fmt.Errorf("check workspace slug: %w", err)
+			return "", err
 		}
 
-		if taken == 0 {
+		if !taken {
 			return candidate, nil
 		}
 	}
@@ -178,7 +181,7 @@ func baseSlug(name string) string {
 
 	slug = strings.Trim(slug, "-")
 
-	if len(slug) < slugMinLength || slices.Contains(reservedSlugs(), slug) {
+	if len(slug) < slugMinLength || reservedSlug(slug) {
 		slug = strings.TrimPrefix(slug+"-workspace", "-")
 	}
 
@@ -206,14 +209,4 @@ func withSuffix(base string, n int) string {
 	}
 
 	return base + suffix
-}
-
-/*
-reservedSlugs are slugs that would read as part of the product.
-*/
-func reservedSlugs() []string {
-	return []string{
-		"api", "app", "www", "admin", "help", "docs", "status", "mail", "support", "dimmi", "auth", "login",
-		"setup", "static", "assets", "cdn", "widget", "mcp", "oauth", "billing",
-	}
 }

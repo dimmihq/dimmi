@@ -56,13 +56,29 @@ function toApiError(status: number, body: ErrorBody | null): ApiError {
 }
 
 /*
+ * RequestOptions changes one call: workspace names the workspace a
+ * workspace route works in, sent in the Dimmi-Workspace header.
+ */
+export interface RequestOptions {
+  workspace?: string;
+}
+
+/*
  * request sends one API call and returns the data of the response, or
  * undefined for a response without a body.
  */
-export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options: RequestOptions = {},
+): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
+  }
+  if (options.workspace) {
+    headers["Dimmi-Workspace"] = options.workspace;
   }
 
   const response = await fetch(base + path, {

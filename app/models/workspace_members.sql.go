@@ -12,6 +12,19 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countActiveOwners = `-- name: CountActiveOwners :one
+SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND role = 'owner' AND status = 'active'
+`
+
+// CountActiveOwners counts the workspace's active owners, the people who
+// can still run it.
+func (q *Queries) CountActiveOwners(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveOwners, workspaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createWorkspaceMember = `-- name: CreateWorkspaceMember :one
 INSERT INTO workspace_members (workspace_id, user_id, role, joined_via, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
@@ -50,6 +63,78 @@ func (q *Queries) CreateWorkspaceMember(ctx context.Context, arg CreateWorkspace
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
 	)
+	return i, err
+}
+
+const deactivateWorkspaceMember = `-- name: DeactivateWorkspaceMember :one
+UPDATE workspace_members
+SET status = 'deactivated', deactivated_at = $1::timestamptz, deactivated_by_member_id = $2::uuid,
+    updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+`
+
+type DeactivateWorkspaceMemberParams struct {
+	Now           time.Time `json:"now"`
+	DeactivatedBy ids.UUID  `json:"deactivated_by"`
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	ID            ids.UUID  `json:"id"`
+}
+
+// DeactivateWorkspaceMember ends the member's access to the workspace and
+// records who ended it, keeping the row so their history stays theirs.
+func (q *Queries) DeactivateWorkspaceMember(ctx context.Context, arg DeactivateWorkspaceMemberParams) (WorkspaceMember, error) {
+	row := q.db.QueryRow(ctx, deactivateWorkspaceMember,
+		arg.Now,
+		arg.DeactivatedBy,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i WorkspaceMember
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.Role,
+		&i.Availability,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastAccessedAt,
+		&i.DeactivatedAt,
+		&i.DeactivatedByMemberID,
+		&i.JoinedVia,
+	)
+	return i, err
+}
+
+const findUserMembership = `-- name: FindUserMembership :one
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.status::text AS status
+FROM auth_list_user_memberships($1) AS m
+WHERE m.member_id = $2::uuid
+`
+
+type FindUserMembershipParams struct {
+	UserID   ids.UUID `json:"user_id"`
+	MemberID ids.UUID `json:"member_id"`
+}
+
+type FindUserMembershipRow struct {
+	MemberID    ids.UUID `json:"member_id"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Status      string   `json:"status"`
+}
+
+// FindUserMembership returns one of the user's own memberships, in any
+// workspace and any state, through a security definer function since the
+// workspace is not known yet.
+func (q *Queries) FindUserMembership(ctx context.Context, arg FindUserMembershipParams) (FindUserMembershipRow, error) {
+	row := q.db.QueryRow(ctx, findUserMembership, arg.UserID, arg.MemberID)
+	var i FindUserMembershipRow
+	err := row.Scan(&i.MemberID, &i.WorkspaceID, &i.Status)
 	return i, err
 }
 
@@ -114,6 +199,146 @@ func (q *Queries) FindWorkspaceMemberForUser(ctx context.Context, arg FindWorksp
 	return i, err
 }
 
+const findWorkspaceMemberWithUser = `-- name: FindWorkspaceMemberWithUser :one
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = $1 AND m.id = $2
+`
+
+type FindWorkspaceMemberWithUserParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+type FindWorkspaceMemberWithUserRow struct {
+	WorkspaceMember WorkspaceMember `json:"workspace_member"`
+	User            User            `json:"user"`
+}
+
+// FindWorkspaceMemberWithUser returns the member with the id in the
+// workspace, with their account.
+func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorkspaceMemberWithUserParams) (FindWorkspaceMemberWithUserRow, error) {
+	row := q.db.QueryRow(ctx, findWorkspaceMemberWithUser, arg.WorkspaceID, arg.ID)
+	var i FindWorkspaceMemberWithUserRow
+	err := row.Scan(
+		&i.WorkspaceMember.ID,
+		&i.WorkspaceMember.WorkspaceID,
+		&i.WorkspaceMember.UserID,
+		&i.WorkspaceMember.Role,
+		&i.WorkspaceMember.Availability,
+		&i.WorkspaceMember.Status,
+		&i.WorkspaceMember.CreatedAt,
+		&i.WorkspaceMember.UpdatedAt,
+		&i.WorkspaceMember.LastAccessedAt,
+		&i.WorkspaceMember.DeactivatedAt,
+		&i.WorkspaceMember.DeactivatedByMemberID,
+		&i.WorkspaceMember.JoinedVia,
+		&i.User.ID,
+		&i.User.Name,
+		&i.User.Email,
+		&i.User.EmailVerifiedAt,
+		&i.User.PasswordHash,
+		&i.User.TwoFactorConfirmedAt,
+		&i.User.AvatarPath,
+		&i.User.Locale,
+		&i.User.Timezone,
+		&i.User.LastSeenAt,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.DeletedAt,
+		&i.User.PasswordChangedAt,
+		&i.User.RiskFlags,
+		&i.User.CreatedVia,
+	)
+	return i, err
+}
+
+const listUserMemberships = `-- name: ListUserMemberships :many
+SELECT
+    m.member_id::uuid AS member_id,
+    m.role::text AS role,
+    m.status::text AS status,
+    coalesce(m.joined_via, '')::text AS joined_via,
+    (m.last_accessed_at IS NOT NULL)::boolean AS accessed,
+    coalesce(m.last_accessed_at, m.created_at)::timestamptz AS last_accessed_at,
+    w.id, w.organization_id, w.name, w.slug, w.timezone, w.locale, w.settings, w.test_mode, w.next_conversation_number, w.suspended_at, w.deleted_at, w.created_at, w.updated_at, w.created_by_user_id, w.deleted_by_user_id, w.purge_after, w.suspended_reason
+FROM auth_list_user_memberships($1) AS m
+JOIN workspaces w ON w.id = m.workspace_id::uuid
+WHERE m.status = 'active'
+  AND CASE $2::text
+      WHEN 'with' THEN w.deleted_at IS NULL OR m.role = 'owner'
+      WHEN 'only' THEN w.deleted_at IS NOT NULL AND m.role = 'owner'
+      ELSE w.deleted_at IS NULL
+  END
+ORDER BY accessed DESC, last_accessed_at DESC, w.created_at
+`
+
+type ListUserMembershipsParams struct {
+	UserID  ids.UUID `json:"user_id"`
+	Trashed string   `json:"trashed"`
+}
+
+type ListUserMembershipsRow struct {
+	MemberID       ids.UUID  `json:"member_id"`
+	Role           string    `json:"role"`
+	Status         string    `json:"status"`
+	JoinedVia      string    `json:"joined_via"`
+	Accessed       bool      `json:"accessed"`
+	LastAccessedAt time.Time `json:"last_accessed_at"`
+	Workspace      Workspace `json:"workspace"`
+}
+
+// ListUserMemberships returns the user's active memberships, the one used
+// most recently first, through a security definer function since they
+// span workspaces. A membership never opened says so in accessed, and
+// its last_accessed_at is then when it began. Workspaces in the trash are left out unless trashed
+// asks for them ("with" adds them, "only" lists nothing else), and only
+// owners ever see one.
+func (q *Queries) ListUserMemberships(ctx context.Context, arg ListUserMembershipsParams) ([]ListUserMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listUserMemberships, arg.UserID, arg.Trashed)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserMembershipsRow
+	for rows.Next() {
+		var i ListUserMembershipsRow
+		if err := rows.Scan(
+			&i.MemberID,
+			&i.Role,
+			&i.Status,
+			&i.JoinedVia,
+			&i.Accessed,
+			&i.LastAccessedAt,
+			&i.Workspace.ID,
+			&i.Workspace.OrganizationID,
+			&i.Workspace.Name,
+			&i.Workspace.Slug,
+			&i.Workspace.Timezone,
+			&i.Workspace.Locale,
+			&i.Workspace.Settings,
+			&i.Workspace.TestMode,
+			&i.Workspace.NextConversationNumber,
+			&i.Workspace.SuspendedAt,
+			&i.Workspace.DeletedAt,
+			&i.Workspace.CreatedAt,
+			&i.Workspace.UpdatedAt,
+			&i.Workspace.CreatedByUserID,
+			&i.Workspace.DeletedByUserID,
+			&i.Workspace.PurgeAfter,
+			&i.Workspace.SuspendedReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserWorkspaces = `-- name: ListUserWorkspaces :many
 SELECT
     m.member_id::uuid AS member_id,
@@ -160,6 +385,233 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 		return nil, err
 	}
 	return items, nil
+}
+
+const listWorkspaceMembers = `-- name: ListWorkspaceMembers :many
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = $1
+  AND (coalesce(cardinality($2::text[]), 0) = 0 OR m.status = ANY ($2::text[]))
+  AND (coalesce(cardinality($3::text[]), 0) = 0 OR m.role = ANY ($3::text[]))
+  AND ($4::text = '' OR u.name ILIKE '%' || $4::text || '%' OR u.email ILIKE '%' || $4::text || '%')
+ORDER BY
+    CASE WHEN $5::boolean THEN m.created_at END DESC,
+    CASE WHEN NOT $5::boolean THEN lower(u.name) END,
+    m.id
+LIMIT $7::bigint OFFSET $6::bigint
+`
+
+type ListWorkspaceMembersParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Statuses    []string `json:"statuses"`
+	Roles       []string `json:"roles"`
+	Search      string   `json:"search"`
+	NewestFirst bool     `json:"newest_first"`
+	RowOffset   int64    `json:"row_offset"`
+	RowLimit    int64    `json:"row_limit"`
+}
+
+type ListWorkspaceMembersRow struct {
+	WorkspaceMember WorkspaceMember `json:"workspace_member"`
+	User            User            `json:"user"`
+}
+
+// ListWorkspaceMembers returns a page of the workspace's members with
+// their accounts, narrowed to the statuses and roles asked for (none
+// means all) and to names or emails containing the search, by name or
+// newest first.
+func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMembersParams) ([]ListWorkspaceMembersRow, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceMembers,
+		arg.WorkspaceID,
+		arg.Statuses,
+		arg.Roles,
+		arg.Search,
+		arg.NewestFirst,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorkspaceMembersRow
+	for rows.Next() {
+		var i ListWorkspaceMembersRow
+		if err := rows.Scan(
+			&i.WorkspaceMember.ID,
+			&i.WorkspaceMember.WorkspaceID,
+			&i.WorkspaceMember.UserID,
+			&i.WorkspaceMember.Role,
+			&i.WorkspaceMember.Availability,
+			&i.WorkspaceMember.Status,
+			&i.WorkspaceMember.CreatedAt,
+			&i.WorkspaceMember.UpdatedAt,
+			&i.WorkspaceMember.LastAccessedAt,
+			&i.WorkspaceMember.DeactivatedAt,
+			&i.WorkspaceMember.DeactivatedByMemberID,
+			&i.WorkspaceMember.JoinedVia,
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.EmailVerifiedAt,
+			&i.User.PasswordHash,
+			&i.User.TwoFactorConfirmedAt,
+			&i.User.AvatarPath,
+			&i.User.Locale,
+			&i.User.Timezone,
+			&i.User.LastSeenAt,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.DeletedAt,
+			&i.User.PasswordChangedAt,
+			&i.User.RiskFlags,
+			&i.User.CreatedVia,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockWorkspaceMember = `-- name: LockWorkspaceMember :one
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via FROM workspace_members WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+`
+
+type LockWorkspaceMemberParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// LockWorkspaceMember returns the member and holds the row until the
+// transaction ends.
+func (q *Queries) LockWorkspaceMember(ctx context.Context, arg LockWorkspaceMemberParams) (WorkspaceMember, error) {
+	row := q.db.QueryRow(ctx, lockWorkspaceMember, arg.WorkspaceID, arg.ID)
+	var i WorkspaceMember
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.Role,
+		&i.Availability,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastAccessedAt,
+		&i.DeactivatedAt,
+		&i.DeactivatedByMemberID,
+		&i.JoinedVia,
+	)
+	return i, err
+}
+
+const reactivateWorkspaceMember = `-- name: ReactivateWorkspaceMember :one
+UPDATE workspace_members
+SET status = 'active', role = $1, deactivated_at = NULL, deactivated_by_member_id = NULL, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+`
+
+type ReactivateWorkspaceMemberParams struct {
+	Role        string    `json:"role"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// ReactivateWorkspaceMember gives the member their access back with the
+// role.
+func (q *Queries) ReactivateWorkspaceMember(ctx context.Context, arg ReactivateWorkspaceMemberParams) (WorkspaceMember, error) {
+	row := q.db.QueryRow(ctx, reactivateWorkspaceMember,
+		arg.Role,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i WorkspaceMember
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.Role,
+		&i.Availability,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastAccessedAt,
+		&i.DeactivatedAt,
+		&i.DeactivatedByMemberID,
+		&i.JoinedVia,
+	)
+	return i, err
+}
+
+const touchWorkspaceMemberAccess = `-- name: TouchWorkspaceMemberAccess :exec
+UPDATE workspace_members SET last_accessed_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3 AND (last_accessed_at IS NULL OR last_accessed_at < $4::timestamptz)
+`
+
+type TouchWorkspaceMemberAccessParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+	Since       time.Time `json:"since"`
+}
+
+// TouchWorkspaceMemberAccess records that the member opened the
+// workspace, at most once per interval: a member who used it since the
+// given time is left alone, so busy members cost no write per request.
+func (q *Queries) TouchWorkspaceMemberAccess(ctx context.Context, arg TouchWorkspaceMemberAccessParams) error {
+	_, err := q.db.Exec(ctx, touchWorkspaceMemberAccess,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.Since,
+	)
+	return err
+}
+
+const updateWorkspaceMemberRole = `-- name: UpdateWorkspaceMemberRole :one
+UPDATE workspace_members SET role = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+`
+
+type UpdateWorkspaceMemberRoleParams struct {
+	Role        string    `json:"role"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// UpdateWorkspaceMemberRole gives the member a new role.
+func (q *Queries) UpdateWorkspaceMemberRole(ctx context.Context, arg UpdateWorkspaceMemberRoleParams) (WorkspaceMember, error) {
+	row := q.db.QueryRow(ctx, updateWorkspaceMemberRole,
+		arg.Role,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i WorkspaceMember
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.Role,
+		&i.Availability,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastAccessedAt,
+		&i.DeactivatedAt,
+		&i.DeactivatedByMemberID,
+		&i.JoinedVia,
+	)
+	return i, err
 }
 
 const updateWorkspaceMemberStatus = `-- name: UpdateWorkspaceMemberStatus :exec

@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
+	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/providers"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
@@ -48,6 +49,8 @@ Providers finds the ones the install configured. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
+WorkspaceInitializers are the setup steps every new workspace goes
+through, registered by the parts of the product that need defaults.
 Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
 widget's build and WidgetAssets serves it.
@@ -73,6 +76,8 @@ type App struct {
 	Links       auth.Links
 	Actions     *Actions
 
+	WorkspaceInitializers *workspaces.Initializers
+
 	OAuthAttempts auth.OAuthAttempts
 	Frontend      fs.FS
 	Vite          *vite.Bundle
@@ -83,8 +88,8 @@ type App struct {
 /*
 New returns the application before boot, with its configuration empty
 until the framework loads it, the full permission catalog, the login
-policy that allows every method, no first-party app grants and no
-identity providers yet.
+policy that allows every method, no first-party app grants, and no
+identity providers or workspace initializers yet.
 */
 func New(version string) *App {
 	return &App{
@@ -95,6 +100,8 @@ func New(version string) *App {
 		AppGrants:   auth.NoAppGrants{},
 
 		IdentityProviders: providers.NewRegistry(),
+
+		WorkspaceInitializers: workspaces.NewInitializers(),
 	}
 }
 

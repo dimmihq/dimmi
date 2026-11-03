@@ -162,6 +162,42 @@ state(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(s
 | No identities yet | `r ids -b a.jar -H "$O" $B/user/identities` | 200 `data: []` |
 | Unlink unknown | `r un -b a.jar -X DELETE -H "$O" $B/user/identities/idn_01jc0000000000000000000000` | 404 `not_found` |
 
+### Workspaces and members
+
+Ada (`a.jar`) owns Acme from the sign-up; `WS` is its `ws_…` id, from `me`. Bob (`b.jar`) signed up above. Until
+invitations exist, add Bob to Acme by hand, verified:
+
+```bash
+WS=$(curl -s -b a.jar $B/me | jq -r '.data.workspaces[0].id'); H="Dimmi-Workspace: $WS"
+docker compose exec -T postgres psql -U postgres -d dimmi_e2e -c "update users set email_verified_at = now()
+  where email = '$BOB'; insert into workspace_members (workspace_id, user_id, role, joined_via)
+  select m.workspace_id, u.id, 'member', 'invitation' from workspace_members m join users o on o.id = m.user_id,
+  users u where o.email = '$ADA' and u.email = '$BOB'"
+BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Memberships | `r ms -b a.jar -H "$O" $B/user/memberships` | 200, one `membership` with `role: owner`, `joined_via: created`, `workspace.slug: acme` |
+| Only workspace implied | `r ws -b a.jar -H "$O" $B/workspace` | 200 Acme, no `organization_id` |
+| Several need a name | Bob's own workspace plus Acme: `r ws2 -b b.jar -H "$O" $B/workspace` | 400 `workspace_required`; with `-H "$H"` 200 Acme |
+| Foreign workspace | Carol names Acme: `r fw -b s2.jar -H "$O" -H "$H" $B/workspace` | 404 `workspace_not_found` |
+| Rename and move | `r upd -b a.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/workspace -d '{"name":"Acme Support","slug":"acme-help","timezone":"Europe/Lisbon"}'` | 200 with the new values; `organizations.name` Acme Support |
+| Old slug held | Bob in his own workspace: `PATCH $B/workspace {"slug":"acme"}` | 422 `slug_reserved`; Ada taking `acme` back: 200 |
+| Bad values | `{"slug":"admin"}`, `{"slug":"Not A Slug"}`, `{"timezone":"America/Nowhere"}`, `{"test_mode":true}` | 422 `slug_reserved`, `validation_failed`, `validation_failed`, `test_mode_immutable` |
+| Members | `r mem -b a.jar -H "$O" -H "$H" "$B/members?sort=-created_at"` | 200, Bob first, each with `user.name`, `user.email`; `members/me` is Ada |
+| Promote | `r pr -b a.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/members/$BOBM -d '{"role":"admin"}'` | 200 `role: admin`; again: 200, nothing changes |
+| Self-deactivate | Bob: `PATCH $B/members/me {"status":"deactivated"}` | 422 `invalid_transition`, `from: active`, `to: deactivated` |
+| Admin touches owner | Bob: `PATCH $B/members/<Ada's mem_> {"role":"admin"}` | 403 `forbidden` |
+| Deactivate | Ada: `PATCH $B/members/$BOBM {"status":"deactivated"}`, then Bob `GET $B/workspace` with `-H "$H"` | 200 `status: deactivated`, then 403 `membership_deactivated` |
+| Reactivate | Ada: `{"status":"active"}` | 200 `status: active`, role kept |
+| Last owner | Ada: `PATCH $B/members/me {"role":"admin"}`, and `DELETE $B/user/memberships/<Ada's mem_>` | 409 `last_owner` both |
+| Transfer | Ada: `PATCH $B/members/$BOBM {"role":"owner"}` | 200 `role: owner`; Ada's `members/me` now `admin` |
+| Transfer needs recent sign-in | the same from a session older than 15 min (or `keep_owner` back) | 423 `password_confirmation_required` until `POST $B/user/confirmation` |
+| Leave | Ada: `r lv -b a.jar -X DELETE -H "$O" $B/user/memberships/<Ada's mem_>` | 204; `user/memberships` no longer lists Acme |
+| Repair | `dimmi workspace:repair acme` | `acme: defaults checked, organization in order`, exit 0; unknown slug exits 1 "Workspace not found" |
+| In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.

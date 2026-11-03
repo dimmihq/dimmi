@@ -17,10 +17,8 @@ import {
   AuditLogSettings,
   BillingSettings,
   ImportSettings,
-  MembersSettings,
   TeamsSettings,
   WorkspaceSecuritySettings,
-  WorkspaceSettings,
 } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { ConnectionsSettings, EmailSettings, MessengerSettings } from "./pages/channels";
@@ -33,6 +31,7 @@ import {
 } from "./pages/content";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
+import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 
 export const settingsViews: Record<SettingsSection, ComponentType> = {
   profile: ProfileSettings,

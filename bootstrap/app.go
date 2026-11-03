@@ -18,6 +18,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/foundation"
 
 	"github.com/dimmihq/dimmi/app"
+	commands "github.com/dimmihq/dimmi/app/console/commands"
 	"github.com/dimmihq/dimmi/app/providers"
 	"github.com/dimmihq/dimmi/database/migrations"
 	"github.com/dimmihq/dimmi/lang"
@@ -63,6 +64,7 @@ func Application() (*app.App, foundation.Options) {
 		Migrations: migrations.Files(),
 		Language:   lang.Files(),
 		Providers:  providers.All(application, routes.Register),
+		Commands:   commands.All(application),
 		Module:     Module,
 	}
 }

@@ -1,90 +1,13 @@
 /*
- * Running the workspace: its name and address, members and invitations,
- * teams, the rules every member signs in under, the audit log, moving
- * data in and out, and billing on the cloud. Admins and owners change
- * these; some actions are for owners only.
+ * Running the workspace: its teams, the rules every member signs in
+ * under, the audit log, moving data in and out, and billing on the
+ * cloud. Admins and owners change these; some actions are for owners
+ * only. The workspace's name and its members live in workspace.tsx.
  */
 import { RiBankCardLine, RiDownload2Line, RiFileList3Line, RiTeamLine } from "@remixicon/react";
 
-import { Avatar } from "@/components/base/avatar/avatar";
-import { Chip } from "@/components/base/badges/chip";
-import { avatarColor } from "@/features/shell/avatar-color";
-
-import { Action, Choice, Danger, Field, Toggle } from "../controls";
+import { Action, Field, Toggle } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
-import { useAccount } from "../use-account";
-
-export function WorkspaceSettings() {
-  const me = useAccount();
-
-  return (
-    <SettingsPage title="Workspace" description="Seen by everyone in the workspace.">
-      <Section title="General">
-        <Row label="Name">
-          <Field label="Workspace name" value={me.workspace.name} />
-        </Row>
-        <Row label="Address" description="The old address keeps redirecting for 30 days after a change.">
-          <span className="text-body-2-regular text-text-tertiary">/w/</span>
-          <Field label="Workspace address" value={me.workspace.slug} width="w-40" />
-        </Row>
-      </Section>
-      <Section title="Language and region" description="Members and customers fall back to these.">
-        <Row label="Language">
-          <Choice label="Workspace language" options={["English", "Français", "Deutsch", "Español", "Português"]} />
-        </Row>
-        <Row label="Time zone">
-          <Choice label="Workspace time zone" options={["UTC", "Europe/Lisbon", "Europe/London", "America/New_York"]} />
-        </Row>
-      </Section>
-      <Section title="Danger zone">
-        <Row label="Delete workspace" description="Owners only. It can be restored for 30 days.">
-          <Danger>Delete workspace</Danger>
-        </Row>
-      </Section>
-    </SettingsPage>
-  );
-}
-
-function roleLabel(role: string): string {
-  return role ? `${role.charAt(0).toUpperCase()}${role.slice(1)}` : "Member";
-}
-
-function Person({ name, detail, access, you }: { name: string; detail: string; access: string; you?: boolean }) {
-  return (
-    <Item
-      mark={<Avatar size="md" color={avatarColor(name)} initials={name.charAt(0)} />}
-      title={you ? `${name} (you)` : name}
-      detail={detail}
-    >
-      <Chip variant="caption" color={access === "Owner" ? "blue" : "neutral"}>
-        {access}
-      </Chip>
-    </Item>
-  );
-}
-
-export function MembersSettings() {
-  const me = useAccount();
-
-  return (
-    <SettingsPage title="Members" description="Owners and admins manage the workspace; members work the inbox.">
-      <Section title="Members" description="3 active" action={<Action>Invite</Action>}>
-        <Person name={me.name} detail={`${me.email} · Support`} access={roleLabel(me.workspace.role)} you />
-        <Person name="Sam Okafor" detail="sam@acme.com · Support · Online" access="Admin" />
-        <Person name="Lea Martin" detail="lea@acme.com · Billing · Last seen yesterday" access="Member" />
-      </Section>
-      <Section title="Invitations" description="Links last 7 days." action={<Action>Copy invite link</Action>}>
-        <Item
-          mark={<Avatar size="md" color="neutral" initials="N" />}
-          title="noor@acme.com"
-          detail="Member · Sent 2 days ago"
-        >
-          <Action>Resend</Action>
-        </Item>
-      </Section>
-    </SettingsPage>
-  );
-}
 
 export function TeamsSettings() {
   return (

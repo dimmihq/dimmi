@@ -107,3 +107,28 @@ assigned reports whether the role table has a row for the permission.
 func assigned(permission string) bool {
 	return slices.Contains(roleTablePermissions(), permission)
 }
+
+/*
+IsOwnerRole reports whether the role owns its workspace. Changes to who
+owns a workspace follow stricter rules than other role changes, and a
+workspace must always keep an active owner, so the actions that change
+roles ask this instead of naming the role.
+*/
+func IsOwnerRole(role enums.Role) bool {
+	return role == enums.RoleOwner
+}
+
+/*
+OwnerRole returns the role that owns a workspace.
+*/
+func OwnerRole() enums.Role {
+	return enums.RoleOwner
+}
+
+/*
+ManagerRole returns the role an owner keeps after handing ownership
+over, and the role a deactivated owner comes back with.
+*/
+func ManagerRole() enums.Role {
+	return enums.RoleAdmin
+}

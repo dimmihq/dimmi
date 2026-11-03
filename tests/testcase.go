@@ -72,6 +72,8 @@ type TestCase struct {
 	mailOnce  sync.Once
 	social    *socialite.Fake
 	oauthOnce sync.Once
+	environ   []string
+	before    []func(a *app.App)
 }
 
 /*
@@ -127,10 +129,13 @@ and shuts it down when the test ends.
 func New(tb testing.TB, opts ...Option) *TestCase {
 	tb.Helper()
 
-	application, fake, err := Boot(tb, opts...)
+	o := collect(opts)
+
+	booted, err := start(tb, o)
 	require.NoError(tb, err)
 
-	o := collect(opts)
+	application, fake := booted.app, booted.clock
+
 	for _, fn := range o.routes {
 		fn(application.Router)
 	}
@@ -150,7 +155,7 @@ func New(tb testing.TB, opts ...Option) *TestCase {
 
 	return &TestCase{
 		T: tb, App: application, Clock: fake, Owner: owner, Workspace: workspace,
-		handler: application.Kernel.Handler(routes),
+		handler: application.Kernel.Handler(routes), environ: booted.environ, before: o.before,
 	}
 }
 
@@ -162,7 +167,26 @@ tests about booting itself.
 func Boot(tb testing.TB, opts ...Option) (*app.App, *clock.Fake, error) {
 	tb.Helper()
 
-	o := collect(opts)
+	booted, err := start(tb, collect(opts))
+
+	return booted.app, booted.clock, err
+}
+
+/*
+booted is a booted application with its clock and the environment it
+read.
+*/
+type booted struct {
+	app     *app.App
+	clock   *clock.Fake
+	environ []string
+}
+
+/*
+start boots the application with the options.
+*/
+func start(tb testing.TB, o *options) (booted, error) {
+	tb.Helper()
 
 	application, foundationOptions := bootstrap.Application()
 	for _, fn := range o.before {
@@ -176,12 +200,12 @@ func Boot(tb testing.TB, opts ...Option) (*app.App, *clock.Fake, error) {
 
 	fa, err := foundation.New(tb.Context(), foundationOptions)
 	if err != nil {
-		return nil, nil, err
+		return booted{}, err
 	}
 
 	tb.Cleanup(func() { require.NoError(tb, fa.Shutdown(context.WithoutCancel(tb.Context()))) })
 
-	return application, fake, nil
+	return booted{app: application, clock: fake, environ: foundationOptions.Environ}, nil
 }
 
 /*

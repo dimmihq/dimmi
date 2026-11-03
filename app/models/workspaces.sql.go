@@ -7,19 +7,38 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 const countWorkspacesWithSlug = `-- name: CountWorkspacesWithSlug :one
-SELECT count(*) FROM workspaces WHERE slug = $1
+SELECT count(*)
+FROM workspaces w
+WHERE w.id <> $1
+  AND (
+    w.slug = $2
+    OR EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(coalesce(w.settings -> 'previous_slugs', '[]'::jsonb)) AS previous
+        WHERE lower(previous ->> 'slug') = lower($2::text) AND (previous ->> 'until')::timestamptz > $3::timestamptz
+    )
+  )
 `
 
-// CountWorkspacesWithSlug says whether a slug is taken, by any workspace
-// in the trash included, since a trashed workspace can be restored.
-func (q *Queries) CountWorkspacesWithSlug(ctx context.Context, slug string) (int64, error) {
-	row := q.db.QueryRow(ctx, countWorkspacesWithSlug, slug)
+type CountWorkspacesWithSlugParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Slug        string    `json:"slug"`
+	Now         time.Time `json:"now"`
+}
+
+// CountWorkspacesWithSlug says whether a slug is taken by a workspace
+// other than the one named: as its slug, by a workspace in the trash
+// included, since a trashed workspace can be restored, or as a slug it
+// gave up less than the hold period ago, which still sends people to it.
+func (q *Queries) CountWorkspacesWithSlug(ctx context.Context, arg CountWorkspacesWithSlugParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countWorkspacesWithSlug, arg.WorkspaceID, arg.Slug, arg.Now)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -92,6 +111,163 @@ SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, n
 // FindWorkspace returns the workspace with the id, deleted or not.
 func (q *Queries) FindWorkspace(ctx context.Context, id ids.UUID) (Workspace, error) {
 	row := q.db.QueryRow(ctx, findWorkspace, id)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const findWorkspaceBySlug = `-- name: FindWorkspaceBySlug :one
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE slug = $1
+`
+
+// FindWorkspaceBySlug returns the workspace with the slug, deleted or
+// not.
+func (q *Queries) FindWorkspaceBySlug(ctx context.Context, slug string) (Workspace, error) {
+	row := q.db.QueryRow(ctx, findWorkspaceBySlug, slug)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const listWorkspaces = `-- name: ListWorkspaces :many
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE deleted_at IS NULL ORDER BY created_at, id
+`
+
+// ListWorkspaces returns every workspace not in the trash, oldest first.
+func (q *Queries) ListWorkspaces(ctx context.Context) ([]Workspace, error) {
+	rows, err := q.db.Query(ctx, listWorkspaces)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Workspace
+	for rows.Next() {
+		var i Workspace
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.Slug,
+			&i.Timezone,
+			&i.Locale,
+			&i.Settings,
+			&i.TestMode,
+			&i.NextConversationNumber,
+			&i.SuspendedAt,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByUserID,
+			&i.DeletedByUserID,
+			&i.PurgeAfter,
+			&i.SuspendedReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockWorkspace = `-- name: LockWorkspace :one
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE id = $1 FOR UPDATE
+`
+
+// LockWorkspace returns the workspace and holds it until the transaction
+// ends, so changes to who owns it happen one after another.
+func (q *Queries) LockWorkspace(ctx context.Context, id ids.UUID) (Workspace, error) {
+	row := q.db.QueryRow(ctx, lockWorkspace, id)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const updateWorkspace = `-- name: UpdateWorkspace :one
+UPDATE workspaces
+SET name = $1, slug = $2, timezone = $3, locale = $4, settings = $5, updated_at = $6
+WHERE id = $7
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type UpdateWorkspaceParams struct {
+	Name     string          `json:"name"`
+	Slug     string          `json:"slug"`
+	Timezone string          `json:"timezone"`
+	Locale   string          `json:"locale"`
+	Settings json.RawMessage `json:"settings"`
+	Now      time.Time       `json:"now"`
+	ID       ids.UUID        `json:"id"`
+}
+
+// UpdateWorkspace stores the workspace's name, slug, language, time zone
+// and settings.
+func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, updateWorkspace,
+		arg.Name,
+		arg.Slug,
+		arg.Timezone,
+		arg.Locale,
+		arg.Settings,
+		arg.Now,
+		arg.ID,
+	)
 	var i Workspace
 	err := row.Scan(
 		&i.ID,

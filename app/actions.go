@@ -13,6 +13,7 @@ package app
 
 import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 )
@@ -45,4 +46,12 @@ type Actions struct {
 	HandleOAuthCallback     *auth.HandleOAuthCallback
 	ListOAuthIdentities     *auth.ListOAuthIdentities
 	UnlinkOAuthIdentity     *auth.UnlinkOAuthIdentity
+	ResolveWorkspace        *workspaces.ResolveWorkspace
+	UpdateWorkspace         *workspaces.UpdateWorkspace
+	ListMemberships         *workspaces.ListMemberships
+	RepairWorkspaces        *workspaces.RepairWorkspaces
+	ListMembers             *members.ListMembers
+	ShowMember              *members.ShowMember
+	UpdateMember            *members.UpdateMember
+	LeaveWorkspace          *members.LeaveWorkspace
 }
