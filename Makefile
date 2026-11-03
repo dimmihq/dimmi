@@ -16,7 +16,7 @@ APP_PKGS := ./app/...
 # cloud build.
 CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
+.PHONY: e2e tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -28,6 +28,7 @@ tools:
 	GOBIN=$(CURDIR)/bin go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 	GOBIN=$(CURDIR)/bin go install github.com/air-verse/air@$(AIR_VERSION)
 	pnpm install
+	pnpm exec playwright install chromium
 
 # Compiles database/queries into app/models (sqlc.yaml).
 sqlc:
@@ -115,3 +116,9 @@ web-build:
 web-test:
 	pnpm typecheck
 	pnpm test
+
+# End-to-end tests: builds both binaries, then drives Chromium in light
+# and dark against the release cloud binary, started fresh on :18090
+# with its own database (tests/e2e/server.ts). Needs `make services`.
+e2e: build
+	pnpm e2e

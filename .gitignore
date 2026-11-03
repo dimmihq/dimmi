@@ -11,3 +11,5 @@ coverage-app.filtered.out
 /dimmi.yaml
 /tmp/
 /public/carousel/
+/test-results/
+/playwright-report/

@@ -72,6 +72,7 @@ describe("LoginForm", () => {
 
     expect((await screen.findByRole("alert")).textContent).toBe("The code is invalid or has expired.");
     expect(screen.queryByText("Check your inbox")).toBeTruthy();
+    expect((screen.getByLabelText("Digit 1 of 6") as HTMLInputElement).value).toBe("");
   });
 
   it("shows a failure that names no field under the email", async () => {

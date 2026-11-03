@@ -4,15 +4,19 @@
 |--------------------------------------------------------------------------
 |
 | Pages run only the scripts this server names. Every script tag carries
-| a fresh nonce, styles and fonts come from this origin, and nothing may
-| frame a page or post its forms elsewhere. The main domain hosts the
-| app and its sessions, so no third-party script is ever allowed: one
-| would act as the signed-in user.
+| a fresh nonce, fonts and style sheets come from this origin, and
+| nothing may frame a page or post its forms elsewhere. The main domain
+| hosts the app and its sessions, so no third-party script is ever
+| allowed: one would act as the signed-in user.
+|
+| Inline styles are allowed: the design system injects style elements
+| at runtime, such as the reveal of a theme change, whose content varies
+| so no hash can name it. Styles cannot run code, so scripts stay locked
+| to the nonce.
 |
 | While the Vite dev server runs, pages also load modules, styles and
-| fonts from it and keep a socket open for hot updates, and the styles
-| it injects inline are allowed. A production server never runs one, so
-| it never relaxes the policy.
+| fonts from it and keep a socket open for hot updates. A production
+| server never runs one, so it never relaxes the policy further.
 |
 */
 
@@ -68,13 +72,13 @@ func policy(dev string) string {
 	script, style, connect, assets := "", "", "", ""
 	if dev != "" {
 		socket := "ws" + strings.TrimPrefix(dev, "http")
-		script, style, connect, assets = " "+dev, " 'unsafe-inline' "+dev, " "+dev+" "+socket, " "+dev
+		script, style, connect, assets = " "+dev, " "+dev, " "+dev+" "+socket, " "+dev
 	}
 
 	return strings.Join([]string{
 		"default-src 'self'",
 		"script-src 'self' 'nonce-" + middleware.NoncePlaceholder + "'" + script,
-		"style-src 'self'" + style,
+		"style-src 'self' 'unsafe-inline'" + style,
 		"img-src 'self' data: blob:" + assets,
 		"font-src 'self'" + assets,
 		"connect-src 'self'" + connect,

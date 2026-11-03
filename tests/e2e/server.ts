@@ -1,0 +1,60 @@
+/*
+ * Starts the release cloud binary the way production runs it, for the
+ * end-to-end tests: a database of its own created fresh, migrations
+ * applied with the production command, Valkey keys under a prefix of
+ * this run, mail through Mailpit, and nothing from the developer's
+ * shell or dimmi.yaml: it runs in an empty directory of its own, where
+ * no config file waits. Playwright starts it and stops it.
+ *
+ * Build the binary first with `make build`; `make e2e` does both.
+ */
+import { execFileSync, spawn } from "node:child_process";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+
+const binary = resolve("bin/dimmi-cloud");
+const database = "dimmi_e2e";
+const port = 18090;
+
+if (!existsSync(binary)) {
+  throw new Error(`${binary} is missing: run \`make build\` first`);
+}
+
+function psql(sql: string) {
+  execFileSync("docker", ["compose", "exec", "-T", "postgres", "psql", "-U", "postgres", "-qc", sql], {
+    stdio: "inherit",
+  });
+}
+
+psql(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
+psql(`CREATE DATABASE ${database}`);
+
+const home = mkdtempSync(join(tmpdir(), "dimmi-e2e-"));
+
+const env = {
+  PATH: process.env.PATH ?? "",
+  HOME: process.env.HOME ?? "",
+  DIMMI_APP__URL: `http://localhost:${port}`,
+  DIMMI_APP__KEY_AUTO_GENERATE: "true",
+  DIMMI_APP__DATA_DIR: join(home, "storage"),
+  DIMMI_APP__REGION: "us",
+  DIMMI_HTTP__ADDR: `127.0.0.1:${port}`,
+  DIMMI_HTTP__ADMIN_ADDR: "",
+  DIMMI_DATABASE__URL: `postgres://postgres:postgres@localhost:15432/${database}?sslmode=disable`,
+  DIMMI_REDIS__URL: "redis://localhost:16379/5",
+  DIMMI_REDIS__KEY_PREFIX: `e2e${Date.now()}:`,
+  DIMMI_AUTH__SIGNUP__MAX_PER_HOUR_PER_IP: "1000",
+  DIMMI_MAIL__MAILERS__SYSTEM__DRIVER: "smtp",
+  DIMMI_MAIL__MAILERS__SYSTEM__HOST: "localhost",
+  DIMMI_MAIL__MAILERS__SYSTEM__PORT: "11025",
+  DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE: "true",
+};
+
+execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });
+
+const server = spawn(binary, ["serve"], { cwd: home, env, stdio: "inherit" });
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => server.kill("SIGTERM"));
+}
+server.on("exit", (code) => process.exit(code ?? 0));

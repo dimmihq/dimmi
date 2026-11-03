@@ -147,13 +147,22 @@ export function CodeStep({
   onBack: () => void;
 }) {
   const [code, setCode] = useState("");
-  const verify = useMutation({ mutationFn: (typed: string) => signInWithCode(email, typed), onSuccess: onSignedIn });
+  const verify = useMutation({
+    mutationFn: (typed: string) => signInWithCode(email, typed),
+    onSuccess: onSignedIn,
+    onError: () => setCode(""),
+  });
+  const check = (typed: string) => {
+    if (!verify.isPending) {
+      verify.mutate(typed);
+    }
+  };
   const resend = useMutation({ mutationFn: () => sendMagicLink(email) });
   const codeError = fieldError(verify.error ?? resend.error, "code", ["code"], "code");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    verify.mutate(code);
+    check(code);
   };
 
   return (
@@ -177,7 +186,7 @@ export function CodeStep({
               verify.reset();
               resend.reset();
             }}
-            onComplete={(typed) => verify.mutate(typed)}
+            onComplete={check}
             length={6}
             groupEvery={3}
             isInvalid={Boolean(codeError)}

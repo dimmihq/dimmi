@@ -77,7 +77,7 @@ func TestAppPage(t *testing.T) {
 		assert.Contains(t, body, `<meta name="robots" content="noindex">`)
 		assert.Contains(t, body, `<html lang="en" class="" data-accent="emerald">`)
 		assert.NotContains(t, policy, "localhost:5173")
-		assert.NotContains(t, policy, "unsafe-inline")
+		assert.Contains(t, policy, "script-src 'self' 'nonce-"+nonce+"'; style-src 'self' 'unsafe-inline';")
 		assert.Contains(t, policy, "frame-ancestors 'none'")
 		assert.Equal(t, "no-cache", res.Header.Get("Cache-Control"))
 	})

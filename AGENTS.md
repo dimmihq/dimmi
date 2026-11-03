@@ -89,6 +89,9 @@ package cache
   `boardui add` and `boardui init` write them: never edit them, and Biome skips them. Our own code lives elsewhere
   under `resources/js` and builds on them.
 - `pnpm typecheck` and `pnpm test` pass too. `make lint test` runs all of it with the Go checks.
+- Browser flows have end-to-end tests in `tests/e2e` (Playwright, Chromium, light and dark) against the release
+  cloud binary, started fresh by `tests/e2e/server.ts`. A test fails on any page error, console error or content
+  security policy violation. Every new page or flow gets one; `make e2e` builds both binaries and runs them.
 
 ## Tests
 
@@ -131,6 +134,7 @@ package cache
 | `make dev` | Go server on :8080 (rebuilt by air) plus the Vite dev server with hot updates; open `localhost:8080/d`. `TAGS=cloud` runs the cloud edition |
 | `make web-build` | Builds the browser app into `public/build`, which the next `go build` embeds |
 | `make web-test` | Type-checks and tests the browser app |
+| `make e2e` | Builds both binaries and runs the Playwright tests against the cloud binary on :18090 |
 
 Development-only commands live in files with `//go:build dev` and are never compiled into release builds;
 `make lint` and `make test` cover the dev build and both editions; edition-specific tests live in files tagged
