@@ -44,7 +44,7 @@ function BackToTeams() {
   return (
     <div>
       <Button
-        variant="ghost"
+        variant="secondary"
         size="small"
         leadingIcon={RiArrowLeftLine}
         onClick={() => navigate({ to: "/d/settings/$section", params: { section: "teams" } })}
