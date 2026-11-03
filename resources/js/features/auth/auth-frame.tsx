@@ -1,11 +1,9 @@
 /*
  * The frame every sign-in page shares, laid out like BoardUI's auth
- * card: a bordered card with a title and description, a failure of the
- * whole form shown above the fields, and small print below.
+ * card: a bordered card with a title and description, and small print
+ * below.
  */
 import type { ReactNode } from "react";
-
-import { Notification } from "@/components/base/notification/notification";
 
 export function AuthCard({ children }: { children: ReactNode }) {
   return (
@@ -22,18 +20,6 @@ export function AuthHeader({ title, description }: { title: ReactNode; descripti
       {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
     </div>
   );
-}
-
-/*
- * FormError announces a failure of the whole form, such as a wrong
- * password, or nothing when there is none.
- */
-export function FormError({ message }: { message: string | null | undefined }) {
-  if (!message) {
-    return null;
-  }
-
-  return <Notification status="error" title={message} dismissible={false} role="alert" className="w-full" />;
 }
 
 export function AuthFooter({ children }: { children: ReactNode }) {

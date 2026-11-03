@@ -7,13 +7,15 @@ import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { LinkButton } from "@/components/base/buttons/link-button";
+import { HintText } from "@/components/base/input/hint-text";
 import { Input } from "@/components/base/input/input";
 import { InputOtp } from "@/components/base/input-otp/input-otp";
+import { Notification } from "@/components/base/notification/notification";
 import { type AuthConfig, type Me, sendMagicLink, signIn, signInWithCode } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
 
-import { AuthCard, AuthFooter, AuthHeader, FormError } from "./auth-frame";
+import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
 import { field } from "./form-data";
+import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
 
 export interface LoginFormProps {
@@ -21,10 +23,6 @@ export interface LoginFormProps {
   redirect: string;
   initialError?: string | null;
   onSignedIn: (me: Me) => void;
-}
-
-function failure(error: unknown): ApiError | null {
-  return error instanceof ApiError ? error : null;
 }
 
 export function LoginForm({ config, redirect, initialError, onSignedIn }: LoginFormProps) {
@@ -58,7 +56,10 @@ function PasswordStep({
     onSuccess: onSignedIn,
   });
   const link = useMutation({ mutationFn: sendMagicLink, onSuccess: () => onMailed(email) });
-  const error = failure(login.error) ?? failure(link.error);
+  const error = login.error ?? link.error;
+  const fields = ["email", "password"];
+  const emailError = fieldError(error, "email", fields, "email");
+  const passwordError = fieldError(error, "password", fields, "email");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,6 +69,9 @@ function PasswordStep({
   return (
     <AuthCard>
       <AuthHeader title="Sign in to Dimmi" description="Welcome back. Sign in to pick up where you left off." />
+      {initialError ? (
+        <Notification status="error" title={initialError} dismissible={false} role="alert" className="mt-6 w-full" />
+      ) : null}
       <ProviderButtons
         providers={config.providers}
         redirect={redirect}
@@ -83,7 +87,6 @@ function PasswordStep({
         className="mt-5 flex flex-col gap-4"
         aria-busy={login.isPending}
       >
-        <FormError message={error?.fields.email || error?.fields.password ? null : (error?.message ?? initialError)} />
         <Input
           name="email"
           type="email"
@@ -94,8 +97,8 @@ function PasswordStep({
           validationBehavior="aria"
           value={email}
           onChange={setEmail}
-          isInvalid={Boolean(error?.fields.email)}
-          errorMessage={error?.fields.email}
+          isInvalid={Boolean(emailError)}
+          errorMessage={emailError}
         />
         <Input
           name="password"
@@ -105,8 +108,8 @@ function PasswordStep({
           autoComplete="current-password"
           isRequired
           validationBehavior="aria"
-          isInvalid={Boolean(error?.fields.password)}
-          errorMessage={error?.fields.password}
+          isInvalid={Boolean(passwordError)}
+          errorMessage={passwordError}
         />
         <div className="flex justify-end">
           <LinkButton href="/forgot-password">Forgot password?</LinkButton>
@@ -146,7 +149,7 @@ export function CodeStep({
   const [code, setCode] = useState("");
   const verify = useMutation({ mutationFn: (typed: string) => signInWithCode(email, typed), onSuccess: onSignedIn });
   const resend = useMutation({ mutationFn: () => sendMagicLink(email) });
-  const error = failure(verify.error) ?? failure(resend.error);
+  const codeError = fieldError(verify.error ?? resend.error, "code", ["code"], "code");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -165,19 +168,27 @@ export function CodeStep({
         }
       />
       <form onSubmit={submit} className="mt-6 flex flex-col gap-4" aria-busy={verify.isPending}>
-        <FormError message={error?.message} />
         <div className="flex flex-col gap-1.5">
           <span className="text-body-medium text-text-secondary">Sign-in code</span>
           <InputOtp
             value={code}
-            onChange={setCode}
+            onChange={(typed) => {
+              setCode(typed);
+              verify.reset();
+              resend.reset();
+            }}
             onComplete={(typed) => verify.mutate(typed)}
             length={6}
             groupEvery={3}
-            isInvalid={Boolean(verify.error)}
+            isInvalid={Boolean(codeError)}
             aria-label="Sign-in code"
             className="justify-start"
           />
+          {codeError ? (
+            <HintText isInvalid role="alert">
+              {codeError}
+            </HintText>
+          ) : null}
         </div>
         <Button type="submit" className="w-full" disabled={verify.isPending || code.length < 6}>
           {verify.isPending ? "Signing in…" : "Sign in"}

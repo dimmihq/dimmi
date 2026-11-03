@@ -49,6 +49,43 @@ describe("LoginForm", () => {
     expect(await screen.findByText("These credentials do not match.")).toBeTruthy();
   });
 
+  it("shows a wrong code under the code boxes, not in an alert box", async () => {
+    answer(
+      [202, { data: { message: "On its way." } }],
+      [
+        422,
+        {
+          code: "invalid_code",
+          message: "The code is invalid or has expired.",
+          errors: { code: ["The code is invalid or has expired."] },
+        },
+      ],
+    );
+    renderWithQueries(<LoginForm config={config} redirect="/d" onSignedIn={vi.fn()} />);
+    fill(/email/i, "ada@example.com");
+    fireEvent.click(screen.getByRole("button", { name: "Email me a sign-in link" }));
+    await screen.findByText("Check your inbox");
+
+    for (const [index, digit] of [..."123456"].entries()) {
+      fireEvent.change(screen.getByLabelText(`Digit ${index + 1} of 6`), { target: { value: digit } });
+    }
+
+    expect((await screen.findByRole("alert")).textContent).toBe("The code is invalid or has expired.");
+    expect(screen.queryByText("Check your inbox")).toBeTruthy();
+  });
+
+  it("shows a failure that names no field under the email", async () => {
+    answer([429, { code: "too_many_attempts", message: "Too many attempts. Try again in 30 seconds." }]);
+    renderWithQueries(<LoginForm config={config} redirect="/d" onSignedIn={vi.fn()} />);
+
+    fill(/email/i, "ada@example.com");
+    fill(/password/i, "whatever-1");
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+    const message = await screen.findByText("Too many attempts. Try again in 30 seconds.");
+    expect(screen.getByLabelText(/email/i).getAttribute("aria-describedby")).toContain(message.id);
+  });
+
   it("shows an error a provider sent back", () => {
     renderWithQueries(
       <LoginForm config={config} redirect="/d" initialError="You cancelled the sign-in." onSignedIn={vi.fn()} />,

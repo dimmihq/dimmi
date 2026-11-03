@@ -11,19 +11,15 @@ import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Notification } from "@/components/base/notification/notification";
 import { type Me, requestPasswordReset, resetPassword } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
 
-import { AuthCard, AuthFooter, AuthHeader, FormError } from "./auth-frame";
+import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
 import { field } from "./form-data";
-
-function failure(error: unknown): ApiError | null {
-  return error instanceof ApiError ? error : null;
-}
+import { fieldError } from "./form-errors";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const send = useMutation({ mutationFn: requestPasswordReset });
-  const error = failure(send.error);
+  const emailError = fieldError(send.error, "email", ["email"], "email");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,7 +46,6 @@ export function ForgotPasswordForm() {
           className="mt-6 flex flex-col gap-4"
           aria-busy={send.isPending}
         >
-          <FormError message={error?.fields.email ? null : error?.message} />
           <Input
             name="email"
             type="email"
@@ -61,8 +56,8 @@ export function ForgotPasswordForm() {
             validationBehavior="aria"
             value={email}
             onChange={setEmail}
-            isInvalid={Boolean(error?.fields.email)}
-            errorMessage={error?.fields.email}
+            isInvalid={Boolean(emailError)}
+            errorMessage={emailError}
           />
           <Button type="submit" className="w-full" disabled={send.isPending}>
             {send.isPending ? "Sending…" : "Send reset link"}
@@ -88,7 +83,7 @@ export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPas
     mutationFn: (form: FormData) => resetPassword(id, token, field(form, "password")),
     onSuccess: onSignedIn,
   });
-  const error = failure(reset.error);
+  const passwordError = fieldError(reset.error, "password", ["password"], "password");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -108,7 +103,6 @@ export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPas
         className="mt-6 flex flex-col gap-4"
         aria-busy={reset.isPending}
       >
-        <FormError message={error?.fields.password ? null : error?.message} />
         <Input
           name="password"
           type="password"
@@ -118,8 +112,8 @@ export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPas
           hint={`At least ${minLength} characters.`}
           isRequired
           validationBehavior="aria"
-          isInvalid={Boolean(error?.fields.password)}
-          errorMessage={error?.fields.password}
+          isInvalid={Boolean(passwordError)}
+          errorMessage={passwordError}
         />
         <Button type="submit" className="w-full" disabled={reset.isPending}>
           {reset.isPending ? "Saving…" : "Save password and sign in"}

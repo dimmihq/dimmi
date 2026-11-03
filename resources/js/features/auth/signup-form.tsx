@@ -11,10 +11,10 @@ import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Notification } from "@/components/base/notification/notification";
 import { type AuthConfig, type Me, signUp } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
 
-import { AuthCard, AuthFooter, AuthHeader, FormError } from "./auth-frame";
+import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
 import { field } from "./form-data";
+import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
 
 export interface SignupFormProps {
@@ -29,8 +29,8 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
       signUp({ name: field(form, "name"), email: field(form, "email"), password: field(form, "password") }),
     onSuccess: onSignedIn,
   });
-  const error = register.error instanceof ApiError ? register.error : null;
-  const fieldError = error && Object.keys(error.fields).length > 0;
+  const fields = ["name", "email", "password"];
+  const errorFor = (name: string) => fieldError(register.error, name, fields, "email");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -72,7 +72,6 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
         className="mt-5 flex flex-col gap-4"
         aria-busy={register.isPending}
       >
-        <FormError message={fieldError ? null : error?.message} />
         <Input
           name="name"
           label="Full name"
@@ -80,8 +79,8 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
           autoComplete="name"
           isRequired
           validationBehavior="aria"
-          isInvalid={Boolean(error?.fields.name)}
-          errorMessage={error?.fields.name}
+          isInvalid={Boolean(errorFor("name"))}
+          errorMessage={errorFor("name")}
         />
         <Input
           name="email"
@@ -92,8 +91,8 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
           hint="We use this to contact you, and never share it."
           isRequired
           validationBehavior="aria"
-          isInvalid={Boolean(error?.fields.email)}
-          errorMessage={error?.fields.email}
+          isInvalid={Boolean(errorFor("email"))}
+          errorMessage={errorFor("email")}
         />
         <Input
           name="password"
@@ -104,8 +103,8 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
           hint={`At least ${config.password_min_length} characters.`}
           isRequired
           validationBehavior="aria"
-          isInvalid={Boolean(error?.fields.password)}
-          errorMessage={error?.fields.password}
+          isInvalid={Boolean(errorFor("password"))}
+          errorMessage={errorFor("password")}
         />
         <Button type="submit" className="w-full" disabled={register.isPending}>
           {register.isPending ? "Creating account…" : "Create account"}
