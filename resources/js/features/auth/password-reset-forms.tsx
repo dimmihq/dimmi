@@ -3,16 +3,17 @@
  * answers the same so it never tells whether an address has an account,
  * and choosing a new password from the link.
  */
+import { RiLinkUnlinkM, RiMailSendLine } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
+import { HintText } from "@/components/base/input/hint-text";
 import { Input } from "@/components/base/input/input";
-import { Notification } from "@/components/base/notification/notification";
-import { LinkButton } from "@/features/navigation/links";
+import { ButtonLink, LinkButton } from "@/features/navigation/links";
 import { type Me, requestPasswordReset, resetPassword } from "@/lib/api/auth";
 
-import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
+import { AuthCard, AuthFooter, AuthHeader, AuthStatus } from "./auth-frame";
 import { field } from "./form-data";
 import { fieldError } from "./form-errors";
 
@@ -26,48 +27,83 @@ export function ForgotPasswordForm() {
     send.mutate(email);
   };
 
+  if (send.isSuccess) {
+    return <ResetLinkSent email={email} onResend={() => send.mutateAsync(email)} />;
+  }
+
   return (
     <AuthCard>
       <AuthHeader title="Reset your password" description="We will mail you a link to choose a new one." />
-      {send.isSuccess ? (
-        <div className="mt-6">
-          <Notification
-            status="success"
-            title="Check your inbox"
-            description={send.data.message}
-            dismissible={false}
-            className="w-full"
-          />
-        </div>
-      ) : (
-        <form
-          onSubmit={submit}
-          onChange={() => send.reset()}
-          className="mt-6 flex flex-col gap-4"
-          aria-busy={send.isPending}
-        >
-          <Input
-            name="email"
-            type="email"
-            label="Email"
-            placeholder="you@company.com"
-            autoComplete="email"
-            isRequired
-            validationBehavior="aria"
-            value={email}
-            onChange={setEmail}
-            isInvalid={Boolean(emailError)}
-            errorMessage={emailError}
-          />
-          <Button type="submit" className="w-full" disabled={send.isPending}>
-            {send.isPending ? "Sending…" : "Send reset link"}
-          </Button>
-        </form>
-      )}
+      <form
+        onSubmit={submit}
+        onChange={() => send.reset()}
+        className="mt-6 flex flex-col gap-4"
+        aria-busy={send.isPending}
+      >
+        <Input
+          name="email"
+          type="email"
+          label="Email"
+          placeholder="you@company.com"
+          autoComplete="email"
+          isRequired
+          validationBehavior="aria"
+          value={email}
+          onChange={setEmail}
+          isInvalid={Boolean(emailError)}
+          errorMessage={emailError}
+        />
+        <Button type="submit" className="w-full" disabled={send.isPending}>
+          {send.isPending ? "Sending…" : "Send reset link"}
+        </Button>
+      </form>
       <AuthFooter>
         Remembered it? <LinkButton to="/login">Sign in</LinkButton>
       </AuthFooter>
     </AuthCard>
+  );
+}
+
+/*
+ * ResetLinkSent confirms the request. It never says whether the address
+ * has an account, so it reads the same for every address.
+ */
+function ResetLinkSent({ email, onResend }: { email: string; onResend: () => Promise<unknown> }) {
+  const resend = useMutation({ mutationFn: onResend });
+  const resendError = fieldError(resend.error, "email", ["email"], "email");
+
+  return (
+    <AuthStatus
+      icon={RiMailSendLine}
+      title="Check your inbox"
+      description={
+        <>
+          If <span className="text-body-medium text-text-primary">{email}</span> has an account, a link to choose a new
+          password is on its way. It works for 60 minutes.
+        </>
+      }
+    >
+      <ButtonLink to="/login" variant="secondary" className="mt-6 w-full">
+        Back to sign in
+      </ButtonLink>
+      {resendError ? (
+        <HintText isInvalid role="alert" className="mt-3">
+          {resendError}
+        </HintText>
+      ) : null}
+      <AuthFooter>
+        {resend.isSuccess ? (
+          "We sent it again."
+        ) : (
+          <>
+            Didn't get it?{" "}
+            <LinkButton onClick={() => resend.mutate()} disabled={resend.isPending}>
+              Send again
+            </LinkButton>
+          </>
+        )}
+      </AuthFooter>
+    </AuthStatus>
   );
 }
 
@@ -128,14 +164,15 @@ export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPas
 
 export function BrokenLink() {
   return (
-    <AuthCard>
-      <AuthHeader
-        title="This link is incomplete"
-        description="Open the link from the mail again, or copy all of it into the address bar."
-      />
+    <AuthStatus
+      icon={RiLinkUnlinkM}
+      tone="error"
+      title="This link is incomplete"
+      description="Open the link from the mail again, or copy all of it into the address bar."
+    >
       <AuthFooter>
         <LinkButton to="/login">Back to sign in</LinkButton>
       </AuthFooter>
-    </AuthCard>
+    </AuthStatus>
   );
 }

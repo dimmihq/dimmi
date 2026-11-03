@@ -9,7 +9,8 @@ it.describe("resetting a password", () => {
     await page.getByRole("link", { name: "Forgot password?" }).click();
     await page.getByLabel("Email").fill(person.email);
     await page.getByRole("button", { name: "Send reset link" }).click();
-    await expect(page.getByText("Check your inbox")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText(person.email);
 
     await page.goto(await mailedLink(person.email, "Reset"));
     await page.getByLabel("New password").fill("difference-engine-1822");

@@ -3,16 +3,16 @@
  * a provider. On a server that takes accounts by invitation only, the
  * page says so instead of offering a form that cannot work.
  */
+import { RiMailLine } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
-import { Notification } from "@/components/base/notification/notification";
-import { LinkButton } from "@/features/navigation/links";
+import { ButtonLink, LinkButton } from "@/features/navigation/links";
 import { type AuthConfig, type Me, signUp } from "@/lib/api/auth";
 
-import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
+import { AuthCard, AuthFooter, AuthHeader, AuthStatus } from "./auth-frame";
 import { field } from "./form-data";
 import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
@@ -39,21 +39,15 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
 
   if (config.signup_mode !== "open") {
     return (
-      <AuthCard>
-        <AuthHeader title="Create your workspace" />
-        <div className="mt-6">
-          <Notification
-            status="information"
-            title="Signing up is by invitation"
-            description="Ask someone on your team to invite you. The invitation mail has a link to join."
-            dismissible={false}
-            className="w-full"
-          />
-        </div>
-        <AuthFooter>
-          Already have an account? <LinkButton to="/login">Sign in</LinkButton>
-        </AuthFooter>
-      </AuthCard>
+      <AuthStatus
+        icon={RiMailLine}
+        title="Signing up is by invitation"
+        description="Ask someone on your team to invite you. The invitation mail has a link to join."
+      >
+        <ButtonLink to="/login" variant="secondary" className="mt-6 w-full">
+          Back to sign in
+        </ButtonLink>
+      </AuthStatus>
     );
   }
 

@@ -28,6 +28,6 @@ it.describe("signing in by mail", () => {
     await expect(page).toHaveURL(/\/d$/);
 
     await page.goto(link);
-    await expect(page.getByRole("heading", { name: "This sign-in link does not work" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This sign-in link no longer works" })).toBeVisible();
   });
 });

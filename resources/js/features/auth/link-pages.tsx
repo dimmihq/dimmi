@@ -4,14 +4,14 @@
  * posting it once, so a mail scanner that opens the address spends
  * nothing.
  */
+import { RiCheckboxCircleLine, RiErrorWarningLine } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { Notification } from "@/components/base/notification/notification";
 import { Spinner } from "@/components/base/spinner/spinner";
-import { ButtonLink, LinkButton } from "@/features/navigation/links";
+import { ButtonLink } from "@/features/navigation/links";
 import { type Me, signInWithLink, verifyEmail } from "@/lib/api/auth";
 
-import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
+import { AuthCard, AuthHeader, AuthStatus } from "./auth-frame";
 import { BrokenLink } from "./password-reset-forms";
 
 /*
@@ -54,21 +54,16 @@ export function MagicLinkPage({ token, onSignedIn }: { token: string; onSignedIn
 
   if (consume.isError) {
     return (
-      <AuthCard>
-        <AuthHeader title="This sign-in link does not work" />
-        <div className="mt-6">
-          <Notification
-            status="error"
-            title={consume.error.message}
-            dismissible={false}
-            role="alert"
-            className="w-full"
-          />
-        </div>
-        <AuthFooter>
-          <LinkButton to="/login">Request a new link</LinkButton>
-        </AuthFooter>
-      </AuthCard>
+      <AuthStatus
+        icon={RiErrorWarningLine}
+        tone="error"
+        title="This sign-in link no longer works"
+        description={consume.error.message}
+      >
+        <ButtonLink to="/login" className="mt-6 w-full">
+          Request a new link
+        </ButtonLink>
+      </AuthStatus>
     );
   }
 
@@ -87,22 +82,32 @@ export function VerifyEmailPage({ id, token }: { id: string; token: string }) {
     return <BrokenLink />;
   }
 
-  if (verify.isSuccess || verify.isError) {
+  if (verify.isSuccess) {
     return (
-      <AuthCard>
-        <AuthHeader title={verify.isSuccess ? "Email verified" : "This verification link does not work"} />
-        <div className="mt-6">
-          <Notification
-            status={verify.isSuccess ? "success" : "error"}
-            title={verify.isSuccess ? "Your email address is proven." : (verify.error?.message ?? "")}
-            dismissible={false}
-            className="w-full"
-          />
-        </div>
+      <AuthStatus
+        icon={RiCheckboxCircleLine}
+        title="Email verified"
+        description="Your email address is proven. Everything that mails your team is now open to you."
+      >
         <ButtonLink to="/d" className="mt-6 w-full">
           Continue to Dimmi
         </ButtonLink>
-      </AuthCard>
+      </AuthStatus>
+    );
+  }
+
+  if (verify.isError) {
+    return (
+      <AuthStatus
+        icon={RiErrorWarningLine}
+        tone="error"
+        title="This verification link does not work"
+        description={verify.error.message}
+      >
+        <ButtonLink to="/d" className="mt-6 w-full">
+          Continue to Dimmi
+        </ButtonLink>
+      </AuthStatus>
     );
   }
 
