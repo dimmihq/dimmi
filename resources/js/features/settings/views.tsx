@@ -13,14 +13,9 @@ import {
   SecuritySettings,
   TokensSettings,
 } from "./pages/account";
-import {
-  AuditLogSettings,
-  BillingSettings,
-  ImportSettings,
-  TeamsSettings,
-  WorkspaceSecuritySettings,
-} from "./pages/admin";
+import { BillingSettings, ImportSettings, TeamsSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
+import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectionsSettings, EmailSettings, MessengerSettings } from "./pages/channels";
 import {
   ChangelogSettings,

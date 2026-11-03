@@ -99,3 +99,33 @@ export async function request<T>(
 
   return (json as { data: T }).data;
 }
+
+/*
+ * Page is one page of a list and the cursor of the next, null on the
+ * last page.
+ */
+export interface Page<T> {
+  items: T[];
+  next: string | null;
+}
+
+/*
+ * requestPage reads one page of a list endpoint, keeping the cursor of
+ * the next page the server puts beside the data.
+ */
+export async function requestPage<T>(path: string, options: RequestOptions = {}): Promise<Page<T>> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (options.workspace) {
+    headers["Dimmi-Workspace"] = options.workspace;
+  }
+
+  const response = await fetch(base + path, { headers, credentials: "same-origin" });
+  const json: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw toApiError(response.status, json as ErrorBody | null);
+  }
+
+  const body = json as { data?: T[]; meta?: { next_cursor?: string | null } } | null;
+
+  return { items: body?.data ?? [], next: body?.meta?.next_cursor ?? null };
+}
