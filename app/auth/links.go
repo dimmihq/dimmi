@@ -51,11 +51,18 @@ func (l Links) ResetPassword(id ids.UUID, token string) string {
 }
 
 /*
+SecurityPage is the path of the dashboard page listing the account's
+sessions and sign-in methods, where two-factor authentication is set
+up. The dashboard lives under /d.
+*/
+const SecurityPage = "/d/settings/security"
+
+/*
 Security is the page listing the account's sessions and sign-in
 methods.
 */
 func (l Links) Security() string {
-	return l.page("/settings/security")
+	return l.page(SecurityPage)
 }
 
 func (l Links) page(path string) string {

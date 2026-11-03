@@ -132,7 +132,7 @@ settings for a link, the sign-in page otherwise.
 */
 func failurePage(intent string) string {
 	if intent == appauth.IntentLink {
-		return "/settings/security"
+		return appauth.SecurityPage
 	}
 
 	return "/login"

@@ -133,7 +133,7 @@ func TestAccountMail(t *testing.T) {
 
 		mail, message := tests.LastSent[appmail.NewSignInMail](tc, fake)
 		assert.Equal(t, "192.0.2.1", mail.IP)
-		assert.Contains(t, mail.SecurityURL, "/settings/security")
+		assert.Contains(t, mail.SecurityURL, "/d/settings/security")
 		assert.Contains(t, message.Message.Text, "signed in from an unknown device at 192.0.2.1")
 	})
 
