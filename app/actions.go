@@ -13,6 +13,7 @@ package app
 
 import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
@@ -65,4 +66,15 @@ type Actions struct {
 	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
 	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
 	DisableTwoFactor           *factors.DisableTwoFactor
+
+	CreateEmailAddress   *email.CreateEmailAddress
+	ListEmailAddresses   *email.ListEmailAddresses
+	ShowEmailAddress     *email.ShowEmailAddress
+	UpdateEmailAddress   *email.UpdateEmailAddress
+	DeleteEmailAddress   *email.DeleteEmailAddress
+	SendEmailAddressTest *email.SendEmailAddressTest
+	ListInboundEmails    *email.ListInboundEmails
+	ReceiveInboundEmail  *email.ReceiveInboundEmail
+	ProcessInboundEmail  *email.ProcessInboundEmail
+	SendEmailMessage     *email.SendEmailMessage
 }

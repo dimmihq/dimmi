@@ -161,6 +161,17 @@ func (tx *Tx) run(ctx context.Context, fn func(ctx context.Context, tx *Tx) erro
 }
 
 /*
+Transaction runs the function in a savepoint of this transaction, for
+code that holds the transaction but not the database, such as a hook
+that runs inside another's transaction. A failure undoes only the
+savepoint's work and leaves this transaction usable, so a caller can
+try an insert that may hit a unique constraint and carry on.
+*/
+func (tx *Tx) Transaction(ctx context.Context, fn func(ctx context.Context, tx *Tx) error) error {
+	return tx.savepoint(ctx, fn)
+}
+
+/*
 savepoint runs the function in a savepoint. Once released, the
 savepoint's hooks belong to the parent: its work now stands or falls
 with the parent's.

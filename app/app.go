@@ -34,6 +34,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
 	"github.com/dimmihq/dimmi/app/auth/providers"
+	"github.com/dimmihq/dimmi/app/integrations/email"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
 	appconfig "github.com/dimmihq/dimmi/config"
 )
@@ -53,7 +54,8 @@ Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
 WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults.
-Frontend is the browser app's production build and Vite links it, or
+EmailChannel is the email channel adapter the inbox sends replies
+through. Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
 widget's build and WidgetAssets serves it.
 */
@@ -80,6 +82,7 @@ type App struct {
 	Actions     *Actions
 
 	WorkspaceInitializers *workspaces.Initializers
+	EmailChannel          *email.Channel
 
 	OAuthAttempts auth.OAuthAttempts
 	Frontend      fs.FS

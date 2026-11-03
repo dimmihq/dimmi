@@ -73,6 +73,18 @@ const (
 )
 
 /*
+The prefixes of the email channel's tables.
+*/
+const (
+	PrefixEmailDomain      Prefix = "edm"
+	PrefixEmailAddress     Prefix = "ema"
+	PrefixInboundEmail     Prefix = "ibm"
+	PrefixOutboundEmail    Prefix = "obm"
+	PrefixEmailSuppression Prefix = "sup"
+	PrefixEmailSignature   Prefix = "sig"
+)
+
+/*
 PublicIDEntry is one row of the catalog: a prefix and the table it
 names. The table of a reserved prefix starts with "reserved: ".
 */
@@ -169,12 +181,12 @@ func channelPublicIDs() []PublicIDEntry {
 		{"wgt", "widget_settings"},
 		{"wss", "widget_sessions"},
 		{"isk", "identity_secrets"},
-		{"sig", "email_signatures"},
-		{"edm", "email_domains"},
-		{"ema", "email_addresses"},
-		{"ibm", "inbound_emails"},
-		{"obm", "outbound_emails"},
-		{"sup", "email_suppressions"},
+		{PrefixEmailSignature, "email_signatures"},
+		{PrefixEmailDomain, "email_domains"},
+		{PrefixEmailAddress, "email_addresses"},
+		{PrefixInboundEmail, "inbound_emails"},
+		{PrefixOutboundEmail, "outbound_emails"},
+		{PrefixEmailSuppression, "email_suppressions"},
 		{"chr", "channel_rooms"},
 		{"cml", "channel_member_links"},
 		{"cie", "channel_inbound_events"},

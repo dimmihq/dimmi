@@ -37,6 +37,7 @@ type Config struct {
 
 	Frontend FrontendConfig `koanf:"frontend"`
 	Widget   WidgetConfig   `koanf:"widget"`
+	Channels ChannelsConfig `koanf:"channels"`
 }
 
 /*
@@ -47,6 +48,11 @@ the files and environment are read.
 func (c *Config) Validate() error {
 	c.App.settle()
 	c.Auth.settle(c.App.Edition)
+	c.Channels.settle(c.App.Edition)
 
-	return c.Auth.check()
+	if err := c.Auth.check(); err != nil {
+		return err
+	}
+
+	return c.Channels.check()
 }

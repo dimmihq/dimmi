@@ -71,6 +71,8 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 		return err
 	}
 
+	registerEmail(p.App, fa)
+
 	errs := []error{models.RegisterPublicIDs(fa.IDs)}
 
 	for _, rule := range []validation.Rule{
@@ -117,6 +119,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootIdentities(a)
 	bootWorkspaces(a)
 	bootFactors(a)
+
+	if err := bootEmail(a); err != nil {
+		return err
+	}
 
 	return registerJobs(a)
 }

@@ -47,6 +47,7 @@ type controllers struct {
 	workspace         *v1.CurrentWorkspaceController
 	members           *v1.MemberController
 	authFactors       *v1.AuthFactorController
+	emailAddresses    *v1.EmailAddressController
 }
 
 /*
@@ -113,6 +114,28 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+	emailAddressRoutes(workspace, c.emailAddresses)
+}
+
+/*
+emailAddressRoutes declares the workspace's email addresses. Reading
+them takes email:read, changing them email:manage, and the log of what
+arrived, which shows senders and subjects, email:read_raw.
+*/
+func emailAddressRoutes(workspace *routing.Router, c *v1.EmailAddressController) {
+	routing.Get(workspace, "/email-addresses", "email-addresses.index", c.Index).Ability("settings:read")
+	routing.Post(workspace, "/email-addresses", "email-addresses.store", c.Store).
+		Ability("settings:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, "/email-addresses/{address}", "email-addresses.show", c.ShowAddress).
+		Ability("settings:read")
+	routing.Patch(workspace, "/email-addresses/{address}", "email-addresses.update", c.Update).
+		Ability("settings:write")
+	routing.Delete(workspace, "/email-addresses/{address}", "email-addresses.destroy", c.Destroy).
+		Ability("settings:write").Status(fhttp.StatusNoContent)
+	routing.Post(workspace, "/email-addresses/{address}/tests", "email-addresses.tests.store", c.StoreTest).
+		Ability("settings:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, "/email-addresses/{address}/inbound-emails", "email-addresses.inbound-emails.index",
+		c.InboundEmails).Ability("settings:read")
 }
 
 /*
@@ -164,6 +187,22 @@ func newControllers(a *app.App) controllers {
 			Change: acts.UpdateAuthFactor, Remove: acts.RemoveAuthFactor, RemoveAll: acts.RemoveAllAuthFactors,
 			IDs: a.IDs, Cookies: a.Cookies,
 		},
+		emailAddresses: emailAddressController(a),
+	}
+}
+
+/*
+emailAddressController builds the controller of the workspace's email
+addresses.
+*/
+func emailAddressController(a *app.App) *v1.EmailAddressController {
+	acts := a.Actions
+
+	return &v1.EmailAddressController{
+		Create: acts.CreateEmailAddress, List: acts.ListEmailAddresses, Show: acts.ShowEmailAddress,
+		Change: acts.UpdateEmailAddress, Remove: acts.DeleteEmailAddress, Test: acts.SendEmailAddressTest,
+		Activity: acts.ListInboundEmails, IDs: a.IDs, Provider: a.EmailChannel.Transport,
+		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
 	}
 }
 

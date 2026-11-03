@@ -1,0 +1,386 @@
+/*
+|--------------------------------------------------------------------------
+| Inbox Ingest
+|--------------------------------------------------------------------------
+|
+| The inbox's side of receiving a message from a channel, as the channel
+| contract describes it: find or create the contact, find the
+| conversation the message continues or start one, store the message
+| and move the conversation along, all in one transaction. The channel
+| then writes its own rows in the same transaction through its hook.
+|
+| A message the workspace already accepted, by its dedupe key, changes
+| nothing. A reply to a conversation closed within the reopen window
+| reopens it; a later one starts a new conversation. Automatic mail
+| never reopens, wakes or counts as the customer's latest word, and a
+| proven address is marked verified on its contact.
+|
+| The shared inbox owns this step once it ships its own receiver; this
+| one implements the same contract so the email channel can be wired to
+| either.
+|
+*/
+
+package email
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/filesystem"
+	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
+
+	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/models"
+)
+
+/*
+ErrConnectionGone means the message arrived on a connection that no
+longer exists.
+*/
+var ErrConnectionGone = errors.New("inbox: channel connection gone")
+
+/*
+storedFile is an attachment written to disk before its row exists.
+*/
+type storedFile struct {
+	file contracts.InboundAttachment
+	path string
+	sum  string
+	size int64
+}
+
+/*
+Ingest takes inbound messages into the inbox of the workspace the
+context is scoped to.
+*/
+type Ingest struct {
+	DB           *database.DB
+	Clock        clock.Clock
+	Disk         filesystem.Filesystem
+	DiskName     string
+	ReopenWindow time.Duration
+}
+
+/*
+ReceiveInboundMessage stores the message in its conversation.
+*/
+func (r *Ingest) ReceiveInboundMessage(
+	ctx context.Context, msg contracts.InboundMessage,
+) (contracts.InboundResult, error) {
+	tenant, err := tenancy.Required(ctx)
+	if err != nil {
+		return contracts.InboundResult{}, err
+	}
+
+	workspaceID, err := ids.Parse(tenant)
+	if err != nil {
+		return contracts.InboundResult{}, fmt.Errorf("read workspace: %w", err)
+	}
+
+	files, err := r.storeFiles(ctx, msg.Attachments)
+	if err != nil {
+		return contracts.InboundResult{}, err
+	}
+
+	var result contracts.InboundResult
+
+	err = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		run := &ingestRun{r: r, q: models.New(tx), tx: tx, ws: workspaceID, msg: msg, files: files}
+		result, err = run.receive(ctx)
+
+		return err
+	})
+
+	return result, err
+}
+
+/*
+ingestRun is one message being received.
+*/
+type ingestRun struct {
+	r     *Ingest
+	q     *models.Queries
+	tx    *database.Tx
+	ws    ids.UUID
+	msg   contracts.InboundMessage
+	files []storedFile
+}
+
+/*
+receive runs the steps of receiving the message.
+*/
+func (run *ingestRun) receive(ctx context.Context) (contracts.InboundResult, error) {
+	conn, err := run.q.FindChannelConnection(ctx, models.FindChannelConnectionParams{
+		WorkspaceID: run.ws, ID: run.msg.ConnectionID,
+	})
+	if errors.Is(err, database.ErrNotFound) || (err == nil && conn.DeletedAt != nil) {
+		return contracts.InboundResult{}, ErrConnectionGone
+	}
+
+	if err != nil {
+		return contracts.InboundResult{}, fmt.Errorf("find connection: %w", err)
+	}
+
+	existing, err := run.q.FindMessageByDedupeKey(ctx, models.FindMessageByDedupeKeyParams{
+		WorkspaceID: run.ws, DedupeKey: &run.msg.DedupeKey,
+	})
+	if err == nil {
+		return contracts.InboundResult{
+			MessageID: existing.ID, ConversationID: existing.ConversationID, Duplicate: true,
+		}, nil
+	}
+
+	if !errors.Is(err, database.ErrNotFound) {
+		return contracts.InboundResult{}, fmt.Errorf("find message by dedupe key: %w", err)
+	}
+
+	contact, err := run.resolveContact(ctx, run.msg.Sender)
+	if err != nil {
+		return contracts.InboundResult{}, err
+	}
+
+	return run.deliver(ctx, conn, contact)
+}
+
+/*
+deliver stores the message in its conversation and runs the channel's
+hook.
+*/
+func (run *ingestRun) deliver(
+	ctx context.Context, conn models.ChannelConnection, contact models.Contact,
+) (contracts.InboundResult, error) {
+	conv, created, err := run.conversation(ctx, conn, contact)
+	if err != nil {
+		return contracts.InboundResult{}, err
+	}
+
+	message, err := run.store(ctx, conn, conv, contact)
+	if err != nil {
+		return contracts.InboundResult{}, err
+	}
+
+	result := contracts.InboundResult{
+		MessageID: message.ID, ConversationID: conv.ID, ContactID: contact.ID, ConversationCreated: created,
+		Spam: conv.Spam,
+	}
+
+	wake := !run.msg.AutoGenerated && !conv.Spam && conv.Status != string(enums.ConversationStatusOpen)
+	result.Reopened = wake && conv.Status == string(enums.ConversationStatusClosed)
+
+	conv, err = run.q.RecordEmailConversationMessage(ctx, models.RecordEmailConversationMessageParams{
+		Wake: wake, Substantive: !run.msg.AutoGenerated, Now: run.r.Clock.Now(), WorkspaceID: run.ws, ID: conv.ID,
+	})
+	if err != nil {
+		return result, fmt.Errorf("record conversation message: %w", err)
+	}
+
+	if err := run.join(ctx, conv, contact); err != nil {
+		return result, err
+	}
+
+	if err := run.attach(ctx, message); err != nil {
+		return result, err
+	}
+
+	if run.msg.AfterPersist == nil {
+		return result, nil
+	}
+
+	return result, run.msg.AfterPersist(ctx, run.tx, conv, message)
+}
+
+/*
+conversation returns the conversation the message continues, or a new
+one, and whether it is new.
+*/
+func (run *ingestRun) conversation(
+	ctx context.Context, conn models.ChannelConnection, contact models.Contact,
+) (models.Conversation, bool, error) {
+	found, err := run.existing(ctx, conn)
+	if err != nil {
+		return models.Conversation{}, false, err
+	}
+
+	if found != nil && !closedBefore(*found, run.r.Clock.Now().Add(-run.r.ReopenWindow)) {
+		return *found, false, nil
+	}
+
+	number, err := run.q.AllocateConversationNumber(ctx, run.ws)
+	if err != nil {
+		return models.Conversation{}, false, fmt.Errorf("allocate conversation number: %w", err)
+	}
+
+	source, err := json.Marshal(run.msg.Source)
+	if err != nil {
+		return models.Conversation{}, false, fmt.Errorf("encode conversation source: %w", err)
+	}
+
+	conv, err := run.q.CreateConversation(ctx, models.CreateConversationParams{
+		WorkspaceID: run.ws, Number: number, InboxID: conn.InboxID, ChannelConnectionID: conn.ID,
+		ContactID: contact.ID, Subject: optional(run.msg.Subject), Status: string(enums.ConversationStatusOpen),
+		ExternalThreadKey: optional(run.msg.ExternalThreadKey), Source: source, Now: run.r.Clock.Now(),
+	})
+	if err != nil {
+		return conv, false, fmt.Errorf("create conversation: %w", err)
+	}
+
+	if run.msg.SpamVerdict == enums.SpamVerdictSpam || contact.BlockedAt != nil {
+		err := run.q.MarkEmailConversationSpam(ctx, models.MarkEmailConversationSpamParams{
+			Now: run.r.Clock.Now(), WorkspaceID: run.ws, ID: conv.ID,
+		})
+		if err != nil {
+			return conv, false, fmt.Errorf("mark conversation spam: %w", err)
+		}
+
+		conv.Spam = true
+	}
+
+	return conv, true, nil
+}
+
+/*
+closedBefore reports whether the conversation was closed before the
+time, too long ago for a reply to reopen it.
+*/
+func closedBefore(conv models.Conversation, cutoff time.Time) bool {
+	return conv.Status == string(enums.ConversationStatusClosed) &&
+		(conv.ClosedAt == nil || conv.ClosedAt.Before(cutoff))
+}
+
+/*
+existing returns the live conversation the channel named, or the newest
+one with the message's thread key, or nil.
+*/
+func (run *ingestRun) existing(ctx context.Context, conn models.ChannelConnection) (*models.Conversation, error) {
+	if run.msg.ConversationID != nil {
+		conv, err := run.q.FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: run.ws, ID: *run.msg.ConversationID,
+		})
+		if err == nil && conv.DeletedAt == nil {
+			return &conv, nil
+		}
+
+		if err != nil && !errors.Is(err, database.ErrNotFound) {
+			return nil, fmt.Errorf("find conversation: %w", err)
+		}
+	}
+
+	if run.msg.ExternalThreadKey == "" {
+		return nil, nil
+	}
+
+	conv, err := run.q.FindLatestThreadConversation(ctx, models.FindLatestThreadConversationParams{
+		WorkspaceID: run.ws, ChannelConnectionID: conn.ID, ExternalThreadKey: &run.msg.ExternalThreadKey,
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("find thread conversation: %w", err)
+	}
+
+	return &conv, nil
+}
+
+/*
+store inserts the message, authored by the contact.
+*/
+func (run *ingestRun) store(
+	ctx context.Context, conn models.ChannelConnection, conv models.Conversation, contact models.Contact,
+) (models.Message, error) {
+	metadata, err := json.Marshal(map[string]any{"auto_reply": run.msg.AutoGenerated, conn.Type: run.msg.Metadata})
+	if err != nil {
+		return models.Message{}, fmt.Errorf("encode message metadata: %w", err)
+	}
+
+	sentAt := run.msg.SentAt
+	message, err := run.q.CreateMessage(ctx, models.CreateMessageParams{
+		WorkspaceID: run.ws, ConversationID: conv.ID, Type: string(enums.MessageTypeMessage),
+		AuthorType: string(enums.AuthorTypeContact), AuthorID: &contact.ID, Body: &run.msg.Body,
+		BodyHtml: optional(run.msg.BodyHTML), ChannelMessageID: optional(run.msg.ChannelMessageID),
+		DedupeKey: &run.msg.DedupeKey, DeliveryStatus: new(string(enums.DeliveryStatusNotApplicable)),
+		Substantive: !run.msg.AutoGenerated, Metadata: metadata, SentAt: &sentAt, Now: run.r.Clock.Now(),
+	})
+	if err != nil {
+		return message, fmt.Errorf("create message: %w", err)
+	}
+
+	return message, nil
+}
+
+/*
+storeFiles writes the message's attachments to disk before anything
+else, so the transaction only records them.
+*/
+func (r *Ingest) storeFiles(ctx context.Context, files []contracts.InboundAttachment) ([]storedFile, error) {
+	stored := make([]storedFile, 0, len(files))
+
+	for _, file := range files {
+		content, err := readAll(ctx, file)
+		if err != nil {
+			return nil, err
+		}
+
+		path := "attachments/" + ids.NewV7At(r.Clock.Now()).String()
+
+		err = r.Disk.Put(ctx, path, content, filesystem.PutOptions{ContentType: file.ContentType})
+		if err != nil {
+			return nil, fmt.Errorf("store attachment: %w", err)
+		}
+
+		stored = append(stored, storedFile{
+			file: file, path: path, sum: hashing.SHA256Hex(content), size: int64(len(content)),
+		})
+	}
+
+	return stored, nil
+}
+
+/*
+readAll reads an attachment's content.
+*/
+func readAll(ctx context.Context, file contracts.InboundAttachment) ([]byte, error) {
+	reader, err := file.Open(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open attachment: %w", err)
+	}
+	defer func() { _ = reader.Close() }()
+
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("read attachment: %w", err)
+	}
+
+	return content, nil
+}
+
+/*
+attach records the stored attachments on the message, each waiting for
+its scan.
+*/
+func (run *ingestRun) attach(ctx context.Context, message models.Message) error {
+	for _, f := range run.files {
+		_, err := run.q.CreateEmailAttachment(ctx, models.CreateEmailAttachmentParams{
+			WorkspaceID: run.ws, MessageID: &message.ID, UploadedByID: message.AuthorID, Disk: run.r.DiskName,
+			Path: f.path, Filename: f.file.Filename, ContentType: f.file.ContentType, SizeBytes: f.size,
+			Sha256: &f.sum, Inline: f.file.Inline, ContentID: optional(f.file.ContentID), ScanStatus: "pending",
+			Now: run.r.Clock.Now(),
+		})
+		if err != nil {
+			return fmt.Errorf("record attachment: %w", err)
+		}
+	}
+
+	return nil
+}
