@@ -70,6 +70,9 @@ func TestOwnershipTransfer(t *testing.T) {
 			tc.Workspace.Workspace.ID)
 		user, member := join(t, tc, enums.RoleMember)
 		owner := in(tc, tc.Owner)
+		if _, err := factories.EnableTwoFactor(t.Context(), tc.App, tc.Owner); err != nil {
+			t.Fatal(err)
+		}
 
 		owner.PatchJSON("/api/v1/members/"+memberID(member), testkit.JSON{"role": "owner"}).
 			AssertStatus(409).

@@ -6,7 +6,9 @@
 | Every change to how much a sign-in must prove is told to the account's
 | owner: two-factor authentication turned on or off, and a recovery code
 | spent, which means the authenticator was not at hand, or was not
-| theirs to begin with.
+| theirs to begin with. A workspace that starts requiring a second
+| factor tells every member who has none, since they are shut out of it
+| until they add one.
 |
 */
 
@@ -15,6 +17,7 @@ package mail
 import (
 	"context"
 
+	"github.com/dimmihq/dimmi/framework/i18n"
 	"github.com/dimmihq/dimmi/framework/mail"
 
 	"github.com/dimmihq/dimmi/resources/views/mail/accounts"
@@ -89,4 +92,32 @@ Content renders the mail.
 func (m RecoveryCodeUsedMail) Content(ctx context.Context) (mail.Content, error) {
 	return content(ctx, "mail.recovery_code_used.subject",
 		accounts.RecoveryCodeUsed(m.Name, m.Remaining, m.SecurityURL)), nil
+}
+
+/*
+TwoFactorRequiredMail tells a member without a second factor that the
+Workspace now requires one, and links their security settings to add
+it.
+*/
+type TwoFactorRequiredMail struct {
+	Name        string `json:"name"`
+	Workspace   string `json:"workspace"`
+	SecurityURL string `json:"security_url"`
+}
+
+/*
+Envelope leaves the subject to the content, which translates it.
+*/
+func (TwoFactorRequiredMail) Envelope() mail.Envelope {
+	return mail.Envelope{}
+}
+
+/*
+Content renders the mail, its subject naming the workspace.
+*/
+func (m TwoFactorRequiredMail) Content(ctx context.Context) (mail.Content, error) {
+	c := mail.View(accounts.TwoFactorRequired(m.Name, m.Workspace, m.SecurityURL))
+	c.Subject = i18n.T(ctx, "mail.two_factor_required.subject", i18n.Args{"workspace": m.Workspace})
+
+	return c, nil
 }

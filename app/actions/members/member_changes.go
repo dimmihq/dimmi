@@ -18,7 +18,6 @@ package members
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -145,7 +144,7 @@ func checkSuccessor(ctx context.Context, q *models.Queries, w models.Workspace, 
 		return exceptions.ErrTargetUnverified
 	}
 
-	if requiresTwoFactor(w.Settings) && !user.TwoFactorEnabled() {
+	if w.RequiresTwoFactor() && !user.TwoFactorEnabled() {
 		return exceptions.ErrTargetTwoFactorRequired
 	}
 
@@ -167,22 +166,4 @@ func checkReassignee(
 	}
 
 	return nil
-}
-
-/*
-requiresTwoFactor reports whether the workspace settings require every
-member to use a second factor, under security.require_two_factor.
-*/
-func requiresTwoFactor(settings json.RawMessage) bool {
-	var stored struct {
-		Security struct {
-			RequireTwoFactor bool `json:"require_two_factor"`
-		} `json:"security"`
-	}
-
-	if err := json.Unmarshal(settings, &stored); err != nil {
-		return false
-	}
-
-	return stored.Security.RequireTwoFactor
 }

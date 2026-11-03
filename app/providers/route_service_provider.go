@@ -12,7 +12,8 @@
 | confirmation of who is calling, within the configured window, and
 | steps that reach other people ask for a proven email where the
 | install requires one. Workspace routes run inside the workspace the
-| request names, resolved once the caller is known.
+| request names, resolved once the caller is known, and only for callers
+| who meet what that workspace requires, such as a second factor.
 |
 | The route files sit outside the application package, since routes
 | depend on the application and never the other way around, so the
@@ -68,6 +69,9 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	})
 	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), nil
+	})
+	fa.Kernel.Alias("access.policy", func(...string) (fhttp.Middleware, error) {
+		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Errors), nil
 	})
 
 	p.App.Vite = vite.New(vite.Options{

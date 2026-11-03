@@ -54,3 +54,21 @@ var (
 	ErrRecoveryCodesRequired = fault.New(fault.Conflict, "recovery_codes_required",
 		"Recovery codes stay while two-factor authentication is on. Regenerate them instead.")
 )
+
+/*
+Workspace requirement failures.
+
+ErrTwoFactorRequired refuses a request in a workspace that requires a
+second factor from a caller whose account has none; the access policy
+adds what is required and where to set it up, so clients can send the
+person there. ErrTwoFactorRequiredByWorkspace refuses turning
+two-factor authentication off while a workspace the user works in
+requires it; the action adds the list of those workspaces.
+*/
+var (
+	ErrTwoFactorRequired = fault.New(fault.Forbidden, "two_factor_required",
+		"This workspace requires two-factor authentication. Turn it on to continue.")
+	ErrTwoFactorRequiredByWorkspace = fault.New(fault.Conflict, "two_factor_required_by_workspace",
+		"A workspace you belong to requires two-factor authentication. Leave it or ask an admin to turn "+
+			"the requirement off first.")
+)

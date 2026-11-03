@@ -224,7 +224,10 @@ func bootWorkspaces(a *app.App) {
 	acts.ResolveWorkspace = &workspaces.ResolveWorkspace{
 		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Permissions: a.Permissions,
 	}
-	acts.UpdateWorkspace = &workspaces.UpdateWorkspace{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.UpdateWorkspace = &workspaces.UpdateWorkspace{
+		DB: a.DB, Events: a.Events, Clock: a.Clock, Mail: a.Mail, Links: a.Links,
+		ConfirmWindow: a.Config.Auth.PasswordConfirmation.TTL,
+	}
 	acts.ListMemberships = &workspaces.ListMemberships{DB: a.DB}
 	acts.RepairWorkspaces = &workspaces.RepairWorkspaces{
 		DB: a.DB, Clock: a.Clock, Initializers: a.WorkspaceInitializers,
@@ -246,5 +249,13 @@ func registerJobs(a *app.App) error {
 		return fmt.Errorf("avatar disk: %w", err)
 	}
 
-	return queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk})
+	err = queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk})
+	if err != nil {
+		return err
+	}
+
+	return queue.Register(a.Queue, &jobs.PurgeExpiredAuthRecords{
+		DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,
+		SessionIdle: a.Config.Auth.Sessions.IdleLifetime,
+	})
 }
