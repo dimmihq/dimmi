@@ -1,0 +1,63 @@
+/*
+|--------------------------------------------------------------------------
+| Account Links
+|--------------------------------------------------------------------------
+|
+| The pages mail sends people to. A secret always rides after the # of
+| the address: browsers never send that part to any server, so it never
+| reaches a log, a proxy or a Referer header, and a mail scanner that
+| opens the page cannot use it, because only the page's script sends it
+| on, in the body of a request.
+|
+*/
+
+package auth
+
+import (
+	"strings"
+
+	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/models"
+)
+
+/*
+Links builds the addresses of the account pages under Base, the
+application's URL.
+*/
+type Links struct {
+	Base string
+}
+
+/*
+VerifyEmail is the page that proves an email address.
+*/
+func (l Links) VerifyEmail(id ids.UUID, token string) string {
+	return l.page("/verify-email") + "#id=" + models.PublicID(models.PrefixOneTimeToken, id) + "&token=" + token
+}
+
+/*
+MagicLink is the page that signs in with a mailed link.
+*/
+func (l Links) MagicLink(token string) string {
+	return l.page("/login/magic") + "#token=" + token
+}
+
+/*
+ResetPassword is the page that chooses a new password.
+*/
+func (l Links) ResetPassword(id ids.UUID, token string) string {
+	return l.page("/reset-password") + "#id=" + models.PublicID(models.PrefixPasswordReset, id) + "&token=" + token
+}
+
+/*
+Security is the page listing the account's sessions and sign-in
+methods.
+*/
+func (l Links) Security() string {
+	return l.page("/settings/security")
+}
+
+func (l Links) page(path string) string {
+	return strings.TrimRight(l.Base, "/") + path
+}

@@ -43,6 +43,38 @@ func (q *Queries) CreateSecurityEvent(ctx context.Context, arg CreateSecurityEve
 	return err
 }
 
+const findSignInHistory = `-- name: FindSignInHistory :one
+SELECT
+    EXISTS (SELECT 1 FROM security_events AS e WHERE e.user_id = $1 AND e.type = 'login.succeeded')::boolean
+        AS signed_in_before,
+    EXISTS (
+        SELECT 1 FROM security_events AS e
+        WHERE e.user_id = $1 AND e.type = 'login.succeeded' AND e.created_at >= $2
+          AND e.metadata ->> 'device_id' = $3::text
+    )::boolean AS known_device
+`
+
+type FindSignInHistoryParams struct {
+	UserID   ids.UUID  `json:"user_id"`
+	Since    time.Time `json:"since"`
+	DeviceID string    `json:"device_id"`
+}
+
+type FindSignInHistoryRow struct {
+	SignedInBefore bool `json:"signed_in_before"`
+	KnownDevice    bool `json:"known_device"`
+}
+
+// FindSignInHistory says whether the user ever signed in before and
+// whether the device with this id signed in as them since the time, to
+// tell a sign-in from a new device.
+func (q *Queries) FindSignInHistory(ctx context.Context, arg FindSignInHistoryParams) (FindSignInHistoryRow, error) {
+	row := q.db.QueryRow(ctx, findSignInHistory, arg.UserID, arg.Since, arg.DeviceID)
+	var i FindSignInHistoryRow
+	err := row.Scan(&i.SignedInBefore, &i.KnownDevice)
+	return i, err
+}
+
 const hasSignedInFromDevice = `-- name: HasSignedInFromDevice :one
 SELECT EXISTS (
     SELECT 1 FROM security_events

@@ -98,9 +98,15 @@ func (p *Principal) Abilities() []string {
 }
 
 /*
-ConfirmedAt returns the last time the caller proved who they are.
+ConfirmedAt returns the last time the caller proved who they are. An
+app proves it by signing its user in again in the browser as well as
+by confirming, so for an app the later of the two counts.
 */
 func (p *Principal) ConfirmedAt() time.Time {
+	if p.Kind == KindApp && p.AuthenticatedAt.After(p.Confirmed) {
+		return p.AuthenticatedAt
+	}
+
 	return p.Confirmed
 }
 

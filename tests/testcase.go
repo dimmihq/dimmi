@@ -21,8 +21,10 @@
 package tests
 
 import (
+	"cmp"
 	"context"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,8 +35,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/mail"
 	notifydb "github.com/dimmihq/dimmi/framework/notifications/channels/database"
 	"github.com/dimmihq/dimmi/framework/queue"
+	"github.com/dimmihq/dimmi/framework/routing"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app"
@@ -63,6 +67,8 @@ type TestCase struct {
 	Owner     models.User
 	Workspace workspaces.CreatedWorkspace
 	handler   fhttp.Handler
+	mail      *mail.Fake
+	mailOnce  sync.Once
 }
 
 /*
@@ -74,6 +80,8 @@ type Option func(o *options)
 type options struct {
 	env    []string
 	before []func(a *app.App)
+	routes []func(r *routing.Router)
+	logs   io.Writer
 }
 
 /*
@@ -93,6 +101,23 @@ func Before(fn func(a *app.App)) Option {
 }
 
 /*
+WithRoutes adds routes only the test serves, such as one behind a
+middleware no product route uses yet, declared once the application's
+own routes are.
+*/
+func WithRoutes(fn func(r *routing.Router)) Option {
+	return func(o *options) { o.routes = append(o.routes, fn) }
+}
+
+/*
+WithLogs writes the application's log lines to the writer instead of
+dropping them, so a test can read what was logged.
+*/
+func WithLogs(w io.Writer) Option {
+	return func(o *options) { o.logs = w }
+}
+
+/*
 New boots the application for the test, with a workspace and its owner,
 and shuts it down when the test ends.
 */
@@ -101,6 +126,11 @@ func New(tb testing.TB, opts ...Option) *TestCase {
 
 	application, fake, err := Boot(tb, opts...)
 	require.NoError(tb, err)
+
+	o := collect(opts)
+	for _, fn := range o.routes {
+		fn(application.Router)
+	}
 
 	ctx := tb.Context()
 	users, err := factories.User(ctx, application)
@@ -129,10 +159,7 @@ tests about booting itself.
 func Boot(tb testing.TB, opts ...Option) (*app.App, *clock.Fake, error) {
 	tb.Helper()
 
-	o := &options{}
-	for _, opt := range opts {
-		opt(o)
-	}
+	o := collect(opts)
 
 	application, foundationOptions := bootstrap.Application()
 	for _, fn := range o.before {
@@ -141,7 +168,7 @@ func Boot(tb testing.TB, opts ...Option) (*app.App, *clock.Fake, error) {
 
 	fake := clock.NewFake(Epoch())
 	foundationOptions.Environ = append(environment(tb), o.env...)
-	foundationOptions.LogWriter = io.Discard
+	foundationOptions.LogWriter = cmp.Or[io.Writer](o.logs, io.Discard)
 	foundationOptions.Clock = fake
 
 	fa, err := foundation.New(tb.Context(), foundationOptions)
@@ -152,6 +179,18 @@ func Boot(tb testing.TB, opts ...Option) (*app.App, *clock.Fake, error) {
 	tb.Cleanup(func() { require.NoError(tb, fa.Shutdown(context.WithoutCancel(tb.Context()))) })
 
 	return application, fake, nil
+}
+
+/*
+collect applies the options.
+*/
+func collect(opts []Option) *options {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	return o
 }
 
 /*

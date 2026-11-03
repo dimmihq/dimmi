@@ -25,8 +25,9 @@ import (
 /*
 LoadConfig loads the framework configuration the options point at and
 checks it, then loads the application's own configuration into
-opts.Config when it is set. A configuration that cannot work returns a
-*ConfigError.
+opts.Config when it is set. When opts.Configure is set it then adjusts
+the framework configuration, which is checked again. A configuration
+that cannot work returns a *ConfigError.
 */
 func LoadConfig(ctx context.Context, opts Options) (*Config, error) {
 	sources := config.LoadOptions{
@@ -51,6 +52,16 @@ func LoadConfig(ctx context.Context, opts Options) (*Config, error) {
 		if err := config.LoadInto(ctx, sources, opts.Config); err != nil {
 			return nil, &ConfigError{Err: err, Redacted: config.Redacted(opts.Config)}
 		}
+	}
+
+	if opts.Configure == nil {
+		return cfg, nil
+	}
+
+	opts.Configure(cfg)
+
+	if err := cfg.check(); err != nil {
+		return nil, &ConfigError{Err: err, Redacted: config.Redacted(cfg)}
 	}
 
 	return cfg, nil

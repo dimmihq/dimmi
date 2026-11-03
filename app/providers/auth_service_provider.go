@@ -45,7 +45,8 @@ type AuthServiceProvider struct {
 
 /*
 Register checks the permission catalog and builds the session manager,
-the guards and the sign-in services.
+the guards and the sign-in services, mailed secrets and the links to
+the account pages included.
 */
 func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 	a := p.App
@@ -60,6 +61,10 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 	a.Cookies = appauth.Cookies{Device: a.Config.Auth.Sessions.DeviceCookie, Secure: a.SecureCookies()}
 	a.SecurityLog = &appauth.SecurityLog{DB: fa.DB, Clock: fa.Clock, Devices: a.Devices}
 	a.Lockout = &appauth.Lockout{Limiter: fa.Limiter, Cache: fa.Cache, Clock: fa.Clock, Config: a.Config.Auth.Lockout}
+	a.Secrets = &appauth.OneTimeTokens{
+		DB: fa.DB, Clock: fa.Clock, Codes: appauth.Codes{Key: fa.DerivedKey(appauth.CodeKeyPurpose)},
+	}
+	a.Links = appauth.Links{Base: fa.Config.App.URL}
 
 	fa.Session.Configure(session.Config{
 		Cookie:      a.Config.Auth.Sessions.Cookie,

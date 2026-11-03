@@ -11,11 +11,25 @@
 
 package config
 
+import "time"
+
 /*
-MagicLinkConfig turns sign-in links by mail on or off.
+MagicLinkConfig turns sign-in links by mail on or off. TTL is how long a
+link and its code work after they were sent.
 */
 type MagicLinkConfig struct {
-	Enabled bool `default:"true" koanf:"enabled"`
+	Enabled bool          `default:"true" koanf:"enabled"`
+	TTL     time.Duration `default:"15m"  koanf:"ttl"`
+}
+
+/*
+VerificationConfig says whether a user must prove their email before
+the steps that reach other people, such as inviting them or minting
+tokens. Required is unset until the edition settles it: the cloud
+requires it, a self-hosted install does not.
+*/
+type VerificationConfig struct {
+	Required *bool `koanf:"required"`
 }
 
 /*

@@ -119,6 +119,36 @@ func TestLoadConfig(t *testing.T) {
 		assert.Equal(t, 10, own.Signup.MinLength)
 	})
 
+	t.Run("lets the application adjust the framework configuration from its own", func(t *testing.T) {
+		t.Parallel()
+		own := &ownConfig{}
+		opts := options([]string{
+			"APP_DATABASE__URL=postgres://localhost/app", "APP_REDIS__URL=redis://localhost",
+			"APP_SIGNUP__MODE=open",
+		})
+		opts.Config = own
+		opts.Configure = func(cfg *foundation.Config) {
+			cfg.Mail.Mailers["system"]["level"] = own.Signup.Mode
+		}
+
+		cfg, err := foundation.LoadConfig(t.Context(), opts)
+		require.NoError(t, err)
+
+		assert.Equal(t, "open", cfg.Mail.Mailers["system"]["level"])
+	})
+
+	t.Run("checks the framework configuration again after the application adjusted it", func(t *testing.T) {
+		t.Parallel()
+		opts := options([]string{"APP_DATABASE__URL=postgres://localhost/app", "APP_REDIS__URL=redis://localhost"})
+		opts.Configure = func(cfg *foundation.Config) { cfg.Database.URL = "" }
+
+		_, err := foundation.LoadConfig(t.Context(), opts)
+
+		var configErr *foundation.ConfigError
+		require.ErrorAs(t, err, &configErr)
+		assert.ErrorContains(t, err, "database.url")
+	})
+
 	t.Run("stops on an application value that cannot work", func(t *testing.T) {
 		t.Parallel()
 		opts := options([]string{

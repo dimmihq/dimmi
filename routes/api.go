@@ -26,45 +26,97 @@ import (
 )
 
 /*
+controllers are the API's controllers, built once with the actions
+they call.
+*/
+type controllers struct {
+	authConfig        *v1.AuthConfigController
+	users             *v1.UserController
+	me                *v1.MeController
+	sessions          *v1.SessionController
+	magicLinks        *v1.MagicLinkController
+	resets            *v1.PasswordResetController
+	verifications     *v1.EmailVerificationController
+	confirmation      *v1.UserConfirmationController
+	confirmationCodes *v1.UserConfirmationCodeController
+}
+
+/*
 API declares the /api/v1 routes.
 */
 func API(a *app.App) {
-	server := v1.Server{
-		Edition: string(a.Config.App.Edition), Version: a.Version, APIVersion: a.Config.API.Version,
-		Region: a.Config.App.Region, MailConfigured: a.MailConfigured(), Clock: a.Clock,
-	}
-
-	authConfig := &v1.AuthConfigController{Auth: a.Config.Auth, Server: server}
-	users := &v1.UserController{RegisterUser: a.Actions.RegisterUser, Cookies: a.Cookies, Server: server}
-	me := &v1.MeController{LoadMe: a.Actions.LoadMe, IDs: a.IDs, Server: server}
-	sessions := &v1.SessionController{
-		AttemptLogin: a.Actions.AttemptLogin, ListSessions: a.Actions.ListSessions, EndSession: a.Actions.EndSession,
-		EndOtherSessions: a.Actions.EndOtherSessions, IDs: a.IDs, Cookies: a.Cookies, Server: server,
-	}
+	c := newControllers(a)
 
 	a.Router.API("/api/v1", "Dimmi API", a.Config.API.Version, func(api *routing.Router) {
 		api.Group("", func(guest *routing.Router) {
 			guest.Middleware("csrf", "session")
 
-			routing.Get(guest, "/auth/config", "auth.config.show", authConfig.Show)
-			routing.Post(guest, "/users", "users.store", users.Store)
-			routing.Post(guest, "/sessions", "sessions.store", sessions.Store)
+			routing.Get(guest, "/auth/config", "auth.config.show", c.authConfig.Show)
+			routing.Post(guest, "/users", "users.store", c.users.Store)
+			routing.Post(guest, "/sessions", "sessions.store", c.sessions.Store)
+			routing.Post(guest, "/magic-links", "magic-links.store", c.magicLinks.Store)
+			routing.Post(guest, "/password-resets", "password-resets.store", c.resets.Store)
+			routing.Patch(guest, "/password-resets/{reset}", "password-resets.update", c.resets.Update)
+			routing.Patch(guest, "/email-verifications/{verification}", "email-verifications.update",
+				c.verifications.Update)
 		})
 
 		api.Group("", func(user *routing.Router) {
 			user.Middleware("csrf", "session", "auth:user")
 
-			routing.Get(user, "/sessions", "sessions.index", sessions.Index)
-			routing.Delete(user, "/sessions", "sessions.destroy-many", sessions.DestroyMany).
+			routing.Get(user, "/sessions", "sessions.index", c.sessions.Index)
+			routing.Delete(user, "/sessions", "sessions.destroy-many", c.sessions.DestroyMany).
 				Middleware("password.confirm").Status(fhttp.StatusNoContent)
-			routing.Delete(user, "/sessions/{session}", "sessions.destroy", sessions.Destroy).
+			routing.Delete(user, "/sessions/{session}", "sessions.destroy", c.sessions.Destroy).
 				Status(fhttp.StatusNoContent)
+			routing.Post(user, "/email-verifications", "email-verifications.store", c.verifications.Store)
+			routing.Get(user, "/user/confirmation", "user.confirmation.show", c.confirmation.Show)
+			routing.Post(user, "/user/confirmation", "user.confirmation.store", c.confirmation.Store)
+			routing.Post(user, "/user/confirmation-codes", "user.confirmation-codes.store",
+				c.confirmationCodes.Store)
 		})
 
 		api.Group("", func(caller *routing.Router) {
 			caller.Middleware("csrf", "session", "auth")
 
-			routing.Get(caller, "/me", "me.show", me.Show)
+			routing.Get(caller, "/me", "me.show", c.me.Show)
 		})
 	})
+}
+
+/*
+newControllers builds the controllers with the actions and the facts
+about the server their answers carry.
+*/
+func newControllers(a *app.App) controllers {
+	server := v1.Server{
+		Edition: string(a.Config.App.Edition), Version: a.Version, APIVersion: a.Config.API.Version,
+		Region: a.Config.App.Region, MailConfigured: a.MailConfigured(), Clock: a.Clock,
+	}
+	acts := a.Actions
+
+	return controllers{
+		authConfig: &v1.AuthConfigController{Auth: a.Config.Auth, Server: server},
+		users:      &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
+		me:         &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
+		sessions: &v1.SessionController{
+			AttemptLogin: acts.AttemptLogin, ConsumeMagicLink: acts.ConsumeMagicLink, ListSessions: acts.ListSessions,
+			EndSession: acts.EndSession, EndOtherSessions: acts.EndOtherSessions, IDs: a.IDs, Cookies: a.Cookies,
+			Server: server,
+		},
+		magicLinks: &v1.MagicLinkController{SendMagicLink: acts.SendMagicLink, Cookies: a.Cookies},
+		resets: &v1.PasswordResetController{
+			SendPasswordResetLink: acts.SendPasswordResetLink, ResetPassword: acts.ResetPassword, Cookies: a.Cookies,
+			Server: server,
+		},
+		verifications: &v1.EmailVerificationController{
+			Resend: acts.ResendEmailVerification, Verify: acts.VerifyEmail, Cookies: a.Cookies,
+		},
+		confirmation: &v1.UserConfirmationController{
+			Check: acts.CheckConfirmation, Confirm: acts.ConfirmUser, Cookies: a.Cookies,
+		},
+		confirmationCodes: &v1.UserConfirmationCodeController{
+			SendConfirmCode: acts.SendConfirmCode, Cookies: a.Cookies,
+		},
+	}
 }

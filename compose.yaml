@@ -16,7 +16,7 @@ services:
 
   s3:
     image: chrislusf/seaweedfs:3.97
-    command: server -s3 -dir=/data -volume.max=0
+    command: server -s3 -dir=/data -volume.max=0 -master.volumeSizeLimitMB=32
     ports: ["18333:8333"]
 
   mailpit:

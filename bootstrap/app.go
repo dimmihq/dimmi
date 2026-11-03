@@ -55,6 +55,7 @@ func Application() (*app.App, foundation.Options) {
 		Version:    Version,
 		EnvPrefix:  "DIMMI",
 		Config:     application.Config,
+		Configure:  application.ConfigureFramework,
 		Migrations: migrations.Files(),
 		Language:   lang.Files(),
 		Providers:  providers.All(application, routes.Register),

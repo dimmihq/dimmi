@@ -124,6 +124,44 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (User, erro
 	return i, err
 }
 
+const markUserEmailVerified = `-- name: MarkUserEmailVerified :exec
+UPDATE users
+SET email_verified_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE id = $2 AND email_verified_at IS NULL
+`
+
+type MarkUserEmailVerifiedParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// MarkUserEmailVerified records that the user proved they read mail at
+// their address. An email proven earlier keeps its first proof.
+func (q *Queries) MarkUserEmailVerified(ctx context.Context, arg MarkUserEmailVerifiedParams) error {
+	_, err := q.db.Exec(ctx, markUserEmailVerified, arg.Now, arg.ID)
+	return err
+}
+
+const revokeUserTokens = `-- name: RevokeUserTokens :one
+SELECT auth_revoke_user_tokens($1, $2)::bigint AS revoked
+`
+
+type RevokeUserTokensParams struct {
+	UserID ids.UUID  `json:"user_id"`
+	Now    time.Time `json:"now"`
+}
+
+// RevokeUserTokens revokes every live access token the user holds, in
+// every workspace, and returns how many it revoked. It runs through a
+// security definer function, since tokens of many workspaces are hidden
+// until one is chosen.
+func (q *Queries) RevokeUserTokens(ctx context.Context, arg RevokeUserTokensParams) (int64, error) {
+	row := q.db.QueryRow(ctx, revokeUserTokens, arg.UserID, arg.Now)
+	var revoked int64
+	err := row.Scan(&revoked)
+	return revoked, err
+}
+
 const updateUserDeletedAt = `-- name: UpdateUserDeletedAt :exec
 UPDATE users SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz WHERE id = $2
 `
@@ -137,6 +175,25 @@ type UpdateUserDeletedAtParams struct {
 // stop working at once, since every guard loads the account.
 func (q *Queries) UpdateUserDeletedAt(ctx context.Context, arg UpdateUserDeletedAtParams) error {
 	_, err := q.db.Exec(ctx, updateUserDeletedAt, arg.Now, arg.ID)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users
+SET password_hash = $1, password_changed_at = $2::timestamptz, updated_at = $2::timestamptz
+WHERE id = $3
+`
+
+type UpdateUserPasswordParams struct {
+	PasswordHash *string   `json:"password_hash"`
+	Now          time.Time `json:"now"`
+	ID           ids.UUID  `json:"id"`
+}
+
+// UpdateUserPassword sets a new password, or removes it with a NULL hash,
+// and records when the password last changed.
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.PasswordHash, arg.Now, arg.ID)
 	return err
 }
 

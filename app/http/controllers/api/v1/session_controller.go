@@ -38,6 +38,7 @@ SessionController serves the session collection.
 */
 type SessionController struct {
 	AttemptLogin     *auth.AttemptLogin
+	ConsumeMagicLink *auth.ConsumeMagicLink
 	ListSessions     *auth.ListSessions
 	EndSession       *auth.EndSession
 	EndOtherSessions *auth.EndOtherSessions
@@ -50,16 +51,7 @@ type SessionController struct {
 Store signs in with the grant and answers with the caller's picture.
 */
 func (c *SessionController) Store(ctx context.Context, in *requests.StoreSessionRequest) (*MeOutput, error) {
-	if in.Body.Grant != requests.GrantPassword {
-		return nil, exceptions.ErrGrantNotAllowed
-	}
-
-	signedIn, err := c.AttemptLogin.Handle(ctx, auth.AttemptLoginInput{
-		Email:    in.Body.Email,
-		Password: in.Body.Password,
-		Reauth:   in.Body.Reauth,
-		Client:   clientOf(ctx, c.Cookies),
-	})
+	signedIn, err := c.signIn(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +60,31 @@ func (c *SessionController) Store(ctx context.Context, in *requests.StoreSession
 		SetCookie: deviceCookies(c.Cookies, signedIn.DeviceToken),
 		Body:      fhttp.NewResource(resources.NewMe(signedIn.Me, c.Server.instance())),
 	}, nil
+}
+
+/*
+signIn runs the action of the grant. A second factor cannot complete a
+sign-in on its own yet, so that grant is not allowed.
+*/
+func (c *SessionController) signIn(ctx context.Context, in *requests.StoreSessionRequest) (auth.SignedIn, error) {
+	client := clientOf(ctx, c.Cookies)
+
+	switch in.Body.Grant {
+	case requests.GrantPassword:
+		return c.AttemptLogin.Handle(ctx, auth.AttemptLoginInput{
+			Email: in.Body.Email, Password: in.Body.Password, Reauth: in.Body.Reauth, Client: client,
+		})
+	case requests.GrantMagicLink:
+		return c.ConsumeMagicLink.Handle(ctx, auth.ConsumeMagicLinkInput{
+			Token: in.Body.Token, Reauth: in.Body.Reauth, Client: client,
+		})
+	case requests.GrantEmailCode:
+		return c.ConsumeMagicLink.Handle(ctx, auth.ConsumeMagicLinkInput{
+			Email: in.Body.Email, Code: in.Body.Code, Reauth: in.Body.Reauth, Client: client,
+		})
+	default:
+		return auth.SignedIn{}, exceptions.ErrGrantNotAllowed
+	}
 }
 
 /*

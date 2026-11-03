@@ -55,7 +55,7 @@ func (l *SecurityLog) Record(ctx context.Context, e Entry) error {
 	err := models.New(l.DB).CreateSecurityEvent(ctx, models.CreateSecurityEventParams{
 		UserID:      e.UserID,
 		Type:        e.Type,
-		Ip:          address(e.Client.IP),
+		Ip:          Address(e.Client.IP),
 		UserAgent:   optional(e.Client.TruncatedUserAgent()),
 		DeviceLabel: optional(l.Devices.Label(e.Client.UserAgent)),
 		Metadata:    metadata,
@@ -69,10 +69,10 @@ func (l *SecurityLog) Record(ctx context.Context, e Entry) error {
 }
 
 /*
-address returns the client's address as stored, or nil when it is not
+Address returns a client's address as stored, or nil when it is not
 one.
 */
-func address(ip string) *netip.Addr {
+func Address(ip string) *netip.Addr {
 	addr, err := netip.ParseAddr(ip)
 	if err != nil {
 		return nil

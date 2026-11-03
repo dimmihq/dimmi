@@ -13,7 +13,8 @@
 |     the account is locked for strangers for 15 minutes, while a browser
 |     that signed in as this user before keeps getting in, so an
 |     attacker can never lock the real user out;
-|   - one address guessing many accounts: blocked for an hour.
+|   - one address guessing many accounts: blocked for an hour, from
+|     signing in and from asking for sign-in links and resets alike.
 |
 | A lock answers before any password is hashed, the same way for every
 | address, and a correct password does not get past it. Locks end by
@@ -107,50 +108,90 @@ func (l *Lockout) Check(ctx context.Context, a Attempt) error {
 }
 
 /*
-Failed counts a failed attempt on every front and locks what crossed
-its line. It reports whether this failure locked anything.
+CheckAddress returns exceptions.ErrTooManyAttempts, with how long to
+wait, while the address is blocked for guessing passwords across many
+accounts. The other ways in that a stranger could abuse from that
+address, such as mailing sign-in links, ask it too.
 */
-func (l *Lockout) Failed(ctx context.Context, a Attempt) (bool, error) {
-	locked, err := l.countFailure(ctx, a)
+func (l *Lockout) CheckAddress(ctx context.Context, ip string) error {
+	wait, err := l.lockedFor(ctx, l.sprayKey(Attempt{IP: ip}))
 	if err != nil {
-		return false, Unavailable(ctx, err)
+		return Unavailable(ctx, err)
 	}
 
-	return locked, nil
+	if wait > 0 {
+		return tooManyAttempts(wait)
+	}
+
+	return nil
+}
+
+/*
+Locks says which locks a failure set: Streak for the address at the
+account, Account for the account against strangers, Spray for the
+address at every account.
+*/
+type Locks struct {
+	Streak  bool
+	Account bool
+	Spray   bool
+}
+
+/*
+Any reports whether the failure set any lock.
+*/
+func (l Locks) Any() bool {
+	return l.Streak || l.Account || l.Spray
+}
+
+/*
+Failed counts a failed attempt on every front, locks what crossed its
+line and says which locks it set.
+*/
+func (l *Lockout) Failed(ctx context.Context, a Attempt) (Locks, error) {
+	locks, err := l.countFailure(ctx, a)
+	if err != nil {
+		return Locks{}, Unavailable(ctx, err)
+	}
+
+	return locks, nil
 }
 
 /*
 countFailure counts the failure and locks what crossed its line.
 */
-func (l *Lockout) countFailure(ctx context.Context, a Attempt) (bool, error) {
+func (l *Lockout) countFailure(ctx context.Context, a Attempt) (Locks, error) {
 	streak, streakErr := l.count(ctx, "login:streak:"+a.IP+":"+a.Email, unlimitedStreak, streakWindow)
 	byEmail, emailErr := l.count(ctx, "login:failures:email:"+a.Email, l.Config.PerEmailSoftLock, failureWindow)
 	byIP, ipErr := l.count(ctx, "login:failures:ip:"+a.IP, l.Config.PerIPSpray, failureWindow)
 
 	if err := errors.Join(streakErr, emailErr, ipErr); err != nil {
-		return false, err
+		return Locks{}, err
 	}
 
-	locks := []struct {
+	locks := Locks{
+		Streak:  streakLock(streak) > 0,
+		Account: byEmail >= l.Config.PerEmailSoftLock,
+		Spray:   byIP >= l.Config.PerIPSpray,
+	}
+
+	var errs []error
+
+	for _, lock := range []struct {
 		crossed bool
 		key     string
 		wait    time.Duration
 	}{
-		{streakLock(streak) > 0, l.streakKey(a), streakLock(streak)},
-		{byEmail >= l.Config.PerEmailSoftLock, l.emailKey(a), emailLock},
-		{byIP >= l.Config.PerIPSpray, l.sprayKey(a), sprayBlock},
-	}
-
-	locked, errs := false, []error{}
-
-	for _, lock := range locks {
+		{locks.Streak, l.streakKey(a), streakLock(streak)},
+		{locks.Account, l.emailKey(a), emailLock},
+		{locks.Spray, l.sprayKey(a), sprayBlock},
+	} {
 		if lock.crossed {
 			errs = append(errs, l.lock(ctx, lock.key, lock.wait))
-			locked = true
 		}
 	}
 
-	return locked, errors.Join(errs...)
+	return locks, errors.Join(errs...)
 }
 
 /*

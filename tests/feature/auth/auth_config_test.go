@@ -29,7 +29,8 @@ func TestAuthConfigShow(t *testing.T) {
 				{"type": "totp", "name": "Authenticator app"},
 				{"type": "recovery_code", "name": "Recovery codes"},
 			}).
-			AssertJSONPath("data.capabilities", []any{}).
+			AssertJSONPath("data.magic_link", true).
+			AssertJSONPath("data.capabilities", []string{"magic_link", "email_code"}).
 			AssertJSONPath("data.min_client_versions", testkit.JSON{"ios": nil, "android": nil, "cli": nil})
 	})
 
@@ -49,6 +50,24 @@ func TestAuthConfigShow(t *testing.T) {
 
 		tc.Client().GetJSON("/api/v1/auth/config").AssertOK().
 			AssertJSONPath("data.factors", []testkit.JSON{{"type": "recovery_code", "name": "Recovery codes"}})
+	})
+
+	t.Run("leaves out signing in by mail where magic links are turned off", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__MAGIC_LINK__ENABLED=false"))
+
+		tc.Client().GetJSON("/api/v1/auth/config").AssertOK().
+			AssertJSONPath("data.magic_link", false).
+			AssertJSONPath("data.capabilities", []any{})
+	})
+
+	t.Run("reports mail as configured once a real mailer is named", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(
+			"DIMMI_MAIL__MAILERS__SYSTEM__DRIVER=smtp", "DIMMI_MAIL__MAILERS__SYSTEM__HOST=localhost",
+		))
+
+		tc.Client().GetJSON("/api/v1/auth/config").AssertOK().AssertJSONPath("data.mail_configured", true)
 	})
 
 	t.Run("reports the cloud's own defaults", func(t *testing.T) {

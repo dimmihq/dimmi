@@ -1,6 +1,6 @@
 {
   "invalid_credentials": "These credentials do not match our records.",
-  "too_many_attempts": "Too many login attempts. Try again in {{.retry_after}} seconds.",
+  "too_many_attempts": "Too many attempts. Try again in {{.retry_after}} seconds.",
   "auth_busy": "The server is busy. Try again in a moment.",
   "reauth_user_mismatch": "Sign in as the user of this session.",
   "grant_not_allowed": "This way of signing in is not available.",
@@ -12,5 +12,14 @@
   "sso_required": "Sign in with your organization's single sign-on.",
   "membership_deactivated": "Your membership of this workspace is not active.",
   "workspace_mismatch": "This token belongs to another workspace.",
-  "two_factor_unavailable": "This account uses two-factor authentication, which this server cannot check yet."
+  "two_factor_unavailable": "This account uses two-factor authentication, which this server cannot check yet.",
+  "invalid_reset_token": "This password reset link is invalid or has expired.",
+  "invalid_verification_token": "This verification link is invalid.",
+  "invalid_code": "The code is invalid or has expired.",
+  "magic_link_expired": "This sign-in link was already used or has expired. Request a new one.",
+  "verification_link_stale": "This verification link was sent to an address the account no longer uses.",
+  "verification_link_expired": "This verification link has expired. Sign in and ask for a new one.",
+  "method_not_available": "This method is not available for your account.",
+  "invalid_password": "The password is incorrect.",
+  "email_unverified": "Verify your email address to continue."
 }

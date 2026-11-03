@@ -177,6 +177,19 @@ func (a *Application) onClose(name string, fn func(ctx context.Context) error) {
 }
 
 /*
+DerivedKey returns the 32-byte key for one purpose, derived from the app
+key, such as the key that seals short codes sent by mail. Different
+purposes give unrelated keys, and the same purpose gives the same key
+on every replica sharing the app key. Boot refuses an app key of the
+wrong size, so deriving cannot fail once the application exists.
+*/
+func (a *Application) DerivedKey(purpose string) []byte {
+	key, _ := encryption.DeriveKey(a.appKey, purpose)
+
+	return key
+}
+
+/*
 Shutdown stops the roles and releases everything boot opened, in reverse
 order, giving up on what is left when the context ends: the listeners
 stop accepting, realtime clients are told to reconnect elsewhere, the

@@ -258,6 +258,33 @@ func TestRowLevelSecurity(t *testing.T) {
 		assert.Equal(t, 1, visible)
 		assert.Equal(t, 1, listed)
 	})
+
+	t.Run("lets the application role end a user's tokens in every workspace, and nobody else's", func(t *testing.T) {
+		t.Parallel()
+		ctx := t.Context()
+		migrated := tests.MigratedDatabase(t)
+		owner := open(t, migrated.URL)
+		user, other := seedUser(t, owner, "holder"), seedUser(t, owner, "bystander")
+		for _, holder := range []string{user, user, other} {
+			workspace := seedWorkspace(t, owner)
+			var member string
+			require.NoError(t, owner.QueryRow(ctx, "INSERT INTO workspace_members (workspace_id, user_id, role) "+
+				"VALUES ($1, $2, 'member') RETURNING id::text", workspace, holder).Scan(&member))
+			require.NoError(t, exec(ctx, owner, "INSERT INTO personal_access_tokens "+
+				"(id, owner_id, tenant_id, name, hint, token_hash, created_at) "+
+				"VALUES (uuidv7(), $1, $2, 'CI', 'dmi_live_x', uuid_send(uuidv7()), now())", member, workspace))
+		}
+		app := open(t, appRole(t, migrated))
+
+		var revoked int64
+		require.NoError(t, app.QueryRow(ctx, "SELECT auth_revoke_user_tokens($1, now())", user).Scan(&revoked))
+
+		var live int
+		require.NoError(t, owner.QueryRow(ctx,
+			"SELECT count(*) FROM personal_access_tokens WHERE revoked_at IS NULL").Scan(&live))
+		assert.Equal(t, int64(2), revoked)
+		assert.Equal(t, 1, live)
+	})
 }
 
 /*

@@ -93,6 +93,7 @@ const (
 	StatusMethodNotAllowed      = http.StatusMethodNotAllowed
 	StatusConflict              = http.StatusConflict
 	StatusGone                  = http.StatusGone
+	StatusLocked                = http.StatusLocked
 	StatusRequestEntityTooLarge = http.StatusRequestEntityTooLarge
 	StatusUnprocessableEntity   = http.StatusUnprocessableEntity
 	StatusUpgradeRequired       = http.StatusUpgradeRequired

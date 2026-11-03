@@ -11,7 +11,7 @@ SQLC_VERSION := v1.30.0
 FRAMEWORK_PKGS := ./framework/...
 APP_PKGS := ./app/...
 
-.PHONY: tools fmt lint test cover cover-app services gen sqlc
+.PHONY: tools fmt lint test cover cover-app services gen sqlc views
 
 APP ?= dimmi
 
@@ -25,6 +25,12 @@ tools:
 # Compiles database/queries into app/models (sqlc.yaml).
 sqlc:
 	$(SQLC) generate
+
+# Compiles the templ views in resources/views, with the templ version go.mod pins.
+TEMPL := go run github.com/a-h/templ/cmd/templ@$(shell go list -m -f '{{.Version}}' github.com/a-h/templ)
+views:
+	$(TEMPL) fmt resources/views
+	$(TEMPL) generate -path resources/views
 
 fmt:
 	$(GOLANGCI_LINT) fmt

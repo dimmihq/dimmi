@@ -28,10 +28,14 @@ const (
 )
 
 /*
-unbiasedBytes is the largest multiple of 62 a byte can hold. Random
-bytes at or above it are dropped so every character is equally likely.
+unbiasedBytes and unbiasedDigitBytes are the largest multiples of 62
+and of 10 a byte can hold. Random bytes at or above them are dropped so
+every character is equally likely.
 */
-const unbiasedBytes = 248
+const (
+	unbiasedBytes      = 248
+	unbiasedDigitBytes = 250
+)
 
 /*
 Random returns n characters drawn evenly from letters and digits using
@@ -39,6 +43,24 @@ crypto/rand, suitable for tokens and secrets. It returns "" when n is
 not positive. The random reader never fails, so its result is ignored.
 */
 func Random(n int) string {
+	return draw(n, base62, unbiasedBytes)
+}
+
+/*
+RandomDigits returns n decimal digits drawn evenly using crypto/rand,
+for codes a person types, such as one mailed to confirm a sign-in. It
+returns "" when n is not positive.
+*/
+func RandomDigits(n int) string {
+	return draw(n, base62[:10], unbiasedDigitBytes)
+}
+
+/*
+draw draws n characters evenly from the alphabet, dropping random
+bytes at or above the unbiased bound, the largest multiple of the
+alphabet's size a byte can hold.
+*/
+func draw(n int, alphabet string, unbiased byte) string {
 	out := make([]byte, 0, max(n, 0))
 	buf := make([]byte, max(n, 1))
 
@@ -46,8 +68,8 @@ func Random(n int) string {
 		_, _ = rand.Read(buf)
 
 		for _, b := range buf {
-			if b < unbiasedBytes && len(out) < n {
-				out = append(out, base62[b%62])
+			if b < unbiased && len(out) < n {
+				out = append(out, alphabet[int(b)%len(alphabet)])
 			}
 		}
 	}

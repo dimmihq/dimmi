@@ -21,13 +21,24 @@ import (
 Actions holds the business actions.
 */
 type Actions struct {
-	CreateUser       *users.CreateUser
-	CreateWorkspace  *workspaces.CreateWorkspace
-	StartSession     *auth.StartSession
-	LoadMe           *auth.LoadMe
-	AttemptLogin     *auth.AttemptLogin
-	RegisterUser     *auth.RegisterUser
-	ListSessions     *auth.ListSessions
-	EndSession       *auth.EndSession
-	EndOtherSessions *auth.EndOtherSessions
+	CreateUser              *users.CreateUser
+	CreateWorkspace         *workspaces.CreateWorkspace
+	StartSession            *auth.StartSession
+	CompletePrimaryAuth     *auth.CompletePrimaryAuth
+	LoadMe                  *auth.LoadMe
+	AttemptLogin            *auth.AttemptLogin
+	RegisterUser            *auth.RegisterUser
+	ListSessions            *auth.ListSessions
+	EndSession              *auth.EndSession
+	EndOtherSessions        *auth.EndOtherSessions
+	SendEmailVerification   *auth.SendEmailVerification
+	ResendEmailVerification *auth.ResendEmailVerification
+	VerifyEmail             *auth.VerifyEmail
+	SendPasswordResetLink   *auth.SendPasswordResetLink
+	ResetPassword           *auth.ResetPassword
+	SendMagicLink           *auth.SendMagicLink
+	ConsumeMagicLink        *auth.ConsumeMagicLink
+	ConfirmUser             *auth.ConfirmUser
+	CheckConfirmation       *auth.CheckConfirmation
+	SendConfirmCode         *auth.SendConfirmCode
 }

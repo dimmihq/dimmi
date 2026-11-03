@@ -24,6 +24,16 @@ func TestStr(t *testing.T) {
 		assert.Empty(t, str.Random(-3))
 	})
 
+	t.Run("makes random digits for codes a person types", func(t *testing.T) {
+		t.Parallel()
+
+		code := str.RandomDigits(6)
+
+		assert.Regexp(t, `^[0-9]{6}$`, code)
+		assert.Regexp(t, `^[0-9]{400}$`, str.RandomDigits(400))
+		assert.Empty(t, str.RandomDigits(0))
+	})
+
 	t.Run("makes url slugs", func(t *testing.T) {
 		t.Parallel()
 

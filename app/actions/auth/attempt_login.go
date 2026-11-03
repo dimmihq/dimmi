@@ -27,16 +27,26 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/mail"
+	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 )
+
+/*
+warningInterval is the least time between two warnings to one account
+that strangers are guessing its password.
+*/
+const warningInterval = 24 * time.Hour
 
 /*
 AttemptLoginInput is what the person typed and where they typed it.
@@ -69,6 +79,8 @@ Rules:
     session's user.
   - A user with a second factor is not signed in until it can be asked
     for.
+  - The owner of an account locked against strangers is warned by mail,
+    at most once a day.
 
 Errors: [exceptions.ErrInvalidCredentials],
 [exceptions.ErrTooManyAttempts], [exceptions.ErrReauthUserMismatch],
@@ -76,15 +88,17 @@ Errors: [exceptions.ErrInvalidCredentials],
 [exceptions.ErrTwoFactorUnavailable], or a wrapped error.
 */
 type AttemptLogin struct {
-	DB           *database.DB
-	Hash         *hashing.Manager
-	Clock        clock.Clock
-	LoginPolicy  appauth.LoginPolicyResolver
-	Lockout      *appauth.Lockout
-	SecurityLog  *appauth.SecurityLog
-	StartSession *StartSession
-	LoadMe       *LoadMe
-	DummyHash    string
+	DB                  *database.DB
+	Hash                *hashing.Manager
+	Clock               clock.Clock
+	Mail                *mail.Manager
+	Limiter             *ratelimit.Limiter
+	Links               appauth.Links
+	LoginPolicy         appauth.LoginPolicyResolver
+	Lockout             *appauth.Lockout
+	SecurityLog         *appauth.SecurityLog
+	CompletePrimaryAuth *CompletePrimaryAuth
+	DummyHash           string
 }
 
 /*
@@ -199,20 +213,21 @@ func (a *AttemptLogin) verify(ctx context.Context, try signInTry, password strin
 
 /*
 fail counts the failure toward the lockout and logs it for an existing
-account, then returns the reason. A busy server counts nothing.
+account, then returns the reason. A busy server counts nothing. When
+the failure locks the account against strangers, its owner is warned.
 */
 func (a *AttemptLogin) fail(ctx context.Context, try signInTry, reason error) error {
 	if errors.Is(reason, exceptions.ErrAuthBusy) {
 		return reason
 	}
 
-	locked, err := a.Lockout.Failed(ctx, try.attempt)
+	locks, err := a.Lockout.Failed(ctx, try.attempt)
 	if err != nil {
 		return err
 	}
 
 	event := appauth.EventLoginFailed
-	if locked {
+	if locks.Any() {
 		event = appauth.EventLoginLocked
 	}
 
@@ -220,7 +235,40 @@ func (a *AttemptLogin) fail(ctx context.Context, try signInTry, reason error) er
 		return err
 	}
 
+	if locks.Account {
+		if err := a.warn(ctx, try); err != nil {
+			return err
+		}
+	}
+
 	return reason
+}
+
+/*
+warn mails the owner of an account that strangers keep guessing its
+password, at most once a day. An email without an account has nobody to
+warn.
+*/
+func (a *AttemptLogin) warn(ctx context.Context, try signInTry) error {
+	if try.account == nil {
+		return nil
+	}
+
+	due, err := appauth.Within(ctx, a.Limiter, appauth.Rate{
+		Key: "mail:suspicious_sign_in:" + try.account.ID.String(), Limit: 1, Window: warningInterval,
+	})
+	if err != nil || !due {
+		return err
+	}
+
+	err = appmail.ToUser(a.Mail, *try.account).Queue(ctx, appmail.SuspiciousSignInAttemptsMail{
+		Name: try.account.Name, SecurityURL: a.Links.Security(),
+	})
+	if err != nil {
+		return fmt.Errorf("queue suspicious sign-in warning: %w", err)
+	}
+
+	return nil
 }
 
 /*
@@ -255,14 +303,11 @@ func (a *AttemptLogin) log(ctx context.Context, try signInTry, event string) err
 }
 
 /*
-succeed ends the run of failures, refreshes an outdated hash and starts
-the session.
+succeed ends the run of failures, refreshes an outdated hash and hands
+the user on to finish signing in.
 */
 func (a *AttemptLogin) succeed(ctx context.Context, try signInTry, in AttemptLoginInput) (SignedIn, error) {
 	user := *try.account
-	if user.TwoFactorEnabled() {
-		return SignedIn{}, exceptions.ErrTwoFactorUnavailable
-	}
 
 	if err := a.Lockout.Succeeded(ctx, try.attempt); err != nil {
 		return SignedIn{}, err
@@ -272,19 +317,9 @@ func (a *AttemptLogin) succeed(ctx context.Context, try signInTry, in AttemptLog
 		return SignedIn{}, err
 	}
 
-	started, err := a.StartSession.Handle(ctx, StartSessionInput{
-		User: user, Methods: []string{appauth.MethodPassword}, Client: in.Client, Reauth: in.Reauth,
+	return a.CompletePrimaryAuth.Handle(ctx, CompletePrimaryAuthInput{
+		User: user, Method: appauth.MethodPassword, Client: in.Client, Reauth: in.Reauth,
 	})
-	if err != nil {
-		return SignedIn{}, err
-	}
-
-	me, err := a.LoadMe.Handle(ctx, LoadMeInput{Principal: started.Principal})
-	if err != nil {
-		return SignedIn{}, err
-	}
-
-	return SignedIn{Me: me, DeviceToken: started.DeviceToken}, nil
 }
 
 /*

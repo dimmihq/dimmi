@@ -33,6 +33,16 @@ func (tc *TestCase) ActingAs(user models.User) *testkit.Client {
 		"grant": "password", "email": user.Email, "password": factories.Password,
 	}).AssertCreated()
 
+	return tc.Browser(res)
+}
+
+/*
+Browser returns a client holding the session and device cookies the
+response set, as the browser that received it would.
+*/
+func (tc *TestCase) Browser(res *testkit.Response) *testkit.Client {
+	tc.T.Helper()
+
 	return tc.Client().
 		WithCookie(res.Cookie(tc.App.Session.CookieName())).
 		WithCookie(res.Cookie(tc.App.Cookies.DeviceName()))

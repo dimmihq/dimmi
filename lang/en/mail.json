@@ -1,0 +1,48 @@
+{
+  "footer": "You received this email because of activity on your Dimmi account. If it was not you, you can ignore it.",
+  "greeting": "Hi {{.name}},",
+  "unknown_device": "an unknown device",
+  "verify_email": {
+    "subject": "Verify your email address",
+    "intro": "Confirm that {{.email}} is your email address by opening this link.",
+    "action": "Verify email",
+    "expiry": "The link works for 24 hours."
+  },
+  "magic_link": {
+    "subject": "Your Dimmi sign-in link",
+    "intro": "Open this link to sign in. It works once, within {{.minutes}} minutes.",
+    "action": "Sign in",
+    "code": "Or type this code on the sign-in page:",
+    "requested": "The request came from {{.ip}} ({{.device}}). If it was not you, ignore this email: nobody can sign in without it."
+  },
+  "reset_password": {
+    "subject": "Reset your Dimmi password",
+    "intro": "Someone asked to reset the password of your account. Choose a new one here.",
+    "action": "Choose a new password",
+    "expiry": "The link works for 60 minutes. If you did not ask for it, ignore this email: your password stays as it is."
+  },
+  "confirm_code": {
+    "subject": "Your Dimmi confirmation code",
+    "intro": "Type this code to confirm it is you:",
+    "expiry": "The code works for 10 minutes. If you did not ask for it, someone may be using your account: sign out of your other sessions."
+  },
+  "password_changed": {
+    "subject": "Your Dimmi password changed",
+    "changed": "The password of your account was changed.",
+    "reset": "The password of your account was reset, and every other session was signed out.",
+    "removed": "Your email address was just proven, and the account had a password set before it was. That password may not be yours, so we removed it and signed out every other session. Set a new password in your security settings.",
+    "action": "Review your security settings"
+  },
+  "new_sign_in": {
+    "subject": "New sign-in to your Dimmi account",
+    "intro": "Your account was just signed in from {{.device}} at {{.ip}}.",
+    "unknown": "If this was you, there is nothing to do. If not, sign that session out and change your password.",
+    "action": "Review your sessions"
+  },
+  "suspicious_sign_in_attempts": {
+    "subject": "Someone is trying to sign in to your Dimmi account",
+    "intro": "Many wrong passwords were tried for your account in the last hour, so we locked it for unknown devices for a while.",
+    "advice": "Devices you signed in from before still get in. If you use a short or reused password, change it now.",
+    "action": "Secure your account"
+  }
+}

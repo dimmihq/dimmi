@@ -33,6 +33,7 @@ type AuthConfig struct {
 	Sessions             SessionsConfig                 `koanf:"sessions"`
 	Lockout              LockoutConfig                  `koanf:"lockout"`
 	MagicLink            MagicLinkConfig                `koanf:"magic_link"`
+	Verification         VerificationConfig             `koanf:"verification"`
 	PasswordConfirmation PasswordConfirmationConfig     `koanf:"password_confirmation"`
 	Factors              FactorsConfig                  `koanf:"factors"`
 	OAuth                map[string]OAuthProviderConfig `koanf:"oauth"`
@@ -69,6 +70,10 @@ func (c *AuthConfig) settle(edition Edition) {
 	if c.Signup.MaxPerHourPerIP == 0 {
 		c.Signup.MaxPerHourPerIP = map[bool]int{true: 5, false: 20}[cloud]
 	}
+
+	if c.Verification.Required == nil {
+		c.Verification.Required = &cloud
+	}
 }
 
 /*
@@ -85,6 +90,7 @@ func (c *AuthConfig) check() error {
 		{c.Sessions.IdleLifetime <= 0, "auth.sessions.idle_lifetime"},
 		{c.Sessions.AbsoluteLifetime < c.Sessions.IdleLifetime, "auth.sessions.absolute_lifetime"},
 		{c.Lockout.PerIPEmail <= 0 || c.Lockout.PerEmailSoftLock <= 0 || c.Lockout.PerIPSpray <= 0, "auth.lockout"},
+		{c.MagicLink.TTL <= 0, "auth.magic_link.ttl"},
 	}
 
 	for _, p := range problems {

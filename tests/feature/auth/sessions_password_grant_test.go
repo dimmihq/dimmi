@@ -95,7 +95,7 @@ func TestSessionStoreWithPassword(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
-		tc.Client().PostJSON("/api/v1/sessions", testkit.JSON{"grant": "magic_link"}).
+		tc.Client().PostJSON("/api/v1/sessions", testkit.JSON{"grant": "two_factor", "code": "1"}).
 			AssertValidationError("grant").
 			AssertJSONPath("code", "grant_not_allowed")
 	})

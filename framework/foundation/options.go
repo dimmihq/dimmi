@@ -40,7 +40,11 @@ Environ replaces the process environment when not nil, which tests use
 to boot without touching the process. Config, when set, points at the
 application's own configuration struct, which is loaded from the same
 files and environment as the framework's and checked with it, so a bad
-application value stops the boot like a bad framework one.
+application value stops the boot like a bad framework one. Configure,
+when set, adjusts the framework configuration once both are loaded,
+such as choosing a driver's options from the kind of install the
+application's own configuration describes; values the operator set
+should be left alone.
 
 Migrations holds the application's own SQL migrations. Providers
 register and boot the application's services, and Commands add its
@@ -71,6 +75,7 @@ type Options struct {
 	ConfigFiles       []string
 	Environ           []string
 	Config            any
+	Configure         func(cfg *Config)
 	Migrations        fs.FS
 	Providers         []Provider
 	Commands          []Command

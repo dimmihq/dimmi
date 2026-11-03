@@ -29,7 +29,7 @@ var (
 	ErrInvalidCredentials = fault.New(fault.Invalid, "invalid_credentials",
 		"These credentials do not match our records.").OnField("email")
 	ErrTooManyAttempts = fault.New(fault.RateLimited, "too_many_attempts",
-		"Too many login attempts. Try again later.")
+		"Too many attempts. Try again later.")
 	ErrAuthBusy = fault.New(fault.Unavailable, "auth_busy",
 		"The server is busy. Try again in a moment.").With("retry_after", 1)
 	ErrReauthUserMismatch = fault.New(fault.Invalid, "reauth_user_mismatch",
@@ -123,3 +123,52 @@ without the second factor would silently weaken the account.
 */
 var ErrTwoFactorUnavailable = fault.New(fault.Unavailable, "two_factor_unavailable",
 	"This account uses two-factor authentication, which this server cannot check yet.")
+
+/*
+Mailed secret failures.
+
+A link or code that is unknown, wrong, or of another kind fails the
+same way as one that never existed, so a guess learns nothing.
+ErrInvalidResetToken answers every password reset that cannot be used.
+ErrInvalidVerificationToken answers an email verification that does
+not match. ErrInvalidCode answers a wrong or spent code.
+ErrMagicLinkExpired answers a sign-in link that was used, ran out, or
+never existed. ErrVerificationLinkStale answers a verification sent to
+an address the account no longer has, and ErrVerificationLinkExpired
+one that ran out before the account was verified.
+*/
+var (
+	ErrInvalidResetToken = fault.New(fault.Invalid, "invalid_reset_token",
+		"This password reset link is invalid or has expired.").OnField("token")
+	ErrInvalidVerificationToken = fault.New(fault.Invalid, "invalid_verification_token",
+		"This verification link is invalid.").OnField("token")
+	ErrInvalidCode = fault.New(fault.Invalid, "invalid_code",
+		"The code is invalid or has expired.").OnField("code")
+	ErrMagicLinkExpired = fault.New(fault.Gone, "magic_link_expired",
+		"This sign-in link was already used or has expired. Request a new one.")
+	ErrVerificationLinkStale = fault.New(fault.Gone, "verification_link_stale",
+		"This verification link was sent to an address the account no longer uses.")
+	ErrVerificationLinkExpired = fault.New(fault.Gone, "verification_link_expired",
+		"This verification link has expired. Sign in and ask for a new one.")
+)
+
+/*
+Confirmation failures.
+
+ErrMethodNotAvailable refuses a way of confirming that the account
+cannot use, such as a password on an account without one; it is not a
+guess and counts as none. ErrWrongPassword answers a wrong password
+while confirming.
+*/
+var (
+	ErrMethodNotAvailable = fault.New(fault.Invalid, "method_not_available",
+		"This method is not available for your account.").OnField("method")
+	ErrWrongPassword = fault.New(fault.Invalid, "invalid_password",
+		"The password is incorrect.").OnField("password")
+)
+
+/*
+ErrEmailUnverified refuses a step that reaches other people, such as
+inviting them, until the user proved their email.
+*/
+var ErrEmailUnverified = fault.New(fault.Forbidden, "email_unverified", "Verify your email address to continue.")

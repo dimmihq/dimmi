@@ -30,3 +30,24 @@ UPDATE users SET two_factor_confirmed_at = @two_factor_confirmed_at, updated_at 
 -- UpdateUserDeletedAt marks the account deleted. Its sessions and tokens
 -- stop working at once, since every guard loads the account.
 UPDATE users SET deleted_at = @now::timestamptz, updated_at = @now::timestamptz WHERE id = @id;
+
+-- name: MarkUserEmailVerified :exec
+-- MarkUserEmailVerified records that the user proved they read mail at
+-- their address. An email proven earlier keeps its first proof.
+UPDATE users
+SET email_verified_at = @now::timestamptz, updated_at = @now::timestamptz
+WHERE id = @id AND email_verified_at IS NULL;
+
+-- name: UpdateUserPassword :exec
+-- UpdateUserPassword sets a new password, or removes it with a NULL hash,
+-- and records when the password last changed.
+UPDATE users
+SET password_hash = @password_hash, password_changed_at = @now::timestamptz, updated_at = @now::timestamptz
+WHERE id = @id;
+
+-- name: RevokeUserTokens :one
+-- RevokeUserTokens revokes every live access token the user holds, in
+-- every workspace, and returns how many it revoked. It runs through a
+-- security definer function, since tokens of many workspaces are hidden
+-- until one is chosen.
+SELECT auth_revoke_user_tokens(@user_id, @now)::bigint AS revoked;

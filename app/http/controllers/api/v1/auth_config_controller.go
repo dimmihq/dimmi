@@ -48,11 +48,12 @@ func (c *AuthConfigController) Show(context.Context, *requests.NoInput) (*AuthCo
 		Region:            c.Server.Region,
 		SignupMode:        c.Auth.Signup.Mode,
 		PasswordLogin:     true,
+		MagicLink:         c.Auth.MagicLink.Enabled,
 		MailConfigured:    c.Server.MailConfigured,
 		PasswordMinLength: c.Auth.Passwords.MinLength,
 		Providers:         resources.NewProviders(appauth.OfferedProviders(c.Auth)),
 		Factors:           resources.NewFactors(appauth.OfferedFactors(c.Auth)),
-		Capabilities:      []string{},
+		Capabilities:      appauth.Capabilities(c.Auth),
 		MinClientVersions: map[string]*string{"ios": nil, "android": nil, "cli": nil},
 	})}, nil
 }

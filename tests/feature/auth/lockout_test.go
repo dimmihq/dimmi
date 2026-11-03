@@ -138,6 +138,26 @@ func TestLockout(t *testing.T) {
 			AssertCreated()
 	})
 
+	t.Run("keeps a blocked address from asking for sign-in links and resets too", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(behindProxy, "DIMMI_AUTH__LOCKOUT__PER_IP_SPRAY=3"))
+		sprayer := from(tc, "203.0.113.7")
+		for _, email := range []string{"a@example.com", "b@example.com", "c@example.com"} {
+			fail(t, sprayer, email, 1)
+		}
+
+		for _, res := range []*testkit.Response{
+			sprayer.PostJSON("/api/v1/magic-links", testkit.JSON{"email": tc.Owner.Email}),
+			sprayer.PostJSON("/api/v1/password-resets", testkit.JSON{"email": tc.Owner.Email}),
+			sprayer.PostJSON("/api/v1/sessions", testkit.JSON{
+				"grant": "email_code", "email": tc.Owner.Email, "code": "1",
+			}),
+		} {
+			res.AssertStatus(429).AssertJSONPath("code", "too_many_attempts")
+		}
+		from(tc, "203.0.113.8").PostJSON("/api/v1/magic-links", testkit.JSON{"email": tc.Owner.Email}).AssertStatus(202)
+	})
+
 	t.Run("answers a locked unknown email exactly like a locked account", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))

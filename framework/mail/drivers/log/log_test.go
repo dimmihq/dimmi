@@ -23,20 +23,30 @@ import (
 line is one log line the mailer writes.
 */
 type line struct {
+	Level      string `json:"level"`
 	Msg        string `json:"msg"`
 	Mailer     string `json:"mailer"`
+	Fallback   bool   `json:"mail_fallback"`
 	Recipients string `json:"recipients"`
+	Subject    string `json:"subject"`
+	Links      string `json:"links"`
 	Message    string `json:"message"`
 }
 
 func newMailer(t *testing.T) (mail.Mailer, *bytes.Buffer) {
 	t.Helper()
 
+	return newMailerWith(t, config.Section{"driver": "log"})
+}
+
+func newMailerWith(t *testing.T, section config.Section) (mail.Mailer, *bytes.Buffer) {
+	t.Helper()
+
 	var out bytes.Buffer
 	logger, err := log.New(log.Options{Driver: "json", Level: "info", Writer: &out})
 	require.NoError(t, err)
 
-	mailer, err := maillog.Factory(logger, clock.System())("system", config.Section{"driver": "log"})
+	mailer, err := maillog.Factory(logger, clock.System())("system", section)
 	require.NoError(t, err)
 
 	return mailer, &out
@@ -103,9 +113,72 @@ func TestLine(t *testing.T) {
 
 		written := lines(t, out)
 		require.Len(t, written, 1)
-		assert.Equal(t, "mail sent", written[0].Msg)
+		assert.Equal(t, "mail logged instead of sent", written[0].Msg)
+		assert.Equal(t, "INFO", written[0].Level)
 		assert.Equal(t, "system", written[0].Mailer)
+		assert.True(t, written[0].Fallback)
+		assert.Equal(t, msg.Subject, written[0].Subject)
+		assert.Equal(t, "https://example.com/sign-in?code=abc", written[0].Links)
 		assert.Contains(t, written[0].Message, "https://example.com/sign-in?code=3Dabc")
+	})
+
+	t.Run("writes only the subject, recipients and links when asked, at the level asked", func(t *testing.T) {
+		t.Parallel()
+		mailer, out := newMailerWith(t, config.Section{"driver": "log", "level": "warn", "content": "links"})
+		msg := drivertest.Message(drivertest.Address("Ana"))
+		msg.Text = "Open https://example.com/a#token=1 or https://example.com/b, then https://example.com/a#token=1"
+
+		_, err := mailer.Send(t.Context(), msg)
+		require.NoError(t, err)
+
+		written := lines(t, out)
+		require.Len(t, written, 1)
+		assert.Equal(t, "WARN", written[0].Level)
+		assert.Equal(t, "https://example.com/a#token=1 https://example.com/b", written[0].Links)
+		assert.Empty(t, written[0].Message)
+	})
+
+	t.Run("finds the links of a message that has only HTML", func(t *testing.T) {
+		t.Parallel()
+		mailer, out := newMailerWith(t, config.Section{"driver": "log", "content": "links"})
+		msg := drivertest.Message(drivertest.Address("Ana"))
+		msg.Text, msg.HTML = "", `<a href="https://example.com/r#id=1&amp;token=2">Reset</a>`
+
+		_, err := mailer.Send(t.Context(), msg)
+		require.NoError(t, err)
+
+		assert.Equal(t, "https://example.com/r#id=1&token=2", lines(t, out)[0].Links)
+	})
+
+	t.Run("keeps every link and the body out of the line when only the envelope is wanted", func(t *testing.T) {
+		t.Parallel()
+		mailer, out := newMailerWith(t, config.Section{"driver": "log", "content": "envelope"})
+		msg := drivertest.Message(drivertest.Address("Ana"))
+		msg.Text = "Sign in: https://example.com/sign-in#token=secret"
+
+		_, err := mailer.Send(t.Context(), msg)
+		require.NoError(t, err)
+
+		assert.NotContains(t, out.String(), "secret")
+		assert.Equal(t, msg.Subject, lines(t, out)[0].Subject)
+	})
+
+	t.Run("refuses a level or content it does not know", func(t *testing.T) {
+		t.Parallel()
+		logger, err := log.New(log.Options{Driver: "json", Level: "info", Writer: &bytes.Buffer{}})
+		require.NoError(t, err)
+
+		for _, section := range []config.Section{
+			{"driver": "log", "level": "loud"},
+			{"driver": "log", "content": "everything"},
+			{"driver": "log", "level": []int{1}},
+		} {
+			_, err := maillog.Factory(logger, clock.System())("system", section)
+			require.Error(t, err)
+		}
+
+		_, err = maillog.NewWith(logger, clock.System(), "system", maillog.Options{Level: "info", Content: "all"})
+		require.ErrorIs(t, err, maillog.ErrInvalidOption)
 	})
 
 	t.Run("refuses a raw message with broken recipients", func(t *testing.T) {

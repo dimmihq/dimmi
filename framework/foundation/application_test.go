@@ -136,6 +136,17 @@ func TestApplication(t *testing.T) {
 		assert.NotEmpty(t, app.AdminAddr())
 	})
 
+	t.Run("derives one stable key per purpose from the app key", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t, "APP_APP__ROLES=web")))
+
+		codes := app.DerivedKey("codes")
+
+		assert.Len(t, codes, 32)
+		assert.Equal(t, codes, app.DerivedKey("codes"))
+		assert.NotEqual(t, codes, app.DerivedKey("links"))
+	})
+
 	t.Run("shuts down cleanly in reverse and only once", func(t *testing.T) {
 		t.Parallel()
 		flushed := make(chan struct{}, 2)

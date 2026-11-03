@@ -7,7 +7,9 @@
 | actions exist. Cross-origin protection trusts the application's own
 | origin and the extra origins configured for split deployments, such as
 | a dashboard on another host. Sensitive routes ask for a recent
-| confirmation of who is calling, within the configured window.
+| confirmation of who is calling, within the configured window, and
+| steps that reach other people ask for a proven email where the
+| install requires one.
 |
 | The route files sit outside the application package, since routes
 | depend on the application and never the other way around, so the
@@ -28,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/http/middleware"
 
 	"github.com/dimmihq/dimmi/app"
+	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 )
 
 /*
@@ -53,6 +56,9 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	fa.Kernel.Alias("csrf", func(...string) (fhttp.Middleware, error) { return csrf, nil })
 	fa.Kernel.Alias("password.confirm", func(...string) (fhttp.Middleware, error) {
 		return fauth.RequireConfirmation(fa.Clock, p.App.Config.Auth.PasswordConfirmation.TTL, fa.Errors), nil
+	})
+	fa.Kernel.Alias("verified", func(...string) (fhttp.Middleware, error) {
+		return appmiddleware.EnsureEmailVerified(p.App.Config.Auth.Verification, fa.Errors), nil
 	})
 
 	return nil

@@ -64,6 +64,7 @@ Rules:
   - Only an open install takes new accounts.
   - One address creates a limited number of accounts per hour.
   - A workspace name creates a workspace the new user owns.
+  - The new address is sent a verification link; nothing waits for it.
 
 Events: [appevents.UserRegistered], and those of
 [workspaces.CreateWorkspace] when a workspace is created.
@@ -73,16 +74,17 @@ Errors: [exceptions.ErrSignupClosed], [exceptions.ErrTooManySignups],
 [exceptions.ErrAuthBusy], or a wrapped error.
 */
 type RegisterUser struct {
-	DB              *database.DB
-	Hash            *hashing.Manager
-	Events          *events.Dispatcher
-	Limiter         *ratelimit.Limiter
-	Signup          config.SignupConfig
-	LoginPolicy     appauth.LoginPolicyResolver
-	CreateUser      *users.CreateUser
-	CreateWorkspace *workspaces.CreateWorkspace
-	StartSession    *StartSession
-	LoadMe          *LoadMe
+	DB               *database.DB
+	Hash             *hashing.Manager
+	Events           *events.Dispatcher
+	Limiter          *ratelimit.Limiter
+	Signup           config.SignupConfig
+	LoginPolicy      appauth.LoginPolicyResolver
+	CreateUser       *users.CreateUser
+	CreateWorkspace  *workspaces.CreateWorkspace
+	SendVerification *SendEmailVerification
+	StartSession     *StartSession
+	LoadMe           *LoadMe
 }
 
 /*
@@ -163,6 +165,10 @@ func (a *RegisterUser) create(ctx context.Context, in RegisterUserInput, hash st
 			Name: in.Name, Email: in.Email, PasswordHash: &hash, CreatedVia: appauth.CreatedViaRegister,
 		})
 		if err != nil {
+			return err
+		}
+
+		if err := a.SendVerification.Handle(ctx, user, in.Client); err != nil {
 			return err
 		}
 

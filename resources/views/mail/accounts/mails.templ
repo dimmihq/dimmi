@@ -1,0 +1,99 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+VerifyEmail asks a new user to prove they read mail at their address.
+*/
+
+templ VerifyEmail(name, email, url string) {
+	@layout(i18n.T(ctx, "mail.verify_email.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.verify_email.intro", i18n.Args{"email": email}) }</p>
+		@button(url, i18n.T(ctx, "mail.verify_email.action", nil))
+		<p>{ i18n.T(ctx, "mail.verify_email.expiry", nil) }</p>
+	}
+}
+
+/*
+MagicLink signs a person in by link or by code, and says where the
+request came from so they can tell whether it was them.
+*/
+
+templ MagicLink(url, signInCode, ip, device string, minutes int) {
+	@layout(i18n.T(ctx, "mail.magic_link.subject", nil)) {
+		<p>{ i18n.T(ctx, "mail.magic_link.intro", i18n.Args{"minutes": minutes}) }</p>
+		@button(url, i18n.T(ctx, "mail.magic_link.action", nil))
+		<p>{ i18n.T(ctx, "mail.magic_link.code", nil) }</p>
+		@code(signInCode)
+		<p>{ i18n.T(ctx, "mail.magic_link.requested", i18n.Args{"ip": ip, "device": device}) }</p>
+	}
+}
+
+/*
+ResetPassword lets a user who forgot their password choose a new one.
+*/
+
+templ ResetPassword(name, url string) {
+	@layout(i18n.T(ctx, "mail.reset_password.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.reset_password.intro", nil) }</p>
+		@button(url, i18n.T(ctx, "mail.reset_password.action", nil))
+		<p>{ i18n.T(ctx, "mail.reset_password.expiry", nil) }</p>
+	}
+}
+
+/*
+ConfirmCode gives a user without a password the code that confirms it
+is them before a sensitive change.
+*/
+
+templ ConfirmCode(name, confirmCode string) {
+	@layout(i18n.T(ctx, "mail.confirm_code.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.confirm_code.intro", nil) }</p>
+		@code(confirmCode)
+		<p>{ i18n.T(ctx, "mail.confirm_code.expiry", nil) }</p>
+	}
+}
+
+/*
+PasswordChanged tells a user their password changed, was reset, or was
+removed to protect the account, and where to look if it was not them.
+*/
+
+templ PasswordChanged(name, reason, securityURL string) {
+	@layout(i18n.T(ctx, "mail.password_changed.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.password_changed." + reason, nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.password_changed.action", nil))
+	}
+}
+
+/*
+NewSignIn tells a user their account was signed in from a device it
+had not seen.
+*/
+
+templ NewSignIn(name, device, ip, securityURL string) {
+	@layout(i18n.T(ctx, "mail.new_sign_in.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.new_sign_in.intro", i18n.Args{"device": device, "ip": ip}) }</p>
+		<p>{ i18n.T(ctx, "mail.new_sign_in.unknown", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.new_sign_in.action", nil))
+	}
+}
+
+/*
+SuspiciousSignInAttempts warns a user that strangers keep guessing
+their password, and that their own devices still get in.
+*/
+
+templ SuspiciousSignInAttempts(name, securityURL string) {
+	@layout(i18n.T(ctx, "mail.suspicious_sign_in_attempts.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.suspicious_sign_in_attempts.intro", nil) }</p>
+		<p>{ i18n.T(ctx, "mail.suspicious_sign_in_attempts.advice", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.suspicious_sign_in_attempts.action", nil))
+	}
+}

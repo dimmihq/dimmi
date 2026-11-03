@@ -6,7 +6,7 @@ the way a self-hoster does: built with `go build`, configured only by environmen
 milestone that adds or changes endpoints, and add the new flows to the list below in the same change.
 
 It catches what in-process tests cannot: configuration read from the environment, CLI commands, cookies over
-real HTTP, process start and graceful stop, and state surviving a restart.
+real HTTP, mail leaving through a real SMTP server, process start and graceful stop, and state surviving a restart.
 
 ## 1. Start the services and build
 
@@ -29,12 +29,17 @@ DIMMI_APP__KEY_AUTO_GENERATE=true
 DIMMI_HTTP__ADDR=127.0.0.1:18080
 DIMMI_HTTP__ADMIN_ADDR=127.0.0.1:19090
 DIMMI_AUTH__SIGNUP__MODE=open
+DIMMI_MAIL__MAILERS__SYSTEM__DRIVER=smtp
+DIMMI_MAIL__MAILERS__SYSTEM__HOST=localhost
+DIMMI_MAIL__MAILERS__SYSTEM__PORT=11025
+DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE=true
 EOF
 ```
 
 `env -i` below starts the binary with nothing but this file, so a setting the binary needs and the file lacks shows
 up as a failure instead of leaking in from your shell. The bare `DATABASE_URL`, `REDIS_URL` and `PORT` names
-platforms inject are not read yet; use the `DIMMI_*` names.
+platforms inject are not read yet; use the `DIMMI_*` names. The mail lines send every mail through Mailpit's SMTP
+port (`smtp://localhost:11025`); section 5 runs without them to check the log fallback.
 
 ## 2. Migrate and serve
 
@@ -48,7 +53,7 @@ curl -s http://127.0.0.1:18080/ready   # expect: {"status":"pass",...} with data
 ```
 
 Run `dimmi serve` in the background of your tool (an agent's background shell), not with a trailing `&` you lose
-track of.
+track of. `serve` runs the queue worker too, which is what sends mail.
 
 ## 3. Drive the API
 
@@ -62,44 +67,101 @@ r(){ echo "== $1"; shift; curl -s -o body -D hdr -w '%{http_code}\n' "$@"
 ```
 
 Each browser is a cookie jar (`-b a.jar -c a.jar`). Send the `Origin` header on every cookie request, as a browser
-does.
+does. Mailpit keeps every mail from earlier runs, so this run uses addresses of its own:
+
+```bash
+RUN=$(date +%s); ADA=ada.$RUN@example.com; BOB=bob.$RUN@example.com; CAROL=carol.$RUN@example.com
+DAVE=dave.$RUN@example.com
+```
 
 | Flow | Command | Expect |
 |---|---|---|
-| Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors |
-| Common password | `r weak -X POST -H "$O" -H "$J" $B/users -d '{"name":"Ada","email":"ada@example.com","password":"password123"}'` | 422, message "The password is too common. Choose another one." |
-| Sign up | `r signup -c a.jar -b a.jar -X POST -H "$O" -H "$J" $B/users -d '{"name":"Ada Lovelace","email":"Ada@Example.com","password":"analytical-engine-1843","workspace_name":"Acme"}'` | 201, `dimmi_session` and `dimmi_device` cookies, HttpOnly, SameSite=Lax |
-| Email taken, any case | same body with `ada@example.com` | 422 `email_taken` |
+| Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true` |
+| Common password | `r weak -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada\",\"email\":\"$ADA\",\"password\":\"password123\"}"` | 422, message "The password is too common. Choose another one." |
+| Sign up | `r signup -c a.jar -b a.jar -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada Lovelace\",\"email\":\"$ADA\",\"password\":\"analytical-engine-1843\",\"workspace_name\":\"Acme\"}"` | 201, `dimmi_session` and `dimmi_device` cookies, HttpOnly, SameSite=Lax, `email_verified: false` |
+| Email taken, any case | same body with the email in capitals | 422 `email_taken` |
 | Who am I | `r me -b a.jar -H "$O" $B/me` | 200, user, `auth.auth_methods` `["password"]` |
 | Name a workspace | add `-H 'Dimmi-Workspace: ws_…'` (id from sign-up) | 200, `effective_abilities` filled |
 | Cross-origin refused | `r xo -b a.jar -X DELETE -H 'Origin: https://evil.example' $B/sessions/current` | 403 `cross_origin_request` |
 | Sign out | `r out -b a.jar -c a.jar -X DELETE -H "$O" $B/sessions/current` then `me` | 204 with the cookie cleared, then 401 |
 | Lockout | five wrong passwords on `POST $B/sessions` (`{"grant":"password",...}`), then the right one | 422 ×5, then 429 `too_many_attempts`, `Retry-After: 30` |
-| Lock ends | wait 31 s, right password | 201 |
+| Lock ends | wait 31 s, right password with `-c a.jar -b a.jar` | 201 |
 | Same answer for strangers | wrong password for an unknown email | 422 `invalid_credentials`, timing close to a real account's (`-w '%{time_total}'`) |
 | Two browsers | sign in with jar `c.jar`, then `GET $B/sessions` from `a.jar` | two sessions, one `current: true` |
 | Revoke one | `DELETE $B/sessions/ses_…` (the other one) from `a.jar`, then `me` with `c.jar` | 204, then 401 |
 | Sign out others | sign in with `d.jar`, `DELETE $B/sessions` from `a.jar`, then `me` with `d.jar` and `a.jar` | 204, then 401 for d, 200 for a |
-| Bad JSON | `POST $B/sessions -d '{"grant":'` | 400 `bad_request` |
+| Bad JSON | `POST $B/sessions -d '{"grant':` | 400 `bad_request` |
 | OpenAPI | `curl -s -o /dev/null -w '%{http_code}' $B/openapi.json` | 200 |
+
+### Mail flows
+
+Mail leaves through Mailpit, and the API at `http://localhost:18025/api/v1` reads it back, the newest first. Several
+mails to one address can arrive in either order (a sign-in mail and a new-device mail, say), so the helpers pick
+the newest mail to an address whose subject has a word in it, print its text body, and pull a link or a code out:
+
+```bash
+M=http://localhost:18025/api/v1
+mail(){ sleep 1; id=$(curl -s "$M/search?query=to:$1%20subject:$2&limit=1" | jq -r '.messages[0].ID')
+        curl -s "$M/message/$id" | jq -r '"Subject: " + .Subject + "\nFrom: " + .From.Address, .Text'; }
+link(){ mail "$1" "$2" | grep -oE 'http://[^ >]+#[^ >]+' | head -1; }
+code(){ mail "$1" "$2" | grep -oE '[0-9]{3}-[0-9]{3}' | head -1; }
+frag(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(sys.argv[1]).fragment)[sys.argv[2]][0])' "$1" "$2"; }
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Verification mail | `mail $ADA Verify` | "Verify your email address" from `no-reply@localhost`, link `http://localhost:18080/verify-email#id=ott_…&token=…`; the token only after the `#`, never in the subject |
+| Verify, any device | `L=$(link $ADA Verify); r verify -X PATCH -H "$O" -H "$J" $B/email-verifications/$(frag $L id) -d "{\"token\":\"$(frag $L token)\"}"` (no cookie jar) | 200, `object: email_verification`, `status: verified`, `user_id: usr_…` |
+| Second click | same command again | 200, same body (idempotent) |
+| Wrong token | same id, `{"token":"nope"}` | 422 `invalid_verification_token` |
+| Already verified | `r resend -b a.jar -X POST -H "$O" $B/email-verifications` | 200 "Your email address is already verified." |
+| Resend, once a minute | sign up `$BOB` with jar `b.jar`, then `POST $B/email-verifications` twice with `b.jar` | 202, then 429 `too_many_attempts` "Too many attempts. Try again in 60 seconds." |
+| Reset asked | `r reset -X POST -H "$O" -H "$J" $B/password-resets -d "{\"email\":\"$ADA\"}"`, then the same for `nobody.$RUN@example.com` | 202 twice, identical bodies; one mail "Reset your Dimmi password" to Ada with `/reset-password#id=prs_…&token=…` |
+| Reset wrong token | `L=$(link $ADA Reset); r bad -X PATCH -H "$O" -H "$J" $B/password-resets/$(frag $L id) -d '{"token":"nope","password":"difference-engine-1822"}'`, and the same with id `prs_01jc0000000000000000000000` | 422 `invalid_reset_token` both, identical bodies |
+| Reset | `r redeem -c r.jar -b r.jar -X PATCH -H "$O" -H "$J" $B/password-resets/$(frag $L id) -d "{\"token\":\"$(frag $L token)\",\"password\":\"difference-engine-1822\"}"` | 200 `me`, session cookie, `auth.auth_methods` `["password_reset"]`, `email_verified: true`; `me` with `a.jar` 401; mail "Your Dimmi password changed" |
+| New password | `POST $B/sessions` with `difference-engine-1822` and jar `c2.jar` | 201; the old password 422 |
+| Magic link asked | `r magic -X POST -H "$O" -H "$J" $B/magic-links -d "{\"email\":\"$ADA\"}"` | 202 "If this email can sign in, a link is on its way."; mail "Your Dimmi sign-in link" with `/login/magic#token=…`, a `123-456` code, the requesting IP and "an unknown device" for curl |
+| Scanner opens the link | `curl -s -o /dev/null -w '%{http_code}\n' "$(link $ADA link)"` | 404 (no SPA yet); the link still works next |
+| Link signs in | `r ml -c m.jar -b m.jar -X POST -H "$O" -H "$J" $B/sessions -d "{\"grant\":\"magic_link\",\"token\":\"$(frag $(link $ADA link) token)\"}"` | 201, `auth_methods: ["magic_link"]` |
+| Link works once | same command again | 410 `magic_link_expired` |
+| Wrong code | ask again, then `-d "{\"grant\":\"email_code\",\"email\":\"$ADA\",\"code\":\"000-000\"}"` | 422 `invalid_code` |
+| Code signs in | `-d "{\"grant\":\"email_code\",\"email\":\"$ADA\",\"code\":\"$(code $ADA link)\"}"` with jar `e.jar` | 201, `auth_methods: ["email_code"]` |
+| Sign up by link | `POST $B/magic-links` with `{"email":"$CAROL","name":"Carol Shaw"}`, then its link with jar `s2.jar` | 201, `name: Carol Shaw`, `email_verified: true`, `has_password: false` |
+| Taking an account back | ask a link for `$DAVE`, sign up `$DAVE` with a password in jar `x.jar`, then use the link | 201 `email_verified: true`, `has_password: false`; `me` with `x.jar` 401; the squatter's password 422; mail "Your Dimmi password changed" saying the password was removed |
+| Confirmation holds | `r conf -b m.jar -H "$O" $B/user/confirmation` | 200 `method: magic_link`, `confirmed_until` 15 min after that sign-in |
+| Confirm with password | `r confirm -b c2.jar -X POST -H "$O" -H "$J" $B/user/confirmation -d '{"method":"password","password":"difference-engine-1822"}'` | 201 `method: password`, then `GET` shows the same `confirmed_until`; wrong password 422 `invalid_password`; `email_code` 422 `method_not_available` |
+| No code with a password | `r codes -b c2.jar -X POST -H "$O" $B/user/confirmation-codes` | 422 `method_not_available` |
+| Code for a passwordless user | `r cc -b s2.jar -X POST -H "$O" $B/user/confirmation-codes`, then `{"method":"email_code","code":"$(code $CAROL confirmation)"}` | 202 and a "Your Dimmi confirmation code" mail, then 201 `method: email_code` |
+| New device | sign Ada in with a fresh jar `n.jar` | mail "New sign-in to your Dimmi account" naming "an unknown device" and the IP; signing in again from a jar that signed in before sends none |
 
 ## 4. Check what was stored
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d dimmi_e2e \
   -c "select auth_method, auth_methods, confirmed_method, device_id is not null, ip, user_agent from sessions" \
-  -c "select type, count(*) from security_events group by type order by type"
+  -c "select type, count(*) from security_events group by type order by type" \
+  -c "select purpose, count(*), count(consumed_at) from one_time_tokens group by purpose" \
+  -c "select email, created_via, email_verified_at is not null as verified, password_hash is not null as has_password from users" \
+  -c "select kind, state, count(*) from river_job group by kind, state"
 ```
 
-Expect one row per live session with the sign-in record filled, and security events for every sign-in, failure,
-lock, sign-out and revocation above.
+Expect one row per live session with the sign-in record filled; security events for every sign-in, failure,
+lock, sign-out, revocation, `password.reset`, `magic_link.used` and `sessions.revoked_others`; one-time tokens with
+a `code_hash` only for magic links and confirmation codes, used ones `consumed`; Carol `created_via magic_link`,
+verified, without a password; Dave verified without a password; every `send_mail` job `completed`.
 
-## 5. Stop, restart, and clean up
+## 5. Stop, restart without a mail server, and clean up
 
 ```bash
 pkill -TERM -f 'bin/dimmi serve'   # expect: "River client stopped" in serve.log, exit code 0
+grep -v MAIL "$E2E/env" > "$E2E/env.nomail"
+alias dimmi='env -i PATH=$PATH HOME=$HOME $(cat "$E2E/env.nomail" | xargs) /path/to/repo/bin/dimmi'
 dimmi serve > serve2.log 2>&1 &     # expect: no "generated a new app key" line this time
-r me -b a.jar -H "$O" $B/me          # expect: 200, the session survived the restart
+r me -b c2.jar -H "$O" $B/me         # expect: 200, the session survived the restart
+r config $B/auth/config              # expect: mail_configured: false
+r reset -X POST -H "$O" -H "$J" $B/password-resets -d "{\"email\":\"$ADA\"}"
+grep mail_fallback serve2.log        # expect: one WARN "mail logged instead of sent" line with subject, recipients
+                                     # and the reset link in links, and no message body
 pkill -TERM -f 'bin/dimmi serve'
 docker compose exec -T postgres psql -U postgres -c 'DROP DATABASE dimmi_e2e'
 ```

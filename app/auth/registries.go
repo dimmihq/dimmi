@@ -60,8 +60,9 @@ const (
 How an account was created and how a member joined a workspace.
 */
 const (
-	CreatedViaRegister = "register"
-	JoinedViaCreated   = "created"
+	CreatedViaRegister  = "register"
+	CreatedViaMagicLink = MethodMagicLink
+	JoinedViaCreated    = "created"
 )
 
 /*
@@ -74,6 +75,8 @@ const (
 	EventLogout                = "logout.succeeded"
 	EventSessionRevoked        = "session.revoked"
 	EventSessionsRevokedOthers = "sessions.revoked_others"
+	EventPasswordReset         = "password.reset"
+	EventMagicLinkUsed         = "magic_link.used"
 )
 
 /*
@@ -115,11 +118,11 @@ SecurityEvents lists the entries of a user's own security log.
 */
 func SecurityEvents() Registry {
 	return Registry{name: "security_events", values: []string{
-		EventLoginSucceeded, EventLoginFailed, EventLoginLocked, EventLogout, "password.changed", "password.reset",
+		EventLoginSucceeded, EventLoginFailed, EventLoginLocked, EventLogout, "password.changed", EventPasswordReset,
 		"two_factor.enabled", "two_factor.disabled", "auth_factor.added", "auth_factor.removed",
 		"auth_factor.renamed", "auth_factor.recovery_code_used", "auth_factor.recovery_codes_regenerated",
 		"email.change_requested", "email.changed", "identity.linked", "identity.unlinked", EventSessionRevoked,
-		EventSessionsRevokedOthers, "magic_link.used", "token.created", "account.deletion_requested",
+		EventSessionsRevokedOthers, EventMagicLinkUsed, "token.created", "account.deletion_requested",
 	}}
 }
 
