@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,11 +89,8 @@ func TestSignInFailures(t *testing.T) {
 	t.Run("still refuses a wrong password when the failure cannot be logged", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))
-		fail(t, tc.Client(), tc.Owner.Email, 5)
 		tc.BreakTable("security_events")
 
-		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, "wrong")).AssertStatus(500)
-		tc.Clock.Advance(time.Minute)
 		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, "wrong")).AssertStatus(500)
 	})
 

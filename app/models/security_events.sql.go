@@ -97,17 +97,32 @@ func (q *Queries) HasSignedInFromDevice(ctx context.Context, arg HasSignedInFrom
 }
 
 const listUserSecurityEvents = `-- name: ListUserSecurityEvents :many
-SELECT id, user_id, type, ip, user_agent, device_label, country, metadata, created_at FROM security_events WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2
+SELECT id, user_id, type, ip, user_agent, device_label, country, metadata, created_at FROM security_events
+WHERE user_id = $1
+  AND (
+      $2::timestamptz IS NULL
+      OR (created_at, id) < ($2::timestamptz, $3::uuid)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT $4::bigint
 `
 
 type ListUserSecurityEventsParams struct {
-	UserID   ids.UUID `json:"user_id"`
-	RowLimit int32    `json:"row_limit"`
+	UserID   ids.UUID   `json:"user_id"`
+	CursorAt *time.Time `json:"cursor_at"`
+	CursorID *ids.UUID  `json:"cursor_id"`
+	RowLimit int64      `json:"row_limit"`
 }
 
-// ListUserSecurityEvents returns the user's latest security log entries.
+// ListUserSecurityEvents returns a page of the user's security log,
+// newest first, after the cursor position when one is given.
 func (q *Queries) ListUserSecurityEvents(ctx context.Context, arg ListUserSecurityEventsParams) ([]SecurityEvent, error) {
-	rows, err := q.db.Query(ctx, listUserSecurityEvents, arg.UserID, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listUserSecurityEvents,
+		arg.UserID,
+		arg.CursorAt,
+		arg.CursorID,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -134,4 +149,26 @@ func (q *Queries) ListUserSecurityEvents(ctx context.Context, arg ListUserSecuri
 		return nil, err
 	}
 	return items, nil
+}
+
+const pruneSecurityEvents = `-- name: PruneSecurityEvents :execrows
+DELETE FROM security_events
+WHERE id IN (
+    SELECT e.id FROM security_events AS e WHERE e.created_at < $1 ORDER BY e.created_at LIMIT $2::bigint
+)
+`
+
+type PruneSecurityEventsParams struct {
+	Cutoff time.Time `json:"cutoff"`
+	Batch  int64     `json:"batch"`
+}
+
+// PruneSecurityEvents deletes up to a batch of security log entries, of
+// every user, written before the cutoff, oldest first.
+func (q *Queries) PruneSecurityEvents(ctx context.Context, arg PruneSecurityEventsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneSecurityEvents, arg.Cutoff, arg.Batch)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

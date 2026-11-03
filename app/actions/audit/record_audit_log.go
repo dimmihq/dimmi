@@ -1,0 +1,242 @@
+/*
+|--------------------------------------------------------------------------
+| Record Audit Log
+|--------------------------------------------------------------------------
+|
+| Every change to a workspace someone may later have to answer for is
+| written to its audit log inside the transaction that made it, so an
+| entry exists exactly when the change does and a failed write undoes
+| the change. The entry names who acted, through which credential, from
+| which address, labeled as they were at that moment, so it still reads
+| right after the member or the token is gone. Values under keys that
+| look secret never reach the log.
+|
+| This is the one writer of the audit log: listeners and actions of
+| every feature record through it.
+|
+*/
+
+package audit
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/ids"
+
+	appauth "github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/app/models"
+)
+
+/*
+The audit events of workspaces and their members.
+*/
+const (
+	EventWorkspaceCreated     = "workspace.created"
+	EventWorkspaceUpdated     = "workspace.updated"
+	EventMemberJoined         = "member.joined"
+	EventMemberRoleChanged    = "member.role_changed"
+	EventMemberDeactivated    = "member.deactivated"
+	EventMemberReactivated    = "member.reactivated"
+	EventMemberLeft           = "member.left"
+	EventOwnershipTransferred = "ownership.transferred"
+)
+
+/*
+The kinds of actor and of the channel they acted through. A member acts
+through their browser session, their own app or an access token they
+minted; the system acts on its own.
+*/
+const (
+	ActorMember      = "member"
+	ActorSystem      = "system"
+	ViaSession       = "session"
+	ViaApp           = "app"
+	ViaPersonalToken = "personal_token"
+)
+
+/*
+systemLabel is how an entry names the system as its actor.
+*/
+const systemLabel = "System"
+
+/*
+Subject is what an entry is about: its kind, such as member or
+workspace, its id, and the name it had at the time.
+*/
+type Subject struct {
+	Type  string
+	ID    ids.UUID
+	Label string
+}
+
+/*
+Entry is one change to record. ActorID is the member who made it, or
+ids.Nil() when the system did. Changes describes what changed, such as
+{"role": {"from": "member", "to": "admin"}}, and holds only values that
+encode as JSON.
+*/
+type Entry struct {
+	WorkspaceID ids.UUID
+	Event       string
+	ActorID     ids.UUID
+	Subject     Subject
+	Changes     map[string]any
+}
+
+/*
+RecordAuditLog writes entries to workspaces' audit logs. The credential
+and the client come from the request in the context, when there is one;
+work done outside a request records no channel and no address.
+
+Errors: a wrapped database error, which fails the change it records.
+*/
+type RecordAuditLog struct {
+	DB    *database.DB
+	Clock clock.Clock
+}
+
+/*
+actor is who an entry names as having acted, and through what.
+*/
+type actor struct {
+	kind    string
+	id      *ids.UUID
+	viaKind *string
+	viaID   *ids.UUID
+	label   string
+}
+
+/*
+Handle writes the entry, inside the transaction in the context when
+there is one, and returns it as stored.
+*/
+func (a *RecordAuditLog) Handle(ctx context.Context, e Entry) (models.AuditLog, error) {
+	q := models.New(a.DB)
+
+	who, err := a.actor(ctx, q, e)
+	if err != nil {
+		return models.AuditLog{}, err
+	}
+
+	changes, err := json.Marshal(Redact(e.Changes))
+	if err != nil {
+		return models.AuditLog{}, fmt.Errorf("encode audit changes: %w", err)
+	}
+
+	params := models.CreateAuditLogParams{
+		WorkspaceID: e.WorkspaceID, Event: e.Event, ActorType: who.kind, ActorID: who.id, ViaKind: who.viaKind,
+		ViaID: who.viaID, ActorLabel: who.label, Changes: changes, Now: a.Clock.Now(),
+	}
+	withSubject(&params, e.Subject)
+	withClient(ctx, &params)
+
+	entry, err := q.CreateAuditLog(ctx, params)
+	if err != nil {
+		return entry, fmt.Errorf("record audit event %s: %w", e.Event, err)
+	}
+
+	return entry, nil
+}
+
+/*
+actor works out who the entry names: the system, or the member with
+their account as it is now and, for a token, the token's name.
+*/
+func (a *RecordAuditLog) actor(ctx context.Context, q *models.Queries, e Entry) (actor, error) {
+	who := actor{kind: ActorSystem, label: systemLabel}
+	principal, signedIn := appauth.CurrentPrincipal(ctx)
+
+	if signedIn {
+		who.viaKind, who.viaID = via(principal)
+	}
+
+	if e.ActorID == ids.Nil() {
+		return who, nil
+	}
+
+	member, err := q.FindAuditActor(ctx, models.FindAuditActorParams{WorkspaceID: e.WorkspaceID, ID: e.ActorID})
+	if err != nil {
+		return who, fmt.Errorf("find audit actor: %w", err)
+	}
+
+	who.kind, who.id = ActorMember, &member.ID
+	who.label = fmt.Sprintf("%s <%s>", member.Name, member.Email)
+
+	if !signedIn || principal.Kind != appauth.KindToken {
+		return who, nil
+	}
+
+	token, err := q.FindAuditToken(ctx, principal.CredentialID)
+	if errors.Is(err, database.ErrNotFound) {
+		return who, nil
+	}
+
+	if err != nil {
+		return who, fmt.Errorf("find audit token: %w", err)
+	}
+
+	who.label = fmt.Sprintf("%s via Token %s (%s)", member.Name, token.Name, token.Hint)
+
+	return who, nil
+}
+
+/*
+via returns the channel the caller acts through and the credential's
+id.
+*/
+func via(p *appauth.Principal) (*string, *ids.UUID) {
+	kinds := map[string]string{
+		appauth.KindSession: ViaSession, appauth.KindApp: ViaApp, appauth.KindToken: ViaPersonalToken,
+	}
+
+	kind, known := kinds[p.Kind]
+	if !known {
+		return nil, nil
+	}
+
+	id := p.CredentialID
+
+	return &kind, &id
+}
+
+/*
+withSubject fills in what the entry is about, when it names anything.
+*/
+func withSubject(p *models.CreateAuditLogParams, s Subject) {
+	if s.Type == "" {
+		return
+	}
+
+	p.SubjectType, p.SubjectLabel = &s.Type, &s.Label
+	if s.ID != ids.Nil() {
+		p.SubjectID = &s.ID
+	}
+}
+
+/*
+withClient fills in the address, browser and request id of the request
+in the context, when there is one.
+*/
+func withClient(ctx context.Context, p *models.CreateAuditLogParams) {
+	if id := fhttp.RequestID(ctx); id != "" {
+		p.RequestID = &id
+	}
+
+	r, ok := fhttp.RequestFrom(ctx)
+	if !ok {
+		return
+	}
+
+	client := appauth.Client{IP: fhttp.ClientIP(r), UserAgent: r.UserAgent()}
+	p.Ip = appauth.Address(client.IP)
+
+	if agent := client.TruncatedUserAgent(); agent != "" {
+		p.UserAgent = &agent
+	}
+}

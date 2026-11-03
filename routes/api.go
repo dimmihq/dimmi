@@ -47,6 +47,8 @@ type controllers struct {
 	workspace         *v1.CurrentWorkspaceController
 	members           *v1.MemberController
 	authFactors       *v1.AuthFactorController
+	auditLogs         *v1.AuditLogController
+	securityEvents    *v1.SecurityEventController
 }
 
 /*
@@ -89,6 +91,7 @@ func API(a *app.App) {
 			routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
 				Status(fhttp.StatusNoContent)
 			authFactorRoutes(user, c.authFactors)
+			routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index)
 		})
 
 		api.Group("", func(caller *routing.Router) {
@@ -113,6 +116,8 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read")
+	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
 }
 
 /*
@@ -125,6 +130,7 @@ func newControllers(a *app.App) controllers {
 		Region: a.Config.App.Region, MailConfigured: a.MailConfigured(), Clock: a.Clock,
 	}
 	acts := a.Actions
+	cursors := pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose))
 
 	return controllers{
 		authConfig: &v1.AuthConfigController{Auth: a.Config.Auth, Providers: a.Providers, Server: server},
@@ -157,13 +163,17 @@ func newControllers(a *app.App) controllers {
 		workspace:   &v1.CurrentWorkspaceController{UpdateWorkspace: acts.UpdateWorkspace},
 		members: &v1.MemberController{
 			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-			Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+			Cursors: cursors,
 		},
 		authFactors: &v1.AuthFactorController{
 			List: acts.ListAuthFactors, Add: acts.AddAuthFactor, Activate: acts.ActivateAuthFactor,
 			Change: acts.UpdateAuthFactor, Remove: acts.RemoveAuthFactor, RemoveAll: acts.RemoveAllAuthFactors,
 			IDs: a.IDs, Cookies: a.Cookies,
 		},
+		auditLogs: &v1.AuditLogController{
+			List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,
+		},
+		securityEvents: &v1.SecurityEventController{List: acts.ListSecurityEvents, Cursors: cursors},
 	}
 }
 

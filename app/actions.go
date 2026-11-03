@@ -12,6 +12,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/members"
@@ -65,4 +66,9 @@ type Actions struct {
 	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
 	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
 	DisableTwoFactor           *factors.DisableTwoFactor
+
+	RecordAuditLog     *audit.RecordAuditLog
+	ListAuditLogs      *audit.ListAuditLogs
+	ShowAuditLog       *audit.ShowAuditLog
+	ListSecurityEvents *auth.ListSecurityEvents
 }

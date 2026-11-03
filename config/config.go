@@ -19,6 +19,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 )
 
 /*
@@ -37,6 +38,9 @@ type Config struct {
 
 	Frontend FrontendConfig `koanf:"frontend"`
 	Widget   WidgetConfig   `koanf:"widget"`
+
+	Audit          AuditConfig          `koanf:"audit"`
+	SecurityEvents SecurityEventsConfig `koanf:"security_events"`
 }
 
 /*
@@ -47,6 +51,11 @@ the files and environment are read.
 func (c *Config) Validate() error {
 	c.App.settle()
 	c.Auth.settle(c.App.Edition)
+	c.Audit.settle(c.App.Edition)
+
+	if *c.Audit.RetentionDays < 0 || c.SecurityEvents.RetentionDays < 0 {
+		return fmt.Errorf("%w: retention_days", ErrInvalid)
+	}
 
 	return c.Auth.check()
 }

@@ -290,11 +290,23 @@ func (a *AttemptLogin) refuse(ctx context.Context, try signInTry, refusal error)
 
 /*
 log writes a failed or locked sign-in to the account's security log. A
-try at an email without an account has no log to write to.
+try at an email without an account has no log to write to, and a run
+of failures from one address writes one failure a minute, so guessing
+cannot flood the log.
 */
 func (a *AttemptLogin) log(ctx context.Context, try signInTry, event string) error {
 	if try.account == nil {
 		return nil
+	}
+
+	if event == appauth.EventLoginFailed {
+		due, err := appauth.Within(ctx, a.Limiter, appauth.Rate{
+			Key: "security_event:login_failed:" + try.account.ID.String() + ":" + try.client.IP, Limit: 1,
+			Window: time.Minute,
+		})
+		if err != nil || !due {
+			return err
+		}
 	}
 
 	return a.SecurityLog.Record(ctx, appauth.Entry{

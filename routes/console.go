@@ -3,17 +3,23 @@
 | Console Routes
 |--------------------------------------------------------------------------
 |
-| Work the scheduler runs on its own, such as pruning expired sign-in
-| records. Nothing is scheduled yet: sessions expire by their own
-| timestamps, and stale rows are only clutter until pruning is added.
+| Work the scheduler runs on its own. Every night the audit log and the
+| security log drop the entries older than they are kept for, at a quiet
+| hour, a few minutes apart so they never compete.
 |
 */
 
 package routes
 
-import "github.com/dimmihq/dimmi/app"
+import (
+	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/jobs"
+)
 
 /*
 Console declares the scheduled jobs.
 */
-func Console(*app.App) {}
+func Console(a *app.App) {
+	a.Schedule.Job(jobs.PruneAuditLogsArgs{}).DailyAt("03:10")
+	a.Schedule.Job(jobs.PruneSecurityEventsArgs{}).DailyAt("03:20")
+}
