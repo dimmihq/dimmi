@@ -75,6 +75,7 @@ func TestAppPage(t *testing.T) {
 		assert.Contains(t, body, `<link nonce="`+nonce+`" rel="stylesheet" href="/build/assets/app-77aa.css">`)
 		assert.Contains(t, body, `<div id="root"></div>`)
 		assert.Contains(t, body, `<meta name="robots" content="noindex">`)
+		assert.Contains(t, body, `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,`)
 		assert.Contains(t, body, `<html lang="en" class="" data-accent="emerald">`)
 		assert.NotContains(t, policy, "localhost:5173")
 		assert.Contains(t, policy, "script-src 'self' 'nonce-"+nonce+"'; style-src 'self' 'unsafe-inline';")

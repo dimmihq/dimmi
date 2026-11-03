@@ -6,11 +6,9 @@
  */
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-
-import { ButtonLink } from "@/components/base/buttons/button";
-import { LinkButton } from "@/components/base/buttons/link-button";
 import { Notification } from "@/components/base/notification/notification";
 import { Spinner } from "@/components/base/spinner/spinner";
+import { ButtonLink, LinkButton } from "@/features/navigation/links";
 import { type Me, signInWithLink, verifyEmail } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
@@ -68,7 +66,7 @@ export function MagicLinkPage({ token, onSignedIn }: { token: string; onSignedIn
           />
         </div>
         <AuthFooter>
-          <LinkButton href="/login">Request a new link</LinkButton>
+          <LinkButton to="/login">Request a new link</LinkButton>
         </AuthFooter>
       </AuthCard>
     );
@@ -101,7 +99,7 @@ export function VerifyEmailPage({ id, token }: { id: string; token: string }) {
             className="w-full"
           />
         </div>
-        <ButtonLink href="/d" className="mt-6 w-full">
+        <ButtonLink to="/d" className="mt-6 w-full">
           Continue to Dimmi
         </ButtonLink>
       </AuthCard>

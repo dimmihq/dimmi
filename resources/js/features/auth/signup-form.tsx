@@ -7,9 +7,9 @@ import { useMutation } from "@tanstack/react-query";
 import type { FormEvent } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Notification } from "@/components/base/notification/notification";
+import { LinkButton } from "@/features/navigation/links";
 import { type AuthConfig, type Me, signUp } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
@@ -40,7 +40,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
   if (config.signup_mode !== "open") {
     return (
       <AuthCard>
-        <AuthHeader title="Create your account" />
+        <AuthHeader title="Create your workspace" />
         <div className="mt-6">
           <Notification
             status="information"
@@ -51,7 +51,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
           />
         </div>
         <AuthFooter>
-          Already have an account? <LinkButton href="/login">Sign in</LinkButton>
+          Already have an account? <LinkButton to="/login">Sign in</LinkButton>
         </AuthFooter>
       </AuthCard>
     );
@@ -59,7 +59,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
 
   return (
     <AuthCard>
-      <AuthHeader title="Create your account" description="Set up Dimmi for your team in a couple of minutes." />
+      <AuthHeader title="Create your workspace" />
       <ProviderButtons
         providers={config.providers}
         redirect={redirect}
@@ -114,7 +114,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
         </p>
       </form>
       <AuthFooter>
-        Already have an account? <LinkButton href="/login">Sign in</LinkButton>
+        Already have an account? <LinkButton to="/login">Sign in</LinkButton>
       </AuthFooter>
     </AuthCard>
   );

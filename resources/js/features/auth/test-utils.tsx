@@ -1,8 +1,10 @@
 /*
- * Rendering auth forms in tests: a fresh query cache per test and the
- * API answered by a stub of fetch.
+ * Rendering auth forms in tests: a fresh query cache and router per test,
+ * and the API answered by a stub of fetch. The router lets the forms'
+ * links to other pages render.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createMemoryHistory, createRootRoute, createRouter, RouterContextProvider } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 
@@ -20,7 +22,13 @@ export const config: AuthConfig = {
 export function renderWithQueries(ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
 
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  const router = createRouter({ routeTree: createRootRoute(), history: createMemoryHistory() });
+
+  return render(
+    <QueryClientProvider client={client}>
+      <RouterContextProvider router={router}>{ui}</RouterContextProvider>
+    </QueryClientProvider>,
+  );
 }
 
 /*

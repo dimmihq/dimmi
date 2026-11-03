@@ -1,5 +1,6 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+import { PageOutlet } from "@/features/layout/page-outlet";
 import { currentUser } from "@/lib/session";
 
 export const Route = createFileRoute("/d")({
@@ -8,5 +9,5 @@ export const Route = createFileRoute("/d")({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
-  component: Outlet,
+  component: () => <PageOutlet />,
 });

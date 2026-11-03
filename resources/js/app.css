@@ -31,3 +31,28 @@
   --color-accent-900: oklch(37.8% 0.077 168.94);
   --color-accent-950: oklch(26.2% 0.051 172.552);
 }
+
+/*
+ * The page reveal PageOutlet plays on navigation, after BoardUI's stagger
+ * reveal: a fade, an 8px rise and a 3px blur that clears, on BoardUI's
+ * soft-landing curve. It fills backwards only, so once it ends the page
+ * keeps no transform or filter, which would otherwise trap fixed
+ * descendants inside it.
+ */
+@theme {
+  --animate-page-in: page-in 400ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+      filter: blur(3px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in {
+    animation: none;
+  }
+}

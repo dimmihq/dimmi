@@ -1,9 +1,11 @@
 /*
  * The frame every sign-in page shares, laid out like BoardUI's auth
- * card: a bordered card with a title and description, and small print
- * below.
+ * card: a bordered card that opens with the Dimmi icon above a title and
+ * description, and small print below.
  */
 import type { ReactNode } from "react";
+
+import { DimmiIcon } from "@/features/brand/logo";
 
 export function AuthCard({ children }: { children: ReactNode }) {
   return (
@@ -15,10 +17,15 @@ export function AuthCard({ children }: { children: ReactNode }) {
 
 export function AuthHeader({ title, description }: { title: ReactNode; description?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <h1 className="text-title-2-medium text-text-primary">{title}</h1>
-      {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
-    </div>
+    <>
+      <div className="mb-5 flex justify-start">
+        <DimmiIcon className="size-10 text-text-primary" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-title-2-medium text-text-primary">{title}</h1>
+        {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
+      </div>
+    </>
   );
 }
 

@@ -6,11 +6,11 @@ import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { LinkButton } from "@/components/base/buttons/link-button";
 import { HintText } from "@/components/base/input/hint-text";
 import { Input } from "@/components/base/input/input";
 import { InputOtp } from "@/components/base/input-otp/input-otp";
 import { Notification } from "@/components/base/notification/notification";
+import { LinkButton } from "@/features/navigation/links";
 import { type AuthConfig, type Me, sendMagicLink, signIn, signInWithCode } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
@@ -68,7 +68,7 @@ function PasswordStep({
 
   return (
     <AuthCard>
-      <AuthHeader title="Sign in to Dimmi" description="Welcome back. Sign in to pick up where you left off." />
+      <AuthHeader title="Log in to dimmi" />
       {initialError ? (
         <Notification status="error" title={initialError} dismissible={false} role="alert" className="mt-6 w-full" />
       ) : null}
@@ -112,7 +112,7 @@ function PasswordStep({
           errorMessage={passwordError}
         />
         <div className="flex justify-end">
-          <LinkButton href="/forgot-password">Forgot password?</LinkButton>
+          <LinkButton to="/forgot-password">Forgot password?</LinkButton>
         </div>
         <Button type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}
@@ -130,7 +130,7 @@ function PasswordStep({
       </form>
       {config.signup_mode === "open" ? (
         <AuthFooter>
-          New here? <LinkButton href="/signup">Create an account</LinkButton>
+          New here? <LinkButton to="/signup">Create an account</LinkButton>
         </AuthFooter>
       ) : null}
     </AuthCard>

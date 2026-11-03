@@ -7,9 +7,9 @@ import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Notification } from "@/components/base/notification/notification";
+import { LinkButton } from "@/features/navigation/links";
 import { type Me, requestPasswordReset, resetPassword } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
@@ -65,7 +65,7 @@ export function ForgotPasswordForm() {
         </form>
       )}
       <AuthFooter>
-        Remembered it? <LinkButton href="/login">Sign in</LinkButton>
+        Remembered it? <LinkButton to="/login">Sign in</LinkButton>
       </AuthFooter>
     </AuthCard>
   );
@@ -120,7 +120,7 @@ export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPas
         </Button>
       </form>
       <AuthFooter>
-        Link expired? <LinkButton href="/forgot-password">Send a new one</LinkButton>
+        Link expired? <LinkButton to="/forgot-password">Send a new one</LinkButton>
       </AuthFooter>
     </AuthCard>
   );
@@ -134,7 +134,7 @@ export function BrokenLink() {
         description="Open the link from the mail again, or copy all of it into the address bar."
       />
       <AuthFooter>
-        <LinkButton href="/login">Back to sign in</LinkButton>
+        <LinkButton to="/login">Back to sign in</LinkButton>
       </AuthFooter>
     </AuthCard>
   );

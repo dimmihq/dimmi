@@ -88,7 +88,7 @@ func Shell(lang, chosenTheme string, assets templ.Component) templ.Component {
 			}
 			templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><meta name=\"color-scheme\" content=\"light dark\"><title>Dimmi</title>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><meta name=\"color-scheme\" content=\"light dark\"><title>Dimmi</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHN0eWxlPmd7ZmlsbDojMDAwMDAwfUBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7Z3tmaWxsOiNGRkZGRkZ9fTwvc3R5bGU+PGcgZmlsbC1ydWxlPSJldmVub2RkIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNCwtNCkiPjxwYXRoIGQ9Ik00LDI0IEEyMCwyMCAwIDAgMSAxOC44NjksNC42NjkgTDQzLjMzMSwyOS4xMzEgQTIwLDIwIDAgMCAxIDI0LDQ0IEwxMSw0NCBBNyw3IDAgMCAxIDQsMzcgWiIvPjxwYXRoIGQ9Ik0yMS45MSw0LjExIEEyMCwyMCAwIDAgMSAzMC4xNzgsNC45NzggTDQzLjAyMiwxNy44MjIgQTIwLDIwIDAgMCAxIDQzLjg5LDI2LjA5IFoiLz48L2c+PC9nPjwvc3ZnPg==\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
