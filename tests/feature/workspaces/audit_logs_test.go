@@ -213,7 +213,7 @@ func TestAuditLogIndex(t *testing.T) {
 		owner := in(tc, tc.Owner)
 		first := owner.GetJSON("/api/v1/audit-logs?limit=2").AssertOK().AssertJSONPath("data.#", 2)
 		second := owner.GetJSON("/api/v1/audit-logs?limit=2&cursor=" + first.String("meta.next_cursor")).AssertOK()
-		third := owner.GetJSON("/api/v1/audit-logs?limit=2&cursor=" + second.String("meta.next_cursor")).AssertOK().
+		third := owner.GetJSON("/api/v1/audit-logs?limit=2&cursor="+second.String("meta.next_cursor")).AssertOK().
 			AssertJSONPath("meta.next_cursor", nil)
 		assert.Equal(t, "team.created", first.String("data.0.event"))
 		assert.Equal(t, "workspace.created", third.String("data.0.event"))
@@ -305,7 +305,7 @@ func TestAuditLogAccess(t *testing.T) {
 
 		owner.GetJSON("/api/v1/audit-logs/"+auditID(foreign)).AssertNotFound().AssertJSONPath("code", "not_found")
 		owner.GetJSON("/api/v1/audit-logs/aud_nope").AssertNotFound()
-		owner.GetJSON("/api/v1/audit-logs/"+models.PublicID(models.PrefixAuditLog, ids.New())).AssertNotFound()
+		owner.GetJSON("/api/v1/audit-logs/" + models.PublicID(models.PrefixAuditLog, ids.New())).AssertNotFound()
 		res := owner.GetJSON("/api/v1/audit-logs?limit=100").AssertOK()
 		assert.NotContains(t, res.String("data.#.id"), auditID(foreign))
 	})

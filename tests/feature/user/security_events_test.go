@@ -44,7 +44,7 @@ func TestSecurityEventIndex(t *testing.T) {
 		client := tc.ActingAsOwner()
 
 		first := client.GetJSON("/api/v1/user/security-events?limit=2").AssertOK().AssertJSONPath("data.#", 2)
-		last := client.GetJSON("/api/v1/user/security-events?limit=2&cursor=" + first.String("meta.next_cursor")).
+		last := client.GetJSON("/api/v1/user/security-events?limit=2&cursor="+first.String("meta.next_cursor")).
 			AssertOK().
 			AssertJSONPath("data.#", 1).
 			AssertJSONPath("meta.next_cursor", nil)

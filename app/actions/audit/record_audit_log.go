@@ -26,7 +26,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
-	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -224,16 +223,15 @@ withClient fills in the address, browser and request id of the request
 in the context, when there is one.
 */
 func withClient(ctx context.Context, p *models.CreateAuditLogParams) {
-	if id := fhttp.RequestID(ctx); id != "" {
+	if id := appauth.CurrentRequestID(ctx); id != "" {
 		p.RequestID = &id
 	}
 
-	r, ok := fhttp.RequestFrom(ctx)
+	client, ok := appauth.CurrentClient(ctx)
 	if !ok {
 		return
 	}
 
-	client := appauth.Client{IP: fhttp.ClientIP(r), UserAgent: r.UserAgent()}
 	p.Ip = appauth.Address(client.IP)
 
 	if agent := client.TruncatedUserAgent(); agent != "" {
