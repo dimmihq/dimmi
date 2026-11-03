@@ -232,6 +232,13 @@ F=$B/user/auth-factors; P="{\"grant\":\"password\",\"email\":\"$ADA\",\"password
 | Turn off | `r off -b a.jar -X DELETE -H "$O" $F/$FAC` | 204; mail "Two-factor authentication is off"; `POST $B/sessions` with `$P` 201 again |
 | Turn off all at once | turn on again, then `r alloff -b a.jar -X DELETE -H "$O" $F` | 204, the list empty |
 | Operator turns it off | turn on again, then `dimmi user:disable-2fa $ADA`, again, then `dimmi user:disable-2fa nobody@example.com` | "Two-factor authentication is off for …", exit 0; then "was already off", exit 0; then "no account has this email", exit 1 |
+| Require it without 2FA | Bob, owner of Acme since the transfer: `r req -b b.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/workspace -d '{"require_two_factor":true}'` | 409 `two_factor_not_enabled` |
+| Require it | Bob adds and activates an authenticator as Ada did, with `b.jar`, then the same | 200 `require_two_factor: true`; mail "Acme Support now requires two-factor authentication" to each active member without 2FA; a token of Bob's sending the field 403 `first_party_only` |
+| Kept out without 2FA | any member without 2FA, by session or token: `GET $B/workspace` with `-H "$H"` | 403 `two_factor_required` with `requirement: two_factor`, `action_url: /d/settings/security`; `GET $B/me`, `GET $F` and `GET $B/sessions` still 200 |
+| In right after setup | that member adds and activates an authenticator, then `GET $B/workspace` again | 200 at once |
+| Cannot turn it off | Bob: `r boff -b b.jar -X DELETE -H "$O" $F` | 409 `two_factor_required_by_workspace`, `workspaces: [{"id":"ws_…","name":"Acme Support"}]`; nothing removed; `dimmi user:disable-2fa $BOB` still works |
+| Lift it | Bob (with 2FA again): `{"require_two_factor":false}` | 200 `require_two_factor: false`, no mail |
+| Purge | start an enrollment and leave it; with the server running, wait past the hour | the `pending` factor gone, a `purge_expired_auth_records` job `completed` in `river_job` |
 
 ### Browser pages
 
@@ -243,7 +250,9 @@ Run `make build` first so the binary embeds the browser app.
 | App page | `curl -s -D - $W/d \| grep -iE '^(cache-control\|content-security-policy)'` | `no-cache`; policy with `'nonce-…'`, no `unsafe-inline`, no dev server |
 | Theme | `curl -s -b dimmi_theme=dark $W/login \| grep -o '<html[^>]*>'` | `<html lang="en" class="dark">` |
 | In a browser | open `$W/signup`, create an account, open the verification mail's link, sign out, sign in by password, then by mailed code | lands on `/d` each time; provider buttons first when providers are configured; light and dark switch and survive a reload |
-| Two-factor in a browser | in `/d/settings/security` add an authenticator (scan the QR code or type the key), confirm with its code, keep the recovery codes; sign out, sign in by password, answer with the app's code; sign out again and use "Use a recovery code instead" | the codes show once; each sign-in stops at `/login/two-factor`, then lands on `/d`; the settings then say "9 of 10 left" |
+| Two-factor in a browser | in `/d/settings/security` add an authenticator (scan the QR code, or "Can't scan the code?" and copy the key), confirm with its code, copy the recovery codes; sign out, sign in by password, answer with the app's code; sign out again and use "Use a recovery code instead" | the key stays hidden until asked and copies from its read-only field; "Copy codes" puts all ten on the clipboard, one per line; each sign-in stops at `/login/two-factor`, then lands on `/d`; the settings then say "9 of 10 left" |
+| Require 2FA in a browser | open `/d/settings/workspace` and switch "Require two-factor authentication" before and after adding an authenticator | refused with a note to turn it on for your own account first, then on and still on after a reload |
+| Sessions in a browser | sign in from a second browser, open `/d/settings/security` | both sessions listed, this one marked "This session"; "Revoke" and "Sign out others" sign the other browser out |
 
 ## 4. Check what was stored
 
