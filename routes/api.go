@@ -47,6 +47,8 @@ type controllers struct {
 	workspace         *v1.CurrentWorkspaceController
 	members           *v1.MemberController
 	authFactors       *v1.AuthFactorController
+	tokens            *v1.PersonalAccessTokenController
+	tokenAbilities    *v1.TokenAbilityController
 }
 
 /*
@@ -98,6 +100,7 @@ func API(a *app.App) {
 		})
 
 		api.Group("", func(workspace *routing.Router) { workspaceRoutes(workspace, c) })
+		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 	})
 }
 
@@ -113,6 +116,24 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+}
+
+/*
+tokenRoutes declares the caller's personal access tokens in the
+workspace in play. Only the user themselves reaches them, never a
+token, so a stolen token can neither mint another nor hide its tracks.
+Minting needs a verified email and a recent confirmation.
+*/
+func tokenRoutes(tokens *routing.Router, c controllers) {
+	tokens.Middleware("csrf", "session", "auth:user", "workspace")
+
+	routing.Get(tokens, "/tokens", "tokens.index", c.tokens.Index)
+	routing.Post(tokens, "/tokens", "tokens.store", c.tokens.Store).
+		Middleware("verified", "password.confirm")
+	routing.Get(tokens, "/tokens/abilities", "tokens.abilities.index", c.tokenAbilities.Index)
+	routing.Get(tokens, "/tokens/{token}", "tokens.show", c.tokens.ShowToken)
+	routing.Patch(tokens, "/tokens/{token}", "tokens.update", c.tokens.Update)
+	routing.Delete(tokens, "/tokens/{token}", "tokens.destroy", c.tokens.Destroy).Status(fhttp.StatusNoContent)
 }
 
 /*
@@ -164,6 +185,23 @@ func newControllers(a *app.App) controllers {
 			Change: acts.UpdateAuthFactor, Remove: acts.RemoveAuthFactor, RemoveAll: acts.RemoveAllAuthFactors,
 			IDs: a.IDs, Cookies: a.Cookies,
 		},
+		tokens:         tokenController(a),
+		tokenAbilities: &v1.TokenAbilityController{List: acts.ListTokenAbilities},
+	}
+}
+
+/*
+tokenController builds the controller of the caller's personal access
+tokens.
+*/
+func tokenController(a *app.App) *v1.PersonalAccessTokenController {
+	acts := a.Actions
+
+	return &v1.PersonalAccessTokenController{
+		Create: acts.CreatePersonalAccessToken, List: acts.ListPersonalAccessTokens,
+		Show: acts.ShowPersonalAccessToken, Rename: acts.RenamePersonalAccessToken,
+		Revoke: acts.RevokePersonalAccessToken, IDs: a.IDs, Cookies: a.Cookies,
+		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
 	}
 }
 

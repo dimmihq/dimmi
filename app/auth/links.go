@@ -58,6 +58,13 @@ func (l Links) Security() string {
 	return l.page("/settings/security")
 }
 
+/*
+Tokens is the page listing the user's personal access tokens.
+*/
+func (l Links) Tokens() string {
+	return l.page("/d/settings/tokens")
+}
+
 func (l Links) page(path string) string {
 	return strings.TrimRight(l.Base, "/") + path
 }

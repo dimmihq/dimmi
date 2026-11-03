@@ -69,5 +69,18 @@
     "intro": "A {{.provider}} account with your email address was linked to your Dimmi account. You can now sign in with {{.provider}}.",
     "unknown": "If this was not you, unlink it in your security settings and change your password.",
     "action": "Review your sign-in methods"
+  },
+  "token_created": {
+    "subject": "A new API token was made for your dimmi account",
+    "intro": "The API token \"{{.token}}\" was just made in {{.workspace}} from {{.ip}}. It acts as you.",
+    "abilities": "It may use: {{.abilities}}.",
+    "unknown": "If you did not make it, revoke it now and change your password.",
+    "action": "Review your API tokens"
+  },
+  "token_expiring": {
+    "subject": "An API token expires in a week",
+    "intro": "Your API token \"{{.token}}\" in {{.workspace}} stops working on {{.date}}.",
+    "advice": "Scripts that use it will stop too. Make a new token and switch them over before then.",
+    "action": "Review your API tokens"
   }
 }

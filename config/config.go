@@ -35,6 +35,8 @@ type Config struct {
 	HTTP HTTPConfig `koanf:"http"`
 	Auth AuthConfig `koanf:"auth"`
 
+	Tokens TokensConfig `koanf:"tokens"`
+
 	Frontend FrontendConfig `koanf:"frontend"`
 	Widget   WidgetConfig   `koanf:"widget"`
 }

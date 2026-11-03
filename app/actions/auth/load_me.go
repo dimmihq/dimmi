@@ -46,14 +46,16 @@ Me is everything a client learns about its caller.
 
 Workspace and Member are set when a workspace is in play, and
 Permissions then holds what the caller may do there, with Abilities the
-ability groups those permissions reach. Workspaces lists the user's
-workspaces for credentials that can switch between them, and is nil for
-tokens.
+ability groups those permissions reach. Token is the personal access
+token the request came with, nil for other credentials. Workspaces
+lists the user's workspaces for credentials that can switch between
+them, and is nil for tokens.
 */
 type Me struct {
 	Principal   *appauth.Principal
 	Workspace   *models.Workspace
 	Member      *models.WorkspaceMember
+	Token       *models.FindWorkspaceTokenRow
 	Permissions []string
 	Abilities   []string
 	Workspaces  []models.ListUserWorkspacesRow
@@ -145,6 +147,14 @@ func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUI
 		member, err = q.FindWorkspaceMemberForUser(ctx, models.FindWorkspaceMemberForUserParams{
 			WorkspaceID: workspaceID, UserID: me.Principal.User.ID,
 		})
+		if err != nil || me.Principal.Kind != appauth.KindToken {
+			return err
+		}
+
+		token, err := q.FindWorkspaceToken(ctx, models.FindWorkspaceTokenParams{
+			WorkspaceID: workspaceID, ID: me.Principal.CredentialID,
+		})
+		me.Token = &token
 
 		return err
 	})

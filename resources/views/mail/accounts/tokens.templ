@@ -1,0 +1,33 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+TokenCreated tells a user a personal access token was made for them,
+what it may do and where it was made from, and where to revoke it if it
+was not them.
+*/
+
+templ TokenCreated(name, token, workspace, abilities, ip, tokensURL string) {
+	@layout(i18n.T(ctx, "mail.token_created.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.token_created.intro", i18n.Args{"token": token, "workspace": workspace, "ip": ip}) }</p>
+		<p>{ i18n.T(ctx, "mail.token_created.abilities", i18n.Args{"abilities": abilities}) }</p>
+		<p>{ i18n.T(ctx, "mail.token_created.unknown", nil) }</p>
+		@button(tokensURL, i18n.T(ctx, "mail.token_created.action", nil))
+	}
+}
+
+/*
+TokenExpiring warns a user a week ahead that one of their personal
+access tokens stops working, so they can make a new one in time.
+*/
+
+templ TokenExpiring(name, token, workspace, expiresOn, tokensURL string) {
+	@layout(i18n.T(ctx, "mail.token_expiring.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.token_expiring.intro", i18n.Args{"token": token, "workspace": workspace, "date": expiresOn}) }</p>
+		<p>{ i18n.T(ctx, "mail.token_expiring.advice", nil) }</p>
+		@button(tokensURL, i18n.T(ctx, "mail.token_expiring.action", nil))
+	}
+}

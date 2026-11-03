@@ -15,6 +15,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 )
@@ -65,4 +66,11 @@ type Actions struct {
 	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
 	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
 	DisableTwoFactor           *factors.DisableTwoFactor
+
+	CreatePersonalAccessToken *tokens.CreatePersonalAccessToken
+	ListPersonalAccessTokens  *tokens.ListPersonalAccessTokens
+	ShowPersonalAccessToken   *tokens.ShowPersonalAccessToken
+	RenamePersonalAccessToken *tokens.RenamePersonalAccessToken
+	RevokePersonalAccessToken *tokens.RevokePersonalAccessToken
+	ListTokenAbilities        *tokens.ListTokenAbilities
 }

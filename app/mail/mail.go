@@ -42,6 +42,8 @@ func Register(m *mail.Manager) {
 	mail.Register[TwoFactorEnabledMail](m, "two_factor_enabled")
 	mail.Register[TwoFactorDisabledMail](m, "two_factor_disabled")
 	mail.Register[RecoveryCodeUsedMail](m, "recovery_code_used")
+	mail.Register[TokenCreatedMail](m, "token_created")
+	mail.Register[TokenExpiringMail](m, "token_expiring")
 }
 
 /*

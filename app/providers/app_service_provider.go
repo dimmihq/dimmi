@@ -117,6 +117,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootIdentities(a)
 	bootWorkspaces(a)
 	bootFactors(a)
+	bootTokens(a)
 
 	return registerJobs(a)
 }
@@ -246,5 +247,8 @@ func registerJobs(a *app.App) error {
 		return fmt.Errorf("avatar disk: %w", err)
 	}
 
-	return queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk})
+	return errors.Join(
+		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
+		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
+	)
 }
