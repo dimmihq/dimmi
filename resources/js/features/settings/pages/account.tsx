@@ -1,16 +1,9 @@
 /*
  * The person's own settings: their profile, how the app behaves for
- * them, what notifies them, how they sign in, and their API tokens.
- * Nothing here changes anything for teammates.
+ * them, what notifies them and how they sign in. Nothing here changes
+ * anything for teammates.
  */
-import {
-  RiComputerLine,
-  RiGithubFill,
-  RiGoogleFill,
-  RiKey2Line,
-  RiShieldKeyholeLine,
-  RiSmartphoneLine,
-} from "@remixicon/react";
+import { RiComputerLine, RiGithubFill, RiGoogleFill, RiShieldKeyholeLine, RiSmartphoneLine } from "@remixicon/react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
@@ -229,26 +222,6 @@ export function SecuritySettings() {
           title="Signed in with a password"
           detail="Today · Chrome on macOS"
         />
-      </Section>
-    </SettingsPage>
-  );
-}
-
-export function TokensSettings() {
-  return (
-    <SettingsPage title="API tokens" description="Tokens act as you, with only the abilities you give them.">
-      <Section
-        title="Your tokens"
-        description="The secret shows once. Up to 50 tokens."
-        action={<Action>New token</Action>}
-      >
-        <Item
-          mark={<Glyph icon={RiKey2Line} />}
-          title="Coding agent"
-          detail="dmi_7Hk… · Conversations, articles · Last used yesterday · Never expires"
-        >
-          <Action>Revoke</Action>
-        </Item>
       </Section>
     </SettingsPage>
   );
