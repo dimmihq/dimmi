@@ -1,6 +1,11 @@
 /*
  * The app's stylesheet: BoardUI's tokens and type scale, with its
- * typefaces served from this origin rather than a font CDN.
+ * typefaces served from this origin rather than a font CDN, and Dimmi's
+ * accent. BoardUI tints every button, link, focus ring and selection
+ * from its eleven accent steps; the block below is BoardUI's emerald
+ * accent, copied from its color page. The page's html carries
+ * data-accent="emerald", which BoardUI reads to soften accent fills in
+ * dark mode.
  */
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono";
@@ -11,4 +16,20 @@
 :root {
   --font-inter: "Inter Variable";
   --font-mono-source: "JetBrains Mono Variable";
+}
+
+/* BoardUI accent — emerald.
+ * Paste anywhere after importing styles/theme.css. */
+:root {
+  --color-accent-50: oklch(97.9% 0.021 166.113);
+  --color-accent-100: oklch(95% 0.052 163.051);
+  --color-accent-200: oklch(90.5% 0.093 164.15);
+  --color-accent-300: oklch(84.5% 0.143 164.978);
+  --color-accent-400: oklch(76.5% 0.177 163.223);
+  --color-accent-500: oklch(69.6% 0.17 162.48);
+  --color-accent-600: oklch(59.6% 0.145 163.225);
+  --color-accent-700: oklch(50.8% 0.118 165.612);
+  --color-accent-800: oklch(43.2% 0.095 166.913);
+  --color-accent-900: oklch(37.8% 0.077 168.94);
+  --color-accent-950: oklch(26.2% 0.051 172.552);
 }

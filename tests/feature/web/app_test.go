@@ -75,7 +75,7 @@ func TestAppPage(t *testing.T) {
 		assert.Contains(t, body, `<link nonce="`+nonce+`" rel="stylesheet" href="/build/assets/app-77aa.css">`)
 		assert.Contains(t, body, `<div id="root"></div>`)
 		assert.Contains(t, body, `<meta name="robots" content="noindex">`)
-		assert.Contains(t, body, `<html lang="en" class="">`)
+		assert.Contains(t, body, `<html lang="en" class="" data-accent="emerald">`)
 		assert.NotContains(t, policy, "localhost:5173")
 		assert.NotContains(t, policy, "unsafe-inline")
 		assert.Contains(t, policy, "frame-ancestors 'none'")
@@ -158,8 +158,8 @@ func TestTheme(t *testing.T) {
 		light := tc.Client().WithCookie(&fhttp.Cookie{Name: "dimmi_theme", Value: "light"}).
 			Send(fhttp.MethodGet, "/d", nil).AssertOK()
 
-		assert.Contains(t, string(dark.Body), `<html lang="en" class="dark">`)
-		assert.Contains(t, string(light.Body), `<html lang="en" class="">`)
+		assert.Contains(t, string(dark.Body), `<html lang="en" class="dark" data-accent="emerald">`)
+		assert.Contains(t, string(light.Body), `<html lang="en" class="" data-accent="emerald">`)
 	})
 
 	t.Run("ignores a cookie that names no theme", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestTheme(t *testing.T) {
 		res := tc.Client().WithCookie(&fhttp.Cookie{Name: "dimmi_theme", Value: "midnight"}).
 			Send(fhttp.MethodGet, "/d", nil).AssertOK()
 
-		assert.Contains(t, string(res.Body), `<html lang="en" class="">`)
+		assert.Contains(t, string(res.Body), `<html lang="en" class="" data-accent="emerald">`)
 	})
 
 	t.Run("follows the system theme before paint when the browser never chose", func(t *testing.T) {
