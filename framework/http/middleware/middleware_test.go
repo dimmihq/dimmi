@@ -222,6 +222,44 @@ func TestCSRF(t *testing.T) {
 	})
 }
 
+func TestOriginCheck(t *testing.T) {
+	t.Parallel()
+
+	check, err := middleware.NewOriginCheck("https://dashboard.example.com")
+	require.NoError(t, err)
+
+	get := func(headers map[string]string) error {
+		r := request(t, http.MethodGet, "https://app.example.com/connection/websocket", "")
+		for name, value := range headers {
+			r.Header.Set(name, value)
+		}
+
+		return check.Check(r)
+	}
+
+	t.Run("refuses a safe request a browser sent from another site", func(t *testing.T) {
+		t.Parallel()
+
+		require.ErrorIs(t, get(map[string]string{"Origin": "https://evil.example.net"}), middleware.ErrCrossOrigin)
+		require.ErrorIs(t, get(map[string]string{"Sec-Fetch-Site": "cross-site"}), middleware.ErrCrossOrigin)
+	})
+
+	t.Run("allows same-origin, trusted and non-browser requests", func(t *testing.T) {
+		t.Parallel()
+
+		require.NoError(t, get(map[string]string{"Origin": "https://app.example.com"}))
+		require.NoError(t, get(map[string]string{"Origin": "https://dashboard.example.com"}))
+		require.NoError(t, get(nil))
+	})
+
+	t.Run("refuses trusted origins that are not origins", func(t *testing.T) {
+		t.Parallel()
+		_, err := middleware.NewOriginCheck("https://example.com/path")
+
+		require.Error(t, err)
+	})
+}
+
 func TestSigned(t *testing.T) {
 	t.Parallel()
 

@@ -96,6 +96,17 @@ func (c *Channels) Authorize(pattern string, opts ChannelOptions, authorize Auth
 }
 
 /*
+MustAuthorize is Authorize for patterns written in code, which are
+either valid or a programming error: an invalid pattern panics while
+the application boots, long before any client could connect.
+*/
+func (c *Channels) MustAuthorize(pattern string, opts ChannelOptions, authorize Authorizer) {
+	if err := c.Authorize(pattern, opts, authorize); err != nil {
+		panic(err)
+	}
+}
+
+/*
 match finds the route for a channel and the values of its placeholders.
 */
 func (c *Channels) match(channel string) (route, map[string]string, bool) {

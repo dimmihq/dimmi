@@ -13,6 +13,7 @@ package app
 
 import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
@@ -65,4 +66,6 @@ type Actions struct {
 	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
 	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
 	DisableTwoFactor           *factors.DisableTwoFactor
+
+	RecordTyping *conversations.RecordTyping
 }

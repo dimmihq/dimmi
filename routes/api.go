@@ -97,7 +97,10 @@ func API(a *app.App) {
 			routing.Get(caller, "/me", "me.show", c.me.Show)
 		})
 
-		api.Group("", func(workspace *routing.Router) { workspaceRoutes(workspace, c) })
+		api.Group("", func(workspace *routing.Router) {
+			workspaceRoutes(workspace, c)
+			realtimeRoutes(workspace, a)
+		})
 	})
 }
 

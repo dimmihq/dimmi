@@ -64,6 +64,7 @@ func Application() (*app.App, foundation.Options) {
 		Migrations: migrations.Files(),
 		Language:   lang.Files(),
 		Providers:  providers.All(application, routes.Register),
+		Broadcast:  application.ResolveRealtime,
 		Commands:   commands.All(application),
 		Module:     Module,
 	}

@@ -58,6 +58,7 @@ func TestChannels(t *testing.T) {
 		for _, pattern := range []string{"room}", "room:{", "room:{}", "a:{x}:{x}", "a:{x{y}}"} {
 			err := channels.Authorize(pattern, broadcasting.ChannelOptions{}, authorizeRoom)
 			require.ErrorIs(t, err, broadcasting.ErrInvalidPattern, pattern)
+			assert.Panics(t, func() { channels.MustAuthorize(pattern, broadcasting.ChannelOptions{}, authorizeRoom) })
 		}
 	})
 
@@ -116,6 +117,33 @@ func TestBroadcast(t *testing.T) {
 
 		channels := []string{c.publication().Channel, c.publication().Channel}
 		assert.ElementsMatch(t, []string{"room:1", "room:2"}, channels)
+	})
+
+	t.Run("carries the message id and meta", func(t *testing.T) {
+		t.Parallel()
+		n := newNode(t, testkit.NewValkey(t))
+		c := connect(t, n, "u1")
+		require.Nil(t, c.subscribe("room:1", "", 0).Error)
+
+		m := broadcasting.Message{ID: "evt_1", Event: "note.added", Meta: map[string]string{"by": "u2"}}
+		require.NoError(t, n.server.Publish(t.Context(), []string{"room:1"}, m))
+
+		e := decode(t, c.publication().Pub)
+		assert.Equal(t, "evt_1", e.ID)
+		assert.Equal(t, map[string]string{"by": "u2"}, e.Meta)
+	})
+
+	t.Run("leaves out an empty id and meta", func(t *testing.T) {
+		t.Parallel()
+		n := newNode(t, testkit.NewValkey(t))
+		c := connect(t, n, "u1")
+		require.Nil(t, c.subscribe("room:1", "", 0).Error)
+
+		require.NoError(t, n.server.Broadcast(t.Context(), "room:1", "plain", nil))
+
+		raw := string(c.publication().Pub.Data)
+		assert.NotContains(t, raw, `"id"`)
+		assert.NotContains(t, raw, `"meta"`)
 	})
 
 	t.Run("keeps history under the client's key prefix", func(t *testing.T) {
@@ -323,6 +351,26 @@ func TestPresence(t *testing.T) {
 		assert.Equal(t, "bob", members[1].UserID)
 		assert.JSONEq(t, `{"name":"bob"}`, string(members[1].Info))
 		assert.NotEmpty(t, members[0].ClientID)
+	})
+
+	t.Run("answers a client only on channels it is subscribed to", func(t *testing.T) {
+		t.Parallel()
+		n := newNode(t, testkit.NewValkey(t))
+		c := connect(t, n, "alice")
+		require.Nil(t, c.subscribe("room:1", "", 0).Error)
+
+		reply := c.command(map[string]any{"presence": map[string]any{"channel": "room:1"}})
+		require.Nil(t, reply.Error)
+		require.NotNil(t, reply.Presence)
+		require.Len(t, reply.Presence.Presence, 1)
+
+		for _, info := range reply.Presence.Presence {
+			assert.Equal(t, "alice", info.User)
+		}
+
+		denied := c.command(map[string]any{"presence": map[string]any{"channel": "room:2"}})
+		require.NotNil(t, denied.Error)
+		assert.Equal(t, 103, denied.Error.Code)
 	})
 
 	t.Run("stops when the context is done", func(t *testing.T) {
