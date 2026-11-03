@@ -2,6 +2,7 @@ package web_test
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -74,7 +75,7 @@ func TestAppPage(t *testing.T) {
 		assert.Contains(t, body, `<link nonce="`+nonce+`" rel="stylesheet" href="/build/assets/app-77aa.css">`)
 		assert.Contains(t, body, `<div id="root"></div>`)
 		assert.Contains(t, body, `<meta name="robots" content="noindex">`)
-		assert.Contains(t, body, `<html lang="en">`)
+		assert.Contains(t, body, `<html lang="en" class="">`)
 		assert.NotContains(t, policy, "localhost:5173")
 		assert.NotContains(t, policy, "unsafe-inline")
 		assert.Contains(t, policy, "frame-ancestors 'none'")
@@ -123,6 +124,65 @@ func TestAppPage(t *testing.T) {
 		res := tc.Client().Send(fhttp.MethodGet, "/", nil).AssertStatus(fhttp.StatusFound)
 
 		assert.Equal(t, "/d", res.Header.Get("Location"))
+	})
+}
+
+func TestAuthPages(t *testing.T) {
+	t.Parallel()
+
+	t.Run("serves every sign-in page as the app, never stored and naming no referrer", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild())
+
+		for _, path := range []string{
+			"/login", "/login/magic", "/signup", "/forgot-password", "/reset-password", "/verify-email",
+		} {
+			res := tc.Client().Send(fhttp.MethodGet, path, nil).AssertOK()
+
+			assert.Contains(t, string(res.Body), `<div id="root"></div>`, path)
+			assert.Equal(t, "no-store", res.Header.Get("Cache-Control"), path)
+			assert.Equal(t, "no-referrer", res.Header.Get("Referrer-Policy"), path)
+		}
+	})
+}
+
+func TestTheme(t *testing.T) {
+	t.Parallel()
+
+	t.Run("renders the page in the theme the browser chose", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild())
+
+		dark := tc.Client().WithCookie(&fhttp.Cookie{Name: "dimmi_theme", Value: "dark"}).
+			Send(fhttp.MethodGet, "/login", nil).AssertOK()
+		light := tc.Client().WithCookie(&fhttp.Cookie{Name: "dimmi_theme", Value: "light"}).
+			Send(fhttp.MethodGet, "/d", nil).AssertOK()
+
+		assert.Contains(t, string(dark.Body), `<html lang="en" class="dark">`)
+		assert.Contains(t, string(light.Body), `<html lang="en" class="">`)
+	})
+
+	t.Run("ignores a cookie that names no theme", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild())
+
+		res := tc.Client().WithCookie(&fhttp.Cookie{Name: "dimmi_theme", Value: "midnight"}).
+			Send(fhttp.MethodGet, "/d", nil).AssertOK()
+
+		assert.Contains(t, string(res.Body), `<html lang="en" class="">`)
+	})
+
+	t.Run("follows the system theme before paint when the browser never chose", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild())
+
+		res := tc.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+
+		nonce := nonceOf(t, res.Header.Get("Content-Security-Policy"))
+		body := string(res.Body)
+		assert.Contains(t, body, `<script nonce="`+nonce+`">`)
+		assert.Contains(t, body, "prefers-color-scheme: dark")
+		assert.Less(t, strings.Index(body, "prefers-color-scheme"), strings.Index(body, "/build/assets/app-4f2a.js"))
 	})
 }
 

@@ -59,7 +59,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	appmail.Register(fa.Mail)
 
 	identity := p.App.IdentityProviders
-	if err := identity.Register(idp.GitHub(fa.Social), idp.Google(fa.Social)); err != nil {
+	if err := identity.Register(idp.Google(fa.Social), idp.GitHub(fa.Social)); err != nil {
 		return err
 	}
 

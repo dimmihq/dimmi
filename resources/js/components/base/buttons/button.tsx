@@ -1,4 +1,10 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ComponentType, ReactNode, Ref } from "react";
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  ComponentType,
+  ReactNode,
+  Ref,
+} from "react";
 import { cx, sortCx } from "@/utils/cx";
 import { directionalIconClass } from "@/utils/directional-icon";
 
@@ -46,7 +52,8 @@ type IconComponent = ComponentType<{
   "aria-hidden"?: boolean | "true" | "false";
 }>;
 
-export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+export interface ButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   iconOnly?: boolean;
@@ -56,7 +63,8 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   ref?: Ref<HTMLButtonElement>;
 }
 
-export interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "children"> {
+export interface ButtonLinkProps
+  extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "children"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   iconOnly?: boolean;
@@ -78,8 +86,8 @@ const styles = sortCx({
   // Base shape per size (used when label is present OR medium icon-only).
   size: {
     medium: "h-9 rounded-2lg p-2 text-body-medium",
-    small: "h-8 rounded-lg px-2 py-1.5 text-body-medium",
-    xs: "h-6 rounded-sm px-2 text-caption-1-semibold",
+    small:  "h-8 rounded-lg px-2 py-1.5 text-body-medium",
+    xs:     "h-6 rounded-sm px-2 text-caption-1-semibold",
   },
 
   // Icon-only override:
@@ -89,21 +97,21 @@ const styles = sortCx({
   //   Xs     → forces 24×24, content-centered — used for the calendar
   //            template's edit-icon buttons (timezone/participants/reminder).
   iconOnlySize: {
-    medium: "", // base size already produces 36×36 with a 20px icon
-    small: "size-8 p-0", // hard 32×32, content-centered
-    xs: "size-6 p-0", // hard 24×24, content-centered
+    medium: "",                // base size already produces 36×36 with a 20px icon
+    small:  "size-8 p-0",      // hard 32×32, content-centered
+    xs:     "size-6 p-0",      // hard 24×24, content-centered
   },
 
   icon: {
-    medium: "size-5 shrink-0", // 20px
-    small: "size-[18px] shrink-0", // 18px
-    xs: "size-3.5 shrink-0", // 14px
+    medium: "size-5 shrink-0",        // 20px
+    small:  "size-[18px] shrink-0",   // 18px
+    xs:     "size-3.5 shrink-0",      // 14px
   },
 
   label: {
-    medium: "inline-flex items-center justify-center px-1 shrink-0", // px=4
-    small: "inline-flex items-center justify-center px-0.5 shrink-0", // px=2
-    xs: "inline-flex items-center justify-center px-0.5 shrink-0", // px=2
+    medium: "inline-flex items-center justify-center px-1 shrink-0",    // px=4
+    small:  "inline-flex items-center justify-center px-0.5 shrink-0",  // px=2
+    xs:     "inline-flex items-center justify-center px-0.5 shrink-0",  // px=2
   },
 
   variant: {

@@ -10,3 +10,4 @@ coverage-app.filtered.out
 /storage/
 /dimmi.yaml
 /tmp/
+/public/carousel/

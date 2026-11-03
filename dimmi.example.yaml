@@ -19,6 +19,16 @@ frontend:
 auth:
   signup:
     mode: open
+  # Sign-in providers. A provider shows on the sign-in pages once it has a
+  # client id. Register an OAuth app at each provider with the callback
+  # http://localhost:8080/auth/<key>/callback, then paste its credentials.
+  oauth:
+    github:
+      client_id: replace-with-github-client-id
+      client_secret: replace-with-github-client-secret
+    google:
+      client_id: replace-with-google-client-id
+      client_secret: replace-with-google-client-secret
 mail:
   mailers:
     system:

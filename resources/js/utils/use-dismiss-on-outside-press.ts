@@ -1,7 +1,7 @@
 "use client";
 
-import type { RefObject } from "react";
 import { useEffect, useRef } from "react";
+import type { RefObject } from "react";
 
 /**
  * React Aria's `Popover` couples "non-modal" with "not dismissable on
@@ -17,15 +17,11 @@ export function useDismissOnOutsidePress(
   refs: RefObject<HTMLElement | null>[],
 ) {
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+    if (!isOpen) return;
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (refs.some((ref) => ref.current?.contains(target))) {
-        return;
-      }
+      if (refs.some((ref) => ref.current?.contains(target))) return;
       onDismiss();
     };
 
@@ -47,18 +43,17 @@ export function useDismissOnOutsidePress(
  *   const allowOpenChange = useTriggerToggle(isOpen, triggerRef);
  *   <AriaSelect onOpenChange={(o) => allowOpenChange(o) && setIsOpen(o)} …
  */
-export function useTriggerToggle(isOpen: boolean, triggerRef: RefObject<HTMLElement | null>) {
+export function useTriggerToggle(
+  isOpen: boolean,
+  triggerRef: RefObject<HTMLElement | null>,
+) {
   const suppressReopenRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+    if (!isOpen) return;
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!triggerRef.current?.contains(event.target as Node)) {
-        return;
-      }
+      if (!triggerRef.current?.contains(event.target as Node)) return;
       suppressReopenRef.current = true;
       // Safety valve: only the very next open within this click may be
       // swallowed; never leave a stale suppression behind.

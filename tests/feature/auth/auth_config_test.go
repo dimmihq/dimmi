@@ -29,6 +29,17 @@ func TestAuthConfigShow(t *testing.T) {
 			AssertJSONPath("data.factors", []testkit.JSON{{"type": "recovery_code", "name": "Recovery codes"}})
 	})
 
+	t.Run("offers Google before GitHub", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(
+			"DIMMI_AUTH__OAUTH__GITHUB__CLIENT_ID=github-client", "DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID=google-client",
+		))
+
+		tc.Client().GetJSON("/api/v1/auth/config").AssertOK().
+			AssertJSONPath("data.providers.0.key", "google").
+			AssertJSONPath("data.providers.1.key", "github")
+	})
+
 	t.Run("leaves out signing in by mail where magic links are turned off", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__MAGIC_LINK__ENABLED=false"))

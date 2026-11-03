@@ -9,50 +9,236 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as DRouteRouteImport } from './routes/d/route'
+import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
+import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
+import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
+import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 
-const DIndexRoute = DIndexRouteImport.update({
-  id: '/d/',
-  path: '/d/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/_auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DRouteRoute = DRouteRouteImport.update({
+  id: '/d',
+  path: '/d',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => AuthRoute,
+} as any)
+const DIndexRoute = DIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
+  id: '/login_/magic',
+  path: '/login/magic',
+  getParentRoute: () => AuthRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/d': typeof DRouteRouteWithChildren
+  '/': typeof AuthRouteWithChildren
+  '/forgot-password': typeof AuthForgotPasswordRoute
+  '/login': typeof AuthLoginRoute
+  '/reset-password': typeof AuthResetPasswordRoute
+  '/signup': typeof AuthSignupRoute
+  '/verify-email': typeof AuthVerifyEmailRoute
   '/d/': typeof DIndexRoute
+  '/login/magic': typeof AuthLoginMagicRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof AuthRouteWithChildren
+  '/forgot-password': typeof AuthForgotPasswordRoute
+  '/login': typeof AuthLoginRoute
+  '/reset-password': typeof AuthResetPasswordRoute
+  '/signup': typeof AuthSignupRoute
+  '/verify-email': typeof AuthVerifyEmailRoute
   '/d': typeof DIndexRoute
+  '/login/magic': typeof AuthLoginMagicRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/d': typeof DRouteRouteWithChildren
+  '/_auth': typeof AuthRouteWithChildren
+  '/_auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/_auth/login': typeof AuthLoginRoute
+  '/_auth/reset-password': typeof AuthResetPasswordRoute
+  '/_auth/signup': typeof AuthSignupRoute
+  '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/d/': typeof DIndexRoute
+  '/_auth/login_/magic': typeof AuthLoginMagicRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/d/'
+  fullPaths:
+    | '/d'
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
+    | '/d/'
+    | '/login/magic'
   fileRoutesByTo: FileRoutesByTo
-  to: '/d'
-  id: '__root__' | '/d/'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
+    | '/d'
+    | '/login/magic'
+  id:
+    | '__root__'
+    | '/d'
+    | '/_auth'
+    | '/_auth/forgot-password'
+    | '/_auth/login'
+    | '/_auth/reset-password'
+    | '/_auth/signup'
+    | '/_auth/verify-email'
+    | '/d/'
+    | '/_auth/login_/magic'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  DIndexRoute: typeof DIndexRoute
+  DRouteRoute: typeof DRouteRouteWithChildren
+  AuthRoute: typeof AuthRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/d': {
+      id: '/d'
+      path: '/d'
+      fullPath: '/d'
+      preLoaderRoute: typeof DRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_auth/forgot-password': {
+      id: '/_auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/login': {
+      id: '/_auth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/reset-password': {
+      id: '/_auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/signup': {
+      id: '/_auth/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/verify-email': {
+      id: '/_auth/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/d/': {
       id: '/d/'
-      path: '/d'
+      path: '/'
       fullPath: '/d/'
       preLoaderRoute: typeof DIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/_auth/login_/magic': {
+      id: '/_auth/login_/magic'
+      path: '/login/magic'
+      fullPath: '/login/magic'
+      preLoaderRoute: typeof AuthLoginMagicRouteImport
+      parentRoute: typeof AuthRoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
+interface DRouteRouteChildren {
+  DIndexRoute: typeof DIndexRoute
+}
+
+const DRouteRouteChildren: DRouteRouteChildren = {
   DIndexRoute: DIndexRoute,
+}
+
+const DRouteRouteWithChildren =
+  DRouteRoute._addFileChildren(DRouteRouteChildren)
+
+interface AuthRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthSignupRoute: typeof AuthSignupRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthLoginMagicRoute: typeof AuthLoginMagicRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthSignupRoute: AuthSignupRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthLoginMagicRoute: AuthLoginMagicRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  DRouteRoute: DRouteRouteWithChildren,
+  AuthRoute: AuthRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

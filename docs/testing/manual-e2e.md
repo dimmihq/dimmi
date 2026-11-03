@@ -162,6 +162,17 @@ state(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(s
 | No identities yet | `r ids -b a.jar -H "$O" $B/user/identities` | 200 `data: []` |
 | Unlink unknown | `r un -b a.jar -X DELETE -H "$O" $B/user/identities/idn_01jc0000000000000000000000` | 404 `not_found` |
 
+### Browser pages
+
+Run `make build` first so the binary embeds the browser app.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Sign-in pages | `for p in /login /signup /login/magic /forgot-password /reset-password /verify-email; do curl -s -o /dev/null -D - $W$p \| grep -iE '^(cache-control\|referrer-policy)'; done` | `no-store` and `no-referrer` on each |
+| App page | `curl -s -D - $W/d \| grep -iE '^(cache-control\|content-security-policy)'` | `no-cache`; policy with `'nonce-…'`, no `unsafe-inline`, no dev server |
+| Theme | `curl -s -b dimmi_theme=dark $W/login \| grep -o '<html[^>]*>'` | `<html lang="en" class="dark">` |
+| In a browser | open `$W/signup`, create an account, open the verification mail's link, sign out, sign in by password, then by mailed code | lands on `/d` each time; provider buttons first when providers are configured; light and dark switch and survive a reload |
+
 ## 4. Check what was stored
 
 ```bash

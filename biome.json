@@ -9,6 +9,9 @@
     "includes": [
       "resources/js/**",
       "!resources/js/route-tree.gen.ts",
+      "!resources/js/components",
+      "!resources/js/styles",
+      "!resources/js/utils",
       "vite.config.ts",
       "package.json",
       "tsconfig.json",
@@ -87,27 +90,5 @@
         "noJsxPropsBind": "off"
       }
     }
-  },
-  "overrides": [
-    {
-      "includes": ["resources/js/styles/**"],
-      "linter": {
-        "rules": {
-          "complexity": {
-            "noImportantStyles": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["resources/js/components/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "useComponentExportOnlyModules": "off"
-          }
-        }
-      }
-    }
-  ]
+  }
 }

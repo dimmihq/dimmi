@@ -1,0 +1,25 @@
+package theme
+
+/*
+Root returns the classes of a page's html element for the chosen theme,
+"" for light or no choice.
+*/
+func Root(chosen string) string {
+	if chosen == "dark" {
+		return "dark"
+	}
+
+	return ""
+}
+
+/*
+Script follows the system's dark setting on a browser that chose no
+theme. It runs in the head, before anything paints, so a dark system
+never sees a light page flash. It carries the response's nonce.
+*/
+
+templ Script() {
+	<script nonce={ templ.GetNonce(ctx) }>
+		if (!/(?:^|; )dimmi_theme=(light|dark)/.test(document.cookie) && matchMedia("(prefers-color-scheme: dark)").matches) { document.documentElement.classList.add("dark") }
+	</script>
+}

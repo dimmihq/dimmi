@@ -84,8 +84,10 @@ package cache
   finish with zero errors and zero warnings, every time. A warning is a failure.
 - Never add `biome-ignore` comments, never lower a rule or add an override in `biome.json`, and never exclude a
   file to get there: change the code, or stop and report why the rule does not fit.
-- Run `pnpm format` (`biome check --write`) before finishing, and after every `boardui add`: installed BoardUI
-  components are our code and meet the same rules.
+- Run `pnpm format` (`biome check --write`) before finishing.
+- BoardUI's files (`resources/js/components`, `resources/js/styles`, `resources/js/utils`) stay exactly as
+  `boardui add` and `boardui init` write them: never edit them, and Biome skips them. Our own code lives elsewhere
+  under `resources/js` and builds on them.
 - `pnpm typecheck` and `pnpm test` pass too. `make lint test` runs all of it with the Go checks.
 
 ## Tests

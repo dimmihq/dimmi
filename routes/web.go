@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | Pages a browser opens directly rather than calls from the dashboard:
-| the browser app under /d and its built files under /build, and the
-| redirects to identity providers and their callbacks. Pages carry a
+| the browser app under /d, its sign-in pages and its built files under
+| /build, and the redirects to identity providers and their callbacks. Pages carry a
 | strict content security policy. The provider routes run the browser's
 | session, which a sign-in rotates and a link reads, but no guard: the
 | redirect decides per attempt what it needs, and the callback trusts
@@ -47,6 +47,10 @@ func Web(a *app.App) {
 		}))
 		pages.Handle(fhttp.MethodGet, "/d", "app.show", fhttp.HandlerFunc(spa.Show))
 		pages.Handle(fhttp.MethodGet, "/d/*", "app.page", fhttp.HandlerFunc(spa.Show))
+
+		for name, path := range authPages() {
+			pages.Handle(fhttp.MethodGet, path, name, fhttp.HandlerFunc(spa.ShowAuth))
+		}
 	})
 
 	a.Router.Handle(fhttp.MethodGet, "/build/*", "build",
@@ -60,4 +64,19 @@ func Web(a *app.App) {
 		browser.Handle(fhttp.MethodGet, "/auth/{provider}/callback", "oauth.callback",
 			fhttp.HandlerFunc(callback.Invoke))
 	})
+}
+
+/*
+authPages names the browser app's sign-in pages, which mails and the
+provider callbacks link to.
+*/
+func authPages() map[string]string {
+	return map[string]string{
+		"login":           "/login",
+		"login.magic":     "/login/magic",
+		"signup":          "/signup",
+		"forgot-password": "/forgot-password",
+		"reset-password":  "/reset-password",
+		"verify-email":    "/verify-email",
+	}
 }
