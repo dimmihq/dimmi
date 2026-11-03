@@ -34,6 +34,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
 	"github.com/dimmihq/dimmi/app/auth/providers"
+	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
 	appconfig "github.com/dimmihq/dimmi/config"
 )
@@ -51,6 +52,7 @@ factor drivers and knows which the install enables. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
+Channels holds the channel drivers replies go out through.
 WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults.
 Frontend is the browser app's production build and Vite links it, or
@@ -78,6 +80,7 @@ type App struct {
 	Secrets     *auth.OneTimeTokens
 	Links       auth.Links
 	Actions     *Actions
+	Channels    *channels.Manager
 
 	WorkspaceInitializers *workspaces.Initializers
 

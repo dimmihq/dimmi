@@ -65,4 +65,6 @@ type Actions struct {
 	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
 	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
 	DisableTwoFactor           *factors.DisableTwoFactor
+
+	Inbox *InboxActions
 }
