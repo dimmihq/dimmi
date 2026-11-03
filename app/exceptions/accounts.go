@@ -172,3 +172,24 @@ ErrEmailUnverified refuses a step that reaches other people, such as
 inviting them, until the user proved their email.
 */
 var ErrEmailUnverified = fault.New(fault.Forbidden, "email_unverified", "Verify your email address to continue.")
+
+/*
+Identity provider failures.
+
+ErrOAuthEmailUnverified refuses a first sign-in through a provider that
+does not vouch for the person's address, since the address would decide
+which account they get. ErrIdentityTaken refuses to link a provider
+account another user already linked. ErrProviderAlreadyLinked refuses a
+second account of a provider for a user who has one linked.
+ErrLastLoginMethod refuses to unlink the only way left to sign in.
+*/
+var (
+	ErrOAuthEmailUnverified = fault.New(fault.Invalid, "oauth_email_unverified",
+		"The provider has not verified your email address.")
+	ErrIdentityTaken = fault.New(fault.Conflict, "identity_taken",
+		"This account is already linked to another user.")
+	ErrProviderAlreadyLinked = fault.New(fault.Conflict, "provider_already_linked",
+		"You already linked an account of this provider.")
+	ErrLastLoginMethod = fault.New(fault.Conflict, "last_login_method",
+		"This is your only way to sign in. Set a password or link another account first.")
+)

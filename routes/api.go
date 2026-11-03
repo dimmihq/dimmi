@@ -39,6 +39,7 @@ type controllers struct {
 	verifications     *v1.EmailVerificationController
 	confirmation      *v1.UserConfirmationController
 	confirmationCodes *v1.UserConfirmationCodeController
+	identities        *v1.UserIdentityController
 }
 
 /*
@@ -74,6 +75,9 @@ func API(a *app.App) {
 			routing.Post(user, "/user/confirmation", "user.confirmation.store", c.confirmation.Store)
 			routing.Post(user, "/user/confirmation-codes", "user.confirmation-codes.store",
 				c.confirmationCodes.Store)
+			routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index)
+			routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
+				Middleware("password.confirm").Status(fhttp.StatusNoContent)
 		})
 
 		api.Group("", func(caller *routing.Router) {
@@ -96,7 +100,7 @@ func newControllers(a *app.App) controllers {
 	acts := a.Actions
 
 	return controllers{
-		authConfig: &v1.AuthConfigController{Auth: a.Config.Auth, Server: server},
+		authConfig: &v1.AuthConfigController{Auth: a.Config.Auth, Providers: a.Providers, Server: server},
 		users:      &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
 		me:         &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
 		sessions: &v1.SessionController{
@@ -117,6 +121,9 @@ func newControllers(a *app.App) controllers {
 		},
 		confirmationCodes: &v1.UserConfirmationCodeController{
 			SendConfirmCode: acts.SendConfirmCode, Cookies: a.Cookies,
+		},
+		identities: &v1.UserIdentityController{
+			List: acts.ListOAuthIdentities, Unlink: acts.UnlinkOAuthIdentity, IDs: a.IDs, Cookies: a.Cookies,
 		},
 	}
 }

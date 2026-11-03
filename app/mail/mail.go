@@ -38,6 +38,7 @@ func Register(m *mail.Manager) {
 	mail.Register[PasswordChangedMail](m, "password_changed")
 	mail.Register[NewSignInMail](m, "new_sign_in")
 	mail.Register[SuspiciousSignInAttemptsMail](m, "suspicious_sign_in_attempts")
+	mail.Register[IdentityLinkedMail](m, "identity_linked")
 }
 
 /*

@@ -51,3 +51,14 @@ WHERE id = @id;
 -- security definer function, since tokens of many workspaces are hidden
 -- until one is chosen.
 SELECT auth_revoke_user_tokens(@user_id, @now)::bigint AS revoked;
+
+-- name: LockUser :one
+-- LockUser returns the account and holds it until the transaction ends,
+-- so two changes to how it signs in cannot both pass a check that only
+-- one of them may.
+SELECT * FROM users WHERE id = @id FOR UPDATE;
+
+-- name: SetUserAvatarPath :execrows
+-- SetUserAvatarPath gives an account without an avatar the stored image.
+-- An avatar the user set in the meantime is kept.
+UPDATE users SET avatar_path = @avatar_path, updated_at = @now::timestamptz WHERE id = @id AND avatar_path IS NULL;

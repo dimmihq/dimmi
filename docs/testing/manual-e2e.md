@@ -29,6 +29,8 @@ DIMMI_APP__KEY_AUTO_GENERATE=true
 DIMMI_HTTP__ADDR=127.0.0.1:18080
 DIMMI_HTTP__ADMIN_ADDR=127.0.0.1:19090
 DIMMI_AUTH__SIGNUP__MODE=open
+DIMMI_AUTH__OAUTH__GITHUB__CLIENT_ID=e2e-github-client
+DIMMI_AUTH__OAUTH__GITHUB__CLIENT_SECRET=e2e-github-secret
 DIMMI_MAIL__MAILERS__SYSTEM__DRIVER=smtp
 DIMMI_MAIL__MAILERS__SYSTEM__HOST=localhost
 DIMMI_MAIL__MAILERS__SYSTEM__PORT=11025
@@ -39,7 +41,9 @@ EOF
 `env -i` below starts the binary with nothing but this file, so a setting the binary needs and the file lacks shows
 up as a failure instead of leaking in from your shell. The bare `DATABASE_URL`, `REDIS_URL` and `PORT` names
 platforms inject are not read yet; use the `DIMMI_*` names. The mail lines send every mail through Mailpit's SMTP
-port (`smtp://localhost:11025`); section 5 runs without them to check the log fallback.
+port (`smtp://localhost:11025`); section 5 runs without them to check the log fallback. The GitHub client is not a
+real OAuth app: it turns the provider on, so the redirect and callback checks below run, but no one can finish a
+sign-in at github.com with it. The integration tests cover finished sign-ins against a local identity provider.
 
 ## 2. Migrate and serve
 
@@ -133,6 +137,30 @@ frag(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(sy
 | No code with a password | `r codes -b c2.jar -X POST -H "$O" $B/user/confirmation-codes` | 422 `method_not_available` |
 | Code for a passwordless user | `r cc -b s2.jar -X POST -H "$O" $B/user/confirmation-codes`, then `{"method":"email_code","code":"$(code $CAROL confirmation)"}` | 202 and a "Your Dimmi confirmation code" mail, then 201 `method: email_code` |
 | New device | sign Ada in with a fresh jar `n.jar` | mail "New sign-in to your Dimmi account" naming "an unknown device" and the IP; signing in again from a jar that signed in before sends none |
+
+### Identity providers
+
+The redirect and callback are browser routes outside `/api/v1`. The helper prints `Location` cut short, so read it
+whole where the table needs the query:
+
+```bash
+W=http://127.0.0.1:18080
+loc(){ grep -i '^location' hdr | cut -d' ' -f2 | tr -d '\r'; }
+state(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(sys.argv[1]).query)["state"][0])' "$1"; }
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Providers offered | `r config $B/auth/config; jq -c .data.providers body` | `[{"key":"github","name":"GitHub","protocol":"oauth2","redirect_url":"/auth/github/redirect"}]` |
+| Provider not configured | `r google $W/auth/google/redirect` | 404 `not_found` |
+| Redirect | `r gh -c o.jar -b o.jar "$W/auth/github/redirect?redirect=/inbox"; loc` | 302 to `https://github.com/login/oauth/authorize` with `code_challenge_method=S256`, `scope=read:user user:email`, `redirect_uri=http://localhost:18080/auth/github/callback`; `dimmi_oauth` cookie, HttpOnly, SameSite=Lax, `Max-Age=600`, its value not the state |
+| Declined at GitHub | `r deny -b o.jar -c o.jar "$W/auth/github/callback?error=access_denied&state=$(state "$(loc)")"` (state from the redirect, run right after it) | 302 `/login?error=oauth_denied`, `dimmi_oauth` cleared |
+| Callback used twice | the same command again | 302 `/login?error=oauth_state` |
+| Callback from another browser | `r other "$W/auth/github/callback?code=x&state=y"` | 302 `/login?error=oauth_state` |
+| Link needs a session | `r lt -H "Authorization: Bearer dmi_live_x" "$W/auth/github/redirect?intent=link"` | 401 `unauthenticated` |
+| Link from a fresh session | `r link -b a.jar "$W/auth/github/redirect?intent=link"` | 302 to GitHub with a new `dimmi_oauth` cookie |
+| No identities yet | `r ids -b a.jar -H "$O" $B/user/identities` | 200 `data: []` |
+| Unlink unknown | `r un -b a.jar -X DELETE -H "$O" $B/user/identities/idn_01jc0000000000000000000000` | 404 `not_found` |
 
 ## 4. Check what was stored
 

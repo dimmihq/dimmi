@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/support/str"
 	"github.com/dimmihq/dimmi/framework/validation"
 
@@ -26,6 +27,8 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	idp "github.com/dimmihq/dimmi/app/auth/providers"
+	"github.com/dimmihq/dimmi/app/jobs"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/rules"
@@ -47,11 +50,18 @@ type AppServiceProvider struct {
 
 /*
 Register binds the framework application and registers the public id
-prefixes, the validation rules and the mailables.
+prefixes, the identity providers, the validation rules and the
+mailables. The providers come before the rules, since their keys are
+registry values the rules accept.
 */
 func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	p.App.Application = fa
 	appmail.Register(fa.Mail)
+
+	identity := p.App.IdentityProviders
+	if err := identity.Register(idp.GitHub(fa.Social), idp.Google(fa.Social)); err != nil {
+		return err
+	}
 
 	common, err := data.CommonPasswords()
 	if err != nil {
@@ -63,7 +73,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	for _, rule := range []validation.Rule{
 		rules.PasswordLength{Min: p.App.Config.Auth.Passwords.MinLength},
 		rules.UncommonPassword{Common: common},
-		rules.Registered{Registries: appauth.Registries()},
+		rules.Registered{Registries: appauth.Registries(identity.Keys())},
 	} {
 		errs = append(errs, fa.Validator.Register(rule))
 	}
@@ -72,7 +82,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 }
 
 /*
-Boot builds every action.
+Boot builds every action and registers the jobs' workers.
 */
 func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application) error {
 	a := p.App
@@ -96,8 +106,9 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 
 	bootSignIn(a, dummy)
 	bootMailedSecrets(a)
+	bootIdentities(a)
 
-	return nil
+	return registerJobs(a)
 }
 
 /*
@@ -167,4 +178,39 @@ func bootMailedSecrets(a *app.App) {
 	}
 
 	acts.SendConfirmCode = &auth.SendConfirmCode{DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Tokens: a.Secrets}
+}
+
+/*
+bootIdentities builds the actions that sign in with identity providers
+and manage the linked accounts.
+*/
+func bootIdentities(a *app.App) {
+	acts := a.Actions
+	acts.LinkOAuthIdentity = &auth.LinkOAuthIdentity{
+		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links, Providers: a.Providers, SecurityLog: a.SecurityLog,
+	}
+
+	acts.HandleOAuthCallback = &auth.HandleOAuthCallback{
+		DB: a.DB, Clock: a.Clock, Events: a.Events, Queue: a.Queue, LoginPolicy: a.LoginPolicy,
+		Signup: a.Config.Auth.Signup, CreateUser: acts.CreateUser, Link: acts.LinkOAuthIdentity,
+		CompletePrimaryAuth: acts.CompletePrimaryAuth, ClaimAccount: acts.ConsumeMagicLink.ClaimAccount,
+	}
+
+	acts.ListOAuthIdentities = &auth.ListOAuthIdentities{DB: a.DB}
+	acts.UnlinkOAuthIdentity = &auth.UnlinkOAuthIdentity{
+		DB: a.DB, Clock: a.Clock, Providers: a.Providers, MagicLink: a.Config.Auth.MagicLink,
+		SecurityLog: a.SecurityLog,
+	}
+}
+
+/*
+registerJobs registers the worker of every product job.
+*/
+func registerJobs(a *app.App) error {
+	disk, err := a.Storage.Default()
+	if err != nil {
+		return fmt.Errorf("avatar disk: %w", err)
+	}
+
+	return queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk})
 }

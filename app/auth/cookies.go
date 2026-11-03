@@ -4,7 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | Cookies the product sets besides the session: the device cookie, kept
-| for a year so a browser is recognized across sign-ins. Served over
+| for a year so a browser is recognized across sign-ins, and the
+| attempt cookie, which ties a sign-in at an identity provider to the
+| browser that started it for the few minutes it takes. Served over
 | HTTPS a cookie gets the __Host- prefix, which browsers only accept on
 | a Secure cookie for the whole site; a self-hosted install on plain
 | HTTP drops the prefix and the Secure flag, or browsers would refuse
@@ -26,8 +28,13 @@ deviceCookieLifetime is how long a browser keeps its device cookie.
 const deviceCookieLifetime = 365 * 24 * time.Hour
 
 /*
-Cookies names and builds the product's own cookies. Secure is false on
-an install served over plain HTTP.
+oauthCookie is the name of the attempt cookie, before its prefix.
+*/
+const oauthCookie = "dimmi_oauth"
+
+/*
+Cookies names and builds the product's own cookies. Device names the
+device cookie. Secure is false on an install served over plain HTTP.
 */
 type Cookies struct {
 	Device string
@@ -38,11 +45,45 @@ type Cookies struct {
 DeviceName returns the name of the device cookie, with its prefix.
 */
 func (c Cookies) DeviceName() string {
-	if c.Secure {
-		return "__Host-" + c.Device
+	return c.prefixed(c.Device)
+}
+
+/*
+OAuthName returns the name of the attempt cookie, with its prefix.
+*/
+func (c Cookies) OAuthName() string {
+	return c.prefixed(oauthCookie)
+}
+
+/*
+OAuthCookie returns the cookie that keeps a sign-in attempt's sealed
+value for the lifetime, or deletes it with a zero lifetime. It is sent
+back on the provider's top-level redirect, never on a request another
+site makes in the background.
+*/
+func (c Cookies) OAuthCookie(value string, lifetime time.Duration) fhttp.Cookie {
+	maxAge := int(lifetime.Seconds())
+	if lifetime <= 0 {
+		maxAge = -1
 	}
 
-	return c.Device
+	return fhttp.Cookie{
+		Name:     c.OAuthName(),
+		Value:    value,
+		Path:     "/",
+		MaxAge:   maxAge,
+		Secure:   c.Secure,
+		HttpOnly: true,
+		SameSite: fhttp.SameSiteLaxMode,
+	}
+}
+
+func (c Cookies) prefixed(name string) string {
+	if c.Secure {
+		return "__Host-" + name
+	}
+
+	return name
 }
 
 /*

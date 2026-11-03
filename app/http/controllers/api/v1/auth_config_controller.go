@@ -16,6 +16,7 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/app/auth/providers"
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/config"
@@ -32,14 +33,15 @@ type AuthConfigOutput struct {
 AuthConfigController serves GET /auth/config.
 */
 type AuthConfigController struct {
-	Auth   config.AuthConfig
-	Server Server
+	Auth      config.AuthConfig
+	Providers providers.ProviderResolver
+	Server    Server
 }
 
 /*
 Show answers with the sign-in options.
 */
-func (c *AuthConfigController) Show(context.Context, *requests.NoInput) (*AuthConfigOutput, error) {
+func (c *AuthConfigController) Show(ctx context.Context, _ *requests.NoInput) (*AuthConfigOutput, error) {
 	return &AuthConfigOutput{Body: fhttp.NewResource(resources.AuthConfig{
 		Object:            "auth_config",
 		Edition:           c.Server.Edition,
@@ -51,7 +53,7 @@ func (c *AuthConfigController) Show(context.Context, *requests.NoInput) (*AuthCo
 		MagicLink:         c.Auth.MagicLink.Enabled,
 		MailConfigured:    c.Server.MailConfigured,
 		PasswordMinLength: c.Auth.Passwords.MinLength,
-		Providers:         resources.NewProviders(appauth.OfferedProviders(c.Auth)),
+		Providers:         resources.NewProviders(ctx, c.Providers),
 		Factors:           resources.NewFactors(appauth.OfferedFactors(c.Auth)),
 		Capabilities:      appauth.Capabilities(c.Auth),
 		MinClientVersions: map[string]*string{"ios": nil, "android": nil, "cli": nil},

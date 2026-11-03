@@ -40,8 +40,8 @@ func (r Registry) Has(value string) bool {
 
 /*
 The ways a person proves who they are. Primary methods sign a person in
-alone; second factors only follow one. Provider keys such as github are
-primary methods too.
+alone; second factors only follow one. The key of every registered
+identity provider, such as github, is a primary method too.
 */
 const (
 	MethodPassword      = "password"
@@ -50,8 +50,6 @@ const (
 	MethodPasswordReset = "password_reset"
 	MethodSetup         = "setup"
 	MethodInvitation    = "invitation"
-	MethodGitHub        = "github"
-	MethodGoogle        = "google"
 	MethodTOTP          = "totp"
 	MethodRecoveryCode  = "recovery_code"
 )
@@ -77,16 +75,18 @@ const (
 	EventSessionsRevokedOthers = "sessions.revoked_others"
 	EventPasswordReset         = "password.reset"
 	EventMagicLinkUsed         = "magic_link.used"
+	EventIdentityLinked        = "identity.linked"
+	EventIdentityUnlinked      = "identity.unlinked"
 )
 
 /*
-PrimaryMethods lists the primary sign-in methods a session can record.
+PrimaryMethods lists the primary sign-in methods a session can record,
+the keys of the identity providers included.
 */
-func PrimaryMethods() Registry {
-	return Registry{name: "auth_methods", values: []string{
+func PrimaryMethods(providers []string) Registry {
+	return Registry{name: "auth_methods", values: slices.Concat([]string{
 		MethodPassword, MethodMagicLink, MethodEmailCode, MethodPasswordReset, MethodSetup, MethodInvitation,
-		MethodGitHub, MethodGoogle,
-	}}
+	}, providers)}
 }
 
 /*
@@ -98,12 +98,13 @@ func SecondFactors() Registry {
 }
 
 /*
-CreatedVia lists how an account can come to exist.
+CreatedVia lists how an account can come to exist, signing up through
+any of the identity providers included.
 */
-func CreatedVia() Registry {
-	return Registry{name: "created_via", values: []string{
-		CreatedViaRegister, MethodMagicLink, MethodInvitation, MethodSetup, "cli", MethodGitHub, MethodGoogle,
-	}}
+func CreatedVia(providers []string) Registry {
+	return Registry{name: "created_via", values: slices.Concat([]string{
+		CreatedViaRegister, MethodMagicLink, MethodInvitation, MethodSetup, "cli",
+	}, providers)}
 }
 
 /*
@@ -121,18 +122,21 @@ func SecurityEvents() Registry {
 		EventLoginSucceeded, EventLoginFailed, EventLoginLocked, EventLogout, "password.changed", EventPasswordReset,
 		"two_factor.enabled", "two_factor.disabled", "auth_factor.added", "auth_factor.removed",
 		"auth_factor.renamed", "auth_factor.recovery_code_used", "auth_factor.recovery_codes_regenerated",
-		"email.change_requested", "email.changed", "identity.linked", "identity.unlinked", EventSessionRevoked,
+		"email.change_requested", "email.changed", EventIdentityLinked, EventIdentityUnlinked, EventSessionRevoked,
 		EventSessionsRevokedOthers, EventMagicLinkUsed, "token.created", "account.deletion_requested",
 	}}
 }
 
 /*
 Registries returns every registry, keyed by name, for the request rule
-that checks a field against one of them.
+that checks a field against one of them. Providers are the keys of the
+registered identity providers.
 */
-func Registries() map[string]Registry {
+func Registries(providers []string) map[string]Registry {
 	all := map[string]Registry{}
-	for _, r := range []Registry{PrimaryMethods(), SecondFactors(), CreatedVia(), JoinedVia(), SecurityEvents()} {
+	for _, r := range []Registry{
+		PrimaryMethods(providers), SecondFactors(), CreatedVia(providers), JoinedVia(), SecurityEvents(),
+	} {
 		all[r.name] = r
 	}
 

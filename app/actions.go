@@ -41,4 +41,8 @@ type Actions struct {
 	ConfirmUser             *auth.ConfirmUser
 	CheckConfirmation       *auth.CheckConfirmation
 	SendConfirmCode         *auth.SendConfirmCode
+	LinkOAuthIdentity       *auth.LinkOAuthIdentity
+	HandleOAuthCallback     *auth.HandleOAuthCallback
+	ListOAuthIdentities     *auth.ListOAuthIdentities
+	UnlinkOAuthIdentity     *auth.UnlinkOAuthIdentity
 }

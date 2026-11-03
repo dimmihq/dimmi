@@ -26,13 +26,16 @@ package providers
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	fauth "github.com/dimmihq/dimmi/framework/auth"
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	"github.com/dimmihq/dimmi/app"
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	idp "github.com/dimmihq/dimmi/app/auth/providers"
 	"github.com/dimmihq/dimmi/app/exceptions"
 )
 
@@ -45,8 +48,9 @@ type AuthServiceProvider struct {
 
 /*
 Register checks the permission catalog and builds the session manager,
-the guards and the sign-in services, mailed secrets and the links to
-the account pages included.
+the guards and the sign-in services, mailed secrets, the links to the
+account pages, the configured identity providers and the sealing of
+attempts at them included.
 */
 func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 	a := p.App
@@ -65,6 +69,16 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 		DB: fa.DB, Clock: fa.Clock, Codes: appauth.Codes{Key: fa.DerivedKey(appauth.CodeKeyPurpose)},
 	}
 	a.Links = appauth.Links{Base: fa.Config.App.URL}
+	a.Providers = idp.Static{Registry: a.IdentityProviders, Configured: func(key string) bool {
+		return a.Config.Auth.OAuth[key].ClientID != ""
+	}}
+
+	encrypter, err := encryption.NewEncrypter(fa.DerivedKey(appauth.OAuthKeyPurpose))
+	if err != nil {
+		return fmt.Errorf("seal provider sign-in attempts: %w", err)
+	}
+
+	a.OAuthAttempts = appauth.OAuthAttempts{Encrypter: encrypter}
 
 	fa.Session.Configure(session.Config{
 		Cookie:      a.Config.Auth.Sessions.Cookie,

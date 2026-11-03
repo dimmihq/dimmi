@@ -152,7 +152,8 @@ func TestSchema(t *testing.T) {
 	t.Run("stores every registered value and refuses one of the wrong shape", func(t *testing.T) {
 		t.Parallel()
 		ctx := t.Context()
-		registered := slices.Concat(appauth.PrimaryMethods().Values(), appauth.CreatedVia().Values())
+		providers := []string{"github", "google"}
+		registered := slices.Concat(appauth.PrimaryMethods(providers).Values(), appauth.CreatedVia(providers).Values())
 
 		for _, value := range registered {
 			require.NoError(t, exec(ctx, db, "INSERT INTO users (name, email, created_via) VALUES ('a', $1, $2)",

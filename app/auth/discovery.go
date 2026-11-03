@@ -4,12 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | Apps ask the server how people may sign in before anyone has: which
-| providers are set up, which second factors may be enrolled, and which
-| ways of signing in by mail it serves. A provider is offered only once
-| its client id is configured, a factor only when the install enables
-| it, and a capability only when it works, so an app never shows a
-| button that cannot work. Each entry is an object, so new fields can be
-| added without breaking older apps.
+| second factors may be enrolled and which ways of signing in by mail it
+| serves; the identity providers come from their own registry. A factor
+| is offered only when the install enables it, and a capability only
+| when it works, so an app never shows a button that cannot work. Each
+| entry is an object, so new fields can be added without breaking older
+| apps.
 |
 */
 
@@ -22,34 +22,11 @@ import (
 )
 
 /*
-Provider is a sign-in provider as apps show it. Protocol is oauth2 or
-oidc.
-*/
-type Provider struct {
-	Key      string
-	Name     string
-	Protocol string
-}
-
-/*
 Factor is a second-factor type as apps show it.
 */
 type Factor struct {
 	Type string
 	Name string
-}
-
-/*
-OfferedProviders returns the providers configured with a client id, in
-the order apps list them.
-*/
-func OfferedProviders(cfg config.AuthConfig) []Provider {
-	known := []Provider{
-		{Key: MethodGitHub, Name: "GitHub", Protocol: "oauth2"},
-		{Key: MethodGoogle, Name: "Google", Protocol: "oidc"},
-	}
-
-	return slices.DeleteFunc(known, func(p Provider) bool { return cfg.OAuth[p.Key].ClientID == "" })
 }
 
 /*

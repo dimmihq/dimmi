@@ -44,5 +44,11 @@
     "intro": "Many wrong passwords were tried for your account in the last hour, so we locked it for unknown devices for a while.",
     "advice": "Devices you signed in from before still get in. If you use a short or reused password, change it now.",
     "action": "Secure your account"
+  },
+  "identity_linked": {
+    "subject": "{{.provider}} account linked to your Dimmi account",
+    "intro": "A {{.provider}} account with your email address was linked to your Dimmi account. You can now sign in with {{.provider}}.",
+    "unknown": "If this was not you, unlink it in your security settings and change your password.",
+    "action": "Review your sign-in methods"
   }
 }

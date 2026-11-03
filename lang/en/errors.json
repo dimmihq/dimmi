@@ -21,5 +21,9 @@
   "verification_link_expired": "This verification link has expired. Sign in and ask for a new one.",
   "method_not_available": "This method is not available for your account.",
   "invalid_password": "The password is incorrect.",
-  "email_unverified": "Verify your email address to continue."
+  "email_unverified": "Verify your email address to continue.",
+  "oauth_email_unverified": "The provider has not verified your email address.",
+  "identity_taken": "This account is already linked to another user.",
+  "provider_already_linked": "You already linked an account of this provider.",
+  "last_login_method": "This is your only way to sign in. Set a password or link another account first."
 }

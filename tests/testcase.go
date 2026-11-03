@@ -39,6 +39,7 @@ import (
 	notifydb "github.com/dimmihq/dimmi/framework/notifications/channels/database"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/routing"
+	"github.com/dimmihq/dimmi/framework/socialite"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app"
@@ -69,6 +70,8 @@ type TestCase struct {
 	handler   fhttp.Handler
 	mail      *mail.Fake
 	mailOnce  sync.Once
+	social    *socialite.Fake
+	oauthOnce sync.Once
 }
 
 /*

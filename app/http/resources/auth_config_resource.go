@@ -13,7 +13,10 @@
 package resources
 
 import (
+	"context"
+
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/app/auth/providers"
 )
 
 /*
@@ -61,11 +64,13 @@ type Factor struct {
 /*
 NewProviders shapes the offered sign-in providers.
 */
-func NewProviders(providers []appauth.Provider) []Provider {
-	out := make([]Provider, 0, len(providers))
-	for _, p := range providers {
+func NewProviders(ctx context.Context, resolver providers.ProviderResolver) []Provider {
+	offered := resolver.Offered(ctx)
+
+	out := make([]Provider, 0, len(offered))
+	for _, p := range offered {
 		out = append(out, Provider{
-			Key: p.Key, Name: p.Name, Protocol: p.Protocol, RedirectURL: "/auth/" + p.Key + "/redirect",
+			Key: p.Key(), Name: p.Display().Name, Protocol: p.Protocol(), RedirectURL: "/auth/" + p.Key() + "/redirect",
 		})
 	}
 

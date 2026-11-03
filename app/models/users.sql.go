@@ -124,6 +124,37 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (User, erro
 	return i, err
 }
 
+const lockUser = `-- name: LockUser :one
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via FROM users WHERE id = $1 FOR UPDATE
+`
+
+// LockUser returns the account and holds it until the transaction ends,
+// so two changes to how it signs in cannot both pass a check that only
+// one of them may.
+func (q *Queries) LockUser(ctx context.Context, id ids.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, lockUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.TwoFactorConfirmedAt,
+		&i.AvatarPath,
+		&i.Locale,
+		&i.Timezone,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PasswordChangedAt,
+		&i.RiskFlags,
+		&i.CreatedVia,
+	)
+	return i, err
+}
+
 const markUserEmailVerified = `-- name: MarkUserEmailVerified :exec
 UPDATE users
 SET email_verified_at = $1::timestamptz, updated_at = $1::timestamptz
@@ -160,6 +191,26 @@ func (q *Queries) RevokeUserTokens(ctx context.Context, arg RevokeUserTokensPara
 	var revoked int64
 	err := row.Scan(&revoked)
 	return revoked, err
+}
+
+const setUserAvatarPath = `-- name: SetUserAvatarPath :execrows
+UPDATE users SET avatar_path = $1, updated_at = $2::timestamptz WHERE id = $3 AND avatar_path IS NULL
+`
+
+type SetUserAvatarPathParams struct {
+	AvatarPath *string   `json:"avatar_path"`
+	Now        time.Time `json:"now"`
+	ID         ids.UUID  `json:"id"`
+}
+
+// SetUserAvatarPath gives an account without an avatar the stored image.
+// An avatar the user set in the meantime is kept.
+func (q *Queries) SetUserAvatarPath(ctx context.Context, arg SetUserAvatarPathParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setUserAvatarPath, arg.AvatarPath, arg.Now, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateUserDeletedAt = `-- name: UpdateUserDeletedAt :exec

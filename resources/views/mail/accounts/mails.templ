@@ -97,3 +97,18 @@ templ SuspiciousSignInAttempts(name, securityURL string) {
 		@button(securityURL, i18n.T(ctx, "mail.suspicious_sign_in_attempts.action", nil))
 	}
 }
+
+/*
+IdentityLinked tells a user an account at a sign-in provider was linked
+to theirs, by them or because the provider vouched for their address,
+and where to unlink it if it was not them.
+*/
+
+templ IdentityLinked(name, provider, securityURL string) {
+	@layout(i18n.T(ctx, "mail.identity_linked.subject", i18n.Args{"provider": provider})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.identity_linked.intro", i18n.Args{"provider": provider}) }</p>
+		<p>{ i18n.T(ctx, "mail.identity_linked.unknown", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.identity_linked.action", nil))
+	}
+}
