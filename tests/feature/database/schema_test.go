@@ -58,7 +58,7 @@ func checkValues(t *testing.T, db *database.DB, table, column string) []string {
 	err := db.QueryRow(t.Context(), `
 		SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c
 		JOIN pg_class r ON r.oid = c.conrelid
-		WHERE r.relname = $1 AND c.contype = 'c' AND pg_get_constraintdef(c.oid) LIKE '%' || $2 || '%ANY%'`,
+		WHERE r.relname = $1 AND c.contype = 'c' AND pg_get_constraintdef(c.oid) LIKE '%(' || $2 || ' = ANY%'`,
 		table, column).Scan(&definition)
 	require.NoError(t, err, "check on %s.%s", table, column)
 
@@ -127,6 +127,12 @@ func TestSchema(t *testing.T) {
 		assert.Equal(t, asStrings(enums.AuthFactorStatuses()), checkValues(t, db, "user_auth_factors", "status"))
 		assert.Equal(t, asStrings(enums.OneTimePurposes()), checkValues(t, db, "one_time_tokens", "purpose"))
 		assert.Equal(t, []string{"admin", "member"}, checkValues(t, db, "invitations", "role"))
+		assert.Equal(t, asStrings(enums.ContactKinds()), checkValues(t, db, "contacts", "kind"))
+		assert.Equal(t, asStrings(enums.ConversationStatuses()), checkValues(t, db, "conversations", "status"))
+		assert.Equal(t, asStrings(enums.MessageTypes()), checkValues(t, db, "messages", "type"))
+		assert.Equal(t, asStrings(enums.AuthorTypes()), checkValues(t, db, "messages", "author_type"))
+		assert.Equal(t, asStrings(enums.ParticipantRoles()),
+			checkValues(t, db, "conversation_participants", "role"))
 	})
 
 	t.Run("knows every enum value it stores", func(t *testing.T) {
@@ -136,6 +142,8 @@ func TestSchema(t *testing.T) {
 			enums.RoleOwner.Valid(), enums.MemberStatusActive.Valid(), enums.AvailabilityAway.Valid(),
 			enums.InvitationStatusExpired.Valid(), enums.AuthFactorStatusPending.Valid(),
 			enums.OneTimePurposeConfirmCode.Valid(), enums.SignupModeInviteOnly.Valid(),
+			enums.ContactKindLead.Valid(), enums.ConversationStatusSnoozed.Valid(), enums.MessageTypeNote.Valid(),
+			enums.AuthorTypeIntegration.Valid(), enums.ParticipantRoleCC.Valid(),
 		} {
 			assert.True(t, valid)
 		}
@@ -144,6 +152,8 @@ func TestSchema(t *testing.T) {
 			enums.Role("guest").Valid(), enums.MemberStatus("").Valid(), enums.Availability("busy").Valid(),
 			enums.InvitationStatus("sent").Valid(), enums.AuthFactorStatus("lost").Valid(),
 			enums.OneTimePurpose("login").Valid(), enums.SignupMode("closed").Valid(),
+			enums.ContactKind("visitor").Valid(), enums.ConversationStatus("pending").Valid(),
+			enums.MessageType("reply").Valid(), enums.AuthorType("bot").Valid(), enums.ParticipantRole("to").Valid(),
 		} {
 			assert.False(t, valid)
 		}
