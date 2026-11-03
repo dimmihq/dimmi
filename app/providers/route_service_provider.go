@@ -3,10 +3,10 @@
 | Route Service Provider
 |--------------------------------------------------------------------------
 |
-| Names the product's route middleware and declares the routes once the
-| actions exist. Cross-origin protection trusts the application's own
-| origin and the extra origins configured for split deployments, such as
-| a dashboard on another host. Sensitive routes ask for a recent
+| Names the product's route middleware, links the browser app's scripts,
+| and declares the routes once the actions exist. Cross-origin protection
+| trusts the application's own origin and the extra origins configured
+| for split deployments, such as a dashboard on another host. Sensitive routes ask for a recent
 | confirmation of who is calling, within the configured window, and
 | steps that reach other people ask for a proven email where the
 | install requires one.
@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/foundation"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/middleware"
+	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app"
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
@@ -59,6 +60,13 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	})
 	fa.Kernel.Alias("verified", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnsureEmailVerified(p.App.Config.Auth.Verification, fa.Errors), nil
+	})
+
+	p.App.Vite = vite.New(vite.Options{
+		Build: p.App.Frontend, Base: "/build", HotFile: p.App.Config.Frontend.HotPath, React: true,
+	})
+	fa.Kernel.Alias("csp", func(...string) (fhttp.Middleware, error) {
+		return appmiddleware.ContentSecurityPolicy(p.App.Vite), nil
 	})
 
 	return nil

@@ -29,30 +29,39 @@ Options configure a handler.
 Immutable marks every file as never changing, so clients cache it for a
 year without revalidating; use it only for files named after their
 content. Precompressed serves a .gz sibling of a file in its place to
-clients that accept gzip.
+clients that accept gzip. Prefix is the URL path the files are mounted
+under, such as "/build", removed before a file is looked up.
 */
 type Options struct {
 	Immutable     bool
 	Precompressed bool
+	Prefix        string
 }
 
 /*
-Handler serves the files in the file system at the request path, with
-index.html for a directory. Only GET and HEAD are answered.
+Handler serves the files in the file system at the request path, less
+the prefix, with index.html for a directory. Only GET and HEAD are
+answered.
 */
 func Handler(fsys fs.FS, opts Options) http.Handler {
 	server := statigz.FileServer(readDirFS{fsys}, encodings(opts))
-	if !opts.Immutable {
-		return server
+
+	var handler http.Handler = server
+	if opts.Immutable {
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if server.Found(r) {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
+
+			server.ServeHTTP(w, r)
+		})
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if server.Found(r) {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		}
+	if opts.Prefix == "" {
+		return handler
+	}
 
-		server.ServeHTTP(w, r)
-	})
+	return http.StripPrefix(opts.Prefix, handler)
 }
 
 func encodings(opts Options) func(*statigz.Server) {

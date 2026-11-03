@@ -12,6 +12,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/config"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -29,7 +30,7 @@ func TestMeShow(t *testing.T) {
 			AssertJSONPath("data.member", nil).
 			AssertJSONPath("data.auth.abilities", []string{"*"}).
 			AssertJSONPath("data.workspaces.0.id", workspaceID(tc)).
-			AssertJSONPath("data.instance.edition", "self_host")
+			AssertJSONPath("data.instance.edition", string(config.BuiltEdition))
 	})
 
 	t.Run("shows a member's permissions in the workspace the browser names", func(t *testing.T) {

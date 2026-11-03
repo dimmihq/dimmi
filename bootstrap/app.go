@@ -5,7 +5,8 @@
 |
 | Everything the framework needs to know about the product, in one place:
 | its name and environment prefix, its own configuration, migrations and
-| translations, and its providers with the routes they declare. The
+| translations, the browser app's build, and its providers with the
+| routes they declare. The
 | binary runs it; tests boot the same options with their own
 | environment, so a test application is wired exactly like production.
 |
@@ -20,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/providers"
 	"github.com/dimmihq/dimmi/database/migrations"
 	"github.com/dimmihq/dimmi/lang"
+	"github.com/dimmihq/dimmi/public"
 	"github.com/dimmihq/dimmi/routes"
 )
 
@@ -49,6 +51,7 @@ options that boot it.
 */
 func Application() (*app.App, foundation.Options) {
 	application := app.New(Version)
+	application.Frontend = public.Build()
 
 	return application, foundation.Options{
 		Name:       Name,

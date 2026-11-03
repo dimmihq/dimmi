@@ -1,0 +1,28 @@
+# Local development settings. `make dev` copies this file to dimmi.yaml,
+# which stays out of git; edit that copy. Services come from compose.yaml
+# (`make services`).
+app:
+  env: local
+  url: http://localhost:8080
+  key_auto_generate: true
+http:
+  addr: 127.0.0.1:8080
+  admin_addr: 127.0.0.1:9090
+database:
+  url: postgres://postgres:postgres@localhost:15432/dimmi?sslmode=disable
+redis:
+  url: redis://localhost:16379/1
+migrations:
+  auto: true
+frontend:
+  hot_path: public/hot
+auth:
+  signup:
+    mode: open
+mail:
+  mailers:
+    system:
+      driver: smtp
+      host: localhost
+      port: 11025
+      allow_insecure: true

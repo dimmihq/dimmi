@@ -6,12 +6,17 @@ GOLANGCI_LINT := ./bin/golangci-lint
 GOLANGCI_LINT_VERSION := v2.15.0
 SQLC := ./bin/sqlc
 SQLC_VERSION := v1.30.0
+AIR := ./bin/air
+AIR_VERSION := v1.67.4
 
 # Packages whose statements count toward the coverage gates.
 FRAMEWORK_PKGS := ./framework/...
 APP_PKGS := ./app/...
+# Packages whose behaviour depends on the edition, tested again in the
+# cloud build.
+CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: tools fmt lint test cover cover-app services gen sqlc views
+.PHONY: tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -21,6 +26,8 @@ services:
 tools:
 	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	GOBIN=$(CURDIR)/bin go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
+	GOBIN=$(CURDIR)/bin go install github.com/air-verse/air@$(AIR_VERSION)
+	pnpm install
 
 # Compiles database/queries into app/models (sqlc.yaml).
 sqlc:
@@ -34,6 +41,7 @@ views:
 
 fmt:
 	$(GOLANGCI_LINT) fmt
+	pnpm format
 
 # Dev-only commands (make:* generators, route:lint) sit behind the dev build
 # tag, so lint and tests run once without it and once with it.
@@ -41,6 +49,9 @@ lint:
 	$(GOLANGCI_LINT) config verify
 	$(GOLANGCI_LINT) run ./...
 	$(GOLANGCI_LINT) run --build-tags dev ./...
+	$(GOLANGCI_LINT) run --build-tags cloud ./...
+	pnpm lint
+	pnpm typecheck
 
 # Tests read the same variables the application does; ENV_FILE picks the
 # environment (CI passes its own file).
@@ -49,6 +60,8 @@ WITH_ENV := set -a && . ./$(ENV_FILE) && set +a &&
 
 test:
 	$(WITH_ENV) go test -race -shuffle=on ./...
+	$(WITH_ENV) go test -race -shuffle=on -tags cloud $(CLOUD_PKGS)
+	pnpm test
 	$(WITH_ENV) go test -race -tags dev ./framework/foundation/...
 
 # Runs a dev-only command, e.g. make gen ARGS="make:action CloseTicket".
@@ -64,5 +77,41 @@ cover:
 # left out of the profile.
 cover-app:
 	$(WITH_ENV) go test -race -count=1 -coverpkg=$(APP_PKGS) -coverprofile=coverage-app.out ./tests/...
+	$(WITH_ENV) go test -race -count=1 -tags cloud -coverpkg=$(APP_PKGS) -coverprofile=coverage-app-cloud.out ./tests/...
+	tail -n +2 coverage-app-cloud.out >> coverage-app.out
 	grep -v -e '\.sql\.go:' -e 'app/models/db\.go:' -e 'app/models/models\.go:' coverage-app.out > coverage-app.filtered.out
 	go tool cover -func=coverage-app.filtered.out | tail -1
+
+# Local development: the Go server on :8080, rebuilt by air on every Go
+# change, and the Vite dev server on :5173 for hot updates of the browser
+# app. Open http://localhost:8080/d. Settings come from dimmi.yaml, copied
+# from dimmi.example.yaml on first run. `make dev TAGS=cloud` runs the
+# cloud edition.
+dev: dev-db
+	@test -f dimmi.yaml || cp dimmi.example.yaml dimmi.yaml
+	$(MAKE) -j2 dev-server dev-web
+
+dev-server:
+	$(AIR) --build.cmd "go build -tags '$(TAGS)' -o ./tmp/dimmi ./cmd/dimmi"
+
+dev-web:
+	pnpm dev
+
+dev-db:
+	@docker compose exec -T postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'dimmi'" | grep -q 1 \
+		|| docker compose exec -T postgres psql -U postgres -c 'CREATE DATABASE dimmi'
+
+# Builds both binaries with the browser app embedded: bin/dimmi, the
+# self-hosted edition operators run, and bin/dimmi-cloud, the cloud
+# edition with the cloud-only code.
+build: web-build
+	go build -trimpath -o bin/dimmi ./cmd/dimmi
+	go build -trimpath -tags cloud -o bin/dimmi-cloud ./cmd/dimmi
+
+# Builds the browser app into public/build, which the next go build embeds.
+web-build:
+	pnpm build
+
+web-test:
+	pnpm typecheck
+	pnpm test

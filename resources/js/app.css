@@ -1,0 +1,14 @@
+/*
+ * The app's stylesheet: BoardUI's tokens and type scale, with its
+ * typefaces served from this origin rather than a font CDN.
+ */
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource-variable/jetbrains-mono";
+@import "./styles/globals.css";
+
+@source "./";
+
+:root {
+  --font-inter: "Inter Variable";
+  --font-mono-source: "JetBrains Mono Variable";
+}

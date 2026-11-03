@@ -19,7 +19,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 )
 
 /*
@@ -35,6 +34,8 @@ type Config struct {
 	API  APIConfig  `koanf:"api"`
 	HTTP HTTPConfig `koanf:"http"`
 	Auth AuthConfig `koanf:"auth"`
+
+	Frontend FrontendConfig `koanf:"frontend"`
 }
 
 /*
@@ -43,10 +44,6 @@ the first value that cannot work. The loader calls it once, right after
 the files and environment are read.
 */
 func (c *Config) Validate() error {
-	if !c.App.Edition.Valid() {
-		return fmt.Errorf("%w: app.edition %q", ErrInvalid, c.App.Edition)
-	}
-
 	c.App.settle()
 	c.Auth.settle(c.App.Edition)
 

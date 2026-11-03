@@ -1,4 +1,12 @@
 /bin/
 coverage.out
 coverage-app.out
+coverage-app-cloud.out
 coverage-app.filtered.out
+/node_modules/
+/public/hot
+/public/build/*
+!/public/build/.gitkeep
+/storage/
+/dimmi.yaml
+/tmp/

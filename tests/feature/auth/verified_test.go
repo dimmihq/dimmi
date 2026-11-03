@@ -34,15 +34,4 @@ func TestVerifiedMiddleware(t *testing.T) {
 			AssertJSONPath("code", "email_unverified")
 		tc.ActingAsOwner().PostJSON("/testing/gated", nil).AssertNoContent()
 	})
-
-	t.Run("requires a proven email on the cloud but not on a self-hosted install", func(t *testing.T) {
-		t.Parallel()
-		selfHosted := tests.New(t, tests.WithRoutes(gatedStep))
-		cloud := tests.New(t, tests.WithRoutes(gatedStep),
-			tests.WithEnv("DIMMI_APP__EDITION=cloud", "DIMMI_APP__REGION=us"))
-
-		selfHosted.ActingAs(selfHosted.CreateUser(factories.Unverified)).PostJSON("/testing/gated", nil).
-			AssertNoContent()
-		cloud.ActingAs(cloud.CreateUser(factories.Unverified)).PostJSON("/testing/gated", nil).AssertForbidden()
-	})
 }

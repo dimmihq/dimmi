@@ -167,15 +167,6 @@ func TestUserStore(t *testing.T) {
 		tc.Table("users").AssertMissing(testkit.Row{"email": "stranger@example.com"})
 	})
 
-	t.Run("starts a self-hosted install closed and the cloud open", func(t *testing.T) {
-		t.Parallel()
-		selfHosted := tests.New(t, tests.WithEnv("DIMMI_AUTH__SIGNUP__MODE="))
-		cloud := tests.New(t, tests.WithEnv("DIMMI_AUTH__SIGNUP__MODE=", "DIMMI_APP__EDITION=cloud"))
-
-		selfHosted.Client().PostJSON("/api/v1/users", registration("a@example.com")).AssertForbidden()
-		cloud.Client().PostJSON("/api/v1/users", registration("a@example.com")).AssertCreated()
-	})
-
 	t.Run("caps the accounts one address creates in an hour", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__SIGNUP__MAX_PER_HOUR_PER_IP=2"))

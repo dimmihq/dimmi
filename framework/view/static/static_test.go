@@ -99,6 +99,15 @@ func TestHandler(t *testing.T) {
 		assert.Equal(t, "public, max-age=31536000, immutable", w.Header().Get("Cache-Control"))
 	})
 
+	t.Run("serves files under the prefix they are mounted at", func(t *testing.T) {
+		t.Parallel()
+		h := static.Handler(assets(t), static.Options{Immutable: true, Prefix: "/build"})
+		w := get(t, h, "/build/app.js", nil)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, script, w.Body.String())
+		assert.Equal(t, http.StatusNotFound, get(t, h, "/app.js", nil).Code)
+	})
+
 	t.Run("does not mark a missing file as immutable", func(t *testing.T) {
 		t.Parallel()
 		h := static.Handler(assets(t), static.Options{Immutable: true})

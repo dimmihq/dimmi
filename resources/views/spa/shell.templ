@@ -1,0 +1,23 @@
+package spa
+
+/*
+Shell is the page every route of the browser app starts from: the
+document the app mounts into, with the tags that load it. The app sits
+behind a sign-in, so search engines are asked not to index it.
+*/
+
+templ Shell(lang string, assets templ.Component) {
+	<!DOCTYPE html>
+	<html lang={ lang }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="robots" content="noindex"/>
+			<title>Dimmi</title>
+			@assets
+		</head>
+		<body>
+			<div id="root"></div>
+		</body>
+	</html>
+}

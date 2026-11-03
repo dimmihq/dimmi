@@ -1,0 +1,16 @@
+{
+  "paths": {
+    "components": "resources/js/components",
+    "utils": "resources/js/utils",
+    "hooks": "resources/js/hooks",
+    "styles": "resources/js/styles",
+    "lib": "resources/js/lib"
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/utils",
+    "hooks": "@/hooks",
+    "styles": "@/styles",
+    "lib": "@/lib"
+  }
+}

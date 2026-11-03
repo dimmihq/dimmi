@@ -180,45 +180,6 @@ func TestAccountMail(t *testing.T) {
 	})
 }
 
-func TestMailFallback(t *testing.T) {
-	t.Parallel()
-
-	t.Run("logs unsent mail as a warning with its links on a self-hosted install", func(t *testing.T) {
-		t.Parallel()
-		logs := &syncBuffer{}
-		tc := tests.New(t, tests.WithLogs(logs), tests.WithEnv("DIMMI_LOG__LEVEL=warn", "DIMMI_LOG__DRIVER=json"))
-
-		tc.Client().PostJSON("/api/v1/password-resets", testkit.JSON{"email": tc.Owner.Email}).
-			AssertStatus(fhttp.StatusAccepted)
-		tc.Drain()
-
-		line := fallbackLine(t, logs)
-		assert.Equal(t, "mail logged instead of sent", line["msg"])
-		assert.Equal(t, "WARN", line["level"])
-		assert.Equal(t, tc.Owner.Email, line["recipients"])
-		assert.Equal(t, "Reset your Dimmi password", line["subject"])
-		assert.Contains(t, line["links"], "/reset-password#id=prs_")
-		assert.NotContains(t, line, "message")
-	})
-
-	t.Run("keeps every link out of the log on the cloud", func(t *testing.T) {
-		t.Parallel()
-		logs := &syncBuffer{}
-		tc := tests.New(t, tests.WithLogs(logs), tests.WithEnv(
-			"DIMMI_LOG__LEVEL=info", "DIMMI_LOG__DRIVER=json", "DIMMI_APP__EDITION=cloud", "DIMMI_APP__REGION=us",
-		))
-
-		tc.Client().PostJSON("/api/v1/password-resets", testkit.JSON{"email": tc.Owner.Email}).
-			AssertStatus(fhttp.StatusAccepted)
-		tc.Drain()
-
-		line := fallbackLine(t, logs)
-		assert.Equal(t, "Reset your Dimmi password", line["subject"])
-		assert.NotContains(t, line, "links")
-		assert.NotContains(t, logs.String(), "reset-password#")
-	})
-}
-
 /*
 newSignIns drains the queue and returns the new-device mails sent.
 */

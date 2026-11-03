@@ -12,6 +12,12 @@ change. When this page and those files disagree, this page wins and the disagree
   Generic words (`tenant`, `user`, `member`, `channel`, `message`) are fine.
 - `app/`, `routes/`, `config/`, `bootstrap/`, `database/`, `cmd/`, `lang/`, `resources/` hold the product.
   `cmd/dimmi` only calls `bootstrap.Main`; `bootstrap` hands the framework the app's options and providers.
+- `resources/js/` is the browser app (React, Vite, TanStack Router and Query, BoardUI on Tailwind v4). Go serves
+  its page; `public/build` holds the production build embedded in the binary.
+- Two editions, chosen at build time: the default build is the self-hosted binary (`bin/dimmi`); `-tags cloud`
+  adds the cloud-only code (billing, marketing site) for `bin/dimmi-cloud`. Cloud-only code lives in `app/cloud/...`
+  or in files starting with `//go:build cloud`, and only such files import `app/cloud/...` (`tests/arch` checks).
+  The edition is never configurable: `config.BuiltEdition` says which binary runs.
 - `specs/` and `research/` describe what to build. Code never refers to them.
 - The package catalog, what each package wraps and its public API: `specs/00-conventions/framework.md` section 3.2.
 
@@ -72,6 +78,16 @@ package cache
   15, 4 parameters, 3 results, 120-column lines, 80-column doc lines.
 - Managers (`framework/manager`) for services with several drivers; register drivers with `Extend`, never `init`.
 
+## Frontend
+
+- Biome is the only linter and formatter of the browser app. `pnpm lint` (`biome ci --error-on-warnings`) must
+  finish with zero errors and zero warnings, every time. A warning is a failure.
+- Never add `biome-ignore` comments, never lower a rule or add an override in `biome.json`, and never exclude a
+  file to get there: change the code, or stop and report why the rule does not fit.
+- Run `pnpm format` (`biome check --write`) before finishing, and after every `boardui add`: installed BoardUI
+  components are our code and meet the same rules.
+- `pnpm typecheck` and `pnpm test` pass too. `make lint test` runs all of it with the Go checks.
+
 ## Tests
 
 - Business logic is tested only with integration tests against real services. Framework packages use unit tests
@@ -102,20 +118,71 @@ package cache
 | Command | Does |
 |---|---|
 | `make services` | Starts PostgreSQL, Valkey, SeaweedFS and Mailpit |
-| `make fmt` | Formats Go code |
-| `make lint` | golangci-lint with zero issues allowed |
-| `make test` | All tests with `-race` against the services |
+| `make fmt` | Formats Go code and the browser app (Biome) |
+| `make lint` | golangci-lint and Biome with zero issues and zero warnings allowed, plus TypeScript |
+| `make test` | All Go tests with `-race` against the services, then the browser app's tests |
 | `make cover` | Coverage across framework packages |
 | `make cover-app` | Coverage of app packages by the integration tests |
 | `make sqlc` | Compiles `database/queries` into `app/models` |
 | `make gen ARGS="make:action Name"` | Runs a dev-only command (generators, `route:lint`, `lang:check`) |
+| `make build` | Builds the browser app and both binaries: `bin/dimmi` (self-hosted) and `bin/dimmi-cloud` |
+| `make dev` | Go server on :8080 (rebuilt by air) plus the Vite dev server with hot updates; open `localhost:8080/d`. `TAGS=cloud` runs the cloud edition |
+| `make web-build` | Builds the browser app into `public/build`, which the next `go build` embeds |
+| `make web-test` | Type-checks and tests the browser app |
 
 Development-only commands live in files with `//go:build dev` and are never compiled into release builds;
-`make lint` and `make test` cover both builds.
+`make lint` and `make test` cover the dev build and both editions; edition-specific tests live in files tagged
+`cloud` or `!cloud`.
 
 The Go linker must keep removing unused methods: never call `reflect.Value.MethodByName` or `Method` with a
 non-constant name, and never execute `text/template` or `html/template` in framework code paths a running app
 reaches. `tests/arch` fails the build when this regresses, which doubles the binary size.
 
-A change is done when `make lint test` passes. Never add `//nolint`, raise a limit or edit `.golangci.yml` to get
+A change is done when `make lint test` passes, Biome included, with no warnings. Never add `//nolint`, raise a limit or edit `.golangci.yml` to get
 there: change the code, or stop and report why the rule does not fit.
+
+<!-- boardui:rules:start -->
+# BoardUI design rules
+
+This project uses BoardUI (React + Tailwind CSS v4, source-owned components under `components/`). These rules always apply when writing UI code. MCP tools are on demand; these rules are not optional context.
+
+## Components first
+
+- Before hand-building any UI element, check for an installed BoardUI component under `components/base/` and `components/application/`, and prefer it.
+- Missing a component? Install it (BoardUI MCP `install_components`, or `npx boardui@latest add <name>`) instead of writing a lookalike.
+- Import through the aliases configured in `boardui.json`, e.g. `import { Button } from "@/components/base/buttons/button"`.
+
+## Color: semantic tokens only
+
+- Never use raw palette classes (`text-gray-500`, `bg-white`, `border-neutral-200`) or hex/oklch literals. Every color rides a BoardUI semantic token, which also makes dark mode automatic.
+- Text: `text-text-primary`, `text-text-secondary`, `text-text-tertiary`, `text-text-placeholder`, errors `text-text-error-primary`.
+- Surfaces: `bg-background-primary-default`, `bg-background-secondary-default` / `-hover`, `bg-background-tertiary-default`, page ground `bg-background-full`.
+- Borders: `border-border-button-default` / `-hover`, hairlines `border-separator-border`, tables `border-border-table`, errors `border-border-error-default`.
+- Icons: `text-foreground-icon-primary` through `text-foreground-icon-quaternary`.
+- Charts: the `chart-1` … `chart-5` tokens (plus `-active` variants). CTAs and selection states: the `accent-50` … `accent-950` ramp.
+- Dark mode flips tokens via the `.dark` class on `<html>`. Do not write `dark:` overrides with raw colors; if a token pair looks wrong in dark mode, pick a different token, not a literal.
+
+## Typography: composite utilities only
+
+- Use BoardUI's composite type utilities: `text-title-1-medium`, `text-title-2-medium`, `text-title-3-semibold`, `text-headline-medium`, `text-body-medium`, `text-body-regular`, `text-body-2-*`, `text-caption-1-semibold`, and friends. Each sets size, weight, line-height, and letter-spacing together.
+- Never rebuild type by stacking `text-sm font-medium leading-5`; if a style seems missing, look in `styles/typography.css` before inventing one.
+
+## Spacing and shape
+
+- Stay on Tailwind's spacing scale (`gap-2`, `p-4`, `mt-6`); prefer flex/grid `gap` over per-child margins. Arbitrary values (`p-[13px]`) only when matching an existing BoardUI component exactly.
+- Cards and panels: `rounded-3xl` with `border-border-button-default`. Inputs and menu rows: `rounded-md` to `rounded-xl`. Pills: `rounded-full`.
+
+## Mechanics
+
+- Direction: wrap the app (or a mixed-language region) in `DirectionProvider` from `@/components/foundations/direction/direction`, with an explicit BCP 47 `locale` (`ar`, `he`, `en-US`, `zh-CN`). Set matching `lang` and `dir` on `<html>` for full-app RTL. CSS `dir` alone does not configure React Aria keyboard navigation or portal placement. Use `useDirection()` for custom interactions and put its value on custom portal roots.
+- Use logical styles: `ms`/`me`, `ps`/`pe`, `start`/`end`, `text-start`/`text-end`, `border-s`/`border-e`, `rounded-s`/`rounded-e`, and inline logical CSS properties. Mirror navigation/disclosure glyphs and horizontal drawer motion in RTL. Preserve physical coordinates for measured geometry, charts, canvas, and decorative art. Keep code, OTP digits, email addresses and URLs in explicit LTR regions; isolate mixed text with `<bdi>` or `dir="auto"`. Translating labels and formatting application data is separate from layout direction. See https://www.boardui.com/rtl.
+
+- Internal vertical scroll regions must soften the top edge with a progressive blur and surface fade once scrolled, rather than sharply clipping content. Keep headers outside the scroll region. Use a stationary, `pointer-events-none`, `aria-hidden` overlay in a relative wrapper: a 24px masked 1px backdrop blur, a 16px masked 4px backdrop blur, and a gradient from the enclosing semantic surface token to transparent. Ramp each layer's opacity from 0 to 1 over the first 24px of scrolling; keep it invisible at scrollTop 0. Apply opacity to the individual layers, never the overlay parent (a translucent parent creates a backdrop root and can break blur at normal browser zoom). Verify top/reset, overflow, light/dark mode, and 100% zoom; preserve keyboard scrolling and do not blur the whole content area. The `scroll-fade` registry item ships this recipe as `ScrollFade` + `useScrollFade` (`@/components/foundations/scroll-fade/scroll-fade`); reuse it rather than rebuilding the layers.
+
+- Merge classes with `cx()` from `@/utils/cx` (tailwind-merge aware of BoardUI's composite text styles). No string concatenation, no plain `clsx`.
+- Icons come from `@remixicon/react`, passed as component references (`leadingIcon={RiAddLine}`), not rendered elements.
+- Form components build on `react-aria-components`; extend the installed BoardUI form components rather than raw `<input>`/`<select>`.
+- Focus states: `outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring`.
+
+When unsure about a token, a component's API, or working example code, ask the BoardUI MCP server: `get_theme`, `get_component`, `get_usage_examples`.
+<!-- boardui:rules:end -->

@@ -20,6 +20,7 @@ package app
 
 import (
 	"cmp"
+	"io/fs"
 	"maps"
 	"net/url"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/mail"
+	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/providers"
@@ -45,6 +47,8 @@ Providers finds the ones the install configured. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
+Frontend is the browser app's production build and Vite links it, or
+the dev server while one runs, into pages.
 */
 type App struct {
 	*foundation.Application
@@ -68,6 +72,8 @@ type App struct {
 	Actions     *Actions
 
 	OAuthAttempts auth.OAuthAttempts
+	Frontend      fs.FS
+	Vite          *vite.Bundle
 }
 
 /*
