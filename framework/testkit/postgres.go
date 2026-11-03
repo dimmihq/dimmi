@@ -101,12 +101,13 @@ func createDatabase(tb testing.TB, template string) Database {
 /*
 NewRole creates a login role without superuser rights that owns nothing
 in the database, the way an application role that is not the tables'
-owner connects, so row level security applies to it. The caller grants
-it what it needs through AdminURL. When the test ends, whatever its
-outcome, the role's privileges in the database and the role itself are
-dropped, before the database is.
+owner connects, so row level security applies to it. Each grant names
+privileges the role gets, such as "SELECT ON ALL TABLES IN SCHEMA
+public". When the test ends, whatever its outcome, the role's privileges
+in the database and the role itself are dropped, before the database
+is.
 */
-func (d Database) NewRole(tb testing.TB) Role {
+func (d Database) NewRole(tb testing.TB, grants ...string) Role {
 	tb.Helper()
 
 	name := UniqueName("t_")
@@ -125,6 +126,10 @@ func (d Database) NewRole(tb testing.TB) Role {
 	})
 
 	mustExec(tb, admin, fmt.Sprintf("CREATE ROLE %s LOGIN NOSUPERUSER PASSWORD '%s'", name, password))
+
+	for _, grant := range grants {
+		mustExec(tb, admin, "GRANT "+grant+" TO "+name)
+	}
 
 	return Role{Name: name, URL: withDatabase(tb, d.AdminURL, d.Name, url.UserPassword(name, password))}
 }

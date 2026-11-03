@@ -304,11 +304,7 @@ application role is, and returns the database URL that connects as it.
 func appRole(t *testing.T, db testkit.Database) string {
 	t.Helper()
 
-	role := db.NewRole(t)
-	admin := open(t, db.AdminURL)
-	require.NoError(t, exec(t.Context(), admin, "GRANT SELECT ON ALL TABLES IN SCHEMA public TO "+role.Name))
-
-	return role.URL
+	return db.NewRole(t, "SELECT ON ALL TABLES IN SCHEMA public").URL
 }
 
 /*

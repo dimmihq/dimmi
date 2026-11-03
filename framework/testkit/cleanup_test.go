@@ -131,11 +131,7 @@ func TestCleanup(t *testing.T) {
 			db = testkit.NewMigratedDatabase(tb, version, func(ctx context.Context, url string) error {
 				return exec(ctx, url, "CREATE TABLE items (id int PRIMARY KEY)")
 			})
-			role = db.NewRole(tb)
-
-			if err := exec(tb.Context(), db.AdminURL, "GRANT SELECT ON items TO "+role.Name); err != nil {
-				tb.Fatalf("grant: %v", err)
-			}
+			role = db.NewRole(tb, "SELECT ON items")
 
 			runtime.Goexit()
 		})
@@ -158,8 +154,7 @@ func TestNewRole(t *testing.T) {
 			"CREATE POLICY notes_mine ON notes USING (owner = current_user)",
 			"INSERT INTO notes VALUES ('someone', 'hidden')",
 		))
-		role := db.NewRole(t)
-		require.NoError(t, exec(t.Context(), db.AdminURL, "GRANT SELECT, INSERT ON notes TO "+role.Name))
+		role := db.NewRole(t, "SELECT, INSERT ON notes")
 		require.NoError(t, exec(t.Context(), role.URL, "INSERT INTO notes VALUES (current_user, 'mine')"))
 
 		var visible, all int

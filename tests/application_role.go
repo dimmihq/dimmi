@@ -42,26 +42,13 @@ pool as it.
 func (tc *TestCase) openApplicationRole() *database.DB {
 	tc.T.Helper()
 
-	ctx := tc.T.Context()
-	role := tc.Database.NewRole(tc.T)
+	role := tc.Database.NewRole(tc.T,
+		"SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public",
+		"USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public",
+	)
 
-	admin, err := database.Open(ctx, database.Config{
-		URL: tc.Database.AdminURL, MaxConns: 1, PoolMode: database.PoolModeSession, TenantSetting: "app.tenant_id",
-	})
-	require.NoError(tc.T, err)
-
-	defer admin.Close()
-
-	for _, statement := range []string{
-		"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO " + role.Name,
-		"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO " + role.Name,
-	} {
-		_, err := admin.Exec(ctx, statement)
-		require.NoError(tc.T, err)
-	}
-
-	db, err := database.Open(ctx, database.Config{
-		URL: role.URL, MaxConns: 2, PoolMode: database.PoolModeSession, TenantSetting: "app.tenant_id",
+	db, err := database.Open(tc.T.Context(), database.Config{
+		URL: role.URL, MaxConns: 1, PoolMode: database.PoolModeSession, TenantSetting: "app.tenant_id",
 	})
 	require.NoError(tc.T, err)
 	tc.T.Cleanup(db.Close)
