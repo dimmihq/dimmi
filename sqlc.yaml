@@ -48,6 +48,11 @@ sql:
           - db_type: inet
             nullable: true
             go_type: { import: net/netip, type: Addr, pointer: true }
+          - db_type: tsvector
+            go_type: { import: github.com/dimmihq/dimmi/framework/database, type: SearchDocument }
+          - db_type: tsvector
+            nullable: true
+            go_type: { import: github.com/dimmihq/dimmi/framework/database, type: SearchDocument }
           - db_type: vector
             go_type: { import: github.com/dimmihq/dimmi/framework/database, type: Vector }
           - column: "*.*_encrypted"

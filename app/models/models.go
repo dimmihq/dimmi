@@ -9,9 +9,31 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/ids"
 )
+
+type Attachment struct {
+	ID             ids.UUID  `json:"id"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	MessageID      *ids.UUID `json:"message_id"`
+	UploadedByType string    `json:"uploaded_by_type"`
+	UploadedByID   *ids.UUID `json:"uploaded_by_id"`
+	Disk           string    `json:"disk"`
+	Path           string    `json:"path"`
+	Filename       string    `json:"filename"`
+	ContentType    string    `json:"content_type"`
+	SizeBytes      int64     `json:"size_bytes"`
+	Sha256         *string   `json:"sha256"`
+	Width          *int32    `json:"width"`
+	Height         *int32    `json:"height"`
+	Inline         bool      `json:"inline"`
+	ContentID      *string   `json:"content_id"`
+	ScanStatus     string    `json:"scan_status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
 
 type AuditLog struct {
 	ID           ids.UUID        `json:"id"`
@@ -38,6 +60,129 @@ type CertmagicStorage struct {
 	Modified time.Time `json:"modified"`
 }
 
+type ChannelConnection struct {
+	ID                   ids.UUID          `json:"id"`
+	WorkspaceID          ids.UUID          `json:"workspace_id"`
+	InboxID              ids.UUID          `json:"inbox_id"`
+	Type                 string            `json:"type"`
+	Name                 string            `json:"name"`
+	Status               string            `json:"status"`
+	ExternalID           *string           `json:"external_id"`
+	Config               json.RawMessage   `json:"config"`
+	CredentialsEncrypted encryption.Sealed `json:"credentials_encrypted"`
+	LastError            *string           `json:"last_error"`
+	LastErrorAt          *time.Time        `json:"last_error_at"`
+	LastActivityAt       *time.Time        `json:"last_activity_at"`
+	DeletedAt            *time.Time        `json:"deleted_at"`
+	CreatedAt            time.Time         `json:"created_at"`
+	UpdatedAt            time.Time         `json:"updated_at"`
+}
+
+type Company struct {
+	ID               ids.UUID        `json:"id"`
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	ExternalID       *string         `json:"external_id"`
+	Name             string          `json:"name"`
+	Domain           *string         `json:"domain"`
+	CustomAttributes json.RawMessage `json:"custom_attributes"`
+	DeletedAt        *time.Time      `json:"deleted_at"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+}
+
+type Contact struct {
+	ID                   ids.UUID                `json:"id"`
+	WorkspaceID          ids.UUID                `json:"workspace_id"`
+	Kind                 string                  `json:"kind"`
+	ExternalID           *string                 `json:"external_id"`
+	Email                *string                 `json:"email"`
+	EmailVerified        bool                    `json:"email_verified"`
+	Name                 *string                 `json:"name"`
+	Phone                *string                 `json:"phone"`
+	AvatarUrl            *string                 `json:"avatar_url"`
+	CompanyID            *ids.UUID               `json:"company_id"`
+	CustomAttributes     json.RawMessage         `json:"custom_attributes"`
+	TrustedAttributeKeys []string                `json:"trusted_attribute_keys"`
+	Locale               *string                 `json:"locale"`
+	Timezone             *string                 `json:"timezone"`
+	Location             json.RawMessage         `json:"location"`
+	FirstSeenAt          *time.Time              `json:"first_seen_at"`
+	LastSeenAt           *time.Time              `json:"last_seen_at"`
+	BlockedAt            *time.Time              `json:"blocked_at"`
+	MergedIntoID         *ids.UUID               `json:"merged_into_id"`
+	Search               database.SearchDocument `json:"search"`
+	DeletedAt            *time.Time              `json:"deleted_at"`
+	CreatedAt            time.Time               `json:"created_at"`
+	UpdatedAt            time.Time               `json:"updated_at"`
+}
+
+type ContactIdentity struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	Type        string    `json:"type"`
+	Value       string    `json:"value"`
+	Verified    bool      `json:"verified"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type Conversation struct {
+	ID                     ids.UUID        `json:"id"`
+	WorkspaceID            ids.UUID        `json:"workspace_id"`
+	Number                 int64           `json:"number"`
+	InboxID                ids.UUID        `json:"inbox_id"`
+	ChannelConnectionID    ids.UUID        `json:"channel_connection_id"`
+	ContactID              ids.UUID        `json:"contact_id"`
+	Subject                *string         `json:"subject"`
+	Status                 string          `json:"status"`
+	Spam                   bool            `json:"spam"`
+	Priority               bool            `json:"priority"`
+	AssigneeMemberID       *ids.UUID       `json:"assignee_member_id"`
+	AssigneeTeamID         *ids.UUID       `json:"assignee_team_id"`
+	AiState                string          `json:"ai_state"`
+	SnoozedUntil           *time.Time      `json:"snoozed_until"`
+	ExternalThreadKey      *string         `json:"external_thread_key"`
+	Source                 json.RawMessage `json:"source"`
+	FirstCustomerMessageAt *time.Time      `json:"first_customer_message_at"`
+	LastCustomerMessageAt  *time.Time      `json:"last_customer_message_at"`
+	FirstReplyAt           *time.Time      `json:"first_reply_at"`
+	LastReplyAt            *time.Time      `json:"last_reply_at"`
+	LastMessageAt          *time.Time      `json:"last_message_at"`
+	ClosedAt               *time.Time      `json:"closed_at"`
+	MessageCount           int32           `json:"message_count"`
+	DeletedAt              *time.Time      `json:"deleted_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+}
+
+type ConversationParticipant struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	ContactID      ids.UUID  `json:"contact_id"`
+	Role           string    `json:"role"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ConversationRead struct {
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	ConversationID    ids.UUID  `json:"conversation_id"`
+	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	LastReadMessageID *ids.UUID `json:"last_read_message_id"`
+	LastReadAt        time.Time `json:"last_read_at"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type ConversationTag struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	TagID          ids.UUID  `json:"tag_id"`
+	CreatedByType  string    `json:"created_by_type"`
+	CreatedByID    *ids.UUID `json:"created_by_id"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
 type IdempotencyKey struct {
 	TenantID    string          `json:"tenant_id"`
 	Scope       string          `json:"scope"`
@@ -48,6 +193,17 @@ type IdempotencyKey struct {
 	Body        []byte          `json:"body"`
 	CreatedAt   time.Time       `json:"created_at"`
 	ExpiresAt   time.Time       `json:"expires_at"`
+}
+
+type Inbox struct {
+	ID            ids.UUID        `json:"id"`
+	WorkspaceID   ids.UUID        `json:"workspace_id"`
+	Name          string          `json:"name"`
+	DefaultTeamID *ids.UUID       `json:"default_team_id"`
+	Settings      json.RawMessage `json:"settings"`
+	DeletedAt     *time.Time      `json:"deleted_at"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 type Invitation struct {
@@ -68,6 +224,31 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type Message struct {
+	ID               ids.UUID                `json:"id"`
+	WorkspaceID      ids.UUID                `json:"workspace_id"`
+	ConversationID   ids.UUID                `json:"conversation_id"`
+	Type             string                  `json:"type"`
+	AuthorType       string                  `json:"author_type"`
+	AuthorID         *ids.UUID               `json:"author_id"`
+	Body             *string                 `json:"body"`
+	BodyHtml         *string                 `json:"body_html"`
+	Event            json.RawMessage         `json:"event"`
+	ChannelMessageID *string                 `json:"channel_message_id"`
+	DedupeKey        *string                 `json:"dedupe_key"`
+	DeliveryStatus   *string                 `json:"delivery_status"`
+	DeliveryError    *string                 `json:"delivery_error"`
+	Substantive      bool                    `json:"substantive"`
+	Metadata         json.RawMessage         `json:"metadata"`
+	EditedAt         *time.Time              `json:"edited_at"`
+	SentAt           *time.Time              `json:"sent_at"`
+	ReadAt           *time.Time              `json:"read_at"`
+	DeletedAt        *time.Time              `json:"deleted_at"`
+	Search           database.SearchDocument `json:"search"`
+	CreatedAt        time.Time               `json:"created_at"`
+	UpdatedAt        time.Time               `json:"updated_at"`
 }
 
 type OauthAuthorizationCode struct {
@@ -194,6 +375,17 @@ type PersonalAccessToken struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type SavedReply struct {
+	ID            ids.UUID  `json:"id"`
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	OwnerMemberID *ids.UUID `json:"owner_member_id"`
+	Title         string    `json:"title"`
+	Body          string    `json:"body"`
+	Shortcut      *string   `json:"shortcut"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
 type SecurityEvent struct {
 	ID          ids.UUID        `json:"id"`
 	UserID      ids.UUID        `json:"user_id"`
@@ -226,6 +418,15 @@ type Session struct {
 	ExpiresAt       time.Time       `json:"expires_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type Tag struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Name        string    `json:"name"`
+	Color       *string   `json:"color"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Team struct {
