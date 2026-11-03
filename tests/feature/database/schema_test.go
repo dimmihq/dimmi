@@ -3,7 +3,6 @@ package database_test
 import (
 	"context"
 	"io/fs"
-	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -305,28 +304,11 @@ application role is, and returns the database URL that connects as it.
 func appRole(t *testing.T, db testkit.Database) string {
 	t.Helper()
 
+	role := db.NewRole(t)
 	admin := open(t, db.AdminURL)
-	name, password := testkit.UniqueName("app_"), testkit.UniqueName("p")
-	ctx := t.Context()
+	require.NoError(t, exec(t.Context(), admin, "GRANT SELECT ON ALL TABLES IN SCHEMA public TO "+role.Name))
 
-	for _, statement := range []string{
-		"CREATE ROLE " + name + " LOGIN PASSWORD '" + password + "'",
-		"GRANT SELECT ON ALL TABLES IN SCHEMA public TO " + name,
-	} {
-		require.NoError(t, exec(ctx, admin, statement))
-	}
-
-	t.Cleanup(func() {
-		cleanup := context.WithoutCancel(ctx)
-		_ = exec(cleanup, admin, "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM "+name)
-		_ = exec(cleanup, admin, "DROP OWNED BY "+name)
-	})
-
-	u, err := url.Parse(db.URL)
-	require.NoError(t, err)
-	u.User = url.UserPassword(name, password)
-
-	return u.String()
+	return role.URL
 }
 
 /*

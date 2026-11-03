@@ -5,10 +5,11 @@
 | Development Commands
 |--------------------------------------------------------------------------
 |
-| Generators, route linting and the message key check help while writing
-| code and have no use on a server, so they are compiled only into
-| development builds, made with the dev build tag. Release builds carry
-| neither the commands nor the templates behind them.
+| Generators, route linting, the message key check and the sweep of test
+| leftovers help while writing code and have no use on a server, so they
+| are compiled only into development builds, made with the dev build tag.
+| Release builds carry neither the commands nor the templates behind
+| them.
 |
 */
 
@@ -32,7 +33,8 @@ import (
 )
 
 /*
-devCommands returns the make generators, route:lint and lang:check.
+devCommands returns the make generators, route:lint, lang:check and
+test:sweep.
 */
 func devCommands(k *kernel) []console.Command {
 	generator := make.Generator{
@@ -43,7 +45,7 @@ func devCommands(k *kernel) []console.Command {
 		Clock:     clock.System(),
 	}
 
-	return append(generator.Commands(), k.routeLintCommand(), k.langCheckCommand())
+	return append(generator.Commands(), k.routeLintCommand(), k.langCheckCommand(), k.testSweepCommand())
 }
 
 func (k *kernel) routeLintCommand() console.Command {

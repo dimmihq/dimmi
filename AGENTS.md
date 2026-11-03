@@ -127,6 +127,7 @@ package cache
 | `make fmt` | Formats Go code and the browser app (Biome) |
 | `make lint` | golangci-lint and Biome with zero issues and zero warnings allowed, plus TypeScript |
 | `make test` | All Go tests with `-race` against the services, then the browser app's tests |
+| `make test-sweep` | Drops the databases and roles that killed test runs left on the test server |
 | `make cover` | Coverage across framework packages |
 | `make cover-app` | Coverage of app packages by the integration tests |
 | `make sqlc` | Compiles `database/queries` into `app/models` |

@@ -8,6 +8,10 @@
 | rows, and row-level security applies to them exactly as it does in
 | production, where the application never connects as a superuser.
 |
+| Every database and role a test creates is dropped when the test ends,
+| whether it passed, failed or stopped half way, so test runs leave
+| nothing behind on the server.
+|
 | DATABASE_URL must connect as a superuser, since it creates the roles.
 |
 */
@@ -26,12 +30,23 @@ import (
 /*
 Database is a throwaway database created for one test.
 
-URL connects as the owning role, without superuser rights. AdminURL
-connects to the same database as the superuser, for setup that needs it.
+Name is the database's name, which its owning role shares. URL connects
+as the owning role, without superuser rights. AdminURL connects to the
+same database as the superuser, for setup that needs it.
 */
 type Database struct {
+	Name     string
 	URL      string
 	AdminURL string
+}
+
+/*
+Role is a login role created for one test. URL connects as it to the
+database it was created for.
+*/
+type Role struct {
+	Name string
+	URL  string
 }
 
 /*
@@ -77,9 +92,41 @@ func createDatabase(tb testing.TB, template string) Database {
 	mustExec(tb, admin, create)
 
 	return Database{
+		Name:     name,
 		URL:      withDatabase(tb, serverURL, name, url.UserPassword(name, password)),
 		AdminURL: withDatabase(tb, serverURL, name, nil),
 	}
+}
+
+/*
+NewRole creates a login role without superuser rights that owns nothing
+in the database, the way an application role that is not the tables'
+owner connects, so row level security applies to it. The caller grants
+it what it needs through AdminURL. When the test ends, whatever its
+outcome, the role's privileges in the database and the role itself are
+dropped, before the database is.
+*/
+func (d Database) NewRole(tb testing.TB) Role {
+	tb.Helper()
+
+	name := UniqueName("t_")
+	password := UniqueName("p")
+
+	admin, err := pgx.Connect(tb.Context(), d.AdminURL)
+	if err != nil {
+		tb.Fatalf("connect to %s: %v", d.Name, err)
+	}
+
+	tb.Cleanup(func() {
+		ctx := context.WithoutCancel(tb.Context())
+		_, _ = admin.Exec(ctx, "DROP OWNED BY "+name)
+		_, _ = admin.Exec(ctx, "DROP ROLE IF EXISTS "+name)
+		_ = admin.Close(ctx)
+	})
+
+	mustExec(tb, admin, fmt.Sprintf("CREATE ROLE %s LOGIN NOSUPERUSER PASSWORD '%s'", name, password))
+
+	return Role{Name: name, URL: withDatabase(tb, d.AdminURL, d.Name, url.UserPassword(name, password))}
 }
 
 func mustExec(tb testing.TB, conn *pgx.Conn, sql string) {
