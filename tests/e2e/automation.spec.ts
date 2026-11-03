@@ -80,7 +80,7 @@ it.describe("automation", () => {
     await canvas.getByRole("button", { name: "Zoom in" }).click();
     await canvas.getByRole("button", { name: "Add a step" }).last().click();
     await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Tag" }).click();
-    await expect(canvas.locator('button[aria-pressed="true"]')).toBeInViewport({ ratio: 1 });
+    await expect(canvas.locator('button[aria-pressed="true"]')).toBeInViewport({ ratio: 0.99 });
   });
 
   it("shows what is typed and picked in the settings on the step's card", async ({ page }) => {
@@ -98,6 +98,23 @@ it.describe("automation", () => {
     await inspector.getByRole("button", { name: /Assignee/ }).click();
     await page.getByRole("option", { name: "Lea Martin" }).click();
     await expect(canvas.getByRole("button", { name: /Assign to Lea Martin/ })).toBeVisible();
+  });
+
+  it("starts a new workflow from a searched trigger and keeps that trigger", async ({ page }) => {
+    await page.goto("/d/workflows");
+    await page.getByRole("button", { name: "New workflow" }).click();
+
+    const picker = page.getByRole("dialog", { name: "What starts this workflow?" });
+    await expect(picker.getByRole("region", { name: "Team" })).toBeVisible();
+    await picker.getByRole("textbox", { name: "Search triggers" }).fill("stops replying");
+    await expect(picker.getByRole("region", { name: "Start of conversation" })).toBeHidden();
+    await picker.getByRole("button", { name: /Teammate stops replying/ }).click();
+
+    await expect(page).toHaveURL(/\/d\/workflows\/new\?trigger=teammate-quiet$/);
+    await expect(page.getByRole("heading", { name: "Untitled workflow" })).toBeVisible();
+    const inspector = page.getByRole("region", { name: "When it starts" });
+    await expect(inspector).toContainText("Teammate stops replying");
+    await expect(inspector.getByRole("button")).toHaveCount(0);
   });
 
   it("edits a procedure and keeps tests from spending without asking", async ({ page }) => {

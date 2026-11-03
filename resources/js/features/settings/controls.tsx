@@ -117,11 +117,20 @@ export function Field({
 }
 
 /*
- * Action is a secondary button on a row, such as Change or Connect.
+ * Action is a secondary button on a row, such as Change or Connect. Rows
+ * in dense lists, such as templates, take the extra-small size.
  */
-export function Action({ children, onPress }: { children: string; onPress?: () => void }) {
+export function Action({
+  children,
+  onPress,
+  size = "small",
+}: {
+  children: string;
+  onPress?: () => void;
+  size?: "small" | "xs";
+}) {
   return (
-    <Button variant="secondary" size="small" onClick={onPress}>
+    <Button variant="secondary" size={size} onClick={onPress}>
       {children}
     </Button>
   );

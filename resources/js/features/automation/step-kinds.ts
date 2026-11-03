@@ -5,14 +5,12 @@
  * actions neutral.
  */
 import {
-  RiChatSmile2Line,
   RiCheckboxCircleLine,
   RiFlag2Line,
   RiGitBranchLine,
   RiHashtag,
   RiListRadio,
   RiMessage2Line,
-  RiPlayCircleLine,
   RiQuestionAnswerLine,
   RiSparkling2Line,
   RiStickyNoteLine,
@@ -24,7 +22,8 @@ import type { ComponentType } from "react";
 
 import type { ChipColor } from "@/components/base/badges/chip";
 
-import type { StepKind, TriggerKind } from "./workflows";
+import { type TriggerKind, tintOf, triggers } from "./triggers";
+import type { StepKind } from "./workflows";
 
 export interface KindLook {
   name: string;
@@ -47,11 +46,10 @@ export const stepLook: Record<StepKind, KindLook> = {
   close: { name: "Close", icon: RiCheckboxCircleLine, tint: "neutral" },
 };
 
-export const triggerLook: Record<TriggerKind, KindLook> = {
-  opened: { name: "Trigger", icon: RiChatSmile2Line, tint: "orange" },
-  "first-message": { name: "Trigger", icon: RiMessage2Line, tint: "orange" },
-  "customer-quiet": { name: "Trigger", icon: RiTimerLine, tint: "orange" },
-  "teammate-quiet": { name: "Trigger", icon: RiTimerLine, tint: "orange" },
-  state: { name: "Trigger", icon: RiCheckboxCircleLine, tint: "orange" },
-  reusable: { name: "Trigger", icon: RiPlayCircleLine, tint: "orange" },
-};
+/*
+ * triggerLook is how a trigger's card looks on the canvas: named Trigger,
+ * with the trigger's own icon in its group's colour.
+ */
+export function triggerLook(kind: TriggerKind): KindLook {
+  return { name: "Trigger", icon: triggers[kind].icon, tint: tintOf(kind) };
+}

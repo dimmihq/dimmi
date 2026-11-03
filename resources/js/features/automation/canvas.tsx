@@ -42,7 +42,8 @@ import { AddStep } from "./add-step";
 import { addSize, cardHeight, cardWidth, type FlowItem, layoutWorkflow } from "./flow-layout";
 import { KindMark } from "./parts";
 import { type KindLook, stepLook, triggerLook } from "./step-kinds";
-import { type Step, type StepKind, type TriggerKind, triggerLabel } from "./workflows";
+import { type TriggerKind, triggers } from "./triggers";
+import type { Step, StepKind } from "./workflows";
 
 export interface CanvasMoves {
   selected: string;
@@ -161,7 +162,7 @@ function lookOf(item: FlowItem, trigger: TriggerKind): { look: KindLook; summary
     return { look: stepLook[item.step.kind], summary: item.step.summary };
   }
 
-  return { look: triggerLook[trigger], summary: triggerLabel[trigger] };
+  return { look: triggerLook(trigger), summary: triggers[trigger].name };
 }
 
 function useGraph(trigger: TriggerKind, steps: Step[], sizes: Sizes) {
@@ -209,7 +210,7 @@ function measure(before: Sizes, changes: NodeChange[]): Sizes {
  * useReveal pans the canvas, at its current zoom, until the given card
  * is fully on screen, and leaves it alone when it already is.
  */
-function useReveal(frame: RefObject<HTMLDivElement | null>) {
+function useReveal(frame: RefObject<HTMLDivElement | null>, moved: RefObject<boolean>) {
   const flow = useReactFlow();
   const still = useReducedMotion();
 
@@ -227,11 +228,48 @@ function useReveal(frame: RefObject<HTMLDivElement | null>) {
     if (left >= 0 && top >= 0 && left + width * zoom <= box.width && top + height * zoom <= box.height) {
       return;
     }
+    moved.current = true;
     flow.setCenter(node.position.x + width / 2, node.position.y + height / 2, {
       zoom,
       duration: still ? 0 : 300,
       interpolate: "linear",
     });
+  };
+}
+
+/*
+ * useStartView keeps the trigger centred at the top while the canvas
+ * changes size, as it does while the sidebar folds on the way in, until
+ * the canvas is first moved, by the person or to reveal a card.
+ */
+function useStartView(frame: RefObject<HTMLDivElement | null>) {
+  const flow = useReactFlow();
+  const moved = useRef(false);
+
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) {
+      return;
+    }
+    const centre = () => {
+      if (!moved.current) {
+        flow.setViewport({ x: element.clientWidth / 2, y: 32, zoom: 1 });
+      }
+    };
+    const observer = new ResizeObserver(centre);
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [flow, frame]);
+
+  return {
+    moved,
+    centre: () => flow.setViewport({ x: (frame.current?.clientWidth ?? 0) / 2, y: 32, zoom: 1 }),
+    onMoveStart: (event: MouseEvent | TouchEvent | null) => {
+      if (event) {
+        moved.current = true;
+      }
+    },
   };
 }
 
@@ -258,7 +296,8 @@ function Flow({ trigger, steps, moves }: { trigger: TriggerKind; steps: Step[]; 
   const frame = useRef<HTMLDivElement>(null);
   const [sizes, setSizes] = useState<Sizes>(() => new Map());
   const { nodes, edges } = useGraph(trigger, steps, sizes);
-  const reveal = useReveal(frame);
+  const start = useStartView(frame);
+  const reveal = useReveal(frame, start.moved);
   const overview = useWide(768);
   const shown = useRef(moves.selected);
 
@@ -279,7 +318,8 @@ function Flow({ trigger, steps, moves }: { trigger: TriggerKind; steps: Step[]; 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={(changes) => setSizes((before) => measure(before, changes))}
-          onInit={(flow) => flow.setViewport({ x: (frame.current?.clientWidth ?? 0) / 2, y: 32, zoom: 1 })}
+          onInit={start.centre}
+          onMoveStart={start.onMoveStart}
           nodesDraggable={false}
           nodesConnectable={false}
           nodesFocusable={false}

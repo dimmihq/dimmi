@@ -72,16 +72,16 @@ function Collapsible({ collapsed, children, className }: { collapsed: boolean; c
 
 /**
  * Row density. `regular` is the Figma 36px row (8px padding around a 20px
- * icon). `compact` is a 32px row with an 18px icon and tighter section
- * spacing, for sidebars with many pages such as settings.
+ * icon). `compact` is a 28px row with a 16px icon, Body 2 labels and
+ * tighter section spacing, for sidebars with many pages such as settings.
  */
 export type SidebarDensity = "regular" | "compact";
 
 const DensityContext = createContext<SidebarDensity>("regular");
 
 const density = {
-  regular: { row: "p-2", icon: "size-5", rows: "gap-1", heading: "h-7" },
-  compact: { row: "px-2 py-1.5", icon: "size-[18px]", rows: "gap-0.5", heading: "h-6" },
+  regular: { row: "p-2", icon: "size-5", text: "text-body-medium", rail: "w-9", rows: "gap-1", heading: "h-7" },
+  compact: { row: "px-2 py-1", icon: "size-4", text: "text-body-2-medium", rail: "w-8", rows: "gap-0.5", heading: "h-6" },
 } as const;
 
 function NavItem({
@@ -123,7 +123,7 @@ function NavItem({
         "flex items-center justify-between overflow-hidden rounded-2lg",
         sizes.row,
         "transition-[width,background-color] duration-300 ease-in-out",
-        collapsed ? "w-9" : "w-full",
+        collapsed ? sizes.rail : "w-full",
         isSelected
           ? "bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected"
           : "hover:bg-background-secondary-hover",
@@ -137,7 +137,8 @@ function NavItem({
         <Collapsible collapsed={collapsed}>
           <span
             className={cx(
-              "text-body-medium whitespace-nowrap",
+              sizes.text,
+              "whitespace-nowrap",
               isSelected ? "text-white" : "text-text-secondary",
             )}
           >
@@ -314,7 +315,7 @@ export function DashboardSidebar({
   onCollapsedChange?: (collapsed: boolean) => void;
   /** Removes the floating panel treatment for a sidebar revealed beneath mobile content. */
   flat?: boolean;
-  /** Row height: `regular` 36px (default) or `compact` 32px. */
+  /** Row height: `regular` 36px (default) or `compact` 28px. */
   density?: SidebarDensity;
   className?: string;
 }) {

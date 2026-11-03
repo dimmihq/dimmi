@@ -6,6 +6,8 @@
  * through a "Let Dimmi handle" step, whose outcomes are paths of their
  * own. Until workflows run on the server these live in the browser.
  */
+import type { TriggerKind } from "./triggers";
+
 export type StepKind =
   | "message"
   | "buttons"
@@ -36,8 +38,6 @@ export interface Step {
   paths?: Path[];
 }
 
-export type TriggerKind = "opened" | "first-message" | "customer-quiet" | "teammate-quiet" | "state" | "reusable";
-
 export interface Workflow {
   id: string;
   name: string;
@@ -49,15 +49,6 @@ export interface Workflow {
   version: number;
   steps: Step[];
 }
-
-export const triggerLabel: Record<TriggerKind, string> = {
-  opened: "Customer opens the messenger",
-  "first-message": "Customer sends their first message",
-  "customer-quiet": "Customer stops replying",
-  "teammate-quiet": "Teammate stops replying",
-  state: "Conversation state changes",
-  reusable: "Run from another workflow or the inbox",
-};
 
 export const workflows: Workflow[] = [
   {
@@ -171,7 +162,7 @@ export const workflows: Workflow[] = [
   {
     id: "handover-note",
     name: "Brief the team on handover",
-    trigger: "reusable",
+    trigger: "dimmi-handover",
     channels: "All channels",
     status: "live",
     edited: "Edited 3 weeks ago by Sam Okafor",
@@ -198,6 +189,24 @@ export const templates = [
  * builder, next to the steps' own ids.
  */
 export const triggerStep = "trigger";
+
+/*
+ * blankWorkflow is a new, empty draft that starts from the trigger picked
+ * for it.
+ */
+export function blankWorkflow(trigger: TriggerKind): Workflow {
+  return {
+    id: "new",
+    name: "Untitled workflow",
+    trigger,
+    channels: "Messenger, email",
+    status: "draft",
+    edited: "Not saved yet",
+    runs: "Never run",
+    version: 1,
+    steps: [],
+  };
+}
 
 export function findWorkflow(id: string): Workflow | undefined {
   return workflows.find((workflow) => workflow.id === id);

@@ -1,7 +1,8 @@
 /*
  * The inspector beside the canvas: the settings of whatever is selected,
  * the trigger or a step, laid out like the settings pages. Every kind of
- * step has its own few settings; the trigger holds the workflow's own
+ * step has its own few settings; the trigger shows what starts the
+ * workflow, which never changes, and holds the workflow's own settings
  * (channels, audience, office hours, how often it runs). Dimmi's step
  * repeats the rules Dimmi always keeps, so nobody has to guess them. On
  * screens too narrow to sit beside the canvas it opens in a drawer, with
@@ -15,9 +16,11 @@ import { Textarea } from "@/components/base/textarea/textarea";
 import { Action, Choice, Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { KindMark } from "./parts";
 import { stepLook } from "./step-kinds";
 import { fieldsOf, options, unsetSummary, withField, withPathLabel } from "./step-settings";
-import { type Step, type TriggerKind, triggerLabel } from "./workflows";
+import { type TriggerKind, tintOf, triggers } from "./triggers";
+import type { Step } from "./workflows";
 
 type Edit = (edit: (step: Step) => Step) => void;
 
@@ -40,10 +43,19 @@ function Words({ label, value, onChange }: { label: string; value: string; onCha
 function TriggerSettings({ trigger }: { trigger: TriggerKind }) {
   return (
     <>
-      <Section title="When it starts">
-        <Row label="Trigger">
-          <Choice label="Trigger" options={Object.values(triggerLabel)} value={triggerLabel[trigger]} />
-        </Row>
+      <Section
+        title="When it starts"
+        description="A workflow keeps the trigger it was made with. To start from another, make a new workflow."
+      >
+        <Row
+          label={
+            <span className="flex items-center gap-2">
+              <KindMark icon={triggers[trigger].icon} tint={tintOf(trigger)} size="sm" />
+              {triggers[trigger].name}
+            </span>
+          }
+          description={triggers[trigger].detail}
+        />
       </Section>
       <Section title="Who it runs for">
         <Row label="Channels">
