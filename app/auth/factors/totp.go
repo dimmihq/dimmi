@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/auth/twofactor"
 	"github.com/dimmihq/dimmi/framework/cache"
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/enums"
@@ -42,11 +43,11 @@ const totpSettings = `{"algorithm":"SHA1","digits":6,"period":30}`
 
 /*
 TOTP is the authenticator app driver. Issuer names the install in the
-apps, Sealer seals the seeds, Cache holds the steps already used.
+apps, Keys seal the seeds, Cache holds the steps already used.
 */
 type TOTP struct {
 	Issuer string
-	Sealer twofactor.Sealer
+	Keys   encryption.KeyManager
 	Cache  *cache.Store
 	Clock  clock.Clock
 }
@@ -79,15 +80,15 @@ func (d *TOTP) Capabilities() Capabilities {
 Enroll makes a new seed for the factor and what the user needs to add
 it to their app.
 */
-func (d *TOTP) Enroll(_ context.Context, user models.User, id ids.UUID) (Enrollment, error) {
+func (d *TOTP) Enroll(ctx context.Context, user models.User, id ids.UUID) (Enrollment, error) {
 	codes := d.codes(id)
 
-	sealed, err := codes.NewSecret()
+	sealed, err := codes.NewSecret(ctx)
 	if err != nil {
 		return Enrollment{}, fmt.Errorf("make authenticator seed: %w", err)
 	}
 
-	secret, url, err := codes.Setup(sealed, user.Email)
+	secret, url, err := codes.Setup(ctx, sealed, user.Email)
 	if err != nil {
 		return Enrollment{}, fmt.Errorf("describe authenticator seed: %w", err)
 	}
@@ -129,5 +130,5 @@ codes returns the one-time password maker for the factor, sealing with
 its id.
 */
 func (d *TOTP) codes(id ids.UUID) *twofactor.TOTP {
-	return twofactor.NewTOTP(d.Issuer, bind(d.Sealer, id), d.Cache, d.Clock)
+	return twofactor.NewTOTP(d.Issuer, bind(d.Keys, id), d.Cache, d.Clock)
 }

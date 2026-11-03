@@ -25,6 +25,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
@@ -42,20 +43,46 @@ var (
 )
 
 /*
-Sealer seals secrets before they are stored and opens them again. The
-application's encrypter is one; a caller may bind each secret to the
-row it belongs to with a sealer of its own.
+Sealer seals secrets before they are stored and opens them again.
+KeySealer is the usual one: it binds each secret to the row it belongs
+to, so a sealed secret copied onto another row never opens.
 */
 type Sealer interface {
 	/*
 		Encrypt returns the plaintext encrypted and authenticated.
 	*/
-	Encrypt(plaintext []byte) ([]byte, error)
+	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 
 	/*
 		Decrypt returns the plaintext of what Encrypt returned.
 	*/
-	Decrypt(ciphertext []byte) ([]byte, error)
+	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
+}
+
+/*
+KeySealer seals with the data keys Keys holds for Scope, bound to AAD,
+such as the id of the row the secret is stored in.
+*/
+type KeySealer struct {
+	Keys  encryption.KeyManager
+	Scope encryption.Scope
+	AAD   []byte
+}
+
+var _ Sealer = KeySealer{}
+
+/*
+Encrypt seals the plaintext for the scope, bound to the AAD.
+*/
+func (s KeySealer) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+	return s.Keys.Encrypt(ctx, s.Scope, plaintext, s.AAD)
+}
+
+/*
+Decrypt opens what Encrypt sealed, failing for any other AAD.
+*/
+func (s KeySealer) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+	return s.Keys.Decrypt(ctx, ciphertext, s.AAD)
 }
 
 /*

@@ -38,7 +38,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/factors"
 	idp "github.com/dimmihq/dimmi/app/auth/providers"
 	"github.com/dimmihq/dimmi/app/exceptions"
-	"github.com/dimmihq/dimmi/config"
+	"github.com/dimmihq/dimmi/app/support/keysets"
 )
 
 /*
@@ -52,7 +52,8 @@ type AuthServiceProvider struct {
 Register checks the permission catalog and builds the session manager,
 the guards and the sign-in services, mailed secrets, the links to the
 account pages, the configured identity providers and the sealing of
-attempts at them included, and the auth factors.
+attempts at them included, the data keys and the auth factors sealing
+with them.
 */
 func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 	a := p.App
@@ -82,7 +83,15 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 
 	a.OAuthAttempts = appauth.OAuthAttempts{Encrypter: encrypter}
 
-	if a.Factors, err = newFactors(fa, a.Config.Auth.Factors); err != nil {
+	if a.Keys, err = fa.Crypt.Keys(&keysets.Store{DB: fa.DB}); err != nil {
+		return fmt.Errorf("data keys: %w", err)
+	}
+
+	a.Factors, err = factors.NewRegistry(a.Config.Auth.Factors.Enabled,
+		&factors.TOTP{Issuer: a.Config.Auth.Factors.TOTP.Issuer, Keys: a.Keys, Cache: fa.Cache, Clock: fa.Clock},
+		&factors.RecoveryCodes{Keys: a.Keys},
+	)
+	if err != nil {
 		return err
 	}
 
@@ -97,23 +106,6 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 	p.registerGuards(fa)
 
 	return nil
-}
-
-/*
-newFactors registers the auth factor drivers, sealing their secrets with
-a key of their own, and enables the ones the configuration lists. An
-enabled type without a driver stops the boot.
-*/
-func newFactors(fa *foundation.Application, cfg config.FactorsConfig) (*factors.Registry, error) {
-	sealer, err := encryption.NewEncrypter(fa.DerivedKey(factors.KeyPurpose))
-	if err != nil {
-		return nil, fmt.Errorf("seal auth factors: %w", err)
-	}
-
-	return factors.NewRegistry(cfg.Enabled,
-		&factors.TOTP{Issuer: cfg.TOTP.Issuer, Sealer: sealer, Cache: fa.Cache, Clock: fa.Clock},
-		&factors.RecoveryCodes{Sealer: sealer},
-	)
 }
 
 /*

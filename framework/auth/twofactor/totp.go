@@ -88,11 +88,11 @@ func (t *TOTP) Type() string {
 /*
 NewSecret returns a new random seed, sealed for storage.
 */
-func (t *TOTP) NewSecret() ([]byte, error) {
+func (t *TOTP) NewSecret(ctx context.Context) ([]byte, error) {
 	seed := make([]byte, seedLength)
 	_, _ = rand.Read(seed)
 
-	sealed, err := t.encrypter.Encrypt(seed)
+	sealed, err := t.encrypter.Encrypt(ctx, seed)
 	if err != nil {
 		return nil, fmt.Errorf("seal totp seed: %w", err)
 	}
@@ -105,8 +105,8 @@ Setup returns what a person needs to add the sealed seed to an
 authenticator app: the seed in base32 to type in, and the otpauth URL
 for the account to show as a QR code.
 */
-func (t *TOTP) Setup(sealed []byte, account string) (secret, url string, err error) {
-	seed, err := t.encrypter.Decrypt(sealed)
+func (t *TOTP) Setup(ctx context.Context, sealed []byte, account string) (secret, url string, err error) {
+	seed, err := t.encrypter.Decrypt(ctx, sealed)
 	if err != nil {
 		return "", "", fmt.Errorf("open totp seed: %w", err)
 	}
@@ -131,7 +131,7 @@ Verify accepts a code for a step after the credential's counter, claims
 the step so no other server accepts it, and moves the counter to it.
 */
 func (t *TOTP) Verify(ctx context.Context, cred *Credential, input string) error {
-	seed, err := t.encrypter.Decrypt(cred.Secret)
+	seed, err := t.encrypter.Decrypt(ctx, cred.Secret)
 	if err != nil {
 		return fmt.Errorf("open totp seed: %w", err)
 	}

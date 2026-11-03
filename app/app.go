@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/config"
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/view/vite"
@@ -48,7 +49,8 @@ LoginPolicy decides which sign-in methods an address may use, and
 AccessPolicy what a workspace requires of the callers working in it.
 IdentityProviders holds the registered identity provider drivers, and
 Providers finds the ones the install configured. Factors holds the auth
-factor drivers and knows which the install enables. AppGrants
+factor drivers and knows which the install enables, sealing their
+secrets with Keys, the install's data keys. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
@@ -71,6 +73,7 @@ type App struct {
 	IdentityProviders *providers.Registry
 	Providers         providers.ProviderResolver
 	Factors           *factors.Registry
+	Keys              *encryption.Keys
 
 	Tokens      *auth.PersonalTokens
 	Devices     *auth.Devices
