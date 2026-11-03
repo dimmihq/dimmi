@@ -117,6 +117,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootIdentities(a)
 	bootWorkspaces(a)
 	bootFactors(a)
+	bootTeams(a)
 
 	return registerJobs(a)
 }

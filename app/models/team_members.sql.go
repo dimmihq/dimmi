@@ -7,12 +7,164 @@ package models
 
 import (
 	"context"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
-const removeMemberFromTeams = `-- name: RemoveMemberFromTeams :exec
+const addTeamMember = `-- name: AddTeamMember :execrows
+INSERT INTO team_members (team_id, workspace_id, workspace_member_id, created_at)
+SELECT t.id, t.workspace_id, $1, $2
+FROM teams t
+WHERE t.workspace_id = $3 AND t.id = $4
+ON CONFLICT (team_id, workspace_member_id) DO NOTHING
+`
+
+type AddTeamMemberParams struct {
+	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	Now               time.Time `json:"now"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	TeamID            ids.UUID  `json:"team_id"`
+}
+
+// AddTeamMember puts the member in the team, taking the workspace from
+// the team row so the two can never differ. A member already in the
+// team adds no row.
+func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, addTeamMember,
+		arg.WorkspaceMemberID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.TeamID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const listMemberTeams = `-- name: ListMemberTeams :many
+SELECT tm.workspace_member_id, t.id, t.workspace_id, t.name, t.deleted_at, t.created_at, t.updated_at
+FROM team_members tm
+JOIN teams t ON t.id = tm.team_id
+WHERE tm.workspace_id = $1 AND tm.workspace_member_id = ANY ($2::uuid[]) AND t.deleted_at IS NULL
+ORDER BY lower(t.name), t.id
+`
+
+type ListMemberTeamsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	MemberIds   []ids.UUID `json:"member_ids"`
+}
+
+type ListMemberTeamsRow struct {
+	WorkspaceMemberID ids.UUID `json:"workspace_member_id"`
+	Team              Team     `json:"team"`
+}
+
+// ListMemberTeams returns the live teams of the members, by name.
+func (q *Queries) ListMemberTeams(ctx context.Context, arg ListMemberTeamsParams) ([]ListMemberTeamsRow, error) {
+	rows, err := q.db.Query(ctx, listMemberTeams, arg.WorkspaceID, arg.MemberIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMemberTeamsRow
+	for rows.Next() {
+		var i ListMemberTeamsRow
+		if err := rows.Scan(
+			&i.WorkspaceMemberID,
+			&i.Team.ID,
+			&i.Team.WorkspaceID,
+			&i.Team.Name,
+			&i.Team.DeletedAt,
+			&i.Team.CreatedAt,
+			&i.Team.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTeamMembers = `-- name: ListTeamMembers :many
+SELECT tm.team_id, m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+FROM team_members tm
+JOIN workspace_members m ON m.id = tm.workspace_member_id
+JOIN users u ON u.id = m.user_id
+WHERE tm.workspace_id = $1 AND tm.team_id = ANY ($2::uuid[])
+ORDER BY lower(u.name), m.id
+`
+
+type ListTeamMembersParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	TeamIds     []ids.UUID `json:"team_ids"`
+}
+
+type ListTeamMembersRow struct {
+	TeamID          ids.UUID        `json:"team_id"`
+	WorkspaceMember WorkspaceMember `json:"workspace_member"`
+	User            User            `json:"user"`
+}
+
+// ListTeamMembers returns the members of the teams with their accounts,
+// by name.
+func (q *Queries) ListTeamMembers(ctx context.Context, arg ListTeamMembersParams) ([]ListTeamMembersRow, error) {
+	rows, err := q.db.Query(ctx, listTeamMembers, arg.WorkspaceID, arg.TeamIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTeamMembersRow
+	for rows.Next() {
+		var i ListTeamMembersRow
+		if err := rows.Scan(
+			&i.TeamID,
+			&i.WorkspaceMember.ID,
+			&i.WorkspaceMember.WorkspaceID,
+			&i.WorkspaceMember.UserID,
+			&i.WorkspaceMember.Role,
+			&i.WorkspaceMember.Availability,
+			&i.WorkspaceMember.Status,
+			&i.WorkspaceMember.CreatedAt,
+			&i.WorkspaceMember.UpdatedAt,
+			&i.WorkspaceMember.LastAccessedAt,
+			&i.WorkspaceMember.DeactivatedAt,
+			&i.WorkspaceMember.DeactivatedByMemberID,
+			&i.WorkspaceMember.JoinedVia,
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.EmailVerifiedAt,
+			&i.User.PasswordHash,
+			&i.User.TwoFactorConfirmedAt,
+			&i.User.AvatarPath,
+			&i.User.Locale,
+			&i.User.Timezone,
+			&i.User.LastSeenAt,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.DeletedAt,
+			&i.User.PasswordChangedAt,
+			&i.User.RiskFlags,
+			&i.User.CreatedVia,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const removeMemberFromTeams = `-- name: RemoveMemberFromTeams :many
 DELETE FROM team_members WHERE workspace_id = $1 AND workspace_member_id = $2
+RETURNING team_id
 `
 
 type RemoveMemberFromTeamsParams struct {
@@ -21,8 +173,43 @@ type RemoveMemberFromTeamsParams struct {
 }
 
 // RemoveMemberFromTeams takes the member out of every team of the
-// workspace.
-func (q *Queries) RemoveMemberFromTeams(ctx context.Context, arg RemoveMemberFromTeamsParams) error {
-	_, err := q.db.Exec(ctx, removeMemberFromTeams, arg.WorkspaceID, arg.WorkspaceMemberID)
-	return err
+// workspace and returns the teams they left.
+func (q *Queries) RemoveMemberFromTeams(ctx context.Context, arg RemoveMemberFromTeamsParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, removeMemberFromTeams, arg.WorkspaceID, arg.WorkspaceMemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var team_id ids.UUID
+		if err := rows.Scan(&team_id); err != nil {
+			return nil, err
+		}
+		items = append(items, team_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const removeTeamMember = `-- name: RemoveTeamMember :execrows
+DELETE FROM team_members
+WHERE workspace_id = $1 AND team_id = $2 AND workspace_member_id = $3
+`
+
+type RemoveTeamMemberParams struct {
+	WorkspaceID       ids.UUID `json:"workspace_id"`
+	TeamID            ids.UUID `json:"team_id"`
+	WorkspaceMemberID ids.UUID `json:"workspace_member_id"`
+}
+
+// RemoveTeamMember takes the member out of the team.
+func (q *Queries) RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, removeTeamMember, arg.WorkspaceID, arg.TeamID, arg.WorkspaceMemberID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

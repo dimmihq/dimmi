@@ -7,7 +7,7 @@
 | time, GET /members/{member} shows one, and PATCH /members/{member}
 | changes their role or status, handing ownership over included. "me"
 | names the caller's own membership. Ids of other workspaces' members
-| are simply not found.
+| are simply not found. include=teams adds the teams each member is in.
 |
 */
 
@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -56,6 +57,7 @@ type MemberController struct {
 	ListMembers  *members.ListMembers
 	ShowMember   *members.ShowMember
 	UpdateMember *members.UpdateMember
+	MemberTeams  *teams.ListMemberTeams
 	IDs          *ids.Registry
 	Cursors      *pagination.Cursors
 }
@@ -75,7 +77,7 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 	r, _ := fhttp.RequestFrom(ctx)
 
 	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
-		Filters: []string{"status", "role"}, Sorts: []string{"name", "created_at"},
+		Filters: []string{"status", "role"}, Sorts: []string{"name", "created_at"}, Includes: []string{"teams"},
 	})
 	if err != nil {
 		return nil, err
@@ -94,6 +96,9 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 	out := pagination.Page[resources.WorkspaceMember]{
 		Items: resources.NewWorkspaceMembers(page.Members), Limit: in.Limit,
 	}
+	if err := c.includeTeams(ctx, query, out.Items, memberIDs(page.Members)); err != nil {
+		return nil, err
+	}
 	if page.More {
 		if out.NextCursor, err = c.Cursors.Encode(memberPage{Offset: in.Offset + in.Limit}); err != nil {
 			return nil, err
@@ -104,9 +109,16 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 }
 
 /*
-Show answers with one member.
+Show answers with one member, with their teams under include=teams.
 */
 func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequest) (*MemberOutput, error) {
+	r, _ := fhttp.RequestFrom(ctx)
+
+	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Includes: []string{"teams"}})
+	if err != nil {
+		return nil, err
+	}
+
 	id, err := c.memberID(ctx, in.Member)
 	if err != nil {
 		return nil, err
@@ -117,7 +129,50 @@ func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequ
 		return nil, err
 	}
 
-	return &MemberOutput{Body: fhttp.NewResource(resources.NewWorkspaceMember(row.WorkspaceMember, row.User))}, nil
+	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
+	if err := c.includeTeams(ctx, query, out, []ids.UUID{row.WorkspaceMember.ID}); err != nil {
+		return nil, err
+	}
+
+	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
+}
+
+/*
+includeTeams adds to each shaped member the teams they are in, when the
+query includes teams. The members and their ids come in the same order.
+*/
+func (c *MemberController) includeTeams(
+	ctx context.Context, query pagination.Query, out []resources.WorkspaceMember, memberIDs []ids.UUID,
+) error {
+	if !slices.Contains(query.Includes, "teams") {
+		return nil
+	}
+
+	byMember, err := c.MemberTeams.Handle(ctx, teams.ListMemberTeamsInput{
+		Membership: membership(ctx), MemberIDs: memberIDs,
+	})
+	if err != nil {
+		return err
+	}
+
+	for i, id := range memberIDs {
+		summaries := resources.NewTeamSummaries(byMember[id])
+		out[i].Teams = &summaries
+	}
+
+	return nil
+}
+
+/*
+memberIDs returns the ids of the listed members, in order.
+*/
+func memberIDs(rows []models.ListWorkspaceMembersRow) []ids.UUID {
+	out := make([]ids.UUID, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, row.WorkspaceMember.ID)
+	}
+
+	return out
 }
 
 /*
