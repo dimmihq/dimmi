@@ -15,7 +15,12 @@ export function useAccount() {
     name: me?.user.name ?? "",
     email: me?.user.email ?? "",
     hasPassword: me?.user.has_password ?? false,
-    workspace: { name: current?.name ?? "Workspace", slug: current?.slug ?? "workspace", role: current?.role ?? "" },
+    workspace: {
+      id: current?.id ?? "",
+      name: current?.name ?? "Workspace",
+      slug: current?.slug ?? "workspace",
+      role: current?.role ?? "",
+    },
     cloud: me?.instance?.edition === "cloud",
   };
 }
