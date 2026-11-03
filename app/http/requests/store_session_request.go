@@ -41,6 +41,7 @@ type StoreSessionRequest struct {
 		Password string `json:"password,omitempty" validate:"omitempty,max=256"`
 		Token    string `json:"token,omitempty"    validate:"omitempty,max=256"`
 		Code     string `json:"code,omitempty"     validate:"omitempty,max=20"`
+		Method   string `json:"method,omitempty"   validate:"omitempty,max=40"`
 		Reauth   bool   `json:"reauth,omitempty"`
 	}
 }
@@ -69,6 +70,15 @@ type emailCodeGrant struct {
 }
 
 /*
+twoFactorGrant holds the fields the second-factor grant requires: the
+kind of factor answering and its code.
+*/
+type twoFactorGrant struct {
+	Method string `json:"method" validate:"required"`
+	Code   string `json:"code"   validate:"required"`
+}
+
+/*
 Validate checks the fields of the chosen grant.
 */
 func (r *StoreSessionRequest) Validate(ctx context.Context, v *validation.Factory) error {
@@ -79,6 +89,8 @@ func (r *StoreSessionRequest) Validate(ctx context.Context, v *validation.Factor
 		return v.Struct(ctx, magicLinkGrant{Token: r.Body.Token})
 	case GrantEmailCode:
 		return v.Struct(ctx, emailCodeGrant{Email: r.Body.Email, Code: r.Body.Code})
+	case GrantTwoFactor:
+		return v.Struct(ctx, twoFactorGrant{Method: r.Body.Method, Code: r.Body.Code})
 	default:
 		return nil
 	}

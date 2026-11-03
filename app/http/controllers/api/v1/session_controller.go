@@ -39,6 +39,7 @@ SessionController serves the session collection.
 type SessionController struct {
 	AttemptLogin     *auth.AttemptLogin
 	ConsumeMagicLink *auth.ConsumeMagicLink
+	TwoFactor        *auth.CompleteTwoFactorChallenge
 	ListSessions     *auth.ListSessions
 	EndSession       *auth.EndSession
 	EndOtherSessions *auth.EndOtherSessions
@@ -48,23 +49,21 @@ type SessionController struct {
 }
 
 /*
-Store signs in with the grant and answers with the caller's picture.
+Store signs in with the grant and answers with the caller's picture, or
+with the second-factor challenge the account asks for.
 */
-func (c *SessionController) Store(ctx context.Context, in *requests.StoreSessionRequest) (*MeOutput, error) {
+func (c *SessionController) Store(ctx context.Context, in *requests.StoreSessionRequest) (*SignInOutput, error) {
 	signedIn, err := c.signIn(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	return &MeOutput{
-		SetCookie: deviceCookies(c.Cookies, signedIn.DeviceToken),
-		Body:      fhttp.NewResource(resources.NewMe(signedIn.Me, c.Server.instance())),
-	}, nil
+	return signInOutput(c.Cookies, c.Server, signedIn, fhttp.StatusCreated), nil
 }
 
 /*
-signIn runs the action of the grant. A second factor cannot complete a
-sign-in on its own yet, so that grant is not allowed.
+signIn runs the action of the grant. The second-factor grant answers
+the challenge the browser's cookie holds.
 */
 func (c *SessionController) signIn(ctx context.Context, in *requests.StoreSessionRequest) (auth.SignedIn, error) {
 	client := clientOf(ctx, c.Cookies)
@@ -83,7 +82,11 @@ func (c *SessionController) signIn(ctx context.Context, in *requests.StoreSessio
 			Email: in.Body.Email, Code: in.Body.Code, Reauth: in.Body.Reauth, Client: client,
 		})
 	default:
-		return auth.SignedIn{}, exceptions.ErrGrantNotAllowed
+		r, _ := fhttp.RequestFrom(ctx)
+
+		return c.TwoFactor.Handle(ctx, auth.CompleteTwoFactorChallengeInput{
+			Token: c.Cookies.TwoFactorToken(r), Method: in.Body.Method, Code: in.Body.Code, Client: client,
+		})
 	}
 }
 

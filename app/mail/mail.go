@@ -39,6 +39,9 @@ func Register(m *mail.Manager) {
 	mail.Register[NewSignInMail](m, "new_sign_in")
 	mail.Register[SuspiciousSignInAttemptsMail](m, "suspicious_sign_in_attempts")
 	mail.Register[IdentityLinkedMail](m, "identity_linked")
+	mail.Register[TwoFactorEnabledMail](m, "two_factor_enabled")
+	mail.Register[TwoFactorDisabledMail](m, "two_factor_disabled")
+	mail.Register[RecoveryCodeUsedMail](m, "recovery_code_used")
 }
 
 /*

@@ -61,11 +61,13 @@ type AttemptLoginInput struct {
 
 /*
 SignedIn is the caller after signing in, and the device token to hand
-the browser when it had none.
+the browser when it had none. Challenge is set instead when the user
+must still answer with a second factor, and no session started.
 */
 type SignedIn struct {
 	Me          Me
 	DeviceToken string
+	Challenge   *TwoFactorChallenge
 }
 
 /*
@@ -77,15 +79,14 @@ Rules:
     password hash, and count toward the lockout.
   - With Reauth on a signed-in session, the password must belong to the
     session's user.
-  - A user with a second factor is not signed in until it can be asked
-    for.
+  - A user with a second factor gets a challenge instead of a session.
   - The owner of an account locked against strangers is warned by mail,
     at most once a day.
 
 Errors: [exceptions.ErrInvalidCredentials],
 [exceptions.ErrTooManyAttempts], [exceptions.ErrReauthUserMismatch],
-[exceptions.ErrSSORequired], [exceptions.ErrAuthBusy],
-[exceptions.ErrTwoFactorUnavailable], or a wrapped error.
+[exceptions.ErrSSORequired], [exceptions.ErrAuthBusy], or a wrapped
+error.
 */
 type AttemptLogin struct {
 	DB                  *database.DB

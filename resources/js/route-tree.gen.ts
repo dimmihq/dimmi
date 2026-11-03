@@ -25,6 +25,7 @@ import { Route as DDocsRouteImport } from './routes/d/docs'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
+import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
@@ -115,6 +116,11 @@ const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
   path: '/login/magic',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthLoginTwoFactorRoute = AuthLoginTwoFactorRouteImport.update({
+  id: '/login_/two-factor',
+  path: '/login/two-factor',
+  getParentRoute: () => AuthRoute,
+} as any)
 const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   id: '/inbox/$view',
   path: '/inbox/$view',
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/login/magic': typeof AuthLoginMagicRoute
+  '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/d/notifications': typeof DNotificationsRoute
   '/d': typeof DIndexRoute
   '/login/magic': typeof AuthLoginMagicRoute
+  '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
+  '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/d/'
     | '/d/inbox/$view'
     | '/login/magic'
+    | '/login/two-factor'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/d/notifications'
     | '/d'
     | '/login/magic'
+    | '/login/two-factor'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/d/'
     | '/d/inbox/$view'
     | '/_auth/login_/magic'
+    | '/_auth/login_/two-factor'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
@@ -451,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/login/magic'
       fullPath: '/login/magic'
       preLoaderRoute: typeof AuthLoginMagicRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/login_/two-factor': {
+      id: '/_auth/login_/two-factor'
+      path: '/login/two-factor'
+      fullPath: '/login/two-factor'
+      preLoaderRoute: typeof AuthLoginTwoFactorRouteImport
       parentRoute: typeof AuthRoute
     }
     '/d/inbox/$view': {
@@ -588,6 +607,7 @@ interface AuthRouteChildren {
   AuthSignupRoute: typeof AuthSignupRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
+  AuthLoginTwoFactorRoute: typeof AuthLoginTwoFactorRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -597,6 +617,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthSignupRoute: AuthSignupRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,
+  AuthLoginTwoFactorRoute: AuthLoginTwoFactorRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

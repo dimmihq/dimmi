@@ -11,7 +11,7 @@ import { Input } from "@/components/base/input/input";
 import { InputOtp } from "@/components/base/input-otp/input-otp";
 import { Notification } from "@/components/base/notification/notification";
 import { LinkButton } from "@/features/navigation/links";
-import { type AuthConfig, type Me, sendMagicLink, signIn, signInWithCode } from "@/lib/api/auth";
+import { type AuthConfig, type SignInResult, sendMagicLink, signIn, signInWithCode } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
 import { field } from "./form-data";
@@ -22,7 +22,7 @@ export interface LoginFormProps {
   config: AuthConfig;
   redirect: string;
   initialError?: string | null;
-  onSignedIn: (me: Me) => void;
+  onSignedIn: (result: SignInResult) => void;
 }
 
 export function LoginForm({ config, redirect, initialError, onSignedIn }: LoginFormProps) {
@@ -143,7 +143,7 @@ export function CodeStep({
   onBack,
 }: {
   email: string;
-  onSignedIn: (me: Me) => void;
+  onSignedIn: (result: SignInResult) => void;
   onBack: () => void;
 }) {
   const [code, setCode] = useState("");

@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/app/auth/factors"
 	"github.com/dimmihq/dimmi/app/auth/providers"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
 	appconfig "github.com/dimmihq/dimmi/config"
@@ -44,7 +45,8 @@ application's own configuration; the framework's stays on
 Application.Config. Permissions is the permission catalog and
 LoginPolicy decides which sign-in methods an address may use.
 IdentityProviders holds the registered identity provider drivers, and
-Providers finds the ones the install configured. AppGrants
+Providers finds the ones the install configured. Factors holds the auth
+factor drivers and knows which the install enables. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
@@ -63,6 +65,7 @@ type App struct {
 
 	IdentityProviders *providers.Registry
 	Providers         providers.ProviderResolver
+	Factors           *factors.Registry
 
 	Tokens      *auth.PersonalTokens
 	Devices     *auth.Devices

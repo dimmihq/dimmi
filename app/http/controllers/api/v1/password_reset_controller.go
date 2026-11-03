@@ -19,7 +19,6 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/http/requests"
-	"github.com/dimmihq/dimmi/app/http/resources"
 )
 
 /*
@@ -49,11 +48,12 @@ func (c *PasswordResetController) Store(
 }
 
 /*
-Update sets the new password and answers with the signed-in caller.
+Update sets the new password and answers with the signed-in caller, or
+with the second-factor challenge the account asks for.
 */
 func (c *PasswordResetController) Update(
 	ctx context.Context, in *requests.UpdatePasswordResetRequest,
-) (*MeOutput, error) {
+) (*SignInOutput, error) {
 	signedIn, err := c.ResetPassword.Handle(ctx, auth.ResetPasswordInput{
 		ID: in.Reset, Token: in.Body.Token, Password: in.Body.Password, Client: clientOf(ctx, c.Cookies),
 	})
@@ -61,8 +61,5 @@ func (c *PasswordResetController) Update(
 		return nil, err
 	}
 
-	return &MeOutput{
-		SetCookie: deviceCookies(c.Cookies, signedIn.DeviceToken),
-		Body:      fhttp.NewResource(resources.NewMe(signedIn.Me, c.Server.instance())),
-	}, nil
+	return signInOutput(c.Cookies, c.Server, signedIn, fhttp.StatusOK), nil
 }

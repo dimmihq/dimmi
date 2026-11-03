@@ -1,0 +1,48 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+TwoFactorEnabled tells a user their account now asks for a second
+factor at every sign-in, and where to look if it was not them.
+*/
+
+templ TwoFactorEnabled(name, securityURL string) {
+	@layout(i18n.T(ctx, "mail.two_factor_enabled.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.two_factor_enabled.intro", nil) }</p>
+		<p>{ i18n.T(ctx, "mail.two_factor_enabled.unknown", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.two_factor_enabled.action", nil))
+	}
+}
+
+/*
+TwoFactorDisabled tells a user their account no longer asks for a
+second factor, and where to turn it back on.
+*/
+
+templ TwoFactorDisabled(name, securityURL string) {
+	@layout(i18n.T(ctx, "mail.two_factor_disabled.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.two_factor_disabled.intro", nil) }</p>
+		<p>{ i18n.T(ctx, "mail.two_factor_disabled.unknown", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.two_factor_disabled.action", nil))
+	}
+}
+
+/*
+RecoveryCodeUsed tells a user one of their recovery codes signed them
+in, how many are left, and to make new ones when few or none are.
+*/
+
+templ RecoveryCodeUsed(name string, remaining int, securityURL string) {
+	@layout(i18n.T(ctx, "mail.recovery_code_used.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.recovery_code_used.intro", i18n.Args{"remaining": remaining}) }</p>
+		if remaining <= 2 {
+			<p>{ i18n.T(ctx, "mail.recovery_code_used.regenerate", nil) }</p>
+		}
+		<p>{ i18n.T(ctx, "mail.recovery_code_used.unknown", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.recovery_code_used.action", nil))
+	}
+}

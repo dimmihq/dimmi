@@ -91,15 +91,6 @@ func TestSessionStoreWithPassword(t *testing.T) {
 		tc.Table("security_events").AssertMissing(testkit.Row{"type": "login.failed"})
 	})
 
-	t.Run("refuses grants this server does not serve yet", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-
-		tc.Client().PostJSON("/api/v1/sessions", testkit.JSON{"grant": "two_factor", "code": "1"}).
-			AssertValidationError("grant").
-			AssertJSONPath("code", "grant_not_allowed")
-	})
-
 	t.Run("replaces a hash made with older settings on the next sign-in", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
@@ -129,18 +120,6 @@ func TestSessionStoreWithPassword(t *testing.T) {
 		wg.Wait()
 
 		tc.Table("sessions").AssertCount(3, testkit.Row{"device_id": hashing.SHA256Hex([]byte(device.Value))})
-	})
-
-	t.Run("does not sign in an account protected by a second factor it cannot ask for", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-		_, err := factories.EnableTwoFactor(t.Context(), tc.App, tc.Owner)
-		require.NoError(t, err)
-
-		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, factories.Password)).
-			AssertStatus(503).
-			AssertJSONPath("code", "two_factor_unavailable")
-		tc.Table("sessions").AssertCount(0)
 	})
 
 	t.Run("asks the login policy before checking any password", func(t *testing.T) {

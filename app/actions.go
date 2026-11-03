@@ -13,6 +13,7 @@ package app
 
 import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 )
@@ -45,4 +46,14 @@ type Actions struct {
 	HandleOAuthCallback     *auth.HandleOAuthCallback
 	ListOAuthIdentities     *auth.ListOAuthIdentities
 	UnlinkOAuthIdentity     *auth.UnlinkOAuthIdentity
+
+	CompleteTwoFactorChallenge *auth.CompleteTwoFactorChallenge
+	ListAuthFactors            *factors.ListAuthFactors
+	AddAuthFactor              *factors.AddAuthFactor
+	ActivateAuthFactor         *factors.ActivateAuthFactor
+	UpdateAuthFactor           *factors.UpdateAuthFactor
+	RemoveAuthFactor           *factors.RemoveAuthFactor
+	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
+	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
+	DisableTwoFactor           *factors.DisableTwoFactor
 }

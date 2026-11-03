@@ -11,7 +11,7 @@ import { Button } from "@/components/base/buttons/button";
 import { HintText } from "@/components/base/input/hint-text";
 import { Input } from "@/components/base/input/input";
 import { ButtonLink, LinkButton } from "@/features/navigation/links";
-import { type Me, requestPasswordReset, resetPassword } from "@/lib/api/auth";
+import { requestPasswordReset, resetPassword, type SignInResult } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader, AuthStatus } from "./auth-frame";
 import { field } from "./form-data";
@@ -111,7 +111,7 @@ export interface ResetPasswordFormProps {
   id: string;
   token: string;
   minLength: number;
-  onSignedIn: (me: Me) => void;
+  onSignedIn: (result: SignInResult) => void;
 }
 
 export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPasswordFormProps) {

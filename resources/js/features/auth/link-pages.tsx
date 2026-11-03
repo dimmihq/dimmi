@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Spinner } from "@/components/base/spinner/spinner";
 import { ButtonLink } from "@/features/navigation/links";
-import { type Me, signInWithLink, verifyEmail } from "@/lib/api/auth";
+import { type SignInResult, signInWithLink, verifyEmail } from "@/lib/api/auth";
 
 import { AuthCard, AuthHeader, AuthStatus } from "./auth-frame";
 import { BrokenLink } from "./password-reset-forms";
@@ -40,7 +40,7 @@ function Working({ title }: { title: string }) {
   );
 }
 
-export function MagicLinkPage({ token, onSignedIn }: { token: string; onSignedIn: (me: Me) => void }) {
+export function MagicLinkPage({ token, onSignedIn }: { token: string; onSignedIn: (result: SignInResult) => void }) {
   const consume = useMutation({ mutationFn: signInWithLink, onSuccess: onSignedIn });
   useOnce(() => {
     if (token) {
