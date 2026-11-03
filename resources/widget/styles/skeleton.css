@@ -1,0 +1,235 @@
+/*
+ * Loading states, ported from BoardUI's skeleton: blocks tinted from the
+ * text color, a three-layer sheen sweeping across them, and the content
+ * sharpening in from a 4px blur once it arrives. Under reduced motion the
+ * sheen stops and the blocks breathe instead.
+ */
+.skeleton-set {
+  display: none;
+}
+
+.loaded {
+  display: grid;
+  gap: 12px;
+}
+
+.page > .loaded {
+  display: block;
+}
+
+.thread > .loaded {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.view[data-state="ready"] .loaded {
+  animation: reveal 300ms ease-out;
+}
+
+.view[data-load]:not([data-state="ready"]) .skeleton-set {
+  display: grid;
+  gap: 12px;
+}
+
+.view[data-load]:not([data-state="ready"]) .loaded {
+  display: none;
+}
+
+.bone {
+  --bone-line: light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.2));
+  --bone-glow: light-dark(rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.08));
+  --bone-bloom: light-dark(rgb(255 255 255 / 0.35), rgb(255 255 255 / 0.04));
+  position: relative;
+  display: block;
+  block-size: 12px;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--text-primary) 8%, transparent);
+}
+
+.bone::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent, var(--bone-line)) right / 2px 100% no-repeat,
+    linear-gradient(90deg, transparent, var(--bone-glow)) right / 72px 100% no-repeat,
+    linear-gradient(90deg, transparent, var(--bone-bloom)) right / 240px 100% no-repeat;
+  content: "";
+  translate: -100% 0;
+  animation: sheen 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.bone.line {
+  border-radius: 6px;
+}
+
+.bone.circle {
+  flex: none;
+  border-radius: 50%;
+}
+
+.size-36 {
+  inline-size: 36px;
+  block-size: 36px;
+}
+
+.size-24 {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+.w-20 {
+  inline-size: 20%;
+}
+
+.w-30 {
+  inline-size: 30%;
+}
+
+.w-40 {
+  inline-size: 40%;
+}
+
+.w-50 {
+  inline-size: 50%;
+}
+
+.w-60 {
+  inline-size: 60%;
+}
+
+.w-70 {
+  inline-size: 70%;
+}
+
+.w-80 {
+  inline-size: 80%;
+}
+
+.w-90 {
+  inline-size: 90%;
+}
+
+.w-100 {
+  inline-size: 100%;
+}
+
+.bone.tall {
+  block-size: 16px;
+}
+
+.bone-row {
+  pointer-events: none;
+}
+
+.bone-row .text {
+  gap: 8px;
+}
+
+.label-bone {
+  margin: 4px 4px 8px;
+}
+
+.bone-card {
+  display: grid;
+}
+
+.bone-card .art-bone {
+  block-size: 128px;
+  border-radius: 0;
+}
+
+.bone-card .copy {
+  gap: 10px;
+}
+
+.bone-page {
+  display: grid;
+  gap: 12px;
+}
+
+.bone-page .title {
+  block-size: 26px;
+  margin-block-end: 4px;
+}
+
+.bone-page .byline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 12px;
+}
+
+.figure-bone {
+  block-size: 200px;
+  margin-block: 8px;
+}
+
+.bone-thread {
+  display: grid;
+  gap: 14px;
+}
+
+.day-bone {
+  justify-self: center;
+  block-size: 10px;
+}
+
+.bone-said {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.bubble-bone {
+  block-size: 40px;
+  border-radius: 18px;
+}
+
+.bubble-bone.tall {
+  block-size: 64px;
+}
+
+.bubble-bone.mine {
+  justify-self: end;
+}
+
+@keyframes sheen {
+  0% {
+    translate: -100% 0;
+  }
+
+  60%,
+  100% {
+    translate: 100% 0;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone::after {
+    display: none;
+  }
+
+  .bone {
+    animation: breathe 2s ease-in-out infinite;
+  }
+
+  .view[data-state="ready"] .loaded {
+    animation: none;
+  }
+}

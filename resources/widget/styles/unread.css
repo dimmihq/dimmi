@@ -1,0 +1,174 @@
+/*
+ * Unread messages: the preview card that rises above the launcher, the
+ * count badges on the launcher and the Messages tab, and bold rows with a
+ * dot. The count is BoardUI's counter badge: a 4px-rounded tag in
+ * semibold 12/16 with white text on the accent, here the brand. The card enters the BoardUI way, condensing from a fade, a slight
+ * scale and a small blur toward the launcher it grows from.
+ */
+.notice {
+  position: relative;
+  inline-size: min(340px, calc(100vw - 2 * var(--x)));
+  transform-origin: bottom right;
+  animation: arrive 300ms var(--modal);
+}
+
+.notice[hidden] {
+  display: none;
+}
+
+[data-side="left"] .notice {
+  transform-origin: bottom left;
+}
+
+[data-open="true"] .notice {
+  display: none;
+}
+
+.notice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  inline-size: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border-button);
+  border-radius: 18px;
+  background: var(--bg-primary);
+  text-align: start;
+  box-shadow:
+    0 16px 40px -12px rgb(0 0 0 / 0.28),
+    var(--shadow-xs);
+  transition: background-color 150ms ease;
+}
+
+.notice-card:hover {
+  background: var(--bg-primary-hover);
+}
+
+.notice-card:active {
+  background: var(--bg-primary-active);
+}
+
+.notice-card .face {
+  inline-size: 36px;
+  block-size: 36px;
+  font-size: 12px;
+}
+
+.notice-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notice-body {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-primary);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notice-close {
+  position: absolute;
+  inset-block-start: -12px;
+  inset-inline-end: -8px;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px solid var(--border-button);
+  border-radius: 50%;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-xs);
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease;
+}
+
+.notice:hover .notice-close,
+.notice:focus-within .notice-close {
+  opacity: 1;
+}
+
+.notice-close svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 18px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: oklch(from var(--brand) clamp(0.55, l, 0.68) c h);
+  color: #fff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.count[hidden] {
+  display: none;
+}
+
+.launcher {
+  position: relative;
+}
+
+.launcher .count {
+  position: absolute;
+  inset-block-start: -4px;
+  inset-inline-end: -4px;
+  box-shadow: 0 0 0 2px var(--bg-full);
+  animation: arrive 300ms var(--modal);
+}
+
+.tabs .count {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: calc(50% + 4px);
+  box-shadow: 0 0 0 2px var(--bg-full);
+}
+
+.unread-dot {
+  display: none;
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+[data-unread="true"] .unread-dot {
+  display: block;
+}
+
+[data-unread="true"] .text > span,
+[data-unread="true"] small {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    scale: 0.9;
+    filter: blur(2px);
+  }
+}
+
+@media (pointer: coarse) {
+  .notice-close {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice,
+  .launcher .count {
+    animation: none;
+  }
+}

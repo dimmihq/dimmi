@@ -4,9 +4,10 @@
 |--------------------------------------------------------------------------
 |
 | Built assets ship inside the binary. Compressing them once at build time
-| beats compressing every response, so a file.js.gz next to file.js is
-| sent to every client that accepts gzip, and unpacked on the fly for the
-| rare one that does not. Every response carries an ETag, so a browser
+| beats compressing every response, so a file.js.br or file.js.gz next to
+| file.js is sent to every client that accepts it, the smallest one the
+| client takes winning. A gzip copy is unpacked on the fly for the rare
+| client that takes neither and finds no plain file. Every response carries an ETag, so a browser
 | revalidating a file it already has gets a 304.
 |
 | Files whose names change with their content can be cached by browsers
@@ -28,9 +29,10 @@ Options configure a handler.
 
 Immutable marks every file as never changing, so clients cache it for a
 year without revalidating; use it only for files named after their
-content. Precompressed serves a .gz sibling of a file in its place to
-clients that accept gzip. Prefix is the URL path the files are mounted
-under, such as "/build", removed before a file is looked up.
+content. Precompressed serves a .br or .gz sibling of a file in its
+place to clients that accept brotli or gzip. Prefix is the URL path the
+files are mounted under, such as "/build", removed before a file is
+looked up.
 */
 type Options struct {
 	Immutable     bool
@@ -64,13 +66,19 @@ func Handler(fsys fs.FS, opts Options) http.Handler {
 	return http.StripPrefix(opts.Prefix, handler)
 }
 
+/*
+encodings serves brotli copies only as they are, since no brotli decoder
+is linked in; a client that takes no brotli gets the gzip or plain file.
+*/
 func encodings(opts Options) func(*statigz.Server) {
 	return func(s *statigz.Server) {
-		if opts.Precompressed {
+		if !opts.Precompressed {
+			s.Encodings = nil
+
 			return
 		}
 
-		s.Encodings = nil
+		s.Encodings = append([]statigz.Encoding{{FileExt: ".br", ContentEncoding: "br"}}, s.Encodings...)
 	}
 }
 

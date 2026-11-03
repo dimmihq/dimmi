@@ -4,7 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | Names the product's route middleware, links the browser app's scripts,
-| and declares the routes once the actions exist. Cross-origin protection
+| loads the messenger widget's build, and declares the routes once the
+| actions exist. A binary without a widget build still boots; a broken
+| build stops it, since every customer's page would fail. Cross-origin protection
 | trusts the application's own origin and the extra origins configured
 | for split deployments, such as a dashboard on another host. Sensitive routes ask for a recent
 | confirmation of who is calling, within the configured window, and
@@ -21,6 +23,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -32,6 +35,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
+	"github.com/dimmihq/dimmi/app/support/widgetassets"
 )
 
 /*
@@ -68,6 +72,13 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	fa.Kernel.Alias("csp", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.ContentSecurityPolicy(p.App.Vite), nil
 	})
+
+	widget, err := widgetassets.New(p.App.Widget, p.App.Config.Widget.AssetsBaseURL)
+	if err != nil && !errors.Is(err, widgetassets.ErrNoBuild) {
+		return fmt.Errorf("widget assets: %w", err)
+	}
+
+	p.App.WidgetAssets = widget
 
 	return nil
 }

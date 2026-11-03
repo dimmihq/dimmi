@@ -37,6 +37,9 @@ func assets(t *testing.T) fstest.MapFS {
 		"app.js.gz":       &fstest.MapFile{Data: gz(t, script)},
 		"only.css.gz":     &fstest.MapFile{Data: gz(t, "body{color:red}")},
 		"docs/index.html": &fstest.MapFile{Data: []byte("<p>Docs</p>")},
+		"tiny.js":         &fstest.MapFile{Data: []byte(script)},
+		"tiny.js.gz":      &fstest.MapFile{Data: gz(t, script)},
+		"tiny.js.br":      &fstest.MapFile{Data: []byte("br")},
 	}
 }
 
@@ -72,6 +75,17 @@ func TestHandler(t *testing.T) {
 		w := get(t, h, "/app.js", map[string]string{"Accept-Encoding": "gzip, br"})
 		assert.Equal(t, "gzip", w.Header().Get("Content-Encoding"))
 		assert.Equal(t, gz(t, script), w.Body.Bytes())
+	})
+
+	t.Run("serves the brotli copy to clients that accept brotli", func(t *testing.T) {
+		t.Parallel()
+		h := static.Handler(assets(t), static.Options{Precompressed: true})
+		w := get(t, h, "/tiny.js", map[string]string{"Accept-Encoding": "gzip, br"})
+		assert.Equal(t, "br", w.Header().Get("Content-Encoding"))
+		assert.Equal(t, "br", w.Body.String())
+		gzipOnly := get(t, h, "/tiny.js", map[string]string{"Accept-Encoding": "gzip"})
+		assert.Equal(t, "gzip", gzipOnly.Header().Get("Content-Encoding"))
+		assert.Equal(t, script, get(t, h, "/tiny.js", nil).Body.String())
 	})
 
 	t.Run("unpacks a compressed-only file for clients without gzip", func(t *testing.T) {

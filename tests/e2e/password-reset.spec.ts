@@ -1,4 +1,4 @@
-import { createAccount, expect, test as it } from "./support/fixtures";
+import { createAccount, expect, inbox, test as it, signOut } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 it.describe("resetting a password", () => {
@@ -7,6 +7,7 @@ it.describe("resetting a password", () => {
 
     await page.goto("/login");
     await page.getByRole("link", { name: "Forgot password?" }).click();
+    await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
     await page.getByLabel("Email").fill(person.email);
     await page.getByRole("button", { name: "Send reset link" }).click();
     await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
@@ -15,9 +16,9 @@ it.describe("resetting a password", () => {
     await page.goto(await mailedLink(person.email, "Reset"));
     await page.getByLabel("New password").fill("difference-engine-1822");
     await page.getByRole("button", { name: "Save password and sign in" }).click();
-    await expect(page).toHaveURL(/\/d$/);
+    await expect(page).toHaveURL(inbox);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await signOut(page, person);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();

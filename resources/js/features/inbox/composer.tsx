@@ -1,0 +1,250 @@
+/*
+ * The reply and note composer, on BoardUI's composer panel. It rests as a
+ * slim bar under the thread so the conversation keeps the room; choosing
+ * Reply or Note (or pressing R or N) unfolds it into the full panel, which
+ * stays open until the person leaves the conversation. The panel has the
+ * BoardUI tab strip behind its top edge saying who will see the message,
+ * attachments as tiles above the text, a field that grows with what is
+ * typed, and a toolbar with the add menu (files, help articles, saved
+ * replies and more from the workspace) and a way to ask Operator. Files can
+ * also be dropped on the panel or pasted. Sending is not connected yet,
+ * so the composer says so instead of pretending. Each time Reply or Note
+ * is chosen the field takes the focus, sized to the draft it holds.
+ */
+import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { type DragEvent, useCallback, useRef, useState } from "react";
+
+import { Kbd } from "@/components/base/kbd/kbd";
+import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { cx } from "@/utils/cx";
+
+import { AddMenu } from "./add-menu";
+import { AttachmentStrip } from "./attachments";
+import { type Mode, modes } from "./modes";
+import { useAttachments } from "./use-attachments";
+
+const surface =
+  "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
+const settle = [0.22, 1, 0.36, 1] as const;
+
+export function Composer({
+  mode,
+  focusKey,
+  customer,
+  channel,
+  onOpen,
+  onAskOperator,
+}: {
+  mode: Mode | null;
+  focusKey: number;
+  customer: string;
+  channel: string;
+  onOpen: (mode: Mode) => void;
+  onAskOperator: () => void;
+}) {
+  const still = useReducedMotion();
+
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <AnimatePresence initial={false} mode="wait">
+        {mode ? (
+          <motion.div
+            key="open"
+            initial={{ opacity: 0, height: 52, filter: "blur(2px)" }}
+            animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
+            transition={still ? { duration: 0 } : { duration: 0.3, ease: settle }}
+            className="overflow-hidden"
+          >
+            <Panel
+              mode={mode}
+              focusKey={focusKey}
+              customer={customer}
+              channel={channel}
+              onModeChange={onOpen}
+              onAskOperator={onAskOperator}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="closed"
+            exit={{ opacity: 0, filter: "blur(2px)" }}
+            transition={still ? { duration: 0 } : { duration: 0.12, ease: "easeIn" }}
+          >
+            <Bar customer={customer} onOpen={onOpen} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function Bar({ customer, onOpen }: { customer: string; onOpen: (mode: Mode) => void }) {
+  return (
+    <div className={cx(surface, "flex items-center gap-1 p-2")}>
+      <button
+        type="button"
+        onClick={() => onOpen("reply")}
+        className="flex h-9 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-full ps-2.5 pe-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiChatQuoteLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+        <span className="min-w-0 flex-1 truncate text-body-regular text-text-tertiary">Reply to {customer}…</span>
+        <Kbd>R</Kbd>
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpen("note")}
+        className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full ps-2.5 pe-2 outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiStickyNoteLine aria-hidden className="size-4 text-foreground-icon-secondary" />
+        <span className="text-body-medium text-text-secondary">Note</span>
+        <Kbd>N</Kbd>
+      </button>
+    </div>
+  );
+}
+
+/*
+ * sizeToText sizes the field to its text, between its resting height and a cap
+ * past which it scrolls.
+ */
+function sizeToText(field: HTMLTextAreaElement) {
+  field.style.height = "auto";
+  field.style.height = `${Math.min(field.scrollHeight, 280)}px`;
+}
+
+function Panel({
+  mode,
+  focusKey,
+  customer,
+  channel,
+  onModeChange,
+  onAskOperator,
+}: {
+  mode: Mode;
+  focusKey: number;
+  customer: string;
+  channel: string;
+  onModeChange: (mode: Mode) => void;
+  onAskOperator: () => void;
+}) {
+  const [drafts, setDrafts] = useState<Record<Mode, string>>({ reply: "", note: "" });
+  const attachments = useAttachments();
+  const [dragging, setDragging] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
+  const field = useRef<HTMLTextAreaElement | null>(null);
+  const note = mode === "note";
+  const arrive = useCallback((element: HTMLTextAreaElement | null) => {
+    field.current = element;
+    if (element) {
+      sizeToText(element);
+      element.focus();
+    }
+  }, []);
+
+  const insert = (text: string) => {
+    setDrafts((before) => ({ ...before, [mode]: before[mode] ? `${before[mode]}\n\n${text}` : text }));
+    window.requestAnimationFrame(() => {
+      if (field.current) {
+        sizeToText(field.current);
+        field.current.focus();
+      }
+    });
+  };
+
+  const drop = (event: DragEvent) => {
+    event.preventDefault();
+    setDragging(false);
+    attachments.add(event.dataTransfer.files);
+  };
+
+  return (
+    <div>
+      <div className="mx-7 flex h-[34px] items-center justify-between gap-3 rounded-t-2xl bg-composer-panel-tab-background px-1 py-1">
+        <SegmentedControl
+          aria-label="Write"
+          variant="plain"
+          selectedKeys={[mode]}
+          onSelectionChange={(selected) => {
+            const next = [...selected][0];
+            if (next === modes.reply || next === modes.note) {
+              onModeChange(next);
+            }
+          }}
+          className="[&_button]:py-0.5 [&_button]:text-body-2-medium"
+        >
+          <SegmentedControlItem id={modes.reply}>Reply</SegmentedControlItem>
+          <SegmentedControlItem id={modes.note}>Note</SegmentedControlItem>
+        </SegmentedControl>
+        <span className="flex min-w-0 items-center gap-1 pe-1.5 text-body-2-medium text-text-secondary">
+          {note ? <RiLock2Line aria-hidden className="size-3.5 shrink-0" /> : null}
+          <span className="truncate">{note ? "Only your team sees this" : `To ${customer} · ${channel}`}</span>
+        </span>
+      </div>
+      <fieldset
+        aria-label={note ? "Note composer" : "Reply composer"}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={drop}
+        className={cx(
+          surface,
+          "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150",
+          dragging && "ring-2 ring-accent-500 ring-inset",
+        )}
+      >
+        <div className="flex flex-col gap-3 px-1.5">
+          <AttachmentStrip files={attachments.files} onRemove={attachments.remove} />
+          <textarea
+            key={`${mode}-${focusKey}`}
+            ref={arrive}
+            value={drafts[mode]}
+            onChange={(event) => setDrafts((before) => ({ ...before, [mode]: event.target.value }))}
+            onInput={(event) => sizeToText(event.currentTarget)}
+            onPaste={(event) => attachments.add(event.clipboardData.files)}
+            rows={4}
+            aria-label={note ? "Internal note" : `Reply to ${customer}`}
+            placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
+            className="block max-h-[280px] min-h-24 w-full resize-none bg-transparent p-0 text-body-regular text-text-primary caret-accent-500 outline-none placeholder:text-text-tertiary"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <AddMenu onFiles={() => picker.current?.click()} onAttach={attachments.link} onInsert={insert} />
+          <input
+            ref={picker}
+            type="file"
+            multiple
+            tabIndex={-1}
+            aria-label="Attach files"
+            className="sr-only"
+            onChange={(event) => {
+              attachments.add(event.target.files ?? []);
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={onAskOperator}
+            className="flex h-[30px] shrink-0 cursor-pointer items-center gap-1 rounded-full ps-2 pe-2.5 text-body-2-medium text-text-secondary outline-none transition-colors duration-150 ease hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+          >
+            <RiSparkling2Line aria-hidden className="size-4" />
+            Ask Operator
+          </button>
+          <span className="ms-auto hidden truncate text-body-2-regular text-text-tertiary sm:inline">
+            Sending arrives with the inbox
+          </span>
+          <button
+            type="button"
+            disabled
+            aria-label={note ? "Add note" : "Send"}
+            className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-button-primary p-2 text-text-white outline-none transition-opacity duration-200 ease focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <RiArrowUpLine aria-hidden className="size-5" />
+          </button>
+        </div>
+      </fieldset>
+    </div>
+  );
+}

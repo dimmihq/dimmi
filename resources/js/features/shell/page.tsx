@@ -1,0 +1,111 @@
+/*
+ * The parts every page of the app is built from: floating panels beside
+ * the sidebar, a header with the page's title and actions, a scroll area
+ * whose top edge softens once scrolled, and the empty state a page shows
+ * when it has nothing to list, or until its feature is built.
+ */
+import type { ComponentType, ReactNode } from "react";
+
+import { ScrollFade, useScrollFade } from "@/components/foundations/scroll-fade/scroll-fade";
+import { cx } from "@/utils/cx";
+
+/*
+ * Panel is one floating card of a page, on BoardUI's app geometry: the
+ * sidebar's own card, with its secondary surface, light edge and shadow,
+ * so every pane beside the sidebar reads as its sibling. A page with
+ * several panes puts each in its own Panel.
+ */
+export function Panel({ label, className, children }: { label?: string; className?: string; children: ReactNode }) {
+  return (
+    <section
+      aria-label={label}
+      className={cx(
+        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-3xl border border-border-button-white bg-background-secondary-default shadow-sidebar",
+        className,
+      )}
+    >
+      {children}
+    </section>
+  );
+}
+
+/*
+ * ScrollArea is the scrolling body of a panel, below its header. Its top
+ * edge softens into the panel's surface once scrolled.
+ */
+export function ScrollArea({ className, children }: { className?: string; children: ReactNode }) {
+  const fade = useScrollFade();
+
+  return (
+    <div className="relative min-h-0 flex-1">
+      <div onScroll={fade.onScroll} className={cx("h-full overflow-y-auto [scrollbar-width:none]", className)}>
+        {children}
+      </div>
+      <ScrollFade progress={fade.progress} surfaceClassName="from-background-secondary-default" />
+    </div>
+  );
+}
+
+/*
+ * PageHeader titles a panel. The page's main panel takes the level 1
+ * heading; panels beside it pass level 2.
+ */
+export function PageHeader({ title, level = 1, children }: { title: ReactNode; level?: 1 | 2; children?: ReactNode }) {
+  const Heading = level === 1 ? "h1" : "h2";
+
+  return (
+    <header className="flex h-12 shrink-0 items-center justify-between gap-3 ps-4 pe-2.5 pt-[7px]">
+      <Heading className="min-w-0 truncate text-body-medium text-text-primary">{title}</Heading>
+      {children ? <div className="flex items-center gap-2">{children}</div> : null}
+    </header>
+  );
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+      <span
+        aria-hidden
+        className="flex size-11 items-center justify-center rounded-full bg-background-primary-default shadow-card"
+      >
+        <Icon className="size-5 text-foreground-icon-secondary" />
+      </span>
+      <div className="flex max-w-sm flex-col gap-1">
+        <p className="text-body-medium text-text-primary">{title}</p>
+        {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/*
+ * FeaturePage is a page whose feature is not built yet: its header, and
+ * an empty state saying what will live there.
+ */
+export function FeaturePage({
+  title,
+  icon,
+  description,
+}: {
+  title: string;
+  icon: ComponentType<{ className?: string }>;
+  description: string;
+}) {
+  return (
+    <Panel className="h-full flex-1">
+      <PageHeader title={title} />
+      <EmptyState icon={icon} title={`${title} is on its way`} description={description} />
+    </Panel>
+  );
+}

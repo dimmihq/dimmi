@@ -5,7 +5,8 @@
 |
 | Pages a browser opens directly rather than calls from the dashboard:
 | the browser app under /d, its sign-in pages and its built files under
-| /build, and the redirects to identity providers and their callbacks. Pages carry a
+| /build, the messenger widget's files customers' pages load, and the
+| redirects to identity providers and their callbacks. Pages carry a
 | strict content security policy. The provider routes run the browser's
 | session, which a sign-in rotates and a link reads, but no guard: the
 | redirect decides per attempt what it needs, and the callback trusts
@@ -22,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
+	"github.com/dimmihq/dimmi/app/http/controllers/widget"
 )
 
 /*
@@ -55,6 +57,11 @@ func Web(a *app.App) {
 
 	a.Router.Handle(fhttp.MethodGet, "/build/*", "build",
 		static.Handler(a.Frontend, static.Options{Immutable: true, Prefix: "/build"}))
+
+	assets := &widget.AssetController{Assets: a.WidgetAssets, LoaderMaxAge: a.Config.Widget.LoaderMaxAge}
+	a.Router.Handle(fhttp.MethodGet, "/widget/v1/loader.js", "widget.loader", fhttp.HandlerFunc(assets.Loader))
+	a.Router.Handle(fhttp.MethodGet, "/widget/v1/manifest.json", "widget.manifest", fhttp.HandlerFunc(assets.Manifest))
+	a.Router.Handle(fhttp.MethodGet, "/widget/assets/*", "widget.assets", fhttp.HandlerFunc(assets.Asset))
 
 	a.Router.Group("", func(browser *routing.Router) {
 		browser.Middleware("csp", "session")

@@ -36,6 +36,7 @@ type Config struct {
 	Auth AuthConfig `koanf:"auth"`
 
 	Frontend FrontendConfig `koanf:"frontend"`
+	Widget   WidgetConfig   `koanf:"widget"`
 }
 
 /*

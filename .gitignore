@@ -7,9 +7,14 @@ coverage-app.filtered.out
 /public/hot
 /public/build/*
 !/public/build/.gitkeep
+/public/widget/*
+!/public/widget/.gitkeep
 /storage/
 /dimmi.yaml
 /tmp/
 /public/carousel/
 /test-results/
 /playwright-report/
+/public/ai-chat/
+/public/templates/
+/public/brand/boardui_logo_circle.webp

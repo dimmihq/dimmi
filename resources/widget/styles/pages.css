@@ -1,0 +1,192 @@
+/*
+ * Article and changelog pages: page headers, long-form text and feedback.
+ */
+.back-bar {
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  padding-inline: 12px 18px;
+}
+
+.back-bar h2 {
+  overflow: hidden;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secondary {
+  border: 1px solid var(--border-button);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.secondary:hover {
+  border-color: var(--border-button-hover);
+  background: var(--bg-primary-hover);
+}
+
+.secondary:active {
+  border-color: var(--border-button-active);
+  background: var(--bg-primary-active);
+}
+
+.lead {
+  margin: 0 4px 4px;
+  color: var(--text-secondary);
+}
+
+.page {
+  inline-size: 100%;
+  max-inline-size: 680px;
+  margin-inline: auto;
+  padding: 28px 28px 32px;
+}
+
+.page > .badge {
+  display: inline-block;
+}
+
+.page h1 {
+  margin: 10px 0 0;
+  font-size: 26px;
+  line-height: 32px;
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.prose {
+  margin-block-start: 24px;
+  font-size: 15px;
+  line-height: 25px;
+}
+
+.prose > * {
+  margin: 0 0 16px;
+}
+
+.prose h3 {
+  margin-block-start: 28px;
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.prose ul,
+.prose ol {
+  padding-inline-start: 22px;
+}
+
+.prose li + li {
+  margin-block-start: 6px;
+}
+
+.prose li::marker {
+  color: var(--text-tertiary);
+}
+
+.prose pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  font:
+    13px / 20px ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  white-space: pre;
+}
+
+.note {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--tint);
+}
+
+.note > svg {
+  margin-block-start: 3px;
+  color: var(--accent);
+}
+
+.figure {
+  display: grid;
+  gap: 8px;
+}
+
+.figure .art {
+  border-radius: 14px;
+  aspect-ratio: 16 / 9;
+  block-size: auto;
+}
+
+.figure figcaption {
+  padding: 0;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.feedback {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-block-start: 32px;
+  padding-block-start: 24px;
+  border-block-start: 1px solid var(--separator);
+  text-align: center;
+}
+
+.feedback p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.reactions {
+  display: flex;
+  gap: 8px;
+}
+
+.reactions button {
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 1px solid var(--border-button);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  font-size: 22px;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 420ms var(--press);
+}
+
+.reactions button:hover {
+  border-color: var(--border-button-hover);
+  background: var(--bg-primary-hover);
+}
+
+.reactions button:active {
+  transform: scale(0.96);
+  transition-duration: 150ms, 150ms, 220ms;
+}
+
+.entry {
+  display: grid;
+  inline-size: 100%;
+  transition: background-color 150ms ease;
+}
+
+.entry:hover {
+  background: var(--bg-primary-hover);
+}

@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { Home } from "@/features/home/home";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/d/")({
-  component: Home,
+  beforeLoad: () => {
+    throw redirect({ to: "/d/inbox/$view", params: { view: "unassigned" } });
+  },
 });

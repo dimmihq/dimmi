@@ -1,0 +1,54 @@
+/*
+ * Shared keyframes, the phone layout and reduced motion.
+ */
+@keyframes enter {
+  from {
+    opacity: 0;
+    scale: 0.98;
+    filter: blur(2px);
+  }
+}
+
+@media (max-width: 480px) {
+  [data-open="true"] .panel {
+    position: fixed;
+    inset: 0;
+    inline-size: auto;
+    block-size: auto;
+    border: 0;
+    border-radius: 0;
+  }
+
+  [data-open="true"] .launcher {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) and (pointer: coarse) {
+  .tools > :first-child {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launcher,
+  .icons svg,
+  .panel,
+  [data-open="true"] .panel,
+  .view[data-current],
+  .button,
+  .icon-button,
+  .field,
+  .chat,
+  .row,
+  .said,
+  .dots i,
+  .live i,
+  .live-dot,
+  .play,
+  .composer,
+  [data-recording="true"] .recorder {
+    animation: none;
+    transition: none;
+  }
+}

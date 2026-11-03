@@ -1,0 +1,111 @@
+/*
+ * Pages the visitor opens from a tab: a help collection's articles, an
+ * article, and a changelog entry. Articles and entries are long reads, so
+ * their views are marked to expand the panel when they open; the messenger
+ * shrinks it again when the visitor leaves.
+ */
+import type { Child } from "widget-jsx/jsx-runtime";
+
+import { BackBar } from "../components/chrome";
+import { Feedback, Prose } from "../components/prose";
+import { ArticleRow } from "../components/rows";
+import { Loadable, SkeletonArticle, SkeletonRows } from "../components/skeleton";
+import type { Article, Collection, Content, Entry } from "../content";
+import type { Options } from "../options";
+import { initials } from "../text";
+
+function Page({ name, expand = false, children }: { name: string; expand?: boolean; children: Child }) {
+  return (
+    <div className="view" data-view={name} data-expand={expand} data-load>
+      {children}
+    </div>
+  );
+}
+
+function CollectionPage({ collection, content }: { collection: Collection; content: Content }) {
+  const articles = collection.articles
+    .map((slug) => content.articles.find((article) => article.slug === slug))
+    .filter((article): article is Article => Boolean(article));
+
+  return (
+    <>
+      <BackBar title={collection.title} />
+      <div className="stack">
+        <p className="lead">{collection.description}</p>
+        <Loadable skeleton={<SkeletonRows count={3} />}>
+          <div className="list">
+            {articles.map((article) => (
+              <ArticleRow article={article} key={article.slug} />
+            ))}
+          </div>
+        </Loadable>
+      </div>
+    </>
+  );
+}
+
+function ArticlePage({ article, options }: { article: Article; options: Options }) {
+  return (
+    <>
+      <BackBar title={options.texts.help} />
+      <article className="page">
+        <Loadable skeleton={<SkeletonArticle />}>
+          <h1>{article.title}</h1>
+          <p className="byline">
+            <span className="face">{initials(article.author)}</span>
+            <span>{article.author}</span>
+            <span>·</span>
+            <span>{article.updated}</span>
+          </p>
+          <Prose blocks={article.body} />
+          <Feedback options={options} prompt={options.texts.helpful} />
+        </Loadable>
+      </article>
+    </>
+  );
+}
+
+function EntryPage({ entry, options }: { entry: Entry; options: Options }) {
+  return (
+    <>
+      <BackBar title={options.texts.changelog} />
+      <article className="page">
+        <Loadable skeleton={<SkeletonArticle />}>
+          <em className="badge">{entry.tag}</em>
+          <h1>{entry.title}</h1>
+          <p className="byline">
+            <time>{entry.date}</time>
+          </p>
+          <Prose blocks={entry.body} />
+          <Feedback options={options} prompt={options.texts.update_feedback} />
+        </Loadable>
+      </article>
+    </>
+  );
+}
+
+/*
+ * Pages renders every page the sample content can open. Once the backend
+ * is wired, pages will load on demand instead of rendering up front.
+ */
+export function Pages({ options, content }: { options: Options; content: Content }) {
+  return (
+    <>
+      {content.collections.map((collection) => (
+        <Page name={`collection:${collection.slug}`} key={collection.slug}>
+          <CollectionPage collection={collection} content={content} />
+        </Page>
+      ))}
+      {content.articles.map((article) => (
+        <Page name={`article:${article.slug}`} expand key={article.slug}>
+          <ArticlePage article={article} options={options} />
+        </Page>
+      ))}
+      {content.changelog.map((entry, index) => (
+        <Page name={`entry:${index}`} expand key={entry.title}>
+          <EntryPage entry={entry} options={options} />
+        </Page>
+      ))}
+    </>
+  );
+}

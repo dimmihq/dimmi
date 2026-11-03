@@ -4,9 +4,21 @@
     {
       "name": "dimmi",
       "runtimeExecutable": "make",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
       "port": 8080,
       "url": "http://localhost:8080"
+    },
+    {
+      "name": "dimmi-web-only",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "go build -o tmp/dimmi-web ./cmd/dimmi && DIMMI_HTTP__ADDR=127.0.0.1:8095 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__ROLES=web DIMMI_APP__URL=http://localhost:8095 tmp/dimmi-web serve"
+      ],
+      "port": 8095,
+      "autoPort": false
     }
   ]
 }

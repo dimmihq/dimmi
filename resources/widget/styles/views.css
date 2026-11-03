@@ -1,0 +1,113 @@
+/*
+ * Shared view parts: headers, empty states and changelog cards.
+ */
+.bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 84px 1fr 84px;
+  align-items: center;
+  block-size: 60px;
+  padding-inline: 18px;
+  border-block-end: 1px solid var(--separator);
+  background: var(--bg-full);
+}
+
+.bar .tools {
+  justify-self: end;
+  gap: 6px;
+  margin-inline-end: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+}
+
+.dock {
+  padding: 12px 16px 16px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.glyph {
+  display: grid;
+  place-items: center;
+  inline-size: 48px;
+  block-size: 48px;
+  margin-block-end: 12px;
+  border-radius: 14px;
+  background: var(--tint);
+  color: var(--accent);
+}
+
+.empty strong {
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.entry {
+  display: grid;
+}
+
+.art {
+  display: grid;
+  place-items: center;
+  block-size: 128px;
+  background:
+    radial-gradient(80% 120% at 0% 100%, color-mix(in oklab, var(--brand), white 30%), transparent 60%),
+    radial-gradient(70% 100% at 100% 0%, color-mix(in oklab, var(--accent), transparent 30%), transparent 65%),
+    var(--brand);
+  color: var(--on-brand);
+}
+
+.art > svg {
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+.copy {
+  display: grid;
+  gap: 4px;
+  padding: 16px 20px 18px;
+}
+
+.copy strong {
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.badge {
+  justify-self: start;
+  margin-block-end: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--accent);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.none {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  text-align: center;
+}

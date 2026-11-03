@@ -21,7 +21,7 @@ import { cx, sortCx } from "@/utils/cx";
  */
 
 type AvatarSize = "xs" | "sm" | "md" | "lg";
-type AvatarColor = "neutral" | "blue" | "lime" | "pink";
+export type AvatarColor = "neutral" | "blue" | "lime" | "pink";
 
 export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   size?: AvatarSize;

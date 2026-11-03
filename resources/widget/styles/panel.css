@@ -1,0 +1,86 @@
+/*
+ * The panel, its open and closed states, and the stack of views inside it.
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  inline-size: min(400px, calc(100vw - 2 * var(--x)));
+  block-size: min(704px, calc(100dvh - 104px - var(--y)));
+  overflow: hidden;
+  border: 1px solid var(--separator);
+  border-radius: 24px;
+  background: var(--bg-full);
+  box-shadow:
+    0 0 1px 0 rgb(0 0 0 / 0.32),
+    0 24px 64px -12px rgb(0 0 0 / 0.32),
+    0 8px 24px -8px rgb(0 0 0 / 0.12);
+  transform-origin: bottom right;
+  visibility: hidden;
+  opacity: 0;
+  scale: 0.85;
+  filter: blur(4px);
+  transition:
+    opacity 220ms ease-in,
+    scale 220ms ease-in,
+    filter 220ms ease-in,
+    inline-size 300ms var(--modal),
+    block-size 300ms var(--modal),
+    visibility 0s 220ms;
+}
+
+[data-side="left"] .panel {
+  transform-origin: bottom left;
+}
+
+[data-open="true"] .panel {
+  visibility: visible;
+  opacity: 1;
+  scale: 1;
+  filter: none;
+  transition:
+    opacity 300ms var(--modal),
+    scale 300ms var(--modal),
+    filter 300ms var(--modal),
+    inline-size 300ms var(--modal),
+    block-size 300ms var(--modal);
+}
+
+[data-expanded="true"] .panel {
+  inline-size: min(720px, calc(100vw - 2 * var(--x)));
+  block-size: calc(100dvh - 2 * var(--y) - 72px);
+}
+
+.views {
+  position: relative;
+  flex: 1;
+  min-block-size: 0;
+}
+
+.view {
+  display: none;
+  block-size: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.view[data-current] {
+  display: flex;
+  flex-direction: column;
+  animation: enter 220ms var(--out);
+}
+
+.tools {
+  display: flex;
+  gap: 4px;
+  margin-inline-end: -8px;
+}
+
+.narrow,
+[data-expanded="true"] .widen {
+  display: none;
+}
+
+[data-expanded="true"] .narrow {
+  display: block;
+}

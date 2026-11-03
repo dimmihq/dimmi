@@ -37,9 +37,15 @@ export interface WorkspaceSummary {
   role: string;
 }
 
+export interface Instance {
+  edition: string;
+  version: string;
+}
+
 export interface Me {
   user: User;
   workspaces: WorkspaceSummary[];
+  instance: Instance;
 }
 
 export interface Message {

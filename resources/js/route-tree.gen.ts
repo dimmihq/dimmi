@@ -17,7 +17,19 @@ import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-pass
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
+import { Route as DAgentRouteImport } from './routes/d/agent'
+import { Route as DAnnouncementsRouteImport } from './routes/d/announcements'
+import { Route as DChangelogRouteImport } from './routes/d/changelog'
+import { Route as DCustomersRouteImport } from './routes/d/customers'
+import { Route as DDocsRouteImport } from './routes/d/docs'
+import { Route as DFeedbackRouteImport } from './routes/d/feedback'
+import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
+import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
+import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
+import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$section'
+import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
+import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -58,10 +70,70 @@ const DIndexRoute = DIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DAgentRoute = DAgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DAnnouncementsRoute = DAnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DChangelogRoute = DChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DCustomersRoute = DCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DDocsRoute = DDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DFeedbackRoute = DFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DNotificationsRoute = DNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
   id: '/login_/magic',
   path: '/login/magic',
   getParentRoute: () => AuthRoute,
+} as any)
+const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
+  id: '/inbox/$view',
+  path: '/inbox/$view',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DSettingsIndexRoute = DSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DSettingsSectionRoute = DSettingsSectionRouteImport.update({
+  id: '/settings/$section',
+  path: '/settings/$section',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DInboxViewIndexRoute = DInboxViewIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DInboxViewRouteRoute,
+} as any)
+const DInboxViewConversationRoute = DInboxViewConversationRouteImport.update({
+  id: '/$conversation',
+  path: '/$conversation',
+  getParentRoute: () => DInboxViewRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -72,8 +144,20 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/d/agent': typeof DAgentRoute
+  '/d/announcements': typeof DAnnouncementsRoute
+  '/d/changelog': typeof DChangelogRoute
+  '/d/customers': typeof DCustomersRoute
+  '/d/docs': typeof DDocsRoute
+  '/d/feedback': typeof DFeedbackRoute
+  '/d/notifications': typeof DNotificationsRoute
   '/d/': typeof DIndexRoute
+  '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/login/magic': typeof AuthLoginMagicRoute
+  '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/settings/': typeof DSettingsIndexRoute
+  '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
+  '/d/inbox/$view/': typeof DInboxViewIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthRouteWithChildren
@@ -82,8 +166,19 @@ export interface FileRoutesByTo {
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/d/agent': typeof DAgentRoute
+  '/d/announcements': typeof DAnnouncementsRoute
+  '/d/changelog': typeof DChangelogRoute
+  '/d/customers': typeof DCustomersRoute
+  '/d/docs': typeof DDocsRoute
+  '/d/feedback': typeof DFeedbackRoute
+  '/d/notifications': typeof DNotificationsRoute
   '/d': typeof DIndexRoute
   '/login/magic': typeof AuthLoginMagicRoute
+  '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/settings': typeof DSettingsIndexRoute
+  '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
+  '/d/inbox/$view': typeof DInboxViewIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,8 +189,20 @@ export interface FileRoutesById {
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/signup': typeof AuthSignupRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/d/agent': typeof DAgentRoute
+  '/d/announcements': typeof DAnnouncementsRoute
+  '/d/changelog': typeof DChangelogRoute
+  '/d/customers': typeof DCustomersRoute
+  '/d/docs': typeof DDocsRoute
+  '/d/feedback': typeof DFeedbackRoute
+  '/d/notifications': typeof DNotificationsRoute
   '/d/': typeof DIndexRoute
+  '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
+  '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/settings/': typeof DSettingsIndexRoute
+  '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
+  '/d/inbox/$view/': typeof DInboxViewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,8 +214,20 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/d/agent'
+    | '/d/announcements'
+    | '/d/changelog'
+    | '/d/customers'
+    | '/d/docs'
+    | '/d/feedback'
+    | '/d/notifications'
     | '/d/'
+    | '/d/inbox/$view'
     | '/login/magic'
+    | '/d/settings/$section'
+    | '/d/settings/'
+    | '/d/inbox/$view/$conversation'
+    | '/d/inbox/$view/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,8 +236,19 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/d/agent'
+    | '/d/announcements'
+    | '/d/changelog'
+    | '/d/customers'
+    | '/d/docs'
+    | '/d/feedback'
+    | '/d/notifications'
     | '/d'
     | '/login/magic'
+    | '/d/settings/$section'
+    | '/d/settings'
+    | '/d/inbox/$view/$conversation'
+    | '/d/inbox/$view'
   id:
     | '__root__'
     | '/d'
@@ -128,8 +258,20 @@ export interface FileRouteTypes {
     | '/_auth/reset-password'
     | '/_auth/signup'
     | '/_auth/verify-email'
+    | '/d/agent'
+    | '/d/announcements'
+    | '/d/changelog'
+    | '/d/customers'
+    | '/d/docs'
+    | '/d/feedback'
+    | '/d/notifications'
     | '/d/'
+    | '/d/inbox/$view'
     | '/_auth/login_/magic'
+    | '/d/settings/$section'
+    | '/d/settings/'
+    | '/d/inbox/$view/$conversation'
+    | '/d/inbox/$view/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -195,6 +337,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DIndexRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/agent': {
+      id: '/d/agent'
+      path: '/agent'
+      fullPath: '/d/agent'
+      preLoaderRoute: typeof DAgentRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/announcements': {
+      id: '/d/announcements'
+      path: '/announcements'
+      fullPath: '/d/announcements'
+      preLoaderRoute: typeof DAnnouncementsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/changelog': {
+      id: '/d/changelog'
+      path: '/changelog'
+      fullPath: '/d/changelog'
+      preLoaderRoute: typeof DChangelogRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/customers': {
+      id: '/d/customers'
+      path: '/customers'
+      fullPath: '/d/customers'
+      preLoaderRoute: typeof DCustomersRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/docs': {
+      id: '/d/docs'
+      path: '/docs'
+      fullPath: '/d/docs'
+      preLoaderRoute: typeof DDocsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/feedback': {
+      id: '/d/feedback'
+      path: '/feedback'
+      fullPath: '/d/feedback'
+      preLoaderRoute: typeof DFeedbackRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/notifications': {
+      id: '/d/notifications'
+      path: '/notifications'
+      fullPath: '/d/notifications'
+      preLoaderRoute: typeof DNotificationsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/_auth/login_/magic': {
       id: '/_auth/login_/magic'
       path: '/login/magic'
@@ -202,15 +393,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginMagicRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/d/inbox/$view': {
+      id: '/d/inbox/$view'
+      path: '/inbox/$view'
+      fullPath: '/d/inbox/$view'
+      preLoaderRoute: typeof DInboxViewRouteRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/': {
+      id: '/d/settings/'
+      path: '/settings'
+      fullPath: '/d/settings/'
+      preLoaderRoute: typeof DSettingsIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/$section': {
+      id: '/d/settings/$section'
+      path: '/settings/$section'
+      fullPath: '/d/settings/$section'
+      preLoaderRoute: typeof DSettingsSectionRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/inbox/$view/': {
+      id: '/d/inbox/$view/'
+      path: '/'
+      fullPath: '/d/inbox/$view/'
+      preLoaderRoute: typeof DInboxViewIndexRouteImport
+      parentRoute: typeof DInboxViewRouteRoute
+    }
+    '/d/inbox/$view/$conversation': {
+      id: '/d/inbox/$view/$conversation'
+      path: '/$conversation'
+      fullPath: '/d/inbox/$view/$conversation'
+      preLoaderRoute: typeof DInboxViewConversationRouteImport
+      parentRoute: typeof DInboxViewRouteRoute
+    }
   }
 }
 
+interface DInboxViewRouteRouteChildren {
+  DInboxViewConversationRoute: typeof DInboxViewConversationRoute
+  DInboxViewIndexRoute: typeof DInboxViewIndexRoute
+}
+
+const DInboxViewRouteRouteChildren: DInboxViewRouteRouteChildren = {
+  DInboxViewConversationRoute: DInboxViewConversationRoute,
+  DInboxViewIndexRoute: DInboxViewIndexRoute,
+}
+
+const DInboxViewRouteRouteWithChildren = DInboxViewRouteRoute._addFileChildren(
+  DInboxViewRouteRouteChildren,
+)
+
 interface DRouteRouteChildren {
+  DAgentRoute: typeof DAgentRoute
+  DAnnouncementsRoute: typeof DAnnouncementsRoute
+  DChangelogRoute: typeof DChangelogRoute
+  DCustomersRoute: typeof DCustomersRoute
+  DDocsRoute: typeof DDocsRoute
+  DFeedbackRoute: typeof DFeedbackRoute
+  DNotificationsRoute: typeof DNotificationsRoute
   DIndexRoute: typeof DIndexRoute
+  DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
+  DSettingsSectionRoute: typeof DSettingsSectionRoute
+  DSettingsIndexRoute: typeof DSettingsIndexRoute
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
+  DAgentRoute: DAgentRoute,
+  DAnnouncementsRoute: DAnnouncementsRoute,
+  DChangelogRoute: DChangelogRoute,
+  DCustomersRoute: DCustomersRoute,
+  DDocsRoute: DDocsRoute,
+  DFeedbackRoute: DFeedbackRoute,
+  DNotificationsRoute: DNotificationsRoute,
   DIndexRoute: DIndexRoute,
+  DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
+  DSettingsSectionRoute: DSettingsSectionRoute,
+  DSettingsIndexRoute: DSettingsIndexRoute,
 }
 
 const DRouteRouteWithChildren =

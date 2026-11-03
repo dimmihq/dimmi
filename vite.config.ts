@@ -73,8 +73,12 @@ export default defineConfig(({ command }) => ({
     rollupOptions: { input: "resources/js/app.tsx" },
   },
   test: {
-    environment: "jsdom",
-    globals: true,
-    include: ["resources/js/**/*.test.{ts,tsx}"],
+    projects: [
+      {
+        extends: true,
+        test: { name: "app", environment: "jsdom", globals: true, include: ["resources/js/**/*.test.{ts,tsx}"] },
+      },
+      "./vite.widget.config.ts",
+    ],
   },
 }));

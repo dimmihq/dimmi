@@ -1,0 +1,92 @@
+/*
+ * The launcher button and the mark that turns into a chevron.
+ */
+.launcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  block-size: 56px;
+  min-inline-size: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 28px;
+  background-image: linear-gradient(180deg, var(--brand-top), var(--brand));
+  color: var(--on-brand);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 10px 28px -6px rgb(0 0 0 / 0.3);
+  transition:
+    filter 150ms ease,
+    transform 420ms var(--press);
+  animation: enter 400ms var(--out) backwards;
+}
+
+.launcher[data-shape="squircle"] {
+  border-radius: 18px;
+}
+
+@supports (corner-shape: squircle) {
+  .launcher[data-shape="squircle"] {
+    border-radius: 50%;
+    corner-shape: squircle;
+  }
+}
+
+.launcher:has(.label) {
+  padding-inline: 16px 22px;
+}
+
+.launcher:hover {
+  filter: brightness(1.08);
+}
+
+.launcher:active {
+  transform: scale(0.98);
+  transition-duration: 150ms, 220ms;
+}
+
+.icons {
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+}
+
+.icons svg {
+  grid-area: 1 / 1;
+  inline-size: 26px;
+  block-size: 26px;
+  transition:
+    opacity 300ms var(--modal),
+    rotate 300ms var(--modal),
+    scale 300ms var(--modal),
+    filter 300ms var(--modal);
+}
+
+.chevron {
+  stroke-width: 2.25;
+  opacity: 0;
+  rotate: -90deg;
+  scale: 0.5;
+  filter: blur(2px);
+}
+
+[data-open="true"] .icons .mark {
+  opacity: 0;
+  rotate: 90deg;
+  scale: 0.5;
+  filter: blur(2px);
+}
+
+[data-open="true"] .chevron {
+  opacity: 1;
+  rotate: 0deg;
+  scale: 1;
+  filter: none;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}

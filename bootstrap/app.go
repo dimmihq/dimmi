@@ -52,6 +52,7 @@ options that boot it.
 func Application() (*app.App, foundation.Options) {
 	application := app.New(Version)
 	application.Frontend = public.Build()
+	application.Widget = public.Widget()
 
 	return application, foundation.Options{
 		Name:       Name,

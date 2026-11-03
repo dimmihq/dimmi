@@ -32,6 +32,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/providers"
+	"github.com/dimmihq/dimmi/app/support/widgetassets"
 	appconfig "github.com/dimmihq/dimmi/config"
 )
 
@@ -48,7 +49,8 @@ ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
 Frontend is the browser app's production build and Vite links it, or
-the dev server while one runs, into pages.
+the dev server while one runs, into pages. Widget is the messenger
+widget's build and WidgetAssets serves it.
 */
 type App struct {
 	*foundation.Application
@@ -74,6 +76,8 @@ type App struct {
 	OAuthAttempts auth.OAuthAttempts
 	Frontend      fs.FS
 	Vite          *vite.Bundle
+	Widget        fs.FS
+	WidgetAssets  *widgetassets.Assets
 }
 
 /*

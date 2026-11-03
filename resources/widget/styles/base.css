@@ -1,0 +1,149 @@
+/*
+ * The messenger on someone else's page.
+ *
+ * Surfaces, borders, text and controls are BoardUI's, copied from its
+ * theme: the same neutral tokens in light and dark, the primary button's
+ * gradient with its hover layer and soft press, the icon button, and the
+ * input's inset ring that darkens on hover and focus. The one thing that
+ * is not BoardUI's is color: the customer's brand replaces BoardUI's
+ * accent, so primary buttons, the logo tile, the header's tint, avatars
+ * and accents all follow the color the customer picked, and text on it
+ * turns ink or white by its lightness.
+ *
+ * Motion follows BoardUI: entrances condense from a fade, a slight scale
+ * and a small blur; the panel opens like a modal in 300ms and leaves
+ * faster; the launcher's mark turns into a chevron on the same curve;
+ * color changes take 150ms; and reduced motion turns it all off.
+ */
+:host {
+  all: initial;
+  --bg-full: light-dark(#fff, #121212);
+  --bg-primary: light-dark(#fff, #262626);
+  --bg-primary-hover: light-dark(#f7f7f7, rgb(64 64 64 / 0.6));
+  --bg-primary-active: light-dark(#ebebeb, #262626);
+  --bg-secondary: light-dark(#f7f7f7, #171717);
+  --bg-tertiary: light-dark(#ebebeb, #262626);
+  --border-button: light-dark(#ebebeb, #404040);
+  --border-button-hover: light-dark(#d4d4d4, #737373);
+  --border-button-active: light-dark(#a1a1a1, #525252);
+  --separator: light-dark(#ebebeb, #262626);
+  --text-primary: light-dark(#0a0a0a, #fafafa);
+  --text-secondary: #737373;
+  --text-tertiary: light-dark(#a1a1a1, #525252);
+  --shadow-xs: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.18));
+  --card: light-dark(#fff, #171717);
+  --accent: light-dark(oklch(from var(--brand) min(l, 0.5) c h), oklch(from var(--brand) max(l, 0.8) c h));
+  --tint: color-mix(in oklab, var(--accent) 12%, transparent);
+  --on-brand: #fff;
+  --brand-top: oklch(from var(--brand) calc(l + 0.06) c h);
+  --brand-hover: oklch(from var(--brand) calc(l + 0.12) c h);
+  --brand-deep: oklch(from var(--brand) calc(l - 0.06) c h);
+  --modal: cubic-bezier(0.32, 0.72, 0, 1);
+  --out: cubic-bezier(0.22, 1, 0.36, 1);
+  --press: cubic-bezier(0.4, 0, 0.2, 1);
+  color-scheme: light dark;
+}
+
+*,
+::before {
+  box-sizing: border-box;
+}
+
+:host([data-theme="light"]) {
+  color-scheme: light;
+}
+
+:host([data-theme="dark"]) {
+  color-scheme: dark;
+}
+
+:host([data-brand="light"]) {
+  --on-brand: #0a0a0a;
+}
+
+.messenger {
+  position: fixed;
+  z-index: 2147483000;
+  inset-block-end: var(--y);
+  inset-inline-end: var(--x);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+  color: var(--text-primary);
+  font:
+    14px / 20px system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.messenger[data-font="inherit"] {
+  font-family: inherit;
+}
+
+.messenger[data-side="left"] {
+  inset-inline: var(--x) auto;
+  align-items: flex-start;
+}
+
+button,
+input,
+textarea {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: 0;
+}
+
+svg {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mark {
+  fill: currentColor;
+  stroke: none;
+}
+
+strong {
+  font-weight: 500;
+}
+
+small {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+time {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+}

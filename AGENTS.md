@@ -85,9 +85,10 @@ package cache
 - Never add `biome-ignore` comments, never lower a rule or add an override in `biome.json`, and never exclude a
   file to get there: change the code, or stop and report why the rule does not fit.
 - Run `pnpm format` (`biome check --write`) before finishing.
-- BoardUI's files (`resources/js/components`, `resources/js/styles`, `resources/js/utils`) stay exactly as
-  `boardui add` and `boardui init` write them: never edit them, and Biome skips them. Our own code lives elsewhere
-  under `resources/js` and builds on them.
+- BoardUI's files (`resources/js/components`, `resources/js/styles`, `resources/js/utils`) are ours: start from the
+  BoardUI block that fits and edit its source to take real data (props instead of demo content, router links),
+  keeping its look and tokens. Biome skips those folders. Product code that is not a BoardUI block lives elsewhere
+  under `resources/js`.
 - `pnpm typecheck` and `pnpm test` pass too. `make lint test` runs all of it with the Go checks.
 - Browser flows have end-to-end tests in `tests/e2e` (Playwright, Chromium, light and dark) against the release
   cloud binary, started fresh by `tests/e2e/server.ts`. A test fails on any page error, console error or content

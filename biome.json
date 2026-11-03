@@ -8,6 +8,8 @@
   "files": {
     "includes": [
       "resources/js/**",
+      "resources/widget/**",
+      "scripts/**",
       "!resources/js/route-tree.gen.ts",
       "!resources/js/components",
       "!resources/js/styles",
@@ -93,5 +95,17 @@
         "noJsxPropsBind": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["resources/widget/lib/report.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ]
 }

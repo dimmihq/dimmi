@@ -1,0 +1,16 @@
+/*
+ * The messenger's stylesheet, split by area. Order matters: later files
+ * build on and override earlier ones.
+ */
+@import "./base.css";
+@import "./controls.css";
+@import "./launcher.css";
+@import "./panel.css";
+@import "./home.css";
+@import "./views.css";
+@import "./pages.css";
+@import "./conversation.css";
+@import "./tabs.css";
+@import "./skeleton.css";
+@import "./unread.css";
+@import "./responsive.css";

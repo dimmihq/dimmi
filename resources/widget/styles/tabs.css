@@ -1,0 +1,70 @@
+/*
+ * The tab bar, hidden while a page covers the tabs.
+ */
+.tabs {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding: 6px 8px 8px;
+  border-block-start: 1px solid var(--separator);
+  background: var(--bg-full);
+}
+
+.tabs button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  transition: color 150ms ease;
+}
+
+.tabs button:hover {
+  color: var(--text-secondary);
+}
+
+.tabs svg {
+  inline-size: 22px;
+  block-size: 22px;
+  transition: fill 150ms ease;
+}
+
+.tabs [aria-selected="true"] {
+  color: var(--text-primary);
+}
+
+.tabs [aria-selected="true"] svg {
+  fill: color-mix(in oklab, currentColor 14%, transparent);
+}
+
+.dot {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: calc(50% + 6px);
+  inline-size: 8px;
+  block-size: 8px;
+  border: 2px solid var(--bg-full);
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+[data-page="true"] .tabs {
+  display: none;
+}
+
+.view[data-current] > * {
+  flex-shrink: 0;
+}
+
+.view[data-current] > .thread {
+  flex-shrink: 1;
+  min-block-size: 0;
+}

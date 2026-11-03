@@ -45,13 +45,19 @@ export const test = base.extend<{ person: Person; watch: undefined }>({
 export { expect };
 
 /*
+ * inbox matches the address the app opens on: the workspace's
+ * unassigned conversations.
+ */
+export const inbox = /\/d\/inbox\/unassigned$/;
+
+/*
  * createAccount signs the person up through the API, as a quick way to
  * have an account; it leaves the browser signed out. A request outside a
  * browser sends no Origin, which cross-origin protection lets through.
  */
-export async function createAccount(request: APIRequestContext, person: Person) {
+export async function createAccount(request: APIRequestContext, person: Person, workspace?: string) {
   const response = await request.post("/api/v1/users", {
-    data: { name: person.name, email: person.email, password: person.password },
+    data: { name: person.name, email: person.email, password: person.password, workspace_name: workspace },
   });
   expect(response.status(), await response.text()).toBe(201);
 }
@@ -64,5 +70,14 @@ export async function signIn(page: Page, person: Person) {
   await page.getByLabel("Email").fill(person.email);
   await page.getByLabel("Password").fill(person.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).toHaveURL(/\/d$/);
+  await expect(page).toHaveURL(inbox);
+}
+
+/*
+ * signOut signs out from the account menu at the foot of the sidebar.
+ */
+export async function signOut(page: Page, person: Person) {
+  await page.getByRole("button", { name: person.name, exact: true }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
 }
