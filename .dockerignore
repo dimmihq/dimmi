@@ -1,0 +1,16 @@
+.git
+.claude
+**/node_modules
+**/cdk.out
+bin
+tmp
+storage
+public/build
+test-results
+playwright-report
+deploy
+specs
+research
+docs
+.env*
+dimmi.yaml

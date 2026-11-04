@@ -16,30 +16,32 @@ import (
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
     workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id,
-    dedupe_key, delivery_status, substantive, metadata, sent_at, created_at, updated_at
+    dedupe_key, delivery_status, substantive, metadata, sent_at, channel_connection_id, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
-    $9, $10, $11, $12, $13, $14, $15, $15
+    $9, $10, $11, $12, $13, $14,
+    $15, $16, $16
 )
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id
 `
 
 type CreateMessageParams struct {
-	WorkspaceID      ids.UUID        `json:"workspace_id"`
-	ConversationID   ids.UUID        `json:"conversation_id"`
-	Type             string          `json:"type"`
-	AuthorType       string          `json:"author_type"`
-	AuthorID         *ids.UUID       `json:"author_id"`
-	Body             *string         `json:"body"`
-	BodyHtml         *string         `json:"body_html"`
-	Event            json.RawMessage `json:"event"`
-	ChannelMessageID *string         `json:"channel_message_id"`
-	DedupeKey        *string         `json:"dedupe_key"`
-	DeliveryStatus   *string         `json:"delivery_status"`
-	Substantive      bool            `json:"substantive"`
-	Metadata         json.RawMessage `json:"metadata"`
-	SentAt           *time.Time      `json:"sent_at"`
-	Now              time.Time       `json:"now"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ConversationID      ids.UUID        `json:"conversation_id"`
+	Type                string          `json:"type"`
+	AuthorType          string          `json:"author_type"`
+	AuthorID            *ids.UUID       `json:"author_id"`
+	Body                *string         `json:"body"`
+	BodyHtml            *string         `json:"body_html"`
+	Event               json.RawMessage `json:"event"`
+	ChannelMessageID    *string         `json:"channel_message_id"`
+	DedupeKey           *string         `json:"dedupe_key"`
+	DeliveryStatus      *string         `json:"delivery_status"`
+	Substantive         bool            `json:"substantive"`
+	Metadata            json.RawMessage `json:"metadata"`
+	SentAt              *time.Time      `json:"sent_at"`
+	ChannelConnectionID *ids.UUID       `json:"channel_connection_id"`
+	Now                 time.Time       `json:"now"`
 }
 
 // CreateMessage appends an entry to a conversation's timeline. A dedupe
@@ -62,6 +64,7 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		arg.Substantive,
 		arg.Metadata,
 		arg.SentAt,
+		arg.ChannelConnectionID,
 		arg.Now,
 	)
 	var i Message
@@ -85,15 +88,16 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.SentAt,
 		&i.ReadAt,
 		&i.DeletedAt,
-		&i.Search,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
 	)
 	return i, err
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
 WHERE workspace_id = $1
   AND conversation_id = $2
   AND (
@@ -150,9 +154,10 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 			&i.SentAt,
 			&i.ReadAt,
 			&i.DeletedAt,
-			&i.Search,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Search,
+			&i.ChannelConnectionID,
 		); err != nil {
 			return nil, err
 		}

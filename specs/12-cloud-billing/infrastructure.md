@@ -1,27 +1,28 @@
 # 12 Dimmi Cloud: infrastructure
 
-Style: caveman. Status: outline (PO 2026-11-02: "no need to worry too much about that now"). Internal ops only; never published as self-host guidance. Self-host paths: `specs/11-self-host/packaging.md` (compose, `install.sh` bare binary, platform templates).
+Style: caveman. Status: approved for launch (owner, 2026-11-04). Internal ops only; never published as self-host guidance. Self-host paths: `specs/11-self-host/packaging.md`. Built and run: `deploy/` and `docs/deploy`; detail in `specs/19-cloud-staging`.
 
 ## Shape
 
-Same binary as self-host, no Docker. Managed backing services. Built to scale out a lot.
+Same binary as self-host, cloud edition (`-tags cloud`), in a distroless ARM container. Managed backing services. Staging and production defined in one CDK app.
 
 | Layer | Choice |
 |---|---|
-| App | release binary (`linux/arm64`, Graviton) on EC2, run by the same `dimmi.service` systemd unit `install.sh` ships. No container runtime |
-| Fleet | EC2 Auto Scaling groups behind an NLB with TCP passthrough on 443 and 80, so the binary terminates TLS with certificates from the database (TCP idle timeout 350 s, health `/ready` over HTTP on port 80, no sticky sessions). Optional split by `DIMMI_APP__ROLES`: `web` group (scales on WebSocket count + CPU), `worker,scheduler` group (scales on River queue depth) |
-| Deploy | new binary version = new launch template version (user data pulls signed release archive, verifies checksum + cosign) then ASG instance refresh, rolling; migrations run once under advisory lock (11 operations.md) |
-| Postgres | RDS PostgreSQL 18 (pgvector), Multi-AZ, writer endpoint as `database.url`; reader endpoint as `database.read_urls` when replicas added; RDS Proxy optional (`database.pool_mode=transaction` + `database.direct_url`). Backups: RDS PITR (`backups.enabled=false`) |
-| Valkey | ElastiCache for Valkey 8, TLS + auth, cluster mode when one shard is not enough (`redis.mode=auto`) |
-| Storage | S3 (`filesystems.default=s3`) |
-| Mail | SES (two configuration sets, tenant per workspace; 04) |
-| Keys | KMS (`encryption.keys.driver=kms`) |
-| Secrets | Secrets Manager, read at boot into `_FILE` paths or env by user data |
-| IaC | CloudFormation (stacks per cell) |
-| Cells | one cell = one VPC + RDS + ElastiCache + ASGs (`app.region` `us`, later `eu`); foundation extensibility.md cell model |
+| App | ECS Fargate, `linux/arm64`, image from `Dockerfile`. Tasks disposable: fresh container per deploy, nothing on disk |
+| Edge | NLB, TCP passthrough on 443 and 80, Elastic IP per zone, client IP preservation on IP targets. Binary terminates TLS (certmagic, certificates in Postgres). Health `/ready` over plain HTTP. No ALB, no sticky sessions |
+| Services | `web` behind the NLB; production adds `worker,scheduler` as its own service (`DIMMI_APP__ROLES`). Staging runs all roles in one task |
+| Deploy | image per commit in ECR; `release` tag moved, `provision` and `migrate --force` one-off tasks, then forced rolling deployment (100/200, circuit breaker rollback). Production gets the exact image staging ran. GitHub Actions with OIDC, no long-lived keys |
+| Postgres | RDS PostgreSQL 18, Multi-AZ in production. App connects as `dimmi_app` (owns nothing, no `BYPASSRLS`); migrations as `dimmi_owner`. Backups: RDS automated (`backups.enabled=false`) |
+| Valkey | ElastiCache for Valkey 8, node based, TLS + AUTH. Serverless out: no `CLIENT TRACKING` |
+| Storage | S3 (`filesystems.default=s3`); inbound mail bucket owned by the mail stack |
+| Mail | SES, Region per environment (staging us-east-2, production us-east-1), two configuration sets, tenant per workspace (04) |
+| Keys | KMS (`encryption.kek=awskms`) |
+| Secrets | Secrets Manager, injected by ECS at task start |
+| DNS | Vercel, every record, written by `deploy/dns`. No Route 53 |
+| IaC | AWS CDK in TypeScript, `deploy/cdk`, one typed config per environment |
 
 Backing-service scaling (RDS instance class, replicas, ElastiCache shards) is AWS's job; Dimmi only connects (11 decision 20).
 
 ## Later (not specced yet)
 
-Stack layout, instance sizes, autoscaling thresholds, observability stack, runbooks, cost model refresh (`research/pricing.md` uses EC2 Graviton compute).
+Autoscaling thresholds (web on CPU and connections, worker on queue depth), cells per region (`app.region` `us`, later `eu`), observability stack beyond CloudWatch, cost model refresh in `research/pricing.md`.
