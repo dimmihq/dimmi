@@ -476,7 +476,7 @@ vis(){ r "$@" -H "$SITE" -H "Authorization: Bearer $V"; }
 | Live stream | `curl -N "http://127.0.0.1:18080/connection/uni_sse?cf_connect=$(jq -rn --arg t <token> '{token:$t}\|tojson\|@uri')"`, then reply from the inbox | a `connect` push, then `message.created` with `widget_id` |
 | Stream past the cap | open eleven streams with fresh tokens | the first ends with `disconnect` code 4004 |
 | Polling | `vis up $M/updates`, reply, then `vis up "$M/updates?since=<meta.cursor>"` | 200, the reply as `message.created` in `data`, `meta.has_more: false`; a forged `since` 400 |
-| Sign out | keep a stream open, `vis bye -X DELETE $M/session` | 204; the stream gets `widget.session_revoked` then `disconnect` 4009; `vis me $M/session` gives 401 `session_revoked` |
+| Sign out | keep a stream open, `vis bye -X DELETE $M/session` | 204; the stream gets `widget.session_revoked` (usually before the close) and `disconnect` 4009; `vis me $M/session` gives 401 `session_revoked` |
 | Token as API bearer | `r bad -H "Authorization: Bearer <realtime token>" $M/session` | 401 |
 
 ### Email channel

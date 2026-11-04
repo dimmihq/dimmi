@@ -1,6 +1,7 @@
 package widget_test
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 	"testing"
@@ -74,16 +75,22 @@ func TestWidgetRealtime(t *testing.T) {
 
 		v.client().Delete("/widget/v1/session").AssertNoContent()
 
-		event, data := s.event()
-		assert.Equal(t, "widget.session_revoked", event)
-		assert.JSONEq(t, `{"session_id":"`+v.id+`"}`, string(data))
-
 		for {
 			p := s.next()
 			if p.Disconnect != nil {
 				assert.Equal(t, 4009, p.Disconnect.Code)
 
 				break
+			}
+
+			if p.Pub != nil {
+				var notice struct {
+					Event string          `json:"event"`
+					Data  json.RawMessage `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(p.Pub.Data, &notice))
+				assert.Equal(t, "widget.session_revoked", notice.Event)
+				assert.JSONEq(t, `{"session_id":"`+v.id+`"}`, string(notice.Data))
 			}
 		}
 	})

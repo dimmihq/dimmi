@@ -3,11 +3,12 @@
 | Session Streams
 |--------------------------------------------------------------------------
 |
-| A session that ended must not keep listening. Its streams first hear
-| that the session ended, so the messenger forgets it rather than trying
-| again, and are then closed. Each stream connects under its session's
-| public id, so closing every stream of a session is one call that
-| reaches every replica. The notice goes out on the contact's channel
+| A session that ended must not keep listening. Its streams are told the
+| session ended, so the messenger forgets it rather than trying again, and
+| are then closed. The notice and the close travel separately, so a stream
+| may close before the notice reaches it; the close code says the same.
+| Each stream connects under its session's public id, so closing every
+| stream of a session is one call that reaches every replica. The notice goes out on the contact's channel
 | without history, naming the session, so another device of the same
 | visitor ignores it and a reconnect never replays it.
 |
