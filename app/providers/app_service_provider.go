@@ -124,6 +124,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootFactors(a)
 	bootTeams(a)
 
+	if err := bootAudit(a); err != nil {
+		return err
+	}
+
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
 }
 

@@ -12,6 +12,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
@@ -87,4 +88,9 @@ type Actions struct {
 	PurgeTeam        *teams.PurgeTeam
 	AddTeamMembers   *teams.AddTeamMembers
 	RemoveTeamMember *teams.RemoveTeamMember
+
+	RecordAuditLog     *audit.RecordAuditLog
+	ListAuditLogs      *audit.ListAuditLogs
+	ShowAuditLog       *audit.ShowAuditLog
+	ListSecurityEvents *auth.ListSecurityEvents
 }

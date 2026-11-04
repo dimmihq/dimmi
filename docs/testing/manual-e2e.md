@@ -237,6 +237,28 @@ ADAM=$(curl -s -b b.jar -H "$H" "$B/members?q=$ADA" | jq -r '.data[0].id')
 | Name free again | `POST $B/teams {"name":"Customer care"}` | 201 |
 | In a browser | open `$W/d/settings/teams`, create a team, add a member from the picker, rename it, remove the member, go back to all teams and delete it | the team page opens on create; the member count follows each change; delete asks first and returns to the list |
 
+### Audit and security logs
+
+Run right after the members flows: Bob now owns Acme and Ada has left it. `ADAM` is Ada's `mem_` id. Filters use
+square brackets, so pass `-g` to stop curl from reading them as a glob.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Whole log, oldest first | `r log -g -b b.jar -H "$O" -H "$H" "$B/audit-logs?sort=created_at&limit=100"; jq -r '.data[] \| [.event, .actor.via.kind, .subject.label] \| @tsv' body` | 200: `workspace.created`, `member.joined` (no `via`: signing up), `workspace.updated`, `member.role_changed`, `member.deactivated`, `member.reactivated`, `member.role_changed`, `ownership.transferred`, `member.role_changed` (Ada to admin), `member.left`; each with `actor.label` "Ada Lovelace <ada…>", `via.kind: session`, `ip`, `user_agent: curl/…`, `request_id`, `changes` such as `{"role":{"from":"member","to":"admin"}}` |
+| By event | `"$B/audit-logs?filter[event]=member.role_changed,ownership.transferred"` | 4 entries, newest first |
+| By actor, paged | `"$B/audit-logs?filter[actor]=$ADAM&limit=2"`, then again with `&cursor=` the `meta.next_cursor` | 2 entries and a cursor, then the next 2 older ones |
+| By time | `filter[created_after]=2026-01-01T00:00:00Z&filter[created_before]=2099-01-01T00:00:00Z`; then `filter[created_after]=yesterday` | every entry; then 400 `invalid_filter`, `parameter: created_after` |
+| One entry | `r show -b b.jar -H "$O" -H "$H" $B/audit-logs/aud_…`, and `aud_01jc0000000000000000000000` | 200 the entry; 404 `not_found` |
+| Members cannot read | before the promotion above, Bob (then a member): `GET $B/audit-logs` with `-H "$H"` | 403 `forbidden` |
+| Own security log | `r sev -b a.jar -H "$O" "$B/user/security-events?limit=2"` | 200, newest first: `login.succeeded` with `metadata.auth_methods`, `session_id`, no `device_id`; `meta.next_cursor` while more remain |
+| Tokens refused | `r sevt -H "Authorization: Bearer dmi_live_x" $B/user/security-events` | 401 `invalid_token` |
+| Entries cannot change | as the application's database role (not a superuser): `update audit_logs set event = 'x.y'` | `permission denied for table audit_logs` |
+| In a browser | as Bob, open `$W/d/settings/audit-log`, pick "Changed a role" under events, then Ada under actors; open `$W/d/settings/security` | the table narrows to each filter, Older and Newer step through pages; "Recent security activity" lists the latest sign-ins with device and address |
+
+Retention: `audit.retention_days` (`DIMMI_AUDIT__RETENTION_DAYS`) keeps audit entries for ever on self-host
+unless set, a year on the cloud; `security_events.retention_days` is 365 on both. The prune jobs run nightly at
+03:10 and 03:20 UTC.
+
 ### Two-factor authentication
 
 Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an

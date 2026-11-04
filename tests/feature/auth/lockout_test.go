@@ -80,7 +80,7 @@ func TestLockout(t *testing.T) {
 		client.PostJSON("/api/v1/sessions", login(tc.Owner.Email, factories.Password)).AssertCreated()
 	})
 
-	t.Run("records failed and locked sign-ins in the account's security log", func(t *testing.T) {
+	t.Run("records failed sign-ins once a minute per address, and every locked one", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))
 
@@ -88,7 +88,7 @@ func TestLockout(t *testing.T) {
 		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, factories.Password)).AssertStatus(429)
 
 		tc.Table("security_events").
-			AssertCount(4, testkit.Row{"user_id": tc.Owner.ID, "type": "login.failed"}).
+			AssertCount(1, testkit.Row{"user_id": tc.Owner.ID, "type": "login.failed"}).
 			AssertCount(2, testkit.Row{"user_id": tc.Owner.ID, "type": "login.locked"})
 	})
 

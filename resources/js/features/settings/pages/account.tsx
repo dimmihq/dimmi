@@ -3,7 +3,7 @@
  * them, what notifies them, how they sign in, and their API tokens.
  * Nothing here changes anything for teammates.
  */
-import { RiGithubFill, RiGoogleFill, RiKey2Line, RiShieldKeyholeLine } from "@remixicon/react";
+import { RiGithubFill, RiGoogleFill, RiKey2Line } from "@remixicon/react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
@@ -11,6 +11,7 @@ import { avatarColor } from "@/features/shell/avatar-color";
 
 import { Action, Choice, Danger, Field, Toggle } from "../controls";
 import { Empty, Glyph, Item, Logo, Row, Section, SettingsPage } from "../layout";
+import { RecentSecurityActivity } from "../security-activity";
 import { SessionsSection } from "../sessions";
 import { TwoFactorSection } from "../two-factor";
 import { useAccount } from "../use-account";
@@ -205,13 +206,7 @@ export function SecuritySettings() {
         </Item>
       </Section>
       <SessionsSection hasPassword={me.hasPassword} />
-      <Section title="Security log" description="Sign-ins and changes to your account.">
-        <Item
-          mark={<Glyph icon={RiShieldKeyholeLine} />}
-          title="Signed in with a password"
-          detail="Today · Chrome on macOS"
-        />
-      </Section>
+      <RecentSecurityActivity />
     </SettingsPage>
   );
 }

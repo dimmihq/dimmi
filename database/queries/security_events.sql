@@ -12,8 +12,24 @@ SELECT EXISTS (
 );
 
 -- name: ListUserSecurityEvents :many
--- ListUserSecurityEvents returns the user's latest security log entries.
-SELECT * FROM security_events WHERE user_id = @user_id ORDER BY created_at DESC, id DESC LIMIT @row_limit;
+-- ListUserSecurityEvents returns a page of the user's security log,
+-- newest first, after the cursor position when one is given.
+SELECT * FROM security_events
+WHERE user_id = @user_id
+  AND (
+      sqlc.narg(cursor_at)::timestamptz IS NULL
+      OR (created_at, id) < (sqlc.narg(cursor_at)::timestamptz, sqlc.narg(cursor_id)::uuid)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT @row_limit::bigint;
+
+-- name: PruneSecurityEvents :execrows
+-- PruneSecurityEvents deletes up to a batch of security log entries, of
+-- every user, written before the cutoff, oldest first.
+DELETE FROM security_events
+WHERE id IN (
+    SELECT e.id FROM security_events AS e WHERE e.created_at < @cutoff ORDER BY e.created_at LIMIT @batch::bigint
+);
 
 -- name: FindSignInHistory :one
 -- FindSignInHistory says whether the user ever signed in before and

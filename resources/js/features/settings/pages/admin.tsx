@@ -1,11 +1,11 @@
 /*
- * Running the workspace: the rules every member signs in under, the
- * audit log, moving data in and out, and billing on the cloud. Admins
- * and owners change these; some actions are for owners only. The
- * workspace's name and its members live in workspace.tsx, its teams in
- * teams.tsx.
+ * Running the workspace: the rules every member signs in under, moving
+ * data in and out, and billing on the cloud. Admins and owners change
+ * these; some actions are for owners only. The workspace's name and its
+ * members live in workspace.tsx, its teams in teams.tsx and its audit
+ * log in audit-log.tsx.
  */
-import { RiBankCardLine, RiDownload2Line, RiFileList3Line } from "@remixicon/react";
+import { RiBankCardLine, RiDownload2Line } from "@remixicon/react";
 
 import { Action, Field } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
@@ -18,24 +18,6 @@ export function WorkspaceSecuritySettings() {
   return (
     <SettingsPage title="Security" description="Rules every member of the workspace signs in under.">
       <RequireTwoFactorSection workspace={me.workspace.id} hasPassword={me.hasPassword} title="Authentication" />
-    </SettingsPage>
-  );
-}
-
-const events = [
-  ["Sam Okafor changed Lea Martin's role to Member", "Today, 10:42 · Browser"],
-  ["Lea Martin created the webhook api.acme.com/hooks/dimmi", "Yesterday · API token"],
-  ["Sam Okafor invited noor@acme.com", "2 days ago · Browser"],
-];
-
-export function AuditLogSettings() {
-  return (
-    <SettingsPage title="Audit log" description="Kept for a year on cloud, for ever on self-host.">
-      <Section title="Recent events" action={<Action>Export CSV</Action>}>
-        {events.map(([title, detail]) => (
-          <Item key={title} mark={<Glyph icon={RiFileList3Line} />} title={title} detail={detail} />
-        ))}
-      </Section>
     </SettingsPage>
   );
 }

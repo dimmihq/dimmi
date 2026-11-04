@@ -58,6 +58,8 @@ type controllers struct {
 	authFactors       *v1.AuthFactorController
 	teams             *v1.TeamController
 	teamMembers       *v1.TeamMemberController
+	auditLogs         *v1.AuditLogController
+	securityEvents    *v1.SecurityEventController
 }
 
 /*
@@ -103,6 +105,7 @@ func API(a *app.App) {
 			routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
 				Status(fhttp.StatusNoContent)
 			authFactorRoutes(user, c.authFactors)
+			routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index)
 		})
 
 		api.Group("", func(caller *routing.Router) {
@@ -128,6 +131,8 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read")
+	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
 	invitationRoutes(workspace, c)
 	teamRoutes(workspace, c)
 }
@@ -174,6 +179,7 @@ func newControllers(a *app.App) controllers {
 		Region: a.Config.App.Region, MailConfigured: a.MailConfigured(), Clock: a.Clock,
 	}
 	acts := a.Actions
+	cursors := pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose))
 
 	c := controllers{
 		authConfig: &v1.AuthConfigController{
@@ -210,16 +216,20 @@ func newControllers(a *app.App) controllers {
 		members: &v1.MemberController{
 			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
 			MemberTeams: acts.ListMemberTeams,
-			Cursors:     pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+			Cursors:     cursors,
 		},
 		authFactors: &v1.AuthFactorController{
 			List: acts.ListAuthFactors, Add: acts.AddAuthFactor, Activate: acts.ActivateAuthFactor,
 			Change: acts.UpdateAuthFactor, Remove: acts.RemoveAuthFactor, RemoveAll: acts.RemoveAllAuthFactors,
 			IDs: a.IDs, Cookies: a.Cookies,
 		},
+		auditLogs: &v1.AuditLogController{
+			List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,
+		},
+		securityEvents: &v1.SecurityEventController{List: acts.ListSecurityEvents, Cursors: cursors},
 	}
-	membershipControllers(a, &c)
-	teamControllers(a, &c)
+	membershipControllers(a, &c, cursors)
+	teamControllers(a, &c, cursors)
 
 	return c
 }
@@ -228,13 +238,13 @@ func newControllers(a *app.App) controllers {
 teamControllers builds into c the controllers of the workspace's teams
 and their members.
 */
-func teamControllers(a *app.App, c *controllers) {
+func teamControllers(a *app.App, c *controllers, cursors *pagination.Cursors) {
 	acts := a.Actions
 
 	c.teams = &v1.TeamController{
 		ListTeams: acts.ListTeams, ShowTeam: acts.ShowTeam, CreateTeam: acts.CreateTeam,
 		UpdateTeam: acts.UpdateTeam, DeleteTeam: acts.DeleteTeam, IDs: a.IDs,
-		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+		Cursors: cursors,
 	}
 	c.teamMembers = &v1.TeamMemberController{Add: acts.AddTeamMembers, Remove: acts.RemoveTeamMember, IDs: a.IDs}
 }
@@ -244,7 +254,7 @@ membershipControllers builds into c the controllers that bring people
 into workspaces and take workspaces away: memberships, invitations and
 the trash.
 */
-func membershipControllers(a *app.App, c *controllers) {
+func membershipControllers(a *app.App, c *controllers, cursors *pagination.Cursors) {
 	acts := a.Actions
 
 	c.memberships = &v1.MembershipController{
@@ -254,7 +264,7 @@ func membershipControllers(a *app.App, c *controllers) {
 
 	c.invitations = &v1.InvitationController{
 		List: acts.ListInvitations, Create: acts.CreateInvitations, Revoke: acts.RevokeInvitation, IDs: a.IDs,
-		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+		Cursors: cursors,
 	}
 	c.deliveries = &v1.InvitationDeliveryController{Resend: acts.ResendInvitation, IDs: a.IDs}
 	c.previews = &v1.InvitationPreviewController{Preview: acts.PreviewInvitation}
