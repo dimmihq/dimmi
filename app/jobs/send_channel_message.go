@@ -9,8 +9,9 @@
 | A provider that refuses for good, such as for an address that cannot
 | be reached, fails the message at once with the reason; any other
 | failure is tried again, and the message fails when the last attempt
-| does. A message no longer pending, already sent or removed, is left
-| alone, so a job that runs twice sends once.
+| does. A provider asking to slow down postpones the try without using
+| up an attempt. A message no longer pending, already sent or removed,
+| is left alone, so a job that runs twice sends once.
 |
 */
 
@@ -18,6 +19,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -30,6 +32,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -40,15 +43,6 @@ may take.
 const (
 	sendAttempts = 5
 	sendTimeout  = 30 * time.Second
-)
-
-/*
-The delivery statuses the job moves a message between.
-*/
-const (
-	deliveryPending = "pending"
-	deliverySent    = "sent"
-	deliveryFailed  = "failed"
 )
 
 /*
@@ -110,14 +104,18 @@ func (w *SendChannelMessage) Handle(ctx context.Context, job *queue.Job[SendChan
 
 	result, err := out.driver.Send(sendCtx, out.conn, out.message)
 	if err == nil {
-		return w.record(ctx, args, delivery{status: deliverySent, result: result})
+		return w.record(ctx, args, delivery{status: enums.DeliveryStatusSent, result: result, conn: out.conn})
+	}
+
+	if limited, ok := errors.AsType[*contracts.RateLimitedError](err); ok {
+		return queue.Postpone(limited.RetryAfter)
 	}
 
 	final := job.Attempt >= job.MaxAttempts || permanent(err)
 
-	status := deliveryPending
+	status := enums.DeliveryStatusPending
 	if final {
-		status = deliveryFailed
+		status = enums.DeliveryStatusFailed
 	}
 
 	if recordErr := w.record(ctx, args, delivery{status: status, err: err}); recordErr != nil {
@@ -135,8 +133,16 @@ func (w *SendChannelMessage) Handle(ctx context.Context, job *queue.Job[SendChan
 permanent reports whether the channel refused for good.
 */
 func permanent(err error) bool {
-	return errors.Is(err, contracts.ErrPermanent) || errors.Is(err, contracts.ErrRecipientUnreachable) ||
-		errors.Is(err, contracts.ErrConnectionBroken)
+	for _, sentinel := range []error{
+		contracts.ErrPermanent, contracts.ErrRecipientUnreachable, contracts.ErrConnectionBroken,
+		contracts.ErrWindowClosed, contracts.ErrContentRejected, contracts.ErrUnsupported,
+	} {
+		if errors.Is(err, sentinel) {
+			return true
+		}
+	}
+
+	return false
 }
 
 /*
@@ -163,7 +169,7 @@ func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessag
 			return fmt.Errorf("find message: %w", err)
 		}
 
-		if msg.DeletedAt != nil || msg.DeliveryStatus == nil || *msg.DeliveryStatus != deliveryPending {
+		if msg.DeletedAt != nil || msg.DeliveryStatus == nil || *msg.DeliveryStatus != string(enums.DeliveryStatusPending) {
 			return nil
 		}
 
@@ -177,50 +183,14 @@ func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessag
 }
 
 /*
-outbound puts together what the driver is handed for the message.
-*/
-func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, msg models.Message) (outbound, error) {
-	c, err := q.FindConversation(ctx, models.FindConversationParams{
-		WorkspaceID: msg.WorkspaceID, ID: msg.ConversationID,
-	})
-	if err != nil {
-		return outbound{}, fmt.Errorf("find conversation: %w", err)
-	}
-
-	conn, err := q.FindChannelConnection(ctx, models.FindChannelConnectionParams{
-		WorkspaceID: c.WorkspaceID, ID: c.ChannelConnectionID,
-	})
-	if err != nil {
-		return outbound{}, fmt.Errorf("find channel connection: %w", err)
-	}
-
-	contact, err := q.FindContact(ctx, models.FindContactParams{WorkspaceID: c.WorkspaceID, ID: c.ContactID})
-	if err != nil {
-		return outbound{}, fmt.Errorf("find contact: %w", err)
-	}
-
-	driver, err := w.Channels.Driver(conn.Type)
-	if err != nil {
-		return outbound{}, queue.Cancel(err)
-	}
-
-	return outbound{conn: conn, driver: driver, message: contracts.OutboundMessage{
-		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ConversationNumber: c.Number, MessageID: msg.ID,
-		IdempotencyKey: models.PublicID(models.PrefixMessage, msg.ID), ExternalThreadKey: deref(c.ExternalThreadKey),
-		Subject: deref(c.Subject), BodyMarkdown: deref(msg.Body),
-		Recipient: contracts.Recipient{ContactID: contact.ID, Name: deref(contact.Name), Email: deref(contact.Email)},
-		Author:    contracts.OutboundAuthor{Type: msg.AuthorType, ID: orNil(msg.AuthorID)},
-	}}, nil
-}
-
-/*
-delivery is how one try went: the status the message moves to, and
-what the channel answered.
+delivery is how one try went: the status the message moves to, what
+the channel answered, and the connection it went out on.
 */
 type delivery struct {
-	status string
+	status enums.DeliveryStatus
 	result contracts.SendResult
 	err    error
+	conn   models.ChannelConnection
 }
 
 /*
@@ -229,14 +199,14 @@ record writes how the try went onto the message.
 func (w *SendChannelMessage) record(ctx context.Context, args SendChannelMessageArgs, d delivery) error {
 	now := w.Clock.Now()
 	params := models.UpdateMessageDeliveryParams{
-		DeliveryStatus: &d.status, Now: now, WorkspaceID: args.WorkspaceID, ID: args.MessageID,
+		DeliveryStatus: new(string(d.status)), Now: now, WorkspaceID: args.WorkspaceID, ID: args.MessageID,
 	}
 
 	if d.err != nil {
 		params.DeliveryError = new(d.err.Error())
 	}
 
-	if d.status == deliverySent {
+	if d.status == enums.DeliveryStatusSent {
 		sentAt := d.result.SentAt
 		if sentAt.IsZero() {
 			sentAt = now
@@ -248,33 +218,28 @@ func (w *SendChannelMessage) record(ctx context.Context, args SendChannelMessage
 		}
 	}
 
+	if d.result.Metadata != nil {
+		metadata, err := json.Marshal(map[string]any{d.conn.Type: d.result.Metadata})
+		if err != nil {
+			return fmt.Errorf("encode delivery metadata: %w", err)
+		}
+
+		params.Metadata = metadata
+	}
+
 	return w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		if _, err := models.New(tx).UpdateMessageDelivery(ctx, params); err != nil {
+		q := models.New(tx)
+		if _, err := q.UpdateMessageDelivery(ctx, params); err != nil {
 			return fmt.Errorf("record delivery: %w", err)
 		}
 
-		return nil
+		if d.result.ExternalThreadKey == "" {
+			return nil
+		}
+
+		return q.SetConversationThreadKey(ctx, models.SetConversationThreadKeyParams{
+			ExternalThreadKey: &d.result.ExternalThreadKey, Now: now, WorkspaceID: args.WorkspaceID,
+			ID: args.ConversationID,
+		})
 	})
-}
-
-/*
-deref returns the text, or empty for none.
-*/
-func deref(s *string) string {
-	if s == nil {
-		return ""
-	}
-
-	return *s
-}
-
-/*
-orNil returns the id, or ids.Nil() for none.
-*/
-func orNil(id *ids.UUID) ids.UUID {
-	if id == nil {
-		return ids.Nil()
-	}
-
-	return *id
 }

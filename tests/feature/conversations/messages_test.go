@@ -137,7 +137,7 @@ func TestConversationDelivery(t *testing.T) {
 		require.Len(t, driver.Sent(), 2)
 		sent := driver.Sent()[1]
 		assert.Equal(t, "On its way", sent.BodyMarkdown)
-		assert.Equal(t, "ann@example.com", sent.Recipient.Email)
+		assert.Equal(t, "ann@example.com", sent.Recipient.IdentityValue)
 		assert.Equal(t, reply.String("data.id"), sent.IdempotencyKey)
 
 		d.owner.GetJSON(path+"/messages?filter[type]=message").AssertOK().

@@ -1,0 +1,19 @@
+From: Gmail Team <forwarding-noreply@google.com>
+To: {{TO}}
+Subject: (#428715637) Gmail Forwarding Confirmation - Receive Mail from support@acme.test
+Date: Mon, 2 Nov 2026 08:00:00 +0000
+Message-ID: <gmail-confirmation-0001@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+support@acme.test has requested to automatically forward mail to your email
+address {{FORWARDING}}.
+Confirmation code: 428715637
+
+To allow support@acme.test to automatically forward mail to your address,
+please click the link below to confirm the request:
+
+https://mail-settings.google.com/mail/vf-%5BANGjdJ8example%5D-abcdef
+
+If you click the link and it appears to be broken, please copy and paste it
+into a new browser window.

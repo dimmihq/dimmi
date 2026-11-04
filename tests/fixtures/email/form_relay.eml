@@ -1,0 +1,12 @@
+From: Webflow <no-reply@webflow.com>
+Reply-To: Jules Verne <jules@visitor.test>
+To: {{TO}}
+Subject: New form submission on Acme
+Date: Mon, 2 Nov 2026 13:00:00 +0000
+Message-ID: <webflow-form-0001@webflow.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Name: Jules Verne
+Email: jules@visitor.test
+Message: Do you offer discounts for non-profits?

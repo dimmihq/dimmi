@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -493,23 +494,26 @@ const updateMessageDelivery = `-- name: UpdateMessageDelivery :one
 UPDATE messages
 SET delivery_status = $1, delivery_error = $2,
     channel_message_id = coalesce($3, channel_message_id),
-    sent_at = coalesce($4, sent_at), updated_at = $5
-WHERE workspace_id = $6 AND id = $7
+    sent_at = coalesce($4, sent_at), updated_at = $5,
+    metadata = metadata || coalesce($6::jsonb, '{}'::jsonb)
+WHERE workspace_id = $7 AND id = $8
 RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at
 `
 
 type UpdateMessageDeliveryParams struct {
-	DeliveryStatus   *string    `json:"delivery_status"`
-	DeliveryError    *string    `json:"delivery_error"`
-	ChannelMessageID *string    `json:"channel_message_id"`
-	SentAt           *time.Time `json:"sent_at"`
-	Now              time.Time  `json:"now"`
-	WorkspaceID      ids.UUID   `json:"workspace_id"`
-	ID               ids.UUID   `json:"id"`
+	DeliveryStatus   *string         `json:"delivery_status"`
+	DeliveryError    *string         `json:"delivery_error"`
+	ChannelMessageID *string         `json:"channel_message_id"`
+	SentAt           *time.Time      `json:"sent_at"`
+	Now              time.Time       `json:"now"`
+	Metadata         json.RawMessage `json:"metadata"`
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	ID               ids.UUID        `json:"id"`
 }
 
 // UpdateMessageDelivery records how delivering the message on its
-// channel went, and the channel's own id for it once it has one.
+// channel went, the channel's own id for it once it has one, and what
+// the channel reported, merged into its metadata.
 func (q *Queries) UpdateMessageDelivery(ctx context.Context, arg UpdateMessageDeliveryParams) (Message, error) {
 	row := q.db.QueryRow(ctx, updateMessageDelivery,
 		arg.DeliveryStatus,
@@ -517,6 +521,7 @@ func (q *Queries) UpdateMessageDelivery(ctx context.Context, arg UpdateMessageDe
 		arg.ChannelMessageID,
 		arg.SentAt,
 		arg.Now,
+		arg.Metadata,
 		arg.WorkspaceID,
 		arg.ID,
 	)

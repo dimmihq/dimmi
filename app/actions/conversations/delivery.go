@@ -25,18 +25,10 @@ import (
 
 	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
-)
-
-/*
-The delivery statuses a reply starts with.
-*/
-const (
-	DeliveryPending       = "pending"
-	DeliverySent          = "sent"
-	DeliveryNotApplicable = "not_applicable"
 )
 
 /*
@@ -72,7 +64,7 @@ func (d Delivery) Plan(conn models.ChannelConnection, contact models.Contact) (R
 		return Route{}, fmt.Errorf("find channel driver: %w", err)
 	}
 
-	route := Route{Connection: conn, Capabilities: driver.Capabilities(conn), Status: DeliveryNotApplicable}
+	route := Route{Connection: conn, Capabilities: driver.Capabilities(conn), Status: string(enums.DeliveryStatusNotApplicable)}
 
 	switch route.Capabilities.Transport {
 	case contracts.TransportPush:
@@ -80,9 +72,9 @@ func (d Delivery) Plan(conn models.ChannelConnection, contact models.Contact) (R
 			return route, exceptions.ErrContactUnreachable
 		}
 
-		route.Status = DeliveryPending
+		route.Status = string(enums.DeliveryStatusPending)
 	case contracts.TransportRealtime:
-		route.Status = DeliverySent
+		route.Status = string(enums.DeliveryStatusSent)
 	case contracts.TransportNone:
 	}
 
@@ -94,7 +86,7 @@ Dispatch hands a pending reply to its job, in the transaction that
 wrote it, so the job only runs once the reply is committed.
 */
 func (d Delivery) Dispatch(ctx context.Context, tx *database.Tx, msg models.Message) error {
-	if msg.DeliveryStatus == nil || *msg.DeliveryStatus != DeliveryPending {
+	if msg.DeliveryStatus == nil || *msg.DeliveryStatus != string(enums.DeliveryStatusPending) {
 		return nil
 	}
 

@@ -132,6 +132,17 @@ func TestSchema(t *testing.T) {
 		assert.Equal(t, asStrings(enums.AuthorTypes()), checkValues(t, db, "messages", "author_type"))
 		assert.Equal(t, asStrings(enums.ParticipantRoles()),
 			checkValues(t, db, "conversation_participants", "role"))
+		assert.Equal(t, asStrings(enums.DeliveryStatuses()), checkValues(t, db, "messages", "delivery_status"))
+		assert.Equal(t, asStrings(enums.InboundEmailStatuses()), checkValues(t, db, "inbound_emails", "status"))
+		assert.Equal(t, asStrings(enums.EmailClassifications()),
+			checkValues(t, db, "inbound_emails", "classification"))
+		assert.Equal(t, asStrings(enums.OutboundEmailKinds()), checkValues(t, db, "outbound_emails", "kind"))
+		assert.Equal(t, asStrings(enums.OutboundEmailStatuses()), checkValues(t, db, "outbound_emails", "status"))
+		assert.Equal(t, asStrings(enums.EmailSuppressionReasons()),
+			checkValues(t, db, "email_suppressions", "reason"))
+		assert.Equal(t, asStrings(enums.EmailSuppressionScopes()), checkValues(t, db, "email_suppressions", "scope"))
+		assert.Equal(t, asStrings(enums.ReplyToModes()), checkValues(t, db, "email_addresses", "reply_to_mode"))
+		assert.Equal(t, asStrings(enums.FromNameStyles()), checkValues(t, db, "email_addresses", "from_name_style"))
 	})
 
 	t.Run("knows every enum value it stores", func(t *testing.T) {

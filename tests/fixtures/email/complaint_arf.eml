@@ -1,0 +1,33 @@
+From: Feedback Loop <fbl@mail.provider.test>
+To: {{TO}}
+Subject: Complaint about message from 192.0.2.1
+Date: Tue, 3 Nov 2026 12:00:00 +0000
+Message-ID: <arf-0001@mail.provider.test>
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=feedback-report; boundary="arfboundary"
+
+--arfboundary
+Content-Type: text/plain; charset=utf-8
+
+This is an email abuse report for an email message received from IP 192.0.2.1.
+
+--arfboundary
+Content-Type: message/feedback-report
+
+Feedback-Type: abuse
+User-Agent: ProviderFBL/1.0
+Version: 1
+Original-Mail-From: <{{FORWARDING}}>
+Original-Rcpt-To: <{{RECIPIENT}}>
+Arrival-Date: Tue, 3 Nov 2026 11:59:00 +0000
+Source-IP: 192.0.2.1
+
+--arfboundary
+Content-Type: text/rfc822-headers
+
+From: Acme Support <{{FORWARDING}}>
+To: {{RECIPIENT}}
+Subject: Re: Refund for order 1042
+Message-ID: <{{ORIGINAL}}>
+
+--arfboundary--

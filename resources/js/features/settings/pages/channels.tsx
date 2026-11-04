@@ -1,24 +1,15 @@
 /*
- * The places customers write from: the messenger on your site, email
- * addresses, and connections to the chat apps they already use. Each
+ * The places customers write from: the messenger on your site and
+ * connections to the chat apps they already use; email has its own page. Each
  * channel decides which inbox its conversations land in.
  */
-import {
-  RiDiscordFill,
-  RiGlobalLine,
-  RiMailLine,
-  RiSearchLine,
-  RiSlackFill,
-  RiTelegramFill,
-  RiWhatsappFill,
-} from "@remixicon/react";
+import { RiDiscordFill, RiSearchLine, RiSlackFill, RiTelegramFill, RiWhatsappFill } from "@remixicon/react";
 import { useState } from "react";
 
-import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
 
 import { Action, Choice, Colour, Danger, Field, Toggle } from "../controls";
-import { Empty, Glyph, Item, Logo, Row, Section, SettingsPage } from "../layout";
+import { Empty, Item, Logo, Row, Section, SettingsPage } from "../layout";
 
 export function MessengerSettings() {
   return (
@@ -89,46 +80,6 @@ export function MessengerSettings() {
       <Section title="Danger zone">
         <Row label="Delete this messenger" description="Sites using its snippet stop showing it.">
           <Danger>Delete messenger</Danger>
-        </Row>
-      </Section>
-    </SettingsPage>
-  );
-}
-
-export function EmailSettings() {
-  return (
-    <SettingsPage title="Email" description="Forward your support address to Dimmi and reply from it.">
-      <Section title="Addresses" action={<Action>Add address</Action>}>
-        <Item mark={<Glyph icon={RiMailLine} />} title="support@acme.com" detail="Support inbox · Forwarding confirmed">
-          <Chip variant="caption" color="neutral">
-            Default
-          </Chip>
-          <Action>Edit</Action>
-        </Item>
-      </Section>
-      <Section
-        title="Sending domains"
-        description="Verify your domain so replies come from it and reach inboxes."
-        action={<Action>Add domain</Action>}
-      >
-        <Item mark={<Glyph icon={RiGlobalLine} />} title="acme.com" detail="DKIM and return path waiting for DNS">
-          <Action>Check now</Action>
-        </Item>
-      </Section>
-      <Section title="Replies">
-        <Row label="Sender name" description="How your replies are signed in the customer's inbox.">
-          <Choice label="Sender name" options={["Ada from Acme", "Acme"]} />
-        </Row>
-        <Row label="Quote the previous message">
-          <Toggle label="Quote the previous message" on />
-        </Row>
-        <Row label="Bulk mail" description="Newsletters and auto-replies sent to your address.">
-          <Choice label="Bulk mail" options={["Close", "Keep open", "Drop"]} />
-        </Row>
-      </Section>
-      <Section title="Sending" description="Today 14 of 200 sent. Verify a domain to send up to 2,000 a day.">
-        <Row label="Suppressed addresses" description="Addresses that bounced or complained are never mailed.">
-          <Action>View list</Action>
         </Row>
       </Section>
     </SettingsPage>

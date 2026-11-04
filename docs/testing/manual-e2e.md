@@ -427,6 +427,42 @@ Run `make build` first so the binary embeds the browser app.
 | Require 2FA in a browser | open `/d/settings/workspace` and switch "Require two-factor authentication" before and after adding an authenticator | refused with a note to turn it on for your own account first, then on and still on after a reload |
 | Sessions in a browser | sign in from a second browser, open `/d/settings/security` | both sessions listed, this one marked "This session"; "Revoke" and "Sign out others" sign the other browser out |
 
+### Email channel
+
+The install receives mail only with an inbound domain. Add these lines to `$E2E/env` before migrating, so every new
+workspace gets a forwarding address, and the test inbound source takes raw emails over HTTP in place of a receiving
+provider:
+
+```bash
+cat >> "$E2E/env" <<'EOF'
+DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN=inbound.e2e.test
+DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=test
+DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET=e2e-inbound-secret
+EOF
+EA=$B/email-addresses; IN='Authorization: Bearer e2e-inbound-secret'
+mailraw(){ printf 'From: Bob <bob.%s@customer.test>\r\nTo: %s\r\nSubject: %s\r\nMessage-ID: <%s>\r\n%s\r\n\r\n%s\r\n' \
+  "$RUN" "$1" "$2" "$3" "$4" "$5"; }
+```
+
+Sign up a new account first (a workspace created before the inbound domain was set has no address; run
+`dimmi workspace:repair <slug>` to give it one).
+
+| Flow | Command | Expect |
+|---|---|---|
+| Default address | `r ea -b a.jar -H "$O" $EA; FWD=$(jq -r '.data[0].forwarding_address' body); EMA=$(jq -r '.data[0].id' body)` | 200, one `email_address`, `forwarding_address` `<slug>@inbound.e2e.test`, `is_default: true`, `setup_guides` from `gmail`, `inbound_verified_at: null` |
+| Source closed without the secret | `r no -X POST $W/webhooks/test/inbound --data-binary 'Subject: x'` | 401 `unauthenticated` |
+| Mail arrives | `mailraw $FWD 'Refund for order 1042' first.$RUN@customer.test '' 'Charged twice.' \| r in -X POST -H "$IN" --data-binary @- "$W/webhooks/test/inbound?to=$FWD"` | 202 `workspaces: 1` |
+| Activity log | `r act -b a.jar -H "$O" $EA/$EMA/inbound-emails` | 200, `status: processed`, `classification: normal`, a `conversation` and `message` id; the address now has `inbound_verified_at` |
+| Redelivery | the same command with `&id=p1` twice | 202 twice; the activity log holds it once (a different `id` with the same Message-ID is stored `ignored`, `duplicate`) |
+| Reply threads | `mailraw $FWD 'Re: Refund for order 1042' reply.$RUN@customer.test "In-Reply-To: <first.$RUN@customer.test>" 'Thanks!' \| r re …` | 202; `select count(*) from conversations` unchanged, the message joins the first conversation |
+| Out of office | `mailraw $FWD 'Automatic reply: away' ooo.$RUN@customer.test 'Auto-Submitted: auto-replied' 'Away.' \| r ooo …` | 202; activity `ignore_reason: auto_reply_no_thread`, no new conversation |
+| Unknown address | the first mail to `ghost@inbound.e2e.test` | 202 `workspaces: 0`, nothing stored |
+| Add an address | `r add -b a.jar -X POST -H "$O" -H "$J" $EA -d '{"address":"sales@acme.test"}'` | 201, `forwarding_address` `<slug>.sales@inbound.e2e.test`; the same again 409 `address_in_use`; `x@inbound.e2e.test` 422 `invalid_address` |
+| Settings | `r upd -b a.jar -X PATCH -H "$O" -H "$J" $EA/$EMA -d '{"settings":{"bulk_mail_handling":"drop"}}'` | 200 with `bulk_mail_handling: drop` |
+| Forwarding test | `r t -b a.jar -X POST -H "$O" $EA/$EMA/tests` | 201 `email_address_test` `sent_to` the public address; Mailpit holds it with an `X-Dimmi-Test` header; feeding that raw mail back through the source shows `ignore_reason: forwarding_test` |
+| Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
+| In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
+
 ## 4. Check what was stored
 
 ```bash

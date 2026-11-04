@@ -12,6 +12,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Attachment struct {
@@ -183,6 +184,131 @@ type ConversationTag struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type EmailAddress struct {
+	ID                     ids.UUID        `json:"id"`
+	WorkspaceID            ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID    ids.UUID        `json:"channel_connection_id"`
+	Address                string          `json:"address"`
+	DisplayName            string          `json:"display_name"`
+	EmailDomainID          *ids.UUID       `json:"email_domain_id"`
+	ForwardingAddress      string          `json:"forwarding_address"`
+	ReplyToMode            string          `json:"reply_to_mode"`
+	FromNameStyle          string          `json:"from_name_style"`
+	IsDefault              bool            `json:"is_default"`
+	Settings               json.RawMessage `json:"settings"`
+	ForwardingConfirmation json.RawMessage `json:"forwarding_confirmation"`
+	InboundVerifiedAt      *time.Time      `json:"inbound_verified_at"`
+	LastInboundAt          *time.Time      `json:"last_inbound_at"`
+	LastOutboundAt         *time.Time      `json:"last_outbound_at"`
+	DeletedAt              *time.Time      `json:"deleted_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+}
+
+type EmailDomain struct {
+	ID                      ids.UUID          `json:"id"`
+	WorkspaceID             ids.UUID          `json:"workspace_id"`
+	Domain                  string            `json:"domain"`
+	Status                  string            `json:"status"`
+	Driver                  string            `json:"driver"`
+	ProviderTrustedAt       *time.Time        `json:"provider_trusted_at"`
+	OwnershipToken          string            `json:"ownership_token"`
+	OwnershipVerifiedAt     *time.Time        `json:"ownership_verified_at"`
+	DkimSelector            *string           `json:"dkim_selector"`
+	DkimPrivateKeyEncrypted encryption.Sealed `json:"dkim_private_key_encrypted"`
+	DkimTokens              []string          `json:"dkim_tokens"`
+	DkimSigningHostedZone   *string           `json:"dkim_signing_hosted_zone"`
+	MailFromDomain          *string           `json:"mail_from_domain"`
+	SesIdentityStatus       *string           `json:"ses_identity_status"`
+	Records                 json.RawMessage   `json:"records"`
+	Warnings                json.RawMessage   `json:"warnings"`
+	CheckAttempts           int32             `json:"check_attempts"`
+	LastCheckedAt           *time.Time        `json:"last_checked_at"`
+	NextCheckAt             *time.Time        `json:"next_check_at"`
+	VerifiedAt              *time.Time        `json:"verified_at"`
+	DegradedAt              *time.Time        `json:"degraded_at"`
+	FailedAt                *time.Time        `json:"failed_at"`
+	FailureReason           *string           `json:"failure_reason"`
+	CreatedByMemberID       *ids.UUID         `json:"created_by_member_id"`
+	DeletedAt               *time.Time        `json:"deleted_at"`
+	CreatedAt               time.Time         `json:"created_at"`
+	UpdatedAt               time.Time         `json:"updated_at"`
+}
+
+type EmailMessageRef struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	RfcMessageID   string    `json:"rfc_message_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	MessageID      *ids.UUID `json:"message_id"`
+	Kind           string    `json:"kind"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type EmailSendingProfile struct {
+	WorkspaceID   ids.UUID   `json:"workspace_id"`
+	Status        string     `json:"status"`
+	PausedAt      *time.Time `json:"paused_at"`
+	PausedReason  *string    `json:"paused_reason"`
+	DailyLimit    *int32     `json:"daily_limit"`
+	HourlyLimit   *int32     `json:"hourly_limit"`
+	SesTenantName *string    `json:"ses_tenant_name"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+type EmailSendingStat struct {
+	WorkspaceID ids.UUID    `json:"workspace_id"`
+	Day         pgtype.Date `json:"day"`
+	Stream      string      `json:"stream"`
+	Sent        int32       `json:"sent"`
+	Delivered   int32       `json:"delivered"`
+	HardBounced int32       `json:"hard_bounced"`
+	SoftBounced int32       `json:"soft_bounced"`
+	Complained  int32       `json:"complained"`
+	Blocked     int32       `json:"blocked"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+type EmailSignature struct {
+	ID                ids.UUID  `json:"id"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	EmailAddressID    *ids.UUID `json:"email_address_id"`
+	Body              string    `json:"body"`
+	Enabled           bool      `json:"enabled"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type EmailSuppression struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Email             string          `json:"email"`
+	Reason            string          `json:"reason"`
+	Scope             string          `json:"scope"`
+	Source            string          `json:"source"`
+	Details           json.RawMessage `json:"details"`
+	OutboundEmailID   *ids.UUID       `json:"outbound_email_id"`
+	ExpiresAt         *time.Time      `json:"expires_at"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+type EmailThread struct {
+	ID                ids.UUID   `json:"id"`
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	ConversationID    ids.UUID   `json:"conversation_id"`
+	EmailAddressID    *ids.UUID  `json:"email_address_id"`
+	ReplyToken        string     `json:"reply_token"`
+	RootMessageID     *string    `json:"root_message_id"`
+	NormalizedSubject *string    `json:"normalized_subject"`
+	RevokedAt         *time.Time `json:"revoked_at"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
 type EncryptionKey struct {
 	ScopeKind string    `json:"scope_kind"`
 	ScopeID   string    `json:"scope_id"`
@@ -202,6 +328,37 @@ type IdempotencyKey struct {
 	Body        []byte          `json:"body"`
 	CreatedAt   time.Time       `json:"created_at"`
 	ExpiresAt   time.Time       `json:"expires_at"`
+}
+
+type InboundEmail struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	EmailAddressID      *ids.UUID       `json:"email_address_id"`
+	ChannelConnectionID *ids.UUID       `json:"channel_connection_id"`
+	Source              string          `json:"source"`
+	ProviderMessageID   *string         `json:"provider_message_id"`
+	MessageIDHeader     *string         `json:"message_id_header"`
+	EnvelopeFrom        *string         `json:"envelope_from"`
+	EnvelopeTo          []string        `json:"envelope_to"`
+	FromAddress         *string         `json:"from_address"`
+	Subject             *string         `json:"subject"`
+	SizeBytes           int64           `json:"size_bytes"`
+	RawDisk             string          `json:"raw_disk"`
+	RawPath             *string         `json:"raw_path"`
+	RawDeletedAt        *time.Time      `json:"raw_deleted_at"`
+	Status              string          `json:"status"`
+	Classification      *string         `json:"classification"`
+	Auth                json.RawMessage `json:"auth"`
+	ProviderVerdicts    json.RawMessage `json:"provider_verdicts"`
+	ConversationID      *ids.UUID       `json:"conversation_id"`
+	MessageID           *ids.UUID       `json:"message_id"`
+	IgnoreReason        *string         `json:"ignore_reason"`
+	Error               *string         `json:"error"`
+	Attempts            int32           `json:"attempts"`
+	ReceivedAt          time.Time       `json:"received_at"`
+	ProcessedAt         *time.Time      `json:"processed_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
 type Inbox struct {
@@ -353,6 +510,32 @@ type Organization struct {
 	DeletedAt       *time.Time      `json:"deleted_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type OutboundEmail struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	MessageID         *ids.UUID       `json:"message_id"`
+	ConversationID    *ids.UUID       `json:"conversation_id"`
+	EmailAddressID    *ids.UUID       `json:"email_address_id"`
+	Kind              string          `json:"kind"`
+	FromAddress       string          `json:"from_address"`
+	ToAddresses       []string        `json:"to_addresses"`
+	CcAddresses       []string        `json:"cc_addresses"`
+	BccAddresses      []string        `json:"bcc_addresses"`
+	Subject           string          `json:"subject"`
+	MessageIDHeader   string          `json:"message_id_header"`
+	Transport         string          `json:"transport"`
+	ProviderMessageID *string         `json:"provider_message_id"`
+	Status            string          `json:"status"`
+	RecipientStatuses json.RawMessage `json:"recipient_statuses"`
+	SizeBytes         *int64          `json:"size_bytes"`
+	Attempts          int32           `json:"attempts"`
+	LastError         *string         `json:"last_error"`
+	Metadata          json.RawMessage `json:"metadata"`
+	SentAt            *time.Time      `json:"sent_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
 type PasswordResetToken struct {

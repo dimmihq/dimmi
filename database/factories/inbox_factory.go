@@ -67,6 +67,37 @@ func Inbox(ctx context.Context, a *app.App, workspace models.Workspace, name str
 }
 
 /*
+DefaultInbox returns the inbox every new workspace gets, with its API
+channel.
+*/
+func DefaultInbox(ctx context.Context, a *app.App, workspace models.Workspace) (InboxWithChannel, error) {
+	var out InboxWithChannel
+
+	scoped := tenancy.With(ctx, workspace.ID.String())
+
+	err := a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+
+		var err error
+
+		if out.Inbox, err = q.FindDefaultInbox(ctx, workspace.ID); err != nil {
+			return err
+		}
+
+		out.API, err = q.FindInboxAPIConnection(ctx, models.FindInboxAPIConnectionParams{
+			WorkspaceID: workspace.ID, InboxID: out.Inbox.ID,
+		})
+
+		return err
+	})
+	if err != nil {
+		return out, fmt.Errorf("find default inbox: %w", err)
+	}
+
+	return out, nil
+}
+
+/*
 Connection connects a channel of the type to the inbox.
 */
 func Connection(

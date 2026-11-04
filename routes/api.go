@@ -62,6 +62,7 @@ type controllers struct {
 	securityEvents    *v1.SecurityEventController
 	tokens            *v1.PersonalAccessTokenController
 	tokenAbilities    *v1.TokenAbilityController
+	emailAddresses    *v1.EmailAddressController
 }
 
 /*
@@ -142,6 +143,7 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
 	invitationRoutes(workspace, c)
 	teamRoutes(workspace, c)
+	emailAddressRoutes(workspace, c.emailAddresses)
 }
 
 /*
@@ -192,6 +194,27 @@ func tokenRoutes(tokens *routing.Router, c controllers) {
 	routing.Get(tokens, "/tokens/{token}", "tokens.show", c.tokens.ShowToken)
 	routing.Patch(tokens, "/tokens/{token}", "tokens.update", c.tokens.Update)
 	routing.Delete(tokens, "/tokens/{token}", "tokens.destroy", c.tokens.Destroy).Status(fhttp.StatusNoContent)
+}
+
+/*
+emailAddressRoutes declares the workspace's email addresses. Reading
+them takes email:read, changing them email:manage, and the log of what
+arrived, which shows senders and subjects, email:read_raw.
+*/
+func emailAddressRoutes(workspace *routing.Router, c *v1.EmailAddressController) {
+	routing.Get(workspace, "/email-addresses", "email-addresses.index", c.Index).Ability("settings:read")
+	routing.Post(workspace, "/email-addresses", "email-addresses.store", c.Store).
+		Ability("settings:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, "/email-addresses/{address}", "email-addresses.show", c.ShowAddress).
+		Ability("settings:read")
+	routing.Patch(workspace, "/email-addresses/{address}", "email-addresses.update", c.Update).
+		Ability("settings:write")
+	routing.Delete(workspace, "/email-addresses/{address}", "email-addresses.destroy", c.Destroy).
+		Ability("settings:write").Status(fhttp.StatusNoContent)
+	routing.Post(workspace, "/email-addresses/{address}/tests", "email-addresses.tests.store", c.StoreTest).
+		Ability("settings:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, "/email-addresses/{address}/inbound-emails", "email-addresses.inbound-emails.index",
+		c.InboundEmails).Ability("settings:read")
 }
 
 /*
@@ -254,11 +277,26 @@ func newControllers(a *app.App) controllers {
 		securityEvents: &v1.SecurityEventController{List: acts.ListSecurityEvents, Cursors: cursors},
 		tokens:         tokenController(a, cursors),
 		tokenAbilities: &v1.TokenAbilityController{List: acts.ListTokenAbilities},
+		emailAddresses: emailAddressController(a, cursors),
 	}
 	membershipControllers(a, &c, cursors)
 	teamControllers(a, &c, cursors)
 
 	return c
+}
+
+/*
+emailAddressController builds the controller of the workspace's email
+addresses.
+*/
+func emailAddressController(a *app.App, cursors *pagination.Cursors) *v1.EmailAddressController {
+	acts := a.Actions
+
+	return &v1.EmailAddressController{
+		Create: acts.CreateEmailAddress, List: acts.ListEmailAddresses, Show: acts.ShowEmailAddress,
+		Change: acts.UpdateEmailAddress, Remove: acts.DeleteEmailAddress, Test: acts.SendEmailAddressTest,
+		Activity: acts.ListInboundEmails, IDs: a.IDs, Provider: a.EmailChannel.Transport, Cursors: cursors,
+	}
 }
 
 /*

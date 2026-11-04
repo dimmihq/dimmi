@@ -15,6 +15,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/members"
@@ -106,4 +107,15 @@ type Actions struct {
 	Inbox *InboxActions
 
 	RecordTyping *conversations.RecordTyping
+
+	CreateEmailAddress   *email.CreateEmailAddress
+	ListEmailAddresses   *email.ListEmailAddresses
+	ShowEmailAddress     *email.ShowEmailAddress
+	UpdateEmailAddress   *email.UpdateEmailAddress
+	DeleteEmailAddress   *email.DeleteEmailAddress
+	SendEmailAddressTest *email.SendEmailAddressTest
+	ListInboundEmails    *email.ListInboundEmails
+	ReceiveInboundEmail  *email.ReceiveInboundEmail
+	ProcessInboundEmail  *email.ProcessInboundEmail
+	SendEmailMessage     *email.SendEmailMessage
 }

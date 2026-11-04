@@ -10,7 +10,7 @@ import { NotificationsSettings, PreferencesSettings, ProfileSettings, SecuritySe
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { AuditLogSettings } from "./pages/audit-log";
-import { ConnectionsSettings, EmailSettings, MessengerSettings } from "./pages/channels";
+import { ConnectionsSettings, MessengerSettings } from "./pages/channels";
 import {
   ChangelogSettings,
   EngageSettings,
@@ -19,6 +19,7 @@ import {
   KnowledgeSettings,
 } from "./pages/content";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
+import { EmailSettings } from "./pages/email";
 import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
 import { TeamsSettings } from "./pages/teams";
 import { TokensSettings } from "./pages/tokens";

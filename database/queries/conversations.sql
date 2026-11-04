@@ -18,6 +18,12 @@ INSERT INTO conversations (
 )
 RETURNING *;
 
+-- name: SetConversationThreadKey :exec
+-- SetConversationThreadKey records the thread the channel opened for the
+-- conversation, unless it already has one.
+UPDATE conversations SET external_thread_key = @external_thread_key, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND external_thread_key IS NULL;
+
 -- name: FindConversation :one
 -- FindConversation returns the conversation with the id in the
 -- workspace, deleted or not.

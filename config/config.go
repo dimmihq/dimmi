@@ -45,6 +45,7 @@ type Config struct {
 
 	Audit          AuditConfig          `koanf:"audit"`
 	SecurityEvents SecurityEventsConfig `koanf:"security_events"`
+	Channels       ChannelsConfig       `koanf:"channels"`
 }
 
 /*
@@ -57,10 +58,15 @@ func (c *Config) Validate() error {
 	c.Auth.settle(c.App.Edition)
 	c.Invitations.settle(c.App.Edition)
 	c.Audit.settle(c.App.Edition)
+	c.Channels.settle(c.App.Edition)
 
 	if *c.Audit.RetentionDays < 0 || c.SecurityEvents.RetentionDays < 0 {
 		return fmt.Errorf("%w: retention_days", ErrInvalid)
 	}
 
-	return c.Auth.check()
+	if err := c.Auth.check(); err != nil {
+		return err
+	}
+
+	return c.Channels.check()
 }

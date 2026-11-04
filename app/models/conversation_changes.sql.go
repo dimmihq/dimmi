@@ -108,32 +108,38 @@ UPDATE conversations
 SET message_count = message_count + 1,
     last_message_at = $1::timestamptz,
     first_customer_message_at = CASE
-        WHEN $2::boolean THEN coalesce(first_customer_message_at, $1::timestamptz)
+        WHEN $2::boolean AND NOT $3::boolean
+        THEN coalesce(first_customer_message_at, $1::timestamptz)
         ELSE first_customer_message_at END,
     last_customer_message_at = CASE
-        WHEN $2::boolean THEN $1::timestamptz ELSE last_customer_message_at END,
-    first_reply_at = CASE WHEN $2::boolean THEN first_reply_at
+        WHEN $2::boolean AND NOT $3::boolean THEN $1::timestamptz
+        ELSE last_customer_message_at END,
+    first_reply_at = CASE WHEN $2::boolean OR $3::boolean THEN first_reply_at
         ELSE coalesce(first_reply_at, $1::timestamptz) END,
-    last_reply_at = CASE WHEN $2::boolean THEN last_reply_at ELSE $1::timestamptz END,
+    last_reply_at = CASE WHEN $2::boolean OR $3::boolean THEN last_reply_at
+        ELSE $1::timestamptz END,
     updated_at = $1::timestamptz
-WHERE workspace_id = $3 AND id = $4
+WHERE workspace_id = $4 AND id = $5
 RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at
 `
 
 type RecordConversationMessageParams struct {
 	At           time.Time `json:"at"`
 	FromCustomer bool      `json:"from_customer"`
+	Automatic    bool      `json:"automatic"`
 	WorkspaceID  ids.UUID  `json:"workspace_id"`
 	ID           ids.UUID  `json:"id"`
 }
 
 // RecordConversationMessage counts a new message into the conversation:
 // its message count and last message time, and, by who wrote it, the
-// first and last customer message or the first and last reply.
+// first and last customer message or the first and last reply. An
+// automatic message, such as an auto-reply, only moves the timeline.
 func (q *Queries) RecordConversationMessage(ctx context.Context, arg RecordConversationMessageParams) (Conversation, error) {
 	row := q.db.QueryRow(ctx, recordConversationMessage,
 		arg.At,
 		arg.FromCustomer,
+		arg.Automatic,
 		arg.WorkspaceID,
 		arg.ID,
 	)

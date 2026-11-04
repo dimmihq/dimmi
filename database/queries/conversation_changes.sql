@@ -48,18 +48,22 @@ RETURNING *;
 -- name: RecordConversationMessage :one
 -- RecordConversationMessage counts a new message into the conversation:
 -- its message count and last message time, and, by who wrote it, the
--- first and last customer message or the first and last reply.
+-- first and last customer message or the first and last reply. An
+-- automatic message, such as an auto-reply, only moves the timeline.
 UPDATE conversations
 SET message_count = message_count + 1,
     last_message_at = @at::timestamptz,
     first_customer_message_at = CASE
-        WHEN @from_customer::boolean THEN coalesce(first_customer_message_at, @at::timestamptz)
+        WHEN @from_customer::boolean AND NOT @automatic::boolean
+        THEN coalesce(first_customer_message_at, @at::timestamptz)
         ELSE first_customer_message_at END,
     last_customer_message_at = CASE
-        WHEN @from_customer::boolean THEN @at::timestamptz ELSE last_customer_message_at END,
-    first_reply_at = CASE WHEN @from_customer::boolean THEN first_reply_at
+        WHEN @from_customer::boolean AND NOT @automatic::boolean THEN @at::timestamptz
+        ELSE last_customer_message_at END,
+    first_reply_at = CASE WHEN @from_customer::boolean OR @automatic::boolean THEN first_reply_at
         ELSE coalesce(first_reply_at, @at::timestamptz) END,
-    last_reply_at = CASE WHEN @from_customer::boolean THEN last_reply_at ELSE @at::timestamptz END,
+    last_reply_at = CASE WHEN @from_customer::boolean OR @automatic::boolean THEN last_reply_at
+        ELSE @at::timestamptz END,
     updated_at = @at::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;

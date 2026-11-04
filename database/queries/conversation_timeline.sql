@@ -73,11 +73,13 @@ LIMIT 1;
 
 -- name: UpdateMessageDelivery :one
 -- UpdateMessageDelivery records how delivering the message on its
--- channel went, and the channel's own id for it once it has one.
+-- channel went, the channel's own id for it once it has one, and what
+-- the channel reported, merged into its metadata.
 UPDATE messages
 SET delivery_status = @delivery_status, delivery_error = sqlc.narg(delivery_error),
     channel_message_id = coalesce(sqlc.narg(channel_message_id), channel_message_id),
-    sent_at = coalesce(sqlc.narg(sent_at), sent_at), updated_at = @now
+    sent_at = coalesce(sqlc.narg(sent_at), sent_at), updated_at = @now,
+    metadata = metadata || coalesce(sqlc.narg(metadata)::jsonb, '{}'::jsonb)
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

@@ -1,0 +1,42 @@
+From: Hana Ito <hana@customer.test>
+To: {{TO}}
+Cc: Ivan Petrov <ivan@customer.test>, {{TO}}
+Subject: Screenshots of the error
+Date: Mon, 2 Nov 2026 12:00:00 +0000
+Message-ID: <attachments-0001@customer.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed"
+
+--mixed
+Content-Type: multipart/related; boundary="related"
+
+--related
+Content-Type: text/html; charset=utf-8
+
+<p>Here is the error:</p><p><img src="cid:screen1@customer.test" alt="error"></p>
+
+--related
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-ID: <screen1@customer.test>
+Content-Disposition: inline; filename="screen.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==
+
+--related--
+
+--mixed
+Content-Type: application/pdf; name="invoice.pdf"
+Content-Disposition: attachment; filename="invoice.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJcfsj6IKMSAwIG9iago8PC9UeXBlL0NhdGFsb2c+PgplbmRvYmoKdHJhaWxlcgo8PC9Sb290IDEgMCBSPj4KJSVFT0YK
+
+--mixed
+Content-Type: application/octet-stream; name="setup.exe"
+Content-Disposition: attachment; filename="setup.exe"
+Content-Transfer-Encoding: base64
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAA=
+
+--mixed--

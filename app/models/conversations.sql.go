@@ -219,3 +219,27 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 	}
 	return items, nil
 }
+
+const setConversationThreadKey = `-- name: SetConversationThreadKey :exec
+UPDATE conversations SET external_thread_key = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4 AND external_thread_key IS NULL
+`
+
+type SetConversationThreadKeyParams struct {
+	ExternalThreadKey *string   `json:"external_thread_key"`
+	Now               time.Time `json:"now"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	ID                ids.UUID  `json:"id"`
+}
+
+// SetConversationThreadKey records the thread the channel opened for the
+// conversation, unless it already has one.
+func (q *Queries) SetConversationThreadKey(ctx context.Context, arg SetConversationThreadKeyParams) error {
+	_, err := q.db.Exec(ctx, setConversationThreadKey,
+		arg.ExternalThreadKey,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}

@@ -103,6 +103,29 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(t, 1, countItems(t.Context(), t, db))
 	})
 
+	t.Run("opens a savepoint from the transaction itself", func(t *testing.T) {
+		t.Parallel()
+		db := open(t)
+
+		err := db.Transaction(t.Context(), func(ctx context.Context, tx *database.Tx) error {
+			nested := tx.Transaction(ctx, func(ctx context.Context, sp *database.Tx) error {
+				mustExecTx(ctx, t, sp, "INSERT INTO items VALUES (1, 'a')")
+
+				return errStop
+			})
+			require.ErrorIs(t, nested, errStop)
+
+			return tx.Transaction(ctx, func(ctx context.Context, sp *database.Tx) error {
+				mustExecTx(ctx, t, sp, "INSERT INTO items VALUES (2, 'b')")
+
+				return nil
+			})
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, countItems(t.Context(), t, db))
+	})
+
 	t.Run("commits a savepoint with the outer transaction", func(t *testing.T) {
 		t.Parallel()
 		db := open(t)

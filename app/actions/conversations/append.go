@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -27,14 +28,21 @@ import (
 NewMessage is an entry to append. Type is message or note; the author
 is the writer's actor. DeliveryStatus is how the entry starts on its
 channel, nil for notes. DedupeKey makes a retried request find its
-first entry. Metadata defaults to an empty object.
+first entry. Metadata defaults to an empty object. A channel bringing a
+message in also gives its HTML, its own id for it and when it was sent.
+Automatic marks a message nobody wrote by hand, such as an auto-reply,
+which only moves the timeline and never counts as anyone's latest word.
 */
 type NewMessage struct {
-	Type           string
-	Body           string
-	DeliveryStatus *string
-	DedupeKey      *string
-	Metadata       json.RawMessage
+	Type             string
+	Body             string
+	BodyHTML         *string
+	ChannelMessageID *string
+	SentAt           *time.Time
+	DeliveryStatus   *string
+	DedupeKey        *string
+	Metadata         json.RawMessage
+	Automatic        bool
 }
 
 /*
@@ -49,23 +57,19 @@ func (w *Writer) Append(
 		metadata = json.RawMessage(`{}`)
 	}
 
-	message := m.Type == string(enums.MessageTypeMessage)
+	substantive := m.Type == string(enums.MessageTypeMessage) && !m.Automatic
 
 	msg, err := w.Q.CreateMessage(ctx, models.CreateMessageParams{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, Type: m.Type, AuthorType: w.Actor.Type,
-		AuthorID: w.authorID(), Body: &m.Body, DedupeKey: m.DedupeKey, DeliveryStatus: m.DeliveryStatus,
-		Substantive: message, Metadata: metadata, Now: w.Now,
+		AuthorID: w.authorID(), Body: &m.Body, BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID,
+		DedupeKey: m.DedupeKey, DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: metadata,
+		SentAt: m.SentAt, Now: w.Now,
 	})
 	if err != nil {
 		return msg, c, fmt.Errorf("add %s: %w", m.Type, err)
 	}
 
-	count := w.touch
-	if message {
-		count = w.countMessage
-	}
-
-	if c, err = count(ctx, c); err != nil {
+	if c, err = w.count(ctx, c, m); err != nil {
 		return msg, c, err
 	}
 
@@ -101,11 +105,17 @@ func (w *Writer) touch(ctx context.Context, c models.Conversation) (models.Conve
 }
 
 /*
-countMessage counts a message into the conversation's activity.
+count counts a message into the conversation's activity, and only marks
+the conversation changed for a note.
 */
-func (w *Writer) countMessage(ctx context.Context, c models.Conversation) (models.Conversation, error) {
+func (w *Writer) count(ctx context.Context, c models.Conversation, m NewMessage) (models.Conversation, error) {
+	if m.Type != string(enums.MessageTypeMessage) {
+		return w.touch(ctx, c)
+	}
+
 	updated, err := w.Q.RecordConversationMessage(ctx, models.RecordConversationMessageParams{
-		At: w.Now, FromCustomer: w.Actor.Type == string(enums.AuthorTypeContact), WorkspaceID: c.WorkspaceID, ID: c.ID,
+		At: w.Now, FromCustomer: w.Actor.Type == string(enums.AuthorTypeContact), Automatic: m.Automatic,
+		WorkspaceID: c.WorkspaceID, ID: c.ID,
 	})
 	if err != nil {
 		return c, fmt.Errorf("count message: %w", err)
