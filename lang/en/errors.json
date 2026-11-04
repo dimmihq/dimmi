@@ -58,5 +58,7 @@
   "member_inactive": "Only an active member can be helped.",
   "two_factor_reset_blocked": "Ask them to use recovery codes or contact support.",
   "invalid_two_factor_reset_token": "This reset link is invalid or has expired.",
-  "password_required": "Enter your password to turn two-factor authentication off."
+  "password_required": "Enter your password to turn two-factor authentication off.",
+  "range_too_large": "An export covers a year at most. Pick a shorter date range.",
+  "too_many_exports": "This workspace exported its audit log as often as it may this hour. Try again later."
 }

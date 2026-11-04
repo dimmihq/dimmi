@@ -133,3 +133,34 @@ export async function requestPage<T>(path: string, options: RequestOptions = {})
 
   return { items: body?.data ?? [], next: body?.meta?.next_cursor ?? null };
 }
+
+/*
+ * DownloadedFile is a file the server sent as an attachment, with the
+ * name it suggested.
+ */
+export interface DownloadedFile {
+  blob: Blob;
+  filename: string;
+}
+
+/*
+ * requestFile fetches a file, such as an export, asking for its media
+ * type. A refusal still arrives as the JSON error envelope.
+ */
+export async function requestFile(path: string, accept: string, options: RequestOptions = {}): Promise<DownloadedFile> {
+  const headers: Record<string, string> = { Accept: accept };
+  if (options.workspace) {
+    headers["Dimmi-Workspace"] = options.workspace;
+  }
+
+  const response = await fetch(base + path, { headers, credentials: "same-origin" });
+  if (!response.ok) {
+    const json: unknown = await response.json().catch(() => null);
+    throw toApiError(response.status, json as ErrorBody | null);
+  }
+
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "download";
+
+  return { blob: await response.blob(), filename };
+}

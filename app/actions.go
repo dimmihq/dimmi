@@ -107,6 +107,7 @@ type Actions struct {
 	RecordAuditLog     *audit.RecordAuditLog
 	ListAuditLogs      *audit.ListAuditLogs
 	ShowAuditLog       *audit.ShowAuditLog
+	ExportAuditLogs    *audit.ExportAuditLogs
 	ListSecurityEvents *auth.ListSecurityEvents
 
 	CreatePersonalAccessToken *tokens.CreatePersonalAccessToken

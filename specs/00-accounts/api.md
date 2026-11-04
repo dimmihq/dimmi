@@ -92,7 +92,7 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | POST | `/api/v1/tokens` | tokens.store | U W C V | create (returns secret once) |
 | DELETE | `/api/v1/tokens/{tok}` | tokens.destroy | U W (own or admin) | revoke |
 | GET | `/api/v1/tokens/abilities` | tokens.abilities.index | U W | ability groups (with member permissions) + `allowed` for my role |
-| GET | `/api/v1/audit-logs` | audit-logs.index | A W `audit_logs:read` (token: `settings:read`) | list/filter; `sort=-created_at` (default) or `created_at` (ascending tail for SIEM pull); `Accept: text/csv` streams CSV |
+| GET | `/api/v1/audit-logs` | audit-logs.index | A W `audit_logs:read` (token: `settings:read`) | list/filter; `sort=-created_at` (default) or `created_at` (ascending tail for SIEM pull); `Accept: text/csv` or `format=csv` streams CSV ([audit.md](audit.md)) |
 | GET | `/api/v1/audit-logs/{aud}` | audit-logs.show | A W `audit_logs:read` (token: `settings:read`) | single |
 | GET, POST | `/api/v1/roles` | roles.index, roles.store | [roles.md](roles.md) | |
 | GET, PATCH, DELETE | `/api/v1/roles/{rol}` | roles.show, .update, .destroy | [roles.md](roles.md) | |

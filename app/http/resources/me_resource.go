@@ -66,7 +66,9 @@ type Auth struct {
 }
 
 /*
-Instance tells a client about the server it talks to.
+Instance tells a client about the server it talks to. AuditRetention
+is how many days audit entries are kept, 0 for ever, so a client never
+offers to look further back.
 */
 type Instance struct {
 	Edition        string    `json:"edition"`
@@ -74,6 +76,7 @@ type Instance struct {
 	APIVersion     string    `json:"api_version"`
 	Region         string    `json:"region"`
 	MailConfigured bool      `json:"mail_configured"`
+	AuditRetention int       `json:"audit_retention_days"`
 	ServerTime     time.Time `json:"server_time"`
 }
 

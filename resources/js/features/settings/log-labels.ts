@@ -6,31 +6,91 @@
  */
 import type { AuditEntry } from "@/lib/api/audit";
 
-export const auditEvents: Record<string, string> = {
-  "workspace.created": "Created the workspace",
-  "workspace.updated": "Changed workspace settings",
-  "member.joined": "Joined the workspace",
-  "member.role_changed": "Changed a role",
-  "ownership.transferred": "Handed over ownership",
-  "member.deactivated": "Deactivated a member",
-  "member.reactivated": "Reactivated a member",
-  "member.left": "Left the workspace",
-  "workspace.deleted": "Deleted the workspace",
-  "workspace.restored": "Restored the workspace",
-  "token.created": "Created an API token",
-  "token.revoked": "Revoked an API token",
-  "invitation.created": "Invited someone",
-  "invitation.accepted": "Accepted an invitation",
-  "invitation.revoked": "Withdrew an invitation",
-  "team.created": "Created a team",
-  "team.updated": "Renamed a team",
-  "team.deleted": "Deleted a team",
-  "team.member_added": "Added someone to a team",
-  "team.member_removed": "Removed someone from a team",
-  "member.two_factor_reset_requested": "Sent a two-factor reset link",
-  "member.two_factor_reset_completed": "Turned off two-factor with a reset link",
-  "member.sign_in_lock_cleared": "Cleared a sign-in lock",
-};
+/*
+ * AuditEventGroup is one kind of event in the audit log's filter, such
+ * as sign-ins, with a label for each event in it. A group no feature
+ * writes to yet has no events and is left out of the filter.
+ */
+export interface AuditEventGroup {
+  id: string;
+  name: string;
+  events: Record<string, string>;
+}
+
+export const auditEventGroups: AuditEventGroup[] = [
+  {
+    id: "sign_in",
+    name: "Sign-in",
+    events: {
+      "member.signed_in": "Signed in",
+      "member.sign_in_failed": "Failed to sign in",
+      "member.sign_in_locked": "Sign-in blocked after failed attempts",
+      "member.sessions_revoked": "Signed out every other session",
+    },
+  },
+  {
+    id: "security",
+    name: "Security settings",
+    events: {
+      "member.two_factor_enabled": "Turned on two-factor authentication",
+      "member.two_factor_disabled": "Turned off two-factor authentication",
+      "member.auth_factor_added": "Added a second factor",
+      "member.auth_factor_removed": "Removed a second factor",
+      "member.recovery_code_used": "Used a recovery code",
+      "member.password_changed": "Changed their password",
+      "member.password_reset": "Reset their password",
+      "member.email_changed": "Changed their email",
+      "member.identity_linked": "Linked a sign-in provider",
+      "member.identity_unlinked": "Unlinked a sign-in provider",
+      "member.two_factor_reset_requested": "Sent a two-factor reset link",
+      "member.two_factor_reset_completed": "Turned off two-factor with a reset link",
+      "member.sign_in_lock_cleared": "Cleared a sign-in lock",
+    },
+  },
+  {
+    id: "members",
+    name: "Members and teams",
+    events: {
+      "workspace.created": "Created the workspace",
+      "workspace.updated": "Changed workspace settings",
+      "workspace.deleted": "Deleted the workspace",
+      "workspace.restored": "Restored the workspace",
+      "member.joined": "Joined the workspace",
+      "member.role_changed": "Changed a role",
+      "ownership.transferred": "Handed over ownership",
+      "member.deactivated": "Deactivated a member",
+      "member.reactivated": "Reactivated a member",
+      "member.left": "Left the workspace",
+      "invitation.created": "Invited someone",
+      "invitation.accepted": "Accepted an invitation",
+      "invitation.revoked": "Withdrew an invitation",
+      "team.created": "Created a team",
+      "team.updated": "Renamed a team",
+      "team.deleted": "Deleted a team",
+      "team.member_added": "Added someone to a team",
+      "team.member_removed": "Removed someone from a team",
+    },
+  },
+  {
+    id: "tokens",
+    name: "Tokens and apps",
+    events: {
+      "token.created": "Created an API token",
+      "token.revoked": "Revoked an API token",
+    },
+  },
+  { id: "inbox", name: "Inbox", events: {} },
+  { id: "email", name: "Email", events: {} },
+  {
+    id: "export",
+    name: "Data export",
+    events: {
+      "audit_logs.exported": "Exported the audit log",
+    },
+  },
+];
+
+export const auditEvents: Record<string, string> = Object.assign({}, ...auditEventGroups.map((group) => group.events));
 
 const securityEvents: Record<string, string> = {
   "login.succeeded": "Signed in",
@@ -68,6 +128,13 @@ const channels: Record<string, string> = {
 
 export function auditEventLabel(event: string): string {
   return auditEvents[event] ?? event;
+}
+
+/*
+ * groupFilter is the event filter that keeps every event of the group.
+ */
+export function groupFilter(group: AuditEventGroup): string {
+  return Object.keys(group.events).join(",");
 }
 
 export function securityEventLabel(type: string): string {
