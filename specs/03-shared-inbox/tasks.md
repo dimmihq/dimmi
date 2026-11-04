@@ -136,32 +136,33 @@ Tests: business logic = integration only (real App, Postgres, Valkey, River, cen
 
 ## A1. Conversation access core (track 02 inbox-access)
 
-- [ ] Migrations `20261201020001` to `003`, `Scope` builder, `Scope.Contains` equals SQL function (table test every mode x assignment shape). Existing queries `FilterConversations`, counts, neighbors, search, show go through it. Test: restricted member per mode list, show 404, neighbors, counts, search, number jump, contact conversations.
-- [ ] Arch test `tests/arch/visible_scope_test.go` (query naming rule, allowlist with reasons). Test: planted query fails.
-- [ ] `PATCH /members/{mem}` fields + `members:manage_access` + member resource fields + audit. Test: self 403, owner 422, team ids rule, no-op no event, ability enforced, token of restricted member, integration token sees all.
-- [ ] Realtime split: `workspace_conversations:{ws}`, `conversation_fanout.go` chokepoint, `FanOutToRestrictedMembers`, `conversation.hidden`, `member.access_changed` disconnect. Test (real centrifuge + Valkey): restricted member denied new channel, gets `member:` copies only for visible, reassigned away gets `conversation.hidden` and loses subscription, access change disconnects under 5 s. Update `resources/js/features/realtime` subscription by `conversation_access`. Existing e2e `realtime.spec.ts` still green.
-- [ ] Bench: list budgets with `all` unchanged, restricted within 50 ms at 100k rows. Inbox UI reaction: sidebar, 404 page. e2e `tests/e2e/inbox-access.spec.ts`: admin restricts via API, restricted browser sees only team conversations, hidden link no-access page.
+- [x] Migrations `20261201020001` to `003`, `Scope` builder, `Scope.Contains` equals SQL function (table test every mode x assignment shape). Existing queries `FilterConversations`, counts, neighbors, search, show go through it. Test: restricted member per mode list, show 404, neighbors, counts, search, number jump, contact conversations.
+- [x] Arch test `tests/arch/visible_scope_test.go` (query naming rule, allowlist with reasons). Test: planted query fails.
+- [x] `PATCH /members/{mem}` fields + `members:manage_access` + member resource fields + audit. Test: self 403, owner 422, team ids rule, no-op no event, ability enforced, token of restricted member, integration token sees all.
+- [x] Realtime split: `workspace_conversations:{ws}`, `conversation_fanout.go` chokepoint, `FanOutToRestrictedMembers`, `conversation.hidden`, `member.access_changed` disconnect. Test (real centrifuge + Valkey): restricted member denied new channel, gets `member:` copies only for visible, reassigned away gets `conversation.hidden` and loses subscription, access change disconnects under 5 s. Update `resources/js/features/realtime` subscription by `conversation_access`. Existing e2e `realtime.spec.ts` still green.
+- [x] Bench: list budgets with `all` unchanged, restricted within 50 ms at 100k rows. Inbox UI reaction: sidebar, 404 page. e2e `tests/e2e/inbox-access.spec.ts`: admin restricts via API, restricted browser sees only team conversations, hidden link no-access page.
 
 Edge 263 to 274.
 
 ## A2. Away status, self assign (track 02 inbox-access)
 
-- [ ] Migration `20261201020004`; `SetMemberAvailability`, `PATCH /members/me|{mem}` fields, `members:manage_availability`, `member.availability_changed`. Test: three states, online clears, others' change needs permission and audit, 17 still reads `availability`.
-- [ ] Reassign on reply in `ReceiveInboundMessage`. Test: edge 282, 283; auto-generated mail no effect, spam no effect.
-- [ ] `assign_on_reply` per member in `AssignOnReply`, reopen and unsnooze rule. Test: edge 287.
-- [ ] User menu control `dashboard-user-menu.tsx`, status dot. e2e `tests/e2e/availability.spec.ts`.
+- [x] Migration `20261201020004`; `SetMemberAvailability`, `PATCH /members/me|{mem}` fields, `members:manage_availability`, `member.availability_changed`. Test: three states, online clears, others' change needs permission and audit, 17 still reads `availability`.
+- [x] Reassign on reply in `ReceiveInboundMessage`. Test: edge 282, 283; auto-generated mail no effect, spam no effect.
+- [x] `assign_on_reply` per member in `AssignOnReply`, reopen and unsnooze rule. Test: edge 287.
+- [x] User menu control `dashboard-user-menu.tsx`, status dot. e2e `tests/e2e/availability.spec.ts`.
 
 ## A3. Picker, round robin, balanced, capacity (track 02 inbox-access)
 
-- [ ] Migrations `005`, `006`. `PickAssignee`, cursor, capacity, overflow. Test: fair rotation over 30 arrivals across 3, away skipped, `include_away`, deactivated, 50 concurrent arrivals no double, balanced fewest with ties, channel limit, edge 275 to 281, 288, 289.
-- [ ] `AssignOnArrival` listener and `drain_assignment_queue` + periodic, wait reason, timeline row, resource `assignment_wait`, `filter[assignment_waiting]`. Test: capacity freed drains in `queue_order`, `SKIP LOCKED` two workers, explanation row once.
-- [ ] `GET /inboxes/{inbox}/assignment-status`. Test: `why_not` each.
+- [x] Migrations `005`, `006`. `PickAssignee`, cursor, capacity, overflow. Test: fair rotation over 30 arrivals across 3, away skipped, `include_away`, deactivated, 50 concurrent arrivals no double, balanced fewest with ties, channel limit, edge 275 to 281, 288, 289.
+- [x] `AssignOnArrival` listener and `drain_assignment_queue` + periodic, wait reason, timeline row, resource `assignment_wait`, `filter[assignment_waiting]`. Test: capacity freed drains in `queue_order`, `SKIP LOCKED` two workers, explanation row once.
+- [x] `GET /inboxes/{inbox}/assignment-status`. Test: `why_not` each.
 
 Edge 290, 291.
 
 ## A4. Inbox settings page (track 02 inbox-access)
 
-- [ ] Replace sample `InboxesSettings`, inbox detail route, assignment controls, status table, seen receipt toggle wired, read only without `inboxes:manage`. Also backend `DELETE /inboxes/{inbox}` with `move_to` (route missing today), `default`. e2e `tests/e2e/inbox-settings.spec.ts`: create, edit reopen window, set round robin, delete moves conversations; member sees read only.
+- [x] Replace sample `InboxesSettings`, inbox detail route, assignment controls, status table, read only without `inboxes:manage`. Also backend `DELETE /inboxes/{inbox}` with `move_to` (route missing today), `default`. e2e `tests/e2e/inbox-settings.spec.ts`: create, edit reopen window, set round robin, delete moves conversations; member sees read only.
+- [ ] Seen receipt toggle wired to `seen_receipt_shows_name`: needs the workspace setting and the widget `conversation.seen_by_team` relay first, neither exists yet.
 
 ## W1. Schema renumber, priority (track 03 inbox-workbench)
 
