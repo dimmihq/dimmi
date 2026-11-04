@@ -11,11 +11,7 @@ ALTER TABLE messages ADD COLUMN IF NOT EXISTS undone_at timestamptz;
 ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS undo_send_seconds smallint
     CHECK (undo_send_seconds IN (0, 5, 10, 20, 30));
 
-CREATE INDEX IF NOT EXISTS messages_scheduled_send_at_index ON messages (scheduled_send_at)
-    WHERE scheduled_send_at IS NOT NULL;
-
 -- +goose Down
-DROP INDEX IF EXISTS messages_scheduled_send_at_index;
 ALTER TABLE workspace_members DROP COLUMN IF EXISTS undo_send_seconds;
 ALTER TABLE messages DROP COLUMN IF EXISTS undone_at;
 ALTER TABLE messages DROP COLUMN IF EXISTS scheduled_send_at;
