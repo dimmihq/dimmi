@@ -41,6 +41,11 @@ type UpdateMemberRequest struct {
 		Status             *string `json:"status,omitempty" validate:"omitempty,oneof=active deactivated"`
 		ReassignToMemberID *string `json:"reassign_to_member_id,omitempty"`
 		KeepOwner          *bool   `json:"keep_owner,omitempty"`
+
+		Access *string `json:"conversation_access" validate:"omitempty,oneof=all assigned teams all_except_teams"`
+
+		AccessUnassigned *bool     `json:"conversation_access_unassigned,omitempty"`
+		AccessTeamIDs    *[]string `json:"access_team_ids,omitempty"`
 	}
 }
 

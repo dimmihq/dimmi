@@ -70,7 +70,7 @@ Boot builds the typing relay.
 func (p BroadcastServiceProvider) Boot(context.Context, *foundation.Application) error {
 	a := p.App
 	a.Actions.RecordTyping = &conversations.RecordTyping{
-		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Scope: conversations.VisibleScope{}, Publisher: a.Broadcast,
+		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Publisher: a.Broadcast,
 	}
 
 	return nil

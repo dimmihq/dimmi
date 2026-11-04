@@ -143,7 +143,7 @@ func (s searcher) jump(ctx context.Context, registry *ids.Registry, sq searchque
 		return nil, nil
 	}
 
-	c, err := Find(ctx, s.q, s.m.Workspace.ID, ref)
+	c, err := Find(ctx, s.q, s.m, ref)
 	if err != nil {
 		return nil, ignoreNotFound(err)
 	}
@@ -185,9 +185,12 @@ func (s searcher) conversations(ctx context.Context, sq searchquery.Query) ([]Hi
 		return nil, nil
 	}
 
+	access := VisibleScope(s.m).Params()
+
 	rows, err := s.q.FilterConversations(ctx, models.FilterConversationsParams{
 		WorkspaceID: s.m.Workspace.ID, MemberID: s.m.Member.ID, Query: &sq.TSQuery, Statuses: sq.Statuses,
-		Descending: true, RowLimit: int64(s.limit),
+		AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+		AccessUnassigned: access.Unassigned, Descending: true, RowLimit: int64(s.limit),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("search conversations: %w", err)

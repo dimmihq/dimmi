@@ -138,7 +138,7 @@ func (q *Queries) InboxesByIDs(ctx context.Context, arg InboxesByIDsParams) ([]I
 }
 
 const membersByIDs = `-- name: MembersByIDs :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = ANY ($2::uuid[])
@@ -178,6 +178,8 @@ func (q *Queries) MembersByIDs(ctx context.Context, arg MembersByIDsParams) ([]M
 			&i.WorkspaceMember.DeactivatedAt,
 			&i.WorkspaceMember.DeactivatedByMemberID,
 			&i.WorkspaceMember.JoinedVia,
+			&i.WorkspaceMember.ConversationAccess,
+			&i.WorkspaceMember.ConversationAccessUnassigned,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,

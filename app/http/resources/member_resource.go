@@ -5,8 +5,9 @@
 |
 | A member as their teammates see them: their role and status in the
 | workspace and who they are, by name and email, never anything about
-| how they sign in. The caller's own membership, with the permissions
-| they hold, is the separate member block of the me resource.
+| how they sign in, plus which conversations they see, which matters to
+| whoever manages access. The caller's own membership, with the
+| permissions they hold, is the separate member block of the me resource.
 |
 */
 
@@ -14,6 +15,8 @@ package resources
 
 import (
 	"time"
+
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -23,12 +26,17 @@ WorkspaceMember is one member of a workspace, with their account. Teams
 is present only when the request included the member's teams.
 */
 type WorkspaceMember struct {
-	ID            string         `json:"id"`
-	Object        string         `json:"object"`
-	Role          string         `json:"role"`
-	Status        string         `json:"status"`
-	Availability  string         `json:"availability"`
-	JoinedVia     *string        `json:"joined_via"`
+	ID           string  `json:"id"`
+	Object       string  `json:"object"`
+	Role         string  `json:"role"`
+	Status       string  `json:"status"`
+	Availability string  `json:"availability"`
+	JoinedVia    *string `json:"joined_via"`
+
+	ConversationAccess           string   `json:"conversation_access"`
+	ConversationAccessUnassigned bool     `json:"conversation_access_unassigned"`
+	AccessTeamIDs                []string `json:"access_team_ids"`
+
 	User          Teammate       `json:"user"`
 	Teams         *[]TeamSummary `json:"teams,omitempty"`
 	DeactivatedAt *time.Time     `json:"deactivated_at"`
@@ -58,6 +66,11 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 		Status:       m.Status,
 		Availability: m.Availability,
 		JoinedVia:    m.JoinedVia,
+
+		ConversationAccess:           m.ConversationAccess,
+		ConversationAccessUnassigned: m.ConversationAccessUnassigned,
+		AccessTeamIDs:                []string{},
+
 		User: Teammate{
 			ID:            models.PublicID(models.PrefixUser, u.ID),
 			Object:        "user",
@@ -68,6 +81,19 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 		DeactivatedAt: m.DeactivatedAt,
 		CreatedAt:     m.CreatedAt,
 	}
+}
+
+/*
+PublicTeamIDs returns the public ids of the teams, an empty list for
+none.
+*/
+func PublicTeamIDs(teamIDs []ids.UUID) []string {
+	out := make([]string, len(teamIDs))
+	for i, id := range teamIDs {
+		out[i] = models.PublicID(models.PrefixTeam, id)
+	}
+
+	return out
 }
 
 /*

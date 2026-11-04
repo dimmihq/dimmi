@@ -392,6 +392,13 @@ type Invitation struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type MemberAccessTeam struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    ids.UUID  `json:"member_id"`
+	TeamID      ids.UUID  `json:"team_id"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Message struct {
 	ID               ids.UUID                `json:"id"`
 	WorkspaceID      ids.UUID                `json:"workspace_id"`
@@ -695,16 +702,18 @@ type Workspace struct {
 }
 
 type WorkspaceMember struct {
-	ID                    ids.UUID   `json:"id"`
-	WorkspaceID           ids.UUID   `json:"workspace_id"`
-	UserID                ids.UUID   `json:"user_id"`
-	Role                  string     `json:"role"`
-	Availability          string     `json:"availability"`
-	Status                string     `json:"status"`
-	CreatedAt             time.Time  `json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
-	LastAccessedAt        *time.Time `json:"last_accessed_at"`
-	DeactivatedAt         *time.Time `json:"deactivated_at"`
-	DeactivatedByMemberID *ids.UUID  `json:"deactivated_by_member_id"`
-	JoinedVia             *string    `json:"joined_via"`
+	ID                           ids.UUID   `json:"id"`
+	WorkspaceID                  ids.UUID   `json:"workspace_id"`
+	UserID                       ids.UUID   `json:"user_id"`
+	Role                         string     `json:"role"`
+	Availability                 string     `json:"availability"`
+	Status                       string     `json:"status"`
+	CreatedAt                    time.Time  `json:"created_at"`
+	UpdatedAt                    time.Time  `json:"updated_at"`
+	LastAccessedAt               *time.Time `json:"last_accessed_at"`
+	DeactivatedAt                *time.Time `json:"deactivated_at"`
+	DeactivatedByMemberID        *ids.UUID  `json:"deactivated_by_member_id"`
+	JoinedVia                    *string    `json:"joined_via"`
+	ConversationAccess           string     `json:"conversation_access"`
+	ConversationAccessUnassigned bool       `json:"conversation_access_unassigned"`
 }

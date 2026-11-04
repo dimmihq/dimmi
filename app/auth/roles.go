@@ -64,6 +64,7 @@ workspace's settings, channels, members and integrations.
 func adminPermissions() []string {
 	return []string{
 		"settings:read", "settings:write", "audit_logs:read", "members:write", "tokens:manage_any",
+		"members:manage_access", "members:manage_availability",
 		"widgets:manage", "identity:manage", "conversations:delete", "conversations:moderate",
 		"saved_replies:manage_shared", "contacts:erase", "contacts:manage_external_id", "companies:delete",
 		"inboxes:manage", "tags:manage", "email:read_raw", "email:manage", "email_suppressions:manage",

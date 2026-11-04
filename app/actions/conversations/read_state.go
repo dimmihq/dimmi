@@ -79,7 +79,7 @@ func (a *ShowReadState) Handle(ctx context.Context, in ReadStateInput) (ReadStat
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		c, err := Find(ctx, q, in.Membership.Workspace.ID, in.Ref)
+		c, err := Find(ctx, q, in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func (a *UpdateReadState) Handle(ctx context.Context, in UpdateReadStateInput) (
 		w := &Writer{Q: models.New(tx), Tx: tx, Events: a.Events, Now: a.Clock.Now(), MutationID: in.MutationID}
 		member := in.Membership.Member.ID
 
-		c, err := Find(ctx, w.Q, in.Membership.Workspace.ID, in.Ref)
+		c, err := Find(ctx, w.Q, in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}

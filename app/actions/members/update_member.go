@@ -40,6 +40,7 @@ import (
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -50,8 +51,8 @@ UpdateMemberInput is who changes a member and what changes.
 Principal is the caller and Membership their membership of the
 workspace. AssignedRole and Status are the requested values, nil to
 leave as they are. ReassignTo names the member to hand a deactivated member's
-open work to, and KeepOwner keeps the caller an owner when they make
-someone else one.
+open work to, KeepOwner keeps the caller an owner when they make someone
+else one, and Access changes which conversations the member sees.
 */
 type UpdateMemberInput struct {
 	Principal    *appauth.Principal
@@ -61,10 +62,11 @@ type UpdateMemberInput struct {
 	Status       *enums.MemberStatus
 	ReassignTo   *ids.UUID
 	KeepOwner    bool
+	Access       *AccessChange
 }
 
 /*
-UpdateMember changes a member's role and status.
+UpdateMember changes a member's role, status and conversation access.
 
 Rules:
   - Member and admin roles of non-owners need members:write.
@@ -80,17 +82,23 @@ Rules:
   - A reactivated owner comes back as an admin unless a role is given.
   - The workspace always keeps an active owner: a change that would
     leave none is refused before the caller's power is weighed.
+  - Conversation access needs members:manage_access, is never the
+    caller's own, and stays full for an owner; becoming an owner lifts
+    any limit.
   - Values equal to the current ones change nothing.
 
 Events: [appevents.MemberReactivated], [appevents.MemberRoleChanged]
-and [appevents.MemberDeactivated], in that order, for what changed.
+and [appevents.MemberDeactivated], in that order, for what changed, and
+[appevents.MemberAccessChanged] when what the member sees changed.
 
 Errors: [exceptions.ErrNotFound], [exceptions.ErrFirstPartyOnly],
 [exceptions.ErrForbidden], [fauth.ErrConfirmationRequired],
 [exceptions.ErrInvalidTransition], [exceptions.ErrTargetUnverified],
 [exceptions.ErrTargetTwoFactorRequired],
-[exceptions.ErrReassignTargetInvalid], [exceptions.ErrLastOwner], or a
-wrapped database error.
+[exceptions.ErrReassignTargetInvalid], [exceptions.ErrLastOwner],
+[exceptions.ErrOwnerAccessUnrestricted],
+[exceptions.ErrAccessTeamNotFound], [exceptions.ErrAccessTeamsNotUsed],
+[exceptions.ErrTooManyAccessTeams], or a wrapped database error.
 */
 type UpdateMember struct {
 	DB            *database.DB
@@ -103,8 +111,8 @@ type UpdateMember struct {
 memberChange is what an update does to its member, worked out before
 anything is written: whether they are reactivated and with which role
 (comeBackAs), the role they end with, whether the caller steps down
-from owner, and whether they are deactivated, handing their open work
-to reassignTo.
+from owner, whether they are deactivated, handing their open work to
+reassignTo, and the conversation access they end with, nil when it stays.
 */
 type memberChange struct {
 	reactivate  bool
@@ -114,6 +122,7 @@ type memberChange struct {
 	demoteActor bool
 	deactivate  bool
 	reassignTo  ids.UUID
+	access      *appevents.ConversationAccessState
 }
 
 /*
@@ -211,7 +220,10 @@ func (a *UpdateMember) plan(ctx context.Context, s subject, in UpdateMemberInput
 		change.reassignTo = *in.ReassignTo
 	}
 
-	return change, nil
+	var err error
+	change.access, err = planAccess(ctx, s, in)
+
+	return change, err
 }
 
 /*
@@ -390,6 +402,12 @@ func (w memberWriter) apply(
 
 	if c.deactivate {
 		if err := w.deactivate(ctx, member, c.reassignTo); err != nil {
+			return err
+		}
+	}
+
+	if c.access != nil {
+		if err := w.changeAccess(ctx, member, *c.access); err != nil {
 			return err
 		}
 	}

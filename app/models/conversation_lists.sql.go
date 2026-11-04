@@ -21,11 +21,19 @@ SELECT
     count(*) FILTER (WHERE spam) AS spam_total
 FROM conversations
 WHERE workspace_id = $2 AND deleted_at IS NULL
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, $3::text, $4::uuid,
+      $5::uuid[], $6::boolean
+  )
 `
 
 type CountConversationsParams struct {
-	MemberID    *ids.UUID `json:"member_id"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID         *ids.UUID  `json:"member_id"`
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
 }
 
 type CountConversationsRow struct {
@@ -38,9 +46,16 @@ type CountConversationsRow struct {
 
 // CountConversations counts the live conversations behind each view of
 // the sidebar: the member's open and snoozed ones, the open ones nobody
-// holds, every open one, and spam.
+// holds, every open one, and spam, among those the reader may see.
 func (q *Queries) CountConversations(ctx context.Context, arg CountConversationsParams) (CountConversationsRow, error) {
-	row := q.db.QueryRow(ctx, countConversations, arg.MemberID, arg.WorkspaceID)
+	row := q.db.QueryRow(ctx, countConversations,
+		arg.MemberID,
+		arg.WorkspaceID,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
+	)
 	var i CountConversationsRow
 	err := row.Scan(
 		&i.MineOpen,
@@ -56,8 +71,20 @@ const countOpenConversationsByInbox = `-- name: CountOpenConversationsByInbox :m
 SELECT inbox_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = $1 AND deleted_at IS NULL AND NOT spam AND status = 'open'
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, $2::text, $3::uuid,
+      $4::uuid[], $5::boolean
+  )
 GROUP BY inbox_id
 `
+
+type CountOpenConversationsByInboxParams struct {
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
+}
 
 type CountOpenConversationsByInboxRow struct {
 	InboxID ids.UUID `json:"inbox_id"`
@@ -65,9 +92,15 @@ type CountOpenConversationsByInboxRow struct {
 }
 
 // CountOpenConversationsByInbox counts the open conversations of each
-// inbox that has any.
-func (q *Queries) CountOpenConversationsByInbox(ctx context.Context, workspaceID ids.UUID) ([]CountOpenConversationsByInboxRow, error) {
-	rows, err := q.db.Query(ctx, countOpenConversationsByInbox, workspaceID)
+// inbox that has any, among those the reader may see.
+func (q *Queries) CountOpenConversationsByInbox(ctx context.Context, arg CountOpenConversationsByInboxParams) ([]CountOpenConversationsByInboxRow, error) {
+	rows, err := q.db.Query(ctx, countOpenConversationsByInbox,
+		arg.WorkspaceID,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +129,10 @@ WHERE c.workspace_id = $2
   AND NOT c.spam
   AND c.status = 'open'
   AND (c.assignee_member_id IS NULL OR c.assignee_member_id = $1::uuid)
+  AND dimmi_conversation_visible(
+      c.assignee_member_id, c.assignee_team_id, $3::text, $4::uuid,
+      $5::uuid[], $6::boolean
+  )
   AND EXISTS (
       SELECT 1 FROM messages m
       WHERE m.workspace_id = c.workspace_id
@@ -112,8 +149,12 @@ WHERE c.workspace_id = $2
 `
 
 type CountUnreadConversationsParams struct {
-	MemberID    ids.UUID `json:"member_id"`
-	WorkspaceID ids.UUID `json:"workspace_id"`
+	MemberID         ids.UUID   `json:"member_id"`
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
 }
 
 type CountUnreadConversationsRow struct {
@@ -122,9 +163,17 @@ type CountUnreadConversationsRow struct {
 }
 
 // CountUnreadConversations counts the open conversations unread by the
-// member among those assigned to them and those nobody holds.
+// member among those assigned to them and those nobody holds, of those
+// they may see.
 func (q *Queries) CountUnreadConversations(ctx context.Context, arg CountUnreadConversationsParams) (CountUnreadConversationsRow, error) {
-	row := q.db.QueryRow(ctx, countUnreadConversations, arg.MemberID, arg.WorkspaceID)
+	row := q.db.QueryRow(ctx, countUnreadConversations,
+		arg.MemberID,
+		arg.WorkspaceID,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
+	)
 	var i CountUnreadConversationsRow
 	err := row.Scan(&i.Mine, &i.Unassigned)
 	return i, err
@@ -139,92 +188,100 @@ FROM conversations c
 WHERE c.workspace_id = $2
   AND c.deleted_at IS NULL
   AND c.spam = $3
-  AND (coalesce(cardinality($4::text[]), 0) = 0 OR c.status = ANY ($4::text[]))
-  AND (NOT $5::boolean OR c.assignee_member_id IS NULL)
-  AND ($6::uuid IS NULL OR c.assignee_member_id = $6::uuid)
-  AND ($7::uuid IS NULL OR c.assignee_team_id = $7::uuid)
-  AND ($8::uuid IS NULL OR c.inbox_id = $8::uuid)
-  AND ($9::uuid IS NULL OR c.contact_id = $9::uuid)
-  AND ($10::boolean IS NULL OR c.priority = $10::boolean)
-  AND ($11::bigint IS NULL OR c.number = $11::bigint)
+  AND dimmi_conversation_visible(
+      c.assignee_member_id, c.assignee_team_id, $4::text, $5::uuid,
+      $6::uuid[], $7::boolean
+  )
+  AND (coalesce(cardinality($8::text[]), 0) = 0 OR c.status = ANY ($8::text[]))
+  AND (NOT $9::boolean OR c.assignee_member_id IS NULL)
+  AND ($10::uuid IS NULL OR c.assignee_member_id = $10::uuid)
+  AND ($11::uuid IS NULL OR c.assignee_team_id = $11::uuid)
+  AND ($12::uuid IS NULL OR c.inbox_id = $12::uuid)
+  AND ($13::uuid IS NULL OR c.contact_id = $13::uuid)
+  AND ($14::boolean IS NULL OR c.priority = $14::boolean)
+  AND ($15::bigint IS NULL OR c.number = $15::bigint)
   AND (
-      NOT $12::boolean
+      NOT $16::boolean
       OR EXISTS (
           SELECT 1 FROM messages m
           WHERE m.workspace_id = c.workspace_id
             AND m.conversation_id = c.id
             AND m.type <> 'event'
             AND m.deleted_at IS NULL
-            AND NOT (m.author_type = 'member' AND m.author_id IS NOT DISTINCT FROM $13::uuid)
+            AND NOT (m.author_type = 'member' AND m.author_id IS NOT DISTINCT FROM $17::uuid)
             AND m.id > coalesce((
                 SELECT r.last_read_message_id FROM conversation_reads r
                 WHERE r.workspace_id = c.workspace_id AND r.conversation_id = c.id
-                  AND r.workspace_member_id = $13::uuid
+                  AND r.workspace_member_id = $17::uuid
             ), '00000000-0000-0000-0000-000000000000'::uuid)
       )
   )
   AND (
-      $14::text IS NULL
-      OR numnode(to_tsquery('english', $14::text)) = 0
-      OR to_tsvector('english', coalesce(c.subject, '')) @@ to_tsquery('english', $14::text)
+      $18::text IS NULL
+      OR numnode(to_tsquery('english', $18::text)) = 0
+      OR to_tsvector('english', coalesce(c.subject, '')) @@ to_tsquery('english', $18::text)
       OR c.id IN (
           SELECT m.conversation_id FROM messages m
           WHERE m.workspace_id = $2
             AND m.deleted_at IS NULL
             AND m.type <> 'event'
-            AND m.search @@ to_tsquery('english', $14::text)
+            AND m.search @@ to_tsquery('english', $18::text)
       )
       OR c.contact_id IN (
           SELECT ct.id FROM contacts ct
           WHERE ct.workspace_id = $2
             AND ct.deleted_at IS NULL
-            AND ct.search @@ to_tsquery('simple', $14::text)
+            AND ct.search @@ to_tsquery('simple', $18::text)
       )
   )
   AND (
-      $15::uuid IS NULL
+      $19::uuid IS NULL
       OR (
-          $16::boolean
+          $20::boolean
           AND ((CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END),
-              c.id) < ($17::timestamptz, $15::uuid)
+              c.id) < ($21::timestamptz, $19::uuid)
       )
       OR (
-          NOT $16::boolean
+          NOT $20::boolean
           AND ((CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END),
-              c.id) > ($17::timestamptz, $15::uuid)
+              c.id) > ($21::timestamptz, $19::uuid)
       )
   )
 ORDER BY
-    CASE WHEN $16::boolean THEN
+    CASE WHEN $20::boolean THEN
         (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)
     END DESC,
-    CASE WHEN $16::boolean THEN c.id END DESC,
-    CASE WHEN NOT $16::boolean THEN
+    CASE WHEN $20::boolean THEN c.id END DESC,
+    CASE WHEN NOT $20::boolean THEN
         (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)
     END,
-    CASE WHEN NOT $16::boolean THEN c.id END
-LIMIT $18::bigint
+    CASE WHEN NOT $20::boolean THEN c.id END
+LIMIT $22::bigint
 `
 
 type FilterConversationsParams struct {
-	SortCreated bool       `json:"sort_created"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	Spam        bool       `json:"spam"`
-	Statuses    []string   `json:"statuses"`
-	Unassigned  bool       `json:"unassigned"`
-	AssigneeID  *ids.UUID  `json:"assignee_id"`
-	TeamID      *ids.UUID  `json:"team_id"`
-	InboxID     *ids.UUID  `json:"inbox_id"`
-	ContactID   *ids.UUID  `json:"contact_id"`
-	Priority    *bool      `json:"priority"`
-	Number      *int64     `json:"number"`
-	OnlyUnread  bool       `json:"only_unread"`
-	MemberID    ids.UUID   `json:"member_id"`
-	Query       *string    `json:"query"`
-	AfterID     *ids.UUID  `json:"after_id"`
-	Descending  bool       `json:"descending"`
-	AfterAt     *time.Time `json:"after_at"`
-	RowLimit    int64      `json:"row_limit"`
+	SortCreated      bool       `json:"sort_created"`
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	Spam             bool       `json:"spam"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
+	Statuses         []string   `json:"statuses"`
+	Unassigned       bool       `json:"unassigned"`
+	AssigneeID       *ids.UUID  `json:"assignee_id"`
+	TeamID           *ids.UUID  `json:"team_id"`
+	InboxID          *ids.UUID  `json:"inbox_id"`
+	ContactID        *ids.UUID  `json:"contact_id"`
+	Priority         *bool      `json:"priority"`
+	Number           *int64     `json:"number"`
+	OnlyUnread       bool       `json:"only_unread"`
+	MemberID         ids.UUID   `json:"member_id"`
+	Query            *string    `json:"query"`
+	AfterID          *ids.UUID  `json:"after_id"`
+	Descending       bool       `json:"descending"`
+	AfterAt          *time.Time `json:"after_at"`
+	RowLimit         int64      `json:"row_limit"`
 }
 
 type FilterConversationsRow struct {
@@ -246,6 +303,10 @@ func (q *Queries) FilterConversations(ctx context.Context, arg FilterConversatio
 		arg.SortCreated,
 		arg.WorkspaceID,
 		arg.Spam,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
 		arg.Statuses,
 		arg.Unassigned,
 		arg.AssigneeID,

@@ -60,6 +60,7 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.InTx, l.memberRoleChanged)
 	events.Listen(d, events.InTx, l.memberDeactivated)
 	events.Listen(d, events.InTx, l.memberReactivated)
+	events.Listen(d, events.InTx, l.memberAccessChanged)
 	l.listenTrash(d)
 	l.listenAccess(d)
 	l.listenTeams(d)
@@ -143,6 +144,32 @@ func (l *WriteAuditLog) memberRoleChanged(ctx context.Context, e appevents.Membe
 	entry.Event = audit.EventOwnershipTransferred
 
 	return l.member(ctx, e.WorkspaceID, e.MemberID, entry)
+}
+
+/*
+memberAccessChanged records which conversations a member sees now and
+what they saw before.
+*/
+func (l *WriteAuditLog) memberAccessChanged(ctx context.Context, e appevents.MemberAccessChanged) error {
+	return l.member(ctx, e.WorkspaceID, e.MemberID, audit.Entry{
+		Event: audit.EventMemberAccessChanged, ActorID: e.ChangedBy,
+		Changes: map[string]any{"conversation_access": map[string]any{
+			"from": auditedAccess(e.From), "to": auditedAccess(e.To),
+		}},
+	})
+}
+
+/*
+auditedAccess is how the audit log writes one state of a member's
+conversation access.
+*/
+func auditedAccess(s appevents.ConversationAccessState) map[string]any {
+	teams := make([]string, len(s.TeamIDs))
+	for i, id := range s.TeamIDs {
+		teams[i] = models.PublicID(models.PrefixTeam, id)
+	}
+
+	return map[string]any{"mode": s.Mode, "unassigned": s.Unassigned, "team_ids": teams}
 }
 
 /*

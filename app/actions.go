@@ -60,6 +60,7 @@ type Actions struct {
 	ListMembers             *members.ListMembers
 	ShowMember              *members.ShowMember
 	UpdateMember            *members.UpdateMember
+	ListAccessTeams         *members.ListAccessTeams
 	LeaveWorkspace          *members.LeaveWorkspace
 	TrashWorkspace          *workspaces.TrashWorkspace
 	DeleteWorkspace         *workspaces.DeleteWorkspace

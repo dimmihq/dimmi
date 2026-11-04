@@ -58,6 +58,7 @@ type MemberController struct {
 	ShowMember   *members.ShowMember
 	UpdateMember *members.UpdateMember
 	MemberTeams  *teams.ListMemberTeams
+	AccessTeams  *members.ListAccessTeams
 	IDs          *ids.Registry
 	Cursors      *pagination.Cursors
 }
@@ -99,6 +100,9 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 	if err := c.includeTeams(ctx, query, out.Items, memberIDs(page.Members)); err != nil {
 		return nil, err
 	}
+	if err := c.includeAccessTeams(ctx, out.Items, memberRows(page.Members)); err != nil {
+		return nil, err
+	}
 	if page.More {
 		if out.NextCursor, err = c.Cursors.Encode(memberPage{Offset: in.Offset + in.Limit}); err != nil {
 			return nil, err
@@ -131,6 +135,9 @@ func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequ
 
 	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
 	if err := c.includeTeams(ctx, query, out, []ids.UUID{row.WorkspaceMember.ID}); err != nil {
+		return nil, err
+	}
+	if err := c.includeAccessTeams(ctx, out, []models.WorkspaceMember{row.WorkspaceMember}); err != nil {
 		return nil, err
 	}
 
@@ -176,8 +183,20 @@ func memberIDs(rows []models.ListWorkspaceMembersRow) []ids.UUID {
 }
 
 /*
-Update changes a member's role or status and answers with the member as
-they now are.
+memberRows returns the membership of each listed member, in order.
+*/
+func memberRows(rows []models.ListWorkspaceMembersRow) []models.WorkspaceMember {
+	out := make([]models.WorkspaceMember, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, row.WorkspaceMember)
+	}
+
+	return out
+}
+
+/*
+Update changes a member's role, status or conversation access and
+answers with the member as they now are.
 */
 func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMemberRequest) (*MemberOutput, error) {
 	id, err := c.memberID(ctx, in.Member)
@@ -200,12 +219,73 @@ func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMember
 		update.ReassignTo = &reassign
 	}
 
+	if update.Access, err = c.accessChange(in); err != nil {
+		return nil, err
+	}
+
 	row, err := c.UpdateMember.Handle(ctx, update)
 	if err != nil {
 		return nil, err
 	}
 
-	return &MemberOutput{Body: fhttp.NewResource(resources.NewWorkspaceMember(row.WorkspaceMember, row.User))}, nil
+	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
+	if err := c.includeAccessTeams(ctx, out, []models.WorkspaceMember{row.WorkspaceMember}); err != nil {
+		return nil, err
+	}
+
+	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
+}
+
+/*
+accessChange reads the conversation access fields of an update, nil when
+it names none. A team id that cannot be read names no team.
+*/
+func (c *MemberController) accessChange(in *requests.UpdateMemberRequest) (*members.AccessChange, error) {
+	b := in.Body
+	if b.Access == nil && b.AccessUnassigned == nil && b.AccessTeamIDs == nil {
+		return nil, nil
+	}
+
+	change := &members.AccessChange{
+		Mode: (*enums.ConversationAccess)(b.Access), Unassigned: b.AccessUnassigned,
+	}
+	if b.AccessTeamIDs == nil {
+		return change, nil
+	}
+
+	teamIDs := make([]ids.UUID, 0, len(*b.AccessTeamIDs))
+	for _, public := range *b.AccessTeamIDs {
+		id, err := c.IDs.Decode(string(models.PrefixTeam), public)
+		if err != nil {
+			return nil, exceptions.ErrAccessTeamNotFound
+		}
+
+		teamIDs = append(teamIDs, id)
+	}
+
+	change.TeamIDs = &teamIDs
+
+	return change, nil
+}
+
+/*
+includeAccessTeams adds to each shaped member the teams their
+conversation access names. The shaped members and the rows come in the
+same order, and only modes that read a list cost a query.
+*/
+func (c *MemberController) includeAccessTeams(
+	ctx context.Context, out []resources.WorkspaceMember, rows []models.WorkspaceMember,
+) error {
+	byMember, err := c.AccessTeams.Handle(ctx, members.ListAccessTeamsInput{Membership: membership(ctx), Members: rows})
+	if err != nil {
+		return err
+	}
+
+	for i, row := range rows {
+		out[i].AccessTeamIDs = resources.PublicTeamIDs(byMember[row.ID])
+	}
+
+	return nil
 }
 
 /*

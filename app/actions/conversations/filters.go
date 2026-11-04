@@ -80,9 +80,12 @@ false for a list that is empty whatever the data: mentions, and a
 search for an id, which only the search endpoint jumps to.
 */
 func listParams(m authz.Membership, f Filters, s Sort) (models.FilterConversationsParams, bool) {
+	access := VisibleScope(m).Params()
 	p := models.FilterConversationsParams{
 		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, SortCreated: s.Created, Descending: s.Descending,
-		Statuses: f.Statuses, Unassigned: f.Unassigned, AssigneeID: f.Assignee, TeamID: f.TeamID,
+		AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+		AccessUnassigned: access.Unassigned,
+		Statuses:         f.Statuses, Unassigned: f.Unassigned, AssigneeID: f.Assignee, TeamID: f.TeamID,
 		InboxID: f.InboxID, ContactID: f.ContactID, Priority: f.Priority, OnlyUnread: f.Unread,
 	}
 

@@ -102,7 +102,6 @@ type RecordTyping struct {
 	DB        *database.DB
 	Cache     *cache.Store
 	Clock     clock.Clock
-	Scope     appbroadcasting.ConversationScope
 	Publisher appbroadcasting.Publisher
 }
 
@@ -160,7 +159,7 @@ func (a *RecordTyping) load(ctx context.Context, in RecordTypingInput) (typingTa
 			return err
 		}
 
-		if !a.Scope.Contains(ctx, in.Membership, t.conversation) {
+		if t.conversation.DeletedAt != nil || !VisibleScope(in.Membership).Contains(t.conversation) {
 			return database.ErrNotFound
 		}
 

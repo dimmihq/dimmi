@@ -294,6 +294,7 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 	}
 	c.members = &v1.MemberController{
 		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
+		AccessTeams: acts.ListAccessTeams,
 		MemberTeams: acts.ListMemberTeams, Cursors: cursors,
 	}
 	c.auditLogs = &v1.AuditLogController{

@@ -114,7 +114,7 @@ func (a *ApplyConversationChanges) Handle(ctx context.Context, in ApplyChangesIn
 
 		w.MutationID = in.MutationID
 
-		c, err := Lock(ctx, w.Q, in.Membership.Workspace.ID, in.Ref)
+		c, err := Lock(ctx, w.Q, in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}

@@ -16,7 +16,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
-	"github.com/dimmihq/dimmi/app/actions/conversations"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -238,7 +237,6 @@ func nodeWith(t *testing.T, tc *tests.TestCase, cfg broadcasting.Config) string 
 
 	authorize := &appbroadcasting.Authorizers{
 		DB: tc.App.DB, IDs: tc.App.IDs, Resolve: tc.App.Actions.ResolveWorkspace,
-		Scope: conversations.VisibleScope{},
 	}
 	channels := server.Channels()
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)

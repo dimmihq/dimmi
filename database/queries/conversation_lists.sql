@@ -16,6 +16,10 @@ FROM conversations c
 WHERE c.workspace_id = @workspace_id
   AND c.deleted_at IS NULL
   AND c.spam = @spam
+  AND dimmi_conversation_visible(
+      c.assignee_member_id, c.assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  )
   AND (coalesce(cardinality(@statuses::text[]), 0) = 0 OR c.status = ANY (@statuses::text[]))
   AND (NOT @unassigned::boolean OR c.assignee_member_id IS NULL)
   AND (sqlc.narg(assignee_id)::uuid IS NULL OR c.assignee_member_id = sqlc.narg(assignee_id)::uuid)
@@ -116,7 +120,7 @@ ORDER BY conversation_id, created_at DESC, id DESC;
 -- name: CountConversations :one
 -- CountConversations counts the live conversations behind each view of
 -- the sidebar: the member's open and snoozed ones, the open ones nobody
--- holds, every open one, and spam.
+-- holds, every open one, and spam, among those the reader may see.
 SELECT
     count(*) FILTER (WHERE NOT spam AND status = 'open' AND assignee_member_id = @member_id) AS mine_open,
     count(*) FILTER (WHERE NOT spam AND status = 'snoozed' AND assignee_member_id = @member_id) AS mine_snoozed,
@@ -124,11 +128,16 @@ SELECT
     count(*) FILTER (WHERE NOT spam AND status = 'open') AS all_open,
     count(*) FILTER (WHERE spam) AS spam_total
 FROM conversations
-WHERE workspace_id = @workspace_id AND deleted_at IS NULL;
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  );
 
 -- name: CountUnreadConversations :one
 -- CountUnreadConversations counts the open conversations unread by the
--- member among those assigned to them and those nobody holds.
+-- member among those assigned to them and those nobody holds, of those
+-- they may see.
 SELECT
     count(*) FILTER (WHERE c.assignee_member_id = @member_id::uuid) AS mine,
     count(*) FILTER (WHERE c.assignee_member_id IS NULL) AS unassigned
@@ -138,6 +147,10 @@ WHERE c.workspace_id = @workspace_id
   AND NOT c.spam
   AND c.status = 'open'
   AND (c.assignee_member_id IS NULL OR c.assignee_member_id = @member_id::uuid)
+  AND dimmi_conversation_visible(
+      c.assignee_member_id, c.assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  )
   AND EXISTS (
       SELECT 1 FROM messages m
       WHERE m.workspace_id = c.workspace_id
@@ -154,10 +167,14 @@ WHERE c.workspace_id = @workspace_id
 
 -- name: CountOpenConversationsByInbox :many
 -- CountOpenConversationsByInbox counts the open conversations of each
--- inbox that has any.
+-- inbox that has any, among those the reader may see.
 SELECT inbox_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND NOT spam AND status = 'open'
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  )
 GROUP BY inbox_id;
 
 -- name: SearchHighlights :many
