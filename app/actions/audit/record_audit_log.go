@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/models"
@@ -146,11 +147,26 @@ type actor struct {
 
 /*
 Handle writes the entry, inside the transaction in the context when
-there is one, and returns it as stored.
+there is one, and returns it as stored. It runs scoped to the entry's
+workspace, so it also works for callers that hold no transaction.
 */
 func (a *RecordAuditLog) Handle(ctx context.Context, e Entry) (models.AuditLog, error) {
-	q := models.New(a.DB)
+	var entry models.AuditLog
 
+	err := a.DB.Transaction(tenancy.With(ctx, e.WorkspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		entry, err = a.write(ctx, models.New(tx), e)
+
+		return err
+	})
+
+	return entry, err
+}
+
+/*
+write stores the entry with the queries of the workspace's transaction.
+*/
+func (a *RecordAuditLog) write(ctx context.Context, q *models.Queries, e Entry) (models.AuditLog, error) {
 	who, err := a.actor(ctx, q, e)
 	if err != nil {
 		return models.AuditLog{}, err
