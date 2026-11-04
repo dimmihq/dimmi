@@ -96,7 +96,7 @@ func TestUndoSend(t *testing.T) {
 		d.tc.Drain()
 		require.Len(t, driver.Sent(), 2)
 
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE workspace_members SET undo_send_seconds = 20")
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE workspace_members SET undo_send_seconds = 20")
 		require.NoError(t, err)
 		heldReply(t, d, path, testkit.JSON{"body": "Mine"})
 		in20 := d.tc.Clock.Now().Add(20 * time.Second).Local().Format(time.RFC3339)

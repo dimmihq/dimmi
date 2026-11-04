@@ -24,7 +24,7 @@ corrupt writes the SQL straight to the database, as a damaged row.
 func corrupt(t *testing.T, d desk, sql string) {
 	t.Helper()
 
-	_, err := d.tc.App.DB.Exec(t.Context(), sql)
+	_, err := d.tc.Operator().Exec(t.Context(), sql)
 	require.NoError(t, err)
 }
 

@@ -205,7 +205,7 @@ func TestDrafts(t *testing.T) {
 		id := d.owner.PostJSON(draftsPath, draft(conv, "reply", "Mine", d.tc.Clock.Now())).AssertCreated().
 			String("data.id")
 
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET deleted_at = now()")
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE conversations SET deleted_at = now()")
 		require.NoError(t, err)
 
 		d.owner.GetJSON(draftsPath).AssertJSONPath("data.#", 0)
