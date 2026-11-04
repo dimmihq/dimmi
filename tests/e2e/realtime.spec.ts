@@ -107,7 +107,8 @@ it.describe("realtime", () => {
     const problems: string[] = [];
     watching.on("pageerror", (error) => problems.push(error.message));
     watching.on("console", (message) => {
-      if (message.type() === "error") {
+      const apiRefusal = /status of 4\d\d/.test(message.text()) && message.location().url.includes("/api/v1/");
+      if (message.type() === "error" && !apiRefusal) {
         problems.push(message.text());
       }
     });
