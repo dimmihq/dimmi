@@ -110,6 +110,7 @@ linters:
             - github.com/alexedwards/argon2id
             - github.com/tink-crypto/tink-go/v2
             - github.com/pquerna/otp
+            - github.com/go-webauthn/webauthn
             - github.com/go-jose/go-jose/v4
             - github.com/coreos/go-oidc/v3
             - github.com/standard-webhooks/standard-webhooks/libraries

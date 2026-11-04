@@ -129,11 +129,17 @@ func (a *RemoveAuthFactor) protectedBy(held []models.UserAuthFactor) bool {
 
 /*
 disable logs the removal of the last protecting factor and turns
-two-factor authentication off for the locked user of the input.
+two-factor authentication off for the locked user of the input. A
+workspace requiring a second factor refuses it before anything is
+logged.
 */
 func (a *RemoveAuthFactor) disable(
 	ctx context.Context, tx *database.Tx, in RemoveAuthFactorInput, target models.UserAuthFactor,
 ) error {
+	if err := blockedByWorkspaces(ctx, models.New(tx), in.User); err != nil {
+		return err
+	}
+
 	err := a.SecurityLog.Record(ctx, appauth.Entry{
 		UserID: in.User.ID, Type: appauth.EventAuthFactorRemoved, Client: in.Client, Metadata: factorEvent(target),
 	})

@@ -5,14 +5,27 @@ import type { AuthFactor } from "@/lib/api/auth-factors";
 
 /*
  * twoFactorState reads what the list of factors means for the page: the
- * active authenticator, the recovery code set, and whether two-factor is
- * on.
+ * active authenticator, the active passkeys, the recovery code set, and
+ * whether two-factor is on, which any authenticator or passkey turns on.
  */
 export function twoFactorState(factors: AuthFactor[]) {
-  const authenticator = factors.find((f) => f.type === "totp" && f.status === "active");
-  const recovery = factors.find((f) => f.type === "recovery_code" && f.status === "active");
+  const active = factors.filter((f) => f.status === "active");
+  const authenticator = active.find((f) => f.type === "totp");
+  const passkeys = active.filter((f) => f.type === "passkey");
+  const recovery = active.find((f) => f.type === "recovery_code");
 
-  return { authenticator, recovery, on: Boolean(authenticator) };
+  return { authenticator, passkeys, recovery, on: Boolean(authenticator) || passkeys.length > 0 };
+}
+
+/*
+ * isLastFactor reports whether removing the factor turns two-factor off:
+ * it is the only authenticator or passkey left.
+ */
+export function isLastFactor(factors: AuthFactor[], factor: AuthFactor): boolean {
+  const { authenticator, passkeys } = twoFactorState(factors);
+  const protecting = [...(authenticator ? [authenticator] : []), ...passkeys];
+
+  return protecting.length === 1 && protecting[0]?.id === factor.id;
 }
 
 /*
@@ -27,4 +40,14 @@ export function remainingLabel(remaining: number, total: number): string {
   const left = `${remaining} of ${total} left`;
 
   return remaining <= 2 ? `${left}. Make new ones soon.` : left;
+}
+
+/*
+ * usedLabel says when a factor was added and last used.
+ */
+export function usedLabel(factor: AuthFactor, dates: Intl.DateTimeFormat): string {
+  const added = `Added ${dates.format(new Date(factor.confirmed_at ?? factor.created_at))}`;
+  const used = factor.last_used_at ? `last used ${dates.format(new Date(factor.last_used_at))}` : "never used";
+
+  return `${added}, ${used}`;
 }

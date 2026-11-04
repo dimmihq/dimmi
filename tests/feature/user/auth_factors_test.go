@@ -112,7 +112,7 @@ func TestAuthFactorStore(t *testing.T) {
 		browser.PostJSON(factorsPath, testkit.JSON{"type": "totp", "name": " Work\u200b phone "}).AssertCreated().
 			AssertJSONPath("data.name", "Work phone")
 		browser.PostJSON(factorsPath, testkit.JSON{"type": "totp", "name": "\u200b"}).AssertValidationError("name")
-		browser.PostJSON(factorsPath, testkit.JSON{"type": "passkey"}).AssertValidationError("type")
+		browser.PostJSON(factorsPath, testkit.JSON{"type": "sms"}).AssertValidationError("type")
 	})
 
 	t.Run("replaces an unfinished authenticator when asked again", func(t *testing.T) {

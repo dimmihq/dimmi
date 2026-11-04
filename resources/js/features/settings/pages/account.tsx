@@ -3,14 +3,7 @@
  * them, what notifies them, how they sign in, and their API tokens.
  * Nothing here changes anything for teammates.
  */
-import {
-  RiComputerLine,
-  RiGithubFill,
-  RiGoogleFill,
-  RiKey2Line,
-  RiShieldKeyholeLine,
-  RiSmartphoneLine,
-} from "@remixicon/react";
+import { RiGithubFill, RiGoogleFill, RiKey2Line, RiShieldKeyholeLine } from "@remixicon/react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
@@ -18,6 +11,7 @@ import { avatarColor } from "@/features/shell/avatar-color";
 
 import { Action, Choice, Danger, Field, Toggle } from "../controls";
 import { Empty, Glyph, Item, Logo, Row, Section, SettingsPage } from "../layout";
+import { SessionsSection } from "../sessions";
 import { TwoFactorSection } from "../two-factor";
 import { useAccount } from "../use-account";
 
@@ -210,19 +204,7 @@ export function SecuritySettings() {
           <Action>Link</Action>
         </Item>
       </Section>
-      <Section title="Sessions" description="Browsers and apps signed in to your account.">
-        <Item mark={<Glyph icon={RiComputerLine} />} title="Chrome on macOS" detail="This session · Lisbon, Portugal" />
-        <Item
-          mark={<Glyph icon={RiSmartphoneLine} />}
-          title="Dimmi for iPhone"
-          detail="Last active 2 days ago · Lisbon, Portugal"
-        >
-          <Action>Revoke</Action>
-        </Item>
-        <Row label="Sign out other sessions">
-          <Action>Sign out others</Action>
-        </Row>
-      </Section>
+      <SessionsSection hasPassword={me.hasPassword} />
       <Section title="Security log" description="Sign-ins and changes to your account.">
         <Item
           mark={<Glyph icon={RiShieldKeyholeLine} />}

@@ -72,7 +72,7 @@ func (rc *RecoveryCodes) Type() string {
 Generate returns count new codes to show once, and their sealed digests
 to store as the credential's secret.
 */
-func (rc *RecoveryCodes) Generate(count int) (codes []string, sealed []byte, err error) {
+func (rc *RecoveryCodes) Generate(ctx context.Context, count int) (codes []string, sealed []byte, err error) {
 	digests := make([]string, 0, count)
 	codes = make([]string, 0, count)
 
@@ -82,7 +82,7 @@ func (rc *RecoveryCodes) Generate(count int) (codes []string, sealed []byte, err
 		digests = append(digests, hashing.SHA256Hex([]byte(normalize(code))))
 	}
 
-	sealed, err = rc.seal(digests)
+	sealed, err = rc.seal(ctx, digests)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,8 +94,8 @@ func (rc *RecoveryCodes) Generate(count int) (codes []string, sealed []byte, err
 Verify accepts a code still in the credential's list and removes it, so
 it never works again.
 */
-func (rc *RecoveryCodes) Verify(_ context.Context, cred *Credential, input string) error {
-	digests, err := rc.open(cred.Secret)
+func (rc *RecoveryCodes) Verify(ctx context.Context, cred *Credential, input string) error {
+	digests, err := rc.open(ctx, cred.Secret)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (rc *RecoveryCodes) Verify(_ context.Context, cred *Credential, input strin
 		return ErrInvalidCode
 	}
 
-	sealed, err := rc.seal(slices.Delete(digests, match, match+1))
+	sealed, err := rc.seal(ctx, slices.Delete(digests, match, match+1))
 	if err != nil {
 		return err
 	}
@@ -126,8 +126,8 @@ func (rc *RecoveryCodes) Verify(_ context.Context, cred *Credential, input strin
 /*
 Remaining returns how many codes of the credential are still unused.
 */
-func (rc *RecoveryCodes) Remaining(cred Credential) (int, error) {
-	digests, err := rc.open(cred.Secret)
+func (rc *RecoveryCodes) Remaining(ctx context.Context, cred Credential) (int, error) {
+	digests, err := rc.open(ctx, cred.Secret)
 	if err != nil {
 		return 0, err
 	}
@@ -135,13 +135,13 @@ func (rc *RecoveryCodes) Remaining(cred Credential) (int, error) {
 	return len(digests), nil
 }
 
-func (rc *RecoveryCodes) seal(digests []string) ([]byte, error) {
+func (rc *RecoveryCodes) seal(ctx context.Context, digests []string) ([]byte, error) {
 	plain, err := json.Marshal(digests)
 	if err != nil {
 		return nil, fmt.Errorf("encode recovery codes: %w", err)
 	}
 
-	sealed, err := rc.encrypter.Encrypt(plain)
+	sealed, err := rc.encrypter.Encrypt(ctx, plain)
 	if err != nil {
 		return nil, fmt.Errorf("seal recovery codes: %w", err)
 	}
@@ -149,8 +149,8 @@ func (rc *RecoveryCodes) seal(digests []string) ([]byte, error) {
 	return sealed, nil
 }
 
-func (rc *RecoveryCodes) open(sealed []byte) ([]string, error) {
-	plain, err := rc.encrypter.Decrypt(sealed)
+func (rc *RecoveryCodes) open(ctx context.Context, sealed []byte) ([]string, error) {
+	plain, err := rc.encrypter.Decrypt(ctx, sealed)
 	if err != nil {
 		return nil, fmt.Errorf("open recovery codes: %w", err)
 	}

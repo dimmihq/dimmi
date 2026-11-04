@@ -37,11 +37,12 @@ WHERE user_id = @user_id AND status = 'active'
 ORDER BY is_preferred DESC, created_at, id;
 
 -- name: ActivateAuthFactor :one
--- ActivateAuthFactor turns a pending factor active, keeping the step its
--- activation code used and whether it is now the preferred one.
+-- ActivateAuthFactor turns a pending factor active, keeping what its
+-- first answer left: the credential, the digest it is found by, the
+-- step or sign counter used, and whether it is now the preferred one.
 UPDATE user_auth_factors
-SET status = 'active', confirmed_at = @now::timestamptz, last_counter = @last_counter, is_preferred = @is_preferred,
-    updated_at = @now
+SET status = 'active', confirmed_at = @now::timestamptz, credential = @credential, lookup_hash = @lookup_hash,
+    last_counter = @last_counter, is_preferred = @is_preferred, updated_at = @now
 WHERE id = @id
 RETURNING *;
 

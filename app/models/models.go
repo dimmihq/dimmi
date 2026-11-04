@@ -183,6 +183,15 @@ type ConversationTag struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type EncryptionKey struct {
+	ScopeKind string    `json:"scope_kind"`
+	ScopeID   string    `json:"scope_id"`
+	Purpose   string    `json:"purpose"`
+	Wrapped   []byte    `json:"wrapped"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type IdempotencyKey struct {
 	TenantID    string          `json:"tenant_id"`
 	Scope       string          `json:"scope"`

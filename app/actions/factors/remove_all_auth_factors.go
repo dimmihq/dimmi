@@ -25,13 +25,15 @@ import (
 )
 
 /*
-RemoveAllAuthFactorsInput is the user, the client and the first-party
-app grant to keep, ids.Nil() for none.
+RemoveAllAuthFactorsInput is the user, the client, the first-party app
+grant to keep, ids.Nil() for none, and whether to Force it past
+workspaces that require a second factor, as only an operator may.
 */
 type RemoveAllAuthFactorsInput struct {
 	UserID    ids.UUID
 	Client    appauth.Client
 	KeepGrant ids.UUID
+	Force     bool
 }
 
 /*
@@ -68,7 +70,7 @@ func (a *RemoveAllAuthFactors) Handle(ctx context.Context, in RemoveAllAuthFacto
 		wasOn = user.TwoFactorEnabled()
 		if wasOn {
 			return a.Disable.Handle(ctx, tx, DisableTwoFactorInput{
-				User: user, Client: in.Client, KeepGrant: in.KeepGrant,
+				User: user, Client: in.Client, KeepGrant: in.KeepGrant, Force: in.Force,
 			})
 		}
 

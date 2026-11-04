@@ -30,16 +30,17 @@ type Factor struct {
 }
 
 /*
-OfferedFactors returns the second-factor types the install enables, in
-the order apps list them.
+OfferedFactors returns the second-factor types among the enabled ones,
+in the order apps list them.
 */
-func OfferedFactors(cfg config.AuthConfig) []Factor {
+func OfferedFactors(enabled []string) []Factor {
 	known := []Factor{
 		{Type: MethodTOTP, Name: "Authenticator app"},
+		{Type: MethodPasskey, Name: "Passkey"},
 		{Type: MethodRecoveryCode, Name: "Recovery codes"},
 	}
 
-	return slices.DeleteFunc(known, func(f Factor) bool { return !slices.Contains(cfg.Factors.Enabled, f.Type) })
+	return slices.DeleteFunc(known, func(f Factor) bool { return !slices.Contains(enabled, f.Type) })
 }
 
 /*

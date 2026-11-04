@@ -15,16 +15,18 @@ package resources
 import "github.com/dimmihq/dimmi/app/models"
 
 /*
-Workspace is a workspace a member works in.
+Workspace is a workspace a member works in. RequireTwoFactor says
+whether every member must have a second factor to work in it.
 */
 type Workspace struct {
-	ID       string `json:"id"`
-	Object   string `json:"object"`
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	Timezone string `json:"timezone"`
-	Locale   string `json:"locale"`
-	TestMode bool   `json:"test_mode"`
+	ID               string `json:"id"`
+	Object           string `json:"object"`
+	Name             string `json:"name"`
+	Slug             string `json:"slug"`
+	Timezone         string `json:"timezone"`
+	Locale           string `json:"locale"`
+	TestMode         bool   `json:"test_mode"`
+	RequireTwoFactor bool   `json:"require_two_factor"`
 }
 
 /*
@@ -39,6 +41,8 @@ func NewWorkspace(w models.Workspace) Workspace {
 		Timezone: w.Timezone,
 		Locale:   w.Locale,
 		TestMode: w.TestMode,
+
+		RequireTwoFactor: w.RequiresTwoFactor(),
 	}
 }
 

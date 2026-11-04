@@ -114,7 +114,7 @@ func (a *AddAuthFactor) Handle(ctx context.Context, in AddAuthFactorInput) (NewA
 			return fmt.Errorf("replace pending factor: %w", err)
 		}
 
-		added, err = writer{q: q, now: a.Clock.Now()}.store(ctx, driver, in.User, str.Clean(in.Name))
+		added, err = writer{q: q, now: a.Clock.Now(), held: held}.store(ctx, driver, in.User, str.Clean(in.Name))
 
 		return err
 	})

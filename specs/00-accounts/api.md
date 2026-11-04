@@ -11,7 +11,7 @@ Auth letters (foundation `api.md` "Who calls what"): `S` = `auth:session` (brows
 |---|---|---|---|---|
 | GET | `/api/v1/auth/config` | auth.config.show | G | login options + capability discovery: providers and factors (arrays of objects), signup mode, magic link, captcha site key, setup required, mail configured, edition, `server_version`, `api_version`, `region`, `capabilities`, `min_client_versions` |
 | POST | `/api/v1/users` | users.store | G | register: user + session (+ workspace or membership via `invitation_token`) |
-| POST | `/api/v1/sessions` | sessions.store | G (`two_factor` grant: challenge cookie) | log in. Body `grant`: `password` `{email, password}`, `two_factor` `{method, code}` (`method` required: `totp`, `recovery_code`; later `{method: "webauthn", credential}`), `magic_link` `{token}`, `email_code` `{email, code}`. Optional `reauth: true` (any primary grant): result must be session cookie's user (flows.md 24). 201 `MeResource` + session cookie, or 200 `two_factor_challenge`. Later grants `passkey`, `sso` (registry) |
+| POST | `/api/v1/sessions` | sessions.store | G (`two_factor` grant: challenge cookie) | log in. Body `grant`: `password` `{email, password}`, `two_factor` `{method, code}` (`method` required: `totp`, `recovery_code` with `code`; `passkey` with `credential`, the assertion JSON), `magic_link` `{token}`, `email_code` `{email, code}`. Optional `reauth: true` (any primary grant): result must be session cookie's user (flows.md 24). 201 `MeResource` + session cookie, or 200 `two_factor_challenge`. Later grants `passkey`, `sso` (registry) |
 | GET | `/api/v1/sessions` | sessions.index | U | own browser sessions and first-party app grants, `kind`, `current` flag |
 | DELETE | `/api/v1/sessions/{ses}` | sessions.destroy | U | revoke one. `{ses}` = `ses_...` (browser), `ogr_...` (first-party app grant) or `current` (logout) |
 | DELETE | `/api/v1/sessions` | sessions.destroy-many | U C | revoke every session and app grant except current |
@@ -135,7 +135,7 @@ Tokens (PAT, third-party OAuth) cannot create tokens, change owner roles, delete
     { "method": "totp", "factor_id": "fac_01jc...", "name": "Authenticator app", "preferred": true, "options": null },
     { "method": "recovery_code", "factor_id": "fac_01jd...", "name": "Recovery codes", "preferred": false, "options": null } ] } }
 ```
-+ `Set-Cookie: __Host-dimmi_2fa=...`. `methods` = active factors of enabled drivers with `SecondFactor` (preferred first; recovery set omitted when `remaining = 0`); `options` = driver challenge options (null for totp and recovery_code; WebAuthn request options later). Then with cookie:
++ `Set-Cookie: __Host-dimmi_2fa=...`. `methods` = active factors of enabled drivers with `SecondFactor` (preferred first; recovery set omitted when `remaining = 0`); `options` = driver challenge options (null for totp and recovery_code; WebAuthn request options for `passkey`, the same on each passkey; recovery set listed last). Then with cookie:
 ```json
 { "grant": "two_factor", "method": "totp", "code": "123456" }
 ```

@@ -158,7 +158,7 @@ landing returns where the browser goes once the callback succeeded.
 func landing(attempt appauth.OAuthAttempt, result auth.OAuthCallbackResult) string {
 	if result.Linked {
 		if attempt.Redirect == "/" {
-			return "/settings/security"
+			return appauth.SecurityPage
 		}
 
 		return attempt.Redirect

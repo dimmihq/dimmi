@@ -14,6 +14,7 @@ package requests
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/dimmihq/dimmi/framework/validation"
 )
@@ -32,7 +33,8 @@ const (
 
 /*
 StoreSessionRequest is the input of POST /sessions. Reauth asks for a
-fresh sign-in of the session's own user.
+fresh sign-in of the session's own user. Credential is the answer a
+device signed for a passkey, sent instead of a code.
 */
 type StoreSessionRequest struct {
 	Body struct {
@@ -43,6 +45,8 @@ type StoreSessionRequest struct {
 		Code     string `json:"code,omitempty"     validate:"omitempty,max=20"`
 		Method   string `json:"method,omitempty"   validate:"omitempty,max=40"`
 		Reauth   bool   `json:"reauth,omitempty"`
+
+		Credential json.RawMessage `json:"credential,omitempty"`
 	}
 }
 
@@ -71,7 +75,8 @@ type emailCodeGrant struct {
 
 /*
 twoFactorGrant holds the fields the second-factor grant requires: the
-kind of factor answering and its code.
+kind of factor answering and its code, or the credential a device
+signed.
 */
 type twoFactorGrant struct {
 	Method string `json:"method" validate:"required"`
@@ -90,8 +95,24 @@ func (r *StoreSessionRequest) Validate(ctx context.Context, v *validation.Factor
 	case GrantEmailCode:
 		return v.Struct(ctx, emailCodeGrant{Email: r.Body.Email, Code: r.Body.Code})
 	case GrantTwoFactor:
-		return v.Struct(ctx, twoFactorGrant{Method: r.Body.Method, Code: r.Body.Code})
+		return r.validateTwoFactor(ctx, v)
 	default:
 		return nil
 	}
+}
+
+/*
+validateTwoFactor checks the second-factor grant: a method, and either
+a code or a credential that is a JSON object of reasonable size.
+*/
+func (r *StoreSessionRequest) validateTwoFactor(ctx context.Context, v *validation.Factory) error {
+	if r.Body.Credential == nil {
+		return v.Struct(ctx, twoFactorGrant{Method: r.Body.Method, Code: r.Body.Code})
+	}
+
+	if err := v.Struct(ctx, twoFactorGrant{Method: r.Body.Method, Code: "-"}); err != nil {
+		return err
+	}
+
+	return validCredential(ctx, r.Body.Credential)
 }

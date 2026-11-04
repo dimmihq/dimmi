@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/config"
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/view/vite"
@@ -43,11 +44,13 @@ App is the booted product.
 
 Version is the release the binary was built as. Config is the
 application's own configuration; the framework's stays on
-Application.Config. Permissions is the permission catalog and
-LoginPolicy decides which sign-in methods an address may use.
+Application.Config. Permissions is the permission catalog,
+LoginPolicy decides which sign-in methods an address may use, and
+AccessPolicy what a workspace requires of the callers working in it.
 IdentityProviders holds the registered identity provider drivers, and
 Providers finds the ones the install configured. Factors holds the auth
-factor drivers and knows which the install enables. AppGrants
+factor drivers and knows which the install enables, sealing their
+secrets with Keys, the install's data keys. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
@@ -60,15 +63,17 @@ widget's build and WidgetAssets serves it.
 type App struct {
 	*foundation.Application
 
-	Version     string
-	Config      *appconfig.Config
-	Permissions *auth.Catalog
-	LoginPolicy auth.LoginPolicyResolver
-	AppGrants   auth.AppGrants
+	Version      string
+	Config       *appconfig.Config
+	Permissions  *auth.Catalog
+	LoginPolicy  auth.LoginPolicyResolver
+	AccessPolicy auth.AccessPolicy
+	AppGrants    auth.AppGrants
 
 	IdentityProviders *providers.Registry
 	Providers         providers.ProviderResolver
 	Factors           *factors.Registry
+	Keys              *encryption.Keys
 
 	Tokens      *auth.PersonalTokens
 	Devices     *auth.Devices
@@ -91,16 +96,18 @@ type App struct {
 /*
 New returns the application before boot, with its configuration empty
 until the framework loads it, the full permission catalog, the login
-policy that allows every method, no first-party app grants, and no
+policy that allows every method, the access policy of every rule a
+workspace may set, no first-party app grants, and no
 identity providers or workspace initializers yet.
 */
 func New(version string) *App {
 	return &App{
-		Version:     version,
-		Config:      &appconfig.Config{},
-		Permissions: auth.NewCatalog(),
-		LoginPolicy: auth.AllowAll{},
-		AppGrants:   auth.NoAppGrants{},
+		Version:      version,
+		Config:       &appconfig.Config{},
+		Permissions:  auth.NewCatalog(),
+		LoginPolicy:  auth.AllowAll{},
+		AccessPolicy: auth.DefaultAccessPolicy(),
+		AppGrants:    auth.NoAppGrants{},
 
 		IdentityProviders: providers.NewRegistry(),
 

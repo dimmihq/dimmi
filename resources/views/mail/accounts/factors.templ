@@ -46,3 +46,18 @@ templ RecoveryCodeUsed(name string, remaining int, securityURL string) {
 		@button(securityURL, i18n.T(ctx, "mail.recovery_code_used.action", nil))
 	}
 }
+
+/*
+TwoFactorRequired tells a member that a workspace now asks everyone in
+it for a second factor, that they cannot work there until they add one,
+and where to add it.
+*/
+
+templ TwoFactorRequired(name, workspace, securityURL string) {
+	@layout(i18n.T(ctx, "mail.two_factor_required.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.two_factor_required.intro", i18n.Args{"workspace": workspace}) }</p>
+		<p>{ i18n.T(ctx, "mail.two_factor_required.blocked", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.two_factor_required.action", nil))
+	}
+}

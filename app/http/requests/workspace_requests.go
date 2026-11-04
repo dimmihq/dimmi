@@ -25,11 +25,12 @@ UpdateCurrentWorkspaceRequest is the input of PATCH /workspace.
 */
 type UpdateCurrentWorkspaceRequest struct {
 	Body struct {
-		Name     *string `json:"name,omitempty"      validate:"omitempty,max=80"`
-		Slug     *string `json:"slug,omitempty"      validate:"omitempty,min=3,max=40,slug"`
-		Timezone *string `json:"timezone,omitempty"  validate:"omitempty,timezone"`
-		Locale   *string `json:"locale,omitempty"    validate:"omitempty,locale"`
-		TestMode *bool   `json:"test_mode,omitempty"`
+		Name             *string `json:"name,omitempty"               validate:"omitempty,max=80"`
+		Slug             *string `json:"slug,omitempty"               validate:"omitempty,min=3,max=40,slug"`
+		Timezone         *string `json:"timezone,omitempty"           validate:"omitempty,timezone"`
+		Locale           *string `json:"locale,omitempty"             validate:"omitempty,locale"`
+		TestMode         *bool   `json:"test_mode,omitempty"`
+		RequireTwoFactor *bool   `json:"require_two_factor,omitempty"`
 	}
 }
 

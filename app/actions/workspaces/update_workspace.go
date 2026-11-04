@@ -13,6 +13,12 @@
 | workspace may take it back. Whether a workspace is a test workspace is
 | decided when it is created and never changes.
 |
+| Requiring a second factor from every member locks people out, so only
+| the person themselves, by browser or app, may switch it, having just
+| proven who they are and holding a second factor of their own. Turning
+| it on mails every member who has none, since from that moment they
+| cannot open the workspace until they add one.
+|
 */
 
 package workspaces
@@ -23,30 +29,43 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
+	fauth "github.com/dimmihq/dimmi/framework/auth"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
-UpdateWorkspaceInput is who changes the workspace, through their
-membership of it, and the fields to change; nil leaves a field as it
-is.
+fieldRequireTwoFactor names the requirement of a second factor among
+the fields an update changed.
+*/
+const fieldRequireTwoFactor = "require_two_factor"
+
+/*
+UpdateWorkspaceInput is who changes the workspace, as the caller and
+through their membership of it, and the fields to change; nil leaves a
+field as it is.
 */
 type UpdateWorkspaceInput struct {
-	Membership authz.Membership
-	Name       *string
-	Slug       *string
-	Timezone   *string
-	Locale     *string
-	TestMode   *bool
+	Principal        *appauth.Principal
+	Membership       authz.Membership
+	Name             *string
+	Slug             *string
+	Timezone         *string
+	Locale           *string
+	TestMode         *bool
+	RequireTwoFactor *bool
 }
 
 /*
@@ -54,31 +73,41 @@ UpdateWorkspace changes the workspace's settings.
 
 Rules:
   - The caller needs settings:write.
+  - Requiring a second factor is set only by the user themselves, by
+    browser or app, confirmed within ConfirmWindow and with a second
+    factor of their own.
   - Test mode cannot change.
   - A new slug must not be reserved, used by another workspace, or held
     by one that gave it up within thirty days; the old slug is held for
     this workspace.
   - A rename renames the organization while it has no other workspace.
   - Values equal to the current ones change nothing.
+  - Turning the requirement on mails every active member without a
+    second factor.
 
 Events: [appevents.WorkspaceUpdated] when anything changed.
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrTestModeImmutable],
+Errors: [exceptions.ErrForbidden], [exceptions.ErrFirstPartyOnly],
+[fauth.ErrConfirmationRequired], [exceptions.ErrTwoFactorNotEnabled],
+[exceptions.ErrTestModeImmutable],
 [exceptions.ErrSlugReserved], [exceptions.ErrSlugTaken], or a wrapped
 database error.
 */
 type UpdateWorkspace struct {
-	DB     *database.DB
-	Events *events.Dispatcher
-	Clock  clock.Clock
+	DB            *database.DB
+	Events        *events.Dispatcher
+	Clock         clock.Clock
+	Mail          *mail.Manager
+	Links         appauth.Links
+	ConfirmWindow time.Duration
 }
 
 /*
 Handle applies the changes and returns the workspace as it now is.
 */
 func (a *UpdateWorkspace) Handle(ctx context.Context, in UpdateWorkspaceInput) (models.Workspace, error) {
-	if !in.Membership.Can("settings:write") {
-		return models.Workspace{}, exceptions.ErrForbidden
+	if err := a.authorize(in); err != nil {
+		return models.Workspace{}, err
 	}
 
 	var updated models.Workspace
@@ -113,6 +142,33 @@ func (a *UpdateWorkspace) Handle(ctx context.Context, in UpdateWorkspaceInput) (
 	})
 
 	return updated, err
+}
+
+/*
+authorize checks that the caller may make the changes.
+*/
+func (a *UpdateWorkspace) authorize(in UpdateWorkspaceInput) error {
+	if !in.Membership.Can("settings:write") {
+		return exceptions.ErrForbidden
+	}
+
+	if in.RequireTwoFactor == nil {
+		return nil
+	}
+
+	if in.Principal == nil || !in.Principal.IsFirstParty() {
+		return exceptions.ErrFirstPartyOnly
+	}
+
+	if !fauth.Confirmed(in.Principal, a.Clock.Now(), a.ConfirmWindow) {
+		return fauth.ErrConfirmationRequired
+	}
+
+	if !in.Principal.User.TwoFactorEnabled() {
+		return exceptions.ErrTwoFactorNotEnabled
+	}
+
+	return nil
 }
 
 /*
@@ -152,18 +208,35 @@ func (a *UpdateWorkspace) changes(
 		changes = append(changes, "slug")
 	}
 
+	if in.RequireTwoFactor != nil && *in.RequireTwoFactor != w.RequiresTwoFactor() {
+		settings, err := models.WithTwoFactorRequired(params.Settings, *in.RequireTwoFactor)
+		if err != nil {
+			return params, nil, err
+		}
+
+		params.Settings = settings
+		changes = append(changes, fieldRequireTwoFactor)
+	}
+
 	slices.Sort(changes)
 
 	return params, changes, nil
 }
 
 /*
-finish renames the organization when the name changed and announces
-the update.
+finish renames the organization when the name changed, tells members
+without a second factor when one became required, and announces the
+update.
 */
 func (a *UpdateWorkspace) finish(
 	ctx context.Context, tx *database.Tx, w models.Workspace, updated appevents.WorkspaceUpdated,
 ) error {
+	if slices.Contains(updated.Changes, fieldRequireTwoFactor) && w.RequiresTwoFactor() {
+		if err := a.mailUnprotected(ctx, tx, w); err != nil {
+			return err
+		}
+	}
+
 	if slices.Contains(updated.Changes, "name") {
 		err := models.New(tx).RenameOrganization(ctx, models.RenameOrganizationParams{
 			ID: w.OrganizationID, Name: w.Name, Now: w.UpdatedAt,
@@ -174,6 +247,28 @@ func (a *UpdateWorkspace) finish(
 	}
 
 	return a.Events.Dispatch(ctx, tx, updated)
+}
+
+/*
+mailUnprotected queues the mail that tells every active member without
+a second factor the workspace now requires one.
+*/
+func (a *UpdateWorkspace) mailUnprotected(ctx context.Context, tx *database.Tx, w models.Workspace) error {
+	users, err := models.New(tx).ListMembersWithoutTwoFactor(ctx, w.ID)
+	if err != nil {
+		return fmt.Errorf("list members without two-factor: %w", err)
+	}
+
+	for _, row := range users {
+		err := appmail.ToUser(a.Mail, row.User).QueueTx(ctx, tx, appmail.TwoFactorRequiredMail{
+			Name: row.User.Name, Workspace: w.Name, SecurityURL: a.Links.Security(),
+		})
+		if err != nil {
+			return fmt.Errorf("queue two-factor required mail: %w", err)
+		}
+	}
+
+	return nil
 }
 
 /*

@@ -8,7 +8,8 @@
 | server turns two-factor authentication off for them, the same way the
 | user would: every factor goes, the owner is mailed, and their app
 | sessions end. They then sign in with their first method alone and set
-| up a new authenticator.
+| up a new authenticator. The operator overrides workspaces that require
+| a second factor; the user stays out of those until they add one.
 |
 */
 
@@ -83,7 +84,7 @@ func (c *UserDisableTwoFactorCommand) Handle(
 	}
 
 	wasOn, err := c.App.Actions.RemoveAllAuthFactors.Handle(ctx, factors.RemoveAllAuthFactorsInput{
-		UserID: user.ID, Client: appauth.Client{UserAgent: "cli"}, KeepGrant: ids.Nil(),
+		UserID: user.ID, Client: appauth.Client{UserAgent: "cli"}, KeepGrant: ids.Nil(), Force: true,
 	})
 	if err != nil {
 		return err

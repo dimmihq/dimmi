@@ -13,7 +13,12 @@
 |   user       the user themselves, by browser or by their own app
 |   caller     every valid credential, access tokens included
 |   workspace  every valid credential, inside the workspace the request
-|              works in: named by a browser or app, a token's own
+|              works in: named by a browser or app, a token's own, and
+|              only once the caller meets what the workspace requires
+|
+| What a workspace requires is never checked on the user's own routes,
+| so a person shut out of a workspace can always set up a second factor
+| or leave it.
 |
 */
 
@@ -106,7 +111,7 @@ workspaceRoutes declares the routes that work inside the workspace a
 request names, or a token's own.
 */
 func workspaceRoutes(workspace *routing.Router, c controllers) {
-	workspace.Middleware("csrf", "session", "auth", "workspace")
+	workspace.Middleware("csrf", "session", "auth", "workspace", "access.policy")
 
 	routing.Get(workspace, "/workspace", "workspace.show", c.workspace.Show)
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
@@ -127,9 +132,11 @@ func newControllers(a *app.App) controllers {
 	acts := a.Actions
 
 	return controllers{
-		authConfig: &v1.AuthConfigController{Auth: a.Config.Auth, Providers: a.Providers, Server: server},
-		users:      &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
-		me:         &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
+		authConfig: &v1.AuthConfigController{
+			Auth: a.Config.Auth, Factors: a.Factors.Types(), Providers: a.Providers, Server: server,
+		},
+		users: &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
+		me:    &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
 		sessions: &v1.SessionController{
 			AttemptLogin: acts.AttemptLogin, ConsumeMagicLink: acts.ConsumeMagicLink,
 			TwoFactor: acts.CompleteTwoFactorChallenge, ListSessions: acts.ListSessions,

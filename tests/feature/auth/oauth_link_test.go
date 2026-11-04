@@ -26,7 +26,7 @@ func TestOAuthLinking(t *testing.T) {
 		attempt := tc.StartOAuth(browser, "/auth/google/redirect?intent=link")
 		res := tc.FinishOAuth(browser, attempt, person("110169", "someone-else@example.com"))
 
-		assertLands(t, res, "/settings/security")
+		assertLands(t, res, "/d/settings/security")
 		tc.Table("oauth_identities").AssertHas(testkit.Row{
 			"user_id": tc.Owner.ID, "provider": "google", "email": "someone-else@example.com", "last_login_at": nil,
 		})
@@ -61,7 +61,7 @@ func TestOAuthLinking(t *testing.T) {
 		attempt = tc.StartOAuth(browser, "/auth/github/redirect?intent=link")
 
 		assertLands(t, tc.FinishOAuth(browser, attempt, person("2", "two@example.com")),
-			"/settings/security?error=provider_already_linked")
+			"/d/settings/security?error=provider_already_linked")
 	})
 
 	t.Run("links nothing to an account deleted while the person was at the provider", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestOAuthLinking(t *testing.T) {
 		require.NoError(t, err)
 
 		assertLands(t, tc.FinishOAuth(browser, attempt, person("583231", "grace@example.com")),
-			"/settings/security?error=not_found")
+			"/d/settings/security?error=not_found")
 		tc.Table("oauth_identities").AssertCount(0)
 	})
 
@@ -87,7 +87,7 @@ func TestOAuthLinking(t *testing.T) {
 		attempt := tc.StartOAuth(browser, "/auth/github/redirect?intent=link")
 
 		assertLands(t, tc.FinishOAuth(browser, attempt, person("583231", "grace@example.com")),
-			"/settings/security?error=identity_taken")
+			"/d/settings/security?error=identity_taken")
 		tc.Table("oauth_identities").AssertCount(0, testkit.Row{"user_id": tc.Owner.ID})
 	})
 

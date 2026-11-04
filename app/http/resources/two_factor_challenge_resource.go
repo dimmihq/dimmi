@@ -14,6 +14,7 @@
 package resources
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/app/actions/auth"
@@ -32,14 +33,16 @@ type TwoFactorChallenge struct {
 /*
 ChallengeMethod is one factor that may answer: its kind, the factor,
 its name, whether it is the preferred one, and the options its prompt
-needs, null for codes.
+needs, null for codes. Passkeys carry the request options the
+browser's credential API signs with, the same for each of the user's
+passkeys.
 */
 type ChallengeMethod struct {
-	Method    string  `json:"method"`
-	FactorID  string  `json:"factor_id"`
-	Name      string  `json:"name"`
-	Preferred bool    `json:"preferred"`
-	Options   *string `json:"options"`
+	Method    string          `json:"method"`
+	FactorID  string          `json:"factor_id"`
+	Name      string          `json:"name"`
+	Preferred bool            `json:"preferred"`
+	Options   json.RawMessage `json:"options"`
 }
 
 /*
@@ -50,9 +53,20 @@ func NewTwoFactorChallenge(c auth.TwoFactorChallenge) TwoFactorChallenge {
 	for _, m := range c.Methods {
 		methods = append(methods, ChallengeMethod{
 			Method: m.Method, FactorID: models.PublicID(models.PrefixAuthFactor, m.FactorID), Name: m.Name,
-			Preferred: m.Preferred,
+			Preferred: m.Preferred, Options: promptOptions(m.Options),
 		})
 	}
 
 	return TwoFactorChallenge{Object: "two_factor_challenge", ExpiresAt: c.ExpiresAt.UTC(), Methods: methods}
+}
+
+/*
+promptOptions returns the prompt options, or JSON null when there are none.
+*/
+func promptOptions(raw json.RawMessage) json.RawMessage {
+	if raw == nil {
+		return json.RawMessage("null")
+	}
+
+	return raw
 }

@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | GET /workspace shows the workspace a request works in to any of its
-| members, and PATCH /workspace changes its name, address, language and
-| time zone. The workspace is the one the request named, already
+| members, and PATCH /workspace changes its name, address, language,
+| time zone and whether it requires a second factor. The workspace is the one the request named, already
 | resolved and checked before these run.
 |
 */
@@ -51,8 +51,9 @@ func (c *CurrentWorkspaceController) Update(
 	ctx context.Context, in *requests.UpdateCurrentWorkspaceRequest,
 ) (*WorkspaceOutput, error) {
 	updated, err := c.UpdateWorkspace.Handle(ctx, workspaces.UpdateWorkspaceInput{
-		Membership: membership(ctx), Name: in.Body.Name, Slug: in.Body.Slug, Timezone: in.Body.Timezone,
-		Locale: in.Body.Locale, TestMode: in.Body.TestMode,
+		Principal: caller(ctx), Membership: membership(ctx), Name: in.Body.Name, Slug: in.Body.Slug,
+		Timezone: in.Body.Timezone, Locale: in.Body.Locale, TestMode: in.Body.TestMode,
+		RequireTwoFactor: in.Body.RequireTwoFactor,
 	})
 	if err != nil {
 		return nil, err

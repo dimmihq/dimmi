@@ -18,22 +18,30 @@ import (
 	"github.com/dimmihq/dimmi/framework/cache"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/encryption/drivertest"
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/redis"
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
 
-func newEncrypter(t *testing.T) *encryption.AppEncrypter {
+/*
+newEncrypter returns a sealer on data keys of their own, kept in a
+PostgreSQL store of the test's own under a fresh app key.
+*/
+func newEncrypter(t *testing.T) twofactor.KeySealer {
 	t.Helper()
 
 	key, err := encryption.ParseAppKey(encryption.GenerateAppKey())
 	require.NoError(t, err)
 
-	enc, err := encryption.NewEncrypter(key)
+	kek, err := encryption.NewLocalKEK(key)
 	require.NoError(t, err)
 
-	return enc
+	keys, err := encryption.NewKeys(encryption.KeysOptions{KEK: kek, Store: drivertest.NewPostgresStore(t)})
+	require.NoError(t, err)
+
+	return twofactor.KeySealer{Keys: keys, Scope: encryption.Scope{Kind: "system"}, AAD: []byte("factor")}
 }
 
 func newCache(t *testing.T) (*cache.Store, *redis.Client) {
@@ -61,10 +69,10 @@ func enroll(t *testing.T, store *cache.Store, clk clock.Clock) (*twofactor.TOTP,
 
 	factor := twofactor.NewTOTP("Acme", newEncrypter(t), store, clk)
 
-	sealed, err := factor.NewSecret()
+	sealed, err := factor.NewSecret(t.Context())
 	require.NoError(t, err)
 
-	secret, _, err := factor.Setup(sealed, "ada@example.com")
+	secret, _, err := factor.Setup(t.Context(), sealed, "ada@example.com")
 	require.NoError(t, err)
 
 	return factor, twofactor.Credential{ID: ids.New(), Type: twofactor.TOTPType, Secret: sealed}, secret
@@ -87,10 +95,10 @@ func TestTOTP(t *testing.T) {
 	t.Run("sets up an authenticator app", func(t *testing.T) {
 		t.Parallel()
 		factor := twofactor.NewTOTP("Acme", newEncrypter(t), store, newClock())
-		sealed, err := factor.NewSecret()
+		sealed, err := factor.NewSecret(t.Context())
 		require.NoError(t, err)
 
-		secret, link, err := factor.Setup(sealed, "ada@example.com")
+		secret, link, err := factor.Setup(t.Context(), sealed, "ada@example.com")
 
 		require.NoError(t, err)
 		assert.Len(t, secret, 32)
@@ -186,16 +194,16 @@ func TestTOTP(t *testing.T) {
 
 		err := other.Verify(t.Context(), &cred, codeAt(t, secret, clk.Now()))
 
-		require.ErrorIs(t, err, encryption.ErrDecrypt)
-		_, _, err = other.Setup(cred.Secret, "ada@example.com")
-		require.ErrorIs(t, err, encryption.ErrDecrypt)
+		require.Error(t, err)
+		_, _, err = other.Setup(t.Context(), cred.Secret, "ada@example.com")
+		require.Error(t, err)
 	})
 
 	t.Run("needs an account name to set up", func(t *testing.T) {
 		t.Parallel()
 		factor, cred, _ := enroll(t, store, newClock())
 
-		_, _, err := factor.Setup(cred.Secret, "")
+		_, _, err := factor.Setup(t.Context(), cred.Secret, "")
 
 		require.Error(t, err)
 	})
@@ -223,7 +231,7 @@ func TestRecoveryCodes(t *testing.T) {
 		t.Parallel()
 		rc := twofactor.NewRecoveryCodes(newEncrypter(t))
 
-		codes, sealed, err := rc.Generate(10)
+		codes, sealed, err := rc.Generate(t.Context(), 10)
 
 		require.NoError(t, err)
 		require.Len(t, codes, 10)
@@ -236,7 +244,7 @@ func TestRecoveryCodes(t *testing.T) {
 		}
 
 		assert.Len(t, seen, 10)
-		remaining, err := rc.Remaining(twofactor.Credential{Secret: sealed})
+		remaining, err := rc.Remaining(t.Context(), twofactor.Credential{Secret: sealed})
 		require.NoError(t, err)
 		assert.Equal(t, 10, remaining)
 	})
@@ -244,7 +252,7 @@ func TestRecoveryCodes(t *testing.T) {
 	t.Run("work once each, however they are typed", func(t *testing.T) {
 		t.Parallel()
 		rc := twofactor.NewRecoveryCodes(newEncrypter(t))
-		codes, sealed, err := rc.Generate(3)
+		codes, sealed, err := rc.Generate(t.Context(), 3)
 		require.NoError(t, err)
 		cred := twofactor.Credential{ID: ids.New(), Type: twofactor.RecoveryCodeType, Secret: sealed}
 		typed := " " + strings.ToUpper(strings.ReplaceAll(codes[1], "-", " ")) + " "
@@ -252,7 +260,7 @@ func TestRecoveryCodes(t *testing.T) {
 		require.NoError(t, rc.Verify(t.Context(), &cred, typed))
 
 		require.ErrorIs(t, rc.Verify(t.Context(), &cred, codes[1]), twofactor.ErrInvalidCode)
-		remaining, err := rc.Remaining(cred)
+		remaining, err := rc.Remaining(t.Context(), cred)
 		require.NoError(t, err)
 		assert.Equal(t, 2, remaining)
 		require.NoError(t, rc.Verify(t.Context(), &cred, codes[0]))
@@ -261,7 +269,7 @@ func TestRecoveryCodes(t *testing.T) {
 	t.Run("refuse a code that was never issued", func(t *testing.T) {
 		t.Parallel()
 		rc := twofactor.NewRecoveryCodes(newEncrypter(t))
-		_, sealed, err := rc.Generate(2)
+		_, sealed, err := rc.Generate(t.Context(), 2)
 		require.NoError(t, err)
 
 		err = rc.Verify(t.Context(), &twofactor.Credential{Secret: sealed}, "00000-00000")
@@ -273,16 +281,16 @@ func TestRecoveryCodes(t *testing.T) {
 		t.Parallel()
 		enc := newEncrypter(t)
 		rc := twofactor.NewRecoveryCodes(enc)
-		_, sealed, err := rc.Generate(2)
+		_, sealed, err := rc.Generate(t.Context(), 2)
 		require.NoError(t, err)
-		notJSON, err := enc.Encrypt([]byte("not json"))
+		notJSON, err := enc.Encrypt(t.Context(), []byte("not json"))
 		require.NoError(t, err)
 		other := twofactor.NewRecoveryCodes(newEncrypter(t))
 
-		require.ErrorIs(t, other.Verify(t.Context(), &twofactor.Credential{Secret: sealed}, "x"), encryption.ErrDecrypt)
-		_, err = other.Remaining(twofactor.Credential{Secret: sealed})
-		require.ErrorIs(t, err, encryption.ErrDecrypt)
-		_, err = rc.Remaining(twofactor.Credential{Secret: notJSON})
+		require.Error(t, other.Verify(t.Context(), &twofactor.Credential{Secret: sealed}, "x"))
+		_, err = other.Remaining(t.Context(), twofactor.Credential{Secret: sealed})
+		require.Error(t, err)
+		_, err = rc.Remaining(t.Context(), twofactor.Credential{Secret: notJSON})
 		require.Error(t, err)
 	})
 }

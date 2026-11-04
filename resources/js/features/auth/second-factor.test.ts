@@ -1,6 +1,6 @@
 import type { ChallengeMethod } from "@/lib/api/auth";
 
-import { firstMethod, offers } from "./second-factor";
+import { firstMethod, offers, passkeyOptions } from "./second-factor";
 
 const totp: ChallengeMethod = { method: "totp", factor_id: "fac_1", name: "Authenticator app", preferred: true };
 const recovery: ChallengeMethod = {
@@ -10,7 +10,15 @@ const recovery: ChallengeMethod = {
   preferred: false,
 };
 
+const options = { challenge: "c2lnbiBtZQ", rpId: "localhost" };
+const passkey: ChallengeMethod = { method: "passkey", factor_id: "fac_3", name: "Laptop", preferred: false, options };
+
 describe("firstMethod", () => {
+  it("asks for a preferred passkey first", () => {
+    expect(firstMethod([recovery, { ...totp, preferred: false }, { ...passkey, preferred: true }])).toBe("passkey");
+    expect(firstMethod([passkey, recovery])).toBe("passkey");
+  });
+
   it("asks for the preferred method first", () => {
     expect(firstMethod([recovery, totp])).toBe("totp");
   });
@@ -32,5 +40,14 @@ describe("offers", () => {
 
   it("offers both when the challenge is not known", () => {
     expect(offers(null, "recovery_code")).toBe(true);
+  });
+});
+
+describe("passkeyOptions", () => {
+  it("offers a passkey only with the options to sign", () => {
+    expect(passkeyOptions([totp, passkey])).toEqual(options);
+    expect(offers([totp, passkey], "passkey")).toBe(true);
+    expect(offers([totp, { ...passkey, options: null }], "passkey")).toBe(false);
+    expect(offers(null, "passkey")).toBe(false);
   });
 });

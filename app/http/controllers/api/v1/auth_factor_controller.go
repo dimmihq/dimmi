@@ -5,7 +5,7 @@
 |
 | The caller's own auth factors: GET lists them, POST adds one or makes
 | new recovery codes, PATCH activates a pending one with its first code
-| or renames or prefers one, DELETE removes one, and DELETE on the
+| or signed credential, or renames or prefers one, DELETE removes one, and DELETE on the
 | collection turns two-factor authentication off. Answers that carry a
 | secret shown once are never cached.
 |
@@ -134,7 +134,8 @@ func (c *AuthFactorController) activate(
 	}
 
 	activated, err := c.Activate.Handle(ctx, factors.ActivateAuthFactorInput{
-		User: caller(ctx).User, FactorID: id, Code: *in.Body.Code, Client: clientOf(ctx, c.Cookies),
+		User: caller(ctx).User, FactorID: id, Code: in.ActivationCode(), Credential: in.Body.Credential,
+		Client: clientOf(ctx, c.Cookies),
 	})
 	if err != nil {
 		return nil, err

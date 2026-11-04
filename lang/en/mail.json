@@ -58,6 +58,12 @@
     "unknown": "If this was not you, change your password and make new recovery codes.",
     "action": "Review your security settings"
   },
+  "two_factor_required": {
+    "subject": "{{.workspace}} now requires two-factor authentication",
+    "intro": "An admin of {{.workspace}} turned on two-factor authentication for everyone in the workspace.",
+    "blocked": "Until you add an authenticator app to your account, you cannot open the workspace. It takes a minute.",
+    "action": "Set up two-factor authentication"
+  },
   "suspicious_sign_in_attempts": {
     "subject": "Someone is trying to sign in to your Dimmi account",
     "intro": "Many wrong passwords were tried for your account in the last hour, so we locked it for unknown devices for a while.",

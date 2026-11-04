@@ -5,9 +5,14 @@
 |
 | A factor is one way a user proves who they are beyond their first
 | sign-in method. Each kind is a driver registered under its type, so a
-| new kind, such as a security key, is a new driver and no change to the
-| sign-in flow or the table. A driver says what it can do through its
-| capabilities, and the flows ask those instead of naming types.
+| new kind is a new driver and no change to the sign-in flow or the
+| table. A driver says what it can do through its capabilities, and the
+| flows ask those instead of naming types.
+|
+| Some kinds answer with a code the person types, others with a signed
+| credential from their device. A kind of the second sort hands the
+| browser options before it can answer, at enrollment and at each
+| challenge, and keeps state on the server until the answer comes.
 |
 | A factor's secret is sealed before it is stored, bound to the factor's
 | own id, so a secret copied onto another row never opens.
@@ -30,9 +35,9 @@ import (
 )
 
 /*
-Verification failures. ErrInvalidCode means the code is wrong and
-ErrCodeReused that it was right but already used; callers answer both
-the same way.
+Verification failures. ErrInvalidCode means the answer is wrong and
+ErrCodeReused that it was right but already used, or came from a copy
+of the factor; callers answer both the same way.
 */
 var (
 	ErrInvalidCode = twofactor.ErrInvalidCode
@@ -68,13 +73,25 @@ type Capabilities struct {
 /*
 Setup is what a user sees once, while enrolling: for an authenticator
 app the secret to type in, the otpauth URL and its QR code; for
-recovery codes the codes.
+recovery codes the codes; for a passkey the options the browser
+creates it with.
 */
 type Setup struct {
 	Secret     string
 	OTPAuthURL string
 	QRCodeSVG  string
 	Codes      []string
+	Options    json.RawMessage
+}
+
+/*
+EnrollInput is the user a new factor is for, the id it will be stored
+under, and the factors the user already holds.
+*/
+type EnrollInput struct {
+	User models.User
+	ID   ids.UUID
+	Held []models.UserAuthFactor
 }
 
 /*
@@ -110,16 +127,16 @@ type Factor interface {
 	Capabilities() Capabilities
 
 	/*
-		Enroll makes the secret of a new factor with the id for the user.
+		Enroll starts a new factor for the user under the id.
 	*/
-	Enroll(ctx context.Context, user models.User, id ids.UUID) (Enrollment, error)
+	Enroll(ctx context.Context, in EnrollInput) (Enrollment, error)
 
 	/*
-		Verify checks the input against the factor and updates the stored
+		Verify checks the answer against the factor and updates the stored
 		state that checking changes, such as the last step used. It returns
-		ErrInvalidCode or ErrCodeReused when the input does not pass.
+		ErrInvalidCode or ErrCodeReused when the answer does not pass.
 	*/
-	Verify(ctx context.Context, factor *models.UserAuthFactor, input string) error
+	Verify(ctx context.Context, factor *models.UserAuthFactor, answer Answer) error
 }
 
 /*

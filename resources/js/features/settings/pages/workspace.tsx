@@ -33,6 +33,7 @@ import {
 
 import { Choice, Danger, Field } from "../controls";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
 
 const zones = ["UTC", "Europe/Lisbon", "Europe/London", "Europe/Berlin", "America/New_York", "Asia/Tokyo"];
@@ -119,6 +120,7 @@ export function WorkspaceSettings() {
           ) : null}
         </Row>
       </Section>
+      <RequireTwoFactorSection workspace={me.workspace.id} hasPassword={me.hasPassword} />
       <Section title="Danger zone">
         <Row label="Delete workspace" description="Owners only. It can be restored for 30 days.">
           <Danger>Delete workspace</Danger>

@@ -30,10 +30,12 @@ type AuthConfigOutput struct {
 }
 
 /*
-AuthConfigController serves GET /auth/config.
+AuthConfigController serves GET /auth/config. Factors are the second-factor
+types the install enables.
 */
 type AuthConfigController struct {
 	Auth      config.AuthConfig
+	Factors   []string
 	Providers providers.ProviderResolver
 	Server    Server
 }
@@ -54,7 +56,7 @@ func (c *AuthConfigController) Show(ctx context.Context, _ *requests.NoInput) (*
 		MailConfigured:    c.Server.MailConfigured,
 		PasswordMinLength: c.Auth.Passwords.MinLength,
 		Providers:         resources.NewProviders(ctx, c.Providers),
-		Factors:           resources.NewFactors(appauth.OfferedFactors(c.Auth)),
+		Factors:           resources.NewFactors(appauth.OfferedFactors(c.Factors)),
 		Capabilities:      appauth.Capabilities(c.Auth),
 		MinClientVersions: map[string]*string{"ios": nil, "android": nil, "cli": nil},
 	})}, nil

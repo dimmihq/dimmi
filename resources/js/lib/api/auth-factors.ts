@@ -1,17 +1,20 @@
 /*
- * The person's own second factors: an authenticator app and the set of
- * recovery codes that stands in for it. Secrets, the authenticator's
- * key and the codes, come back once, in the answer that made them, and
- * are never listed again.
+ * The person's own second factors: an authenticator app, the passkeys on
+ * their devices, and the set of recovery codes that stands in for them.
+ * Secrets, the authenticator's key and the codes, come back once, in the
+ * answer that made them, and are never listed again. A passkey's setup is
+ * only the options the device makes it with.
  */
 import { queryOptions } from "@tanstack/react-query";
+
+import { type CreationOptions, createPasskey } from "@/lib/passkeys";
 
 import { request } from "./client";
 
 export interface AuthFactor {
   id: string;
   object: "auth_factor";
-  type: "totp" | "recovery_code";
+  type: "totp" | "passkey" | "recovery_code";
   name: string;
   status: "pending" | "active";
   preferred: boolean;
@@ -30,6 +33,10 @@ export interface TotpSetup {
 
 export interface NewAuthenticator extends AuthFactor {
   setup: TotpSetup;
+}
+
+export interface NewPasskey extends AuthFactor {
+  setup: { options: CreationOptions };
 }
 
 export interface NewRecoveryCodes extends AuthFactor {
@@ -51,6 +58,34 @@ export function addAuthenticator(): Promise<NewAuthenticator> {
 
 export function activateFactor(id: string, code: string): Promise<ActivatedFactor> {
   return request<ActivatedFactor>("PATCH", `/user/auth-factors/${encodeURIComponent(id)}`, { code });
+}
+
+/*
+ * startPasskey adds a pending passkey under the name, which the device
+ * then makes with the options it carries.
+ */
+export function startPasskey(name: string): Promise<NewPasskey> {
+  const named = name.trim();
+
+  return request<NewPasskey>(
+    "POST",
+    "/user/auth-factors",
+    named ? { type: "passkey", name: named } : { type: "passkey" },
+  );
+}
+
+/*
+ * finishPasskey has the device make the pending passkey and activates it
+ * with the device's answer.
+ */
+export async function finishPasskey(pending: NewPasskey): Promise<ActivatedFactor> {
+  const credential = await createPasskey(pending.setup.options);
+
+  return request<ActivatedFactor>("PATCH", `/user/auth-factors/${encodeURIComponent(pending.id)}`, { credential });
+}
+
+export function renameFactor(id: string, name: string): Promise<AuthFactor> {
+  return request<AuthFactor>("PATCH", `/user/auth-factors/${encodeURIComponent(id)}`, { name: name.trim() });
 }
 
 export function regenerateRecoveryCodes(): Promise<NewRecoveryCodes> {

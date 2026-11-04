@@ -52,6 +52,7 @@ const (
 	MethodInvitation    = "invitation"
 	MethodTOTP          = "totp"
 	MethodRecoveryCode  = "recovery_code"
+	MethodPasskey       = "passkey"
 )
 
 /*
@@ -94,7 +95,7 @@ SecondFactors lists the methods that complete a sign-in after a primary
 one.
 */
 func SecondFactors() Registry {
-	return Registry{name: "second_factors", values: []string{MethodTOTP, MethodRecoveryCode}}
+	return Registry{name: "second_factors", values: []string{MethodTOTP, MethodPasskey, MethodRecoveryCode}}
 }
 
 /*

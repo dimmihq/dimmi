@@ -20,8 +20,11 @@
 package auth
 
 import (
+	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -62,13 +65,15 @@ type TwoFactorChallenge struct {
 
 /*
 ChallengeMethod is one factor that may answer a challenge: its kind,
-the factor, its name and whether it is the user's preferred one.
+the factor, its name, whether it is the user's preferred one, and the
+options the browser needs to answer with it, nil for typed codes.
 */
 type ChallengeMethod struct {
 	Method    string
 	FactorID  ids.UUID
 	Name      string
 	Preferred bool
+	Options   json.RawMessage
 }
 
 /*
@@ -77,8 +82,8 @@ CompletePrimaryAuth signs in a user who passed a primary method.
 Rules:
   - A user with two-factor authentication on gets a challenge instead
     of a session, offering their active factors of enabled kinds that
-    answer challenges, preferred first; a used-up recovery set is left
-    out.
+    answer challenges, preferred first and recovery codes last; a
+    used-up recovery set is left out.
   - Otherwise a session starts with the method as its only one.
 
 Errors: those of [StartSession] and [LoadMe], or a wrapped error.
@@ -119,26 +124,40 @@ func (a *CompletePrimaryAuth) Handle(ctx context.Context, in CompletePrimaryAuth
 
 /*
 challenge stores a challenge for the user's usable factors and returns
-it.
+it. Each kind that needs a prompt gets one, shared by its factors, and
+the state the kind keeps rides on the challenge.
 */
 func (a *CompletePrimaryAuth) challenge(ctx context.Context, in CompletePrimaryAuthInput) (TwoFactorChallenge, error) {
-	methods, err := a.methods(ctx, in.User)
+	offered, err := a.offered(ctx, in.User)
 	if err != nil {
 		return TwoFactorChallenge{}, err
 	}
 
-	kinds := []string{}
-	factorIDs := []string{}
+	prompts, err := a.prompts(ctx, in.User, offered)
+	if err != nil {
+		return TwoFactorChallenge{}, err
+	}
 
-	for _, m := range methods {
-		kinds = append(kinds, m.Method)
-		factorIDs = append(factorIDs, m.FactorID.String())
+	methods, kinds, factorIDs := []ChallengeMethod{}, []string{}, []string{}
+	states := map[string]json.RawMessage{}
+
+	for _, f := range offered {
+		kinds = append(kinds, f.Type)
+		factorIDs = append(factorIDs, f.ID.String())
+		methods = append(methods, ChallengeMethod{
+			Method: f.Type, FactorID: f.ID, Name: f.Name, Preferred: f.IsPreferred, Options: prompts[f.Type].Options,
+		})
+
+		if state := prompts[f.Type].State; state != nil {
+			states[f.Type] = state
+		}
 	}
 
 	issued, err := a.Tokens.Issue(ctx, appauth.Issue{
 		Purpose: enums.OneTimePurposeTwoFactorChallenge, UserID: &in.User.ID, Email: in.User.Email,
 		Data: map[string]any{
 			"primary_method": in.Method, "methods": kinds, "factor_ids": factorIDs, "reauth": in.Reauth,
+			"driver_state": states,
 		},
 		Client: in.Client, TTL: challengeTTL, Live: appauth.MaxSecretAttempts,
 	})
@@ -150,15 +169,16 @@ func (a *CompletePrimaryAuth) challenge(ctx context.Context, in CompletePrimaryA
 }
 
 /*
-methods returns the factors that may answer a challenge for the user.
+offered returns the factors that may answer a challenge for the user,
+preferred first and recovery codes last.
 */
-func (a *CompletePrimaryAuth) methods(ctx context.Context, user models.User) ([]ChallengeMethod, error) {
+func (a *CompletePrimaryAuth) offered(ctx context.Context, user models.User) ([]models.UserAuthFactor, error) {
 	held, err := models.New(a.DB).ListActiveAuthFactors(ctx, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("list factors to challenge: %w", err)
 	}
 
-	methods := []ChallengeMethod{}
+	offered := []models.UserAuthFactor{}
 
 	for _, f := range held {
 		driver, ok := a.Factors.Find(f.Type)
@@ -170,10 +190,51 @@ func (a *CompletePrimaryAuth) methods(ctx context.Context, user models.User) ([]
 			continue
 		}
 
-		methods = append(methods, ChallengeMethod{
-			Method: f.Type, FactorID: f.ID, Name: f.Name, Preferred: f.IsPreferred,
-		})
+		offered = append(offered, f)
 	}
 
-	return methods, nil
+	slices.SortStableFunc(offered, func(x, y models.UserAuthFactor) int {
+		return cmp.Compare(a.standIn(x), a.standIn(y))
+	})
+
+	return offered, nil
+}
+
+/*
+standIn ranks a factor that only stands in for another, such as a
+recovery code, after the real ones.
+*/
+func (a *CompletePrimaryAuth) standIn(f models.UserAuthFactor) int {
+	if a.Factors.EnablesTwoFactor(f.Type) {
+		return 0
+	}
+
+	return 1
+}
+
+/*
+prompts asks each offered kind what its factors need to answer.
+*/
+func (a *CompletePrimaryAuth) prompts(
+	ctx context.Context, user models.User, offered []models.UserAuthFactor,
+) (map[string]factors.Prompt, error) {
+	byKind := map[string][]models.UserAuthFactor{}
+	for _, f := range offered {
+		byKind[f.Type] = append(byKind[f.Type], f)
+	}
+
+	prompts := map[string]factors.Prompt{}
+
+	for kind, held := range byKind {
+		driver, _ := a.Factors.Find(kind)
+
+		prompt, err := factors.Challenge(ctx, driver, user, held)
+		if err != nil {
+			return nil, err
+		}
+
+		prompts[kind] = prompt
+	}
+
+	return prompts, nil
 }

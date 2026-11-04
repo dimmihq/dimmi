@@ -16,24 +16,29 @@ import (
 
 const activateAuthFactor = `-- name: ActivateAuthFactor :one
 UPDATE user_auth_factors
-SET status = 'active', confirmed_at = $1::timestamptz, last_counter = $2, is_preferred = $3,
-    updated_at = $1
-WHERE id = $4
+SET status = 'active', confirmed_at = $1::timestamptz, credential = $2, lookup_hash = $3,
+    last_counter = $4, is_preferred = $5, updated_at = $1
+WHERE id = $6
 RETURNING id, user_id, type, name, status, secret_encrypted, credential, lookup_hash, last_counter, is_preferred, confirmed_at, last_used_at, created_at, updated_at
 `
 
 type ActivateAuthFactorParams struct {
-	Now         time.Time `json:"now"`
-	LastCounter *int64    `json:"last_counter"`
-	IsPreferred bool      `json:"is_preferred"`
-	ID          ids.UUID  `json:"id"`
+	Now         time.Time       `json:"now"`
+	Credential  json.RawMessage `json:"credential"`
+	LookupHash  []byte          `json:"lookup_hash"`
+	LastCounter *int64          `json:"last_counter"`
+	IsPreferred bool            `json:"is_preferred"`
+	ID          ids.UUID        `json:"id"`
 }
 
-// ActivateAuthFactor turns a pending factor active, keeping the step its
-// activation code used and whether it is now the preferred one.
+// ActivateAuthFactor turns a pending factor active, keeping what its
+// first answer left: the credential, the digest it is found by, the
+// step or sign counter used, and whether it is now the preferred one.
 func (q *Queries) ActivateAuthFactor(ctx context.Context, arg ActivateAuthFactorParams) (UserAuthFactor, error) {
 	row := q.db.QueryRow(ctx, activateAuthFactor,
 		arg.Now,
+		arg.Credential,
+		arg.LookupHash,
 		arg.LastCounter,
 		arg.IsPreferred,
 		arg.ID,
