@@ -1,30 +1,16 @@
 /*
- * Running the workspace: its teams, the rules every member signs in
- * under, the audit log, moving data in and out, and billing on the
- * cloud. Admins and owners change these; some actions are for owners
- * only. The workspace's name and its members live in workspace.tsx.
+ * Running the workspace: the rules every member signs in under, the
+ * audit log, moving data in and out, and billing on the cloud. Admins
+ * and owners change these; some actions are for owners only. The
+ * workspace's name and its members live in workspace.tsx, its teams in
+ * teams.tsx.
  */
-import { RiBankCardLine, RiDownload2Line, RiFileList3Line, RiTeamLine } from "@remixicon/react";
+import { RiBankCardLine, RiDownload2Line, RiFileList3Line } from "@remixicon/react";
 
 import { Action, Field } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
-
-export function TeamsSettings() {
-  return (
-    <SettingsPage title="Teams" description="Assign conversations to a team, and let an inbox route to one.">
-      <Section title="Teams" action={<Action>New team</Action>}>
-        <Item mark={<Glyph icon={RiTeamLine} />} title="Support" detail="2 members · Support inbox">
-          <Action>Edit</Action>
-        </Item>
-        <Item mark={<Glyph icon={RiTeamLine} />} title="Billing" detail="1 member · Billing inbox">
-          <Action>Edit</Action>
-        </Item>
-      </Section>
-    </SettingsPage>
-  );
-}
 
 export function WorkspaceSecuritySettings() {
   const me = useAccount();

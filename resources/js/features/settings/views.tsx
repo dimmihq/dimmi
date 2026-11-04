@@ -13,13 +13,7 @@ import {
   SecuritySettings,
   TokensSettings,
 } from "./pages/account";
-import {
-  AuditLogSettings,
-  BillingSettings,
-  ImportSettings,
-  TeamsSettings,
-  WorkspaceSecuritySettings,
-} from "./pages/admin";
+import { AuditLogSettings, BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { ConnectionsSettings, EmailSettings, MessengerSettings } from "./pages/channels";
 import {
@@ -31,6 +25,7 @@ import {
 } from "./pages/content";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
+import { TeamsSettings } from "./pages/teams";
 import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 
 export const settingsViews: Record<SettingsSection, ComponentType> = {

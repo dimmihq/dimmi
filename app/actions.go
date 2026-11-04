@@ -16,6 +16,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 )
@@ -76,4 +77,14 @@ type Actions struct {
 	RemoveAllAuthFactors       *factors.RemoveAllAuthFactors
 	RegenerateRecoveryCodes    *factors.RegenerateRecoveryCodes
 	DisableTwoFactor           *factors.DisableTwoFactor
+
+	ListTeams        *teams.ListTeams
+	ShowTeam         *teams.ShowTeam
+	ListMemberTeams  *teams.ListMemberTeams
+	CreateTeam       *teams.CreateTeam
+	UpdateTeam       *teams.UpdateTeam
+	DeleteTeam       *teams.DeleteTeam
+	PurgeTeam        *teams.PurgeTeam
+	AddTeamMembers   *teams.AddTeamMembers
+	RemoveTeamMember *teams.RemoveTeamMember
 }

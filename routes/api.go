@@ -56,6 +56,8 @@ type controllers struct {
 	deliveries        *v1.InvitationDeliveryController
 	previews          *v1.InvitationPreviewController
 	authFactors       *v1.AuthFactorController
+	teams             *v1.TeamController
+	teamMembers       *v1.TeamMemberController
 }
 
 /*
@@ -127,6 +129,7 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 	invitationRoutes(workspace, c)
+	teamRoutes(workspace, c)
 }
 
 /*
@@ -142,6 +145,23 @@ func invitationRoutes(workspace *routing.Router, c controllers) {
 		Ability("members:write").Status(fhttp.StatusNoContent)
 	routing.Post(workspace, "/invitations/{invitation}/deliveries", "invitations.deliveries.store",
 		c.deliveries.Store).Ability("members:write")
+}
+
+/*
+teamRoutes declares the workspace's teams and their members. Anyone who
+may see the members sees the teams; changing them takes members:write.
+*/
+func teamRoutes(workspace *routing.Router, c controllers) {
+	routing.Get(workspace, "/teams", "teams.index", c.teams.Index).Ability("members:read")
+	routing.Post(workspace, "/teams", "teams.store", c.teams.Store).Ability("members:write")
+	routing.Get(workspace, "/teams/{team}", "teams.show", c.teams.Show).Ability("members:read")
+	routing.Patch(workspace, "/teams/{team}", "teams.update", c.teams.Update).Ability("members:write")
+	routing.Delete(workspace, "/teams/{team}", "teams.destroy", c.teams.Destroy).Ability("members:write").
+		Status(fhttp.StatusNoContent)
+	routing.Post(workspace, "/teams/{team}/members", "teams.members.store", c.teamMembers.Store).
+		Ability("members:write").Status(fhttp.StatusOK)
+	routing.Delete(workspace, "/teams/{team}/members/{member}", "teams.members.destroy", c.teamMembers.Destroy).
+		Ability("members:write").Status(fhttp.StatusNoContent)
 }
 
 /*
@@ -189,7 +209,8 @@ func newControllers(a *app.App) controllers {
 		},
 		members: &v1.MemberController{
 			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-			Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+			MemberTeams: acts.ListMemberTeams,
+			Cursors:     pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
 		},
 		authFactors: &v1.AuthFactorController{
 			List: acts.ListAuthFactors, Add: acts.AddAuthFactor, Activate: acts.ActivateAuthFactor,
@@ -198,8 +219,24 @@ func newControllers(a *app.App) controllers {
 		},
 	}
 	membershipControllers(a, &c)
+	teamControllers(a, &c)
 
 	return c
+}
+
+/*
+teamControllers builds into c the controllers of the workspace's teams
+and their members.
+*/
+func teamControllers(a *app.App, c *controllers) {
+	acts := a.Actions
+
+	c.teams = &v1.TeamController{
+		ListTeams: acts.ListTeams, ShowTeam: acts.ShowTeam, CreateTeam: acts.CreateTeam,
+		UpdateTeam: acts.UpdateTeam, DeleteTeam: acts.DeleteTeam, IDs: a.IDs,
+		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+	}
+	c.teamMembers = &v1.TeamMemberController{Add: acts.AddTeamMembers, Remove: acts.RemoveTeamMember, IDs: a.IDs}
 }
 
 /*

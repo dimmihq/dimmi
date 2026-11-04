@@ -93,11 +93,8 @@ func (w memberWriter) deactivate(ctx context.Context, m models.WorkspaceMember, 
 		return fmt.Errorf("deactivate member: %w", err)
 	}
 
-	err = q.RemoveMemberFromTeams(ctx, models.RemoveMemberFromTeamsParams{
-		WorkspaceID: m.WorkspaceID, WorkspaceMemberID: m.ID,
-	})
-	if err != nil {
-		return fmt.Errorf("remove member from teams: %w", err)
+	if err := w.leaveTeams(ctx, m); err != nil {
+		return err
 	}
 
 	_, err = q.RevokeMemberTokens(ctx, models.RevokeMemberTokensParams{
@@ -110,6 +107,30 @@ func (w memberWriter) deactivate(ctx context.Context, m models.WorkspaceMember, 
 	return w.events.Dispatch(ctx, w.tx, appevents.MemberDeactivated{
 		WorkspaceID: m.WorkspaceID, MemberID: m.ID, UserID: m.UserID, DeactivatedBy: w.by, ReassignTo: reassignTo,
 	})
+}
+
+/*
+leaveTeams takes a member out of every team, announcing each team they
+left. Reactivating them later does not put them back.
+*/
+func (w memberWriter) leaveTeams(ctx context.Context, m models.WorkspaceMember) error {
+	teams, err := models.New(w.tx).RemoveMemberFromTeams(ctx, models.RemoveMemberFromTeamsParams{
+		WorkspaceID: m.WorkspaceID, WorkspaceMemberID: m.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("remove member from teams: %w", err)
+	}
+
+	for _, team := range teams {
+		err := w.events.Dispatch(ctx, w.tx, appevents.TeamMemberRemoved{
+			WorkspaceID: m.WorkspaceID, TeamID: team, MemberID: m.ID, RemovedBy: w.by,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*

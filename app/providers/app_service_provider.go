@@ -122,6 +122,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootWorkspaces(a)
 	bootWorkspaceLifecycle(a)
 	bootFactors(a)
+	bootTeams(a)
 
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
 }

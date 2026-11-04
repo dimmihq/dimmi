@@ -19,18 +19,20 @@ import (
 )
 
 /*
-WorkspaceMember is one member of a workspace, with their account.
+WorkspaceMember is one member of a workspace, with their account. Teams
+is present only when the request included the member's teams.
 */
 type WorkspaceMember struct {
-	ID            string     `json:"id"`
-	Object        string     `json:"object"`
-	Role          string     `json:"role"`
-	Status        string     `json:"status"`
-	Availability  string     `json:"availability"`
-	JoinedVia     *string    `json:"joined_via"`
-	User          Teammate   `json:"user"`
-	DeactivatedAt *time.Time `json:"deactivated_at"`
-	CreatedAt     time.Time  `json:"created_at"`
+	ID            string         `json:"id"`
+	Object        string         `json:"object"`
+	Role          string         `json:"role"`
+	Status        string         `json:"status"`
+	Availability  string         `json:"availability"`
+	JoinedVia     *string        `json:"joined_via"`
+	User          Teammate       `json:"user"`
+	Teams         *[]TeamSummary `json:"teams,omitempty"`
+	DeactivatedAt *time.Time     `json:"deactivated_at"`
+	CreatedAt     time.Time      `json:"created_at"`
 }
 
 /*
