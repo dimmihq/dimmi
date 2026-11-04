@@ -98,3 +98,50 @@ func (q *Queries) FindChannelConnection(ctx context.Context, arg FindChannelConn
 	)
 	return i, err
 }
+
+const listInboxesWithoutChannel = `-- name: ListInboxesWithoutChannel :many
+SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at FROM inboxes AS i
+WHERE i.workspace_id = $1
+  AND i.deleted_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM channel_connections AS c
+      WHERE c.workspace_id = i.workspace_id AND c.inbox_id = i.id AND c.type = $2 AND c.deleted_at IS NULL
+  )
+ORDER BY i.created_at, i.id
+`
+
+type ListInboxesWithoutChannelParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Type        string   `json:"type"`
+}
+
+// ListInboxesWithoutChannel returns the workspace's live inboxes that
+// have no live connection of the type, oldest first.
+func (q *Queries) ListInboxesWithoutChannel(ctx context.Context, arg ListInboxesWithoutChannelParams) ([]Inbox, error) {
+	rows, err := q.db.Query(ctx, listInboxesWithoutChannel, arg.WorkspaceID, arg.Type)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Inbox
+	for rows.Next() {
+		var i Inbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.DefaultTeamID,
+			&i.Settings,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

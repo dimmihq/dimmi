@@ -16,7 +16,7 @@ APP_PKGS := ./app/...
 # cloud build.
 CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: e2e tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
+.PHONY: test-sweep e2e tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -64,6 +64,10 @@ test:
 	$(WITH_ENV) go test -race -shuffle=on -tags cloud $(CLOUD_PKGS)
 	pnpm test
 	$(WITH_ENV) go test -race -tags dev ./framework/foundation/...
+
+# Drops the databases and roles killed test runs left on the test server.
+test-sweep:
+	$(WITH_ENV) DIMMI_DATABASE__URL="$$DATABASE_URL" DIMMI_REDIS__URL="$$REDIS_URL" go run -tags dev ./cmd/$(APP) test:sweep
 
 # Runs a dev-only command, e.g. make gen ARGS="make:action CloseTicket".
 gen:

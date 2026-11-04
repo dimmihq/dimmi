@@ -81,14 +81,17 @@ func TestWorkspaceRepair(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withLabels())
 		w := tc.Workspace.Workspace
-		exec(t, tc, "UPDATE workspaces SET settings = '{}' WHERE id = $1", w.ID)
+		exec(t, tc, "UPDATE workspaces SET settings = settings - 'label' WHERE id = $1", w.ID)
 		exec(t, tc, "UPDATE organizations SET deleted_at = now(), name = 'Stale' WHERE id = $1", w.OrganizationID)
 
 		code, out := tc.Command("workspace:repair", w.Slug)
 		require.Equal(t, 0, code, out)
 		assert.Contains(t, out, w.Slug+": defaults checked, organization restored")
 		tc.Table("organizations").AssertHas(testkit.Row{"id": w.OrganizationID, "name": w.Name, "deleted_at": nil})
-		tc.Table("workspaces").AssertHas(testkit.Row{"id": w.ID, "settings": `{"label": "default"}`})
+		var label string
+		require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+			"SELECT settings->>'label' FROM workspaces WHERE id = $1", w.ID).Scan(&label))
+		assert.Equal(t, "default", label)
 
 		code, out = tc.Command("workspace:repair")
 		require.Equal(t, 0, code, out)

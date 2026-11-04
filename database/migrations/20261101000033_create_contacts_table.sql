@@ -40,6 +40,7 @@ CREATE TABLE contacts (
 CREATE UNIQUE INDEX contacts_workspace_id_external_id_key ON contacts (workspace_id, external_id)
     WHERE external_id IS NOT NULL;
 CREATE INDEX contacts_workspace_id_email_index ON contacts (workspace_id, email);
+CREATE INDEX contacts_workspace_id_company_id_index ON contacts (workspace_id, company_id);
 
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY contacts_tenant ON contacts USING (workspace_id = ANY (dimmi_visible_workspaces()));
