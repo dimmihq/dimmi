@@ -549,6 +549,38 @@ func (q *Queries) ListEmailDomainClaims(ctx context.Context, name string) ([]Lis
 	return items, nil
 }
 
+const listEmailDomainStates = `-- name: ListEmailDomainStates :many
+SELECT domain::text AS domain, status FROM email_domains
+WHERE workspace_id = $1 AND deleted_at IS NULL
+`
+
+type ListEmailDomainStatesRow struct {
+	Domain string `json:"domain"`
+	Status string `json:"status"`
+}
+
+// ListEmailDomainStates returns the name and state of each live domain,
+// for telling every address of the workspace how it sends.
+func (q *Queries) ListEmailDomainStates(ctx context.Context, workspaceID ids.UUID) ([]ListEmailDomainStatesRow, error) {
+	rows, err := q.db.Query(ctx, listEmailDomainStates, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEmailDomainStatesRow
+	for rows.Next() {
+		var i ListEmailDomainStatesRow
+		if err := rows.Scan(&i.Domain, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEmailDomains = `-- name: ListEmailDomains :many
 SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at FROM email_domains WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY domain
 `

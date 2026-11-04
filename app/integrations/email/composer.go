@@ -43,7 +43,8 @@ Draft is a reply ready to compose.
 MessageID, InReplyTo and References are given without angle brackets.
 Automated marks mail no person wrote, such as an agent's reply.
 LoopStamp and TestStamp are the stamps to carry, when set. Quote is the
-previous message to show below the reply, when set.
+previous message to show below the reply, when set. Signing is the key
+a relay signs the reply with, for a domain we sign for.
 */
 type Draft struct {
 	From, ReplyTo mail.Address
@@ -58,6 +59,7 @@ type Draft struct {
 	TestStamp     string
 	Quote         *Quote
 	Attachments   []mail.Attachment
+	Signing       *mail.SigningKey
 }
 
 /*
@@ -107,7 +109,7 @@ func Compose(d Draft) mail.Message {
 
 	return mail.Message{
 		From: d.From, ReplyTo: d.ReplyTo, To: d.To, Cc: d.Cc, Subject: d.Subject, Headers: headers,
-		Text: text, HTML: wrapHTML(body), Attachments: d.Attachments,
+		Text: text, HTML: wrapHTML(body), Attachments: d.Attachments, Signing: d.Signing,
 	}
 }
 

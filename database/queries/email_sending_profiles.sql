@@ -8,3 +8,7 @@ SET ses_tenant_name = coalesce(email_sending_profiles.ses_tenant_name, excluded.
     updated_at = CASE WHEN email_sending_profiles.ses_tenant_name IS NULL THEN excluded.updated_at
         ELSE email_sending_profiles.updated_at END
 RETURNING *;
+
+-- name: FindEmailSendingProfile :one
+-- FindEmailSendingProfile returns the workspace's sending profile.
+SELECT * FROM email_sending_profiles WHERE workspace_id = @workspace_id;

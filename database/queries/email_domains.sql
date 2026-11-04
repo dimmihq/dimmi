@@ -137,3 +137,9 @@ FROM fail_email_domain_claims(@name::citext, @keep_workspace::uuid, @reason::tex
 -- exact name, the proof that mail may leave from an address on it.
 SELECT * FROM email_domains
 WHERE workspace_id = @workspace_id AND domain = @domain AND status = 'verified' AND deleted_at IS NULL;
+
+-- name: ListEmailDomainStates :many
+-- ListEmailDomainStates returns the name and state of each live domain,
+-- for telling every address of the workspace how it sends.
+SELECT domain::text AS domain, status FROM email_domains
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL;

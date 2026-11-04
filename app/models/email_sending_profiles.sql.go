@@ -46,3 +46,25 @@ func (q *Queries) EnsureEmailSendingProfile(ctx context.Context, arg EnsureEmail
 	)
 	return i, err
 }
+
+const findEmailSendingProfile = `-- name: FindEmailSendingProfile :one
+SELECT workspace_id, status, paused_at, paused_reason, daily_limit, hourly_limit, ses_tenant_name, created_at, updated_at FROM email_sending_profiles WHERE workspace_id = $1
+`
+
+// FindEmailSendingProfile returns the workspace's sending profile.
+func (q *Queries) FindEmailSendingProfile(ctx context.Context, workspaceID ids.UUID) (EmailSendingProfile, error) {
+	row := q.db.QueryRow(ctx, findEmailSendingProfile, workspaceID)
+	var i EmailSendingProfile
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Status,
+		&i.PausedAt,
+		&i.PausedReason,
+		&i.DailyLimit,
+		&i.HourlyLimit,
+		&i.SesTenantName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

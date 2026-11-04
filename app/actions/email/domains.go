@@ -344,9 +344,9 @@ func (d *Domains) publicKey(
 		return "", nil
 	}
 
-	private, err := encryption.Open[string](ctx, d.Keys, sealed, keySlot(row.WorkspaceID, row.Domain, *selector).AAD)
+	private, err := d.openKey(ctx, row, selector, sealed)
 	if err != nil {
-		return "", fmt.Errorf("open signing key: %w", err)
+		return "", err
 	}
 
 	public, err := dkim.PublicKey(private)
@@ -355,4 +355,18 @@ func (d *Domains) publicKey(
 	}
 
 	return public, nil
+}
+
+/*
+openKey returns the PEM private half of a relay signing key of the row.
+*/
+func (d *Domains) openKey(
+	ctx context.Context, row models.EmailDomain, selector *string, sealed encryption.Sealed,
+) (string, error) {
+	private, err := encryption.Open[string](ctx, d.Keys, sealed, keySlot(row.WorkspaceID, row.Domain, *selector).AAD)
+	if err != nil {
+		return "", fmt.Errorf("open signing key: %w", err)
+	}
+
+	return private, nil
 }
