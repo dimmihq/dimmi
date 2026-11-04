@@ -85,7 +85,7 @@ Catalog grows where Intercom has controls teams ask for. Each new permission sit
 |---|---|---|---|---|---|
 | `conversations:assign` | `conversations:write` | yes | yes | 03 | assign, bulk assign |
 | `conversations:merge` | `conversations:write` | yes | yes | 03 | merge |
-| `conversations:export` | `conversations:read` | yes | yes | 03 | transcript, list export |
+| `conversations:export` | `conversations:read` | no | yes | 03 | transcript, list export |
 | `conversations:manage_notes` | `conversations:write` | no | yes | 03 | delete another's note |
 | `views:manage_shared` | `conversations:write` | no | yes | 03 | shared views |
 | `contacts:export` | `contacts:read` | no | yes | 03 | contact CSV |

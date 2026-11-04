@@ -98,3 +98,21 @@ Style: caveman. Raw notes from spec writing (2026-11-01/02): what each writer re
 - Framework catalog: `customdomain` (+ `certmagic_storage` in framework set), `image`, `support/diff` (textdiff stays app over it), `httpclient/robots`, `view/feed`, `markdown.FrontMatter`; adapter majors go-github v93, stripe-go v87; `nodes` table gone (Valkey `dimmi:nodes:`).
 - Valkey unreachable policy decided (data-model.md): auth/abuse guards fail closed, provider limiters defer, rest fail open with metric; `/ready` 503, `/up` 200.
 - Mail config shape: `mail.default` = mailer name; driver keys flat under `mail.mailers.<name>`. 06 critical auth mail bypass of system suppression (3/day) kept.
+
+## "Everything now" round (2026-11-04: widget, inbox, security, accounts, email, audiences)
+- Sources: `research/competitors/intercom-gaps-in-built-features.md` (97 gaps, all placed; gap maps in 00-accounts, 03, 04, 06, 01, 02, 21), owner email plan, approved `18-audiences`.
+- New folders: `18-audiences` (owner), `19-cloud-staging` (draft, owner), `20-native-sdks`, `21-enterprise-identity`. Native SDKs and enterprise identity took 20, 21 because 18, 19 were claimed first.
+- Migrations: goose rejects a pending version older than latest applied, so all new work takes `20261201TTNNNN` track ranges (`specs/BUILD-TRACKS.md`).
+- `drf_` was reserved for `reply_drafts`: now `conversation_drafts` (composer drafts); send modes stay 09.
+- `team_assignment_cursors` moved 17 to 03: one picker. 17 migration `001710` dropped.
+- `attribute_definitions` overlap: 18 owns contact + company (`atd_`); 03 conversation attributes split to `conversation_attribute_definitions` (`cad_`).
+- `contact_tag`, `company_tag` overlap: 03 records.md owns, track 04 builds, 18 consumes.
+- `segments` renamed `audiences` everywhere; `seg_` removed; `engage.max_segments` becomes `audiences.max_per_workspace` owner 18.
+- 01 `page_rules` dropped: pages control compiles to `audiences.launcher`; one evaluator.
+- IaC: 04 picked OpenTofu, 19 picked CDK. Resolved to CDK, one tool; 04 M20 owns `Mail` stack, 19 B5 uses it. One staging account.
+- Round trip: 04 hourly, 19 draft every 6 hours. 04 wins as mail owner.
+- Passkeys were stale in foundation text; built as `passkey` second factor (not primary login).
+- 04 Never list: per-workspace credentials reworded: OAuth mailbox connections and IMAP read-only credential allowed, BYO SMTP stays out.
+- Seen indicator: email shows provider delivery status only; no pixel (Never list).
+- Depguard additions requested for builders (new approved modules, the documented path): `codeberg.org/go-pdf/fpdf`, `github.com/emersion/go-imap/v2`, `github.com/russellhaering/gosaml2`, `github.com/russellhaering/goxmldsig`, `scim2/filter-parser/v2`.
+

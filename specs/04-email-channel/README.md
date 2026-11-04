@@ -554,7 +554,7 @@ resources/js/lib/api/email-domains.ts, email-senders.ts, email-mailboxes.ts
 tests/e2e/email-domains.spec.ts, email-senders.spec.ts, email-setup.spec.ts, email-signatures.spec.ts,
   email-mailboxes.spec.ts, email-sending.spec.ts
 tests/emailmatrix/                      # tag emailmatrix; staging.md 5.3
-deploy/tofu/, deploy/domainconnect/     # staging.md 7
+deploy/cdk/, deploy/domainconnect/      # staging.md 7
 ```
 
 ## HTTP API
@@ -1074,6 +1074,6 @@ Traces: span per pipeline stage (parse, auth, classify, thread, strip, ingest).
 8. Provider domains: API when `domain_api_token` set, else config list. Why: per-record status where possible, no forced account token.
 9. Push wakes, poll is truth, for Gmail and Graph. Why: both vendors say notifications can drop; self-host may have no public URL or Cloud project.
 10. Default send path of connected mailbox is mailbox API. Why: no DNS step, lands in Sent, sender reputation is customer's own. Bulk kinds never use it.
-11. IaC OpenTofu ([staging.md](staging.md) 7). Why: MPL-2.0, multi-provider, S3 native lock. 12 infrastructure outline says CloudFormation; owner to confirm whole cloud follows.
+11. IaC AWS CDK in TypeScript ([staging.md](staging.md) 7). Why: same tool as 19 cloud staging, one tool for whole cloud; CDK synthesizes CloudFormation, so 12 infrastructure outline stays true.
 12. Domain Connect optional on top of plain records, Entri no ([sending.md](sending.md) 6).
 13. `[staging]` mark = provider fact not stated in docs read; fixture pins current belief, driver reports what provider returns, first staging run corrects. Never blocks build.

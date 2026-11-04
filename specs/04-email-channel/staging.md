@@ -8,7 +8,7 @@ Style: caveman. Owner: 04-email-channel. Tasks: [tasks.md](tasks.md) M20. Track 
 |---|---|---|---|
 | Unit + integration | every commit | Postgres, Valkey, S3, Mailpit; fakes at HTTP boundary | `make test` |
 | e2e | every commit | browser, binaries; `/webhooks/test/inbound` | `make e2e` |
-| IaC check | every commit touching `deploy/tofu` | `tofu fmt -check`, `tofu validate` (no credentials, `-backend=false`) | `make infra-check` |
+| IaC check | every commit touching `deploy/cdk` | `tsc --noEmit`, `cdk synth` with fixture context (no credentials, no lookups), arch test for secrets | `make infra-check` |
 | SES simulator | hourly on staging | SES send + events | `RunEmailRoundTrip` |
 | Probe round trip | hourly on staging | real mail both ways, one real mailbox per host | `RunEmailRoundTrip` |
 | Mailbox matrix | nightly + before release | six mailbox hosts, every direction, headers read | `make email-matrix` (tag `emailmatrix`) |
@@ -18,7 +18,7 @@ Staging runs cost SES and storage only. No LLM anywhere (X16). Each manual real 
 
 ## 2. Separate AWS account
 
-`dimmi-email-staging`, member of AWS Organization, own billing alarm at 20 USD/month. Never shares SES reputation, identities or suppression list with production. Region `us-east-1` (SES receiving available, same as production). Production account unchanged by staging applies.
+Same staging account as [19 cloud staging](../19-cloud-staging/README.md), named there (`dimmi-staging`), member of AWS Organization, own billing alarm. One staging account, not one per feature. Never shares SES reputation, identities or suppression list with production. Region `us-east-1` (SES receiving available, same as production).
 
 SES production access requested for staging too: sandbox blocks unverified real recipients. Simulator works in sandbox, so simulator checks work from day one.
 
@@ -109,35 +109,35 @@ Alerts:
 
 ## 7. Infrastructure as code
 
-**Tool: OpenTofu.** MPL-2.0 (Terraform is BUSL: outside repo license list). HCL same, AWS provider has every resource needed, also drives Cloudflare and Route 53 so `cf.` zone lives in same plan. Native S3 state lock (`use_lockfile`, 1.10+), no DynamoDB. Pin `required_version = "~> 1.10"`. Conflict: `12-cloud-billing/infrastructure.md` says CloudFormation for cloud stacks; that doc is outline. Reported to owner; email stacks use OpenTofu. Should other stacks follow, one tool remains.
+**Tool: AWS CDK in TypeScript at `deploy/cdk`** (Apache-2.0). One tool for whole cloud: [19 cloud staging](../19-cloud-staging/README.md) defines rest of environment there, so a second tool would split state and reviews. Decided here so email files ready whether or not 19 approved yet: `Mail` stack deploys alone. Track 05 M20 owns it; 19 task B5 uses this stack, never writes a second one. `12-cloud-billing/infrastructure.md` follows (19 task B10). OpenTofu considered: multi-provider, rejected only to keep one tool.
 
 Layout:
 
 ```
-deploy/tofu/
-  README.md                     # plan and apply steps, bootstrap, no secret values
-  modules/email-ses/
-    main.tf variables.tf outputs.tf versions.tf
-    receiving.tf                # receipt rule set, active set, rule: S3 + scan, recipient = inbound domain
-    storage.tf                  # S3 inbound bucket, lifecycle raw/ 31 days, block public, SSE, bucket policy ses.amazonaws.com + aws:SourceAccount + aws:SourceArn
-    notifications.tf            # SNS inbound + events topics, HTTPS subscriptions, topic policy
-    sending.tf                  # identity for inbound domain, DKIM, MAIL FROM, config sets dimmi-system, dimmi-customer, event destinations
-    iam.tf                      # app role: ses:SendEmail on identities, sesv2 identity + tenant actions, s3:GetObject raw/, s3:DeleteObject raw/ (erase)
-    alarms.tf                   # section 6
-    dns.tf                      # optional route53 records when var.route53_zone_id set; else outputs records for human
-  envs/staging/
-    main.tf backend.tf terraform.tfvars.example
-  envs/production/
-    main.tf backend.tf terraform.tfvars.example
-  modules/mail-probe-cloudflare/ # cf. zone: Email Routing rule to worker, optional
+deploy/cdk/
+  README.md                     # synth, diff, deploy, bootstrap, no secret values, no account ids
+  package.json, tsconfig.json   # exact pins; own lockfile; not part of browser app
+  bin/dimmi.ts                  # stage from env + context; account and zone ids never in repo
+  lib/mail-stack.ts             # section below; deployable alone
+  lib/mail/activate-rule-set.ts # custom resource: CDK cannot activate a receipt rule set
+  test/mail-stack.test.ts       # snapshot-free assertions on synthesized template
 deploy/domainconnect/trydimmi.com.email.json
 ```
 
-Resources: `aws_ses_receipt_rule_set`, `aws_ses_active_receipt_rule_set`, `aws_ses_receipt_rule` (`s3_action` with `topic_arn`, `scan_enabled = true`, `tls_policy = "Optional"`), `aws_s3_bucket*`, `aws_sns_topic*`, `aws_sesv2_email_identity`, `aws_sesv2_email_identity_mail_from_attributes`, `aws_sesv2_configuration_set`, `aws_sesv2_configuration_set_event_destination`, `aws_iam_role*`, `aws_cloudwatch_metric_alarm`. Customer domains and tenants are never IaC: app creates them.
+`Mail` stack resources:
+- Receiving: receipt rule set, active by custom resource; rule recipient = inbound domain, S3 action with SNS topic, `scanEnabled` on, TLS optional. SES message encryption off (client-side, driver cannot read); bucket encryption instead.
+- Storage: S3 inbound bucket, lifecycle `raw/` 31 days, block public, SSE, bucket policy for `ses.amazonaws.com` with `aws:SourceAccount` + `aws:SourceArn`.
+- Notifications: SNS inbound + events topics, HTTPS subscriptions to app `/webhooks/ses/inbound`, `/webhooks/ses/events`, retry about 1 h, dead-letter queue, topic policy.
+- Sending: identity for inbound domain, Easy DKIM, MAIL FROM with reject on MX failure, configuration sets `dimmi-system`, `dimmi-customer` (stage suffix), event destinations.
+- IAM: app role `ses:SendEmail` on identities, sesv2 identity + tenant actions, `s3:GetObject`, `s3:DeleteObject` on `raw/` (erase).
+- Alarms: section 6.
+- DNS: Route 53 records when zone id in context; else CfnOutput records for a human.
 
-State: S3 bucket `dimmi-tofu-state-<env>` in same account, versioning on, SSE-KMS, `use_lockfile = true`, public block. Bootstrap once by hand (`deploy/tofu/README.md` lists the commands). State holds outputs only: no secret resources in Tofu; DB URLs, API keys and mailbox credentials go to Secrets Manager by human or by app config, values never in `.tf`, `.tfvars`.
+Cloudflare `cf.` zone is outside CDK: human step (section 8) with worker from `dimmi email:cloudflare-worker`.
 
-Repo rules: `.gitignore` `*.tfstate*`, `*.tfvars` (only `.example` committed), `.terraform/`. `make infra-check` runs fmt + validate + `tests/arch/deploy_secrets_test.go` (fails on AWS key pattern, `password =` literals, private key blocks under `deploy/`). Lock file `.terraform.lock.hcl` committed.
+State: CloudFormation in account. No secret resources in stack: DB URLs, API keys, mailbox credentials go to Secrets Manager by hand or through 19.
+
+Repo rules: `.gitignore` `cdk.out/`, `cdk.context.json`, `.env*`. `make infra-check` runs typecheck, `cdk synth` on fixture context, template test, `tests/arch/deploy_secrets_test.go` (fails on AWS key pattern, 12-digit account ids, `password =` literals, private key blocks under `deploy/`). Public repo: no account id, zone id or secret ever committed.
 
 Binary unaffected; `deploy/` not embedded.
 
@@ -146,12 +146,12 @@ Binary unaffected; `deploy/` not embedded.
 No code path waits on these. Order matters.
 
 AWS and DNS:
-- [ ] Create AWS account `dimmi-email-staging` in Organization; billing alarm.
-- [ ] Bootstrap state bucket (`deploy/tofu/README.md`).
+- [ ] Create or reuse staging AWS account (section 2) in Organization; billing alarm.
+- [ ] `cdk bootstrap` with narrowed execution role (`deploy/cdk/README.md`, 19).
 - [ ] Delegate `staging.trydimmi.com` NS to Route 53 zone.
-- [ ] `tofu apply` staging; confirm SNS `ops` email.
+- [ ] `cdk deploy` `Mail` stack; confirm SNS `ops` email.
 - [ ] Request SES production access in staging (support case). Same for production when ready.
-- [ ] Set staging app config from Tofu outputs; confirm SNS HTTPS subscription auto-confirms.
+- [ ] Set staging app config from stack outputs; confirm SNS HTTPS subscription auto-confirms.
 - [ ] Production: repeat in production account, inbound on `inbound.trydimmi.com`.
 
 Mailboxes:

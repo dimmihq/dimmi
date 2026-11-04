@@ -14,7 +14,7 @@ This file owns **shared core tables**. Feature specs own their own tables and mu
 | encryption_keys (app `encryption.KeysetStore`) | 00-foundation |
 | sessions (`framework/session`), personal_access_tokens (`framework/auth/token`), oauth_clients, oauth_authorization_codes, oauth_grants, oauth_tokens (`framework/oauth`), idempotency_keys (`framework/http/idempotency`), certmagic_storage (`framework/customdomain/storage`), notifications (`framework/notifications/channels/database`, migrate step), River tables (`river_*`, migrate step), `framework_migrations` | framework (one framework migration set; "Infrastructure tables" below). Owner specs add product columns by ALTER in app set |
 | widget_settings, widget_sessions | 01-messenger-widget |
-| identity_secrets | 02-widget-identity (`identity_settings`, `identity_verification_stats` later: `identity-validations`; JWT nonce replay set moved to Valkey `SET NX EX`; no `identity_jwt_nonces` table) |
+| identity_secrets | 02-widget-identity (JWT nonce replay set moved to Valkey `SET NX EX`; no `identity_jwt_nonces` table) |
 | email_domains, email_addresses, email_threads, email_message_refs, inbound_emails, outbound_emails, email_suppressions, email_sending_profiles, email_sending_stats, email_signatures | 04-email-channel |
 | channel_rooms, channel_message_refs, channel_contact_states, channel_member_links, channel_inbound_events, channel_socket_sessions, whatsapp_templates | 05-chat-app-channels |
 | notification_settings, notification_preferences, notification_destinations, notification_deliveries, push_subscriptions (user-scoped, no workspace_id); product columns on framework `notifications` (ALTER) | 06-notifications |
@@ -26,7 +26,15 @@ This file owns **shared core tables**. Feature specs own their own tables and mu
 | billing_accounts, billing_periods, billing_windows, usage_ledger, billing_adjustments, billing_disputes, credit_grants, spend_caps, invoices_cache, stripe_events, billing_program_applications, billing_reconciliation_issues, credit_grant_applications, entitlement_overrides | 12-cloud-billing |
 | changelogs, changelog_labels, changelog_entries, changelog_entry_label, changelog_entry_author, changelog_entry_article, changelog_entry_reaction_counts, changelog_reactions, changelog_reads, changelog_subscribers, changelog_mailings, changelog_mailing_recipients, changelog_sources, changelog_generations, changelog_entry_stats_daily, changelog_stats_daily | 13-changelog |
 | feedback_settings, feedback_boards, feedback_categories, feedback_statuses, feedback_posts, feedback_post_tag, feedback_votes, feedback_comments, feedback_comment_mentions, feedback_requests, feedback_post_merges, feedback_subscriptions, feedback_post_updates, feedback_notifications, feedback_contact_states, feedback_suggestions, feedback_post_embeddings, feedback_imports, portal_sessions, portal_sign_ins | 14-feedback-roadmap |
-| engage_settings, segments, engage_assets, announcements, surveys, survey_questions, survey_responses, survey_answers, engage_receipts, engage_stats_daily | 15-announcements-surveys |
+| engage_settings, engage_assets, announcements, surveys, survey_questions, survey_responses, survey_answers, engage_receipts, engage_stats_daily | 15-announcements-surveys |
+| member_access_teams, team_assignment_cursors, away_reasons, conversation_views, member_inbox_preferences, snooze_lists, conversation_drafts, bulk_operations, message_reactions, contact_tag, company_tag, conversation_attribute_definitions, redaction_rules, contact_erasures, data_exports (workspace-level), export_destinations, export_schedules, side_conversations, side_messages, message_translations; SQL function `dimmi_conversation_visible` | 03-shared-inbox |
+| widget_translations, widget_assets, widget_site_imports, widget_domains | 01-messenger-widget |
+| identity_verification_stats | 02-widget-identity |
+| email_ignored_addresses, email_trusted_senders, email_mailbox_connections, email_mailbox_messages, email_address_tests | 04-email-channel |
+| audiences, audience_references, attribute_definitions, attribute_problems, event_definitions, contact_event_summaries, audience_snapshots, audience_snapshot_members | 18-audiences |
+| widget_devices, widget_push_credentials | 20-native-sdks |
+| roles | 00-accounts |
+| sso_connections, organization_domains, scim_tokens, scim_group_links | 21-enterprise-identity |
 | imports, import_runs, import_run_stages, import_mappings, import_records, import_errors, import_files, import_erasures | 16-importers |
 
 Exceptions to table rules: `usage_ledger` and billing tables append-only, no `updated_at`, no cascade from workspace purge (tax records). User-scoped (`user_id`, no `workspace_id`): `push_subscriptions` (06; `oauth_grant_id uuid null references oauth_grants on delete cascade`: app push rows die with grant, listener on `oauth_grant.revoked` also deletes; `device_id`), `sessions`, `user_auth_factors`, `oauth_identities`, `security_events`. Global (not tenant, no RLS): `organizations`, `encryption_keys`. Org-scoped (`-- lint:org-scoped`, RLS via `dimmi_visible_billing_accounts()`, 12): `billing_accounts`, `spend_caps`, `billing_periods`, `invoices_cache`, `credit_grants`, `credit_grant_applications`, `billing_adjustments`, `entitlement_overrides` (staff only, no tenant API).
@@ -55,10 +63,24 @@ Feature migrations that alter core tables. Builders apply in migration number or
 | jsonb keys | messages.metadata.survey_request `{survey_id, response_id}`, conversations.source.announcement_id, messages.event name `announcement.replied` | 15-announcements-surveys |
 | jsonb keys | messages.metadata.ai.confirmation, messages.metadata.ai.action_calls, messages.metadata.widget.identity_verified, messages.event names `ai.action_call_completed`, `ai.action_call_approval_requested` (03 registers) | 07-dimmi-agent (actions) |
 | jsonb keys, registry values | conversations.source.imported `{import_id, source, external_id, external_number, external_url, channel}`, messages.metadata.imported (bool) + messages.metadata.import, `messages.dedupe_key` `imp:<connection_key>:<id>`, `channel_connections.type` value `import`, `attachments.uploaded_by_type` value `system`. No column change | 16-importers |
+| workspace_members | conversation_access, conversation_access_unassigned (`20261201020001`); away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at (`20261201020004`); undo_send_seconds (`20261201030014`); FK away_reason_id (`20261201120001`) | 03-shared-inbox |
+| workspace_members | directory_external_id, directory_managed_at (`20261201080008`); custom_role_id (`20261201080009`, also invitations) | 21, 00-accounts |
+| conversations | assignment_wait_reason, assignment_waiting_since (`20261201020006`); priority boolean to smallint 0..4 (`20261201030012`); custom_attributes (`20261201120004`) | 03-shared-inbox |
+| messages | scheduled_send_at, undone_at (`20261201030014`) | 03-shared-inbox |
+| conversation_participants | role values `to`, `cc`; removed_at, added_by (`20261201040004`) | 03-shared-inbox |
+| conversation_tag | message_id (`20261201040006`) | 03-shared-inbox |
+| contacts, companies | notes (`20261201040007`) | 03-shared-inbox |
+| contacts | last_heard_at, web_sessions, conversation_count, GIN custom_attributes | 18-audiences |
+| attachments | scan_status adds inconclusive, mismatch; scan_signature, scanned_at (`20261201040008`); side_message_id + one-target CHECK (`20261201120003`) | 03-shared-inbox |
+| users | preferences (`20261201070001`); managed_by_organization_id (`20261201080005`) | 00-accounts, 21 |
+| invitations | reminded_at (`20261201070002`) | 00-accounts |
+| one_time_tokens | purpose adds two_factor_reset (`20261201070003`) | 00-accounts |
+| oauth_identities, sessions, oauth_grants, oauth_authorization_requests | sso_connection_id, auth_domain where listed (`20261201080003`, `004`, `010`) | 21-enterprise-identity |
+| jsonb keys | conversations.source.email_throttled, conversations.source.email_spoof_risk, messages.metadata.email.{trusted, unverified_sender, spoof_risk, external_send}, messages.metadata.from_non_participant (04 writes, 03 reads); messages.metadata.dev_context, messages.metadata.ai.run_id (01) | 04, 01 |
 
 Feature tables changed by other features (owner applies in own block; listed for build order): `widget_settings` (01) gains `changelog_tab_enabled` (13), `feedback_tab_enabled` (14, migration `001421`); `knowledge_documents.changelog_entry_id` (13 migration `001314`); `email_suppressions.scope` adds `changelog` and `outbound_emails.kind` adds `changelog`, `feedback_update`, `portal_sign_in` (04 block); `feedback_posts.changelog_entry_id`, `feedback_post_updates.changelog_entry_id` FKs (declared inline by 14 migrations `001406` / `001414`; 13 block runs first); `ai_runs.kind` adds `changelog`, `feedback`, `docs_sync` (07 CHECK); `changelog_sources.github_repository_id` (13 table, FK to 08 `github_repositories`; 08 block runs first).
 
-Migration number ranges (app set, `database/migrations`): 00-accounts `20261101000001-000029` (organizations before workspaces), foundation core `000030-000099`, then one block per feature `00FFNN` = folder number `FF` (`000101-000199` for 01 ... `001201-001299` for 12), 13 `20261101001301-001399`, 14 `001401-001499`, 15 announcements/surveys `001501-001599` (folder renamed from 16; its old `0016NN` numbers move to `0015NN`), 16 importers `001601-001699`. Sub-ranges listed for grep (no rule change): 07 agent actions `000707-000710`, 08 docs sync + GitHub layer `000821-000827`. Cross-feature FK needing later table ships in the later block (13 `001314` adds `knowledge_documents.changelog_entry_id`). Framework set (`foundation.FrameworkMigrations()`: SQL embedded per owning package, one set, own version table `framework_migrations`) runs first, after migrate steps (River schema, notifications table); app set version table `app_migrations`. App migrations needing product columns on framework tables (`sessions`, `personal_access_tokens`, `oauth_*`, `notifications`) ALTER them.
+Migration number ranges: every migration built from 2026-11-04 on takes a track range `20261201TTNNNN`, see `specs/BUILD-TRACKS.md`; `00FFNN` numbers in specs are labels for what is unbuilt. Original ranges (app set, `database/migrations`): 00-accounts `20261101000001-000029` (organizations before workspaces), foundation core `000030-000099`, then one block per feature `00FFNN` = folder number `FF` (`000101-000199` for 01 ... `001201-001299` for 12), 13 `20261101001301-001399`, 14 `001401-001499`, 15 announcements/surveys `001501-001599` (folder renamed from 16; its old `0016NN` numbers move to `0015NN`), 16 importers `001601-001699`. Sub-ranges listed for grep (no rule change): 07 agent actions `000707-000710`, 08 docs sync + GitHub layer `000821-000827`. Cross-feature FK needing later table ships in the later block (13 `001314` adds `knowledge_documents.changelog_entry_id`). Framework set (`foundation.FrameworkMigrations()`: SQL embedded per owning package, one set, own version table `framework_migrations`) runs first, after migrate steps (River schema, notifications table); app set version table `app_migrations`. App migrations needing product columns on framework tables (`sessions`, `personal_access_tokens`, `oauth_*`, `notifications`) ALTER them.
 
 ## Public ID prefixes (registry)
 
@@ -96,7 +118,7 @@ One prefix per addressable table (pivots, stats, singletons, keyed-by-parent tab
 | ksr_ | knowledge_sync_runs | kd_ | knowledge_documents |
 | kc_ | knowledge_chunks | ocl_ | oauth_clients |
 | ogr_ | oauth_grants | oar_ | oauth_authorization_requests |
-| odr_ | oauth_device_codes | drf_ | reserved: reply_drafts (later: `reply-drafts`) |
+| odr_ | oauth_device_codes | drf_ | conversation_drafts (03; 09 server drafts reuse table) |
 | whk_ | webhook_endpoints | whd_ | webhook_deliveries |
 | wha_ | webhook_delivery_attempts | bak_ | backups |
 | iex_ | data_exports (instance) | | |
@@ -118,7 +140,7 @@ One prefix per addressable table (pivots, stats, singletons, keyed-by-parent tab
 | fbn_ | feedback_notifications (14) | fbsg_ | feedback_suggestions (14) |
 | fbi_ | feedback_imports (14) | pts_ | portal_sessions (14) |
 | psi_ | portal_sign_ins (14) | | |
-| seg_ | segments (15) | ann_ | announcements (15) |
+| adn_ | audiences (18) | ann_ | announcements (15) |
 | svy_ | surveys (15) | svq_ | survey_questions (15) |
 | svr_ | survey_responses (15) | erc_ | engage_receipts (15) |
 | eas_ | engage_assets (15) | | |
@@ -129,8 +151,22 @@ One prefix per addressable table (pivots, stats, singletons, keyed-by-parent tab
 | asr_ | article_source_refs (08; `article_freshness` keyed by article, no prefix) | | |
 | imp_ | imports (16) | impr_ | import_runs (16) |
 | impm_ | import_mappings (16) | impf_ | import_files (16) |
+| wga_ | widget_assets (01) | wsi_ | widget_site_imports (01) |
+| wdm_ | widget_domains (01) | wdv_ | widget_devices (20) |
+| wpc_ | widget_push_credentials (20) | cvw_ | conversation_views (03) |
+| blk_ | bulk_operations (03) | awr_ | away_reasons (03) |
+| cad_ | conversation_attribute_definitions (03) | rxr_ | redaction_rules (03) |
+| ces_ | contact_erasures (03) | dex_ | data_exports (03, workspace) |
+| dxd_ | export_destinations (03) | dxs_ | export_schedules (03) |
+| sdc_ | side_conversations (03) | sdm_ | side_messages (03) |
+| atd_ | attribute_definitions (18) | edf_ | event_definitions (18) |
+| asn_ | audience_snapshots (18) | ssoc_ | sso_connections (21) |
+| odom_ | organization_domains (21) | sct_ | scim_tokens (21) |
+| scg_ | scim_group_links (21) | rol_ | roles (00-accounts) |
+| eig_ | email_ignored_addresses (04) | ets_ | email_trusted_senders (04) |
+| eat_ | email_address_tests (04) | emc_ | email_mailbox_connections (04) |
 
-Reserved for later tables (do not reuse; `00-foundation/extensibility.md`): `ssoc_` sso_connections, `odom_` organization_domains, `rol_` roles, `brd_` brands, `lgh_` legal_holds, `ains_` app_installations, `dev_` user_devices. `encryption_keys` has no public id (internal). Prefix uniqueness checked over registry + reserved list (CI: `app/models/public_ids.go` test; 2026-11-02 final pass: zero collisions across registry + reserved list incl. 07 actions, 08 docs sync, 16 importers).
+Reserved for later tables (do not reuse; `00-foundation/extensibility.md`): `brd_` brands, `lgh_` legal_holds, `ains_` app_installations, `dev_` user_devices. `encryption_keys` has no public id (internal). Prefix uniqueness checked over registry + reserved list (CI: `app/models/public_ids.go` test; 2026-11-02 final pass: zero collisions across registry + reserved list incl. 07 actions, 08 docs sync, 16 importers).
 
 ## Accounts
 
@@ -256,7 +292,7 @@ Merge rules (03-shared-inbox owns action `MergeContacts`): auto-merge only on ve
 | subject | text | email subject, or first message excerpt (120 chars) |
 | status | text CHECK in ('open','snoozed','closed') | |
 | spam | boolean not null default false | separate from status so un-spam restores status |
-| priority | boolean not null default false | |
+| priority | smallint not null default 0, CHECK 0..4 | none, low, medium, high, urgent. Was boolean; 03 W1 migrates |
 | assignee_member_id | uuid null references workspace_members | |
 | assignee_team_id | uuid null references teams | |
 | ai_state | text CHECK in ('off','active','handed_off') default 'off' | 07 owns transitions |
@@ -281,7 +317,7 @@ Customer message on closed conversation reopens it. Exception: closed more than 
 
 ### conversation_participants
 Extra people on thread (email CC, Slack channel members who wrote, second contact).
-`conversation_id, contact_id, role text CHECK in ('cc','participant'), created_at`, primary key both.
+`conversation_id, contact_id, role text CHECK in ('to','cc'), removed_at, added_by, created_at`, primary key both.
 
 ### messages
 One row per thing in timeline: customer message, teammate reply, AI reply, internal note, system event.

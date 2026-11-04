@@ -212,7 +212,7 @@ Spec: [mailbox-connections.md](mailbox-connections.md). Tests fake HTTP boundary
 
 Spec: [staging.md](staging.md). Human checklist there; code must not wait.
 
-- [ ] `deploy/tofu` module + envs + README; `.gitignore`; `make infra-check`; `tests/arch/deploy_secrets_test.go`. Acceptance: `tofu validate` with no credentials; seeded secret in test tree fails arch test.
+- [ ] `deploy/cdk` `Mail` stack + README; `.gitignore`; `make infra-check`; `tests/arch/deploy_secrets_test.go`. Acceptance: `cdk synth` with fixture context and no credentials; template test asserts scan on, S3 + SNS action, lifecycle 31 days, DLQ; seeded secret or account id in test tree fails arch test.
 - [ ] `deploy/domainconnect` template. Acceptance: linter clean (`dc-template-linter -cloudflare`) when available in CI step, no network required in `make test`.
 - [ ] `RunEmailRoundTrip`, `email:round-trip`, simulator set, probe set on address tests, metrics, alert + heartbeat. Tests: fake clock, `tc.Mail`, `httpclienttest`; two-failure gate; disabled not scheduled. Needs M16 test table.
 - [ ] `tests/emailmatrix` harness + `make email-matrix` + `-record`; vet under tag in `make lint`. Acceptance: compiles; never runs in `make test`; refuses without secrets; first real run only after owner approval.

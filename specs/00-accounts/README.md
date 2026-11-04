@@ -685,6 +685,19 @@ Rules:
 
 Catalog registration: 00-accounts declares ability groups (= `api.md` ability catalog) and its own permissions. Each feature spec registers its permissions from its service provider: `permissions.Register(key, group, ownerSpec)`. Role defaults for every permission live in `roles.go` (central; owner spec edits only its rows). Boot checks: group is a known ability; every registered permission has a `roles.go` entry (possibly no role); every `roles.go` permission is registered; key format `resource:action`. Unknown permission in `authz.Can`: panic in tests, deny + ERROR log in prod.
 
+Permissions added by feature specs in 2026-11-04 round (group, roles; `roles.go` rows registered by owner track, 00-accounts catalog lists them):
+| Permission | Group | Member | Admin, owner | Owner spec |
+|---|---|---|---|---|
+| `members:manage_availability` | `members:write` | no | yes | 03 assignment.md |
+| `views:manage_shared` | `conversations:write` | no | yes | 03 views.md |
+| `conversations:side` | `conversations:write` | yes | yes | 03 collaboration.md |
+| `conversations:export` | `conversations:read` | no | yes | 03 safety.md |
+| `contacts:export` | `contacts:read` | no | yes | 03 safety.md |
+| `attributes:manage` | `settings:write` | no | yes | 03 records.md, 18 |
+| `redaction:manage` | `settings:write` | no | yes | 03 safety.md |
+| `email:send_as_any` | `conversations:write` | yes | yes | 04 sender-rules.md |
+| `audiences:read`, `audiences:write`, `events:write` | own ability groups | read yes, write per 18 | yes | 18 |
+
 Permission groups (each permission in exactly one group):
 | Group (ability) | Permissions in group | Owner spec |
 |---|---|---|

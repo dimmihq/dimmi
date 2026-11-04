@@ -1,6 +1,6 @@
 # Dimmi MVP specs (backend)
 
-Date: 2026-11-02. Style: caveman. Backend first: REST API, widget API, realtime, MCP, CLI, jobs. Frontend (React dashboard, Preact widget UI) later, built on these APIs. Monolith serves web app.
+Date: 2026-11-04. Style: caveman. Build plan for parallel agents: [BUILD-TRACKS.md](BUILD-TRACKS.md). 00-accounts, 01, 02, 03, 04, 06, 18, 20, 21 specify screens too (BoardUI); other folders stay backend first. Monolith serves web app.
 
 Stack: Go 1.26 single binary, Laravel code structure and conventions, PostgreSQL 18 (only database of record), Valkey (required, rebuildable state only). License MIT. See `research/tech-stack.md`, `research/roadmap.md`, `research/pricing.md`, `research/build-vs-reuse.md`.
 
@@ -14,7 +14,7 @@ Conflict rule: `00-foundation/contracts.md` wins, then `00-foundation/rest.md`, 
 
 ## Folders
 
-Counts: edge cases = numbered items in `edge-cases.md` (lettered items like `164a` count); tasks = `- [ ]` lines in `tasks.md`. Recount: `grep -cE '^[0-9]+[a-z]?\. ' edge-cases.md`, `grep -cE '^\s*- \[ \]' tasks.md`. Snapshot: 2026-11-02 last cleanup + verification pass (recount before relying).
+Counts: edge cases = numbered items in `edge-cases.md` (lettered items like `164a` count); tasks = `- [ ]` lines in `tasks.md`. Recount: `grep -cE '^[0-9]+[a-z]?\. ' edge-cases.md`, `grep -cE '^\s*- \[ \]' tasks.md`. Snapshot: 2026-11-02 last cleanup + verification pass; counts below are stale for folders changed 2026-11-04 (recount before relying).
 
 | Folder | Roadmap item | What | Edge cases | Tasks |
 |---|---|---|---|---|
@@ -33,15 +33,20 @@ Counts: edge cases = numbered items in `edge-cases.md` (lettered items like `164
 | [12-cloud-billing](12-cloud-billing/README.md) | 12 | metering rules D1-D15 as code, ledger, spend caps, Stripe invoicing, entitlements cloud driver | 126 | 45 |
 | [13-changelog](13-changelog/README.md) | 13 | changelog on help center host (`/changelog`), RSS, widget What's new, reactions, double opt-in email subscribers, GitHub/AI/MCP drafts, knowledge ingestion | 175 | 49 |
 | [14-feedback-roadmap](14-feedback-roadmap/README.md) | 14 | feedback boards, votes, requests from conversations, public roadmap portal, AI capture + duplicates, notify-on-ship loop with 13, CSV import | 152 | 54 |
-| [15-announcements-surveys](15-announcements-surveys/README.md) | 15 | in-app announcements (banner, modal, chat), surveys (NPS, CSAT, CES), segments, CSAT on close (widget + email rating page) ("engage") | 136 | 36 |
+| [15-announcements-surveys](15-announcements-surveys/README.md) | 15 | in-app announcements (banner, modal, chat), surveys (NPS, CSAT, CES), audiences via 18, CSAT on close (widget + email rating page) ("engage") | 136 | 36 |
 | [16-importers](16-importers/README.md) | 17 | imports from Intercom, Zendesk, Help Scout, Featurebase, Productlane, Canny, public help center URL, CSV; preview, mapping, resumable, delta, rollback, redirects, never billed | 140 | 38 |
+| [17-workflows](17-workflows/README.md) | rules lite + workflows | one engine for automations; consumes 18 audiences and 03 assignment picker | see folder | see folder |
+| [18-audiences](18-audiences/README.md) | launch addition | one rule language, saved audiences, attribute registry, contact and company tags, events, builder (owner approved) | in README | in README |
+| [19-cloud-staging](19-cloud-staging/README.md) | launch addition | real AWS staging (draft, awaiting owner) | none | see folder |
+| [20-native-sdks](20-native-sdks/README.md) | launch addition | React Native + Expo, iOS, Android, headless hooks on `/widget/v1` | see folder | see folder |
+| [21-enterprise-identity](21-enterprise-identity/README.md) | launch addition | sign-in rules, session length, SAML, OIDC, SCIM, IP allowlists | see folder | see folder |
 | | | **Total features** | **3,011** | **849** (+53 foundation) |
 
 No `15-status-page`: status page removed from product (PO); announcements/surveys folder renamed `16-` -> `15-announcements-surveys` (migration block `0015NN`).
 
 ## Build order
 
-Dependencies decide order. After milestone 3, tracks run in parallel.
+For work in flight use [BUILD-TRACKS.md](BUILD-TRACKS.md): it overrides this table for 00-accounts, 01, 02, 03, 04, 06, 18, 20, 21. Dependencies decide order. After milestone 3, tracks run in parallel.
 
 | Milestone | Specs | Unblocks | Demo at end |
 |---|---|---|---|
@@ -55,7 +60,7 @@ Dependencies decide order. After milestone 3, tracks run in parallel.
 | M4 (parallel) | 08 help center (incl. shared GitHub layer) | 07, 13, 14, 16 | help center live on custom domain, cold-start drafts reviewed in queue, GitHub repo connected once (one webhook) |
 | M4 (parallel, after 08 public site + 04 outbound core; AI drafts after 07) | 13 changelog | 14 notify-on-ship | entry live on help center `/changelog`, RSS validates, widget badge, double opt-in + mailing with undo, GitHub release draft via shared repo webhook, agent cites entry |
 | M4 (parallel, after 08 + 04 + 01; AI capture after 07; ship link after 13) | 14 feedback + roadmap | | post from widget, vote, link conversation to post, roadmap page live, status change notifies voters |
-| M4 (parallel, after 01 + 03 + 04) | 15 announcements + surveys | | banner shown to segment, NPS survey answered in widget, CSAT after close by widget and email |
+| M4 (parallel, after 01 + 03 + 04 + 18 M4) | 15 announcements + surveys | | banner shown to audience, NPS survey answered in widget, CSAT after close by widget and email |
 | M4 (parallel, after 03, 08, 13, 14, 09 CLI core) | 16 importers | switch campaign | `npx dimmi migrate intercom` from fixture tenant: preview, run, redirects, rollback; zero side effects (`AssertNoSideEffects`) |
 | M5 | 07 Dimmi Agent | | BYOK key, agent answers widget with citations, handoff, cost shown |
 | M5 (after 07 core + 01 card + 06) | 07 agent actions | | Stripe template: read subscription inline, cancel via confirmation card, approval by teammate |
@@ -75,11 +80,12 @@ Dependencies decide order. After milestone 3, tracks run in parallel.
 - IDs: UUIDv7 keys, TypeID public IDs (prefix registry in `00-foundation/data-model.md`).
 - API: REST only, noun paths, state changes via `PATCH` on fields, bulk via `PATCH` on collection. One API for all callers; guards (`auth:session`, `auth:app`, `auth:user`, `auth`) decide caller class incl. first-party Dimmi mobile app (`00-foundation/rest.md`, `api.md`). CSRF via Go `http.CrossOriginProtection`.
 - Extensibility seams: org layer from day one (1:1, hidden), registry enums for driver-backed values, permissions not role names, entitlements catalog (one over-limit code `entitlement_limit_reached`), retention guard, access policy, audit sink, KeyManager scopes (`00-foundation/extensibility.md`).
+- Conversation access: team-based, one `VisibleScope` for every list, search, count, channel (03 access.md). Audiences: one rule language owned by 18; 15, 17, 01, 07, 08 consume.
 - Realtime: `centrifuge` library embedded (no Pusher protocol, no own protocol server). Dashboard centrifuge-js over WebSocket; widget plain `EventSource` on uni-SSE with 60 s connect token; channels `workspace:`, `conversation:`, `member:`, `widget_contact:`; history + recovery replaces last-event-id resume; ephemeral events never recovered.
 - Valkey required in every deployment (PO): realtime broker/presence/history (centrifuge Redis broker), cache, rate limits, internal pubsub, replay/dedupe windows, counters, node registry. Holds only rebuildable state. Unreachable: auth/abuse guards fail closed, rest fail open with metric, `/ready` 503. Postgres keeps everything durable (River queue, sessions, tokens, audit, idempotency keys, ledger, FTS + pgvector).
 - Backing services: Dimmi scales only its own process; operating, scaling and failing over Postgres and Valkey is the operator's or provider's job. Dimmi connects correctly to single instances and scaled setups: Postgres writer endpoint, multi-host, session or transaction pooler, read replicas; Valkey standalone, Sentinel, cluster (11 decision 20, operations.md section 11).
 - Events: three dispatch phases (InTx abortable, Queued transactional, AfterCommit). Billing gate is InTx.
-- Email: one instance-level provider from deploy config (SES, Postmark, Resend, Mailgun, SendGrid, or SMTP relay), two never-mixed streams `system` (members) and `customer` (contacts), inbound via SES receiving at MVP, no SMTP receiver, no per-workspace provider credentials; all contact mail through 04 actions.
+- Email: one instance-level provider from deploy config (SES, Postmark, Resend, Mailgun, SendGrid, or SMTP relay), two never-mixed streams `system` (members) and `customer` (contacts), inbound via SES receiving, provider webhooks, IMAP, OAuth Google and Microsoft mailboxes; no SMTP receiver, no BYO SMTP per workspace; all contact mail through 04 actions.
 - Testing: business logic integration tests only (real Postgres, real Valkey, real App, fresh tenant per test), no mocks of DB/actions/events; framework unit + integration; tests named in plain words (no edge-case ids), every edge case covered; 95% app coverage gate (`00-conventions/testing.md`).
 - SDK golden path: `npx dimmi init` writes framework package setup (`@dimmi/nextjs`, `@dimmi/react`, browser package, `@dimmi/server`) + identity source; other stacks get raw snippets (script tag + `data-identity-url`); no JWT code in customer app; identity tokens minted per request, never inlined in HTML (`01-messenger-widget/sdk-contract.md`). More framework packages later (`identity-helper-packages`).
 - Widget identity: JWT, default mode `required` for new workspaces (anonymous chat still works), HS256 + RS256/EdDSA, `email_verified` only from explicit claim. Only verified sources mark attributes trusted (`contacts.trusted_attribute_keys`).
@@ -118,7 +124,7 @@ Dependencies decide order. After milestone 3, tracks run in parallel.
 
 ## Open questions (defaults chosen, confirm)
 
-Answered questions dropped. Full lists: each spec's "Open questions".
+Answered questions dropped. Folders changed 2026-11-04 list theirs under "Decisions", decided; values below stand where not superseded. Other folders keep "Open questions".
 
 | Question | Default | Spec |
 |---|---|---|
@@ -127,7 +133,7 @@ Answered questions dropped. Full lists: each spec's "Open questions".
 | Anonymous visitor session | 180 days sliding | 01 |
 | Ad-blocker strategy | first-party proxy only | 01 |
 | Identified widget session lifetime | 24 h, renewed per page-load handshake (`PATCH /widget/v1/session`) | 02 |
-| Spam auto-purge | 30 days in spam, then trash, 30 more days purge | 03 |
+| Spam auto-purge | see 03 safety.md | 03 |
 | Raw inbound `.eml` retention | 30 days | 04 |
 | Cloud email cap | 200/day unverified domain, 2,000/day verified (entitlement keys) | 04 |
 | Reply-To token address on replies | on; per-address toggle | 04 |
@@ -168,7 +174,7 @@ Answered questions dropped. Full lists: each spec's "Open questions".
 | Revenue weighting source | company attribute (`mrr`), contact fallback | 14 |
 | Max interruptive in-app messages per contact per day | 2 | 15 |
 | CSAT channels | widget + email only (chat apps later: `chat-app-csat`) | 15 |
-| Contact tags for targeting | no at MVP (custom attributes) | 15 |
+| Contact tags for targeting | yes (18 decision 8) | 18 |
 | Intercom `user_hash` through shim | no; shim boots unverified, docs show JWT migration | 16 |
 | Default `conversations.status_mode` | `close_all` (`preserve` available) | 16 |
 | Intercom anonymous leads | `skip_anonymous_leads` true (no email, no conversations) | 16 |

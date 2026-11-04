@@ -52,7 +52,7 @@ Seam now:
 |---|---|---|
 | id | uuid pk default uuidv7() | public `fac_` |
 | user_id | uuid not null references users on delete cascade | |
-| type | text not null CHECK (type ~ '^[a-z][a-z0-9_]{1,39}$') | registry enum (P1). MVP registry: `totp`, `recovery_code`. Later: `webauthn`, `email_otp`. `sms`: never (00-accounts) |
+| type | text not null CHECK (type ~ '^[a-z][a-z0-9_]{1,39}$') | registry enum (P1). Registry: `totp`, `passkey`, `recovery_code`. Later: `email_otp`. `sms`: never (00-accounts) |
 | name | text not null | user label 1..60, NFC. Defaults "Authenticator app", "Recovery codes" |
 | status | text not null default 'pending' CHECK in ('pending','active') | pending = enrollment unfinished; pending older than 1 h deleted by `PurgeExpiredAuthRecords` |
 | secret_encrypted | bytea | TOTP seed; recovery code SHA-256 list. System data key (security.md). Null for public-key factors |
@@ -683,7 +683,7 @@ Add: `encryption_keys` + `encryption.Scope`; RLS function `dimmi_visible_workspa
 | Third-party feature flag service | entitlement catalog + overrides covers rollouts | none |
 | Data model for article translations | 08 owns; not core | 08 later |
 
-## Open questions (recommended default in bold)
+## Decisions (were open questions; bold value stands)
 
 1. Second workspace created by same user: new org (**yes at MVP**) or same org? Same org would merge billing (one free allowance, combined tiers): product call, defer to org UI launch.
 2. Show `organization_id` in workspace resource now? **No** (additive later; avoids clients guessing semantics).

@@ -80,6 +80,7 @@ type KnowledgeVisibility string // "public" | "agent_only"
 
 type KnowledgeSearchOptions struct {
     Limit             int                   // default 8, max 50
+    AllowedAudienceIDs []ids.UUID           // 18: filter effective_audience_ids <@ allowed; public surfaces and anonymous MCP pass empty
     Visibility        []KnowledgeVisibility // agent: [public, agent_only]; public surfaces: [public]
     Queries           []string              // up to 3 extra rewrites, fused with query by RRF (07)
     Locale            string                // preferred BCP 47, others ranked lower
@@ -177,6 +178,8 @@ Mailables: `mail.Mailable` (`Envelope()`, `Content(ctx)`), registered `mail.Regi
 
 Errors (`errors.Is`): `mail.ErrPermanent` (invalid address, suppressed, rejected content; no retry), `mail.ErrTemporary` (retry with backoff), `*mail.RateLimitedError{RetryAfter}`. Drivers (instance config only): `smtp` (relay/submission host only, never MX lookup; default self-host), `ses` (default AWS / cloud, shared IP pools), `postmark`, `resend`, `mailgun`, `sendgrid`, `log` (dev; may print auth links, see security.md exception; refused for customer stream in production). Drivers without raw-MIME endpoint (postmark, resend, sendgrid) decompose `Raw` into provider JSON. Open/click tracking always off.
 
+Exceptions added 2026-11-04 (04): one system Mailable to a non-member, `EmailSetupInstructionsMail`, allowlisted in `email_streams_test.go`. Conversation mail on a connected Google or Microsoft mailbox goes through mailbox API, not customer stream.
+
 ## Event dispatch phases
 
 ```go
@@ -221,6 +224,8 @@ GDPR erase (`DELETE /api/v1/contacts/{id}?erase=true`, 03 action `EraseContact`)
 - 14: votes anonymized, posts/comments/requests scrubbed, subscriptions, notifications, portal sessions/sign-ins, contact state (`EraseFeedbackContactData`).
 - 15: survey responses + answers, engage receipts, CSAT request rows (`EraseEngageContactData`).
 - 16: `import_records` rows for contact and its conversations, `import_errors` mentioning its external id, tombstones (`encryption.MAC` of external ids + emails) in `import_erasures` so delta sync never re-imports (`EraseImportContactData`).
+- 03 additions: drafts, reactions, translations, side conversations, `contact_tag`, notes. 01 hook also deletes `widget_devices` (20 registers none). 04 hook also deletes `email_mailbox_messages`, never touches customer's own mailbox. 18: `contact_tag` and `contact_event_summaries` by cascade. 21 none.
+Message eraser (`contracts.MessageEraser`, `EraseMessage(ctx, workspaceID, messageID ids.UUID) error`): same registry shape, job retries until all nil. Registered by 04 (raw `.eml`, outbound rows), 07 (prompt copies), 10 (stored delivery bodies). Used by delete and redaction (03 safety.md).
 Eraser interface (`contracts.ContactEraser`): `Erase(ctx, workspaceID, contactID ids.UUID) error`, registered in provider. Erase job fails loudly if any eraser errors; retried until all succeed. New feature storing contact PII must register eraser (review checklist).
 
 ## Auth interfaces owned by 00-accounts (pointers)
@@ -261,7 +266,9 @@ type AccessPolicy interface {
 - `password.confirm` (sudo) reads `ConfirmedAt` (session or app grant) or `AuthenticatedAt` within `auth.password_confirmation.ttl` (api.md "Who calls what").
 - Failure: 403 `{code, message, requirement, action_url}` (api.md "Errors"). Clients branch on `requirement`, not `code`.
 - Applies to every caller on workspace routes (session, app, token: token principal = owning member's user; member without 2FA gets 403, same as today). Exempt routes unchanged (00-accounts flows "Require 2FA").
-- Later rules = new rule structs, no middleware change: max session age, idle limit, IP allowlist, allowed methods / SSO only, phishing-resistant MFA, managed device.
+- Rules now in scope (21 access-policy.md): session max age, idle limit, dashboard and API IP allowlists, allowed sign-in methods, Google domains, SSO only. `Requirement` values: `two_factor`, `reauthentication_required`, `sign_in_method`, `sso_required`, `ip_not_allowed`; `action_url` may be null; extra fields `allowed_methods`, `allowed_domains`, `redirect_url`, `ip`, `reason`. `AccessRule.Check(p, settings, now)`; `Principal` adds `LastActivityAt`, `SSOConnectionID`, `AuthDomain`.
+- `LoginPolicyResolver` driver: `OrganizationLoginPolicy`; `AllowAll` tests only. Effective permissions: `EffectivePermissions(catalog, role, customPermissions, abilities)` (00-accounts roles.md). `contracts.Actor.Via.Kind` adds `scim`.
+- Later rules = new rule structs, no middleware change: phishing-resistant MFA, managed device.
 
 ## Entitlements (owner foundation contract; drivers 11 self-host, 12 cloud)
 
@@ -311,7 +318,12 @@ Self-host column: value from owner config key (`0` = unlimited -> `-1`) unless s
 | `feedback.import_rows_per_month` | limit (monthly) | -1 | 100000 | 14 |
 | `engage.max_live_announcements` | limit | config (50) | 50 | 15 |
 | `engage.max_live_surveys` | limit | config (20) | 20 | 15 |
-| `engage.max_segments` | limit | config (200) | 200 | 15 |
+| `audiences.max_per_workspace` | limit | config (200) | 200 | 18 |
+| `api.workspace_rate_limit_per_minute` | limit | 6000 | 6000 | foundation (00-accounts rate-limits.md) |
+| `sso.connections_per_organization` | limit | 5 | 5 | 21 |
+| `scim.tokens_per_organization` | limit | 5 | 5 | 21 |
+| `roles.custom_per_workspace` | limit | 50 | 50 | 00-accounts |
+| `email.connected_mailboxes` | limit | config (0 = -1) | 25 | 04 |
 | `changelog.max_labels` | limit (per changelog) | 20 | 20 | 13 |
 | `changelog.max_sources` | limit (per changelog) | 5 | 5 | 13 |
 | `ai.actions.max_connections` | limit | config (0 = -1) | 20 | 07 |
@@ -416,6 +428,7 @@ func Get[T any](ctx context.Context, key string, at ScopeRef) (T, error) // reso
 ```
 - Storage: instance = `system_settings` (11); organization = `organizations.settings`; workspace = `workspaces.settings`; user = existing columns/tables.
 - Rule: scalar policy or preference = registry key in jsonb; anything with identity, lifecycle or many rows = own table.
+- Keys added 2026-11-04, full list with defaults in owner specs: 03 `inbox.*`, `snooze.*`, `availability.*` (README Config), 02 `identity.mode`, `identity.client_writable_attributes`, 00-accounts `customer_facing_name`, 21 `security.*`.
 - MVP keys: workspace keys from 00-accounts (`security.require_two_factor`, `previous_slugs`) and 09 (`agent_access`: client-kind allowlist only); instance keys from 11. No org keys used yet.
 - Later: org lock on enforceable key; workspace `PATCH` of locked key returns 422 `setting_locked` (reserved code).
 
