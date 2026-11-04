@@ -18,12 +18,13 @@ func (d desk) inboxPath() string {
 }
 
 /*
-extraInbox adds an inbox through the API and returns its public id.
+extraInbox adds a Billing inbox through the API and returns its public
+id.
 */
-func (d desk) extraInbox(t *testing.T, name string) string {
+func (d desk) extraInbox(t *testing.T) string {
 	t.Helper()
 
-	return d.owner.PostJSON("/api/v1/inboxes", testkit.JSON{"name": name}).AssertCreated().String("data.id")
+	return d.owner.PostJSON("/api/v1/inboxes", testkit.JSON{"name": "Billing"}).AssertCreated().String("data.id")
 }
 
 func TestInboxSettings(t *testing.T) {
@@ -32,7 +33,7 @@ func TestInboxSettings(t *testing.T) {
 	t.Run("shows the defaults and marks the default inbox", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		other := d.extraInbox(t, "Billing")
+		other := d.extraInbox(t)
 
 		list := d.owner.GetJSON("/api/v1/inboxes").AssertOK()
 		list.AssertJSONPath("data.0.default", true)
@@ -140,7 +141,7 @@ func TestDeleteInbox(t *testing.T) {
 	t.Run("deletes an empty inbox without a target", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		other := d.extraInbox(t, "Billing")
+		other := d.extraInbox(t)
 
 		d.owner.Delete("/api/v1/inboxes/" + other).AssertNoContent()
 		d.owner.GetJSON("/api/v1/inboxes/" + other).AssertNotFound()
@@ -149,7 +150,7 @@ func TestDeleteInbox(t *testing.T) {
 	t.Run("moves conversations to the target and refuses a bad one", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		other := d.extraInbox(t, "Billing")
+		other := d.extraInbox(t)
 		conversation := d.owner.PostJSON("/api/v1/conversations", testkit.JSON{
 			"inbox_id": other, "author": "contact", "subject": "Refund", "body": "Please",
 			"contact": testkit.JSON{"email": "bo@example.com", "name": "Bo"},

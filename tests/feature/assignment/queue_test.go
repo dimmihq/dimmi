@@ -96,7 +96,7 @@ func TestAssignmentQueue(t *testing.T) {
 		d := open(t)
 		s := d.crew(t, 1, map[string]any{"mode": "round_robin"})
 		team := models.PublicID(models.PrefixTeam, s.team.ID)
-		other := d.extraInbox(t, "Billing")
+		other := d.extraInbox(t)
 		d.owner.PatchJSON("/api/v1/inboxes/"+other, testkit.JSON{
 			"default_team_id": team, "settings": testkit.JSON{"assignment": testkit.JSON{"mode": "round_robin"}},
 		}).AssertOK()
@@ -109,8 +109,8 @@ func TestAssignmentQueue(t *testing.T) {
 		d.show(t, id).AssertJSONPath("data.assignment_wait.reason", "no_available_member")
 
 		d.rule(t, &s.team.ID, map[string]any{"mode": "round_robin", "include_away": true})
-		d.owner.Delete("/api/v1/inboxes/" + other + "?move_to=" + models.PublicID(models.PrefixInbox, d.inbox.Inbox.ID)).
-			AssertNoContent()
+		target := models.PublicID(models.PrefixInbox, d.inbox.Inbox.ID)
+		d.owner.Delete("/api/v1/inboxes/" + other + "?move_to=" + target).AssertNoContent()
 		d.tc.Drain()
 
 		d.show(t, id).AssertJSONPath("data.assignee.id", s.members[0].public())
