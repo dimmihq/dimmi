@@ -88,3 +88,11 @@ export function addTeammate(ownerEmail: string, email: string, role: "admin" | "
 export function verifyEmail(email: string) {
   psql("UPDATE users SET email_verified_at = now() WHERE email = :'email'", { email });
 }
+
+/*
+ * markTwoFactorOn marks the person's account as protected by a second
+ * factor, as a person who then lost their phone would have it.
+ */
+export function markTwoFactorOn(email: string) {
+  psql("UPDATE users SET two_factor_confirmed_at = now() WHERE email = :'email'", { email });
+}

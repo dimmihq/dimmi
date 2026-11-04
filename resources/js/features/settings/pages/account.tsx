@@ -16,6 +16,7 @@ import { LeaveWorkspace } from "../profile/leave-workspace";
 import { NameRow } from "../profile/name-row";
 import { RecentSecurityActivity } from "../security-activity";
 import { SessionsSection } from "../sessions";
+import { SignInMethodsSection } from "../sign-in-methods";
 import { TwoFactorSection } from "../two-factor";
 import { useAccount } from "../use-account";
 
@@ -65,6 +66,7 @@ export function SecuritySettings() {
   return (
     <SettingsPage title="Security & access" description="How you sign in, and where you are signed in.">
       <PasswordSection hasPassword={me.hasPassword} />
+      <SignInMethodsSection hasPassword={me.hasPassword} />
       <TwoFactorSection hasPassword={me.hasPassword} />
       <SessionsSection hasPassword={me.hasPassword} />
       <RecentSecurityActivity />

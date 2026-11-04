@@ -60,6 +60,9 @@ const (
 
 	EventWidgetSettingsUpdated = "widget.settings_updated"
 	EventWidgetDeleted         = "widget.deleted"
+	EventTwoFactorResetAsked   = "member.two_factor_reset_requested"
+	EventTwoFactorResetDone    = "member.two_factor_reset_completed"
+	EventSignInLockCleared     = "member.sign_in_lock_cleared"
 )
 
 /*

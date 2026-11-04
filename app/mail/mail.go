@@ -56,6 +56,8 @@ func Register(m *mail.Manager) {
 	mail.Register[EmailChangedMail](m, "email_changed")
 	mail.Register[AccountDeletedMail](m, "account_deleted")
 	mail.Register[InvitationPendingMail](m, "invitation_pending")
+	mail.Register[TwoFactorResetMail](m, "two_factor_reset")
+	mail.Register[TwoFactorResetCompletedMail](m, "two_factor_reset_completed")
 }
 
 /*

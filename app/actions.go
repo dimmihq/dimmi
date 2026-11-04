@@ -69,6 +69,9 @@ type Actions struct {
 	ListMembers             *members.ListMembers
 	ShowMember              *members.ShowMember
 	UpdateMember            *members.UpdateMember
+	StartTwoFactorReset     *members.StartTwoFactorReset
+	CompleteTwoFactorReset  *members.CompleteTwoFactorReset
+	ClearSignInLock         *members.ClearSignInLock
 	LeaveWorkspace          *members.LeaveWorkspace
 	TrashWorkspace          *workspaces.TrashWorkspace
 	DeleteWorkspace         *workspaces.DeleteWorkspace

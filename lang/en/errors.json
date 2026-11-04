@@ -53,5 +53,10 @@
   "invalid_avatar": "Choose a PNG, JPEG, WebP or GIF picture.",
   "avatar_too_large": "The picture must be 2 MB or smaller.",
   "sole_owner": "Hand over or delete the workspaces you alone own first.",
-  "confirm_email_mismatch": "Type your email address to confirm."
+  "confirm_email_mismatch": "Type your email address to confirm.",
+  "cannot_reset_self": "Use your own recovery codes to get back in.",
+  "member_inactive": "Only an active member can be helped.",
+  "two_factor_reset_blocked": "Ask them to use recovery codes or contact support.",
+  "invalid_two_factor_reset_token": "This reset link is invalid or has expired.",
+  "password_required": "Enter your password to turn two-factor authentication off."
 }

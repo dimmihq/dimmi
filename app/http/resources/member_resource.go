@@ -21,6 +21,8 @@ import (
 /*
 WorkspaceMember is one member of a workspace, with their account. Teams
 is present only when the request included the member's teams.
+SignInLocked says whether failed guesses locked the member's account,
+and is null for callers who may not lift the lock.
 */
 type WorkspaceMember struct {
 	ID            string         `json:"id"`
@@ -33,6 +35,7 @@ type WorkspaceMember struct {
 	Teams         *[]TeamSummary `json:"teams,omitempty"`
 	DeactivatedAt *time.Time     `json:"deactivated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
+	SignInLocked  *bool          `json:"sign_in_locked"`
 }
 
 /*

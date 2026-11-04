@@ -6,6 +6,8 @@
  * shell or dimmi.yaml: it runs in an empty directory of its own, where
  * no config file waits. Playwright starts it and stops it. E2E_DATABASE
  * and E2E_PORT let several checkouts run their suites side by side.
+ * Google sign-in points at a local provider started here on a free port,
+ * which the binary is allowed to reach and nothing else is.
  *
  * Build the binary first with `make build`; `make e2e` does both.
  */
@@ -13,6 +15,8 @@ import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
+import { startIdentityProvider } from "./support/identity-provider.ts";
 
 const binary = resolve("bin/dimmi-cloud");
 const database = process.env.E2E_DATABASE ?? "dimmi_e2e";
@@ -39,6 +43,8 @@ const home = mkdtempSync(join(tmpdir(), "dimmi-e2e-"));
  */
 const inboundSecret = "e2e-inbound-secret";
 
+const provider = await startIdentityProvider();
+
 const env = {
   PATH: process.env.PATH ?? "",
   HOME: process.env.HOME ?? "",
@@ -59,6 +65,10 @@ const env = {
   DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE: "true",
   DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS: "ses,test",
   DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET: inboundSecret,
+  DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID: provider.clientId,
+  DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET: provider.clientSecret,
+  DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER: provider.issuer,
+  DIMMI_HTTP_CLIENT__ALLOW_HOSTS: new URL(provider.issuer).host,
 };
 
 execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });
