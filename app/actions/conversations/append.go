@@ -61,16 +61,16 @@ func (w *Writer) Append(
 
 	substantive := m.Type == string(enums.MessageTypeMessage) && !m.Automatic
 
-	var travelled *ids.UUID
+	var via *ids.UUID
 	if m.Type == string(enums.MessageTypeMessage) {
-		travelled = &c.ChannelConnectionID
+		via = &c.ChannelConnectionID
 	}
 
 	msg, err := w.Q.CreateMessage(ctx, models.CreateMessageParams{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, Type: m.Type, AuthorType: w.Actor.Type,
 		AuthorID: w.authorID(), Body: &m.Body, BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID,
 		DedupeKey: m.DedupeKey, DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: metadata,
-		SentAt: m.SentAt, ChannelConnectionID: travelled, Now: w.Now,
+		SentAt: m.SentAt, ChannelConnectionID: via, Now: w.Now,
 	})
 	if err != nil {
 		return msg, c, fmt.Errorf("add %s: %w", m.Type, err)

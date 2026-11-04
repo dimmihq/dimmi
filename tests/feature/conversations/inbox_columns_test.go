@@ -64,8 +64,9 @@ func TestConversationInboxColumns(t *testing.T) {
 		assert.True(t, matches)
 
 		id := d.customer(t, "ann", "Rückerstattung", "Ich möchte eine Überweisung")
-		assert.Equal(t, []string{id}, listed(d.owner.GetJSON("/api/v1/conversations?filter[view]=all&q=ruckerstattung")))
-		assert.Equal(t, []string{id}, listed(d.owner.GetJSON("/api/v1/conversations?filter[view]=all&q=uberweisung")))
+		search := "/api/v1/conversations?filter[view]=all&q="
+		assert.Equal(t, []string{id}, listed(d.owner.GetJSON(search+"ruckerstattung")))
+		assert.Equal(t, []string{id}, listed(d.owner.GetJSON(search+"uberweisung")))
 	})
 
 	t.Run("a customer waits from their first unanswered message until someone answers", func(t *testing.T) {
@@ -142,14 +143,16 @@ func TestConversationInboxColumns(t *testing.T) {
 	t.Run("the migration's backfill finds who waits and what happened last", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		waiting, answered := conversationID(t, d, d.customer(t, "ann", "A", "a")), conversationID(t, d, d.customer(t, "bea", "B", "b"))
+		waiting := conversationID(t, d, d.customer(t, "ann", "A", "a"))
+		answered := conversationID(t, d, d.customer(t, "bea", "B", "b"))
 		closed := conversationID(t, d, d.customer(t, "cid", "C", "c"))
 		d.owner.PostJSON(
 			"/api/v1/conversations/"+models.PublicID(models.PrefixConversation, answered)+"/replies",
 			testkit.JSON{"body": "Done"},
 		).AssertCreated()
 		d.owner.PatchJSON(
-			"/api/v1/conversations/"+models.PublicID(models.PrefixConversation, closed), testkit.JSON{"status": "closed"},
+			"/api/v1/conversations/"+models.PublicID(models.PrefixConversation, closed),
+			testkit.JSON{"status": "closed"},
 		).AssertOK()
 
 		db := owned(t, d)
@@ -252,8 +255,7 @@ func TestConversationListPlans(t *testing.T) {
 	spam.Statuses, spam.Spam = nil, true
 	urgent := base
 	urgent.Sort, urgent.PriorityMin = querybuilder.SortPriority, new(int16(1))
-	deleted := base
-	deleted.Statuses, deleted.Deleted = nil, true
+	deleted := querybuilder.Conversations{WorkspaceID: workspace, MemberID: me, Deleted: true, Limit: 25}
 
 	for name, tc := range map[string]struct {
 		list  querybuilder.Conversations
@@ -266,6 +268,7 @@ func TestConversationListPlans(t *testing.T) {
 		"snooze ends":            {snoozed, "conversations_snooze_idx"},
 		"spam":                   {spam, "conversations_spam_idx"},
 		"priority":               {urgent, "conversations_priority_idx"},
+		"deleted":                {deleted, "conversations_deleted_idx"},
 	} {
 		t.Run(fmt.Sprintf("%s walks its index", name), func(t *testing.T) {
 			t.Parallel()

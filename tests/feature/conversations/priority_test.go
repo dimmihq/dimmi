@@ -2,7 +2,6 @@ package conversations_test
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 
@@ -42,8 +41,8 @@ func TestConversationPriority(t *testing.T) {
 		d := open(t)
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Refund", "Please")
 
-		d.owner.PatchJSON(path, testkit.JSON{"priority": "extreme"}).AssertStatus(http.StatusUnprocessableEntity)
-		d.owner.PatchJSON(path, testkit.JSON{"priority": true}).AssertStatus(http.StatusUnprocessableEntity)
+		d.owner.PatchJSON(path, testkit.JSON{"priority": "extreme"}).AssertStatus(422)
+		d.owner.PatchJSON(path, testkit.JSON{"priority": true}).AssertStatus(422)
 		d.owner.GetJSON(path).AssertOK().AssertJSONPath("data.priority", "none")
 	})
 
@@ -56,7 +55,7 @@ func TestConversationPriority(t *testing.T) {
 		d.owner.PatchJSON("/api/v1/conversations/"+low, testkit.JSON{"priority": "low"}).AssertOK()
 
 		assert.ElementsMatch(t, []string{high, urgent}, listed(d.owner.GetJSON(all+"&filter[priority]=high,urgent")))
-		d.owner.GetJSON(all + "&filter[priority]=true").AssertStatus(http.StatusBadRequest)
+		d.owner.GetJSON(all + "&filter[priority]=true").AssertStatus(400)
 	})
 
 	t.Run("searches by any level, one level and at least a level", func(t *testing.T) {

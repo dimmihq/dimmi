@@ -95,8 +95,11 @@ func (a *ListConversations) Handle(ctx context.Context, in ListConversationsInpu
 			rows = rows[:in.Limit]
 		}
 
-		page, err = toPage(ctx, models.New(tx), in.Membership.Member.ID, rows, in.Sort)
+		page, err = toPage(ctx, models.New(tx), in.Membership.Member.ID, rows)
 		page.More = more
+		if len(rows) > 0 {
+			page.Last = new(positionOf(rows[len(rows)-1], in.Sort))
+		}
 
 		return err
 	})
@@ -189,7 +192,7 @@ func positionOf(c models.Conversation, s querybuilder.Sort) querybuilder.Keyset 
 toPage loads the rows of a page.
 */
 func toPage(
-	ctx context.Context, q *models.Queries, memberID ids.UUID, rows []models.Conversation, s querybuilder.Sort,
+	ctx context.Context, q *models.Queries, memberID ids.UUID, rows []models.Conversation,
 ) (ConversationPage, error) {
 	var page ConversationPage
 
@@ -199,9 +202,6 @@ func toPage(
 	}
 
 	page.Conversations = loaded
-	if len(rows) > 0 {
-		page.Last = new(positionOf(rows[len(rows)-1], s))
-	}
 
 	return page, nil
 }

@@ -93,6 +93,7 @@ func (s Sort) keys() []sortKey {
 		return []sortKey{{columnPriority, true, false}, {columnWaiting, false, true}, {columnID, false, false}}
 	case SortSnoozeEnds:
 		return []sortKey{{columnSnoozeEnd, false, true}, {columnID, false, false}}
+	case SortLatest:
 	}
 
 	return []sortKey{{columnActivity, true, true}, {columnID, true, false}}
@@ -220,7 +221,7 @@ func (b *builder) steps(keys []sortKey, after Keyset) string {
 	value := after.value(key.column)
 
 	if len(keys) == 1 {
-		return key.column + comparison(key.desc) + b.add(value)
+		return key.column + key.further() + b.add(value)
 	}
 
 	rest := b.steps(keys[1:], after)
@@ -234,7 +235,7 @@ func (b *builder) steps(keys []sortKey, after Keyset) string {
 	}
 
 	placeholder := b.add(value)
-	beyond := key.column + comparison(key.desc) + placeholder
+	beyond := key.column + key.further() + placeholder
 
 	if key.nullable && !key.desc {
 		beyond += " OR " + key.column + " IS NULL"
@@ -244,10 +245,10 @@ func (b *builder) steps(keys []sortKey, after Keyset) string {
 }
 
 /*
-comparison returns the operator going further along a key.
+further returns the operator that moves along the key's order.
 */
-func comparison(desc bool) string {
-	if desc {
+func (k sortKey) further() string {
+	if k.desc {
 		return " < "
 	}
 

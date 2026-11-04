@@ -195,7 +195,7 @@ func (s searcher) conversations(ctx context.Context, sq searchquery.Query) ([]Hi
 		return nil, fmt.Errorf("search conversations: %w", err)
 	}
 
-	page, err := toPage(ctx, s.q, s.m.Member.ID, rows, querybuilder.SortLatest)
+	page, err := toPage(ctx, s.q, s.m.Member.ID, rows)
 	if err != nil || len(page.Conversations) == 0 {
 		return nil, err
 	}
