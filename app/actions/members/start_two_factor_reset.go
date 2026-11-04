@@ -114,7 +114,7 @@ func (a *StartTwoFactorReset) Handle(ctx context.Context, in StartTwoFactorReset
 		return TwoFactorReset{}, exceptions.ErrForbidden
 	}
 
-	target, err := findWithUser(ctx, models.New(a.DB), in.Membership.Workspace.ID, in.MemberID)
+	target, err := findWithUserIn(ctx, a.DB, in.Membership.Workspace.ID, in.MemberID)
 	if err != nil {
 		return TwoFactorReset{}, err
 	}
