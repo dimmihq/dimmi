@@ -188,9 +188,9 @@ func TestServeTLS(t *testing.T) {
 			assert.Empty(t, location, path)
 		}
 
-		code, location := plainGet(t, app.Addr(), "Staging.Example.com:8080", "/d/inbox?tab=open")
+		code, location := plainGet(t, app.Addr(), "Staging.Example.com:8080", "/d/orders?tab=open")
 		assert.Equal(t, http.StatusPermanentRedirect, code)
-		assert.Equal(t, "https://staging.example.com/d/inbox?tab=open", location)
+		assert.Equal(t, "https://staging.example.com/d/orders?tab=open", location)
 
 		code, location = plainGet(t, app.Addr(), "bad host!", "/")
 		assert.Equal(t, http.StatusBadRequest, code)

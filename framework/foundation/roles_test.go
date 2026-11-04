@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -134,40 +132,42 @@ func TestMaintenance(t *testing.T) {
 		state, err := second.Maintenance.State(t.Context())
 		require.NoError(t, err)
 		assert.Equal(t, "upgrading", state.Message)
-		assert.FileExists(t, filepath.Join(second.Config.App.DataDir, "framework", "down"))
 
 		require.NoError(t, first.Maintenance.Up(t.Context()))
 
 		require.Eventually(t, func() bool {
 			return mustGet(t, "http://"+second.Addr()+"/anything").Status == http.StatusNotFound
 		}, 5*time.Second, 20*time.Millisecond)
-		assert.NoFileExists(t, filepath.Join(second.Config.App.DataDir, "framework", "down"))
 	})
 
-	t.Run("stays down across a restart", func(t *testing.T) {
+	t.Run("stays down across a restart and for a replica on another disk", func(t *testing.T) {
 		t.Parallel()
 		env := environ(t, "APP_MIGRATIONS__AUTO=false")
 		before := newApp(t, options(env))
-		require.NoError(t, before.Maintenance.Down(t.Context(), ""))
+		require.NoError(t, before.Maintenance.Down(t.Context(), "moving"))
 		require.NoError(t, before.Shutdown(t.Context()))
 
-		after := newApp(t, options(env))
+		after := newApp(t, options(append(env, "APP_APP__DATA_DIR="+t.TempDir())))
 
-		active, err := after.Maintenance.Active(t.Context())
+		state, err := after.Maintenance.State(t.Context())
 		require.NoError(t, err)
-		assert.True(t, active)
+		assert.True(t, state.Enabled)
+		assert.Equal(t, "moving", state.Message)
+		assert.False(t, state.Since.IsZero())
 	})
 
-	t.Run("refuses a maintenance file it cannot read", func(t *testing.T) {
+	t.Run("comes back up for a replica started after", func(t *testing.T) {
 		t.Parallel()
-		dataDir := t.TempDir()
-		require.NoError(t, os.MkdirAll(filepath.Join(dataDir, "framework"), 0o750))
-		require.NoError(t, os.WriteFile(filepath.Join(dataDir, "framework", "down"), []byte("{"), 0o600))
+		env := environ(t, "APP_MIGRATIONS__AUTO=false")
+		first := newApp(t, options(env))
+		require.NoError(t, first.Maintenance.Down(t.Context(), ""))
+		require.NoError(t, first.Maintenance.Up(t.Context()))
 
-		_, err := foundation.New(t.Context(), options(environ(t,
-			"APP_APP__DATA_DIR="+dataDir, "APP_MIGRATIONS__AUTO=false")))
+		later := newApp(t, options(env))
 
-		require.ErrorContains(t, err, "decode maintenance file")
+		active, err := later.Maintenance.Active(t.Context())
+		require.NoError(t, err)
+		assert.False(t, active)
 	})
 }
 

@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"sync/atomic"
 
 	"github.com/dimmihq/dimmi/framework/broadcasting"
@@ -75,8 +74,7 @@ func (a *Application) bootValkeyServices(ctx context.Context) error {
 		return err
 	}
 
-	store, err := NewMaintenanceStore(log.NewContext(ctx, a.Log),
-		filepath.Join(a.Config.App.DataDir, "framework", "down"), a.PubSub, a.Clock)
+	store, err := NewMaintenanceStore(log.NewContext(ctx, a.Log), a.DB, a.PubSub, a.Clock)
 	if err != nil {
 		return err
 	}
