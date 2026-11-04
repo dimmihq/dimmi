@@ -160,9 +160,9 @@ func TestInboxDeliveryFailures(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		conv := d.customer(t, "ann", "Billing", "Hi")
-		widget, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "widget")
+		sms, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "sms")
 		require.NoError(t, err)
-		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET channel_connection_id = $1", widget.ID)
+		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET channel_connection_id = $1", sms.ID)
 		require.NoError(t, err)
 
 		d.owner.PostJSON("/api/v1/conversations/"+conv+"/replies", testkit.JSON{"body": "x"}).

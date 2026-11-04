@@ -3,9 +3,9 @@
 | Workspace Behavior
 |--------------------------------------------------------------------------
 |
-| Settings of a workspace, read from and written to its settings document
-| in one place, so the code that follows a setting and the endpoint that
-| changes it always agree on where it lives. Settings nest
+| Settings of a workspace, read from and written to its settings
+| document in one place, so the policy that enforces a setting and the
+| endpoint that changes it always agree on where it lives. Settings nest
 | by area, such as {"security": {"require_two_factor": true}}, and every
 | key a change does not touch is kept as it was.
 |
@@ -47,6 +47,32 @@ WithTwoFactorRequired returns the settings document with the
 requirement of a second factor set to on, keeping every other key.
 */
 func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, error) {
+	return WithSetting(settings, "security", "require_two_factor", on)
+}
+
+/*
+ShowsViewersOnList reports whether the inbox list shows who views each
+conversation. It does unless the workspace turned it off.
+*/
+func (w Workspace) ShowsViewersOnList() bool {
+	var settings struct {
+		Inbox struct {
+			ShowViewersOnList *bool `json:"show_viewers_on_list"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return true
+	}
+
+	return settings.Inbox.ShowViewersOnList == nil || *settings.Inbox.ShowViewersOnList
+}
+
+/*
+WithSetting returns the settings document with the key of the area set
+to the value, keeping every other key.
+*/
+func WithSetting(settings json.RawMessage, area, key string, value any) (json.RawMessage, error) {
 	values := map[string]json.RawMessage{}
 	if len(settings) > 0 {
 		if err := json.Unmarshal(settings, &values); err != nil {
@@ -54,21 +80,26 @@ func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, 
 		}
 	}
 
-	security := map[string]json.RawMessage{}
-	if raw, ok := values["security"]; ok {
-		if err := json.Unmarshal(raw, &security); err != nil {
-			return nil, fmt.Errorf("read workspace security settings: %w", err)
+	section := map[string]json.RawMessage{}
+	if raw, ok := values[area]; ok {
+		if err := json.Unmarshal(raw, &section); err != nil {
+			return nil, fmt.Errorf("read workspace %s settings: %w", area, err)
 		}
 	}
 
-	security["require_two_factor"] = json.RawMessage(fmt.Sprint(on))
-
-	raw, err := json.Marshal(security)
+	encoded, err := json.Marshal(value)
 	if err != nil {
-		return nil, fmt.Errorf("write workspace security settings: %w", err)
+		return nil, fmt.Errorf("write workspace setting %s: %w", key, err)
 	}
 
-	values["security"] = raw
+	section[key] = encoded
+
+	raw, err := json.Marshal(section)
+	if err != nil {
+		return nil, fmt.Errorf("write workspace %s settings: %w", area, err)
+	}
+
+	values[area] = raw
 
 	return json.Marshal(values)
 }
@@ -132,4 +163,36 @@ func WithCustomerFacingName(settings json.RawMessage, name *string) (json.RawMes
 	values["customer_facing_name"] = raw
 
 	return json.Marshal(values)
+}
+
+/*
+SnoozeWakeDefaults returns whether each teammate move wakes a snoozed
+conversation when the workspace has not chosen: a reply does, a note by
+someone other than the holder and handing it on do not.
+*/
+func SnoozeWakeDefaults() map[string]bool {
+	return map[string]bool{"member_reply": true, "others_note": false, "assigned": false}
+}
+
+/*
+WakesSnoozeOn reports whether the move, named by its wake reason, wakes
+a snoozed conversation in the workspace. Settings live under snooze as
+wake_on_reply, wake_on_others_note and wake_on_assignment.
+*/
+func (w Workspace) WakesSnoozeOn(reason string) bool {
+	var settings struct {
+		Snooze map[string]bool `json:"snooze"`
+	}
+
+	keys := map[string]string{
+		"member_reply": "wake_on_reply", "others_note": "wake_on_others_note", "assigned": "wake_on_assignment",
+	}
+
+	if len(w.Settings) > 0 && json.Unmarshal(w.Settings, &settings) == nil {
+		if on, ok := settings.Snooze[keys[reason]]; ok {
+			return on
+		}
+	}
+
+	return SnoozeWakeDefaults()[reason]
 }

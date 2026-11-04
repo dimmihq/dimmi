@@ -11,13 +11,14 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/channel/api"
 	"github.com/dimmihq/dimmi/app/drivers/channel/fake"
+	"github.com/dimmihq/dimmi/app/integrations/widget"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 func TestChannelDrivers(t *testing.T) {
 	t.Parallel()
 
-	for _, driver := range []contracts.Channel{api.Driver{}, &fake.Driver{}} {
+	for _, driver := range []contracts.Channel{api.Driver{}, &fake.Driver{}, widget.Channel{}} {
 		t.Run("keeps the contract: "+driver.Type(), func(t *testing.T) {
 			t.Parallel()
 			conn := models.ChannelConnection{Type: driver.Type()}

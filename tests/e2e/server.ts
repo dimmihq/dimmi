@@ -18,7 +18,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-
+import { serveZone } from "./support/dns.ts";
 import { startIdentityProvider } from "./support/identity-provider.ts";
 
 const binary = resolve("bin/dimmi-cloud");
@@ -43,6 +43,12 @@ psql(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
 psql(`CREATE DATABASE ${database}`);
 
 const home = mkdtempSync(join(tmpdir(), "dimmi-e2e-"));
+
+/*
+ * resolver answers the server's domain checks from the records tests
+ * publish through support/dns.ts.
+ */
+const resolver = await serveZone(port);
 
 /*
  * inboundSecret opens the test inbound source, through which the tests
@@ -77,6 +83,7 @@ const env = {
   DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET: provider.clientSecret,
   DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER: provider.issuer,
   DIMMI_HTTP_CLIENT__ALLOW_HOSTS: new URL(provider.issuer).host,
+  DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS: resolver,
 };
 
 execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });

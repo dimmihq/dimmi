@@ -39,7 +39,9 @@ func TextLimits() map[string]int {
 		limits[key] = 80
 	}
 
-	for _, key := range []string{"home", "messages", "changelog", "help", "feedback", "action_confirm", "action_cancel"} {
+	for _, key := range []string{
+		"home", "messages", "changelog", "help", "feedback", "action_confirm", "action_cancel",
+	} {
 		limits[key] = 24
 	}
 

@@ -49,7 +49,7 @@ func TestWidgetConfig(t *testing.T) {
 		res.AssertJSONPath("data.branding.show", false)
 		res.AssertJSONMissing("data.surface")
 		assert.NotContains(t, string(res.Body), tc.Owner.Email)
-		res.AssertHeader("Vary", "Origin")
+		assert.Contains(t, res.Header.Values("Vary"), "Origin")
 	})
 
 	t.Run("is cacheable with an entity tag that a revalidation matches", func(t *testing.T) {
@@ -246,7 +246,8 @@ func TestWidgetOrigin(t *testing.T) {
 		tc.Client().WithHeader("Origin", "https://acme.com").Send(fhttp.MethodOptions, "/widget/v1/apps/nope/config", nil).
 			AssertNoContent()
 		tc.Client().WithHeader("Origin", "https://acme.com").
-			Send(fhttp.MethodOptions, "/widget/v1/apps/"+models.PublicID(models.PrefixWidget, ids.New())+"/config", nil).
+			Send(fhttp.MethodOptions,
+				"/widget/v1/apps/"+models.PublicID(models.PrefixWidget, ids.New())+"/config", nil).
 			AssertNoContent()
 	})
 }
@@ -328,7 +329,8 @@ func TestWidgetAvailability(t *testing.T) {
 			return tc.Client().GetJSON(path(t, tc)).AssertOK().String("data.reply_time") == "minutes"
 		}, 5*time.Second, 50*time.Millisecond)
 
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE workspace_members SET availability = 'away' WHERE workspace_id = $1",
+		_, err := tc.App.DB.Exec(t.Context(),
+			"UPDATE workspace_members SET availability = 'away' WHERE workspace_id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 
@@ -346,7 +348,8 @@ func TestWidgetAvailability(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			_, err = tc.App.DB.Exec(t.Context(), "UPDATE users SET avatar_path = 'avatars/x.png' WHERE id = $1", user.ID)
+			_, err = tc.App.DB.Exec(t.Context(),
+				"UPDATE users SET avatar_path = 'avatars/x.png' WHERE id = $1", user.ID)
 			require.NoError(t, err)
 		}
 

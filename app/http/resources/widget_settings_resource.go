@@ -75,13 +75,16 @@ func NewWidgetSettings(row widget.SettingsRow, base string) WidgetSettings {
 
 	return WidgetSettings{
 		ID: public, Object: "widget_settings", Name: w.Name, Enabled: w.Enabled,
-		Inbox:               Named{ID: models.PublicID(models.PrefixInbox, row.Inbox.ID), Object: "inbox", Name: row.Inbox.Name},
+		Inbox: Named{
+			ID: models.PublicID(models.PrefixInbox, row.Inbox.ID), Object: "inbox", Name: row.Inbox.Name,
+		},
 		ChannelConnectionID: models.PublicID(models.PrefixChannelConnection, w.ChannelConnectionID),
 		Appearance:          row.Appearance, Texts: row.Texts, Locale: w.Locale, ReplyTime: w.ReplyTime,
 		ShowTeamAvatars: w.ShowTeamAvatars, ShowAvailability: w.ShowAvailability, AllowedOrigins: w.AllowedOrigins,
 		AllowAnonymous: w.AllowAnonymous, CollectEmail: w.CollectEmail,
 		RequireEmailWhenOffline: w.RequireEmailWhenOffline, AttachmentsEnabled: w.AttachmentsEnabled,
-		MaxAttachmentMB: w.MaxAttachmentMb, NativeAppsEnabled: w.NativeAppsEnabled, HelpCenterID: helpCenterID(w.HelpCenterID),
+		MaxAttachmentMB: w.MaxAttachmentMb, NativeAppsEnabled: w.NativeAppsEnabled,
+		HelpCenterID:   helpCenterID(w.HelpCenterID),
 		HelpTabEnabled: w.HelpTabEnabled, ChangelogTabEnabled: w.ChangelogTabEnabled, IntercomShim: w.IntercomShim,
 		ShowBranding: w.ShowBranding, Branding: row.Branding, ConfigVersion: w.ConfigVersion, LastBootAt: w.LastBootAt,
 		LastBootOrigin: w.LastBootOrigin, CreatedAt: w.CreatedAt, UpdatedAt: w.UpdatedAt,

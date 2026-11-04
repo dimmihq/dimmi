@@ -15,10 +15,11 @@ package middleware
 
 import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/support/widgetinstall"
+	"github.com/dimmihq/dimmi/app/support/widgetorigin"
 )
 
 /*
@@ -29,7 +30,7 @@ type InstallRecorder interface {
 		Record notes one request of a site, allowed or not. A blank origin
 		is a client without one.
 	*/
-	Record(workspaceID, widgetID ids.UUID, origin string, allowed bool)
+	Record(v widgetinstall.Visit)
 }
 
 /*
@@ -48,11 +49,13 @@ func VerifyWidgetOrigin(install string, tracker InstallRecorder, errs fhttp.Erro
 			}
 
 			asking := r.Header.Get("Origin")
-			allowed := widget.OriginAllowed(
+			allowed := widgetorigin.OriginAllowed(
 				resolved.Widget.AllowedOrigins, resolved.Widget.NativeAppsEnabled, asking, install,
 			)
 
-			tracker.Record(resolved.Workspace.ID, resolved.Widget.ID, asking, allowed)
+			tracker.Record(widgetinstall.Visit{
+				WorkspaceID: resolved.Workspace.ID, WidgetID: resolved.Widget.ID, Origin: asking, Allowed: allowed,
+			})
 
 			if err := refusal(resolved, allowed); err != nil {
 				errs.Render(w, r, err)

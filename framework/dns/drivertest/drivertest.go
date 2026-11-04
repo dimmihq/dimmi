@@ -43,6 +43,7 @@ func Zone() map[string]dns.Records {
 			TXT:   []string{"v=spf1 -all", "token=" + strings.Repeat("a", 300)},
 			MX:    []dns.MX{{Host: "backup.example.test", Pref: 20}, {Host: "mail.example.test", Pref: 10}},
 			Addrs: []netip.Addr{netip.MustParseAddr("192.0.2.1"), netip.MustParseAddr("2001:db8::1")},
+			NS:    []string{"ns1.example.test", "ns2.example.test"},
 		},
 		"www.example.test":  {CNAME: "example.test"},
 		"text.example.test": {TXT: []string{"only text"}},
@@ -79,6 +80,15 @@ func runRecords(t *testing.T, r dns.Resolver) {
 
 		require.NoError(t, err)
 		assert.Equal(t, []dns.MX{{Host: "mail.example.test", Pref: 10}, {Host: "backup.example.test", Pref: 20}}, got)
+	})
+
+	t.Run("returns the name servers", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := r.NS(t.Context(), "example.test")
+
+		require.NoError(t, err)
+		assert.ElementsMatch(t, Zone()["example.test"].NS, got)
 	})
 
 	t.Run("returns both address families", func(t *testing.T) {

@@ -2,6 +2,7 @@ package widget_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -89,7 +90,7 @@ func TestWidgetSettingsCreate(t *testing.T) {
 		res := owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{
 			"name": "Docs", "inbox_id": models.PublicID(models.PrefixInbox, inbox.Inbox.ID),
 			"appearance": testkit.JSON{"primary_color": "#5B5BD6"},
-		}).AssertOK()
+		}).AssertCreated()
 
 		res.AssertJSONPath("data.name", "Docs")
 		res.AssertJSONPath("data.inbox.name", "Sales")
@@ -104,13 +105,14 @@ func TestWidgetSettingsCreate(t *testing.T) {
 		seen := map[string]bool{appID(t, tc): true}
 
 		for range 9 {
-			res := owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).AssertOK()
+			res := owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).AssertCreated()
 			seen[res.String("data.id")] = true
 		}
 
 		assert.Len(t, seen, 10)
 
-		refused := owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).AssertStatus(fhttp.StatusUnprocessableEntity)
+		refused := owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).
+			AssertStatus(fhttp.StatusUnprocessableEntity)
 		refused.AssertJSONPath("code", "entitlement_limit_reached")
 		refused.AssertJSONPath("key", entitlements.KeyWidgetMaxPerWorkspace)
 		refused.AssertJSONPath("limit", float64(10))
@@ -125,7 +127,7 @@ func TestWidgetSettingsCreate(t *testing.T) {
 		}}
 		tc := tests.New(t, tests.Before(func(a *app.App) { a.Entitlements = driver }))
 
-		owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).AssertOK()
+		owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).AssertCreated()
 		owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{}).AssertStatus(fhttp.StatusUnprocessableEntity)
 
 		driver.Catalog[entitlements.KeyWidgetMaxPerWorkspace] = 1
@@ -150,7 +152,7 @@ func TestWidgetSettingsCreate(t *testing.T) {
 		}
 
 		statuses := []int{<-done, <-done}
-		assert.ElementsMatch(t, []int{fhttp.StatusOK, fhttp.StatusUnprocessableEntity}, statuses)
+		assert.ElementsMatch(t, []int{fhttp.StatusCreated, fhttp.StatusUnprocessableEntity}, statuses)
 	})
 
 	t.Run("replays a post with the same idempotency key", func(t *testing.T) {
@@ -158,8 +160,8 @@ func TestWidgetSettingsCreate(t *testing.T) {
 		tc := tests.New(t)
 		client := owner(tc).WithHeader("Idempotency-Key", "widget-one")
 
-		first := client.PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "One"}).AssertOK()
-		second := client.PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "One"}).AssertOK()
+		first := client.PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "One"}).AssertCreated()
+		second := client.PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "One"}).AssertCreated()
 
 		assert.Equal(t, first.String("data.id"), second.String("data.id"))
 		assert.Len(t, listWidgets(t, tc), 2)
@@ -234,7 +236,8 @@ func TestWidgetSettingsPermissions(t *testing.T) {
 		tc := tests.New(t)
 		path := settingsPath(t, tc)
 
-		tc.ActingAsToken(tc.Workspace.Owner, "settings:read").PatchJSON(path, testkit.JSON{"name": "A"}).AssertForbidden()
+		tc.ActingAsToken(tc.Workspace.Owner, "settings:read").PatchJSON(path, testkit.JSON{"name": "A"}).
+			AssertForbidden()
 		tc.ActingAsToken(tc.Workspace.Owner, "settings:write").PatchJSON(path, testkit.JSON{"name": "A"}).AssertOK()
 	})
 
@@ -267,7 +270,9 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		res.AssertJSONPath("data.config_version", float64(before+1))
 		res.AssertJSONPath("data.appearance.theme", "auto")
 
-		res = patch(t, tc, testkit.JSON{"appearance": testkit.JSON{"position": nil, "launcher": testkit.JSON{"style": "tab"}}})
+		res = patch(t, tc, testkit.JSON{"appearance": testkit.JSON{
+			"position": nil, "launcher": testkit.JSON{"style": "tab"},
+		}})
 		res.AssertJSONPath("data.appearance.primary_color", "#5B5BD6")
 		res.AssertJSONPath("data.appearance.position", "right")
 		res.AssertJSONPath("data.appearance.launcher.style", "tab")
@@ -288,14 +293,20 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		body  testkit.JSON
 		field string
 	}{
-		"colour":        {testkit.JSON{"appearance": testkit.JSON{"primary_color": "red"}}, "appearance.primary_color"},
-		"theme":         {testkit.JSON{"appearance": testkit.JSON{"theme": "neon"}}, "appearance.theme"},
-		"unknown key":   {testkit.JSON{"appearance": testkit.JSON{"nope": 1}}, "appearance.nope"},
-		"padding":       {testkit.JSON{"appearance": testkit.JSON{"padding_x": 500}}, "appearance.padding_x"},
-		"launcher":      {testkit.JSON{"appearance": testkit.JSON{"launcher": testkit.JSON{"style": "x"}}}, "appearance.launcher.style"},
-		"background":    {testkit.JSON{"appearance": testkit.JSON{"background": testkit.JSON{"type": "x"}}}, "appearance.background.type"},
+		"color":       {testkit.JSON{"appearance": testkit.JSON{"primary_color": "red"}}, "appearance.primary_color"},
+		"theme":       {testkit.JSON{"appearance": testkit.JSON{"theme": "neon"}}, "appearance.theme"},
+		"unknown key": {testkit.JSON{"appearance": testkit.JSON{"nope": 1}}, "appearance.nope"},
+		"padding":     {testkit.JSON{"appearance": testkit.JSON{"padding_x": 500}}, "appearance.padding_x"},
+		"launcher": {
+			testkit.JSON{"appearance": testkit.JSON{"launcher": testkit.JSON{"style": "x"}}},
+			"appearance.launcher.style",
+		},
+		"background": {
+			testkit.JSON{"appearance": testkit.JSON{"background": testkit.JSON{"type": "x"}}},
+			"appearance.background.type",
+		},
 		"text key":      {testkit.JSON{"texts": testkit.JSON{"nope": "x"}}, "texts.nope"},
-		"long text":     {testkit.JSON{"texts": testkit.JSON{"greeting_intro": string(make([]byte, 61))}}, ""},
+		"long text":     {testkit.JSON{"texts": testkit.JSON{"greeting_intro": strings.Repeat("a", 61)}}, ""},
 		"empty name":    {testkit.JSON{"name": " "}, "name"},
 		"reply time":    {testkit.JSON{"reply_time": "soon"}, "reply_time"},
 		"collect email": {testkit.JSON{"collect_email": "x"}, "collect_email"},
@@ -345,7 +356,8 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		owner(tc).Delete(settingsPath(t, tc)).AssertNoContent()
 
 		tc.Table("audit_logs").AssertCount(1, testkit.Row{"event": "widget.deleted"})
-		tc.Table("channel_connections").AssertCount(1, testkit.Row{"id": widget.ChannelConnectionID, "status": "disconnected"})
+		tc.Table("channel_connections").
+			AssertCount(1, testkit.Row{"id": widget.ChannelConnectionID, "status": "disconnected"})
 		tc.Client().GetJSON("/widget/v1/apps/"+models.PublicID(models.PrefixWidget, widget.ID)+"/config").
 			AssertNotFound().AssertJSONPath("code", "app_not_found")
 	})

@@ -13,6 +13,7 @@
 package http
 
 import (
+	"io"
 	"mime/multipart"
 	"net/http"
 )
@@ -110,3 +111,11 @@ const (
 	StatusInternalServerError   = http.StatusInternalServerError
 	StatusServiceUnavailable    = http.StatusServiceUnavailable
 )
+
+/*
+MaxBytesReader limits how much of a request body a handler reads, answering
+an error once the limit is passed.
+*/
+func MaxBytesReader(w ResponseWriter, body io.ReadCloser, limit int64) io.ReadCloser {
+	return http.MaxBytesReader(w, body, limit)
+}

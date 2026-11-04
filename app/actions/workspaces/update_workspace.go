@@ -73,6 +73,7 @@ type UpdateWorkspaceInput struct {
 	Locale           *string
 	TestMode         *bool
 	RequireTwoFactor *bool
+	ShowViewers      *bool
 
 	CustomerFacingName      *string
 	ClearCustomerFacingName bool
@@ -234,8 +235,9 @@ func (a *UpdateWorkspace) changes(
 
 /*
 settingsChange applies to params the changes kept in the settings
-document, the requirement of a second factor and the name customers
-see, and returns the names of those that changed.
+document: the requirement of a second factor, whether inbox lists show
+viewers, and the name customers see, and returns the names of those
+that changed.
 */
 func settingsChange(
 	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput,
@@ -250,6 +252,16 @@ func settingsChange(
 
 		params.Settings = settings
 		changes = append(changes, fieldRequireTwoFactor)
+	}
+
+	if in.ShowViewers != nil && *in.ShowViewers != w.ShowsViewersOnList() {
+		settings, err := models.WithSetting(params.Settings, "inbox", "show_viewers_on_list", *in.ShowViewers)
+		if err != nil {
+			return nil, err
+		}
+
+		params.Settings = settings
+		changes = append(changes, "show_viewers_on_list")
 	}
 
 	settings, changed, err := customerFacingName(params.Settings, w, in)

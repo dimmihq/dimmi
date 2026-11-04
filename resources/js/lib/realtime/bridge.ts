@@ -7,7 +7,8 @@
  * copy share an id. The screen that made a change already shows it, so
  * a broadcast carrying one of its own client mutation ids is dropped.
  * A broadcast too large to send carries only a reference, and the
- * screens that show it refetch.
+ * screens that show it refetch. Who views a conversation patches the
+ * rows that show it and nothing else.
  */
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
@@ -67,6 +68,18 @@ function isObjectRecord(value: unknown): value is ObjectRecord {
 }
 
 /*
+ * isViewers reports whether the data says who views a conversation.
+ */
+function isViewers(value: unknown): value is Identified & { viewers: unknown[] } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Identified).id === "string" &&
+    Array.isArray((value as { viewers?: unknown }).viewers)
+  );
+}
+
+/*
  * isReference reports whether the broadcast carries only a reference to
  * a record too large to send.
  */
@@ -94,7 +107,13 @@ export class Bridge {
 
     const [namespace] = channel.split(":");
 
-    if (envelope.event === "workspace.updated") {
+    if (envelope.event === "conversation.viewers_changed" && isViewers(envelope.data)) {
+      this.patchLists(workspace, envelope.data, false);
+    } else if (envelope.event === "inbox_preferences.updated") {
+      this.refetch(realtimeKeys.preferences(workspace), realtimeKeys.counts(workspace));
+    } else if (envelope.event.startsWith("conversation_view.")) {
+      this.refetch(realtimeKeys.views(workspace), realtimeKeys.counts(workspace));
+    } else if (envelope.event === "workspace.updated") {
       void this.client.invalidateQueries({ queryKey: realtimeKeys.workspace(workspace), exact: true });
       this.refetch(realtimeKeys.me());
     } else if (envelope.event.startsWith("member.")) {
@@ -178,12 +197,12 @@ export class Bridge {
    * refetches the lists that do not, since the change may move the
    * conversation into them.
    */
-  private patchLists(workspace: string, record: ObjectRecord) {
+  private patchLists(workspace: string, record: Identified, refetchMissing = true) {
     for (const [key, cached] of this.client.getQueriesData({ queryKey: realtimeKeys.conversations(workspace) })) {
       const patched = upsertRecord(cached, record);
       if (patched.found) {
         this.client.setQueryData(key, patched.data);
-      } else {
+      } else if (refetchMissing) {
         this.refetch(key);
       }
     }

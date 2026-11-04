@@ -3,7 +3,7 @@
 | Ink
 |--------------------------------------------------------------------------
 |
-| Text on a customer's brand colour turns dark or light by the colour's
+| Text on a customer's brand color turns dark or light by the color's
 | lightness, so a white header never hides its own title. The threshold
 | matches the widget's own, so server and browser agree.
 |
@@ -19,7 +19,7 @@ inkLightSurface is the luminance above which a surface takes dark text.
 const inkLightSurface = 0.62
 
 /*
-inkOn returns the ink that reads on the colour: dark on a light surface,
+inkOn returns the ink that reads on the color: dark on a light surface,
 light on a dark one.
 */
 func inkOn(hex string) string {
@@ -31,7 +31,7 @@ func inkOn(hex string) string {
 }
 
 /*
-luminance returns the colour's relative luminance from 0 to 1.
+luminance returns the color's relative luminance from 0 to 1.
 */
 func luminance(hex string) float64 {
 	if len(hex) != 7 {

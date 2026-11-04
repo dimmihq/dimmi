@@ -15,6 +15,7 @@
 package widget
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -31,6 +32,7 @@ import (
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/widgetorigin"
 )
 
 /*
@@ -236,7 +238,7 @@ func (a *UpdateWidgetSettings) moveInbox(
 /*
 set copies a sent value over the current one.
 */
-func set[T any](current *T, sent *T) {
+func set[T any](current, sent *T) {
 	if sent != nil {
 		*current = *sent
 	}
@@ -364,7 +366,7 @@ func applyOrigins(p *models.SaveWidgetSettingsParams, c SettingsChange) error {
 		return nil
 	}
 
-	origins, err := NormalizeOrigins(c.AllowedOrigins)
+	origins, err := widgetorigin.NormalizeOrigins(c.AllowedOrigins)
 	if err != nil {
 		return err
 	}
@@ -501,5 +503,5 @@ func jsonEqual(a, b json.RawMessage) bool {
 	first, _ := json.Marshal(left)
 	second, _ := json.Marshal(right)
 
-	return string(first) == string(second)
+	return bytes.Equal(first, second)
 }

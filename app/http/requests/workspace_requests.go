@@ -33,6 +33,7 @@ type UpdateCurrentWorkspaceRequest struct {
 		Locale           *string `json:"locale,omitempty"             validate:"omitempty,locale"`
 		TestMode         *bool   `json:"test_mode,omitempty"`
 		RequireTwoFactor *bool   `json:"require_two_factor,omitempty"`
+		ShowViewers      *bool   `json:"show_viewers_on_list,omitempty"`
 
 		CustomerFacingName *string `json:"customer_facing_name,omitempty" validate:"omitempty,max=80"`
 	}

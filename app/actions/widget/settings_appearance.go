@@ -16,8 +16,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"regexp"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/fault"
 
@@ -46,7 +47,7 @@ type Launcher struct {
 }
 
 /*
-Gradient is a background's two colours and its angle in degrees.
+Gradient is a background's two colors and its angle in degrees.
 */
 type Gradient struct {
 	From  string `json:"from"`
@@ -55,7 +56,7 @@ type Gradient struct {
 }
 
 /*
-Background is what fills the home hero and the header: a solid colour, a
+Background is what fills the home hero and the header: a solid color, a
 gradient or an image, softened into the page below it when Fade is set.
 */
 type Background struct {
@@ -111,17 +112,24 @@ func ResolveAppearance(stored json.RawMessage) (Appearance, error) {
 }
 
 /*
-hexColor returns the pattern of a colour.
+isHexColor reports whether the text is a color written #RRGGBB.
 */
-func hexColor() *regexp.Regexp {
-	return regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
+func isHexColor(text string) bool {
+	digits, ok := strings.CutPrefix(text, "#")
+	if !ok || len(digits) != 6 {
+		return false
+	}
+
+	_, err := strconv.ParseUint(digits, 16, 32)
+
+	return err == nil
 }
 
 /*
 mergeObject applies a change to a stored object key by key: null removes a
 key, and the keys named in nested merge into their own objects.
 */
-func mergeObject(stored map[string]any, change map[string]any, nested ...string) map[string]any {
+func mergeObject(stored, change map[string]any, nested ...string) map[string]any {
 	out := maps.Clone(stored)
 	if out == nil {
 		out = map[string]any{}
@@ -176,9 +184,9 @@ func mergeAppearance(stored json.RawMessage, change map[string]any) (json.RawMes
 /*
 checkAppearance refuses unknown keys and values out of range.
 */
-func checkAppearance(a map[string]any) *checkFailure {
+func checkAppearance(a map[string]any) *fault.Error {
 	checks := map[string]func(any) string{
-		"primary_color": colourCheck(false), "header_color": colourCheck(true), "button_color": colourCheck(true),
+		"primary_color": requiredColor, "header_color": optionalColor, "button_color": optionalColor,
 		"theme": oneOf("light", "dark", "auto"), "position": oneOf("right", "left"),
 		"padding_x": between(0, maxPadding), "padding_y": between(0, maxPadding), "font": oneOf("system", "inherit"),
 		"sound": isBool, "logo_asset_id": isAssetID,
@@ -209,20 +217,14 @@ func checkAppearance(a map[string]any) *checkFailure {
 	return nil
 }
 
-/*
-checkFailure is an error from checking, kept as a pointer so a nil one means
-the check passed.
-*/
-type checkFailure = fault.Error
-
-func failField(field, message string) *checkFailure {
+func failField(field, message string) *fault.Error {
 	return exceptions.WidgetField(field, message)
 }
 
 /*
 checkLauncher checks the launcher's keys.
 */
-func checkLauncher(value any) *checkFailure {
+func checkLauncher(value any) *fault.Error {
 	launcher, ok := value.(map[string]any)
 	if !ok {
 		return failField("appearance.launcher", "Use an object.")
@@ -239,7 +241,7 @@ func checkLauncher(value any) *checkFailure {
 /*
 checkBackground checks the background's keys.
 */
-func checkBackground(value any) *checkFailure {
+func checkBackground(value any) *fault.Error {
 	background, ok := value.(map[string]any)
 	if !ok {
 		return failField("appearance.background", "Use an object.")
@@ -256,7 +258,7 @@ func checkBackground(value any) *checkFailure {
 /*
 checkKeys runs the checks on an object, refusing keys they do not list.
 */
-func checkKeys(prefix string, object map[string]any, checks map[string]func(any) string) *checkFailure {
+func checkKeys(prefix string, object map[string]any, checks map[string]func(any) string) *fault.Error {
 	for key, value := range object {
 		check, known := checks[key]
 		if !known {
@@ -272,7 +274,7 @@ func checkKeys(prefix string, object map[string]any, checks map[string]func(any)
 }
 
 /*
-gradientCheck checks a gradient's colours and angle.
+gradientCheck checks a gradient's colors and angle.
 */
 func gradientCheck(value any) string {
 	gradient, ok := value.(map[string]any)
@@ -281,7 +283,7 @@ func gradientCheck(value any) string {
 	}
 
 	for _, key := range []string{"from", "to"} {
-		if problem := colourCheck(false)(gradient[key]); problem != "" {
+		if problem := requiredColor(gradient[key]); problem != "" {
 			return problem
 		}
 	}
@@ -290,24 +292,26 @@ func gradientCheck(value any) string {
 }
 
 /*
-colourCheck returns the check of a colour, which may be null where a colour
-follows another.
+requiredColor checks a color that must be set.
 */
-func colourCheck(nullable bool) func(any) string {
-	pattern := hexColor()
+func requiredColor(value any) string {
+	text, ok := value.(string)
+	if !ok || !isHexColor(text) {
+		return "Use #RRGGBB."
+	}
 
-	return func(value any) string {
-		if value == nil && nullable {
-			return ""
-		}
+	return ""
+}
 
-		text, ok := value.(string)
-		if !ok || !pattern.MatchString(text) {
-			return "Use #RRGGBB."
-		}
-
+/*
+optionalColor checks a color that may be null where it follows another.
+*/
+func optionalColor(value any) string {
+	if value == nil {
 		return ""
 	}
+
+	return requiredColor(value)
 }
 
 /*

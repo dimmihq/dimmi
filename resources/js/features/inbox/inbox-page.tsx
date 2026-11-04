@@ -3,12 +3,13 @@
  * open conversation, each in its own floating panel, resizable on the gap
  * between them. While a conversation is open the list steps aside unless
  * the screen is very wide, so the thread, its details and Operator have
- * room. On phones one of the two shows at a time. The list's search
- * looks through every conversation of the view, closed ones included.
+ * room. On phones one of the two shows at a time. Above the list the
+ * person picks the status shown and the order, remembered per view; a
+ * search keeps that status.
  */
 import { RiChatSmile3Line, RiInbox2Line, RiSearchLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useDeferredValue, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
@@ -16,13 +17,20 @@ import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
 import { Spinner } from "@/components/base/spinner/spinner";
 import { PageOutlet } from "@/features/layout/page-outlet";
-import { type InboxView, inboxViews } from "@/features/shell/navigation";
+import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
-import { type Counts, conversationsQuery, countsQuery } from "@/lib/api/inbox";
+import { type ConversationSort, type Counts, conversationsQuery, countsQuery } from "@/lib/api/inbox";
+import { viewsQuery } from "@/lib/api/views";
+import { callerQuery } from "@/lib/api/workspace";
 import { ConversationList } from "./conversation-list";
 import { useInbox } from "./conversations";
+import { ListControls } from "./views/list-controls";
+import { useViewName } from "./views/use-sidebar-views";
+import { useViewPreferences } from "./views/use-view-preferences";
+import { ViewActions } from "./views/view-actions";
+import { listStatus, type StatusChoice, sortsFor, viewParams } from "./views/view-route";
 
 const visible = { overflow: "visible" } as const;
 
@@ -52,7 +60,7 @@ function useArrangement(openId: string | undefined) {
   return { list, open, both: list && open, ids };
 }
 
-export function InboxPage({ view }: { view: InboxView }) {
+export function InboxPage({ view }: { view: string }) {
   const { conversation: openId } = useParams({ strict: false });
   const shown = useArrangement(openId);
   const fixed = shown.both
@@ -80,36 +88,87 @@ export function InboxPage({ view }: { view: InboxView }) {
  * openCount is how many open conversations wait in the view, as the
  * sidebar counts them.
  */
-function openCount(counts: Counts | undefined, view: InboxView): number | undefined {
+function openCount(counts: Counts | undefined, view: string): number | undefined {
   if (!counts) {
     return undefined;
   }
-  if (view === "mentions") {
-    return counts.views.mentions.unread;
+  const v = counts.views;
+  switch (view) {
+    case "mentions":
+      return v.mentions.unread;
+    case "mine":
+    case "unassigned":
+    case "all":
+      return v[view].open;
+    case "snoozed":
+      return v.mine.snoozed;
   }
 
-  return counts.views[view].open;
+  return (v.teams[view] ?? v.members[view] ?? v.inboxes[view])?.open;
 }
 
-function ListPanel({ view, openId }: { view: InboxView; openId: string | undefined }) {
-  const page = inboxViews[view];
+/*
+ * useListSettings returns the status and order the list shows: the
+ * address's status first, then the person's saved choice for the view,
+ * and the setters that keep both.
+ */
+function useListSettings(workspace: string, view: string) {
+  const params = viewParams(view) ?? { kind: "fixed" as const, filter: view };
+  const { status: fromUrl } = useSearch({ strict: false }) as { status?: StatusChoice };
+  const navigate = useNavigate();
+  const { preference, save } = useViewPreferences(workspace, view);
+  const { data: views } = useQuery({ ...viewsQuery(workspace), enabled: params.kind === "custom" });
+  const saved = views?.find((v) => v.id === view);
+  const status = listStatus(params, fromUrl ?? preference.status ?? saved?.status_filter ?? undefined);
+  const allowed = sortsFor(status).map((s) => s.value as string);
+  const chosen = preference.sort ?? saved?.sort ?? undefined;
+  const sort = chosen && allowed.includes(chosen) ? chosen : undefined;
+
+  return {
+    params,
+    status,
+    sort,
+    setStatus: (next: StatusChoice) => {
+      save({ status: next });
+      void navigate({ to: ".", search: (prev: Record<string, unknown>) => ({ ...prev, status: next }) });
+    },
+    setSort: (next: ConversationSort) => save({ sort: next }),
+  };
+}
+
+function ListPanel({ view, openId }: { view: string; openId: string | undefined }) {
+  const fixed = inboxViews[view as keyof typeof inboxViews] as Page | undefined;
   const { workspace } = useInbox();
+  const name = useViewName(workspace, view);
+  const title = fixed?.label ?? name ?? "Conversations";
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search);
+  const settings = useListSettings(workspace, view);
   const {
     data: conversations,
     isPending,
     isError,
   } = useQuery({
-    ...conversationsQuery(workspace, view, query),
+    ...conversationsQuery(workspace, {
+      view: settings.params.filter,
+      status: settings.status,
+      sort: settings.sort,
+      search: query,
+    }),
     enabled: workspace !== "",
   });
   const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: workspace !== "" });
+  const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
   const count = openCount(counts, view);
 
   return (
-    <Panel label={`${page.label} conversations`} className="h-full w-full">
-      <PageHeader title={page.label}>
+    <Panel label={`${title} conversations`} className="h-full w-full">
+      <PageHeader title={title}>
+        <ViewActions
+          workspace={workspace}
+          view={view}
+          start={{ sort: settings.sort, status: settings.params.status ? undefined : settings.status }}
+        />
         <Chip variant="caption" color="neutral">
           {count === undefined ? "Open" : `${count} open`}
         </Chip>
@@ -123,8 +182,17 @@ function ListPanel({ view, openId }: { view: InboxView; openId: string | undefin
           onChange={setSearch}
         />
       </div>
+      <ListControls
+        status={settings.status}
+        fixedStatus={settings.params.status !== undefined}
+        sort={settings.sort ?? "-last_message_at"}
+        onStatusChange={settings.setStatus}
+        onSortChange={settings.setSort}
+      />
       <ListBody
         view={view}
+        me={caller?.member?.id}
+        description={fixed?.description ?? "Conversations of this view."}
         openId={openId}
         search={query}
         state={isPending ? "loading" : isError ? "error" : "ready"}
@@ -136,12 +204,16 @@ function ListPanel({ view, openId }: { view: InboxView; openId: string | undefin
 
 function ListBody({
   view,
+  me,
+  description,
   openId,
   search,
   state,
   conversations,
 }: {
-  view: InboxView;
+  view: string;
+  me: string | undefined;
+  description: string;
   openId: string | undefined;
   search: string;
   state: "loading" | "error" | "ready";
@@ -167,13 +239,13 @@ function ListBody({
     return search.trim() ? (
       <EmptyState icon={RiSearchLine} title="No matches" description={`Nothing in this view matches “${search}”.`} />
     ) : (
-      <EmptyState icon={RiInbox2Line} title="No conversations" description={inboxViews[view].description} />
+      <EmptyState icon={RiInbox2Line} title="No conversations" description={description} />
     );
   }
 
   return (
     <ScrollArea>
-      <ConversationList view={view} conversations={conversations} openId={openId} />
+      <ConversationList view={view} conversations={conversations} openId={openId} me={me} />
     </ScrollArea>
   );
 }

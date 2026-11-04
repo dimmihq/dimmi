@@ -47,3 +47,23 @@ func Clean(s string) string {
 
 	return strings.TrimSpace(cleaned)
 }
+
+/*
+CleanText is [Clean] for text that runs over several lines, such as a
+message: line breaks and tabs stay, everything else Clean drops goes.
+*/
+func CleanText(s string) string {
+	cleaned := strings.Map(func(r rune) rune {
+		if r == zeroWidthJoiner || r == '\n' || r == '\t' {
+			return r
+		}
+
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			return -1
+		}
+
+		return r
+	}, norm.NFC.String(strings.ToValidUTF8(strings.ReplaceAll(s, "\r\n", "\n"), "")))
+
+	return strings.TrimSpace(cleaned)
+}

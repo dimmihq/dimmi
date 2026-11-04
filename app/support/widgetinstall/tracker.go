@@ -80,9 +80,21 @@ func New(db *database.DB, store *cache.Store, clk clock.Clock) *Tracker {
 }
 
 /*
-Record notes one request of a site, allowed or not, in memory.
+Visit is one request to a widget: the site it came from, blank for a client
+without one, and whether the widget let it in.
 */
-func (t *Tracker) Record(workspaceID, widgetID ids.UUID, origin string, allowed bool) {
+type Visit struct {
+	WorkspaceID ids.UUID
+	WidgetID    ids.UUID
+	Origin      string
+	Allowed     bool
+}
+
+/*
+Record notes one visit in memory.
+*/
+func (t *Tracker) Record(v Visit) {
+	workspaceID, widgetID, origin := v.WorkspaceID, v.WidgetID, v.Origin
 	if origin == "" {
 		origin = AppOrigin
 	}
@@ -96,7 +108,7 @@ func (t *Tracker) Record(workspaceID, widgetID ids.UUID, origin string, allowed 
 		t.seen[widgetID] = entry
 	}
 
-	if !allowed {
+	if !v.Allowed {
 		entry.blocked[origin] = struct{}{}
 
 		return
@@ -129,11 +141,11 @@ func (t *Tracker) Flush(ctx context.Context) error {
 write records one widget's sightings.
 */
 func (t *Tracker) write(ctx context.Context, id ids.UUID, entry *seen) error {
-	if err := t.mergeSites(ctx, siteKey(id, false), entry.allowed); err != nil {
+	if err := t.mergeSites(ctx, seenKey(id), entry.allowed); err != nil {
 		return err
 	}
 
-	if err := t.mergeSites(ctx, siteKey(id, true), entry.blocked); err != nil {
+	if err := t.mergeSites(ctx, blockedKey(id), entry.blocked); err != nil {
 		return err
 	}
 
@@ -223,11 +235,11 @@ Sites returns the origins a widget was seen on and those it blocked, newest
 first.
 */
 func (t *Tracker) Sites(ctx context.Context, id ids.UUID) (seenOn, blocked []string, err error) {
-	if seenOn, err = t.readSites(ctx, siteKey(id, false)); err != nil {
+	if seenOn, err = t.readSites(ctx, seenKey(id)); err != nil {
 		return nil, nil, err
 	}
 
-	if blocked, err = t.readSites(ctx, siteKey(id, true)); err != nil {
+	if blocked, err = t.readSites(ctx, blockedKey(id)); err != nil {
 		return nil, nil, err
 	}
 
@@ -239,7 +251,7 @@ Allow drops an origin from a widget's blocked list, once it has been added to
 the allowed sites.
 */
 func (t *Tracker) Allow(ctx context.Context, id ids.UUID, origins []string) error {
-	key := siteKey(id, true)
+	key := blockedKey(id)
 
 	current, err := t.readSites(ctx, key)
 	if err != nil || len(current) == 0 {
@@ -270,14 +282,14 @@ func (t *Tracker) Start(ctx context.Context, interval time.Duration) func(contex
 	go func() {
 		defer close(stopped)
 
-		ticker := time.NewTicker(interval)
+		ticker := t.clock.NewTicker(interval)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-done:
 				return
-			case <-ticker.C:
+			case <-ticker.Chan():
 				if err := t.Flush(ctx); err != nil {
 					log.From(ctx).WarnContext(ctx, "flush widget install tracker", log.Err(err))
 				}
@@ -294,12 +306,15 @@ func (t *Tracker) Start(ctx context.Context, interval time.Duration) func(contex
 }
 
 /*
-siteKey names a widget's list of sites.
+seenKey names a widget's list of sites it was used from.
 */
-func siteKey(id ids.UUID, blocked bool) string {
-	if blocked {
-		return "widget:origins_blocked:" + id.String()
-	}
-
+func seenKey(id ids.UUID) string {
 	return "widget:origins:" + id.String()
+}
+
+/*
+blockedKey names a widget's list of sites it refused.
+*/
+func blockedKey(id ids.UUID) string {
+	return "widget:origins_blocked:" + id.String()
 }

@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
@@ -33,23 +34,28 @@ import (
 
 /*
 ListConversationsInput is who asks and which page of which list.
+DefaultSort says the request chose no order, so a saved view's own
+order applies.
 */
 type ListConversationsInput struct {
-	Membership authz.Membership
-	Filters    Filters
-	Sort       querybuilder.Sort
-	After      *querybuilder.Keyset
-	Limit      int
+	Membership  authz.Membership
+	Filters     Filters
+	Sort        querybuilder.Sort
+	DefaultSort bool
+	After       *querybuilder.Keyset
+	Limit       int
 }
 
 /*
 ConversationPage is a page of conversations, the position of its last
-row and whether more follow.
+row, whether more follow, and for a saved view the hash of the version
+listed.
 */
 type ConversationPage struct {
 	Conversations []Loaded
 	Last          *querybuilder.Keyset
 	More          bool
+	ViewHash      string
 }
 
 /*
@@ -61,10 +67,14 @@ Rules:
   - Deleted conversations show only in the trash; spam only in the spam
     view.
 
-Errors: [exceptions.ErrForbidden], or a wrapped database error.
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound] for a saved
+view the caller may not see, [exceptions.ErrInvalidDefinition], or a
+wrapped database error.
 */
 type ListConversations struct {
-	DB *database.DB
+	DB    *database.DB
+	IDs   *ids.Registry
+	Clock clock.Clock
 }
 
 /*
@@ -75,34 +85,57 @@ func (a *ListConversations) Handle(ctx context.Context, in ListConversationsInpu
 		return ConversationPage{}, err
 	}
 
-	list, ok := listOf(in.Membership, in.Filters, in.Sort)
-	if !ok {
-		return ConversationPage{}, nil
-	}
-
-	list.Limit, list.After = in.Limit+1, in.After
-
 	var page ConversationPage
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		rows, err := selectConversations(ctx, tx, list)
+		q := models.New(tx)
+
+		view, err := a.applyCustomView(ctx, q, &in)
 		if err != nil {
-			return fmt.Errorf("list conversations: %w", err)
+			return err
 		}
 
-		more := len(rows) > in.Limit
-		if more {
-			rows = rows[:in.Limit]
+		list, ok := listOf(in.Membership, in.Filters, in.Sort)
+		if !ok {
+			return nil
 		}
 
-		page, err = toPage(ctx, models.New(tx), in.Membership.Member.ID, rows)
-		page.More = more
-		if len(rows) > 0 {
-			page.Last = new(positionOf(rows[len(rows)-1], in.Sort))
+		view.apply(&list)
+		list.Limit, list.After = in.Limit+1, in.After
+
+		page, err = a.page(ctx, tx, in, list)
+		if view != nil {
+			page.ViewHash = view.hash
 		}
 
 		return err
 	})
+
+	return page, err
+}
+
+/*
+page runs the list and loads its rows.
+*/
+func (a *ListConversations) page(
+	ctx context.Context, tx *database.Tx, in ListConversationsInput, list querybuilder.Conversations,
+) (ConversationPage, error) {
+	rows, err := selectConversations(ctx, tx, list)
+	if err != nil {
+		return ConversationPage{}, fmt.Errorf("list conversations: %w", err)
+	}
+
+	more := len(rows) > in.Limit
+	if more {
+		rows = rows[:in.Limit]
+	}
+
+	page, err := toPage(ctx, models.New(tx), in.Membership.Member.ID, rows)
+	page.More = more
+
+	if len(rows) > 0 {
+		page.Last = new(positionOf(rows[len(rows)-1], in.Sort))
+	}
 
 	return page, err
 }

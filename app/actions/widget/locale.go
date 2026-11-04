@@ -11,7 +11,7 @@
 
 package widget
 
-import "golang.org/x/text/language"
+import "github.com/dimmihq/dimmi/framework/i18n"
 
 /*
 LocaleAuto means the widget follows the visitor's browser.
@@ -27,10 +27,5 @@ func NormalizeWidgetLocale(raw string) (string, bool) {
 		return raw, true
 	}
 
-	tag, err := language.Parse(raw)
-	if err != nil {
-		return "", false
-	}
-
-	return tag.String(), true
+	return i18n.Canonical(raw)
 }

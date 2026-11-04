@@ -19,6 +19,8 @@ import (
 	"strings"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/pagination"
+	"github.com/dimmihq/dimmi/framework/http/useragent"
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
@@ -42,6 +44,10 @@ func Widget(a *app.App) {
 			public.Middleware("widget.app", "widget.origin")
 			widgetAppRoutes(public, a)
 		})
+		api.Group("", func(visitor *routing.Router) {
+			visitor.Middleware("widget.session", "widget.origin")
+			widgetSessionRoutes(visitor, a)
+		})
 	})
 }
 
@@ -59,6 +65,47 @@ func widgetAppRoutes(public *routing.Router, a *app.App) {
 
 	routing.Get(public, "/apps/{app}/config", "widget.apps.config.show", config.Invoke)
 	routing.Get(public, "/apps/{app}/availability", "widget.apps.availability.show", availability.Invoke)
+
+	sessions := sessionController(a)
+	routing.Post(public, "/sessions", "widget.sessions.store", sessions.Store)
+}
+
+/*
+widgetSessionRoutes declares the routes a visitor's session names.
+*/
+func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
+	sessions := sessionController(a)
+
+	routing.Get(visitor, "/session", "widget.session.show", sessions.Show)
+	routing.Delete(visitor, "/session", "widget.session.destroy", sessions.Destroy).Status(fhttp.StatusNoContent)
+
+	contact := &widget.ContactController{DB: a.DB, Update: a.Actions.Widget.UpdateContact}
+	routing.Get(visitor, "/contact", "widget.contact.show", contact.Show)
+	routing.Patch(visitor, "/contact", "widget.contact.update", contact.Patch)
+
+	conv := &widget.ConversationController{
+		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage, IDs: a.IDs, Clock: a.Clock,
+		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
+	}
+	one := "/conversations/{conversation}"
+
+	routing.Get(visitor, "/conversations", "widget.conversations.index", conv.Index)
+	routing.Post(visitor, "/conversations", "widget.conversations.store", conv.Store).Middleware("idempotent")
+	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
+	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
+	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")
+}
+
+/*
+sessionController returns the controller of visitors' sessions.
+*/
+func sessionController(a *app.App) *widget.SessionController {
+	acts := a.Actions.Widget
+
+	return &widget.SessionController{
+		Start: acts.StartSession, Describe: acts.ShowSession, Revoke: acts.RevokeSession, Clock: a.Clock,
+		BaseURL: baseURLOf(a),
+	}
 }
 
 /*

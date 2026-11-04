@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/widgetorigin"
 )
 
 /*
@@ -131,7 +132,7 @@ func preflightAllowed(
 		return true
 	}
 
-	return widget.OriginAllowed(
+	return widgetorigin.OriginAllowed(
 		resolved.Widget.AllowedOrigins, resolved.Widget.NativeAppsEnabled, r.Header.Get("Origin"), install,
 	)
 }

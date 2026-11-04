@@ -25,7 +25,7 @@ import (
 	"slices"
 	"strings"
 
-	"golang.org/x/text/language"
+	"github.com/dimmihq/dimmi/framework/i18n"
 
 	widgetlang "github.com/dimmihq/dimmi/resources/widget/lang"
 )
@@ -41,7 +41,6 @@ Strings holds the built-in words by language.
 type Strings struct {
 	byLocale map[string]map[string]string
 	locales  []string
-	matcher  language.Matcher
 }
 
 /*
@@ -77,26 +76,10 @@ func From(files fs.FS) (*Strings, error) {
 	}
 
 	out.locales = slices.Sorted(maps.Keys(out.byLocale))
-	slices.SortStableFunc(out.locales, func(a, b string) int {
-		return boolRank(b == Fallback) - boolRank(a == Fallback)
-	})
-
-	tags := make([]language.Tag, 0, len(out.locales))
-	for _, locale := range out.locales {
-		tags = append(tags, language.MustParse(locale))
-	}
-
-	out.matcher = language.NewMatcher(tags)
+	out.locales = slices.DeleteFunc(out.locales, func(l string) bool { return l == Fallback })
+	out.locales = slices.Insert(out.locales, 0, Fallback)
 
 	return out, nil
-}
-
-func boolRank(b bool) int {
-	if b {
-		return 1
-	}
-
-	return 0
 }
 
 /*
@@ -128,17 +111,17 @@ func (s *Strings) Negotiate(r Request) string {
 		wanted = r.Requested
 	}
 
-	tag, err := language.Parse(wanted)
-	if err != nil {
+	tag, ok := i18n.Canonical(wanted)
+	if !ok {
 		return r.fallback()
 	}
 
-	if exact := s.exact(tag.String(), r); exact != "" {
+	if exact := s.exact(tag, r); exact != "" {
 		return exact
 	}
 
-	if base, _ := tag.Base(); base.String() != tag.String() {
-		if exact := s.exact(base.String(), r); exact != "" {
+	if base := Base(tag); base != tag {
+		if exact := s.exact(base, r); exact != "" {
 			return exact
 		}
 	}
@@ -235,26 +218,33 @@ func (s *Strings) ResolveWith(
 	out := make(map[string]string, len(s.byLocale[Fallback]))
 
 	for key := range s.byLocale[Fallback] {
-		out[key] = s.resolveKey(key, locale, defaultLocale, texts, translations)
+		out[key] = s.resolveKey(key, locale, defaultLocale, written{texts: texts, translations: translations})
 	}
 
 	return out, nil
 }
 
 /*
+written is what the customer wrote: texts in their default language and
+translations by language.
+*/
+type written struct {
+	texts        map[string]string
+	translations map[string]map[string]string
+}
+
+/*
 resolveKey resolves one key.
 */
-func (s *Strings) resolveKey(
-	key, locale, defaultLocale string, texts map[string]string, translations map[string]map[string]string,
-) string {
+func (s *Strings) resolveKey(key, locale, defaultLocale string, w written) string {
 	for _, candidate := range []string{locale, Base(locale)} {
-		if word := translations[candidate][key]; word != "" {
+		if word := w.translations[candidate][key]; word != "" {
 			return word
 		}
 	}
 
-	if texts[key] != "" {
-		return texts[key]
+	if w.texts[key] != "" {
+		return w.texts[key]
 	}
 
 	for _, candidate := range []string{locale, Base(locale), defaultLocale, Fallback} {

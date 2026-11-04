@@ -14,7 +14,7 @@
 |
 */
 
-package widget
+package widgetorigin
 
 import (
 	"fmt"
@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/http/origin"
+
+	"github.com/dimmihq/dimmi/app/exceptions"
 )
 
 /*
@@ -30,18 +32,12 @@ maxAllowedOrigins is the most sites one widget lists.
 const maxAllowedOrigins = 50
 
 /*
-AppOrigin is what install status records for a request with no Origin
-header, the mark of a native app.
-*/
-const AppOrigin = "app"
-
-/*
 NormalizeOrigins returns the sites in their normal form without duplicates,
 refusing any that is not an origin.
 */
 func NormalizeOrigins(raw []string) ([]string, error) {
 	if len(raw) > maxAllowedOrigins {
-		return nil, failField("allowed_origins", fmt.Sprintf("List at most %d sites.", maxAllowedOrigins))
+		return nil, exceptions.WidgetField("allowed_origins", fmt.Sprintf("List at most %d sites.", maxAllowedOrigins))
 	}
 
 	out := make([]string, 0, len(raw))
@@ -49,7 +45,9 @@ func NormalizeOrigins(raw []string) ([]string, error) {
 	for i, entry := range raw {
 		normal, ok := normalizeOrigin(entry)
 		if !ok {
-			return nil, failField(fmt.Sprintf("allowed_origins.%d", i), "Origin must be scheme://host[:port], no path.")
+			field := fmt.Sprintf("allowed_origins.%d", i)
+
+			return nil, exceptions.WidgetField(field, "Origin must be scheme://host[:port], no path.")
 		}
 
 		if !slices.Contains(out, normal) {
@@ -61,12 +59,14 @@ func NormalizeOrigins(raw []string) ([]string, error) {
 }
 
 /*
-normalizeOrigin returns one site in its normal form. A wildcard is checked
-by what it would match, which refuses one covering a public suffix.
+normalizeOrigin returns one site in its normal form. A site is a scheme and
+host only, so anything after the host, even a lone slash, is refused. A
+wildcard is checked by what it would match, which refuses one covering a
+public suffix.
 */
 func normalizeOrigin(entry string) (string, bool) {
 	scheme, rest, found := strings.Cut(strings.TrimSpace(entry), "://")
-	if !found {
+	if !found || strings.ContainsAny(rest, "/?#") {
 		return "", false
 	}
 

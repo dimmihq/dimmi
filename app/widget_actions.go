@@ -30,4 +30,12 @@ type WidgetActions struct {
 	ShowConfig   *widget.ShowWidgetConfig
 	Availability *widget.ComputeTeamAvailability
 	Install      *widgetinstall.Tracker
+
+	Authenticate  *widget.AuthenticateWidgetSession
+	StartSession  *widget.StartWidgetSession
+	ShowSession   *widget.ShowWidgetSession
+	RevokeSession *widget.RevokeWidgetSession
+	UpdateContact *widget.UpdateWidgetContact
+	Conversations *widget.ListWidgetConversations
+	PostMessage   *widget.PostWidgetMessage
 }

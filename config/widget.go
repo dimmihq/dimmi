@@ -25,6 +25,11 @@ self-hosted cap, zero meaning none. ConfigCacheTTL is how long a replica
 keeps a widget in memory, PollingInterval how often a browser without a
 stream polls, and InstallFlushInterval how often a replica writes down
 where it saw each widget.
+
+AnonymousSessionTTL is how long an anonymous visitor's session lives after
+their last visit. RealtimeTokenTTL is how long a stream's connect token
+works, MaxConnectionsPerSession how many streams one session keeps open, one
+per tab, and TypingThrottle how often a visitor's typing is passed on.
 */
 type WidgetConfig struct {
 	AssetsBaseURL          string        `koanf:"assets_base_url"`
@@ -34,4 +39,9 @@ type WidgetConfig struct {
 	ConfigCacheTTL         time.Duration `default:"60s"    koanf:"config_cache_ttl"`
 	PollingInterval        time.Duration `default:"5s"     koanf:"polling_interval"`
 	InstallFlushInterval   time.Duration `default:"60s"    koanf:"install_flush_interval"`
+
+	AnonymousSessionTTL      time.Duration `default:"4320h" koanf:"anonymous_session_ttl"`
+	RealtimeTokenTTL         time.Duration `default:"60s"   koanf:"realtime_token_ttl"`
+	MaxConnectionsPerSession int           `default:"10"    koanf:"max_connections_per_session"`
+	TypingThrottle           time.Duration `default:"2s"    koanf:"typing_throttle"`
 }

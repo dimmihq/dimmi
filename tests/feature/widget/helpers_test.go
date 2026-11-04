@@ -42,7 +42,8 @@ inWorkspace runs a read or write inside the workspace.
 func inWorkspace(t *testing.T, tc *tests.TestCase, ws ids.UUID, fn func(ctx context.Context, q *models.Queries) error) {
 	t.Helper()
 
-	err := tc.App.DB.Transaction(tenancy.With(t.Context(), ws.String()), func(ctx context.Context, tx *database.Tx) error {
+	scoped := tenancy.With(t.Context(), ws.String())
+	err := tc.App.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		return fn(ctx, models.New(tx))
 	})
 	require.NoError(t, err)

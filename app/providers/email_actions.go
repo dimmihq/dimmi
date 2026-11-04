@@ -20,6 +20,7 @@ import (
 	"cmp"
 	"fmt"
 
+	fconfig "github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/queue"
 
@@ -93,11 +94,10 @@ func bootEmail(a *app.App) error {
 }
 
 /*
-customerTransport returns the driver of the customer-stream mailer,
-which falls back to the default mailer, as the transport sent email
-records. A driver the records do not know counts as the log driver.
+customerSection returns the configuration of the customer-stream
+mailer, the default mailer's when it has none of its own.
 */
-func customerTransport(a *app.App) string {
+func customerSection(a *app.App) fconfig.Section {
 	mail := a.Application.Config.Mail
 
 	section, ok := mail.Mailers[a.Config.Channels.Email.Mailer]
@@ -105,7 +105,16 @@ func customerTransport(a *app.App) string {
 		section = mail.Mailers[mail.Default]
 	}
 
-	switch driver := section.String("driver"); driver {
+	return section
+}
+
+/*
+customerTransport returns the driver of the customer-stream mailer,
+which falls back to the default mailer, as the transport sent email
+records. A driver the records do not know counts as the log driver.
+*/
+func customerTransport(a *app.App) string {
+	switch driver := customerSection(a).String("driver"); driver {
 	case "ses", "smtp", "postmark", "resend", "mailgun", "sendgrid":
 		return driver
 	}

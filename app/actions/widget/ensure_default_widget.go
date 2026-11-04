@@ -62,7 +62,7 @@ func (a *EnsureDefaultWidget) Initialize(ctx context.Context, tx *database.Tx, w
 		return err
 	}
 
-	widget, err := insertWidget(ctx, q, inbox, DefaultName, a.Clock)
+	widget, err := insertWidget(ctx, q, inbox, newWidget{name: DefaultName, at: a.Clock.Now()})
 	if err != nil {
 		return err
 	}
