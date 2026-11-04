@@ -2,6 +2,8 @@ package workspaces_test
 
 import (
 	"regexp"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,6 +49,40 @@ func TestCreateWorkspace(t *testing.T) {
 
 		assert.Regexp(t, regexp.MustCompile(`^busy-[a-z0-9]{4}$`), slug)
 		tc.Table("workspaces").AssertHas(testkit.Row{"slug": "busy-99"})
+	})
+
+	t.Run("gives workspaces created at the same moment with one name their own slugs", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		name := "Rush " + tc.Owner.ID.String()[:8]
+
+		var (
+			wait  sync.WaitGroup
+			mu    sync.Mutex
+			slugs []string
+			errs  []error
+		)
+
+		for range 8 {
+			wait.Go(func() {
+				created, err := tc.App.Actions.CreateWorkspace.Handle(t.Context(), workspaces.CreateWorkspaceInput{
+					Owner: tc.Owner, Name: name, JoinedVia: appauth.JoinedViaCreated,
+				})
+
+				mu.Lock()
+				defer mu.Unlock()
+
+				slugs, errs = append(slugs, created.Workspace.Slug), append(errs, err)
+			})
+		}
+
+		wait.Wait()
+
+		for _, err := range errs {
+			require.NoError(t, err)
+		}
+
+		assert.ElementsMatch(t, slugs, slices.Compact(slices.Sorted(slices.Values(slugs))))
 	})
 
 	t.Run("creates nothing when its owner cannot be added", func(t *testing.T) {
