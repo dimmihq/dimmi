@@ -245,6 +245,7 @@ func TestTeamsUpdate(t *testing.T) {
 		owner.PatchJSON("/api/v1/teams/"+teamID(support), testkit.JSON{"name": "billing"}).AssertStatus(422).
 			AssertJSONPath("code", "team_name_taken")
 		owner.PatchJSON("/api/v1/teams/"+teamID(foreign), testkit.JSON{"name": "Mine"}).AssertNotFound()
+		owner.PatchJSON("/api/v1/teams/team_nope", testkit.JSON{"name": "Mine"}).AssertNotFound()
 		owner.PatchJSON("/api/v1/teams/"+teamID(support), testkit.JSON{"name": ""}).AssertStatus(422)
 		in(tc, member).PatchJSON("/api/v1/teams/"+teamID(support), testkit.JSON{"name": "Mine"}).AssertForbidden()
 		tc.Table("teams").AssertHas(testkit.Row{"id": foreign.ID, "name": "Sales"})
@@ -268,6 +269,7 @@ func TestTeamsDestroy(t *testing.T) {
 		assert.Equal(t, support.ID, deleted.all()[0].TeamID)
 		owner.GetJSON("/api/v1/teams/" + teamID(support)).AssertNotFound()
 		owner.Delete("/api/v1/teams/" + teamID(support)).AssertNotFound()
+		owner.Delete("/api/v1/teams/team_nope").AssertNotFound()
 		owner.PostJSON("/api/v1/teams/"+teamID(support)+"/members", testkit.JSON{
 			"member_ids": []string{memberID(member)},
 		}).AssertNotFound()
