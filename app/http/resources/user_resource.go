@@ -55,6 +55,7 @@ func NewUser(u models.User) User {
 		Email:            u.Email,
 		EmailVerified:    u.IsVerified(),
 		TwoFactorEnabled: u.TwoFactorEnabled(),
+		AvatarURL:        u.AvatarURL(),
 		Locale:           locale,
 		Timezone:         u.Timezone,
 		HasPassword:      u.HasPassword(),

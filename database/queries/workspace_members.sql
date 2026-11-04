@@ -165,3 +165,21 @@ WHERE m.workspace_id = @workspace_id AND u.email = @email::citext;
 -- PurgeWorkspaceRows deletes one batch of the workspace's rows from one
 -- of its tables and returns how many went; nothing left returns zero.
 SELECT dimmi_purge_workspace_rows(@workspace_id::uuid, @batch_size::integer)::bigint AS removed;
+
+-- name: ListUserActiveMemberships :many
+-- ListUserActiveMemberships returns every workspace the user is an active
+-- member of, those in the trash included. It runs before any workspace is
+-- chosen, through a security definer function.
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.workspace_name::text AS workspace_name,
+    m.workspace_slug::citext AS workspace_slug,
+    m.role::text AS role,
+    (m.deleted_at IS NOT NULL)::boolean AS trashed
+FROM auth_user_memberships(@user_id) AS m
+WHERE m.status = 'active';
+
+-- name: CountActiveMembers :one
+-- CountActiveMembers counts the people who can still work in the workspace.
+SELECT count(*) FROM workspace_members WHERE workspace_id = @workspace_id AND status = 'active';

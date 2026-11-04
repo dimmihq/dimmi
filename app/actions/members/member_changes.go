@@ -34,13 +34,15 @@ import (
 
 /*
 memberWriter writes changes to members inside one transaction, on
-behalf of the member making them, at one moment.
+behalf of the member making them, at one moment. keepInvitations leaves
+the invitations a deactivated member sent standing.
 */
 type memberWriter struct {
-	tx     *database.Tx
-	events *events.Dispatcher
-	by     ids.UUID
-	now    time.Time
+	tx              *database.Tx
+	events          *events.Dispatcher
+	by              ids.UUID
+	now             time.Time
+	keepInvitations bool
 }
 
 /*
@@ -106,8 +108,10 @@ func (w memberWriter) deactivate(ctx context.Context, m models.WorkspaceMember, 
 		return fmt.Errorf("revoke member tokens: %w", err)
 	}
 
-	if err := w.withdrawInvitations(ctx, m); err != nil {
-		return err
+	if !w.keepInvitations {
+		if err := w.withdrawInvitations(ctx, m); err != nil {
+			return err
+		}
 	}
 
 	return w.events.Dispatch(ctx, w.tx, appevents.MemberDeactivated{

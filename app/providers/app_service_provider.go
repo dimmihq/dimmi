@@ -127,6 +127,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootTeams(a)
 	bootTokens(a)
 
+	if err := bootAccount(a); err != nil {
+		return err
+	}
+
 	if err := bootAudit(a); err != nil {
 		return err
 	}

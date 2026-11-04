@@ -12,6 +12,52 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const anonymizeUser = `-- name: AnonymizeUser :exec
+UPDATE users
+SET name = $1, email = $2, password_hash = NULL, two_factor_confirmed_at = NULL, avatar_path = NULL,
+    locale = NULL, timezone = NULL, deleted_at = $3::timestamptz, updated_at = $3::timestamptz
+WHERE id = $4
+`
+
+type AnonymizeUserParams struct {
+	Name  string    `json:"name"`
+	Email string    `json:"email"`
+	Now   time.Time `json:"now"`
+	ID    ids.UUID  `json:"id"`
+}
+
+// AnonymizeUser leaves only a nameless row behind, so what the person wrote
+// keeps an author while nothing about them remains. The placeholder address
+// is unique and can never receive mail, and frees the old one for anyone.
+func (q *Queries) AnonymizeUser(ctx context.Context, arg AnonymizeUserParams) error {
+	_, err := q.db.Exec(ctx, anonymizeUser,
+		arg.Name,
+		arg.Email,
+		arg.Now,
+		arg.ID,
+	)
+	return err
+}
+
+const countUserLiveTokens = `-- name: CountUserLiveTokens :one
+SELECT auth_count_user_tokens($1, $2)::bigint AS remaining
+`
+
+type CountUserLiveTokensParams struct {
+	UserID ids.UUID  `json:"user_id"`
+	Now    time.Time `json:"now"`
+}
+
+// CountUserLiveTokens counts the access tokens that still work for the user,
+// in every workspace. It runs through a security definer function, since
+// tokens of many workspaces are hidden until one is chosen.
+func (q *Queries) CountUserLiveTokens(ctx context.Context, arg CountUserLiveTokensParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserLiveTokens, arg.UserID, arg.Now)
+	var remaining int64
+	err := row.Scan(&remaining)
+	return remaining, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email, password_hash, email_verified_at, locale, timezone, created_via, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
@@ -173,6 +219,42 @@ func (q *Queries) MarkUserEmailVerified(ctx context.Context, arg MarkUserEmailVe
 	return err
 }
 
+const replaceUserAvatarPath = `-- name: ReplaceUserAvatarPath :one
+UPDATE users SET avatar_path = $1, updated_at = $2::timestamptz WHERE id = $3 RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via
+`
+
+type ReplaceUserAvatarPathParams struct {
+	AvatarPath *string   `json:"avatar_path"`
+	Now        time.Time `json:"now"`
+	ID         ids.UUID  `json:"id"`
+}
+
+// ReplaceUserAvatarPath gives the account the stored image, or none with a
+// NULL path, whatever it had before.
+func (q *Queries) ReplaceUserAvatarPath(ctx context.Context, arg ReplaceUserAvatarPathParams) (User, error) {
+	row := q.db.QueryRow(ctx, replaceUserAvatarPath, arg.AvatarPath, arg.Now, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.TwoFactorConfirmedAt,
+		&i.AvatarPath,
+		&i.Locale,
+		&i.Timezone,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PasswordChangedAt,
+		&i.RiskFlags,
+		&i.CreatedVia,
+	)
+	return i, err
+}
+
 const revokeUserTokens = `-- name: RevokeUserTokens :one
 SELECT auth_revoke_user_tokens($1, $2)::bigint AS revoked
 `
@@ -229,6 +311,45 @@ func (q *Queries) UpdateUserDeletedAt(ctx context.Context, arg UpdateUserDeleted
 	return err
 }
 
+const updateUserEmail = `-- name: UpdateUserEmail :one
+UPDATE users
+SET email = $1, email_verified_at = $2::timestamptz, updated_at = $2::timestamptz
+WHERE id = $3
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via
+`
+
+type UpdateUserEmailParams struct {
+	Email string    `json:"email"`
+	Now   time.Time `json:"now"`
+	ID    ids.UUID  `json:"id"`
+}
+
+// UpdateUserEmail moves the account to an address its owner just proved.
+// It fails on users_email_key when another account took the address first.
+func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserEmail, arg.Email, arg.Now, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.TwoFactorConfirmedAt,
+		&i.AvatarPath,
+		&i.Locale,
+		&i.Timezone,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PasswordChangedAt,
+		&i.RiskFlags,
+		&i.CreatedVia,
+	)
+	return i, err
+}
+
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE users
 SET password_hash = $1, password_changed_at = $2::timestamptz, updated_at = $2::timestamptz
@@ -263,6 +384,53 @@ type UpdateUserPasswordHashParams struct {
 func (q *Queries) UpdateUserPasswordHash(ctx context.Context, arg UpdateUserPasswordHashParams) error {
 	_, err := q.db.Exec(ctx, updateUserPasswordHash, arg.PasswordHash, arg.Now, arg.ID)
 	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+UPDATE users
+SET name = $1, locale = $2, timezone = $3, updated_at = $4::timestamptz
+WHERE id = $5
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via
+`
+
+type UpdateUserProfileParams struct {
+	Name     string    `json:"name"`
+	Locale   *string   `json:"locale"`
+	Timezone *string   `json:"timezone"`
+	Now      time.Time `json:"now"`
+	ID       ids.UUID  `json:"id"`
+}
+
+// UpdateUserProfile replaces what a person says about themselves: their
+// name, language and time zone.
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserProfile,
+		arg.Name,
+		arg.Locale,
+		arg.Timezone,
+		arg.Now,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.TwoFactorConfirmedAt,
+		&i.AvatarPath,
+		&i.Locale,
+		&i.Timezone,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PasswordChangedAt,
+		&i.RiskFlags,
+		&i.CreatedVia,
+	)
+	return i, err
 }
 
 const updateUserTwoFactorConfirmedAt = `-- name: UpdateUserTwoFactorConfirmedAt :exec

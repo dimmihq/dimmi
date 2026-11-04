@@ -64,6 +64,7 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 			Name:          u.Name,
 			Email:         u.Email,
 			EmailVerified: u.IsVerified(),
+			AvatarURL:     u.AvatarURL(),
 		},
 		DeactivatedAt: m.DeactivatedAt,
 		CreatedAt:     m.CreatedAt,

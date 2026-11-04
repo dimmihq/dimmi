@@ -27,6 +27,8 @@ user when it is signed out.
 const (
 	RevokedForPasswordReset    = "password_reset"
 	RevokedForPreHijackDefense = "pre_hijack_defense"
+	RevokedForPasswordChanged  = "password_changed"
+	RevokedForUserDeleted      = "user_deleted"
 )
 
 /*

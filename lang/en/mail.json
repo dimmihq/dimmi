@@ -125,5 +125,28 @@
     "intro": "Your API token \"{{.token}}\" in {{.workspace}} stops working on {{.date}}.",
     "advice": "Scripts that use it will stop too. Make a new token and switch them over before then.",
     "action": "Review your API tokens"
+  },
+  "email_change_verification": {
+    "subject": "Confirm your new Dimmi email address",
+    "intro": "Open this link to make {{.email}} the address of your account.",
+    "action": "Confirm new email",
+    "expiry": "The link works for 24 hours. If you did not ask for it, ignore this email: nothing changes."
+  },
+  "email_change_requested": {
+    "subject": "Someone asked to change your Dimmi email address",
+    "intro": "A request was made to move your account to {{.email}}. Nothing changes until that address confirms it.",
+    "advice": "If this was not you, secure your account now.",
+    "action": "Secure your account"
+  },
+  "email_changed": {
+    "subject": "Your Dimmi email address changed",
+    "intro": "Your account now uses {{.email}}. This address no longer signs in to it.",
+    "advice": "If this was not you, reset your password and contact your workspace owner.",
+    "action": "Review your security settings"
+  },
+  "account_deleted": {
+    "subject": "Your Dimmi account was deleted",
+    "intro": "Your account and its sign-in details are gone, and this cannot be undone.",
+    "advice": "You can sign up again with this address at any time, as a new account."
   }
 }

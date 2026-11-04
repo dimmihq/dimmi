@@ -46,5 +46,12 @@
   "invitation_expired": "This invitation has expired. Ask for a new one.",
   "invitation_revoked": "This invitation was withdrawn.",
   "invitation_already_accepted": "This invitation was already accepted.",
-  "already_member": "You are already a member of this workspace."
+  "already_member": "You are already a member of this workspace.",
+  "invalid_email_change_token": "This confirmation link is invalid or has expired.",
+  "email_unchanged": "This is already your email address.",
+  "current_password_required": "Enter your current password.",
+  "invalid_avatar": "Choose a PNG, JPEG, WebP or GIF picture.",
+  "avatar_too_large": "The picture must be 2 MB or smaller.",
+  "sole_owner": "Hand over or delete the workspaces you alone own first.",
+  "confirm_email_mismatch": "Type your email address to confirm."
 }

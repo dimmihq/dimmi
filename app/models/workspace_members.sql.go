@@ -12,6 +12,18 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countActiveMembers = `-- name: CountActiveMembers :one
+SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND status = 'active'
+`
+
+// CountActiveMembers counts the people who can still work in the workspace.
+func (q *Queries) CountActiveMembers(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveMembers, workspaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countActiveOwners = `-- name: CountActiveOwners :one
 SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND role = 'owner' AND status = 'active'
 `
@@ -375,6 +387,57 @@ func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserActiveMemberships = `-- name: ListUserActiveMemberships :many
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.workspace_name::text AS workspace_name,
+    m.workspace_slug::citext AS workspace_slug,
+    m.role::text AS role,
+    (m.deleted_at IS NOT NULL)::boolean AS trashed
+FROM auth_user_memberships($1) AS m
+WHERE m.status = 'active'
+`
+
+type ListUserActiveMembershipsRow struct {
+	MemberID      ids.UUID `json:"member_id"`
+	WorkspaceID   ids.UUID `json:"workspace_id"`
+	WorkspaceName string   `json:"workspace_name"`
+	WorkspaceSlug string   `json:"workspace_slug"`
+	Role          string   `json:"role"`
+	Trashed       bool     `json:"trashed"`
+}
+
+// ListUserActiveMemberships returns every workspace the user is an active
+// member of, those in the trash included. It runs before any workspace is
+// chosen, through a security definer function.
+func (q *Queries) ListUserActiveMemberships(ctx context.Context, userID ids.UUID) ([]ListUserActiveMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listUserActiveMemberships, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserActiveMembershipsRow
+	for rows.Next() {
+		var i ListUserActiveMembershipsRow
+		if err := rows.Scan(
+			&i.MemberID,
+			&i.WorkspaceID,
+			&i.WorkspaceName,
+			&i.WorkspaceSlug,
+			&i.Role,
+			&i.Trashed,
 		); err != nil {
 			return nil, err
 		}

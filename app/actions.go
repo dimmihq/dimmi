@@ -30,6 +30,14 @@ Actions holds the business actions.
 */
 type Actions struct {
 	CreateUser              *users.CreateUser
+	UpdateProfile           *users.UpdateProfile
+	UpdatePassword          *users.UpdatePassword
+	UpdateAvatar            *users.UpdateAvatar
+	DeleteAvatar            *users.DeleteAvatar
+	RequestEmailChange      *users.RequestEmailChange
+	ConfirmEmailChange      *users.ConfirmEmailChange
+	PreviewAccountDeletion  *members.PreviewAccountDeletion
+	DeleteAccount           *users.DeleteAccount
 	CreateWorkspace         *workspaces.CreateWorkspace
 	StartSession            *auth.StartSession
 	CompletePrimaryAuth     *auth.CompletePrimaryAuth

@@ -62,3 +62,39 @@ SELECT * FROM users WHERE id = @id FOR UPDATE;
 -- SetUserAvatarPath gives an account without an avatar the stored image.
 -- An avatar the user set in the meantime is kept.
 UPDATE users SET avatar_path = @avatar_path, updated_at = @now::timestamptz WHERE id = @id AND avatar_path IS NULL;
+
+-- name: UpdateUserProfile :one
+-- UpdateUserProfile replaces what a person says about themselves: their
+-- name, language and time zone.
+UPDATE users
+SET name = @name, locale = @locale, timezone = @timezone, updated_at = @now::timestamptz
+WHERE id = @id
+RETURNING *;
+
+-- name: ReplaceUserAvatarPath :one
+-- ReplaceUserAvatarPath gives the account the stored image, or none with a
+-- NULL path, whatever it had before.
+UPDATE users SET avatar_path = @avatar_path, updated_at = @now::timestamptz WHERE id = @id RETURNING *;
+
+-- name: UpdateUserEmail :one
+-- UpdateUserEmail moves the account to an address its owner just proved.
+-- It fails on users_email_key when another account took the address first.
+UPDATE users
+SET email = @email, email_verified_at = @now::timestamptz, updated_at = @now::timestamptz
+WHERE id = @id
+RETURNING *;
+
+-- name: AnonymizeUser :exec
+-- AnonymizeUser leaves only a nameless row behind, so what the person wrote
+-- keeps an author while nothing about them remains. The placeholder address
+-- is unique and can never receive mail, and frees the old one for anyone.
+UPDATE users
+SET name = @name, email = @email, password_hash = NULL, two_factor_confirmed_at = NULL, avatar_path = NULL,
+    locale = NULL, timezone = NULL, deleted_at = @now::timestamptz, updated_at = @now::timestamptz
+WHERE id = @id;
+
+-- name: CountUserLiveTokens :one
+-- CountUserLiveTokens counts the access tokens that still work for the user,
+-- in every workspace. It runs through a security definer function, since
+-- tokens of many workspaces are hidden until one is chosen.
+SELECT auth_count_user_tokens(@user_id, @now)::bigint AS remaining;

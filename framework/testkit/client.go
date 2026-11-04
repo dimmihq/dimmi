@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -177,11 +178,47 @@ func (c *Client) Send(method, path string, body any) *Response {
 		c.tb.Fatalf("encode %s %s body: %v", method, path, err)
 	}
 
+	return c.send(method, path, payload, "application/json")
+}
+
+/*
+PutFile uploads the contents as a multipart form with one file in the
+field.
+*/
+func (c *Client) PutFile(path, field, name string, contents []byte) *Response {
+	c.tb.Helper()
+
+	var body bytes.Buffer
+
+	form := multipart.NewWriter(&body)
+
+	part, err := form.CreateFormFile(field, name)
+	if err != nil {
+		c.tb.Fatalf("start form for PUT %s: %v", path, err)
+	}
+
+	if _, err := part.Write(contents); err != nil {
+		c.tb.Fatalf("write form for PUT %s: %v", path, err)
+	}
+
+	if err := form.Close(); err != nil {
+		c.tb.Fatalf("finish form for PUT %s: %v", path, err)
+	}
+
+	return c.send(http.MethodPut, path, &body, form.FormDataContentType())
+}
+
+/*
+send makes the request, naming the payload's type when there is one.
+*/
+func (c *Client) send(method, path string, payload io.Reader, contentType string) *Response {
+	c.tb.Helper()
+
 	r := httptest.NewRequestWithContext(c.tb.Context(), method, path, payload)
 	r.Header = c.header.Clone()
 
 	if payload != nil {
-		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Content-Type", contentType)
 	}
 
 	for _, cookie := range c.cookies {

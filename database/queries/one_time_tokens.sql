@@ -52,3 +52,13 @@ WHERE id IN (
     ORDER BY t.created_at DESC, t.id DESC
     OFFSET @keep
 );
+
+-- name: ExpireUserOneTimeTokens :exec
+-- ExpireUserOneTimeTokens ends every live secret of the user, once the
+-- address they were mailed to stops being the account's.
+UPDATE one_time_tokens SET expires_at = @now
+WHERE user_id = @user_id AND consumed_at IS NULL AND expires_at > @now;
+
+-- name: DeleteUserOneTimeTokens :exec
+-- DeleteUserOneTimeTokens removes every secret of a deleted account.
+DELETE FROM one_time_tokens WHERE user_id = @user_id;
