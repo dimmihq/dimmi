@@ -66,6 +66,28 @@ func (a *Application) Start(ctx context.Context) error {
 		return a.startWeb(ctx)
 	}
 
+	return a.startAdmin(ctx)
+}
+
+/*
+startAdmin serves health and metrics on the admin listener for a process
+without the web role, so a worker can be checked like a web server.
+*/
+func (a *Application) startAdmin(ctx context.Context) error {
+	if a.Config.HTTP.AdminAddr == "" {
+		return nil
+	}
+
+	web := &webServers{errs: make(chan error, 1)}
+
+	addr, err := a.listen(ctx, endpoint{"admin", a.Config.HTTP.AdminAddr, a.adminHandler(), nil}, web.errs)
+	if err != nil {
+		return err
+	}
+
+	web.admin = addr
+	a.web.Store(web)
+
 	return nil
 }
 
