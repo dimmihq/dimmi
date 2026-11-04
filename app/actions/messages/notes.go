@@ -93,6 +93,12 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 			return err
 		}
 
+		if s.c.AssigneeMemberID == nil || *s.c.AssigneeMemberID != in.Membership.Member.ID {
+			if s.c, err = s.w.WakeIf(ctx, in.Membership.Workspace, s.c, conversations.ReasonOthersNote); err != nil {
+				return err
+			}
+		}
+
 		out, err = s.written(ctx)
 
 		return err

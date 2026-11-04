@@ -15,7 +15,7 @@
 import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -26,10 +26,20 @@ import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
-import { addNote, type Conversation, markRead, messagesQuery, reply, retryDelivery } from "@/lib/api/inbox";
+import {
+  addNote,
+  type Conversation,
+  markRead,
+  messagesQuery,
+  reply,
+  retryDelivery,
+  snoozeChoicesQuery,
+  type Then,
+} from "@/lib/api/inbox";
 import { useMutationId } from "@/lib/realtime/context";
 import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
+import { AssignPicker } from "./assign/assign-picker";
 import { statusLabel, useCase } from "./case";
 import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
@@ -37,9 +47,11 @@ import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
 import { OriginalMessage } from "./original-message";
 import { PriorityMenu } from "./priority/priority-menu";
+import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
+import { useWalk } from "./use-walk";
 
 const visible = { overflow: "visible" } as const;
 
@@ -75,10 +87,22 @@ function useTimeline(workspace: string, conversation: Conversation) {
     }
   }, [unread, mark]);
 
-  const send = async (mode: Mode, text: string) => {
+  const send = async (mode: Mode, text: string, then?: "close" | "snooze") => {
     const write = { workspace, mutation: mutationId() };
-    await (mode === "note" ? addNote(write, conversation.id, text) : reply(write, conversation.id, text));
+    if (mode === "note") {
+      await addNote(write, conversation.id, text);
+    } else {
+      await reply(write, conversation.id, text, await afterReply(then));
+    }
     await refresh();
+  };
+  const afterReply = async (then?: "close" | "snooze"): Promise<Then | undefined> => {
+    if (then !== "snooze") {
+      return then ? { kind: then } : undefined;
+    }
+    const choices = await queryClient.fetchQuery(snoozeChoicesQuery(workspace, conversation.id));
+    const first = choices[0];
+    return first ? { kind: "snooze", option: first.key } : undefined;
   };
 
   const retry = useMutation({
@@ -102,6 +126,18 @@ export function ConversationView({
   const { userId } = useInbox();
   const typing = useTypingReport(workspace, conversation.id);
   const caze = useCase(workspace, conversation);
+  const [snoozing, setSnoozing] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const toggleRef = useRef<() => void>(() => undefined);
+  const panels = useMemo(
+    () => ({
+      openSnooze: () => setSnoozing(true),
+      openAssign: () => setAssigning(true),
+      toggleDetails: () => toggleRef.current(),
+    }),
+    [],
+  );
+  const walk = useWalk(view, workspace, conversation, caze, panels);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);
@@ -118,6 +154,7 @@ export function ConversationView({
   const [original, setOriginal] = useState<string | null>(null);
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
+  toggleRef.current = () => toggle(pane.details);
   const toggleOperator = () => (sideBySide ? toggle(pane.operator) : setDrawer(!drawer));
   const operatorShown = sideBySide ? operatorOpen : drawer;
 
@@ -140,6 +177,29 @@ export function ConversationView({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <ConversationViewers conversation={conversation.id} self={userId} />
+          <AssignPicker
+            workspace={workspace}
+            assignee={conversation.assignee?.id ?? null}
+            team={conversation.team?.id ?? null}
+            isOpen={assigning}
+            onOpenChange={setAssigning}
+            onMember={caze.assign}
+            onTeam={caze.assignTeam}
+          />
+          <SnoozePicker
+            workspace={workspace}
+            conversation={conversation.id}
+            isOpen={snoozing}
+            onOpenChange={setSnoozing}
+            onOption={(key) => {
+              caze.snoozeWith(key);
+              walk.advance();
+            }}
+            onUntil={(until) => {
+              caze.snoozeUntil(until);
+              walk.advance();
+            }}
+          />
           <PriorityMenu priority={conversation.priority} onChange={caze.setPriority} />
           {sideBySide ? (
             <IconButton
@@ -165,7 +225,12 @@ export function ConversationView({
         entries={timeline.entries}
         customer={customer}
         channel={conversation.channel.name}
-        onSend={timeline.send}
+        onSend={async (mode, text, then) => {
+          await timeline.send(mode, text, then);
+          if (then) {
+            walk.advance();
+          }
+        }}
         onAskOperator={toggleOperator}
         onTyping={typing}
         onOpenOriginal={setOriginal}

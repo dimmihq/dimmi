@@ -165,6 +165,29 @@ func clientOptions(opts Options) []gomail.Option {
 }
 
 /*
+sign signs the built message with the message's own key, else the
+configured one, else leaves it as it is.
+*/
+func (m *Mailer) sign(msg mail.Message, raw []byte) ([]byte, error) {
+	signer := m.signer
+
+	if key := msg.Signing; key != nil {
+		own, err := dkim.New(dkim.Options{Domain: key.Domain, Selector: key.Selector, PrivateKey: key.PrivateKey})
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", mail.ErrPermanent, err)
+		}
+
+		signer = own
+	}
+
+	if signer == nil {
+		return raw, nil
+	}
+
+	return signer.Sign(raw)
+}
+
+/*
 Send builds, signs and transmits the message on a fresh connection.
 */
 func (m *Mailer) Send(ctx context.Context, msg mail.Message) (mail.SendResult, error) {
@@ -183,10 +206,8 @@ func (m *Mailer) Send(ctx context.Context, msg mail.Message) (mail.SendResult, e
 		return mail.SendResult{}, err
 	}
 
-	if m.signer != nil {
-		if raw, err = m.signer.Sign(raw); err != nil {
-			return mail.SendResult{}, err
-		}
+	if raw, err = m.sign(msg, raw); err != nil {
+		return mail.SendResult{}, err
 	}
 
 	conn, err := m.client.DialToSMTPClientWithContext(ctx)

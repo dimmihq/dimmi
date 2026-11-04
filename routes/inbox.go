@@ -51,7 +51,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		conversations: &v1.ConversationController{
 			List: acts.ListConversations, Show: acts.ShowConversation, Create: acts.CreateConversation,
-			Apply: acts.ApplyChanges, Neighbors: acts.ShowNeighbors, IDs: a.IDs, Cursors: cursors,
+			Apply: acts.ApplyChanges, Neighbors: acts.ShowNeighbors, Viewers: a.Viewers, IDs: a.IDs,
+			Cursors: cursors,
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
@@ -88,6 +89,8 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/conversation-counts", "conversation-counts.index", c.views.CountIndex).
 		Ability("conversations:read")
 	routing.Get(r, "/search", "search.index", c.views.SearchIndex).Ability("conversations:read")
+
+	inboxViewRoutes(r, a)
 }
 
 /*

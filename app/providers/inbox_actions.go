@@ -18,6 +18,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
+	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
@@ -47,14 +48,14 @@ func bootInbox(a *app.App) error {
 		CreateContact: &contacts.CreateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		UpdateContact: &contacts.UpdateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
 
-		ListConversations: &conversations.ListConversations{DB: a.DB},
+		ListConversations: &conversations.ListConversations{DB: a.DB, IDs: a.IDs, Clock: a.Clock},
 		ShowConversation:  &conversations.ShowConversation{DB: a.DB},
 		CreateConversation: &conversations.CreateConversation{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
 		},
 		ApplyChanges:       &conversations.ApplyConversationChanges{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		ShowNeighbors:      &conversations.ShowNeighbors{DB: a.DB},
-		CountConversations: &conversations.CountConversations{DB: a.DB},
+		CountConversations: &conversations.CountConversations{DB: a.DB, IDs: a.IDs, Clock: a.Clock, Cache: a.Cache},
 		ShowReadState:      &conversations.ShowReadState{DB: a.DB},
 		UpdateReadState:    &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
@@ -72,7 +73,30 @@ func bootInbox(a *app.App) error {
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
+	bootWorkbench(a)
+
 	return queue.Register(a.Queue, &jobs.SendChannelMessage{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels,
 	})
+}
+
+/*
+bootWorkbench builds the actions of the inbox's workbench: preferences,
+saved views and snooze lists.
+*/
+func bootWorkbench(a *app.App) {
+	acts := a.Actions.Inbox
+	saver := conversationviews.Saver{DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock}
+
+	acts.ShowPreferences = &conversations.ShowPreferences{DB: a.DB, IDs: a.IDs}
+	acts.UpdatePreferences = &conversations.UpdatePreferences{DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock}
+	acts.ListViews = &conversationviews.ListViews{DB: a.DB, IDs: a.IDs}
+	acts.ShowView = &conversationviews.ShowView{DB: a.DB, IDs: a.IDs}
+	acts.CreateView = &conversationviews.CreateView{Saver: saver}
+	acts.UpdateView = &conversationviews.UpdateView{Saver: saver}
+	acts.DeleteView = &conversationviews.DeleteView{Saver: saver}
+	acts.ReorderViews = &conversationviews.ReorderViews{Saver: saver}
+	acts.ListSnoozeLists = &conversations.ListSnoozeLists{DB: a.DB}
+	acts.UpdateSnoozeList = &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.ShowSnoozeOptions = &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock}
 }

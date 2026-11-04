@@ -28,8 +28,13 @@ func Channels(a *app.App) {
 	}
 
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)
-	channels.MustAuthorize(appbroadcasting.ConversationPattern, appbroadcasting.ConversationOptions(),
-		authorize.Conversation)
+	viewers := &appbroadcasting.ViewerAnnouncer{
+		Viewers: a.Viewers, Server: a.Broadcast, Clock: a.Clock, Locate: authorize.Locate,
+	}
+	conversation := appbroadcasting.ConversationOptions()
+	conversation.ListenersChanged = viewers.Changed
+
+	channels.MustAuthorize(appbroadcasting.ConversationPattern, conversation, authorize.Conversation)
 	channels.MustAuthorize(appbroadcasting.MemberPattern, appbroadcasting.MemberOptions(), authorize.Member)
 	channels.MustAuthorize(appbroadcasting.WidgetContactPattern, appbroadcasting.WidgetContactOptions(),
 		authorize.WidgetContact)

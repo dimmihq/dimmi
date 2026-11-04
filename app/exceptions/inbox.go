@@ -124,3 +124,49 @@ var ErrCursorMismatch = &fhttp.ResponseError{
 	Status: fhttp.StatusBadRequest, Code: "cursor_mismatch",
 	Message: "This cursor belongs to a different list.",
 }
+
+/*
+Inbox preference failures.
+
+ErrInvalidPreferences refuses a view no member has, or a sort, status or
+layout no list accepts. ErrPreferencesTooLarge refuses preferences over
+64 KB.
+*/
+var (
+	ErrInvalidPreferences = fault.New(fault.Invalid, "invalid_preferences",
+		"These preferences name a view or setting the inbox does not have.").OnField("views")
+	ErrPreferencesTooLarge = fault.New(fault.Invalid, "preferences_too_large",
+		"Inbox preferences can be 64 KB at most.")
+)
+
+/*
+Saved view failures.
+
+ErrInvalidDefinition refuses conditions a view cannot hold, naming the
+path to the culprit. ErrViewLimitReached refuses a view past the
+workspace's 200 shared or a member's 50 personal ones. ErrViewNameTaken
+refuses a name another view of the same scope and owner already has.
+*/
+var (
+	ErrInvalidDefinition = fault.New(fault.Invalid, "invalid_definition",
+		"This view's conditions are not valid.").OnField("definition")
+	ErrViewLimitReached = fault.New(fault.Invalid, "view_limit_reached",
+		"There are as many views as allowed. Delete one to add another.")
+	ErrViewNameTaken = fault.New(fault.Invalid, "view_name_taken",
+		"Another view already has this name.").OnField("name")
+)
+
+/*
+Snooze option failures.
+
+ErrInvalidSnoozeOptions refuses a snooze list that is empty, holds more
+than ten options, repeats a key or holds an option its kind cannot
+resolve. ErrSnoozeOptionUnknown refuses a snooze by an option the
+conversation's list no longer offers.
+*/
+var (
+	ErrInvalidSnoozeOptions = fault.New(fault.Invalid, "invalid_snooze_options",
+		"These snooze options are not valid.").OnField("options")
+	ErrSnoozeOptionUnknown = fault.New(fault.Invalid, "snooze_option_unknown",
+		"This snooze option is no longer offered.").OnField("snooze_option")
+)

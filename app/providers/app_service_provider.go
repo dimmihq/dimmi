@@ -75,6 +75,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	}
 
 	registerEmail(p.App, fa)
+	registerWidget(p.App, fa)
 
 	errs := []error{models.RegisterPublicIDs(fa.IDs)}
 
@@ -131,6 +132,18 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
+	if err := bootChannels(ctx, a); err != nil {
+		return err
+	}
+
+	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
+}
+
+/*
+bootChannels builds the inbox and every channel that feeds it, stopping at
+the first one that cannot start.
+*/
+func bootChannels(ctx context.Context, a *app.App) error {
 	if err := bootInbox(a); err != nil {
 		return err
 	}
@@ -139,7 +152,11 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
-	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
+	if err := bootWidget(ctx, a); err != nil {
+		return err
+	}
+
+	return bootEmailSending(a)
 }
 
 /*
