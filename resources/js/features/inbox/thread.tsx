@@ -5,7 +5,7 @@
  * pills. What Operator adds is a full-width card across the thread, so
  * the team's own agent never reads as part of the exchange with the
  * customer. Teammates' notes sit on the team's side with a dashed edge
- * and a lock. Below the thread sits the composer; R and N open it for a
+ * and a lock. Every message's Markdown is rendered. Below the thread sits the composer; R and N open it for a
  * reply or a note from anywhere, and O opens or closes Operator.
  */
 import { RiLock2Line, RiSparkling2Line } from "@remixicon/react";
@@ -20,6 +20,7 @@ import { cx } from "@/utils/cx";
 
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
+import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
 import type { Report } from "./use-typing-report";
 
@@ -77,7 +78,7 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
         </Chip>
         <span className="ms-auto text-body-2-regular text-text-tertiary">{entry.at}</span>
       </header>
-      <p className="text-body-regular whitespace-pre-line text-text-primary">{entry.text}</p>
+      <MessageBody text={entry.text} className="text-body-regular text-text-primary" />
       <p className="flex items-center gap-1 text-body-2-regular text-text-tertiary">
         <RiLock2Line aria-hidden className="size-3.5" />
         Not visible to {customer}
@@ -105,13 +106,13 @@ function Entry({ entry, customer }: { entry: ThreadEntry; customer: string }) {
       <div
         className={cx(
           bubble,
-          "text-body-regular whitespace-pre-line text-text-primary",
+          "text-body-regular text-text-primary",
           !ours && "bg-background-tertiary-default",
           ours && !note && "bg-background-primary-default shadow-card",
           note && "border border-dashed border-border-button-hover",
         )}
       >
-        {entry.text}
+        <MessageBody text={entry.text} />
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
       <Tag entry={entry} />

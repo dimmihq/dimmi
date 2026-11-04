@@ -15,9 +15,11 @@ package resources
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/markdown"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -140,16 +142,19 @@ func author(m models.Message, contact models.Contact, member *conversations.Memb
 }
 
 /*
-excerpt returns the start of a message, cut short where it is long.
+excerpt returns the start of a message as plain text, its Markdown
+taken out, cut short where it is long.
 */
 func excerpt(body *string) string {
 	if body == nil {
 		return ""
 	}
 
-	runes := []rune(*body)
+	plain := strings.Join(strings.Fields(markdown.PlainText([]byte(*body))), " ")
+
+	runes := []rune(plain)
 	if len(runes) <= excerptLength {
-		return *body
+		return plain
 	}
 
 	return string(runes[:excerptLength]) + "…"

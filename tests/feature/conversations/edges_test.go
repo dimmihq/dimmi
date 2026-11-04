@@ -56,6 +56,17 @@ func TestInboxEdges(t *testing.T) {
 			AssertJSONPath("data.0.last_message.excerpt", res.String("data.0.excerpt"))
 	})
 
+	t.Run("shows a reply's markdown as plain text in the list", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Hi")
+		d.owner.PostJSON(path+"/replies", testkit.JSON{"body": "We added **decaf**\n\n- one bag\n- [track it](https://x.test)"}).
+			AssertCreated().AssertJSONPath("data.body", "We added **decaf**\n\n- one bag\n- [track it](https://x.test)")
+
+		d.owner.GetJSON("/api/v1/conversations?filter[view]=all").AssertOK().
+			AssertJSONPath("data.0.last_message.excerpt", "We added decaf one bag track it")
+	})
+
 	t.Run("normalizes empty contact details away and caps custom attributes", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)

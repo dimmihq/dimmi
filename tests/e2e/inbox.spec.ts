@@ -117,6 +117,26 @@ it.describe("the inbox", () => {
 
     await page.getByRole("textbox", { name: "Search conversations" }).fill("nothing like this");
     await expect(page.getByText("No matches")).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Search conversations" }).fill("haddad");
+    await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toBeHidden();
+  });
+
+  it("shows a reply's markdown as formatted text", async ({ page }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await page
+      .getByRole("textbox", { name: "Reply to Emily Johnson" })
+      .fill("Use **a sign-in code**\n\n- open the app\n- see [the guide](https://help.example/sign-in)");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    const reply = page.getByRole("article", { name: /Message from/ }).last();
+    await expect(reply.locator("strong")).toHaveText("a sign-in code");
+    await expect(reply.getByRole("listitem")).toHaveCount(2);
+    await expect(reply.getByRole("link", { name: "the guide" })).toHaveAttribute("target", "_blank");
+    await expect(reply).not.toContainText("**");
   });
 
   it("talks the case over with Operator", async ({ page }) => {
