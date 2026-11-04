@@ -20,7 +20,7 @@ it.describe("tags", () => {
     const id = await startConversation(page, customer);
     await page.goto(`/d/inbox/unassigned/${id}`);
     const details = page.getByRole("region", { name: "Details" });
-    await expect(details.getByRole("button", { name: "Add tag" })).toBeVisible();
+    await expect(details.getByRole("button", { name: "Add tag", exact: true })).toBeVisible();
 
     await page.keyboard.press("Shift+T");
     const find = page.getByRole("textbox", { name: "Find or create a tag" });
