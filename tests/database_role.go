@@ -16,11 +16,13 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
 
@@ -80,4 +82,18 @@ func (tc *TestCase) operatorDB() *database.DB {
 	})
 
 	return tc.operator
+}
+
+/*
+InWorkspace runs the function in a transaction scoped to the test's
+workspace, the way the application reaches workspace rows, and fails
+the test when it returns an error. Setup that calls services directly,
+such as minting or revoking a token, runs through it.
+*/
+func (tc *TestCase) InWorkspace(fn func(ctx context.Context) error) {
+	tc.T.Helper()
+
+	ctx := tenancy.With(tc.T.Context(), tc.Workspace.Workspace.ID.String())
+	err := tc.App.DB.Transaction(ctx, func(ctx context.Context, _ *database.Tx) error { return fn(ctx) })
+	require.NoError(tc.T, err)
 }
