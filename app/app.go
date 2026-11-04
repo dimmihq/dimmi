@@ -71,7 +71,8 @@ Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
 widget's build and WidgetAssets serves it. HelpSample is the sample help
 center and changelog the public pages show until their content lives in
-the database. Realtime authenticates realtime connections.
+the database. Realtime authenticates realtime connections, and Viewers
+finds who views conversations.
 */
 type App struct {
 	*foundation.Application
@@ -105,6 +106,7 @@ type App struct {
 	EmailChannel          *email.Channel
 
 	Realtime *appbroadcasting.Connections
+	Viewers  *appbroadcasting.Viewers
 
 	OAuthAttempts auth.OAuthAttempts
 	Frontend      fs.FS

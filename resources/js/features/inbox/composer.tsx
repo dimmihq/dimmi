@@ -25,13 +25,15 @@ import { cx } from "@/utils/cx";
 import { AddMenu } from "./add-menu";
 import { AttachmentStrip } from "./attachments";
 import { type Mode, modes } from "./modes";
+import { SendMenu } from "./send-menu";
 import { useAttachments } from "./use-attachments";
 import type { Report } from "./use-typing-report";
 
 /*
- * Send sends what the composer holds as a reply or a note.
+ * Send sends what the composer holds as a reply or a note, and for a
+ * reply what then happens to the conversation: close or snooze.
  */
-export type Send = (mode: Mode, text: string) => Promise<unknown>;
+export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Promise<unknown>;
 
 const surface =
   "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
@@ -174,7 +176,7 @@ function Panel({
   };
 
   const text = drafts[mode].trim();
-  const send = async () => {
+  const send = async (then?: "close" | "snooze") => {
     if (!text || sending) {
       return;
     }
@@ -182,7 +184,7 @@ function Panel({
     setFailure(null);
     onTyping(false);
     try {
-      await onSend(mode, text);
+      await onSend(mode, text, note ? undefined : then);
       setDrafts((before) => ({ ...before, [mode]: "" }));
       attachments.clear();
     } catch (error) {
@@ -254,7 +256,7 @@ function Panel({
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                 event.preventDefault();
-                void send();
+                void send(event.shiftKey ? "close" : event.altKey ? "snooze" : undefined);
               }
             }}
             rows={4}
@@ -303,6 +305,7 @@ function Panel({
           >
             <RiArrowUpLine aria-hidden className="size-5" />
           </button>
+          {note ? null : <SendMenu disabled={!text || sending} onSend={(then) => void send(then)} />}
         </div>
       </fieldset>
     </div>

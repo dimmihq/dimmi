@@ -25,6 +25,7 @@ import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DDocsRouteImport } from './routes/d/docs'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
+import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
@@ -118,6 +119,11 @@ const DNotificationsRoute = DNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DShortcutsRoute = DShortcutsRouteImport.update({
+  id: '/shortcuts',
+  path: '/shortcuts',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
   id: '/login_/magic',
   path: '/login/magic',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/login/magic': typeof AuthLoginMagicRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/shortcuts': typeof DShortcutsRoute
   '/d': typeof DIndexRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
+    | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
     | '/login/magic'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
+    | '/d/shortcuts'
     | '/d'
     | '/login/magic'
     | '/login/two-factor'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
+    | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
     | '/_auth/login_/magic'
@@ -489,6 +501,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DNotificationsRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/shortcuts': {
+      id: '/d/shortcuts'
+      path: '/shortcuts'
+      fullPath: '/d/shortcuts'
+      preLoaderRoute: typeof DShortcutsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/_auth/login_/magic': {
       id: '/_auth/login_/magic'
       path: '/login/magic'
@@ -605,6 +624,7 @@ interface DRouteRouteChildren {
   DDocsRoute: typeof DDocsRoute
   DFeedbackRoute: typeof DFeedbackRoute
   DNotificationsRoute: typeof DNotificationsRoute
+  DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
@@ -625,6 +645,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DDocsRoute: DDocsRoute,
   DFeedbackRoute: DFeedbackRoute,
   DNotificationsRoute: DNotificationsRoute,
+  DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
   DProceduresProcedureRoute: DProceduresProcedureRoute,

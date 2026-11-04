@@ -130,7 +130,7 @@ func TestListenersChanged(t *testing.T) {
 		changes := make(chan string, 4)
 		watch := broadcasting.ChannelOptions{
 			Presence: true,
-			ListenersChanged: func(principal broadcasting.Principal, channel string) {
+			ListenersChanged: func(_ context.Context, principal broadcasting.Principal, channel string) {
 				changes <- principal.UserID + " " + channel
 			},
 		}
@@ -149,7 +149,7 @@ func TestListenersChanged(t *testing.T) {
 		n := newNode(t, testkit.NewValkey(t))
 		changes := make(chan string, 4)
 		watch := broadcasting.ChannelOptions{
-			ListenersChanged: func(principal broadcasting.Principal, channel string) {
+			ListenersChanged: func(_ context.Context, principal broadcasting.Principal, channel string) {
 				changes <- principal.UserID + " " + channel
 			},
 		}
