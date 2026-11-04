@@ -14,6 +14,7 @@ package app
 import (
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/members"
@@ -101,5 +102,8 @@ type Actions struct {
 	RenamePersonalAccessToken *tokens.RenamePersonalAccessToken
 	RevokePersonalAccessToken *tokens.RevokePersonalAccessToken
 	ListTokenAbilities        *tokens.ListTokenAbilities
-	Inbox                     *InboxActions
+
+	Inbox *InboxActions
+
+	RecordTyping *conversations.RecordTyping
 }

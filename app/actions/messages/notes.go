@@ -35,12 +35,15 @@ import (
 /*
 NoteInput is who adds a note to which conversation, and the note.
 ClientMessageID makes a retried request find its first note.
+MutationID is the id the client gave the change, empty when it gave
+none.
 */
 type NoteInput struct {
 	Membership      authz.Membership
 	Ref             conversations.Ref
 	Body            string
 	ClientMessageID *string
+	MutationID      string
 }
 
 /*
@@ -72,7 +75,7 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 	var out Written
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref})
+		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref, in.MutationID})
 		if err != nil {
 			return err
 		}
@@ -99,12 +102,15 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 /*
 ContactMessageInput is who relays which customer message to which
 conversation. DedupeKey, when given, makes the message count once.
+MutationID is the id the client gave the change, empty when it gave
+none.
 */
 type ContactMessageInput struct {
 	Membership authz.Membership
 	Ref        conversations.Ref
 	Body       string
 	DedupeKey  *string
+	MutationID string
 }
 
 /*
@@ -139,7 +145,7 @@ func (a *AddContactMessage) Handle(ctx context.Context, in ContactMessageInput) 
 	var out Written
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref})
+		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref, in.MutationID})
 		if err != nil {
 			return err
 		}

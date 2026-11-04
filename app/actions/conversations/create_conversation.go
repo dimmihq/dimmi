@@ -43,6 +43,8 @@ CreateConversationInput is who starts which conversation. ByContact
 says the customer wrote the first message, which then needs InboxID or
 an api ConnectionID; otherwise the caller wrote it and ConnectionID is
 required. AssignSet says Assignee was sent, nil meaning nobody.
+MutationID is the id the client gave the change, empty when it gave
+none.
 */
 type CreateConversationInput struct {
 	Membership   authz.Membership
@@ -54,6 +56,7 @@ type CreateConversationInput struct {
 	Body         string
 	AssignSet    bool
 	Assignee     *ids.UUID
+	MutationID   string
 }
 
 /*
@@ -96,6 +99,8 @@ func (a *CreateConversation) Handle(ctx context.Context, in CreateConversationIn
 		if err != nil {
 			return err
 		}
+
+		w.MutationID = in.MutationID
 
 		c, err := a.start(ctx, w, in)
 		if err != nil {
@@ -267,8 +272,7 @@ func (a *CreateConversation) firstMessage(
 	}
 
 	if err := w.Dispatch(ctx, appevents.ConversationCreated{
-		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, InitiatedBy: initiatedBy,
-		ActorType: author.Actor.Type, ActorID: author.Actor.ID,
+		Base: author.Base(c.WorkspaceID), ConversationRef: ref(c), ContactID: c.ContactID, InitiatedBy: initiatedBy,
 	}); err != nil {
 		return c, err
 	}

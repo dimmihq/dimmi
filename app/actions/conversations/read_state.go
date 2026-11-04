@@ -95,13 +95,15 @@ func (a *ShowReadState) Handle(ctx context.Context, in ReadStateInput) (ReadStat
 /*
 UpdateReadStateInput is who moves their marker on which conversation:
 up to the entry UpTo, to the latest entry when nil, or back to unread
-when Unread.
+when Unread. MutationID is the id the client gave the change, empty
+when it gave none.
 */
 type UpdateReadStateInput struct {
 	Membership authz.Membership
 	Ref        Ref
 	UpTo       *ids.UUID
 	Unread     bool
+	MutationID string
 }
 
 /*
@@ -134,7 +136,7 @@ func (a *UpdateReadState) Handle(ctx context.Context, in UpdateReadStateInput) (
 	var out ReadState
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		w := &Writer{Q: models.New(tx), Tx: tx, Events: a.Events, Now: a.Clock.Now()}
+		w := &Writer{Q: models.New(tx), Tx: tx, Events: a.Events, Now: a.Clock.Now(), MutationID: in.MutationID}
 		member := in.Membership.Member.ID
 
 		c, err := Find(ctx, w.Q, in.Membership.Workspace.ID, in.Ref)
@@ -340,7 +342,7 @@ func (w *Writer) saveMarker(ctx context.Context, c models.Conversation, member i
 	}
 
 	return w.Dispatch(ctx, appevents.ConversationRead{
-		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, MemberID: member, LastReadMessageID: orNil(m.entry),
-		Unread: m.unread,
+		Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), MemberRef: appevents.MemberRef{MemberID: member},
+		LastReadMessageID: m.entry, Unread: m.unread,
 	})
 }

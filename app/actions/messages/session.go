@@ -46,11 +46,13 @@ type session struct {
 }
 
 /*
-target is the conversation a request writes to, and who writes.
+target is the conversation a request writes to, who writes, and the id
+the client gave the change.
 */
 type target struct {
-	m   authz.Membership
-	ref conversations.Ref
+	m        authz.Membership
+	ref      conversations.Ref
+	mutation string
 }
 
 /*
@@ -61,6 +63,8 @@ func open(ctx context.Context, tx *database.Tx, s conversations.Services, t targ
 	if err != nil {
 		return nil, err
 	}
+
+	w.MutationID = t.mutation
 
 	c, err := conversations.Lock(ctx, w.Q, t.m.Workspace.ID, t.ref)
 	if err != nil {

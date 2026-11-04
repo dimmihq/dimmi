@@ -52,7 +52,8 @@ const (
 ReplyInput is who replies to which conversation, and the reply.
 ClientMessageID makes a retried request find its first reply.
 ExpectedLastMessageID is the newest message the replier saw. Then is
-one of the Then values, with Snooze saying until when.
+one of the Then values, with Snooze saying until when. MutationID is
+the id the client gave the change, empty when it gave none.
 */
 type ReplyInput struct {
 	Membership            authz.Membership
@@ -62,6 +63,7 @@ type ReplyInput struct {
 	ExpectedLastMessageID *ids.UUID
 	Then                  string
 	Snooze                SnoozeInput
+	MutationID            string
 }
 
 /*
@@ -120,7 +122,7 @@ func (a *ReplyToConversation) Handle(ctx context.Context, in ReplyInput) (Writte
 	var out Written
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref})
+		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref, in.MutationID})
 		if err != nil {
 			return err
 		}

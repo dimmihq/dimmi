@@ -197,7 +197,10 @@ type frame struct {
 	Error     *protoError   `json:"error"`
 	Connect   *connected    `json:"connect"`
 	Subscribe *subscription `json:"subscribe"`
-	Push      *push         `json:"push"`
+	Presence  *struct {
+		Presence map[string]clientInfo `json:"presence"`
+	} `json:"presence"`
+	Push *push `json:"push"`
 }
 
 /*
@@ -395,9 +398,11 @@ func (c *wsClient) closed() websocket.StatusCode {
 envelope is the broadcast as the server encodes it.
 */
 type envelope struct {
-	Event      string          `json:"event"`
-	ServerTime time.Time       `json:"server_time"`
-	Data       json.RawMessage `json:"data"`
+	ID         string            `json:"id"`
+	Event      string            `json:"event"`
+	ServerTime time.Time         `json:"server_time"`
+	Data       json.RawMessage   `json:"data"`
+	Meta       map[string]string `json:"meta"`
 }
 
 /*

@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The order is the boot order: the application first, since every other
-| provider uses it, then sign-in, then the routes, which need the
-| actions.
+| provider uses it, then sign-in, then realtime, which authenticates
+| with sign-in's guards, then the routes, which need the actions.
 |
 */
 
@@ -25,6 +25,7 @@ func All(a *app.App, routes func(a *app.App)) []foundation.Provider {
 	return []foundation.Provider{
 		AppServiceProvider{App: a},
 		AuthServiceProvider{App: a},
+		BroadcastServiceProvider{App: a},
 		RouteServiceProvider{App: a, Routes: routes},
 	}
 }

@@ -26,6 +26,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -42,14 +43,17 @@ type Actor struct {
 /*
 Writer writes the changes of one transaction. Now is the time they
 happen, and Timezone the actor's own time zone, nil when they set none.
+MutationID is the id the client gave the change, carried on every
+event so the screen that made it can drop its own echo.
 */
 type Writer struct {
-	Q        *models.Queries
-	Tx       *database.Tx
-	Events   *events.Dispatcher
-	Now      time.Time
-	Actor    Actor
-	Timezone *string
+	Q          *models.Queries
+	Tx         *database.Tx
+	Events     *events.Dispatcher
+	Now        time.Time
+	Actor      Actor
+	Timezone   *string
+	MutationID string
 }
 
 /*
@@ -84,6 +88,38 @@ Dispatch sends the event within the writer's transaction.
 */
 func (w *Writer) Dispatch(ctx context.Context, e events.Event) error {
 	return w.Events.Dispatch(ctx, w.Tx, e)
+}
+
+/*
+Base returns the header of an event the writer dispatches in the
+workspace: a fresh id, the time of the change, the actor and the
+client's mutation id.
+*/
+func (w *Writer) Base(workspaceID ids.UUID) appevents.Base {
+	return appevents.Base{
+		ID: ids.New(), WorkspaceID: workspaceID, OccurredAt: w.Now,
+		Actor:            appevents.Actor{Type: w.actorType(), ID: w.Actor.ID},
+		ClientMutationID: w.MutationID,
+	}
+}
+
+/*
+actorType returns the type of the actor for an event, system when the
+writer acts for nobody.
+*/
+func (w *Writer) actorType() string {
+	if w.Actor.Type == "" {
+		return "system"
+	}
+
+	return w.Actor.Type
+}
+
+/*
+ref returns how an event names the conversation.
+*/
+func ref(c models.Conversation) appevents.ConversationRef {
+	return appevents.ConversationRef{ConversationID: c.ID}
 }
 
 /*
@@ -165,8 +201,7 @@ func teamRef(team *models.Team) any {
 }
 
 /*
-orNil returns the id, or ids.Nil() for none, the way events name
-nobody.
+orNil returns the id, or ids.Nil() for none.
 */
 func orNil(id *ids.UUID) ids.UUID {
 	if id == nil {

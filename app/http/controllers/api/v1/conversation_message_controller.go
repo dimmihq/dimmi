@@ -186,7 +186,7 @@ func (c *ConversationMessageController) StoreReply(
 	b := in.Body
 	reply := messages.ReplyInput{
 		Membership: membership(ctx), Ref: ref, Body: b.Body, ClientMessageID: b.ClientMessageID,
-		Then: messages.ThenKeep,
+		Then: messages.ThenKeep, MutationID: mutationID(ctx),
 	}
 
 	if b.Then != nil {
@@ -230,6 +230,7 @@ func (c *ConversationMessageController) StoreNote(
 
 	written, err := c.Note.Handle(ctx, messages.NoteInput{
 		Membership: membership(ctx), Ref: ref, Body: in.Body.Body, ClientMessageID: in.Body.ClientMessageID,
+		MutationID: mutationID(ctx),
 	})
 	if err != nil {
 		return nil, err
@@ -251,6 +252,7 @@ func (c *ConversationMessageController) Store(
 
 	written, err := c.Relay.Handle(ctx, messages.ContactMessageInput{
 		Membership: membership(ctx), Ref: ref, Body: in.Body.Body, DedupeKey: in.Body.DedupeKey,
+		MutationID: mutationID(ctx),
 	})
 	if err != nil {
 		return nil, err

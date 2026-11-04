@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
@@ -153,7 +154,8 @@ func (c *ConversationController) Store(
 	create := conversations.CreateConversationInput{
 		Membership: membership(ctx), ByContact: b.Author != nil && *b.Author == "contact", Subject: b.Subject,
 		Body: b.Body, AssignSet: requests.Sent(in.RawBody)["assignee_id"],
-		Contact: contacts.Ref{ExternalID: b.Contact.ExternalID, Email: b.Contact.Email, Name: b.Contact.Name},
+		Contact:    contacts.Ref{ExternalID: b.Contact.ExternalID, Email: b.Contact.Email, Name: b.Contact.Name},
+		MutationID: mutationID(ctx),
 	}
 
 	var err error
@@ -203,7 +205,7 @@ func (c *ConversationController) Update(
 	}
 
 	applied, err := c.Apply.Handle(ctx, conversations.ApplyChangesInput{
-		Membership: membership(ctx), Ref: ref, Changes: changes,
+		Membership: membership(ctx), Ref: ref, Changes: changes, MutationID: mutationID(ctx),
 	})
 	if err != nil {
 		return nil, err
@@ -324,4 +326,17 @@ func decodeField(registry *ids.Registry, prefix models.Prefix, named *string, re
 	}
 
 	return &id, nil
+}
+
+/*
+mutationID returns the id the client gave the change the request makes,
+"" when it gave none, so the events of the change carry it back.
+*/
+func mutationID(ctx context.Context) string {
+	r, ok := fhttp.RequestFrom(ctx)
+	if !ok {
+		return ""
+	}
+
+	return appmiddleware.ClientMutationID(r)
 }

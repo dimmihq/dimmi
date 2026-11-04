@@ -13,6 +13,11 @@
 | such as typing indicators, keep none: replaying them after a reconnect
 | would show something that is long over.
 |
+| A broadcast may carry an id, so a client that receives it twice, once
+| replayed from history and once live, keeps it once, and metadata such
+| as the id of the client change that caused it, so the client that made
+| the change can recognize its own echo.
+|
 */
 
 package broadcasting
@@ -73,18 +78,36 @@ type Member struct {
 }
 
 /*
-envelope is the shape of every broadcast clients receive.
+Message is one broadcast. ID identifies it to clients that deduplicate,
+and may be empty. Event names it and Data is its payload, encoded as
+JSON. Meta carries facts about the broadcast itself rather than its
+subject, and is left out when empty. Ephemeral keeps the broadcast out
+of every channel's history.
 */
-type envelope struct {
-	Event      string    `json:"event"`
-	ServerTime time.Time `json:"server_time"`
-	Data       any       `json:"data"`
+type Message struct {
+	ID        string
+	Event     string
+	Data      any
+	Meta      map[string]string
+	Ephemeral bool
 }
 
 /*
-revoked closes the connections of a user whose access ended. Its code
-is in the range client libraries treat as final, so they do not
-reconnect.
+envelope is the shape of every broadcast clients receive.
+*/
+type envelope struct {
+	ID         string            `json:"id,omitempty"`
+	Event      string            `json:"event"`
+	ServerTime time.Time         `json:"server_time"`
+	Data       any               `json:"data"`
+	Meta       map[string]string `json:"meta,omitempty"`
+}
+
+/*
+revoked closes the connections of a user whose access ended. Client
+libraries reconnect after a code in this range, and the new connection
+is then refused every channel the user may no longer follow, so a
+client knows to drop what it showed.
 */
 func revoked() centrifuge.Disconnect {
 	return centrifuge.Disconnect{Code: 4009, Reason: "member_removed"}
@@ -104,7 +127,24 @@ in its own history. No channel receives it when one is unknown or the
 payload is too large.
 */
 func (s *Server) BroadcastMany(ctx context.Context, channels []string, event string, payload any) error {
-	data, err := s.encode(event, payload)
+	return s.Publish(ctx, channels, Message{Event: event, Data: payload})
+}
+
+/*
+BroadcastEphemeral publishes the event on the channel without keeping
+it in history, so reconnecting clients never receive it.
+*/
+func (s *Server) BroadcastEphemeral(ctx context.Context, channel, event string, payload any) error {
+	return s.Publish(ctx, []string{channel}, Message{Event: event, Data: payload, Ephemeral: true})
+}
+
+/*
+Publish publishes the message on every channel, each keeping it in its
+own history unless the message is ephemeral. No channel receives it
+when one is unknown or the encoded message is too large.
+*/
+func (s *Server) Publish(ctx context.Context, channels []string, m Message) error {
+	data, err := s.encode(m)
 	if err != nil {
 		return err
 	}
@@ -113,37 +153,21 @@ func (s *Server) BroadcastMany(ctx context.Context, channels []string, event str
 	for _, channel := range channels {
 		r, _, ok := s.channels.match(channel)
 		if !ok {
-			return fmt.Errorf("broadcast %s on %q: %w", event, channel, ErrUnknownChannel)
+			return fmt.Errorf("broadcast %s on %q: %w", m.Event, channel, ErrUnknownChannel)
 		}
 
 		routes = append(routes, r)
 	}
 
 	for i, channel := range channels {
-		if err := s.publish(ctx, channel, data, routes[i].opts.history()...); err != nil {
-			return fmt.Errorf("broadcast %s: %w", event, err)
+		var opts []centrifuge.PublishOption
+		if !m.Ephemeral {
+			opts = routes[i].opts.history()
 		}
-	}
 
-	return nil
-}
-
-/*
-BroadcastEphemeral publishes the event on the channel without keeping
-it in history, so reconnecting clients never receive it.
-*/
-func (s *Server) BroadcastEphemeral(ctx context.Context, channel, event string, payload any) error {
-	data, err := s.encode(event, payload)
-	if err != nil {
-		return err
-	}
-
-	if _, _, ok := s.channels.match(channel); !ok {
-		return fmt.Errorf("broadcast %s on %q: %w", event, channel, ErrUnknownChannel)
-	}
-
-	if err := s.publish(ctx, channel, data); err != nil {
-		return fmt.Errorf("broadcast %s: %w", event, err)
+		if err := s.send(ctx, channel, data, opts...); err != nil {
+			return fmt.Errorf("broadcast %s: %w", m.Event, err)
+		}
 	}
 
 	return nil
@@ -194,25 +218,28 @@ func (s *Server) Presence(ctx context.Context, channel string) ([]Member, error)
 }
 
 /*
-encode builds the envelope for the event and checks its size.
+encode builds the envelope for the message and checks its size.
 */
-func (s *Server) encode(event string, payload any) ([]byte, error) {
-	data, err := json.Marshal(envelope{Event: event, ServerTime: s.clock.Now().UTC(), Data: payload})
+func (s *Server) encode(m Message) ([]byte, error) {
+	data, err := json.Marshal(envelope{
+		ID: m.ID, Event: m.Event, ServerTime: s.clock.Now().UTC(), Data: m.Data, Meta: m.Meta,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("encode %s: %w", event, err)
+		return nil, fmt.Errorf("encode %s: %w", m.Event, err)
 	}
 
 	if len(data) > s.maxPayload {
-		return nil, fmt.Errorf("broadcast %s: %w: %d bytes, cap %d", event, ErrPayloadTooLarge, len(data), s.maxPayload)
+		return nil, fmt.Errorf("broadcast %s: %w: %d bytes, cap %d",
+			m.Event, ErrPayloadTooLarge, len(data), s.maxPayload)
 	}
 
 	return data, nil
 }
 
 /*
-publish hands one encoded broadcast to the broker.
+send hands one encoded broadcast to the broker.
 */
-func (s *Server) publish(ctx context.Context, channel string, data []byte, opts ...centrifuge.PublishOption) error {
+func (s *Server) send(ctx context.Context, channel string, data []byte, opts ...centrifuge.PublishOption) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("publish on %q: %w", channel, err)
 	}

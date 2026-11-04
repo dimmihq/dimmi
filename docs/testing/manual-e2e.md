@@ -382,6 +382,36 @@ T(){ echo "Authorization: Bearer $1"; }; K=$B/tokens
 | Deactivation ends tokens | Bob deactivates the member, then the member's token on `me` | 401 `token_revoked` |
 | In a browser | open `$W/d/settings/tokens`, make a token with one ability, copy it, call `$B/members` with it, then revoke it | the secret shows once with a copy button; the list says what it may do, when it was last used and when it expires; after revoking it shows "Revoked" and the token gets 401 |
 
+### Realtime
+
+The realtime endpoint speaks centrifuge's JSON protocol over WebSocket. `websocat` (`brew install websocat`) is
+enough to drive it by hand: each line you type is one command, each line printed is a reply or a push. A browser
+sends its cookie and its page's `Origin` with the upgrade; a token goes in the connect command instead, never in
+the URL. Read the session cookie out of `a.jar` (`SES=$(awk '/dimmi_session/ {print $7}' a.jar)`) and take the
+workspace id from sign-up (`WS=ws_…`) and a member id from `GET $B/members` (`MEM=mem_…`).
+
+```bash
+WSS=ws://127.0.0.1:18080/connection/websocket
+listen(){ websocat -H "Cookie: dimmi_session=$SES" -H "$O" "$@" $WSS; }
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Connect with the cookie | `listen`, then type `{"id":1,"connect":{}}` | `{"id":1,"connect":{"client":"…","ping":25,…}}` |
+| No credentials | `websocat $WSS`, then `{"id":1,"connect":{}}` | `{"id":1,"error":{"code":101,"message":"unauthorized"}}` |
+| Cookie from another site | `listen -H 'Sec-Fetch-Site: cross-site'`, then connect | error 101 |
+| Bad token | `websocat $WSS`, then `{"id":1,"connect":{"token":"dmi_live_nope"}}` | error 101 |
+| Follow the workspace | after connecting, `{"id":2,"subscribe":{"channel":"workspace:'$WS'"}}` | `subscribe` reply with `recoverable: true`, `epoch`, `offset` |
+| Other workspace refused | sign up `$BOB` with his own workspace, connect with his cookie, subscribe `workspace:$WS` | error 103 `permission denied` |
+| Unknown channel | `{"id":3,"subscribe":{"channel":"lobby"}}` | error 102 |
+| Live rename | keep the subscription open; in another shell `r ren -b a.jar -X PATCH -H "$O" -H "$J" $B/workspace -d '{"name":"Acme Live"}'` | a push `{"push":{"channel":"workspace:ws_…","pub":{"data":{"id":"evt_…","event":"workspace.updated",…,"data":{"id":"ws_…","object":"workspace","changes":["name"]}},"offset":…}}}` |
+| Recover after a drop | note the `epoch` and last `offset`, quit, rename again, reconnect and `{"id":2,"subscribe":{"channel":"workspace:'$WS'","recover":true,"epoch":"…","offset":…}}` | `recovered: true` with the missed `workspace.updated` in `publications` |
+| Client publish refused | `{"id":4,"publish":{"channel":"workspace:'$WS'","data":{}}}` | an error reply; nothing is broadcast |
+| Presence | `{"id":5,"presence":{"channel":"workspace:'$WS'"}}` | one entry per connection, `user: usr_…`, `conn_info` `{"name":"Ada Lovelace","avatar_url":null}`; a channel not subscribed: error 103 |
+| Deactivated member | add `$CAROL` as a member, connect with her cookie, subscribe the workspace; from `a.jar` `PATCH $B/members/mem_…` `{"status":"deactivated"}` | her socket closes with code 4009 `member_removed` within a second; Ada's subscription gets `member.deactivated` |
+| Typing relay | `r typ -b a.jar -X POST -H "$O" -H "$J" -H "Dimmi-Workspace: $WS" $B/conversations/conv_…/typing-indicators -d '{}'` (a conversation started by a customer) | 202 `{"data":{"object":"typing_indicator","state":"start","expires_at":"…"}}`; an unknown `conv_` 404; `{"state":"dancing"}` 422 |
+| Node SDK | `pnpm exec playwright test tests/e2e/realtime.spec.ts` | centrifuge-js connects with the cookie, follows the workspace and a conversation, lists presence, recovers after a disconnect |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.
@@ -392,6 +422,7 @@ Run `make build` first so the binary embeds the browser app.
 | App page | `curl -s -D - $W/d \| grep -iE '^(cache-control\|content-security-policy)'` | `no-cache`; policy with `'nonce-…'`, no `unsafe-inline`, no dev server |
 | Theme | `curl -s -b dimmi_theme=dark $W/login \| grep -o '<html[^>]*>'` | `<html lang="en" class="dark">` |
 | In a browser | open `$W/signup`, create an account, open the verification mail's link, sign out, sign in by password, then by mailed code | lands on `/d` each time; provider buttons first when providers are configured; light and dark switch and survive a reload |
+| Live in two browsers | add Bob to Ada's workspace, sign in as Bob in a private window on `/d/inbox`, then rename the workspace in Ada's `/d/settings/workspace` | Bob's sidebar shows the new name without a reload; stop the server and after two seconds Bob sees "Reconnecting…", which goes away once it is back |
 | Two-factor in a browser | in `/d/settings/security` add an authenticator (scan the QR code, or "Can't scan the code?" and copy the key), confirm with its code, copy the recovery codes; sign out, sign in by password, answer with the app's code; sign out again and use "Use a recovery code instead" | the key stays hidden until asked and copies from its read-only field; "Copy codes" puts all ten on the clipboard, one per line; each sign-in stops at `/login/two-factor`, then lands on `/d`; the settings then say "9 of 10 left" |
 | Require 2FA in a browser | open `/d/settings/workspace` and switch "Require two-factor authentication" before and after adding an authenticator | refused with a note to turn it on for your own account first, then on and still on after a reload |
 | Sessions in a browser | sign in from a second browser, open `/d/settings/security` | both sessions listed, this one marked "This session"; "Revoke" and "Sign out others" sign the other browser out |

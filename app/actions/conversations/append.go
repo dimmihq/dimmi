@@ -69,9 +69,12 @@ func (w *Writer) Append(
 		return msg, c, err
 	}
 
+	connection := c.ChannelConnectionID
 	if err := w.Dispatch(ctx, appevents.MessageCreated{
-		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, MessageID: msg.ID, Type: msg.Type,
-		AuthorType: msg.AuthorType, AuthorID: orNil(msg.AuthorID), Substantive: msg.Substantive,
+		Base:       w.Base(c.WorkspaceID),
+		MessageRef: appevents.MessageRef{ConversationRef: ref(c), MessageID: msg.ID},
+		ContactID:  c.ContactID, ChannelConnectionID: &connection, Type: msg.Type,
+		AuthorType: msg.AuthorType, AuthorID: msg.AuthorID, Substantive: msg.Substantive,
 	}); err != nil {
 		return msg, c, err
 	}

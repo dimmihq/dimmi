@@ -122,13 +122,23 @@ func (s *Server) connecting(ctx context.Context, event centrifuge.ConnectEvent) 
 }
 
 /*
-connected guards the subscriptions a client asks for. Publishing and
-every other client command stay unhandled, which the node refuses.
+connected guards the subscriptions a client asks for, and lets it list
+who else listens on a channel it is subscribed to. Publishing and every
+other client command stay unhandled, which the node refuses.
 */
 func (s *Server) connected(client *centrifuge.Client) {
 	client.OnSubscribe(func(event centrifuge.SubscribeEvent, callback centrifuge.SubscribeCallback) {
 		opts, err := s.authorize(client.Context(), event.Channel)
 		callback(centrifuge.SubscribeReply{Options: opts}, err)
+	})
+	client.OnPresence(func(event centrifuge.PresenceEvent, callback centrifuge.PresenceCallback) {
+		if !client.IsSubscribed(event.Channel) {
+			callback(centrifuge.PresenceReply{}, centrifuge.ErrorPermissionDenied)
+
+			return
+		}
+
+		callback(centrifuge.PresenceReply{}, nil)
 	})
 }
 

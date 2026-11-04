@@ -114,6 +114,7 @@ func (c *InboxViewController) UpdateReadState(
 
 	update := conversations.UpdateReadStateInput{
 		Membership: membership(ctx), Ref: ref, Unread: in.Body.Unread != nil && *in.Body.Unread,
+		MutationID: mutationID(ctx),
 	}
 
 	if named := in.Body.LastReadMessageID; named != nil {

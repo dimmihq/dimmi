@@ -35,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
 	"github.com/dimmihq/dimmi/app/auth/providers"
+	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/retention"
@@ -63,7 +64,8 @@ through, registered by the parts of the product that need defaults.
 Retention is asked before any purge destroys data.
 Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
-widget's build and WidgetAssets serves it.
+widget's build and WidgetAssets serves it. Realtime authenticates
+realtime connections.
 */
 type App struct {
 	*foundation.Application
@@ -92,6 +94,8 @@ type App struct {
 
 	WorkspaceInitializers *workspaces.Initializers
 	Retention             contracts.RetentionGuard
+
+	Realtime *appbroadcasting.Connections
 
 	OAuthAttempts auth.OAuthAttempts
 	Frontend      fs.FS

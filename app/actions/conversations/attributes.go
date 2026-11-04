@@ -92,7 +92,7 @@ func (w *Writer) attributeEvents(
 	if len(changes) > 0 {
 		data := map[string]any{"changes": changes}
 		if err := w.emit(ctx, after, entry{"conversation.updated", data}, appevents.ConversationUpdated{
-			WorkspaceID: after.WorkspaceID, ConversationID: after.ID, ActorID: w.Actor.ID, Changes: changes,
+			Base: w.Base(after.WorkspaceID), ConversationRef: ref(after), Changes: changes,
 		}); err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (w *Writer) attributeEvents(
 
 	return w.emit(ctx, after, entry{"conversation.priority_changed", map[string]any{"priority": after.Priority}},
 		appevents.ConversationPriorityChanged{
-			WorkspaceID: after.WorkspaceID, ConversationID: after.ID, ActorID: w.Actor.ID, Priority: after.Priority,
+			Base: w.Base(after.WorkspaceID), ConversationRef: ref(after), Priority: after.Priority,
 		})
 }
 
@@ -164,7 +164,10 @@ func (w *Writer) setSpam(ctx context.Context, c models.Conversation, to spamChan
 		return c, false, fmt.Errorf("mark spam: %w", err)
 	}
 
-	return updated, true, w.emit(ctx, updated, entry{to.event, nil}, appevents.ConversationSpamChanged{
-		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ActorID: w.Actor.ID, Spam: to.spam,
-	})
+	var event any = appevents.ConversationUnmarkedSpam{Base: w.Base(c.WorkspaceID), ConversationRef: ref(c)}
+	if to.spam {
+		event = appevents.ConversationMarkedSpam{Base: w.Base(c.WorkspaceID), ConversationRef: ref(c)}
+	}
+
+	return updated, true, w.emit(ctx, updated, entry{to.event, nil}, event)
 }

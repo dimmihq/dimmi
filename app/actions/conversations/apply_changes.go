@@ -50,11 +50,14 @@ type Changes struct {
 
 /*
 ApplyChangesInput is who changes which conversation, and how.
+MutationID is the id the client gave the change, empty when it gave
+none.
 */
 type ApplyChangesInput struct {
 	Membership authz.Membership
 	Ref        Ref
 	Changes    Changes
+	MutationID string
 }
 
 /*
@@ -75,7 +78,8 @@ Rules:
     in one transaction; one failing field undoes them all.
   - A field already as asked is skipped.
 
-Events: [appevents.ConversationSpamChanged],
+Events: [appevents.ConversationMarkedSpam] or
+[appevents.ConversationUnmarkedSpam],
 [appevents.ConversationAssigned], the status events,
 [appevents.ConversationUpdated], [appevents.ConversationPriorityChanged]
 and [appevents.ConversationRead], for what changed.
@@ -107,6 +111,8 @@ func (a *ApplyConversationChanges) Handle(ctx context.Context, in ApplyChangesIn
 		if err != nil {
 			return err
 		}
+
+		w.MutationID = in.MutationID
 
 		c, err := Lock(ctx, w.Q, in.Membership.Workspace.ID, in.Ref)
 		if err != nil {

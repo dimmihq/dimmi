@@ -114,23 +114,23 @@ func (w *Writer) statusEvent(ctx context.Context, c models.Conversation, from st
 	switch {
 	case to.Status == string(enums.ConversationStatusClosed):
 		return w.emit(ctx, c, entry{"conversation.closed", nil}, appevents.ConversationClosed{
-			WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ActorID: w.Actor.ID,
+			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c),
 		})
 	case to.Status == string(enums.ConversationStatusSnoozed):
 		return w.emit(ctx, c, entry{"conversation.snoozed", map[string]any{"until": to.Until}},
 			appevents.ConversationSnoozed{
-				WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ActorID: w.Actor.ID, Until: to.Until,
+				Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Until: to.Until,
 			})
 	case from == string(enums.ConversationStatusSnoozed):
 		return w.emit(ctx, c, entry{"conversation.unsnoozed", map[string]any{"reason": to.reason()}},
 			appevents.ConversationUnsnoozed{
-				WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ActorID: w.Actor.ID, Reason: to.reason(),
+				Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Reason: to.reason(),
 			})
 	}
 
 	return w.emit(ctx, c, entry{"conversation.reopened", map[string]any{"reason": to.reason()}},
 		appevents.ConversationReopened{
-			WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ActorID: w.Actor.ID, Reason: to.reason(),
+			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Reason: to.reason(),
 		})
 }
 

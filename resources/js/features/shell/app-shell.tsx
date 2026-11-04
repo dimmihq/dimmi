@@ -7,7 +7,8 @@
  * into a drawer opened from a slim top bar. While a conversation, a
  * workflow or a procedure is open, the sidebar folds to its rail so the
  * page's panels have room; unfolding it by hand holds until the person
- * leaves that page.
+ * leaves that page. The shell also opens the app's one realtime
+ * connection, for the workspace on screen, and says when it drops.
  */
 import {
   RiAddLine,
@@ -29,7 +30,9 @@ import {
 import { MenuDivider, MenuRowList } from "@/components/application/dashboard/dashboard-user-menu";
 import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
+import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
+import { RealtimeProvider } from "@/lib/realtime/provider";
 
 import { GetStarted } from "./get-started";
 import { appSections, selectedKey, settingsLink, settingsPages, settingsSections } from "./navigation";
@@ -174,6 +177,7 @@ function SignedInShell({
 }) {
   const switcher = useSwitcher(me);
   const account = useAccount(me);
+  const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const sections = inSettings ? settingsSections(me.instance?.edition === "cloud") : appSections();
@@ -198,32 +202,35 @@ function SignedInShell({
   );
 
   return (
-    <div className="flex h-dvh flex-col gap-3 bg-background-full p-3 lg:flex-row lg:gap-4">
-      <div className="hidden h-full lg:flex">{sidebar(false)}</div>
+    <RealtimeProvider workspace={workspace?.id ?? null}>
+      <div className="flex h-dvh flex-col gap-3 bg-background-full p-3 lg:flex-row lg:gap-4">
+        <div className="hidden h-full lg:flex">{sidebar(false)}</div>
 
-      <div className="flex items-center gap-2 px-1 lg:hidden">
-        <Button
-          variant="ghost"
-          size="small"
-          iconOnly
-          leadingIcon={RiMenuLine}
-          aria-label="Open navigation"
-          onClick={() => setDrawerOpen(true)}
-        />
-        <span className="text-body-semibold text-text-primary">{switcher.label}</span>
+        <div className="flex items-center gap-2 px-1 lg:hidden">
+          <Button
+            variant="ghost"
+            size="small"
+            iconOnly
+            leadingIcon={RiMenuLine}
+            aria-label="Open navigation"
+            onClick={() => setDrawerOpen(true)}
+          />
+          <span className="text-body-semibold text-text-primary">{switcher.label}</span>
+        </div>
+        <Drawer
+          isOpen={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          placement="start"
+          size="nav"
+          aria-label="Navigation"
+          className="border-0 bg-transparent p-0 shadow-none"
+        >
+          {sidebar(true)}
+        </Drawer>
+
+        <main className="flex min-h-0 min-w-0 flex-1">{children}</main>
       </div>
-      <Drawer
-        isOpen={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        placement="start"
-        size="nav"
-        aria-label="Navigation"
-        className="border-0 bg-transparent p-0 shadow-none"
-      >
-        {sidebar(true)}
-      </Drawer>
-
-      <main className="flex min-h-0 min-w-0 flex-1">{children}</main>
-    </div>
+      <ConnectionIndicator className="fixed end-4 bottom-4 z-50" />
+    </RealtimeProvider>
   );
 }

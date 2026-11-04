@@ -68,9 +68,9 @@ func (w *Writer) Assign(ctx context.Context, c models.Conversation, to Assignmen
 	}
 
 	return updated, true, w.emit(ctx, updated, entry{"conversation.assigned", data}, appevents.ConversationAssigned{
-		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ActorID: w.Actor.ID,
-		FromMemberID: orNil(c.AssigneeMemberID), ToMemberID: orNil(to.Member),
-		FromTeamID: orNil(c.AssigneeTeamID), ToTeamID: orNil(to.Team),
+		Base: w.Base(c.WorkspaceID), ConversationRef: ref(c),
+		FromMemberID: c.AssigneeMemberID, ToMemberID: to.Member,
+		FromTeamID: c.AssigneeTeamID, ToTeamID: to.Team,
 	})
 }
 
