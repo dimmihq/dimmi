@@ -26,5 +26,6 @@ export function useAccount() {
       role: current?.role ?? "",
     },
     cloud: me?.instance?.edition === "cloud",
+    auditRetentionDays: me?.instance?.audit_retention_days ?? 0,
   };
 }

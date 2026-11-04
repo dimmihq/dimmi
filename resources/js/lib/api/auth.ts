@@ -45,6 +45,7 @@ export interface WorkspaceSummary {
 export interface Instance {
   edition: string;
   version: string;
+  audit_retention_days?: number;
 }
 
 export interface Me {

@@ -43,13 +43,17 @@ type AuditLogOutput struct {
 }
 
 /*
-AuditLogController serves the workspace's audit log.
+AuditLogController serves the workspace's audit log, as pages of JSON
+or, through ServeCSV, as a CSV file. Errors renders what refuses an
+export before its file starts.
 */
 type AuditLogController struct {
 	List    *audit.ListAuditLogs
 	Find    *audit.ShowAuditLog
+	Export  *audit.ExportAuditLogs
 	IDs     *ids.Registry
 	Cursors *pagination.Cursors
+	Errors  fhttp.Errors
 }
 
 /*

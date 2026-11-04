@@ -53,5 +53,7 @@
   "invalid_avatar": "Choose a PNG, JPEG, WebP or GIF picture.",
   "avatar_too_large": "The picture must be 2 MB or smaller.",
   "sole_owner": "Hand over or delete the workspaces you alone own first.",
-  "confirm_email_mismatch": "Type your email address to confirm."
+  "confirm_email_mismatch": "Type your email address to confirm.",
+  "range_too_large": "An export covers a year at most. Pick a shorter date range.",
+  "too_many_exports": "This workspace exported its audit log as often as it may this hour. Try again later."
 }

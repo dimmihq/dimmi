@@ -150,7 +150,8 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
-	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read")
+	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read").
+		Use(c.auditLogs.ServeCSV)
 	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
 	invitationRoutes(workspace, c)
 	teamRoutes(workspace, c)
@@ -236,6 +237,7 @@ func newControllers(a *app.App) controllers {
 	server := v1.Server{
 		Edition: string(a.Config.App.Edition), Version: a.Version, APIVersion: a.Config.API.Version,
 		Region: a.Config.App.Region, MailConfigured: a.MailConfigured(), Clock: a.Clock,
+		AuditRetentionDays: *a.Config.Audit.RetentionDays,
 	}
 	acts := a.Actions
 	cursors := pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose))
@@ -298,7 +300,8 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 		MemberTeams: acts.ListMemberTeams, Cursors: cursors,
 	}
 	c.auditLogs = &v1.AuditLogController{
-		List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,
+		List: acts.ListAuditLogs, Find: acts.ShowAuditLog, Export: acts.ExportAuditLogs, IDs: a.IDs, Cursors: cursors,
+		Errors: a.Errors,
 	}
 	c.tokens = tokenController(a, cursors)
 	c.tokenAbilities = &v1.TokenAbilityController{List: acts.ListTokenAbilities}

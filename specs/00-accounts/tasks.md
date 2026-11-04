@@ -146,10 +146,10 @@ Migrations range `20261201070001+`. Spec: [settings-pages.md](settings-pages.md)
 
 Spec: [audit.md](audit.md). Builds on F71 fix.
 
-- [ ] `export_audit_logs.go`, CSV stream, `app/support/csvsafe`, `audit_logs.exported`. Tests in audit.md.
-- [ ] `MirrorSecurityEventToAudit` queued listener + label + filter groups in `log-labels.ts`.
-- [ ] UI date range + export. Extend `audit-log.spec.ts`.
-- [ ] Event names list for other specs in delta verified against what is registered at milestone end; labels added.
+- [x] `export_audit_logs.go`, CSV stream, `app/support/csvsafe`, `audit_logs.exported`. Tests in audit.md.
+- [x] `MirrorSecurityEventToAudit` queued listener + label + filter groups in `log-labels.ts`.
+- [x] UI date range + export. Extend `audit-log.spec.ts`.
+- [x] Event names list for other specs in delta verified against what is registered at milestone end; labels added.
 
 ## M17. Members, invitations, teams (track 07 accounts-settings)
 
