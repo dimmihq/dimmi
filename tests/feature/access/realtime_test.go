@@ -61,7 +61,7 @@ func TestRealtimeAccess(t *testing.T) {
 		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(d.workspaceUUID())).Error)
 
 		id := d.customer(t, "ann")
-		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": true}).AssertOK()
+		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": "high"}).AssertOK()
 		d.owner.PatchJSON("/api/v1/workspace", testkit.JSON{"name": "Renamed"}).AssertOK()
 
 		assert.Equal(t, "workspace.updated", c.Publication().Event)
@@ -81,8 +81,8 @@ func TestRealtimeAccess(t *testing.T) {
 		c := d.tc.ListenAs(m.user, url)
 		require.Nil(t, c.Subscribe(appbroadcasting.MemberChannel(m.member.ID)).Error)
 
-		d.owner.PatchJSON("/api/v1/conversations/"+hidden, testkit.JSON{"priority": true}).AssertOK()
-		d.owner.PatchJSON("/api/v1/conversations/"+seen, testkit.JSON{"priority": true}).AssertOK()
+		d.owner.PatchJSON("/api/v1/conversations/"+hidden, testkit.JSON{"priority": "high"}).AssertOK()
+		d.owner.PatchJSON("/api/v1/conversations/"+seen, testkit.JSON{"priority": "high"}).AssertOK()
 
 		copied := c.Publication()
 		assert.Equal(t, "conversation.priority_changed", copied.Event)
@@ -139,12 +139,12 @@ func TestRealtimeAccess(t *testing.T) {
 		m := d.join(t, enums.RoleMember)
 		d.restrict(t, m, testkit.JSON{"conversation_access": "all_except_teams"})
 		id := d.customer(t, "ann")
-		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": true}).AssertOK()
+		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": "high"}).AssertOK()
 		d.restrict(t, m, testkit.JSON{"conversation_access": "all"})
 
 		c := d.tc.ListenAs(m.user, url)
 		require.Nil(t, c.Subscribe(appbroadcasting.MemberChannel(m.member.ID)).Error)
-		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": false}).AssertOK()
+		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": "none"}).AssertOK()
 		d.restrict(t, d.join(t, enums.RoleMember), testkit.JSON{"conversation_access": "assigned"})
 		d.owner.PatchJSON("/api/v1/members/"+m.public(), testkit.JSON{"conversation_access": "assigned"}).AssertOK()
 

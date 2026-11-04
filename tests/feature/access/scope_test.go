@@ -187,7 +187,7 @@ func TestRestrictedMemberSurfaces(t *testing.T) {
 				m.client.GetJSON(base + "/neighbors?filter[view]=all").AssertNotFound()
 				m.client.GetJSON(base + "/read-state").AssertNotFound()
 				m.client.PatchJSON(base+"/read-state", testkit.JSON{}).AssertNotFound()
-				m.client.PatchJSON(base, testkit.JSON{"priority": true}).AssertNotFound()
+				m.client.PatchJSON(base, testkit.JSON{"priority": "high"}).AssertNotFound()
 				m.client.PostJSON(base+"/notes", testkit.JSON{"body": "hi"}).AssertNotFound()
 				m.client.PostJSON(base+"/replies", testkit.JSON{"body": "hi"}).AssertNotFound()
 				m.client.PostJSON(base+"/typing-indicators", testkit.JSON{"state": "start", "composer": "reply"}).
