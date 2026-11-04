@@ -50,7 +50,7 @@ func TestConversationsIndex(t *testing.T) {
 		d := open(t)
 		open1 := d.customer(t, "ann", "Open", "One")
 		closed := d.customer(t, "bea", "Closed", "Two")
-		d.owner.PatchJSON("/api/v1/conversations/"+closed, testkit.JSON{"status": "closed", "priority": true}).
+		d.owner.PatchJSON("/api/v1/conversations/"+closed, testkit.JSON{"status": "closed", "priority": "high"}).
 			AssertOK()
 		contact := d.owner.GetJSON("/api/v1/conversations/" + open1).String("data.contact.id")
 		all := "/api/v1/conversations?filter[view]=all"
@@ -60,7 +60,7 @@ func TestConversationsIndex(t *testing.T) {
 		assert.Len(t, listed(d.owner.GetJSON(all+"&filter[status]=any")), 2)
 		assert.Len(t, listed(d.owner.GetJSON(all+"&filter[status]=open,closed&filter[inbox]="+d.inboxID())), 2)
 		assert.Equal(t, []string{open1}, listed(d.owner.GetJSON(all+"&filter[status]=any&filter[contact]="+contact)))
-		assert.Equal(t, []string{closed}, listed(d.owner.GetJSON(all+"&filter[status]=any&filter[priority]=true")))
+		assert.Equal(t, []string{closed}, listed(d.owner.GetJSON(all+"&filter[status]=any&filter[priority]=high")))
 		assert.Equal(t, []string{open1}, listed(d.owner.GetJSON(all+"&filter[unread]=true")))
 
 		d.owner.PatchJSON("/api/v1/conversations/"+open1+"/read-state", testkit.JSON{}).AssertOK()
@@ -85,7 +85,7 @@ func TestConversationsIndex(t *testing.T) {
 		assert.NotContains(t, listed(page), listed(next)[0])
 
 		d.owner.GetJSON("/api/v1/conversations?filter[view]=unassigned&limit=2&cursor="+cursor).
-			AssertStatus(400).AssertJSONPath("code", "invalid_cursor")
+			AssertStatus(400).AssertJSONPath("code", "cursor_mismatch")
 		d.owner.GetJSON(all + "&cursor=forged").AssertStatus(400)
 	})
 
@@ -95,7 +95,7 @@ func TestConversationsIndex(t *testing.T) {
 
 		for _, query := range []string{
 			"filter[view]=trash", "filter[view]=member:nope", "filter[status]=done", "filter[inbox]=nope",
-			"filter[assignee]=nope", "filter[priority]=maybe", "filter[unread]=1", "filter[tag]=x", "sort=-priority",
+			"filter[assignee]=nope", "filter[priority]=maybe", "filter[unread]=1", "filter[tag]=x", "sort=-subject",
 		} {
 			d.owner.GetJSON("/api/v1/conversations?" + query).AssertStatus(400)
 		}

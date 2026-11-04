@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 	"github.com/dimmihq/dimmi/app/support/searchquery"
 )
 
@@ -95,7 +96,7 @@ func (a *Search) Handle(ctx context.Context, in SearchInput) (SearchResults, err
 	var out SearchResults
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s := searcher{q: models.New(tx), m: in.Membership, limit: in.Limit}
+		s := searcher{tx: tx, q: models.New(tx), m: in.Membership, limit: in.Limit}
 
 		var err error
 		if out.Jump, err = s.jump(ctx, a.IDs, sq); err != nil || out.Jump != nil {
@@ -118,6 +119,7 @@ func (a *Search) Handle(ctx context.Context, in SearchInput) (SearchResults, err
 searcher runs the parts of one search in its transaction.
 */
 type searcher struct {
+	tx    *database.Tx
 	q     *models.Queries
 	m     authz.Membership
 	limit int
@@ -185,9 +187,9 @@ func (s searcher) conversations(ctx context.Context, sq searchquery.Query) ([]Hi
 		return nil, nil
 	}
 
-	rows, err := s.q.FilterConversations(ctx, models.FilterConversationsParams{
-		WorkspaceID: s.m.Workspace.ID, MemberID: s.m.Member.ID, Query: &sq.TSQuery, Statuses: sq.Statuses,
-		Descending: true, RowLimit: int64(s.limit),
+	rows, err := selectConversations(ctx, s.tx, querybuilder.Conversations{
+		WorkspaceID: s.m.Workspace.ID, MemberID: s.m.Member.ID, TSQuery: &sq.TSQuery, Statuses: sq.Statuses,
+		Sort: querybuilder.SortLatest, Limit: s.limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("search conversations: %w", err)
