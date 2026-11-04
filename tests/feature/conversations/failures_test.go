@@ -1,6 +1,7 @@
 package conversations_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -194,6 +195,56 @@ func TestSendChannelMessageJob(t *testing.T) {
 
 		d.tc.Drain()
 		require.Len(t, driver.Sent(), 1)
+	})
+
+	t.Run("sends nothing while what the reply needs cannot be read", func(t *testing.T) {
+		t.Parallel()
+
+		for name, breaks := range map[string]func(d desk){
+			"message":      breakTable("messages"),
+			"conversation": breakTable("conversations"),
+			"channel":      breakTable("channel_connections"),
+			"customer":     breakTable("contacts"),
+			"author":       breakTable("workspace_members"),
+			"driver": func(d desk) {
+				_, err := d.tc.App.DB.Exec(d.tc.T.Context(), "UPDATE channel_connections SET type = 'retired'")
+				require.NoError(d.tc.T, err)
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				d := open(t)
+				driver, path := fakeConversation(t, d)
+				d.owner.PostJSON(path+"/replies", testkit.JSON{"body": "Held"}).AssertCreated()
+				breaks(d)
+
+				d.tc.Drain()
+
+				require.Len(t, driver.Sent(), 1)
+			})
+		}
+	})
+
+	t.Run("retries a reply whose delivery cannot be recorded", func(t *testing.T) {
+		t.Parallel()
+
+		for name, refusal := range map[string]error{"sent": nil, "refused": errors.New("timeout")} {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				d := open(t)
+				driver, path := fakeConversation(t, d)
+				if refusal != nil {
+					driver.FailNext(refusal)
+				}
+				d.owner.PostJSON(path+"/replies", testkit.JSON{"body": "Unrecorded"}).AssertCreated()
+				d.tc.FailWrites("messages", "UPDATE")
+
+				d.tc.Drain()
+
+				d.tc.Table("river_job").
+					AssertCount(1, testkit.Row{"kind": "send_channel_message", "state": "completed"})
+			})
+		}
 	})
 }
 

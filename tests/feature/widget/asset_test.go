@@ -188,12 +188,17 @@ func TestWidgetAssetFiles(t *testing.T) {
 
 	t.Run("answers 404 for every widget file in a binary built without the widget", func(t *testing.T) {
 		t.Parallel()
-		tc := tests.New(t, withWidget(fstest.MapFS{}))
 
-		paths := []string{"/widget/v1/loader.js", "/widget/v1/manifest.json", "/widget/assets/core-abc.js"}
-		for _, path := range paths {
-			res := tc.Client().Send(fhttp.MethodGet, path, nil).AssertNotFound()
-			assertPublic(t, res.Header)
+		withoutBuild := tests.Before(func(a *app.App) { a.Widget = nil })
+
+		for _, opt := range []tests.Option{withWidget(fstest.MapFS{}), withoutBuild} {
+			tc := tests.New(t, opt)
+
+			paths := []string{"/widget/v1/loader.js", "/widget/v1/manifest.json", "/widget/assets/core-abc.js"}
+			for _, path := range paths {
+				res := tc.Client().Send(fhttp.MethodGet, path, nil).AssertNotFound()
+				assertPublic(t, res.Header)
+			}
 		}
 	})
 }
@@ -225,4 +230,15 @@ func TestWidgetBuildAtBoot(t *testing.T) {
 			require.ErrorIs(t, err, widgetassets.ErrBrokenBuild)
 		})
 	}
+
+	t.Run("refuses to boot with a manifest that cannot be read", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := tests.Boot(t, withWidget(build(func(fsys fstest.MapFS) {
+			delete(fsys, "manifest.json")
+			fsys["manifest.json/part"] = &fstest.MapFile{Data: []byte("{}")}
+		})))
+
+		require.ErrorContains(t, err, "read widget manifest")
+	})
 }
