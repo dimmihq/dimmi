@@ -40,6 +40,7 @@ export interface WorkspaceChanges {
   name?: string;
   slug?: string;
   timezone?: string;
+  locale?: string;
   require_two_factor?: boolean;
 }
 

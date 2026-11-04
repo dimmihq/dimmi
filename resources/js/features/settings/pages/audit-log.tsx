@@ -89,7 +89,7 @@ function Entries({ entries, zone }: { entries: AuditEntry[]; zone?: string }) {
               </TableCell>
               <TableCell>
                 <span className="whitespace-nowrap text-body-2-regular text-text-secondary">
-                  {formatTime(entry.created_at, undefined, zone)}
+                  {formatTime(entry.created_at, zone)}
                 </span>
               </TableCell>
             </TableRow>
@@ -130,7 +130,7 @@ export function AuditLogSettings() {
           <Filter
             label="Event"
             every="All events"
-            options={Object.entries(auditEvents).map(([id, name]) => ({ id, name }))}
+            options={auditEvents.map((id) => ({ id, name: auditEventLabel(id) }))}
             value={filters.event}
             onChange={(event) => filter({ event })}
           />

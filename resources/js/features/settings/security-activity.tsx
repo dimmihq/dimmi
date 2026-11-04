@@ -27,7 +27,7 @@ export function RecentSecurityActivity() {
           key={event.id}
           mark={<Glyph icon={RiShieldKeyholeLine} />}
           title={securityEventLabel(event.type)}
-          detail={[formatTime(event.created_at, undefined, me.displayZone), event.device_label, event.ip]
+          detail={[formatTime(event.created_at, me.displayZone), event.device_label, event.ip]
             .filter(Boolean)
             .join(" · ")}
         />

@@ -5,9 +5,12 @@
  * this run, mail through Mailpit, and nothing from the developer's
  * shell or dimmi.yaml: it runs in an empty directory of its own, where
  * no config file waits. Playwright starts it and stops it. E2E_DATABASE
- * and E2E_PORT let several checkouts run their suites side by side.
+ * and E2E_PORT let several checkouts run their suites side by side. It
+ * serves the pseudo locale en-XA beside English, so the language tests
+ * can switch to a language whose every word looks different.
  *
- * Build the binary first with `make build`; `make e2e` does both.
+ * Generate the pseudo locale and build the binary first, with
+ * `make pseudo-locale build`; `make e2e` does both.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
@@ -20,6 +23,10 @@ const port = Number(process.env.E2E_PORT ?? 18090);
 
 if (!existsSync(binary)) {
   throw new Error(`${binary} is missing: run \`make build\` first`);
+}
+
+if (!existsSync(resolve("lang/en-XA"))) {
+  throw new Error("the pseudo locale is missing: run `make pseudo-locale build` first");
 }
 
 function psql(sql: string) {
@@ -46,6 +53,7 @@ const env = {
   DIMMI_APP__KEY_AUTO_GENERATE: "true",
   DIMMI_APP__DATA_DIR: join(home, "storage"),
   DIMMI_APP__REGION: "us",
+  DIMMI_APP__LOCALES: "en,en-XA",
   DIMMI_HTTP__ADDR: `127.0.0.1:${port}`,
   DIMMI_HTTP__ADMIN_ADDR: "",
   DIMMI_HTTP__TRUSTED_PROXIES: "127.0.0.1/32",

@@ -24,6 +24,7 @@ import (
 	"cmp"
 	"context"
 	"io"
+	"io/fs"
 	"sync"
 	"testing"
 	"time"
@@ -87,10 +88,11 @@ or one of its fields.
 type Option func(o *options)
 
 type options struct {
-	env    []string
-	before []func(a *app.App)
-	routes []func(r *routing.Router)
-	logs   io.Writer
+	env      []string
+	before   []func(a *app.App)
+	routes   []func(r *routing.Router)
+	logs     io.Writer
+	language fs.FS
 }
 
 /*
@@ -116,6 +118,14 @@ own routes are.
 */
 func WithRoutes(fn func(r *routing.Router)) Option {
 	return func(o *options) { o.routes = append(o.routes, fn) }
+}
+
+/*
+WithLanguage loads more message files over the product's own, one
+directory per locale, such as a test-only language.
+*/
+func WithLanguage(files fs.FS) Option {
+	return func(o *options) { o.language = files }
 }
 
 /*
@@ -204,6 +214,15 @@ func start(tb testing.TB, o *options) (booted, error) {
 	foundationOptions.Environ = append(environment(tb, db.URL), o.env...)
 	foundationOptions.LogWriter = cmp.Or[io.Writer](o.logs, io.Discard)
 	foundationOptions.Clock = fake
+
+	if o.language != nil {
+		merged, err := mergeLanguage(foundationOptions.Language, o.language)
+		if err != nil {
+			return booted{}, err
+		}
+
+		foundationOptions.Language = merged
+	}
 
 	fa, err := foundation.New(tb.Context(), foundationOptions)
 	if err != nil {

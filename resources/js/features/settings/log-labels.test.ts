@@ -1,6 +1,6 @@
 import { type AuditEntry, auditPath } from "@/lib/api/audit";
 
-import { actorDetail, actorName, auditEventLabel, formatTime, securityEventLabel } from "./log-labels";
+import { actorDetail, actorName, auditEventLabel, auditEvents, formatTime, securityEventLabel } from "./log-labels";
 
 function actor(type: string, via: string | null): AuditEntry["actor"] {
   return { type, id: null, label: "", via: via ? { kind: via, id: null } : null };
@@ -26,8 +26,12 @@ describe("log labels", () => {
     expect(actorDetail({ actor: actor("member", null), ip: "203.0.113.4" })).toBe("203.0.113.4");
   });
 
-  it("writes a time with its date", () => {
-    expect(formatTime("2026-11-01T10:00:00Z", "en-US")).toContain("2026");
+  it("writes a time with its date in the zone given", () => {
+    expect(formatTime("2026-11-01T10:00:00Z", "UTC")).toBe("Nov 1, 2026, 10:00 AM");
+  });
+
+  it("lists every known event with its name", () => {
+    expect(auditEvents.every((event) => auditEventLabel(event) !== event)).toBe(true);
   });
 });
 

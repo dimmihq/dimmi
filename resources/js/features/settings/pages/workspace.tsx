@@ -35,6 +35,7 @@ import { Choice, Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { WorkspaceLanguageRow } from "../preferences/language-row";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
 
@@ -108,9 +109,7 @@ export function WorkspaceSettings() {
       </Section>
       <Failure error={save.error} />
       <Section title="Language and region" description="Members and customers fall back to these.">
-        <Row label="Language">
-          <Choice label="Workspace language" options={["English"]} />
-        </Row>
+        <WorkspaceLanguageRow workspace={me.workspace.id} />
         <Row label="Time zone">
           {workspace ? (
             <Choice

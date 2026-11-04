@@ -9,6 +9,7 @@ import { request } from "./client";
 
 export interface ProfileChanges {
   name?: string;
+  locale?: string | null;
   timezone?: string | null;
 }
 

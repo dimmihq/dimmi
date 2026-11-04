@@ -15,6 +15,11 @@
 | request names, resolved once the caller is known, and only for callers
 | who meet what that workspace requires, such as a second factor.
 |
+| A request picks its language before anyone is known, from the browser.
+| Once authentication, and then the workspace, tell who is calling, the
+| language is picked again, so the person's own choice and then their
+| workspace's win over the browser's on every authenticated route.
+|
 | The route files sit outside the application package, since routes
 | depend on the application and never the other way around, so the
 | function that declares them is handed in.
@@ -68,9 +73,7 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	fa.Kernel.Alias("verified", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnsureEmailVerified(p.App.Config.Auth.Verification, fa.Errors), nil
 	})
-	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
-		return appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), nil
-	})
+	p.aliasCallers(fa)
 	fa.Kernel.Alias("access.policy", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Errors), nil
 	})
@@ -106,6 +109,37 @@ func (p RouteServiceProvider) Boot(context.Context, *foundation.Application) err
 	p.Routes(p.App)
 
 	return nil
+}
+
+/*
+aliasCallers names the middleware that learn who is calling: auth, and
+workspace for the workspace they work in. Each picks the request's
+language again once it knows more.
+*/
+func (p RouteServiceProvider) aliasCallers(fa *foundation.Application) {
+	locale := middleware.Locale(fa.Lang, appmiddleware.LocalePreference(fa.Lang))
+
+	fa.Kernel.Alias("auth", func(params ...string) (fhttp.Middleware, error) {
+		guard, err := fa.Guards.Middleware(params...)
+		if err != nil {
+			return nil, fmt.Errorf("auth middleware: %w", err)
+		}
+
+		return then(guard, locale), nil
+	})
+	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
+		return then(appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), locale), nil
+	})
+}
+
+/*
+then runs the second middleware inside the first, once the first let
+the request through.
+*/
+func then(first, second fhttp.Middleware) fhttp.Middleware {
+	return func(next fhttp.Handler) fhttp.Handler {
+		return fhttp.Chain(next, first, second)
+	}
 }
 
 /*

@@ -18,3 +18,5 @@ coverage-app.filtered.out
 /public/ai-chat/
 /public/templates/
 /public/brand/boardui_logo_circle.webp
+/lang/en-XA/
+/resources/js/lang/en-XA/

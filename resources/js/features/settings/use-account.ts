@@ -17,6 +17,7 @@ export function useAccount() {
     email: me?.user.email ?? "",
     hasPassword: me?.user.has_password ?? false,
     avatarUrl: me?.user.avatar_url ?? null,
+    locale: me?.user.locale ?? null,
     timezone: me?.user.timezone ?? null,
     displayZone: displayZone(me),
     workspace: {

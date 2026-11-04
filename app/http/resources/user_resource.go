@@ -18,12 +18,8 @@ import (
 )
 
 /*
-defaultLocale is the locale shown for a user who never picked one.
-*/
-const defaultLocale = "en"
-
-/*
-User is a user's own profile.
+User is a user's own profile. Locale and Timezone are what the person
+picked, null while they follow their workspace.
 */
 type User struct {
 	ID               string    `json:"id"`
@@ -33,7 +29,7 @@ type User struct {
 	EmailVerified    bool      `json:"email_verified"`
 	TwoFactorEnabled bool      `json:"two_factor_enabled"`
 	AvatarURL        *string   `json:"avatar_url"`
-	Locale           string    `json:"locale"`
+	Locale           *string   `json:"locale"`
 	Timezone         *string   `json:"timezone"`
 	HasPassword      bool      `json:"has_password"`
 	CreatedAt        time.Time `json:"created_at"`
@@ -43,11 +39,6 @@ type User struct {
 NewUser shapes the user.
 */
 func NewUser(u models.User) User {
-	locale := defaultLocale
-	if u.Locale != nil {
-		locale = *u.Locale
-	}
-
 	return User{
 		ID:               models.PublicID(models.PrefixUser, u.ID),
 		Object:           "user",
@@ -56,7 +47,7 @@ func NewUser(u models.User) User {
 		EmailVerified:    u.IsVerified(),
 		TwoFactorEnabled: u.TwoFactorEnabled(),
 		AvatarURL:        u.AvatarURL(),
-		Locale:           locale,
+		Locale:           u.Locale,
 		Timezone:         u.Timezone,
 		HasPassword:      u.HasPassword(),
 		CreatedAt:        u.CreatedAt.UTC(),

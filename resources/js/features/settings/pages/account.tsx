@@ -8,6 +8,7 @@ import { applyTheme, type ThemeMode, useThemeMode } from "@/components/applicati
 import { Choice } from "../controls";
 import { Empty, Row, Section, SettingsPage } from "../layout";
 import { PasswordSection } from "../password-dialog";
+import { LanguageRow } from "../preferences/language-row";
 import { TimeZoneRows } from "../preferences/time-zone-row";
 import { AvatarRow } from "../profile/avatar-row";
 import { DeleteAccount } from "../profile/delete-account";
@@ -43,6 +44,7 @@ export function PreferencesSettings() {
   return (
     <SettingsPage title="Preferences" description="How dimmi looks and behaves for you.">
       <Section title="Region">
+        <LanguageRow />
         <TimeZoneRows />
       </Section>
       <Section title="Interface">

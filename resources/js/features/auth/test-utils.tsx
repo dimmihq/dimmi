@@ -17,6 +17,7 @@ export const config: AuthConfig = {
   mail_configured: true,
   password_min_length: 10,
   providers: [{ key: "github", name: "GitHub", protocol: "oauth2", redirect_url: "/auth/github/redirect" }],
+  locales: [{ code: "en", name: "English" }],
 };
 
 export function renderWithQueries(ui: ReactNode) {
