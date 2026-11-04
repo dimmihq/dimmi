@@ -230,6 +230,7 @@ Only items without which first users will not switch or will churn week one. Eac
 | 3 extended: world-class inbox | `03-shared-inbox`, `06-notifications` | team, inbox, teammate and custom views; sorting; shortcuts and Cmd+K; mentions; bulk; snooze picker; send and close; undo send; drafts; delete and edit; start conversation; tags; customer panel; directory; companies; merges; To, Cc, Bcc; team-based conversation access; round robin, balanced, capacity, away; spam and block; malware scan; redaction; erase and export; retention; exports; side conversations; conversation attributes; translation |
 | 4 extended: email complete | `04-email-channel` | everything in launch 4 plus own address, signatures, ignored addresses, trusted senders, setup guides, test button, IT admin mail, mistake detection, staging plan with round trip check |
 | Audiences | `18-audiences` (approved) | one rule language for widget, engage, workflows, help center, dimmi; attribute registry, contact and company tags, events |
+| Workflows | `17-workflows` | one engine for triggers, steps, office hours, assignment, auto-replies and SLAs; replaces rules lite. Builds after audiences core |
 | Cloud staging | `19-cloud-staging` (draft, awaiting owner) | real AWS staging environment; `Mail` stack shared with 04 |
 | Native and headless SDKs | `20-native-sdks` | React Native and Expo, iOS, Android, headless hooks, on `/widget/v1` |
 | Enterprise identity | `21-enterprise-identity`, `00-accounts` | sign-in rules, session length, SAML, OIDC, SCIM, IP allowlists, custom roles |
@@ -239,7 +240,7 @@ Moved names (rows removed from tables below or pointed here): mobile SDKs, headl
 
 ### Not at launch
 
-Linear, SMS, Instagram, Facebook Messenger, Microsoft Teams, workflows, SLAs, reports beyond basic counts, voice, email/broadcast outbound campaigns, product tours and checklists, status page. Scope-audit deferrals: "Later" section.
+Linear, SMS, Instagram, Facebook Messenger, Microsoft Teams, reports beyond basic counts, voice, email/broadcast outbound campaigns, product tours and checklists, status page. Scope-audit deferrals: "Later" section.
 
 ## Must ship after MVP (strict priority)
 

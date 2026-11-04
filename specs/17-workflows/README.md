@@ -489,7 +489,7 @@ Members read everything (they need to understand why a conversation was routed).
 | 12 billing | nothing new (system messages non-substantive) |
 | 15 engage | CSAT `survey_response.completed` on conversation surveys feeds trigger `conversation.rated`; close step "ask for rating" calls 15 `RequestConversationCsat` |
 | 16 importers | later `import-workflows`; nothing at MVP |
-| roadmap | promote "rules lite" and "workflows, SLAs" to one launch item (open question 1) |
+| roadmap | "rules lite" and "workflows, SLAs" are one launch item (decided) |
 
 ## Where we beat them
 
@@ -513,7 +513,7 @@ Members read everything (they need to understand why a conversation was routed).
 
 ## Open questions (recommended answer in bold)
 
-1. Roadmap placement. Workflows were "Not at launch" and rules lite post-MVP item 11. **Ship as one launch item (19) after 07 core, replacing rules lite; build order M5 parallel track.** Alternative: keep post-MVP and ship only the engine plus office hours and round robin.
+1. Roadmap placement. Decided by the owner on 2026-11-04: workflows are in launch, as one item replacing rules lite, built after audiences core.
 2. Should workflow bot messages count as substantive (billable) when they carry real content? **No: always non-substantive.** Abuse is bounded by step limits and the conversation price model.
 3. Keep automatic dimmi (07 settings) as the fallback for unclaimed conversations, or require a workflow for dimmi to speak at all (prototype comment says "only through a step")? **Keep automatic as fallback; visible as the bottom row of the list.** Zero-config matters for solo users.
 4. Drop "Customer visits a page" and leave proactive messages to 15 chat announcements? **Yes.**
