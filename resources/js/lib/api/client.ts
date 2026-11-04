@@ -69,6 +69,31 @@ export interface RequestOptions {
 }
 
 /*
+ * longestWait is the longest a read waits for the rate limit to open
+ * again before it is tried once more; a longer wait fails at once.
+ */
+const longestWait = 10;
+
+/*
+ * send makes the call. A read refused for going too fast is tried once
+ * more after the wait the server named, when that wait is short; a write
+ * never is, so it cannot happen twice, and its refusal reaches the page.
+ */
+async function send(url: string, init: RequestInit): Promise<Response> {
+  const response = await fetch(url, init);
+  const method = (init.method ?? "GET").toUpperCase();
+  const wait = Number(response.headers.get("Retry-After"));
+
+  if (response.status !== 429 || method !== "GET" || !(wait > 0 && wait <= longestWait)) {
+    return response;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+
+  return fetch(url, init);
+}
+
+/*
  * request sends one API call and returns the data of the response, or
  * undefined for a response without a body.
  */
@@ -91,7 +116,7 @@ export async function request<T>(
     headers["Dimmi-Workspace"] = options.workspace;
   }
 
-  const response = await fetch(base + path, {
+  const response = await send(base + path, {
     method,
     headers,
     credentials: "same-origin",
@@ -129,7 +154,7 @@ export async function requestPage<T>(path: string, options: RequestOptions = {})
     headers["Dimmi-Workspace"] = options.workspace;
   }
 
-  const response = await fetch(base + path, { headers, credentials: "same-origin" });
+  const response = await send(base + path, { headers, credentials: "same-origin" });
   const json: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     throw toApiError(response.status, json as ErrorBody | null);

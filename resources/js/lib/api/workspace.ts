@@ -59,6 +59,23 @@ export function workspaceQuery(workspace: string) {
   });
 }
 
+/*
+ * APILimits are requests a minute per token, per signed-in person and
+ * per workspace's tokens together; zero means no limit.
+ */
+export interface APILimits {
+  token_per_minute: number;
+  user_per_minute: number;
+  workspace_per_minute: number;
+}
+
+export function entitlementsQuery(workspace: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "entitlements"],
+    queryFn: () => request<{ api: APILimits }>("GET", "/workspace/entitlements", undefined, { workspace }),
+  });
+}
+
 export function membersQuery(workspace: string) {
   return queryOptions({
     queryKey: ["workspace", workspace, "members"],

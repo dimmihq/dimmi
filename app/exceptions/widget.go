@@ -18,7 +18,7 @@ import "github.com/dimmihq/dimmi/framework/fault"
 Failures reaching a widget.
 */
 var (
-	ErrAppNotFound = fault.New(fault.NotFound, "app_not_found", "No messenger has this app id.")
+	ErrAppNotFound    = fault.New(fault.NotFound, "app_not_found", "No messenger has this app id.")
 	ErrWidgetDisabled = fault.New(fault.Forbidden, "widget_disabled",
 		"This messenger is turned off.")
 	ErrOriginNotAllowed = fault.New(fault.Forbidden, "origin_not_allowed",

@@ -54,3 +54,50 @@ describe("request", () => {
     expect(error).toMatchObject({ status: 502, code: "unexpected_response" });
   });
 });
+
+describe("going too fast", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function tooFast(retryAfter: string) {
+    return new Response(JSON.stringify({ code: "too_many_requests", message: "Too many requests." }), {
+      status: 429,
+      headers: { "Retry-After": retryAfter },
+    });
+  }
+
+  it("reads again once after a short wait", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(tooFast("2"))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })),
+    );
+
+    const read = request<{ ok: boolean }>("GET", "/me");
+    await vi.advanceTimersByTimeAsync(2000);
+
+    await expect(read).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("never sends a write twice", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(tooFast("1")));
+
+    await expect(request("POST", "/teams", { name: "Support" })).rejects.toMatchObject({
+      status: 429,
+      code: "too_many_requests",
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails at once when the wait is long", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(tooFast("60")));
+
+    await expect(request("GET", "/me")).rejects.toBeInstanceOf(ApiError);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});

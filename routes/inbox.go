@@ -68,7 +68,7 @@ func newInboxControllers(a *app.App) inboxControllers {
 inboxRoutes declares the inbox's routes.
 */
 func inboxRoutes(r *routing.Router, a *app.App) {
-	r.Middleware("csrf", "session", "auth", "workspace")
+	r.Middleware("csrf", "session", "auth", "workspace", "api.throttle")
 
 	c := newInboxControllers(a)
 

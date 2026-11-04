@@ -4,7 +4,9 @@
  * choices offered when minting one. Kept apart from the page so the
  * wording can be tested without rendering it.
  */
+
 import { allAbilities, type PersonalAccessToken } from "@/lib/api/tokens";
+import type { APILimits } from "@/lib/api/workspace";
 import { formatDate } from "@/lib/i18n/format";
 
 /*
@@ -92,4 +94,25 @@ function ending(token: PersonalAccessToken, now: Date): string {
  */
 export function isLive(token: PersonalAccessToken, now: Date): boolean {
   return !token.revoked_at && (!token.expires_at || new Date(token.expires_at).getTime() > now.getTime());
+}
+
+/*
+ * rateLimitLine says how fast tokens may call the API: per token, and
+ * for the workspace's tokens together.
+ */
+export function rateLimitLine(api: APILimits): string {
+  const count = (n: number) => n.toLocaleString("en-US");
+  if (api.token_per_minute <= 0 && api.workspace_per_minute <= 0) {
+    return "Tokens have no request limit.";
+  }
+
+  const parts = [];
+  if (api.token_per_minute > 0) {
+    parts.push(`${count(api.token_per_minute)} requests a minute per token`);
+  }
+  if (api.workspace_per_minute > 0) {
+    parts.push(`${count(api.workspace_per_minute)} for the workspace's tokens together`);
+  }
+
+  return `${parts.join(", ")}.`;
 }

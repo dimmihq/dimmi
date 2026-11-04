@@ -28,11 +28,11 @@ import {
   tokenAbilitiesQuery,
   tokensQuery,
 } from "@/lib/api/tokens";
-
+import { entitlementsQuery } from "@/lib/api/workspace";
 import { Action, Choice } from "../controls";
 import { Empty, Glyph, Item, Section, SettingsPage } from "../layout";
 import { useRecentAuth } from "../recent-auth";
-import { abilityLabel, expiryChoices, expiryFor, isLive, tokenDetail } from "../token-format";
+import { abilityLabel, expiryChoices, expiryFor, isLive, rateLimitLine, tokenDetail } from "../token-format";
 import { useAccount } from "../use-account";
 
 type Dialog =
@@ -47,6 +47,7 @@ export function TokensSettings() {
   const queryClient = useQueryClient();
   const inWorkspace = workspace !== "";
   const { data: tokens = [], isPending } = useQuery({ ...tokensQuery(workspace), enabled: inWorkspace });
+  const { data: entitlements } = useQuery({ ...entitlementsQuery(workspace), enabled: inWorkspace });
   const [dialog, setDialog] = useState<Dialog>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: tokensQuery(workspace).queryKey });
   const revoke = useMutation({
@@ -59,7 +60,12 @@ export function TokensSettings() {
     <SettingsPage title="API tokens" description="Tokens act as you, with only the abilities you give them.">
       <Section
         title="Your tokens"
-        description="The secret shows once. Up to 50 working tokens."
+        description={[
+          "The secret shows once. Up to 50 working tokens.",
+          entitlements ? rateLimitLine(entitlements.api) : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         action={inWorkspace ? <Action onPress={() => setDialog({ kind: "create" })}>New token</Action> : null}
       >
         {revoke.error ? (

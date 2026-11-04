@@ -578,3 +578,18 @@ sign-in lock", and `/two-factor-reset` from the mailed link, in light and dark.
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in
 the code or in this table; fix whichever is wrong and add an integration test for it when it is the code.
+
+## API rate limits
+
+Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_PER_MINUTE=4`,
+`..._USER_PER_MINUTE=1200` and `..._BAD_CREDENTIAL_PER_MINUTE=3`. `$T` is a token with `members:read`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Headers | `curl -i -H "Authorization: Bearer $T" $B/members` | 200 with `X-RateLimit-Limit: 12`, `X-RateLimit-Remaining`, `X-RateLimit-Scope: token` |
+| Burst | the same three times within ten seconds | third 429 `too_many_requests`, `X-RateLimit-Scope: burst`, `Retry-After`, `X-RateLimit-Reset` |
+| Workspace share | two tokens of one workspace, five calls between them in a minute | the fifth 429 with scope `workspace`; the dashboard in a browser keeps working |
+| Bad tokens | `curl -H "Authorization: Bearer dmi_live_nope" $B/members` four times | three 401, then 429 |
+| Limits shown | `r ent -b a.jar -H "$O" -H "Dimmi-Workspace: $WS" $B/workspace/entitlements` | 200 `api.token_per_minute` 12; the tokens page says "12 requests a minute per token, 4 for the workspace's tokens together." |
+| Metric | scrape `/metrics` on the admin address | `dimmi_api_throttled_total{scope="burst"}` counts the refusals |
+

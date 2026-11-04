@@ -38,7 +38,7 @@ func signInHelpRoutes(api *routing.Router, a *app.App) {
 	})
 
 	api.Group("", func(admin *routing.Router) {
-		admin.Middleware("csrf", "session", "auth:user", "workspace", "access.policy")
+		admin.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
 
 		routing.Post(admin, "/members/{member}/two-factor-resets", "members.two-factor-resets.store",
 			help.StoreReset).Middleware("password.confirm").Status(fhttp.StatusCreated)

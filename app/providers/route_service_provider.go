@@ -38,6 +38,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/foundation"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/middleware"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app"
@@ -74,6 +75,7 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 		return appmiddleware.EnsureEmailVerified(p.App.Config.Auth.Verification, fa.Errors), nil
 	})
 	p.aliasCallers(fa)
+	p.aliasLimits(fa)
 	fa.Kernel.Alias("access.policy", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Errors), nil
 	})
@@ -118,6 +120,10 @@ language again once it knows more.
 */
 func (p RouteServiceProvider) aliasCallers(fa *foundation.Application) {
 	locale := middleware.Locale(fa.Lang, appmiddleware.LocalePreference(fa.Lang))
+	slow := appmiddleware.SlowBadCredentials(appmiddleware.BadCredentialsOptions{
+		Limiter: fa.Limiter, PerMinute: p.App.Config.API.Limits.BadCredentialPerMinute,
+		Cookie: fa.Session.CookieName(), Clock: fa.Clock, Errors: fa.Errors,
+	})
 
 	fa.Kernel.Alias("auth", func(params ...string) (fhttp.Middleware, error) {
 		guard, err := fa.Guards.Middleware(params...)
@@ -125,10 +131,30 @@ func (p RouteServiceProvider) aliasCallers(fa *foundation.Application) {
 			return nil, fmt.Errorf("auth middleware: %w", err)
 		}
 
-		return then(guard, locale), nil
+		return then(slow, then(guard, locale)), nil
 	})
 	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
 		return then(appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), locale), nil
+	})
+}
+
+/*
+aliasLimits names api.throttle, the public API's fairness limits, which
+run after the caller and the workspace are known. Every refusal is
+counted by scope.
+*/
+func (p RouteServiceProvider) aliasLimits(fa *foundation.Application) {
+	throttled, err := fa.Telemetry.Counter("dimmi_api_throttled")
+
+	fa.Kernel.Alias("api.throttle", func(...string) (fhttp.Middleware, error) {
+		return appmiddleware.APIThrottle(appmiddleware.APIThrottleOptions{
+			Limiter: fa.Limiter, Entitlements: p.App.Entitlements, Limits: p.App.Config.API.Limits,
+			Clock: fa.Clock, Refused: func(ctx context.Context, scope string) {
+				if err == nil {
+					throttled.Add(ctx, 1, telemetry.String("scope", scope))
+				}
+			},
+		}), nil
 	})
 }
 

@@ -49,6 +49,7 @@ type controllers struct {
 	confirmationCodes *v1.UserConfirmationCodeController
 	identities        *v1.UserIdentityController
 	memberships       *v1.MembershipController
+	entitlements      *v1.WorkspaceEntitlementController
 	workspace         *v1.CurrentWorkspaceController
 	workspaces        *v1.WorkspaceController
 	members           *v1.MemberController
@@ -76,7 +77,7 @@ func API(a *app.App) {
 		api.Group("", func(user *routing.Router) { userRoutes(user, c) })
 
 		api.Group("", func(caller *routing.Router) {
-			caller.Middleware("csrf", "session", "auth")
+			caller.Middleware("csrf", "session", "auth", "api.throttle")
 
 			routing.Get(caller, "/me", "me.show", c.me.Show)
 		})
@@ -115,7 +116,7 @@ userRoutes declares the signed-in user's own routes, which a token
 never reaches.
 */
 func userRoutes(user *routing.Router, c controllers) {
-	user.Middleware("csrf", "session", "auth:user")
+	user.Middleware("csrf", "session", "auth:user", "api.throttle")
 
 	routing.Get(user, "/sessions", "sessions.index", c.sessions.Index)
 	routing.Delete(user, "/sessions", "sessions.destroy-many", c.sessions.DestroyMany).
@@ -144,9 +145,10 @@ workspaceRoutes declares the routes that work inside the workspace a
 request names, or a token's own.
 */
 func workspaceRoutes(workspace *routing.Router, c controllers) {
-	workspace.Middleware("csrf", "session", "auth", "workspace", "access.policy")
+	workspace.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
 
 	routing.Get(workspace, "/workspace", "workspace.show", c.workspace.Show)
+	routing.Get(workspace, "/workspace/entitlements", "workspace.entitlements.show", c.entitlements.Show)
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
 	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK)
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
@@ -199,7 +201,7 @@ token, so a stolen token can neither mint another nor hide its tracks.
 Minting needs a verified email and a recent confirmation.
 */
 func tokenRoutes(tokens *routing.Router, c controllers) {
-	tokens.Middleware("csrf", "session", "auth:user", "workspace")
+	tokens.Middleware("csrf", "session", "auth:user", "workspace", "api.throttle")
 
 	routing.Get(tokens, "/tokens", "tokens.index", c.tokens.Index)
 	routing.Post(tokens, "/tokens", "tokens.store", c.tokens.Store).
@@ -297,6 +299,7 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 	c.workspace = &v1.CurrentWorkspaceController{
 		UpdateWorkspace: acts.UpdateWorkspace, DeleteWorkspace: acts.DeleteWorkspace,
 	}
+	c.entitlements = &v1.WorkspaceEntitlementController{Entitlements: a.Entitlements, Limits: a.Config.API.Limits}
 	c.members = &v1.MemberController{
 		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
 		MemberTeams: acts.ListMemberTeams, Cursors: cursors, Lockout: a.Lockout,

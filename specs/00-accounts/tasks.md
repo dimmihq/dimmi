@@ -165,10 +165,10 @@ Spec: [audit.md](audit.md). Builds on F71 fix.
 
 Spec: [rate-limits.md](rate-limits.md).
 
-- [ ] Entitlements catalog + `self_host`, cloud default drivers if still absent (contracts.md). Keys incl. `api.workspace_rate_limit_per_minute`.
-- [ ] `ThrottleOptions` `Limit`, `Skip`, `Scope` + framework tests (90% coverage kept).
-- [ ] `api_throttle.go`; mount on every authenticated group + `/mcp`; bad-credential bucket in guards. `tests/arch/api_throttle_test.go`.
-- [ ] `lib/api/client.ts` 429 handling; tokens page line; docs; `dimmi_api_throttled_total`. Tests in rate-limits.md. `docs/testing/manual-e2e.md` row.
+- [x] Entitlements catalog + `self_host`, cloud default drivers if still absent (contracts.md). Keys incl. `api.workspace_rate_limit_per_minute`. Catalog and drivers are track 01's; the API keys live in `app/support/entitlements/api_limits.go`, and a catalog without them leaves `api.limits.*` config in force.
+- [x] `ThrottleOptions` `Limit`, `Skip`, `Scope` + framework tests (90% coverage kept).
+- [x] `api_throttle.go`; mount on every authenticated group + `/mcp`; bad-credential bucket in guards. `tests/arch/api_throttle_test.go`. Open: `/mcp` over HTTP does not exist yet; it joins the same alias when built.
+- [x] `lib/api/client.ts` 429 handling; tokens page line; docs; `dimmi_api_throttled_total`. Tests in rate-limits.md. `docs/testing/manual-e2e.md` row. Open: the public docs page waits for the docs site.
 
 ## M19. Custom roles (track 08 enterprise-identity)
 
