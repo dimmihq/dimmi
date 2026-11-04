@@ -269,7 +269,7 @@ func conversationEvents(tc *tests.TestCase, id ids.UUID) []appevents.Conversatio
 		appevents.ConversationReopened{Base: base(tc, ""), ConversationRef: ref, Reason: "manual"},
 		appevents.ConversationSnoozed{Base: base(tc, ""), ConversationRef: ref, Until: tc.Clock.Now()},
 		appevents.ConversationUnsnoozed{Base: base(tc, ""), ConversationRef: ref, Reason: "manual"},
-		appevents.ConversationPriorityChanged{Base: base(tc, ""), ConversationRef: ref, Priority: true},
+		appevents.ConversationPriorityChanged{Base: base(tc, ""), ConversationRef: ref, From: "none", To: "high"},
 		appevents.ConversationTagged{Base: base(tc, ""), ConversationRef: ref},
 		appevents.ConversationUntagged{Base: base(tc, ""), ConversationRef: ref},
 		appevents.ConversationMarkedSpam{Base: base(tc, ""), ConversationRef: ref},

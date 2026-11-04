@@ -1,0 +1,66 @@
+{
+  "providerId": "trydimmi.com",
+  "providerName": "dimmi",
+  "serviceId": "email",
+  "serviceName": "dimmi email sending",
+  "version": 1,
+  "logoUrl": "https://trydimmi.com/brand/dimmi-logo-light.svg",
+  "description": "Lets dimmi send email from your domain, with SPF, DKIM and DMARC aligned.",
+  "variableDescription": "dkim1, dkim2 and dkim3 are the signing tokens of the domain; mailfrom is the bounce subdomain; token proves ownership; region is the sending Region.",
+  "syncBlock": false,
+  "syncPubKeyDomain": "trydimmi.com",
+  "syncRedirectDomain": "trydimmi.com",
+  "records": [
+    {
+      "type": "SPFM",
+      "host": "@",
+      "spfRules": "include:amazonses.com"
+    },
+    {
+      "type": "TXT",
+      "host": "_dimmi-verification",
+      "data": "dimmi-verification=%token%",
+      "ttl": 3600
+    },
+    {
+      "type": "CNAME",
+      "host": "%dkim1%._domainkey",
+      "pointsTo": "%dkim1%.dkim.amazonses.com",
+      "ttl": 3600
+    },
+    {
+      "type": "CNAME",
+      "host": "%dkim2%._domainkey",
+      "pointsTo": "%dkim2%.dkim.amazonses.com",
+      "ttl": 3600
+    },
+    {
+      "type": "CNAME",
+      "host": "%dkim3%._domainkey",
+      "pointsTo": "%dkim3%.dkim.amazonses.com",
+      "ttl": 3600
+    },
+    {
+      "type": "MX",
+      "host": "%mailfrom%",
+      "pointsTo": "feedback-smtp.%region%.amazonses.com",
+      "priority": 10,
+      "ttl": 3600
+    },
+    {
+      "type": "TXT",
+      "host": "%mailfrom%",
+      "data": "v=spf1 include:amazonses.com ~all",
+      "ttl": 3600
+    },
+    {
+      "type": "TXT",
+      "host": "_dmarc",
+      "data": "v=DMARC1; p=none;",
+      "ttl": 3600,
+      "txtConflictMatchingMode": "Prefix",
+      "txtConflictMatchingPrefix": "v=DMARC1",
+      "essential": "OnApply"
+    }
+  ]
+}

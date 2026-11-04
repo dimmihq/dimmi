@@ -27,11 +27,17 @@ import { Select, SelectItem } from "@/components/base/select/select";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
-import type { Conversation, ConversationStatus } from "@/lib/api/inbox";
+import {
+  type Conversation,
+  type ConversationPriority,
+  type ConversationStatus,
+  conversationPriorities,
+} from "@/lib/api/inbox";
 import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
-import { type CaseControls, type Priority, priorityLabel, statusLabel } from "./case";
-import { customerName } from "./conversations";
+import { type CaseControls, statusLabel } from "../case";
+import { customerName } from "../conversations";
+import { priorityLabel } from "../priority/labels";
 
 const nobody = "nobody";
 const statusDot = { open: "green", snoozed: "yellow", closed: "indigo" } as const;
@@ -85,8 +91,6 @@ function CaseFields({
   caze: CaseControls;
   people: Person[];
 }) {
-  const priority: Priority = conversation.priority ? "priority" : "normal";
-
   return (
     <dl className="flex flex-col">
       <Row label="Assignee">
@@ -127,10 +131,10 @@ function CaseFields({
         <Select
           aria-label="Priority"
           size="sm"
-          selectedKey={priority}
-          onSelectionChange={choose<Priority>(caze.setPriority)}
+          selectedKey={conversation.priority}
+          onSelectionChange={choose<ConversationPriority>(caze.setPriority)}
         >
-          {(Object.keys(priorityLabel) as Priority[]).map((value) => (
+          {conversationPriorities.map((value) => (
             <SelectItem key={value} id={value} textValue={priorityLabel[value]}>
               {priorityLabel[value]}
             </SelectItem>

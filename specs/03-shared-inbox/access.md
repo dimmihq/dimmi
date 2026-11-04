@@ -78,7 +78,7 @@ AND dimmi_conversation_visible(c.assignee_member_id, c.assignee_team_id, @access
     sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean)
 ```
 
-`Teams` never nil (null array hides everything); `Params()` guarantees it. Why no ctx and error: list is read when workspace resolves, so scope costs no query and cannot fail mid-action.
+Lists built by `app/support/querybuilder` set `Conversations.Access` (from `VisibleScope(m).Params()`); builder always renders the function, zero `Access` shows nothing (fail closed). `Teams` never nil (null array hides everything); `Params()` and the builder guarantee it. Why no ctx and error: list is read when workspace resolves, so scope costs no query and cannot fail mid-action.
 
 Surfaces that must use it (table test `tests/feature/access/scope_test.go` hides one conversation, walks each):
 

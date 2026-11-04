@@ -15,7 +15,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
-	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 	"github.com/dimmihq/dimmi/database/factories"
 )
 
@@ -72,14 +72,27 @@ func firstPage(t *testing.T, d desk, scope authz.ConversationScope, memberID ids
 
 		err := d.tc.App.DB.Transaction(tenancy.With(t.Context(), workspace.String()),
 			func(ctx context.Context, tx *database.Tx) error {
-				rows, err := models.New(tx).FilterConversations(ctx, models.FilterConversationsParams{
-					WorkspaceID: workspace, MemberID: memberID, Statuses: []string{"open"}, Descending: true,
-					AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
-					AccessUnassigned: access.Unassigned, RowLimit: 50,
-				})
-				assert.Len(t, rows, 50)
+				sql, args := querybuilder.Conversations{
+					WorkspaceID: workspace, MemberID: memberID, Statuses: []string{"open"},
+					Sort: querybuilder.SortLatest, Limit: 50, Access: querybuilder.Access{
+						Mode: access.Mode, Viewer: access.Viewer, Teams: access.Teams, Unassigned: access.Unassigned,
+					},
+				}.IDs()
 
-				return err
+				rows, err := tx.Query(ctx, sql, args...)
+				if err != nil {
+					return err
+				}
+				defer rows.Close()
+
+				count := 0
+				for rows.Next() {
+					count++
+				}
+
+				assert.Equal(t, 50, count)
+
+				return rows.Err()
 			})
 		require.NoError(t, err)
 

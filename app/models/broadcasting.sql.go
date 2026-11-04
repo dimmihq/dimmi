@@ -12,7 +12,7 @@ import (
 )
 
 const findBroadcastMessage = `-- name: FindBroadcastMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at FROM messages WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages WHERE workspace_id = $1 AND id = $2
 `
 
 type FindBroadcastMessageParams struct {
@@ -45,9 +45,10 @@ func (q *Queries) FindBroadcastMessage(ctx context.Context, arg FindBroadcastMes
 		&i.SentAt,
 		&i.ReadAt,
 		&i.DeletedAt,
-		&i.Search,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
 	)
 	return i, err
 }

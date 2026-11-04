@@ -14,6 +14,7 @@ import type { Conversation } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { ago, customerName, subjectOf } from "./conversations";
+import { PriorityChip } from "./priority/priority-menu";
 
 export function ConversationList({
   view,
@@ -59,6 +60,7 @@ export function ConversationList({
                   >
                     {subjectOf(conversation)}
                   </span>
+                  <PriorityChip priority={conversation.priority} />
                   {conversation.unread ? (
                     <>
                       <StatusDot color="indigo" />

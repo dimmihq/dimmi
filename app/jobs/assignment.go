@@ -121,55 +121,12 @@ func (w *DrainAssignmentQueue) Handle(ctx context.Context, job *queue.Job[DrainA
 }
 
 /*
-SweepAssignmentQueuesArgs starts the round that drains every workspace
-with waiting conversations.
-*/
-type SweepAssignmentQueuesArgs struct{}
-
-/*
-Kind names the job.
-*/
-func (SweepAssignmentQueuesArgs) Kind() string {
-	return "sweep_assignment_queues"
-}
-
-/*
-Options run the round on the maintenance queue.
-*/
-func (SweepAssignmentQueuesArgs) Options() queue.Options {
-	return queue.Options{Queue: "maintenance"}
-}
-
-/*
-SweepAssignmentQueues queues a drain for every workspace with waiting
-conversations.
-*/
-type SweepAssignmentQueues struct {
-	Assigner Assigner
-	Queue    *queue.Queue
-}
-
-/*
-Handle queues the drains.
-*/
-func (w *SweepAssignmentQueues) Handle(ctx context.Context, _ *queue.Job[SweepAssignmentQueuesArgs]) error {
-	workspaces, err := w.Assigner.WaitingWorkspaces(ctx, waitingSweepSize)
-	if err != nil {
-		return err
-	}
-
-	for _, id := range workspaces {
-		if err := w.Queue.Push(ctx, DrainAssignmentQueueArgs{WorkspaceID: id}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-/*
-pendingStates are the states in which a job counts as still to run.
+pendingStates are the states in which a job counts as not done yet. A
+drain running when another is asked for skips it; the sweep every minute
+catches what that leaves.
 */
 func pendingStates() []queue.State {
-	return []queue.State{queue.StateAvailable, queue.StatePending, queue.StateScheduled, queue.StateRetryable}
+	return []queue.State{
+		queue.StateAvailable, queue.StatePending, queue.StateRunning, queue.StateScheduled, queue.StateRetryable,
+	}
 }

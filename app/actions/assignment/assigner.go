@@ -28,8 +28,12 @@ type Assigner struct {
 /*
 AssignConversation assigns one conversation for the reason.
 */
-func (a *Assigner) AssignConversation(ctx context.Context, workspaceID, conversationID ids.UUID, reason string) error {
-	_, err := a.Arrival.Handle(ctx, ArrivalInput{WorkspaceID: workspaceID, ConversationID: conversationID, Reason: reason})
+func (a *Assigner) AssignConversation(
+	ctx context.Context, workspaceID, conversationID ids.UUID, reason string,
+) error {
+	_, err := a.Arrival.Handle(ctx, ArrivalInput{
+		WorkspaceID: workspaceID, ConversationID: conversationID, Reason: reason,
+	})
 
 	return err
 }

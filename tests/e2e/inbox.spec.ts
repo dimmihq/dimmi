@@ -66,6 +66,22 @@ it.describe("the inbox", () => {
     );
   });
 
+  it("sets a priority from the keyboard and shows it on the row", async ({ page }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    await expect(page.getByRole("heading", { name: "Can't log in" })).toBeVisible();
+
+    await page.keyboard.press("p");
+    await expect(page.getByRole("dialog", { name: "Set priority" })).toBeVisible();
+    await page.keyboard.press("5");
+
+    await expect(page.getByRole("button", { name: "Priority: Urgent" })).toBeVisible();
+    await expect(page.getByText("set the priority to urgent")).toBeVisible();
+
+    await page.goto("/d/inbox/unassigned");
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toContainText("Urgent");
+  });
+
   it("adds a note only the team sees", async ({ page, person }) => {
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);

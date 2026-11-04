@@ -23,13 +23,10 @@
 package broadcasting
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/centrifugal/centrifuge"
@@ -262,32 +259,6 @@ func (s *Server) noticed(event centrifuge.NotificationEvent) {
 			client.Disconnect(revoked())
 		}
 	}
-}
-
-/*
-Presence returns the connections listening on the channel, across every
-node, ordered by user and then client.
-*/
-func (s *Server) Presence(ctx context.Context, channel string) ([]Member, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, fmt.Errorf("presence on %q: %w", channel, err)
-	}
-
-	result, err := s.node.Presence(channel)
-	if err != nil {
-		return nil, fmt.Errorf("presence on %q: %w", channel, err)
-	}
-
-	members := make([]Member, 0, len(result.Presence))
-	for _, info := range result.Presence {
-		members = append(members, Member{ClientID: info.ClientID, UserID: info.UserID, Info: info.ConnInfo})
-	}
-
-	slices.SortFunc(members, func(a, b Member) int {
-		return cmp.Or(strings.Compare(a.UserID, b.UserID), strings.Compare(a.ClientID, b.ClientID))
-	})
-
-	return members, nil
 }
 
 /*

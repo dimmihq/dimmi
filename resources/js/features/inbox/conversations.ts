@@ -79,12 +79,12 @@ const statusWords: Record<string, string> = {
  */
 export function eventText(event: TimelineEvent): string {
   const actor = event.actor.name || "dimmi";
-  if (event.name === "conversation.assigned") {
+  if (event.name === "conversation.assigned" && typeof event.to !== "string") {
     const to = event.to?.member?.name ?? event.to?.team?.name;
     return to ? `${actor} assigned the conversation to ${to}` : `${actor} unassigned the conversation`;
   }
   if (event.name === "conversation.priority_changed") {
-    return event.priority ? `${actor} marked the conversation as a priority` : `${actor} removed the priority`;
+    return event.to === "none" ? `${actor} removed the priority` : `${actor} set the priority to ${event.to}`;
   }
 
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
