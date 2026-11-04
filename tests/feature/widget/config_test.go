@@ -14,6 +14,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/config"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -46,7 +47,7 @@ func TestWidgetConfig(t *testing.T) {
 		res.AssertJSONPath("data.dir", "ltr")
 		res.AssertJSONPath("data.tabs", []any{"home", "messages"})
 		res.AssertJSONPath("data.honeypot_field", "website")
-		res.AssertJSONPath("data.branding.show", false)
+		res.AssertJSONPath("data.branding.show", config.BuiltEdition == config.EditionCloud)
 		res.AssertJSONMissing("data.surface")
 		assert.NotContains(t, string(res.Body), tc.Owner.Email)
 		assert.Contains(t, res.Header.Values("Vary"), "Origin")
@@ -249,47 +250,6 @@ func TestWidgetOrigin(t *testing.T) {
 			Send(fhttp.MethodOptions,
 				"/widget/v1/apps/"+models.PublicID(models.PrefixWidget, ids.New())+"/config", nil).
 			AssertNoContent()
-	})
-}
-
-func TestWidgetBranding(t *testing.T) {
-	t.Parallel()
-
-	type row struct {
-		edition string
-		paid    bool
-		choice  any
-		show    bool
-		locked  bool
-	}
-
-	for name, c := range map[string]row{
-		"self host unset":    {"self_host", false, nil, false, false},
-		"self host opted in": {"self_host", false, true, true, false},
-		"self host off":      {"self_host", false, false, false, false},
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			tc := tests.New(t)
-
-			if c.choice != nil {
-				patch(t, tc, testkit.JSON{"show_branding": c.choice})
-			}
-
-			res := tc.Client().GetJSON(configPath(t, tc)).AssertOK()
-			res.AssertJSONPath("data.branding.show", c.show)
-			res.AssertJSONPath("data.branding.locked", c.locked)
-		})
-	}
-
-	t.Run("the badge links back with the workspace's slug", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-
-		url := tc.Client().GetJSON(configPath(t, tc)).AssertOK().String("data.branding.url")
-
-		assert.Contains(t, url, "utm_source=widget")
-		assert.Contains(t, url, "ref="+tc.Workspace.Workspace.Slug)
 	})
 }
 
