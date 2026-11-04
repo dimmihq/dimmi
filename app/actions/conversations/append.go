@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
@@ -59,17 +61,22 @@ func (w *Writer) Append(
 
 	substantive := m.Type == string(enums.MessageTypeMessage) && !m.Automatic
 
+	var travelled *ids.UUID
+	if m.Type == string(enums.MessageTypeMessage) {
+		travelled = &c.ChannelConnectionID
+	}
+
 	msg, err := w.Q.CreateMessage(ctx, models.CreateMessageParams{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, Type: m.Type, AuthorType: w.Actor.Type,
 		AuthorID: w.authorID(), Body: &m.Body, BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID,
 		DedupeKey: m.DedupeKey, DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: metadata,
-		SentAt: m.SentAt, Now: w.Now,
+		SentAt: m.SentAt, ChannelConnectionID: travelled, Now: w.Now,
 	})
 	if err != nil {
 		return msg, c, fmt.Errorf("add %s: %w", m.Type, err)
 	}
 
-	if c, err = w.count(ctx, c, m); err != nil {
+	if c, err = w.count(ctx, c, m, msg); err != nil {
 		return msg, c, err
 	}
 
@@ -108,14 +115,16 @@ func (w *Writer) touch(ctx context.Context, c models.Conversation) (models.Conve
 count counts a message into the conversation's activity, and only marks
 the conversation changed for a note.
 */
-func (w *Writer) count(ctx context.Context, c models.Conversation, m NewMessage) (models.Conversation, error) {
+func (w *Writer) count(
+	ctx context.Context, c models.Conversation, m NewMessage, msg models.Message,
+) (models.Conversation, error) {
 	if m.Type != string(enums.MessageTypeMessage) {
 		return w.touch(ctx, c)
 	}
 
 	updated, err := w.Q.RecordConversationMessage(ctx, models.RecordConversationMessageParams{
 		At: w.Now, FromCustomer: w.Actor.Type == string(enums.AuthorTypeContact), Automatic: m.Automatic,
-		WorkspaceID: c.WorkspaceID, ID: c.ID,
+		MessageID: msg.ID, WorkspaceID: c.WorkspaceID, ID: c.ID,
 	})
 	if err != nil {
 		return c, fmt.Errorf("count message: %w", err)
