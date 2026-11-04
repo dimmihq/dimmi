@@ -35,6 +35,7 @@ func unscopedQueries() map[string]string {
 		"FindNextWaitingConversation":  "the assignment drain: the system picks, no member is asking",
 		"ListWaitingInboxes":           "the assignment drain: names inboxes, not conversations",
 		"CountWaitingConversations":    "inbox-wide queue totals for inbox settings: names no conversation",
+		"CountInboxConversations":      "whether an inbox being deleted is empty: names no conversation",
 	}
 }
 

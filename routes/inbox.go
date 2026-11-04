@@ -43,7 +43,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 	return inboxControllers{
 		inboxes: &v1.InboxController{
 			List: acts.ListInboxes, Show: acts.ShowInbox, Create: acts.CreateInbox, Change: acts.UpdateInbox,
-			IDs: a.IDs,
+			Remove: acts.DeleteInbox,
+			Status: a.Actions.AssignmentStatus, IDs: a.IDs,
 		},
 		contacts: &v1.ContactController{
 			List: acts.ListContacts, Show: acts.ShowContact, Create: acts.CreateContact, Change: acts.UpdateContact,
@@ -76,6 +77,9 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 	routing.Post(r, "/inboxes", "inboxes.store", c.inboxes.Store).Ability("settings:write")
 	routing.Get(r, "/inboxes/{inbox}", "inboxes.show", c.inboxes.Get).Ability("conversations:read")
 	routing.Patch(r, "/inboxes/{inbox}", "inboxes.update", c.inboxes.Update).Ability("settings:write")
+	routing.Delete(r, "/inboxes/{inbox}", "inboxes.destroy", c.inboxes.Destroy).Ability("settings:write")
+	routing.Get(r, "/inboxes/{inbox}/assignment-status", "inboxes.assignment-status.show",
+		c.inboxes.AssignmentStatus).Ability("settings:read")
 
 	routing.Get(r, "/contacts", "contacts.index", c.contacts.Index).Ability("contacts:read")
 	routing.Post(r, "/contacts", "contacts.store", c.contacts.Store).Ability("contacts:write")

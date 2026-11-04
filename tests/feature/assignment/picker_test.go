@@ -2,6 +2,7 @@ package assignment_test
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 	"testing"
 
@@ -255,8 +256,9 @@ func TestCapacity(t *testing.T) {
 		id := d.arrivals(t, 1)[0]
 
 		d.show(t, id).AssertJSONPath("data.assignment_wait.reason", "no_available_member")
-		d.tc.Drain()
-		d.owner.GetJSON("/api/v1/conversations/"+id+"/messages").AssertOK()
+		require.NoError(t, d.tc.App.Actions.Assignment.DrainWorkspace(t.Context(), d.tc.Workspace.Workspace.ID))
+		timeline := d.owner.GetJSON("/api/v1/conversations/" + id + "/messages").AssertOK()
+		assert.Equal(t, 1, strings.Count(string(timeline.Body), "conversation.assignment_waiting"))
 
 		s.members[0].client.PatchJSON("/api/v1/members/me", testkit.JSON{"availability": "online"}).AssertOK()
 		d.tc.Drain()

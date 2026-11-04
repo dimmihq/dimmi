@@ -9,7 +9,9 @@
 | look for an assignee; anything that frees someone up, such as a close,
 | a snooze, a reassignment or someone coming back, drains the waiting
 | ones. A conversation that gets a member, closes, or leaves the inbox
-| stops waiting in the same transaction.
+| stops waiting in the same transaction. A deleted team or inbox takes
+| its round robin cursor with it, and the conversations a deleted inbox
+| moved out wait on the rules of the inbox they moved to.
 |
 */
 
@@ -44,6 +46,7 @@ func bootAssignment(a *app.App) error {
 	listenArrivals(a.Events)
 	listenDrains(a.Events)
 	listenWaitEnds(a.Events, a)
+	listenPoolEnds(a.Events, a)
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.AssignConversation{Assigner: assigner}),
@@ -152,4 +155,25 @@ func listenWaitEnds(d *events.Dispatcher, a *app.App) {
 	events.Listen(d, events.InTx, func(ctx context.Context, e appevents.ConversationDeleted) error {
 		return end(ctx, e.WorkspaceID, e.ConversationID)
 	})
+}
+
+/*
+listenPoolEnds forgets the cursor of a team or inbox in the transaction
+that deleted it, and drains the workspace after an inbox moved its
+conversations out.
+*/
+func listenPoolEnds(d *events.Dispatcher, a *app.App) {
+	forget := func(ctx context.Context, workspaceID ids.UUID, kind string, pool ids.UUID) error {
+		return models.New(a.DB).DeleteAssignmentCursor(ctx, models.DeleteAssignmentCursorParams{
+			WorkspaceID: workspaceID, PoolKind: kind, PoolID: pool,
+		})
+	}
+
+	events.Listen(d, events.InTx, func(ctx context.Context, e appevents.TeamDeleted) error {
+		return forget(ctx, e.WorkspaceID, "team", e.TeamID)
+	})
+	events.Listen(d, events.InTx, func(ctx context.Context, e appevents.InboxDeleted) error {
+		return forget(ctx, e.WorkspaceID, "inbox", e.InboxID)
+	})
+	events.ListenQueued(d, func(e appevents.InboxDeleted) queue.Args { return drain(e.WorkspaceID) })
 }

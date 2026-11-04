@@ -14,6 +14,7 @@
 package assignment
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -29,11 +30,13 @@ import (
 )
 
 /*
-StatusInput is who asks about which inbox.
+StatusInput is who asks about which inbox, and for conversations of
+which channel type, empty for the widget.
 */
 type StatusInput struct {
-	Membership authz.Membership
-	InboxID    ids.UUID
+	Membership  authz.Membership
+	InboxID     ids.UUID
+	ChannelType enums.ChannelType
 }
 
 /*
@@ -48,13 +51,14 @@ type Waiting struct {
 
 /*
 Status is the inbox's assignment as it stands: its mode, the pool's
-members with whether each may take a conversation, and what waits. The
-members are judged for conversations of ChannelType.
+members with whether each may take a conversation and their names, and
+what waits. The members are judged for conversations of ChannelType.
 */
 type Status struct {
 	Mode        string
 	ChannelType enums.ChannelType
 	Members     []Candidate
+	Names       map[ids.UUID]string
 	Waiting     Waiting
 }
 
@@ -63,8 +67,9 @@ ShowAssignmentStatus explains an inbox's automatic assignment.
 
 Rules:
   - The caller needs settings:read.
-  - Members are judged as for a conversation of the inbox's widget
-    channel, the channel most inboxes take conversations through.
+  - Members are judged as for a conversation of the channel type
+    asked for, by default the widget, the channel most inboxes take
+    conversations through.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
 wrapped database error.
@@ -97,13 +102,17 @@ func (a *ShowAssignmentStatus) Handle(ctx context.Context, in StatusInput) (Stat
 		}
 
 		settings := inbox.ReadSettings().Assignment
-		out = Status{Mode: settings.Mode, ChannelType: enums.ChannelTypeWidget}
+		out = Status{Mode: settings.Mode, ChannelType: cmp.Or(in.ChannelType, enums.ChannelTypeWidget)}
 
 		out.Members, err = Candidates(ctx, q, PickInput{
 			WorkspaceID: ws, InboxID: inbox.ID, TeamID: inbox.DefaultTeamID, Settings: settings,
 			ChannelType: out.ChannelType,
 		})
 		if err != nil {
+			return err
+		}
+
+		if out.Names, err = names(ctx, q, ws, out.Members); err != nil {
 			return err
 		}
 
@@ -136,6 +145,30 @@ func waiting(ctx context.Context, q *models.Queries, workspaceID, inboxID ids.UU
 			oldest := row.Oldest
 			out.OldestAt = &oldest
 		}
+	}
+
+	return out, nil
+}
+
+/*
+names returns the names of the candidates, by member.
+*/
+func names(
+	ctx context.Context, q *models.Queries, workspaceID ids.UUID, members []Candidate,
+) (map[ids.UUID]string, error) {
+	memberIDs := make([]ids.UUID, len(members))
+	for i, m := range members {
+		memberIDs[i] = m.ID
+	}
+
+	rows, err := q.MembersByIDs(ctx, models.MembersByIDsParams{WorkspaceID: workspaceID, Ids: memberIDs})
+	if err != nil {
+		return nil, fmt.Errorf("load pool members: %w", err)
+	}
+
+	out := make(map[ids.UUID]string, len(rows))
+	for _, row := range rows {
+		out[row.WorkspaceMember.ID] = row.User.Name
 	}
 
 	return out, nil
