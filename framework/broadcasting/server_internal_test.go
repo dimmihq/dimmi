@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"testing"
 
+	"github.com/centrifugal/centrifuge"
 	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,5 +54,19 @@ func TestShardConfig(t *testing.T) {
 		assert.Equal(t, "s", cfg.SentinelUser)
 		assert.Equal(t, "spw", cfg.SentinelPassword)
 		assert.Equal(t, "pw", cfg.Password)
+	})
+}
+
+func TestNoticed(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ignores what is not an ended credential, or cannot be read", func(t *testing.T) {
+		t.Parallel()
+		s := &Server{}
+
+		assert.NotPanics(t, func() {
+			s.noticed(centrifuge.NotificationEvent{Op: "something_else", Data: []byte(`{}`)})
+			s.noticed(centrifuge.NotificationEvent{Op: opCloseConnections, Data: []byte(`not json`)})
+		})
 	})
 }

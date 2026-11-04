@@ -106,8 +106,8 @@ type envelope struct {
 /*
 revoked closes the connections of a user whose access ended. Client
 libraries reconnect after a code in this range, and the new connection
-is then refused every channel the user may no longer follow, so a
-client knows to drop what it showed.
+is then refused outright or refused every channel the user may no longer
+follow, so a client knows to drop what it showed.
 */
 func revoked() centrifuge.Disconnect {
 	return centrifuge.Disconnect{Code: 4009, Reason: "member_removed"}
@@ -189,6 +189,62 @@ func (s *Server) Disconnect(ctx context.Context, userID string) error {
 	}
 
 	return nil
+}
+
+/*
+credentialEnded is the notice that tells every node to close the
+connections a user opened with one credential.
+*/
+type credentialEnded struct {
+	UserID     string `json:"user_id"`
+	Credential string `json:"credential"`
+}
+
+/*
+opCloseConnections names that notice among the messages nodes send each
+other.
+*/
+const opCloseConnections = "close_connections"
+
+/*
+DisconnectCredential closes the user's connections opened with the
+credential, on every node, leaving those opened with any other. Use it
+when one session or token ends and the user's others go on.
+*/
+func (s *Server) DisconnectCredential(ctx context.Context, userID, credential string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("disconnect credential of user %s: %w", userID, err)
+	}
+
+	data, err := json.Marshal(credentialEnded{UserID: userID, Credential: credential})
+	if err != nil {
+		return fmt.Errorf("encode ended credential: %w", err)
+	}
+
+	if err := s.node.Notify(opCloseConnections, data, ""); err != nil {
+		return fmt.Errorf("disconnect credential of user %s: %w", userID, err)
+	}
+
+	return nil
+}
+
+/*
+noticed handles what another node, or this one, tells every node: the
+connections of an ended credential close here. Anything it cannot read
+came from a node of another version, and is left to the timed check.
+*/
+func (s *Server) noticed(event centrifuge.NotificationEvent) {
+	ended := credentialEnded{}
+	if event.Op != opCloseConnections || json.Unmarshal(event.Data, &ended) != nil {
+		return
+	}
+
+	for _, client := range s.node.Hub().UserConnections(ended.UserID) {
+		principal, _ := client.Context().Value(principalKey{}).(Principal)
+		if principal.Credential == ended.Credential {
+			client.Disconnect(revoked())
+		}
+	}
 }
 
 /*

@@ -10,8 +10,11 @@
 |
 | Losing access ends it everywhere at once. A deactivated member's
 | connections are closed on every node, with a reason that tells the
-| client not to reconnect on its own: whatever it showed of the
-| workspace is no longer theirs to see.
+| client to drop what it showed: whatever it showed of the workspace is
+| no longer theirs to see. The same goes for a credential that ends: a
+| session signed out or revoked and a token revoked close the connections
+| opened with them, and a reset or a taken-back account closes all of the
+| user's.
 |
 */
 
@@ -25,18 +28,25 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
-Disconnector closes every connection of a user, on every node.
+Disconnector closes connections of a user, on every node.
 */
 type Disconnector interface {
 	/*
-		Disconnect closes the user's connections for good.
+		Disconnect closes every connection of the user.
 	*/
 	Disconnect(ctx context.Context, userID string) error
+
+	/*
+		DisconnectCredential closes the user's connections opened with the
+		credential.
+	*/
+	DisconnectCredential(ctx context.Context, userID, credential string) error
 }
 
 /*
@@ -50,23 +60,53 @@ type changed struct {
 }
 
 /*
-Disconnects closes the connections of members who lose access.
+Disconnects closes the connections of users who lose access and of
+credentials that end.
 */
 type Disconnects struct {
 	Server Disconnector
 }
 
 /*
-Listen makes the disconnects hear deactivations, once they commit.
+Listen makes the disconnects hear what ends access, once it commits.
 */
 func (d *Disconnects) Listen(dispatcher *events.Dispatcher) {
 	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.MemberDeactivated) error {
-		if err := d.Server.Disconnect(ctx, models.PublicID(models.PrefixUser, e.UserID)); err != nil {
-			return fmt.Errorf("disconnect deactivated member: %w", err)
-		}
-
-		return nil
+		return d.user(ctx, e.UserID)
 	})
+	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.UserSignedOutEverywhere) error {
+		return d.user(ctx, e.UserID)
+	})
+	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.SessionRevoked) error {
+		return d.credential(ctx, e.UserID, appauth.KindSession, e.SessionID)
+	})
+	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.TokenRevoked) error {
+		return d.credential(ctx, e.UserID, appauth.KindToken, e.TokenID)
+	})
+}
+
+/*
+user closes every connection of the user.
+*/
+func (d *Disconnects) user(ctx context.Context, userID ids.UUID) error {
+	if err := d.Server.Disconnect(ctx, models.PublicID(models.PrefixUser, userID)); err != nil {
+		return fmt.Errorf("disconnect user: %w", err)
+	}
+
+	return nil
+}
+
+/*
+credential closes the user's connections opened with the session or
+token.
+*/
+func (d *Disconnects) credential(ctx context.Context, userID ids.UUID, kind string, id ids.UUID) error {
+	err := d.Server.DisconnectCredential(ctx, models.PublicID(models.PrefixUser, userID), Credential(kind, id))
+	if err != nil {
+		return fmt.Errorf("disconnect ended credential: %w", err)
+	}
+
+	return nil
 }
 
 /*

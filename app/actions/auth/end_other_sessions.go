@@ -14,19 +14,24 @@ package auth
 import (
 	"context"
 
+	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	appevents "github.com/dimmihq/dimmi/app/events"
 )
 
 /*
 EndOtherSessions signs the caller out of every browser session but the
 one they are using.
 
+Events: [appevents.SessionRevoked] for each session that ended.
+
 Errors: a wrapped error.
 */
 type EndOtherSessions struct {
 	Sessions    *session.Manager
+	Events      *events.Dispatcher
 	SecurityLog *appauth.SecurityLog
 }
 
@@ -34,13 +39,33 @@ type EndOtherSessions struct {
 Handle ends the other sessions and logs how many ended.
 */
 func (a *EndOtherSessions) Handle(ctx context.Context, p *appauth.Principal, client appauth.Client) error {
+	live, err := a.Sessions.Sessions(ctx, p.ID())
+	if err != nil {
+		return err
+	}
+
 	ended, err := a.Sessions.RevokeOthers(ctx, p.ID(), p.CredentialID)
 	if err != nil {
 		return err
 	}
 
-	return a.SecurityLog.Record(ctx, appauth.Entry{
+	err = a.SecurityLog.Record(ctx, appauth.Entry{
 		UserID: p.ID(), Type: appauth.EventSessionsRevokedOthers, Client: client,
 		Metadata: map[string]any{"count": ended},
 	})
+	if err != nil {
+		return err
+	}
+
+	for _, s := range live {
+		if s.ID == p.CredentialID {
+			continue
+		}
+
+		if err := a.Events.Dispatch(ctx, nil, appevents.SessionRevoked{UserID: p.ID(), SessionID: s.ID}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -33,7 +33,12 @@ func realtimeServer(t *testing.T) (*broadcasting.Server, string) {
 			return broadcasting.Principal{}, broadcasting.ErrUnauthenticated
 		}
 
-		return broadcasting.Principal{UserID: user, Info: map[string]string{"name": user}}, nil
+		principal := broadcasting.Principal{UserID: user, Info: map[string]string{"name": user}}
+		if user == "signed-out" {
+			principal.Alive = func(context.Context) (bool, error) { return false, nil }
+		}
+
+		return principal, nil
 	}
 
 	logger, err := log.New(log.Options{Driver: "json", Level: "error", Writer: io.Discard})
@@ -100,6 +105,15 @@ func TestRealtime(t *testing.T) {
 		c := testkit.ConnectRealtime(t, url, testkit.RealtimeOptions{Token: "ada"})
 		assert.Equal(t, 103, c.Subscribe("room:secret").Error.Code)
 		assert.NotNil(t, c.Publish("room:1", map[string]int{}))
+	})
+
+	t.Run("reports the server closing a connection for what it asked", func(t *testing.T) {
+		t.Parallel()
+		_, url := realtimeServer(t)
+
+		c := testkit.ConnectRealtime(t, url, testkit.RealtimeOptions{Token: "signed-out"})
+
+		assert.Equal(t, 3005, c.ClosedBySubscribing("room:1"))
 	})
 
 	t.Run("recovers what it missed", func(t *testing.T) {

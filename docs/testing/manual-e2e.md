@@ -465,6 +465,20 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
 
+## Realtime connections end with their credential
+
+Open a socket with a browser's cookie (`a.jar`) and one with a token, using the SDK or `websocat`, and follow a conversation on each.
+
+| Flow | Try | Expect |
+|---|---|---|
+| Sign out | `DELETE $B/sessions/current` with `a.jar` | the cookie socket closes with 4009; connecting again with that cookie answers 101 `unauthorized`; the token socket stays |
+| Session ended elsewhere | sign in again in `b.jar`; `DELETE $B/sessions/{id of a.jar}` with `b.jar` | only `a.jar`'s socket closes |
+| Everywhere else | `DELETE $B/sessions` with `b.jar`, confirmed | every socket of the other sessions closes |
+| Token revoked | `DELETE $B/tokens/{id}` | only that token's socket closes |
+| Password reset | redeem a reset link | every socket of the user closes, and every token answers 401 |
+| Taken back | magic link, reset or `claim: true` on an unverified account | every socket of the stranger closes |
+| Runs out or lost | delete the session row by hand or let a token expire | the socket closes with 3005 at its next subscribe, or within `DIMMI_BROADCASTING__RECHECK` (one minute) on its own |
+
 ## 4. Check what was stored
 
 ```bash

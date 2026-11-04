@@ -3,12 +3,20 @@
 | Connecting And Subscribing
 |--------------------------------------------------------------------------
 |
-| A connection is authenticated once, when it opens, by the resolver the
+| A connection is authenticated when it opens by the resolver the
 | application hands over: the same guards that protect its HTTP routes
 | look at the upgrade request and at the token the client sends in its
 | connect command, never in the URL of a bidirectional connection. Every
 | subscription is then checked by the authorizer of the channel's
 | pattern, with the principal the resolver returned.
+|
+| A socket must not outlive the credential that opened it. The application
+| closes connections when it ends a credential, but a credential can also
+| just run out, or a closing message can be lost, so every connection also
+| asks whether its credential is still alive: before each subscription, and
+| on a timer. A dead one is closed with a code clients reconnect after, and
+| only a credential that still works gets back in, such as a browser whose
+| session cookie moved on to a new session.
 |
 | Clients never publish. Everything on a channel comes from the server,
 | so a client cannot impersonate another or flood its listeners.
@@ -25,6 +33,7 @@ import (
 
 	"github.com/centrifugal/centrifuge"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/log"
 )
 
@@ -45,12 +54,20 @@ the server subscribes the connection to on its own, which is how
 clients that cannot send commands, such as EventSource, listen; each
 still passes its authorizer. Subject is the application's own identity
 value, handed back untouched to authorizers.
+
+Credential names what the connection authenticated with, which
+DisconnectCredential closes it by. Alive reports whether that credential
+still works; left nil, the connection is never asked. An error is not an
+answer: the connection stays until it can be asked again, but takes no
+new subscription.
 */
 type Principal struct {
-	UserID   string
-	Info     any
-	Channels []string
-	Subject  any
+	UserID     string
+	Info       any
+	Channels   []string
+	Subject    any
+	Credential string
+	Alive      func(ctx context.Context) (bool, error)
 }
 
 /*
@@ -114,22 +131,40 @@ func (s *Server) connecting(ctx context.Context, event centrifuge.ConnectEvent) 
 		subscriptions[channel] = opts
 	}
 
-	return centrifuge.ConnectReply{
-		Context:       ctx,
-		Credentials:   &centrifuge.Credentials{UserID: principal.UserID, Info: info},
-		Subscriptions: subscriptions,
-	}, nil
+	credentials := &centrifuge.Credentials{UserID: principal.UserID, Info: info}
+	if principal.Alive != nil {
+		credentials.ExpireAt = s.nextRecheck()
+	}
+
+	return centrifuge.ConnectReply{Context: ctx, Credentials: credentials, Subscriptions: subscriptions}, nil
 }
 
 /*
-connected guards the subscriptions a client asks for, and lets it list
-who else listens on a channel it is subscribed to. Publishing and every
-other client command stay unhandled, which the node refuses.
+connected guards the subscriptions a client asks for, lets it list who
+else listens on a channel it is subscribed to, and keeps asking whether
+its credential is alive. Publishing and every other client command stay
+unhandled, which the node refuses.
 */
 func (s *Server) connected(client *centrifuge.Client) {
 	client.OnSubscribe(func(event centrifuge.SubscribeEvent, callback centrifuge.SubscribeCallback) {
+		if err := s.checkAlive(client.Context()); err != nil {
+			callback(centrifuge.SubscribeReply{}, err)
+
+			return
+		}
+
 		opts, err := s.authorize(client.Context(), event.Channel)
 		callback(centrifuge.SubscribeReply{Options: opts}, err)
+	})
+	client.OnRefresh(func(_ centrifuge.RefreshEvent, callback centrifuge.RefreshCallback) {
+		err := s.checkAlive(client.Context())
+		if errors.Is(err, centrifuge.DisconnectExpired) {
+			callback(centrifuge.RefreshReply{Expired: true}, nil)
+
+			return
+		}
+
+		callback(centrifuge.RefreshReply{ExpireAt: s.nextRecheck()}, nil)
 	})
 	client.OnPresence(func(event centrifuge.PresenceEvent, callback centrifuge.PresenceCallback) {
 		if !client.IsSubscribed(event.Channel) {
@@ -140,6 +175,39 @@ func (s *Server) connected(client *centrifuge.Client) {
 
 		callback(centrifuge.PresenceReply{}, nil)
 	})
+}
+
+/*
+checkAlive returns nil while the connection's credential works, the
+disconnect that ends the connection once it does not, and a server error
+when the answer could not be had.
+*/
+func (s *Server) checkAlive(ctx context.Context) error {
+	principal, _ := ctx.Value(principalKey{}).(Principal)
+	if principal.Alive == nil {
+		return nil
+	}
+
+	alive, err := principal.Alive(ctx)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "check realtime credential", log.Err(err))
+
+		return centrifuge.ErrorInternal
+	}
+
+	if !alive {
+		return centrifuge.DisconnectExpired
+	}
+
+	return nil
+}
+
+/*
+nextRecheck returns when a connection is next asked about its
+credential, as the Unix time the node compares with the wall clock.
+*/
+func (s *Server) nextRecheck() int64 {
+	return clock.System().Now().Add(s.recheck).Unix()
 }
 
 /*

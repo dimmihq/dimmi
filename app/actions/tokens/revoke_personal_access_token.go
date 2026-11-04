@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | Revoking a token ends it at once: the guard reads the token on every
-| request, so the very next call with it is refused. The row stays, with
+| request, so the very next call with it is refused, and connections it
+| opened close. The row stays, with
 | who ended it, so its owner still sees when it was last used. Revoking
 | a token that already ended changes nothing.
 |
@@ -91,7 +92,8 @@ func (a *RevokePersonalAccessToken) Handle(ctx context.Context, in RevokePersona
 		}
 
 		return a.Events.Dispatch(ctx, tx, appevents.TokenRevoked{
-			WorkspaceID: m.Workspace.ID, TokenID: tok.ID, MemberID: tok.OwnerID, RevokedBy: m.Member.ID,
+			WorkspaceID: m.Workspace.ID, TokenID: tok.ID, MemberID: tok.OwnerID, UserID: tok.MemberUserID,
+			RevokedBy: m.Member.ID,
 		})
 	})
 }

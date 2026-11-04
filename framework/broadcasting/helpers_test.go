@@ -96,11 +96,20 @@ admits only that user.
 func newNode(t *testing.T, client *redis.Client) *node {
 	t.Helper()
 
+	return nodeWith(t, client, broadcasting.Config{Resolve: resolve})
+}
+
+/*
+nodeWith is newNode with the configuration given.
+*/
+func nodeWith(t *testing.T, client *redis.Client, cfg broadcasting.Config) *node {
+	t.Helper()
+
 	logs := &syncBuffer{}
 	logger, err := log.New(log.Options{Driver: "json", Level: "debug", Writer: logs})
 	require.NoError(t, err)
 
-	server, err := broadcasting.Open(log.NewContext(t.Context(), logger), client, broadcasting.Config{Resolve: resolve})
+	server, err := broadcasting.Open(log.NewContext(t.Context(), logger), client, cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = server.Shutdown(context.WithoutCancel(t.Context())) })
 
@@ -288,6 +297,24 @@ func (c *wsClient) command(cmd map[string]any) frame {
 
 		c.queue = append(c.queue, f)
 	}
+}
+
+/*
+send sends a command without waiting for its reply.
+*/
+func (c *wsClient) send(cmd map[string]any) {
+	c.t.Helper()
+
+	c.id++
+	cmd["id"] = c.id
+
+	data, err := json.Marshal(cmd)
+	require.NoError(c.t, err)
+
+	ctx, cancel := context.WithTimeout(c.t.Context(), waitFor)
+	defer cancel()
+
+	require.NoError(c.t, c.conn.Write(ctx, websocket.MessageText, data))
 }
 
 /*

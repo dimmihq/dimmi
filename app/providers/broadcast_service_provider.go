@@ -7,8 +7,8 @@
 | the API's own guards, and a browser's cookie only counts when the
 | socket was opened from the same origins cross-origin protection
 | trusts for the API. Domain events become broadcasts once they commit,
-| deactivated members lose their connections, and teammates typing are
-| relayed to the customer's side.
+| connections end with the access or credential behind them, and
+| teammates typing are relayed to the customer's side.
 |
 */
 
@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/http/resources"
 )
@@ -47,7 +48,10 @@ func (p BroadcastServiceProvider) Register(fa *foundation.Application) error {
 		return fmt.Errorf("realtime origin check: %w", err)
 	}
 
-	p.App.Realtime = &appbroadcasting.Connections{Guards: fa.Guards, Sessions: fa.Session, Origins: origins}
+	p.App.Realtime = &appbroadcasting.Connections{
+		Guards: fa.Guards, Sessions: fa.Session, Origins: origins,
+		Live: &appauth.LiveCredentials{DB: fa.DB, Clock: fa.Clock, Sessions: fa.Session},
+	}
 
 	broadcaster := &appbroadcasting.Broadcaster{
 		Server: fa.Broadcast, Payloads: resources.BroadcastPayloads{DB: fa.DB},

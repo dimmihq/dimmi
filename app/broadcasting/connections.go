@@ -3,8 +3,8 @@
 | Realtime Connections
 |--------------------------------------------------------------------------
 |
-| A realtime connection is authenticated by the same guards as the API,
-| once, when it opens. The dashboard rides on its session cookie, which
+| A realtime connection is authenticated by the same guards as the API
+| when it opens. The dashboard rides on its session cookie, which
 | only works when the browser opened the connection from the app's own
 | origin: any site can make a browser open a socket and send the cookie
 | along, so a cross-origin upgrade is refused before the cookie is read.
@@ -15,7 +15,8 @@
 | The connection belongs to the user. Which workspaces and channels it
 | may follow is decided channel by channel when it subscribes, so one
 | browser tab follows whichever workspace it shows, and losing access to
-| a workspace closes the user's connections.
+| a workspace closes the user's connections. It also remembers the session
+| or token it opened with, and ends when that does.
 |
 */
 
@@ -31,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/middleware"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -40,12 +42,14 @@ import (
 /*
 Connections authenticates realtime connections. Guards are the API's
 guards, Sessions loads the browser's session from its cookie and
-Origins refuses cookie connections opened from another origin.
+Origins refuses cookie connections opened from another origin. Live says
+whether a connection's credential still works.
 */
 type Connections struct {
 	Guards   *fauth.Guards
 	Sessions *session.Manager
 	Origins  *middleware.OriginCheck
+	Live     *appauth.LiveCredentials
 }
 
 /*
@@ -75,10 +79,20 @@ func (c *Connections) Resolve(ctx context.Context, r *fhttp.Request, token strin
 	}
 
 	return fbroadcasting.Principal{
-		UserID:  UserID(principal),
-		Info:    Info{Name: principal.User.Name},
-		Subject: principal,
+		UserID:     UserID(principal),
+		Info:       Info{Name: principal.User.Name},
+		Subject:    principal,
+		Credential: Credential(principal.Kind, principal.CredentialID),
+		Alive:      func(ctx context.Context) (bool, error) { return c.Live.Alive(ctx, principal) },
 	}, nil
+}
+
+/*
+Credential is the name a connection's session or token goes by, which
+is how the connections opened with it are closed when it ends.
+*/
+func Credential(kind string, id ids.UUID) string {
+	return kind + ":" + id.String()
 }
 
 /*

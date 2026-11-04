@@ -114,7 +114,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		LoadMe:           &auth.LoadMe{DB: a.DB, Permissions: a.Permissions},
 		ListSessions:     &auth.ListSessions{Sessions: a.Session},
 		EndSession:       &auth.EndSession{Sessions: a.Session, Events: a.Events, SecurityLog: a.SecurityLog},
-		EndOtherSessions: &auth.EndOtherSessions{Sessions: a.Session, SecurityLog: a.SecurityLog},
+		EndOtherSessions: &auth.EndOtherSessions{Sessions: a.Session, Events: a.Events, SecurityLog: a.SecurityLog},
 	}
 
 	bootInvitations(a)

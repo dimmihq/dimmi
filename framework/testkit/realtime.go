@@ -235,6 +235,27 @@ func (c *Realtime) Closed() int {
 }
 
 /*
+ClosedBySubscribing asks for the channel without waiting for an answer,
+reads until the server closes the connection instead, and returns the
+close code.
+*/
+func (c *Realtime) ClosedBySubscribing(channel string) int {
+	c.tb.Helper()
+
+	c.id++
+
+	data, err := json.Marshal(map[string]any{"id": c.id, "subscribe": map[string]any{"channel": channel}})
+	require.NoError(c.tb, err)
+
+	ctx, cancel := context.WithTimeout(c.tb.Context(), RealtimeWait)
+	defer cancel()
+
+	require.NoError(c.tb, c.conn.Write(ctx, websocket.MessageText, data))
+
+	return c.Closed()
+}
+
+/*
 Close closes the connection from the client's side.
 */
 func (c *Realtime) Close() {

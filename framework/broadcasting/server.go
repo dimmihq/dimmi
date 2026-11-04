@@ -52,6 +52,7 @@ const (
 	DefaultKeyspace     = "rt"
 	DefaultPingInterval = 25 * time.Second
 	DefaultMaxPayload   = 10 << 10
+	DefaultRecheck      = time.Minute
 )
 
 /*
@@ -66,14 +67,17 @@ Config configures the server.
 Keyspace keeps realtime keys apart from the other services on the same
 Valkey. PingInterval is how often the server pings each client, short
 enough to keep idle connections open through proxies that close them
-after a minute. MaxPayload caps an encoded broadcast in bytes. Resolve
-authenticates each connection and is set in code, as is Clock, which
-stamps broadcasts and defaults to the system clock.
+after a minute. MaxPayload caps an encoded broadcast in bytes. Recheck is
+how often a connection is asked whether its credential is still alive,
+which bounds how long one outlives a credential that ran out on its own.
+Resolve authenticates each connection and is set in code, as is Clock,
+which stamps broadcasts and defaults to the system clock.
 */
 type Config struct {
 	Keyspace     string        `default:"rt"    koanf:"keyspace"`
 	PingInterval time.Duration `default:"25s"   koanf:"ping_interval"`
 	MaxPayload   int           `default:"10240" koanf:"max_payload"`
+	Recheck      time.Duration `default:"1m"    koanf:"recheck"`
 	Resolve      Resolver      `koanf:"-"`
 	Clock        clock.Clock   `koanf:"-"`
 }
@@ -90,6 +94,7 @@ type Server struct {
 	clock      clock.Clock
 	maxPayload int
 	pingPong   centrifuge.PingPongConfig
+	recheck    time.Duration
 }
 
 /*
@@ -110,6 +115,7 @@ func Open(ctx context.Context, client *redis.Client, cfg Config) (*Server, error
 		clock:      cmp.Or(cfg.Clock, clock.System()),
 		maxPayload: cmp.Or(cfg.MaxPayload, DefaultMaxPayload),
 		pingPong:   centrifuge.PingPongConfig{PingInterval: ping, PongTimeout: ping * 2 / 5},
+		recheck:    cmp.Or(cfg.Recheck, DefaultRecheck),
 	}
 
 	node, err := centrifuge.New(centrifuge.Config{
@@ -130,6 +136,7 @@ func Open(ctx context.Context, client *redis.Client, cfg Config) (*Server, error
 
 	node.OnConnecting(s.connecting)
 	node.OnConnect(s.connected)
+	node.OnNotification(s.noticed)
 
 	if err := node.Run(); err != nil {
 		s.shard.Close()

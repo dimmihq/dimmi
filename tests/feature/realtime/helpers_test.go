@@ -219,11 +219,20 @@ returns its base URL.
 func secondNode(t *testing.T, tc *tests.TestCase, resolve broadcasting.Resolver) string {
 	t.Helper()
 
+	return nodeWith(t, tc, broadcasting.Config{Resolve: resolve})
+}
+
+/*
+nodeWith starts another realtime node of the application with the
+configuration and returns its base URL.
+*/
+func nodeWith(t *testing.T, tc *tests.TestCase, cfg broadcasting.Config) string {
+	t.Helper()
+
 	logger, err := log.New(log.Options{Driver: "json", Level: "error", Writer: io.Discard})
 	require.NoError(t, err)
 
-	server, err := broadcasting.Open(log.NewContext(t.Context(), logger), tc.App.Redis,
-		broadcasting.Config{Resolve: resolve})
+	server, err := broadcasting.Open(log.NewContext(t.Context(), logger), tc.App.Redis, cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = server.Shutdown(context.WithoutCancel(t.Context())) })
 
