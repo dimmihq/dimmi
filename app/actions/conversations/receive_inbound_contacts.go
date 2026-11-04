@@ -32,10 +32,20 @@ import (
 )
 
 /*
-resolveContact returns the contact a sender is, creating a lead for a
-sender nobody knows.
+resolveContact returns the contact a sender is: the one the channel names
+when it already knows, otherwise the one an identity finds, creating a lead
+for a sender nobody knows.
 */
 func (run *ingestRun) resolveContact(ctx context.Context, s contracts.InboundSender) (models.Contact, error) {
+	if s.ContactID != nil {
+		contact, err := run.q.FindContact(ctx, models.FindContactParams{WorkspaceID: run.ws, ID: *s.ContactID})
+		if err != nil {
+			return contact, fmt.Errorf("find sender: %w", err)
+		}
+
+		return run.known(ctx, contact, s, contracts.IdentityClaim{})
+	}
+
 	for _, claim := range s.Identities {
 		contact, err := run.q.FindContactByIdentity(ctx, models.FindContactByIdentityParams{
 			WorkspaceID: run.ws, Type: string(claim.Type), Value: claim.Value,

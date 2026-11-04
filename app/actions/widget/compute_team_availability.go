@@ -92,7 +92,8 @@ func (a *ComputeTeamAvailability) Handle(ctx context.Context, r Resolved) (Avail
 		return out, err
 	}
 
-	out.Online, out.ReplyTime, out.Team = online, replyTime(r.Widget.ReplyTime, online), a.faces(ctx, rows)
+	out.Online, out.Team = online, a.faces(ctx, rows)
+	out.ReplyTime = out.replyTime(r.Widget.ReplyTime)
 
 	return out, nil
 }
@@ -148,12 +149,12 @@ func anyoneOnline(rows []models.ListWidgetTeamRow, present []fbroadcasting.Membe
 /*
 replyTime resolves auto from whether someone is there.
 */
-func replyTime(setting string, online bool) string {
+func (a Availability) replyTime(setting string) string {
 	if setting != string(enums.WidgetReplyAuto) {
 		return setting
 	}
 
-	if online {
+	if a.Online {
 		return string(enums.WidgetReplyMinutes)
 	}
 
@@ -181,4 +182,13 @@ func (a *ComputeTeamAvailability) faces(ctx context.Context, rows []models.ListW
 	}
 
 	return out
+}
+
+/*
+Online reports whether someone on the widget's team is there now.
+*/
+func (a *ComputeTeamAvailability) Online(ctx context.Context, r Resolved) (bool, error) {
+	_, online, err := a.team(ctx, r.Workspace.ID)
+
+	return online, err
 }

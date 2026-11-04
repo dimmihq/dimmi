@@ -16,7 +16,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"net/http"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -70,7 +69,7 @@ bodyAppID peeks at the JSON body's app_id and leaves the body as it was for
 the route. A body too large to read ends up refused by the route.
 */
 func bodyAppID(w fhttp.ResponseWriter, r *fhttp.Request) string {
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxWidgetBody))
+	body, err := io.ReadAll(fhttp.MaxBytesReader(w, r.Body, maxWidgetBody))
 	if err != nil {
 		return ""
 	}

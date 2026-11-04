@@ -32,7 +32,7 @@ ConfigOutput is a widget's config with its caching headers.
 */
 type ConfigOutput struct {
 	Status       int
-	ETag         string `header:"ETag"`
+	Etag         string `header:"Etag"`
 	CacheControl string `header:"Cache-Control"`
 	Body         *fhttp.Resource[actions.Config]
 }
@@ -50,7 +50,9 @@ type ShowWidgetConfigController struct {
 Invoke answers with the config, or with no body when the browser already
 holds this version.
 */
-func (c *ShowWidgetConfigController) Invoke(ctx context.Context, in *requests.ShowWidgetConfigRequest) (*ConfigOutput, error) {
+func (c *ShowWidgetConfigController) Invoke(
+	ctx context.Context, in *requests.ShowWidgetConfigRequest,
+) (*ConfigOutput, error) {
 	resolved, _ := actions.CurrentResolved(ctx)
 
 	config, err := c.Show.Handle(ctx, actions.ShowWidgetConfigInput{
@@ -61,11 +63,11 @@ func (c *ShowWidgetConfigController) Invoke(ctx context.Context, in *requests.Sh
 	}
 
 	out := &ConfigOutput{
-		Status: fhttp.StatusOK, ETag: fmt.Sprintf(`"%s:%d:%s"`, config.AppID, config.ConfigVersion, config.Locale),
+		Status: fhttp.StatusOK, Etag: fmt.Sprintf(`"%s:%d:%s"`, config.AppID, config.ConfigVersion, config.Locale),
 		CacheControl: configCacheControl,
 	}
 
-	if in.IfNoneMatch == out.ETag {
+	if in.IfNoneMatch == out.Etag {
 		out.Status = fhttp.StatusNotModified
 
 		return out, nil

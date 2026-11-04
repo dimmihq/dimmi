@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -104,7 +105,7 @@ func (a *CreateWidget) Handle(ctx context.Context, in CreateWidgetInput) (models
 			return err
 		}
 
-		out, err = insertWidget(ctx, q, inbox, name, a.Clock)
+		out, err = insertWidget(ctx, q, inbox, newWidget{name: name, at: a.Clock.Now()})
 		if err != nil {
 			return err
 		}
@@ -169,12 +170,13 @@ func findInbox(ctx context.Context, q *models.Queries, ws ids.UUID, id *ids.UUID
 }
 
 /*
-insertWidget writes the channel connection and the widget on it.
+insertWidget writes the channel connection and the widget on it, named
+and stamped as the widget says.
 */
 func insertWidget(
-	ctx context.Context, q *models.Queries, inbox models.Inbox, name string, clk clock.Clock,
+	ctx context.Context, q *models.Queries, inbox models.Inbox, w newWidget,
 ) (models.WidgetSetting, error) {
-	now := clk.Now()
+	name, now := w.name, w.at
 
 	conn, err := q.CreateChannelConnection(ctx, models.CreateChannelConnectionParams{
 		WorkspaceID: inbox.WorkspaceID, InboxID: inbox.ID, Type: string(enums.ChannelTypeWidget), Name: name,
@@ -192,4 +194,12 @@ func insertWidget(
 	}
 
 	return widget, nil
+}
+
+/*
+newWidget is the name and time a widget is created with.
+*/
+type newWidget struct {
+	name string
+	at   time.Time
 }

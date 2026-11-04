@@ -190,10 +190,10 @@ func (a *Application) DerivedKey(purpose string) []byte {
 }
 
 /*
-OnClose registers a release that runs when the application shuts down,
+OnShutdown registers a release that runs when the application shuts down,
 before what booted earlier is released.
 */
-func (a *Application) OnClose(name string, fn func(ctx context.Context) error) {
+func (a *Application) OnShutdown(name string, fn func(ctx context.Context) error) {
 	a.onClose(name, fn)
 }
 

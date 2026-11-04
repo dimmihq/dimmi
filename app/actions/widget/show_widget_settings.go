@@ -38,7 +38,8 @@ type SettingsRow struct {
 }
 
 /*
-ShowWidgetSettings reads widgets. Every method needs widgets:read.
+ShowWidgetSettings reads widgets. Every method needs widgets:read, or
+widgets:manage, since whoever changes a widget sees what they changed.
 */
 type ShowWidgetSettings struct {
 	DB       *database.DB
@@ -49,7 +50,7 @@ type ShowWidgetSettings struct {
 List returns the workspace's widgets, oldest first.
 */
 func (a *ShowWidgetSettings) List(ctx context.Context, m authz.Membership) ([]SettingsRow, error) {
-	if !m.Can("widgets:read") {
+	if !canRead(m) {
 		return nil, exceptions.ErrForbidden
 	}
 
@@ -84,7 +85,7 @@ func (a *ShowWidgetSettings) List(ctx context.Context, m authz.Membership) ([]Se
 Find returns one widget of the workspace.
 */
 func (a *ShowWidgetSettings) Find(ctx context.Context, m authz.Membership, id ids.UUID) (SettingsRow, error) {
-	if !m.Can("widgets:read") {
+	if !canRead(m) {
 		return SettingsRow{}, exceptions.ErrForbidden
 	}
 
@@ -142,4 +143,11 @@ func (a *ShowWidgetSettings) shape(
 	out.Branding, err = a.Branding.Handle(ctx, m.Workspace, w.ShowBranding)
 
 	return out, err
+}
+
+/*
+canRead reports whether the member may see the workspace's widgets.
+*/
+func canRead(m authz.Membership) bool {
+	return m.Can("widgets:read") || m.Can("widgets:manage")
 }

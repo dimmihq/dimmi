@@ -22,11 +22,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/maypok86/otter/v2"
-
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/log"
+	"github.com/dimmihq/dimmi/framework/memo"
 	"github.com/dimmihq/dimmi/framework/pubsub"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
@@ -63,8 +62,8 @@ Directory finds widgets and caches what is built from them.
 type Directory struct {
 	db      *database.DB
 	bus     *pubsub.Bus
-	widgets *otter.Cache[ids.UUID, Resolved]
-	configs *otter.Cache[string, Config]
+	widgets *memo.Cache[ids.UUID, Resolved]
+	configs *memo.Cache[string, Config]
 }
 
 /*
@@ -73,12 +72,8 @@ NewDirectory returns a directory keeping widgets for the time given.
 func NewDirectory(db *database.DB, bus *pubsub.Bus, ttl time.Duration) *Directory {
 	return &Directory{
 		db: db, bus: bus,
-		widgets: otter.Must(&otter.Options[ids.UUID, Resolved]{
-			MaximumSize: maxCachedWidgets, ExpiryCalculator: otter.ExpiryWriting[ids.UUID, Resolved](ttl),
-		}),
-		configs: otter.Must(&otter.Options[string, Config]{
-			MaximumSize: maxCachedConfigs, ExpiryCalculator: otter.ExpiryWriting[string, Config](ttl),
-		}),
+		widgets: memo.New[ids.UUID, Resolved](memo.Options{Size: maxCachedWidgets, TTL: ttl}),
+		configs: memo.New[string, Config](memo.Options{Size: maxCachedConfigs, TTL: ttl}),
 	}
 }
 
@@ -115,7 +110,7 @@ func (d *Directory) Forget(ctx context.Context, id ids.UUID) {
 drop removes the widget from this replica.
 */
 func (d *Directory) drop(id ids.UUID) {
-	d.widgets.Invalidate(id)
+	d.widgets.Delete(id)
 }
 
 /*
@@ -123,7 +118,7 @@ Find returns the live widget with the id, from memory when it can, and
 [exceptions.ErrAppNotFound] when there is none.
 */
 func (d *Directory) Find(ctx context.Context, id ids.UUID) (Resolved, error) {
-	if found, ok := d.widgets.GetIfPresent(id); ok {
+	if found, ok := d.widgets.Get(id); ok {
 		return found, nil
 	}
 
@@ -188,7 +183,7 @@ func (d *Directory) load(ctx context.Context, id ids.UUID) (Resolved, error) {
 config returns the config cached under the key.
 */
 func (d *Directory) config(key string) (Config, bool) {
-	return d.configs.GetIfPresent(key)
+	return d.configs.Get(key)
 }
 
 /*
