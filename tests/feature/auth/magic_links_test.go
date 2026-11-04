@@ -17,6 +17,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	appmail "github.com/dimmihq/dimmi/app/mail"
+	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -219,6 +220,31 @@ func TestSessionStoreWithMagicLink(t *testing.T) {
 		})
 	})
 
+	t.Run("creates no account through a live link once the invitation it relied on is withdrawn", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__SIGNUP__MODE=invite_only"))
+		owner := tc.ActingAsOwner().WithHeader("Dimmi-Workspace", public(tc))
+		invited := owner.PostJSON("/api/v1/invitations", testkit.JSON{
+			"invitations": []testkit.JSON{{"email": "newbie@example.com", "role": "member"}},
+		}).AssertOK()
+		sent := magicLink(t, tc, "newbie@example.com", nil)
+		require.Less(t, owner.Delete("/api/v1/invitations/"+invited.String("data.0.invitation.id")).Status, 300)
+
+		withLink(tc.Client(), sent, tc).AssertForbidden().AssertJSONPath("code", "signup_closed")
+
+		tc.Table("users").AssertMissing(testkit.Row{"email": "newbie@example.com"})
+	})
+
+	t.Run("still signs up an invited address through a link on a closed install", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__SIGNUP__MODE=invite_only"))
+		tc.ActingAsOwner().WithHeader("Dimmi-Workspace", public(tc)).PostJSON("/api/v1/invitations", testkit.JSON{
+			"invitations": []testkit.JSON{{"email": "newbie@example.com", "role": "member"}},
+		}).AssertOK()
+
+		withLink(tc.Client(), magicLink(t, tc, "newbie@example.com", nil), tc).AssertCreated()
+	})
+
 	t.Run("names a new account after its address when no name was given", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
@@ -345,4 +371,11 @@ func squatterToken(t *testing.T, tc *tests.TestCase, email string) string {
 	_, plain := tc.MintToken(member, "*")
 
 	return plain
+}
+
+/*
+public returns the public id of the test case's workspace.
+*/
+func public(tc *tests.TestCase) string {
+	return models.PublicID(models.PrefixWorkspace, tc.Workspace.Workspace.ID)
 }

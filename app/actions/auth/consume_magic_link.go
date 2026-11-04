@@ -12,8 +12,10 @@
 | The account is found by address when the link is spent, not when it
 | was sent: if someone registered the address in between, the inbox
 | owner signs into that account and claims it from them. An address
-| still without an account gets one, already verified, with no
-| password. Either way the inbox is now proven.
+| still without an account gets one, already verified, with no password,
+| if the install still takes it: an invitation withdrawn or signup closed
+| after the link went out ends what the link could do. Either way the
+| inbox is now proven.
 |
 */
 
@@ -71,14 +73,16 @@ Rules:
   - With Reauth on a signed-in session, the link must be for the
     session's user.
   - An unverified account is claimed from whoever registered it, unless
-    this browser is signed in to it; any account is marked verified; an
-    unknown address signs up.
+    this browser is signed in to it; any account is marked verified.
+  - An unknown address signs up if signup is open or an invitation to
+    it is still pending; otherwise the link stays unspent.
 
 Events: [appevents.UserRegistered] for a new account.
 
 Errors: [exceptions.ErrGrantNotAllowed], [exceptions.ErrMagicLinkExpired],
 [exceptions.ErrInvalidCode], [exceptions.ErrReauthUserMismatch],
-[exceptions.ErrSSORequired], [exceptions.ErrTooManyAttempts],
+[exceptions.ErrSignupClosed], [exceptions.ErrSSORequired],
+[exceptions.ErrTooManyAttempts],
 [exceptions.ErrAuthBusy], those of [CompletePrimaryAuth], or a wrapped
 error.
 */
@@ -91,6 +95,7 @@ type ConsumeMagicLink struct {
 	Tokens              *appauth.OneTimeTokens
 	LoginPolicy         appauth.LoginPolicyResolver
 	MagicLink           config.MagicLinkConfig
+	Signup              config.SignupConfig
 	SecurityLog         *appauth.SecurityLog
 	CreateUser          *users.CreateUser
 	ClaimAccount        *ClaimAccount
@@ -260,7 +265,8 @@ func (a *ConsumeMagicLink) settle(ctx context.Context, tx *database.Tx, p proof)
 
 /*
 signUp creates the verified, passwordless account a sign-up link was
-sent for, named as asked or after its address.
+sent for, named as asked or after its address, when the install still
+takes the address.
 */
 func (a *ConsumeMagicLink) signUp(ctx context.Context, tx *database.Tx, tok models.OneTimeToken) (models.User, error) {
 	var data struct {
@@ -268,6 +274,15 @@ func (a *ConsumeMagicLink) signUp(ctx context.Context, tx *database.Tx, tok mode
 	}
 
 	_ = json.Unmarshal(tok.Data, &data)
+
+	admitted, err := admitsNewcomer(ctx, models.New(tx), a.Signup, newcomer{email: tok.Email, now: a.Clock.Now()})
+	if err != nil {
+		return models.User{}, err
+	}
+
+	if !admitted {
+		return models.User{}, exceptions.ErrSignupClosed
+	}
 
 	user, err := a.CreateUser.Handle(ctx, users.CreateUserInput{
 		Name: cmp.Or(strings.TrimSpace(data.Name), nameFromEmail(tok.Email)), Email: tok.Email, Verified: true,

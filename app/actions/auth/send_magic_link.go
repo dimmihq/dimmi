@@ -130,22 +130,41 @@ remembering the name to give it, only where anyone may sign up or a
 pending invitation waits for the address.
 */
 func (a *SendMagicLink) sendToNewcomer(ctx context.Context, email string, in SendMagicLinkInput) error {
-	if a.Signup.Mode != config.SignupOpen {
-		pending := models.CountPendingInvitationsForEmailParams{Email: email, Now: a.Clock.Now()}
-
-		invited, err := models.New(a.DB).CountPendingInvitationsForEmail(ctx, pending)
-		if err != nil {
-			return fmt.Errorf("count pending invitations: %w", err)
-		}
-
-		if invited == 0 {
-			return nil
-		}
+	admitted, err := admitsNewcomer(ctx, models.New(a.DB), a.Signup, newcomer{email: email, now: a.Clock.Now()})
+	if err != nil || !admitted {
+		return err
 	}
 
 	pending := a.Mail.To(mail.Address{Email: strings.TrimSpace(in.Email)})
 
 	return a.send(ctx, pending, appauth.Issue{Email: email, Data: map[string]any{"name": in.Name}}, in.Client)
+}
+
+/*
+newcomer is an address without an account, at a moment.
+*/
+type newcomer struct {
+	email string
+	now   time.Time
+}
+
+/*
+admitsNewcomer reports whether the address may sign up: always while
+signup is open, else only while an invitation to it is pending.
+*/
+func admitsNewcomer(ctx context.Context, q *models.Queries, signup config.SignupConfig, n newcomer) (bool, error) {
+	if signup.Mode == config.SignupOpen {
+		return true, nil
+	}
+
+	invited, err := q.CountPendingInvitationsForEmail(ctx, models.CountPendingInvitationsForEmailParams{
+		Email: n.email, Now: n.now,
+	})
+	if err != nil {
+		return false, fmt.Errorf("count pending invitations: %w", err)
+	}
+
+	return invited > 0, nil
 }
 
 /*

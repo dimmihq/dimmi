@@ -309,8 +309,11 @@ admit decides whether the address may sign up: always while signup is
 open, else only with an invitation to it, carried or pending.
 */
 func (a *HandleOAuthCallback) admit(ctx context.Context, in OAuthCallbackInput) error {
-	if a.Signup.Mode == config.SignupOpen {
-		return nil
+	address := newcomer{email: in.Identity.Email, now: a.Clock.Now()}
+
+	admitted, err := admitsNewcomer(ctx, models.New(a.DB), a.Signup, address)
+	if err != nil || admitted {
+		return err
 	}
 
 	carried, err := a.invitationFor(ctx, in.Invitation, in.Identity.Email)
@@ -318,18 +321,7 @@ func (a *HandleOAuthCallback) admit(ctx context.Context, in OAuthCallbackInput) 
 		return err
 	}
 
-	pending, err := models.New(a.DB).CountPendingInvitationsForEmail(ctx, models.CountPendingInvitationsForEmailParams{
-		Email: in.Identity.Email, Now: a.Clock.Now(),
-	})
-	if err != nil {
-		return fmt.Errorf("count pending invitations: %w", err)
-	}
-
-	if pending == 0 {
-		return exceptions.ErrSignupClosed
-	}
-
-	return nil
+	return exceptions.ErrSignupClosed
 }
 
 /*

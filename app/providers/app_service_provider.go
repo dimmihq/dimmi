@@ -210,8 +210,9 @@ func bootMailedSecrets(a *app.App) {
 
 	acts.ConsumeMagicLink = &auth.ConsumeMagicLink{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Limiter: a.Limiter, Lockout: a.Lockout, Tokens: a.Secrets,
-		LoginPolicy: a.LoginPolicy, MagicLink: a.Config.Auth.MagicLink, SecurityLog: a.SecurityLog,
-		CreateUser: acts.CreateUser, CompletePrimaryAuth: acts.CompletePrimaryAuth, ClaimAccount: claim,
+		LoginPolicy: a.LoginPolicy, MagicLink: a.Config.Auth.MagicLink, Signup: a.Config.Auth.Signup,
+		SecurityLog: a.SecurityLog, CreateUser: acts.CreateUser, CompletePrimaryAuth: acts.CompletePrimaryAuth,
+		ClaimAccount: claim,
 	}
 
 	acts.SendConfirmCode = &auth.SendConfirmCode{DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Tokens: a.Secrets}
