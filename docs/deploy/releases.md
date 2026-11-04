@@ -97,3 +97,16 @@ and registry are retained. Tearing production down takes a person turning each o
 final snapshot.
 
 `dimmi-account` stays while any environment exists.
+
+## End-to-end tests against a deployed environment
+
+**AUTOMATED, 10 minutes, any time.** The Playwright suite runs against a deployed host when given its URL and the gate's
+CI key. Specs that need the local database, Mailpit or the test inbound driver are left out on their own.
+
+```sh
+E2E_BASE_URL=https://staging.trydimmi.com \
+E2E_GATE_KEY="$(aws secretsmanager get-secret-value --region us-east-2 --secret-id dimmi-staging/gate/ci-key --query SecretString --output text)" \
+pnpm e2e
+```
+
+Each run signs up new accounts on the environment, so run it on staging, not production.
