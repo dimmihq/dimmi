@@ -29,7 +29,10 @@ function useOnce(action: () => void) {
   }, [action]);
 }
 
-function Working({ title }: { title: string }) {
+/*
+ * Working is the card a page shows while it waits for the server.
+ */
+export function Working({ title }: { title: string }) {
   return (
     <AuthCard>
       <div className="flex items-center gap-3">

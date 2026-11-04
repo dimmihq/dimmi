@@ -39,3 +39,25 @@ func (q *Queries) RevokeMemberTokens(ctx context.Context, arg RevokeMemberTokens
 	}
 	return result.RowsAffected(), nil
 }
+
+const revokeWorkspaceTokens = `-- name: RevokeWorkspaceTokens :execrows
+UPDATE personal_access_tokens
+SET revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
+WHERE workspace_id = $3::uuid AND revoked_at IS NULL
+`
+
+type RevokeWorkspaceTokensParams struct {
+	Now         time.Time `json:"now"`
+	RevokedBy   *ids.UUID `json:"revoked_by"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// RevokeWorkspaceTokens ends every live access token of the workspace,
+// recording who ended them, nobody when the system did.
+func (q *Queries) RevokeWorkspaceTokens(ctx context.Context, arg RevokeWorkspaceTokensParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeWorkspaceTokens, arg.Now, arg.RevokedBy, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

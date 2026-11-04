@@ -164,15 +164,26 @@ state(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(s
 
 ### Workspaces and members
 
-Ada (`a.jar`) owns Acme from the sign-up; `WS` is its `ws_…` id, from `me`. Bob (`b.jar`) signed up above. Until
-invitations exist, add Bob to Acme by hand, verified:
+Ada (`a.jar`) owns Acme from the sign-up; `WS` is its `ws_…` id, from `me`. Bob (`b.jar`) signed up above and
+joins Acme by invitation; Eve signs up through one:
 
 ```bash
-WS=$(curl -s -b a.jar $B/me | jq -r '.data.workspaces[0].id'); H="Dimmi-Workspace: $WS"
-docker compose exec -T postgres psql -U postgres -d dimmi_e2e -c "update users set email_verified_at = now()
-  where email = '$BOB'; insert into workspace_members (workspace_id, user_id, role, joined_via)
-  select m.workspace_id, u.id, 'member', 'invitation' from workspace_members m join users o on o.id = m.user_id,
-  users u where o.email = '$ADA' and u.email = '$BOB'"
+WS=$(curl -s -b a.jar $B/me | jq -r '.data.workspaces[0].id'); H="Dimmi-Workspace: $WS"; EVE=eve.$RUN@example.com
+inv(){ r inv -b a.jar -X POST -H "$O" -H "$J" -H "$H" $B/invitations -d "{\"invitations\":[$1]}"; }
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Invite a batch | `inv "{\"email\":\"$BOB\",\"role\":\"member\"},{\"email\":\"$ADA\",\"role\":\"member\"},{\"email\":\"nope\",\"role\":\"member\"}"` | 200, per address `created` (with `accept_url: null`, `invited_by.name: Ada Lovelace`), `already_member`, `invalid` with `error.code: invalid_email`; mail "Ada Lovelace invited you to join Acme on dimmi" to Bob, link `/invitation#token=…` |
+| Invite again | the first address again | 200 `resent`, `send_count: 2`; one pending row; the first mail's link now 404 on preview |
+| Preview | `T=$(frag $(link $BOB invited) token); r pv -H "Dimmi-Invitation-Token: $T" $B/invitations/preview` | 200 `invitation_preview`, `workspace.name: Acme`, `inviter.name`, `email_masked: b***@example.com`, `has_account: true`, `status: pending`, `Cache-Control: no-store`; a made-up token 404 |
+| Someone else accepts | `r acc -b s2.jar -X POST -H "$O" -H "$J" $B/user/memberships -d "{\"invitation_token\":\"$T\"}"` | 403 `invitation_email_mismatch`; without a cookie 401 |
+| Accept | the same with `b.jar` | 201 `membership`, `role: member`, `joined_via: invitation`; Bob's email verified; mail "Bob joined Acme" to Ada; again: 409 `invitation_already_accepted` |
+| Send again, withdraw | `inv "{\"email\":\"$DAVE\",\"role\":\"admin\"}"; INV=$(jq -r '.data[0].invitation.id' body)`, `POST $B/invitations/$INV/deliveries` four times, then `DELETE $B/invitations/$INV` twice | 201 `invitation_delivery` three times (`send_count` 2 to 4, `expires_at` a week on), then 429 `too_many_attempts`; 204, then 422 `invalid_transition` `from: revoked`; the link's preview `status: revoked`, accept 410 `invitation_revoked` |
+| List | `r li -b a.jar -H "$O" -H "$H" -g "$B/invitations?filter[status]=accepted,revoked"` | 200, Dave `revoked` first, then Bob `accepted`; `GET $B/invitations` alone lists only pending ones |
+| Sign up by invitation | `inv "{\"email\":\"$EVE\",\"role\":\"member\"}"`, then `r eve -c i.jar -b i.jar -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Eve\",\"email\":\"$EVE\",\"password\":\"analytical-engine-1843\",\"invitation_token\":\"$(frag $(link $EVE invited) token)\"}"` | 201, `email_verified: true`, `workspace.name: Acme`, `member.role: member`; no verification mail; another email with the token 403 `invitation_email_mismatch` |
+
+```bash
 BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 ```
 
@@ -185,7 +196,7 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Rename and move | `r upd -b a.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/workspace -d '{"name":"Acme Support","slug":"acme-help","timezone":"Europe/Lisbon"}'` | 200 with the new values; `organizations.name` Acme Support |
 | Old slug held | Bob in his own workspace: `PATCH $B/workspace {"slug":"acme"}` | 422 `slug_reserved`; Ada taking `acme` back: 200 |
 | Bad values | `{"slug":"admin"}`, `{"slug":"Not A Slug"}`, `{"timezone":"America/Nowhere"}`, `{"test_mode":true}` | 422 `slug_reserved`, `validation_failed`, `validation_failed`, `test_mode_immutable` |
-| Members | `r mem -b a.jar -H "$O" -H "$H" "$B/members?sort=-created_at"` | 200, Bob first, each with `user.name`, `user.email`; `members/me` is Ada |
+| Members | `r mem -b a.jar -H "$O" -H "$H" "$B/members?sort=-created_at"` | 200, Eve then Bob first, each with `user.name`, `user.email`; `members/me` is Ada |
 | Promote | `r pr -b a.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/members/$BOBM -d '{"role":"admin"}'` | 200 `role: admin`; again: 200, nothing changes |
 | Self-deactivate | Bob: `PATCH $B/members/me {"status":"deactivated"}` | 422 `invalid_transition`, `from: active`, `to: deactivated` |
 | Admin touches owner | Bob: `PATCH $B/members/<Ada's mem_> {"role":"admin"}` | 403 `forbidden` |
@@ -196,7 +207,13 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Transfer needs recent sign-in | the same from a session older than 15 min (or `keep_owner` back) | 423 `password_confirmation_required` until `POST $B/user/confirmation` |
 | Leave | Ada: `r lv -b a.jar -X DELETE -H "$O" $B/user/memberships/<Ada's mem_>` | 204; `user/memberships` no longer lists Acme |
 | Repair | `dimmi workspace:repair acme` | `acme: defaults checked, organization in order`, exit 0; unknown slug exits 1 "Workspace not found" |
+| Delete is for owners | Eve: `r del -b i.jar -X DELETE -H "$O" -H "$J" -H "$H" $B/workspace -d '{"confirm_slug":"acme"}'` | 403 `forbidden` |
+| Delete needs the address | Bob (owner since the transfer): the same with `b.jar` and `{"confirm_slug":"wrong"}` | 422 `confirm_slug_mismatch` on `confirm_slug` (423 `password_confirmation_required` first when Bob signed in over 15 min ago: confirm with `POST $B/user/confirmation`) |
+| Delete | Bob: `{"confirm_slug":"acme"}` | 200 with `deleted_at` and `purge_after` 30 days later; `GET $B/workspace` with `-H "$H"` 404 `workspace_not_found`; mail "Acme was deleted" to Bob; `user/memberships` hides Acme, `curl -g ...?filter[trashed]=only` shows it to Bob |
+| Restore | Bob: `r rs -b b.jar -X PATCH -H "$O" -H "$J" $B/workspaces/$WS -d '{"trashed":false}'` | 200 `deleted_at: null`; mail "Acme was restored"; Eve the same 404 `workspace_not_found`; `{"trashed":false,"name":"x"}` 422 `prohibited` on `name` |
 | In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
+| Invite in a browser | as an owner open Members, Invite, enter an address and send; open the mailed link in a private window and sign up there; back in Members, resend and revoke another pending invitation | the invitee lands in the workspace's inbox and shows in Members; the pending list updates; the revoked link says it was withdrawn |
+| Delete in a browser | as an owner open Workspace, Danger zone, Delete workspace, type the address | the button stays off until the address matches; the workspace disappears and the app opens another one |
 
 ### Two-factor authentication
 
@@ -268,7 +285,7 @@ Run `make build` first so the binary embeds the browser app.
 
 | Flow | Command | Expect |
 |---|---|---|
-| Sign-in pages | `for p in /login /signup /login/magic /login/two-factor /forgot-password /reset-password /verify-email; do curl -s -o /dev/null -D - $W$p \| grep -iE '^(cache-control\|referrer-policy)'; done` | `no-store` and `no-referrer` on each |
+| Sign-in pages | `for p in /login /signup /login/magic /login/two-factor /forgot-password /reset-password /verify-email /invitation; do curl -s -o /dev/null -D - $W$p \| grep -iE '^(cache-control\|referrer-policy)'; done` | `no-store` and `no-referrer` on each |
 | App page | `curl -s -D - $W/d \| grep -iE '^(cache-control\|content-security-policy)'` | `no-cache`; policy with `'nonce-…'`, no `unsafe-inline`, no dev server |
 | Theme | `curl -s -b dimmi_theme=dark $W/login \| grep -o '<html[^>]*>'` | `<html lang="en" class="dark">` |
 | In a browser | open `$W/signup`, create an account, open the verification mail's link, sign out, sign in by password, then by mailed code | lands on `/d` each time; provider buttons first when providers are configured; light and dark switch and survive a reload |

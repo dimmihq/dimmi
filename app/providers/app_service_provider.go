@@ -115,13 +115,15 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		EndOtherSessions: &auth.EndOtherSessions{Sessions: a.Session, SecurityLog: a.SecurityLog},
 	}
 
+	bootInvitations(a)
 	bootSignIn(a, dummy)
 	bootMailedSecrets(a)
 	bootIdentities(a)
 	bootWorkspaces(a)
+	bootWorkspaceLifecycle(a)
 	bootFactors(a)
 
-	return registerJobs(a)
+	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
 }
 
 /*
@@ -146,6 +148,7 @@ func bootSignIn(a *app.App, dummy string) {
 		DB: a.DB, Hash: a.Hash, Events: a.Events, Limiter: a.Limiter, Signup: a.Config.Auth.Signup,
 		LoginPolicy: a.LoginPolicy, CreateUser: acts.CreateUser, CreateWorkspace: acts.CreateWorkspace,
 		SendVerification: acts.SendEmailVerification, StartSession: acts.StartSession, LoadMe: acts.LoadMe,
+		Preview: acts.PreviewInvitation, Accept: acts.AcceptInvitation,
 	}
 
 	acts.ConfirmUser = &auth.ConfirmUser{
@@ -177,8 +180,8 @@ func bootMailedSecrets(a *app.App) {
 	}
 
 	acts.SendMagicLink = &auth.SendMagicLink{
-		DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links, Devices: a.Devices, Tokens: a.Secrets,
-		LoginPolicy: a.LoginPolicy, Lockout: a.Lockout, MagicLink: a.Config.Auth.MagicLink,
+		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links, Devices: a.Devices,
+		Tokens: a.Secrets, LoginPolicy: a.LoginPolicy, Lockout: a.Lockout, MagicLink: a.Config.Auth.MagicLink,
 		Signup: a.Config.Auth.Signup,
 	}
 

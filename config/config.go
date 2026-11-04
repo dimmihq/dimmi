@@ -35,6 +35,9 @@ type Config struct {
 	HTTP HTTPConfig `koanf:"http"`
 	Auth AuthConfig `koanf:"auth"`
 
+	Workspaces  WorkspacesConfig  `koanf:"workspaces"`
+	Invitations InvitationsConfig `koanf:"invitations"`
+
 	Frontend FrontendConfig `koanf:"frontend"`
 	Widget   WidgetConfig   `koanf:"widget"`
 }
@@ -47,6 +50,7 @@ the files and environment are read.
 func (c *Config) Validate() error {
 	c.App.settle()
 	c.Auth.settle(c.App.Edition)
+	c.Invitations.settle(c.App.Edition)
 
 	return c.Auth.check()
 }

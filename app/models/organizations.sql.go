@@ -89,3 +89,23 @@ func (q *Queries) RepairOrganization(ctx context.Context, arg RepairOrganization
 	}
 	return result.RowsAffected(), nil
 }
+
+const retireOrganization = `-- name: RetireOrganization :exec
+UPDATE organizations o
+SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE o.id = $2 AND o.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.organization_id = o.id AND w.deleted_at IS NULL)
+`
+
+type RetireOrganizationParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// RetireOrganization marks the organization deleted once it holds no
+// live workspace. The row stays, so billing history keeps its owner, and
+// its id is never handed out again.
+func (q *Queries) RetireOrganization(ctx context.Context, arg RetireOrganizationParams) error {
+	_, err := q.db.Exec(ctx, retireOrganization, arg.Now, arg.ID)
+	return err
+}

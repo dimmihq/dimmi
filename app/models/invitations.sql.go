@@ -12,6 +12,51 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const acceptInvitation = `-- name: AcceptInvitation :one
+UPDATE invitations
+SET status = 'accepted', accepted_at = $1::timestamptz, accepted_by_user_id = $2, updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+`
+
+type AcceptInvitationParams struct {
+	Now         time.Time `json:"now"`
+	UserID      *ids.UUID `json:"user_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// AcceptInvitation records that the user accepted the invitation.
+func (q *Queries) AcceptInvitation(ctx context.Context, arg AcceptInvitationParams) (Invitation, error) {
+	row := q.db.QueryRow(ctx, acceptInvitation,
+		arg.Now,
+		arg.UserID,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.TeamIds,
+		&i.InvitedByMemberID,
+		&i.TokenHash,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.LastSentAt,
+		&i.SendCount,
+		&i.AcceptedAt,
+		&i.AcceptedByUserID,
+		&i.RevokedAt,
+		&i.RevokedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const countPendingInvitationsForEmail = `-- name: CountPendingInvitationsForEmail :one
 SELECT count(*)
 FROM auth_pending_invitations_for_email($1::citext) AS i
@@ -30,6 +75,64 @@ func (q *Queries) CountPendingInvitationsForEmail(ctx context.Context, arg Count
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const createInvitation = `-- name: CreateInvitation :one
+INSERT INTO invitations (
+    workspace_id, email, role, team_ids, invited_by_member_id, token_hash, expires_at, last_sent_at, created_at,
+    updated_at
+) VALUES (
+    $1, $2, $3, coalesce($4::uuid[], '{}'), $5, $6, $7, $8, $8, $8
+)
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+`
+
+type CreateInvitationParams struct {
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	Email             string     `json:"email"`
+	Role              string     `json:"role"`
+	TeamIds           []ids.UUID `json:"team_ids"`
+	InvitedByMemberID *ids.UUID  `json:"invited_by_member_id"`
+	TokenHash         []byte     `json:"token_hash"`
+	ExpiresAt         time.Time  `json:"expires_at"`
+	Now               time.Time  `json:"now"`
+}
+
+// CreateInvitation stores a pending invitation to the address. A second
+// pending invitation to the same address in the workspace fails on
+// invitations_workspace_id_email_pending_key.
+func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error) {
+	row := q.db.QueryRow(ctx, createInvitation,
+		arg.WorkspaceID,
+		arg.Email,
+		arg.Role,
+		arg.TeamIds,
+		arg.InvitedByMemberID,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.Now,
+	)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.TeamIds,
+		&i.InvitedByMemberID,
+		&i.TokenHash,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.LastSentAt,
+		&i.SendCount,
+		&i.AcceptedAt,
+		&i.AcceptedByUserID,
+		&i.RevokedAt,
+		&i.RevokedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const findInvitationByToken = `-- name: FindInvitationByToken :one
@@ -59,6 +162,403 @@ func (q *Queries) FindInvitationByToken(ctx context.Context, tokenDigest []byte)
 		&i.Email,
 		&i.Status,
 		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const findInvitationWithInviter = `-- name: FindInvitationWithInviter :one
+SELECT i.id, i.workspace_id, i.email, i.role, i.team_ids, i.invited_by_member_id, i.token_hash, i.status, i.expires_at, i.last_sent_at, i.send_count, i.accepted_at, i.accepted_by_user_id, i.revoked_at, i.revoked_by_member_id, i.created_at, i.updated_at, coalesce(u.name, '')::text AS inviter_name
+FROM invitations i
+LEFT JOIN workspace_members m ON m.id = i.invited_by_member_id AND m.workspace_id = i.workspace_id
+LEFT JOIN users u ON u.id = m.user_id
+WHERE i.workspace_id = $1 AND i.id = $2
+`
+
+type FindInvitationWithInviterParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+type FindInvitationWithInviterRow struct {
+	Invitation  Invitation `json:"invitation"`
+	InviterName string     `json:"inviter_name"`
+}
+
+// FindInvitationWithInviter returns the invitation with the name of who
+// sent it.
+func (q *Queries) FindInvitationWithInviter(ctx context.Context, arg FindInvitationWithInviterParams) (FindInvitationWithInviterRow, error) {
+	row := q.db.QueryRow(ctx, findInvitationWithInviter, arg.WorkspaceID, arg.ID)
+	var i FindInvitationWithInviterRow
+	err := row.Scan(
+		&i.Invitation.ID,
+		&i.Invitation.WorkspaceID,
+		&i.Invitation.Email,
+		&i.Invitation.Role,
+		&i.Invitation.TeamIds,
+		&i.Invitation.InvitedByMemberID,
+		&i.Invitation.TokenHash,
+		&i.Invitation.Status,
+		&i.Invitation.ExpiresAt,
+		&i.Invitation.LastSentAt,
+		&i.Invitation.SendCount,
+		&i.Invitation.AcceptedAt,
+		&i.Invitation.AcceptedByUserID,
+		&i.Invitation.RevokedAt,
+		&i.Invitation.RevokedByMemberID,
+		&i.Invitation.CreatedAt,
+		&i.Invitation.UpdatedAt,
+		&i.InviterName,
+	)
+	return i, err
+}
+
+const listExistingTeams = `-- name: ListExistingTeams :many
+SELECT id FROM teams WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND deleted_at IS NULL
+`
+
+type ListExistingTeamsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// ListExistingTeams returns which of the team ids name live teams of the
+// workspace.
+func (q *Queries) ListExistingTeams(ctx context.Context, arg ListExistingTeamsParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, listExistingTeams, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInvitations = `-- name: ListInvitations :many
+SELECT
+    i.id, i.workspace_id, i.email, i.role, i.team_ids, i.invited_by_member_id, i.token_hash, i.status, i.expires_at, i.last_sent_at, i.send_count, i.accepted_at, i.accepted_by_user_id, i.revoked_at, i.revoked_by_member_id, i.created_at, i.updated_at,
+    (CASE WHEN i.status = 'pending' AND i.expires_at <= $1::timestamptz THEN 'expired' ELSE i.status END)::text
+        AS current_status,
+    coalesce(u.name, '')::text AS inviter_name
+FROM invitations i
+LEFT JOIN workspace_members m ON m.id = i.invited_by_member_id AND m.workspace_id = i.workspace_id
+LEFT JOIN users u ON u.id = m.user_id
+WHERE i.workspace_id = $2
+  AND (CASE WHEN i.status = 'pending' AND i.expires_at <= $1::timestamptz THEN 'expired' ELSE i.status END)
+      = ANY ($3::text[])
+ORDER BY i.created_at DESC, i.id DESC
+LIMIT $5::bigint OFFSET $4::bigint
+`
+
+type ListInvitationsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Statuses    []string  `json:"statuses"`
+	RowOffset   int64     `json:"row_offset"`
+	RowLimit    int64     `json:"row_limit"`
+}
+
+type ListInvitationsRow struct {
+	Invitation    Invitation `json:"invitation"`
+	CurrentStatus string     `json:"current_status"`
+	InviterName   string     `json:"inviter_name"`
+}
+
+// ListInvitations returns a page of the workspace's invitations with the
+// name of who sent each, newest first, narrowed to the statuses asked
+// for. A pending invitation past its expiry reads as expired.
+func (q *Queries) ListInvitations(ctx context.Context, arg ListInvitationsParams) ([]ListInvitationsRow, error) {
+	rows, err := q.db.Query(ctx, listInvitations,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.Statuses,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListInvitationsRow
+	for rows.Next() {
+		var i ListInvitationsRow
+		if err := rows.Scan(
+			&i.Invitation.ID,
+			&i.Invitation.WorkspaceID,
+			&i.Invitation.Email,
+			&i.Invitation.Role,
+			&i.Invitation.TeamIds,
+			&i.Invitation.InvitedByMemberID,
+			&i.Invitation.TokenHash,
+			&i.Invitation.Status,
+			&i.Invitation.ExpiresAt,
+			&i.Invitation.LastSentAt,
+			&i.Invitation.SendCount,
+			&i.Invitation.AcceptedAt,
+			&i.Invitation.AcceptedByUserID,
+			&i.Invitation.RevokedAt,
+			&i.Invitation.RevokedByMemberID,
+			&i.Invitation.CreatedAt,
+			&i.Invitation.UpdatedAt,
+			&i.CurrentStatus,
+			&i.InviterName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockInvitation = `-- name: LockInvitation :one
+SELECT id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at FROM invitations WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+`
+
+type LockInvitationParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// LockInvitation returns the invitation and holds it until the
+// transaction ends.
+func (q *Queries) LockInvitation(ctx context.Context, arg LockInvitationParams) (Invitation, error) {
+	row := q.db.QueryRow(ctx, lockInvitation, arg.WorkspaceID, arg.ID)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.TeamIds,
+		&i.InvitedByMemberID,
+		&i.TokenHash,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.LastSentAt,
+		&i.SendCount,
+		&i.AcceptedAt,
+		&i.AcceptedByUserID,
+		&i.RevokedAt,
+		&i.RevokedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const lockPendingInvitationForEmail = `-- name: LockPendingInvitationForEmail :one
+SELECT id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at FROM invitations
+WHERE workspace_id = $1 AND email = $2 AND status = 'pending'
+FOR UPDATE
+`
+
+type LockPendingInvitationForEmailParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Email       string   `json:"email"`
+}
+
+// LockPendingInvitationForEmail returns the workspace's pending
+// invitation to the address, expired or not, and holds it until the
+// transaction ends.
+func (q *Queries) LockPendingInvitationForEmail(ctx context.Context, arg LockPendingInvitationForEmailParams) (Invitation, error) {
+	row := q.db.QueryRow(ctx, lockPendingInvitationForEmail, arg.WorkspaceID, arg.Email)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.TeamIds,
+		&i.InvitedByMemberID,
+		&i.TokenHash,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.LastSentAt,
+		&i.SendCount,
+		&i.AcceptedAt,
+		&i.AcceptedByUserID,
+		&i.RevokedAt,
+		&i.RevokedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const previewInvitation = `-- name: PreviewInvitation :one
+SELECT
+    i.id::uuid AS id,
+    i.workspace_id::uuid AS workspace_id,
+    i.workspace_name::text AS workspace_name,
+    coalesce(i.inviter_name, '')::text AS inviter_name,
+    i.email::citext AS email,
+    i.role::text AS role,
+    i.status::text AS status,
+    i.expires_at::timestamptz AS expires_at
+FROM auth_preview_invitation($1) AS i
+`
+
+type PreviewInvitationRow struct {
+	ID            ids.UUID  `json:"id"`
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	WorkspaceName string    `json:"workspace_name"`
+	InviterName   string    `json:"inviter_name"`
+	Email         string    `json:"email"`
+	Role          string    `json:"role"`
+	Status        string    `json:"status"`
+	ExpiresAt     time.Time `json:"expires_at"`
+}
+
+// PreviewInvitation returns what an invitation link invites to: the
+// workspace, who sent it, the role, the address and where it stands. It
+// runs through a security definer function, since the holder of the link
+// belongs to no workspace yet, and finds nothing for a workspace in the
+// trash.
+func (q *Queries) PreviewInvitation(ctx context.Context, tokenDigest []byte) (PreviewInvitationRow, error) {
+	row := q.db.QueryRow(ctx, previewInvitation, tokenDigest)
+	var i PreviewInvitationRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.WorkspaceName,
+		&i.InviterName,
+		&i.Email,
+		&i.Role,
+		&i.Status,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const revokeInvitation = `-- name: RevokeInvitation :one
+UPDATE invitations
+SET status = 'revoked', revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+`
+
+type RevokeInvitationParams struct {
+	Now         time.Time `json:"now"`
+	RevokedBy   *ids.UUID `json:"revoked_by"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// RevokeInvitation withdraws the invitation, recording who withdrew it.
+func (q *Queries) RevokeInvitation(ctx context.Context, arg RevokeInvitationParams) (Invitation, error) {
+	row := q.db.QueryRow(ctx, revokeInvitation,
+		arg.Now,
+		arg.RevokedBy,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.TeamIds,
+		&i.InvitedByMemberID,
+		&i.TokenHash,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.LastSentAt,
+		&i.SendCount,
+		&i.AcceptedAt,
+		&i.AcceptedByUserID,
+		&i.RevokedAt,
+		&i.RevokedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const revokePendingInvitations = `-- name: RevokePendingInvitations :execrows
+UPDATE invitations
+SET status = 'revoked', revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND status = 'pending'
+`
+
+type RevokePendingInvitationsParams struct {
+	Now         time.Time `json:"now"`
+	RevokedBy   *ids.UUID `json:"revoked_by"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// RevokePendingInvitations withdraws every pending invitation of the
+// workspace.
+func (q *Queries) RevokePendingInvitations(ctx context.Context, arg RevokePendingInvitationsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokePendingInvitations, arg.Now, arg.RevokedBy, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const sendInvitationAgain = `-- name: SendInvitationAgain :one
+UPDATE invitations
+SET token_hash = $1, expires_at = $2, last_sent_at = $3, send_count = send_count + 1,
+    role = $4, team_ids = coalesce($5::uuid[], '{}'), status = 'pending', updated_at = $3
+WHERE workspace_id = $6 AND id = $7
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+`
+
+type SendInvitationAgainParams struct {
+	TokenHash   []byte     `json:"token_hash"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	Now         time.Time  `json:"now"`
+	Role        string     `json:"role"`
+	TeamIds     []ids.UUID `json:"team_ids"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	ID          ids.UUID   `json:"id"`
+}
+
+// SendInvitationAgain gives the invitation a new link, valid until the
+// new expiry, with the role and teams given, and counts the sending.
+// The old link stops working.
+func (q *Queries) SendInvitationAgain(ctx context.Context, arg SendInvitationAgainParams) (Invitation, error) {
+	row := q.db.QueryRow(ctx, sendInvitationAgain,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.Now,
+		arg.Role,
+		arg.TeamIds,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Invitation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.TeamIds,
+		&i.InvitedByMemberID,
+		&i.TokenHash,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.LastSentAt,
+		&i.SendCount,
+		&i.AcceptedAt,
+		&i.AcceptedByUserID,
+		&i.RevokedAt,
+		&i.RevokedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

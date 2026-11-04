@@ -16,7 +16,24 @@ export interface Person {
 
 const refusedByApi = /Failed to load resource: the server responded with a status of 4\d\d/;
 
-export const test = base.extend<{ person: Person; watch: undefined }>({
+/*
+ * listen collects every script error, console error and blocked content
+ * the page reports, leaving out the API's refusals.
+ */
+function listen(page: Page): string[] {
+  const problems: string[] = [];
+  page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+  page.on("console", (message) => {
+    const apiRefusal = refusedByApi.test(message.text()) && message.location().url.includes("/api/v1/");
+    if (message.type() === "error" && !apiRefusal) {
+      problems.push(`console error: ${message.text()}`);
+    }
+  });
+
+  return problems;
+}
+
+export const test = base.extend<{ person: Person; watch: undefined; guest: Page }>({
   person: async ({ browserName }, use, info) => {
     const id = `${browserName}-${info.workerIndex}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -25,14 +42,7 @@ export const test = base.extend<{ person: Person; watch: undefined }>({
 
   watch: [
     async ({ page }, use) => {
-      const problems: string[] = [];
-      page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
-      page.on("console", (message) => {
-        const apiRefusal = refusedByApi.test(message.text()) && message.location().url.includes("/api/v1/");
-        if (message.type() === "error" && !apiRefusal) {
-          problems.push(`console error: ${message.text()}`);
-        }
-      });
+      const problems = listen(page);
 
       await use(undefined);
 
@@ -40,6 +50,22 @@ export const test = base.extend<{ person: Person; watch: undefined }>({
     },
     { auto: true },
   ],
+
+  /*
+   * guest is a page in a browser of its own, sharing no cookies with
+   * page, for a second person such as an invitee. It is watched the same
+   * way.
+   */
+  guest: async ({ browser }, use) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const problems = listen(page);
+
+    await use(page);
+
+    await context.close();
+    expect(problems, "the guest page logged errors").toEqual([]);
+  },
 });
 
 export { expect };

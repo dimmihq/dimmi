@@ -9,6 +9,10 @@
 | translations for. Requests apply them as
 | `validate:"timezone"` and `validate:"locale"`.
 |
+| The binary carries its own copy of the time zone database, so a
+| container image without the system's zone files accepts the same zones
+| as any other host.
+|
 */
 
 package rules

@@ -18,17 +18,28 @@ function remembered(): string | null {
   }
 }
 
+/*
+ * rememberWorkspace makes the workspace the one this browser opens, such
+ * as one the person just joined. Blocked storage keeps the choice for
+ * the current page only, and the answer says whether it was kept.
+ */
+export function rememberWorkspace(id: string): boolean {
+  try {
+    window.localStorage.setItem(key, id);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useCurrentWorkspace(workspaces: WorkspaceSummary[]) {
   const [chosen, setChosen] = useState(remembered);
   const current = workspaces.find((workspace) => workspace.id === chosen) ?? workspaces[0] ?? null;
 
   const choose = useCallback((id: string) => {
     setChosen(id);
-    try {
-      window.localStorage.setItem(key, id);
-    } catch {
-      // Blocked storage keeps the choice for this page only.
-    }
+    rememberWorkspace(id);
   }, []);
 
   return { current, choose };

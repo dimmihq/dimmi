@@ -57,10 +57,13 @@ function toApiError(status: number, body: ErrorBody | null): ApiError {
 
 /*
  * RequestOptions changes one call: workspace names the workspace a
- * workspace route works in, sent in the Dimmi-Workspace header.
+ * workspace route works in, sent in the Dimmi-Workspace header, and
+ * headers adds any other header the call needs, such as a token that
+ * must never sit in an address.
  */
 export interface RequestOptions {
   workspace?: string;
+  headers?: Record<string, string>;
 }
 
 /*
@@ -73,7 +76,7 @@ export async function request<T>(
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { ...options.headers, Accept: "application/json" };
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
   }

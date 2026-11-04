@@ -16,6 +16,8 @@ export interface Workspace {
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  deleted_at: string | null;
+  purge_after: string | null;
 }
 
 export interface Member {
@@ -69,6 +71,22 @@ export function callerQuery(workspace: string) {
 
 export function updateWorkspace(workspace: string, changes: WorkspaceChanges): Promise<Workspace> {
   return request<Workspace>("PATCH", "/workspace", changes, { workspace });
+}
+
+/*
+ * deleteWorkspace moves the workspace to the trash, where it can be
+ * restored for a while. The person types the workspace's address as
+ * confirmSlug, so a slip of the mouse never deletes one.
+ */
+export function deleteWorkspace(workspace: string, confirmSlug: string): Promise<Workspace> {
+  return request<Workspace>("DELETE", "/workspace", { confirm_slug: confirmSlug }, { workspace });
+}
+
+/*
+ * restoreWorkspace takes a deleted workspace out of the trash.
+ */
+export function restoreWorkspace(workspace: string): Promise<Workspace> {
+  return request<Workspace>("PATCH", `/workspaces/${encodeURIComponent(workspace)}`, { trashed: false });
 }
 
 export function updateMember(workspace: string, member: string, changes: MemberChanges): Promise<Member> {

@@ -31,11 +31,11 @@ import (
 
 /*
 SpentTokenRetention is how long a one-time token is kept once it
-expired or was used, and purgeAttempts how often the job is tried.
+expired or was used, and authPurgeAttempts how often the job is tried.
 */
 const (
 	SpentTokenRetention = 24 * time.Hour
-	purgeAttempts       = 3
+	authPurgeAttempts   = 3
 )
 
 /*
@@ -55,7 +55,7 @@ Options try the job a few times and run it once per hour however many
 times it is pushed: the next run catches up on anything left.
 */
 func (PurgeExpiredAuthRecordsArgs) Options() queue.Options {
-	return queue.Options{MaxAttempts: purgeAttempts, Unique: queue.UniqueOpts{ByPeriod: time.Hour}}
+	return queue.Options{MaxAttempts: authPurgeAttempts, Unique: queue.UniqueOpts{ByPeriod: time.Hour}}
 }
 
 /*

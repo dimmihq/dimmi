@@ -19,9 +19,24 @@ export interface ProviderButtonsProps {
   action: string;
   /** Names the email form below the buttons, such as "or sign in with email". */
   emailLabel: string;
+  /** The token of the invitation the person is answering, carried through the provider's round trip. */
+  invitation?: string;
 }
 
-export function ProviderButtons({ providers, redirect, action, emailLabel }: ProviderButtonsProps) {
+/*
+ * startAddress is the server's redirect for the provider, with where to
+ * land afterwards and the invitation being answered, if any.
+ */
+function startAddress(provider: Provider, redirect: string, invitation?: string): string {
+  const query = new URLSearchParams({ redirect });
+  if (invitation) {
+    query.set("invitation", invitation);
+  }
+
+  return `${provider.redirect_url}?${query.toString()}`;
+}
+
+export function ProviderButtons({ providers, redirect, action, emailLabel, invitation }: ProviderButtonsProps) {
   const known = providers.filter((provider) => brands[provider.key]);
   if (known.length === 0) {
     return null;
@@ -35,7 +50,7 @@ export function ProviderButtons({ providers, redirect, action, emailLabel }: Pro
           brand={brands[provider.key] as SocialProvider}
           appearance="colorful"
           fullWidth
-          href={`${provider.redirect_url}?redirect=${encodeURIComponent(redirect)}`}
+          href={startAddress(provider, redirect, invitation)}
         >
           {`${action} ${provider.name}`}
         </SocialButton>

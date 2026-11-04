@@ -50,7 +50,11 @@ type controllers struct {
 	identities        *v1.UserIdentityController
 	memberships       *v1.MembershipController
 	workspace         *v1.CurrentWorkspaceController
+	workspaces        *v1.WorkspaceController
 	members           *v1.MemberController
+	invitations       *v1.InvitationController
+	deliveries        *v1.InvitationDeliveryController
+	previews          *v1.InvitationPreviewController
 	authFactors       *v1.AuthFactorController
 }
 
@@ -72,6 +76,7 @@ func API(a *app.App) {
 			routing.Patch(guest, "/password-resets/{reset}", "password-resets.update", c.resets.Update)
 			routing.Patch(guest, "/email-verifications/{verification}", "email-verifications.update",
 				c.verifications.Update)
+			routing.Get(guest, "/invitations/preview", "invitations.preview.show", c.previews.Show)
 		})
 
 		api.Group("", func(user *routing.Router) {
@@ -91,6 +96,8 @@ func API(a *app.App) {
 			routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
 				Middleware("password.confirm").Status(fhttp.StatusNoContent)
 			routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
+			routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store)
+			routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update)
 			routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
 				Status(fhttp.StatusNoContent)
 			authFactorRoutes(user, c.authFactors)
@@ -115,9 +122,26 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 
 	routing.Get(workspace, "/workspace", "workspace.show", c.workspace.Show)
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
+	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK)
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+	invitationRoutes(workspace, c)
+}
+
+/*
+invitationRoutes declares the invitations of the workspace in play.
+Inviting reaches other people, so it needs a verified email where the
+install asks for one.
+*/
+func invitationRoutes(workspace *routing.Router, c controllers) {
+	routing.Get(workspace, "/invitations", "invitations.index", c.invitations.Index).Ability("members:read")
+	routing.Post(workspace, "/invitations", "invitations.store", c.invitations.Store).
+		Ability("members:write").Middleware("verified").Status(fhttp.StatusOK)
+	routing.Delete(workspace, "/invitations/{invitation}", "invitations.destroy", c.invitations.Destroy).
+		Ability("members:write").Status(fhttp.StatusNoContent)
+	routing.Post(workspace, "/invitations/{invitation}/deliveries", "invitations.deliveries.store",
+		c.deliveries.Store).Ability("members:write")
 }
 
 /*
@@ -131,7 +155,7 @@ func newControllers(a *app.App) controllers {
 	}
 	acts := a.Actions
 
-	return controllers{
+	c := controllers{
 		authConfig: &v1.AuthConfigController{
 			Auth: a.Config.Auth, Factors: a.Factors.Types(), Providers: a.Providers, Server: server,
 		},
@@ -160,8 +184,9 @@ func newControllers(a *app.App) controllers {
 		identities: &v1.UserIdentityController{
 			List: acts.ListOAuthIdentities, Unlink: acts.UnlinkOAuthIdentity, IDs: a.IDs, Cookies: a.Cookies,
 		},
-		memberships: &v1.MembershipController{List: acts.ListMemberships, Leave: acts.LeaveWorkspace, IDs: a.IDs},
-		workspace:   &v1.CurrentWorkspaceController{UpdateWorkspace: acts.UpdateWorkspace},
+		workspace: &v1.CurrentWorkspaceController{
+			UpdateWorkspace: acts.UpdateWorkspace, DeleteWorkspace: acts.DeleteWorkspace,
+		},
 		members: &v1.MemberController{
 			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
 			Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
@@ -172,6 +197,30 @@ func newControllers(a *app.App) controllers {
 			IDs: a.IDs, Cookies: a.Cookies,
 		},
 	}
+	membershipControllers(a, &c)
+
+	return c
+}
+
+/*
+membershipControllers builds into c the controllers that bring people
+into workspaces and take workspaces away: memberships, invitations and
+the trash.
+*/
+func membershipControllers(a *app.App, c *controllers) {
+	acts := a.Actions
+
+	c.memberships = &v1.MembershipController{
+		List: acts.ListMemberships, Accept: acts.AcceptInvitation, Leave: acts.LeaveWorkspace, IDs: a.IDs,
+	}
+	c.workspaces = &v1.WorkspaceController{Restore: acts.RestoreWorkspace, IDs: a.IDs}
+
+	c.invitations = &v1.InvitationController{
+		List: acts.ListInvitations, Create: acts.CreateInvitations, Revoke: acts.RevokeInvitation, IDs: a.IDs,
+		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
+	}
+	c.deliveries = &v1.InvitationDeliveryController{Resend: acts.ResendInvitation, IDs: a.IDs}
+	c.previews = &v1.InvitationPreviewController{Preview: acts.PreviewInvitation}
 }
 
 /*

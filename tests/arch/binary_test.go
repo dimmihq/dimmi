@@ -36,6 +36,16 @@ func TestBinarySize(t *testing.T) {
 
 		assert.Empty(t, flagged(dump), "functions that disable dead method elimination")
 	})
+
+	t.Run("the binary carries its own time zone database", func(t *testing.T) {
+		t.Parallel()
+
+		cmd := exec.CommandContext(t.Context(), "go", "list", "-deps", "../../cmd/dimmi")
+
+		deps, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(deps))
+		assert.Contains(t, strings.Fields(string(deps)), "time/tzdata")
+	})
 }
 
 /*

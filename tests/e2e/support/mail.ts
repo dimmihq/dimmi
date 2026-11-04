@@ -9,14 +9,14 @@ interface Message {
   ID: string;
 }
 
-async function newest(to: string, subject: string): Promise<string> {
+async function newest(to: string, subject: string, count = 1): Promise<string> {
   const query = encodeURIComponent(`to:${to} subject:"${subject}"`);
 
   for (let attempt = 0; attempt < 50; attempt++) {
-    const found = (await (await fetch(`${api}/api/v1/search?query=${query}&limit=1`)).json()) as {
+    const found = (await (await fetch(`${api}/api/v1/search?query=${query}&limit=${count}`)).json()) as {
       messages: Message[];
     };
-    const id = found.messages[0]?.ID;
+    const id = found.messages.length >= count ? found.messages[0]?.ID : undefined;
     if (id) {
       const message = (await (await fetch(`${api}/api/v1/message/${id}`)).json()) as { Text: string };
       return message.Text;
@@ -30,10 +30,11 @@ async function newest(to: string, subject: string): Promise<string> {
 
 /*
  * mailedLink returns the first link with a fragment in the newest mail
- * to the address whose subject has the words.
+ * to the address whose subject has the words, once count such mails
+ * arrived.
  */
-export async function mailedLink(to: string, subject: string): Promise<string> {
-  const link = (await newest(to, subject)).match(/https?:\/\/[^\s<>]+#[^\s<>]+/)?.[0];
+export async function mailedLink(to: string, subject: string, count = 1): Promise<string> {
+  const link = (await newest(to, subject, count)).match(/https?:\/\/[^\s<>]+#[^\s<>]+/)?.[0];
   if (!link) {
     throw new Error(`the mail to ${to} with "${subject}" carries no link`);
   }

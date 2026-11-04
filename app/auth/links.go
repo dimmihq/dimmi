@@ -65,6 +65,27 @@ func (l Links) Security() string {
 	return l.page(SecurityPage)
 }
 
+/*
+Invitation is the page that accepts an invitation to a workspace.
+*/
+func (l Links) Invitation(token string) string {
+	return l.page("/invitation") + "#token=" + token
+}
+
+/*
+App is the dashboard's front page.
+*/
+func (l Links) App() string {
+	return l.page("/d")
+}
+
+/*
+Members is the dashboard page listing a workspace's members.
+*/
+func (l Links) Members() string {
+	return l.page("/d/settings/members")
+}
+
 func (l Links) page(path string) string {
 	return strings.TrimRight(l.Base, "/") + path
 }

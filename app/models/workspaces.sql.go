@@ -104,6 +104,17 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 	return i, err
 }
 
+const deleteWorkspace = `-- name: DeleteWorkspace :exec
+DELETE FROM workspaces WHERE id = $1
+`
+
+// DeleteWorkspace removes the workspace row for good, and with it every
+// row still pointing at it.
+func (q *Queries) DeleteWorkspace(ctx context.Context, id ids.UUID) error {
+	_, err := q.db.Exec(ctx, deleteWorkspace, id)
+	return err
+}
+
 const findWorkspace = `-- name: FindWorkspace :one
 SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE id = $1
 `
@@ -208,6 +219,87 @@ func (q *Queries) ListWorkspaces(ctx context.Context) ([]Workspace, error) {
 	return items, nil
 }
 
+const listWorkspacesDueForPurge = `-- name: ListWorkspacesDueForPurge :many
+SELECT id FROM workspaces
+WHERE deleted_at IS NOT NULL AND purge_after <= $1::timestamptz
+ORDER BY purge_after, id
+`
+
+// ListWorkspacesDueForPurge returns the workspaces whose time in the
+// trash ran out, the longest overdue first.
+func (q *Queries) ListWorkspacesDueForPurge(ctx context.Context, now time.Time) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, listWorkspacesDueForPurge, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspacesDueForReminder = `-- name: ListWorkspacesDueForReminder :many
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces
+WHERE deleted_at IS NOT NULL AND purge_after > $1::timestamptz AND purge_after <= $2::timestamptz
+  AND NOT settings ? 'deletion_reminded_at'
+ORDER BY purge_after, id
+`
+
+type ListWorkspacesDueForReminderParams struct {
+	Now         time.Time `json:"now"`
+	NoticeUntil time.Time `json:"notice_until"`
+}
+
+// ListWorkspacesDueForReminder returns the workspaces in the trash that
+// will be purged within the notice period and whose owners were not
+// reminded yet.
+func (q *Queries) ListWorkspacesDueForReminder(ctx context.Context, arg ListWorkspacesDueForReminderParams) ([]Workspace, error) {
+	rows, err := q.db.Query(ctx, listWorkspacesDueForReminder, arg.Now, arg.NoticeUntil)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Workspace
+	for rows.Next() {
+		var i Workspace
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.Slug,
+			&i.Timezone,
+			&i.Locale,
+			&i.Settings,
+			&i.TestMode,
+			&i.NextConversationNumber,
+			&i.SuspendedAt,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByUserID,
+			&i.DeletedByUserID,
+			&i.PurgeAfter,
+			&i.SuspendedReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockWorkspace = `-- name: LockWorkspace :one
 SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE id = $1 FOR UPDATE
 `
@@ -216,6 +308,154 @@ SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, n
 // ends, so changes to who owns it happen one after another.
 func (q *Queries) LockWorkspace(ctx context.Context, id ids.UUID) (Workspace, error) {
 	row := q.db.QueryRow(ctx, lockWorkspace, id)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const markWorkspacePurgeStarted = `-- name: MarkWorkspacePurgeStarted :one
+UPDATE workspaces
+SET settings = CASE
+        WHEN settings ? 'purge_started_at' THEN settings
+        ELSE jsonb_set(settings, '{purge_started_at}', to_jsonb($1::timestamptz))
+    END
+WHERE id = $2 AND deleted_at IS NOT NULL
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type MarkWorkspacePurgeStartedParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// MarkWorkspacePurgeStarted records when the purge of a workspace in the
+// trash began, once; from then on it can no longer be restored. It
+// returns nothing for a workspace no longer in the trash.
+func (q *Queries) MarkWorkspacePurgeStarted(ctx context.Context, arg MarkWorkspacePurgeStartedParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, markWorkspacePurgeStarted, arg.Now, arg.ID)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const markWorkspaceReminded = `-- name: MarkWorkspaceReminded :exec
+UPDATE workspaces
+SET settings = jsonb_set(settings, '{deletion_reminded_at}', to_jsonb($1::timestamptz))
+WHERE id = $2
+`
+
+type MarkWorkspaceRemindedParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// MarkWorkspaceReminded records that the owners were told the workspace
+// is about to be purged, so they are told once.
+func (q *Queries) MarkWorkspaceReminded(ctx context.Context, arg MarkWorkspaceRemindedParams) error {
+	_, err := q.db.Exec(ctx, markWorkspaceReminded, arg.Now, arg.ID)
+	return err
+}
+
+const restoreWorkspace = `-- name: RestoreWorkspace :one
+UPDATE workspaces
+SET deleted_at = NULL, purge_after = NULL, deleted_by_user_id = NULL,
+    settings = settings - 'deletion_reminded_at', updated_at = $1
+WHERE id = $2
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type RestoreWorkspaceParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// RestoreWorkspace takes the workspace out of the trash.
+func (q *Queries) RestoreWorkspace(ctx context.Context, arg RestoreWorkspaceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, restoreWorkspace, arg.Now, arg.ID)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const trashWorkspace = `-- name: TrashWorkspace :one
+UPDATE workspaces
+SET deleted_at = $1::timestamptz, purge_after = $2::timestamptz, deleted_by_user_id = $3,
+    settings = settings - 'deletion_reminded_at', updated_at = $1::timestamptz
+WHERE id = $4
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type TrashWorkspaceParams struct {
+	Now        time.Time `json:"now"`
+	PurgeAfter time.Time `json:"purge_after"`
+	DeletedBy  *ids.UUID `json:"deleted_by"`
+	ID         ids.UUID  `json:"id"`
+}
+
+// TrashWorkspace moves the workspace to the trash until purge_after,
+// recording who deleted it. A reminder sent for an earlier deletion is
+// forgotten, so this deletion gets its own.
+func (q *Queries) TrashWorkspace(ctx context.Context, arg TrashWorkspaceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, trashWorkspace,
+		arg.Now,
+		arg.PurgeAfter,
+		arg.DeletedBy,
+		arg.ID,
+	)
 	var i Workspace
 	err := row.Scan(
 		&i.ID,

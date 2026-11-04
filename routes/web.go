@@ -86,5 +86,6 @@ func authPages() map[string]string {
 		"forgot-password":  "/forgot-password",
 		"reset-password":   "/reset-password",
 		"verify-email":     "/verify-email",
+		"invitation":       "/invitation",
 	}
 }

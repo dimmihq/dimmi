@@ -27,3 +27,12 @@ WHERE w.id = @workspace_id AND o.id = w.organization_id AND w.deleted_at IS NULL
     o.deleted_at IS NOT NULL
     OR (o.name <> w.name AND (SELECT count(*) FROM workspaces x WHERE x.organization_id = o.id) = 1)
   );
+
+-- name: RetireOrganization :exec
+-- RetireOrganization marks the organization deleted once it holds no
+-- live workspace. The row stays, so billing history keeps its owner, and
+-- its id is never handed out again.
+UPDATE organizations o
+SET deleted_at = @now::timestamptz, updated_at = @now::timestamptz
+WHERE o.id = @id AND o.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.organization_id = o.id AND w.deleted_at IS NULL);
