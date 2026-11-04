@@ -112,10 +112,7 @@ func (a *ReceiveInboundEmail) Handle(ctx context.Context, env mailbox.Envelope) 
 		return nil, err
 	}
 
-	verdicts, err := json.Marshal(env.Verdicts)
-	if err != nil {
-		return nil, fmt.Errorf("encode verdicts: %w", err)
-	}
+	verdicts := jsonOf(env.Verdicts)
 
 	received := make([]ReceivedEmail, 0, len(routes))
 	for _, r := range routes {

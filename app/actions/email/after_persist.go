@@ -129,13 +129,9 @@ teammate's forward.
 */
 func (a *ProcessInboundEmail) settle(ctx context.Context, p persisting) error {
 	if p.plan.aiSkip != "" {
-		patch, err := jsonOf(map[string]string{"ai_skip": p.plan.aiSkip})
-		if err != nil {
-			return err
-		}
-
-		err = p.q.AddEmailMessageMetadata(ctx, models.AddEmailMessageMetadataParams{
-			Metadata: patch, Now: a.Clock.Now(), WorkspaceID: p.msg.WorkspaceID, ID: p.msg.ID,
+		err := p.q.AddEmailMessageMetadata(ctx, models.AddEmailMessageMetadataParams{
+			Metadata: jsonOf(map[string]string{"ai_skip": p.plan.aiSkip}), Now: a.Clock.Now(),
+			WorkspaceID: p.msg.WorkspaceID, ID: p.msg.ID,
 		})
 		if err != nil {
 			return fmt.Errorf("mark message unanswerable: %w", err)

@@ -80,10 +80,7 @@ func (a *ProcessInboundEmail) notice(ctx context.Context, mail *received, insp i
 
 		reason = ignoreConfirmation
 
-		stored, err := jsonOf(storedConfirmation{Confirmation: *insp.confirmation, ReceivedAt: a.Clock.Now()})
-		if err != nil {
-			return err
-		}
+		stored := jsonOf(storedConfirmation{Confirmation: *insp.confirmation, ReceivedAt: a.Clock.Now()})
 
 		return q.StoreForwardingConfirmation(ctx, models.StoreForwardingConfirmationParams{
 			ForwardingConfirmation: stored, Now: a.Clock.Now(), WorkspaceID: mail.address.WorkspaceID,

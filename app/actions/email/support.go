@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"strings"
 
@@ -72,15 +71,14 @@ func bytesReader(b []byte) io.Reader {
 }
 
 /*
-jsonOf encodes a value stored as JSON.
+jsonOf encodes a value the channel stores as JSON. Every such value is
+built here from strings, booleans, numbers and times, which always
+encode, so the encoder's error is never set and is discarded.
 */
-func jsonOf(v any) (json.RawMessage, error) {
-	encoded, err := json.Marshal(v)
-	if err != nil {
-		return nil, fmt.Errorf("encode %T: %w", v, err)
-	}
+func jsonOf(v any) json.RawMessage {
+	encoded, _ := json.Marshal(v)
 
-	return encoded, nil
+	return encoded
 }
 
 /*

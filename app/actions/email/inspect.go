@@ -24,12 +24,9 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/dom"
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/mailbox"
-	"github.com/dimmihq/dimmi/framework/mailbox/arf"
 	"github.com/dimmihq/dimmi/framework/mailbox/authcheck"
-	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	inbound "github.com/dimmihq/dimmi/app/integrations/email"
@@ -86,7 +83,7 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 	insp := inspection{auth: a.authenticate(ctx, mail), body: body, own: known.own}
 	if known.member != nil && insp.auth.Passed() {
 		insp.member = known.member
-		if forward, ok := inbound.FindForward(forwardSource(mail, body)); ok {
+		if forward, ok := inbound.FindForward(mail.parsed.Text); ok {
 			insp.forward = &forward
 		}
 	}
@@ -108,7 +105,7 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 		Loop: a.Stamps.ValidLoop(mail.parsed.Header.Get(inbound.LoopHeader), mail.row.WorkspaceID.String(),
 			mail.parsed.MessageID) || known.outboundRefs > 0,
 		SystemNotice: insp.confirmation != nil || insp.forwardingTest,
-		Complaint:    isComplaint(mail.raw),
+		Complaint:    isComplaint(mail),
 		Bounce:       isBounce(mail),
 		Spam:         spam(mail.verdicts) || quarantined,
 		Member:       insp.member != nil, Forwarded: insp.forward != nil, FormRelay: insp.relay != "",
@@ -202,10 +199,8 @@ func (a *ProcessInboundEmail) rate(ctx context.Context, mail *received) (bool, b
 /*
 isComplaint reports whether the email is a feedback report.
 */
-func isComplaint(raw []byte) bool {
-	_, err := arf.Parse(raw)
-
-	return err == nil
+func isComplaint(mail *received) bool {
+	return mail.feedback != nil
 }
 
 /*
@@ -213,7 +208,7 @@ isBounce reports whether the email is a delivery report, or reads as a
 bounce without one.
 */
 func isBounce(mail *received) bool {
-	if _, err := dsn.Parse(mail.raw); err == nil {
+	if mail.delivery != nil {
 		return true
 	}
 
@@ -232,21 +227,4 @@ or a sender domain that rejects mail failing DMARC.
 func spam(v mailbox.Verdicts) bool {
 	return v.Spam == mailbox.VerdictFail || v.Virus == mailbox.VerdictFail ||
 		(v.DMARC == mailbox.VerdictFail && strings.EqualFold(v.DMARCPolicy, "reject"))
-}
-
-/*
-forwardSource returns the text a forwarded block is looked for in: the
-plain text part when there is one, else the Markdown of the HTML.
-*/
-func forwardSource(mail *received, body inbound.Body) string {
-	if strings.TrimSpace(mail.parsed.Text) != "" {
-		return mail.parsed.Text
-	}
-
-	full, err := dom.ToMarkdown(body.HTML)
-	if err != nil {
-		return body.Markdown
-	}
-
-	return full
 }

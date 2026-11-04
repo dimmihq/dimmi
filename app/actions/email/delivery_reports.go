@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/dimmihq/dimmi/framework/mailbox/arf"
 	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 
 	"github.com/dimmihq/dimmi/app/enums"
@@ -51,18 +50,14 @@ type reportRun struct {
 complaint stops mail to whoever reported the workspace's email as spam.
 */
 func (a *ProcessInboundEmail) complaint(ctx context.Context, mail *received) error {
-	report, err := arf.Parse(mail.raw)
-	if err != nil {
-		return fmt.Errorf("parse feedback report: %w", err)
-	}
-
+	report := mail.feedback
 	if !report.Complaint() {
 		return a.ignore(ctx, mail.row, ignoreComplaintNotSpam)
 	}
 
 	reason := ignoreComplaint + unmatchedSuffix
 
-	err = within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
+	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
 		sent, ok, err := findSent(ctx, q, mail.row.WorkspaceID, report.OriginalMessageID)
 		if err != nil || !ok {
 			return err
@@ -95,8 +90,8 @@ func (a *ProcessInboundEmail) complaint(ctx context.Context, mail *received) err
 bounce records a delivery report on the email it is about.
 */
 func (a *ProcessInboundEmail) bounce(ctx context.Context, mail *received) error {
-	report, err := dsn.Parse(mail.raw)
-	if err != nil {
+	report := mail.delivery
+	if report == nil {
 		return a.ignore(ctx, mail.row, ignoreBounceUnmatched)
 	}
 
@@ -107,7 +102,7 @@ func (a *ProcessInboundEmail) bounce(ctx context.Context, mail *received) error 
 
 	reason := ignoreBounceUnmatched
 
-	err = within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
+	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
 		sent, ok, err := findSent(ctx, q, mail.row.WorkspaceID, original)
 		if err != nil || !ok {
 			return err
@@ -172,14 +167,10 @@ the address when the outcome calls for it.
 */
 func (run reportRun) record(ctx context.Context, o outcome) error {
 	if o.reason != "" {
-		details, err := jsonOf(map[string]string{"code": o.status.Code, "diagnostic": o.status.Diagnostic})
-		if err != nil {
-			return err
-		}
-
-		err = run.q.SuppressEmail(ctx, models.SuppressEmailParams{
+		err := run.q.SuppressEmail(ctx, models.SuppressEmailParams{
 			WorkspaceID: run.sent.WorkspaceID, Email: o.address, Reason: string(o.reason),
-			Scope: string(enums.EmailSuppressionScopeAll), Source: o.source, Details: details,
+			Scope: string(enums.EmailSuppressionScopeAll), Source: o.source,
+			Details:         jsonOf(map[string]string{"code": o.status.Code, "diagnostic": o.status.Diagnostic}),
 			OutboundEmailID: &run.sent.ID, Now: run.a.Clock.Now(),
 		})
 		if err != nil {
@@ -187,13 +178,8 @@ func (run reportRun) record(ctx context.Context, o outcome) error {
 		}
 	}
 
-	encoded, err := jsonOf(o.status)
-	if err != nil {
-		return err
-	}
-
-	_, err = run.q.RecordOutboundRecipientStatus(ctx, models.RecordOutboundRecipientStatusParams{
-		Recipient: o.address, RecipientStatus: encoded, Status: o.overall, Now: run.a.Clock.Now(),
+	_, err := run.q.RecordOutboundRecipientStatus(ctx, models.RecordOutboundRecipientStatusParams{
+		Recipient: o.address, RecipientStatus: jsonOf(o.status), Status: o.overall, Now: run.a.Clock.Now(),
 		WorkspaceID: run.sent.WorkspaceID, ID: run.sent.ID,
 	})
 	if err != nil {

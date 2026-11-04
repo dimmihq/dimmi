@@ -41,12 +41,11 @@ import (
 )
 
 /*
-Bounds of address creation: how many numbered forwarding addresses are
-tried, and the longest display name.
+Address creation: how many numbered forwarding addresses are tried, and
+the name of the inbox a workspace without one gets.
 */
 const (
 	maxForwardingAttempts = 50
-	maxDisplayNameLength  = 80
 	defaultInboxName      = "Support"
 )
 
@@ -246,12 +245,9 @@ forwarding address leaves the transaction usable.
 func (c creator) insert(ctx context.Context, tx *database.Tx, in newAddress) (models.EmailAddress, error) {
 	var created models.EmailAddress
 
-	settings, err := json.Marshal(models.DefaultEmailAddressSettings())
-	if err != nil {
-		return created, fmt.Errorf("encode email address settings: %w", err)
-	}
+	settings := jsonOf(models.DefaultEmailAddressSettings())
 
-	err = tx.Transaction(ctx, func(ctx context.Context, sp *database.Tx) error {
+	err := tx.Transaction(ctx, func(ctx context.Context, sp *database.Tx) error {
 		q := models.New(sp)
 
 		conn, err := q.CreateChannelConnection(ctx, models.CreateChannelConnectionParams{
@@ -341,15 +337,11 @@ func publicAddress(address, inboundDomain string) (string, error) {
 }
 
 /*
-displayName returns a display name that fits: trimmed, at most 80
-characters, never empty.
+displayName returns a display name that is safe in a From line and
+never empty.
 */
 func displayName(name string) string {
 	name = inbound.DisplayName(name)
-	if runes := []rune(name); len(runes) > maxDisplayNameLength {
-		name = strings.TrimSpace(string(runes[:maxDisplayNameLength]))
-	}
-
 	if name == "" {
 		return "Support"
 	}

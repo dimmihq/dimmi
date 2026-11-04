@@ -225,10 +225,9 @@ func (a *SendEmailMessage) save(
 		})
 	}
 
-	metadata, err := jsonOf(map[string]string{"idempotency_key": out.msg.IdempotencyKey, "stream": "customer"})
-	if err != nil {
-		return err
-	}
+	metadata := jsonOf(map[string]string{"idempotency_key": out.msg.IdempotencyKey, "stream": "customer"})
+
+	var err error
 
 	d := out.draft
 	out.row, err = q.CreateOutboundEmail(ctx, models.CreateOutboundEmailParams{

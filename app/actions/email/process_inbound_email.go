@@ -31,6 +31,8 @@ import (
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mailbox"
+	"github.com/dimmihq/dimmi/framework/mailbox/arf"
+	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 	"github.com/dimmihq/dimmi/framework/mailbox/parse"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -41,11 +43,6 @@ import (
 	"github.com/dimmihq/dimmi/app/models"
 	appconfig "github.com/dimmihq/dimmi/config"
 )
-
-/*
-maxErrorLength bounds the error kept on a row.
-*/
-const maxErrorLength = 500
 
 /*
 ignoreLoop is the ignore reason of the workspace's own mail coming
@@ -64,6 +61,8 @@ type received struct {
 	parsed   *parse.Parsed
 	verdicts mailbox.Verdicts
 	from     string
+	feedback *arf.Report
+	delivery *dsn.Report
 }
 
 /*
@@ -183,6 +182,8 @@ func (a *ProcessInboundEmail) load(ctx context.Context, mail *received) error {
 	}
 
 	mail.verdicts = readVerdicts(mail.row.ProviderVerdicts)
+	mail.feedback, _ = arf.Parse(mail.raw)
+	mail.delivery, _ = dsn.Parse(mail.raw)
 	mail.from = lower(mail.parsed.From.Email)
 
 	return nil
@@ -224,12 +225,9 @@ func (a *ProcessInboundEmail) process(ctx context.Context, mail *received) error
 describe records what parsing and checking learned on the row.
 */
 func (a *ProcessInboundEmail) describe(ctx context.Context, mail *received, insp inspection) error {
-	auth, err := jsonOf(insp.auth)
-	if err != nil {
-		return err
-	}
+	auth := jsonOf(insp.auth)
 
-	err = within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
+	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
 		return q.DescribeInboundEmail(ctx, models.DescribeInboundEmailParams{
 			MessageIDHeader: optional(mail.parsed.MessageID), FromAddress: optional(mail.from),
 			Subject: optional(inbound.DisplaySubject(mail.parsed.Subject)), Classification: new(string(insp.class)),
@@ -257,10 +255,7 @@ fail records why processing failed. The error says what went wrong,
 never what the mail said.
 */
 func (a *ProcessInboundEmail) fail(ctx context.Context, row models.InboundEmail, cause error) {
-	message := cause.Error()
-	if len(message) > maxErrorLength {
-		message = message[:maxErrorLength]
-	}
+	message := diagnostic(cause.Error())
 
 	_ = within(context.WithoutCancel(ctx), a.DB, func(ctx context.Context, q *models.Queries) error {
 		return q.FailInboundEmail(ctx, models.FailInboundEmailParams{

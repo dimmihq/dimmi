@@ -16,7 +16,6 @@ package email
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -155,11 +154,7 @@ func (a *UpdateEmailAddress) Handle(
 			return err
 		}
 
-		params, err := updateParams(current.EmailAddress, in)
-		if err != nil {
-			return err
-		}
-
+		params := updateParams(current.EmailAddress, in)
 		params.Now = a.Clock.Now()
 		if _, err := q.UpdateEmailAddress(ctx, params); err != nil {
 			return fmt.Errorf("update email address: %w", err)
@@ -176,7 +171,7 @@ func (a *UpdateEmailAddress) Handle(
 /*
 updateParams merges the changes into the address's current values.
 */
-func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) (models.UpdateEmailAddressParams, error) {
+func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) models.UpdateEmailAddressParams {
 	settings := models.ReadEmailAddressSettings(current.Settings)
 	if in.QuotePrevious != nil {
 		settings.QuotePrevious = *in.QuotePrevious
@@ -186,14 +181,9 @@ func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) (mode
 		settings.BulkMailHandling = string(*in.BulkMailHandling)
 	}
 
-	encoded, err := json.Marshal(settings)
-	if err != nil {
-		return models.UpdateEmailAddressParams{}, fmt.Errorf("encode email address settings: %w", err)
-	}
-
 	params := models.UpdateEmailAddressParams{
 		DisplayName: current.DisplayName, ReplyToMode: current.ReplyToMode, FromNameStyle: current.FromNameStyle,
-		Settings: encoded, WorkspaceID: current.WorkspaceID, ID: current.ID,
+		Settings: jsonOf(settings), WorkspaceID: current.WorkspaceID, ID: current.ID,
 	}
 
 	if in.DisplayName != nil {
@@ -208,7 +198,7 @@ func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) (mode
 		params.FromNameStyle = string(*in.FromNameStyle)
 	}
 
-	return params, nil
+	return params
 }
 
 /*
