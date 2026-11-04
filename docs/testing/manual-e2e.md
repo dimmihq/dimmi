@@ -324,6 +324,8 @@ Same session as the shared inbox above, `C` the conversation Ann started:
 | Redaction on write | `POST $B/conversations` as a contact with body `Card 4242 4242 4242 4242 ACCT-7` | the message body reads `Card •••• •••• •••• 4242 [redacted]`, `redactions` lists `card_numbers` and the rule's id; the database holds no original |
 | Redaction switches | `PATCH $B/redaction-rules {"us_ssn":true,"order":[…]}`, then a note `SSN 123-45-6789` | 200 with the new order; the note reads `SSN •••-••-••••`; the audit log has `redaction_settings.updated` |
 | Try redaction | `POST $B/redaction-tests {"text":"4242424242424242"}` | 200 `object: redaction_test`, `text: •••• •••• •••• 4242`, one `redactions` entry; nothing stored |
+| Link safety settings | `PATCH $B/workspace {"link_safety":{"block_domains":["Evil.example"],"strip_inbound_email_links":true}}`, then `{"link_safety":{"block_domains":["co.uk"]}}` | 200, `link_safety.block_domains: ["evil.example"]`; then 422 `invalid_link_domains`; Bob 403 |
+| Links in a thread | a customer sends `[Sign in](https://login.evil.example)` and `https://bit.ly/x`; open the conversation | the first link is struck through and cannot be opened; the second asks "Opens bit.ly. Continue?" |
 | Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
 
 ### Two-factor authentication

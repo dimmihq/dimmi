@@ -43,6 +43,7 @@ type UpdateWorkspaceRequest struct {
 		TestMode         any   `json:"test_mode,omitempty"`
 		RequireTwoFactor any   `json:"require_two_factor,omitempty"`
 		ShowViewers      any   `json:"show_viewers_on_list,omitempty"`
+		LinkSafety       any   `json:"link_safety,omitempty"`
 	}
 }
 
@@ -63,6 +64,7 @@ func (r *UpdateWorkspaceRequest) Validate(ctx context.Context, _ *validation.Fac
 		{"test_mode", b.TestMode},
 		{"require_two_factor", b.RequireTwoFactor},
 		{"show_viewers_on_list", b.ShowViewers},
+		{"link_safety", b.LinkSafety},
 	}
 	for _, field := range others {
 		if field.value != nil {

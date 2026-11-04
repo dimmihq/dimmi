@@ -25,14 +25,26 @@ UpdateCurrentWorkspaceRequest is the input of PATCH /workspace.
 */
 type UpdateCurrentWorkspaceRequest struct {
 	Body struct {
-		Name             *string `json:"name,omitempty"               validate:"omitempty,max=80"`
-		Slug             *string `json:"slug,omitempty"               validate:"omitempty,min=3,max=40,slug"`
-		Timezone         *string `json:"timezone,omitempty"           validate:"omitempty,timezone"`
-		Locale           *string `json:"locale,omitempty"             validate:"omitempty,locale"`
-		TestMode         *bool   `json:"test_mode,omitempty"`
-		RequireTwoFactor *bool   `json:"require_two_factor,omitempty"`
-		ShowViewers      *bool   `json:"show_viewers_on_list,omitempty"`
+		Name             *string         `json:"name,omitempty"               validate:"omitempty,max=80"`
+		Slug             *string         `json:"slug,omitempty"               validate:"omitempty,min=3,max=40,slug"`
+		Timezone         *string         `json:"timezone,omitempty"           validate:"omitempty,timezone"`
+		Locale           *string         `json:"locale,omitempty"             validate:"omitempty,locale"`
+		TestMode         *bool           `json:"test_mode,omitempty"`
+		RequireTwoFactor *bool           `json:"require_two_factor,omitempty"`
+		ShowViewers      *bool           `json:"show_viewers_on_list,omitempty"`
+		LinkSafety       *LinkSafetyBody `json:"link_safety,omitempty"`
 	}
+}
+
+/*
+LinkSafetyBody is a change to the workspace's link checks; a field left
+out keeps its value, and a list sent replaces the list.
+*/
+type LinkSafetyBody struct {
+	Enabled                *bool    `json:"enabled,omitempty"`
+	AllowDomains           []string `json:"allow_domains,omitempty"             validate:"max=500,dive,max=253"`
+	BlockDomains           []string `json:"block_domains,omitempty"             validate:"max=500,dive,max=253"`
+	StripInboundEmailLinks *bool    `json:"strip_inbound_email_links,omitempty"`
 }
 
 /*

@@ -4,7 +4,8 @@
  * renders it: emphasis, lists, quotes, code and links, with single line
  * breaks kept the way the writer typed them. Raw HTML in a message is
  * dropped, never rendered, and links open in a new tab without handing
- * the thread to the page they open.
+ * the thread to the page they open. A customer's links pass the
+ * workspace's link checks first.
  */
 import type { ComponentProps } from "react";
 import Markdown, { type Components } from "react-markdown";
@@ -12,6 +13,8 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
 import { cx } from "@/utils/cx";
+
+import { SafeLink } from "./links/safe-link";
 
 const plugins = [remarkGfm, remarkBreaks];
 
@@ -49,10 +52,24 @@ const components: Components = {
   h3: ({ children }) => <p className="text-body-medium">{children}</p>,
 };
 
-export function MessageBody({ text, className }: { text: string; className?: string }) {
+const customerComponents: Components = { ...components, a: SafeLink };
+
+/*
+ * MessageBody renders the text. A customer's links go through the
+ * workspace's link checks; the team's own links open as written.
+ */
+export function MessageBody({
+  text,
+  className,
+  fromCustomer = false,
+}: {
+  text: string;
+  className?: string;
+  fromCustomer?: boolean;
+}) {
   return (
     <div className={cx("flex flex-col gap-2 wrap-break-word", className)}>
-      <Markdown remarkPlugins={plugins} components={components} skipHtml>
+      <Markdown remarkPlugins={plugins} components={fromCustomer ? customerComponents : components} skipHtml>
         {text}
       </Markdown>
     </div>

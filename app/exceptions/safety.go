@@ -3,7 +3,7 @@
 | Conversation Safety Errors
 |--------------------------------------------------------------------------
 |
-| What a workspace's own redaction rules can refuse. Each refusal carries
+| What a workspace's own redaction rules and link checks can refuse. Each refusal carries
 | a stable code programs can branch on, and never echoes the pattern or
 | the text it was given.
 |
@@ -29,3 +29,10 @@ var (
 	ErrRedactionOrder = fault.New(fault.Invalid, "invalid_order",
 		"List each of the workspace's rules exactly once.").OnField("order")
 )
+
+/*
+ErrInvalidLinkDomains refuses an allowed or blocked domain that is not a
+hostname a workspace could own, or a list longer than 500 domains.
+*/
+var ErrInvalidLinkDomains = fault.New(fault.Invalid, "invalid_link_domains",
+	"Each domain must be a hostname such as example.com, at most 500 in a list.").OnField("link_safety")

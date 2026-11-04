@@ -56,6 +56,7 @@ func (c *CurrentWorkspaceController) Update(
 		Principal: caller(ctx), Membership: membership(ctx), Name: in.Body.Name, Slug: in.Body.Slug,
 		Timezone: in.Body.Timezone, Locale: in.Body.Locale, TestMode: in.Body.TestMode,
 		RequireTwoFactor: in.Body.RequireTwoFactor, ShowViewers: in.Body.ShowViewers,
+		LinkSafety: linkSafetyChange(in.Body.LinkSafety),
 	})
 	if err != nil {
 		return nil, err
@@ -89,4 +90,18 @@ func membership(ctx context.Context) authz.Membership {
 	m, _ := authz.CurrentMembership(ctx)
 
 	return m
+}
+
+/*
+linkSafetyChange reads the link checks sent, nil when none were.
+*/
+func linkSafetyChange(body *requests.LinkSafetyBody) *workspaces.LinkSafetyChange {
+	if body == nil {
+		return nil
+	}
+
+	return &workspaces.LinkSafetyChange{
+		Enabled: body.Enabled, AllowDomains: body.AllowDomains, BlockDomains: body.BlockDomains,
+		StripInboundEmailLinks: body.StripInboundEmailLinks,
+	}
 }

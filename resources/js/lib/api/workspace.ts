@@ -6,6 +6,8 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
+import type { LinkSafety } from "@/features/inbox/links/link-checks";
+
 import { request } from "./client";
 
 export interface Workspace {
@@ -16,6 +18,7 @@ export interface Workspace {
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  link_safety: LinkSafety;
   deleted_at: string | null;
   purge_after: string | null;
 }
@@ -41,6 +44,7 @@ export interface WorkspaceChanges {
   slug?: string;
   timezone?: string;
   require_two_factor?: boolean;
+  link_safety?: Partial<LinkSafety>;
 }
 
 export interface MemberChanges {

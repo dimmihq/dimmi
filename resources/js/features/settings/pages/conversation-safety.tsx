@@ -4,8 +4,8 @@
  * its own patterns, applied after them in their order. Every rule acts
  * before a message, note or subject is stored, and what it replaces is
  * gone for good. The test box shows what the rules would make of a text
- * without storing it. Only people the server lets manage redaction see
- * the controls.
+ * without storing it. Below, the link checks run on what customers send.
+ * Only people the server lets manage these see the controls.
  */
 import { RiArrowUpLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +34,7 @@ import { callerQuery } from "@/lib/api/workspace";
 
 import { Action, Danger } from "../controls";
 import { Empty, Row, Section, SettingsPage } from "../layout";
+import { LinkSafetySection } from "../link-safety-section";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -331,6 +332,7 @@ export function ConversationSafetySettings() {
           {canManage ? <TryRules /> : null}
         </>
       ) : null}
+      <LinkSafetySection canManage={permissions.includes("settings:write")} />
     </SettingsPage>
   );
 }

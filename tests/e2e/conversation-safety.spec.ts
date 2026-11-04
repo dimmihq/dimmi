@@ -41,4 +41,32 @@ it.describe("conversation safety", () => {
     await expect(message).toContainText("My card is •••• •••• •••• 4242");
     await expect(message).toContainText("1 item redacted");
   });
+
+  it("blocks listed domains and asks before opening a suspicious link", async ({ page }) => {
+    await page.goto("/d/settings/conversation-safety");
+    await page.getByRole("textbox", { name: "Blocked domains" }).fill("Evil.example");
+    await page.getByRole("button", { name: "Save domains" }).click();
+    await expect(page.getByRole("textbox", { name: "Blocked domains" })).toHaveValue("evil.example");
+
+    const id = await startConversation(page, {
+      name: "Bo Chen",
+      email: "bo@chen.example",
+      subject: "Links",
+      body: "[Sign in](https://login.evil.example/x), [bank.example](https://other.example/y) and https://bit.ly/abc",
+    });
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    const message = page.getByRole("article", { name: "Message from Bo Chen" });
+    await expect(message.getByLabel("Blocked link to login.evil.example")).toBeVisible();
+    await expect(message.getByRole("link", { name: "Sign in" })).toHaveCount(0);
+
+    await message.getByRole("link", { name: /bank\.example/ }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText("Opens other.example. Continue?");
+    await expect(dialog).toContainText("Its text names a different site.");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+
+    await message.getByRole("link", { name: /bit\.ly/ }).click();
+    await expect(page.getByRole("alertdialog")).toContainText("link shortener");
+  });
 });

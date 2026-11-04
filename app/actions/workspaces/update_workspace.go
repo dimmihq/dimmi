@@ -67,6 +67,7 @@ type UpdateWorkspaceInput struct {
 	TestMode         *bool
 	RequireTwoFactor *bool
 	ShowViewers      *bool
+	LinkSafety       *LinkSafetyChange
 }
 
 /*
@@ -247,6 +248,12 @@ func settingChanges(
 
 		params.Settings = settings
 		changes = append(changes, "show_viewers_on_list")
+	}
+
+	if changed, err := applyLinkSafety(params, w, in.LinkSafety); err != nil || changed {
+		changes = append(changes, "link_safety")
+
+		return changes, err
 	}
 
 	return changes, nil

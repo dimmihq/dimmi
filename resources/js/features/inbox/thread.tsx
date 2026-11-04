@@ -21,6 +21,7 @@ import { cx } from "@/utils/cx";
 
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
+import { LinkPolicyProvider } from "./links/link-policy";
 import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
 import type { Report } from "./use-typing-report";
@@ -118,7 +119,7 @@ function Entry({ entry, customer }: { entry: ThreadEntry; customer: string }) {
           note && "border border-dashed border-border-button-hover",
         )}
       >
-        <MessageBody text={entry.text} />
+        <MessageBody text={entry.text} fromCustomer={!ours} />
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
       <Tag entry={entry} />
@@ -157,6 +158,7 @@ export function Thread({
   entries,
   customer,
   channel,
+  channelType,
   onSend,
   onAskOperator,
   onTyping,
@@ -165,6 +167,7 @@ export function Thread({
   entries: ThreadEntry[];
   customer: string;
   channel: string;
+  channelType?: string;
   onSend: Send;
   onAskOperator: () => void;
   onTyping: Report;
@@ -189,13 +192,15 @@ export function Thread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="pt-2 pb-4">
-        <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Entry entry={entry} customer={customer} />
-            </li>
-          ))}
-        </ol>
+        <LinkPolicyProvider channelType={channelType}>
+          <ol className="mx-auto flex max-w-3xl flex-col gap-3">
+            {entries.map((entry) => (
+              <li key={entry.id}>
+                <Entry entry={entry} customer={customer} />
+              </li>
+            ))}
+          </ol>
+        </LinkPolicyProvider>
       </ScrollArea>
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}
