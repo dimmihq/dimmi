@@ -51,9 +51,9 @@ Rules:
   - The test carries the address's test stamp, so its arrival marks
     the address verified.
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], a
-[contracts.SendError] when the mailer refuses it, or a wrapped database
-error.
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
+[exceptions.ErrMailUnavailable] when the mailer refuses it, or a
+wrapped database error.
 */
 type SendEmailAddressTest struct {
 	DB        *database.DB
@@ -150,15 +150,14 @@ outcome.
 func (a *SendEmailAddressTest) send(ctx context.Context, row models.OutboundEmail, message mail.Message) error {
 	mailer, err := a.Mail.Mailer(a.Config.Mailer)
 	if err != nil {
-		return noSender()
+		return exceptions.ErrMailUnavailable
 	}
 
 	message.Tags = map[string]string{"stream": "customer", "kind": string(enums.OutboundEmailKindTest)}
 
 	res, err := mailer.Send(ctx, message)
 	if err != nil {
-		cause := sendError(err)
-		reason := cause.Error()
+		reason := sendError(err).Error()
 
 		_ = within(context.WithoutCancel(ctx), a.DB, func(ctx context.Context, q *models.Queries) error {
 			return q.MarkOutboundEmailFailed(ctx, models.MarkOutboundEmailFailedParams{
@@ -167,7 +166,7 @@ func (a *SendEmailAddressTest) send(ctx context.Context, row models.OutboundEmai
 			})
 		})
 
-		return cause
+		return exceptions.ErrMailUnavailable
 	}
 
 	return within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {

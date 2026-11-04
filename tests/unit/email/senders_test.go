@@ -247,6 +247,17 @@ func (s *sender) Send(
 	return contracts.SendResult{ChannelMessageID: "id"}, nil
 }
 
+func TestChannelErrors(t *testing.T) {
+	t.Parallel()
+
+	limited := &contracts.RateLimitedError{RetryAfter: time.Minute}
+	assert.Equal(t, "channel: rate limited", limited.Error())
+
+	err := &contracts.SendError{Code: "smtp_550", Message: "Unknown user", Err: contracts.ErrRecipientUnreachable}
+	assert.Equal(t, "smtp_550: Unknown user", err.Error())
+	require.ErrorIs(t, err, contracts.ErrRecipientUnreachable)
+}
+
 func TestChannel(t *testing.T) {
 	t.Parallel()
 

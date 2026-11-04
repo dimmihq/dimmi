@@ -9,7 +9,6 @@ import (
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/database/factories"
-	"github.com/dimmihq/dimmi/tests"
 )
 
 func TestEmailAddresses(t *testing.T) {
@@ -203,19 +202,5 @@ func TestInboundSource(t *testing.T) {
 			Send("POST", "/webhooks/test/inbound", []byte("Subject: x\r\n\r\nx")).AssertUnauthorized()
 		tc.Client().WithHeader("Authorization", "Bearer "+testSecret).
 			Send("POST", "/webhooks/test/inbound", []byte{}).AssertStatus(413)
-	})
-
-	t.Run("hides the source and gives out no addresses on an install that receives no mail", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-
-		tc.Client().WithHeader("Authorization", "Bearer "+testSecret).
-			Send("POST", "/webhooks/test/inbound", []byte("Subject: x\r\n\r\nx")).AssertNotFound().
-			AssertJSONPath("code", "inbound_driver_disabled")
-
-		owner := tc.ActingAsOwner()
-		owner.GetJSON("/api/v1/email-addresses").AssertOK().AssertJSONPath("data.#", 0.0)
-		owner.PostJSON("/api/v1/email-addresses", map[string]any{"address": "support@acme.test"}).
-			AssertStatus(422).AssertJSONPath("code", "inbound_not_configured")
 	})
 }

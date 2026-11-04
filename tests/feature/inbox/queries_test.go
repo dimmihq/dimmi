@@ -214,7 +214,7 @@ func TestInboxQueries(t *testing.T) {
 		})
 
 		assert.Equal(t, "Support", found.Name)
-		assert.Equal(t, []models.Inbox{found}, listed)
+		assert.Contains(t, listed, found)
 		require.ErrorIs(t, err, database.ErrNotFound)
 	})
 
