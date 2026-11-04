@@ -101,3 +101,12 @@ ON CONFLICT (conversation_id, workspace_member_id) DO UPDATE
 SET last_read_message_id = excluded.last_read_message_id, last_read_at = excluded.last_read_at,
     updated_at = excluded.updated_at
 RETURNING *;
+
+-- name: LatestContactMessage :one
+-- LatestContactMessage returns the newest live message the customer
+-- wrote in the conversation, the one a seen receipt answers.
+SELECT * FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND author_type = 'contact' AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 1;

@@ -8,7 +8,7 @@
 | socket was opened from the same origins cross-origin protection
 | trusts for the API. Domain events become broadcasts once they commit,
 | connections end with the access or credential behind them, and
-| teammates typing are relayed to the customer's side.
+| teammates typing and reading are relayed to the customer's side.
 |
 */
 
@@ -63,6 +63,9 @@ func (p BroadcastServiceProvider) Register(fa *foundation.Application) error {
 
 	disconnects := &appbroadcasting.Disconnects{Server: fa.Broadcast}
 	disconnects.Listen(fa.Events)
+
+	seen := &appbroadcasting.SeenReceipts{DB: fa.DB, Cache: fa.Cache, Server: fa.Broadcast}
+	seen.Listen(fa.Events)
 
 	return nil
 }

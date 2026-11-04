@@ -32,6 +32,7 @@ type UpdateCurrentWorkspaceRequest struct {
 		TestMode         *bool   `json:"test_mode,omitempty"`
 		RequireTwoFactor *bool   `json:"require_two_factor,omitempty"`
 		ShowViewers      *bool   `json:"show_viewers_on_list,omitempty"`
+		SeenReceiptName  *bool   `json:"seen_receipt_shows_name,omitempty"`
 	}
 }
 

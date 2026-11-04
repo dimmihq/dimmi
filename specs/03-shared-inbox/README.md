@@ -216,7 +216,7 @@ Doc rules on core tables (`00-foundation/extensibility.md` sections 1 P1, 10):
 - `reopen_window_days` int 0 to 365. 0 = closed conversations never reopen; customer message always starts new conversation.
 - `assign_on_reply` bool default true.
 
-`workspaces.settings` keys owned by 03 (`models.WorkspaceSettings`): `default_inbox_id` (uuid), `seen_receipt_shows_name` (bool, default false; widget "Seen" shows replying member name + avatar, see `conversation.seen_by_team`).
+`workspaces.settings` keys owned by 03 (`models.WorkspaceSettings`): `default_inbox_id` (uuid), `inbox.seen_receipt_shows_name` (bool, default false, `PATCH /workspace`; widget "Seen" shows replying member name + avatar, see `conversation.seen_by_team`).
 
 `workspaces.settings` keys added this round (registry, delta): `inbox.merge_different_customers`, `inbox.undo_send_seconds`, `inbox.team_mentions_enabled`, `inbox.show_viewers_on_list`, `inbox.gif_picker`, `inbox.translation_enabled`, `snooze.wake_*`, `availability.*`, `attachments.customer_uploads`, `attachments.allowed_extra_extensions`, `redaction.card_numbers`, `redaction.us_ssn`, `link_safety.*`, `retention.*`. Meaning in owning file.
 

@@ -67,6 +67,7 @@ type UpdateWorkspaceInput struct {
 	TestMode         *bool
 	RequireTwoFactor *bool
 	ShowViewers      *bool
+	SeenReceiptName  *bool
 }
 
 /*
@@ -221,6 +222,16 @@ func (a *UpdateWorkspace) changes(
 }
 
 /*
+inboxFlag is an on or off inbox setting of the workspace: its key, the
+value asked for, nil to leave it, and the value it has.
+*/
+type inboxFlag struct {
+	key  string
+	want *bool
+	has  bool
+}
+
+/*
 settingChanges writes the settings the input changes into the params,
 returning their names.
 */
@@ -239,14 +250,21 @@ func settingChanges(
 		changes = append(changes, fieldRequireTwoFactor)
 	}
 
-	if in.ShowViewers != nil && *in.ShowViewers != w.ShowsViewersOnList() {
-		settings, err := models.WithSetting(params.Settings, "inbox", "show_viewers_on_list", *in.ShowViewers)
+	for _, flag := range []inboxFlag{
+		{key: "show_viewers_on_list", want: in.ShowViewers, has: w.ShowsViewersOnList()},
+		{key: "seen_receipt_shows_name", want: in.SeenReceiptName, has: w.SeenReceiptShowsName()},
+	} {
+		if flag.want == nil || *flag.want == flag.has {
+			continue
+		}
+
+		settings, err := models.WithSetting(params.Settings, "inbox", flag.key, *flag.want)
 		if err != nil {
 			return nil, err
 		}
 
 		params.Settings = settings
-		changes = append(changes, "show_viewers_on_list")
+		changes = append(changes, flag.key)
 	}
 
 	return changes, nil

@@ -1,8 +1,8 @@
 /*
- * Inbox settings end to end: an admin adds an inbox, changes its reopen
- * window and assignment, and deletes it, which moves its conversations
- * to the default inbox. A member sees the same settings without being
- * able to change them.
+ * Inbox settings end to end: an admin names teammates in seen receipts,
+ * adds an inbox, changes its reopen window and assignment, and deletes
+ * it, which moves its conversations to the default inbox. A member sees
+ * the same settings without being able to change them.
  */
 import type { Page } from "@playwright/test";
 
@@ -34,6 +34,17 @@ async function api(page: Page) {
   };
 }
 
+/*
+ * pick chooses the option of a select, opening it again when the page
+ * re-rendered under the first press.
+ */
+async function pick(page: Page, select: string, option: string) {
+  await expect(async () => {
+    await page.getByRole("button", { name: select }).click();
+    await page.getByRole("option", { name: option }).click({ timeout: 1000 });
+  }).toPass();
+}
+
 it.describe("inbox settings", () => {
   it.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -47,15 +58,21 @@ it.describe("inbox settings", () => {
     const inboxes = page.getByRole("region", { name: "Inboxes" });
     await expect(inboxes.getByText("Default")).toBeVisible();
 
+    const names = page.getByRole("switch", { name: "Name in seen receipts" });
+    await expect(names).not.toBeChecked();
+    const named = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().endsWith("/workspace"));
+    await names.click({ force: true });
+    expect((await named).status()).toBe(200);
+    await page.reload();
+    await expect(names).toBeChecked();
+
     await inboxes.getByRole("button", { name: "New inbox" }).click();
     await page.getByRole("alertdialog").getByRole("textbox", { name: "Inbox name" }).fill("Billing");
     await page.getByRole("alertdialog").getByRole("button", { name: "Create inbox" }).click();
     await expect(page.getByRole("heading", { name: "Billing", level: 1 })).toBeVisible();
 
-    await page.getByRole("button", { name: "Reopen window" }).click();
-    await page.getByRole("option", { name: "7 days" }).click();
-    await page.getByRole("button", { name: "Assignment mode" }).click();
-    await page.getByRole("option", { name: "Round robin" }).click();
+    await pick(page, "Reopen window", "7 days");
+    await pick(page, "Assignment mode", "Round robin");
     const saved = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("/inboxes/"));
     await page.getByRole("button", { name: "Save changes" }).click();
     expect((await saved).status()).toBe(200);
@@ -99,6 +116,7 @@ it.describe("inbox settings", () => {
 
     const inboxes = page.getByRole("region", { name: "Inboxes" });
     await expect(inboxes.getByRole("button", { name: "New inbox" })).toHaveCount(0);
+    await expect(page.getByRole("switch", { name: "Name in seen receipts" })).toBeDisabled();
     await inboxes.getByRole("button", { name: "View" }).first().click();
 
     await expect(page.getByText("Only admins can change inboxes.")).toBeVisible();

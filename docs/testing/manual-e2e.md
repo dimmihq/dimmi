@@ -542,6 +542,7 @@ Make a team of two teammates the default team of an inbox, then follow conversat
 | Status | `GET $B/inboxes/{inbox}/assignment-status?channel_type=api` | each member with `open_count`, `eligible`, `why_not`; `waiting.count`; a member without `settings:read` 403 |
 | Waiting list | `GET $B/conversations?filter[view]=all&filter[assignment_waiting]=true` | only the waiting ones |
 | Delete inbox | `DELETE $B/inboxes/{inbox}` holding conversations; then `?move_to=inbox_...`; the default inbox | 422 `move_to_required`; 204 and its conversations show the target inbox; 422 `default_inbox` |
+| Seen receipt | widget conversation; subscribe `widget_contact:ctc_...`; `PATCH $B/conversations/{id}/read-state` `{}`; then `PATCH $B/workspace` `{"seen_receipt_shows_name":true}` and write again | `conversation.seen_by_team` with `conversation_id`, `seen_at`, no member id or name; after the switch, a second receipt after 5 s carries `seen_by.name` |
 
 ## 4. Check what was stored
 

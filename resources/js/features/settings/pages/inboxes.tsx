@@ -2,7 +2,9 @@
  * The workspace's inboxes, on the server: every live inbox, the default
  * one marked, and adding a new one. Each inbox opens on its own page for
  * its settings, its automatic assignment and deleting it. Adding is
- * offered only to people the server lets manage inboxes.
+ * offered only to people the server lets manage inboxes. Whether the
+ * messenger names the teammate who read a customer's message is a
+ * workspace setting, changed by those who may change settings.
  */
 import { RiInbox2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,10 +15,11 @@ import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { createInbox, inboxesQuery } from "@/lib/api/inboxes";
+import { updateWorkspace, workspaceQuery } from "@/lib/api/workspace";
 
-import { Action } from "../controls";
+import { Action, Toggle } from "../controls";
 import { assignmentModes, usePermission } from "../inboxes";
-import { Glyph, Item, Section, SettingsPage } from "../layout";
+import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -67,6 +70,38 @@ function NewInboxDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   );
 }
 
+/*
+ * MessengerSection says whether the customer's "Seen" names the teammate
+ * who read their message, saved as soon as it flips.
+ */
+function MessengerSection() {
+  const workspace = useAccount().workspace.id;
+  const queryClient = useQueryClient();
+  const canChange = usePermission(workspace, "settings:write");
+  const { data } = useQuery(workspaceQuery(workspace));
+  const save = useMutation({
+    mutationFn: (on: boolean) => updateWorkspace(workspace, { seen_receipt_shows_name: on }),
+    onSuccess: (updated) => queryClient.setQueryData(workspaceQuery(workspace).queryKey, updated),
+  });
+
+  if (!data) {
+    return null;
+  }
+
+  return (
+    <Section title="Messenger">
+      <Row label="Name in seen receipts" description="Show customers which teammate read their message.">
+        <Toggle
+          label="Name in seen receipts"
+          on={data.seen_receipt_shows_name}
+          disabled={!canChange}
+          onChange={(on) => save.mutate(on)}
+        />
+      </Row>
+    </Section>
+  );
+}
+
 export function InboxesSettings() {
   const workspace = useAccount().workspace.id;
   const navigate = useNavigate();
@@ -102,6 +137,7 @@ export function InboxesSettings() {
           </Item>
         ))}
       </Section>
+      <MessengerSection />
       <NewInboxDialog isOpen={creating} onClose={() => setCreating(false)} />
     </SettingsPage>
   );

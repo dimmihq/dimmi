@@ -162,7 +162,7 @@ Edge 290, 291.
 ## A4. Inbox settings page (track 02 inbox-access)
 
 - [x] Replace sample `InboxesSettings`, inbox detail route, assignment controls, status table, read only without `inboxes:manage`. Also backend `DELETE /inboxes/{inbox}` with `move_to` (route missing today), `default`. e2e `tests/e2e/inbox-settings.spec.ts`: create, edit reopen window, set round robin, delete moves conversations; member sees read only.
-- [ ] Seen receipt toggle wired to `seen_receipt_shows_name`: needs the workspace setting and the widget `conversation.seen_by_team` relay first, neither exists yet.
+- [x] Seen receipt toggle wired to `inbox.seen_receipt_shows_name` (`PATCH /workspace`), relay `conversation.seen_by_team` on `widget_contact:`. Test: no name by default, name when on, one per 5 s, only when the read reaches the customer's latest message, widget conversations only.
 
 ## W1. Schema renumber, priority (track 03 inbox-workbench)
 

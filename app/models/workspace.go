@@ -69,6 +69,25 @@ func (w Workspace) ShowsViewersOnList() bool {
 }
 
 /*
+SeenReceiptShowsName reports whether the customer's widget names the
+teammate who read their message. It does not unless the workspace
+turned it on: by default the customer only learns that the team saw it.
+*/
+func (w Workspace) SeenReceiptShowsName() bool {
+	var settings struct {
+		Inbox struct {
+			SeenReceiptShowsName bool `json:"seen_receipt_shows_name"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return false
+	}
+
+	return settings.Inbox.SeenReceiptShowsName
+}
+
+/*
 WithSetting returns the settings document with the key of the area set
 to the value, keeping every other key.
 */

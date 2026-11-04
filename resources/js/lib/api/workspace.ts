@@ -16,6 +16,7 @@ export interface Workspace {
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  seen_receipt_shows_name: boolean;
   deleted_at: string | null;
   purge_after: string | null;
 }
@@ -50,6 +51,7 @@ export interface WorkspaceChanges {
   slug?: string;
   timezone?: string;
   require_two_factor?: boolean;
+  seen_receipt_shows_name?: boolean;
 }
 
 export interface MemberChanges {

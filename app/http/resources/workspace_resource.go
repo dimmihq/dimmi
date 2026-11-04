@@ -20,10 +20,12 @@ import (
 
 /*
 Workspace is a workspace a member works in. RequireTwoFactor says
-whether every member must have a second factor to work in it, and
-ShowViewers whether inbox lists show who views each conversation. DeletedAt
-and PurgeAfter are set while it is in the trash: when it was deleted,
-and when it is purged for good unless restored.
+whether every member must have a second factor to work in it,
+ShowViewers whether inbox lists show who views each conversation, and
+SeenReceiptName whether the customer's widget names the teammate who
+read their message. DeletedAt and PurgeAfter are set while it is in the
+trash: when it was deleted, and when it is purged for good unless
+restored.
 */
 type Workspace struct {
 	ID               string     `json:"id"`
@@ -35,6 +37,7 @@ type Workspace struct {
 	TestMode         bool       `json:"test_mode"`
 	RequireTwoFactor bool       `json:"require_two_factor"`
 	ShowViewers      bool       `json:"show_viewers_on_list"`
+	SeenReceiptName  bool       `json:"seen_receipt_shows_name"`
 	DeletedAt        *time.Time `json:"deleted_at"`
 	PurgeAfter       *time.Time `json:"purge_after"`
 }
@@ -53,6 +56,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		TestMode:         w.TestMode,
 		RequireTwoFactor: w.RequiresTwoFactor(),
 		ShowViewers:      w.ShowsViewersOnList(),
+		SeenReceiptName:  w.SeenReceiptShowsName(),
 		DeletedAt:        w.DeletedAt,
 		PurgeAfter:       w.PurgeAfter,
 	}
