@@ -9,7 +9,7 @@ function actor(type: string, via: string | null): AuditEntry["actor"] {
 describe("log labels", () => {
   it("names known events and falls back to the server's name", () => {
     expect(auditEventLabel("member.role_changed")).toBe("Changed a role");
-    expect(auditEventLabel("team.created")).toBe("team.created");
+    expect(auditEventLabel("billing.plan_changed")).toBe("billing.plan_changed");
     expect(securityEventLabel("login.succeeded")).toBe("Signed in");
     expect(securityEventLabel("something.new")).toBe("something.new");
   });
