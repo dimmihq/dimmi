@@ -157,8 +157,8 @@ func (a *ReplyToConversation) Handle(ctx context.Context, in ReplyInput) (Writte
 }
 
 /*
-write writes the reply, hands it to its channel, takes the conversation
-and applies what comes after.
+write writes the reply, hands it to its channel, ends the caller's
+reply draft, takes the conversation and applies what comes after.
 */
 func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInput, key *string) error {
 	conn, err := conversations.Connection(ctx, s.w.Q, s.c)
@@ -183,6 +183,10 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 	}
 
 	if err := a.Delivery.Dispatch(ctx, s.w.Tx, s.msg); err != nil {
+		return err
+	}
+
+	if err := s.consume(ctx, conversations.DraftReply); err != nil {
 		return err
 	}
 

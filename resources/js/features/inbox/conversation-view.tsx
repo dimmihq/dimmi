@@ -213,6 +213,7 @@ export function ConversationView({
         </div>
       </header>
       <Thread
+        conversation={conversation.id}
         entries={timeline.entries}
         customer={customer}
         channel={conversation.channel.name}

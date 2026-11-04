@@ -9,6 +9,8 @@
  * replies and more from the workspace) and a way to ask Operator. Files can
  * also be dropped on the panel or pasted. Sending goes to the server; a
  * sent draft empties, a refused one stays with the reason under it.
+ * Each draft, reply and note apart, is kept on the server and in the
+ * browser, so it survives leaving, reloading and another device.
  * Files are not sent yet. Each time Reply or Note is chosen the field
  * takes the focus, sized to the draft it holds. While a reply is being
  * written the composer says so through onTyping, and says it stopped
@@ -24,6 +26,9 @@ import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
 import { AttachmentStrip } from "./attachments";
+import { useInbox } from "./conversations";
+import { DraftConflict } from "./drafts/draft-conflict";
+import { useDraft } from "./drafts/use-draft";
 import { type Mode, modes } from "./modes";
 import { SendMenu } from "./send-menu";
 import { useAttachments } from "./use-attachments";
@@ -40,6 +45,7 @@ const surface =
 const settle = [0.22, 1, 0.36, 1] as const;
 
 export function Composer({
+  conversation,
   mode,
   focusKey,
   customer,
@@ -49,6 +55,7 @@ export function Composer({
   onAskOperator,
   onTyping,
 }: {
+  conversation: string;
   mode: Mode | null;
   focusKey: number;
   customer: string;
@@ -72,6 +79,7 @@ export function Composer({
             className="overflow-hidden"
           >
             <Panel
+              conversation={conversation}
               mode={mode}
               focusKey={focusKey}
               customer={customer}
@@ -131,6 +139,7 @@ function sizeToText(field: HTMLTextAreaElement) {
 }
 
 function Panel({
+  conversation,
   mode,
   focusKey,
   customer,
@@ -140,6 +149,7 @@ function Panel({
   onAskOperator,
   onTyping,
 }: {
+  conversation: string;
   mode: Mode;
   focusKey: number;
   customer: string;
@@ -149,7 +159,9 @@ function Panel({
   onAskOperator: () => void;
   onTyping: Report;
 }) {
-  const [drafts, setDrafts] = useState<Record<Mode, string>>({ reply: "", note: "" });
+  const { workspace } = useInbox();
+  const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
+  const draft = drafts[mode];
   const [sending, setSending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const attachments = useAttachments();
@@ -166,7 +178,7 @@ function Panel({
   }, []);
 
   const insert = (text: string) => {
-    setDrafts((before) => ({ ...before, [mode]: before[mode] ? `${before[mode]}\n\n${text}` : text }));
+    draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
     window.requestAnimationFrame(() => {
       if (field.current) {
         sizeToText(field.current);
@@ -175,7 +187,7 @@ function Panel({
     });
   };
 
-  const text = drafts[mode].trim();
+  const text = draft.body.trim();
   const send = async (then?: "close" | "snooze") => {
     if (!text || sending) {
       return;
@@ -185,7 +197,7 @@ function Panel({
     onTyping(false);
     try {
       await onSend(mode, text, note ? undefined : then);
-      setDrafts((before) => ({ ...before, [mode]: "" }));
+      draft.sent();
       attachments.clear();
     } catch (error) {
       setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
@@ -210,6 +222,7 @@ function Panel({
           onSelectionChange={(selected) => {
             const next = [...selected][0];
             if (next === modes.reply || next === modes.note) {
+              draft.flush();
               onModeChange(next);
             }
           }}
@@ -238,14 +251,15 @@ function Panel({
         )}
       >
         <div className="flex flex-col gap-3 px-1.5">
+          <DraftConflict draft={draft} />
           <AttachmentStrip files={attachments.files} onRemove={attachments.remove} />
           <textarea
             key={`${mode}-${focusKey}`}
             ref={arrive}
-            value={drafts[mode]}
+            value={draft.body}
             onChange={(event) => {
               const value = event.target.value;
-              setDrafts((before) => ({ ...before, [mode]: value }));
+              draft.edit(value);
               if (!note) {
                 onTyping(value.trim() !== "");
               }

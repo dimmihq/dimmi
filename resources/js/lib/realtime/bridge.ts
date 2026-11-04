@@ -111,6 +111,8 @@ export class Bridge {
       this.patchLists(workspace, envelope.data, false);
     } else if (envelope.event === "inbox_preferences.updated") {
       this.refetch(realtimeKeys.preferences(workspace), realtimeKeys.counts(workspace));
+    } else if (envelope.event === "draft.updated") {
+      this.refetch(realtimeKeys.drafts(workspace));
     } else if (envelope.event.startsWith("conversation_view.")) {
       this.refetch(realtimeKeys.views(workspace), realtimeKeys.counts(workspace));
     } else if (envelope.event === "workspace.updated") {

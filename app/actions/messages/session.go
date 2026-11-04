@@ -184,3 +184,13 @@ func excerpt(body *string) string {
 
 	return string(runes[:excerptLength]) + "…"
 }
+
+/*
+consume ends the caller's draft of the conversation in the mode the
+message was written in.
+*/
+func (s *session) consume(ctx context.Context, mode string) error {
+	return conversations.ConsumeDraft(ctx, s.w, conversations.SentDraft{
+		Workspace: s.c.WorkspaceID, Conversation: &s.c.ID, Mode: mode,
+	})
+}

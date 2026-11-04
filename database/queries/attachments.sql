@@ -53,8 +53,9 @@ DELETE FROM attachments WHERE workspace_id = @workspace_id AND id = @id AND mess
 -- name: ListUnattachedAttachments :many
 -- ListUnattachedAttachments returns uploads of the workspace no message
 -- used, created before the cutoff, oldest first, so a purge can remove
--- their files and then their rows.
-SELECT * FROM attachments
-WHERE workspace_id = @workspace_id AND message_id IS NULL AND created_at < @before
-ORDER BY created_at, id
+-- their files and then their rows. Files a draft still holds are kept.
+SELECT * FROM attachments AS a
+WHERE a.workspace_id = @workspace_id AND a.message_id IS NULL AND a.created_at < @before
+  AND NOT EXISTS (SELECT 1 FROM conversation_drafts d WHERE d.attachment_ids @> ARRAY[a.id])
+ORDER BY a.created_at, a.id
 LIMIT @row_limit;

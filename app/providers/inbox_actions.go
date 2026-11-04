@@ -13,6 +13,8 @@
 package providers
 
 import (
+	"errors"
+
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/queue"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/drafts"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/channels"
@@ -70,12 +73,17 @@ func bootInbox(a *app.App) error {
 
 	bootWorkbench(a)
 
-	return queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels})
+	return errors.Join(
+		queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels}),
+		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{
+			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.Inbox.Drafts.RetentionDays,
+		}),
+	)
 }
 
 /*
 bootWorkbench builds the actions of the inbox's workbench: preferences,
-saved views and snooze lists.
+saved views, snooze lists and drafts.
 */
 func bootWorkbench(a *app.App) {
 	acts := a.Actions.Inbox
@@ -92,4 +100,10 @@ func bootWorkbench(a *app.App) {
 	acts.ListSnoozeLists = &conversations.ListSnoozeLists{DB: a.DB}
 	acts.UpdateSnoozeList = &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ShowSnoozeOptions = &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock}
+
+	drafter := drafts.Saver{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.ListDrafts = &drafts.ListDrafts{DB: a.DB}
+	acts.SaveDraft = &drafts.SaveDraft{Saver: drafter}
+	acts.UpdateDraft = &drafts.UpdateDraft{Saver: drafter}
+	acts.DeleteDraft = &drafts.DeleteDraft{Saver: drafter}
 }

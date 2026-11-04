@@ -278,9 +278,10 @@ func (q *Queries) ListMessageAttachments(ctx context.Context, arg ListMessageAtt
 }
 
 const listUnattachedAttachments = `-- name: ListUnattachedAttachments :many
-SELECT id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, path, filename, content_type, size_bytes, sha256, width, height, inline, content_id, scan_status, created_at, updated_at FROM attachments
-WHERE workspace_id = $1 AND message_id IS NULL AND created_at < $2
-ORDER BY created_at, id
+SELECT id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, path, filename, content_type, size_bytes, sha256, width, height, inline, content_id, scan_status, created_at, updated_at FROM attachments AS a
+WHERE a.workspace_id = $1 AND a.message_id IS NULL AND a.created_at < $2
+  AND NOT EXISTS (SELECT 1 FROM conversation_drafts d WHERE d.attachment_ids @> ARRAY[a.id])
+ORDER BY a.created_at, a.id
 LIMIT $3
 `
 
@@ -292,7 +293,7 @@ type ListUnattachedAttachmentsParams struct {
 
 // ListUnattachedAttachments returns uploads of the workspace no message
 // used, created before the cutoff, oldest first, so a purge can remove
-// their files and then their rows.
+// their files and then their rows. Files a draft still holds are kept.
 func (q *Queries) ListUnattachedAttachments(ctx context.Context, arg ListUnattachedAttachmentsParams) ([]Attachment, error) {
 	rows, err := q.db.Query(ctx, listUnattachedAttachments, arg.WorkspaceID, arg.Before, arg.RowLimit)
 	if err != nil {

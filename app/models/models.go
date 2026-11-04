@@ -163,6 +163,20 @@ type Conversation struct {
 	Priority               int16                   `json:"priority"`
 }
 
+type ConversationDraft struct {
+	ID              ids.UUID        `json:"id"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	MemberID        ids.UUID        `json:"member_id"`
+	ConversationID  *ids.UUID       `json:"conversation_id"`
+	Mode            string          `json:"mode"`
+	Body            string          `json:"body"`
+	AttachmentIds   []ids.UUID      `json:"attachment_ids"`
+	Recipients      json.RawMessage `json:"recipients"`
+	ClientUpdatedAt time.Time       `json:"client_updated_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
 type ConversationParticipant struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
 	ConversationID ids.UUID  `json:"conversation_id"`

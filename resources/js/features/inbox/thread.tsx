@@ -148,6 +148,7 @@ function useComposerKeys(keys: Record<string, () => void>) {
 }
 
 export function Thread({
+  conversation,
   entries,
   customer,
   channel,
@@ -156,6 +157,7 @@ export function Thread({
   onTyping,
   status,
 }: {
+  conversation: string;
   entries: ThreadEntry[];
   customer: string;
   channel: string;
@@ -194,6 +196,7 @@ export function Thread({
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}
         <Composer
+          conversation={conversation}
           mode={mode}
           focusKey={focusKey}
           customer={customer}
