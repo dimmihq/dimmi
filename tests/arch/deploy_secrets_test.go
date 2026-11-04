@@ -1,6 +1,7 @@
 package arch_test
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -23,9 +24,11 @@ a call reading one, is not a finding.
 func secretPatterns() map[string]*regexp.Regexp {
 	return map[string]*regexp.Regexp{
 		"aws access key": regexp.MustCompile(`\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA)[0-9A-Z]{16}\b`),
-		"aws account id": regexp.MustCompile(`(^|[^0-9])[0-9]{12}([^0-9]|$)`),
-		"password":       regexp.MustCompile(`(?i)password["']?\s*[:=]\s*(?:["'][^\s"']{4,}["']|[^\s"'(){}\[\],;]+\s*$)`),
-		"private key":    regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY`),
+		"aws account id": regexp.MustCompile(`(^|\D)\d{12}(\D|$)`),
+		"password": regexp.MustCompile(
+			`(?i)password["']?\s*[:=]\s*(?:["'][^\s"']{4,}["']|[^\s"'(){}\[\],;]+\s*$)`,
+		),
+		"private key": regexp.MustCompile(`-{5}BEGIN [A-Z ]*PRIVATE KEY`),
 	}
 }
 
@@ -44,47 +47,60 @@ func skippedForSecrets(entry fs.DirEntry) bool {
 
 /*
 scanForSecrets returns one finding per line of the tree that matches a
-pattern, naming the kind of secret but never its value.
+pattern, naming the kind of secret but never its value. Files are read
+through a root, so a link inside the tree cannot lead the scan outside it.
 */
-func scanForSecrets(root string) ([]string, error) {
-	var findings []string
+func scanForSecrets(root string) (findings []string, err error) {
+	tree, err := os.OpenRoot(root)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", root, err)
+	}
 
-	patterns := secretPatterns()
+	defer func() { err = errors.Join(err, tree.Close()) }()
 
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	err = fs.WalkDir(tree.FS(), ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if skippedForSecrets(entry) {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
+		if skippedForSecrets(entry) && entry.IsDir() {
+			return filepath.SkipDir
+		}
 
+		if skippedForSecrets(entry) || entry.IsDir() {
 			return nil
 		}
 
-		if entry.IsDir() {
-			return nil
-		}
+		found, err := scanFile(tree, path)
+		findings = append(findings, found...)
 
-		contents, err := os.ReadFile(filepath.Clean(path))
-		if err != nil {
-			return fmt.Errorf("read %s: %w", path, err)
-		}
-
-		for number, line := range strings.Split(string(contents), "\n") {
-			for kind, pattern := range patterns {
-				if pattern.MatchString(line) {
-					findings = append(findings, fmt.Sprintf("%s:%d: %s", path, number+1, kind))
-				}
-			}
-		}
-
-		return nil
+		return err
 	})
 
 	return findings, err
+}
+
+/*
+scanFile returns the findings of one file, each named by its path inside
+the scanned tree.
+*/
+func scanFile(tree *os.Root, path string) ([]string, error) {
+	contents, err := tree.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+
+	var findings []string
+
+	for number, line := range strings.Split(string(contents), "\n") {
+		for kind, pattern := range secretPatterns() {
+			if pattern.MatchString(line) {
+				findings = append(findings, fmt.Sprintf("%s:%d: %s", path, number+1, kind))
+			}
+		}
+	}
+
+	return findings, nil
 }
 
 func TestDeploySecrets(t *testing.T) {
