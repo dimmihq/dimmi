@@ -24,6 +24,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/roles"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -113,9 +114,9 @@ bulkChange is the change every member gets: a built-in role, or a
 custom role, nil to take it away.
 */
 type bulkChange struct {
-	role       *enums.Role
-	customRole bool
-	roleID     *ids.UUID
+	role         *enums.Role
+	customRole   bool
+	customRoleID *ids.UUID
 }
 
 /*
@@ -144,7 +145,7 @@ func (c *MemberController) bulkChange(in *requests.UpdateMembersRequest) (bulkCh
 			return bulkChange{}, err
 		}
 
-		out.roleID = &id
+		out.customRoleID = &id
 	}
 
 	return out, nil
@@ -174,7 +175,7 @@ func (c *MemberController) changeOne(ctx context.Context, named string, change b
 
 	if change.customRole {
 		_, err = c.AssignRole.Handle(ctx, roles.AssignRoleInput{
-			Membership: membership(ctx), MemberID: id, RoleID: change.roleID,
+			Membership: membership(ctx), MemberID: id, CustomRole: change.customRoleID,
 		})
 	} else {
 		_, err = c.UpdateMember.Handle(ctx, members.UpdateMemberInput{
@@ -194,14 +195,14 @@ unchanged reports whether the member already stands as the change asks.
 */
 func (b bulkChange) unchanged(m models.WorkspaceMember) bool {
 	if !b.customRole {
-		return string(*b.role) == m.Role && m.CustomRoleID == nil
+		return !appauth.RoleChanged(string(*b.role), m.Role) && m.CustomRoleID == nil
 	}
 
-	if b.roleID == nil || m.CustomRoleID == nil {
-		return b.roleID == nil && m.CustomRoleID == nil
+	if b.customRoleID == nil || m.CustomRoleID == nil {
+		return b.customRoleID == nil && m.CustomRoleID == nil
 	}
 
-	return *b.roleID == *m.CustomRoleID
+	return *b.customRoleID == *m.CustomRoleID
 }
 
 /*

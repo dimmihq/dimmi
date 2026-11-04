@@ -113,6 +113,9 @@ linters:
             - github.com/go-webauthn/webauthn
             - github.com/go-jose/go-jose/v4
             - github.com/coreos/go-oidc/v3
+            - github.com/russellhaering/gosaml2
+            - github.com/russellhaering/goxmldsig
+            - github.com/beevik/etree
             - github.com/standard-webhooks/standard-webhooks/libraries
             - github.com/SherClockHolmes/webpush-go
             # ids, time, strings

@@ -39,7 +39,7 @@ the custom role they get, nil to take theirs away.
 type AssignRoleInput struct {
 	Membership authz.Membership
 	MemberID   ids.UUID
-	RoleID     *ids.UUID
+	CustomRole *ids.UUID
 }
 
 /*
@@ -114,7 +114,7 @@ func (a *AssignRole) assign(
 		return exceptions.ErrInvalidTransition.OnField("custom_role_id").With("from", target.Role)
 	}
 
-	if sameRole(target.CustomRoleID, in.RoleID) {
+	if sameRole(target.CustomRoleID, in.CustomRole) {
 		return nil
 	}
 
@@ -128,7 +128,7 @@ func (a *AssignRole) assign(
 	}
 
 	updated, err := models.New(tx).SetMemberCustomRole(ctx, models.SetMemberCustomRoleParams{
-		WorkspaceID: target.WorkspaceID, ID: target.ID, Role: role, CustomRoleID: in.RoleID, Now: a.Clock.Now(),
+		WorkspaceID: target.WorkspaceID, ID: target.ID, Role: role, CustomRoleID: in.CustomRole, Now: a.Clock.Now(),
 	})
 	if err != nil {
 		return fmt.Errorf("assign role: %w", err)
@@ -154,11 +154,11 @@ as a whole when the custom role is taken away.
 func (a *AssignRole) grant(
 	ctx context.Context, q *models.Queries, target models.WorkspaceMember, in AssignRoleInput,
 ) (string, []string, error) {
-	if in.RoleID == nil {
+	if in.CustomRole == nil {
 		return target.Role, appauth.RolePermissions(enums.Role(target.Role)), nil
 	}
 
-	role, err := lockRole(ctx, q, target.WorkspaceID, *in.RoleID)
+	role, err := lockRole(ctx, q, target.WorkspaceID, *in.CustomRole)
 	if err != nil {
 		return "", nil, err
 	}
@@ -173,7 +173,7 @@ it moved, then the custom role.
 func (a *AssignRole) announce(ctx context.Context, tx *database.Tx, c change) error {
 	before, after, by := c.before, c.after, c.by
 
-	if before.Role != after.Role {
+	if appauth.RoleChanged(before.Role, after.Role) {
 		err := a.Events.Dispatch(ctx, tx, appevents.MemberRoleChanged{
 			WorkspaceID: after.WorkspaceID, MemberID: after.ID, UserID: after.UserID, From: before.Role, To: after.Role,
 			ChangedBy: by,

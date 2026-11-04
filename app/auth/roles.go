@@ -135,3 +135,12 @@ over, and the role a deactivated owner comes back with.
 func ManagerRole() enums.Role {
 	return enums.RoleAdmin
 }
+
+/*
+RoleChanged reports whether a member's built-in role differs before and
+after a change, so the change can be announced. It decides nothing about
+what either role may do.
+*/
+func RoleChanged(from, to string) bool {
+	return from != to
+}

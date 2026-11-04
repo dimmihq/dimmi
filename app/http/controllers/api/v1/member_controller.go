@@ -268,7 +268,7 @@ func (c *MemberController) assign(ctx context.Context, memberID ids.UUID, named 
 			return nil, err
 		}
 
-		in.RoleID = &roleID
+		in.CustomRole = &roleID
 	}
 
 	row, err := c.AssignRole.Handle(ctx, in)
