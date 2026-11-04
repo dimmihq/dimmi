@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/clock"
+	fconfig "github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/customdomain"
 	"github.com/dimmihq/dimmi/framework/database"
 	fdns "github.com/dimmihq/dimmi/framework/dns"
@@ -119,12 +120,13 @@ type Inspection struct {
 
 /*
 Domains holds what every domain action needs. Driver is the install's
-customer-stream driver at the time, Provider its side of a domain, nil
-for a provider set up by hand, and Region the SES region the return path
-points at.
+customer-stream driver at the time and Mailer that mailer's
+configuration, Provider its side of a domain, nil for a provider set up
+by hand, and Region the SES region the return path points at.
 */
 type Domains struct {
 	DB       *database.DB
+	Mailer   fconfig.Section
 	Clock    clock.Clock
 	Events   *events.Dispatcher
 	Keys     encryption.KeyManager

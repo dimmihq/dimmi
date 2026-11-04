@@ -40,7 +40,7 @@ func bootEmailSending(a *app.App) error {
 	cfg := a.Config.Channels.Email
 	domains := &email.Domains{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Keys: a.Keys, DNS: a.DNS, Driver: customerTransport(a),
-		Config: cfg, Edition: a.Config.App.Edition,
+		Mailer: customerSection(a), Config: cfg, Edition: a.Config.App.Edition,
 	}
 
 	domains.Provider, domains.Region = domainProvider(a, domains.Driver, cfg.Sending)
