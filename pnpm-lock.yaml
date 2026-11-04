@@ -68,6 +68,9 @@ importers:
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
+      tinykeys:
+        specifier: 3.1.0
+        version: 3.1.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.6.4
@@ -1762,6 +1765,9 @@ packages:
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
+
+  tinykeys@3.1.0:
+    resolution: {integrity: sha512-LyQgmvqSSCBzK6PJjDy1kJWlanBVY0LFnJtte3AzJfdoijCZ+nDWjT0GvJAoHI+LUiBGpQQfvRrRNmValIZQiw==}
 
   tldts-core@7.4.20:
     resolution: {integrity: sha512-C630TWXZCZmLq0F2bW4QqwnaaxCQ/svpAqvJwnC4JvgEM5ohhBnGsEzTLSOXcN+xjz+kEaHS5uoWIw2klnqd0A==}
@@ -3692,6 +3698,8 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
+
+  tinykeys@3.1.0: {}
 
   tldts-core@7.4.20: {}
 

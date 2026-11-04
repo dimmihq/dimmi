@@ -212,6 +212,23 @@ type ConversationTag struct {
 	MessageID      *ids.UUID `json:"message_id"`
 }
 
+type ConversationView struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Icon              *string         `json:"icon"`
+	Scope             string          `json:"scope"`
+	OwnerMemberID     *ids.UUID       `json:"owner_member_id"`
+	Definition        json.RawMessage `json:"definition"`
+	Sort              *string         `json:"sort"`
+	StatusFilter      *string         `json:"status_filter"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	Position          int32           `json:"position"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+	DeletedAt         *time.Time      `json:"deleted_at"`
+}
+
 type EmailAddress struct {
 	ID                     ids.UUID        `json:"id"`
 	WorkspaceID            ids.UUID        `json:"workspace_id"`
@@ -234,33 +251,42 @@ type EmailAddress struct {
 }
 
 type EmailDomain struct {
-	ID                      ids.UUID          `json:"id"`
-	WorkspaceID             ids.UUID          `json:"workspace_id"`
-	Domain                  string            `json:"domain"`
-	Status                  string            `json:"status"`
-	Driver                  string            `json:"driver"`
-	ProviderTrustedAt       *time.Time        `json:"provider_trusted_at"`
-	OwnershipToken          string            `json:"ownership_token"`
-	OwnershipVerifiedAt     *time.Time        `json:"ownership_verified_at"`
-	DkimSelector            *string           `json:"dkim_selector"`
-	DkimPrivateKeyEncrypted encryption.Sealed `json:"dkim_private_key_encrypted"`
-	DkimTokens              []string          `json:"dkim_tokens"`
-	DkimSigningHostedZone   *string           `json:"dkim_signing_hosted_zone"`
-	MailFromDomain          *string           `json:"mail_from_domain"`
-	SesIdentityStatus       *string           `json:"ses_identity_status"`
-	Records                 json.RawMessage   `json:"records"`
-	Warnings                json.RawMessage   `json:"warnings"`
-	CheckAttempts           int32             `json:"check_attempts"`
-	LastCheckedAt           *time.Time        `json:"last_checked_at"`
-	NextCheckAt             *time.Time        `json:"next_check_at"`
-	VerifiedAt              *time.Time        `json:"verified_at"`
-	DegradedAt              *time.Time        `json:"degraded_at"`
-	FailedAt                *time.Time        `json:"failed_at"`
-	FailureReason           *string           `json:"failure_reason"`
-	CreatedByMemberID       *ids.UUID         `json:"created_by_member_id"`
-	DeletedAt               *time.Time        `json:"deleted_at"`
-	CreatedAt               time.Time         `json:"created_at"`
-	UpdatedAt               time.Time         `json:"updated_at"`
+	ID                          ids.UUID          `json:"id"`
+	WorkspaceID                 ids.UUID          `json:"workspace_id"`
+	Domain                      string            `json:"domain"`
+	Status                      string            `json:"status"`
+	Driver                      string            `json:"driver"`
+	ProviderTrustedAt           *time.Time        `json:"provider_trusted_at"`
+	OwnershipToken              string            `json:"ownership_token"`
+	OwnershipVerifiedAt         *time.Time        `json:"ownership_verified_at"`
+	DkimSelector                *string           `json:"dkim_selector"`
+	DkimPrivateKeyEncrypted     encryption.Sealed `json:"dkim_private_key_encrypted"`
+	DkimTokens                  []string          `json:"dkim_tokens"`
+	DkimSigningHostedZone       *string           `json:"dkim_signing_hosted_zone"`
+	MailFromDomain              *string           `json:"mail_from_domain"`
+	SesIdentityStatus           *string           `json:"ses_identity_status"`
+	Records                     json.RawMessage   `json:"records"`
+	Warnings                    json.RawMessage   `json:"warnings"`
+	CheckAttempts               int32             `json:"check_attempts"`
+	LastCheckedAt               *time.Time        `json:"last_checked_at"`
+	NextCheckAt                 *time.Time        `json:"next_check_at"`
+	VerifiedAt                  *time.Time        `json:"verified_at"`
+	DegradedAt                  *time.Time        `json:"degraded_at"`
+	FailedAt                    *time.Time        `json:"failed_at"`
+	FailureReason               *string           `json:"failure_reason"`
+	CreatedByMemberID           *ids.UUID         `json:"created_by_member_id"`
+	DeletedAt                   *time.Time        `json:"deleted_at"`
+	CreatedAt                   time.Time         `json:"created_at"`
+	UpdatedAt                   time.Time         `json:"updated_at"`
+	ProviderDomainID            *string           `json:"provider_domain_id"`
+	DnsHostOverride             *string           `json:"dns_host_override"`
+	DomainConnectAppliedAt      *time.Time        `json:"domain_connect_applied_at"`
+	VerifyingSince              *time.Time        `json:"verifying_since"`
+	CheckRequestedAt            *time.Time        `json:"check_requested_at"`
+	SesDkimRestartedAt          *time.Time        `json:"ses_dkim_restarted_at"`
+	DkimNextSelector            *string           `json:"dkim_next_selector"`
+	DkimNextPrivateKeyEncrypted encryption.Sealed `json:"dkim_next_private_key_encrypted"`
+	DkimRotatedAt               *time.Time        `json:"dkim_rotated_at"`
 }
 
 type EmailMessageRef struct {
@@ -418,6 +444,15 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type MemberInboxPreference struct {
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	MemberID         ids.UUID        `json:"member_id"`
+	Sidebar          json.RawMessage `json:"sidebar"`
+	Views            json.RawMessage `json:"views"`
+	PinnedAttributes json.RawMessage `json:"pinned_attributes"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type Message struct {
@@ -661,6 +696,13 @@ type Session struct {
 	ExpiresAt       time.Time       `json:"expires_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type SnoozeList struct {
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TeamID      *ids.UUID       `json:"team_id"`
+	Options     json.RawMessage `json:"options"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 type Tag struct {

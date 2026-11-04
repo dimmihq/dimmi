@@ -50,6 +50,15 @@ export interface MessageSummary {
   created_at: string;
 }
 
+/*
+ * Viewer is a teammate who has the conversation open right now.
+ */
+export interface Viewer {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+}
+
 export interface Conversation {
   id: string;
   number: number;
@@ -70,6 +79,7 @@ export interface Conversation {
   team: Named | null;
   last_message: MessageSummary | null;
   tags: Tag[];
+  viewers?: Viewer[];
   created_at: string;
   updated_at: string;
 }
@@ -108,7 +118,52 @@ export interface Counts {
     unassigned: { open: number; unread: number };
     all: { open: number; capped: boolean };
     mentions: { unread: number };
+    inboxes: Record<string, { open: number }>;
+    teams: Record<string, { open: number }>;
+    members: Record<string, { open: number }>;
+    custom: Record<string, { open: number }>;
   };
+}
+
+/*
+ * The orders a list can have, as the API names them, with the words the
+ * sort control shows. Snooze ends only applies to snoozed lists.
+ */
+export const conversationSorts = [
+  { value: "-last_message_at", label: "Latest activity" },
+  { value: "last_message_at", label: "Oldest activity" },
+  { value: "waiting_since", label: "Waiting longest" },
+  { value: "-created_at", label: "Newest started" },
+  { value: "created_at", label: "Oldest started" },
+  { value: "-priority", label: "Priority" },
+  { value: "-priority,waiting_since", label: "Priority, waiting longest" },
+  { value: "snoozed_until", label: "Snooze ends" },
+] as const;
+
+export type ConversationSort = (typeof conversationSorts)[number]["value"];
+
+export type StatusFilter = "open" | "snoozed" | "closed" | "any";
+
+/*
+ * ViewPreference is how the person likes one view.
+ */
+export interface ViewPreference {
+  sort?: ConversationSort;
+  status?: StatusFilter;
+  layout?: "list" | "table";
+  columns?: string[];
+}
+
+export interface InboxPreferences {
+  sidebar: Record<string, unknown>;
+  views: Record<string, ViewPreference>;
+  pinned_attributes: string[];
+  updated_at: string | null;
+}
+
+export interface InboxSummary {
+  id: string;
+  name: string;
 }
 
 /*
@@ -119,32 +174,69 @@ export interface ConversationChanges {
   assignee_id?: string | null;
   status?: ConversationStatus;
   snooze_preset?: "later_today" | "tomorrow" | "next_week" | "one_week";
+  snooze_option?: string;
+  snoozed_until?: string;
   priority?: ConversationPriority;
+  team_id?: string | null;
   unread?: boolean;
   add_tags?: string[];
   remove_tags?: string[];
 }
 
 /*
- * viewFilter is how an inbox view of the sidebar asks the list: the
- * view, and for mentions the open conversations someone mentioned the
- * person in.
+ * ListParams is what one list asks for: the view as filter[view] reads
+ * it, the status shown, the order and what the person searched.
  */
-export function conversationsPath(view: string, search: string): string {
-  const params = new URLSearchParams({ "filter[view]": view, limit: "50" });
+export interface ListParams {
+  view: string;
+  status: StatusFilter;
+  sort?: ConversationSort;
+  search?: string;
+}
+
+/*
+ * conversationsPath is the list's address. Viewers come along with every
+ * page, so rows show who has a conversation open.
+ */
+export function conversationsPath({ view, status, sort, search = "" }: ListParams): string {
+  const params = new URLSearchParams({ "filter[view]": view, "filter[status]": status, limit: "50" });
+  params.set("include", "viewers");
+  if (sort) {
+    params.set("sort", sort);
+  }
   if (search.trim()) {
     params.set("q", search.trim());
-    params.set("filter[status]", "any");
   }
 
   return `/conversations?${params.toString()}`;
 }
 
-export function conversationsQuery(workspace: string, view: string, search = "") {
+export function conversationsQuery(workspace: string, list: ListParams) {
   return queryOptions({
-    queryKey: [...realtimeKeys.conversations(workspace), view, search],
-    queryFn: () => request<Conversation[]>("GET", conversationsPath(view, search), undefined, { workspace }),
+    queryKey: [...realtimeKeys.conversations(workspace), list.view, list.status, list.sort ?? "", list.search ?? ""],
+    queryFn: () => request<Conversation[]>("GET", conversationsPath(list), undefined, { workspace }),
   });
+}
+
+export function inboxesQuery(workspace: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "inboxes"],
+    queryFn: () => request<InboxSummary[]>("GET", "/inboxes?limit=100", undefined, { workspace }),
+  });
+}
+
+export function preferencesQuery(workspace: string) {
+  return queryOptions({
+    queryKey: realtimeKeys.preferences(workspace),
+    queryFn: () => request<InboxPreferences>("GET", "/inbox-preferences", undefined, { workspace }),
+  });
+}
+
+export function updatePreferences(
+  write: Write,
+  changes: Partial<Pick<InboxPreferences, "sidebar" | "views" | "pinned_attributes">>,
+): Promise<InboxPreferences> {
+  return request<InboxPreferences>("PATCH", "/inbox-preferences", changes, writeOptions(write));
 }
 
 export function conversationQuery(workspace: string, id: string) {
@@ -189,11 +281,35 @@ export function updateConversation(write: Write, id: string, changes: Conversati
   return request<Conversation>("PATCH", `/conversations/${encodeURIComponent(id)}`, changes, writeOptions(write));
 }
 
-export function reply(write: Write, id: string, body: string): Promise<Message> {
+/*
+ * Then is what happens to the conversation once a reply is sent: it
+ * keeps its status, closes, or snoozes by one of its snooze options.
+ */
+export type Then = { kind: "close" } | { kind: "snooze"; option: string };
+
+const thenField = "then";
+
+/*
+ * afterFields writes what happens next as the reply's then and snooze
+ * fields; the field name comes from a constant because a then key on an
+ * object literal reads as a promise to tools.
+ */
+function afterFields(then: Then | undefined): Record<string, unknown> {
+  if (!then) {
+    return {};
+  }
+  const fields: Record<string, unknown> = { [thenField]: then.kind };
+
+  return then.kind === "snooze" ? { ...fields, snooze: { option: then.option } } : fields;
+}
+
+export function reply(write: Write, id: string, body: string, then?: Then): Promise<Message> {
+  const after = afterFields(then);
+
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
-    { body, client_message_id: crypto.randomUUID() },
+    { body, client_message_id: crypto.randomUUID(), ...after },
     writeOptions(write),
   );
 }
@@ -222,4 +338,50 @@ export function sendTyping(workspace: string, id: string, state: "start" | "stop
     { state, composer: "reply" },
     { workspace },
   );
+}
+
+export interface ConversationRef {
+  id: string;
+  number: number;
+  subject: string | null;
+  status: ConversationStatus;
+}
+
+/*
+ * SearchResults are what the quick search found: the conversation a
+ * number or id names, conversations with the matching excerpt, and
+ * customers.
+ */
+export interface SearchResults {
+  jump: ConversationRef | null;
+  conversations: { conversation: ConversationRef; contact: ContactSummary; highlight: string | null }[];
+  contacts: ContactSummary[];
+}
+
+export function searchQuery(workspace: string, text: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "search", text],
+    queryFn: () => request<SearchResults>("GET", `/search?q=${encodeURIComponent(text)}`, undefined, { workspace }),
+  });
+}
+
+/*
+ * SnoozeChoice is one way to snooze a conversation and the moment it
+ * ends for the reader.
+ */
+export interface SnoozeChoice {
+  key: string;
+  label: string;
+  kind: string;
+  until: string;
+}
+
+export function snoozeChoicesQuery(workspace: string, conversation: string) {
+  return queryOptions({
+    queryKey: [...realtimeKeys.conversation(workspace, conversation), "snooze-options"],
+    queryFn: () =>
+      request<SnoozeChoice[]>("GET", `/snooze-options?conversation=${encodeURIComponent(conversation)}`, undefined, {
+        workspace,
+      }),
+  });
 }

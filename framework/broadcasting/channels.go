@@ -53,17 +53,18 @@ long, so a client that reconnects in time receives what it missed; both
 must be positive for history to be kept.
 
 ListenersChanged runs each time a connection starts or stops listening
-on a channel of the pattern, with who it is and the channel's name. It
-runs on the connection's own goroutine, so it hands long work elsewhere,
-and just before the change shows in Presence, so it reads the listeners
-a moment later.
+on a channel of the pattern, with the connection's context, who it is
+and the channel's name. It runs on the connection's own goroutine, so it
+hands long work elsewhere, and just before the change shows in Presence,
+so it reads the listeners a moment later. The context ends with the
+connection.
 */
 type ChannelOptions struct {
 	Presence         bool
 	JoinLeave        bool
 	HistorySize      int
 	HistoryTTL       time.Duration
-	ListenersChanged func(principal Principal, channel string)
+	ListenersChanged func(ctx context.Context, principal Principal, channel string)
 }
 
 /*

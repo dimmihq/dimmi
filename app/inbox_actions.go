@@ -15,6 +15,7 @@ package app
 import (
 	"github.com/dimmihq/dimmi/app/actions/companies"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
+	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
@@ -59,6 +60,8 @@ type InboxActions struct {
 	Search                  *conversations.Search
 	ListRecordConversations *conversations.ListRecordConversations
 	ShowContext             *conversations.ShowContext
+	ShowPreferences         *conversations.ShowPreferences
+	UpdatePreferences       *conversations.UpdatePreferences
 
 	ListTags          *tags.ListTags
 	CreateTag         *tags.CreateTag
@@ -66,6 +69,17 @@ type InboxActions struct {
 	DeleteTag         *tags.DeleteTag
 	TagConversation   *conversations.TagConversation
 	UntagConversation *conversations.UntagConversation
+
+	ListViews    *conversationviews.ListViews
+	ShowView     *conversationviews.ShowView
+	CreateView   *conversationviews.CreateView
+	UpdateView   *conversationviews.UpdateView
+	DeleteView   *conversationviews.DeleteView
+	ReorderViews *conversationviews.ReorderViews
+
+	ListSnoozeLists   *conversations.ListSnoozeLists
+	UpdateSnoozeList  *conversations.UpdateSnoozeList
+	ShowSnoozeOptions *conversations.ShowSnoozeOptions
 
 	ListMessages      *messages.ListMessages
 	Reply             *messages.ReplyToConversation

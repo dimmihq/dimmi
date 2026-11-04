@@ -138,6 +138,7 @@ func permissionGroups() map[string][]string {
 		"conversations:read": {"conversations:read"},
 		"conversations:write": {
 			"conversations:write", "conversations:delete", "conversations:moderate", "saved_replies:manage_shared",
+			"views:manage_shared",
 		},
 		"contacts:read": {"contacts:read"},
 		"contacts:write": {

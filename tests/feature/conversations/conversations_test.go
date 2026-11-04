@@ -89,7 +89,7 @@ func TestConversationsStore(t *testing.T) {
 		}).AssertStatus(422)
 	})
 
-	t.Run("refuses customer messages off the api channel and channels that cannot start conversations", func(t *testing.T) {
+	t.Run("refuses customer messages off the api channel and channels that cannot initiate", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		widget, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "widget")
