@@ -51,6 +51,7 @@ lint:
 	$(GOLANGCI_LINT) run ./...
 	$(GOLANGCI_LINT) run --build-tags dev ./...
 	$(GOLANGCI_LINT) run --build-tags cloud ./...
+	go vet -tags emailmatrix ./tests/emailmatrix/...
 	pnpm lint
 	pnpm typecheck
 
@@ -126,3 +127,26 @@ web-test:
 # with its own database (tests/e2e/server.ts). Needs `make services`.
 e2e: build
 	pnpm e2e
+
+# Checks the infrastructure code without reaching any account: credentials
+# are hidden from the toolchain, so a machine that holds some cannot use them
+# by accident. deploy/cdk has its own lockfile and is not part of the browser app.
+INFRA_ENV := env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE -u AWS_DEFAULT_PROFILE \
+	AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null AWS_EC2_METADATA_DISABLED=true \
+	CDK_DISABLE_CLI_TELEMETRY=true
+
+.PHONY: infra-check email-matrix
+
+infra-check:
+	cd deploy/cdk && pnpm install --frozen-lockfile
+	cd deploy/cdk && $(INFRA_ENV) pnpm run typecheck
+	cd deploy/cdk && $(INFRA_ENV) pnpm run synth:fixture
+	cd deploy/cdk && $(INFRA_ENV) pnpm run test
+	go test -count=1 ./tests/arch/ -run '^TestDeploy'
+
+# Sends real mail through real mailboxes and refuses to start without their
+# credentials. Each run needs the owner's approval. ARGS takes -adapter <name>
+# and -record, for example make email-matrix ARGS="-adapter postmark -record".
+email-matrix:
+	EMAIL_MATRIX_ARGS="$(ARGS)" EMAIL_MATRIX_ROOT="$(CURDIR)" \
+		go test -tags emailmatrix -count=1 -timeout 3h -v -run '^TestEmailMatrix$$' ./tests/emailmatrix/
