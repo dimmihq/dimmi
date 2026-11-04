@@ -1,4 +1,4 @@
-# 19 Enterprise identity: tasks
+# 21 Enterprise identity: tasks
 
 Style: caveman. Order matters. Every task merged with tests. App logic: integration tests against real Postgres + Valkey (testing.md). Fakes only at IdP boundary: `framework/saml/samltest`, `framework/socialite/drivertest`. Migrations range `20261201080001+`. Other tracks: needs track 07 M16 (audit labels) only for label text; otherwise independent. `oauth_grants` columns: built whether or not mobile ships.
 

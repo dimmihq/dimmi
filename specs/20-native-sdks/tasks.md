@@ -1,4 +1,4 @@
-# 18 Native SDKs: tasks
+# 20 Native SDKs: tasks
 
 Style: caveman. Track 10 native-sdks, wave 2. **Starts only after 01 M3 merged and `/widget/v1` freeze committed** (01 tasks "Freeze" lists exactly what is frozen). Needs 01 M11 for hosted page tabs (M4 on) and 01 M8, M9 for theme and texts config (additive, stubbed by fixtures until landed). New migrations `20261201 10 NNNN`.
 
@@ -8,6 +8,8 @@ CI: `sdk-ci` job runs against real binary + compose. No real APNs, FCM or LLM. E
 
 - [ ] Package `sdk/packages/headless` builds from `resources/widget/client/`; `createDimmiClient`; adapters for fetch, storage, event source.
   - Tests: contract fixtures; integration against real server: every handshake row, send, stream, recover, polling.
+- [ ] Read `surface` when present (booleans, tab residual hidden, no evaluator); `track` posts only `surface.writable_events` names, else no-op. Additive: works with server before and after 18 M5.
+  - Tests: fixtures with and without `surface`; 403 `conversation_start_restricted` hides start; bundle holds no rule code.
 - [ ] Hooks `@dimmi/headless/react`, example `headless-react`.
   - Tests: Playwright: own UI sends and receives; E43 to E46; size budget 15 KB gz.
 

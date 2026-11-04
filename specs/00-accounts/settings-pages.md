@@ -149,7 +149,7 @@ Formula guard on every CSV out (members, audit): cell starting `=`, `+`, `-`, `@
 
 - Copy link always: `accept_url` returned on create and delivery to any caller with `members:write` (was only without mail). Stored only as hash, so existing pending row copy: `POST /invitations/{inv}/deliveries {channel: "link"}` rotates token, no mail, returns `accept_url`; UI warns "the emailed link stops working". Default channel `email`. Accept still enforces invited email.
 - Reminder after 3 days: job `RemindInviters` daily; pending invitations with `last_sent_at` older than 3 days and `reminded_at` null: `InvitationPendingMail` to inviter once. Migration `20261201070002_add_reminded_at_to_invitations`. Inviter gone: skipped.
-- Teams on invite: team multi-select in dialog; API `team_ids` exists. Custom role select once 19 M7 ships.
+- Teams on invite: team multi-select in dialog; API `team_ids` exists. Custom role select once 21 M7 ships.
 - `invitation.resent` audit builds on F71 fix.
 - Custom invitation message stays out (spam vector).
 

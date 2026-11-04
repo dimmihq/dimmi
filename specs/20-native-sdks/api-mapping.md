@@ -1,4 +1,4 @@
-# 18 Native SDKs: API mapping
+# 20 Native SDKs: API mapping
 
 Style: caveman. Same verbs as web (`sdk-contract` Design rule 5). Same wire. JS names camelCase, Swift and Kotlin idiomatic.
 
@@ -21,6 +21,8 @@ Style: caveman. Same verbs as web (`sdk-contract` Design rule 5). Same wire. JS 
 | Attach | `uploads.create(file)` | same | same | `POST /attachments`, PUT, `PATCH /attachments/{att}` |
 | Page or screen | `screen(name)` | `screen(_:)` | `screen(name)` | `POST /pings` with `page.url = app://{bundle}/{name}` |
 | Context | `update({context, locale})` | same | same | `POST /pings`, config refetch on locale |
+| Track | `track(name, props)` | same | same | `POST /contact-events` only for `surface.writable_events`; else no-op (18) |
+| Surface | `useConfig`, `useSession` | same | same | `GET /surface`, session `surface`; `surface.changed` refetch |
 | Live stream | automatic | automatic | automatic | `POST /realtime-tokens`, `GET /connection/uni_sse`, fallback `GET /updates` |
 | Secondary tab | `show('help', opts)` | `show(.help)` | `show(View.Help)` | `POST /session-transfers`, then `/messenger/{app}?view=` |
 | Help data headless | `help.search(q)` | no | no | 08 routes |
@@ -46,6 +48,6 @@ Events same names as web `DimmiEvents` where they apply: `ready`, `open`, `close
 
 Read: `company`, `appearance.primary_color`, `header_color`, `button_color`, `header_ink`, `button_ink`, `background`, `theme`, `sound`, `texts`, `locale`, `dir`, `locales`, `tabs`, `open_to`, `show_team_avatars`, `show_availability`, `customer_status`, `delay_notice`, `privacy`, `home_links`, `features`, `branding`, `realtime`, `workflow_openers`.
 
-Ignored: `position`, `padding_*`, `launcher`, `font`, `page_rules`, `features.dev_context`, `intercom_shim`, `engage`.
+Ignored: `position`, `padding_*`, `launcher`, `font`, `surface.anonymous.launcher`, `features.dev_context`, `intercom_shim`, `engage`.
 
 Branding: same rule as web, cloud never-paid shows "Powered by dimmi" row.

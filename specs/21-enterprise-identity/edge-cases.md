@@ -1,4 +1,4 @@
-# 19 Enterprise identity: edge cases
+# 21 Enterprise identity: edge cases
 
 Style: caveman. Each: case. Decided behavior.
 

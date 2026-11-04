@@ -1,4 +1,4 @@
-# 19 Enterprise identity: SCIM 2.0
+# 21 Enterprise identity: SCIM 2.0
 
 Style: caveman. RFC 7643, 7644. Base `/scim/v2`. IdP pushes people and groups; dimmi applies through same actions as dashboard.
 

@@ -1,4 +1,4 @@
-# 19 Enterprise identity: sign-in rules, session length, SAML, OIDC, SCIM, IP allowlists
+# 21 Enterprise identity: sign-in rules, session length, SAML, OIDC, SCIM, IP allowlists
 
 Style: caveman. Date: 2026-11-04. Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`, [../00-accounts/README.md](../00-accounts/README.md). Every feature here is in both editions, default build and `-tags cloud`, every plan. Pricing promise: SSO free when shipped; no entitlement `feature` key gates any of it.
 

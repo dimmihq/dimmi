@@ -1,4 +1,4 @@
-# 18 Native and headless SDKs
+# 20 Native and headless SDKs
 
 Style: caveman. Date 2026-11-04. Owner decision: moved from later to now. Track 10 native-sdks, wave 2, after 01 session and messaging API frozen ([01 tasks](../01-messenger-widget/tasks.md) "Freeze"). Files: [api-mapping.md](api-mapping.md), [edge-cases.md](edge-cases.md), [tasks.md](tasks.md).
 
@@ -43,7 +43,14 @@ Prebuilt screen on each platform, drawn natively:
 - Theme from config colours, background, logo, `theme`; texts from config `texts`, `dir` respected. Web-only fields ignored (01 settings.md).
 - Tabs Help, What's new, Feedback, CSAT survey card: open hosted page in in-app web view (`WKWebView`, Android `WebView`, `react-native-webview` optional peer, else system browser) through session transfer + `view=`. Why: three feature UIs per platform is far more code than value; hosted page is same real widget and always current.
 
-Automatic announcements and survey triggers (15) do not fire in native SDKs: triggers are URL and `track` based on web core. `show('announcement' | 'survey')` still opens hosted page; headless exposes `/widget/v1/engage-items` to build own.
+Automatic announcements and survey triggers (15) do not fire in native SDKs: triggers are page and `track` based on web core. `show('announcement' | 'survey')` still opens hosted page; headless exposes `/widget/v1/engage-items` to build own.
+
+### Audiences (18)
+
+- Native evaluates no rule. Reads server decisions only: `surface` in session and `GET /widget/v1/surface`, refetch on `surface.changed` and identity change. Booleans from server, no evaluator in bundle.
+- Page leaves not applicable. Residual tree where boolean expected: launcher ignored (no launcher rule on native), tab treated as hidden (18 unknown rule). `messenger.start` always boolean, server enforces: 403 `conversation_start_restricted` hides start. `dynamic` ignored.
+- `track(name, props)`: name in `surface.writable_events` and session exists: batched 1 per 2 s to `POST /widget/v1/contact-events`, claimed. Else no-op. No local trigger. Verified events: host server through REST.
+- `PATCH /widget/v1/contact` drops non-writable keys silently, same as web.
 
 ### Headless hooks
 

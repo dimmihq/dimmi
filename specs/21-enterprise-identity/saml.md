@@ -1,4 +1,4 @@
-# 19 Enterprise identity: SAML 2.0 and enterprise OIDC
+# 21 Enterprise identity: SAML 2.0 and enterprise OIDC
 
 Style: caveman. Service provider only. Web browser SSO profile: HTTP-Redirect for request, HTTP-POST for response.
 

@@ -1,4 +1,4 @@
-# 19 Enterprise identity: access policy rules
+# 21 Enterprise identity: access policy rules
 
 Style: caveman. Rules set per workspace, evaluated by `access.policy` on every `W` route, no query. Extends `app/auth/access_policy.go`. Stored in `workspaces.settings.security`, read and written through typed methods in `app/models/workspace_security.go` (same pattern as `RequiresTwoFactor`; moved to `app/support/settings` registry when foundation registry lands, keys already `Enforceable`).
 

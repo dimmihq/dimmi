@@ -1,4 +1,4 @@
-# 18 Native SDKs: edge cases
+# 20 Native SDKs: edge cases
 
 Style: caveman. Each: case. decided behavior. Session and message rules from 01 edge-cases apply unchanged.
 
