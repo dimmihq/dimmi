@@ -3,6 +3,7 @@ package email_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -248,5 +249,88 @@ func TestSloppySendersAreStillHeard(t *testing.T) {
 			to(address.ForwardingAddress, "spf", "pass", "dkim", "pass", "dmarc", "pass", "from", tc.Owner.Email))
 
 		tc.Table("contact_identities").AssertHas(map[string]any{"value": tc.Owner.Email, "verified": false})
+	})
+}
+
+func TestUnnamedAndDisguisedFiles(t *testing.T) {
+	t.Parallel()
+
+	withFile := func(to, headers string) []byte {
+		return []byte("From: Hans <hans@customer.test>\r\nTo: " + to + "\r\nSubject: Files\r\n" +
+			"Content-Type: multipart/mixed; boundary=m\r\n\r\n--m\r\nContent-Type: text/plain\r\n\r\nSee file\r\n" +
+			"--m\r\n" + headers + "\r\n\r\nfile data\r\n--m--\r\n")
+	}
+
+	for _, name := range []string{"INVOICE.EXE ", "invoice.exe.", "folder/invoice.exe"} {
+		t.Run("refuses an executable hiding behind the name "+name, func(t *testing.T) {
+			t.Parallel()
+			tc, _ := emailCase(t)
+			address := defaultAddress(tc)
+
+			deliver(tc, withFile(address.ForwardingAddress, "Content-Type: application/octet-stream\r\n"+
+				`Content-Disposition: attachment; filename="`+name+`"`), "")
+
+			tc.Table("attachments").AssertCount(0)
+		})
+	}
+
+	t.Run("stores only the last part of a file name that is a path", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, withFile(address.ForwardingAddress, "Content-Type: application/pdf\r\n"+
+			`Content-Disposition: attachment; filename="../../etc/report.pdf"`), "")
+
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "report.pdf"})
+	})
+
+	for contentType, want := range map[string]string{
+		"text/calendar":           "attachment-1.ics",
+		"message/delivery-status": "delivery-status.txt",
+		"image/png":               "attachment-1.png",
+		"application/x-thing":     "attachment-1",
+	} {
+		t.Run("gives an unnamed "+contentType+" part a useful name", func(t *testing.T) {
+			t.Parallel()
+			tc, _ := emailCase(t)
+			address := defaultAddress(tc)
+
+			deliver(tc, withFile(address.ForwardingAddress,
+				"Content-Type: "+contentType+"\r\nContent-Disposition: attachment"), "")
+
+			tc.Table("attachments").AssertHas(map[string]any{"filename": want})
+		})
+	}
+
+	t.Run("names an attached mail after its subject", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, []byte("From: Hans <hans@customer.test>\r\nTo: "+address.ForwardingAddress+
+			"\r\nSubject: Files\r\nContent-Type: multipart/mixed; boundary=m\r\n\r\n--m\r\n"+
+			"Content-Type: text/plain\r\n\r\nSee file\r\n--m\r\nContent-Type: message/rfc822\r\n\r\n"+
+			"From: b@customer.test\r\nSubject: Old invoice\r\n\r\nInner\r\n--m--\r\n"), "")
+
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "Old invoice.eml"})
+	})
+}
+
+func TestDatesWithoutADefinedOffset(t *testing.T) {
+	t.Parallel()
+
+	t.Run("uses the arrival time for a date in a zone with no defined offset", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+		date := tc.Clock.Now().Add(-time.Hour).UTC().Format("Mon, 2 Jan 2006 15:04:05")
+
+		deliver(tc, []byte("From: Hans <hans@customer.test>\r\nTo: "+address.ForwardingAddress+
+			"\r\nSubject: Time\r\nDate: "+date+" CET\r\n\r\nHello"), "")
+
+		convs := conversations(tc)
+		require.Len(t, convs, 1)
+		assert.Equal(t, tc.Clock.Now().UTC(), messages(tc, convs[0].ID)[0].SentAt.UTC())
 	})
 }

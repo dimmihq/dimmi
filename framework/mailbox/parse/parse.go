@@ -24,7 +24,6 @@ import (
 	"cmp"
 	"fmt"
 	"io"
-	netmail "net/mail"
 	"net/textproto"
 	"strings"
 	"time"
@@ -78,9 +77,10 @@ Parsed is a received message.
 
 Header holds every top-level header field as received. Message ids are
 given without angle brackets. Date is zero when the header is missing
-or cannot be read. TextDerived is set when the message had no text of
-its own and Text was converted from its HTML. Truncated is set when the
-message exceeded MaxBytes and was only walked.
+or cannot be read, which includes a zone named without a defined
+offset. TextDerived is set when the message had no text of its own and
+Text was converted from its HTML. Truncated is set when the message
+exceeded MaxBytes and was only walked.
 */
 type Parsed struct {
 	Header      textproto.MIMEHeader
@@ -243,7 +243,7 @@ func fromHeader(top head) *Parsed {
 		return parsed
 	}
 
-	when, err := netmail.ParseDate(date)
+	when, err := readDate(date)
 	if err != nil {
 		parsed.Warnings = append(parsed.Warnings, "unreadable date: "+date)
 

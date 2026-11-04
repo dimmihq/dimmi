@@ -17,6 +17,7 @@
 package parse
 
 import (
+	"cmp"
 	"html"
 	"slices"
 	"strings"
@@ -33,6 +34,7 @@ const (
 	typePlain       = "text/plain"
 	typeHTML        = "text/html"
 	typeAlternative = "multipart/alternative"
+	typeMessage     = "message/rfc822"
 	typeBinary      = "application/octet-stream"
 	prefixMultipart = "multipart/"
 	dispAttachment  = "attachment"
@@ -252,23 +254,44 @@ func filesFirst(a, b Attachment) int {
 /*
 attachment describes a part as a file. A part counts as inline when it
 says so, or when it has a content id and says nothing. A text file is
-kept in UTF-8 like the rest of the text.
+kept in UTF-8 like the rest of the text. A mail attached without a name
+is named after its subject.
 */
 func attachment(part *enmime.Part) Attachment {
 	inline := part.Disposition == dispInline ||
 		(part.Disposition == "" && part.ContentType != typeBinary && part.ContentID != "")
 
-	content := part.Content
+	content, carried := contentOf(part)
 	if strings.HasPrefix(part.ContentType, "text/") {
 		content = []byte(decodedContent(part))
 	}
 
+	name := cmp.Or(part.FileName, carried)
+	if name == "" && part.ContentType == typeMessage {
+		name = attachedMailName(content)
+	}
+
 	return Attachment{
-		Filename:    decodeWords(repairUTF8([]byte(part.FileName))),
+		Filename:    decodeWords(repairUTF8([]byte(name))),
 		ContentType: part.ContentType,
 		ContentID:   part.ContentID,
 		Inline:      inline,
 		Size:        int64(len(content)),
 		Content:     content,
 	}
+}
+
+/*
+attachedMailName returns a file name for an attached mail, or "" when it
+has no subject to name it after.
+*/
+func attachedMailName(content []byte) string {
+	fields, _ := readFields(content)
+
+	subject := strings.TrimSpace(decodeWords(repairHeader(fields.Get("Subject"), content)))
+	if subject == "" {
+		return ""
+	}
+
+	return subject + ".eml"
 }

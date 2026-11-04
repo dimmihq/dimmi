@@ -8,6 +8,11 @@
 | also lose bidirectional control characters, which a sender could use
 | to make an address read as someone else's.
 |
+| A file name comes from the sender and ends up on disk listings and in
+| download headers, so only its last path element survives, without
+| control characters and without the trailing dots and spaces that
+| Windows ignores: "invoice.exe." is an executable there.
+|
 */
 
 package parse
@@ -47,7 +52,7 @@ func (p *Parsed) normalize(limits Limits) {
 	}
 
 	for i := range p.Attachments {
-		p.Attachments[i].Filename = clean(p.Attachments[i].Filename)
+		p.Attachments[i].Filename = cleanFilename(p.Attachments[i].Filename)
 	}
 
 	if len(p.Warnings) > limits.MaxWarnings {
@@ -60,6 +65,20 @@ func clean(s string) string {
 	s = strings.ReplaceAll(s, "\x00", "")
 
 	return norm.NFC.String(s)
+}
+
+func cleanFilename(name string) string {
+	name = clean(name)
+	name = name[strings.LastIndexAny(name, `/\`)+1:]
+	name = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.Is(unicode.Bidi_Control, r) {
+			return -1
+		}
+
+		return r
+	}, name)
+
+	return strings.TrimRight(strings.TrimLeft(name, " "), ". ")
 }
 
 func cleanAddress(a mail.Address) mail.Address {

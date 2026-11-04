@@ -144,7 +144,9 @@ func decodedContent(part *enmime.Part) string {
 
 	_, params, _, _ := mediatype.Parse(part.Header.Get("Content-Type"))
 
-	return decodeBody(part.Content, params[charsetParam], part.ContentType)
+	content, _ := contentOf(part)
+
+	return decodeBody(content, params[charsetParam], part.ContentType)
 }
 
 /*

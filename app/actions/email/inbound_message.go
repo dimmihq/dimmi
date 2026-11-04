@@ -22,9 +22,7 @@ import (
 	"cmp"
 	"context"
 	"io"
-	"path"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -214,7 +212,7 @@ func (a *ProcessInboundEmail) attachments(parts []parse.Attachment) ([]contracts
 	)
 
 	for i, part := range parts {
-		name := cmp.Or(part.Filename, "attachment-"+strconv.Itoa(i+1))
+		name := attachmentName(part, i)
 		reason := a.skipReason(part, len(files))
 
 		if reason != "" {
@@ -256,20 +254,6 @@ func (a *ProcessInboundEmail) skipReason(part parse.Attachment, stored int) stri
 	}
 
 	return ""
-}
-
-/*
-executable reports whether a file name has an extension that runs code
-when opened.
-*/
-func executable(filename string) bool {
-	switch strings.ToLower(path.Ext(filename)) {
-	case ".exe", ".bat", ".cmd", ".com", ".scr", ".pif", ".vbs", ".vbe", ".js", ".jse", ".msi", ".jar", ".ps1",
-		".wsf", ".hta", ".cpl", ".reg", ".lnk":
-		return true
-	}
-
-	return false
 }
 
 /*
