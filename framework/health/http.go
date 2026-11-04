@@ -24,11 +24,17 @@ import (
 
 /*
 Up returns the liveness handler. It answers 200 for as long as the
-process can serve a request.
+process can serve a request, naming the release that runs when one is
+given, so a deploy can check which build answers.
 */
-func Up() http.Handler {
+func Up(release string) http.Handler {
+	body := map[string]string{"status": "up"}
+	if release != "" {
+		body["release"] = release
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "up"})
+		writeJSON(w, http.StatusOK, body)
 	})
 }
 

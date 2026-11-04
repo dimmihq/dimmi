@@ -31,11 +31,19 @@ func TestUp(t *testing.T) {
 	t.Run("answers ok without running any check", func(t *testing.T) {
 		t.Parallel()
 
-		response := serve(t, health.Up())
+		response := serve(t, health.Up(""))
 
 		assert.Equal(t, http.StatusOK, response.Code)
 		assert.JSONEq(t, `{"status":"up"}`, response.Body.String())
 		assert.Equal(t, "no-store", response.Header().Get("Cache-Control"))
+	})
+
+	t.Run("names the release that runs", func(t *testing.T) {
+		t.Parallel()
+
+		response := serve(t, health.Up("4f47858"))
+
+		assert.JSONEq(t, `{"status":"up","release":"4f47858"}`, response.Body.String())
 	})
 }
 

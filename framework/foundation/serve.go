@@ -254,7 +254,7 @@ func (a *Application) adminHandler() http.Handler {
 
 func (a *Application) healthMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.Handle(PathUp, health.Up())
+	mux.Handle(PathUp, health.Up(a.Config.App.Release))
 	mux.Handle(PathReady, health.Ready(a.Health))
 
 	return mux
