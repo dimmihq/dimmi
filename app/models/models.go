@@ -390,6 +390,7 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+	RemindedAt        *time.Time `json:"reminded_at"`
 }
 
 type Message struct {

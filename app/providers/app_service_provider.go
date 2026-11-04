@@ -282,6 +282,7 @@ func registerJobs(a *app.App) error {
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
 		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
+		queue.Register(a.Queue, &jobs.RemindInviters{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
 		queue.Register(a.Queue, &jobs.PurgeExpiredAuthRecords{
 			DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,
 			SessionIdle: a.Config.Auth.Sessions.IdleLifetime,

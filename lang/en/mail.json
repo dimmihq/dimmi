@@ -127,7 +127,7 @@
     "action": "Review your API tokens"
   },
   "email_change_verification": {
-    "subject": "Confirm your new Dimmi email address",
+    "subject": "Confirm your new dimmi email address",
     "intro": "Open this link to make {{.email}} the address of your account.",
     "action": "Confirm new email",
     "expiry": "The link works for 24 hours. If you did not ask for it, ignore this email: nothing changes."
@@ -148,5 +148,11 @@
     "subject": "Your Dimmi account was deleted",
     "intro": "Your account and its sign-in details are gone, and this cannot be undone.",
     "advice": "You can sign up again with this address at any time, as a new account."
+  },
+  "invitation_pending": {
+    "subject": "{{.email}} has not joined {{.workspace}} yet",
+    "intro": "You invited {{.email}} to {{.workspace}} on {{.date}}, and they have not answered.",
+    "advice": "The mail may have gone to spam. Send it again, or copy the link and pass it on yourself.",
+    "action": "See pending invitations"
   }
 }
