@@ -9,6 +9,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -114,5 +115,38 @@ func TestAssignmentQueue(t *testing.T) {
 		d.tc.Drain()
 
 		d.show(t, id).AssertJSONPath("data.assignee.id", s.members[0].public())
+	})
+
+	t.Run("sweeps a waiting conversation whose drain was missed", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		s := d.crew(t, 1, map[string]any{"mode": "round_robin"})
+		away(t, s.members[0])
+		id := d.arrivals(t, 1)[0]
+		d.show(t, id).AssertJSONPath("data.assignment_wait.reason", "no_available_member")
+
+		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE workspace_members SET availability = 'online', "+
+			"away_since = NULL WHERE id = $1", s.members[0].member.ID)
+		require.NoError(t, err)
+		d.tc.Drain()
+		d.show(t, id).AssertJSONPath("data.assignee", nil)
+
+		require.NoError(t, d.tc.App.Queue.Push(t.Context(), jobs.SweepAssignmentQueuesArgs{}))
+		d.tc.Drain()
+
+		d.show(t, id).AssertJSONPath("data.assignee.id", s.members[0].public())
+	})
+
+	t.Run("draws from every member of the workspace when the inbox has no team", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		m := d.join(t)
+		d.rule(t, nil, map[string]any{"mode": "balanced"})
+
+		counts := d.holders(t, d.arrivals(t, 4))
+
+		owner := models.PublicID(models.PrefixMember, d.tc.Workspace.Owner.ID)
+		assert.Equal(t, 2, counts[owner])
+		assert.Equal(t, 2, counts[m.public()])
 	})
 }

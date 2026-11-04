@@ -32,10 +32,11 @@ func (SweepAssignmentQueuesArgs) Kind() string {
 }
 
 /*
-Options run the round on the maintenance queue.
+Options keep one round at a time: a round still waiting or running
+makes the next minute's push a no-op.
 */
 func (SweepAssignmentQueuesArgs) Options() queue.Options {
-	return queue.Options{Queue: "maintenance"}
+	return queue.Options{Unique: queue.UniqueOpts{ByArgs: true, ByState: pendingStates()}}
 }
 
 /*
