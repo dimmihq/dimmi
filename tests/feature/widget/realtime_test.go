@@ -2,6 +2,7 @@ package widget_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -139,6 +140,23 @@ func TestWidgetBroadcasts(t *testing.T) {
 		assert.Contains(t, string(data), `"widget_id":"`+appID(t, tc)+`"`)
 		assert.Contains(t, string(data), `"customer_status":"waiting_on_you"`)
 		assert.NotContains(t, string(data), tc.Owner.Email)
+	})
+
+	t.Run("a reply too large to broadcast arrives as a reference to fetch", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		s := v.openStream(t, streamURL(t, tc), nil)
+		require.NotNil(t, s.next().Connect)
+
+		reply(t, tc, id, strings.Repeat("long answer ", 1000))
+
+		event, data := s.event()
+		assert.Equal(t, "message.created", event)
+		assert.Contains(t, string(data), `"object":"message"`)
+		assert.Contains(t, string(data), `"conversation_id":"`+id+`"`)
+		assert.NotContains(t, string(data), "long answer")
 	})
 
 	t.Run("closing the conversation reaches the visitor", func(t *testing.T) {

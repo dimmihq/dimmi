@@ -326,6 +326,84 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		})
 	}
 
+	t.Run("refuses each bad appearance value on its own field", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		as, path := owner(tc), settingsPath(t, tc)
+		look := func(key string, value any) testkit.JSON {
+			return testkit.JSON{"appearance": testkit.JSON{key: value}}
+		}
+
+		for field, body := range map[string]testkit.JSON{
+			"appearance.header_color":              look("header_color", "blue"),
+			"appearance.sound":                     look("sound", "yes"),
+			"appearance.logo_asset_id":             look("logo_asset_id", 7),
+			"appearance.launcher":                  look("launcher", "tab"),
+			"appearance.launcher.label":            look("launcher", testkit.JSON{"label": strings.Repeat("a", 25)}),
+			"appearance.launcher.nope":             look("launcher", testkit.JSON{"nope": true}),
+			"appearance.background":                look("background", "solid"),
+			"appearance.background.gradient":       look("background", testkit.JSON{"gradient": "red"}),
+			"appearance.background.fade":           look("background", testkit.JSON{"fade": 1}),
+			"appearance.background.image_asset_id": look("background", testkit.JSON{"image_asset_id": false}),
+			"texts.greeting":                       {"texts": testkit.JSON{"greeting": 5}},
+		} {
+			as.PatchJSON(path, body).
+				AssertStatus(fhttp.StatusUnprocessableEntity).AssertValidationError(field)
+		}
+
+		for _, gradient := range []testkit.JSON{
+			{"from": "#000000"},
+			{"from": "#000000", "to": "#ffffff", "angle": 400},
+			{"from": "#000000", "to": "#ffffff", "angle": 1.5},
+		} {
+			as.PatchJSON(path, look("background", testkit.JSON{"gradient": gradient})).
+				AssertStatus(fhttp.StatusUnprocessableEntity).AssertValidationError("appearance.background.gradient")
+		}
+	})
+
+	t.Run("takes a full appearance and clears a text with null", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		res := patch(t, tc, testkit.JSON{
+			"appearance": testkit.JSON{
+				"header_color": nil, "button_color": "#112233", "sound": false, "logo_asset_id": nil,
+				"launcher": testkit.JSON{"label": "Ask us", "image_asset_id": nil},
+				"background": testkit.JSON{
+					"type": "gradient", "fade": true,
+					"gradient": testkit.JSON{"from": "#000000", "to": "#ffffff", "angle": 90},
+				},
+			},
+			"texts": testkit.JSON{"greeting": "Hi there\u0007", "chat_title": "Chat"},
+		})
+		res.AssertJSONPath("data.appearance.button_color", "#112233")
+		res.AssertJSONPath("data.appearance.background.gradient.angle", 90.0)
+		res.AssertJSONPath("data.texts.greeting", "Hi there")
+
+		patch(t, tc, testkit.JSON{"texts": testkit.JSON{"greeting": nil, "chat_title": ""}}).
+			AssertJSONMissing("data.texts.greeting").AssertJSONMissing("data.texts.chat_title")
+
+		options := patch(t, tc, testkit.JSON{
+			"reply_time": "minutes", "collect_email": "always", "locale": "de", "max_attachment_mb": 5,
+			"appearance": testkit.JSON{"primary_color": "#FFFFFF", "header_color": "#FAFAFA"},
+		})
+		options.AssertJSONPath("data.reply_time", "minutes").AssertJSONPath("data.locale", "de")
+		options.AssertJSONPath("data.max_attachment_mb", 5.0)
+
+		config := tc.Client().GetJSON(configPath(t, tc)).AssertOK()
+		config.AssertJSONPath("data.appearance.header_ink", "dark")
+		config.AssertJSONPath("data.appearance.button_color", "#112233")
+		config.AssertJSONPath("data.appearance.background.gradient.from", "#000000")
+	})
+
+	t.Run("refuses a name too long for the list", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": strings.Repeat("a", 81)}).
+			AssertStatus(fhttp.StatusUnprocessableEntity)
+	})
+
 	t.Run("sends new conversations to another inbox", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
