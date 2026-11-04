@@ -109,7 +109,7 @@ export function LanguageRow() {
       <LanguageSelect
         label={t("language.label")}
         options={options}
-        value={me.locale ?? followWorkspace}
+        value={locales.some((locale) => locale.code === me.locale) ? (me.locale ?? followWorkspace) : followWorkspace}
         onPick={(id) => save.mutate(id === followWorkspace ? null : id)}
       />
     </Row>

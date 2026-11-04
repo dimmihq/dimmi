@@ -185,10 +185,12 @@ Spec: [roles.md](roles.md). Migration `20261201080009_create_roles_table`.
 
 Spec: [i18n.md](i18n.md). Last milestone of track, after wave-1 screens merge (L5).
 
-- [ ] `lib/i18n`, i18next init, `DirectionProvider` wiring, `Accept-Language` from client, `/auth/config.locales`, `PATCH /user {locale}` rule.
-- [ ] `lib/i18n/format.ts`; replace ad hoc date and number formatting.
-- [ ] Extract strings per namespace (one PR per feature folder), `i18next-cli` config, pseudo locale.
-- [ ] Gates in `pnpm lint`; Go test locale dirs. E2e `language.spec.ts`.
+- [x] `lib/i18n`, i18next init, `DirectionProvider` wiring, `Accept-Language` from client, `/auth/config.locales`, `PATCH /user {locale}` rule. Server re-picks the locale after `auth` and `workspace` (user, then workspace, then `Accept-Language`).
+- [x] `lib/i18n/format.ts`; replace ad hoc date and number formatting.
+- [x] `i18next-cli` config, pseudo locale (`make pseudo-locale`, generated, not committed), worked example: `log-labels.ts`, `invitation-text.ts`, `session-detail.ts` on keys. Language rows on Preferences and Workspace.
+- [ ] Extract strings per namespace (one PR per feature folder). **Waits for wave 1 to merge its screens (L5).**
+- [ ] Gates in `pnpm lint` (`i18next-cli extract --ci`, `i18next-cli lint`). **Turn on after extraction.**
+- [x] Go test locale dirs (`tests/arch/locales_test.go`). E2e `language.spec.ts`: pick, survives sign-in, server error, workspace fallback, `Accept-Language` and `<html lang dir>`. "Every settings page has no untranslated text" waits for extraction.
 - [ ] Human: machine first pass + reviewer per language, each listing in `app.locales` is its own change. Owner approves any LLM run.
 
 ## Done when

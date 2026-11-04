@@ -199,7 +199,7 @@ Fires `workspace.updated`. Test: changing it changes email display name when add
 
 ## Workspace language row
 
-Workspace page Language `Choice` wired: `PATCH /workspace {locale}`, list from `/auth/config.locales`. Hidden with one locale. Workspace time zone list uses same full picker as A-03.
+Workspace page Language row (`WorkspaceLanguageRow` in `preferences/language-row.tsx`) wired: `PATCH /workspace {locale}`, list from `/auth/config.locales`, native names. Hidden with one locale (the old static English `Choice` is gone). Workspace time zone list uses same full picker as A-03.
 
 ## Tests
 
