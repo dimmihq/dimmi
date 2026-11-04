@@ -184,7 +184,7 @@ it.describe("the inbox", () => {
     await expect(details).toBeHidden();
   });
 
-  it("keeps each draft and attaches files", async ({ page }) => {
+  it("keeps each draft and drops picked workspace items into the text", async ({ page }) => {
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);
     const reply = page.getByRole("textbox", { name: "Reply to Emily Johnson" });
@@ -199,10 +199,13 @@ it.describe("the inbox", () => {
     await page.getByRole("radio", { name: "Reply" }).click();
     await expect(reply).toHaveValue("Hi Emily");
 
-    await page
-      .getByLabel("Attach files")
-      .setInputFiles([{ name: "refund-policy.pdf", mimeType: "application/pdf", buffer: Buffer.from("policy") }]);
-    await expect(page.getByRole("list", { name: "Attachments" }).getByRole("listitem")).toHaveCount(1);
+    await expect(page.getByLabel("Attach files")).toHaveCount(0);
+    await page.getByRole("button", { name: "Add to message" }).click();
+    const menu = page.getByRole("dialog", { name: "Add to message" });
+    await expect(menu).not.toContainText("Files and photos");
+    await menu.getByRole("button", { name: /^Help article/ }).click();
+    await menu.getByRole("option", { name: /Reset your password/ }).click();
+    await expect(reply).toHaveValue("Hi Emily\n\nReset your password (Help center · Account)");
   });
 
   it("slides Operator over the thread on a narrow screen", async ({ page }) => {

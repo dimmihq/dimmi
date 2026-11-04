@@ -6,7 +6,8 @@
 | What a channel driver is handed for a reply: the conversation and its
 | thread, the body as written in Markdown and also as plain text and
 | safe HTML for channels that render one of those, the customer by the
-| address the channel reaches them at, and the teammate who wrote it by
+| address the channel reaches them at, everyone else on the thread as a
+| copy, the way a reply to all would, and the teammate who wrote it by
 | name. The driver never reads the database to learn any of it.
 |
 */
@@ -61,8 +62,35 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 
 	message, err := outboundMessage(c, msg, contact)
 	message.Author = author
+	if err != nil {
+		return outbound{}, err
+	}
+
+	message.CC, err = copiesOf(ctx, q, c)
 
 	return outbound{conn: conn, driver: driver, message: message}, err
+}
+
+/*
+copiesOf returns everyone on the conversation besides its customer, by
+email, to copy on the reply.
+*/
+func copiesOf(ctx context.Context, q *models.Queries, c models.Conversation) ([]contracts.Recipient, error) {
+	rows, err := q.ListConversationCopies(ctx, models.ListConversationCopiesParams{
+		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ContactID: c.ContactID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list conversation copies: %w", err)
+	}
+
+	out := make([]contracts.Recipient, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, contracts.Recipient{
+			ContactID: row.ID, Name: deref(row.Name), IdentityType: enums.IdentityTypeEmail, IdentityValue: row.Email,
+		})
+	}
+
+	return out, nil
 }
 
 /*
