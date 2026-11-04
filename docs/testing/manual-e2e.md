@@ -465,6 +465,8 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Forwarding test | `r t -b a.jar -X POST -H "$O" $EA/$EMA/tests` | 201 `email_address_test` `sent_to` the public address; Mailpit holds it with an `X-Dimmi-Test` header; feeding that raw mail back through the source shows `ignore_reason: forwarding_test` |
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
+| Load run | `go build -tags dev -o bin/dimmi-dev ./cmd/dimmi`, then with the same env `bin/dimmi-dev email:load --url $W --to $FWD --secret e2e-inbound-secret --rate 20 --duration 10s` | `sent 200 … 0 refused`, then `processed 200 of 200` with p50 and p95; the full bar is `--rate 50 --duration 10m` with p95 under 10 s, on a database nothing else uses |
+| Metrics | restart with `DIMMI_TELEMETRY__METRICS=prometheus`, send one mail, `curl -s http://127.0.0.1:19090/metrics \| grep dimmi_email_` | `dimmi_email_inbound_total` by source, status and classification, `dimmi_email_inbound_latency_seconds` and `dimmi_email_auth_total`; provider webhooks also add `dimmi_email_inbound_bytes`; no address, subject or body in any label |
 
 Provider webhooks. Restart with `DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=test,postmark,cloudflare`,
 `DIMMI_MAILBOX__SOURCES__POSTMARK__DRIVER=postmark`, `__USERNAME=hook`, `__PASSWORD=pm-secret`,

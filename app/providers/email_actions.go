@@ -100,7 +100,9 @@ func bootEmail(a *app.App) error {
 		return err
 	}
 
-	return queue.Register(a.Queue, &jobs.ProcessInboundEmail{Processor: acts.ProcessInboundEmail})
+	return queue.Register(a.Queue, &jobs.ProcessInboundEmail{Processor: &email.MeteredInboundProcessor{
+		Processor: acts.ProcessInboundEmail, DB: a.DB, Metrics: acts.InboundMetrics,
+	}})
 }
 
 /*
@@ -111,6 +113,12 @@ func bootInboundSources(a *app.App) error {
 	acts := a.Actions
 	cfg := a.Config.Channels.Email
 
+	metrics, err := email.NewInboundMetrics(a.Telemetry)
+	if err != nil {
+		return err
+	}
+
+	acts.InboundMetrics = metrics
 	acts.InboundHealth = &email.InboundHealth{Cache: a.Cache, Log: a.Log}
 	acts.InboundBudget = mailbox.NewBudget(cfg.Inbound.ParseMemoryBudgetMB * bytesPerMB)
 	acts.BackfillResend = &email.BackfillResend{Sources: a.Mailbox, Receive: acts.ReceiveInboundEmail}

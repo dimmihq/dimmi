@@ -264,6 +264,46 @@ func (q *Queries) FinishInboundEmail(ctx context.Context, arg FinishInboundEmail
 	return err
 }
 
+const inboundLatencyBySubject = `-- name: InboundLatencyBySubject :one
+SELECT
+    count(*)::bigint AS total,
+    count(*) FILTER (WHERE status IN ('processed', 'ignored', 'failed', 'quarantined'))::bigint AS settled,
+    coalesce(percentile_cont(0.5) WITHIN GROUP (
+        ORDER BY extract(epoch FROM processed_at - received_at)
+    ), 0)::float8 AS p50_seconds,
+    coalesce(percentile_cont(0.95) WITHIN GROUP (
+        ORDER BY extract(epoch FROM processed_at - received_at)
+    ), 0)::float8 AS p95_seconds
+FROM inbound_emails
+WHERE workspace_id = $1 AND subject LIKE $2::text || '%'
+`
+
+type InboundLatencyBySubjectParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Prefix      string   `json:"prefix"`
+}
+
+type InboundLatencyBySubjectRow struct {
+	Total      int64   `json:"total"`
+	Settled    int64   `json:"settled"`
+	P50Seconds float64 `json:"p50_seconds"`
+	P95Seconds float64 `json:"p95_seconds"`
+}
+
+// InboundLatencyBySubject summarizes how fast the workspace's mail whose
+// subject starts with the prefix was processed, for a load run.
+func (q *Queries) InboundLatencyBySubject(ctx context.Context, arg InboundLatencyBySubjectParams) (InboundLatencyBySubjectRow, error) {
+	row := q.db.QueryRow(ctx, inboundLatencyBySubject, arg.WorkspaceID, arg.Prefix)
+	var i InboundLatencyBySubjectRow
+	err := row.Scan(
+		&i.Total,
+		&i.Settled,
+		&i.P50Seconds,
+		&i.P95Seconds,
+	)
+	return i, err
+}
+
 const latestInboundEmails = `-- name: LatestInboundEmails :many
 SELECT source::text AS source, latest_at::timestamptz AS latest_at FROM email_inbound_latest()
 `

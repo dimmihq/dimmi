@@ -122,6 +122,7 @@ type Actions struct {
 	InboundDoctor        *email.InboundDoctor
 	BackfillResend       *email.BackfillResend
 	InboundBudget        *mailbox.Budget
+	InboundMetrics       *email.InboundMetrics
 	ProcessInboundEmail  *email.ProcessInboundEmail
 	SendEmailMessage     *email.SendEmailMessage
 }

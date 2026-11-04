@@ -27,6 +27,7 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/mailbox"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -50,6 +51,7 @@ type MailboxController struct {
 	Receive *email.ReceiveInboundEmail
 	Health  *email.InboundHealth
 	Budget  *mailbox.Budget
+	Metrics *email.InboundMetrics
 	Config  appconfig.EmailConfig
 	Log     log.Logger
 	Errors  fhttp.Errors
@@ -75,6 +77,12 @@ func (c *MailboxController) Store(source string) fhttp.HandlerFunc {
 deliver reads the delivery under the memory budget and keeps the mail.
 */
 func (c *MailboxController) deliver(r *fhttp.Request, receiver mailbox.Receiver) error {
+	source := telemetry.String("source", receiver.Name())
+	ctx, span := c.Metrics.Telemetry.Start(r.Context(), "email.inbound.receive", source)
+	defer span.End()
+
+	r = r.WithContext(ctx)
+
 	release, err := c.Budget.Acquire(r.Context(), declaredSize(r, receiver), budgetWait)
 	if err != nil {
 		return err
@@ -115,9 +123,12 @@ func (c *MailboxController) keep(ctx context.Context, env mailbox.Envelope) erro
 	ctx, cancel := context.WithTimeout(ctx, keepRawWait)
 	defer cancel()
 
-	if _, err := c.Receive.Handle(ctx, env); err != nil {
+	received, err := c.Receive.Handle(ctx, env)
+	if err != nil {
 		return err
 	}
+
+	c.Metrics.Received(ctx, env.Source, env.SizeBytes, len(received))
 
 	if env.Accepted == nil {
 		return nil

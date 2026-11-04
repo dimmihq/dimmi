@@ -26,7 +26,8 @@ mailboxRoutes declares a route per receiving provider.
 func mailboxRoutes(a *app.App) {
 	controller := &webhooks.MailboxController{
 		Sources: a.Mailbox, Receive: a.Actions.ReceiveInboundEmail, Health: a.Actions.InboundHealth,
-		Budget: a.Actions.InboundBudget, Config: a.Config.Channels.Email, Log: a.Log, Errors: a.Errors,
+		Budget: a.Actions.InboundBudget, Metrics: a.Actions.InboundMetrics, Config: a.Config.Channels.Email,
+		Log: a.Log, Errors: a.Errors,
 	}
 
 	routes := []struct{ path, source string }{
