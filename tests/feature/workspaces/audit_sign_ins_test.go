@@ -111,7 +111,7 @@ func TestSignInAudit(t *testing.T) {
 		tc.Drain()
 
 		var events, changes []string
-		require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+		require.NoError(t, tc.Operator().QueryRow(t.Context(),
 			"SELECT array_agg(event), array_agg(changes::text) FROM audit_logs WHERE subject_type = 'member'",
 		).Scan(&events, &changes))
 		joined := strings.Join(changes, " ")
