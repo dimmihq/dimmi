@@ -87,6 +87,7 @@ type Config struct {
 	CustomDomains customdomain.Config  `koanf:"custom_domains"`
 	Idempotency   idempotency.Config   `koanf:"idempotency"`
 	Maintenance   MaintenanceConfig    `koanf:"maintenance"`
+	Gate          GateConfig           `koanf:"gate"`
 }
 
 /*
@@ -136,6 +137,18 @@ type HTTPConfig struct {
 }
 
 /*
+GateConfig puts the whole application behind one shared password, for a
+public host only invited people should use. Password is what people
+type; CIKey is what automated checks send in the X-Gate-Key header. An
+enabled gate needs at least one of them.
+*/
+type GateConfig struct {
+	Enabled  bool   `koanf:"enabled"`
+	Password string `koanf:"password" secret:"true"`
+	CIKey    string `koanf:"ci_key"   secret:"true"`
+}
+
+/*
 ConfigError stops the boot when the configuration cannot work. Err holds
 every problem found, and Redacted the effective configuration with its
 secrets masked, for printing beside the error.
@@ -174,6 +187,7 @@ func (c *Config) check() error {
 		{!c.Database.PoolMode.Valid(), "database.pool_mode", database.ErrInvalidPoolMode},
 		{c.Redis.URL == "", "redis.url", errRequired},
 		{c.HTTP.ShutdownTimeout <= 0, "http.shutdown_timeout", errors.New("must be positive")},
+		{c.Gate.Enabled && c.Gate.Password == "" && c.Gate.CIKey == "", "gate.password", errRequired},
 	}
 
 	errs := []error{c.App.Roles.validate(), checkURL(c.App.URL), checkMemoryLimit(c.Runtime.MemoryLimit)}

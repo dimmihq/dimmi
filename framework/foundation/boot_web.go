@@ -43,6 +43,11 @@ urlSigningPurpose derives the URL signing key from the app key.
 const urlSigningPurpose = "url-signing"
 
 /*
+gatePurpose derives the key that signs the shared password gate's cookie.
+*/
+const gatePurpose = "gate-cookie"
+
+/*
 bootWeb builds identity, validation, the HTTP kernel, the router and
 the health checks.
 */
@@ -125,6 +130,10 @@ func (a *Application) bootKernel() error {
 		a.Kernel.Use(trust)
 	}
 
+	if err := a.useGate(); err != nil {
+		return err
+	}
+
 	a.Kernel.Use(middleware.Maintenance(a.Maintenance, a.Config.Maintenance.RetryAfter, a.opts.MaintenanceExcept...))
 
 	a.Router = routing.New(routing.Options{Middleware: a.Kernel, Errors: a.Errors, Validator: a.Validator})
@@ -136,6 +145,31 @@ func (a *Application) bootKernel() error {
 
 	a.URL = routing.NewURL(a.Router, a.Config.App.URL, signing, a.Clock)
 	a.aliasMiddleware()
+
+	return nil
+}
+
+/*
+useGate puts the shared password gate in front of every route when it is
+enabled. Certificate challenges and health never reach the kernel, so
+they stay open without being listed.
+*/
+func (a *Application) useGate() error {
+	if !a.Config.Gate.Enabled {
+		return nil
+	}
+
+	secret, err := encryption.DeriveKey(a.appKey, gatePurpose)
+	if err != nil {
+		return fmt.Errorf("derive gate key: %w", err)
+	}
+
+	a.Kernel.Use(middleware.Gate(middleware.GateOptions{
+		Password: a.Config.Gate.Password,
+		Key:      a.Config.Gate.CIKey,
+		Secret:   secret,
+		Except:   a.opts.GateExcept,
+	}))
 
 	return nil
 }
