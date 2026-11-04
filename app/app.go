@@ -63,7 +63,9 @@ services providers build at boot, and Actions every business action.
 Channels holds the channel drivers replies go out through.
 WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults.
-Retention is asked before any purge destroys data. EmailChannel is the
+Retention is asked before any purge destroys data. Entitlements answers
+what a workspace may have and BillingStatus whether it ever paid.
+EmailChannel is the
 email channel driver, which also receives inbound mail.
 Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
@@ -98,6 +100,8 @@ type App struct {
 
 	WorkspaceInitializers *workspaces.Initializers
 	Retention             contracts.RetentionGuard
+	Entitlements          contracts.Entitlements
+	BillingStatus         contracts.BillingStatus
 	EmailChannel          *email.Channel
 
 	Realtime *appbroadcasting.Connections

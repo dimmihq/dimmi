@@ -29,6 +29,7 @@ import (
 Actions holds the business actions.
 */
 type Actions struct {
+	Widget                  *WidgetActions
 	CreateUser              *users.CreateUser
 	UpdateProfile           *users.UpdateProfile
 	UpdatePassword          *users.UpdatePassword
