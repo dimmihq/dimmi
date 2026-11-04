@@ -8,30 +8,30 @@ The package has its own lockfile and is not part of the browser app. Node runs t
 
 ## Layout
 
-| Path | Holds |
-|---|---|
-| `bin/dimmi.ts` | Entry point: reads `-c env=` and builds that environment |
+| Path                         | Holds                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `bin/dimmi.ts`               | Entry point: reads `-c env=` and builds that environment                             |
 | `lib/config/environments.ts` | **Every difference between environments**: sizes, counts, Regions, hosts, protection |
-| `lib/config/environment.ts` | The config type and its validation |
-| `lib/environment-stacks.ts` | Wires one environment's stacks together, names and tags them |
-| `lib/stacks/` | One file per stack |
-| `lib/constructs/` | Pieces a stack is built from: database, Valkey, load balancer, app settings |
-| `lib/database/provision.sql` | Creates the owner and application roles; run by the `provision` task |
-| `test/` | Template assertions, run with Vitest, no AWS credentials needed |
+| `lib/config/environment.ts`  | The config type and its validation                                                   |
+| `lib/environment-stacks.ts`  | Wires one environment's stacks together, names and tags them                         |
+| `lib/stacks/`                | One file per stack                                                                   |
+| `lib/constructs/`            | Pieces a stack is built from: database, Valkey, load balancer, app settings          |
+| `lib/database/provision.sql` | Creates the owner and application roles; run by the `provision` task                 |
+| `test/`                      | Template assertions, run with Vitest, no AWS credentials needed                      |
 
 ## Stacks
 
 Each environment has these, named `dimmi-<env>-<role>` and tagged `Environment=<env>`:
 
-| Stack | Owns |
-|---|---|
-| `ops` | Alarm topic mailed to the alarm address, monthly budget on the environment tag |
-| `network` | VPC, public and isolated subnets, S3 gateway endpoint, security groups |
-| `registry` | ECR repository. Alone because it must hold an image before tasks can start |
-| `data` | RDS PostgreSQL 18, ElastiCache Valkey, files bucket, KMS key, every secret |
-| `mail` | SES identities, receipt rules, configuration sets, webhooks, mail alarms. Writes no DNS |
-| `app` | ECS cluster, web and worker services, `migrate` and `provision` tasks, NLB with Elastic IPs |
-| `ci` | The role GitHub Actions assumes to release; it cannot change infrastructure |
+| Stack      | Owns                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `ops`      | Alarm topic mailed to the alarm address, monthly budget on the environment tag              |
+| `network`  | VPC, public and isolated subnets, S3 gateway endpoint, security groups                      |
+| `registry` | ECR repository. Alone because it must hold an image before tasks can start                  |
+| `data`     | RDS PostgreSQL 18, ElastiCache Valkey, files bucket, KMS key, every secret                  |
+| `mail`     | SES identities, receipt rules, configuration sets, webhooks, mail alarms. Writes no DNS     |
+| `app`      | ECS cluster, web and worker services, `migrate` and `provision` tasks, NLB with Elastic IPs |
+| `ci`       | The role GitHub Actions assumes to release; it cannot change infrastructure                 |
 
 `dimmi-account` holds the GitHub OIDC provider, once per account, in us-east-1.
 

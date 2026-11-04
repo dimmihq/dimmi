@@ -29,6 +29,8 @@ export type EnvironmentConfig = {
   region: string;
   /** The one public host. It serves the dashboard, help center and marketing. */
   host: string;
+  /** The DNS zone at Vercel that holds the host and the mail domains. */
+  dnsZone: string;
   /**
    * Mail domains, which are DNS only and never websites. `inbound` receives
    * customer mail and sends from customer addresses; `system` sends sign-up,
@@ -96,6 +98,9 @@ export function validate(config: EnvironmentConfig): EnvironmentConfig {
   check(NAME.test(config.name), `name ${config.name}: lowercase letters, digits and dashes`);
   for (const [field, host] of Object.entries({ host: config.host, ...config.mail })) {
     check(HOST.test(host), `${field} ${host} is not a lowercase host name`);
+  }
+  for (const host of [config.host, config.mail.inbound, config.mail.system]) {
+    check(host === config.dnsZone || host.endsWith(`.${config.dnsZone}`), `${host} is not inside ${config.dnsZone}`);
   }
   check(config.mail.inbound !== config.mail.system, "mail.inbound and mail.system must differ");
   check(config.services.web.roles.includes("web"), "services.web must run the web role");
