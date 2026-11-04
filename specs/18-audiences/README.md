@@ -1,6 +1,6 @@
 # 18 Audiences
 
-**Draft: awaiting owner approval. Nothing here is built, and nothing should be until the "Decisions for you" list at the end is answered.**
+**Approved by the owner on 2026-11-04, with every recommended answer in "Decisions for you" accepted. Not built yet.**
 
 Style: caveman. Date 2026-11-04. One file while it is a proposal; on approval it splits into `README.md`, `edge-cases.md`, `tasks.md` like other folders. Read with `specs/00-conventions/*`, `specs/00-foundation/*`, `specs/15-announcements-surveys`, `specs/17-workflows`, `specs/02-widget-identity`. Research: `research/competitors/intercom-audiences.md`.
 
@@ -854,7 +854,7 @@ Ordered, each about 1 day, tests per `00-conventions/testing.md`: integration on
 
 Honest limits against Intercom: no multi-company "any" until `contact_companies`; no event metadata rules; no raw event history at start; no Series-like journeys (17 covers conversation flows, outbound journeys are not planned); enrichment only through integrations.
 
-## Decisions for you
+## Decisions (all recommended answers approved)
 
 Recommended answer in bold.
 
