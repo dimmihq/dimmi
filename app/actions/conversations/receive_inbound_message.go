@@ -103,7 +103,8 @@ func (r *ReceiveInboundMessage) ReceiveInboundMessage(
 
 	err = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		w := &Writer{
-			Q: models.New(tx), Tx: tx, Events: r.Events, Now: r.Clock.Now(), Actor: Actor{Type: "system", ID: ids.Nil()},
+			Q: models.New(tx), Tx: tx, Events: r.Events, Now: r.Clock.Now(),
+			Actor: Actor{Type: "system", ID: ids.Nil()},
 		}
 		run := &ingestRun{r: r, q: w.Q, w: w, tx: tx, ws: workspaceID, msg: msg, files: files}
 		result, err = run.receive(ctx)
@@ -201,7 +202,19 @@ func (run *ingestRun) deliver(
 
 	result.MessageID, result.ConversationID = message.ID, conv.ID
 
-	return result, run.settle(ctx, sender, conv, contact, message, wake)
+	return result, run.settle(ctx, landed{sender: sender, conv: conv, contact: contact, message: message, wake: wake})
+}
+
+/*
+landed is a stored message: who sent it, its conversation and contact,
+and whether it wakes the conversation.
+*/
+type landed struct {
+	sender  *Writer
+	conv    models.Conversation
+	contact models.Contact
+	message models.Message
+	wake    bool
 }
 
 /*
@@ -209,14 +222,11 @@ settle opens the conversation again when the message wakes it, puts
 everyone on the message on the conversation, records its attachments,
 and runs the channel's hook.
 */
-func (run *ingestRun) settle(
-	ctx context.Context, sender *Writer, conv models.Conversation, contact models.Contact, message models.Message,
-	wake bool,
-) error {
-	if wake {
+func (run *ingestRun) settle(ctx context.Context, l landed) error {
+	if l.wake {
 		var err error
 
-		conv, _, err = sender.ChangeStatus(ctx, conv, StatusChange{
+		l.conv, _, err = l.sender.ChangeStatus(ctx, l.conv, StatusChange{
 			Status: string(enums.ConversationStatusOpen), Reason: ReasonCustomerMessage,
 		})
 		if err != nil {
@@ -224,11 +234,11 @@ func (run *ingestRun) settle(
 		}
 	}
 
-	if err := run.join(ctx, conv, contact); err != nil {
+	if err := run.join(ctx, l.conv, l.contact); err != nil {
 		return err
 	}
 
-	if err := run.attach(ctx, message); err != nil {
+	if err := run.attach(ctx, l.message); err != nil {
 		return err
 	}
 
@@ -236,7 +246,7 @@ func (run *ingestRun) settle(
 		return nil
 	}
 
-	return run.msg.AfterPersist(ctx, run.tx, conv, message)
+	return run.msg.AfterPersist(ctx, run.tx, l.conv, l.message)
 }
 
 /*
@@ -369,7 +379,9 @@ func optional(text string) *string {
 storeFiles writes the message's attachments to disk before anything
 else, so the transaction only records them.
 */
-func (r *ReceiveInboundMessage) storeFiles(ctx context.Context, files []contracts.InboundAttachment) ([]storedFile, error) {
+func (r *ReceiveInboundMessage) storeFiles(
+	ctx context.Context, files []contracts.InboundAttachment,
+) ([]storedFile, error) {
 	stored := make([]storedFile, 0, len(files))
 
 	for _, file := range files {

@@ -169,7 +169,8 @@ func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessag
 			return fmt.Errorf("find message: %w", err)
 		}
 
-		if msg.DeletedAt != nil || msg.DeliveryStatus == nil || *msg.DeliveryStatus != string(enums.DeliveryStatusPending) {
+		pending := msg.DeliveryStatus != nil && *msg.DeliveryStatus == string(enums.DeliveryStatusPending)
+		if msg.DeletedAt != nil || !pending {
 			return nil
 		}
 

@@ -64,7 +64,9 @@ func (d Delivery) Plan(conn models.ChannelConnection, contact models.Contact) (R
 		return Route{}, fmt.Errorf("find channel driver: %w", err)
 	}
 
-	route := Route{Connection: conn, Capabilities: driver.Capabilities(conn), Status: string(enums.DeliveryStatusNotApplicable)}
+	route := Route{
+		Connection: conn, Capabilities: driver.Capabilities(conn), Status: string(enums.DeliveryStatusNotApplicable),
+	}
 
 	switch route.Capabilities.Transport {
 	case contracts.TransportPush:

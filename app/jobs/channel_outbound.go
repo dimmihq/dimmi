@@ -69,7 +69,9 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 outboundMessage shapes the reply for its driver, its body rendered from
 the Markdown it was written in.
 */
-func outboundMessage(c models.Conversation, msg models.Message, contact models.Contact) (contracts.OutboundMessage, error) {
+func outboundMessage(
+	c models.Conversation, msg models.Message, contact models.Contact,
+) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
 	rendered, err := markdown.New(markdown.Options{GFM: true}).HTML([]byte(body))
@@ -108,7 +110,9 @@ func authorOf(ctx context.Context, q *models.Queries, msg models.Message) (contr
 		return author, nil
 	}
 
-	rows, err := q.MembersByIDs(ctx, models.MembersByIDsParams{WorkspaceID: msg.WorkspaceID, Ids: []ids.UUID{*msg.AuthorID}})
+	rows, err := q.MembersByIDs(ctx, models.MembersByIDsParams{
+		WorkspaceID: msg.WorkspaceID, Ids: []ids.UUID{*msg.AuthorID},
+	})
 	if err != nil {
 		return author, fmt.Errorf("find reply author: %w", err)
 	}

@@ -75,7 +75,9 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 	var out Written
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref, in.MutationID})
+		services := conversations.Services{Events: a.Events, Clock: a.Clock}
+
+		s, err := open(ctx, tx, services, target{in.Membership, in.Ref, in.MutationID})
 		if err != nil {
 			return err
 		}
@@ -145,7 +147,9 @@ func (a *AddContactMessage) Handle(ctx context.Context, in ContactMessageInput) 
 	var out Written
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{in.Membership, in.Ref, in.MutationID})
+		services := conversations.Services{Events: a.Events, Clock: a.Clock}
+
+		s, err := open(ctx, tx, services, target{in.Membership, in.Ref, in.MutationID})
 		if err != nil {
 			return err
 		}

@@ -72,44 +72,8 @@ func API(a *app.App) {
 	c := newControllers(a)
 
 	a.Router.API("/api/v1", "Dimmi API", a.Config.API.Version, func(api *routing.Router) {
-		api.Group("", func(guest *routing.Router) {
-			guest.Middleware("csrf", "session")
-
-			routing.Get(guest, "/auth/config", "auth.config.show", c.authConfig.Show)
-			routing.Post(guest, "/users", "users.store", c.users.Store)
-			routing.Post(guest, "/sessions", "sessions.store", c.sessions.Store)
-			routing.Post(guest, "/magic-links", "magic-links.store", c.magicLinks.Store)
-			routing.Post(guest, "/password-resets", "password-resets.store", c.resets.Store)
-			routing.Patch(guest, "/password-resets/{reset}", "password-resets.update", c.resets.Update)
-			routing.Patch(guest, "/email-verifications/{verification}", "email-verifications.update",
-				c.verifications.Update)
-			routing.Get(guest, "/invitations/preview", "invitations.preview.show", c.previews.Show)
-		})
-
-		api.Group("", func(user *routing.Router) {
-			user.Middleware("csrf", "session", "auth:user")
-
-			routing.Get(user, "/sessions", "sessions.index", c.sessions.Index)
-			routing.Delete(user, "/sessions", "sessions.destroy-many", c.sessions.DestroyMany).
-				Middleware("password.confirm").Status(fhttp.StatusNoContent)
-			routing.Delete(user, "/sessions/{session}", "sessions.destroy", c.sessions.Destroy).
-				Status(fhttp.StatusNoContent)
-			routing.Post(user, "/email-verifications", "email-verifications.store", c.verifications.Store)
-			routing.Get(user, "/user/confirmation", "user.confirmation.show", c.confirmation.Show)
-			routing.Post(user, "/user/confirmation", "user.confirmation.store", c.confirmation.Store)
-			routing.Post(user, "/user/confirmation-codes", "user.confirmation-codes.store",
-				c.confirmationCodes.Store)
-			routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index)
-			routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
-				Middleware("password.confirm").Status(fhttp.StatusNoContent)
-			routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
-			routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store)
-			routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update)
-			routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
-				Status(fhttp.StatusNoContent)
-			authFactorRoutes(user, c.authFactors)
-			routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index)
-		})
+		api.Group("", func(guest *routing.Router) { guestRoutes(guest, c) })
+		api.Group("", func(user *routing.Router) { userRoutes(user, c) })
 
 		api.Group("", func(caller *routing.Router) {
 			caller.Middleware("csrf", "session", "auth")
@@ -124,6 +88,52 @@ func API(a *app.App) {
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
 	})
+}
+
+/*
+guestRoutes declares the routes anyone reaches before signing in.
+*/
+func guestRoutes(guest *routing.Router, c controllers) {
+	guest.Middleware("csrf", "session")
+
+	routing.Get(guest, "/auth/config", "auth.config.show", c.authConfig.Show)
+	routing.Post(guest, "/users", "users.store", c.users.Store)
+	routing.Post(guest, "/sessions", "sessions.store", c.sessions.Store)
+	routing.Post(guest, "/magic-links", "magic-links.store", c.magicLinks.Store)
+	routing.Post(guest, "/password-resets", "password-resets.store", c.resets.Store)
+	routing.Patch(guest, "/password-resets/{reset}", "password-resets.update", c.resets.Update)
+	routing.Patch(guest, "/email-verifications/{verification}", "email-verifications.update",
+		c.verifications.Update)
+	routing.Get(guest, "/invitations/preview", "invitations.preview.show", c.previews.Show)
+}
+
+/*
+userRoutes declares the signed-in user's own routes, which a token
+never reaches.
+*/
+func userRoutes(user *routing.Router, c controllers) {
+	user.Middleware("csrf", "session", "auth:user")
+
+	routing.Get(user, "/sessions", "sessions.index", c.sessions.Index)
+	routing.Delete(user, "/sessions", "sessions.destroy-many", c.sessions.DestroyMany).
+		Middleware("password.confirm").Status(fhttp.StatusNoContent)
+	routing.Delete(user, "/sessions/{session}", "sessions.destroy", c.sessions.Destroy).
+		Status(fhttp.StatusNoContent)
+	routing.Post(user, "/email-verifications", "email-verifications.store", c.verifications.Store)
+	routing.Get(user, "/user/confirmation", "user.confirmation.show", c.confirmation.Show)
+	routing.Post(user, "/user/confirmation", "user.confirmation.store", c.confirmation.Store)
+	routing.Post(user, "/user/confirmation-codes", "user.confirmation-codes.store",
+		c.confirmationCodes.Store)
+	routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index)
+	routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
+		Middleware("password.confirm").Status(fhttp.StatusNoContent)
+	routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
+	routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store)
+	routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update)
+	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
+		Status(fhttp.StatusNoContent)
+	authFactorRoutes(user, c.authFactors)
+	routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index)
 }
 
 /*
@@ -258,31 +268,40 @@ func newControllers(a *app.App) controllers {
 		identities: &v1.UserIdentityController{
 			List: acts.ListOAuthIdentities, Unlink: acts.UnlinkOAuthIdentity, IDs: a.IDs, Cookies: a.Cookies,
 		},
-		workspace: &v1.CurrentWorkspaceController{
-			UpdateWorkspace: acts.UpdateWorkspace, DeleteWorkspace: acts.DeleteWorkspace,
-		},
-		members: &v1.MemberController{
-			ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-			MemberTeams: acts.ListMemberTeams,
-			Cursors:     cursors,
-		},
 		authFactors: &v1.AuthFactorController{
 			List: acts.ListAuthFactors, Add: acts.AddAuthFactor, Activate: acts.ActivateAuthFactor,
 			Change: acts.UpdateAuthFactor, Remove: acts.RemoveAuthFactor, RemoveAll: acts.RemoveAllAuthFactors,
 			IDs: a.IDs, Cookies: a.Cookies,
 		},
-		auditLogs: &v1.AuditLogController{
-			List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,
-		},
 		securityEvents: &v1.SecurityEventController{List: acts.ListSecurityEvents, Cursors: cursors},
-		tokens:         tokenController(a, cursors),
-		tokenAbilities: &v1.TokenAbilityController{List: acts.ListTokenAbilities},
-		emailAddresses: emailAddressController(a, cursors),
 	}
+	workspaceControllers(a, &c, cursors)
 	membershipControllers(a, &c, cursors)
 	teamControllers(a, &c, cursors)
 
 	return c
+}
+
+/*
+workspaceControllers builds into c the controllers of the workspace in
+play: its settings, members, audit log, tokens and email addresses.
+*/
+func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursors) {
+	acts := a.Actions
+
+	c.workspace = &v1.CurrentWorkspaceController{
+		UpdateWorkspace: acts.UpdateWorkspace, DeleteWorkspace: acts.DeleteWorkspace,
+	}
+	c.members = &v1.MemberController{
+		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
+		MemberTeams: acts.ListMemberTeams, Cursors: cursors,
+	}
+	c.auditLogs = &v1.AuditLogController{
+		List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,
+	}
+	c.tokens = tokenController(a, cursors)
+	c.tokenAbilities = &v1.TokenAbilityController{List: acts.ListTokenAbilities}
+	c.emailAddresses = emailAddressController(a, cursors)
 }
 
 /*
