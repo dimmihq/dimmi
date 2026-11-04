@@ -22,16 +22,27 @@ import (
 
 /*
 Team is one team of a workspace. Members is present only when the
-request included the members.
+request included the members, and Counts only when it included the
+conversation counts.
 */
 type Team struct {
-	ID          string             `json:"id"`
-	Object      string             `json:"object"`
-	Name        string             `json:"name"`
-	MemberCount int64              `json:"member_count"`
-	Members     *[]WorkspaceMember `json:"members,omitempty"`
-	CreatedAt   time.Time          `json:"created_at"`
-	UpdatedAt   time.Time          `json:"updated_at"`
+	ID          string                  `json:"id"`
+	Object      string                  `json:"object"`
+	Name        string                  `json:"name"`
+	MemberCount int64                   `json:"member_count"`
+	Members     *[]WorkspaceMember      `json:"members,omitempty"`
+	Counts      *TeamConversationCounts `json:"conversation_counts,omitempty"`
+	CreatedAt   time.Time               `json:"created_at"`
+	UpdatedAt   time.Time               `json:"updated_at"`
+}
+
+/*
+TeamConversationCounts counts a team's conversations by status.
+*/
+type TeamConversationCounts struct {
+	Open    int64 `json:"open"`
+	Snoozed int64 `json:"snoozed"`
+	Closed  int64 `json:"closed"`
 }
 
 /*
@@ -64,6 +75,10 @@ func NewTeam(t teams.Team) Team {
 		MemberCount: t.MemberCount,
 		CreatedAt:   t.Team.CreatedAt,
 		UpdatedAt:   t.Team.UpdatedAt,
+	}
+
+	if c := t.ConversationCounts; c != nil {
+		out.Counts = &TeamConversationCounts{Open: c.Open, Snoozed: c.Snoozed, Closed: c.Closed}
 	}
 
 	if t.Members == nil {

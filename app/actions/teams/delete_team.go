@@ -5,10 +5,11 @@
 |
 | Deleting a team happens in two steps. The team is hidden at once: it
 | no longer lists, cannot take new conversations or members, and its
-| name is free for a new team. The inbox then unassigns its
-| conversations in the background and purges the row, which takes the
-| memberships with it. Purging only ever removes a team that was
-| deleted first.
+| name is free for a new team. In the same step its conversations, open,
+| snoozed and closed, move where the admin chose: to another team, to
+| a teammate, or to nobody, so none waits on a team that is gone. A
+| sweep later purges the row, which takes the memberships with it.
+| Purging only ever removes a team that was deleted first.
 |
 */
 
@@ -23,7 +24,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
-	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -31,12 +31,16 @@ import (
 )
 
 /*
-DeleteTeamInput is who deletes a team, through their membership, and
-the team.
+DeleteTeamInput is who deletes a team, through their membership, the
+team, and where its conversations go: ToTeam, keeping each one's
+assignee, or ToMember, taking the team away; neither leaves them with
+no team.
 */
 type DeleteTeamInput struct {
 	Membership authz.Membership
 	TeamID     ids.UUID
+	ToTeam     *ids.UUID
+	ToMember   *ids.UUID
 }
 
 /*
@@ -45,13 +49,17 @@ DeleteTeam hides a live team of the caller's workspace.
 Rules:
   - The caller needs members:write.
   - Deleted teams and teams of other workspaces are not found.
-  - Every live conversation the team holds is unassigned from it first.
+  - Every live conversation the team holds moves first: to ToTeam with
+    its assignee kept, to ToMember with no team, or else off the team.
+  - The target is another live team or an active member of the
+    workspace, never both.
+  - Inboxes that routed to the team route to ToTeam, or to none.
 
 Events: [appevents.ConversationAssigned] for each conversation it held,
 then [appevents.TeamDeleted].
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
-wrapped database error.
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
+[exceptions.ErrReassignToInvalid], or a wrapped database error.
 */
 type DeleteTeam struct {
 	DB     *database.DB
@@ -75,7 +83,11 @@ func (a *DeleteTeam) Handle(ctx context.Context, in DeleteTeamInput) error {
 			return err
 		}
 
-		if err := a.unassign(ctx, tx, in.Membership, team); err != nil {
+		if err := checkTarget(ctx, q, team, in); err != nil {
+			return err
+		}
+
+		if err := a.move(ctx, tx, in, team); err != nil {
 			return err
 		}
 
@@ -90,33 +102,6 @@ func (a *DeleteTeam) Handle(ctx context.Context, in DeleteTeamInput) error {
 			WorkspaceID: team.WorkspaceID, TeamID: team.ID, DeletedBy: in.Membership.Member.ID,
 		})
 	})
-}
-
-/*
-unassign takes every live conversation away from the team as the
-member deleting it, each recorded on its timeline, so no conversation
-waits on a team that is gone.
-*/
-func (a *DeleteTeam) unassign(ctx context.Context, tx *database.Tx, m authz.Membership, team models.Team) error {
-	w, err := conversations.NewWriter(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, m)
-	if err != nil {
-		return err
-	}
-
-	held, err := w.Q.ListTeamConversations(ctx, models.ListTeamConversationsParams{
-		WorkspaceID: team.WorkspaceID, TeamID: team.ID,
-	})
-	if err != nil {
-		return fmt.Errorf("list team conversations: %w", err)
-	}
-
-	for _, c := range held {
-		if _, err := w.DropTeam(ctx, c); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 /*
