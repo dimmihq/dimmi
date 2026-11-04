@@ -102,7 +102,7 @@ func TestAccountMail(t *testing.T) {
 	t.Run("writes a user's mail in the language they chose", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET locale = 'fr' WHERE id = $1", tc.Owner.ID)
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE users SET locale = 'fr' WHERE id = $1", tc.Owner.ID)
 		require.NoError(t, err)
 		fake := tc.Mail()
 

@@ -123,7 +123,7 @@ func TestWidgetConfig(t *testing.T) {
 		t.Parallel()
 
 		tc := tests.New(t)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE workspaces SET suspended_at = now() WHERE id = $1",
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE workspaces SET suspended_at = now() WHERE id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 
@@ -329,7 +329,7 @@ func TestWidgetAvailability(t *testing.T) {
 			return tc.Client().GetJSON(path(t, tc)).AssertOK().String("data.reply_time") == "minutes"
 		}, 5*time.Second, 50*time.Millisecond)
 
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"UPDATE workspace_members SET availability = 'away' WHERE workspace_id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
@@ -348,7 +348,7 @@ func TestWidgetAvailability(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			_, err = tc.App.DB.Exec(t.Context(),
+			_, err = tc.Operator().Exec(t.Context(),
 				"UPDATE users SET avatar_path = 'avatars/x.png' WHERE id = $1", user.ID)
 			require.NoError(t, err)
 		}

@@ -168,7 +168,7 @@ func TestSessionStoreWithTwoFactor(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		account := protectedAccount(t, tc)
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			`UPDATE user_auth_factors SET credential = '{"total":10,"remaining":0}' WHERE id = $1`, account.Recovery.ID)
 		require.NoError(t, err)
 

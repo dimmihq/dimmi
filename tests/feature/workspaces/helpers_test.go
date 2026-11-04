@@ -63,7 +63,7 @@ an operator would.
 func exec(t *testing.T, tc *tests.TestCase, sql string, args ...any) {
 	t.Helper()
 
-	_, err := tc.App.DB.Exec(t.Context(), sql, args...)
+	_, err := tc.Operator().Exec(t.Context(), sql, args...)
 	require.NoError(t, err)
 }
 

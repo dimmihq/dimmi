@@ -327,7 +327,7 @@ func TestAuthFactorDrivers(t *testing.T) {
 		id, options := startPasskey(browser, "Laptop")
 		answer, err := newDevice(tc).Create(options)
 		require.NoError(t, err)
-		_, err = tc.App.DB.Exec(t.Context(), "UPDATE user_auth_factors SET credential = '{}'")
+		_, err = tc.Operator().Exec(t.Context(), "UPDATE user_auth_factors SET credential = '{}'")
 		require.NoError(t, err)
 
 		browser.PatchJSON(factorsPath+"/"+id, testkit.JSON{"credential": answer}).
@@ -340,7 +340,8 @@ func TestAuthFactorDrivers(t *testing.T) {
 		laptop, _ := addPasskey(t, tc, tc.ActingAsOwner(), "Laptop")
 		browser, challenge := signInWithPassword(tc, tc.Owner.Email)
 		signed := signPasskey(t, challenge, laptop.key)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE user_auth_factors SET credential = '{}' WHERE type = 'passkey'")
+		_, err := tc.Operator().Exec(t.Context(),
+			"UPDATE user_auth_factors SET credential = '{}' WHERE type = 'passkey'")
 		require.NoError(t, err)
 
 		answerPasskey(browser, signed).AssertValidationError("credential")

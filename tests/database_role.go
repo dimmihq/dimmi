@@ -63,11 +63,13 @@ func applicationURL(tb testing.TB, db testkit.Database) string {
 }
 
 /*
-operatorDB returns a pool that reads every row, as an operator would:
-the application's own pool in a normal run, or one connected as the
-owner when the application runs as the application role.
+Operator returns a pool that reads and writes every row and may change
+the schema, as an operator would: the application's own pool in a
+normal run, or one connected as the owner when the application runs as
+the application role. Raw SQL a test seeds or inspects rows with runs
+through it.
 */
-func (tc *TestCase) operatorDB() *database.DB {
+func (tc *TestCase) Operator() *database.DB {
 	if !asApplicationRole() {
 		return tc.App.DB
 	}

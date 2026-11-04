@@ -53,7 +53,7 @@ func invitationID(t *testing.T, tc *tests.TestCase) string {
 
 	var id models.Invitation
 
-	row := tc.App.DB.QueryRow(t.Context(), `SELECT id FROM invitations ORDER BY created_at DESC, id DESC LIMIT 1`)
+	row := tc.Operator().QueryRow(t.Context(), `SELECT id FROM invitations ORDER BY created_at DESC, id DESC LIMIT 1`)
 	require.NoError(t, row.Scan(&id.ID))
 
 	return models.PublicID(models.PrefixInvitation, id.ID)

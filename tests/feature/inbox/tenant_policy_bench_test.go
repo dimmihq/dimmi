@@ -30,7 +30,7 @@ owner.
 func seedConversations(b *testing.B, tc *tests.TestCase, workspace ids.UUID) {
 	b.Helper()
 
-	_, err := tc.App.DB.Exec(b.Context(), `
+	_, err := tc.Operator().Exec(b.Context(), `
 		WITH contact AS (
 			INSERT INTO contacts (workspace_id, kind, name) VALUES ($1, 'lead', 'Ada') RETURNING id
 		),
@@ -115,7 +115,7 @@ func BenchmarkConversationListTenantPolicy(b *testing.B) {
 	require.NoError(b, err)
 	seedConversations(b, tc, workspace)
 	seedConversations(b, tc, other.Workspace.ID)
-	_, err = tc.App.DB.Exec(b.Context(), "ANALYZE conversations")
+	_, err = tc.Operator().Exec(b.Context(), "ANALYZE conversations")
 	require.NoError(b, err)
 
 	for _, run := range []struct {

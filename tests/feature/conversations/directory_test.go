@@ -184,7 +184,7 @@ func TestContacts(t *testing.T) {
 		assert.True(t, all[3].Unblocked)
 
 		var trusted []string
-		err := d.tc.App.DB.QueryRow(t.Context(), "SELECT trusted_attribute_keys FROM contacts").Scan(&trusted)
+		err := d.tc.Operator().QueryRow(t.Context(), "SELECT trusted_attribute_keys FROM contacts").Scan(&trusted)
 		require.NoError(t, err)
 		assert.Equal(t, []string{"seats"}, trusted)
 	})
@@ -210,7 +210,7 @@ func TestContacts(t *testing.T) {
 		other := open(t)
 		survivor := d.owner.PostJSON("/api/v1/contacts", testkit.JSON{"name": "Kept"}).AssertCreated().String("data.id")
 		merged := d.owner.PostJSON("/api/v1/contacts", testkit.JSON{"name": "Gone"}).AssertCreated().String("data.id")
-		_, err := d.tc.App.DB.Exec(t.Context(),
+		_, err := d.tc.Operator().Exec(t.Context(),
 			"UPDATE contacts SET merged_into_id = (SELECT id FROM contacts WHERE name = 'Kept') WHERE name = 'Gone'")
 		require.NoError(t, err)
 
@@ -221,7 +221,7 @@ func TestContacts(t *testing.T) {
 		d.owner.GetJSON("/api/v1/contacts/ctc_nope").AssertNotFound()
 		d.owner.PatchJSON("/api/v1/contacts/ctc_nope", testkit.JSON{"name": "x"}).AssertNotFound()
 
-		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE contacts SET deleted_at = now()")
+		_, err = d.tc.Operator().Exec(t.Context(), "UPDATE contacts SET deleted_at = now()")
 		require.NoError(t, err)
 		d.owner.GetJSON("/api/v1/contacts/" + survivor).AssertNotFound()
 	})

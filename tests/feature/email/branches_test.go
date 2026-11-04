@@ -26,7 +26,7 @@ exec runs a statement in the workspace, as the workspace sees its rows.
 func exec(tc *tests.TestCase, workspaceID ids.UUID, sql string, args ...any) {
 	tc.T.Helper()
 
-	_, err := tc.App.DB.Exec(tenancy.With(tc.T.Context(), workspaceID.String()), sql, args...)
+	_, err := tc.Operator().Exec(tenancy.With(tc.T.Context(), workspaceID.String()), sql, args...)
 	require.NoError(tc.T, err)
 }
 

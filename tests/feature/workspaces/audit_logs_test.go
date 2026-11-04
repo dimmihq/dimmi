@@ -160,7 +160,7 @@ func TestAuditLogRecording(t *testing.T) {
 		tc := tests.New(t)
 		seed(t, tc, "workspace.updated")
 
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE audit_logs SET event = 'changed.event'")
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE audit_logs SET event = 'changed.event'")
 
 		require.ErrorContains(t, err, "permission denied")
 	})
@@ -192,7 +192,7 @@ test case's workspace.
 func leaverMembership(t *testing.T, tc *tests.TestCase, user models.User) string {
 	t.Helper()
 
-	m, err := models.New(tc.App.DB).FindWorkspaceMemberForUser(t.Context(), models.FindWorkspaceMemberForUserParams{
+	m, err := models.New(tc.Operator()).FindWorkspaceMemberForUser(t.Context(), models.FindWorkspaceMemberForUserParams{
 		WorkspaceID: tc.Workspace.Workspace.ID, UserID: user.ID,
 	})
 	require.NoError(t, err)

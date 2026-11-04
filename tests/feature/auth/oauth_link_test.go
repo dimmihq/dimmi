@@ -70,7 +70,7 @@ func TestOAuthLinking(t *testing.T) {
 		tc.Social()
 		browser := tc.ActingAsOwner()
 		attempt := tc.StartOAuth(browser, "/auth/github/redirect?intent=link")
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET deleted_at = now() WHERE id = $1", tc.Owner.ID)
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE users SET deleted_at = now() WHERE id = $1", tc.Owner.ID)
 		require.NoError(t, err)
 
 		assertLands(t, tc.FinishOAuth(browser, attempt, person("583231", "grace@example.com")),

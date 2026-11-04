@@ -287,9 +287,9 @@ func TestConversationTimeline(t *testing.T) {
 		bob, member := d.join(t, enums.RoleMember)
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Charged twice")
 		bob.PostJSON(path+"/notes", testkit.JSON{"body": "Mine"}).AssertCreated()
-		_, err := d.tc.App.DB.Exec(t.Context(), "DELETE FROM workspace_members WHERE id = $1", member.ID)
+		_, err := d.tc.Operator().Exec(t.Context(), "DELETE FROM workspace_members WHERE id = $1", member.ID)
 		require.NoError(t, err)
-		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE messages SET deleted_at = now() WHERE type = 'message'")
+		_, err = d.tc.Operator().Exec(t.Context(), "UPDATE messages SET deleted_at = now() WHERE type = 'message'")
 		require.NoError(t, err)
 
 		d.owner.GetJSON(path+"/messages").AssertOK().
