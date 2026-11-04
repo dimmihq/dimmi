@@ -30,6 +30,7 @@ import {
 import { MenuDivider, MenuRowList } from "@/components/application/dashboard/dashboard-user-menu";
 import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
+import { useSidebarViews } from "@/features/inbox/views/use-sidebar-views";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
 import { RealtimeProvider } from "@/lib/realtime/provider";
@@ -180,7 +181,10 @@ function SignedInShell({
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
-  const sections = inSettings ? settingsSections(me.instance?.edition === "cloud") : appSections();
+  const views = useSidebarViews(workspace?.id ?? "");
+  const sections = inSettings
+    ? settingsSections(me.instance?.edition === "cloud")
+    : appSections(views.sections, views.canDelete);
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (

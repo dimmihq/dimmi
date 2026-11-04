@@ -66,6 +66,7 @@ type UpdateWorkspaceInput struct {
 	Locale           *string
 	TestMode         *bool
 	RequireTwoFactor *bool
+	ShowViewers      *bool
 }
 
 /*
@@ -208,19 +209,47 @@ func (a *UpdateWorkspace) changes(
 		changes = append(changes, "slug")
 	}
 
+	settings, err := settingChanges(&params, w, in)
+	if err != nil {
+		return params, nil, err
+	}
+
+	changes = append(changes, settings...)
+	slices.Sort(changes)
+
+	return params, changes, nil
+}
+
+/*
+settingChanges writes the settings the input changes into the params,
+returning their names.
+*/
+func settingChanges(
+	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput,
+) ([]string, error) {
+	var changes []string
+
 	if in.RequireTwoFactor != nil && *in.RequireTwoFactor != w.RequiresTwoFactor() {
 		settings, err := models.WithTwoFactorRequired(params.Settings, *in.RequireTwoFactor)
 		if err != nil {
-			return params, nil, err
+			return nil, err
 		}
 
 		params.Settings = settings
 		changes = append(changes, fieldRequireTwoFactor)
 	}
 
-	slices.Sort(changes)
+	if in.ShowViewers != nil && *in.ShowViewers != w.ShowsViewersOnList() {
+		settings, err := models.WithSetting(params.Settings, "inbox", "show_viewers_on_list", *in.ShowViewers)
+		if err != nil {
+			return nil, err
+		}
 
-	return params, changes, nil
+		params.Settings = settings
+		changes = append(changes, "show_viewers_on_list")
+	}
+
+	return changes, nil
 }
 
 /*

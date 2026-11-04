@@ -3,7 +3,7 @@
 | Workspace Behavior
 |--------------------------------------------------------------------------
 |
-| Security settings of a workspace, read from and written to its settings
+| Settings of a workspace, read from and written to its settings
 | document in one place, so the policy that enforces a setting and the
 | endpoint that changes it always agree on where it lives. Settings nest
 | by area, such as {"security": {"require_two_factor": true}}, and every
@@ -47,6 +47,32 @@ WithTwoFactorRequired returns the settings document with the
 requirement of a second factor set to on, keeping every other key.
 */
 func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, error) {
+	return WithSetting(settings, "security", "require_two_factor", on)
+}
+
+/*
+ShowsViewersOnList reports whether the inbox list shows who views each
+conversation. It does unless the workspace turned it off.
+*/
+func (w Workspace) ShowsViewersOnList() bool {
+	var settings struct {
+		Inbox struct {
+			ShowViewersOnList *bool `json:"show_viewers_on_list"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return true
+	}
+
+	return settings.Inbox.ShowViewersOnList == nil || *settings.Inbox.ShowViewersOnList
+}
+
+/*
+WithSetting returns the settings document with the key of the area set
+to the value, keeping every other key.
+*/
+func WithSetting(settings json.RawMessage, area, key string, value any) (json.RawMessage, error) {
 	values := map[string]json.RawMessage{}
 	if len(settings) > 0 {
 		if err := json.Unmarshal(settings, &values); err != nil {
@@ -54,21 +80,26 @@ func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, 
 		}
 	}
 
-	security := map[string]json.RawMessage{}
-	if raw, ok := values["security"]; ok {
-		if err := json.Unmarshal(raw, &security); err != nil {
-			return nil, fmt.Errorf("read workspace security settings: %w", err)
+	section := map[string]json.RawMessage{}
+	if raw, ok := values[area]; ok {
+		if err := json.Unmarshal(raw, &section); err != nil {
+			return nil, fmt.Errorf("read workspace %s settings: %w", area, err)
 		}
 	}
 
-	security["require_two_factor"] = json.RawMessage(fmt.Sprint(on))
-
-	raw, err := json.Marshal(security)
+	encoded, err := json.Marshal(value)
 	if err != nil {
-		return nil, fmt.Errorf("write workspace security settings: %w", err)
+		return nil, fmt.Errorf("write workspace setting %s: %w", key, err)
 	}
 
-	values["security"] = raw
+	section[key] = encoded
+
+	raw, err := json.Marshal(section)
+	if err != nil {
+		return nil, fmt.Errorf("write workspace %s settings: %w", area, err)
+	}
+
+	values[area] = raw
 
 	return json.Marshal(values)
 }

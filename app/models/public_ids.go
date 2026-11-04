@@ -70,6 +70,7 @@ const (
 	PrefixAttachment        Prefix = "att"
 	PrefixTag               Prefix = "tag"
 	PrefixSavedReply        Prefix = "rpl"
+	PrefixConversationView  Prefix = "cvw"
 )
 
 /*
@@ -167,6 +168,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixAttachment, "attachments"},
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
+		{PrefixConversationView, "conversation_views"},
 		{"exp", "contact_exports"},
 		{"evt", "events"},
 	}

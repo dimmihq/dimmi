@@ -190,6 +190,23 @@ type ConversationTag struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type ConversationView struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Icon              *string         `json:"icon"`
+	Scope             string          `json:"scope"`
+	OwnerMemberID     *ids.UUID       `json:"owner_member_id"`
+	Definition        json.RawMessage `json:"definition"`
+	Sort              *string         `json:"sort"`
+	StatusFilter      *string         `json:"status_filter"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	Position          int32           `json:"position"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+	DeletedAt         *time.Time      `json:"deleted_at"`
+}
+
 type EmailAddress struct {
 	ID                     ids.UUID        `json:"id"`
 	WorkspaceID            ids.UUID        `json:"workspace_id"`
@@ -396,6 +413,15 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type MemberInboxPreference struct {
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	MemberID         ids.UUID        `json:"member_id"`
+	Sidebar          json.RawMessage `json:"sidebar"`
+	Views            json.RawMessage `json:"views"`
+	PinnedAttributes json.RawMessage `json:"pinned_attributes"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type Message struct {

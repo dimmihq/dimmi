@@ -1,6 +1,6 @@
 /*
- * The moves a teammate makes on a case: who holds it, its status and
- * its priority. Each goes to the server, which records it in the
+ * The moves a teammate makes on a case: who holds it, the team it sits
+ * with, its status and its priority. Each goes to the server, which records it in the
  * thread as an event so the history says who did what; the open
  * conversation, its timeline, the lists and the sidebar's counts are
  * then read again. Each change carries an id, so its realtime echo is
@@ -41,6 +41,7 @@ export function useCase(workspace: string, conversation: Conversation) {
     pending: change.isPending,
     error: change.error,
     assign: (memberId: string | null) => change.mutate({ assignee_id: memberId }),
+    assignTeam: (teamId: string | null) => change.mutate({ team_id: teamId }),
     setStatus: (status: ConversationStatus) =>
       change.mutate(status === "snoozed" ? { status, snooze_preset: "tomorrow" } : { status }),
     setPriority: (priority: ConversationPriority) => change.mutate({ priority }),

@@ -121,3 +121,34 @@ var ErrCursorMismatch = &fhttp.ResponseError{
 	Status: fhttp.StatusBadRequest, Code: "cursor_mismatch",
 	Message: "This cursor belongs to a different list.",
 }
+
+/*
+Inbox preference failures.
+
+ErrInvalidPreferences refuses a view no member has, or a sort, status or
+layout no list accepts. ErrPreferencesTooLarge refuses preferences over
+64 KB.
+*/
+var (
+	ErrInvalidPreferences = fault.New(fault.Invalid, "invalid_preferences",
+		"These preferences name a view or setting the inbox does not have.").OnField("views")
+	ErrPreferencesTooLarge = fault.New(fault.Invalid, "preferences_too_large",
+		"Inbox preferences can be 64 KB at most.")
+)
+
+/*
+Saved view failures.
+
+ErrInvalidDefinition refuses conditions a view cannot hold, naming the
+path to the culprit. ErrViewLimitReached refuses a view past the
+workspace's 200 shared or a member's 50 personal ones. ErrViewNameTaken
+refuses a name another view of the same scope and owner already has.
+*/
+var (
+	ErrInvalidDefinition = fault.New(fault.Invalid, "invalid_definition",
+		"This view's conditions are not valid.").OnField("definition")
+	ErrViewLimitReached = fault.New(fault.Invalid, "view_limit_reached",
+		"There are as many views as allowed. Delete one to add another.")
+	ErrViewNameTaken = fault.New(fault.Invalid, "view_name_taken",
+		"Another view already has this name.").OnField("name")
+)
