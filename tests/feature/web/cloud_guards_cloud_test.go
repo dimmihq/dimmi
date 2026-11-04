@@ -26,7 +26,8 @@ func TestCloudBootGuards(t *testing.T) {
 		))
 
 		require.ErrorIs(t, err, providers.ErrCloudMisconfigured)
-		for _, key := range []string{"filesystems.default", "mail.default", "app.url", "channels.email.inbound_domain"} {
+		keys := []string{"filesystems.default", "mail.default", "app.url", "channels.email.inbound_domain"}
+		for _, key := range keys {
 			assert.ErrorContains(t, err, key)
 		}
 	})
