@@ -6,7 +6,8 @@
  * at once. On arrival it shows the newer of the copy and the server's
  * draft. Another device's newer save replaces the text when nothing is
  * being typed, and otherwise waits as a conflict the person settles.
- * Sending clears it: the server ends its own copy with the send.
+ * Sending pauses saving, so no save races the send, and then clears it:
+ * the server ends its own copy with the send. A failed send saves again.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,6 +25,7 @@ export interface DraftState {
   edit: (body: string) => void;
   flush: () => void;
   sent: () => void;
+  pause: () => void;
   conflict: Draft | null;
   takeTheirs: () => void;
   keepMine: () => void;
@@ -94,16 +96,21 @@ export function useDraft(workspace: string, conversation: string | null, mode: D
 
   const flush = useCallback(() => save(true), [save]);
 
+  const pause = useCallback(() => {
+    window.clearTimeout(timers.current.save);
+    timers.current.save = undefined;
+    inFlight.current?.abort();
+  }, []);
+
   const sent = useCallback(() => {
     window.clearTimeout(timers.current.copy);
-    window.clearTimeout(timers.current.save);
+    pause();
     timers.current = {};
-    inFlight.current?.abort();
     dirty.current = false;
     writeCopy(key, null);
     remember({ body: "", at: new Date().toISOString() });
     client.setQueryData<Draft[]>(realtimeKeys.drafts(workspace), (list) => replace(list, null, { conversation, mode }));
-  }, [client, conversation, key, mode, remember, workspace]);
+  }, [client, conversation, key, mode, pause, remember, workspace]);
 
   useArrivals(stored, latest, dirty, { remember, setConflict });
   useFlushOnLeave(flush);
@@ -113,6 +120,7 @@ export function useDraft(workspace: string, conversation: string | null, mode: D
     edit,
     flush,
     sent,
+    pause,
     conflict,
     takeTheirs: () => {
       if (conflict) {

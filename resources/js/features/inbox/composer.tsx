@@ -5,7 +5,7 @@
  * stays open until the person leaves the conversation. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
  * attachments as tiles above the text, a field that grows with what is
- * typed, and a toolbar with the add menu (files, help articles, saved
+ * typed with formatting kept as Markdown, and a toolbar with the add menu (files, help articles, saved
  * replies and more from the workspace) and a way to ask Operator. Files can
  * also be dropped on the panel or pasted. Sending goes to the server; a
  * sent draft empties, a refused one stays with the reason under it.
@@ -18,7 +18,7 @@
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type DragEvent, useCallback, useRef, useState } from "react";
+import { type DragEvent, useEffect, useRef, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -26,6 +26,8 @@ import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
 import { AttachmentStrip } from "./attachments";
+import { ComposerField } from "./composer/composer-field";
+import { preloadEditor } from "./composer/load-editor";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
@@ -66,6 +68,7 @@ export function Composer({
   onTyping: Report;
 }) {
   const still = useReducedMotion();
+  useEffect(preloadEditor, []);
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -129,15 +132,6 @@ function Bar({ customer, onOpen }: { customer: string; onOpen: (mode: Mode) => v
   );
 }
 
-/*
- * sizeToText sizes the field to its text, between its resting height and a cap
- * past which it scrolls.
- */
-function sizeToText(field: HTMLTextAreaElement) {
-  field.style.height = "auto";
-  field.style.height = `${Math.min(field.scrollHeight, 280)}px`;
-}
-
 function Panel({
   conversation,
   mode,
@@ -167,25 +161,8 @@ function Panel({
   const attachments = useAttachments();
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
-  const field = useRef<HTMLTextAreaElement | null>(null);
   const note = mode === "note";
-  const arrive = useCallback((element: HTMLTextAreaElement | null) => {
-    field.current = element;
-    if (element) {
-      sizeToText(element);
-      element.focus();
-    }
-  }, []);
-
-  const insert = (text: string) => {
-    draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
-    window.requestAnimationFrame(() => {
-      if (field.current) {
-        sizeToText(field.current);
-        field.current.focus();
-      }
-    });
-  };
+  const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
 
   const text = draft.body.trim();
   const send = async (then?: "close" | "snooze") => {
@@ -195,11 +172,13 @@ function Panel({
     setSending(true);
     setFailure(null);
     onTyping(false);
+    draft.pause();
     try {
       await onSend(mode, text, note ? undefined : then);
       draft.sent();
       attachments.clear();
     } catch (error) {
+      draft.edit(draft.body);
       setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
     } finally {
       setSending(false);
@@ -253,30 +232,20 @@ function Panel({
         <div className="flex flex-col gap-3 px-1.5">
           <DraftConflict draft={draft} />
           <AttachmentStrip files={attachments.files} onRemove={attachments.remove} />
-          <textarea
-            key={`${mode}-${focusKey}`}
-            ref={arrive}
+          <ComposerField
             value={draft.body}
-            onChange={(event) => {
-              const value = event.target.value;
+            label={note ? "Internal note" : `Reply to ${customer}`}
+            placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
+            focusKey={`${mode}-${focusKey}`}
+            onChange={(value) => {
               draft.edit(value);
               if (!note) {
                 onTyping(value.trim() !== "");
               }
             }}
+            onSubmit={(then) => void send(then)}
             onBlur={() => onTyping(false)}
-            onInput={(event) => sizeToText(event.currentTarget)}
-            onPaste={(event) => attachments.add(event.clipboardData.files)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault();
-                void send(event.shiftKey ? "close" : event.altKey ? "snooze" : undefined);
-              }
-            }}
-            rows={4}
-            aria-label={note ? "Internal note" : `Reply to ${customer}`}
-            placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
-            className="block max-h-[280px] min-h-24 w-full resize-none bg-transparent p-0 text-body-regular text-text-primary caret-accent-500 outline-none placeholder:text-text-tertiary"
+            onFiles={attachments.add}
           />
         </div>
         <div className="flex items-center gap-2">

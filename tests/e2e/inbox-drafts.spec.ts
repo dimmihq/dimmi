@@ -4,7 +4,7 @@
  * the note, and is gone once sent.
  */
 import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
-import { type Customer, startConversation } from "./support/inbox";
+import { type Customer, openComposer, startConversation } from "./support/inbox";
 
 const emily: Customer = {
   name: "Emily Johnson",
@@ -36,33 +36,33 @@ it.describe("drafts", () => {
     const saved = page.waitForResponse((r) => r.url().includes("/api/v1/drafts") && r.request().method() === "POST");
 
     await page.goto(address);
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await openComposer(page, /Reply to Emily Johnson/);
     await reply.fill("Hi Emily, resetting it now");
     await saved;
 
     await page.goto("/d/inbox/all");
     await expect(page.getByRole("link", { name: /Emily Johnson/ })).toContainText("Draft");
     await page.goto(address);
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
-    await expect(reply).toHaveValue("Hi Emily, resetting it now");
+    await openComposer(page, /Reply to Emily Johnson/);
+    await expect(reply).toHaveText("Hi Emily, resetting it now");
 
     await page.reload();
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
-    await expect(reply).toHaveValue("Hi Emily, resetting it now");
+    await openComposer(page, /Reply to Emily Johnson/);
+    await expect(reply).toHaveText("Hi Emily, resetting it now");
 
     await signIn(guest, person);
     await guest.goto(address);
-    await guest.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
-    await expect(guest.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveValue(
+    await openComposer(guest, /Reply to Emily Johnson/);
+    await expect(guest.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveText(
       "Hi Emily, resetting it now",
     );
 
     await page.getByRole("button", { name: "Send", exact: true }).click();
     await expect(page.getByText("Hi Emily, resetting it now")).toBeVisible();
-    await expect(reply).toHaveValue("");
+    await expect(reply).toHaveText("");
     await page.reload();
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
-    await expect(reply).toHaveValue("");
+    await openComposer(page, /Reply to Emily Johnson/);
+    await expect(reply).toHaveText("");
   });
 
   it("keeps the reply and the note apart", async ({ page }) => {
@@ -72,16 +72,16 @@ it.describe("drafts", () => {
       (r) => r.url().includes("/api/v1/drafts") && r.request().postDataJSON()?.mode === "note",
     );
 
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await openComposer(page, /Reply to Emily Johnson/);
     await page.getByRole("textbox", { name: "Reply to Emily Johnson" }).fill("For Emily");
     await page.getByRole("radio", { name: "Note" }).click();
     await page.getByRole("textbox", { name: "Internal note" }).fill("For the team");
     await saved;
 
     await page.reload();
-    await page.getByRole("button", { name: /^Note/ }).click();
-    await expect(page.getByRole("textbox", { name: "Internal note" })).toHaveValue("For the team");
+    await openComposer(page, /^Note/);
+    await expect(page.getByRole("textbox", { name: "Internal note" })).toHaveText("For the team");
     await page.getByRole("radio", { name: "Reply" }).click();
-    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveValue("For Emily");
+    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveText("For Emily");
   });
 });
