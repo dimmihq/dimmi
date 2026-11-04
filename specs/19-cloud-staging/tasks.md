@@ -1,7 +1,7 @@
 # 19 Cloud staging: tasks
 
-**Draft: awaiting owner approval.** Compute and deployment are open, so packaging, pipeline and CDK tasks wait for that choice. Do not touch any AWS, Vercel, GitHub or DNS
-account before approval. The repository is public: no account ids, secret values or `cdk.context.json` in commits.
+**Approved, 2026-11-04.** Fargate on ARM behind an NLB, DNS at Vercel by script. Code never touches a real AWS, Vercel, GitHub or DNS account; people do,
+following `docs/deploy`. The repository is public: no account ids, secret values or `cdk.context.json` in commits.
 
 Size: S under a day, M 1 to 3 days, L more.
 
@@ -21,12 +21,13 @@ Size: S under a day, M 1 to 3 days, L more.
 
 ## Track B: infrastructure and pipeline
 
-Waits for the compute choice. Regardless of it: TypeScript CDK at `deploy/cdk`, no lookups, GitHub Actions with OIDC, `docs/deploy` with every manual step, IAM scoped by prefix, tag and Region.
+TypeScript CDK at `deploy/cdk`, no lookups, GitHub Actions with OIDC, `docs/deploy` with every manual step, IAM scoped by prefix, tag and Region.
 
-- [ ] B1 (S) `Dns` stack: zone for `staging.trydimmi.com`, outputs NS.
-- [ ] B2 (M) `Mail` stack: identities, MAIL FROM, DMARC, configuration sets, topics, receipt rules with scan on, custom resource activating the rule set, DLQ.
-- [ ] B3 (M) Data stores: isolated subnets, RDS 18, Valkey with TLS and AUTH, S3 buckets, KMS key, secrets.
-- [ ] B4 Compute, packaging, deploy, rollback: to be written after the choice.
+- [x] B1 (S) DNS: `deploy/dns` writes every record to Vercel from stack outputs, with `plan`, `apply`, `verify` and `remove`. No Route 53.
+- [x] B2 (M) `mail` stack: identities, MAIL FROM, DMARC, configuration sets, topics, receipt rules with scan on, custom resource activating the rule set, DLQ.
+- [x] B3 (M) `network` and `data` stacks: isolated subnets, RDS 18, Valkey with TLS and AUTH, S3, KMS key, secrets, composed connection strings.
+- [x] B4 (L) `registry`, `app`, `ci`, `ops` stacks, `Dockerfile`, release and rollback scripts, `main`, `production` and `rollback` workflows, runbook.
+- [ ] B5 (S) First real deploy of staging, following `docs/deploy/new-environment.md`, with dates recorded.
 
 ## Track C: mail both ways (spec 04)
 
