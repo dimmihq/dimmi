@@ -275,11 +275,35 @@ export function updateConversation(write: Write, id: string, changes: Conversati
   return request<Conversation>("PATCH", `/conversations/${encodeURIComponent(id)}`, changes, writeOptions(write));
 }
 
-export function reply(write: Write, id: string, body: string): Promise<Message> {
+/*
+ * Then is what happens to the conversation once a reply is sent: it
+ * keeps its status, closes, or snoozes by one of its snooze options.
+ */
+export type Then = { kind: "close" } | { kind: "snooze"; option: string };
+
+const thenField = "then";
+
+/*
+ * afterFields writes what happens next as the reply's then and snooze
+ * fields; the field name comes from a constant because a then key on an
+ * object literal reads as a promise to tools.
+ */
+function afterFields(then: Then | undefined): Record<string, unknown> {
+  if (!then) {
+    return {};
+  }
+  const fields: Record<string, unknown> = { [thenField]: then.kind };
+
+  return then.kind === "snooze" ? { ...fields, snooze: { option: then.option } } : fields;
+}
+
+export function reply(write: Write, id: string, body: string, then?: Then): Promise<Message> {
+  const after = afterFields(then);
+
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
-    { body, client_message_id: crypto.randomUUID() },
+    { body, client_message_id: crypto.randomUUID(), ...after },
     writeOptions(write),
   );
 }

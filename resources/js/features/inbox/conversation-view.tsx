@@ -26,7 +26,15 @@ import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
-import { addNote, type Conversation, markRead, messagesQuery, reply } from "@/lib/api/inbox";
+import {
+  addNote,
+  type Conversation,
+  markRead,
+  messagesQuery,
+  reply,
+  snoozeChoicesQuery,
+  type Then,
+} from "@/lib/api/inbox";
 import { useMutationId } from "@/lib/realtime/context";
 import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
@@ -76,10 +84,22 @@ function useTimeline(workspace: string, conversation: Conversation) {
     }
   }, [unread, mark]);
 
-  const send = async (mode: Mode, text: string) => {
+  const send = async (mode: Mode, text: string, then?: "close" | "snooze") => {
     const write = { workspace, mutation: mutationId() };
-    await (mode === "note" ? addNote(write, conversation.id, text) : reply(write, conversation.id, text));
+    if (mode === "note") {
+      await addNote(write, conversation.id, text);
+    } else {
+      await reply(write, conversation.id, text, await afterReply(then));
+    }
     await refresh();
+  };
+  const afterReply = async (then?: "close" | "snooze"): Promise<Then | undefined> => {
+    if (then !== "snooze") {
+      return then ? { kind: then } : undefined;
+    }
+    const choices = await queryClient.fetchQuery(snoozeChoicesQuery(workspace, conversation.id));
+    const first = choices[0];
+    return first ? { kind: "snooze", option: first.key } : undefined;
   };
 
   return { entries: messages.map(toEntry), send };
@@ -196,7 +216,12 @@ export function ConversationView({
         entries={timeline.entries}
         customer={customer}
         channel={conversation.channel.name}
-        onSend={timeline.send}
+        onSend={async (mode, text, then) => {
+          await timeline.send(mode, text, then);
+          if (then) {
+            walk.advance();
+          }
+        }}
         onAskOperator={toggleOperator}
         onTyping={typing}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}

@@ -71,7 +71,7 @@ func BuiltInSnoozeOptions() []SnoozeOption {
 /*
 clockTime is what an option's At looks like.
 */
-var clockTime = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
+var clockTime = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 
 /*
 ValidateSnoozeOptions refuses an empty list, more than ten options, a
@@ -157,7 +157,9 @@ func atClock(day time.Time, at string) time.Time {
 snoozeOptionsFor returns the options that apply to a conversation the
 team holds: the team's list, the workspace's, or the built-in presets.
 */
-func snoozeOptionsFor(ctx context.Context, q *models.Queries, workspace ids.UUID, team *ids.UUID) ([]SnoozeOption, error) {
+func snoozeOptionsFor(
+	ctx context.Context, q *models.Queries, workspace ids.UUID, team *ids.UUID,
+) ([]SnoozeOption, error) {
 	rows, err := q.SnoozeListsFor(ctx, models.SnoozeListsForParams{WorkspaceID: workspace, TeamID: team})
 	if err != nil {
 		return nil, fmt.Errorf("load snooze lists: %w", err)
@@ -192,4 +194,34 @@ func snoozeOption(
 	}
 
 	return SnoozeOption{}, exceptions.ErrSnoozeOptionUnknown
+}
+
+/*
+SnoozeWhen is how a snooze says when it ends: a time, a preset or an
+option's key, read in the location.
+*/
+type SnoozeWhen struct {
+	Until    *time.Time
+	Preset   string
+	Option   string
+	Location *time.Location
+}
+
+/*
+SnoozeEnd works out when a snooze of the conversation ends, refusing a
+moment too soon or too far and an option no longer offered.
+*/
+func SnoozeEnd(ctx context.Context, w *Writer, c models.Conversation, when SnoozeWhen) (time.Time, error) {
+	if when.Option == "" {
+		return SnoozeUntil(w.Now, when.Until, when.Preset, when.Location)
+	}
+
+	option, err := snoozeOption(ctx, w.Q, c, when.Option)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	until := ResolveSnoozeOption(option, w.Now, when.Location)
+
+	return SnoozeUntil(w.Now, &until, "", when.Location)
 }

@@ -308,17 +308,8 @@ snoozeUntil works out when the snooze ends: at the time given, the
 preset's time, or the option's time in the caller's location.
 */
 func (ap *applier) snoozeUntil(ctx context.Context, ch Changes) (time.Time, error) {
-	loc := Location(ap.w.Timezone, ap.m.Workspace)
-	if ch.SnoozeOption == "" {
-		return SnoozeUntil(ap.w.Now, ch.SnoozedUntil, ch.SnoozePreset, loc)
-	}
-
-	option, err := snoozeOption(ctx, ap.w.Q, ap.c, ch.SnoozeOption)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	until := ResolveSnoozeOption(option, ap.w.Now, loc)
-
-	return SnoozeUntil(ap.w.Now, &until, "", loc)
+	return SnoozeEnd(ctx, ap.w, ap.c, SnoozeWhen{
+		Until: ch.SnoozedUntil, Preset: ch.SnoozePreset, Option: ch.SnoozeOption,
+		Location: Location(ap.w.Timezone, ap.m.Workspace),
+	})
 }

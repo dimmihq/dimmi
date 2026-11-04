@@ -61,15 +61,20 @@ func TestSnoozeOptions(t *testing.T) {
 		team := d.owner.PostJSON("/api/v1/teams", testkit.JSON{"name": "Billing"}).AssertCreated().String("data.id")
 		id := d.customer(t, "ann", "Later", "Hi")
 		workspaceList := []testkit.JSON{{"key": "hour", "label": "In an hour", "kind": "in", "minutes": 60}}
-		teamList := []testkit.JSON{{"key": "monday", "label": "Monday", "kind": "weekday_at", "weekday": 1, "at": "09:00"}}
+		teamList := []testkit.JSON{
+			{"key": "monday", "label": "Monday", "kind": "weekday_at", "weekday": 1, "at": "09:00"},
+		}
+		keys := func() []string {
+			return sliceOf(d.owner.GetJSON("/api/v1/snooze-options?conversation="+id), "data.#.key")
+		}
 
 		d.owner.PatchJSON("/api/v1/snooze-lists/workspace", testkit.JSON{"options": workspaceList}).AssertOK()
-		assert.Equal(t, []string{"hour"}, sliceOf(d.owner.GetJSON("/api/v1/snooze-options?conversation="+id), "data.#.key"))
+		assert.Equal(t, []string{"hour"}, keys())
 
 		d.owner.PatchJSON("/api/v1/snooze-lists/"+team, testkit.JSON{"options": teamList}).AssertOK().
 			AssertJSONPath("data.teams."+team+".0.key", "monday")
 		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"team_id": team}).AssertOK()
-		assert.Equal(t, []string{"monday"}, sliceOf(d.owner.GetJSON("/api/v1/snooze-options?conversation="+id), "data.#.key"))
+		assert.Equal(t, []string{"monday"}, keys())
 
 		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"status": "snoozed", "snooze_option": "hour"}).
 			AssertStatus(422).AssertJSONPath("code", "snooze_option_unknown")
@@ -77,7 +82,7 @@ func TestSnoozeOptions(t *testing.T) {
 			AssertOK().AssertJSONPath("data.status", "snoozed")
 
 		d.owner.PatchJSON("/api/v1/snooze-lists/"+team, testkit.JSON{"options": nil}).AssertOK()
-		assert.Equal(t, []string{"hour"}, sliceOf(d.owner.GetJSON("/api/v1/snooze-options?conversation="+id), "data.#.key"))
+		assert.Equal(t, []string{"hour"}, keys())
 	})
 
 	t.Run("refuses an empty list, eleven options and a member", func(t *testing.T) {
@@ -89,7 +94,8 @@ func TestSnoozeOptions(t *testing.T) {
 			eleven[i] = testkit.JSON{"key": string(rune('a' + i)), "label": "x", "kind": "in", "minutes": 10}
 		}
 
-		d.owner.PatchJSON("/api/v1/snooze-lists/workspace", testkit.JSON{"options": []testkit.JSON{}}).AssertStatus(422)
+		list := "/api/v1/snooze-lists/workspace"
+		d.owner.PatchJSON(list, testkit.JSON{"options": []testkit.JSON{}}).AssertStatus(422)
 		d.owner.PatchJSON("/api/v1/snooze-lists/workspace", testkit.JSON{"options": eleven}).AssertStatus(422)
 		d.owner.PatchJSON("/api/v1/snooze-lists/workspace", testkit.JSON{"options": []testkit.JSON{
 			{"key": "x", "label": "x", "kind": "in", "minutes": 1},

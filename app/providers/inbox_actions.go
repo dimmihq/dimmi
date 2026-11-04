@@ -38,7 +38,6 @@ func bootInbox(a *app.App) error {
 	}
 
 	delivery := conversations.Delivery{Channels: a.Channels, Queue: a.Queue}
-	viewSaver := conversationviews.Saver{DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock}
 	a.Actions.Inbox = &app.InboxActions{
 		ListInboxes:   &inboxes.ListInboxes{DB: a.DB},
 		ShowInbox:     &inboxes.ShowInbox{DB: a.DB},
@@ -60,21 +59,6 @@ func bootInbox(a *app.App) error {
 		ShowReadState:      &conversations.ShowReadState{DB: a.DB},
 		UpdateReadState:    &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
-		ShowPreferences:    &conversations.ShowPreferences{DB: a.DB, IDs: a.IDs},
-		UpdatePreferences: &conversations.UpdatePreferences{
-			DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock,
-		},
-
-		ListViews:    &conversationviews.ListViews{DB: a.DB, IDs: a.IDs},
-		ShowView:     &conversationviews.ShowView{DB: a.DB, IDs: a.IDs},
-		CreateView:   &conversationviews.CreateView{Saver: viewSaver},
-		UpdateView:   &conversationviews.UpdateView{Saver: viewSaver},
-		DeleteView:   &conversationviews.DeleteView{Saver: viewSaver},
-		ReorderViews: &conversationviews.ReorderViews{Saver: viewSaver},
-
-		ListSnoozeLists:   &conversations.ListSnoozeLists{DB: a.DB},
-		UpdateSnoozeList:  &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		ShowSnoozeOptions: &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock},
 
 		ListMessages: &messages.ListMessages{DB: a.DB},
 		Reply: &messages.ReplyToConversation{
@@ -84,5 +68,28 @@ func bootInbox(a *app.App) error {
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
+	bootWorkbench(a)
+
 	return queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels})
+}
+
+/*
+bootWorkbench builds the actions of the inbox's workbench: preferences,
+saved views and snooze lists.
+*/
+func bootWorkbench(a *app.App) {
+	acts := a.Actions.Inbox
+	saver := conversationviews.Saver{DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock}
+
+	acts.ShowPreferences = &conversations.ShowPreferences{DB: a.DB, IDs: a.IDs}
+	acts.UpdatePreferences = &conversations.UpdatePreferences{DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock}
+	acts.ListViews = &conversationviews.ListViews{DB: a.DB, IDs: a.IDs}
+	acts.ShowView = &conversationviews.ShowView{DB: a.DB, IDs: a.IDs}
+	acts.CreateView = &conversationviews.CreateView{Saver: saver}
+	acts.UpdateView = &conversationviews.UpdateView{Saver: saver}
+	acts.DeleteView = &conversationviews.DeleteView{Saver: saver}
+	acts.ReorderViews = &conversationviews.ReorderViews{Saver: saver}
+	acts.ListSnoozeLists = &conversations.ListSnoozeLists{DB: a.DB}
+	acts.UpdateSnoozeList = &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.ShowSnoozeOptions = &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock}
 }
