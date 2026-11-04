@@ -48,6 +48,7 @@ refuses a reply in a conversation marked as spam. ErrChannelNotAPI
 refuses a customer message through the API on a conversation of another
 channel. ErrMessageNotInConversation refuses a read marker on a message
 of another conversation. ErrBodyRequired refuses an empty message.
+ErrMessageNotFailed refuses to send again a message that did not fail.
 */
 var (
 	ErrNewMessagesSince = fault.New(fault.Conflict, "new_messages_since",
@@ -58,7 +59,9 @@ var (
 		"Customer messages can only be added through the API to API conversations.")
 	ErrMessageNotInConversation = fault.New(fault.Invalid, "message_not_in_conversation",
 		"This message is not part of the conversation.").OnField("last_read_message_id")
-	ErrBodyRequired = fault.New(fault.Invalid, "body_required", "Write a message first.").OnField("body")
+	ErrBodyRequired     = fault.New(fault.Invalid, "body_required", "Write a message first.").OnField("body")
+	ErrMessageNotFailed = fault.New(fault.Conflict, "message_not_failed",
+		"Only a reply that was not delivered can be sent again.")
 )
 
 /*

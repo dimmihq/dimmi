@@ -46,6 +46,7 @@ type InboxActions struct {
 	ShowOriginal      *messages.ShowOriginal
 	DownloadOriginal  *messages.DownloadOriginal
 	Reply             *messages.ReplyToConversation
+	RetryDelivery     *messages.RetryDelivery
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
 }

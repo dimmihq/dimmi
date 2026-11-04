@@ -96,6 +96,7 @@ export interface Message {
   has_original: boolean;
   truncated: boolean;
   delivery_status: string | null;
+  delivery_error: string | null;
   event: TimelineEvent | null;
   deleted_at: string | null;
   created_at: string;
@@ -231,6 +232,15 @@ export function addNote(write: Write, id: string, body: string): Promise<Message
     "POST",
     `/conversations/${encodeURIComponent(id)}/notes`,
     { body, client_message_id: crypto.randomUUID() },
+    writeOptions(write),
+  );
+}
+
+export function retryDelivery(write: Write, id: string, message: string): Promise<Message> {
+  return request<Message>(
+    "POST",
+    `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}/retry`,
+    {},
     writeOptions(write),
   );
 }

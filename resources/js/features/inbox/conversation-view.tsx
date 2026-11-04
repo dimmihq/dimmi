@@ -26,7 +26,7 @@ import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
-import { addNote, type Conversation, markRead, messagesQuery, reply } from "@/lib/api/inbox";
+import { addNote, type Conversation, markRead, messagesQuery, reply, retryDelivery } from "@/lib/api/inbox";
 import { useMutationId } from "@/lib/realtime/context";
 import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
@@ -54,8 +54,9 @@ const notConnected =
 
 /*
  * useTimeline reads the conversation's timeline, marks it read once it
- * has loaded, and sends replies and notes, reading everything the inbox
- * shows again once the server has them.
+ * has loaded, and sends replies and notes, and replies that failed once
+ * more, reading everything the inbox shows again once the server has
+ * them.
  */
 function useTimeline(workspace: string, conversation: Conversation) {
   const queryClient = useQueryClient();
@@ -80,7 +81,12 @@ function useTimeline(workspace: string, conversation: Conversation) {
     await refresh();
   };
 
-  return { entries: messages.map(toEntry), send };
+  const retry = useMutation({
+    mutationFn: (message: string) => retryDelivery({ workspace, mutation: mutationId() }, conversation.id, message),
+    onSettled: refresh,
+  });
+
+  return { entries: messages.map(toEntry), send, retry: retry.mutate };
 }
 
 export function ConversationView({
@@ -163,6 +169,7 @@ export function ConversationView({
         onAskOperator={toggleOperator}
         onTyping={typing}
         onOpenOriginal={setOriginal}
+        onRetry={timeline.retry}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
       />
       {original ? (

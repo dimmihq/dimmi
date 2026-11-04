@@ -64,6 +64,7 @@ export function ago(iso: string | null, now = Date.now()): string {
  * ThreadEntry is one entry as the thread shows it. A said entry carries
  * how its text is read, Markdown or plain words, and for received email
  * whether more of it can be opened and whether its body was cut short.
+ * Failed holds why a reply never reached the customer, null otherwise.
  */
 export type ThreadEntry =
   | {
@@ -75,6 +76,7 @@ export type ThreadEntry =
       format: Message["body_format"];
       original: boolean;
       truncated: boolean;
+      failed: string | null;
     }
   | { kind: "event"; id: string; at: string; text: string };
 
@@ -117,6 +119,7 @@ export function toEntry(message: Message): ThreadEntry {
     format: message.body === null ? "plain" : (message.body_format ?? "markdown"),
     original: message.has_original ?? false,
     truncated: message.truncated ?? false,
+    failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
   } as const;
   if (message.type === "note") {
     return { kind: "note", ...said };

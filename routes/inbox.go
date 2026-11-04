@@ -55,7 +55,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
-			Original: acts.ShowOriginal, Raw: acts.DownloadOriginal, IDs: a.IDs, Cursors: cursors,
+			Original: acts.ShowOriginal, Raw: acts.DownloadOriginal, Resend: acts.RetryDelivery, IDs: a.IDs,
+			Cursors: cursors,
 		},
 		views: &v1.InboxViewController{
 			Counts: acts.CountConversations, ReadShow: acts.ShowReadState, ReadSave: acts.UpdateReadState,
@@ -115,6 +116,8 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 	routing.Post(r, conv+"/messages", "conversations.messages.store", c.messages.Store).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/replies", "conversations.replies.store", c.messages.StoreReply).
+		Ability("conversations:write")
+	routing.Post(r, conv+"/messages/{message}/retry", "conversations.messages.retry", c.messages.Retry).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/notes", "conversations.notes.store", c.messages.StoreNote).
 		Ability("conversations:write")

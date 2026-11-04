@@ -7,11 +7,13 @@
  * customer. Teammates' notes sit on the team's side with a dashed edge
  * and a lock. Markdown is rendered and a customer's plain text mail is
  * shown as written. An email whose quoted thread was cut, or whose long
- * body was cut short, offers its full message below it. Below the thread
+ * body was cut short, offers its full message below it. A reply that
+ * never reached the customer says so, with the reason, and can be sent
+ * again. Below the thread
  * sits the composer; R and N open it for a reply or a note from
  * anywhere, and O opens or closes Operator.
  */
-import { RiLock2Line, RiSparkling2Line } from "@remixicon/react";
+import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line } from "@remixicon/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -109,14 +111,43 @@ function More({ entry, onOpen }: { entry: Said; onOpen?: (id: string) => void })
   );
 }
 
+function Undelivered({ entry, onRetry }: { entry: Said; onRetry?: (id: string) => void }) {
+  if (entry.failed === null) {
+    return null;
+  }
+
+  return (
+    <span className="flex max-w-[min(520px,calc(100%-24px))] items-start gap-1.5 text-body-2-regular text-text-error-primary">
+      <RiErrorWarningLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+      <span>
+        Not delivered{entry.failed ? `: ${entry.failed}` : "."}
+        {onRetry ? (
+          <>
+            {" "}
+            <button
+              type="button"
+              onClick={() => onRetry(entry.id)}
+              className="rounded-md text-body-2-medium text-text-secondary underline outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+            >
+              Send again
+            </button>
+          </>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
 function Entry({
   entry,
   customer,
   onOpenOriginal,
+  onRetry,
 }: {
   entry: ThreadEntry;
   customer: string;
   onOpenOriginal?: (id: string) => void;
+  onRetry?: (id: string) => void;
 }) {
   if (entry.kind === "event") {
     return <Pill>{entry.text}</Pill>;
@@ -147,6 +178,7 @@ function Entry({
       </div>
       <Tag entry={entry} />
       <More entry={entry} onOpen={onOpenOriginal} />
+      <Undelivered entry={entry} onRetry={onRetry} />
       {note ? (
         <span aria-hidden className="text-body-2-regular text-text-tertiary">
           Not visible to {customer}
@@ -186,6 +218,7 @@ export function Thread({
   onAskOperator,
   onTyping,
   onOpenOriginal,
+  onRetry,
   status,
 }: {
   entries: ThreadEntry[];
@@ -195,6 +228,7 @@ export function Thread({
   onAskOperator: () => void;
   onTyping: Report;
   onOpenOriginal?: (id: string) => void;
+  onRetry?: (id: string) => void;
   status?: ReactNode;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
@@ -219,7 +253,7 @@ export function Thread({
         <ol className="mx-auto flex max-w-3xl flex-col gap-3">
           {entries.map((entry) => (
             <li key={entry.id}>
-              <Entry entry={entry} customer={customer} onOpenOriginal={onOpenOriginal} />
+              <Entry entry={entry} customer={customer} onOpenOriginal={onOpenOriginal} onRetry={onRetry} />
             </li>
           ))}
         </ol>

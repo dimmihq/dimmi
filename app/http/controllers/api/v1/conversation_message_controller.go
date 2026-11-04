@@ -11,6 +11,9 @@
 | retried write that finds the entry its first attempt wrote answers 200
 | with the Idempotent-Replayed header instead of 201.
 |
+| POST .../messages/{message}/retry sends a reply that was not delivered
+| again and answers 200 with it, pending once more.
+|
 | GET .../messages/{message}/original reads the whole of a received
 | email, and .../original/raw downloads it as it arrived. That file is
 | written by a stranger, so it is only ever an attachment, never sniffed,
@@ -94,6 +97,7 @@ type ConversationMessageController struct {
 	Relay    *messages.AddContactMessage
 	Original *messages.ShowOriginal
 	Raw      *messages.DownloadOriginal
+	Resend   *messages.RetryDelivery
 	IDs      *ids.Registry
 	Cursors  *pagination.Cursors
 }
@@ -171,6 +175,30 @@ func (c *ConversationMessageController) ShowOriginal(
 	}
 
 	return &OriginalOutput{Body: fhttp.NewResource(resources.NewMessageOriginal(original))}, nil
+}
+
+/*
+Retry sends a reply that was not delivered again.
+*/
+func (c *ConversationMessageController) Retry(
+	ctx context.Context, in *requests.ConversationMessageRequest,
+) (*WrittenOutput, error) {
+	input, err := c.originalInput(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	written, err := c.Resend.Handle(ctx, messages.RetryInput{
+		Membership: input.Membership, Ref: input.Ref, MessageID: input.MessageID, MutationID: mutationID(ctx),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := writtenOutput(written)
+	out.Status = fhttp.StatusOK
+
+	return out, nil
 }
 
 /*

@@ -421,6 +421,60 @@ func (q *Queries) MessagesAfter(ctx context.Context, arg MessagesAfterParams) ([
 	return items, nil
 }
 
+const retryMessageDelivery = `-- name: RetryMessageDelivery :one
+UPDATE messages SET delivery_status = 'pending', delivery_error = NULL, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND conversation_id = $3 AND id = $4
+  AND type = 'message' AND delivery_status = 'failed' AND deleted_at IS NULL
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id
+`
+
+type RetryMessageDeliveryParams struct {
+	Now            time.Time `json:"now"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	ID             ids.UUID  `json:"id"`
+}
+
+// RetryMessageDelivery puts a reply that failed back in line to be sent,
+// forgetting why it failed.
+func (q *Queries) RetryMessageDelivery(ctx context.Context, arg RetryMessageDeliveryParams) (Message, error) {
+	row := q.db.QueryRow(ctx, retryMessageDelivery,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ConversationID,
+		arg.ID,
+	)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+	)
+	return i, err
+}
+
 const saveConversationRead = `-- name: SaveConversationRead :one
 INSERT INTO conversation_reads (
     workspace_id, conversation_id, workspace_member_id, last_read_message_id, last_read_at, created_at, updated_at

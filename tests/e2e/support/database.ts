@@ -88,3 +88,24 @@ export function addTeammate(ownerEmail: string, email: string, role: "admin" | "
 export function verifyEmail(email: string) {
   psql("UPDATE users SET email_verified_at = now() WHERE email = :'email'", { email });
 }
+
+/*
+ * stopMail stops all mail to the address in the workspace the owner with
+ * ownerEmail created, as a hard bounce would.
+ */
+export function stopMail(ownerEmail: string, email: string) {
+  psql(
+    `INSERT INTO email_suppressions (workspace_id, email, reason, scope, source, details, created_at, updated_at)
+     SELECT m.workspace_id, :'email', 'hard_bounce', 'all', 'dsn', '{}', now(), now()
+     FROM workspace_members m JOIN users u ON u.id = m.user_id
+     WHERE u.email = :'owner' AND m.role = 'owner'`,
+    { owner: ownerEmail, email },
+  );
+}
+
+/*
+ * resumeMail lets mail reach the address again.
+ */
+export function resumeMail(email: string) {
+  psql("DELETE FROM email_suppressions WHERE email = :'email'", { email });
+}

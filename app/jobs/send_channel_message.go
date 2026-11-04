@@ -11,7 +11,8 @@
 | failure is tried again, and the message fails when the last attempt
 | does. A provider asking to slow down postpones the try without using
 | up an attempt. A message no longer pending, already sent or removed,
-| is left alone, so a job that runs twice sends once.
+| is left alone, so a job that runs twice sends once. Open screens learn
+| when a reply is sent or fails.
 |
 */
 
@@ -26,6 +27,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -33,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -74,6 +77,7 @@ SendChannelMessage sends a pending reply through its channel.
 type SendChannelMessage struct {
 	DB       *database.DB
 	Clock    clock.Clock
+	Events   *events.Dispatcher
 	Channels *channels.Manager
 }
 
@@ -204,7 +208,7 @@ func (w *SendChannelMessage) record(ctx context.Context, args SendChannelMessage
 	}
 
 	if d.err != nil {
-		params.DeliveryError = new(d.err.Error())
+		params.DeliveryError = new(reason(d.err))
 	}
 
 	if d.status == enums.DeliveryStatusSent {
@@ -234,6 +238,10 @@ func (w *SendChannelMessage) record(ctx context.Context, args SendChannelMessage
 			return fmt.Errorf("record delivery: %w", err)
 		}
 
+		if err := w.announce(ctx, tx, args, d.status); err != nil {
+			return err
+		}
+
 		if d.result.ExternalThreadKey == "" {
 			return nil
 		}
@@ -242,5 +250,40 @@ func (w *SendChannelMessage) record(ctx context.Context, args SendChannelMessage
 			ExternalThreadKey: &d.result.ExternalThreadKey, Now: now, WorkspaceID: args.WorkspaceID,
 			ID: args.ConversationID,
 		})
+	})
+}
+
+/*
+reason says why a try failed, in the channel's own words for people
+when it gave them.
+*/
+func reason(err error) string {
+	if refused, ok := errors.AsType[*contracts.SendError](err); ok && refused.Message != "" {
+		return refused.Message
+	}
+
+	return err.Error()
+}
+
+/*
+announce tells open screens a reply was sent or failed. A try that will
+be made again changes nothing they show.
+*/
+func (w *SendChannelMessage) announce(
+	ctx context.Context, tx *database.Tx, args SendChannelMessageArgs, status enums.DeliveryStatus,
+) error {
+	if status == enums.DeliveryStatusPending {
+		return nil
+	}
+
+	return w.Events.Dispatch(ctx, tx, appevents.MessageDeliveryUpdated{
+		Base: appevents.Base{
+			ID: ids.New(), WorkspaceID: args.WorkspaceID, OccurredAt: w.Clock.Now(),
+			Actor: appevents.Actor{Type: string(enums.AuthorTypeSystem), ID: ids.Nil()},
+		},
+		MessageRef: appevents.MessageRef{
+			ConversationRef: appevents.ConversationRef{ConversationID: args.ConversationID}, MessageID: args.MessageID,
+		},
+		Status: string(status),
 	})
 }

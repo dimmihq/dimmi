@@ -65,9 +65,14 @@ func bootInbox(a *app.App) error {
 		Reply: &messages.ReplyToConversation{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
 		},
+		RetryDelivery: &messages.RetryDelivery{
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
+		},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
-	return queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels})
+	return queue.Register(a.Queue, &jobs.SendChannelMessage{
+		DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels,
+	})
 }

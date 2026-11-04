@@ -469,6 +469,9 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
 | Full message in a browser | open the "Broken page" conversation, then "Show full message" | the thread shows the text with its `<div>` and stars as typed; the dialog shows the quoted thread and offers "Download original" |
+| Reply not delivered | insert a `hard_bounce` row in `email_suppressions` for the customer, then reply to their email conversation in the browser | the reply shows "Not delivered: The recipient's address bounced or complained before." without a reload |
+| Send again | delete that row, then `r rt -b a.jar -X POST -H "$O" $B/conversations/<conv_>/messages/<msg_>/retry` (or "Send again") | 200 with `delivery_status: pending`, the mail reaches Mailpit; the same call again 409 `message_not_failed` |
+| Teammate answers by email | the owner replies to a customer's email from their own verified, SPF-passing mailbox | a note by the owner in the thread, no contact for the owner, the conversation not woken |
 
 ## Realtime connections end with their credential
 
