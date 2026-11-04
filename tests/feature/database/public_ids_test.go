@@ -30,7 +30,7 @@ func TestPublicIDs(t *testing.T) {
 		}
 		require.ErrorIs(t, err, ids.ErrPrefixTaken)
 		assert.Len(t, models.PublicIDCatalog(), 127)
-		assert.Equal(t, 8, reserved)
+		assert.Equal(t, 6, reserved)
 	})
 
 	t.Run("turns every id into its public form and back", func(t *testing.T) {

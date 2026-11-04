@@ -255,7 +255,7 @@ func (a *UpdateConnection) reconnect(
 		}
 	}
 
-	if err := checkConfig(e.row.Protocol, cfg, len(next.SecretEncrypted) > 0); err != nil {
+	if err := checkConfig(e.row.Protocol, cfg, secretOf(next.SecretEncrypted)); err != nil {
 		return next, err
 	}
 
@@ -297,7 +297,8 @@ func (a *UpdateConnection) transition(ctx context.Context, e editing, next *mode
 	}
 
 	recent := next.TestedAt != nil && a.Clock.Now().Sub(*next.TestedAt) <= testedWindow
-	if e.in.Principal.SSOConnectionID != e.row.ID && !(recent && c.ConfirmOwnersCanSignIn) {
+	proven := e.in.Principal.SSOConnectionID == e.row.ID || (recent && c.ConfirmOwnersCanSignIn)
+	if !proven {
 		return exceptions.ErrEnforceUnproven
 	}
 

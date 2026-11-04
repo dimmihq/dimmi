@@ -17,12 +17,10 @@ package sso
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base32"
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/customdomain"
@@ -30,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/dns"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/support/str"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -55,9 +54,9 @@ recordPrefix is the label under a domain that holds its proof.
 const recordPrefix = "_dimmi-verify."
 
 /*
-tokenPrefix starts the value of a domain's proof.
+proofPrefix starts the value of a domain's proof.
 */
-const tokenPrefix = "dimmi-domain-verification="
+const proofPrefix = "dimmi-domain-verification="
 
 /*
 verifiedConstraint is the unique index that lets one organization hold
@@ -162,7 +161,7 @@ func (a *Domains) Add(ctx context.Context, m authz.Membership, domain string) (m
 			return err
 		}
 
-		return a.announce(ctx, tx, m, out, "added")
+		return a.announce(ctx, tx, m, domainChange{out, "added"})
 	})
 
 	return out, err
@@ -228,11 +227,11 @@ func (a *Domains) Verify(ctx context.Context, m authz.Membership, id ids.UUID) (
 			return nil
 		}
 
-		if out.Domain, err = markVerified(ctx, q, domain, ViaDNS, a.Clock); err != nil {
+		if out.Domain, err = markVerified(ctx, q, domain, proof{ViaDNS, a.Clock.Now()}); err != nil {
 			return err
 		}
 
-		return a.announce(ctx, tx, m, out.Domain, "verified")
+		return a.announce(ctx, tx, m, domainChange{out.Domain, "verified"})
 	})
 
 	return out, err
@@ -278,7 +277,7 @@ func (a *Domains) Route(
 			return fmt.Errorf("route domain: %w", err)
 		}
 
-		return a.announce(ctx, tx, m, out, "routed")
+		return a.announce(ctx, tx, m, domainChange{out, "routed"})
 	})
 
 	return out, err
@@ -337,7 +336,7 @@ func (a *Domains) Remove(ctx context.Context, m authz.Membership, id ids.UUID) e
 			return fmt.Errorf("remove domain: %w", err)
 		}
 
-		return a.announce(ctx, tx, m, domain, "removed")
+		return a.announce(ctx, tx, m, domainChange{domain, "removed"})
 	})
 }
 
@@ -380,15 +379,22 @@ func (a *Domains) lookup(ctx context.Context, domain string) ([]string, error) {
 }
 
 /*
-announce dispatches a change to a domain from the member's workspace.
+announce dispatches a change to a domain, from the member's workspace.
 */
-func (a *Domains) announce(
-	ctx context.Context, tx *database.Tx, m authz.Membership, domain models.OrganizationDomain, change string,
-) error {
+func (a *Domains) announce(ctx context.Context, tx *database.Tx, m authz.Membership, change domainChange) error {
 	return a.Events.Dispatch(ctx, tx, appevents.OrganizationDomainChanged{
-		WorkspaceID: m.Workspace.ID, DomainID: domain.ID, Domain: domain.Domain, Change: change,
-		Changes: map[string]any{"status": domain.Status}, ChangedBy: m.Member.ID,
+		WorkspaceID: m.Workspace.ID, DomainID: change.domain.ID, Domain: change.domain.Domain, Change: change.kind,
+		Changes: map[string]any{"status": change.domain.Status}, ChangedBy: m.Member.ID,
 	})
+}
+
+/*
+domainChange is what happened to a domain: the domain and the kind of
+change.
+*/
+type domainChange struct {
+	domain models.OrganizationDomain
+	kind   string
 }
 
 /*
@@ -409,13 +415,21 @@ func claimable(domain string) (string, error) {
 }
 
 /*
+proof is how and when a domain was proven.
+*/
+type proof struct {
+	via string
+	at  time.Time
+}
+
+/*
 markVerified records the domain proven, refusing one another
 organization already holds.
 */
 func markVerified(
-	ctx context.Context, q *models.Queries, domain models.OrganizationDomain, via string, clk clock.Clock,
+	ctx context.Context, q *models.Queries, domain models.OrganizationDomain, by proof,
 ) (models.OrganizationDomain, error) {
-	now := clk.Now()
+	via, now := by.via, by.at
 
 	verified, err := q.MarkOrganizationDomainChecked(ctx, models.MarkOrganizationDomainCheckedParams{
 		OrganizationID: domain.OrganizationID, ID: domain.ID, Status: DomainVerified, VerifiedAt: &now,
@@ -436,7 +450,9 @@ func markVerified(
 lockDomain returns the organization's domain and holds its row, or
 exceptions.ErrNotFound.
 */
-func lockDomain(ctx context.Context, q *models.Queries, organizationID, id ids.UUID) (models.OrganizationDomain, error) {
+func lockDomain(
+	ctx context.Context, q *models.Queries, organizationID, id ids.UUID,
+) (models.OrganizationDomain, error) {
 	domain, err := q.LockOrganizationDomain(ctx, models.LockOrganizationDomainParams{
 		OrganizationID: organizationID, ID: id,
 	})
@@ -452,12 +468,9 @@ func lockDomain(ctx context.Context, q *models.Queries, organizationID, id ids.U
 }
 
 /*
-newToken returns a fresh proof value: the prefix and 32 random base32
-characters.
+newToken returns a fresh proof value: the prefix and 32 random letters
+and digits.
 */
 func newToken() string {
-	raw := make([]byte, 20)
-	_, _ = rand.Read(raw)
-
-	return tokenPrefix + strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(raw))
+	return proofPrefix + str.Random(32)
 }

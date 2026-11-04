@@ -142,7 +142,9 @@ func (w *RecheckOrganizationDomains) recheck(ctx context.Context, domain models.
 fail stops enforcing the connection the domain routes to and tells the
 owners, recorded as the system.
 */
-func (w *RecheckOrganizationDomains) fail(ctx context.Context, tx *database.Tx, domain models.OrganizationDomain) error {
+func (w *RecheckOrganizationDomains) fail(
+	ctx context.Context, tx *database.Tx, domain models.OrganizationDomain,
+) error {
 	q := models.New(tx)
 	now := w.Clock.Now()
 
@@ -163,26 +165,42 @@ func (w *RecheckOrganizationDomains) fail(ctx context.Context, tx *database.Tx, 
 		return fmt.Errorf("list owners to tell: %w", err)
 	}
 
-	for i, owner := range owners {
-		if i == 0 {
-			if err := w.Events.Dispatch(ctx, tx, appevents.OrganizationDomainChanged{
-				WorkspaceID: owner.WorkspaceID, DomainID: domain.ID, Domain: domain.Domain, Change: "failed",
-				Changes: map[string]any{"status": sso.DomainFailed}, ChangedBy: ids.Nil(),
-			}); err != nil {
-				return err
-			}
-		}
+	if len(owners) == 0 {
+		return nil
+	}
 
-		pending := w.Mail.To(mail.Address{Name: owner.Name, Email: owner.Email})
-		if owner.Locale != nil && *owner.Locale != "" {
-			pending.Locale(*owner.Locale)
-		}
+	if err := w.Events.Dispatch(ctx, tx, appevents.OrganizationDomainChanged{
+		WorkspaceID: owners[0].WorkspaceID, DomainID: domain.ID, Domain: domain.Domain, Change: "failed",
+		Changes: map[string]any{"status": sso.DomainFailed}, ChangedBy: ids.Nil(),
+	}); err != nil {
+		return err
+	}
 
-		if err := pending.QueueTx(ctx, tx, appmail.DomainVerificationLostMail{
-			Name: owner.Name, Domain: domain.Domain, SettingsURL: w.Links.SingleSignOn(),
-		}); err != nil {
-			return fmt.Errorf("queue domain lost mail: %w", err)
+	for _, owner := range owners {
+		if err := w.tell(ctx, tx, owner, domain.Domain); err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+/*
+tell queues the owner's mail about the domain that lost its proof.
+*/
+func (w *RecheckOrganizationDomains) tell(
+	ctx context.Context, tx *database.Tx, owner models.ListOrganizationOwnersRow, domain string,
+) error {
+	pending := w.Mail.To(mail.Address{Name: owner.Name, Email: owner.Email})
+	if owner.Locale != nil && *owner.Locale != "" {
+		pending.Locale(*owner.Locale)
+	}
+
+	err := pending.QueueTx(ctx, tx, appmail.DomainVerificationLostMail{
+		Name: owner.Name, Domain: domain, SettingsURL: w.Links.SingleSignOn(),
+	})
+	if err != nil {
+		return fmt.Errorf("queue domain lost mail: %w", err)
 	}
 
 	return nil

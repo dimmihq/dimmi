@@ -23,9 +23,12 @@ that binds their kind of credential, and carries the address it saw.
 ErrSignInMethodRequired refuses a session signed in a way the workspace
 does not allow, or through Google from another domain.
 ErrReauthenticationRequired asks a session past the workspace's limits
-to sign in again.
+to sign in again. ErrSSOEnforced refuses a session that did not sign in
+through the connection the organization enforces.
 */
 var (
+	ErrSSOEnforced = fault.New(fault.Forbidden, "sso_required",
+		"Sign in with your organization's single sign-on.")
 	ErrIPNotAllowed = fault.New(fault.Forbidden, "ip_not_allowed",
 		"Your address is not on this workspace's allowlist. Ask an owner to add it.")
 	ErrSignInMethodRequired = fault.New(fault.Forbidden, "sign_in_method_required",

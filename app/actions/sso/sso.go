@@ -84,10 +84,10 @@ SAML, the issuer, client and scopes to OpenID Connect; SPCertificate is
 the service provider's own certificate, made with the connection.
 */
 type Config struct {
-	IdPEntityID     string       `json:"idp_entity_id,omitempty"`
-	IdPSSOURL       string       `json:"idp_sso_url,omitempty"`
-	IdPCertificates []string     `json:"idp_certificates,omitempty"`
-	IdPMetadataURL  string       `json:"idp_metadata_url,omitempty"`
+	IDPEntityID     string       `json:"idp_entity_id,omitempty"`
+	IDPSSOURL       string       `json:"idp_sso_url,omitempty"`
+	IDPCertificates []string     `json:"idp_certificates,omitempty"`
+	IDPMetadataURL  string       `json:"idp_metadata_url,omitempty"`
 	NameIDFormat    string       `json:"name_id_format,omitempty"`
 	SPCertificate   string       `json:"sp_certificate,omitempty"`
 	Issuer          string       `json:"issuer,omitempty"`

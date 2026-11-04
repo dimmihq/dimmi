@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/roles"
+	"github.com/dimmihq/dimmi/app/actions/sso"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
@@ -86,6 +87,13 @@ type Actions struct {
 	AssignRole                 *roles.AssignRole
 	RoleNames                  *roles.RoleNames
 	ListPermissions            *roles.ListPermissions
+	CreateSSOConnection        *sso.CreateConnection
+	UpdateSSOConnection        *sso.UpdateConnection
+	ListSSOConnections         *sso.ListConnections
+	ShowSSOConnection          *sso.ShowConnection
+	DeleteSSOConnection        *sso.DeleteConnection
+	OrganizationDomains        *sso.Domains
+	SSOOperator                *sso.Operator
 	ListAuthFactors            *factors.ListAuthFactors
 	AddAuthFactor              *factors.AddAuthFactor
 	ActivateAuthFactor         *factors.ActivateAuthFactor

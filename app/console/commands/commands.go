@@ -27,5 +27,7 @@ func All(a *app.App) []foundation.Command {
 		WorkspaceRepairCommand{App: a},
 		&UserDisableTwoFactorCommand{App: a},
 		WorkspaceClearAccessPolicyCommand{App: a},
+		SSOVerifyDomainCommand{App: a},
+		SSODisableCommand{App: a},
 	}
 }

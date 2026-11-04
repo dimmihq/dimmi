@@ -79,8 +79,10 @@ func NewKeyPair(entityID string, now time.Time) (KeyPair, error) {
 		return KeyPair{}, fmt.Errorf("sign service provider certificate: %w", err)
 	}
 
+	private := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+
 	return KeyPair{
-		PrivateKey:  string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})),
+		PrivateKey:  string(private),
 		Certificate: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})),
 	}, nil
 }

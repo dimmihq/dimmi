@@ -137,6 +137,8 @@ func accountPublicIDs() []PublicIDEntry {
 		{PrefixMember, "workspace_members"},
 		{PrefixTeam, "teams"},
 		{PrefixRole, "roles"},
+		{PrefixSSOConnection, "sso_connections"},
+		{PrefixOrganizationDomain, "organization_domains"},
 		{PrefixInvitation, "invitations"},
 		{PrefixSession, "sessions"},
 		{PrefixPersonalToken, "personal_access_tokens"},
@@ -338,8 +340,6 @@ func reservedPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixWorkspaceDomain, "reserved: workspace_domains"},
 		{"drf", "reserved: reply_drafts"},
-		{PrefixSSOConnection, "reserved: sso_connections"},
-		{PrefixOrganizationDomain, "reserved: organization_domains"},
 		{"brd", "reserved: brands"},
 		{"lgh", "reserved: legal_holds"},
 		{"ains", "reserved: app_installations"},

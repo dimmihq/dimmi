@@ -77,7 +77,7 @@ func (a *CreateConnection) Handle(ctx context.Context, in CreateConnectionInput)
 		return Connection{}, exceptions.ErrForbidden
 	}
 
-	if err := checkConfig(in.Protocol, in.Config, in.ClientSecret != ""); err != nil {
+	if err := checkConfig(in.Protocol, in.Config, in.ClientSecret); err != nil {
 		return Connection{}, err
 	}
 
@@ -161,22 +161,34 @@ func (a *CreateConnection) complete(
 /*
 checkConfig refuses settings the protocol cannot use: certificates that
 do not read, or an OpenID Connect connection without its issuer, client
-or secret.
+or secret, "" for none.
 */
-func checkConfig(protocol string, cfg Config, hasSecret bool) error {
+func checkConfig(protocol string, cfg Config, secret string) error {
 	if protocol == ProtocolOIDC {
-		if cfg.Issuer == "" || cfg.ClientID == "" || !hasSecret {
+		if cfg.Issuer == "" || cfg.ClientID == "" || secret == "" {
 			return exceptions.ErrInvalidConnectionConfig
 		}
 
 		return nil
 	}
 
-	for _, certificate := range cfg.IdPCertificates {
+	for _, certificate := range cfg.IDPCertificates {
 		if _, err := saml.ParseCertificate(certificate); err != nil {
 			return exceptions.ErrInvalidConnectionConfig
 		}
 	}
 
 	return nil
+}
+
+/*
+secretOf stands in for a stored secret, "" when there is none, so a
+check needs no key to see that one is there.
+*/
+func secretOf(sealed []byte) string {
+	if len(sealed) == 0 {
+		return ""
+	}
+
+	return "sealed"
 }

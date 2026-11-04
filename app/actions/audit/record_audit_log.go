@@ -65,6 +65,16 @@ const (
 )
 
 /*
+EventSSOConnection and EventOrganizationDomain prefix the audit events of
+a company's connections and domains, followed by what happened to them,
+such as sso_connection.enforced or organization_domain.verified.
+*/
+const (
+	EventSSOConnection      = "sso_connection."
+	EventOrganizationDomain = "organization_domain."
+)
+
+/*
 The kinds of actor and of the channel they acted through. A member acts
 through their browser session, their own app or an access token they
 minted; the system acts on its own.

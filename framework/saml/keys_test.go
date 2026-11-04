@@ -29,7 +29,7 @@ func TestKeyPair(t *testing.T) {
 
 	t.Run("reads a certificate without its pem armor and refuses nonsense", func(t *testing.T) {
 		t.Parallel()
-		pair, err := saml.NewKeyPair("sp", time.Now())
+		pair, err := saml.NewKeyPair("sp", time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 		require.NoError(t, err)
 
 		lines := pair.Certificate

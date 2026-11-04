@@ -40,6 +40,8 @@ const (
 	subjectInvitation = "invitation"
 	subjectTeam       = "team"
 	subjectRole       = "role"
+	subjectConnection = "sso_connection"
+	subjectDomain     = "organization_domain"
 )
 
 /*
@@ -66,6 +68,7 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	l.listenAccess(d)
 	l.listenTeams(d)
 	l.listenRoles(d)
+	l.listenSSO(d)
 }
 
 /*

@@ -16,6 +16,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
 	"github.com/dimmihq/dimmi/app/actions/roles"
+	"github.com/dimmihq/dimmi/app/actions/sso"
 )
 
 /*
@@ -34,6 +35,7 @@ func bootIdentity(a *app.App) {
 	}
 
 	bootRoles(a)
+	bootSSO(a)
 }
 
 /*
@@ -49,4 +51,23 @@ func bootRoles(a *app.App) {
 	acts.AssignRole = &roles.AssignRole{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.RoleNames = &roles.RoleNames{DB: a.DB}
 	acts.ListPermissions = &roles.ListPermissions{Catalog: a.Permissions}
+}
+
+/*
+bootSSO builds the actions of a company's identity provider connections
+and proven domains.
+*/
+func bootSSO(a *app.App) {
+	acts := a.Actions
+	acts.CreateSSOConnection = &sso.CreateConnection{
+		DB: a.DB, Events: a.Events, Clock: a.Clock, Keys: a.Keys, Links: a.Links,
+	}
+	acts.UpdateSSOConnection = &sso.UpdateConnection{
+		DB: a.DB, Events: a.Events, Clock: a.Clock, Keys: a.Keys, Links: a.Links,
+	}
+	acts.ListSSOConnections = &sso.ListConnections{DB: a.DB}
+	acts.ShowSSOConnection = &sso.ShowConnection{DB: a.DB}
+	acts.DeleteSSOConnection = &sso.DeleteConnection{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.OrganizationDomains = &sso.Domains{DB: a.DB, Events: a.Events, Clock: a.Clock, DNS: a.DNS}
+	acts.SSOOperator = &sso.Operator{DB: a.DB, Events: a.Events, Clock: a.Clock}
 }

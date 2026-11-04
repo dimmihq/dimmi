@@ -160,7 +160,7 @@ func (r SSORule) Check(a AccessCheck) error {
 
 	url := r.Redirect(enforced[0])
 
-	return exceptions.ErrSSORequired.
+	return exceptions.ErrSSOEnforced.
 		With("requirement", RequirementSSORequired).
 		With("action_url", url+"?intent=link").
 		With("redirect_url", url)

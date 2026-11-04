@@ -74,7 +74,7 @@ func (a *Operator) VerifyDomain(ctx context.Context, domain, slug string) (model
 			return err
 		}
 
-		if out, err = markVerified(ctx, q, locked, ViaCLI, a.Clock); err != nil {
+		if out, err = markVerified(ctx, q, locked, proof{ViaCLI, a.Clock.Now()}); err != nil {
 			return err
 		}
 
