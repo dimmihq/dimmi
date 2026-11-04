@@ -237,9 +237,11 @@ type EmailDomain struct {
 	DnsHostOverride             *string           `json:"dns_host_override"`
 	DomainConnectAppliedAt      *time.Time        `json:"domain_connect_applied_at"`
 	VerifyingSince              *time.Time        `json:"verifying_since"`
+	CheckRequestedAt            *time.Time        `json:"check_requested_at"`
 	SesDkimRestartedAt          *time.Time        `json:"ses_dkim_restarted_at"`
 	DkimNextSelector            *string           `json:"dkim_next_selector"`
 	DkimNextPrivateKeyEncrypted encryption.Sealed `json:"dkim_next_private_key_encrypted"`
+	DkimRotatedAt               *time.Time        `json:"dkim_rotated_at"`
 }
 
 type EmailMessageRef struct {

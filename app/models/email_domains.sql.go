@@ -24,7 +24,7 @@ INSERT INTO email_domains (
     $7, $8, $9, $10,
     $11, $12, $13, $14::timestamptz, $14::timestamptz
 )
-RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted
+RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at
 `
 
 type CreateEmailDomainParams struct {
@@ -95,9 +95,11 @@ func (q *Queries) CreateEmailDomain(ctx context.Context, arg CreateEmailDomainPa
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }
@@ -121,8 +123,52 @@ func (q *Queries) DeleteEmailDomain(ctx context.Context, arg DeleteEmailDomainPa
 	return err
 }
 
+const failEmailDomainClaims = `-- name: FailEmailDomainClaims :many
+SELECT f.workspace_id::uuid AS workspace_id, f.id::uuid AS id, f.status::text AS status
+FROM fail_email_domain_claims($1::citext, $2::uuid, $3::text, $4::timestamptz) AS f
+`
+
+type FailEmailDomainClaimsParams struct {
+	Name          string    `json:"name"`
+	KeepWorkspace ids.UUID  `json:"keep_workspace"`
+	Reason        string    `json:"reason"`
+	At            time.Time `json:"at"`
+}
+
+type FailEmailDomainClaimsRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+	Status      string   `json:"status"`
+}
+
+// FailEmailDomainClaims fails every other workspace's hold on the name.
+func (q *Queries) FailEmailDomainClaims(ctx context.Context, arg FailEmailDomainClaimsParams) ([]FailEmailDomainClaimsRow, error) {
+	rows, err := q.db.Query(ctx, failEmailDomainClaims,
+		arg.Name,
+		arg.KeepWorkspace,
+		arg.Reason,
+		arg.At,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FailEmailDomainClaimsRow
+	for rows.Next() {
+		var i FailEmailDomainClaimsRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findEmailDomain = `-- name: FindEmailDomain :one
-SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted FROM email_domains WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at FROM email_domains WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindEmailDomainParams struct {
@@ -166,15 +212,17 @@ func (q *Queries) FindEmailDomain(ctx context.Context, arg FindEmailDomainParams
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }
 
 const findEmailDomainByName = `-- name: FindEmailDomainByName :one
-SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted FROM email_domains WHERE workspace_id = $1 AND domain = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at FROM email_domains WHERE workspace_id = $1 AND domain = $2 AND deleted_at IS NULL
 `
 
 type FindEmailDomainByNameParams struct {
@@ -218,15 +266,17 @@ func (q *Queries) FindEmailDomainByName(ctx context.Context, arg FindEmailDomain
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }
 
 const findEmailDomainForUpdate = `-- name: FindEmailDomainForUpdate :one
-SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted FROM email_domains WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at FROM email_domains WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type FindEmailDomainForUpdateParams struct {
@@ -271,9 +321,134 @@ func (q *Queries) FindEmailDomainForUpdate(ctx context.Context, arg FindEmailDom
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
+	)
+	return i, err
+}
+
+const findVerifiedEmailDomain = `-- name: FindVerifiedEmailDomain :one
+SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at FROM email_domains
+WHERE workspace_id = $1 AND domain = $2 AND status = 'verified' AND deleted_at IS NULL
+`
+
+type FindVerifiedEmailDomainParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Domain      string   `json:"domain"`
+}
+
+// FindVerifiedEmailDomain returns the workspace's verified domain of that
+// exact name, the proof that mail may leave from an address on it.
+func (q *Queries) FindVerifiedEmailDomain(ctx context.Context, arg FindVerifiedEmailDomainParams) (EmailDomain, error) {
+	row := q.db.QueryRow(ctx, findVerifiedEmailDomain, arg.WorkspaceID, arg.Domain)
+	var i EmailDomain
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Domain,
+		&i.Status,
+		&i.Driver,
+		&i.ProviderTrustedAt,
+		&i.OwnershipToken,
+		&i.OwnershipVerifiedAt,
+		&i.DkimSelector,
+		&i.DkimPrivateKeyEncrypted,
+		&i.DkimTokens,
+		&i.DkimSigningHostedZone,
+		&i.MailFromDomain,
+		&i.SesIdentityStatus,
+		&i.Records,
+		&i.Warnings,
+		&i.CheckAttempts,
+		&i.LastCheckedAt,
+		&i.NextCheckAt,
+		&i.VerifiedAt,
+		&i.DegradedAt,
+		&i.FailedAt,
+		&i.FailureReason,
+		&i.CreatedByMemberID,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProviderDomainID,
+		&i.DnsHostOverride,
+		&i.DomainConnectAppliedAt,
+		&i.VerifyingSince,
+		&i.CheckRequestedAt,
+		&i.SesDkimRestartedAt,
+		&i.DkimNextSelector,
+		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
+	)
+	return i, err
+}
+
+const finishEmailDomainRotation = `-- name: FinishEmailDomainRotation :one
+UPDATE email_domains
+SET dkim_selector = dkim_next_selector, dkim_private_key_encrypted = dkim_next_private_key_encrypted,
+    dkim_next_selector = NULL, dkim_next_private_key_encrypted = NULL, dkim_rotated_at = $1::timestamptz,
+    records = $2, updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND id = $4 AND dkim_next_selector IS NOT NULL
+RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at
+`
+
+type FinishEmailDomainRotationParams struct {
+	Now         time.Time       `json:"now"`
+	Records     json.RawMessage `json:"records"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// FinishEmailDomainRotation makes the next key the signing key once its
+// record shows, keeping the retired one for a week.
+func (q *Queries) FinishEmailDomainRotation(ctx context.Context, arg FinishEmailDomainRotationParams) (EmailDomain, error) {
+	row := q.db.QueryRow(ctx, finishEmailDomainRotation,
+		arg.Now,
+		arg.Records,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i EmailDomain
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Domain,
+		&i.Status,
+		&i.Driver,
+		&i.ProviderTrustedAt,
+		&i.OwnershipToken,
+		&i.OwnershipVerifiedAt,
+		&i.DkimSelector,
+		&i.DkimPrivateKeyEncrypted,
+		&i.DkimTokens,
+		&i.DkimSigningHostedZone,
+		&i.MailFromDomain,
+		&i.SesIdentityStatus,
+		&i.Records,
+		&i.Warnings,
+		&i.CheckAttempts,
+		&i.LastCheckedAt,
+		&i.NextCheckAt,
+		&i.VerifiedAt,
+		&i.DegradedAt,
+		&i.FailedAt,
+		&i.FailureReason,
+		&i.CreatedByMemberID,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProviderDomainID,
+		&i.DnsHostOverride,
+		&i.DomainConnectAppliedAt,
+		&i.VerifyingSince,
+		&i.CheckRequestedAt,
+		&i.SesDkimRestartedAt,
+		&i.DkimNextSelector,
+		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }
@@ -336,23 +511,37 @@ func (q *Queries) ListEmailDomainAddresses(ctx context.Context, arg ListEmailDom
 }
 
 const listEmailDomainClaims = `-- name: ListEmailDomainClaims :many
-SELECT email_domain_claims FROM email_domain_claims($1::citext)
+SELECT c.workspace_id::uuid AS workspace_id, c.id::uuid AS id, c.status::text AS status,
+    c.ownership_token::text AS ownership_token
+FROM email_domain_claims($1::citext) AS c
 `
 
+type ListEmailDomainClaimsRow struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ID             ids.UUID `json:"id"`
+	Status         string   `json:"status"`
+	OwnershipToken string   `json:"ownership_token"`
+}
+
 // ListEmailDomainClaims returns every workspace's claim on the name.
-func (q *Queries) ListEmailDomainClaims(ctx context.Context, name string) ([]interface{}, error) {
+func (q *Queries) ListEmailDomainClaims(ctx context.Context, name string) ([]ListEmailDomainClaimsRow, error) {
 	rows, err := q.db.Query(ctx, listEmailDomainClaims, name)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []interface{}
+	var items []ListEmailDomainClaimsRow
 	for rows.Next() {
-		var email_domain_claims interface{}
-		if err := rows.Scan(&email_domain_claims); err != nil {
+		var i ListEmailDomainClaimsRow
+		if err := rows.Scan(
+			&i.WorkspaceID,
+			&i.ID,
+			&i.Status,
+			&i.OwnershipToken,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, email_domain_claims)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -361,7 +550,7 @@ func (q *Queries) ListEmailDomainClaims(ctx context.Context, name string) ([]int
 }
 
 const listEmailDomains = `-- name: ListEmailDomains :many
-SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted FROM email_domains WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY domain
+SELECT id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at FROM email_domains WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY domain
 `
 
 // ListEmailDomains returns the workspace's live domains, by name.
@@ -406,9 +595,11 @@ func (q *Queries) ListEmailDomains(ctx context.Context, workspaceID ids.UUID) ([
 			&i.DnsHostOverride,
 			&i.DomainConnectAppliedAt,
 			&i.VerifyingSince,
+			&i.CheckRequestedAt,
 			&i.SesDkimRestartedAt,
 			&i.DkimNextSelector,
 			&i.DkimNextPrivateKeyEncrypted,
+			&i.DkimRotatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -421,7 +612,8 @@ func (q *Queries) ListEmailDomains(ctx context.Context, workspaceID ids.UUID) ([
 }
 
 const listEmailDomainsDue = `-- name: ListEmailDomainsDue :many
-SELECT email_domains_due FROM email_domains_due($1::timestamptz, $2::integer)
+SELECT d.workspace_id::uuid AS workspace_id, d.id::uuid AS id
+FROM email_domains_due($1::timestamptz, $2::integer) AS d
 `
 
 type ListEmailDomainsDueParams struct {
@@ -429,20 +621,25 @@ type ListEmailDomainsDueParams struct {
 	RowLimit int32     `json:"row_limit"`
 }
 
+type ListEmailDomainsDueRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
 // ListEmailDomainsDue returns the domains of any workspace due a check.
-func (q *Queries) ListEmailDomainsDue(ctx context.Context, arg ListEmailDomainsDueParams) ([]interface{}, error) {
+func (q *Queries) ListEmailDomainsDue(ctx context.Context, arg ListEmailDomainsDueParams) ([]ListEmailDomainsDueRow, error) {
 	rows, err := q.db.Query(ctx, listEmailDomainsDue, arg.DueAt, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []interface{}
+	var items []ListEmailDomainsDueRow
 	for rows.Next() {
-		var email_domains_due interface{}
-		if err := rows.Scan(&email_domains_due); err != nil {
+		var i ListEmailDomainsDueRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID); err != nil {
 			return nil, err
 		}
-		items = append(items, email_domains_due)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -467,6 +664,70 @@ func (q *Queries) MarkEmailDomainConnectApplied(ctx context.Context, arg MarkEma
 	return err
 }
 
+const requestEmailDomainCheck = `-- name: RequestEmailDomainCheck :one
+UPDATE email_domains
+SET status = CASE WHEN status IN ('pending', 'failed') THEN 'verifying' ELSE status END,
+    verifying_since = CASE WHEN status IN ('pending', 'failed') THEN $1::timestamptz ELSE verifying_since END,
+    check_attempts = CASE WHEN status IN ('pending', 'failed') THEN 0 ELSE check_attempts END,
+    failed_at = CASE WHEN status = 'failed' THEN NULL ELSE failed_at END,
+    failure_reason = CASE WHEN status = 'failed' THEN NULL ELSE failure_reason END,
+    check_requested_at = $1::timestamptz, next_check_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
+RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at
+`
+
+type RequestEmailDomainCheckParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// RequestEmailDomainCheck starts or keeps verifying the domain after
+// someone asked. A pending or failed domain starts a fresh window.
+func (q *Queries) RequestEmailDomainCheck(ctx context.Context, arg RequestEmailDomainCheckParams) (EmailDomain, error) {
+	row := q.db.QueryRow(ctx, requestEmailDomainCheck, arg.Now, arg.WorkspaceID, arg.ID)
+	var i EmailDomain
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Domain,
+		&i.Status,
+		&i.Driver,
+		&i.ProviderTrustedAt,
+		&i.OwnershipToken,
+		&i.OwnershipVerifiedAt,
+		&i.DkimSelector,
+		&i.DkimPrivateKeyEncrypted,
+		&i.DkimTokens,
+		&i.DkimSigningHostedZone,
+		&i.MailFromDomain,
+		&i.SesIdentityStatus,
+		&i.Records,
+		&i.Warnings,
+		&i.CheckAttempts,
+		&i.LastCheckedAt,
+		&i.NextCheckAt,
+		&i.VerifiedAt,
+		&i.DegradedAt,
+		&i.FailedAt,
+		&i.FailureReason,
+		&i.CreatedByMemberID,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProviderDomainID,
+		&i.DnsHostOverride,
+		&i.DomainConnectAppliedAt,
+		&i.VerifyingSince,
+		&i.CheckRequestedAt,
+		&i.SesDkimRestartedAt,
+		&i.DkimNextSelector,
+		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
+	)
+	return i, err
+}
+
 const saveEmailDomainCheck = `-- name: SaveEmailDomainCheck :one
 UPDATE email_domains
 SET status = $1, records = $2, warnings = $3, check_attempts = $4,
@@ -482,7 +743,7 @@ SET status = $1, records = $2, warnings = $3, check_attempts = $4,
     dkim_next_private_key_encrypted = $23,
     mail_from_domain = $24, updated_at = $25::timestamptz
 WHERE workspace_id = $26 AND id = $27
-RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted
+RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at
 `
 
 type SaveEmailDomainCheckParams struct {
@@ -579,9 +840,11 @@ func (q *Queries) SaveEmailDomainCheck(ctx context.Context, arg SaveEmailDomainC
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }
@@ -591,7 +854,7 @@ UPDATE email_domains
 SET dkim_next_selector = $1, dkim_next_private_key_encrypted = $2,
     records = $3, updated_at = $4::timestamptz
 WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL
-RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted
+RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at
 `
 
 type StartEmailDomainRotationParams struct {
@@ -646,9 +909,11 @@ func (q *Queries) StartEmailDomainRotation(ctx context.Context, arg StartEmailDo
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }
@@ -676,7 +941,7 @@ UPDATE email_domains
 SET mail_from_domain = $1, dns_host_override = $2,
     records = $3, updated_at = $4::timestamptz
 WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL
-RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted
+RETURNING id, workspace_id, domain, status, driver, provider_trusted_at, ownership_token, ownership_verified_at, dkim_selector, dkim_private_key_encrypted, dkim_tokens, dkim_signing_hosted_zone, mail_from_domain, ses_identity_status, records, warnings, check_attempts, last_checked_at, next_check_at, verified_at, degraded_at, failed_at, failure_reason, created_by_member_id, deleted_at, created_at, updated_at, provider_domain_id, dns_host_override, domain_connect_applied_at, verifying_since, check_requested_at, ses_dkim_restarted_at, dkim_next_selector, dkim_next_private_key_encrypted, dkim_rotated_at
 `
 
 type UpdateEmailDomainSettingsParams struct {
@@ -731,9 +996,11 @@ func (q *Queries) UpdateEmailDomainSettings(ctx context.Context, arg UpdateEmail
 		&i.DnsHostOverride,
 		&i.DomainConnectAppliedAt,
 		&i.VerifyingSince,
+		&i.CheckRequestedAt,
 		&i.SesDkimRestartedAt,
 		&i.DkimNextSelector,
 		&i.DkimNextPrivateKeyEncrypted,
+		&i.DkimRotatedAt,
 	)
 	return i, err
 }

@@ -20,9 +20,9 @@ what they mean. The repository is public, so even an account id counts.
 func secretPatterns() map[string]*regexp.Regexp {
 	return map[string]*regexp.Regexp{
 		"aws access key": regexp.MustCompile(`\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA)[0-9A-Z]{16}\b`),
-		"aws account id": regexp.MustCompile(`(^|[^0-9])[0-9]{12}([^0-9]|$)`),
+		"aws account id": regexp.MustCompile(`(^|\D)\d{12}(\D|$)`),
 		"password":       regexp.MustCompile(`(?i)password["']?\s*[:=]\s*["']?[^\s"']+`),
-		"private key":    regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY`),
+		"private key":    regexp.MustCompile(`-{5}BEGIN [A-Z ]*PRIVATE KEY`),
 	}
 }
 
@@ -40,47 +40,56 @@ func skippedForSecrets(entry fs.DirEntry) bool {
 
 /*
 scanForSecrets returns one finding per line of the tree that matches a
-pattern, naming the kind of secret but never its value.
+pattern, naming the kind of secret but never its value. The tree is read
+through a file system rooted at it, so a link never leads the scan out.
 */
 func scanForSecrets(root string) ([]string, error) {
 	var findings []string
 
+	tree := os.DirFS(root)
 	patterns := secretPatterns()
 
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	err := fs.WalkDir(tree, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if skippedForSecrets(entry) {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
+		if skippedForSecrets(entry) && entry.IsDir() {
+			return fs.SkipDir
+		}
 
+		if skippedForSecrets(entry) || entry.IsDir() {
 			return nil
 		}
 
-		if entry.IsDir() {
-			return nil
-		}
-
-		contents, err := os.ReadFile(filepath.Clean(path))
+		contents, err := fs.ReadFile(tree, path)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", path, err)
 		}
 
-		for number, line := range strings.Split(string(contents), "\n") {
-			for kind, pattern := range patterns {
-				if pattern.MatchString(line) {
-					findings = append(findings, fmt.Sprintf("%s:%d: %s", path, number+1, kind))
-				}
-			}
-		}
+		findings = append(findings, lineFindings(filepath.Join(root, path), string(contents), patterns)...)
 
 		return nil
 	})
 
 	return findings, err
+}
+
+/*
+lineFindings names every line of the file that matches a pattern.
+*/
+func lineFindings(path, contents string, patterns map[string]*regexp.Regexp) []string {
+	var findings []string
+
+	for number, line := range strings.Split(contents, "\n") {
+		for kind, pattern := range patterns {
+			if pattern.MatchString(line) {
+				findings = append(findings, fmt.Sprintf("%s:%d: %s", path, number+1, kind))
+			}
+		}
+	}
+
+	return findings
 }
 
 func TestDeploySecrets(t *testing.T) {

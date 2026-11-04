@@ -29,7 +29,7 @@ func newIdentities(t *testing.T) (*ses.Identities, *httpclienttest.Fake) {
 	return ses.NewIdentities(cfg), httpclienttest.New(client).PreventStrayRequests()
 }
 
-func jsonResponse(status int, body string, code string) httpclient.Response {
+func jsonResponse(status int, body, code string) httpclient.Response {
 	header := http.Header{"Content-Type": {"application/json"}}
 	if code != "" {
 		header.Set("X-Amzn-Errortype", code)

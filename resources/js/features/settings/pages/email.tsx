@@ -1,11 +1,13 @@
 /*
  * Email settings on the server: each address the workspace receives
- * mail at and a way to add another. Each section lives in its own file
+ * mail at and a way to add another, then the domains replies may come
+ * from. Each section lives in its own file
  * under features/email; this page only puts them in order. Changing
  * addresses follows the email:manage permission the server gives.
  */
 import { useQuery } from "@tanstack/react-query";
 
+import { DomainList } from "@/features/email/domains/domain-list";
 import { AddAddress } from "@/features/email/setup/add-address";
 import { AddressCard } from "@/features/email/setup/address-card";
 import { Failure } from "@/features/email/setup/failure";
@@ -38,6 +40,7 @@ export function EmailSettings() {
         />
       ))}
       {manage && addresses ? <AddAddress /> : null}
+      <DomainList manage={manage} />
       <Failure error={error} />
     </SettingsPage>
   );

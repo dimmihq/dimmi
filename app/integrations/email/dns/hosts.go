@@ -76,7 +76,8 @@ func Hosts() []Host {
 			DeepLink: "https://ap.www.namecheap.com/Domains/DomainControlPanel/{domain}/advancedns",
 		}, "quirk_name"),
 		guide(Host{
-			Key: "squarespace", Name: "Squarespace", HostForm: hostFormRelative, NS: []string{".squarespacedns.com", ".googledomains.com"},
+			Key: "squarespace", Name: "Squarespace", HostForm: hostFormRelative,
+			NS:       []string{".squarespacedns.com", ".googledomains.com"},
 			DeepLink: "https://account.squarespace.com/domains/managed/{domain}/dns/dns-settings",
 		}),
 		guide(Host{
@@ -104,17 +105,19 @@ func Hosts() []Host {
 
 /*
 guide completes a host's instructions with its steps and quirks, as
-language keys under email.dns_host.
+language keys under email_domains.hosts.
 */
 func guide(host Host, quirks ...string) Host {
-	prefix := "email.dns_host." + host.Key + "."
+	prefix := "email_domains.hosts." + host.Key + "."
 
 	host.Quirks = make([]string, 0, len(quirks))
 	for _, quirk := range quirks {
 		host.Quirks = append(host.Quirks, prefix+quirk)
 	}
 
-	host.Steps = []string{prefix + "step_open", "email.dns_host.common.step_add", "email.dns_host.common.step_check"}
+	host.Steps = []string{
+		prefix + "step_open", "email_domains.hosts.common.step_add", "email_domains.hosts.common.step_check",
+	}
 
 	return host
 }
@@ -151,7 +154,8 @@ func MatchHost(hosts []Host, nameservers []string) string {
 
 /*
 HostHint looks up who hosts the domain's DNS, trying the domain and then
-each parent up to the registrable one. A failed lookup is no error, only no guess.
+each parent up to the registrable one. A failed lookup is no error, only
+no guess.
 */
 func HostHint(ctx context.Context, r fdns.Resolver, hosts []Host, domain string) string {
 	for name := domain; strings.Contains(name, "."); name = name[strings.Index(name, ".")+1:] {

@@ -139,6 +139,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
+	if err := bootEmailSending(a); err != nil {
+		return err
+	}
+
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
 }
 

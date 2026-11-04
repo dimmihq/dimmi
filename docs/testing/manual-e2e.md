@@ -465,6 +465,25 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
 
+### Sending domains
+
+The release binary sends customer mail through the `smtp` mailer to Mailpit, so a domain is set up for a relay we sign
+for: an ownership TXT record and a signing key TXT record. Checks read real DNS unless
+`DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS` points at a server you run; with no records published a domain stays
+`verifying`, which is what the rows below expect. `ED=$B/email-domains`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Add | `r ed -b a.jar -X POST -H "$O" -H "$J" $ED -d '{"domain":"acme-'$RUN'.test"}'; EDM=$(jq -r .data.id body)` | 201 `email_domain`, `status: pending`, `driver: smtp`, records `ownership`, `dkim` (TXT `v=DKIM1; k=rsa; p=…`) and `dmarc`, `host_guide.key` `other` |
+| Refused names | the same with `gmail.com`, `com`, `inbound.e2e.test`, then the first domain again | 422 `invalid_domain` three times, then 409 `domain_exists` |
+| Zone file | `curl -s -b a.jar -H "$O" "$ED/$EDM?format=bind"` | `text/plain`, one `3600 IN TXT` line per record, the key split into quoted strings of 255 bytes |
+| Check | `r chk -b a.jar -X POST -H "$O" $ED/$EDM/checks`, again at once | 202 `status: verifying`, then 429 `domain_check_throttled` with `Retry-After` |
+| Check landed | `r show -b a.jar -H "$O" $ED/$EDM` after a few seconds | `last_checked_at` set, `next_check_at` a minute later, records `missing`, warning `dmarc_missing` with its message |
+| Return path and host | `r upd -b a.jar -X PATCH -H "$O" -H "$J" $ED/$EDM -d '{"dns_host":"cloudflare"}'` | 200, `provider_hint: cloudflare`, record `host` values without the domain |
+| New key | `r rot -b a.jar -X POST -H "$O" $ED/$EDM/dkim-rotations` as the owner, then as an admin | 201 with a `dkim_next` record, then 403 |
+| Remove | `r del -b a.jar -X DELETE -H "$O" $ED/$EDM` | 204; `GET` then 404 |
+| In a browser | open `$W/d/settings/email`, add a domain | the domain page with its records, Copy buttons, the host's steps, "Check now", and "Remove domain" |
+
 ## Realtime connections end with their credential
 
 Open a socket with a browser's cookie (`a.jar`) and one with a token, using the SDK or `websocat`, and follow a conversation on each.
