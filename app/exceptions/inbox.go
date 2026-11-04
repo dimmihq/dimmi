@@ -152,3 +152,18 @@ var (
 	ErrViewNameTaken = fault.New(fault.Invalid, "view_name_taken",
 		"Another view already has this name.").OnField("name")
 )
+
+/*
+Snooze option failures.
+
+ErrInvalidSnoozeOptions refuses a snooze list that is empty, holds more
+than ten options, repeats a key or holds an option its kind cannot
+resolve. ErrSnoozeOptionUnknown refuses a snooze by an option the
+conversation's list no longer offers.
+*/
+var (
+	ErrInvalidSnoozeOptions = fault.New(fault.Invalid, "invalid_snooze_options",
+		"These snooze options are not valid.").OnField("options")
+	ErrSnoozeOptionUnknown = fault.New(fault.Invalid, "snooze_option_unknown",
+		"This snooze option is no longer offered.").OnField("snooze_option")
+)

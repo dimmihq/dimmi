@@ -253,6 +253,10 @@ func (c *ConversationController) changes(
 		ch.SnoozePreset = *b.SnoozePreset
 	}
 
+	if b.SnoozeOption != nil {
+		ch.SnoozeOption = *b.SnoozeOption
+	}
+
 	var err error
 	if ch.Assign.Member, err = c.member(ctx, b.AssigneeID); err != nil {
 		return ch, err

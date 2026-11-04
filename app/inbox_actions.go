@@ -52,6 +52,10 @@ type InboxActions struct {
 	DeleteView   *conversationviews.DeleteView
 	ReorderViews *conversationviews.ReorderViews
 
+	ListSnoozeLists   *conversations.ListSnoozeLists
+	UpdateSnoozeList  *conversations.UpdateSnoozeList
+	ShowSnoozeOptions *conversations.ShowSnoozeOptions
+
 	ListMessages      *messages.ListMessages
 	Reply             *messages.ReplyToConversation
 	AddNote           *messages.AddNote

@@ -655,6 +655,13 @@ type Session struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+type SnoozeList struct {
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TeamID      *ids.UUID       `json:"team_id"`
+	Options     json.RawMessage `json:"options"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
 type Tag struct {
 	ID          ids.UUID  `json:"id"`
 	WorkspaceID ids.UUID  `json:"workspace_id"`

@@ -45,4 +45,12 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, view, "conversation-views.update", views.Patch).Ability("conversations:write")
 	routing.Delete(r, view, "conversation-views.destroy", views.Destroy).Ability("conversations:write").
 		Status(fhttp.StatusNoContent)
+
+	snooze := &v1.SnoozeController{
+		Lists: acts.ListSnoozeLists, Update: acts.UpdateSnoozeList, Options: acts.ShowSnoozeOptions, IDs: a.IDs,
+	}
+
+	routing.Get(r, "/snooze-lists", "snooze-lists.index", snooze.Index).Ability("conversations:read")
+	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Ability("settings:write")
+	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read")
 }

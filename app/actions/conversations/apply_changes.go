@@ -33,7 +33,8 @@ import (
 Changes are what a request changes, nil or false to leave a field as it
 is. Assign carries the assignment when AssignMember or AssignTeam says
 that part was sent; the other part stays. Status comes with
-SnoozedUntil or SnoozePreset when snoozing, and Note when closing.
+SnoozedUntil, SnoozePreset or SnoozeOption when snoozing, and Note
+when closing.
 */
 type Changes struct {
 	Spam         *bool
@@ -43,6 +44,7 @@ type Changes struct {
 	Status       *string
 	SnoozedUntil *time.Time
 	SnoozePreset string
+	SnoozeOption string
 	Note         *string
 	Attributes   Attributes
 	Unread       *bool
@@ -230,7 +232,7 @@ func (ap *applier) status(ctx context.Context, ch Changes) error {
 
 	to := StatusChange{Status: *ch.Status}
 	if *ch.Status == "snoozed" {
-		until, err := SnoozeUntil(ap.w.Now, ch.SnoozedUntil, ch.SnoozePreset, Location(ap.w.Timezone, ap.m.Workspace))
+		until, err := ap.snoozeUntil(ctx, ch)
 		if err != nil {
 			return err
 		}
@@ -293,4 +295,24 @@ func (ap *applier) unread(ctx context.Context, ch Changes) error {
 	}
 
 	return nil
+}
+
+/*
+snoozeUntil works out when the snooze ends: at the time given, the
+preset's time, or the option's time in the caller's location.
+*/
+func (ap *applier) snoozeUntil(ctx context.Context, ch Changes) (time.Time, error) {
+	loc := Location(ap.w.Timezone, ap.m.Workspace)
+	if ch.SnoozeOption == "" {
+		return SnoozeUntil(ap.w.Now, ch.SnoozedUntil, ch.SnoozePreset, loc)
+	}
+
+	option, err := snoozeOption(ctx, ap.w.Q, ap.c, ch.SnoozeOption)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	until := ResolveSnoozeOption(option, ap.w.Now, loc)
+
+	return SnoozeUntil(ap.w.Now, &until, "", loc)
 }

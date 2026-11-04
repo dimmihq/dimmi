@@ -72,6 +72,10 @@ func bootInbox(a *app.App) error {
 		DeleteView:   &conversationviews.DeleteView{Saver: viewSaver},
 		ReorderViews: &conversationviews.ReorderViews{Saver: viewSaver},
 
+		ListSnoozeLists:   &conversations.ListSnoozeLists{DB: a.DB},
+		UpdateSnoozeList:  &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		ShowSnoozeOptions: &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock},
+
 		ListMessages: &messages.ListMessages{DB: a.DB},
 		Reply: &messages.ReplyToConversation{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
