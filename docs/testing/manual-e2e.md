@@ -323,6 +323,35 @@ verification on. Within 15 minutes of Ada's last sign-in in `a.jar`, as above.
 | Rename and remove | "Rename" a passkey, then "Remove" one of two | the new name sticks after a reload; 2FA stays on with the other |
 | Remove the last | "Remove" the only passkey | the dialog says it is the last second factor; 2FA turns off and the recovery codes go; with Acme requiring 2FA instead 409 `two_factor_required_by_workspace` and nothing removed |
 
+### Personal access tokens
+
+Bob (`b.jar`) owns Acme after the transfer above. Minting needs a recent confirmation, like adding a factor: confirm
+with `POST $B/user/confirmation` first when Bob's sign-in is older than 15 minutes. `T` sends a token instead of a
+cookie; `-g` keeps curl from reading the brackets of `filter[member]` as a pattern:
+
+```bash
+T(){ echo "Authorization: Bearer $1"; }; K=$B/tokens
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Abilities offered | `r ab -b b.jar -H "$O" -H "$H" $K/abilities` | 200, every ability group with `object: token_ability`, its `permissions` and `allowed: true` for an owner |
+| Unknown ability | `r bad -b b.jar -X POST -H "$O" -H "$J" -H "$H" $K -d '{"name":"CI","abilities":["made:up"]}'` | 422 `ability_not_allowed`, `abilities: ["made:up"]` |
+| Expiry in the past | same with `"abilities":["*"],"expires_at":"2020-01-01T00:00:00Z"` | 422 `invalid_expiry` on `expires_at` |
+| Mint | `r mint -b b.jar -X POST -H "$O" -H "$J" -H "$H" $K -d '{"name":"CI deploy","abilities":["members:read"],"expires_at":"2027-02-01T00:00:00Z"}'; TOK=$(jq -r .data.plain_text_token body); TID=$(jq -r .data.id body)` | 201, `Cache-Control: no-store`, `plain_text_token` `dmi_live_…` of 47 characters, `prefix` its first 13; mail "A new API token was made for your dimmi account" with the name, the abilities and the IP |
+| Use it | `r use -H "$(T $TOK)" $B/members`, then `r me -H "$(T $TOK)" $B/me` | 200; `auth.type: personal_access_token`, `auth.token` with `name`, `prefix`, `expires_at`, `workspaces: null`, `member.permissions` `["members:read"]` |
+| Ability enforced | `r ab2 -X PATCH -H "$(T $TOK)" -H "$J" $B/workspace -d '{"name":"x"}'` | 403 `missing_ability`, `required_ability: settings:write` |
+| Tokens never mint tokens | `r fp -H "$(T $TOK)" $K` | 403 `first_party_only` |
+| Typo | the token with its last character changed | 401 `invalid_token` |
+| List | `r list -b b.jar -H "$O" -H "$H" $K` | 200, the token with `last_used_at` and `last_used_ip` filled, no `plain_text_token` |
+| Rename | `r ren -b b.jar -X PATCH -H "$O" -H "$J" -H "$H" $K/$TID -d '{"name":"Deploy bot"}'` | 200 `name: Deploy bot`, abilities unchanged |
+| Revoke | `r rev -b b.jar -X DELETE -H "$O" -H "$H" $K/$TID`, then `me` with the token | 204, then 401 `token_revoked`; the list keeps it with `revoked_at` |
+| Unknown id | `r nf -b b.jar -H "$O" -H "$H" $K/tok_01jc0000000000000000000000` | 404 `not_found` |
+| Role ceiling | a `member` of Acme asks for `["billing:read","members:read"]` | 422 `ability_not_allowed`, `abilities: ["billing:read"]` |
+| Others' tokens | that member: `DELETE $K/<Bob's tok_>` and `curl -g … "$K?filter[member]=all"`; Bob: `curl -g … "$K?filter[member]=all"` | 404 and 403 for the member; Bob sees every member's tokens |
+| Deactivation ends tokens | Bob deactivates the member, then the member's token on `me` | 401 `token_revoked` |
+| In a browser | open `$W/d/settings/tokens`, make a token with one ability, copy it, call `$B/members` with it, then revoke it | the secret shows once with a copy button; the list says what it may do, when it was last used and when it expires; after revoking it shows "Revoked" and the token gets 401 |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.
@@ -349,7 +378,8 @@ docker compose exec -T postgres psql -U postgres -d dimmi_e2e \
 ```
 
 Expect one row per live session with the sign-in record filled; security events for every sign-in, failure,
-lock, sign-out, revocation, `password.reset`, `magic_link.used` and `sessions.revoked_others`; one-time tokens with
+lock, sign-out, revocation, `password.reset`, `magic_link.used`, `sessions.revoked_others`, `token.created` and
+`token.revoked`; one-time tokens with
 a `code_hash` only for magic links and confirmation codes, used ones `consumed`; Carol `created_via magic_link`,
 verified, without a password; Dave verified without a password; every `send_mail` job `completed`.
 

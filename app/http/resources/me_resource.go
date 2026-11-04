@@ -50,17 +50,19 @@ type Member struct {
 }
 
 /*
-Auth describes the credential. SessionID is set for sessions; the
-sign-in fields are left out for tokens, which carry no sign-in.
+Auth describes the credential. SessionID is set for sessions and Token
+for personal access tokens; the sign-in fields are left out for tokens,
+which carry no sign-in.
 */
 type Auth struct {
-	Type               string     `json:"type"`
-	SessionID          string     `json:"session_id,omitempty"`
-	Abilities          []string   `json:"abilities"`
-	EffectiveAbilities []string   `json:"effective_abilities"`
-	AuthMethods        []string   `json:"auth_methods,omitempty"`
-	TwoFactorUsed      *bool      `json:"two_factor_used,omitempty"`
-	AuthenticatedAt    *time.Time `json:"authenticated_at,omitempty"`
+	Type               string        `json:"type"`
+	SessionID          string        `json:"session_id,omitempty"`
+	Token              *TokenSummary `json:"token,omitempty"`
+	Abilities          []string      `json:"abilities"`
+	EffectiveAbilities []string      `json:"effective_abilities"`
+	AuthMethods        []string      `json:"auth_methods,omitempty"`
+	TwoFactorUsed      *bool         `json:"two_factor_used,omitempty"`
+	AuthenticatedAt    *time.Time    `json:"authenticated_at,omitempty"`
 }
 
 /*
@@ -113,6 +115,13 @@ func newMember(m models.WorkspaceMember, permissions []string) *Member {
 func newAuth(me auth.Me) Auth {
 	p := me.Principal
 	out := Auth{Type: credentialType(p), Abilities: p.Abilities(), EffectiveAbilities: nonNil(me.Abilities)}
+
+	if me.Token != nil {
+		out.Token = &TokenSummary{
+			ID: models.PublicID(models.PrefixPersonalToken, me.Token.ID), Object: "personal_access_token",
+			Name: me.Token.Name, Prefix: me.Token.Hint, ExpiresAt: utc(me.Token.ExpiresAt),
+		}
+	}
 
 	if p.Kind == appauth.KindSession {
 		used := p.SignIn.UsedSecondFactor()

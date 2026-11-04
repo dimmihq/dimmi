@@ -38,6 +38,7 @@ type Config struct {
 
 	Workspaces  WorkspacesConfig  `koanf:"workspaces"`
 	Invitations InvitationsConfig `koanf:"invitations"`
+	Tokens      TokensConfig      `koanf:"tokens"`
 
 	Frontend FrontendConfig `koanf:"frontend"`
 	Widget   WidgetConfig   `koanf:"widget"`

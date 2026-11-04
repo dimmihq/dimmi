@@ -10,7 +10,8 @@
 | ran out are handed to their purges, the audit log and the security log
 | drop the entries older than they are kept for, a few minutes apart so
 | they never compete, and every workspace is checked for an active owner.
-| In the morning owners of workspaces about to be purged are reminded.
+| In the morning owners of workspaces about to be purged are reminded,
+| and owners of access tokens about to expire are warned.
 |
 */
 
@@ -31,4 +32,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.PruneSecurityEventsArgs{}).DailyAt("03:20")
 	a.Schedule.Job(jobs.CheckWorkspaceOwnersArgs{}).DailyAt("04:00")
 	a.Schedule.Job(jobs.SendWorkspaceDeletionRemindersArgs{}).DailyAt("09:00")
+	a.Schedule.Job(jobs.NotifyExpiringTokensArgs{}).DailyAt("09:05")
 }

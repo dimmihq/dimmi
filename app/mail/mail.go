@@ -49,6 +49,8 @@ func Register(m *mail.Manager) {
 	mail.Register[OwnerPromotedBySystemMail](m, "owner_promoted_by_system")
 	mail.Register[InvitationMail](m, "invitation")
 	mail.Register[InvitationAcceptedMail](m, "invitation_accepted")
+	mail.Register[TokenCreatedMail](m, "token_created")
+	mail.Register[TokenExpiringMail](m, "token_expiring")
 }
 
 /*

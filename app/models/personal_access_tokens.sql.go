@@ -12,6 +12,264 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countLiveMemberTokens = `-- name: CountLiveMemberTokens :one
+SELECT count(*)
+FROM personal_access_tokens
+WHERE workspace_id = $1::uuid AND owner_id = $2 AND revoked_at IS NULL
+  AND (expires_at IS NULL OR expires_at > $3::timestamptz)
+`
+
+type CountLiveMemberTokensParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	OwnerID     ids.UUID  `json:"owner_id"`
+	Now         time.Time `json:"now"`
+}
+
+// CountLiveMemberTokens counts the member's tokens that still work: not
+// revoked and not expired.
+func (q *Queries) CountLiveMemberTokens(ctx context.Context, arg CountLiveMemberTokensParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveMemberTokens, arg.WorkspaceID, arg.OwnerID, arg.Now)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const findWorkspaceToken = `-- name: FindWorkspaceToken :one
+SELECT
+    t.id, t.owner_id, t.name, t.hint, t.abilities, t.expires_at, t.last_used_at, t.last_used_ip, t.revoked_at,
+    t.created_at, m.user_id AS member_user_id, u.name AS member_name
+FROM personal_access_tokens t
+JOIN workspace_members m ON m.id = t.owner_id AND m.workspace_id = t.workspace_id
+JOIN users u ON u.id = m.user_id
+WHERE t.workspace_id = $1::uuid AND t.id = $2
+`
+
+type FindWorkspaceTokenParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+type FindWorkspaceTokenRow struct {
+	ID           ids.UUID   `json:"id"`
+	OwnerID      ids.UUID   `json:"owner_id"`
+	Name         string     `json:"name"`
+	Hint         string     `json:"hint"`
+	Abilities    []string   `json:"abilities"`
+	ExpiresAt    *time.Time `json:"expires_at"`
+	LastUsedAt   *time.Time `json:"last_used_at"`
+	LastUsedIp   *string    `json:"last_used_ip"`
+	RevokedAt    *time.Time `json:"revoked_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	MemberUserID ids.UUID   `json:"member_user_id"`
+	MemberName   string     `json:"member_name"`
+}
+
+// FindWorkspaceToken returns the workspace's token with the id, with the
+// member it acts as.
+func (q *Queries) FindWorkspaceToken(ctx context.Context, arg FindWorkspaceTokenParams) (FindWorkspaceTokenRow, error) {
+	row := q.db.QueryRow(ctx, findWorkspaceToken, arg.WorkspaceID, arg.ID)
+	var i FindWorkspaceTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Name,
+		&i.Hint,
+		&i.Abilities,
+		&i.ExpiresAt,
+		&i.LastUsedAt,
+		&i.LastUsedIp,
+		&i.RevokedAt,
+		&i.CreatedAt,
+		&i.MemberUserID,
+		&i.MemberName,
+	)
+	return i, err
+}
+
+const listTokensExpiringSoon = `-- name: ListTokensExpiringSoon :many
+SELECT
+    t.id::uuid AS id,
+    t.name::text AS name,
+    t.expires_at::timestamptz AS expires_at,
+    t.workspace_name::text AS workspace_name,
+    t.user_name::text AS user_name,
+    t.user_email::citext AS user_email,
+    coalesce(t.user_locale, '')::text AS user_locale
+FROM auth_tokens_expiring($1::timestamptz, $2::timestamptz, $3::integer) AS t
+`
+
+type ListTokensExpiringSoonParams struct {
+	ExpiringAfter  time.Time `json:"expiring_after"`
+	ExpiringBefore time.Time `json:"expiring_before"`
+	MaxRows        int32     `json:"max_rows"`
+}
+
+type ListTokensExpiringSoonRow struct {
+	ID            ids.UUID  `json:"id"`
+	Name          string    `json:"name"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	WorkspaceName string    `json:"workspace_name"`
+	UserName      string    `json:"user_name"`
+	UserEmail     string    `json:"user_email"`
+	UserLocale    string    `json:"user_locale"`
+}
+
+// ListTokensExpiringSoon returns live tokens of active members, across
+// workspaces, that expire in the window and whose owner was not warned
+// yet, soonest first, with what the warning needs.
+func (q *Queries) ListTokensExpiringSoon(ctx context.Context, arg ListTokensExpiringSoonParams) ([]ListTokensExpiringSoonRow, error) {
+	rows, err := q.db.Query(ctx, listTokensExpiringSoon, arg.ExpiringAfter, arg.ExpiringBefore, arg.MaxRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTokensExpiringSoonRow
+	for rows.Next() {
+		var i ListTokensExpiringSoonRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ExpiresAt,
+			&i.WorkspaceName,
+			&i.UserName,
+			&i.UserEmail,
+			&i.UserLocale,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspaceTokens = `-- name: ListWorkspaceTokens :many
+SELECT
+    t.id, t.owner_id, t.name, t.hint, t.abilities, t.expires_at, t.last_used_at, t.last_used_ip, t.revoked_at,
+    t.created_at, m.user_id AS member_user_id, u.name AS member_name
+FROM personal_access_tokens t
+JOIN workspace_members m ON m.id = t.owner_id AND m.workspace_id = t.workspace_id
+JOIN users u ON u.id = m.user_id
+WHERE t.workspace_id = $1::uuid
+  AND ($2::uuid IS NULL OR t.owner_id = $2::uuid)
+  AND (t.revoked_at IS NULL OR t.revoked_at > $3::timestamptz)
+ORDER BY t.created_at DESC, t.id DESC
+LIMIT $5::bigint OFFSET $4::bigint
+`
+
+type ListWorkspaceTokensParams struct {
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	OwnerID      *ids.UUID `json:"owner_id"`
+	RevokedAfter time.Time `json:"revoked_after"`
+	PageOffset   int64     `json:"page_offset"`
+	PageLimit    int64     `json:"page_limit"`
+}
+
+type ListWorkspaceTokensRow struct {
+	ID           ids.UUID   `json:"id"`
+	OwnerID      ids.UUID   `json:"owner_id"`
+	Name         string     `json:"name"`
+	Hint         string     `json:"hint"`
+	Abilities    []string   `json:"abilities"`
+	ExpiresAt    *time.Time `json:"expires_at"`
+	LastUsedAt   *time.Time `json:"last_used_at"`
+	LastUsedIp   *string    `json:"last_used_ip"`
+	RevokedAt    *time.Time `json:"revoked_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	MemberUserID ids.UUID   `json:"member_user_id"`
+	MemberName   string     `json:"member_name"`
+}
+
+// ListWorkspaceTokens returns a page of the workspace's tokens, newest
+// first, each with the member it acts as: one member's when owner_id is
+// set, every member's otherwise. Tokens revoked before revoked_after are
+// left out; the rest stay listed so their owner sees that they ended.
+func (q *Queries) ListWorkspaceTokens(ctx context.Context, arg ListWorkspaceTokensParams) ([]ListWorkspaceTokensRow, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceTokens,
+		arg.WorkspaceID,
+		arg.OwnerID,
+		arg.RevokedAfter,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorkspaceTokensRow
+	for rows.Next() {
+		var i ListWorkspaceTokensRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Name,
+			&i.Hint,
+			&i.Abilities,
+			&i.ExpiresAt,
+			&i.LastUsedAt,
+			&i.LastUsedIp,
+			&i.RevokedAt,
+			&i.CreatedAt,
+			&i.MemberUserID,
+			&i.MemberName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markTokenExpiryNotified = `-- name: MarkTokenExpiryNotified :one
+SELECT auth_mark_token_expiry_notified($1::uuid, $2::timestamptz)::bigint
+`
+
+type MarkTokenExpiryNotifiedParams struct {
+	TokenID ids.UUID  `json:"token_id"`
+	Now     time.Time `json:"now"`
+}
+
+// MarkTokenExpiryNotified records that the token's owner was warned, and
+// returns 1, or 0 when someone already did.
+func (q *Queries) MarkTokenExpiryNotified(ctx context.Context, arg MarkTokenExpiryNotifiedParams) (int64, error) {
+	row := q.db.QueryRow(ctx, markTokenExpiryNotified, arg.TokenID, arg.Now)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const renameWorkspaceToken = `-- name: RenameWorkspaceToken :execrows
+UPDATE personal_access_tokens
+SET name = $1, updated_at = $2::timestamptz
+WHERE workspace_id = $3::uuid AND id = $4
+`
+
+type RenameWorkspaceTokenParams struct {
+	Name        string    `json:"name"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// RenameWorkspaceToken gives the workspace's token a new name.
+func (q *Queries) RenameWorkspaceToken(ctx context.Context, arg RenameWorkspaceTokenParams) (int64, error) {
+	result, err := q.db.Exec(ctx, renameWorkspaceToken,
+		arg.Name,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const revokeMemberTokens = `-- name: RevokeMemberTokens :execrows
 UPDATE personal_access_tokens
 SET revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
@@ -33,6 +291,34 @@ func (q *Queries) RevokeMemberTokens(ctx context.Context, arg RevokeMemberTokens
 		arg.RevokedBy,
 		arg.WorkspaceID,
 		arg.OwnerID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const revokeWorkspaceToken = `-- name: RevokeWorkspaceToken :execrows
+UPDATE personal_access_tokens
+SET revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
+WHERE workspace_id = $3::uuid AND id = $4 AND revoked_at IS NULL
+`
+
+type RevokeWorkspaceTokenParams struct {
+	Now         time.Time `json:"now"`
+	RevokedBy   ids.UUID  `json:"revoked_by"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// RevokeWorkspaceToken ends the workspace's token if it still works,
+// recording who ended it.
+func (q *Queries) RevokeWorkspaceToken(ctx context.Context, arg RevokeWorkspaceTokenParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeWorkspaceToken,
+		arg.Now,
+		arg.RevokedBy,
+		arg.WorkspaceID,
+		arg.ID,
 	)
 	if err != nil {
 		return 0, err

@@ -123,6 +123,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootWorkspaceLifecycle(a)
 	bootFactors(a)
 	bootTeams(a)
+	bootTokens(a)
 
 	if err := bootAudit(a); err != nil {
 		return err
@@ -260,13 +261,12 @@ func registerJobs(a *app.App) error {
 		return fmt.Errorf("avatar disk: %w", err)
 	}
 
-	err = queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk})
-	if err != nil {
-		return err
-	}
-
-	return queue.Register(a.Queue, &jobs.PurgeExpiredAuthRecords{
-		DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,
-		SessionIdle: a.Config.Auth.Sessions.IdleLifetime,
-	})
+	return errors.Join(
+		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
+		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
+		queue.Register(a.Queue, &jobs.PurgeExpiredAuthRecords{
+			DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,
+			SessionIdle: a.Config.Auth.Sessions.IdleLifetime,
+		}),
+	)
 }

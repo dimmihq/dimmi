@@ -112,5 +112,18 @@
     "subject": "{{.member}} joined {{.workspace}}",
     "intro": "{{.member}} accepted your invitation and joined the workspace {{.workspace}}.",
     "action": "Review the members"
+  },
+  "token_created": {
+    "subject": "A new API token was made for your dimmi account",
+    "intro": "The API token \"{{.token}}\" was just made in {{.workspace}} from {{.ip}}. It acts as you.",
+    "abilities": "It may use: {{.abilities}}.",
+    "unknown": "If you did not make it, revoke it now and change your password.",
+    "action": "Review your API tokens"
+  },
+  "token_expiring": {
+    "subject": "An API token expires in a week",
+    "intro": "Your API token \"{{.token}}\" in {{.workspace}} stops working on {{.date}}.",
+    "advice": "Scripts that use it will stop too. Make a new token and switch them over before then.",
+    "action": "Review your API tokens"
   }
 }

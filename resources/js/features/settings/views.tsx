@@ -6,13 +6,7 @@ import type { ComponentType } from "react";
 
 import type { SettingsSection } from "@/features/shell/navigation";
 
-import {
-  NotificationsSettings,
-  PreferencesSettings,
-  ProfileSettings,
-  SecuritySettings,
-  TokensSettings,
-} from "./pages/account";
+import { NotificationsSettings, PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { AuditLogSettings } from "./pages/audit-log";
@@ -27,6 +21,7 @@ import {
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
 import { TeamsSettings } from "./pages/teams";
+import { TokensSettings } from "./pages/tokens";
 import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 
 export const settingsViews: Record<SettingsSection, ComponentType> = {

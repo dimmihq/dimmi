@@ -78,6 +78,8 @@ const (
 	EventMagicLinkUsed         = "magic_link.used"
 	EventIdentityLinked        = "identity.linked"
 	EventIdentityUnlinked      = "identity.unlinked"
+	EventTokenCreated          = "token.created"
+	EventTokenRevoked          = "token.revoked"
 )
 
 /*
@@ -124,7 +126,8 @@ func SecurityEvents() Registry {
 		"two_factor.enabled", "two_factor.disabled", "auth_factor.added", "auth_factor.removed",
 		"auth_factor.renamed", "auth_factor.recovery_code_used", "auth_factor.recovery_codes_regenerated",
 		"email.change_requested", "email.changed", EventIdentityLinked, EventIdentityUnlinked, EventSessionRevoked,
-		EventSessionsRevokedOthers, EventMagicLinkUsed, "token.created", "account.deletion_requested",
+		EventSessionsRevokedOthers, EventMagicLinkUsed, EventTokenCreated, EventTokenRevoked,
+		"account.deletion_requested",
 	}}
 }
 
