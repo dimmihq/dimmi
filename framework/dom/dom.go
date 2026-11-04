@@ -42,7 +42,8 @@ type Selection struct {
 Parse reads a whole HTML document or fragment. Fragments are wrapped in
 html, head and body elements as a browser would. The reader is read to
 the end, so limit its size before passing untrusted input. Elements
-nested more than 512 deep are refused rather than parsed.
+nested more than 512 deep are refused rather than parsed; StripTags
+still reads such a document.
 */
 func Parse(r io.Reader) (*Document, error) {
 	doc, err := goquery.NewDocumentFromReader(r)

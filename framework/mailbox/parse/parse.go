@@ -75,8 +75,9 @@ Parsed is a received message.
 
 Header holds every top-level header field as received. Message ids are
 given without angle brackets. Date is zero when the header is missing
-or cannot be read. Truncated is set when the message exceeded MaxBytes
-and was only walked.
+or cannot be read. TextDerived is set when the message had no text of
+its own and Text was converted from its HTML. Truncated is set when the
+message exceeded MaxBytes and was only walked.
 */
 type Parsed struct {
 	Header      textproto.MIMEHeader
@@ -89,9 +90,23 @@ type Parsed struct {
 	InReplyTo   []string
 	References  []string
 	Text, HTML  string
+	TextDerived bool
 	Attachments []Attachment
 	Warnings    []string
 	Truncated   bool
+}
+
+/*
+TextPart returns the text the message itself carried, without a
+conversion from its HTML. A fallback reads this rather than Text, since
+a conversion brings back what the HTML hides from a reader.
+*/
+func (p *Parsed) TextPart() string {
+	if p.TextDerived {
+		return ""
+	}
+
+	return p.Text
 }
 
 /*
@@ -130,7 +145,9 @@ whole parses a message held in memory, falling back to plain text when
 it cannot be read as MIME at all.
 */
 func whole(raw []byte, limits Limits) *Parsed {
-	parser := enmime.NewParser(enmime.MaxMIMEParts(limits.MaxParts), enmime.SkipMalformedParts(true))
+	parser := enmime.NewParser(
+		enmime.MaxMIMEParts(limits.MaxParts), enmime.SkipMalformedParts(true), enmime.DisableTextConversion(true),
+	)
 
 	env, err := parser.ReadEnvelope(bytes.NewReader(raw))
 	if err != nil {
@@ -138,36 +155,13 @@ func whole(raw []byte, limits Limits) *Parsed {
 	}
 
 	parsed := fromHeader(env)
-	parsed.Text, parsed.HTML = env.Text, env.HTML
-
-	for _, part := range env.Attachments {
-		parsed.Attachments = append(parsed.Attachments, attachment(part, false))
-	}
-
-	for _, part := range env.Inlines {
-		parsed.Attachments = append(parsed.Attachments, attachment(part, true))
-	}
-
-	for _, part := range env.OtherParts {
-		parsed.Attachments = append(parsed.Attachments, attachment(part, part.ContentID != ""))
-	}
+	readBodies(parsed, env)
 
 	for _, problem := range env.Errors {
 		parsed.Warnings = append(parsed.Warnings, problem.Error())
 	}
 
 	return parsed
-}
-
-func attachment(part *enmime.Part, inline bool) Attachment {
-	return Attachment{
-		Filename:    part.FileName,
-		ContentType: part.ContentType,
-		ContentID:   part.ContentID,
-		Inline:      inline,
-		Size:        int64(len(part.Content)),
-		Content:     part.Content,
-	}
 }
 
 /*

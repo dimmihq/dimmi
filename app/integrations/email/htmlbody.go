@@ -22,6 +22,7 @@
 package email
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -76,17 +77,60 @@ type Body struct {
 }
 
 /*
-BuildBody turns a message's HTML part, or its text part when it has no
-HTML, into the stored body.
+BuildBody turns a message's HTML part, or its text part, into the stored
+body. It never fails, since a message with words in it must never be
+lost to its markup: HTML that cannot be read gives way to the text part,
+then to the HTML with its tags stripped, and HTML that reads as nothing
+gives way to the text part.
 */
-func BuildBody(html, text string) (Body, error) {
+func BuildBody(html, text string) Body {
 	if strings.TrimSpace(html) == "" {
-		return textBody(text), nil
+		return textBody(text)
 	}
 
+	body, err := htmlBody(html)
+	if err != nil {
+		return unreadableHTMLBody(html, text)
+	}
+
+	if strings.TrimSpace(body.Markdown) == "" && strings.TrimSpace(text) != "" {
+		return textBody(text)
+	}
+
+	return body
+}
+
+/*
+unreadableHTMLBody builds the body of a message whose HTML cannot be
+parsed, leaving out what the HTML hides from a reader.
+*/
+func unreadableHTMLBody(html, text string) Body {
+	if strings.TrimSpace(text) != "" {
+		return textBody(text)
+	}
+
+	return textBody(dom.StripTags(html, hiddenTag))
+}
+
+/*
+hiddenTag reports whether a tag hides its element from a reader.
+*/
+func hiddenTag(tag dom.Tag) bool {
+	if _, hidden := tag.Attrs["hidden"]; hidden {
+		return true
+	}
+
+	return hiddenStyle.MatchString(tag.Attrs["style"])
+}
+
+/*
+htmlBody builds the body from HTML, with the quote and signature marked
+in the stored copy and cut from the Markdown.
+*/
+func htmlBody(html string) (Body, error) {
 	doc, err := dom.Parse(strings.NewReader(html))
 	if err != nil {
-		return Body{}, err
+		return Body{}, fmt.Errorf("read html body: %w", err)
 	}
 
 	dropHidden(doc)
@@ -99,7 +143,7 @@ func BuildBody(html, text string) (Body, error) {
 
 	markdown, err := dom.ToMarkdown(HTMLPolicy().Sanitize(doc.Find("body").HTML()))
 	if err != nil {
-		return Body{}, err
+		return Body{}, fmt.Errorf("convert html body: %w", err)
 	}
 
 	body := strippedBody(markdown)

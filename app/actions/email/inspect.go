@@ -70,10 +70,7 @@ inspect learns everything about the email that sorting needs, and
 sorts it.
 */
 func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (inspection, error) {
-	body, err := inbound.BuildBody(mail.parsed.HTML, mail.parsed.Text)
-	if err != nil {
-		return inspection{}, fmt.Errorf("build body: %w", err)
-	}
+	body := inbound.BuildBody(mail.parsed.HTML, mail.parsed.TextPart())
 
 	known, err := a.facts(ctx, mail)
 	if err != nil {

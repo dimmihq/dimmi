@@ -232,3 +232,44 @@ func TestDecodeCharset(t *testing.T) {
 		assert.Equal(t, tc.want, got, tc.name)
 	}
 }
+
+func TestStripTags(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reads a document nested too deep to parse", func(t *testing.T) {
+		t.Parallel()
+
+		document := strings.Repeat("<div>", 600) + "Deep &amp; true" + strings.Repeat("</div>", 600)
+
+		_, err := dom.Parse(strings.NewReader(document))
+		require.Error(t, err)
+		assert.Equal(t, "Deep & true", dom.StripTags(document, nil))
+	})
+
+	t.Run("leaves out scripts, styles and the head and puts blocks on their own lines", func(t *testing.T) {
+		t.Parallel()
+
+		got := dom.StripTags("<head><title>No</title></head><style>p{}</style><script>x()</script>"+
+			"<p>One <b>bold</b></p><!-- no --><p>Two<br/>Three</p><img src=x>Four", nil)
+
+		assert.Equal(t, "One bold\n\nTwo\nThree\nFour", got)
+	})
+
+	t.Run("leaves out what the caller picks, with everything inside it", func(t *testing.T) {
+		t.Parallel()
+
+		document := `<div class="a">Keep</div><div class="no">Drop<div>Drop too</div>Drop more</div><p>End</p>`
+		got := dom.StripTags(document,
+			func(tag dom.Tag) bool { return tag.Attrs["class"] == "no" })
+
+		assert.Equal(t, "Keep\n\nEnd", got)
+	})
+
+	t.Run("does not start skipping at an element that holds nothing", func(t *testing.T) {
+		t.Parallel()
+
+		got := dom.StripTags(`<img class="no">Keep`, func(tag dom.Tag) bool { return tag.Attrs["class"] == "no" })
+
+		assert.Equal(t, "Keep", got)
+	})
+}

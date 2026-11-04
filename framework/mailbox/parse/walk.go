@@ -4,9 +4,10 @@
 |--------------------------------------------------------------------------
 |
 | A message over the size limit is never held whole. It is read once as
-| a stream: the first text and HTML bodies are kept up to a cap each,
-| and every other part is counted and listed as a dropped attachment, so
-| the reader still learns what was sent and what could not be kept.
+| a stream: its text and HTML bodies are kept up to a cap each, in the
+| order they were written, and every other part is counted and listed as
+| a dropped attachment, so the reader still learns what was sent and what
+| could not be kept.
 |
 | A broken structure ends the walk with a warning, keeping what was read
 | so far. Failing to read the source itself is an error, so the caller
@@ -67,8 +68,8 @@ func walk(head []byte, rest io.Reader, limits Limits) (*Parsed, error) {
 }
 
 /*
-visit keeps a part as the text or HTML body when it is the first of its
-kind, and lists it as a dropped attachment otherwise.
+visit adds a part to the text or HTML body when it is one, and lists it
+as a dropped attachment otherwise.
 */
 func (p *Parsed) visit(part *message.Entity, limits Limits, partErr error) error {
 	mediaType, params, _ := part.Header.ContentType()
@@ -85,11 +86,11 @@ func (p *Parsed) visit(part *message.Entity, limits Limits, partErr error) error
 	filename := cmp.Or(dispositionParams["filename"], params["name"])
 
 	if filename == "" && disposition != "attachment" {
-		switch {
-		case mediaType == "text/plain" && p.Text == "":
-			return keep(&p.Text, body, limits.MaxPartBytes)
-		case mediaType == "text/html" && p.HTML == "":
-			return keep(&p.HTML, body, limits.MaxPartBytes)
+		switch mediaType {
+		case typePlain:
+			return keep(&p.Text, textSeparator, body, limits.MaxPartBytes)
+		case typeHTML:
+			return keep(&p.HTML, htmlSeparator, body, limits.MaxPartBytes)
 		}
 	}
 
@@ -111,15 +112,22 @@ func (p *Parsed) visit(part *message.Entity, limits Limits, partErr error) error
 }
 
 /*
-keep reads a body up to the cap and skips the rest of it.
+keep adds a body to what was kept, up to the cap in all, and skips the
+rest of it.
 */
-func keep(target *string, body io.Reader, maxBytes int64) error {
-	kept, err := io.ReadAll(io.LimitReader(body, maxBytes))
+func keep(target *string, separator string, body io.Reader, maxBytes int64) error {
+	room := max(maxBytes-int64(len(*target)), 0)
+
+	kept, err := io.ReadAll(io.LimitReader(body, room))
 	if err != nil {
 		return fmt.Errorf("read body: %w", err)
 	}
 
-	*target = string(kept)
+	if *target != "" && len(kept) > 0 {
+		*target += separator
+	}
+
+	*target += string(kept)
 
 	if _, err := io.Copy(io.Discard, body); err != nil {
 		return fmt.Errorf("read body: %w", err)
