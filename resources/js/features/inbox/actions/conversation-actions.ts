@@ -56,7 +56,7 @@ export const conversationActions: InboxAction[] = [
   },
   {
     id: "conversation.snooze",
-    label: "Snooze until tomorrow",
+    label: "Snooze",
     group: "Conversation",
     icon: RiAlarmLine,
     shortcut: "z",

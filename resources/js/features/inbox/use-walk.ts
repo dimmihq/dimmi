@@ -2,7 +2,8 @@
  * Walking the list from an open conversation: J and K open the next and
  * previous rows of the list on screen, and both neighbours are fetched
  * ahead, conversation and thread, so the next one opens without a
- * spinner. Closing or snoozing moves on to the next row by itself.
+ * spinner. Closing, or snoozing from the picker, moves on to the next
+ * row by itself.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -41,7 +42,13 @@ function useListRows(workspace: string, id: string) {
   return lists.map(([, rows]) => rows).find((rows) => rows?.some((r) => r.id === id));
 }
 
-export function useWalk(view: string, workspace: string, conversation: Conversation, caze: CaseControls) {
+export function useWalk(
+  view: string,
+  workspace: string,
+  conversation: Conversation,
+  caze: CaseControls,
+  openSnooze: () => void,
+) {
   const client = useQueryClient();
   const navigate = useNavigate();
   const rows = useListRows(workspace, conversation.id);
@@ -72,12 +79,15 @@ export function useWalk(view: string, workspace: string, conversation: Conversat
       status: conversation.status,
       close: thenNext(() => caze.setStatus("closed")),
       reopen: () => caze.setStatus("open"),
-      snooze: thenNext(() => caze.setStatus("snoozed")),
+      snooze: openSnooze,
       assignToMe: caze.assignToMe,
       next: () => open(next),
       previous: () => open(previous),
+      advance: () => open(next ?? previous),
     };
-  }, [caze, conversation.id, conversation.status, navigate, next, previous, view]);
+  }, [caze, conversation.id, conversation.status, navigate, next, previous, view, openSnooze]);
 
   useConversationMoves(moves);
+
+  return moves;
 }

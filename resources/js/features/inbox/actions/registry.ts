@@ -32,6 +32,7 @@ export interface ConversationMoves {
   assignToMe: () => void;
   next: () => void;
   previous: () => void;
+  advance: () => void;
 }
 
 export interface InboxAction {

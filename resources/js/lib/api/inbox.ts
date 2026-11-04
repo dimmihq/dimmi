@@ -170,6 +170,8 @@ export interface ConversationChanges {
   assignee_id?: string | null;
   status?: ConversationStatus;
   snooze_preset?: "later_today" | "tomorrow" | "next_week" | "one_week";
+  snooze_option?: string;
+  snoozed_until?: string;
   priority?: ConversationPriority;
   team_id?: string | null;
   unread?: boolean;
@@ -330,5 +332,26 @@ export function searchQuery(workspace: string, text: string) {
   return queryOptions({
     queryKey: ["workspace", workspace, "search", text],
     queryFn: () => request<SearchResults>("GET", `/search?q=${encodeURIComponent(text)}`, undefined, { workspace }),
+  });
+}
+
+/*
+ * SnoozeChoice is one way to snooze a conversation and the moment it
+ * ends for the reader.
+ */
+export interface SnoozeChoice {
+  key: string;
+  label: string;
+  kind: string;
+  until: string;
+}
+
+export function snoozeChoicesQuery(workspace: string, conversation: string) {
+  return queryOptions({
+    queryKey: [...realtimeKeys.conversation(workspace, conversation), "snooze-options"],
+    queryFn: () =>
+      request<SnoozeChoice[]>("GET", `/snooze-options?conversation=${encodeURIComponent(conversation)}`, undefined, {
+        workspace,
+      }),
   });
 }

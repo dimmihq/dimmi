@@ -43,6 +43,8 @@ export function useCase(workspace: string, conversation: Conversation) {
     assign: (memberId: string | null) => change.mutate({ assignee_id: memberId }),
     assignTeam: (teamId: string | null) => change.mutate({ team_id: teamId }),
     assignToMe: () => change.mutate({ assignee_id: "me" }),
+    snoozeWith: (option: string) => change.mutate({ status: "snoozed", snooze_option: option }),
+    snoozeUntil: (until: string) => change.mutate({ status: "snoozed", snoozed_until: until }),
     setStatus: (status: ConversationStatus) =>
       change.mutate(status === "snoozed" ? { status, snooze_preset: "tomorrow" } : { status }),
     setPriority: (priority: ConversationPriority) => change.mutate({ priority }),

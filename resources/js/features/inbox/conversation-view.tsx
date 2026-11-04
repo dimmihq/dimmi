@@ -15,7 +15,7 @@
 import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -36,6 +36,7 @@ import { DetailsPanel } from "./customer/details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
 import { PriorityMenu } from "./priority/priority-menu";
+import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
@@ -96,7 +97,9 @@ export function ConversationView({
   const { userId } = useInbox();
   const typing = useTypingReport(workspace, conversation.id);
   const caze = useCase(workspace, conversation);
-  useWalk(view, workspace, conversation, caze);
+  const [snoozing, setSnoozing] = useState(false);
+  const openSnooze = useCallback(() => setSnoozing(true), []);
+  const walk = useWalk(view, workspace, conversation, caze, openSnooze);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);
@@ -134,6 +137,20 @@ export function ConversationView({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <ConversationViewers conversation={conversation.id} self={userId} />
+          <SnoozePicker
+            workspace={workspace}
+            conversation={conversation.id}
+            isOpen={snoozing}
+            onOpenChange={setSnoozing}
+            onOption={(key) => {
+              caze.snoozeWith(key);
+              walk.advance();
+            }}
+            onUntil={(until) => {
+              caze.snoozeUntil(until);
+              walk.advance();
+            }}
+          />
           <PriorityMenu priority={conversation.priority} onChange={caze.setPriority} />
           {sideBySide ? (
             <IconButton
