@@ -91,6 +91,28 @@ func failures() map[string]failure {
 				return v.client().PatchJSON("/widget/v1/contact", testkit.JSON{"name": "Grace"})
 			},
 		},
+		"starting a session that cannot be stored": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "INSERT") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.tc.Client().PostJSON("/widget/v1/sessions", testkit.JSON{"app_id": appIDOf(v)})
+			},
+		},
+		"starting a session whose lead cannot be stored": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("contacts", "INSERT") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.tc.Client().PostJSON("/widget/v1/sessions", testkit.JSON{"app_id": appIDOf(v)})
+			},
+		},
+		"listing conversations that cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("conversations") },
+			func(v *visitor, _ string) *testkit.Response { return v.client().GetJSON("/widget/v1/conversations") },
+		},
+		"creating a widget whose channel cannot be stored": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("channel_connections", "INSERT") },
+			func(v *visitor, _ string) *testkit.Response {
+				return owner(v.tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Shop"})
+			},
+		},
 		"signing out while sessions cannot be written": {
 			none, func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "UPDATE") },
 			func(v *visitor, _ string) *testkit.Response { return v.client().Delete("/widget/v1/session") },
@@ -134,4 +156,13 @@ func TestWidgetFailures(t *testing.T) {
 			f.call(v, ref).AssertStatus(fhttp.StatusInternalServerError)
 		})
 	}
+}
+
+/*
+appIDOf returns the app id of the visitor's widget.
+*/
+func appIDOf(v *visitor) string {
+	t, _ := v.tc.T.(*testing.T)
+
+	return appID(t, v.tc)
 }
