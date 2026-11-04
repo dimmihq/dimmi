@@ -149,6 +149,13 @@ func writeRecords(b *dnsmessage.Builder, name string, records dns.Records, qtype
 		}
 	}
 
+	for _, host := range records.NS {
+		if qtype == dnsmessage.TypeNS {
+			ns := dnsmessage.NSResource{NS: dnsmessage.MustNewName(host + ".")}
+			errs = append(errs, b.NSResource(rrHeader(name), ns))
+		}
+	}
+
 	for _, txt := range records.TXT {
 		if qtype == dnsmessage.TypeTXT {
 			errs = append(errs, b.TXTResource(rrHeader(name), dnsmessage.TXTResource{TXT: chunks(txt)}))

@@ -25,6 +25,7 @@ import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DDocsRouteImport } from './routes/d/docs'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
+import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
@@ -38,6 +39,7 @@ import { Route as DWorkflowsNewRouteImport } from './routes/d/workflows/new'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
+import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -118,6 +120,11 @@ const DNotificationsRoute = DNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DShortcutsRoute = DShortcutsRouteImport.update({
+  id: '/shortcuts',
+  path: '/shortcuts',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
   id: '/login_/magic',
   path: '/login/magic',
@@ -183,6 +190,12 @@ const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   path: '/settings/teams/$team',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsEmailDomainsDomainRoute =
+  DSettingsEmailDomainsDomainRouteImport.update({
+    id: '/settings/email/domains/$domain',
+    path: '/settings/email/domains/$domain',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/d': typeof DRouteRouteWithChildren
@@ -200,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/login/magic': typeof AuthLoginMagicRoute
@@ -214,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthRouteWithChildren
@@ -230,6 +245,7 @@ export interface FileRoutesByTo {
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/shortcuts': typeof DShortcutsRoute
   '/d': typeof DIndexRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
@@ -243,6 +259,7 @@ export interface FileRoutesByTo {
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -261,6 +278,7 @@ export interface FileRoutesById {
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
@@ -275,6 +293,7 @@ export interface FileRoutesById {
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -294,6 +313,7 @@ export interface FileRouteTypes {
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
+    | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
     | '/login/magic'
@@ -308,6 +328,7 @@ export interface FileRouteTypes {
     | '/d/inbox/$view/$conversation'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view/'
+    | '/d/settings/email/domains/$domain'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -324,6 +345,7 @@ export interface FileRouteTypes {
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
+    | '/d/shortcuts'
     | '/d'
     | '/login/magic'
     | '/login/two-factor'
@@ -337,6 +359,7 @@ export interface FileRouteTypes {
     | '/d/inbox/$view/$conversation'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view'
+    | '/d/settings/email/domains/$domain'
   id:
     | '__root__'
     | '/d'
@@ -354,6 +377,7 @@ export interface FileRouteTypes {
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
+    | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
     | '/_auth/login_/magic'
@@ -368,6 +392,7 @@ export interface FileRouteTypes {
     | '/d/inbox/$view/$conversation'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view/'
+    | '/d/settings/email/domains/$domain'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -489,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DNotificationsRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/shortcuts': {
+      id: '/d/shortcuts'
+      path: '/shortcuts'
+      fullPath: '/d/shortcuts'
+      preLoaderRoute: typeof DShortcutsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/_auth/login_/magic': {
       id: '/_auth/login_/magic'
       path: '/login/magic'
@@ -580,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsTeamsTeamRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/email/domains/$domain': {
+      id: '/d/settings/email/domains/$domain'
+      path: '/settings/email/domains/$domain'
+      fullPath: '/d/settings/email/domains/$domain'
+      preLoaderRoute: typeof DSettingsEmailDomainsDomainRouteImport
+      parentRoute: typeof DRouteRoute
+    }
   }
 }
 
@@ -605,6 +644,7 @@ interface DRouteRouteChildren {
   DDocsRoute: typeof DDocsRoute
   DFeedbackRoute: typeof DFeedbackRoute
   DNotificationsRoute: typeof DNotificationsRoute
+  DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
@@ -615,6 +655,7 @@ interface DRouteRouteChildren {
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
@@ -625,6 +666,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DDocsRoute: DDocsRoute,
   DFeedbackRoute: DFeedbackRoute,
   DNotificationsRoute: DNotificationsRoute,
+  DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
@@ -635,6 +677,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
 }
 
 const DRouteRouteWithChildren =

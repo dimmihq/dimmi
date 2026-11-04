@@ -12,7 +12,7 @@ import (
 )
 
 const conversationsByIDs = `-- name: ConversationsByIDs :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority FROM conversations WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type ConversationsByIDsParams struct {
@@ -57,11 +57,11 @@ func (q *Queries) ConversationsByIDs(ctx context.Context, arg ConversationsByIDs
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsTest,
+			&i.PreviousConversationID,
 			&i.WaitingSince,
 			&i.LastActivityAt,
 			&i.LastMessageID,
-			&i.PreviousConversationID,
-			&i.IsTest,
 			&i.Search,
 			&i.Priority,
 		); err != nil {

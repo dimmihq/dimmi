@@ -95,6 +95,26 @@ func (s *system) CNAME(ctx context.Context, name string) (string, error) {
 }
 
 /*
+NS looks up the name servers.
+*/
+func (s *system) NS(ctx context.Context, name string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	records, err := s.resolver.LookupNS(ctx, absolute(name))
+	if err != nil {
+		return nil, lookupError("ns", name, err)
+	}
+
+	hosts := make([]string, len(records))
+	for i, record := range records {
+		hosts[i] = relative(record.Host)
+	}
+
+	return hosts, nil
+}
+
+/*
 Addrs looks up the IPv4 and IPv6 addresses.
 */
 func (s *system) Addrs(ctx context.Context, name string) ([]netip.Addr, error) {

@@ -37,6 +37,7 @@ type Records struct {
 	MX    []MX
 	CNAME string
 	Addrs []netip.Addr
+	NS    []string
 }
 
 /*
@@ -120,6 +121,18 @@ func (f *Fake) Addrs(ctx context.Context, name string) ([]netip.Addr, error) {
 	}
 
 	return present("addrs", name, records.Addrs)
+}
+
+/*
+NS returns the name servers of the name.
+*/
+func (f *Fake) NS(ctx context.Context, name string) ([]string, error) {
+	records, err := f.lookup(ctx, "ns", name)
+	if err != nil {
+		return nil, err
+	}
+
+	return present("ns", name, records.NS)
 }
 
 /*

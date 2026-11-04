@@ -7,6 +7,7 @@
  * feature is built.
  */
 import {
+  RiAlarmLine,
   RiApps2Line,
   RiArrowLeftLine,
   RiAtLine,
@@ -17,6 +18,7 @@ import {
   RiContactsBook3Line,
   RiCpuLine,
   RiDatabase2Line,
+  RiDeleteBin6Line,
   RiDownload2Line,
   RiEqualizerLine,
   RiFileList3Line,
@@ -39,6 +41,7 @@ import {
   RiSettings4Line,
   RiShieldCheckLine,
   RiShieldUserLine,
+  RiSpam2Line,
   RiSparkling2Line,
   RiStackLine,
   RiTeamLine,
@@ -78,6 +81,15 @@ export const inboxViews = {
     "/d/inbox/mentions",
     "Conversations where a teammate mentioned you.",
   ),
+  snoozed: page(
+    "inbox-snoozed",
+    "Snoozed",
+    RiAlarmLine,
+    "/d/inbox/snoozed",
+    "Your conversations that sleep until their time comes.",
+  ),
+  spam: page("inbox-spam", "Spam", RiSpam2Line, "/d/inbox/spam", "Conversations marked as spam."),
+  deleted: page("inbox-deleted", "Deleted", RiDeleteBin6Line, "/d/inbox/deleted", "Conversations in the trash."),
 } as const;
 
 export type InboxView = keyof typeof inboxViews;
@@ -353,12 +365,19 @@ export const settingsPages = {
 export type SettingsSection = keyof typeof settingsPages;
 
 /*
- * appSections lists the workspace's pages in the sidebar.
+ * appSections lists the workspace's pages in the sidebar, with the inbox
+ * sections that come from the workspace's own teams, teammates and
+ * inboxes after the fixed views. The trash shows only to those who may
+ * delete conversations.
  */
-export function appSections(): DashboardNavSection[] {
+export function appSections(inbox: DashboardNavSection[] = [], canDelete = false): DashboardNavSection[] {
+  const more = canDelete ? [inboxViews.spam, inboxViews.deleted] : [inboxViews.spam];
+
   return [
-    { key: "you", items: [workspacePages.notifications, inboxViews.mine] },
+    { key: "you", items: [workspacePages.notifications, inboxViews.mine, inboxViews.snoozed] },
     { key: "inbox", label: "Inbox", items: [inboxViews.unassigned, inboxViews.all, inboxViews.mentions] },
+    ...inbox,
+    { key: "inbox-more", label: "More", items: more },
     { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },
     {
       key: "workspace",

@@ -57,6 +57,9 @@ const (
 	EventTeamDeleted          = "team.deleted"
 	EventTeamMemberAdded      = "team.member_added"
 	EventTeamMemberRemoved    = "team.member_removed"
+
+	EventWidgetSettingsUpdated = "widget.settings_updated"
+	EventWidgetDeleted         = "widget.deleted"
 )
 
 /*

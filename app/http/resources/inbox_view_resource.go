@@ -14,6 +14,8 @@ package resources
 import (
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -52,10 +54,14 @@ type CountViews struct {
 		Total int64 `json:"total"`
 	} `json:"spam"`
 	Inboxes map[string]InboxCount `json:"inboxes"`
+	Teams   map[string]InboxCount `json:"teams"`
+	Members map[string]InboxCount `json:"members"`
+	Custom  map[string]InboxCount `json:"custom"`
 }
 
 /*
-InboxCount is how many open conversations an inbox holds.
+InboxCount is how many open conversations an inbox, team or member
+holds.
 */
 type InboxCount struct {
 	Open int64 `json:"open"`
@@ -72,10 +78,21 @@ func NewConversationCounts(c conversations.Counts, at time.Time) ConversationCou
 	v.Unassigned.Open, v.Unassigned.Unread = capped(c.UnassignedOpen), capped(c.UnassignedUnread)
 	v.All.Open, v.All.Capped = capped(c.AllOpen), c.AllOpen > conversations.CountCap
 	v.Spam.Total = capped(c.SpamTotal)
-	v.Inboxes = map[string]InboxCount{}
+	v.Inboxes = openCounts(models.PrefixInbox, c.Inboxes)
+	v.Teams = openCounts(models.PrefixTeam, c.Teams)
+	v.Members = openCounts(models.PrefixMember, c.Members)
+	v.Custom = openCounts(models.PrefixConversationView, c.Views)
 
-	for id, open := range c.Inboxes {
-		v.Inboxes[models.PublicID(models.PrefixInbox, id)] = InboxCount{Open: capped(open)}
+	return out
+}
+
+/*
+openCounts keys the open counts by public id.
+*/
+func openCounts(prefix models.Prefix, counts map[ids.UUID]int64) map[string]InboxCount {
+	out := make(map[string]InboxCount, len(counts))
+	for id, open := range counts {
+		out[models.PublicID(prefix, id)] = InboxCount{Open: capped(open)}
 	}
 
 	return out

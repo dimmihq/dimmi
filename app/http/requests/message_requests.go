@@ -26,6 +26,7 @@ SnoozeBody is when a snooze ends: a time or a preset.
 type SnoozeBody struct {
 	Until  *time.Time `json:"until,omitempty"`
 	Preset *string    `json:"preset,omitempty"`
+	Option *string    `json:"option,omitempty" validate:"omitempty,max=40"`
 }
 
 /*
@@ -64,7 +65,7 @@ func (r *ReplyRequest) Validate(ctx context.Context, _ *validation.Factory) erro
 		return violation(ctx, "snooze", "prohibited", "validation.prohibited")
 	}
 
-	if snoozing && (s == nil || (s.Until == nil) == (s.Preset == nil)) {
+	if snoozing && (s == nil || countSet(s.Until != nil, s.Preset != nil, s.Option != nil) != 1) {
 		return violation(ctx, "snooze", "required", "validation.required")
 	}
 

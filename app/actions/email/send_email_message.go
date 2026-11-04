@@ -46,7 +46,9 @@ SendEmailMessage sends one reply by email: the body of the email
 channel's Send.
 
 Rules:
-  - From is the conversation's address, else the workspace's default.
+  - From is the conversation's address, else the workspace's default;
+    it leaves from that address itself only while its domain is
+    verified, and from the address's forwarding address otherwise.
   - Replies carry In-Reply-To, References, a reply token in Reply-To
     and the loop stamp.
   - Suppressed recipients are never mailed.
@@ -63,6 +65,7 @@ type SendEmailMessage struct {
 	Config    appconfig.EmailConfig
 	Stamps    inbound.Stamps
 	Transport string
+	Senders   *Domains
 }
 
 /*

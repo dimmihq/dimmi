@@ -21,4 +21,5 @@ func Register(a *app.App) {
 	Console(a)
 	Channels(a)
 	Webhooks(a)
+	Widget(a)
 }
