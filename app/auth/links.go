@@ -103,3 +103,42 @@ func (l Links) Tokens() string {
 func (l Links) page(path string) string {
 	return strings.TrimRight(l.Base, "/") + path
 }
+
+/*
+SingleSignOn is the page where owners connect their identity provider.
+*/
+func (l Links) SingleSignOn() string {
+	return l.page("/d/settings/single-sign-on")
+}
+
+/*
+SAMLMetadata is the address of a connection's service provider
+metadata, which is also its entity id.
+*/
+func (l Links) SAMLMetadata(connection ids.UUID) string {
+	return l.page("/auth/saml/" + models.PublicID(models.PrefixSSOConnection, connection) + "/metadata")
+}
+
+/*
+SAMLACS is the address a connection's identity provider posts its
+answers to.
+*/
+func (l Links) SAMLACS(connection ids.UUID) string {
+	return l.page("/auth/saml/" + models.PublicID(models.PrefixSSOConnection, connection) + "/acs")
+}
+
+/*
+SSOCallback is the address an OpenID provider sends a connection's
+sign-ins back to.
+*/
+func (l Links) SSOCallback(connection ids.UUID) string {
+	return l.page("/auth/sso/" + models.PublicID(models.PrefixSSOConnection, connection) + "/callback")
+}
+
+/*
+Secure reports whether the application is served over HTTPS, which a
+sign-in posted back from another site needs.
+*/
+func (l Links) Secure() bool {
+	return strings.HasPrefix(l.Base, "https://")
+}

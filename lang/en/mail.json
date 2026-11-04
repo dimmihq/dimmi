@@ -130,5 +130,10 @@
     "subject": "The sign-in rules of {{.workspace}} changed",
     "intro": "An admin of {{.workspace}} changed who may sign in to the workspace and from where. If you did not expect this, check the rules now.",
     "action": "See the rules"
+  },
+  "domain_verification_lost": {
+    "subject": "{{.domain}} is no longer verified",
+    "intro": "We could not find the proof for {{.domain}} for a week, so single sign-on through it is no longer enforced. Publish the TXT record again and check the domain.",
+    "action": "Open single sign-on"
   }
 }
