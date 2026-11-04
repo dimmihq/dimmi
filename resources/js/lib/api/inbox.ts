@@ -307,3 +307,28 @@ export function sendTyping(workspace: string, id: string, state: "start" | "stop
     { workspace },
   );
 }
+
+export interface ConversationRef {
+  id: string;
+  number: number;
+  subject: string | null;
+  status: ConversationStatus;
+}
+
+/*
+ * SearchResults are what the quick search found: the conversation a
+ * number or id names, conversations with the matching excerpt, and
+ * customers.
+ */
+export interface SearchResults {
+  jump: ConversationRef | null;
+  conversations: { conversation: ConversationRef; contact: ContactSummary; highlight: string | null }[];
+  contacts: ContactSummary[];
+}
+
+export function searchQuery(workspace: string, text: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "search", text],
+    queryFn: () => request<SearchResults>("GET", `/search?q=${encodeURIComponent(text)}`, undefined, { workspace }),
+  });
+}

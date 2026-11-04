@@ -39,6 +39,7 @@ import { PriorityMenu } from "./priority/priority-menu";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
+import { useWalk } from "./use-walk";
 
 const visible = { overflow: "visible" } as const;
 
@@ -95,6 +96,7 @@ export function ConversationView({
   const { userId } = useInbox();
   const typing = useTypingReport(workspace, conversation.id);
   const caze = useCase(workspace, conversation);
+  useWalk(view, workspace, conversation, caze);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);

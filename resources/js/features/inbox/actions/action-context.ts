@@ -12,7 +12,10 @@ export interface ActionState {
   open: (panel: "command-menu" | "shortcuts") => void;
 }
 
-export const ActionStateContext = createContext<ActionState>({ setConversation: () => undefined, open: () => undefined });
+export const ActionStateContext = createContext<ActionState>({
+  setConversation: () => undefined,
+  open: () => undefined,
+});
 
 /*
  * useActionState returns the setters of the moves' context.

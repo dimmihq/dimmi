@@ -30,6 +30,7 @@ import {
 import { MenuDivider, MenuRowList } from "@/components/application/dashboard/dashboard-user-menu";
 import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
+import { ActionProvider } from "@/features/inbox/actions/action-provider";
 import { useSidebarViews } from "@/features/inbox/views/use-sidebar-views";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
@@ -232,7 +233,9 @@ function SignedInShell({
           {sidebar(true)}
         </Drawer>
 
-        <main className="flex min-h-0 min-w-0 flex-1">{children}</main>
+        <main className="flex min-h-0 min-w-0 flex-1">
+          <ActionProvider>{children}</ActionProvider>
+        </main>
       </div>
       <ConnectionIndicator className="fixed end-4 bottom-4 z-50" />
     </RealtimeProvider>
