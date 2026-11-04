@@ -1,0 +1,20 @@
+{
+  "name": "dimmi-cdk",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/mail-stack.test.ts",
+    "synth:fixture": "cdk synth --lookups=false --no-version-reporting --no-notices --quiet --context stage=staging --context region=us-east-1 --context inboundDomain=inbound.staging.trydimmi.com --context webhookBaseUrl=https://staging.trydimmi.com --context opsEmail=ops@example.com --context hostedZoneId=ZFIXTUREZONE --context hostedZoneName=staging.trydimmi.com"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.275.0",
+    "constructs": "10.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "aws-cdk": "2.1147.0",
+    "typescript": "7.0.2"
+  }
+}

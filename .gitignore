@@ -18,3 +18,7 @@ coverage-app.filtered.out
 /public/ai-chat/
 /public/templates/
 /public/brand/boardui_logo_circle.webp
+/deploy/**/cdk.out/
+/deploy/**/cdk.context.json
+/deploy/**/.env*
+/deploy/cdk/node_modules/
