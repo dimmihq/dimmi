@@ -100,3 +100,48 @@ func TestRedacted(t *testing.T) {
 		assert.Equal(t, map[string]any{}, config.Redacted(nil))
 	})
 }
+
+func TestRedactCredentials(t *testing.T) {
+	t.Parallel()
+
+	t.Run("masks the password of a connection url and keeps the rest", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, "postgresql://dimmi_app:[redacted]@db.internal:5432/dimmi?sslmode=verify-full",
+			config.RedactCredentials("postgresql://dimmi_app:s3cr3t@db.internal:5432/dimmi?sslmode=verify-full"))
+		assert.Equal(t, "rediss://:[redacted]@cache.internal:6379",
+			config.RedactCredentials("rediss://:tok3n@cache.internal:6379"))
+		assert.Equal(t, "postgres://user:[redacted]@host/db",
+			config.RedactCredentials("postgres://user:p@ss:word@host/db"))
+	})
+
+	t.Run("masks a password pair in a key value connection string", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, "host=db user=app password=[redacted] dbname=dimmi",
+			config.RedactCredentials("host=db user=app password=s3cr3t dbname=dimmi"))
+		assert.Equal(t, "host=db password=[redacted]", config.RedactCredentials("host=db password='a b'"))
+	})
+
+	t.Run("leaves values without a password alone", func(t *testing.T) {
+		t.Parallel()
+
+		for _, value := range []string{
+			"https://staging.example.com", "postgres://user@host/db", "redis://host:6379", "plain", "",
+			"https://example.com/path?next=a@b",
+		} {
+			assert.Equal(t, value, config.RedactCredentials(value))
+		}
+	})
+
+	t.Run("redacts connection strings anywhere in the configuration", func(t *testing.T) {
+		t.Parallel()
+		out := config.Redacted(&struct {
+			URL  string   `koanf:"url"`
+			Read []string `koanf:"read_urls"`
+		}{URL: "postgres://u:" + "p1@h/db", Read: []string{"postgres://u:" + "p2@r/db"}})
+
+		assert.Equal(t, "postgres://u:[redacted]@h/db", out["url"])
+		assert.Equal(t, []any{"postgres://u:[redacted]@r/db"}, out["read_urls"])
+	})
+}

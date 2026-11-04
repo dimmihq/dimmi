@@ -8,8 +8,10 @@
 | credential into logs. Fields tagged secret:"true" are masked wherever
 | they sit in the tree. Raw sections have no tags, because each driver
 | decodes its own options, so their values are masked by key name
-| instead. An empty secret stays empty, so a missing secret is still
-| visible.
+| instead. Any value that is a connection string keeps its user and host
+| but loses its password, since URLs for databases and caches are not
+| secrets as a whole yet carry one. An empty secret stays empty, so a
+| missing secret is still visible.
 |
 */
 
@@ -18,6 +20,7 @@ package config
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 )
 
@@ -63,7 +66,48 @@ func redact(v reflect.Value) any {
 		return nil
 	}
 
+	if v.Kind() == reflect.String {
+		return RedactCredentials(v.String())
+	}
+
 	return v.Interface()
+}
+
+/*
+dsnPassword finds a password in a key=value connection string.
+*/
+var dsnPassword = regexp.MustCompile(`(?i)\b(password\s*=\s*)('[^']*'|\S+)`)
+
+/*
+RedactCredentials returns the value with the password of a connection
+string replaced by "[redacted]": the password of a URL such as
+postgres://user:pass@host, or a password=... pair. Anything else comes
+back unchanged.
+*/
+func RedactCredentials(value string) string {
+	value = dsnPassword.ReplaceAllString(value, "${1}"+redactedValue)
+
+	scheme, rest, ok := strings.Cut(value, "://")
+	if !ok {
+		return value
+	}
+
+	authority := rest
+	if end := strings.IndexAny(rest, "/?#"); end >= 0 {
+		authority = rest[:end]
+	}
+
+	at := strings.LastIndex(authority, "@")
+	if at < 0 {
+		return value
+	}
+
+	user, _, hasPassword := strings.Cut(authority[:at], ":")
+	if !hasPassword {
+		return value
+	}
+
+	return scheme + "://" + user + ":" + redactedValue + rest[at:]
 }
 
 func redactStruct(v reflect.Value) map[string]any {
