@@ -128,11 +128,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootTeams(a)
 	bootTokens(a)
 
-	if err := bootAccount(a); err != nil {
-		return err
-	}
-
-	if err := bootAudit(a); err != nil {
+	if err := bootAccountAndAudit(a); err != nil {
 		return err
 	}
 
@@ -149,6 +145,18 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	}
 
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
+}
+
+/*
+bootAccountAndAudit builds the actions on a person's own account, then
+those of the audit log, which records what they change.
+*/
+func bootAccountAndAudit(a *app.App) error {
+	if err := bootAccount(a); err != nil {
+		return err
+	}
+
+	return bootAudit(a)
 }
 
 /*
