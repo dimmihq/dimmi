@@ -46,6 +46,32 @@ it.describe("workspace and members", () => {
     await expect(page.getByRole("textbox", { name: "Workspace address" })).toHaveValue(`moved-${suffixOf(person)}`);
   });
 
+  it("sets the name customers see and the workspace time zone", async ({ page, person, request }) => {
+    await createAccount(request, person, `Facing ${suffixOf(person)}`);
+    await signIn(page, person);
+    await page.goto("/d/settings/workspace");
+
+    const customerName = page.getByRole("textbox", { name: "Name customers see" });
+    await expect(customerName).toHaveAttribute("placeholder", `Facing ${suffixOf(person)}`);
+    await customerName.fill("Acme Support");
+    const saved = page.waitForResponse(
+      (r) => r.url().endsWith("/api/v1/workspace") && r.request().method() === "PATCH",
+    );
+    await page.getByRole("button", { name: "Save changes" }).click();
+    expect((await saved).status()).toBe(200);
+
+    const zoned = page.waitForResponse(
+      (r) => r.url().endsWith("/api/v1/workspace") && r.request().method() === "PATCH",
+    );
+    await page.getByRole("combobox", { name: "Workspace time zone" }).fill("Lagos");
+    await page.getByRole("option", { name: "Africa/Lagos" }).click();
+    expect((await zoned).status()).toBe(200);
+
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Name customers see" })).toHaveValue("Acme Support");
+    await expect(page.getByRole("combobox", { name: "Workspace time zone" })).toHaveValue("Africa/Lagos");
+  });
+
   it("refuses an address the product keeps for itself", async ({ page, person, request }) => {
     await createAccount(request, person, `Reserved ${suffixOf(person)}`);
     await signIn(page, person);

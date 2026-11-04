@@ -73,29 +73,3 @@ it.describe("own profile", () => {
     await expect(page.getByText("These credentials do not match our records.")).toBeVisible();
   });
 });
-
-it.describe("own preferences", () => {
-  it("a person picks a time zone by searching and goes back to the workspace's", async ({ page, person, request }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await createAccount(request, person, `Zone ${randomUUID().slice(0, 8)}`);
-    await signIn(page, person);
-    await page.goto("/d/settings/preferences");
-
-    const picker = page.getByRole("combobox", { name: "Time zone" });
-    await expect(picker).toHaveValue(/^Workspace default/);
-
-    const saved = page.waitForResponse((r) => r.url().endsWith("/api/v1/user") && r.request().method() === "PATCH");
-    await picker.fill("Tokyo");
-    await page.getByRole("option", { name: "Asia/Tokyo" }).click();
-    expect((await saved).status()).toBe(200);
-    await page.reload();
-    await expect(page.getByRole("combobox", { name: "Time zone" })).toHaveValue("Asia/Tokyo");
-
-    const cleared = page.waitForResponse((r) => r.url().endsWith("/api/v1/user") && r.request().method() === "PATCH");
-    await page.getByRole("combobox", { name: "Time zone" }).fill("Workspace");
-    await page.getByRole("option", { name: /^Workspace default/ }).click();
-    expect((await cleared).status()).toBe(200);
-    await page.reload();
-    await expect(page.getByRole("combobox", { name: "Time zone" })).toHaveValue(/^Workspace default/);
-  });
-});

@@ -530,12 +530,16 @@ needs no workspace header.
 | Ask to move | `r mv -b a.jar -X POST -H "$O" -H "$J" $B/email-changes -d "{\"email\":\"moved.$RUN@example.com\"}"` | 201 `email_change` `pending`, masked; mails "Confirm your new" to the new address and "Someone asked" to the old |
 | Bad link | `L=$(link moved.$RUN@example.com Confirm); r mvbad -X PATCH -H "$O" -H "$J" $B/email-changes/$(frag $L id) -d '{"token":"nope"}'` | 422 `invalid_email_change_token` |
 | Confirm move | same with `$(frag $L token)`, then again | 200 `confirmed` with the full address, mail "email address changed" to the old; second 422 |
+| Preferences | `r pref -b a.jar -X PATCH -H "$O" -H "$J" $B/user -d '{"preferences":{"send_with_enter":true}}'`, then `{"preferences":{"send_with_enter":null}}` | 200 with `preferences.send_with_enter` true, then false; `me.user.preferences` the same |
+| Unknown preference | same with `{"preferences":{"autoplay":true}}` or `{"send_with_enter":"yes"}` | 422 on `preferences.autoplay`, `preferences.send_with_enter` |
+| Name customers see | `r cfn -b a.jar -X PATCH -H "$O" -H "$J" $B/workspace -d '{"customer_facing_name":"Acme Support"}'`, then `null` | 200 `customer_facing_name` "Acme Support", then null; `workspace.updated` in the audit log once |
 | Preview deletion | `r prev -b a.jar $B/user/deletion-preview` | 200 `blocking` with workspaces it alone owns with teammates, `will_be_deleted` with those it is alone in |
-| Blocked deletion | `r del -b a.jar -X DELETE -H "$O" -H "$J" $B/user -d "{\"confirm_email\":\"$ADA\"}"` with teammates present | 409 `sole_owner`, `meta.workspaces` |
+| Blocked deletion | `r del -b a.jar -X DELETE -H "$O" -H "$J" $B/user -d "{\"confirm_email\":\"$ADA\"}"` with teammates present | 409 `sole_owner`, `workspaces` |
 | Delete account | same once nothing blocks | 204, cookie cleared; `me` 401; tokens 401; mail "account was deleted"; signing up with the address again works as a new user; old member rows show "Former teammate" |
 
-Browser: `/d/settings/profile`, `/d/settings/security`, `/d/settings/preferences` and `/email/confirm` from the
-mailed link, in light and dark. Every control on them does something.
+Browser: `/d/settings/profile`, `/d/settings/security`, `/d/settings/preferences`, `/d/settings/workspace` and
+`/email/confirm` from the mailed link, in light and dark. Every control on them does something; there is no
+Notifications page in settings yet.
 
 ## Reporting
 

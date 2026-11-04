@@ -9,7 +9,7 @@
  */
 import { RiMore2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
@@ -28,17 +28,39 @@ import {
   membersQuery,
   updateMember,
   updateWorkspace,
+  type WorkspaceChanges,
   workspaceQuery,
 } from "@/lib/api/workspace";
 
-import { Choice, Danger, Field } from "../controls";
+import { Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { ZonePicker } from "../preferences/zone-picker";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
 
-const zones = ["UTC", "Europe/Lisbon", "Europe/London", "Europe/Berlin", "America/New_York", "Asia/Tokyo"];
+/*
+ * Draft is what the General section holds before it is saved. An empty
+ * name for customers saves as none, so they see the workspace's name.
+ */
+interface Draft {
+  name?: string;
+  slug?: string;
+  customerName?: string;
+}
+
+/*
+ * draftChanges turns the draft into the change the server takes.
+ */
+function draftChanges(draft: Draft): WorkspaceChanges {
+  const changes: WorkspaceChanges = { name: draft.name, slug: draft.slug };
+  if (draft.customerName !== undefined) {
+    changes.customer_facing_name = draft.customerName.trim() === "" ? null : draft.customerName;
+  }
+
+  return changes;
+}
 
 /*
  * Failure shows what went wrong with the last change, in the error
@@ -60,11 +82,11 @@ export function WorkspaceSettings() {
   const me = useAccount();
   const queryClient = useQueryClient();
   const { data: workspace } = useQuery(workspaceQuery(me.workspace.id));
-  const [draft, setDraft] = useState<{ name?: string; slug?: string }>({});
+  const [draft, setDraft] = useState<Draft>({});
+  const zones = useMemo(() => ["UTC", ...Intl.supportedValuesOf("timeZone")].map((id) => ({ id, label: id })), []);
 
   const save = useMutation({
-    mutationFn: (changes: { name?: string; slug?: string; timezone?: string }) =>
-      updateWorkspace(me.workspace.id, changes),
+    mutationFn: (changes: WorkspaceChanges) => updateWorkspace(me.workspace.id, changes),
     onSuccess: (saved) => {
       setDraft({});
       queryClient.setQueryData(workspaceQuery(me.workspace.id).queryKey, saved);
@@ -74,15 +96,18 @@ export function WorkspaceSettings() {
 
   const name = workspace?.name ?? me.workspace.name;
   const slug = workspace?.slug ?? me.workspace.slug;
+  const customerName = workspace?.customer_facing_name ?? "";
   const changed =
-    (draft.name !== undefined && draft.name !== name) || (draft.slug !== undefined && draft.slug !== slug);
+    (draft.name !== undefined && draft.name !== name) ||
+    (draft.slug !== undefined && draft.slug !== slug) ||
+    (draft.customerName !== undefined && draft.customerName.trim() !== customerName);
 
   return (
     <SettingsPage title="Workspace" description="Seen by everyone in the workspace.">
       <Section
         title="General"
         action={
-          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate(draft)}>
+          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate(draftChanges(draft))}>
             Save changes
           </Button>
         }
@@ -105,19 +130,27 @@ export function WorkspaceSettings() {
             onChange={(value) => setDraft((d) => ({ ...d, slug: value }))}
           />
         </Row>
+        {workspace ? (
+          <Row label="Name customers see" description="Shown in the messenger and in email. Empty uses the name above.">
+            <Field
+              key={`customer-${customerName}`}
+              label="Name customers see"
+              value={customerName}
+              placeholder={name}
+              onChange={(value) => setDraft((d) => ({ ...d, customerName: value }))}
+            />
+          </Row>
+        ) : null}
       </Section>
       <Failure error={save.error} />
-      <Section title="Language and region" description="Members and customers fall back to these.">
-        <Row label="Language">
-          <Choice label="Workspace language" options={["English"]} />
-        </Row>
+      <Section title="Region" description="Members fall back to this time zone.">
         <Row label="Time zone">
           {workspace ? (
-            <Choice
+            <ZonePicker
               label="Workspace time zone"
-              options={zones.includes(workspace.timezone) ? zones : [workspace.timezone, ...zones]}
-              value={workspace.timezone}
-              onChange={(timezone) => save.mutate({ timezone })}
+              choices={zones}
+              selected={workspace.timezone}
+              onPick={(timezone) => save.mutate({ timezone })}
             />
           ) : null}
         </Row>

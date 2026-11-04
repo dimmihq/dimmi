@@ -14,6 +14,7 @@ package users
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -22,13 +23,15 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
 UpdateProfileInput is what changes. A nil Name stays as it is. A nil
-Locale or Timezone stays unless its Clear flag empties it.
+Locale or Timezone stays unless its Clear flag empties it. Preferences
+change only the keys sent, null returning a key to its default.
 */
 type UpdateProfileInput struct {
 	UserID        ids.UUID
@@ -37,14 +40,17 @@ type UpdateProfileInput struct {
 	ClearLocale   bool
 	Timezone      *string
 	ClearTimezone bool
+	Preferences   map[string]json.RawMessage
 }
 
 /*
-UpdateProfile changes the caller's own name, language and time zone.
+UpdateProfile changes the caller's own name, language, time zone and
+preferences.
 
 Events: [appevents.UserUpdated] when the name changed.
 
-Errors: a wrapped database error.
+Errors: [appauth.ErrUnknownPreference], [appauth.ErrInvalidPreference],
+or a wrapped database error.
 */
 type UpdateProfile struct {
 	DB     *database.DB
@@ -66,7 +72,12 @@ func (a *UpdateProfile) Handle(ctx context.Context, in UpdateProfileInput) (mode
 			return fmt.Errorf("lock user to update: %w", err)
 		}
 
-		updated, err = q.UpdateUserProfile(ctx, profileChange(user, in, a.Clock))
+		change, err := profileChange(user, in, a.Clock)
+		if err != nil {
+			return err
+		}
+
+		updated, err = q.UpdateUserProfile(ctx, change)
 		if err != nil {
 			return fmt.Errorf("update profile: %w", err)
 		}
@@ -92,9 +103,10 @@ func (a *UpdateProfile) Handle(ctx context.Context, in UpdateProfileInput) (mode
 profileChange works out the values to store from the user as they are
 and what was asked.
 */
-func profileChange(user models.User, in UpdateProfileInput, c clock.Clock) models.UpdateUserProfileParams {
+func profileChange(user models.User, in UpdateProfileInput, c clock.Clock) (models.UpdateUserProfileParams, error) {
 	out := models.UpdateUserProfileParams{
-		ID: user.ID, Name: user.Name, Locale: user.Locale, Timezone: user.Timezone, Now: c.Now(),
+		ID: user.ID, Name: user.Name, Locale: user.Locale, Timezone: user.Timezone, Preferences: user.Preferences,
+		Now: c.Now(),
 	}
 
 	if in.Name != nil {
@@ -109,5 +121,16 @@ func profileChange(user models.User, in UpdateProfileInput, c clock.Clock) model
 		out.Timezone = in.Timezone
 	}
 
-	return out
+	if len(in.Preferences) == 0 {
+		return out, nil
+	}
+
+	merged, err := appauth.MergePreferences(user.Preferences, in.Preferences)
+	if err != nil {
+		return models.UpdateUserProfileParams{}, fmt.Errorf("change preferences: %w", err)
+	}
+
+	out.Preferences = merged
+
+	return out, nil
 }

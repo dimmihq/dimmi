@@ -14,6 +14,7 @@ package resources
 import (
 	"time"
 
+	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -26,17 +27,18 @@ const defaultLocale = "en"
 User is a user's own profile.
 */
 type User struct {
-	ID               string    `json:"id"`
-	Object           string    `json:"object"`
-	Name             string    `json:"name"`
-	Email            string    `json:"email"`
-	EmailVerified    bool      `json:"email_verified"`
-	TwoFactorEnabled bool      `json:"two_factor_enabled"`
-	AvatarURL        *string   `json:"avatar_url"`
-	Locale           string    `json:"locale"`
-	Timezone         *string   `json:"timezone"`
-	HasPassword      bool      `json:"has_password"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID               string         `json:"id"`
+	Object           string         `json:"object"`
+	Name             string         `json:"name"`
+	Email            string         `json:"email"`
+	EmailVerified    bool           `json:"email_verified"`
+	TwoFactorEnabled bool           `json:"two_factor_enabled"`
+	AvatarURL        *string        `json:"avatar_url"`
+	Locale           string         `json:"locale"`
+	Timezone         *string        `json:"timezone"`
+	HasPassword      bool           `json:"has_password"`
+	Preferences      map[string]any `json:"preferences"`
+	CreatedAt        time.Time      `json:"created_at"`
 }
 
 /*
@@ -59,6 +61,7 @@ func NewUser(u models.User) User {
 		Locale:           locale,
 		Timezone:         u.Timezone,
 		HasPassword:      u.HasPassword(),
+		Preferences:      auth.ResolvePreferences(u.Preferences),
 		CreatedAt:        u.CreatedAt.UTC(),
 	}
 }

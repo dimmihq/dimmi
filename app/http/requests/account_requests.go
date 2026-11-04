@@ -13,35 +13,69 @@ package requests
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"maps"
+	"slices"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/support/str"
 	"github.com/dimmihq/dimmi/framework/validation"
+
+	appauth "github.com/dimmihq/dimmi/app/auth"
 )
 
 /*
 UpdateUserRequest is the input of PATCH /user. RawBody tells a field sent
-as null from one not sent.
+as null from one not sent. Preferences change one key at a time, null
+returning a key to its default.
 */
 type UpdateUserRequest struct {
 	Body struct {
-		Name     *string `json:"name,omitempty"     validate:"omitempty,max=120"`
-		Locale   *string `json:"locale,omitempty"   validate:"omitempty,locale"`
-		Timezone *string `json:"timezone,omitempty" validate:"omitempty,timezone"`
+		Name        *string        `json:"name,omitempty"        validate:"omitempty,max=120"`
+		Locale      *string        `json:"locale,omitempty"      validate:"omitempty,locale"`
+		Timezone    *string        `json:"timezone,omitempty"    validate:"omitempty,timezone"`
+		Preferences map[string]any `json:"preferences,omitempty"`
 	}
 	RawBody []byte
 }
 
 /*
 Validate refuses a name made only of invisible characters, which would
-be empty once cleaned.
+be empty once cleaned, and any preference that is not registered or
+holds a value of the wrong type.
 */
 func (r *UpdateUserRequest) Validate(ctx context.Context, _ *validation.Factory) error {
 	if r.Body.Name != nil && str.Clean(*r.Body.Name) == "" {
 		return violation(ctx, "name", "required", "validation.required")
 	}
 
+	change := r.PreferenceChange()
+	for _, key := range slices.Sorted(maps.Keys(change)) {
+		err := appauth.CheckPreference(key, change[key])
+		if errors.Is(err, appauth.ErrUnknownPreference) {
+			return violation(ctx, "preferences."+key, "prohibited", "validation.prohibited")
+		}
+
+		if err != nil {
+			return violation(ctx, "preferences."+key, "preference", "validation.preference")
+		}
+	}
+
 	return nil
+}
+
+/*
+PreferenceChange returns the preferences the body sends, each as raw
+JSON, so a null stays apart from a value.
+*/
+func (r *UpdateUserRequest) PreferenceChange() map[string]json.RawMessage {
+	var body struct {
+		Preferences map[string]json.RawMessage `json:"preferences"`
+	}
+	_ = json.Unmarshal(r.RawBody, &body)
+
+	return body.Preferences
 }
 
 /*

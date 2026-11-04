@@ -55,9 +55,9 @@ export function EmailRow({ email, hasPassword }: { email: string; hasPassword: b
   return (
     <>
       <Row label="Email" description="Changing it sends a link to the new address first.">
-        <span className="max-w-64 truncate text-body-2-regular text-text-secondary">
-          <bdi>{email}</bdi>
-        </span>
+        <bdi className="block min-w-0 max-w-full truncate text-body-2-regular text-text-secondary sm:max-w-64">
+          {email}
+        </bdi>
         <Action onPress={() => setOpen(true)}>{pending ? "Use another address" : "Change"}</Action>
       </Row>
       {pending ? (

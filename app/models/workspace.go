@@ -3,9 +3,9 @@
 | Workspace Behavior
 |--------------------------------------------------------------------------
 |
-| Security settings of a workspace, read from and written to its settings
-| document in one place, so the policy that enforces a setting and the
-| endpoint that changes it always agree on where it lives. Settings nest
+| Settings of a workspace, read from and written to its settings document
+| in one place, so the code that follows a setting and the endpoint that
+| changes it always agree on where it lives. Settings nest
 | by area, such as {"security": {"require_two_factor": true}}, and every
 | key a change does not touch is kept as it was.
 |
@@ -69,6 +69,67 @@ func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, 
 	}
 
 	values["security"] = raw
+
+	return json.Marshal(values)
+}
+
+/*
+CustomerFacingName returns the name customers see in messages and mail
+from the workspace: the one set for them, or else the workspace's own
+name.
+*/
+func (w Workspace) CustomerFacingName() string {
+	if name := w.CustomerFacingNameSetting(); name != nil {
+		return *name
+	}
+
+	return w.Name
+}
+
+/*
+CustomerFacingNameSetting returns the name set for customers, nil when
+none is, so customers see the workspace's own name.
+*/
+func (w Workspace) CustomerFacingNameSetting() *string {
+	var settings struct {
+		CustomerFacingName *string `json:"customer_facing_name"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return nil
+	}
+
+	if settings.CustomerFacingName == nil || *settings.CustomerFacingName == "" {
+		return nil
+	}
+
+	return settings.CustomerFacingName
+}
+
+/*
+WithCustomerFacingName returns the settings document with the name
+customers see set, or removed when name is nil, keeping every other key.
+*/
+func WithCustomerFacingName(settings json.RawMessage, name *string) (json.RawMessage, error) {
+	values := map[string]json.RawMessage{}
+	if len(settings) > 0 {
+		if err := json.Unmarshal(settings, &values); err != nil {
+			return nil, fmt.Errorf("read workspace settings: %w", err)
+		}
+	}
+
+	if name == nil {
+		delete(values, "customer_facing_name")
+
+		return json.Marshal(values)
+	}
+
+	raw, err := json.Marshal(*name)
+	if err != nil {
+		return nil, fmt.Errorf("write customer facing name: %w", err)
+	}
+
+	values["customer_facing_name"] = raw
 
 	return json.Marshal(values)
 }

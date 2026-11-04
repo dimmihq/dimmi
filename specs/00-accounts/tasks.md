@@ -138,9 +138,9 @@ Migrations range `20261201070001+`. Spec: [settings-pages.md](settings-pages.md)
 
 ## M15. Preferences, customer-facing name (track 07 accounts-settings)
 
-- [ ] Migration `20261201070001_add_preferences_to_users_table`; `app/auth/preferences.go`; `PATCH /user {preferences}`; `/me` returns.
-- [ ] Preferences page: each row per table in settings-pages.md; Available, Send with Enter, signature rows appear only with owner track merged. Hide Notifications nav until track 11. E2e `preferences.spec.ts`: "every control on the preferences page changes something".
-- [ ] `customer_facing_name` key, `Workspace.CustomerFacingName()`, workspace page row. Accept: 01 and 04 read through method (their tracks).
+- [x] Migration `20261201070001_add_preferences_to_users_table`; `app/auth/preferences.go`; `PATCH /user {preferences}`; `/me` returns.
+- [x] Preferences page: each row per table in settings-pages.md; Available, Send with Enter, signature rows appear only with owner track merged. Hide Notifications nav until track 11. E2e `preferences.spec.ts`: "every control on the preferences page changes something". Open: Available row lands with track 02 A2, Send with Enter with track 03 composer, signature link with track 05, Language row with M20.
+- [x] `customer_facing_name` key, `Workspace.CustomerFacingName()`, workspace page row. Accept: 01 and 04 read through method (their tracks).
 
 ## M16. Audit export and scope (track 07 accounts-settings)
 

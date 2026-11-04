@@ -3,7 +3,6 @@ import { createAccount, expect, test as it, type Person, signIn } from "./suppor
 const pages = [
   "Profile",
   "Preferences",
-  "Notifications",
   "Security & access",
   "API tokens",
   "Inboxes",

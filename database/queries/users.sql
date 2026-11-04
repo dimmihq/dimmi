@@ -65,9 +65,10 @@ UPDATE users SET avatar_path = @avatar_path, updated_at = @now::timestamptz WHER
 
 -- name: UpdateUserProfile :one
 -- UpdateUserProfile replaces what a person says about themselves: their
--- name, language and time zone.
+-- name, language, time zone and the preferences they changed.
 UPDATE users
-SET name = @name, locale = @locale, timezone = @timezone, updated_at = @now::timestamptz
+SET name = @name, locale = @locale, timezone = @timezone, preferences = @preferences,
+    updated_at = @now::timestamptz
 WHERE id = @id
 RETURNING *;
 

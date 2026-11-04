@@ -245,7 +245,7 @@ func (a *CreateInvitations) store(
 			return Sent{}, false, fmt.Errorf("send invitation again: %w", err)
 		}
 
-		sent, err := a.Delivery.send(ctx, tx, outgoing{workspace, again, in.Inviter.Name, l})
+		sent, err := a.Delivery.send(ctx, tx, outgoing{workspace, again, in.Inviter.Name, l, false})
 
 		return sent, true, err
 	}
@@ -270,7 +270,7 @@ func (a *CreateInvitations) store(
 		return Sent{}, false, err
 	}
 
-	sent, err := a.Delivery.send(ctx, tx, outgoing{workspace, created, in.Inviter.Name, l})
+	sent, err := a.Delivery.send(ctx, tx, outgoing{workspace, created, in.Inviter.Name, l, false})
 
 	return sent, false, err
 }

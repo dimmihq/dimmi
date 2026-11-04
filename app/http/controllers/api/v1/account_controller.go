@@ -62,7 +62,7 @@ func (c *AccountController) Update(ctx context.Context, in *requests.UpdateUserR
 
 	user, err := c.UpdateProfile.Handle(ctx, users.UpdateProfileInput{
 		UserID: caller(ctx).ID(), Name: in.Body.Name, Locale: in.Body.Locale, ClearLocale: nulls["locale"],
-		Timezone: in.Body.Timezone, ClearTimezone: nulls["timezone"],
+		Timezone: in.Body.Timezone, ClearTimezone: nulls["timezone"], Preferences: in.PreferenceChange(),
 	})
 	if err != nil {
 		return nil, err

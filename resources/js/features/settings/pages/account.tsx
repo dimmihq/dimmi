@@ -6,7 +6,7 @@
 import { applyTheme, type ThemeMode, useThemeMode } from "@/components/application/theme/theme-toggle";
 
 import { Choice } from "../controls";
-import { Empty, Row, Section, SettingsPage } from "../layout";
+import { Row, Section, SettingsPage } from "../layout";
 import { PasswordSection } from "../password-dialog";
 import { TimeZoneRows } from "../preferences/time-zone-row";
 import { AvatarRow } from "../profile/avatar-row";
@@ -54,16 +54,6 @@ export function PreferencesSettings() {
             onChange={(option) => applyTheme(themes[option] ?? "light")}
           />
         </Row>
-      </Section>
-    </SettingsPage>
-  );
-}
-
-export function NotificationsSettings() {
-  return (
-    <SettingsPage title="Notifications" description="Choose what reaches you, and where.">
-      <Section title="Channels">
-        <Empty>Everything lands in the app for now.</Empty>
       </Section>
     </SettingsPage>
   );

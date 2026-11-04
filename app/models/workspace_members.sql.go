@@ -280,7 +280,7 @@ func (q *Queries) FindWorkspaceMemberForUser(ctx context.Context, arg FindWorksp
 }
 
 const findWorkspaceMemberWithUser = `-- name: FindWorkspaceMemberWithUser :one
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = $2
@@ -330,12 +330,13 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 		&i.User.PasswordChangedAt,
 		&i.User.RiskFlags,
 		&i.User.CreatedVia,
+		&i.User.Preferences,
 	)
 	return i, err
 }
 
 const listActiveOwners = `-- name: ListActiveOwners :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.role = 'owner' AND m.status = 'active'
@@ -387,6 +388,7 @@ func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
 		); err != nil {
 			return nil, err
 		}
@@ -583,7 +585,7 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 }
 
 const listWorkspaceMembers = `-- name: ListWorkspaceMembers :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
@@ -662,6 +664,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
 		); err != nil {
 			return nil, err
 		}
