@@ -60,6 +60,10 @@ and the workspace initializers. The providers come before the rules,
 since their keys are registry values the rules accept.
 */
 func (p AppServiceProvider) Register(fa *foundation.Application) error {
+	if err := checkCloudProduction(p.App.Config, fa.Config); err != nil {
+		return err
+	}
+
 	p.App.Application = fa
 	appmail.Register(fa.Mail)
 	p.App.WorkspaceInitializers.Register(&inboxes.EnsureDefaultInbox{Clock: fa.Clock})
