@@ -56,7 +56,9 @@ it.describe("inbox settings", () => {
     await page.getByRole("option", { name: "7 days" }).click();
     await page.getByRole("button", { name: "Assignment mode" }).click();
     await page.getByRole("option", { name: "Round robin" }).click();
+    const saved = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("/inboxes/"));
     await page.getByRole("button", { name: "Save changes" }).click();
+    expect((await saved).status()).toBe(200);
     await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
 
     await page.reload();
