@@ -41,14 +41,22 @@ type UpdateMemberRequest struct {
 		Status             *string `json:"status,omitempty" validate:"omitempty,oneof=active deactivated"`
 		ReassignToMemberID *string `json:"reassign_to_member_id,omitempty"`
 		KeepOwner          *bool   `json:"keep_owner,omitempty"`
+		CustomRoleID       *string `json:"custom_role_id,omitempty"`
 	}
+	RawBody []byte
 }
 
 /*
-Validate refuses a side field without the field it belongs to.
+Validate refuses a side field without the field it belongs to, and a
+custom role sent beside another change: assigning one is a change of
+its own.
 */
 func (r *UpdateMemberRequest) Validate(ctx context.Context, _ *validation.Factory) error {
 	b := r.Body
+
+	if Sent(r.RawBody)["custom_role_id"] && (b.AssignedRole != nil || b.Status != nil) {
+		return violation(ctx, "custom_role_id", "prohibited", "validation.prohibited")
+	}
 
 	if b.ReassignToMemberID != nil && (b.Status == nil || *b.Status != "deactivated") {
 		return violation(ctx, "reassign_to_member_id", "prohibited", "validation.prohibited")

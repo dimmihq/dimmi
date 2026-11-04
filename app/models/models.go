@@ -390,6 +390,7 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+	CustomRoleID      *ids.UUID  `json:"custom_role_id"`
 }
 
 type Message struct {
@@ -568,6 +569,18 @@ type PersonalAccessToken struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type Role struct {
+	ID                ids.UUID  `json:"id"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	Name              string    `json:"name"`
+	Description       *string   `json:"description"`
+	BaseRole          string    `json:"base_role"`
+	Permissions       []string  `json:"permissions"`
+	CreatedByMemberID *ids.UUID `json:"created_by_member_id"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
 type SavedReply struct {
 	ID            ids.UUID  `json:"id"`
 	WorkspaceID   ids.UUID  `json:"workspace_id"`
@@ -709,4 +722,5 @@ type WorkspaceMember struct {
 	DeactivatedAt         *time.Time `json:"deactivated_at"`
 	DeactivatedByMemberID *ids.UUID  `json:"deactivated_by_member_id"`
 	JoinedVia             *string    `json:"joined_via"`
+	CustomRoleID          *ids.UUID  `json:"custom_role_id"`
 }

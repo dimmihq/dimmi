@@ -88,6 +88,7 @@ func API(a *app.App) {
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
 		identityRoutes(api, a)
+		roleRoutes(api, a)
 	})
 }
 
@@ -150,6 +151,7 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+	routing.Patch(workspace, "/members", "members.update-many", c.members.UpdateMany).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read")
 	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
 	invitationRoutes(workspace, c)
@@ -295,7 +297,7 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 	}
 	c.members = &v1.MemberController{
 		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-		MemberTeams: acts.ListMemberTeams, Cursors: cursors,
+		MemberTeams: acts.ListMemberTeams, Cursors: cursors, AssignRole: acts.AssignRole, RoleNames: acts.RoleNames,
 	}
 	c.auditLogs = &v1.AuditLogController{
 		List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,

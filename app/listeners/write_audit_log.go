@@ -39,6 +39,7 @@ const (
 	subjectToken      = "token"
 	subjectInvitation = "invitation"
 	subjectTeam       = "team"
+	subjectRole       = "role"
 )
 
 /*
@@ -64,6 +65,7 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	l.listenTrash(d)
 	l.listenAccess(d)
 	l.listenTeams(d)
+	l.listenRoles(d)
 }
 
 /*

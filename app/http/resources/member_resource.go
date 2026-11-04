@@ -20,7 +20,8 @@ import (
 
 /*
 WorkspaceMember is one member of a workspace, with their account. Teams
-is present only when the request included the member's teams.
+is present only when the request included the member's teams, and
+CustomRole names the custom role they hold, null for none.
 */
 type WorkspaceMember struct {
 	ID            string         `json:"id"`
@@ -31,6 +32,7 @@ type WorkspaceMember struct {
 	JoinedVia     *string        `json:"joined_via"`
 	User          Teammate       `json:"user"`
 	Teams         *[]TeamSummary `json:"teams,omitempty"`
+	CustomRole    *RoleSummary   `json:"custom_role"`
 	DeactivatedAt *time.Time     `json:"deactivated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
 }
@@ -65,6 +67,7 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 			Email:         u.Email,
 			EmailVerified: u.IsVerified(),
 		},
+		CustomRole:    newRoleSummary(m.CustomRoleID),
 		DeactivatedAt: m.DeactivatedAt,
 		CreatedAt:     m.CreatedAt,
 	}

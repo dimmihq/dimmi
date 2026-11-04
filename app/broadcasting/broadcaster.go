@@ -64,6 +64,7 @@ func (b *Broadcaster) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, b.conversationEvent)
 	events.Listen(d, events.AfterCommit, b.contactTyping)
 	b.listenAccounts(d)
+	b.listenRoles(d)
 }
 
 /*

@@ -86,18 +86,19 @@ func (a *ResolveWorkspace) Handle(ctx context.Context, in ResolveWorkspaceInput)
 		return authz.Membership{}, err
 	}
 
-	workspace, member, err := a.load(ctx, in.Principal, workspaceID)
+	found, err := a.load(ctx, in.Principal, workspaceID)
 	if err != nil {
 		return authz.Membership{}, err
 	}
 
-	if in.Writes && workspace.SuspendedAt != nil {
+	if in.Writes && found.workspace.SuspendedAt != nil {
 		return authz.Membership{}, exceptions.ErrWorkspaceSuspended
 	}
 
-	permissions := authz.PrincipalPermissions(a.Permissions, enums.Role(member.Role), in.Principal)
+	role := enums.Role(found.member.Role)
+	permissions := authz.PrincipalPermissions(a.Permissions, role, found.custom, in.Principal)
 
-	return authz.NewMembership(workspace, member, permissions), nil
+	return authz.NewMembership(found.workspace, found.member, permissions), nil
 }
 
 /*
@@ -147,15 +148,24 @@ func (a *ResolveWorkspace) tokenWorkspace(in ResolveWorkspaceInput) (ids.UUID, e
 }
 
 /*
-load reads the workspace and the caller's membership inside it, and
-records the access of a member opening it.
+loaded is what a request found of its workspace: the workspace, the
+caller's membership and what their custom role lists, nil without one.
 */
-func (a *ResolveWorkspace) load(
-	ctx context.Context, p *appauth.Principal, workspaceID ids.UUID,
-) (models.Workspace, models.WorkspaceMember, error) {
+type loaded struct {
+	workspace models.Workspace
+	member    models.WorkspaceMember
+	custom    []string
+}
+
+/*
+load reads the workspace, the caller's membership inside it and their
+custom role, and records the access of a member opening it.
+*/
+func (a *ResolveWorkspace) load(ctx context.Context, p *appauth.Principal, workspaceID ids.UUID) (loaded, error) {
 	var (
 		workspace models.Workspace
 		member    models.WorkspaceMember
+		custom    []string
 	)
 
 	scoped := tenancy.With(ctx, workspaceID.String())
@@ -171,6 +181,11 @@ func (a *ResolveWorkspace) load(
 		}
 
 		member, err = findCaller(ctx, q, p, workspaceID)
+		if err != nil {
+			return err
+		}
+
+		custom, err = q.CustomPermissions(ctx, member)
 		if err != nil || !p.IsFirstParty() {
 			return err
 		}
@@ -182,7 +197,7 @@ func (a *ResolveWorkspace) load(
 		})
 	})
 
-	return workspace, member, checkAccess(workspace, member, err)
+	return loaded{workspace: workspace, member: member, custom: custom}, checkAccess(workspace, member, err)
 }
 
 /*

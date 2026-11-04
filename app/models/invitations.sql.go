@@ -16,7 +16,7 @@ const acceptInvitation = `-- name: AcceptInvitation :one
 UPDATE invitations
 SET status = 'accepted', accepted_at = $1::timestamptz, accepted_by_user_id = $2, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at, custom_role_id
 `
 
 type AcceptInvitationParams struct {
@@ -53,6 +53,7 @@ func (q *Queries) AcceptInvitation(ctx context.Context, arg AcceptInvitationPara
 		&i.RevokedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }
@@ -84,7 +85,7 @@ INSERT INTO invitations (
 ) VALUES (
     $1, $2, $3, coalesce($4::uuid[], '{}'), $5, $6, $7, $8, $8, $8
 )
-RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at, custom_role_id
 `
 
 type CreateInvitationParams struct {
@@ -131,6 +132,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 		&i.RevokedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }
@@ -167,7 +169,7 @@ func (q *Queries) FindInvitationByToken(ctx context.Context, tokenDigest []byte)
 }
 
 const findInvitationWithInviter = `-- name: FindInvitationWithInviter :one
-SELECT i.id, i.workspace_id, i.email, i.role, i.team_ids, i.invited_by_member_id, i.token_hash, i.status, i.expires_at, i.last_sent_at, i.send_count, i.accepted_at, i.accepted_by_user_id, i.revoked_at, i.revoked_by_member_id, i.created_at, i.updated_at, coalesce(u.name, '')::text AS inviter_name
+SELECT i.id, i.workspace_id, i.email, i.role, i.team_ids, i.invited_by_member_id, i.token_hash, i.status, i.expires_at, i.last_sent_at, i.send_count, i.accepted_at, i.accepted_by_user_id, i.revoked_at, i.revoked_by_member_id, i.created_at, i.updated_at, i.custom_role_id, coalesce(u.name, '')::text AS inviter_name
 FROM invitations i
 LEFT JOIN workspace_members m ON m.id = i.invited_by_member_id AND m.workspace_id = i.workspace_id
 LEFT JOIN users u ON u.id = m.user_id
@@ -207,6 +209,7 @@ func (q *Queries) FindInvitationWithInviter(ctx context.Context, arg FindInvitat
 		&i.Invitation.RevokedByMemberID,
 		&i.Invitation.CreatedAt,
 		&i.Invitation.UpdatedAt,
+		&i.Invitation.CustomRoleID,
 		&i.InviterName,
 	)
 	return i, err
@@ -245,7 +248,7 @@ func (q *Queries) ListExistingTeams(ctx context.Context, arg ListExistingTeamsPa
 
 const listInvitations = `-- name: ListInvitations :many
 SELECT
-    i.id, i.workspace_id, i.email, i.role, i.team_ids, i.invited_by_member_id, i.token_hash, i.status, i.expires_at, i.last_sent_at, i.send_count, i.accepted_at, i.accepted_by_user_id, i.revoked_at, i.revoked_by_member_id, i.created_at, i.updated_at,
+    i.id, i.workspace_id, i.email, i.role, i.team_ids, i.invited_by_member_id, i.token_hash, i.status, i.expires_at, i.last_sent_at, i.send_count, i.accepted_at, i.accepted_by_user_id, i.revoked_at, i.revoked_by_member_id, i.created_at, i.updated_at, i.custom_role_id,
     (CASE WHEN i.status = 'pending' AND i.expires_at <= $1::timestamptz THEN 'expired' ELSE i.status END)::text
         AS current_status,
     coalesce(u.name, '')::text AS inviter_name
@@ -309,6 +312,7 @@ func (q *Queries) ListInvitations(ctx context.Context, arg ListInvitationsParams
 			&i.Invitation.RevokedByMemberID,
 			&i.Invitation.CreatedAt,
 			&i.Invitation.UpdatedAt,
+			&i.Invitation.CustomRoleID,
 			&i.CurrentStatus,
 			&i.InviterName,
 		); err != nil {
@@ -323,7 +327,7 @@ func (q *Queries) ListInvitations(ctx context.Context, arg ListInvitationsParams
 }
 
 const lockInvitation = `-- name: LockInvitation :one
-SELECT id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at FROM invitations WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at, custom_role_id FROM invitations WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockInvitationParams struct {
@@ -354,12 +358,13 @@ func (q *Queries) LockInvitation(ctx context.Context, arg LockInvitationParams) 
 		&i.RevokedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }
 
 const lockPendingInvitationForEmail = `-- name: LockPendingInvitationForEmail :one
-SELECT id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at FROM invitations
+SELECT id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at, custom_role_id FROM invitations
 WHERE workspace_id = $1 AND email = $2 AND status = 'pending'
 FOR UPDATE
 `
@@ -393,6 +398,7 @@ func (q *Queries) LockPendingInvitationForEmail(ctx context.Context, arg LockPen
 		&i.RevokedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }
@@ -446,7 +452,7 @@ const revokeInvitation = `-- name: RevokeInvitation :one
 UPDATE invitations
 SET status = 'revoked', revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at, custom_role_id
 `
 
 type RevokeInvitationParams struct {
@@ -483,6 +489,7 @@ func (q *Queries) RevokeInvitation(ctx context.Context, arg RevokeInvitationPara
 		&i.RevokedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }
@@ -555,7 +562,7 @@ UPDATE invitations
 SET token_hash = $1, expires_at = $2, last_sent_at = $3, send_count = send_count + 1,
     role = $4, team_ids = coalesce($5::uuid[], '{}'), status = 'pending', updated_at = $3
 WHERE workspace_id = $6 AND id = $7
-RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at
+RETURNING id, workspace_id, email, role, team_ids, invited_by_member_id, token_hash, status, expires_at, last_sent_at, send_count, accepted_at, accepted_by_user_id, revoked_at, revoked_by_member_id, created_at, updated_at, custom_role_id
 `
 
 type SendInvitationAgainParams struct {
@@ -600,6 +607,7 @@ func (q *Queries) SendInvitationAgain(ctx context.Context, arg SendInvitationAga
 		&i.RevokedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }

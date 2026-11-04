@@ -34,7 +34,7 @@ import (
 
 /*
 The audit events of workspaces and their members, of the ways in, such
-as access tokens and invitations, and of teams.
+as access tokens and invitations, of teams and of custom roles.
 */
 const (
 	EventWorkspaceCreated     = "workspace.created"
@@ -58,6 +58,10 @@ const (
 	EventTeamDeleted          = "team.deleted"
 	EventTeamMemberAdded      = "team.member_added"
 	EventTeamMemberRemoved    = "team.member_removed"
+	EventRoleCreated          = "role.created"
+	EventRoleUpdated          = "role.updated"
+	EventRoleDeleted          = "role.deleted"
+	EventMemberCustomRole     = "member.custom_role_changed"
 )
 
 /*

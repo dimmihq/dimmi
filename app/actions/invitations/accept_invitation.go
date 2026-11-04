@@ -113,9 +113,12 @@ Rules:
   - The invitation must be pending and not expired.
   - An active member cannot accept another invitation to the workspace.
   - The user's address counts as verified from then on.
+  - A custom role the invitation names, if it still exists, is the
+    member's from the start.
 
 Events: [appevents.MemberJoined] for a new member or
 [appevents.MemberReactivated] for one coming back, then
+[appevents.MemberCustomRoleChanged] when a custom role applies, then
 [appevents.InvitationAccepted].
 
 Errors: [exceptions.ErrNotFound], [exceptions.ErrInvitationEmailMismatch],
@@ -159,6 +162,10 @@ func (a *AcceptInvitation) Handle(ctx context.Context, in AcceptInvitationInput)
 		}
 
 		if joined.Member, err = a.join(ctx, tx, inv, in.User); err != nil {
+			return err
+		}
+
+		if joined.Member, err = a.startInCustomRole(ctx, tx, inv, joined.Member); err != nil {
 			return err
 		}
 
