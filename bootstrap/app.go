@@ -76,5 +76,15 @@ func Application() (*app.App, foundation.Options) {
 		Broadcast:  application.ResolveRealtime,
 		Commands:   commands.All(application),
 		Module:     Module,
+		GateExcept: gateExcept(),
 	}
+}
+
+/*
+gateExcept lists what stays open behind the shared password gate:
+webhooks, which prove themselves with signatures, and the messenger
+widget's files, which customers' own sites load.
+*/
+func gateExcept() []string {
+	return []string{"/webhooks/*", "/widget/*"}
 }

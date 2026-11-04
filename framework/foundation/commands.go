@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/console"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/pubsub"
 	"github.com/dimmihq/dimmi/framework/redis"
 )
@@ -175,8 +175,9 @@ func (k *kernel) upCommand() console.Command {
 }
 
 /*
-withMaintenance opens the maintenance state over Valkey alone, without
-booting the application, and runs the function with it.
+withMaintenance opens the maintenance state, kept in the database and
+announced over Valkey, without booting the application, and runs the
+function with it.
 */
 func (k *kernel) withMaintenance(ctx context.Context, fn func(cfg *Config, store *MaintenanceStore) error) error {
 	cfg, err := k.config(ctx)
@@ -190,9 +191,13 @@ func (k *kernel) withMaintenance(ctx context.Context, fn func(cfg *Config, store
 	}
 	defer client.Close()
 
-	path := filepath.Join(cfg.App.DataDir, "framework", "down")
+	db, err := database.Open(ctx, cfg.Database)
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer db.Close()
 
-	store, err := NewMaintenanceStore(ctx, path, pubsub.New(client, cfg.PubSub), clock.System())
+	store, err := NewMaintenanceStore(ctx, db, pubsub.New(client, cfg.PubSub), clock.System())
 	if err != nil {
 		return err
 	}

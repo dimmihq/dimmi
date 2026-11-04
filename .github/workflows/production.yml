@@ -55,3 +55,5 @@ jobs:
           SHA: ${{ inputs.sha }}
       - name: Smoke test
         run: deploy/release/smoke.sh https://trydimmi.com
+        env:
+          EXPECT_RELEASE: ${{ inputs.sha }}
