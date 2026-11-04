@@ -533,7 +533,7 @@ View disabled in workspace (tab off, entity not live, not in audience): no-op + 
 | `close()`, `toggle()` | `Promise<void>` | |
 | `show(view, options?)` | `Promise<void>` | table above |
 | `startConversation(message?, options?)` | `Promise<void>` | composer with draft; `options.context` attached to conversation (`source`), e.g. `{ announcement_id }` (15). Never sends by itself |
-| `track(event, properties?)` | `void` | client-only (15): no network, no storage. Matches cached engage items with `trigger.on = track_event`. Name `[a-z0-9_.:-]{1,64}`; properties flat scalars, max 1 KB, ignored. Invalid name: `console.error` `invalid_event_name` |
+| `track(event, properties?)` | `void` | matches cached engage items with `trigger.on = track_event` locally (15). No network and no storage, unless config `surface.writable_events` lists name (18 M6, admin marked `client_writable`): then batched 1 per 2 s to `POST /widget/v1/contact-events` when session exists; claimed value, never passes `access` gate. Name `[a-z0-9_.:-]{1,64}`; properties flat scalars, max 1 KB, sent only with network path (18 `last_metadata`). Invalid name: `console.error` `invalid_event_name` |
 | `update(options)` | `void` | `{ context?, locale?, appearance? }`; merges, sends ping when session exists |
 | `identify()` | `Promise<IdentityStatus>` | re-ask identity source now (after login without navigation) |
 | `logout()` | `Promise<void>` | `DELETE /widget/v1/session`, wipe `dimmi:{app}:*`, close realtime stream, wipe memory, remount anonymous. Never shows previous history. Usually unnecessary (sign-out detected) |
@@ -865,7 +865,7 @@ Codemod rules for this contract: one-line inserts carry no `dimmi:start/end` mar
 - Attachments: `POST /widget/v1/attachments`, PUT to `upload.url`, `PATCH /widget/v1/attachments/{id} {status: "uploaded"}` before send.
 - Read receipts `PATCH .../read-state`; typing `POST .../typing-indicators`; "Talk to a human" `POST .../handoffs`.
 - Outbox: send now; network error or 5xx keeps entry, retry 1 s to 60 s backoff, flush on `online`. Same `client_id` across retries. 4xx (except 401/408/429) drops entry, shows inline error.
-- Engage (15): lists fetched after handshake when config `engage.active`/`anonymous`; events batched to `POST /widget/v1/engage-events`. `track()` never touches network.
+- Engage (15): lists fetched after handshake when config `engage.active`/`anonymous`; events batched to `POST /widget/v1/engage-events`. `track()` touches network only for `surface.writable_events` names.
 - Time: offset from `server_time`; relative times use server clock.
 
 ## Loud console errors (never silent)
@@ -903,7 +903,7 @@ Fix text is stack-aware: package knows its stack (Next fix says `.env.local`, Vi
 | `intercom_attributes_ignored` | browser info | "Intercom attributes (company, custom) ignored; send them as identify() attributes from your server." |
 | `intercom_method_unsupported` | browser info | "Intercom('<method>') has no Dimmi equivalent; ignored." (once per method) |
 | `native_not_allowed` | SDK | "This widget does not accept apps while allowed sites are set." ("Turn on Accept mobile apps in Settings > Messenger.") |
-| `page_hidden` | browser debug | "Launcher hidden on this page by show or hide rules." |
+| `page_hidden` | browser debug | "Launcher hidden on this page by launcher rule." |
 | `article_not_found` | browser warn | "show('help', {article}): article not found or not published; opened Help home." |
 
 ## Host page requirements

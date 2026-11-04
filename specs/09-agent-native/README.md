@@ -52,7 +52,7 @@ Why: roadmap launch item 9 (`research/roadmap.md` "9. Agent-native: CLI, MCP, AP
 - Client version gate on `/oauth/token` (`client.version` middleware, foundation): too-old first-party app or CLI refused (OAuth error shape, below). CLI sends `Dimmi-Client-Version: cli/<ver>` and `Dimmi-Version` on every request.
 - MCP server: streamable HTTP at `/mcp` (protocol 2026-07-28 stateless + legacy 2025-03-26..2025-11-25), stdio via `dimmi mcp` (bridge mode and in-process mode). 19 core tools (plus opt-in feature toolsets), 4 resources, 4 prompts. Confirmation via MRTR form elicitation, fallback `confirm: true`; required on every `dimmi_send_reply` (no workspace bypass).
 - CLI client commands in same Go codebase, published to npm as `dimmi` (platform binaries via optionalDependencies), Homebrew, install script, Docker image (full flavor).
-- CLI commands: `login`, `logout`, `whoami`, `profiles`, `init`, `conversations list|show|reply|close`, `articles pull|push`, `changelog`, `feedback`, `announcements`/`surveys`/`segments` (13-15, cli.md), `tokens create|list|revoke` (wraps 00-accounts PAT API), `mcp`, `agents install`, `api` (raw), `version`.
+- CLI commands: `login`, `logout`, `whoami`, `profiles`, `init`, `conversations list|show|reply|close`, `articles pull|push`, `changelog`, `feedback`, `announcements`/`surveys` (13-15, cli.md), `audiences`/`attributes`/`events` (18), `tokens create|list|revoke` (wraps 00-accounts PAT API), `mcp`, `agents install`, `api` (raw), `version`.
 - Install-by-prompt deliverables: Claude Code skill, Claude Code plugin (skill + MCP config), Cursor rule, AGENTS.md snippet, copy-paste prompt for Lovable/Bolt/v0, `llms.txt` + `llms-full.txt` for Dimmi docs. Contents specified in `cli.md`.
 - OpenAPI as single schema source: MCP tool input schemas from same Go request types that feed huma; CLI API client generated from `openapi.json`; drift tests.
 
@@ -161,6 +161,7 @@ Pending browser authorization between `/oauth/authorize` and consent decision.
 | device_name | text | `device_name` authorize param (first-party), max 100 chars |
 | device_id | text | `device_id` authorize param (first-party app install id: random UUID kept in keychain/keystore), max 64 chars `[A-Za-z0-9-_]`; null when absent; copied to grant |
 | auth_methods | text[] not null default '{}' | session `auth_methods` snapshot taken with `auth_time` (e.g. `{password,totp}`); copied to grant |
+| sso_connection_id, auth_domain | uuid null, text null | session sign-in context (21 migration `20261201080010`); copied to grant |
 | max_age | int | requested `max_age` (null when absent; `prompt=login` stored as 0) |
 | auth_time | timestamptz | `sessions.authenticated_at` (00-accounts column: last full login incl. factors) when request created (after any forced re-login); copied to grant |
 | expires_at | timestamptz not null | created + 10 minutes |
@@ -396,7 +397,8 @@ Directory `app/client/` (CLI client code, no server imports); conventions direct
 | `app/console/commands/client/conversations_command.go` | list, show, reply, close |
 | `app/console/commands/client/changelog_command.go` | 13: list, new, draft, publish, subscribers import/export |
 | `app/console/commands/client/feedback_command.go` | 14: import helper, status shortcut; rest generated |
-| `app/console/commands/client/engage_command.go` | 15-announcements-surveys: `announcements`, `surveys`, `segments` |
+| `app/console/commands/client/engage_command.go` | 15-announcements-surveys: `announcements`, `surveys` |
+| `app/console/commands/client/audiences_command.go` | 18: `audiences`, `attributes`, `events` |
 | `app/console/commands/client/articles_command.go` | pull, push |
 | `app/console/commands/client/tokens_command.go` | create, list, revoke |
 | `app/console/commands/client/agents_command.go` | `agents install` |
@@ -677,7 +679,7 @@ REST column per rest.md rule 15: tool names stay verbs, REST is the contract; to
 
 No MCP tool publishes, accepts, verifies, or deletes articles (08 world-class bar; 08 endpoints reject MCP with 403 `human_review_required`). Publishing stays in dashboard, REST, CLI (`articles push --publish`, `articles publish`). Only carve-out: 16 `dimmi_run_import` with `articles.publish: preserve` after confirm gate (migrated human-written content). Other 08 tools (`dimmi_get_help_center_outline`, `dimmi_propose_help_center`, `dimmi_list_article_suggestions`, `dimmi_list_knowledge_sources`, `dimmi_sync_knowledge_source`) live in `help_center` toolset.
 
-Feature toolsets: tools defined by other specs (00-accounts `accounts`, 01/02 `widget`, 03 `inbox_extra`, 04, 05, 06, 07 `ai`, 07 `ai_actions`, 08 `help_center`, 08 `docs_sync`, 10, 11, 12, 13 `changelog`, 14 `feedback`, 15 `engage`, 16 `imports`; names and confirm-gate rules in mcp.md) register through same registry in named toolsets, off by default; `/mcp?toolsets=billing,channels` or `dimmi mcp --toolsets`. Rules in mcp.md "Feature toolsets". Core 19 above always on.
+Feature toolsets: tools defined by other specs (00-accounts `accounts`, 01/02 `widget`, 03 `inbox_extra`, 04, 05, 06, 07 `ai`, 07 `ai_actions`, 08 `help_center`, 08 `docs_sync`, 10, 11, 12, 13 `changelog`, 14 `feedback`, 15 `engage`, 16 `imports`, 18 `audiences`; names and confirm-gate rules in mcp.md) register through same registry in named toolsets, off by default; `/mcp?toolsets=billing,channels` or `dimmi mcp --toolsets`. Rules in mcp.md "Feature toolsets". Core 19 above always on.
 
 Resources: `dimmi://workspace`, `dimmi://conversations/{number}`, `dimmi://articles/{id_or_slug}`, `dimmi://contacts/{id}`.
 Prompts: `triage_inbox`, `summarize_conversation`, `article_from_conversation`, `daily_digest`.
@@ -704,7 +706,8 @@ Distribution decision: same Go codebase, two build flavors (`dimmi` full = serve
 | `dimmi webhooks endpoints\|deliveries\|redeliver`, `dimmi trigger <event_type>` | 10 webhooks |
 | `dimmi changelog list\|new\|draft\|publish\|subscribers import\|subscribers export` | 13 changelog |
 | `dimmi feedback posts\|status\|link\|import\|suggestions` | 14 feedback (import = dry run then `--run`) |
-| `dimmi announcements ...`, `dimmi surveys ...`, `dimmi segments ...` | 15 engage (`15-announcements-surveys`) |
+| `dimmi announcements ...`, `dimmi surveys ...` | 15 engage (`15-announcements-surveys`) |
+| `dimmi audiences ...`, `dimmi attributes ...`, `dimmi events ...` | 18 audiences |
 | `dimmi tokens create\|list\|revoke` | scoped PATs, `--no-expiry` |
 | `dimmi mcp [--in-process]` | stdio MCP |
 | `dimmi agents install [--claude-code] [--cursor] [--agents-md] [--mcp]` | install-by-prompt files |

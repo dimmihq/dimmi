@@ -6,7 +6,7 @@ Style: caveman. Roadmap name identity-validations, now in scope. Milestone M5, t
 
 Settings registry key `identity.mode`, workspace scope, values `off`, `optional` (default), `required`. Behavior table: [README](README.md) "Identity behavior". Applies to all widgets of workspace, same as secrets. Read cached with secrets (otter, PubSub bust).
 
-`required` is about proof of identity, not who may chat: audience rules arrive with the audiences spec. Same effect as 01 `allow_anonymous = false` on every widget, plus invalid tokens hide widget instead of falling to anonymous.
+`required` is about proof of identity, not who may chat: who may chat is 18 `messenger.start`. Same effect as 01 `allow_anonymous = false` on every widget, plus invalid tokens hide widget instead of falling to anonymous.
 
 Change: `PATCH /api/v1/identity-verification/settings {mode}` (`identity:manage`, audit logged, event `identity_settings.updated`, realtime yes, webhook no). Busts 01 config (`features.allow_anonymous` reflects mode; config includes `identity_mode` so SDK skips anonymous path).
 

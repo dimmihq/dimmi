@@ -9,9 +9,9 @@ Style: caveman. Format: "Case. Behavior." Numbered across groups.
 3. Item published while visitor has page open (SPA, no reload). Visible after next refetch: `refresh_interval_ms` (10 min), identity change, or `Dimmi('update')`. No realtime fan-out to every contact socket (cost).
 4. Item paused or ended while visitor has it cached. Client keeps showing until next fetch at most 10 min; `engage-events` for that item return `item_not_available` and SDK removes it immediately on that response. Urgent removal: ending is reflected on next page load.
 5. Contact attribute changes (JWT claim `plan` from `free` to `pro`) mid-session. ETag includes contact attribute hash; SDK refetches on `identity_changed`; next list reflects new plan.
-6. Segment rules edited while items live. Applies immediately to next evaluation (segment resolved at request time); engage version bumped so caches and ETags change.
-7. Segment deleted while referenced by draft item. Allowed; item shows `deleted_segment: true`; publish blocked `segment_deleted`.
-8. Segment delete attempted while used by live item. 409 `segment_in_use` lists items.
+6. Saved audience edited while items live. Applies at next evaluation (resolved at request time); `audience_references` finds items, engage version bumped so caches and ETags change.
+7. Saved audience deleted while referenced by draft item. Allowed; builder shows `missing_reference`; publish blocked.
+8. Saved audience delete attempted while used by live item. 409 `audience_in_use` lists items.
 9. Custom attribute stored as string `"42"` compared with `gt 10`. Type mismatch: false (never coerced). Dashboard rule builder shows attribute type from sample values to avoid this.
 10. Custom date attribute as unix seconds vs ISO string. Both accepted by date ops; any other type false.
 11. Attribute missing on contact with `neq "free"`. True (missing counts as not equal). Documented; use `exists` + `neq` for strict.
@@ -23,21 +23,21 @@ Style: caveman. Format: "Case. Behavior." Numbered across groups.
 17. Over 70 live items with complex rules. Evaluator budget under 1 ms total measured in benchmark; cloud live caps (entitlements 50 + 20) bound it; self-host unlimited by default (operator sets keys if needed).
 18. List response would exceed 64 KB (many translations, long bodies). Lowest priority items dropped, `meta.truncated: true`; dashboard warns at publish when item body over 10 KB.
 19. Locale requested `pt-BR`, translations have `pt`. Primary subtag fallback to `pt`; then default locale per field.
-20. Audience `locales: ["de"]` and contact has no locale. Session locale used; none: not eligible.
+20. Audience leaf `contact.locale in [de]` and contact has no locale. Missing value: false, not eligible. Author wanting browser language uses `visitor.locale` (client leaf).
 21. Workspace suspended. `live_summary.active=false`; lists empty; CSAT jobs skip; items keep status (resume when unsuspended).
 22. Workspace soft-deleted. Widget already 404; engage jobs skip workspace.
 23. `engage.enabled=false` on self-host. Config omits engage block (`active=false`); admin routes 404 `feature_disabled`; data untouched.
 24. Test session (dashboard preview) without `preview` param. Sees live items like real contact; receipts and responses `is_test`; stats excluded by default.
 25. `preview` param on non-test session. 403 `preview_requires_test_session`.
-26. Preview of draft with deleted segment. Preview ignores audience entirely (shows item); publish still blocked.
-27. Contact in two widgets (`wgt_A`, `wgt_B`) of same workspace. Items are workspace-wide; receipts per contact so seen-once applies across widgets. Per-widget targeting via `url_rules` with absolute host.
+26. Preview of draft with deleted saved audience. Preview ignores audience entirely (shows item); publish still blocked.
+27. Contact in two widgets (`wgt_A`, `wgt_B`) of same workspace. Items are workspace-wide; receipts per contact so seen-once applies across widgets. Per-widget targeting via `page.host` leaf.
 
-## Triggers (client) and URL rules
+## Triggers (client) and page rules
 
-28. SPA route change. SDK re-evaluates URL rules on 01 route detection; pending delay timer for item whose rules no longer match is cancelled.
-29. `matches` glob with `**` and query string. Matched against path + query; fragment never. Shared JSON test vectors guarantee SDK and server (`support/urlmatch`, used for preview validation) agree.
-30. URL rule value with full `https://other.com/x`. Host compared too; item never shows on other hosts.
-31. URL rules contain regex-like input `(a+)+`. Treated literally (glob only); no ReDoS possible.
+28. SPA route change. SDK re-evaluates residual on 01 route detection; pending delay timer for item whose residual no longer matches is cancelled.
+29. `matches` glob with `**` and query string. Matched against leaf's field: `page.path` path, `page.query` query, `page.url` whole URL; fragment never. Shared JSON corpus (18) guarantees SDK and server (`app/support/urlmatch`) agree.
+30. Leaf `page.url starts_with https://other.com/x`. Host compared because field holds whole URL; item never shows on other hosts.
+31. Page leaf contains regex-like input `(a+)+`. Treated literally (glob only); no ReDoS possible.
 32. `track_event` fired before engage list fetched. SDK buffers last 20 track calls for 30 s and replays after list arrives.
 33. `track` called with unknown event or no matching item. No-op, no network (sdk-contract).
 34. `track` called 1,000 times per second by host bug. Client-side only; bounded buffer; item frequency still applies.
@@ -115,7 +115,7 @@ Style: caveman. Format: "Case. Behavior." Numbered across groups.
 94. Survey deleted (soft) with responses. Responses hidden with survey; restore brings back; purge after 30 days deletes responses (cascade); stats rows deleted.
 95. Response delete by admin. Hard delete; receipt kept (contact not re-asked); results cache busted.
 96. Results request at 1M responses with filters. Valkey cache 60 s per filter set; statement timeout 5 s; timeout returns 503 `results_timeout` with hint to narrow range (never partial numbers).
-97. Segment filter on results uses current attributes. Documented; snapshot of attributes at answer time not stored (only `context` page context).
+97. `filter[audience]` on results uses current attributes. Documented; snapshot of attributes at answer time not stored (only `context` page context).
 
 ## CSAT
 
@@ -172,5 +172,5 @@ Style: caveman. Format: "Case. Behavior." Numbered across groups.
 
 134. 16 imports closed conversations (Intercom, Zendesk, Help Scout). No `conversation.closed` dispatched (16 suppression), no CSAT job; defense: worker skips `source.imported` conversations with no live message after import. Imported conversation later reopened by live reply and closed by teammate: normal CSAT eligibility (live close cycle).
 135. Imported source CSAT ratings (Intercom `conversation_rating`). Stay in 16 `metadata.import.rating`; never `survey_responses`, never in 15 results or CSAT stats, never trigger 06 `csat_negative` (16 E45).
-136. Imported contacts match segment (backdated `signed_up_at`, imported custom attributes). Nothing sent: announcements and surveys show only on live widget visit (client fetch after handshake); import creates no receipts, no engage events, no `survey_response.*`.
+136. Imported contacts match audience (backdated `signed_up_at`, imported custom attributes). Nothing sent: announcements and surveys show only on live widget visit (client fetch after handshake); import creates no receipts, no engage events, no `survey_response.*`.
 

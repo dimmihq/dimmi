@@ -86,8 +86,8 @@ Single draft per selected widget. Preview shows draft live; customers see nothin
 | Visitors | Require email when away | `require_email_when_offline` | Toggle |
 | Visitors | Attachments, max size | `attachments_enabled`, `max_attachment_mb` | |
 | Visitors | Conversation status | `customer_status_enabled` | Toggle |
-| Pages | Show on | `page_rules.mode` | Every page, Only these, All except these |
-| Pages | Patterns | `page_rules.patterns` | list editor + URL tester |
+| Pages | Show on | `page_rules.mode` (writes `audiences.launcher`) | Every page, Only these, All except these; "Custom rule" + builder link when richer |
+| Pages | Patterns | `page_rules.patterns` (writes `audiences.launcher`) | list editor + URL tester on `lib/rules.ts` |
 | Tabs | Order | `tab_order` | `sortable-tabs.tsx`, `GridList` with react-aria `useDragAndDrop` (keyboard works) |
 | Tabs | Home links | `home_links` | list editor, max 6 |
 | Developers | Capture console errors, Capture failed requests | `dev_context.console`, `.network` | Toggles; warning line on what is sent |
@@ -97,7 +97,7 @@ Single draft per selected widget. Preview shows draft live; customers see nothin
 | Apps | Hosted page | `hosted_page_enabled` | Toggle + URL + copy |
 | Domain | Custom domain | widget domains API | hostname, DNS rows, status, Check now (same layout as help center domains) |
 
-No control for who sees messenger: audience rules arrive with the audiences spec.
+Who sees messenger, who may start, tabs: shared builder `resources/js/features/audiences/` added here by 18 M5 (track 13). Until then only Pages control.
 
 ## Live preview: real widget code
 

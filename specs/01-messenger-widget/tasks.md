@@ -152,8 +152,8 @@ Per [settings-page.md](settings-page.md).
   - Tests: reencode strips EXIF; HTML renamed png refused (E179); limits; immutable headers; in use 409 (E177); guard false keeps rows.
 - [ ] Widget: logo, company name chain, header and button colours, inks, gradient, image background, launcher image, shape, sound flag, tab order, `open_to`, privacy notice, team intro, welcome, delay notice, home links.
   - Tests: `widget.test.ts` per setting through `Dimmi("update")`; E165, E170 to E176, E181; core budget.
-- [ ] Page rules matcher + route change handling; shared matcher module also used by dashboard tester.
-  - Tests: table of patterns; E167 to E169; `open()` works when hidden; server has no rule logic (no config vary).
+- [ ] Pages control: `page_rules` write form compiles to `audiences.launcher`, decompiled in resource; `surface.anonymous.launcher` in config; `resources/widget/lib/rules.ts` page ops + route change handling; dashboard tester imports same module. 18 M5 extends this file, never second matcher.
+  - Tests: table of patterns on shared 18 corpus file; E167 to E169; `open()` works when hidden; server has no rule logic (no config vary); no rule: no `surface` key.
 - [ ] Page controls per "New controls"; `sortable-tabs.tsx`; image field.
   - Tests: Playwright per group, keyboard reorder, preview reflects, E180.
 
@@ -207,6 +207,10 @@ Per [settings-page.md](settings-page.md).
   - Tests: E202 to E205; stream works on host; no cookies.
 - [ ] Domain section UI.
   - Tests: Playwright add domain, DNS rows, check result.
+
+## Audiences seam (track 13, 18 M5, M6)
+
+Track 01 builds without audiences beyond Pages control. Needs 01 M2 session API. Tasks in [18](../18-audiences/README.md) M5, M6: `surface`, start check, routes, `surface.changed`, contact PATCH drop, track network.
 
 ## M15 Tabs and seams: 07, 08, 13 to 16 (track 01 widget-platform)
 

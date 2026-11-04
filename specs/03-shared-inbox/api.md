@@ -76,7 +76,7 @@ Optional request header on every write: `Dimmi-Client-Mutation-Id: <string up to
 ### Companies
 | Method | Path | Route name | Ability / role | Purpose |
 |---|---|---|---|---|
-| GET | /companies | companies.index | contacts:read | list, `q` |
+| GET | /companies | companies.index | contacts:read | list, `q`, `filter[tag]`, `filter[audience]=adn_` (18) |
 | POST | /companies | companies.store | contacts:write | create; `?upsert=true` upserts by `external_id` then `domain` |
 | GET | /companies/{company} | companies.show | contacts:read | |
 | PATCH | /companies/{company} | companies.update | contacts:write | |
@@ -520,7 +520,7 @@ Linking: `attachment_ids` in reply/note/conversation create. Rules: same workspa
 
 ## Contacts
 
-`GET /contacts` filters: `filter[tag]`, `filter[kind]=user|lead`, `filter[email]`, `filter[external_id]`, `filter[company]`, `filter[blocked]=true` (default false: blocked hidden unless asked), `filter[last_seen_after]`, `filter[last_seen_before]`, `filter[created_after]`, `filter[custom.<key>]=<value>` (equality, max 3, JSON containment), `filter[segment]=seg_...` (15 segment compiler builds predicate; statement timeout 5 s, over: 422 `segment_too_slow`; unknown or other workspace segment: 400 `invalid_filter`), `q`. Sort: `-last_seen_at` (default), `-created_at`, `name`. Excludes merged and deleted.
+`GET /contacts` filters: `filter[tag]`, `filter[kind]=user|lead`, `filter[email]`, `filter[external_id]`, `filter[company]`, `filter[blocked]=true` (default false: blocked hidden unless asked), `filter[last_seen_after]`, `filter[last_seen_before]`, `filter[created_after]`, `filter[custom.<key>]=<value>` (equality, max 3, JSON containment), `filter[audience]=adn_...` (18 SQL compiler builds predicate; statement timeout 5 s, over: 422 `audience_too_slow`; unknown or other workspace audience: 400 `invalid_filter`), `q`. Sort: `-last_seen_at` (default), `-created_at`, `name`. Excludes merged and deleted.
 
 ### Upsert (developer identify)
 `POST /contacts?upsert=true` (rest.md rule 10). Same controller as create (`ContactController.Store`), calls action `UpsertIdentifiedContact` (02 owns separate `identity.IdentifyContact`). Match keys in order: `external_id`, then `email`. Neither given: 422 `upsert_key_required`. `upsert` accepts `true`/`false` only (else 400 `invalid_parameter`). Without `upsert=true`: plain create, existing `external_id` 409 `contact_exists`.
@@ -591,8 +591,8 @@ Details in owning file. Route names follow rest.md rule 14. Auth `A` unless stat
 | GET | /conversations/{conversation}/similar | conversations:read | collaboration.md |
 | POST | /conversations/{conversation}/messages/{message}/translations | conversations:read | collaboration.md |
 | POST | /conversations/{conversation}/reply-translations | conversations:write | collaboration.md |
-| GET, POST | /attribute-definitions | conversations:read; settings:write, `attributes:manage` | records.md |
-| PATCH, DELETE | /attribute-definitions/{attribute_definition} | settings:write, `attributes:manage` | records.md |
+| GET, POST | /conversation-attribute-definitions | attributes:read; attributes:write, `attributes:manage` | records.md |
+| PATCH, DELETE | /conversation-attribute-definitions/{conversation_attribute_definition} | attributes:write, `attributes:manage` | records.md |
 | GET | /companies/{company}/conversations | conversations:read | records.md |
 | POST | /attachments/{attachment}/download-grants | conversations:read | safety.md |
 | GET, POST, PATCH | /redaction-rules | settings:read; settings:write, `redaction:manage` | safety.md |
@@ -667,7 +667,7 @@ See [search.md](search.md). `GET /search?q=refund&limit=5`:
 | 422 | import_channel_cannot_send | reply on imported conversation (16) when inbox has no email connection or contact has no email |
 | 422 | merge_imported_target | merge live conversation into imported target |
 | 422 | invalid_transition | illegal `status` / `ai_state` change; body `from`, `to` (rest.md rule 3) |
-| 422 | segment_too_slow | `GET /contacts?filter[segment]` over 5 s statement timeout (15) |
+| 422 | audience_too_slow | `GET /contacts?filter[audience]` over 5 s statement timeout (18) |
 | 422 | unknown_field, confirmation_required, upsert_key_required, message_not_in_conversation | PATCH unknown key; filter bulk without `confirm_count` (`meta.matched`); upsert without match key; read-state message of other conversation |
 | 422 | merge_different_contacts, required_attributes_missing, attribute_unknown, snooze_option_unknown, invalid_definition, view_limit_reached, away_reason_required, away_reason_limit_reached, owner_access_unrestricted, attribute_definition_limit_reached, redaction_rule_limit_reached, reaction_limit_reached, message_not_reactable, export_too_large, translation_unavailable | this round |
 | 422 | snooze_in_past, snooze_too_far, member_inactive, tag_limit_reached, participant_limit_reached, bulk_too_many, merge_self, attachment_infected, attachment_type_blocked, message_not_editable, message_not_deletable, search_query_too_long | |

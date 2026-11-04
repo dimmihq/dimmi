@@ -99,7 +99,7 @@ Style: caveman. Format: "Case. Behavior." Every behavior decided. Tests named in
 75. Status preserve and assigned to placeholder teammate. Imported unassigned (placeholder cannot own); `metadata.import.assignee_name` kept.
 76. Assignee team mapped `skip`. Unassigned team; inbox from inbox mapping.
 77. Source conversation number (Zendesk ticket #4512). New Dimmi `number` allocated (block per page); `source.imported.external_number` 4512; search `imported:4512` and records lookup find it.
-78. Message author contact differs from conversation contact (second customer replies). Contact resolved (created if needed) and added as participant `participant`.
+78. Message author contact differs from conversation contact (second customer replies). Contact resolved (created if needed) and added as participant role `to`.
 79. Part authored by deleted source user (no data). Author `unknown` with name "Deleted user"; for customer side: conversation contact used as author.
 80. Bot part (Intercom Operator/Fin, Zendesk AI). `author_type agent`, author_id null, `metadata.import.author.kind bot`; never counted as Dimmi AI reply.
 81. Internal note mentions `@Sarah` (source mention markup). Converted to plain text `@Sarah`; no `message_mentions` rows (no notifications).

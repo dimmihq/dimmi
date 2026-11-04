@@ -49,7 +49,7 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
     "show_team_avatars": true, "show_availability": true, "customer_status": true, "delay_notice": true,
     "privacy": { "enabled": true, "url": "https://acme.com/privacy" },
     "home_links": [{ "title": "Book a call", "url": "https://acme.com/call", "icon": "calendar" }],
-    "page_rules": { "mode": "except", "patterns": ["/checkout/*"] },
+    "surface": { "version": 41, "dynamic": false, "anonymous": { "launcher": { "not": { "any": [ { "field": "page.path", "op": "matches", "value": "/checkout/**" } ] } } } },
     "features": {
       "attachments": true, "max_attachment_mb": 10,
       "help_tab": true, "ai_agent": true,
@@ -68,7 +68,7 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
 }
 ```
 
-`ai_agent` true when 07 agent active for widget's inbox. Blocks owned by other specs (README "Config resource blocks"): `features.changelog` (13, only when `changelog_tab_enabled`), `features.feedback` + `texts.feedback` (14, only when `feedback_tab_enabled`), `engage` (15; cache key includes `engage_settings.version`). `features.intercom_shim` (01, 16 switchers): loader installs `window.Intercom` shim. Agent action labels (`action_confirm`, `action_cancel`) ship in `texts`. Reserved: audience rules arrive with the audiences spec; no audience key now. Errors: 404 `app_not_found`, 403 `widget_disabled`, `origin_not_allowed`, `workspace_suspended`.
+`ai_agent` true when 07 agent active for widget's inbox. Blocks owned by other specs (README "Config resource blocks"): `features.changelog` (13, only when `changelog_tab_enabled`), `features.feedback` + `texts.feedback` (14, only when `feedback_tab_enabled`), `engage` (15; cache key includes `engage_settings.version`). `surface` only when any rule exists: page leaves only, booleans for rest ([18](../18-audiences/README.md) "Flows"); `dynamic`, `start`, `tabs`, `writable_events` arrive with 18 M5, M6. Absent key = everyone, no extra request. `features.intercom_shim` (01, 16 switchers): loader installs `window.Intercom` shim. Agent action labels (`action_confirm`, `action_cancel`) ship in `texts`. Reserved: audience rules arrive with the audiences spec; no audience key now. Errors: 404 `app_not_found`, 403 `widget_disabled`, `origin_not_allowed`, `workspace_suspended`.
 
 ## GET /widget/v1/apps/{app}/availability
 
@@ -164,7 +164,7 @@ Bearer. `{ "user_jwt": "..." }`. Resume on page load and refresh mid-session (fo
 { "data": { "id": "ctc_...", "object": "contact", "kind": "lead", "name": "Ada", "email": "ada@example.com", "email_verified": false, "phone": null, "locale": "en", "custom_attributes": {} } }
 ```
 
-PATCH body (lead only): `name` (1..120), `email` (RFC 5322 addr-spec, IDN domain to punycode, max 254), `phone` (E.164), `custom_attributes` (max 20 keys from widget, rules from data-model). Sets `contact_identities` email row `verified=false` only when no other contact holds same email identity; otherwise email stored on `contacts.email` only (no identity row, no merge). Every `custom_attributes` key written here is removed from `contacts.trusted_attribute_keys` in same tx (widget-set values never trusted; 07 agent actions bind only trusted keys). User contacts: 403 `identity_locked`. Email change rate: 5/day/session.
+PATCH body (lead only): `name` (1..120), `email` (RFC 5322 addr-spec, IDN domain to punycode, max 254), `phone` (E.164), `custom_attributes` (max 20 keys from widget, rules from data-model; from 18 M2 key without `client_writable` definition dropped silently, 18 problem row, 200, no oracle on which keys exist). Sets `contact_identities` email row `verified=false` only when no other contact holds same email identity; otherwise email stored on `contacts.email` only (no identity row, no merge). Every `custom_attributes` key written here is removed from `contacts.trusted_attribute_keys` in same tx (widget-set values never trusted; 07 agent actions bind only trusted keys). User contacts: 403 `identity_locked`. Email change rate: 5/day/session.
 
 ## GET /widget/v1/conversations
 
@@ -191,11 +191,11 @@ Scope: `contact_id = session.contact_id`, on this widget (`source.widget_id` = s
 
 Optional `context` keys from SDK `startConversation(text, {context})` land in `source.context`; reserved key lifted to `source`: `announcement_id` (15, `ann_`; chat-format announcement, contact has receipt, item live or ended within 7 days, else 422 `announcement_not_replyable`; `StartWidgetConversation` passes `source.announcement_id` + event row `announcement.replied` to 03).
 
-201 `{ data: conversation, meta: { message: <widget_message> } }`. Same `client_id` replay returns 200 with same objects. `email_required` 422 when rule applies (no rows created).
+201 `{ data: conversation, meta: { message: <widget_message> } }`. Same `client_id` replay returns 200 with same objects. `email_required` 422 when rule applies (no rows created). `messenger.start` false (18 M5): 403 `conversation_start_restricted`, no reason detail, no rows.
 
 ## GET /widget/v1/conversations/{conversation}/messages
 
-Query: `before` cursor (older), `after` message id (newer), `limit` default 30 max 100. Returns `type = message` rows only, not deleted (deleted shown as `{id, object, deleted: true, body: null}` placeholders to keep order), oldest first within page. Attachment URLs signed 1 h. System message from 15 CSAT (`author.type = system`) adds `survey_request: {survey_id, response_id}`; widget renders survey card and answers via 15 `POST /widget/v1/surveys/{svy}/responses`. Agent message with 07 write action adds `ai: {confirmation: {action_call_id, title, text, status, expires_at}}` (README "Agent action card"); `ai.action_calls`, citations internals never.
+Query: `before` cursor (older), `after` message id (newer), `limit` default 30 max 100. Returns `type = message` rows only, not deleted (deleted shown as `{id, object, deleted: true, body: null}` placeholders to keep order), oldest first within page. Attachment URLs signed 30 min. Only scan status `clean`, `skipped` get URL (03 safety.md); others `url: null`, `blocked: true`. System message from 15 CSAT (`author.type = system`) adds `survey_request: {survey_id, response_id}`; widget renders survey card and answers via 15 `POST /widget/v1/surveys/{svy}/responses`. Agent message with 07 write action adds `ai: {confirmation: {action_call_id, title, text, status, expires_at}}` (README "Agent action card"); `ai.action_calls`, citations internals never.
 
 ## POST /widget/v1/conversations/{conversation}/messages
 
@@ -263,6 +263,20 @@ Step 3 `PATCH /widget/v1/attachments/{attachment}` `{ "status": "uploaded" }`. `
 
 Blocked types: executables (`application/x-msdownload`, `x-executable`, `x-mach-binary`, `x-sh`), `.exe .bat .cmd .scr .js .msi .dmg .apk .jar` by extension, `text/html`. SVG allowed as download only.
 
+Upload policy (03 safety.md): `attachments.customer_uploads` false: create upload 403 `uploads_disabled`, config `features.attachments` false. Type check calls `policy.Allowed(ws, name, type)`: refused 422 `attachment_type_blocked`.
+
+## Audience routes (18 M5, M6, track 13)
+
+Shapes in [18](../18-audiences/README.md) "Flows".
+
+| Route | Auth | Does |
+|---|---|---|
+| `GET /widget/v1/surface` | session, ETag | `surface` for this session, refetched on `identity_changed`, `surface.changed`, 600 s |
+| `GET /widget/v1/apps/{app}/decisions` | app | only when config `surface.dynamic`; `private, max-age=300`, rate limited, no session, no row |
+| `POST /widget/v1/contact-events` | session | batched, 1 per 2 s, names marked `client_writable` only; claimed values |
+
+Realtime `surface.changed` on contact channel: contentless, coalesced one per 2 s per contact; SDK refetches `GET /widget/v1/surface`. Logout drops decisions; nothing identified in `localStorage`.
+
 ## POST /widget/v1/pings
 
 ```json
@@ -312,7 +326,7 @@ Owned by 08 (routes, controllers, resources, shapes: `08-help-center/rendering.m
     "attachments_enabled": true, "max_attachment_mb": 10,
     "company_name": "Acme", "default_locale": "en", "open_to": "home", "tab_order": ["home", "messages", "help", "changelog", "feedback"],
     "privacy_notice": { "enabled": true, "url": "https://acme.com/privacy" }, "home_links": [],
-    "page_rules": { "mode": "all", "patterns": [] }, "dev_context": { "console": false, "network": false },
+    "page_rules": { "mode": "all", "patterns": [] }, "audiences": {}, "dev_context": { "console": false, "network": false },
     "customer_status_enabled": true, "delay_notice_enabled": true, "native_apps_enabled": false, "hosted_page_enabled": true, "schedule_id": null,
     "hosted_url": "https://app.trydimmi.com/messenger/wgt_...",
     "help_center_id": "hc_...", "help_tab_enabled": true, "changelog_tab_enabled": false, "feedback_tab_enabled": false,

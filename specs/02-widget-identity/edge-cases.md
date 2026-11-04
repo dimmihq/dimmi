@@ -118,9 +118,9 @@ Style: caveman. Each: case. decided behavior. Session and transport cases shared
 
 ## Claims conventions
 
-82. `custom_attributes.signed_up_at` as `"last tuesday"`. Kept as string, warning `claim_signed_up_at_invalid`; 15 segments treat as missing date.
+82. `custom_attributes.signed_up_at` as `"last tuesday"`. Kept as string, warning `claim_signed_up_at_invalid`; 18 rules treat as missing date.
 83. `signed_up_at` in milliseconds (`1767225600000`). Value over 10^11: warning `claim_signed_up_at_invalid` with hint "seconds, not milliseconds"; stored as given.
-84. Claim change (plan upgrade) on next token. `ApplyIdentityClaims` writes changed keys; `contact.updated` `changes` lists changed `custom_attributes` keys (14 revenue, 15 segments); SDK refetches engage items on `identity_changed`.
+84. Claim change (plan upgrade) on next token. `ApplyIdentityClaims` writes changed keys; `contact.updated` `changes` lists changed `custom_attributes` keys (14 revenue, 18 dependency filter); SDK refetches engage items on `identity_changed`.
 
 ## Nonce cache (Valkey)
 

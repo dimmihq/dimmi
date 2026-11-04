@@ -158,7 +158,7 @@ Generated from `resources/fixtures/webhooks/*.json` (single source for docs, tes
       "number": 1042,
       "status": "open",
       "spam": false,
-      "priority": false,
+      "priority": "none",
       "subject": "Checkout fails on Safari",
       "ai_state": "active",
       "inbox": { "id": "inbox_01ja", "object": "inbox", "name": "Support" },

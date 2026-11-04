@@ -69,7 +69,7 @@ Product owner moved changelog from post-MVP list (`research/roadmap.md`, old "ch
 | Item | When | Why |
 |---|---|---|
 | Comments on entries | later | moderation and spam surface |
-| Audience segmentation (entries visible only to plan X, emails to segment) | later | 15 segments available (`segments`, `seg_`); adopt later; schema leaves `audience` jsonb unused |
+| Audience targeting (entries visible only to plan X, emails to audience) | later | 18 audiences available (`audiences`, `adn_`, surface `changelog.entry`); adopt later with shared `models.Audience` type; schema leaves `audience` jsonb unused |
 | Per-label email subscriptions | later | MVP subscribe = all announced entries |
 | Notify people who requested feature | ships in 14 (launch) | entry links feedback posts; 14 emails voters on `changelog_entry.published`; 13 newsletter dedupes (Feedback seam) |
 | Translations | post-MVP: auto-translation | single locale = help center locale; URL scheme reserves `/{locale}/` like 08 |
@@ -137,7 +137,7 @@ New public ID prefixes (checked against registry in `00-foundation/data-model.md
 | last_published_at | timestamptz | newest published entry |
 | latest_announced_at | timestamptz | newest published entry with `announce`; widget badge |
 | subscriber_count | integer not null default 0 | active subscribers, maintained in tx |
-| audience | jsonb not null default '{}' | reserved (segmentation later), always `{}` at MVP |
+| audience | jsonb not null default '{}' | reserved (18 shared audience type when adopted), always `{}` at MVP |
 Indexes: unique `(help_center_id)`, `(workspace_id)`.
 
 ### changelog_entries
@@ -767,7 +767,8 @@ None billable (`research/pricing.md` section 2, `12-cloud-billing/metering-rules
 | 12 | confirm not metered (replay fixture `changelog_reply_billing`); entitlement keys in cloud driver catalog |
 | 16 | calls `changelog.ImportEntry` (Featurebase, Productlane, Canny changelogs) |
 | 14 | `feedback.LinkChangelogEntry`, `feedback.ShippedRecipientContactIDs` (read), voter mail on `changelog_entry.published`, FK `feedback_posts.changelog_entry_id` (14 migration) |
-| 15-announcements-surveys | consumes `changelog.FindPublishedEntry` + widget entry route for CTA `open_changelog_entry`; segments (adopt later) |
+| 15-announcements-surveys | consumes `changelog.FindPublishedEntry` + widget entry route for CTA `open_changelog_entry` |
+| 18-audiences | `changelog.entry` surface, messenger tab `messenger.tab.changelog` (adopt later) |
 
 ## Required from other specs
 
@@ -867,7 +868,7 @@ Applied in 08 sweep (2026-11-02); listed for traceability. Column 1 lands via 13
 
 1. 13 provides (no 15 edit needed beyond reference): `changelog.FindPublishedEntry(ctx, workspaceID, entryID) (Entry, bool, error)` for CTA `open_changelog_entry` validation; widget route `GET /widget/v1/changelog/entries/{cle}`; SDK `show('changelog', {entry})` opens it.
 2. `spotlight` card stays inside Messenger; not counted by 15 throttle.
-3. Segments (`seg_`) available for entry/email audience later (`changelogs.audience` reserved).
+3. 18 audiences (`adn_`) available for entry and email audience later (`changelogs.audience` reserved).
 
 ### 16-importers
 

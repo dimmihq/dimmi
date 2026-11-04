@@ -161,7 +161,8 @@ Command names stay verbs (rest.md rule 15); REST is the contract. Every request 
 | `tokens create\|list\|revoke` | `POST /tokens`, `GET /tokens`, `DELETE /tokens/{tok}` (00-accounts) |
 | `changelog ...` | `GET/POST /changelog-entries`, `PATCH /changelog-entries/{cle}` (`status: published\|scheduled`), `POST /changelog-generations`, subscribers import/export (13 README map) |
 | `feedback ...` | `/feedback-posts`, `PATCH /feedback-posts/{fbp} {status_id}`, `POST /feedback-posts/{fbp}/requests`, `/feedback-imports` (14 README map) |
-| `announcements ...`, `surveys ...`, `segments ...` | `/announcements`, `/surveys`, `/segments`, `/segment-previews` (15-announcements-surveys README map) |
+| `announcements ...`, `surveys ...` | `/announcements`, `/surveys` (15-announcements-surveys README map) |
+| `audiences ...`, `attributes ...`, `events ...`, `audience explain` | `/audiences`, `/audience-previews`, `/audience-evaluations`, `/attribute-definitions`, `/event-definitions`, `/contact-events` (18) |
 | `articles publish SLUG\|art_` | `POST /articles/{art}/publications` (TTY confirm; `dimmi-cli` passes 08 `RequireHumanReview`) |
 | `docs suggestions [--source commit] [--accept-all sugb_]` | `GET /article-suggestions?filter[source_kind]=...`, batch `PATCH /article-suggestion-batches/{sugb} {status: "accepted"}` (TTY confirm) |
 | `docs sync runs` / `docs sync run --pr N\|--range A..B` | `GET /docs-sync-runs` / `POST /docs-sync-runs {trigger: manual}` (08 docs-sync.md 11) |
@@ -240,9 +241,9 @@ dimmi changelog subscribers import FILE.csv [--run] | export [--out FILE]
 
 `dimmi feedback posts list|show|create`, `dimmi feedback status <post> <status> [--note] [--no-notify]`, `dimmi feedback link <post> --conversation 1042 --quote "..."`, `dimmi feedback import posts.csv [--votes votes.csv] --board fbd_ [--map title=Title,...] [--run]` (multipart upload, dry run first prints errors, `--run` sends `PATCH /feedback-imports/{fbi} {status: running}`), `dimmi feedback suggestions [--accept fbsg_]`. Post refs: `fbp_` or number; status: `fbs_` or name. Status change with notify previews subscriber count, confirm like `publish`.
 
-### `dimmi announcements`, `surveys`, `segments` (15-announcements-surveys)
+### `dimmi announcements`, `surveys` (15-announcements-surveys); `dimmi audiences`, `attributes`, `events` (18)
 
-Command set in `15-announcements-surveys` README "CLI" (`announcements list|create|update|publish|pause|end`, `surveys list|create|results|responses`, `segments list|preview`). `--file` Markdown with front matter for announcement body. `publish` confirms (customer-visible) unless `--yes`. Claude Code skill mentions `dimmi announcements create --file`.
+Command set in `15-announcements-surveys` README "CLI" (`announcements list|create|update|publish|pause|end`, `surveys list|create|results|responses`). `audiences list|show|preview|test|export|apply`, `attributes list|define|archive|convert`, `events list|send`, `audience explain <ctc>`: 18 "CLI"; JSON files round-trip like 17. `--file` Markdown with front matter for announcement body. `publish` confirms (customer-visible) unless `--yes`. Claude Code skill mentions `dimmi announcements create --file`.
 
 ### `dimmi docs` and `dimmi github` (08)
 
@@ -380,6 +381,11 @@ Detection reads manifest files only (never executes project code). Ids and insta
 | `fastapi` | `fastapi` dep | script tag in template, router (raw PyJWT snippet) | app's user dependency, else stub |
 | `go` | `go.mod` | prints script tag + golang-jwt handler (no Go file patching) | user's session lookup |
 | `html` (fallback) | none matched | prints script tag (`data-app-id`, optional `data-identity-url`) | `data-identity-url` to user's endpoint (02 snippets) |
+| `react-native` | `react-native` dep (no `expo`) | `@dimmi/react-native`, provider in app root (20) | host app session |
+| `expo` | `expo` dep | `@dimmi/react-native` + config plugin (20) | host app session |
+| `ios` | `*.xcodeproj` or `Package.swift` | prints Swift package + setup (no project patching) | host app session |
+| `android` | `build.gradle*` with `com.android` | prints Gradle dep + setup (no project patching) | host app session |
+| `webview` | `--framework webview` only | prints hosted page URL (01 M11) | host app |
 | `proxy` | `--framework proxy` only | adds first-party proxy (`withDimmi({ tunnel: true })` or rewrite instructions) | unchanged |
 
 Not in list (Angular, SolidStart, Flask, Phoenix): detected as such, falls back to `html` mode with docs link; never partially patches.

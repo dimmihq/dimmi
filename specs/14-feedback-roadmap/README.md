@@ -81,7 +81,7 @@ Customers ask for things in chat, email, widget and portal. Every ask lands on o
 | Productboard, Frill, UserVoice importers | later: more-import-sources (16) |
 | Fold 14 CSV import into 16 framework | later: feedback-csv-unify |
 | Changelog itself (entries, widget News, subscriber email) | 13-changelog. 14 owns only shipped link + voter notify |
-| Custom post fields, segments (15-announcements-surveys `segments` reusable later), per-company private boards, multiple portals per brand, per-board host | later (extensibility #9 brands) |
+| Custom post fields, 18 audiences (surface `feedback.board`, adopt later with shared type), per-company private boards, multiple portals per brand, per-board host | later (extensibility #9 brands) |
 | Value/effort scoring, RICE, roadmap swimlanes by quarter | later |
 | Comment reactions, polls, anonymous posting and commenting | later (anonymous voting only) |
 | Translations of portal content | post-MVP: auto-translation |
@@ -133,7 +133,7 @@ All tables: `id uuid primary key default uuidv7()` unless stated, `workspace_id 
 | fbi_ | feedback_imports | pts_ | portal_sessions |
 | psi_ | portal_sign_ins | | |
 
-Checked against registry 2026-11-02 (incl. `org_`, `fac_`, `ent_`): no collision. Avoided 13 prefixes (`clg_`, `cle_`, `cll_`, `csub_`, `clm_`, `cls_`, `cgn_`) and 15-announcements-surveys prefixes (`seg_`, `ann_`, `svy_`, `svq_`, `svr_`, `erc_`, `eas_`). Token secret prefix `dmi_pts_` (portal session bearer, not an ID). No prefix: `feedback_settings` (singleton per workspace), `feedback_post_tag` (pivot), `feedback_contact_states` (keyed by contact), `feedback_post_embeddings` (keyed by post).
+Checked against registry 2026-11-02 (incl. `org_`, `fac_`, `ent_`): no collision. Avoided 13 prefixes (`clg_`, `cle_`, `cll_`, `csub_`, `clm_`, `cls_`, `cgn_`) and 15-announcements-surveys prefixes (`adn_` (18), `ann_`, `svy_`, `svq_`, `svr_`, `erc_`, `eas_`). Token secret prefix `dmi_pts_` (portal session bearer, not an ID). No prefix: `feedback_settings` (singleton per workspace), `feedback_post_tag` (pivot), `feedback_contact_states` (keyed by contact), `feedback_post_embeddings` (keyed by post).
 
 ### feedback_settings (one row per workspace)
 
@@ -992,7 +992,7 @@ None billable (`research/pricing.md` section 2). Verified against 12 `metering-r
 
 ### 01-messenger-widget
 12. Document `widget_settings.feedback_tab_enabled` (column added by 14 migration 001421); `PATCH /api/v1/widget-settings/{widget}` accepts it (requires portal settings row; works even when public portal disabled: widget tab independent of `portal_enabled`).
-13. Config response `features.feedback: {enabled, boards_count, roadmap}` and texts `feedback_tab_label` (max 24) in `models.WidgetTexts`.
+13. Config response `features.feedback: {enabled, boards_count, roadmap}` and `texts.feedback` (max 24) in `models.WidgetTexts`.
 14. Session resume/start response adds `feedback_unread_count` (int, from `feedback_notifications`, capped 99) when tab enabled.
 15. Widget route group mounts `/widget/v1/feedback/*` (controllers owned by 14, like 08 Help); app-only auth allowed for reads; CORS allowed request header `Dimmi-Feedback-Session`.
 16. Attachments: widget upload flow (`POST /widget/v1/attachments` + complete) usable for feedback post/comment images; 01 cleanup job (unattached 24 h) treats rows with `feedback_post_id`/`feedback_comment_id` as attached.

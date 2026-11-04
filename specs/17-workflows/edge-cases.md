@@ -16,7 +16,7 @@ Style: caveman. Each: case. Behavior. All decided.
 10. Same event delivered twice to the queued listener (River retry after commit failure). Unique `(workflow_id, trigger_event_id)` makes the second insert a no-op.
 11. Event on spam, trashed or imported conversation, or blocked contact. Never matched (filtered before candidates).
 12. Inbound auto-reply (OOO, bounce) on email. `substantive false`: no trigger, no resume of waiting input steps.
-13. Audience references a custom attribute absent on the contact. Missing-value rules from 15: every op false except `not_exists`, `neq`, `not_in`.
+13. Audience references a custom attribute absent on the contact. Missing-value rules from 18: every op false except `not_exists`, `neq`, `not_in`.
 14. Audience uses `company.*` and contact has no company. Company fields missing (rule 13); `contact.has_company` available.
 15. Channel list excludes Telegram; first message arrives on Telegram. Skipped `channel`; next workflow may match.
 16. Workflow schedule "during office hours"; event at 17:31 with hours ending 17:30. Skipped `schedule`. Evaluated at event time, not at run time.

@@ -39,7 +39,6 @@ Out (later, stable names):
 - `action-mcp-oauth`: OAuth to remote MCP servers (MCP authorization spec). Launch: bearer/header auth only.
 - `email-action-confirmations`: write actions on email ("reply YES"). Launch: writes widget only; email runs verified reads only.
 - `action-procedures`: multi-step SOPs, branching, wait-for-webhook (Fin Procedures).
-- `action-audiences`: offer action only to segment (plan, company).
 - `action-conditional-approval`: approval only above amount threshold. Launch: split into two actions (small refund with `maximum`, large refund with approval).
 - `action-sql-connector`: read-only SQL allowlist (Productlane). Launch: customer exposes HTTP endpoint.
 - Proactive actions (system-triggered), agent-assist actions for teammates, action analytics beyond counts (`reports`).
@@ -290,7 +289,7 @@ Dimmi headers on every request: `User-Agent: Dimmi-Actions/1 (+https://trydimmi.
 
 ### Eligibility (per run, before generate)
 
-Action offered as tool only if all:
+Action offered as tool only if all (includes `ai_actions.audience` jsonb, 18 inline audience, surface `dimmi.action`, `access` mode, evaluated every run, null = everyone; ships in 18 M7):
 - instance `ai.actions.enabled`, agent `actions_enabled`, answer model `Capabilities.Tools` true (else readiness warning `actions_need_tool_model`).
 - run kind `conversation` or `playground` (never `help_center`, `changelog`, `feedback`; never public 08 MCP).
 - action `published`, not trashed, version loaded; connection `active`, breaker closed.

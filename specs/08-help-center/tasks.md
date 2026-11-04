@@ -115,6 +115,7 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Test po
   - Tests: real 07 action with `llm.Fake()` scripted stream; rate limit 429; ai_unavailable (incl. 07 cap reached); no-JS path; retrieval scope asserted from stored `ai_runs` steps (`[public]`, `HelpCenterIDs`, `ExcludeSources`); Valkey stopped: day cap still enforced (E206).
 - [ ] Widget Help API (`/widget/v1/help/*`) + resources + widget_views. App-only auth (`app_id`, session optional), scoped to widget `help_center_id` (01).
   - Tests: agent_only 404; deep open target for `show('help', {article})` missing article 404 (E199); popular fallback; `app_id` required; anonymous (no session) 200 with public cache header; widget linked to A cannot read B article (404); unlinked or `help_tab_enabled=false` 404 `help_center_not_linked`; edge cases 5, 168.
+- [ ] Audience columns, read filter, SSO, knowledge filter: built in 18 M7 after this spec, not here. Here: `customdomains.Claimed` covers `widget_domains` once table exists (01 M14).
 - [ ] Contact eraser `EraseHelpCenterContactData` + `help_center_searches.contact_id` (widget session only).
   - Tests: widget search with session stores contact_id, public search null; erase deletes contact rows only, second run no-op; 03 registry test lists it; edge case 169.
 - [ ] `RebuildHelpCenterUrls` listener on 11 `system.app_url_changed`.

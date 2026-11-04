@@ -56,6 +56,16 @@ Host map cached in-process (L1; hostname -> help_center_id, primary host), TTL 6
 
 Public section providers (`helpcenter.PublicSectionProvider`, README HTTP API): routes mounted inside help center group after 08 routes, before redirect/404 fallback; host resolution, path mode and canonical rules identical (provider pages redirect to primary host like articles; `/api/*` never redirected).
 
+## Audiences (18 M7)
+
+Article and collection audience: `access` gate, verified values only. Rules binding in [18](../18-audiences/README.md) "Help center behaviour", "Help center identity".
+
+- Reader identity: widget session in Help tab; else `__Host-dimmi_hc` from SSO fragment, 02 surface `help_center`, `aud: dimmi-help`, needs `help_centers.login_url`.
+- Filter every output: HTML, `.md` twin, `Accept: text/markdown`, sitemap, `llms.txt`, `llms-full.txt`, search, suggestions, Ask AI, public MCP. Canary title grepped in anonymous response of every path.
+- Page cache `variant` gains hash of reader's allowed set. Public responses unchanged. Restricted responses `Cache-Control: private, no-store`; public cache never sees restricted content.
+- Unknown and restricted slug, anonymous: same 404. `login_url` set: same page with sign-in button, status 404. Signed in, no match: 404. Restricted branch does no extra rendering. `noindex`, old sitemap entry removed.
+- Collection with no visible article disappears for that reader. All restricted: home shows empty state.
+
 ## 4. Pages and SEO
 
 Per page `<head>`:
@@ -176,7 +186,7 @@ Not a conversation, never billable. Token cost to workspace provider, counted in
 
 `POST /help-centers/{hc}/domains {hostname}`. Mechanics below live in `framework/customdomain` (generic); claims, reserved names and authorization in `app/support/customdomains`:
 - Normalize: trim, lowercase, strip trailing dot, IDNA to A-label (UTS 46), max 253, at least one dot, no IP literal, no port, no wildcard.
-- Reject: base_domain or its subdomains (`domain_is_platform`), app host, `localhost`, public suffixes themselves (`co.uk`), hostname claimed by any `help_center_domains` row (`customdomains.Claimed`, `domain_taken`; if pending elsewhere > 7 days without ownership, stale claim deleted and new claim allowed).
+- Reject: base_domain or its subdomains (`domain_is_platform`), app host, `localhost`, public suffixes themselves (`co.uk`), hostname claimed by any `help_center_domains` or `widget_domains` row (`customdomains.Claimed`, `domain_taken`; if pending elsewhere > 7 days without ownership, stale claim deleted and new claim allowed).
 - Limit 1 per help center (config `help_center.domains.max_per_help_center`; 422 `domain_limit_reached`).
 - Response: DNS records to create:
 ```json

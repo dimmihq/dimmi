@@ -12,10 +12,9 @@ Style: caveman. Owner 17. Every trigger and step kind is a registry entry (`enum
   "trigger": "conversation.first_message",
   "trigger_settings": {},
   "channels": ["widget", "email"],
-  "audience": { "all": [
-    { "field": "contact.kind", "op": "eq", "value": "user" },
+  "audience": { "visitors": "identified", "rules": { "all": [
     { "field": "company.custom.plan", "op": "in", "value": ["enterprise"] }
-  ] },
+  ] } },
   "schedule": { "mode": "any" },
   "reentry": { "mode": "once_per_conversation" },
   "exclusive": false,
@@ -112,16 +111,18 @@ No audience, schedule or re-entry of its own (fields ignored, publish warning if
 
 ## 3. Conditions
 
-One language for workflow audience, branch paths and wait interrupts. Reuses 15 "Audience rule language" tree (`all` / `any`, max depth 3, max 30 leaves), operators and missing-value semantics exactly (Go evaluator `app/support/conditions` wraps `app/support/segments`; property test shares the 15 corpus). Adds `not` node (single child) and these fields:
+Rule language owned by 18: tree (`all`, `any`, `not`), limits, ops, missing-value semantics, parser, evaluator, explainer, builder. 17 builds no language. Audience gate: surface `workflow.audience`; branch and wait interrupt: surface `workflow.branch`; both `display` (18 decision 3), so lint `claimed_field` warns when a rule reads a claimed value. Saved audience leaf `audience` allowed, resolved at match time.
+
+This section is the list of registrations 17 adds to `enums.AudienceField` from `app/workflows` (evaluated `conversation`, Go only; preview replays recent conversations). Contact, company, tag, event, saved audience, session, visitor and page fields come from 18's catalog.
 
 | Field | Type | Ops | Available |
 |---|---|---|---|
-| contact.*, company.* | as 15 | as 15 | all triggers |
-| session.page_url, session.locale, session.country | string | eq, contains, starts_with, ends_with, in | opener |
+| contact.*, company.*, event.*, audience | 18 catalog | 18 | all triggers |
+| page.url, page.path, visitor.locale, session.country | 18 catalog (17 `session.page_url` is now `page.url`) | 18 | opener |
 | conversation.channel_type | enum registry | eq, neq, in, not_in | all except opener |
 | conversation.channel_connection_id, inbox_id | id | eq, in, not_in | same |
 | conversation.status | enum | eq, in | same |
-| conversation.priority | bool | is_true, is_false | same |
+| conversation.priority | list `none`, `low`, `medium`, `high`, `urgent` | eq, neq, in, not_in | same |
 | conversation.tags | tag ids | has, has_any, has_none | same |
 | conversation.assignee_id, team_id | id or null | eq, neq, in, exists, not_exists | same |
 | conversation.ai_state | enum | eq, in | same |
@@ -145,7 +146,7 @@ One language for workflow audience, branch paths and wait interrupts. Reuses 15 
 | run.vars.<key> | by JSON type | as custom attributes | branch, wait interrupt (not audience) |
 
 - No regex (ReDoS, explainability). Keyword lists cover the need; AI classify covers fuzzy intent.
-- Unknown field for trigger: publish error `field_unavailable_for_trigger`.
+- Field outside surface: 18 error `field_unavailable_for_surface`. Field outside trigger: publish error `field_unavailable_for_trigger` (17 validator).
 - Referenced tag, team, member, schedule deleted: condition evaluates false, workflow resource `warnings` lists it, 06 notifies admins once.
 
 ## 4. Steps
@@ -168,8 +169,8 @@ Answer: widget click posts a contact message with the label as body and `workflo
 
 #### collect: Collect data (blue)
 
-Settings: `text` (question), `field` (`contact.email`, `contact.name`, `contact.phone`, `contact.custom.<key>`, `run.vars.<key>`), `type` (`text`, `email`, `phone`, `number`, `choice` with options, `yes_no`), `skip_if_known` (default true: field already has a value, step outcome `already_known`, no question), `invalid_text`, `max_attempts` (1 to 3, default 2), `timeout`, `allow_skip` (widget "Skip" chip).
-Behaviour: asks, waits for next contact message (debounced `workflows.input_debounce`), validates (email RFC 5322 light + MX not checked, phone E.164 via 02 helper, number parse, choice match like buttons). Valid: writes field (contact attribute writes via 03 `UpdateContact`, actor system via workflow; email never marked verified; never merges), outcome `collected`. Invalid after `max_attempts`: outcome `invalid_answer`, value stored nowhere. Paths: fixed `collected` (implicit continue), `invalid` (optional), `timeout` (optional). When path absent the step continues down the main line.
+Settings: `text` (question), `field` (`contact.email`, `contact.name`, `contact.phone`, `contact.custom.<key>` (18 definition must have `client_writable = true`, else publish error `collect_target_not_writable`), `run.vars.<key>`), `type` (`text`, `email`, `phone`, `number`, `choice` with options, `yes_no`), `skip_if_known` (default true: field already has a value, step outcome `already_known`, no question), `invalid_text`, `max_attempts` (1 to 3, default 2), `timeout`, `allow_skip` (widget "Skip" chip).
+Behaviour: asks, waits for next contact message (debounced `workflows.input_debounce`), validates (email RFC 5322 light + MX not checked, phone E.164 via 02 helper, number parse, choice match like buttons). Valid: writes field (contact attribute writes via 03 `UpdateContact`, actor system via workflow; email never marked verified; never merges; customer answer is claimed: custom key never joins `trusted_attribute_keys`, never passes `access` gate; `client_writable` off since publish: value dropped, 18 problem row), outcome `collected`. Invalid after `max_attempts`: outcome `invalid_answer`, value stored nowhere. Paths: fixed `collected` (implicit continue), `invalid` (optional), `timeout` (optional). When path absent the step continues down the main line.
 Widget renders typed inputs (email keyboard, number) from `metadata.workflow.input`.
 
 #### reply_time: Show reply time (blue)
@@ -221,7 +222,7 @@ Settings: `workflow_id` (must be a `reusable` workflow, live at publish time of 
 | `unassign` | `what`: `member`, `team`, `both` | 03 `AssignConversation` with nulls | none needed |
 | `tag` | `tag_ids` (1 to 20) | 03 apply tags; outcome `tagged` (count added) | deleted tag skipped, `warnings` |
 | `untag` | `tag_ids` | remove | same |
-| `priority` | `value` bool (default true) | 03 `UpdateConversation` priority (core column is boolean; 5 levels later with ticket fields) | none |
+| `priority` | `value` level `none`, `low`, `medium`, `high`, `urgent` (default `high`) | 03 `UpdateConversation` priority | none |
 | `note` | `text` (variables incl. `{{dimmi.summary}}`, `{{run.vars.*}}`), `mention_member_ids`, `mention_team_ids` | 03 note, `author_type system`, mentions notify (06) | none |
 | `update_contact` | `set`: list of `{field: contact.custom.<key> or contact.name or contact.phone, value}` (literal or variable), max 10 | 03 `UpdateContact` (actor system via workflow); never `email` or `external_id` (identity) | invalid value: skip that field, trace |
 | `snooze` | `for` duration or `until` `office_hours_open` | 03 snooze (actor workflow); waking by customer message as usual | closed conversation: skip `not_open` |

@@ -119,4 +119,3 @@ Style: caveman. Each: case. Decided behavior. Scope trim 2026-11-02: listen-sess
 89. `ai.action_connection_failed` repeats (customer API down 6 h). 07 emits at most once per 24 h per connection (07 rule); 10 delivers each emitted event, no own dedupe.
 90. `docs_sync_run.completed` for private repo. Payload carries repo full name, PR number, counts, review URL; never diff text or file contents.
 91. Contact erased while `ai.action_call_approval_requested` delivery pending. `EraseWebhookContactData` cancels pending deliveries and purges stored payloads (same rule as E85).
-

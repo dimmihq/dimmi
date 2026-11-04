@@ -302,7 +302,7 @@ Columns in owning file. Track numbers per [tasks.md](tasks.md).
 | conversation_drafts | `drf_` | workbench.md |
 | bulk_operations | `blk_` | workbench.md |
 | contact_tag, company_tag | none | records.md |
-| attribute_definitions | `atd_` | records.md |
+| conversation_attribute_definitions | `cad_` | records.md |
 | redaction_rules | `rxr_` | safety.md |
 | contact_erasures | `ces_` | safety.md |
 | data_exports | `dex_` | safety.md |
@@ -421,7 +421,7 @@ Laravel-style paths. Tests listed per milestone in tasks.md.
 
 `assignment/`: `pick_assignee.go`, `assign_on_arrival.go`, `drain_assignment_queue.go`, `set_member_availability.go`, `assignment_status.go`, `auto_away_members.go` (track 12); [assignment.md](assignment.md).
 
-`conversation_views/`, `inbox_preferences/`, `snooze_lists/`, `drafts/`, `bulk_operations/`, `reactions/`, `side_conversations/`, `translations/`, `attribute_definitions/`, `redaction/`, `data_exports/`, `export_schedules/`, `erasures/`: one action per file, per owning spec file; `restore_conversation.go`, `resolve_snooze_option.go`, `undo_reply.go`, `set_conversation_access.go` under `conversations/` and `workspaces/` respectively.
+`conversation_views/`, `inbox_preferences/`, `snooze_lists/`, `drafts/`, `bulk_operations/`, `reactions/`, `side_conversations/`, `translations/`, `conversation_attribute_definitions/`, `redaction/`, `data_exports/`, `export_schedules/`, `erasures/`: one action per file, per owning spec file; `restore_conversation.go`, `resolve_snooze_option.go`, `undo_reply.go`, `set_conversation_access.go` under `conversations/` and `workspaces/` respectively.
 
 `attachments/`: `store_upload.go`, `link_attachments.go` (targets `message`, `feedback_post`, `feedback_comment` (14; caller passes ownership, limits and image-only check); ownership + limits + channel capability check for messages; rejects `uploaded_at IS NULL` rows, 01 core change), `sign_attachment_url.go`, `purge_orphan_attachments.go` (attached = `message_id` or `feedback_post_id` or `feedback_comment_id` set), `scan_attachment.go`. Same package hosts 01-owned `create_pending_upload.go`, `complete_upload.go` (presigned/direct widget uploads); both end by queuing `ScanAttachment`.
 
@@ -527,7 +527,7 @@ No CLI commands owned (09 generates CLI from OpenAPI).
 
 Payload additions (all events): `client_mutation_id` (from request header `Dimmi-Client-Mutation-Id`, max 64 chars, echoed into broadcast `meta`), `actor`.
 
-`contact.updated` and `company.updated` carry `changes: {field: [from, to]}` plus `changed_attribute_keys []string` (custom attribute keys added, changed or removed in this write; 14 revenue recompute and 15 segments filter on it without diffing).
+`contact.updated` and `company.updated` carry `changes: {field: [from, to]}` plus `changed_attribute_keys []string` (custom attribute keys added, changed or removed in this write; 14 revenue recompute and 18 dependency filter read it without diffing).
 
 `message.created` struct fields billing (12), notifications (06), agent (07), outbound need, so no re-query storm:
 ```go
@@ -591,7 +591,7 @@ Dispatch phases (contracts.md "Event dispatch phases"): `message.created` and `c
 | message.reactions_changed | yes (`conversation:{conv}`) | no | collaboration.md |
 | attachment.scanned | yes (`conversation:{conv}`) | no | safety.md |
 | data_export.ready | yes (`member:{mem}`) | no | safety.md |
-| attribute_definition.created / updated / deleted | yes (`workspace:{ws}`) | yes | records.md |
+| conversation_attribute_definition.created / updated / deleted | yes (`workspace:{ws}`) | yes | records.md |
 | side_conversation.created / updated, side_message.created | yes (`conversation:{conv}`) | no | collaboration.md |
 
 Conversation list events move to new channel `workspace_conversations:{ws}` plus per-member copies ([access.md](access.md) Realtime).
@@ -687,7 +687,7 @@ Implemented as permissions (`00-foundation/extensibility.md` section 4, P2). Pol
 | `conversations:side` | conversations:write | owner, admin, member | side conversations |
 | `conversations:export` | conversations:read | owner, admin | `POST /data-exports` conversations |
 | `contacts:export` | contacts:read | owner, admin | `POST /data-exports` contacts |
-| `attributes:manage` | settings:write | owner, admin | attribute definitions |
+| `attributes:manage` | attributes:write | owner, admin | conversation attribute definitions here; contact and company definitions in 18 |
 | `redaction:manage` | settings:write | owner, admin | redaction rules and tests |
 
 | Action | Owner | Admin | Member | Permission (token ability group) |
@@ -720,7 +720,7 @@ Implemented as permissions (`00-foundation/extensibility.md` section 4, P2). Pol
 | Set others' away status, capacity | yes | yes | no | `members:manage_availability` |
 | Side conversations | yes | yes | yes | `conversations:side` |
 | Export conversations or contacts | yes | yes | no | `conversations:export`, `contacts:export` |
-| Redaction, attributes, attachment policy, retention, link safety | yes | yes | no | `redaction:manage`, `attributes:manage`, settings:write |
+| Redaction, attributes, attachment policy, retention, link safety | yes | yes | no | `redaction:manage`, `attributes:manage`, settings:write, attributes:write |
 | Subscribe `conversation:{conv}` (incl. presence) | yes | yes | yes | session or token; `VisibleScope` contains conversation |
 
 Deactivated member: no access (00-accounts disconnects realtime connections). Agent actor (07) uses its own internal actor, not tokens; allowed: reply, note, assign to human/team, close (if 07 policy allows), tag.
@@ -822,7 +822,8 @@ Traces: span per action, per adapter `Send`, per search phase.
 | 10-webhooks | catalog webhook fan-out, `include_notes` opt-in | resources |
 | 13-changelog | eraser + optional export hook | none |
 | 14-feedback-roadmap | eraser + export hook, `feedback.RequestsForConversation` query | `ResolveInboundContact` verified-claim takeover, `LinkAttachments` feedback targets, orphan purge rule, `include=feedback_requests`, `changed_attribute_keys` |
-| 15-announcements-surveys | eraser + export hook, segment compiler (`filter[segment]`), latest CSAT query | `SendSystemMessage`, `announcement.replied` event row, `source.announcement_id`, `include=csat`, `filter[segment]` on contacts |
+| 15-announcements-surveys | eraser + export hook, latest CSAT query | `SendSystemMessage`, `announcement.replied` event row, `source.announcement_id`, `include=csat` |
+| 18-audiences | SQL compiler for `filter[audience]`, new contact columns, `contact_event_summaries`, 18 `attribute_definitions` labels | `contact_tag`, `company_tag`, `changed_attribute_keys`, eraser hook, merge event, `include=event_summaries`, `filter[audience]` on contacts and companies |
 | 16-importers | `import` channel driver implementing `ChannelRehomer`; calls import write helpers | `conversations/importing` helpers, `imported` resource block, filters `filter[imported]`/`filter[import_id]`, search `imported:`, unread rule, outbound/auto-assign skip |
 | 17-workflows | calls `assignment.PickAssignee`, `AssignOnArrival` on run end; adds claim check in `AssignOnArrival` | one picker, cursor table, no round robin inside engine |
 | 12-cloud-billing | InTx listener `MeterMessageActivity` on `message.created` (reply/create gate, `ErrActivationBlocked` -> 423), InTx `GuardOutboundFairUse` on `conversation.created`, queued `ApplyBillingCredits` | event fields per Metering table, `initiated_by`, `conversation.merged`, 423 mapping with `billing` block |

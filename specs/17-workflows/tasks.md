@@ -1,17 +1,17 @@
 # 17 Workflows: tasks
 
-Style: caveman. Ordered. Each about 1 day, merged with tests. Business logic integration-tested only (`tests.New(t)`: real Postgres, Valkey, River, fake clock `tc.Clock`), tests named in plain words, every edge case covered. LLM steps use the 07 `fake` driver only; nothing here calls a real model. Requires 03 core, 07 core (pipeline, handoff, `RunTask`), 15 segments evaluator, 01 widget messages. Each milestone ends green on `make lint test`.
+Style: caveman. Ordered. Each about 1 day, merged with tests. Business logic integration-tested only (`tests.New(t)`: real Postgres, Valkey, River, fake clock `tc.Clock`), tests named in plain words, every edge case covered. LLM steps use the 07 `fake` driver only; nothing here calls a real model. Requires 03 core, 07 core (pipeline, handoff, `RunTask`), 18 M1 to M4 (language, evaluator, builder; 17 starts after them), 01 widget messages. Each milestone ends green on `make lint test`.
 
 ## M1: Definitions, versions, schedules
 
-- [ ] Migrations `001701`..`001712`, sqlc queries, factories (`WorkflowFactory` with spec builder, `ScheduleFactory`, `SlaPolicyFactory`), prefixes `wf_ wfv_ wfr_ sch_ sla_`, permissions and ability groups, entitlement keys, queue `workflows`.
+- [ ] Migrations `001701`..`001713` (`001710` not used), sqlc queries, factories (`WorkflowFactory` with spec builder, `ScheduleFactory`, `SlaPolicyFactory`), prefixes `wf_ wfv_ wfr_ sch_ sla_`, permissions and ability groups, entitlement keys, queue `workflows`.
   - Accept: migrate up/down; tenant lint; RLS test (workspace B cannot read A's workflows, runs, schedules); prefix registry test.
 - [ ] `models.WorkflowSpec` + `app/support/workflowspec` parse, canonical JSON, hash, id assignment, kind computation, compile (index, parents, references).
   - Accept: round-trip test (parse, canonicalize, hash stable across key order); kind matrix per step kind; every template in `resources/workflows/templates` parses.
 - [ ] Validator: per trigger allowed steps, opener shape, fields per trigger, variables, references, limits, warnings (catalog.md section 6).
   - Accept: one subtest per error and warning code; edge cases 75, 78 (self-call), 85, 112.
-- [ ] `app/support/conditions` (extends segments): new fields, `not`, `contains_any`, `has_*`, office hours, run vars.
-  - Accept: shares the 15 property corpus (Go evaluator semantics unchanged for contact/company fields); missing-value cases 13, 14.
+- [ ] Register 17 fields into `app/support/audience` (conversation, message, trigger, dimmi, office hours, run vars); surfaces `workflow.audience`, `workflow.branch`; `audience_references` written on publish.
+  - Accept: 18 parser and evaluator used, no second parser (`tests/arch`); missing-value cases 13, 14; `collect` on non-writable key refused at publish; explainer returns per-leaf result.
 - [ ] Workflow CRUD API, reorder, archive/unarchive, draft save with `lock_version`, `workflow.created/updated/deleted` events, audit.
   - Accept: feature tests: create from trigger, template, duplicate; 409 `edit_conflict` (79); 422 `trigger_immutable` (85); 403 member (108); reorder `order_stale`; realtime event received by subscribed member client.
 - [ ] Publish, versions, diff, pause/resume, rollback, `nothing_to_publish`, `draft_changed`, `workflow_in_use`, entitlement `max_live`.
@@ -112,7 +112,7 @@ Style: caveman. Ordered. Each about 1 day, merged with tests. Business logic int
 
 - [ ] Replace local data with TanStack Query over the API; typed settings from `GET /workflow-triggers` and the spec; autosave with `lock_version`, conflict dialog; publish dialog with errors and warnings; version history with diff and rollback.
   - Accept: unit tests for spec <-> canvas mapping (existing `flow-layout`, `edit-steps` tests extended); Biome clean; e2e: create from template, edit, publish, pause, roll back (light and dark).
-- [ ] Trigger picker and inspector changes from README "Prototype: keep and change" (new triggers, removed page trigger, rule builder, schedule, re-entry, exclusive, new step kinds, typed path and timeout paths, dimmi outcomes).
+- [ ] Trigger picker and inspector changes from README "Prototype: keep and change" (new triggers, removed page trigger, shared 18 builder in place of presets, schedule, re-entry, exclusive, new step kinds, typed path and timeout paths, dimmi outcomes).
   - Accept: e2e builds the `dimmi_first` template by hand and publishes it.
 - [ ] Copy and paste of steps and paths (clipboard JSON with fresh ids), per-step stats overlay, Runs tab with trace, Simulate panel, editor presence.
   - Accept: e2e copy a path between workflows; simulate shows rendered email and widget variants.

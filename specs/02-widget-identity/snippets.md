@@ -36,7 +36,7 @@ JS helpers take user object, never claims. Raw snippets write claims directly (C
 | `phone`, `phoneVerified` | `phone`, `phone_verified` | E.164 |
 | `avatarUrl` | `avatar_url` | https only |
 | `locale`, `timezone` | same | |
-| `signedUpAt` | `custom_attributes.signed_up_at` (unix seconds) | Date, epoch seconds or ISO; 15 segments read it |
+| `signedUpAt` | `custom_attributes.signed_up_at` (unix seconds) | Date, epoch seconds or ISO; 18 rule fields read it |
 | `company: { id, name, domain, attributes }` | `company {id, name, domain, custom_attributes}` | `id` required inside |
 | `attributes` | `custom_attributes` | keys `[a-z0-9_]{1,64}`, max 100, flat scalars, `null` deletes key |
 
@@ -375,7 +375,7 @@ Laravel: same claims inside `Route::get('/api/dimmi/token', ...)` in `routes/web
 
 ## Feedback portal SSO links (14)
 
-Portal (`https://{portal}/feedback`) signs users in with same identity secret. Token in URL fragment, never query: `https://{portal}/feedback/sso#token=<jwt>&return_to=/feedback/posts/12`. Portal tokens: `aud: "dimmi-portal"`, `exp = iat + 300`, random `nonce` (single use, 02 step 11).
+Portal (`https://{portal}/feedback`) signs users in with same identity secret. Token in URL fragment, never query: `https://{portal}/feedback/sso#token=<jwt>&return_to=/feedback/posts/12`. Help center tokens (18): same mint and fragment, `aud: "dimmi-help"`, `{help_host}/sso#token=<jwt>`, from customer route at `help_centers.login_url`. Portal tokens: `aud: "dimmi-portal"`, `exp = iat + 300`, random `nonce` (single use, 02 step 11).
 
 Links in app pages never embed token (rule above). Link to host route that mints on click:
 
@@ -431,4 +431,4 @@ All send `sdk.name` via script tag attribute `data-sdk`. All licensed MIT. Names
 | Endpoint redirects guests to login (Devise `authenticate_user!`, Laravel `auth`, Django `login_required`) | browser `identity_endpoint_invalid` | return `{"token": null}` |
 | `email_verified: true` for every user | silent account takeover risk via email merge (R3) | set only from provider's verified flag |
 | Secret in client bundle | not detectable server side; helpers and `withDimmi` refuse public env names (`identity_secret_public`); `npx dimmi init` refuses `NEXT_PUBLIC_`/`VITE_` names | rotate secret now |
-| `signed_up_at` as non-date string | warning `claim_signed_up_at_invalid` (15 segments ignore it) | Date, epoch seconds or ISO 8601 |
+| `signed_up_at` as non-date string | warning `claim_signed_up_at_invalid` (18 rules ignore it) | Date, epoch seconds or ISO 8601 |

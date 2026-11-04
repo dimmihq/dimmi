@@ -17,7 +17,7 @@ Route lint: no verbs. Publish = `PATCH {status: "live"}`. Pause = `{status: "pau
     "survey_cooldown_days": 14,
     "quiet_while_messenger_open": true,
     "live_summary": { "active": true, "anonymous": false, "next_transition_at": "2026-11-05T09:00:00Z" },
-    "limits": { "live_announcements": { "used": 3, "max": 50 }, "live_surveys": { "used": 2, "max": 20 }, "segments": { "used": 7, "max": 200 } },
+    "limits": { "live_announcements": { "used": 3, "max": 50 }, "live_surveys": { "used": 2, "max": 20 } },
     "version": 42,
     "updated_at": "2026-11-02T08:00:00Z"
   }
@@ -26,81 +26,9 @@ Route lint: no verbs. Publish = `PATCH {status: "live"}`. Pause = `{status: "pau
 
 `PATCH /api/v1/engage-settings` (`engage-settings.update`, engage:write, admin): any of the four writable fields. Bumps version. Audit.
 
-## 2. Segments
+## 2. Audiences
 
-| Method | Path | Name | Ability |
-|---|---|---|---|
-| GET | /segments | segments.index | engage:read |
-| POST | /segments | segments.store | engage:write |
-| GET | /segments/{seg} | segments.show | engage:read |
-| PATCH | /segments/{seg} | segments.update | engage:write |
-| DELETE | /segments/{seg} | segments.destroy | engage:write |
-| GET | /segments/{seg}/contacts | segments.contacts.index | engage:read + contacts:read |
-| POST | /segment-previews | segment-previews.store | engage:read |
-
-Filters `GET /segments`: `q` (name), `filter[used]=true` (referenced by live/paused item). Sort `name`, `-updated_at` (default).
-
-`POST /api/v1/segments`:
-
-```json
-{
-  "name": "Pro users, active 30d",
-  "description": "NPS audience",
-  "rules": { "all": [
-    { "field": "contact.kind", "op": "eq", "value": "user" },
-    { "field": "contact.custom.plan", "op": "in", "value": ["pro", "team"] },
-    { "field": "contact.last_seen_at", "op": "within_last_days", "value": 30 }
-  ] }
-}
-```
-
-201:
-
-```json
-{
-  "data": {
-    "id": "seg_01jbx4...",
-    "object": "segment",
-    "name": "Pro users, active 30d",
-    "description": "NPS audience",
-    "rules": { "all": [ "..." ] },
-    "rules_schema": 1,
-    "used_by": [ { "id": "svy_01jb...", "object": "survey", "name": "Quarterly NPS", "status": "live" } ],
-    "last_estimate": null,
-    "created_at": "2026-11-02T09:00:00Z",
-    "updated_at": "2026-11-02T09:00:00Z"
-  }
-}
-```
-
-Validation errors (422) point at JSON path: `errors["rules.all.1.op"] = ["Operator in requires an array value."]`. Codes: `unknown_field`, `invalid_operator`, `too_many_conditions` (over 30), `too_deep` (over 3), `invalid_value`.
-
-`PATCH` with `rules` on segment used by live items: allowed, applies immediately, bumps engage version; response `meta.affected_items` lists them.
-
-`DELETE` used by live/paused item: 409 `segment_in_use` with `items`. Used only by draft/ended/archived: allowed; those items keep `segment_id` reference shown as `deleted_segment: true`; publishing them 422 `segment_deleted`.
-
-`POST /api/v1/segment-previews` (rest.md rule 11, computed, 201, nothing stored except `last_estimate` when `segment_id` given):
-
-```json
-{ "segment_id": "seg_01jbx4...", "rules": null, "visitors": "identified", "sample": 10 }
-```
-
-```json
-{
-  "data": {
-    "object": "segment_preview",
-    "count": 18234,
-    "approximate": false,
-    "total_contacts": 1002311,
-    "sample": [ { "id": "ctc_01jb...", "object": "contact", "name": "Ada", "email": "ada@acme.com", "last_seen_at": "2026-11-01T19:00:00Z" } ],
-    "computed_in_ms": 412
-  }
-}
-```
-
-Exact count over `engage.segment_preview_timeout` (3 s): falls back to sampled estimate (`approximate: true`, count rounded to 2 significant digits). `sample` omitted when caller lacks `contacts:read` (tokens) or for MCP. Anonymous visitors without session never counted (no rows); response `meta.note = "anonymous visitors not counted"` when `visitors` includes them.
-
-`GET /segments/{seg}/contacts`: cursor on `(last_seen_at desc, id)`, `limit` max 100. Statement timeout 5 s: 422 `segment_too_slow` with hint "Add a more selective condition (e.g. kind or plan)."
+Moved to 18: `/api/v1/audiences`, `/audiences/{adn}/contacts`, `/audiences/{adn}/references`, `/audience-previews`, `/audience-evaluations`, `/audience-lints`, abilities `audiences:read`, `audiences:write`. Item `audience` and `trigger.page` take 18's JSON. `PATCH` of saved audience used by live items: applies at once, bumps engage version through `audience_references`, response `meta.affected_items` lists them. `DELETE` used by live or paused item: 409 `audience_in_use`. Used only by draft, ended or archived item: allowed; publishing that draft is blocked with `missing_reference`.
 
 ## 3. Engage assets
 
@@ -127,7 +55,7 @@ Exact count over `engage.segment_preview_timeout` (3 s): falls back to sampled e
 | GET | /announcements/{ann}/stats | announcements.stats.show | engage:read |
 | GET | /announcements/{ann}/receipts | announcements.receipts.index | engage:read + contacts:read |
 
-`GET /announcements` filters: `filter[status]=live,paused`, `filter[format]=banner`, `filter[segment]=seg_`, `filter[trashed]=with|only`, `q` (name, title). Sort `-updated_at` (default), `-published_at`, `priority`. Collection rows include `stats_summary {impressions, unique_viewers, clicks, dismissals}` (from daily table, totals cached 60 s).
+`GET /announcements` filters: `filter[status]=live,paused`, `filter[format]=banner`, `filter[audience]=adn_` (items referencing that saved audience), `filter[trashed]=with|only`, `q` (name, title). Sort `-updated_at` (default), `-published_at`, `priority`. Collection rows include `stats_summary {impressions, unique_viewers, clicks, dismissals}` (from daily table, totals cached 60 s).
 
 `POST /api/v1/announcements`:
 
@@ -147,8 +75,8 @@ Exact count over `engage.segment_preview_timeout` (3 s): falls back to sampled e
     "modal": { "size": "small" }
   },
   "translations": { "de": { "title": "Dark Mode ist da", "body_markdown": "Unter **Einstellungen > Darstellung**.", "ctas": [ { "id": "try", "label": "Ausprobieren" } ] } },
-  "audience": { "visitors": "identified", "segment_id": "seg_01jbx4...", "rules": { "all": [ { "field": "contact.custom.signed_up_at", "op": "before", "value": "2026-10-01T00:00:00Z" } ] } },
-  "trigger": { "on": "page_view", "url_rules": [ { "op": "starts_with", "value": "/dashboard" } ], "url_match": "any", "delay_seconds": 3, "device": "any" },
+  "audience": { "visitors": "identified", "rules": { "all": [ { "field": "audience", "op": "in", "value": ["adn_01jbx4..."] }, { "field": "contact.custom.signed_up_at", "op": "before", "value": "2026-10-01T00:00:00Z" } ] } },
+  "trigger": { "on": "page_view", "page": { "all": [ { "field": "page.path", "op": "starts_with", "value": "/dashboard" } ] }, "delay_seconds": 3 },
   "frequency": { "mode": "once" },
   "starts_at": null,
   "ends_at": "2026-11-30T23:59:59+01:00",
@@ -207,7 +135,7 @@ archived -> draft        (admin)
 
 Illegal: 422 `invalid_transition` `{from, to}`. `is_running` = `status = live` and now in `[starts_at, ends_at)` and workspace not suspended.
 
-Publish validation (422 `publish_blocked` with `errors` keyed by path): title/body present per format, cover alt (`missing_alt`), CTA targets valid (`article_not_published`, `survey_not_live`, `changelog_entry_not_published`, `invalid_url`), `sender_member_id` active member (chat), segment exists, rules valid, live cap (`entitlement_limit_reached` with `key`, `limit`; returned as its own 422, not inside `publish_blocked`), `ends_at` future, translation locales valid. Warnings (non-blocking): `low_contrast`, `long_title`, `no_url_rules_on_modal` (modal on every page), `audience_everyone_interruptive` (modal to everyone incl. anonymous).
+Publish validation (422 `publish_blocked` with `errors` keyed by path): title/body present per format, cover alt (`missing_alt`), CTA targets valid (`article_not_published`, `survey_not_live`, `changelog_entry_not_published`, `invalid_url`), `sender_member_id` active member (chat), rules valid (18 errors; `attribute_not_client_writable` on survey write-back; `missing_reference`), live cap (`entitlement_limit_reached` with `key`, `limit`; returned as its own 422, not inside `publish_blocked`), `ends_at` future, translation locales valid. Warnings (non-blocking): `low_contrast`, `long_title`, `no_page_rule_on_modal` (modal on every page), `audience_everyone_interruptive` (modal to everyone incl. anonymous).
 
 Editing live: allowed for content, translations, audience, trigger, frequency, schedule, priority. `format` never after first publish (422 `format_locked`). Changes to content or audience bump `revision`; `meta.reshow` optional boolean on PATCH: `true` resets receipts for `once` items (clears `next_eligible_at`, increments cycle) so everyone sees updated version (admin only, audit). Default false.
 
@@ -286,8 +214,8 @@ Rates use `unique_viewers` (session contacts) denominator; anonymous counted sep
   "name": "Quarterly NPS",
   "template": "nps",
   "display": "popover",
-  "audience": { "visitors": "identified", "segment_id": "seg_01jbx4..." },
-  "trigger": { "on": "page_view", "url_rules": [ { "op": "starts_with", "value": "/dashboard" } ], "delay_seconds": 20 },
+  "audience": { "visitors": "identified", "rules": { "all": [ { "field": "audience", "op": "in", "value": ["adn_01jbx4..."] } ] } },
+  "trigger": { "on": "page_view", "page": { "all": [ { "field": "page.path", "op": "starts_with", "value": "/dashboard" } ] }, "delay_seconds": 20 },
   "frequency": { "mode": "recurring", "recur_days": 90 },
   "settings": { "dismissible": true }
 }
@@ -335,7 +263,7 @@ Inline `ref` (client temp ids, `[a-z0-9_]{1,24}`) let branching reference questi
     "thank_you": { "title": "Thanks!", "body_markdown": "We read every answer." },
     "settings": { "dismissible": true, "show_progress": true, "accent_color": null },
     "audience": { "visitors": "everyone" },
-    "trigger": { "on": "track_event", "event_name": "export_completed", "delay_seconds": 2, "url_rules": [], "device": "any" },
+    "trigger": { "on": "track_event", "event_name": "export_completed", "delay_seconds": 2, "page": null },
     "frequency": { "mode": "once" },
     "csat": null,
     "counts": { "requested": 0, "started": 0, "completed": 0 },
@@ -425,7 +353,7 @@ CSV: `GET /surveys/{svy}/responses?format=csv` (or `Accept: text/csv`): streamed
 
 ### Results
 
-`GET /surveys/{svy}/results?filter[from]=&filter[to]=&filter[locale]=&filter[source]=&filter[ai_involved]=&filter[segment]=seg_&filter[include_test]=false`
+`GET /surveys/{svy}/results?filter[from]=&filter[to]=&filter[locale]=&filter[source]=&filter[ai_involved]=&filter[audience]=adn_&filter[include_test]=false`
 
 ```json
 {
@@ -448,7 +376,7 @@ CSV: `GET /surveys/{svy}/responses?format=csv` (or `Accept: text/csv`): streamed
 }
 ```
 
-Default excludes test responses and CSAT responses of conversations now spam or contacts now blocked (`filter[include_spam]=true` to include). Headline per kind: `nps` (score -100..100, promoters 9-10, passives 7-8, detractors 0-6), `csat` (percent of 4-5 on 5-scale or 3 on 3-scale; plus average), `ces` (average on 1..7), `custom` (first scored question average or null). `confidence_95` only when 30+ responses. `trend` bucket `week` default (`?bucket=day|week|month`). `filter[segment]` evaluates segment on current contact attributes (documented: not attributes at response time); responses without contact excluded with `meta.excluded_no_contact`.
+Default excludes test responses and CSAT responses of conversations now spam or contacts now blocked (`filter[include_spam]=true` to include). Headline per kind: `nps` (score -100..100, promoters 9-10, passives 7-8, detractors 0-6), `csat` (percent of 4-5 on 5-scale or 3 on 3-scale; plus average), `ces` (average on 1..7), `custom` (first scored question average or null). `confidence_95` only when 30+ responses. `trend` bucket `week` default (`?bucket=day|week|month`). `filter[audience]` evaluates audience on current contact attributes (documented: not attributes at response time); responses without contact excluded with `meta.excluded_no_contact`.
 
 ### Conversation and contact views
 
@@ -485,7 +413,8 @@ Query: `locale` (BCP 47, optional). Headers: `If-None-Match`. `Cache-Control: pu
         "ctas": [],
         "banner": { "position": "top", "style": "inline", "dismissible": true, "tone": "critical" }
       },
-      "trigger": { "on": "page_view", "url_rules": [], "url_match": "any", "delay_seconds": 0, "device": "any", "event_name": null },
+      "trigger": { "on": "page_view", "delay_seconds": 0, "event_name": null },
+      "residual": null,
       "frequency": { "mode": "until_engaged", "max_impressions": 20, "min_hours_between": 0 },
       "ends_at": "2026-11-02T18:00:00Z"
     }
@@ -520,7 +449,8 @@ Same item shape plus `state`:
     "thank_you": { "title": "Thanks, Ada!", "body_html": "<p>We read every answer.</p>", "cta": null },
     "settings": { "dismissible": true, "show_progress": true }
   },
-  "trigger": { "on": "page_view", "url_rules": [ { "op": "starts_with", "value": "/dashboard" } ], "url_match": "any", "delay_seconds": 20, "device": "any" },
+  "trigger": { "on": "page_view", "delay_seconds": 20, "event_name": null },
+  "residual": { "all": [ { "field": "page.path", "op": "starts_with", "value": "/dashboard" } ] },
   "frequency": { "mode": "recurring", "recur_days": 90 },
   "state": { "cycle": 2, "impressions": 0, "response_id": null, "partial_answers": [] }
 }
@@ -530,7 +460,7 @@ Same item shape plus `state`:
 
 ### GET /widget/v1/announcements/{ann}, GET /widget/v1/surveys/{svy}
 
-For manual trigger, deep link, CTA `open_survey`, CSAT card. Returns one `engage_item`. Session: audience and status enforced (404 `item_not_available` when not eligible, not live, or out of window; frequency ignored for manual: manual show always allowed unless completed this cycle). App auth: only anonymous-safe items. CSAT: `GET /widget/v1/surveys/{svy}?response_id=svr_...` returns item + `state` for that conversation request (contact must own conversation); `expired` or `completed` reflected in `state.status`.
+For manual trigger, deep link, CTA `open_survey`, CSAT card. Returns one `engage_item`. Session: audience and status enforced (404 `item_not_available` when not eligible, not live, or out of window; frequency ignored for manual: manual show always allowed unless completed this cycle). App auth: only items partial evaluation keeps. CSAT: `GET /widget/v1/surveys/{svy}?response_id=svr_...` returns item + `state` for that conversation request (contact must own conversation); `expired` or `completed` reflected in `state.status`.
 
 ### POST /widget/v1/engage-events
 
@@ -618,8 +548,8 @@ Rate limit `engage.rate.csat_posts_per_ip_hour` (30, `a.Limiter` on Valkey). Res
 ## 8. MCP and CLI
 
 Tool inputs mirror REST bodies above (09 renderer derives schemas from OpenAPI). Notable:
-- `dimmi_create_announcement`: `{name, format, title, body_markdown, ctas?, segment_id?, url_rules?, ends_at?}` simplified; always `draft`; returns preview URL hint.
-- `dimmi_update_announcement`: any PATCH field incl. `status`; `live` goes through confirm gate with preview text "Publish 'Dark mode launch' (modal) to ~18,234 contacts?" using `segment-previews` estimate.
+- `dimmi_create_announcement`: `{name, format, title, body_markdown, ctas?, audience?, page?, ends_at?}` simplified; always `draft`; returns preview URL hint.
+- `dimmi_update_announcement`: any PATCH field incl. `status`; `live` goes through confirm gate with preview text "Publish 'Dark mode launch' (modal) to ~18,234 contacts?" using `/audience-previews` estimate.
 - `dimmi_get_survey_results`: `{survey_id, from?, to?}` -> results; text answers in `untrusted_content` envelope.
 - `dimmi_list_survey_responses`: `{survey_id, score_max?, q?, limit<=50}`; contact email included only with `contacts:read`.
 
@@ -632,8 +562,8 @@ format: modal
 title: Dark mode is here
 ctas:
   - { id: try, label: Try it, action: url, url: "https://app.acme.com/settings/appearance" }
-audience: { visitors: identified, segment_id: seg_01jbx4 }
-trigger: { on: page_view, url_rules: [ { op: starts_with, value: /dashboard } ] }
+audience: { visitors: identified, rules: { all: [ { field: audience, op: in, value: [adn_01jbx4] } ] } }
+trigger: { on: page_view, page: { all: [ { field: page.path, op: starts_with, value: /dashboard } ] } }
 ends_at: 2026-11-30T23:59:59+01:00
 ---
 Toggle it in **Settings > Appearance**.
@@ -645,7 +575,7 @@ Toggle it in **Settings > Appearance**.
 |---|---|---|
 | 404 | `feature_disabled` | `engage.enabled = false` |
 | 404 | `item_not_available` | widget: not live, not eligible, other workspace |
-| 409 | `segment_in_use` | delete segment used by live/paused item |
+| 409 | `audience_in_use` | delete saved audience used by live/paused item (18) |
 | 409 | `item_running` | delete live/paused item |
 | 409 | `csat_survey_exists` | second active CSAT survey |
 | 409 | `asset_in_use` | |
@@ -657,10 +587,10 @@ Toggle it in **Settings > Appearance**.
 | 413 | `asset_too_large`, `payload_too_large` | |
 | 422 | `invalid_transition` | status machine, with `from`, `to` |
 | 422 | `publish_blocked` | publish validation failures (errors map) |
-| 422 | `entitlement_limit_reached` | live item, segment caps (`key`, `limit`; entitlement catalog) |
+| 422 | `entitlement_limit_reached` | live item caps (`key`, `limit`; entitlement catalog) |
 | 422 | `format_locked`, `question_type_locked`, `branch_backwards`, `branch_target_archived`, `order_mismatch`, `no_questions` | |
-| 422 | `unknown_field`, `invalid_operator`, `too_many_conditions`, `too_deep`, `invalid_value` | rule validation |
-| 422 | `segment_deleted`, `segment_too_slow` | |
+| 422 | 18 rule errors: `op_invalid_for_type`, `unknown_attribute`, `field_unavailable_for_surface`, `limit_exceeded`, `audience_cycle` | rule validation |
+| 422 | `attribute_not_client_writable` | survey write-back key not `client_writable` (publish) |
 | 422 | `answer_required`, `answer_too_long`, `invalid_option`, `answer_not_on_path`, `invalid_answer_value` | |
 | 422 | `not_applicable_for_display` | audience/trigger on CSAT survey |
 | 422 | `announcement_not_replyable` | chat reply to non-chat or stale announcement |
@@ -671,4 +601,4 @@ Toggle it in **Settings > Appearance**.
 | 403 | `missing_ability` / role errors | standard |
 | 429 | `rate_limited` | |
 
-Warnings (`meta.warnings`): `low_contrast`, `long_title`, `no_url_rules_on_modal`, `audience_everyone_interruptive`, `article_unpublished_cta`, `help_tab_disabled_cta` (CTA `open_article` on widget with Help tab off), `broken_link`, `external_http_image`, `translation_incomplete`.
+Warnings (`meta.warnings`): `low_contrast`, `long_title`, `no_page_rule_on_modal`, `audience_everyone_interruptive`, `article_unpublished_cta`, `help_tab_disabled_cta` (CTA `open_article` on widget with Help tab off), `broken_link`, `external_http_image`, `translation_incomplete`.

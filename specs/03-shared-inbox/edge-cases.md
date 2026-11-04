@@ -242,12 +242,12 @@ Style: caveman. Each: case. Behavior. All decided.
 182. PATCH `{assignee_id: "mem_bob", status: "closed"}` on open conversation assigned to Ada. Assign applied first, then close (fixed order, api.md "Order of application"); events `conversation.assigned` then `conversation.closed`, two timeline rows; `meta.changed: ["assignee_id", "status"]`.
 183. Same PATCH with JSON keys in other order (`status` before `assignee_id`). Same result; JSON key order never matters.
 184. PATCH `{status: "closed", assignee_id: "mem_inactive"}`. Assignment fails 422 `member_inactive`; whole tx rolled back, conversation stays open, no events.
-185. PATCH `{assignee_id: "mem_ada"}` where Ada already assignee plus `{priority: true}` change. Assignment no-op (no event); only `conversation.priority_changed`; `meta.changed: ["priority"]`.
+185. PATCH `{assignee_id: "mem_ada"}` where Ada already assignee plus `{priority: "high"}` change. Assignment no-op (no event); only `conversation.priority_changed`; `meta.changed: ["priority"]`.
 186. PATCH `{snoozed_until: "…"}` without `status`. 422 field error `snoozed_until` (side param needs `status: snoozed`). Both `snoozed_until` and `snooze_preset`: 422.
 187. PATCH `{status: "snoozed", snoozed_until: X}` on conversation already snoozed until X. No-op. Different time: re-snooze, new `conversation.snoozed`, old job no-ops (case 9).
 188. PATCH `{trashed: true, status: "closed"}`. 422 field error `trashed` ("must be sent alone"); nothing changes. `{trashed: false, status: "open"}`: same 422. `{trashed: false}` alone restores.
-189. Member PATCH any field on trashed conversation. 404 (members never see trash). Admin PATCH `{priority: true}` on trashed: 409 `conversation_trashed`.
-190. Member PATCH `{priority: true, trashed: true}` (mixed allowed + forbidden). 403 for whole request; per-field policy runs before any work.
+189. Member PATCH any field on trashed conversation. 404 (members never see trash). Admin PATCH `{priority: "high"}` on trashed: 409 `conversation_trashed`.
+190. Member PATCH `{priority: "high", trashed: true}` (mixed allowed + forbidden). 403 for whole request; per-field policy runs before any work.
 191. Token with `conversations:write` but no `contacts:write` sends `{spam: true, block_contact: true}`. 403 `missing_ability` `required_ability: contacts:write`; spam not set either.
 192. PATCH `{status: "open", ai_state: "active"}` on closed conversation with `ai_state = off` after close. Reopen first, then `ai_state` step: `off -> active` 422 `invalid_transition` (AI activates only via gate); whole PATCH rolled back. `{status: "open", ai_state: "handed_off"}`: reopen + pause (reason `member_paused`), both applied.
 193. PATCH `{ai_state: "active"}` on spam conversation in `handed_off`. 409 `ai_not_active` (07 rule).
@@ -310,7 +310,7 @@ Style: caveman. Each: case. Behavior. All decided.
 241. Unverified claim for address held unverified by L. No takeover, no identity row for new contact (existing rule); duplicates finder surfaces pair.
 242. Widget upload linked to 14 feedback post after 23 h. Orphan purge (24 h) skips row (feedback target set); never linked in 24 h: purged.
 243. `LinkAttachments` with attachment already linked to feedback comment. 409 `attachment_already_attached` (one-target CHECK).
-244. `GET /contacts?filter[segment]=seg_...` with heavy segment. Statement timeout 5 s: 422 `segment_too_slow`; other filters combine with AND; segment of other workspace 400 `invalid_filter`.
+244. `GET /contacts?filter[audience]=adn_...` with heavy audience. Statement timeout 5 s: 422 `audience_too_slow`; other filters combine with AND; audience of other workspace 400 `invalid_filter`.
 245. `include=csat` on conversation with two completed CSAT responses. Latest by `completed_at`; none: `csat: null`.
 246. `include=feedback_requests` when 14 tables empty or feature off. `[]`, one cheap query.
 247. Contact JWT changes `custom_attributes.plan` only. `contact.updated` `changes.custom_attributes` + `changed_attribute_keys: ["plan"]`; unchanged keys absent; nothing changed: no event.

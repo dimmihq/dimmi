@@ -103,12 +103,15 @@ Subscribable = catalog rows with `Webhook=yes` in `events-and-realtime.md`, plus
 | docs_sync_run.completed, .failed (08 docs sync) | docs_sync_run (repo, PR ref, status, skip reason, suggestion count, review URL; never code) | `error_code` on failed |
 | article.freshness_changed (08) | article_freshness (article compact, status, reasons) | `changes` (from/to status) |
 | import.completed (16; only subscribable 16 event) | import_run (kind, status, counts, import compact; never credentials) | `errors_count` |
+| audience.created, .updated, .deleted (18) | audience (id, name, description, rule tree, never member lists) | `changes` on updated |
+| attribute_definition.created, .updated, .deleted (18) | attribute_definition (contact or company) | `changes` on updated |
+| contact_event.tracked (18; off unless named in subscription, `*` and `contact_event.*` do not include it: high volume) | contact_event (name, contact compact, occurred_at, metadata) | |
 | survey_response.completed (15-announcements-surveys) | survey_response (answers, survey compact, contact compact) | text answers raw (consumer treats as untrusted) |
 | feature-added events with `Webhook=yes` in owner spec (00-accounts `workspace.*`, `member.*`, `team.*`; 03 `conversation.updated/merged/participants_changed`, `company.*`, `tag.*`, `contact.blocked/unblocked`; 04 email events; 05 `whatsapp_template.status_changed`; 07 `ai.state_changed`; 08 article/knowledge events; 11 `export.completed` workspace scope; 12 `billing.*`; 07 actions, 08 docs sync, 13, 14, 15-announcements-surveys, 16 rows above) | owner spec Resource | each owner adds registry entry (type, object, fixture) in `webhook_catalog.go` in same PR; CI test fails when catalog row with `Webhook=yes` lacks registry entry |
 
 Internal notes excluded by default: any `message.*` event (`message.created`, `message.updated`, `message.deleted`) whose message has `type='note'` delivered only to endpoints with `include_notes=true` (default false); no delivery row otherwise. Other payloads never embed note bodies. `type='event'` system messages: never sent as `message.created` (duplicates `conversation.*`). Workspace `test_mode=true`: delivered with envelope `test_mode: true`.
 
-Wildcards: `*` all current and future types; `conversation.*` prefix match on first segment. Future types join wildcard subscriptions automatically (documented). Unknown type in subscription: 422.
+Wildcards: `*` all current and future types; `conversation.*` prefix match on first segment. Future types join wildcard subscriptions automatically (documented), except `contact_event.tracked` (18): named only, high volume. Unknown type in subscription: 422.
 
 ## Data model
 

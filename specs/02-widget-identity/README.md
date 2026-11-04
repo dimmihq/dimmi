@@ -80,7 +80,7 @@ No secret exists: JWT session starts fail `identity_not_configured` (401, SDK co
 6. `exp` required (`token_exp_missing`), number. `now > exp + leeway`: `token_expired`.
 7. `nbf` and `iat` (if present): `now + leeway < nbf` or `iat > now + leeway`: `token_not_yet_valid` (hint shows clock offset).
 8. Lifetime: `exp - (iat or now) > identity.max_token_lifetime` (7 days): `token_lifetime_too_long`.
-9. `aud`: surface `widget`: optional; if present, string or array containing `dimmi`, the widget app id `wgt_...`, or workspace id `ws_...`. Surface `portal`: required, must contain `dimmi-portal` (portal tokens never double as widget tokens and vice versa). Else `token_audience_mismatch`.
+9. `aud`: surface `widget`: optional; if present, string or array containing `dimmi`, the widget app id `wgt_...`, or workspace id `ws_...`. Surface `portal`: required, must contain `dimmi-portal` (portal tokens never double as widget tokens and vice versa). Surface `help_center` (18): required, must contain `dimmi-help`. Else `token_audience_mismatch`.
 10. `sub` required string 1 to 255 chars after trim, no control chars. Number: converted to decimal string, warning `claim_sub_number`. Else `token_sub_missing` / `token_sub_invalid`.
 11. `nonce` (if present, max 128 chars): Valkey `SET NX EX` key `identity:nonce:{workspace}:{sha256(nonce)}` with TTL `exp - now + leeway`; key exists: `token_replayed`. Rebuildable state only (lost cache = replay window until `exp`, bounded by 10-minute helper tokens and 300 s portal tokens). Valkey unavailable: tokens with `nonce` fail closed (503, SDK retries on next trigger), tokens without `nonce` unaffected. `jti` ignored (no replay semantics).
 12. Optional claim shape errors (bad email, phone, company, custom attribute): claim dropped, token still valid, warning code `claim_<name>_invalid` returned in `identity.warnings` and console.
@@ -88,7 +88,7 @@ No secret exists: JWT session starts fail `identity_not_configured` (401, SDK co
 
 Clock: `framework/clock` (`a.Clock`). Leeway `identity.clock_leeway` 60 s.
 
-`VerifyIdentityToken{WorkspaceID, AppID?, Token, Surface}`: `Surface` in (`widget`, `portal`). Same steps and errors for both; `Surface` used only for `aud` rule (step 9), error hints (portal: "Sign portal links with createPortalLink / portalLink") and metric tags; no other behavior difference. Portal callers (14) pass no app id.
+`VerifyIdentityToken{WorkspaceID, AppID?, Token, Surface}`: `Surface` in (`widget`, `portal`, `help_center`). Same steps and errors for both; `Surface` used only for `aud` rule (step 9), error hints (portal: "Sign portal links with createPortalLink / portalLink") and metric tags; no other behavior difference. Portal callers (14) and help center callers (18, 08) pass no app id.
 
 ## Claims schema
 
@@ -109,7 +109,7 @@ Clock: `framework/clock` (`a.Clock`). Leeway `identity.clock_leeway` 60 s.
 | `timezone` | string | no | `contacts.timezone` | IANA |
 | `company` | object | no | `companies` upsert by `(workspace_id, external_id)`; `contacts.company_id` = **primary** company (03 doc, extensibility.md section 10; later `companies` array maps to `contact_companies`, `company` stays primary) | `id` required inside (1 to 255), `name` (1 to 120), `domain` (hostname), `custom_attributes` (data-model rules) |
 | `custom_attributes` | object | no | `contacts.custom_attributes` merge + `contacts.trusted_attribute_keys` | data-model rules: max 100 keys total, key `[a-z0-9_]{1,64}`, scalar or string up to 1,024. JWT keys overwrite; `null` value deletes key; absent keys untouched. Every key written by claim added to `trusted_attribute_keys`; `null` removes key from both (07 agent actions bind only trusted keys; widget-set keys never trusted) |
-| `custom_attributes.signed_up_at` | number or string | no | `contacts.custom_attributes.signed_up_at` | convention: unix seconds or RFC 3339; 15 segments read it as date. Non-date value kept as given, warning `claim_signed_up_at_invalid` (hint "Use epoch seconds or ISO 8601"). Helpers map user `signedUpAt` |
+| `custom_attributes.signed_up_at` | number or string | no | `contacts.custom_attributes.signed_up_at` | convention: unix seconds or RFC 3339; 18 rule fields read it as date. Non-date value kept as given, warning `claim_signed_up_at_invalid` (hint "Use epoch seconds or ISO 8601"). Helpers map user `signedUpAt` |
 
 Unknown top-level claims (incl. flat `company_id`, `user_id`) ignored silently.
 
@@ -146,7 +146,7 @@ Input: workspace, widget, verified claims, current session (may be null, anonymo
 | yes | anonymous lead `L` | `MergeContacts(from L, into C, reason "widget_identify", actor system)` (03). `L` conversations move to `C`. `L` unverified email identity moves as unverified; conflict dropped |
 | yes | identified same sub | reuse session (extend) |
 
-4. Apply claims to `C` (`ApplyIdentityClaims`; skip all writes when claims hash equals cached hash for `C`, 10 minutes): attributes per schema; every claim-written `custom_attributes` key appended to `contacts.trusted_attribute_keys` (deduped; `null` value removes key); company upsert (company external id from `company.id`); identity rows: `external_id` verified; `email` verified only when `email_verified = true`; `phone` verified only when `phone_verified = true`. Lead (`L`) keys set via widget stay untrusted after upgrade until a claim writes them.
+4. Apply claims to `C` (`ApplyIdentityClaims`; skip all writes when claims hash equals cached hash for `C`, 10 minutes): attributes per schema; every claim-written `custom_attributes` key appended to `contacts.trusted_attribute_keys` (deduped; `null` value removes key); unknown key auto-registers 18 `attribute_definitions` row, `origin observed`, inferred type (18 M2); type mismatch or key limit: value dropped, 18 problem row, warning `claim_custom_attributes_invalid`, token still valid; company upsert (company external id from `company.id`); identity rows: `external_id` verified; `email` verified only when `email_verified = true`; `phone` verified only when `phone_verified = true`. Lead (`L`) keys set via widget stay untrusted after upgrade until a claim writes them.
 5. Verified email collision: other contact `D` holds verified email identity same value. `D` kind lead: auto-merge `D` into `C` (both verified; foundation merge rule). `D` kind user (other `external_id`): no merge, `C.email` set, no identity row, `contact.updated` with `meta.duplicate_suspect = D` (inbox shows "possible duplicate").
 6. Test detection (D10): `email_verified = true` and email equals active member's `users.email` in workspace: session `test = true` (subject to monthly cap, 01).
 7. Events: `contact.created` or `contact.updated` (changed keys only), `contact.merged` via 03.
@@ -182,6 +182,7 @@ Server (`DELETE /widget/v1/session`): revoke this session only (reason `logout`)
 - Mid-session login: SDK re-asks source (navigation or `identify()`); new token + stored anonymous token = `POST /widget/v1/sessions` with `previous_token` (merge path).
 - Invalid JWT on either route: 401 with code below, no side effects (previous session untouched).
 - Portal (14): helper SSO route mints token with `aud: "dimmi-portal"`, `exp = iat + 300`, random `nonce`, puts it in URL fragment (never query) of portal SSO page; 14 verifies with `Surface: portal`.
+- Help center (18): host route at `login_url` mints token with `aud: "dimmi-help"`, `exp = iat + 300`, random `nonce`, in URL fragment: `{help_host}/sso#token=...`; 08 verifies with `Surface: help_center`, sets `__Host-dimmi_hc`.
 
 ## Data model
 
@@ -384,7 +385,7 @@ Idempotent replay returns stored response including secret (24 h, foundation rul
 | `identity_mismatch` | "Token is for another user than this session." | "Start a new session: POST /widget/v1/sessions with previous_token (SDK does this), or logout first." |
 | `claim_<name>_invalid` (warning) | "Claim {name} invalid and ignored: {reason}." | |
 | `claim_sub_number` (warning) | "sub is a number; converted to string." | "Send sub as string." |
-| `claim_signed_up_at_invalid` (warning) | "signed_up_at is not a date; segments will ignore it." | "Use epoch seconds or ISO 8601 (helpers: signedUpAt)." |
+| `claim_signed_up_at_invalid` (warning) | "signed_up_at is not a date; audience rules will ignore it." | "Use epoch seconds or ISO 8601 (helpers: signedUpAt)." |
 
 Messages via translator (`lang/en/identity.json`).
 
@@ -492,7 +493,8 @@ D10 only: verified member-email sessions mark conversations `test` (01 owns flag
 | 04-email-channel | email verification by inbound reply (verified email identity feeds auto-merge step 5) |
 | 09-agent-native | `npx dimmi init` consumes create secret + snippets API |
 | 14-feedback-roadmap | calls `VerifyIdentityToken{Surface: portal}` + `IdentifyContact` (portal SSO); listener on `identity_secret.revoked` (`revoke_sessions: true`) revokes `portal_sessions` by `identity_secret_id` |
-| 15-announcements-surveys | reads `custom_attributes.signed_up_at` as date in segments; claim changes trigger SDK engage refetch (no server change) |
+| 15-announcements-surveys | claim changes trigger SDK engage refetch (no server change) |
+| 18-audiences | reads claims as verified values; `signed_up_at` as date; observed definitions from claims; `surface` computed after claims apply, same response; `help_center` surface |
 | 12-cloud-billing | test conversation cap counter |
 | 20-native-sdks | native apps pass identity token through same `POST /sessions`, `PATCH /session`; identity provider closure instead of URL |
 

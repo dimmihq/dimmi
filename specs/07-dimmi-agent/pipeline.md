@@ -103,7 +103,7 @@ Routing:
 | `feedback` | thank + handoff `feedback` (human should see bug reports); after commit, when workspace 14 feedback setting `ai.capture = suggest`: call `feedback.QueueCapture(conversationID, messageID)` (14 runs own capture via `ai.RunTask`; no extra LLM call in 07) | false |
 | `spam` | silent, outcome `skipped` reason `spam_suspected`; conversation NOT auto-marked spam (03 owns) | none |
 | `abusive` | one localized refusal, `ai_state = handed_off` reason `abusive`, no priority flag | false |
-| `unsafe` | localized safety message (neutral, no advice, for self-harm includes "please contact local emergency services"), handoff reason `safety` with `priority = true` | false |
+| `unsafe` | localized safety message (neutral, no advice, for self-harm includes "please contact local emergency services"), handoff reason `safety` with priority `high` | false |
 | `off_topic` | localized "I can only help with questions about {product}." outcome `refused`; does not count toward unknown streak | false |
 | `question`, `followup`, `other` | continue to retrieve | |
 
@@ -118,9 +118,11 @@ res, err := app.Knowledge.Search(ctx, workspaceID, query, contracts.KnowledgeSea
     Locale:     conversation.AILanguage,
     Queries:    classify.SearchQueries,    // extra queries, fused by 08 (max 3)
     Surface:    "agent",
+    AllowedAudienceIDs: allowed,           // 18: saved audiences this contact matches now
     LogSearch:  false,                     // 07 logs in ai_run_steps
 })
 ```
+- `allowed`: computed on every run from current contact, never frozen at conversation start, in `access` mode (18 `dimmi.knowledge`): only verified values count, unknown denied. Mid-conversation change reaches next reply; earlier answers stay. Filter `effective_audience_ids <@ allowed` applied by 08 before generation. Public `help_center` runs, anonymous contact: empty set. Attribute values never enter prompt through this path.
 - Contract: `contracts.Knowledge` (`specs/00-foundation/contracts.md`).
 - Timeout 2 s. Error or timeout: retry once; then treat as zero chunks (unknown path), step status `error`, metric. Never answer without retrieval.
 - `res.Degraded != ""` or `res.Mode = fts_fallback` (vector arm unavailable, FTS only): continue, threshold uses FTS rule below. Degraded reason stored on step.
@@ -208,7 +210,7 @@ Alternative setting `unknown_behavior = handoff` (always immediate). Message `su
 
 Action `HandOffConversation{conversation, reason, actor}` (07), used by pipeline, widget button (`POST /widget/v1/conversations/{id}/handoffs` via `RequestHumanHandoff`), member pause (03 `PATCH /conversations/{id}` `ai_state: handed_off` -> `PauseConversationAi`, reason `member_paused`, no customer notice), MCP.
 1. Tx: `ai_state -> handed_off`, `ai_handed_off_at = now`, `ai_handoff_reason`. Dispatch `ai.state_changed`.
-2. Routing (agent `handoff` settings): if `assignee_team_id` null and `handoff.team_id` set: assign team via 03 `AssignConversation` (actor agent) emitting `conversation.assigned`; else inbox default team stays. `handoff.set_priority` (default false; always true for `safety`): set priority via 03 `UpdateConversation` (actor agent). Status: `snoozed` -> 03 `UnsnoozeConversation` (reason `manual`, actor agent); `closed` -> 03 `ReopenConversation` (reason `manual`, actor agent; 03 reopen reason enum has no `ai_handoff`, timeline shows actor agent).
+2. Routing (agent `handoff` settings): if `assignee_team_id` null and `handoff.team_id` set: assign team via 03 `AssignConversation` (actor agent) emitting `conversation.assigned`; else inbox default team stays. `handoff.set_priority` (default false; always true for `safety`): set priority `high` via 03 `UpdateConversation` (actor agent). Status: `snoozed` -> 03 `UnsnoozeConversation` (reason `manual`, actor agent); `closed` -> 03 `ReopenConversation` (reason `manual`, actor agent; 03 reopen reason enum has no `ai_handoff`, timeline shows actor agent).
 3. Customer notice (skipped for `member_paused`, `human_replied`): localized template by office-hours state:
    - inside hours: "Connecting you with the team. Someone will reply here shortly."
    - outside hours: "Our team is offline right now and back {next_open_local}. We'll reply here{email_suffix}." `email_suffix` = " and by email" when contact has email; widget without email: 01 email-capture prompt triggered via message metadata `request_email: true`.

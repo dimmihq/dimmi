@@ -1,6 +1,6 @@
 # 15 Announcements and surveys ("Engage")
 
-Style: caveman. Date 2026-11-02. Backend only. Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`, `specs/01-messenger-widget/*`.
+Style: caveman. Date 2026-11-02. Backend only. Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`, `specs/01-messenger-widget/*`, `specs/18-audiences/README.md`. Build starts after 18 M4: 15 consumes rule language, evaluator, saved audiences, preview and builder from 18 and builds none of them.
 
 Files in this folder:
 
@@ -11,7 +11,7 @@ Files in this folder:
 | [edge-cases.md](edge-cases.md) | decided behavior per edge case (136) |
 | [tasks.md](tasks.md) | ordered build checklist, demo script |
 
-Umbrella name in code and API: **engage** (announcements, surveys, segments, CSAT). Product UI may say "Announcements" and "Surveys".
+Umbrella name in code and API: **engage** (announcements, surveys, CSAT). Product UI may say "Announcements" and "Surveys".
 
 ## Goal
 
@@ -27,14 +27,14 @@ Why: product owner rule "anything we'll use ourselves as a business is MVP". Dim
 | Tooltips, product tours, checklists | post-MVP (selector-anchored, fragile, own spec). Roadmap "post-MVP: upmarket set (tours)" keeps tours |
 | Email delivery of announcements | in-app only at MVP. Bulk email needs consent, unsubscribe, list hygiene, 04 caps (200/2,000 per day). CSAT email is transactional, in conversation thread, ships: 03 `SendSystemMessage` -> email `Channel.Send` (04), `outbound_emails.kind system`. Out-of-thread survey mail not at MVP; if added later it uses 04 `email.SendContactMail` with a new `Kind` added by 04, never `app/mail` Mailables |
 | CSAT after close | ships here (was 03 Out, "post-MVP: reports"). Survey with `display = conversation`, triggered by `conversation.closed`. Channels widget + email only. Slack/Discord/Telegram/WhatsApp: later: chat-app-csat |
-| Segments | owned here (`segments` table). Contact-oriented saved filters, reusable by 03 contacts list (`filter[segment]`), 13 changelog, 14 feedback. 03 saved conversation views stay "post-MVP: ticket fields" |
-| Contact tags | not in core (only conversation tags). Not added. Custom attributes cover flags (`custom.beta = true`). Open question 1 |
-| Event tracking (`Dimmi('track')`) | client-side trigger only. No network, no storage. Matches live items with `trigger.on = track_event` already in browser. Event-based audience ("did X 3 times") post-MVP with `contact_event_summaries` |
-| Eligibility evaluation | hybrid. Server evaluates audience (segment, kind, attributes, schedule, frequency, throttle, receipts) per request; never materializes audience. Client evaluates triggers (URL rules, delay, track event, device) per page. URL rules are targeting, not access control |
+| Audiences | owned by 18 (`audiences` table, `adn_`, rule language, compiler, preview, builder). 15 consumes them. 03 contacts list uses `filter[audience]`. 03 saved conversation views stay separate |
+| Contact tags | ship: tables in 03 records.md (built by track 04), rule field `contact.tags` and `company.tags` from 18. Items target them like any field |
+| Event tracking (`Dimmi('track')`) | client-side trigger: matches live items with `trigger.on = track_event` already in browser, works with no network. Server ingestion, `contact_event_summaries`, network send for names marked `client_writable` and rules like "did X 3 times" are 18 M6 |
+| Eligibility evaluation | hybrid. Server runs `audience.Partial` over audience and `trigger.page`, then schedule, frequency, throttle, receipts, per request; never materializes audience. Client checks residual (page and device leaves only), delay and track event per page. Page rules are targeting, not access control; item audience is a `display` gate (18) |
 | Anonymous visitors without session | CDN-cacheable per-app list of items whose audience allows anonymous; frequency in `localStorage`; aggregate-only impression counters. Answering survey lazily creates session (01 rules, PoW) |
 | A/B tests, goals (conversion events) | post-MVP. MVP measures CTA click rate, dismiss rate, response rate |
 | Branching | yes, simple: per-question rules on closed answers, forward-only jumps (no loops), max 20 questions |
-| Attribute write-back | yes: question may write answer into `contacts.custom_attributes[key]` on completion |
+| Attribute write-back | yes: question may write answer into `contacts.custom_attributes[key]` on completion, only when 18 definition has `client_writable = true`; never trusted |
 | AI | none at MVP. Open-text summary later: survey-ai-summary. Embedding clustering post-MVP |
 | Localization | manual translations per item, up to 10 locales; fallback per field to default locale. Auto-translate "post-MVP: auto-translation" |
 | Preview | reuse 01 widget test sessions; `preview` param shows one item regardless of audience/status; stats excluded |
@@ -62,14 +62,13 @@ Why: product owner rule "anything we'll use ourselves as a business is MVP". Dim
 
 ### In (MVP)
 
-- Segments: CRUD, rule language (contact + company fields, custom attributes, kind, dates), preview count + sample, list matching contacts.
 - Announcements: banner, modal, chat formats; Markdown body; cover image; up to 2 CTAs with actions `url`, `sdk_event`, `open_messenger`, `open_article`, `open_survey`, `dismiss` (+ reserved `open_changelog_entry`); audience; triggers; schedule; frequency; priority; translations; status lifecycle; duplicate; preview; stats; receipts list.
 - Surveys: question types `nps`, `rating`, `scale`, `single_choice`, `multiple_choice`, `text`, `statement`; templates NPS, CSAT, CES, feature feedback; branching; attribute write-back; intro + thank-you; displays popover/modal/conversation; responses list, CSV export, per-question results, NPS score, funnel; API-submitted responses.
 - CSAT on close: conversation survey, delay, channel selection (widget, email), minimal signed email rating page (`/csat-ratings/{svr}`), cooldown, AI-involved split, rating shown on conversation, negative-rating notification (06).
 - Engage settings: global throttle, survey cooldown, quiet while messenger open.
 - Widget API additions, SDK additions (`track`, `show('announcement', {id})`, `show('survey', {id})`, events with camelCase payloads), anonymous CDN list, batched engage events.
 - Assets: images for announcements and surveys (public, immutable URLs).
-- MCP toolset `engage`, CLI `dimmi announcements`, `dimmi surveys`, `dimmi segments`.
+- MCP toolset `engage`, CLI `dimmi announcements`, `dimmi surveys`. Saved audiences through 18's `dimmi audiences`.
 - Webhook `survey_response.completed`. Realtime events for dashboard.
 - GDPR eraser, contact merge handling, audit log entries.
 
@@ -79,9 +78,7 @@ Why: product owner rule "anything we'll use ourselves as a business is MVP". Dim
 |---|---|
 | Product tours, tooltips, checklists, hotspots | "post-MVP: upmarket set (tours)" |
 | Email/push delivery of announcements, broadcasts | post-MVP; needs 04 broadcast pipeline + consent |
-| Event-based audiences (`contact_event_summaries`), server-side `track` ingestion | post-MVP |
 | A/B tests, holdout groups, goals/conversion tracking | post-MVP |
-| Contact tags | open question 1 |
 | Auto-translation of items | "post-MVP: auto-translation" |
 | Embedding-based theme clustering, sentiment per answer | post-MVP |
 | Native mobile SDK rendering | "post-MVP: mobile SDKs" (API already headless) |
@@ -127,7 +124,6 @@ New tables owned by 15. Conventions apply: UUIDv7 `id`, `workspace_id` first in 
 
 | Prefix | Table |
 |---|---|
-| seg_ | segments |
 | ann_ | announcements |
 | svy_ | surveys |
 | svq_ | survey_questions |
@@ -142,7 +138,7 @@ Checked against registry and all spec folders 2026-11-02: no collision. `survey_
 | File | What |
 |---|---|
 | `20261101001501_create_engage_settings_table.sql` | |
-| `20261101001502_create_segments_table.sql` | |
+| `20261101001502` | unused: `audiences` table moved to 18 |
 | `20261101001503_create_engage_assets_table.sql` | |
 | `20261101001504_create_announcements_table.sql` | |
 | `20261101001505_create_surveys_table.sql` | |
@@ -161,29 +157,13 @@ One row per workspace, created lazily (`INSERT ... ON CONFLICT DO NOTHING`) on f
 | Column | Type | Notes |
 |---|---|---|
 | workspace_id | uuid pk | |
-| version | bigint not null default 1 | bumped in same tx as any item/segment/settings change that can alter widget output. Feeds 01 config `engage.version`, ETags, otter keys |
+| version | bigint not null default 1 | bumped in same tx as any item or settings change, and on saved audience change that touches a live item (18 `audience_references`), that can alter widget output. Feeds 01 config `engage.version`, ETags, otter keys |
 | live_summary | jsonb not null default '{}' | `{active: bool, anonymous: bool, next_transition_at: ts|null}` recomputed on bump and by `TransitionEngageSchedules` job. `active` = any announcement/survey `status = live` whose window not ended (CSAT excluded: server-side only). `anonymous` = any of those allows anonymous |
 | max_interruptive_per_day | smallint not null default 2 CHECK 0..20 | modal, popover, chat. 0 = only `bypass_throttle` items |
 | min_minutes_between | smallint not null default 30 CHECK 0..1440 | between interruptive items |
 | survey_cooldown_days | smallint not null default 14 CHECK 0..365 | no in-app survey after contact completed or dismissed one within N days (CSAT exempt) |
 | quiet_while_messenger_open | boolean not null default true | client defers interruptive items while panel open |
 | created_at, updated_at | timestamptz | |
-
-### segments
-
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid pk | `seg_` |
-| workspace_id | uuid not null | |
-| name | text not null | 1..80, unique `(workspace_id, lower(name)) WHERE deleted_at IS NULL` |
-| description | text | max 500 |
-| rules | jsonb not null | rule tree (section "Audience rule language"), max 8 KB, validated |
-| rules_schema | smallint not null default 1 | language version |
-| last_estimate | jsonb | `{count, approximate, at}` from last preview |
-| created_by_member_id | uuid null references workspace_members on delete set null | |
-| created_at, updated_at, deleted_at | timestamptz | soft delete; refused while referenced by live/paused item (409 `segment_in_use`) |
-
-Index `(workspace_id, deleted_at, name)`. Max entitlement `engage.max_segments` (cloud 200) per workspace; over: 422 `entitlement_limit_reached`.
 
 ### engage_assets
 
@@ -229,7 +209,7 @@ Served at `GET /widget/v1/engage-assets/{eas}/{filename}` (public, immutable, CO
 | revision | int not null default 1 | bumped on content/audience/trigger change |
 | published_at, published_by_member_id | | first publish |
 | ended_at | timestamptz | |
-| end_reason | text CHECK in ('schedule','manual','segment_deleted','workspace_suspended') | |
+| end_reason | text CHECK in ('schedule','manual','audience_deleted','workspace_suspended') | |
 | metadata | jsonb not null default '{}' | max 4 KB, API-writable (`source`, external refs) |
 | created_by_type, created_by_id, updated_by_type, updated_by_id | | Actor |
 | created_at, updated_at, deleted_at | timestamptz | soft delete (rest.md rule 7), purge after 30 days |
@@ -296,7 +276,7 @@ Indexes: `(workspace_id, status, deleted_at)`; partial unique `(workspace_id) WH
 | required | boolean not null default true | `statement` always false |
 | config | jsonb not null default '{}' | per type below |
 | branching | jsonb not null default '[]' | ordered rules `[{when: {op, value}, goto: "svq_..."|"end"}]`, max 10 |
-| attribute_key | text | write-back target `custom_attributes` key `[a-z0-9_]{1,64}`; reserved `claimed_user_id` refused |
+| attribute_key | text | write-back target `custom_attributes` key `[a-z0-9_]{1,64}`; must have 18 definition with `client_writable = true`, else publish blocked `attribute_not_client_writable`; reserved `claimed_user_id` refused |
 | archived_at | timestamptz | question removed after answers exist: archived (kept for results), not deleted |
 | created_at, updated_at | timestamptz | |
 
@@ -402,69 +382,39 @@ None. 15 adds no columns to core tables. Uses existing jsonb keys:
 
 Each listed under "Required from other specs" for owner acknowledgement.
 
-## Audience rule language
+## Audience
 
-`models.Audience`:
+Rule language owned by 18. `models.Audience` = 18's inline audience, type from `app/support/audience`:
 
 ```json
 {
   "visitors": "identified",
-  "segment_id": "seg_01jb...",
   "rules": { "all": [
+    { "field": "audience", "op": "in", "value": ["adn_01jb..."] },
     { "field": "contact.custom.plan", "op": "in", "value": ["pro", "team"] },
     { "field": "contact.custom.signed_up_at", "op": "before", "value": "2026-10-01T00:00:00Z" },
-    { "any": [
-      { "field": "contact.last_seen_at", "op": "within_last_days", "value": 30 },
-      { "field": "company.custom.seats", "op": "gte", "value": 10 }
-    ] }
-  ] },
-  "locales": ["en", "de"]
+    { "field": "contact.locale", "op": "in", "value": ["en", "de"] }
+  ] }
 }
 ```
 
-- `visitors` in (`everyone`, `identified` (kind user, verified), `leads` (kind lead with session), `anonymous_and_leads`). Anonymous no-session visitors only reachable when `visitors` in (`everyone`, `anonymous_and_leads`) AND no `segment_id`, AND `rules` reference only anonymous-safe fields (`session.locale`, `session.country`). Else item never in anonymous list.
-- `segment_id` and inline `rules` combine with AND. Segment rules resolved at evaluation time (segment edit applies to live items immediately).
-- Tree: `all`/`any` nodes, max depth 3, max 30 leaf conditions total (segment + inline).
-- `locales`: optional allowlist matched against resolved contact locale primary subtag.
-
-Fields (`contact.custom.signed_up_at` is plain custom attribute; 02 convention makes it a date):
-
-| Field | Type | Ops |
-|---|---|---|
-| contact.kind | enum user, lead | eq, neq |
-| contact.email | string | exists, not_exists, ends_with (domain), eq |
-| contact.email_verified | bool | is_true, is_false |
-| contact.name, contact.phone, contact.external_id | string | exists, not_exists |
-| contact.locale, contact.timezone | string | eq, neq, in, starts_with |
-| contact.country | ISO 3166 | eq, in, not_in |
-| contact.created_at, contact.first_seen_at, contact.last_seen_at | date | before, after, within_last_days, more_than_days_ago |
-| contact.custom.`<key>` | by JSON type of value | string: eq, neq, in, not_in, contains, starts_with, exists, not_exists; number: eq, neq, gt, gte, lt, lte, between; bool: is_true, is_false; date (ISO 8601 string or unix seconds number, op decides): before, after, within_last_days, more_than_days_ago |
-| company.name, company.domain | string | eq, contains, ends_with, exists, not_exists |
-| company.created_at | date | date ops |
-| company.custom.`<key>` | as contact.custom | |
-| contact.has_company | bool | is_true, is_false |
-| session.locale, session.country | string | eq, in (anonymous-safe) |
-
-Semantics (identical in Go evaluator and SQL compiler; property test compares both on 10,000 random contacts):
-- Missing value: every op false except `not_exists`, `neq`, `not_in` (true). Type mismatch (custom string compared with `gt`): false, never error.
-- Strings compared case-insensitively after NFC, `contains` max 100 chars value.
-- Dates: unix seconds when number (02 claim `signed_up_at` convention), else RFC 3339; relative ops use request time (`a.Clock`, `framework/clock`).
-- `in` max 50 values.
-
-SQL compiler (`app/support/segments/compile.go`) emits parameterized predicates over `contacts` left join `companies` via `app/support/querybuilder` only. Used by preview, segment contacts list, 03 `filter[segment]`. Go evaluator (`app/support/segments/evaluate.go`) used by widget eligibility.
+- `visitors`, nodes, ops, limits, missing-value semantics, fields: 18 "Rule language". 15 adds no field and no op.
+- Saved audience is a leaf (`audience in`, `audience not_in`). Resolved at evaluation: saved audience edit applies to live items at once. Locale is a leaf. No separate reference or locale list on item.
+- Item audience gate: `display` (18 Surfaces, `engage.announcement`, `engage.survey`). Claimed values allowed, labelled. Secret in item not protected by audience.
+- Every item save rewrites `audience_references`, so saved audience delete returns 409 `audience_in_use` while live or paused item uses it.
+- Rule errors at save and publish: 18 codes. Lint warnings appear in `meta.warnings`.
 
 ## Trigger and frequency
 
 `models.Trigger`:
 
 ```json
-{ "on": "page_view", "url_rules": [ { "op": "starts_with", "value": "/dashboard" }, { "op": "not_contains", "value": "/dashboard/billing" } ], "url_match": "all", "delay_seconds": 5, "device": "any", "event_name": null }
+{ "on": "page_view", "page": { "all": [ { "field": "page.path", "op": "starts_with", "value": "/dashboard" }, { "field": "page.path", "op": "not_contains", "value": "/dashboard/billing" } ] }, "delay_seconds": 5, "event_name": null }
 ```
 
 - `on` in (`page_view`, `track_event`, `manual`). `manual` = only via SDK `show('announcement', {id})` / `show('survey', {id})`, CTA `open_survey`, or deep link `#dimmi-announcement=ann_...` / `#dimmi-survey=svy_...`.
-- `url_rules` max 10; ops `equals`, `contains`, `not_contains`, `starts_with`, `matches` (glob: `*` any chars, `**` across `/`; no regex, no ReDoS). Matched against URL path + query (host ignored unless value starts with `https://`). Empty = every page.
-- `delay_seconds` 0..3600 on page (timer reset on SPA navigation that fails rules).
-- `device` in (`any`, `desktop`, `mobile`) from client viewport width (640 px).
+- `page`: rule tree limited to `page.*` and `visitor.device`, same ops as 18 (`matches` glob: `*` any chars, `**` across `/`; no regex, no ReDoS). `null` = every page, every device. Values reach browsers: lint `page_rule_is_public`.
+- `delay_seconds` 0..3600 on page (timer reset on SPA navigation that fails residual).
 - `event_name` for `track_event`, same charset as SDK event names.
 
 `models.Frequency`:
@@ -485,30 +435,30 @@ SQL compiler (`app/support/segments/compile.go`) emits parameterized predicates 
 Action `engage.ResolveEligibleItems(ctx, contact, session, opts)`; one shared code path for widget session list, preview, and tests.
 
 ```
-items  = LiveItemsCache.Get(workspace, engage_settings.version)   // otter L1 per replica (version in key; bust via Valkey pubsub), compiled rules; miss: 2 queries (announcements, surveys) + segments
+items  = LiveItemsCache.Get(workspace, engage_settings.version)   // otter L1 per replica (version in key; bust via Valkey pubsub), compiled rules with saved audiences expanded (18 cache); miss: 2 queries (announcements, surveys)
 now    = a.Clock.Now()
 recs   = receipts by (workspace, contact)                          // 1 indexed query, bounded
-ctxVal = contact + company (already loaded by auth:widget) + session locale/country
+ctxVal = contact + company (already loaded by auth:widget) + session; tags, event rollups only when compiled set needs them (18, at most 2 indexed queries)
 throttle = count recs with last_seen_at > now-24h where interruptive and not bypass; last interruptive seen time
 survey_cooldown = max(completed_at, dismissed_at) of in-app survey receipts
 for item in items (priority desc, published_at asc):
   skip if now outside [starts_at, ends_at)
   skip if display == conversation                                  // CSAT is server-driven only
   skip if audience.visitors excludes contact.kind/session kind      // test sessions see live items like real contacts; receipts is_test
-  skip if !Evaluate(audience rules, ctxVal)
+  skip if audience.Partial(all[audience, trigger.page], ctxVal) == False   // Residual kept: page and device leaves only
   skip if rec.next_eligible_at > now
   skip if interruptive and !bypass and (throttle >= max or last interruptive within min_minutes)
   skip if survey and !bypass and survey_cooldown active
-return items with per-item state {cycle, impressions, rendered content for locale}
+return items with per-item state {cycle, impressions, rendered content for locale, residual}
 ```
 
 - Throttled items omitted, not flagged. `meta.throttle = {remaining_today, next_slot_at}` tells client when refetch can return more.
 - Response size cap 64 KB; over cap: lowest priority items dropped (`meta.truncated`).
-- ETag = hash(engage version, contact attributes hash, company `updated_at`, receipts max `updated_at`, locale). 304 when unchanged.
+- ETag = hash(engage version, contact attributes hash, company `updated_at`, receipts max `updated_at`, locale), plus hour bucket when any live rule has relative date leaf (18): rule like `within_last_days 30` flips with time while nothing else changes. Tag and event dependencies join hash when compiled set uses them. 304 when unchanged.
 - Client refetch: on full page load (after handshake, idle), on `identity_changed`, on `Dimmi.update({context|locale})`, on throttle `next_slot_at`, at most every `engage.client_refresh_interval` (600 s) in long SPA sessions.
 - Client shows at most one interruptive item at a time and one banner per position. Ties: priority, then server order.
 
-Anonymous list `GET /widget/v1/apps/{app}/engage-items`: items whose audience is anonymous-safe, rendered with variable fallbacks, `Cache-Control: public, s-maxage=60`, ETag = engage version + locale. Frequency, throttle, cooldown kept in `localStorage` key `dimmi:{app}:engage` (receipts mirror, 50 newest, pruned). After visitor gets session (first write), next fetch uses session list; SDK uploads local receipts once in `POST /widget/v1/engage-events` (`kind: "seen"` with original timestamps, max 7 days old) so server receipts stay consistent.
+Anonymous list `GET /widget/v1/apps/{app}/engage-items`: items where `audience.Partial` with empty context is not `False`, each carrying its residual, rendered with variable fallbacks. Residual holds only page, device and locale leaves. Rule still depending on `session.country` for anonymous: item left out of list, because list is public on CDN and country varies per request; reaches people with session only, builder says so. `Cache-Control: public, s-maxage=60`, ETag = engage version + locale. Frequency, throttle, cooldown kept in `localStorage` key `dimmi:{app}:engage` (receipts mirror, 50 newest, pruned). After visitor gets session (first write), next fetch uses session list; SDK uploads local receipts once in `POST /widget/v1/engage-events` (`kind: "seen"` with original timestamps, max 7 days old) so server receipts stay consistent.
 
 Config hook (01): config resource gains `engage: {active, anonymous, version}` from `engage_settings.live_summary`. SDK fetches lists only when `active` (session) or `anonymous` (no session). Workspaces not using engage: zero requests.
 
@@ -555,24 +505,18 @@ app/enums/
 
 app/models/  (sqlc + behavior)
   announcement.go (AnnouncementContent, typed jsonb), survey.go, survey_question.go (QuestionConfig per type),
-  audience.go (Audience, RuleNode), trigger.go, frequency.go (NextEligibleAt), engage_settings.go
+  trigger.go (page tree, type from `app/support/audience`), frequency.go (NextEligibleAt), engage_settings.go
 
-app/support/segments/
-  rules.go            # parse + validate rule tree, field registry, limits
-  evaluate.go         # Go evaluator (contact, company, session)
-  compile.go          # SQL compiler via querybuilder
 app/support/engagestats/  # in-memory counters + flush
-app/support/urlmatch/     # glob matcher shared with SDK test vectors (JSON fixtures consumed by widget tests)
 app/support/redact/       # Luhn card + secret pattern redaction (shared with 08 secret scanner patterns)
 
 app/actions/engage/
   ensure_engage_settings.go          # EnsureEngageSettings (lazy upsert)
   update_engage_settings.go
   bump_engage_version.go             # BumpEngageVersion: version+1, recompute live_summary (called in every writing tx)
-  create_segment.go, update_segment.go, delete_segment.go, preview_segment.go, list_segment_contacts.go
   upload_engage_asset.go, update_engage_asset.go, delete_engage_asset.go   # bytes via `app/support/images` (08) on `framework/image`, scan `a.Scanner`, disk `a.Storage.Disk("public")`
   create_announcement.go, update_announcement.go, delete_announcement.go, restore_announcement.go, duplicate_announcement.go
-  publish_engage_item.go             # PublishEngageItem: validate publish rules (alt text, CTA targets, caps, segment exists), status live, published_at
+  publish_engage_item.go             # PublishEngageItem: validate publish rules (alt text, CTA targets, caps, audience valid through `app/support/audience`), status live, published_at
   pause_engage_item.go, resume_engage_item.go, end_engage_item.go, archive_engage_item.go
   create_survey.go, update_survey.go, delete_survey.go, duplicate_survey.go
   create_survey_question.go, update_survey_question.go, delete_survey_question.go (archive when answered), reorder_survey_questions.go
@@ -597,9 +541,6 @@ app/actions/engage/
 
 app/http/controllers/api/v1/
   engage_settings_controller.go             # Show, Update                 /engage-settings
-  segment_controller.go                     # Index, Store, Show, Update, Destroy
-  segment_contact_controller.go             # Index                        /segments/{seg}/contacts
-  segment_preview_controller.go             # Store                        /segment-previews
   engage_asset_controller.go                # Index, Store, Update, Destroy
   announcement_controller.go                # Index, Store, Show, Update, Destroy
   announcement_duplicate_controller.go      # Store
@@ -632,7 +573,7 @@ app/http/controllers/web/
 resources/views/csat_ratings/               # templ: page.templ, closed.templ, thanks.templ (zero JS)
 
 app/http/requests/
-  update_engage_settings_request.go, store_segment_request.go, update_segment_request.go, store_segment_preview_request.go,
+  update_engage_settings_request.go,
   store_engage_asset_request.go, update_engage_asset_request.go,
   store_announcement_request.go, update_announcement_request.go, store_engage_preview_request.go,
   store_survey_request.go, update_survey_request.go, store_survey_question_request.go, update_survey_question_request.go,
@@ -642,17 +583,16 @@ app/http/requests/
   store_widget_survey_response_request.go, update_widget_survey_response_request.go, store_csat_rating_request.go
 
 app/http/resources/
-  engage_settings_resource.go, segment_resource.go, segment_preview_resource.go, engage_asset_resource.go,
+  engage_settings_resource.go, engage_asset_resource.go,
   announcement_resource.go, announcement_stats_resource.go, engage_receipt_resource.go,
   survey_resource.go (with questions), survey_question_resource.go, survey_response_resource.go (answers, contact compact gated by contacts:read),
   survey_results_resource.go, survey_template_resource.go, engage_preview_resource.go,
   widget_engage_item_resource.go (widget-safe: no audience, no internal name, no stats), widget_survey_resource.go, widget_survey_response_resource.go
 
 app/policies/
-  segment_policy.go, announcement_policy.go, survey_policy.go (incl. publish, bypassThrottle, deleteResponse, export), engage_settings_policy.go
+  announcement_policy.go, survey_policy.go (incl. publish, bypassThrottle, deleteResponse, export), engage_settings_policy.go
 
 app/events/
-  segment_created.go, segment_updated.go, segment_deleted.go,
   announcement_created.go, announcement_updated.go, announcement_status_changed.go, announcement_deleted.go,
   survey_created.go, survey_updated.go, survey_status_changed.go, survey_deleted.go,
   survey_response_created.go, survey_response_completed.go, survey_response_deleted.go,
@@ -663,34 +603,30 @@ app/listeners/
   schedule_csat_request.go                  # Queued: conversation.closed
   cancel_csat_on_reopen.go                  # Queued: conversation.reopened -> mark pending job skip (worker re-check covers; listener cancels River job when possible)
   repoint_engage_on_contact_merge.go        # InTx: contact.merged
-  end_items_on_segment_delete.go            # InTx guard: segment delete refused when in use (no listener needed); kept for archived references
   pause_engage_on_workspace_suspend.go      # AfterCommit: workspace.suspended -> live_summary inactive (items keep status)
 
 app/jobs/
   send_csat_request.go, expire_survey_requests.go, transition_engage_schedules.go,
   prune_engage_receipts.go, purge_engage_items.go, process_engage_asset.go
 
-app/exceptions/engage.go   # ErrSegmentInUse, ErrFormatLocked, ErrQuestionTypeLocked, ErrBranchBackwards, ErrSurveyNotLive, ErrResponseCompleted, ErrResponseExpired, ErrMissingAlt, ...
+app/exceptions/engage.go   # ErrFormatLocked, ErrQuestionTypeLocked, ErrBranchBackwards, ErrSurveyNotLive, ErrResponseCompleted, ErrResponseExpired, ErrMissingAlt, ...
 
 app/mcp/tools/
   dimmi_list_announcements.go, dimmi_create_announcement.go, dimmi_update_announcement.go,
-  dimmi_list_surveys.go, dimmi_create_survey.go, dimmi_get_survey_results.go, dimmi_list_survey_responses.go,
-  dimmi_preview_segment.go
+  dimmi_list_surveys.go, dimmi_create_survey.go, dimmi_get_survey_results.go, dimmi_list_survey_responses.go
 
 app/client/commands/   # CLI mode (09 owns framework)
-  announcements.go (list, show, create --file, update, publish, pause, end), surveys.go (list, results, responses --csv), segments.go (list, preview)
+  announcements.go (list, show, create --file, update, publish, pause, end), surveys.go (list, results, responses --csv)
 
 database/migrations/20261101001501..1510_*.sql
-database/queries/engage_settings.sql, segments.sql, engage_assets.sql, announcements.sql, surveys.sql,
+database/queries/engage_settings.sql, engage_assets.sql, announcements.sql, surveys.sql,
   survey_questions.sql, survey_responses.sql, survey_answers.sql, engage_receipts.sql, engage_stats_daily.sql
-database/factories/segment_factory.go, announcement_factory.go, survey_factory.go, survey_response_factory.go, engage_receipt_factory.go
+database/factories/announcement_factory.go, survey_factory.go, survey_response_factory.go, engage_receipt_factory.go
 database/seeders/engage_seeder.go   # demo: banner, NPS survey, CSAT survey
 
 tests/feature/api/engage/*_test.go          # one per controller
 tests/feature/widget/engage_*_test.go
 tests/feature/web/csat_rating_test.go
-tests/feature/engage/segments_test.go        # rules validation, Go evaluator, SQL compiler + parity property test (Go vs SQL on real Postgres, 10,000 factory contacts)
-tests/feature/engage/urlmatch_test.go        # shared JSON vectors with widget (pure, table-driven, no mocks)
 tests/feature/engage/*_test.go               # eligibility, frequency, throttle, branching, write-back, CSAT gating, redaction: real App (`testkit.New(t)`), real Postgres, real Valkey (per-test key prefix, never faked), real dispatcher + River (`tc.Queue.Drain`); fakes only at boundaries (`tc.Mail`, `tc.Clock`). No unit tests with mocks (testing.md). Tests named in plain words; every edge case covered
 tests/e2e/widget_engage_protocol_test.go     # Node: config flag, list, events, response, anonymous CDN list
 ```
@@ -703,11 +639,6 @@ Full shapes in [api.md](api.md). Auth letters per `00-foundation/api.md`. All ad
 |---|---|---|---|---|
 | GET | /engage-settings | engage-settings.show | A engage:read | throttle settings, live summary |
 | PATCH | /engage-settings | engage-settings.update | A engage:write + `engage:manage` | |
-| GET | /segments | segments.index | A engage:read | |
-| POST | /segments | segments.store | A engage:write | |
-| GET/PATCH/DELETE | /segments/{seg} | segments.show/update/destroy | A engage:read / engage:write | delete refused when in use |
-| GET | /segments/{seg}/contacts | segments.contacts.index | A engage:read + contacts:read | matching contacts, cursor |
-| POST | /segment-previews | segment-previews.store | A engage:read | count + 10 sample (rules or segment_id) |
 | GET | /engage-assets | engage-assets.index | A engage:read | |
 | POST | /engage-assets | engage-assets.store | A engage:write | multipart, 5 MB |
 | PATCH/DELETE | /engage-assets/{eas} | engage-assets.update/destroy | A engage:write | alt text; delete refused when referenced by non-archived item |
@@ -742,7 +673,7 @@ Widget (`/widget/v1`; `app` = public app id + origin; `widget` = bearer session)
 
 | Method | Path | Route name | Auth | Purpose |
 |---|---|---|---|---|
-| GET | /apps/{app}/engage-items | widget.apps.engage-items.index | app | anonymous-safe items, CDN 60 s |
+| GET | /apps/{app}/engage-items | widget.apps.engage-items.index | app | items surviving partial evaluation, CDN 60 s |
 | GET | /engage-items | widget.engage-items.index | widget | eligible items for contact, ETag |
 | GET | /announcements/{ann} | widget.announcements.show | widget or app | manual/deep link; audience still enforced |
 | GET | /surveys/{svy} | widget.surveys.show | widget or app | manual, CSAT card, `open_survey` |
@@ -769,7 +700,6 @@ Web (`routes/web.go`, rest.md exception row requested):
 | `dimmi_create_survey` | engage:write | write | POST /surveys (draft, template, questions) |
 | `dimmi_get_survey_results` | engage:read | read | GET /surveys/{svy}/results |
 | `dimmi_list_survey_responses` | engage:read | read | GET /surveys/{svy}/responses; text answers in untrusted envelope |
-| `dimmi_preview_segment` | engage:read | read | POST /segment-previews (count only, no sample PII) |
 
 Publishing (`status: live`, `resume`) via MCP is customer-visible: 09 confirm gate rule applies (elicitation then `confirm` param). No MCP delete.
 
@@ -777,13 +707,12 @@ Publishing (`status: live`, `resume`) via MCP is customer-visible: 09 confirm ga
 
 ```
 dimmi announcements list [--status live] [--json]
-dimmi announcements create --file launch.md [--format modal|banner|chat] [--segment seg_...] [--publish] [--dry-run]
+dimmi announcements create --file launch.md [--format modal|banner|chat] [--audience adn_...] [--publish] [--dry-run]
 dimmi announcements update ann_... --file launch.md
 dimmi announcements publish|pause|end ann_...        # PATCH status
 dimmi surveys list
 dimmi surveys results svy_... [--since 30d] [--json]
 dimmi surveys responses svy_... --csv > nps.csv
-dimmi segments list | dimmi segments preview seg_...
 ```
 
 `--file` Markdown with YAML front matter: `name`, `format`, `title`, `ctas`, `audience`, `trigger`, `starts_at`, `ends_at`, `locale`; body = Markdown after front matter. `--publish` requires interactive confirm unless `--yes`.
@@ -794,7 +723,6 @@ Emitted (new, add to catalog):
 
 | Event | Realtime | Webhook | Notes |
 |---|---|---|---|
-| segment.created / segment.updated / segment.deleted | yes (workspace) | no | |
 | announcement.created / announcement.updated / announcement.deleted | yes (workspace) | no | |
 | announcement.status_changed | yes | no | `{from, to, reason}`; audit |
 | survey.created / survey.updated / survey.deleted | yes | no | |
@@ -808,7 +736,7 @@ Widget channel (`widget_contact:{ctc}`): no new events. CSAT card arrives as `me
 
 Consumed: `conversation.closed` (CSAT schedule), `conversation.reopened` (cancel pending CSAT), `contact.merged` (repoint), `contact.deleted` (eraser runs via hook, not listener), `workspace.suspended` / `workspace.unsuspended` (live summary), `member.deactivated` (chat sender fallback, cache bust), `article.unpublished` / `article.deleted` (CTA `open_article` validity warning; item keeps running, CTA hidden in widget).
 
-Audit (WriteAuditLog): status changes, `bypass_throttle` changes, deletes, response deletes, CSV exports, engage settings, segment deletes.
+Audit (WriteAuditLog): status changes, `bypass_throttle` changes, deletes, response deletes, CSV exports, engage settings.
 
 ## Jobs
 
@@ -843,20 +771,19 @@ Audit (WriteAuditLog): status changes, `bypass_throttle` changes, deletes, respo
 | engage.rate.events_per_ip_minute | 300 | anonymous |
 | engage.rate.responses_per_session_hour | 30 | |
 | engage.rate.csat_posts_per_ip_hour | 30 | CSAT rating page |
-| engage.segment_preview_timeout | 3 s | exact count statement timeout, then sampled estimate |
-| engage.segment_contacts_timeout | 5 s | |
 
 Self-host: tunables above configurable, `0` disables a limit.
 
-Entitlement catalog keys (cloud caps, `Entitlements.Limit`, extensibility.md section 6; owner 15; self-host default `-1` unlimited; staff override per customer, 12): `engage.max_live_announcements` (cloud 50, per workspace), `engage.max_live_surveys` (cloud 20), `engage.max_segments` (cloud 200). Over limit: 422 `entitlement_limit_reached` with `key`, `limit`. Validation limits (`engage.max_questions`, `engage.max_translations`, `engage.assets.max_mb`) stay config: same in every edition, not caps.
+Entitlement catalog keys (cloud caps, `Entitlements.Limit`, extensibility.md section 6; owner 15; self-host default `-1` unlimited; staff override per customer, 12): `engage.max_live_announcements` (cloud 50, per workspace), `engage.max_live_surveys` (cloud 20). Saved audience cap is `audiences.max_per_workspace` (cloud 200), owner 18. Over limit: 422 `entitlement_limit_reached` with `key`, `limit`. Validation limits (`engage.max_questions`, `engage.max_translations`, `engage.assets.max_mb`) stay config: same in every edition, not caps.
 
 ## Permissions matrix
 
 | Action | owner | admin | member | token ability |
 |---|---|---|---|---|
-| view items, segments, stats, results, responses, export CSV | yes | yes | yes | engage:read (+ contacts:read for contact details) |
-| create/edit drafts, segments, assets, questions | yes | yes | yes | engage:write |
+| view items, stats, results, responses, export CSV | yes | yes | yes | engage:read (+ contacts:read for contact details) |
+| create/edit drafts, assets, questions | yes | yes | yes | engage:write |
 | publish (`status: live`), resume, edit live item content/audience | yes | yes | no | engage:write + permission `engage:manage` |
+| saved audiences | 18 `audiences:read`, `audiences:write`, `audiences:manage` | | | |
 | pause, end live item | yes | yes | yes | engage:write (stopping is always safe) |
 | set `bypass_throttle`, change engage settings | yes | yes | no | engage:write + `engage:manage` |
 | delete items, delete responses | yes | yes | no | engage:write + `engage:manage` |
@@ -895,26 +822,25 @@ Server enforces what it can; UI contract for frontend team:
 | `POST /widget/v1/engage-events` | p95 10 ms | one upsert statement for up to 50 events; tracker in memory |
 | response save | p95 50 ms | one tx: response row + answers upsert |
 | results | p95 150 ms at 100k, 400 ms at 1M responses | index-only scans on `(workspace_id, question_id, value_number)`, Valkey cache 60 s keyed by filters (shared across replicas) |
-| segment preview | 3 s max | exact count with statement timeout, else `TABLESAMPLE SYSTEM (1)` estimate `approximate: true` |
 | scale assumptions | 1M contacts, 5M page loads/day, 70 live items | server rows only for session contacts that see items; no audience materialization, no fan-out jobs |
 
 Storage estimate: receipt row about 120 bytes; announcement seen by 1M contacts = about 120 MB plus index; pruned 365 days after end. Answer row about 80 bytes plus text.
 
 ## Observability
 
-Metrics: `dimmi_engage_items_requests_total{list=session|anonymous,result=200|304}`, `dimmi_engage_eligibility_seconds`, `dimmi_engage_events_total{kind}`, `dimmi_engage_stats_flush_total{result}`, `dimmi_engage_responses_total{source,status}`, `dimmi_engage_csat_requests_total{result,skip_reason}`, `dimmi_engage_segment_preview_seconds{approximate}`, `dimmi_engage_redactions_total{kind}`.
+Metrics: `dimmi_engage_items_requests_total{list=session|anonymous,result=200|304}`, `dimmi_engage_eligibility_seconds`, `dimmi_engage_events_total{kind}`, `dimmi_engage_stats_flush_total{result}`, `dimmi_engage_responses_total{source,status}`, `dimmi_engage_csat_requests_total{result,skip_reason}`, `dimmi_engage_redactions_total{kind}`.
 
 Logs: item public id, contact public id, outcome. Never answer text at info. Never signed link signatures.
 
 ## Security and privacy
 
-- Audience rules are targeting, not authorization. Content of live items readable by any contact matching audience; URL rules evaluated client-side. Docs and dashboard note: do not put secrets in announcements.
-- Anonymous list exposes only items explicitly anonymous-safe; rendered with variable fallbacks (no contact data).
-- Widget resources hide audience, segment, internal name, stats, creator.
+- Audience rules are targeting, not authorization. Content of live items readable by any contact matching audience; page rules evaluated client-side. Docs and dashboard note: do not put secrets in announcements.
+- Anonymous list exposes only items that partial evaluation keeps, residual holds page, device, locale leaves only; rendered with variable fallbacks (no contact data).
+- Widget resources hide audience, saved audience names, internal name, stats, creator. Only residual (page, device, locale leaves) reaches browser. Canary test per 18.
 - CSAT rating page: CSP `default-src 'self'; img-src 'self' https:; style-src 'self'; form-action 'self'; frame-ancestors 'none'`. Signed URLs via `framework/routing` (HMAC-SHA256, app key), bind `svr` + `expires` (max 30 days); POST reuses same signature (no cookies, no form token). Only `display = conversation` responses with `source conversation_email`.
 - Link scanners: GET never writes (no seen, no answer).
 - Text answers rendered escaped everywhere.
-- Attribute write-back writes only `custom_attributes` keys declared on question; identified contact keys may be overwritten later by JWT claims (02 rule, documented).
+- Attribute write-back writes only `custom_attributes` keys declared on question, and only when 18 definition has `client_writable = true`; off at write time: answer kept, value dropped, `not_client_writable` problem row. Customer answers are claimed values: key never joins `trusted_attribute_keys`, never passes `access` gate. Identified contact keys may be overwritten later by JWT claims (02 rule, documented).
 - Page URL scrubbing reuses 01 rule.
 - GDPR: eraser `EraseEngageContactData` deletes contact's survey responses (answers cascade), receipts, and scrubs `contact_id` from `requested` CSAT rows; stats rows keep counts (no PII). Contact export (03) includes engage receipts and survey responses (export hook).
 - Tenant isolation: all queries with `workspace_id`; widget routes resolve workspace from session/app.
@@ -939,7 +865,8 @@ Logs: item public id, contact public id, outcome. Never answer text at info. Nev
 | 00-accounts | audit log, member roles, workspace suspended events |
 | 01-messenger-widget | config `engage` block, SDK commands/events, lazy chunks, test session mint, preview page `preview` param, `announcement_id` on conversation create, widget message resource exposes `survey_request` |
 | 02-widget-identity | verified contact attributes and company claims (targeting input); `signed_up_at` convention |
-| 03-shared-inbox | `SendSystemMessage` action, `conversation.closed/reopened`, contacts `filter[segment]`, `include=csat`, eraser + export hooks, `announcement.replied` event row, contact merge event |
+| 18-audiences M1 to M4 | rule language, `app/support/audience`, `app/support/urlmatch`, saved audiences, preview, shared builder, attribute definitions (`client_writable`); surface hooks |
+| 03-shared-inbox | `SendSystemMessage` action, `conversation.closed/reopened`, contacts `filter[audience]` (18), `include=csat`, eraser + export hooks, `announcement.replied` event row, contact merge event |
 | 04-email-channel | deliver system survey request message in thread with `Auto-Submitted: auto-generated`; suppression check API |
 | 06-notifications | trigger `csat_negative` |
 | 07-dimmi-agent | agent never triggered by system messages (CSAT request) |
@@ -949,40 +876,40 @@ Logs: item public id, contact public id, outcome. Never answer text at info. Nev
 | 11-self-host | backups include engage tables (automatic), `dimmi doctor` none |
 | 12-cloud-billing | replay fixtures `csat_request_not_billable`, `announcement_reply_billing`; confirm no metering |
 | 13-changelog | widget entry route `GET /widget/v1/changelog/entries/{cle}` (opened by SDK `show('changelog', {entry})`) for CTA `open_changelog_entry`; entry lookup `changelog.FindPublishedEntry(ctx, workspaceID, entryID)`; boundary (Decisions table) |
-| 14-feedback-roadmap | may reuse segments (not at MVP); survey answers linking to feature requests later |
+| 14-feedback-roadmap | may adopt audiences (18, not at MVP); survey answers linking to feature requests later |
 
 ## Required from other specs (exact edits)
 
 15 is read-only on other folders. Owners apply:
 
 ### 00-foundation
-1. `data-model.md` ownership map: add row `engage_settings, segments, engage_assets, announcements, surveys, survey_questions, survey_responses, survey_answers, engage_receipts, engage_stats_daily | 15-announcements-surveys`.
-2. `data-model.md` prefix registry (catalog `app/models/public_ids.go`, `framework/ids`): add `seg_` segments, `ann_` announcements, `svy_` surveys, `svq_` survey_questions, `svr_` survey_responses, `erc_` engage_receipts, `eas_` engage_assets.
+1. `data-model.md` ownership map: add row `engage_settings, engage_assets, announcements, surveys, survey_questions, survey_responses, survey_answers, engage_receipts, engage_stats_daily | 15-announcements-surveys`.
+2. `data-model.md` prefix registry (catalog `app/models/public_ids.go`, `framework/ids`): add `ann_` announcements, `svy_` surveys, `svq_` survey_questions, `svr_` survey_responses, `erc_` engage_receipts, `eas_` engage_assets.
 3. `data-model.md` "Core table changes" jsonb row: `messages.metadata.survey_request`, `conversations.source.announcement_id`, `messages.event` name `announcement.replied` (15). Migration range note: 15 uses `20261101001501-001599`.
 4. `events-and-realtime.md` "Events added by feature specs": row 15 with events in Events table above; note `survey_response.completed` webhook yes, others realtime only. Standard listeners: `WriteAuditLog` covers engage status/settings/exports.
-5. `api.md` abilities: add `engage:read`, `engage:write`. Endpoint ownership: row "announcements, surveys, segments, engage settings, engage assets, survey templates, `/conversations/{conv}/survey-responses`, `/contacts/{ctc}/survey-responses`, `/contacts/{ctc}/engage-receipts`, widget engage routes, `/csat-ratings/{svr}` | 15".
+5. `api.md` abilities: add `engage:read`, `engage:write`. Endpoint ownership: row "announcements, surveys, engage settings, engage assets, survey templates, `/conversations/{conv}/survey-responses`, `/contacts/{ctc}/survey-responses`, `/contacts/{ctc}/engage-receipts`, widget engage routes, `/csat-ratings/{svr}` | 15".
 6. `rest.md` exceptions table: add web row `/csat-ratings/{svr}` (CSAT email rating page, GET renders, POST acts, HMAC-signed query). Replaces earlier `/survey-forms/*` row (later: hosted-survey-page).
 7. `contracts.md` contact eraser hooks: add "15: survey responses + answers, engage receipts, CSAT request rows (`EraseEngageContactData`)".
 8. `security.md` Abuse (cloud): remove public survey links line (later: hosted-survey-page); keep card/secret redaction of answers.
 
 ### 01-messenger-widget
 1. Config resource adds `engage: {active, anonymous, version, refresh_interval_ms}`; config cache key includes `engage_settings.version`; listener bust on `engage_settings` version change (15 `BumpWidgetConfigForEngage` publishes same PubSub invalidation 01 uses).
-2. `sdk-contract.md` (already carries these; listed for check): `track(event, properties?)` client-only (no network; matches cached items with `trigger.on = track_event`; properties ignored at MVP, max 1 KB); views `show('announcement', {id})`, `show('survey', {id})` (no separate show commands); CTA mappings `show('help', {article})`, `show('changelog', {entry})`, `startConversation(prefill, {context: {announcement_id}})`; boot option `engage: false` (opt out per page); events (snake_case names, camelCase payloads) `announcement_shown {id}`, `announcement_dismissed {id}`, `announcement_clicked {id, ctaId}`, `engage_action {id, ctaId, eventName}` (CTA `sdk_event`), `survey_shown {id}`, `survey_completed {id, responseId}` (no answer values); deep links `#dimmi-announcement=`, `#dimmi-survey=`; storage key `dimmi:{app}:engage`.
+2. `sdk-contract.md` (already carries these; listed for check): `track(event, properties?)` matches cached items with `trigger.on = track_event` locally, no network unless config lists name as `client_writable` (18 M6); properties max 1 KB; views `show('announcement', {id})`, `show('survey', {id})` (no separate show commands); CTA mappings `show('help', {article})`, `show('changelog', {entry})`, `startConversation(prefill, {context: {announcement_id}})`; boot option `engage: false` (opt out per page); events (snake_case names, camelCase payloads) `announcement_shown {id}`, `announcement_dismissed {id}`, `announcement_clicked {id, ctaId}`, `engage_action {id, ctaId, eventName}` (CTA `sdk_event`), `survey_shown {id}`, `survey_completed {id, responseId}` (no answer values); deep links `#dimmi-announcement=`, `#dimmi-survey=`; storage key `dimmi:{app}:engage`.
 3. Bundle: lazy chunks `engage-banner` (6 KB gz), `engage-modal` (10 KB), `engage-survey` (14 KB); core budget unchanged (engage scheduler at most 1.5 KB inside 35 KB).
 4. `POST /widget/v1/conversations` accepts `announcement_id` (chat-format reply); `StartWidgetConversation` passes `source.announcement_id` and event row to 03.
 5. Widget message resource exposes `survey_request: {survey_id, response_id}` for system messages; widget renders CSAT card.
 6. Preview page `/widget-preview/{widget}` reads `#preview=ann_...|svy_...` and forwards to SDK; test sessions may request `preview` param on engage routes.
-7. Out table: remove "CSAT prompt on close" and change `dimmi.track` row to "server-side track ingestion and event audiences".
+7. Out table: remove "CSAT prompt on close" and `dimmi.track` row (18 M6 ships server-side ingestion and event audiences).
 8. Eraser `EraseWidgetContactData` unchanged; contact export lists engage data (via 03 export hook).
 
 ### 02-widget-identity
-1. Document `custom_attributes.signed_up_at` (unix seconds or RFC 3339) convention recognized as date by segments; validator hint when `signed_up_at` sent as non-date.
+1. Document `custom_attributes.signed_up_at` (unix seconds or RFC 3339) convention recognized as date by 18 rule fields; validator hint when `signed_up_at` sent as non-date.
 2. Note: identity claim changes trigger SDK engage refetch (no server change).
 
 ### 03-shared-inbox
 1. New action `conversations.SendSystemMessage(ctx, tx, input)`: inserts `type message`, `author_type system`, `substantive false`, metadata passthrough (allowlist key `survey_request`); runs outbound pipeline; never reopens, never changes `waiting_since`, `last_message_at`, `last_activity_at`, unread counts, assignment; never triggers 07; emits `message.created`.
 2. `messages.event` allowed names add `announcement.replied`; `conversations.source` documents `announcement_id`.
-3. `GET /contacts` adds `filter[segment]=seg_...` (15 compiler, statement timeout 5 s, 422 `segment_too_slow`).
+3. `GET /contacts` adds `filter[audience]=adn_...` (18 compiler, statement timeout 5 s, 422 `audience_too_slow`).
 4. Conversation resource `include=csat`: latest completed CSAT `{response_id, score, scale, comment_excerpt (140), completed_at}`; sidebar context endpoint includes it.
 5. Eraser registry list and CI table add 15 `EraseEngageContactData`; contact export hook includes `survey_responses` + `engage_receipts`.
 6. Out table: CSAT row changes to "ships in 15".
@@ -1007,8 +934,8 @@ Logs: item public id, contact public id, outcome. Never answer text at info. Nev
 3. Widget Help tab opens article by id: SDK `show('help', {article: 'art_...'})` -> `GET /widget/v1/help/articles/{art}` (for CTA `open_article`); article not public/published: Help home + `console.warn` `view_unavailable` reason `article_not_found` (sdk-contract code).
 
 ### 09-agent-native
-1. Register toolset `engage` (8 tools above) in `routes/mcp.go`; `status: live` publish uses confirm gate list ("engage publish" row).
-2. CLI commands `announcements`, `surveys`, `segments` in command map; Claude Code skill mentions `dimmi announcements create --file`.
+1. Register toolset `engage` (7 tools above) in `routes/mcp.go`; `status: live` publish uses confirm gate list ("engage publish" row).
+2. CLI commands `announcements`, `surveys` in command map (`audiences` from 18); Claude Code skill mentions `dimmi announcements create --file`.
 
 ### 10-webhooks
 1. `webhook_catalog.go` entry `survey_response.completed` (object `survey_response`, fixture).
@@ -1019,11 +946,11 @@ Logs: item public id, contact public id, outcome. Never answer text at info. Nev
 
 ### 13-changelog
 1. Expose `changelog.FindPublishedEntry(ctx, workspaceID, entryID)` for CTA validation; widget opens entry by id via SDK `show('changelog', {entry: 'cle_...'})` on route `GET /widget/v1/changelog/entries/{cle}`, used by CTA `open_changelog_entry`.
-2. Out row "Popup/banner announcements outside Messenger": change to "ships in 15; announcement CTA links entry". Out row "Audience segmentation": "15 segments available; adopt later".
+2. Out row "Popup/banner announcements outside Messenger": change to "ships in 15; announcement CTA links entry". Out row "Audience targeting": "18 audiences available; adopt later".
 3. `spotlight` card stays inside Messenger; not counted by 15 throttle (no change needed, note only).
 
 ### specs/README.md and research/roadmap.md (orchestrator)
-1. Add folder row `15-announcements-surveys | product-owner MVP add | announcements, surveys, segments, CSAT | 136 | 36`.
+1. Add folder row `15-announcements-surveys | product-owner MVP add | announcements, surveys, CSAT | 136 | 36`.
 2. Roadmap: move "CSAT on close" out of "post-MVP: reports" and "banners" out of "post-MVP: upmarket set" into launch list (announcements + surveys launch item); keep tours in upmarket set; "outbound" removed from "Not at launch" for in-app only.
 
 ## Contradictions found
@@ -1031,10 +958,10 @@ Logs: item public id, contact public id, outcome. Never answer text at info. Nev
 1. `01` Out lists CSAT ("post-MVP: reports") and `dimmi.track` (post-MVP); `03` Out lists CSAT. Product owner rule makes both MVP here; edits listed above.
 2. `research/roadmap.md` "Not at launch" lists "outbound". Resolved: in-app outbound (announcements, surveys) MVP; email/broadcast outbound stays post-MVP.
 3. `data-model.md` "One prefix per table" vs tables without public ids in other specs (`message_mentions`, `conversation_reads`). 15 follows practice: prefixes only for addressable tables.
-4. `00-foundation/data-model.md` lists no contact tags while brief mentions tags as targeting; resolved by custom attributes (open question 1).
+4. `00-foundation/data-model.md` lists no contact tags while brief mentions tags as targeting; resolved: contact and company tags ship (03 records.md, 18 rule fields).
 
 ## Open questions (recommended default in bold)
 
-1. Contact tags (Intercom-style) for targeting: **no at MVP**; custom attributes via JWT/API cover it; revisit with 03 "post-MVP: ticket fields".
+1. Contact tags for targeting: resolved **yes** (18 decision 8): tables 03 records.md, rule fields 18.
 2. Default global throttle 2 interruptive per day: **yes** (Chameleon docs use 2/day example).
 3. CSAT channels: **widget + email** only (chat apps later: chat-app-csat).

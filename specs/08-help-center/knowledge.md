@@ -4,7 +4,7 @@ Style: caveman. Owner 08. Consumer 07-dimmi-agent (retrieval), 08 help center se
 
 ## 1. Knowledge contract (for 07)
 
-Canonical interface and types: `contracts.Knowledge` in `app/contracts/knowledge.go`, defined in `specs/00-foundation/contracts.md` (wins over this file). Types `KnowledgeSearchOptions`, `KnowledgeSearchResult`, `KnowledgeChunk`, `KnowledgeDocument`, `KnowledgeStatus`, `KnowledgeVisibility`. Methods `Search`, `Document`, `Status`, `EmbeddingKeyInUse`, `PublicHosts`. Implementation `app/actions/knowledge` (import path `dimmi/app/actions/knowledge`); `*App.Knowledge` typed `contracts.Knowledge`. 07 depends only on interface. `knowledge.Fake()` for tests (scripted chunks).
+Canonical interface and types: `contracts.Knowledge` in `app/contracts/knowledge.go`, defined in `specs/00-foundation/contracts.md` (wins over this file). Types `KnowledgeSearchOptions`, `KnowledgeSearchResult`, `KnowledgeChunk`, `KnowledgeDocument`, `KnowledgeStatus`, `KnowledgeVisibility`. Methods `Search`, `Document`, `Status`, `EmbeddingKeyInUse`, `PublicHosts`. Audience filter (18 M7): `KnowledgeSearchOptions.AllowedAudienceIDs`, chunk kept when `effective_audience_ids <@ $allowed`; public `help_center` runs and anonymous MCP pass empty set. Implementation `app/actions/knowledge` (import path `dimmi/app/actions/knowledge`); `*App.Knowledge` typed `contracts.Knowledge`. 07 depends only on interface. `knowledge.Fake()` for tests (scripted chunks).
 
 08-only implementation notes:
 - `Search` never errors for missing embeddings: falls back to FTS, `KnowledgeChunk.MatchedBy` lacks `vector`, `Similarity` nil. Errors only: ctx canceled/deadline, database failure, invalid options.

@@ -39,7 +39,7 @@ Workspace settings (registry), page `resources/js/features/settings/pages/conver
 - Default allowlist constant `app/support/attachments/policy.go`: images, pdf, office, text, csv, json, log, zip, common audio and video. Customer-side only; teammates limited by hard block only.
 - Hard block list (executables, scripts) fixed. Not configurable.
 - Not allowed: 422 `attachment_type_blocked`; inbound: dropped with metadata. Size limits config only: `filesystems.max_upload_mb`, 50 file email override.
-- 01 adds audience rules on top if it wants, calling `policy.Allowed(ws, name, type)`.
+- 01 upload path calls `policy.Allowed(ws, name, type)`.
 
 ## Expiring links (S-03)
 

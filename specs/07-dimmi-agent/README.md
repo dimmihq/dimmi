@@ -44,7 +44,7 @@ In (MVP):
 - Agent actions (launch item 18, [actions.md](actions.md)): connections (HTTP, remote MCP), actions with input schema + identity binding from verified login, read inline, write via customer confirmation card + optional teammate approval, test runner, playground fake/live, templates (Stripe, Supabase, Clerk, Resend), OpenAPI import, timeline + audit trail, MCP toolset `ai_actions`.
 
 Out (later):
-- Agent action extensions (actions.md "Out"): `action-oauth-client-credentials`, `action-mcp-oauth`, `email-action-confirmations`, `action-procedures`, `action-audiences`, `action-conditional-approval`, `action-sql-connector`.
+- Agent action extensions (actions.md "Out"): `action-oauth-client-credentials`, `action-mcp-oauth`, `email-action-confirmations`, `action-procedures`, `action-conditional-approval`, `action-sql-connector`.
 - Evals CLI `dimmi test`, replays (post-MVP: agent evals). `ai_runs` stores snapshots so replay possible later.
 - Knowledge-gap report (post-MVP: knowledge-gap report). Runs with outcome `unknown` + queries already stored for it.
 - Agent assist for humans: drafts, summarize on demand, translate (post-MVP: agent assist for humans).
@@ -175,7 +175,7 @@ One per pipeline execution, playground question, help-center Ask AI (08), or han
 | id | uuid | |
 | workspace_id | uuid | |
 | agent_id | uuid not null references ai_agents | |
-| kind | text not null CHECK in ('conversation','playground','help_center','changelog','feedback','docs_sync') | `changelog` (13), `feedback` (14) and `docs_sync` (08 docs sync; purposes `screen_change`, `draft_edit`, `draft_article`, `verify_article` in `config_snapshot.purpose`) = `ai.RunTask` runs (no conversation, no agent enable needed); runs list filter `kind` shows them. Action follow-up runs are `conversation` with `trigger_action_call_id` |
+| kind | text not null CHECK in ('conversation','playground','help_center','changelog','feedback','docs_sync','inbox_translation') | registry `enums.AiRunKind`. `inbox_translation` (03 collaboration.md translation; 07 spend cap applies), `changelog` (13), `feedback` (14) and `docs_sync` (08 docs sync; purposes `screen_change`, `draft_edit`, `draft_article`, `verify_article` in `config_snapshot.purpose`) = `ai.RunTask` runs (no conversation, no agent enable needed); runs list filter `kind` shows them. Action follow-up runs are `conversation` with `trigger_action_call_id` |
 | conversation_id | uuid null references conversations on delete cascade | null for playground/help_center/changelog/feedback/docs_sync |
 | trigger_message_id | uuid null references messages on delete set null | last customer message included |
 | trigger_action_call_id | uuid null | follow-up run reporting write action result (FK to `ai_action_calls` added by `000710`) |
@@ -841,6 +841,7 @@ Secrets never readable by anyone after save (write-only). Audit log: key create/
 
 | Spec | What 07 needs | Contract |
 |---|---|---|
+| 18-audiences | surfaces `dimmi.knowledge`, `dimmi.action`, evaluated every run in `access` mode (verified values only) | `app/support/audience` |
 | 08-help-center | retrieval API, knowledge readiness, embedding key references, help center hosts for link allowlist, Ask AI reuse of `AnswerQuestion` | see "Retrieval contract" below |
 | 01-messenger-widget | render `ai.reply_*` deltas, citations chips, persistent "Talk to a human" button while `ai_state=active`, `metadata.ai.actions`, email capture on `request_email`; registers `POST /widget/v1/conversations/{conversation}/handoffs` (`widget.conversations.handoffs.store`) in widget route group; controller + action (`RequestHumanHandoff`) owned by 07; widget channel must carry `ai.reply_started`, `ai.reply_delta`, `ai.reply_discarded`, `ai.state_changed` (01 list lacks them today) | widget-safe message resource includes `metadata.ai.citations`, `actions` |
 | 03-shared-inbox | `ReplyToConversation` (actor agent, `Substantive`), `AssignConversation`, `UpdateConversation` (priority), `ReopenConversation` (reason `manual`, actor agent), `UnsnoozeConversation` callable with actor `agent`; message resource shows agent author name/avatar; `PATCH /conversations/{conversation}` accepts `ai_state` and hands it to 07 `PauseConversationAi`/`ResumeConversationAi` in same tx (03 never writes column) | actor type `agent` |

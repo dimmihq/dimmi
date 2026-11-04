@@ -1,6 +1,6 @@
 # 17 Workflows
 
-Style: caveman. Date 2026-11-04. Backend first, plus the builder that already exists as a prototype in `resources/js/features/automation`. Read with `specs/00-conventions/*`, `specs/00-foundation/*`, `specs/03-shared-inbox`, `specs/07-dimmi-agent`. Research: `research/competitors/workflows-productlane-intercom-plain.md`.
+Style: caveman. Date 2026-11-04. Backend first, plus the builder that already exists as a prototype in `resources/js/features/automation`. Read with `specs/00-conventions/*`, `specs/00-foundation/*`, `specs/03-shared-inbox`, `specs/07-dimmi-agent`, `specs/18-audiences/README.md`. Builds after 18 M4: rule language, evaluator, builder come from 18. Research: `research/competitors/workflows-productlane-intercom-plain.md`.
 
 Files in this folder:
 
@@ -46,7 +46,7 @@ Why: roadmap post-MVP item 11 "rules lite" (office hours, auto-assign, auto-tags
 - Workflows CRUD, one immutable trigger per workflow, audience, channels, schedule (office hours), re-entry rule, exclusive flag, ordering.
 - Working copy (draft) plus immutable versions for every trigger; publish, pause (optionally cancel running runs), resume, rollback, archive; runs keep their version.
 - 16 triggers in 6 groups (catalog.md): conversation start (opener, first message, customer reopens), during conversation (customer message, customer quiet, rated), team (teammate message, note added, assignment changed, status changed, teammate quiet), dimmi (handed over, resolved), service levels (SLA warning, SLA breached), reusable.
-- Conditions: one rule language for audience and branches, reusing 15 `app/support/segments` (contact, company) extended with conversation, message, trigger, dimmi, office hours, run variables.
+- Conditions: 18 rule language for audience and branches. 17 registers conversation, message, trigger, dimmi, office hours and run variable fields (catalog.md section 3).
 - Steps (catalog.md): message, reply buttons, collect data, show reply time, let dimmi handle, branch, AI classify, wait, run workflow (reusable, call and return), assign (member, team, round robin, balanced), unassign, tag, untag, priority, note, update contact, snooze, close, apply SLA, HTTP request.
 - Execution engine on River (engine.md): claims, ordering, durable runs, timers, idempotent steps, loop guard, failure handling.
 - dimmi integration: dimmi joins a conversation a workflow owns only through a "Let dimmi handle" step; outcomes (resolved, handed over, went quiet) are paths; automatic dimmi (07 settings) stays the fallback for conversations no customer-facing workflow claims.
@@ -64,7 +64,7 @@ Why: roadmap post-MVP item 11 "rules lite" (office hours, auto-assign, auto-tags
 
 | Item | Later |
 |---|---|
-| Customer visits a page / clicks an element (proactive) | covered by 15 chat-format announcements (targeting, URL rules, frequency); the reply starts a conversation that first-message workflows see with `conversation.source.announcement_id`. No second targeting engine |
+| Customer visits a page / clicks an element (proactive) | covered by 15 chat-format announcements (targeting, page rules, frequency); the reply starts a conversation that first-message workflows see with `conversation.source.announcement_id`. No second targeting engine |
 | Contact-level events from the customer's app ("payment failed" starts a conversation) | later: `workflow-contact-events` (needs proactive conversation creation; standout feature "error-triggered proactive support"). Seam: trigger registry + `POST /workflow-runs` already accepts `contact_id` reserved field (422 `not_supported` at MVP) |
 | Paths that rejoin (DAG), loops | later: `workflow-path-joins`. Tree only at MVP; definition stores parent links so joins are additive |
 | Native interactive buttons on Slack, Telegram, WhatsApp, Discord | later: `native-channel-buttons`. MVP renders numbered choices as text on every non-widget channel |
@@ -124,7 +124,7 @@ Change:
 | dimmi follow-up fixed at 4 minutes | `quiet_after` setting, default 10 min chat, 1 day email |
 | wait step one exit, "stop when the customer replies" toggle | two paths: "Time's up" and "They replied" (second optional), interrupt sources configurable |
 | buttons step | adds optional "Typed instead" path and "no answer in" timeout path |
-| trigger inspector: channels choice, 3 audience presets, office hours toggle, once per conversation | channels multi-select, full rule builder (same as branch), schedule picker (any, during, outside named schedule), re-entry (once per conversation, every time, cooldown), exclusive toggle, computed kind badge |
+| trigger inspector: channels choice, 3 audience presets, office hours toggle, once per conversation | channels multi-select, shared audience builder `resources/js/features/audiences/` from 18 M4 (replaces presets; same for branch), schedule picker (any, during, outside named schedule), re-entry (once per conversation, every time, cooldown), exclusive toggle, computed kind badge |
 | step settings as `Record<string,string>` parsed back from the sentence | typed settings from the server definition (catalog.md); card sentence rendered from settings |
 | local state, fake runs and versions | autosaved working copy (`PATCH /workflows/{wf}`), publish via `POST /workflows/{wf}/publications`, live stats |
 | missing steps | snooze, unassign, untag, update contact, apply SLA, HTTP request, AI classify, run workflow |
@@ -308,16 +308,13 @@ Evaluation in `app/support/officehours` (07 already plans it): `IsOpen(t)`, `Nex
 
 PK `(conversation_id, target)`. Index `(workspace_id, state, due_at) WHERE state = 'active'`.
 
-### team_assignment_cursors (`20261101001710`)
-
-`workspace_id, team_id uuid references teams on delete cascade, last_member_id uuid null, last_assigned_at timestamptz, updated_at`. PK `(team_id)`. Round robin pointer; row locked `FOR UPDATE` inside assign step tx.
-
 ### Core table changes
 
 | Migration | Change | Why |
 |---|---|---|
 | `20261101001711_add_workflow_columns_to_conversations.sql` | `conversations.workflow_run_id uuid null references workflow_runs on delete set null` (current customer-facing claim); `conversations.ai_mode text not null default 'auto' CHECK in ('auto','workflow')`; `conversations.sla_due_at timestamptz` (earliest active target, sort and filter); index `(workspace_id, sla_due_at) WHERE sla_due_at IS NOT NULL AND status = 'open'` | claim, dimmi ownership, SLA sort |
 | `20261101001712_move_agent_office_hours.sql` | expand: `ai_agents.schedule_id uuid null references schedules`; backfill: each agent with non-null `office_hours` gets a schedule "dimmi hours" and the column set; contract (next release): drop `ai_agents.office_hours` | office hours owned here (07 open question 1 closed) |
+| `20261101001713_add_schedule_fk_to_widget_settings.sql` | FK `widget_settings.schedule_id` references `schedules` on delete set null (column from 01) | per-widget schedule |
 | jsonb keys | `messages.metadata.workflow {workflow_id, version, run_id, step_id, buttons?: [{id,label}], input?: {kind, step_id}}`; `messages.event` names `workflow.run_started`, `workflow.run_ended`, `workflow.step_failed`, `sla.applied`, `sla.warning`, `sla.breached`, `sla.met` | timeline rows (03 registry) |
 | registry values | `ActorVia.Kind` adds `workflow` (ID = run id); `audit_logs.via_kind` accepts it (registry, no migration) | actor of every workflow action |
 
@@ -328,8 +325,7 @@ app/enums/        workflow_trigger.go (registry), workflow_step_kind.go (registr
                   workflow_run_status.go, workflow_run_end_reason.go (registry), workflow_kind.go, sla_target.go
 app/models/       workflow_spec.go (typed definition, settings per step kind, canonical JSON + hash), sqlc output
 app/support/workflowspec/   parse, validate (per trigger, per step, references, limits), compile, kind, diff
-app/support/conditions/     condition tree evaluator over segments fields + conversation/message/trigger/run fields
-                            (extends app/support/segments; same semantics, same missing-value rules)
+app/workflows/fields.go     registers conversation, message, trigger, dimmi, office hours, run fields into `app/support/audience`
 app/support/officehours/    schedule math (shared with 07)
 app/support/workflowvars/   variable rendering {{contact.first_name | fallback: "there"}} (reuses 03 saved-reply renderer)
 app/workflows/              engine (product package, no HTTP):
@@ -444,7 +440,7 @@ Entitlement catalog keys (add to `00-foundation/contracts.md` catalog; pricing p
 | `schedules.max_per_workspace` | limit | -1 | 50 |
 | `sla.max_policies` | limit | -1 | 50 |
 
-Fixed product limits (not entitlements, same in both editions; 422 `workflow_invalid` with error code): 150 steps per definition, path nesting depth 12, 10 paths per branch / classify step, 6 buttons per step (widget), 5 numbered choices recommended on text channels (6 max), 30 condition leaves and depth 3 per condition tree (same as 15 segments), message 4,000 chars, note 10,000 chars, wait 1 minute to 30 days, reusable call depth 3, chain depth 3, run variables 50 keys, 10 response mappings per HTTP step, 20 tags per tag step, 256 KB definition. Hourly cap over: new runs skipped with reason `rate_limited` (match log), 06 notification once per hour; running runs continue.
+Fixed product limits (not entitlements, same in both editions; 422 `workflow_invalid` with error code): 150 steps per definition, path nesting depth 12, 10 paths per branch / classify step, 6 buttons per step (widget), 5 numbered choices recommended on text channels (6 max), 50 condition leaves and depth 4 per condition tree (18 limits), message 4,000 chars, note 10,000 chars, wait 1 minute to 30 days, reusable call depth 3, chain depth 3, run variables 50 keys, 10 response mappings per HTTP step, 20 tags per tag step, 256 KB definition. Hourly cap over: new runs skipped with reason `rate_limited` (match log), 06 notification once per hour; running runs continue.
 
 ## Permissions
 
@@ -482,7 +478,7 @@ Members read everything (they need to understand why a conversation was routed).
 |---|---|
 | 00-foundation | events rows; prefixes `wf_ wfv_ wfr_ sch_ sla_`; entitlement keys; `ActorVia.Kind` `workflow`; queue `workflows`; contact eraser + export hooks |
 | 00-accounts | permissions `workflows:read`, `workflows:manage`, `workflows:run`, `schedules:manage`, `sla:manage`; ability groups `workflows:read`, `workflows:write`; workspace initializer creates default schedule |
-| 01 widget | config gains `workflow_openers` (compiled opener per audience bucket); `POST /widget/v1/conversations` accepts `opener`; messages endpoint accepts `workflow_answer`; renders `metadata.workflow.buttons` as quick replies, hides composer when the step disables typing; `office_hours_text` stays free text but widget availability reads the default schedule |
+| 01 widget | config gains `workflow_openers` (compiled opener carrying residual from 18 `audience.Partial`, never rule shape); `POST /widget/v1/conversations` accepts `opener`; messages endpoint accepts `workflow_answer`; renders `metadata.workflow.buttons` as quick replies, hides composer when the step disables typing; `office_hours_text` stays free text but widget availability reads the default schedule |
 | 03 inbox | `ai_mode`, `workflow_run_id`, `sla_due_at` columns; resource blocks `workflow` (active run summary) and `sla` (targets); sort `sla_due` and filter `sla_state`; timeline event names; `InterruptWorkflowRuns` listener order before `SendChannelOutbound` |
 | 04 email | workflow system messages sent in thread with `Auto-Submitted: auto-replied`; inbound auto-replies (`substantive false`) never resume or trigger workflows |
 | 05 chat apps | numbered-choice rendering is plain text, nothing new; bot-authored inbound ignored as today |

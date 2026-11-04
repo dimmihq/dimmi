@@ -181,7 +181,7 @@ Style: caveman. Each: case. decided behavior. Identity-specific cases live in [0
 130. `POST /widget/v1/conversations` with `announcement_id` of item visitor never saw, or ended over 7 days ago. 422 `announcement_not_replyable`; no rows.
 131. CSAT system message (15 `survey_request`) arrives while widget closed. Unread count +1 like team message; 01 offline email listener fires only for member/agent authors, so no 01 relay mail (15 owns any CSAT mail); widget shows card on open.
 132. Preview page with `#preview=ann_...` for draft announcement. Test session only; draft shown; receipts `is_test`; real visitors never see draft.
-133. Engage settings changed (segment edited). 15 bumps `engage_settings.version`; config cache key includes it; SDK refetches engage items after `refresh_interval_ms` or next config.
+133. Engage settings changed (saved audience edited). 15 bumps `engage_settings.version`; config cache key includes it; SDK refetches engage items after `refresh_interval_ms` or next config.
 
 ## Proof-of-work (ALTCHA)
 
@@ -233,9 +233,9 @@ Style: caveman. Each: case. decided behavior. Identity-specific cases live in [0
 164. `default_locale` changed to `de` with `texts` in English. Texts stay, label now wrong language; page warns "texts are read as German". `de` row, if any, deleted after confirm (row may not equal default).
 165. RTL locale with launcher `position: right`. Launcher keeps physical side; panel content mirrors.
 166. Translation row disabled. Same as missing. `locales` omits it unless shipped built-in.
-167. Page rule hides launcher on `/checkout/*` while panel open mid-conversation, route changes. Stays open until visitor closes, then launcher gone.
+167. Launcher rule hides launcher on `/checkout/**` while panel open mid-conversation, route changes. Stays open until visitor closes, then launcher gone.
 168. Bad pattern `pricing` (no `/` or scheme). 422 `page_rules.patterns.0`.
-169. Page rule hides everywhere (`only` with empty list). Allowed; launcher hidden everywhere; page warns; `Dimmi.open()` still works; install status still updates.
+169. Pages control `only` with empty list: stored `{"any": []}`, launcher hidden everywhere; page warns; `Dimmi.open()` still works; install status still updates.
 170. `open_to = conversation` with no open thread and `allow_anonymous = false`, anonymous. E89 wins, nothing shown.
 171. Open conversation exists but closed by team. `open_to` opens new thread composer with welcome; closed ones in Messages tab.
 172. `open_to = conversation`, all optional tabs off. Tab bar hidden; back goes to Messages only when visitor has more than one conversation.

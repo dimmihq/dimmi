@@ -45,7 +45,7 @@ Tests: business logic = integration only (real App, Postgres, Valkey, River, cen
 
 - [ ] `EnsureDefaultInbox` (+ `api` connection) registered as first workspace initializer (contracts.md hook, inside `CreateWorkspace` tx, idempotent for `dimmi workspace:repair`); inboxes CRUD endpoints, policy, resource, `inbox.*` events. Test: feature (CRUD, default delete 409, non-empty delete needs move_to, other workspace 404, member 403).
 - [ ] Contacts CRUD + list filters + custom attribute validation + phone/email normalization; `contact.updated`/`company.updated` carry `changes` + `changed_attribute_keys`. Test: feature per endpoint, validation (key format, 100 keys, 1024 chars), cross-tenant; changed keys only (E247).
-- [ ] `GET /contacts?filter[segment]=seg_...` via 15 segment compiler (fake compiler until 15 lands), 5 s statement timeout, 422 `segment_too_slow`. Test: segment filter combines with others, slow segment 422, other workspace segment 400 (E244).
+- [ ] `GET /contacts?filter[audience]=adn_...`, `GET /companies?filter[audience]=` via 18 compiler; built by 18 M3 (track 13), not here. 5 s statement timeout, 422 `audience_too_slow`. Test: audience filter combines with others, slow audience 422, other workspace audience 400 (E244).
 - [ ] `UpsertIdentifiedContact` (renamed from `IdentifyContact`; 02 owns `identity.IdentifyContact`) + `POST /contacts?upsert=true` per api.md algorithm (match `external_id` then `email`, 201/200 + `meta.upserted`); written `custom_attributes` keys added to `contacts.trusted_attribute_keys` (also member/token `PATCH /contacts`), merge keeps source trust for copied keys. Test: feature table test for every branch (external_id hit, email hit user, unverified lead skipped, create, immutable external_id 409, merged id follows chain); feature: no match key 422 `upsert_key_required`, `upsert=yes` 400, plain create 409 `contact_exists`; trusted keys added on upsert and PATCH, null removes (E254); merge trust rule (E255).
 - [ ] Identities list/delete, block/unblock as PATCH `blocked` field (field-dispatch in `ContactController.Update`, `contact.blocked`/`unblocked`), duplicates finder (same email/phone/name+company heuristics). Test: feature (no-op on same value, events order with attributes).
 - [ ] Companies CRUD + `POST /companies?upsert=true` (`external_id` then normalized `domain`) + company contacts. Test: feature.
@@ -289,7 +289,7 @@ Edge 290, 291.
 
 ## X2. Custom attributes (track 12 inbox-extras)
 
-- [ ] Migration `004`, definitions CRUD, value validation, PATCH + bulk, required to close incl. `required_when`, filter, sort, search, snooze wake, panel editors, settings page. Test: each type, edges 350 to 354. e2e `attributes.spec.ts`: required blocks close, fill, close.
+- [ ] Migration `004` (`conversation_attribute_definitions`, `cad_`), definitions CRUD, value validation, PATCH + bulk, required to close incl. `required_when`, filter, sort, search, snooze wake, panel editors, settings page. Test: each type, edges 350 to 354. e2e `attributes.spec.ts`: required blocks close, fill, close.
 
 ## X3. Folders, table layout (track 12 inbox-extras)
 

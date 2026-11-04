@@ -6,7 +6,7 @@ Style: caveman. Date 2026-11-04. Backend, browser widget and dashboard page. Sta
 |---|---|
 | this README | goal, scope, data model, code map, boot handshake, HTTP, events, jobs, permissions |
 | [api.md](api.md) | endpoint shapes |
-| [settings.md](settings.md) | every setting, translations, assets, site import, page rules, audience seam, budgets |
+| [settings.md](settings.md) | every setting, translations, assets, site import, pages control, audiences (18), budgets |
 | [settings-page.md](settings-page.md) | dashboard page: control bindings, several widgets, live preview, installed status, snippets |
 | [client.md](client.md) | connecting static widget; same-person rule, status, seen, typing, AI streaming, developer context |
 | [hosted-and-domains.md](hosted-and-domains.md) | apps without Origin, hosted page, custom API domain, per-widget help center |
@@ -57,7 +57,7 @@ Why: roadmap launch item 1 (`research/roadmap.md` "1. Messenger widget"). Feeds 
 - MCP tools for widget install and settings.
 - Several widgets per workspace, up to 10, each own settings, snippet, inbox. Short list on messenger settings page. Mobile app = another widget ([settings.md](settings.md) "Web-only fields").
 - Same-person rule: verified customer one contact across widgets; anonymous separate per widget; conversation stays on starting widget ([client.md](client.md) "Several widgets, same person").
-- All settings in [settings.md](settings.md): logo, company name, open straight into conversation, privacy notice, sounds, header and button colours, site import, page rules, launcher image, tab order, gradients and background images, team introduction, delay notice, welcome message, strings in 28 shipped languages plus customer translations.
+- All settings in [settings.md](settings.md): logo, company name, open straight into conversation, privacy notice, sounds, header and button colours, site import, pages control, launcher image, tab order, gradients and background images, team introduction, delay notice, welcome message, strings in 28 shipped languages plus customer translations.
 - Dashboard settings page with live preview running real widget code ([settings-page.md](settings-page.md)).
 - Static widget connected ([client.md](client.md)). Customer-visible status, seen on chat, typing to customers, AI token streaming (07 `ai.reply_delta`), console error and network capture.
 - Hosted full-page messenger URL, custom widget API domain, trusted domains, per-widget help center ([hosted-and-domains.md](hosted-and-domains.md)).
@@ -65,12 +65,14 @@ Why: roadmap launch item 1 (`research/roadmap.md` "1. Messenger widget"). Feeds 
 - Realtime stays one-way SSE with polling fallback: keeps bundle budget. No WebSocket in widget (decision).
 - Office hours: widget reads 17 schedule through `schedule_id`. Schedule-based auto-replies are workflows (17), not widget code.
 
+### Audiences
+
+Rules for who sees messenger, who starts, which tabs: [18](../18-audiences/README.md) M5, track 13, after 01 M2 session API. Server-side `track` ingestion and event rules: 18 M6; `track()` matches 15 triggers locally and sends only names marked `client_writable`. See [settings.md](settings.md) "Audiences (18)".
+
 ### Out
 
 | Item | Why |
 |---|---|
-| Rules for who sees the messenger or can start a conversation | audience rules arrive with the audiences spec ([settings.md](settings.md) "Audience seam") |
-| Server-side `track` ingestion and event audiences | depends on same audiences spec. `track()` stays client-only (15 triggers, no network) |
 | Bidirectional WebSocket, centrifuge-js in widget | decided no. Writes are REST, stream is uni-SSE, long-poll only when proxy buffers |
 
 CSAT prompt on close ships in 15 (system message `survey_request`, widget card). What's new tab ships in 13. Feedback tab ships in 14. `window.Intercom` shim ships with 16 importers (launch: importers).
@@ -257,7 +259,7 @@ app/http/resources/
   widget_contact_resource.go                       # widget-safe contact
   widget_conversation_resource.go                  # widget-safe conversation (no assignee email, no tags, no notes)
   widget_message_resource.go                       # type message only; author {type, name, avatar_url}; system messages expose `survey_request {survey_id, response_id}` (15 CSAT card); agent messages expose `ai.confirmation {action_call_id, title, text, status, expires_at}` (07 card), never `ai.action_calls`
-  widget_attachment_resource.go                    # signed URL 1 h
+  widget_attachment_resource.go                    # signed URL 30 min; only `clean`, `skipped`
   widget_upload_resource.go                        # upload instructions
   widget_settings_resource.go                      # dashboard full resource
   widget_install_resource.go                       # snippets + status
@@ -283,7 +285,7 @@ app/actions/widget/
   score_widget_bot.go                              # ScoreWidgetBot: honeypot, timing, UA, PoW, rate signals
   compute_team_availability.go                     # ComputeTeamAvailability: online flag, avatars, reply time
   resolve_branding.go                              # ResolveBranding: edition + 12 billing HasPaid + show_branding
-  build_install_snippets.go                        # BuildInstallSnippets: framework ids = 09 `dimmi init` ids: nextjs-app, nextjs-pages, react, react-router, sveltekit, nuxt, vue, astro, rails, laravel, django, fastapi, go, express, hono, html, proxy; text from sdk-contract "Install by stack"
+  build_install_snippets.go                        # BuildInstallSnippets: framework ids = 09 `dimmi init` ids: nextjs-app, nextjs-pages, react, react-router, sveltekit, nuxt, vue, astro, rails, laravel, django, fastapi, go, express, hono, html, proxy, react-native, expo, ios, android, webview; text from sdk-contract "Install by stack"
   erase_widget_contact_data.go                     # EraseWidgetContactData: GDPR contact eraser (00-foundation/contracts.md "Contact eraser hooks"), registered on 03 eraser registry; revokes contact's widget_sessions (reason contact_erased, disconnects realtime), scrubs current_page/recent_pages/context; idempotent
 
 app/actions/attachments/                           # shared with 03 (see Dependencies)
@@ -424,7 +426,10 @@ Auth legend: `app` = public, app id resolved and origin checked; `widget` = `aut
 | PATCH | `/widget/v1/session` | widget.session.update | widget (expired identified admitted) | `{user_jwt}`: resume or refresh identified session (02), same `sub` else 409 `identity_mismatch` |
 | DELETE | `/widget/v1/session` | widget.session.destroy | widget | logout: revoke token, disconnect realtime streams |
 | GET | `/widget/v1/contact` | widget.contact.show | widget | own widget-safe profile |
-| PATCH | `/widget/v1/contact` | widget.contact.update | widget | lead only: name, email, phone, custom_attributes (unverified) |
+| PATCH | `/widget/v1/contact` | widget.contact.update | widget | lead only: name, email, phone, custom_attributes (unverified; non-writable keys dropped silently, 18) |
+| GET | `/widget/v1/surface` | widget.surface.show | widget | 18 M5: surface decisions, ETag |
+| GET | `/widget/v1/apps/{app}/decisions` | widget.apps.decisions.show | app | 18 M5: only when `surface.dynamic` |
+| POST | `/widget/v1/contact-events` | widget.contact-events.store | widget | 18 M6: `client_writable` names only, claimed |
 | GET | `/widget/v1/conversations` | widget.conversations.index | widget | own conversations, newest activity first |
 | POST | `/widget/v1/conversations` | widget.conversations.store | widget + `idempotent` | create conversation + first message |
 | GET | `/widget/v1/conversations/{conversation}` | widget.conversations.show | widget | |
@@ -605,6 +610,8 @@ Console text (code, sentence, stack-aware fix, docs link) canonical in [sdk-cont
 | 422 | `email_required` | `require_email_when_offline`, team offline, lead has no email | SDK shows email field, keeps draft |
 | 403 | `identity_locked` | widget tried to change profile of `user` contact | console info; field read-only |
 | 403 | `attachments_disabled` | | |
+| 403 | `uploads_disabled` | workspace `attachments.customer_uploads` false (03 safety.md) | upload hidden |
+| 403 | `conversation_start_restricted` | `messenger.start` false (18 M5); no reason detail | start hidden |
 | 413 | `attachment_too_large` | over `max_attachment_mb` | |
 | 422 | `attachment_type_blocked` | executable, html, svg-as-inline etc. | |
 | 409 | `attachment_not_uploaded` | message references pending upload | |
@@ -823,6 +830,7 @@ Logs: app id, session public id, contact public id, outcome, error code. Never t
 | 14-feedback-roadmap | `/widget/v1/feedback/*` controllers, `feedback_tab_enabled` migration `001421`, config `features.feedback`, `feedback_unread_count`, `RevokePortalSessions` (01 calls on session revoke) |
 | 15-announcements-surveys | engage widget routes, config `engage` block, `BumpWidgetConfigForEngage`, `announcement_id` validation on conversation create, `survey_request` system messages via 03 `SendSystemMessage` |
 | 17-workflows | schedules (`schedule_id`, `within_hours`), openers, quick replies; FK added by 17 |
+| 18-audiences | `audiences` values beyond page leaves, `surface`, routes, `lib/rules.ts` extended, start check, `client_writable` on contact PATCH, track network |
 | 20-native-sdks | builds on frozen `/widget/v1` (tasks.md "Freeze"); owns `/widget/v1/devices*`, push credentials |
 | 16-importers | Intercom shim mapping table (`16-importers/sources.md`), import records lookup for `filter[intercom_id]` (via 08 help route) |
 
@@ -858,7 +866,7 @@ Gap ids from `research/competitors/intercom-gaps-in-built-features.md` and roadm
 | Messenger: typing to customers | [client.md](client.md) "Typing to customers" | M12 |
 | Messenger: trusted domains | README `allowed_origins`, [hosted-and-domains.md](hosted-and-domains.md) "Clients without Origin" | M1, M2 |
 | Messenger: identity verification with JWT, identity-validations | [02 README](../02-widget-identity/README.md), [02 validations.md](../02-widget-identity/validations.md) | M7, 02 tasks |
-| Messenger: conversation-started filters, audience upload rules | not specified: audience rules arrive with the audiences spec | none |
+| Messenger: conversation-started filters, audience upload rules | [18](../18-audiences/README.md) `messenger.start`; attachments by 03 `policy.Allowed` | 18 M5 |
 | S-02 widget upload switch | README `attachments_enabled`, `max_attachment_mb`; policy owner 03 (X7) | M2, M4 |
 | I-11, I-12 away, T-04 customer-facing name | availability reads 03 status; `company_name` chain [settings.md](settings.md) | M1, M8 |
 | widget: logo, company name, open straight, privacy, sounds, colours, import, pages, launcher image, tab order, backgrounds, team intro, delay notice | [settings.md](settings.md) | M8, M10 |

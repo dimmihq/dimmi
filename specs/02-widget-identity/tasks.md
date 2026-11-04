@@ -27,7 +27,7 @@ Tests: `framework/jwt` = unit + fuzz (framework layer). Everything in `app/` = i
 
 ## M3 Verification and identify (track 09 widget-identity)
 
-- [ ] `VerifyIdentityToken{..., Surface}`: key selection (kid or try-all HS256 max 5), cached decrypted secrets, nonce `SET NX EX` in Valkey, `aud` rule per surface (`portal` requires `dimmi-portal`), `last_used_at` coalesce.
+- [ ] `VerifyIdentityToken{..., Surface}`: key selection (kid or try-all HS256 max 5), cached decrypted secrets, nonce `SET NX EX` in Valkey, `aud` rule per surface (`portal` requires `dimmi-portal`, `help_center` requires `dimmi-help`), `last_used_at` coalesce.
   - Tests: revoked kid message (E24); try-all with 2 active (E23); nonce replay `token_replayed`; Valkey key TTL = `exp` + leeway; Valkey down fails closed only for nonce tokens (E86); portal token on widget surface rejected (E77) and widget token on portal rejected (E78); zero DB writes on warm path (query counter assert).
 - [ ] `ApplyIdentityClaims`: attributes, company upsert, identity rows (verified only per flags), claims hash skip, member-email test detection, `contacts.trusted_attribute_keys` maintenance. Exported for 03 REST upsert (`UpsertIdentifiedContact`).
   - Tests: absent key untouched, null deletes (E43); company switch (E42); unverified email no identity row (E51); test detection only with `email_verified` (E58, E59); `contact.updated.changes` lists changed `custom_attributes` keys (E84); claim keys added to `trusted_attribute_keys`, null removes, lead keys stay untrusted, absent untouched (E87-E91).

@@ -14,36 +14,42 @@ Tables exist (`tags`, `conversation_tag`), queries in `database/queries/tags.sql
 
 ## People and company tags (I-61)
 
-`20261201040005_create_contact_company_tag_tables.sql`: `contact_tag (workspace_id, contact_id, tag_id, created_by_type, created_by_id, created_at)` PK `(contact_id, tag_id)`, index `(workspace_id, tag_id)`; `company_tag` same shape. Same `tags` vocabulary. RLS.
+`20261201040005_create_contact_company_tag_tables.sql`: `contact_tag (workspace_id, contact_id, tag_id, created_by_type, created_by_id, created_at)` PK `(contact_id, tag_id)`, index `(workspace_id, tag_id)`; `company_tag` same shape. Same `tags` vocabulary. RLS. One spec of these tables: here, built by track 04. 18 reads them through rule fields `contact.tags`, `company.tags` and adds nothing to them.
 
-- `PATCH /contacts/{id}`, `PATCH /companies/{id}`: `add_tags`, `remove_tags`. `filter[tag]` on both lists. View fields `contact.tag`, `company.tag`. Max 50 per record, 422 `tag_limit_reached`.
+- `PATCH /contacts/{id}`, `PATCH /companies/{id}`: `add_tags`, `remove_tags`. `filter[tag]` on both lists. View fields `contact.tag`, `company.tag`. Max 50 per contact or company, 10,000 tags per workspace, 422 `tag_limit_reached`.
 - Events carry in `contact.updated.changes.tags`; no separate event.
 - Merge: union, cap 50. Erase: rows removed. Tag delete cascades; count in `tag.deleted`.
 - Follows person across conversations: panel chips; list row does not show them.
 
 ## Custom attributes (I-63, track 12)
 
-`20261201120004_create_attribute_definitions_table.sql`:
+`20261201120004_create_conversation_attribute_definitions_table.sql`:
 
-`attribute_definitions` (`atd_`): `workspace_id`, `object text CHECK in ('conversation','contact','company')`, `key text` (`[a-z0-9_]`, 1 to 64), `label`, `type text CHECK in ('text','list','number','decimal','boolean','date','reference','file')`, `options jsonb` (list values `{id,label}`), `reference_object text null CHECK in ('contact','company','conversation')`, `required_to_close bool default false`, `required_when jsonb null`, `team_ids uuid[] default '{}'`, `position`, `archived_at`, timestamps. Unique `(workspace_id, object, key)`. Limit 100 per object, 422 `attribute_definition_limit_reached`.
+`conversation_attribute_definitions` (`cad_`): `workspace_id`, `key text` (`[a-z0-9_]`, 1 to 64), `label`, `type text CHECK in ('text','list','number','decimal','boolean','date','reference','file')`, `options jsonb` (list values `{id,label}`), `reference_object text null CHECK in ('contact','company','conversation')`, `required_to_close bool default false`, `required_when jsonb null`, `team_ids uuid[] default '{}'`, `position`, `archived_at`, timestamps. Unique `(workspace_id, key)`. Limit 100, 422 `attribute_definition_limit_reached`.
+
+Contact and company definitions are not here: [18](../18-audiences/README.md) `attribute_definitions` (`atd_`) owns them.
 
 `conversations.custom_attributes jsonb not null default '{}'`, GIN `(workspace_id, custom_attributes jsonb_path_ops)`.
 
-- Contacts and companies keep free-form `custom_attributes`; definition is optional and gives label and type. Undefined keys still display raw. Conversation keys must be defined (422 `attribute_unknown`).
+- Contacts and companies keep free-form `custom_attributes`. Track 04 panel and directory show raw values with key as label; no build dependency on 18. When track 13 ships 18 `attribute_definitions`, labels and types come from that table, keys without definition still display raw. Conversation keys must be defined (422 `attribute_unknown`).
 - Value checks: list option id; number int64; decimal string; date ISO date; reference public id of that object, same workspace; file `att_` linked to this conversation. Max 1024 chars.
 - PATCH `custom_attributes` on single and bulk (`null` removes). Order step 6. Event `conversation.updated` `changes.custom_attributes`, `changed_attribute_keys`. Snooze wake per setting.
 - `required_to_close`: `required_when` is definition grammar limited to `channel`, `inbox`, `team`, `tag`, `priority`. Team-limited: only for conversations of `team_ids`. Enforced when member actor (dashboard, member token) closes, single, bulk (`failed`), reply `then: close`: 422 `required_attributes_missing` `{keys}`. System, agent, workflow, integration tokens bypass. Why: requirement is about human hand-off quality; automation would otherwise stall.
 - Filter `filter[attr.<key>]`, view field `attr.<key>`, sort `attr:<key>` (text, number, date, list), search `attr.plan:pro`.
-- Permission `attributes:manage` (`settings:write`; owner, admin). Writing values: `conversations:write`.
-- API: `GET /attribute-definitions?filter[object]=`, `POST`, `PATCH /attribute-definitions/{id}`, `DELETE` (archives; values stay, hidden). `type`, `key`, `object` immutable (422).
-- Events `attribute_definition.created|updated|deleted`, `workspace:{ws}`, webhook yes.
-- UI: settings `features/settings/pages/attributes.tsx` (new page, nav entry); panel section "Attributes" inline editors by type; close dialog lists missing. e2e `tests/e2e/attributes.spec.ts`.
+- Permission `attributes:manage` (owner, admin), one permission for this table and 18 definitions. Token abilities `attributes:read`, `attributes:write`. Track 12 registers them, 18 reuses. Writing values: `conversations:write`.
+- API: `GET /conversation-attribute-definitions`, `POST`, `PATCH /conversation-attribute-definitions/{id}`, `DELETE` (archives; values stay, hidden). `type`, `key` immutable (422). `/attribute-definitions` belongs to 18.
+- Events `conversation_attribute_definition.created|updated|deleted`, `workspace:{ws}`, webhook yes.
+- UI: settings `features/settings/pages/attributes.tsx` (new page, nav entry, conversation attributes only; contact and company in 18 Data page); panel section "Attributes" inline editors by type; close dialog lists missing. e2e `tests/e2e/attributes.spec.ts`.
+
+## Audience data on contacts (18, track 13)
+
+18 adds `contacts.last_heard_at`, `web_sessions`, `conversation_count`, GIN on `custom_attributes`, `contact_event_summaries`. Contact resource returns three columns once they exist (additive); `include=event_summaries` and `GET /contacts/{ctc}/event-summaries` return rollups (`contacts:read`). Panel section "Events" and attribute trust badge mount with 18 M6, track 04 panel ships without them. Merge and erase of summaries per 18 "Erase and merge".
 
 ## Customer panel (I-90, I-91, E-05)
 
 Split `resources/js/features/inbox/details-panel.tsx` into `features/inbox/panel/`: `conversation-section.tsx` (status, assignee, team, inbox, channel, priority, tags, participants, attributes), `contact-section.tsx`, `company-section.tsx`, `past-conversations.tsx`, `email-delivery-section.tsx`. Placeholder Links and Articles sections removed until owners ship. Data: `GET /conversations/{id}/context`, one round trip.
 
-Contact section: name (edit in place), avatar, email, phone, verified mark, kind, external id, company, location, local time, plan and other attributes, first seen, last seen, browser, OS, device, app version, source page (`conversations.source`), identities list, tags, notes. Long values truncate with copy. Pinned attributes: star on row saves to `member_inbox_preferences.pinned_attributes`; pinned first. Click name: profile page `/d/customers/$contact`.
+Contact section: name (edit in place), avatar, email, phone, verified mark, kind, external id, company, location, local time, plan and other attributes, first seen, last seen, browser, OS, device, app version, source page (`conversations.source`), identities list, tags, notes. Long values truncate with copy. Pinned attributes: star on row saves key to `member_inbox_preferences.pinned_attributes` (works on raw keys, no definition needed); pinned first. Click name: profile page `/d/customers/$contact`.
 
 Past conversations: 3 newest, "Show more" to 20 (`GET /contacts/{id}/conversations?limit=20`, scope filtered). Row: number, subject, status, time; click opens in place. Context `past_conversations` limit moves from 5 to 3 + `total_estimate`.
 

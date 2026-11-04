@@ -37,7 +37,7 @@ Style: caveman. Binding route table in README "HTTP API". Resource shape, errors
   "options": {
     "since": null,
     "conversations": { "status_mode": "close_all", "default_inbox_id": "inbox_01jbc...", "include_notes": true },
-    "contacts": { "skip_anonymous_leads": true, "email_trust": "unverified", "tags_attribute": "intercom_tags" },
+    "contacts": { "skip_anonymous_leads": true, "email_trust": "unverified", "import_tags": true },
     "articles": { "help_center_id": "hc_01jbd...", "publish": "preserve", "locale": "en", "redirects": true, "old_hosts": ["help.acme.com"] },
     "attachments": { "enabled": true }
   } }
@@ -204,7 +204,7 @@ Column mapping lives in `options.csv.columns` (`{"Email": "email", "User ID": "e
 | conversations.include_spam | bool | false | true: imported with `spam = true` |
 | contacts.skip_anonymous_leads | bool | true | lead without email, phone, external id and conversations |
 | contacts.email_trust | `unverified` \| `verified_for_users` | unverified | attestation audited |
-| contacts.tags_attribute | attribute key null | null | contact tags joined `, ` into one string attribute |
+| contacts.import_tags | bool | true | contact and company tags into `contact_tag`, `company_tag` (03 records.md) |
 | articles.help_center_id | hc id | required with articles | |
 | articles.publish | `preserve` \| `draft` | required | |
 | articles.locale | BCP 47 | source default locale | other locales via `locale` mappings to other help centers |

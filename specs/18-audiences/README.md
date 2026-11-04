@@ -2,7 +2,7 @@
 
 **Approved by the owner on 2026-11-04, with every recommended answer in "Decisions for you" accepted. Not built yet.**
 
-Style: caveman. Date 2026-11-04. One file while it is a proposal; on approval it splits into `README.md`, `edge-cases.md`, `tasks.md` like other folders. Read with `specs/00-conventions/*`, `specs/00-foundation/*`, `specs/15-announcements-surveys`, `specs/17-workflows`, `specs/02-widget-identity`. Research: `research/competitors/intercom-audiences.md`.
+Style: caveman. Date 2026-11-04. One file on owner's request for now. Read with `specs/00-conventions/*`, `specs/00-foundation/*`, `specs/15-announcements-surveys`, `specs/17-workflows`, `specs/02-widget-identity`. Research: `research/competitors/intercom-audiences.md`.
 
 ## Goal
 
@@ -17,7 +17,7 @@ Why now: 15 and 17 both specify rule languages, 17 reuses 15, 13, 14, 07 and 08 
 | `contacts.custom_attributes`, `companies.custom_attributes`, `contacts.trusted_attribute_keys` | built | migrations `...000033`, `...000032`; `app/actions/contacts/fields.go` (100 keys, 1,024 chars, key `^[a-z][a-z0-9_]{0,63}$`) |
 | Trust bookkeeping | partial: REST and teammate writes join trusted keys | `app/actions/contacts/update_contact.go`, `create_contact.go` |
 | Attribute definitions, types, registry | none. Type is whatever JSON arrives | |
-| Contact and company tags | none. `tags` + `conversation_tag` only | `20261101000039`, data-model |
+| Contact and company tags | none in code. `tags` + `conversation_tag` only. Spec: 03 records.md, built by track 04 | `20261101000039`, data-model |
 | Events | **not ingested.** `track()` is a spec only: client-side, no network, no storage (01 sdk-contract, 15). `contact_event_summaries` is a post-MVP name in 15. No table, no route | `routes/`, `database/migrations` |
 | Segments, rule evaluator, compiler | spec only (15). `app/support/segments`, `app/support/querybuilder` do not exist | `ls app/support` |
 | Workflows conditions | spec only (17 `app/support/conditions`). Prototype has 3 fixed audience presets | `resources/js/features/automation/inspector.tsx:65` |
@@ -34,7 +34,7 @@ Good news: 15 and 17 are unbuilt, so unifying now costs spec edits, not migratio
 |---|---|
 | One language | exactly one parser, one Go evaluator, one SQL compiler, one client residual evaluator. `tests/arch` fails if another package parses rule JSON |
 | Parity | Go and SQL agree on 10,000 random contacts per field and op (15's test, extended). Go and TypeScript agree on a shared JSON corpus for every client field |
-| Leak-free | widget responses contain no attribute names, attribute values, event names, saved audience names, tag names or rule shapes beyond page leaves the admin was told are public. CI test greps every widget response in the feature suite against a canary rule |
+| Leak-free | widget responses contain no attribute names, attribute values, event names (except those admin marked `client_writable`), saved audience names, tag names or rule shapes beyond page leaves the admin was told are public. CI test greps every widget response in the feature suite against a canary rule |
 | Spoof-proof | a browser can never pass an `access` gate by anything it sends. Proven by a test matrix over every widget write path |
 | Cost when unused | workspace with no rules: zero extra requests, one absent config field, zero rows, no added query |
 | Bundle | client evaluator at most 500 B gz inside the 35 KB core; loader stays under 3 KB with no rule code. CI size gate |
@@ -74,7 +74,7 @@ Good news: 15 and 17 are unbuilt, so unifying now costs spec edits, not migratio
 | Raw event history | `contact-event-history` | rollups answer every rule; see decision 5 |
 | Multi-company matching | with `contact_companies` | core has primary company; `company.*` means primary today, "any" later |
 | Custom objects in rules | post-MVP | no custom objects yet |
-| Conversation custom fields | 17 "ticket fields" | |
+| Conversation custom fields | 03 records.md conversation attributes | |
 | Regex | never | ReDoS, explainability |
 | AI-written audiences | later: `audience-from-sentence` | deterministic first; MCP already lets an agent write JSON |
 | Enrichment attributes | integrations | any integration writes through REST |
@@ -134,6 +134,7 @@ Semantics, identical in Go, SQL, client:
 - Relative dates: rolling 24-hour days from `a.Clock.Now()`, future via named ops, never negative numbers. `on`: calendar day in workspace timezone. `days_ago`: N full days back (24-hour window).
 - Dates stored as Unix seconds when the definition says `date` (see registry), so SQL compares numbers.
 - `within_days` modifier on `event.*.count`, 1 to 90.
+- `matches` glob: `*` any characters except `/`, `**` any characters. Trailing slash on `page.path` ignored. `page.url` never holds fragment.
 
 ### Field catalog
 
@@ -166,7 +167,7 @@ Each field registers: type, source, trust, where it can be evaluated (`client`, 
 | `session.browser`, `.os` | string | server | claimed | parsed from user agent with the existing parser |
 | `session.context.<key>` | by JSON type | server | claimed | 01 `Dimmi('update', {context})` |
 | `visitor.locale` | string | client | claimed | browser language |
-| `visitor.device` | list (desktop, mobile, tablet) | client | claimed | viewport (15) |
+| `visitor.device` | list (desktop, mobile, tablet) | client | claimed | viewport: mobile under 640 px, tablet 640 to 1023 px, desktop 1024 px up |
 | `page.url`, `.path`, `.query`, `.host`, `.referrer` | url | client | claimed | |
 | `conversation.*`, `message.*`, `note.*`, `trigger.*`, `rating.*`, `dimmi.*`, `office_hours.*`, `time.*`, `run.vars.*` | as 17 catalog | conversation | as 17 | Go only; preview replays recent conversations |
 
@@ -214,10 +215,10 @@ Errors (publish refused): `claimed_field_on_access_gate`, `field_unavailable_for
 
 Per surface storage:
 
-- `widget_settings.audiences jsonb`: `{launcher, start, tabs: {help, changelog, feedback}}`, each an inline audience. Absent = everyone.
+- `widget_settings.audiences jsonb`: `{launcher, start, tabs: {help, changelog, feedback}}`, each an inline audience. Absent = everyone. Column and launcher page leaves ship in 01 M8: 01 "Pages" control is simple form over `audiences.launcher` (01 settings.md), no second column, no second matcher.
 - 15 items, 17 versions: existing `audience` columns.
 - 08: `articles.audience_id`, `collections.audience_id`: saved only, so search can filter by id and bulk edit is one id.
-- 07: `agent_actions.audience jsonb` when `action-audiences` ships.
+- 07: `ai_actions.audience jsonb`, M7.
 
 ## Evaluation design
 
@@ -247,13 +248,14 @@ The browser gets a boolean or a page-only tree. No attribute name, value, saved 
 **Config (public, cacheable, 01)** adds, only when any rule exists:
 
 ```json
-"surface": { "version": 41, "dynamic": false,
+"surface": { "version": 41, "dynamic": false, "writable_events": ["export_completed"],
   "anonymous": { "launcher": { "any": [ { "field": "page.path", "op": "starts_with", "value": "/pricing" } ] },
                  "start": true, "tabs": { "help": true } } }
 ```
 
 - Computed at publish, cached with config, bumps with 15's `engage_settings.version` pattern.
 - `dynamic: true` only when an anonymous-reachable rule uses `session.country`. Then the SDK makes one `GET /widget/v1/apps/{app}/decisions` (no session, no row, `private, max-age=300`, rate limited). Workspace without geo rules: zero requests, the 01 bar stays.
+- `writable_events`: only names admin marked `client_writable`; public by that choice. Omitted when none.
 - Loader optimisation: anonymous `launcher: false`, no identity source and no stored session: core is not fetched until `show()` is called. Saves 35 KB on marketing pages for workspaces that only serve signed-in customers.
 
 **Session (handshake)** `GET /widget/v1/session` or `POST /widget/v1/sessions` responses add `surface` (same shape, no `dynamic`), computed after 02 applied claims, so a JWT's attributes count in the same response.
@@ -268,7 +270,7 @@ The browser gets a boolean or a page-only tree. No attribute name, value, saved 
 
 ### Client evaluator
 
-- `resources/widget/lib/rules.ts`. Input: residual tree. Handles `all`, `any`, `not`, url and string ops, device, locale. Under 500 B gz; shares 15's URL matcher.
+- `resources/widget/lib/rules.ts`. 01 M8 ships it with page ops for Pages control; 18 M5 extends. Input: residual tree. Handles `all`, `any`, `not`, url and string ops, device, locale. Under 500 B gz; shares 15's URL matcher.
 - Runs on boot and each `history` change (01 already patches `history`), no throttle because no network.
 - Malformed or unknown op from an older core: treated as false, one `console.error`, never throws.
 - Holds decisions in memory; nothing identified goes to `localStorage`. Logout drops them.
@@ -288,6 +290,8 @@ The browser gets a boolean or a page-only tree. No attribute name, value, saved 
 - Nothing materialised (15's decision stands). Membership is always computed. Only exception: fixed snapshots.
 
 ## Data model
+
+Build numbers come from track range 13 (`20261201130001` up), see BUILD-TRACKS; `0018NN` below are labels.
 
 Migration block `20261101001801`..`001899`. All tables: `workspace_id uuid not null references workspaces on delete cascade`, indexes lead with `workspace_id`, RLS `CREATE POLICY x_tenant ON x USING (workspace_id = ANY (dimmi_visible_workspaces()))`, `created_at`, `updated_at`. Prefixes (add to registry, no collision; `aud_` is audit logs, `evt_` is events): `adn_` audiences, `atd_` attribute definitions, `edf_` event definitions, `asn_` audience snapshots.
 
@@ -322,7 +326,7 @@ PK `(workspace_id, consumer_type, consumer_id, target_type, target_key)`; index 
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid pk | `atd_` |
-| object | text CHECK in (`contact`, `company`) | conversation later |
+| object | text CHECK in (`contact`, `company`) | conversation attributes: 03 records.md `conversation_attribute_definitions` (`cad_`) |
 | key | text not null | `^[a-z][a-z0-9_]{0,63}$`, as code. Unique `(workspace_id, object, key)`. People and company namespaces are separate |
 | label | text not null | editable, defaults from key |
 | description | text | max 500 |
@@ -340,9 +344,9 @@ Seed: `signed_up_at` as `date` when first seen (02 convention).
 
 Grouped log, one row per `(workspace_id, object, key, code)`: `code` (`type_mismatch`, `unknown_key_from_browser`, `not_client_writable`, `archived_write`, `key_limit_reached`, `invalid_option`), `count`, `last_at`, `sample` (shape only, no values). Rebuildable, pruned at 30 days. Surfaces silent failures, which Intercom has many of.
 
-### tags: `contact_tag`, `company_tag` (`001805`, `001806`)
+### tags: `contact_tag`, `company_tag` (`001805`, `001806` not used)
 
-`(workspace_id, contact_id | company_id, tag_id, created_by_type, created_by_id, created_at)`; PK ids; reverse index `(workspace_id, tag_id)`. Same `tags` table as conversations. Max 50 per contact, foundation limit. Resolves 15 open question 1. Limits: 10,000 tags per workspace.
+Spec and caps in 03 records.md (migration `20261201040005`), built by track 04: max 50 per contact or company, 10,000 tags per workspace. 18 adds rule fields `contact.tags`, `company.tags`, dependency filter, and proves merge union and erase in its tests. Resolves 15 open question 1.
 
 ### contacts additions (`001807`)
 
@@ -379,7 +383,7 @@ PK `(workspace_id, contact_id, event_definition_id)`. `count_last_days` = sum of
 - `articles.audience_id`, `collections.audience_id` uuid null references audiences on delete restrict (08).
 - `knowledge_documents.effective_audience_ids uuid[]`, denormalised onto chunks (08 `kd_`, `kc_`) for filter without join. Recomputed when article or collection chain changes.
 - `help_centers.login_url text` (https). Signed-in reading needs it.
-- `widget_settings.audiences jsonb not null default '{}'` (01).
+- `widget_settings.audiences jsonb not null default '{}'`: created in 01 `20261201010001` (M8), label `001813` not used.
 
 ### audience_snapshots, audience_snapshot_members (`001814`, `001815`, last milestone)
 
@@ -484,7 +488,7 @@ Intercom needs a custom domain and cookie forwarding. We reuse 02's portal SSO:
 
 ## API
 
-Rules per `00-foundation/rest.md`. Abilities new: `audiences:read`, `audiences:write`, `attributes:read`, `attributes:write`, `events:write`. Permission `audiences:manage` (owner, admin). Members read, can see preview counts, and with `contacts:read` samples.
+Rules per `00-foundation/rest.md`. Abilities new: `audiences:read`, `audiences:write`, `events:write`; `attributes:read`, `attributes:write` from 03 records.md track 12 (whichever ships first registers). Permissions `audiences:manage`, `attributes:manage` (owner, admin; 03 shares it). Entitlement `audiences.max_per_workspace` (cloud 200, self-host `-1`, owner 18): over 422 `entitlement_limit_reached`. Config `audiences.preview_timeout` 3 s, `audiences.contacts_timeout` 5 s (422 `audience_too_slow`). Metric `dimmi_audience_preview_seconds{approximate}`. Members read, can see preview counts, and with `contacts:read` samples.
 
 | Method | Path | Name | Ability |
 |---|---|---|---|
@@ -504,8 +508,7 @@ Rules per `00-foundation/rest.md`. Abilities new: `audiences:read`, `audiences:w
 | GET, POST | `/api/v1/event-definitions`, GET, PATCH `/{edf}` | | |
 | POST | `/api/v1/contact-events` | contact-events.store | `events:write` |
 | GET | `/api/v1/contacts/{ctc}/event-summaries` | | `contacts:read` |
-| POST | `/api/v1/contacts/{ctc}/tags`, DELETE `/{tag}`, bulk via `PATCH /contacts` `add_tags` | | rest.md rule 8 |
-| same | `/api/v1/companies/{cmp}/tags` | | |
+| | tags on `/contacts`, `/companies` | 03 records.md: `PATCH` `add_tags`, `remove_tags`, `filter[tag]`; no separate routes | |
 | | `filter[audience]=adn_` on `/contacts` and `/companies` | replaces 15's `filter[segment]` | |
 
 Preview:
@@ -612,16 +615,16 @@ Load test harness in `tests/` extends foundation's: 1M contacts, 500 attributes 
 ## Code map
 
 ```text
+app/support/urlmatch/          glob matcher, shared JSON corpus with `lib/rules.ts`
 app/support/audience/          parse.go, validate.go, evaluate.go, partial.go, compile.go, explain.go, lint.go, registry.go, doc.go
 app/actions/audiences/         create, update, delete, preview, evaluate, list_contacts, rewrite_references
 app/actions/attributes/        define, update, archive, delete, convert, rename, record_problem
 app/actions/events/            track, define
-app/actions/tags/              tag_contact, untag_contact, ...
 app/jobs/                      convert_attribute, rename_attribute, backfill_attribute_dates, snapshot_audience
 app/http/controllers/api/v1/   audience_*, attribute_definition_*, event_definition_controller, contact_event_controller
 app/http/controllers/widget/   surface_controller, decision_controller, contact_event_controller
 app/http/resources/            allowlisted widget surface resource
-app/models/                    generated from database/queries/audiences.sql, attributes.sql, events.sql, contact_tags.sql
+app/models/                    generated from database/queries/audiences.sql, attributes.sql, events.sql
 app/mcp/tools/                 audiences.go
 resources/widget/lib/rules.ts  client residual evaluator
 resources/js/features/audiences/
@@ -764,58 +767,61 @@ Ordered, each about 1 day, tests per `00-conventions/testing.md`: integration on
 
 ### M0 Reconcile specs (no code, 1 day)
 
-- [ ] Apply "Required from other specs" to 01, 02, 03, 07, 08, 09, 10, 15, 16, 17, foundation. Split this file. Add folder to `specs/README.md`.
-  - Accept: grep finds no `app/support/segments`, `app/support/conditions`, `segment_id`, `url_rules`, `filter[segment]` outside history. Owner signed off.
+- [x] Apply "Required from other specs" to 01, 02, 03, 07, 08, 09, 10, 13, 14, 15, 16, 17, 20.
+  - Accept: grep finds no `app/support/segments`, `app/support/conditions`, `segment_id`, `url_rules`, `filter[segment]` outside this file and `research/`. Owner signed off.
+- [ ] Foundation prefixes, tables owner map, abilities; folder in `specs/README.md`; BUILD-TRACKS.
 
-### M1 Language
+Tracks: M1 to M4, M6 track 13 core. M5 track 13, needs 01 M2 session API per BUILD-TRACKS. M7 needs 08. M8 last.
+
+### M1 Language (track 13)
 
 - [ ] Migrations `001801`..`001802`, sqlc, factories, prefixes.
   - Accept: migrate up and down; RLS test workspace B cannot read A; prefix registry test.
-- [ ] `app/support/audience`: parse, validate, registry, limits. Accept: table test per field and op; error per code with JSON path.
+- [ ] `app/support/urlmatch`, `app/support/audience`: parse, validate, registry, limits. Accept: table test per field and op; error per code with JSON path.
 - [ ] Evaluate, Partial, Explain. Accept: Kleene table test; residual contains only client fields, property-tested on random trees; `access` mode table.
 - [ ] SQL compiler, parity. Accept: 10,000 random contacts per field and op, Go equals SQL on real Postgres, both modes.
 - [ ] Lint. Accept: one subtest per code.
 - [ ] `tests/arch` rule: only this package parses rule JSON. Accept: fails on a planted second parser.
 
-### M2 Data
+### M2 Data (track 13)
 
 - [ ] Attribute definitions: table, CRUD, inference on verified writes, drop on browser writes, problems. Accept: REST and JWT auto-register; browser no; type mismatch logged; list; limit.
 - [ ] Dates normalised, backfill job, conversions and renames, delete. Accept: dry run counts; edge cases 49, 50, 51.
 - [ ] `client_writable`, reserved names. Accept: edge cases 25, 26, 46.
-- [ ] Tags on contacts and companies. Accept: API, `add_tags`, merge union, erase, realtime event.
+- [ ] Tag rule fields: tables, API built by track 04 (03 records.md). 18 adds `contact.tags`, `company.tags`, dependency filter. Accept: rule on tag; SQL parity; merge union, erase proven in rule tests.
 - [ ] Contact columns: `last_heard_at`, `web_sessions`, `conversation_count`, backfill, GIN on `custom_attributes`. Accept: concurrent index migration; pre-event value in payload (edge case 43).
 
-### M3 Saved audiences, preview, test-as
+### M3 Saved audiences, preview, test-as (track 13)
 
 - [ ] Audience CRUD, references, used-by, `filter[audience]`. Accept: 409s; edge cases 1, 2, 3, 4; every surface test asserts references.
 - [ ] `/audience-previews` at scale. Accept: 1M seeded: under 3 s or labelled sample; conversation replay; lint inside.
 - [ ] `/audience-evaluations`, messenger subject. Accept: leaf values and trust; permissions; audit row; edge cases 69 to 75.
 - [ ] MCP toolset, CLI, export and apply. Accept: token budget test; round trip stable; confirm gate.
 
-### M4 Builder UI
+### M4 Builder UI (track 13)
 
 - [ ] Shared rule builder, sentences, field picker per surface, values per type. Accept: unit tests; `pnpm lint` zero warnings; e2e light and dark.
 - [ ] Preview pane, test a person, warnings with fixes, reach diff. Accept: e2e against seeded workspace: build rule, see count, test a contact, fix `negative_or`.
 - [ ] Settings pages Audiences and Data. Accept: e2e create attribute, archive refused while used; problems tab shows a planted mismatch.
 - [ ] Replace prototype presets in the automation inspector. Accept: `automation.spec.ts` updated.
 
-### M5 Widget surfaces (needs 01 session API)
+### M5 Widget surfaces (track 13, needs 01 M2 session API)
 
 - [ ] `surface` in config and session, `widget_settings.audiences`, launcher and tabs. Accept: canary test: response contains no attribute, event or audience names; zero-cost test.
 - [ ] `messenger.start` server check. Accept: edge cases 25, 28, 29; 403.
-- [ ] Client evaluator with shared corpus, size gate. Accept: Go and vitest on same JSON; CI over 500 B gz fails; history navigation e2e.
+- [ ] Extend 01 M8 `lib/rules.ts` to full residual with shared corpus, size gate. Accept: Go and vitest on same JSON; CI over 500 B gz fails; history navigation e2e.
 - [ ] `decisions` route, loader skip. Accept: bundle not requested until `show()`; country e2e.
 - [ ] `surface.changed` with dependency filter, ETag hour bucket. Accept: attribute REST write reaches open widget under 5 s; clock test edge case 37.
 - [ ] 15 and 17 adopt surface hooks when those milestones run. Accept: their feature tests use `audience`.
 
-### M6 Events
+### M6 Events (track 13)
 
 - [ ] Definitions, rollups, `POST /contact-events`, idempotency, limits. Accept: benchmark; edge cases 53 to 60.
 - [ ] Event fields in rules, window counts, SQL parity. Accept: parity on events; "3 times in 7 days" with fake clock.
-- [ ] SDK `track` network opt-in. Accept: non-writable stays local (no request e2e); batching.
+- [ ] SDK `track` network opt-in, `surface.writable_events`. Accept: non-writable stays local (no request e2e); batching.
 - [ ] Contact panel event summaries; Data page events. Accept: e2e.
 
-### M7 Help center and dimmi
+### M7 Help center and dimmi (needs 08)
 
 - [ ] `audience_id` on articles, collections, effective set, denormalise to chunks. Accept: edge cases 62, 65; `<@` filter.
 - [ ] Read filter on all outputs, public 404 rule, cache variant. Accept: canary across HTML, `.md`, sitemap, `llms`, search, ask, MCP; edge cases 61, 63, 64, 66.
@@ -824,7 +830,7 @@ Ordered, each about 1 day, tests per `00-conventions/testing.md`: integration on
 - [ ] Inbox article insert warning. Accept: e2e.
 - [ ] Manual e2e flow table per `docs/testing/manual-e2e.md`.
 
-### M8 Fixed and CSV
+### M8 Fixed and CSV (last)
 
 - [ ] Snapshots, go-live job, statuses. Accept: edge cases 76, 77; no auto-pause at day 31.
 - [ ] CSV list to tag. Accept: edge cases 78, 79.

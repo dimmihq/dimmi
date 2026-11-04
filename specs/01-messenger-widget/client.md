@@ -32,7 +32,7 @@ New `resources/widget/client/`: no DOM imports, injected `fetch`, storage, event
 | `views/help.tsx`, `pages.tsx`, `changelog.tsx`, `search_controller.ts` | sample | 08, 13 routes via `client/http`; lazy per chunk rule when owners land, tab hidden until then |
 | `controllers/composer_controller.ts` | fake reply | `outbox.send`, attachments flow, typing indicator, email capture when `email_required` |
 | `controllers/voice_controller.ts` | fake | MediaRecorder output uploaded as `audio/webm` or `audio/mp4` attachment, chunk `voice`; hidden when `features.attachments` false or no MediaRecorder |
-| `controllers/messenger_controller.ts` | `receive(Incoming)` | `receive` fed from store; `read` calls read-state; tab rules from config `tabs`, `open_to`, page rules on route change |
+| `controllers/messenger_controller.ts` | `receive(Incoming)` | `receive` fed from store; `read` calls read-state; tab rules from config `tabs`, `open_to`, `surface` residual through `lib/rules.ts` on route change |
 | `lib/sound.ts` | plays | respects `appearance.sound`; never before visitor gesture (browser autoplay rule) |
 | `components/launcher.tsx` | bubble, hidden | tab style, image, label from `texts.launcher_label` |
 | `styles/*.css` | some physical props | logical properties throughout; `[dir=rtl]` checks; launcher `position` stays physical (customer choice) |
@@ -67,7 +67,7 @@ Snoozed shows `with_team`: customer never learns internal state. Spam shows norm
 
 Both directions yes, this is widget and chat only; email never (privacy, X12).
 - Teammate sees visitor read: `PATCH read-state` -> `message.delivery_updated` status `read` (exists).
-- Visitor sees team read: `conversation.seen_by_team` (03) -> `texts.seen` under latest team-visible message, gated by 03 workspace toggle `seen_receipt` (Inbox settings) and name by `seen_receipt_shows_name`. Toggle off: 03 does not emit; polling synthesis in `/updates` checks same toggle. Builds on 03 settings page making `seen_receipt` real (track 02 inbox settings); until then default on.
+- Visitor sees team read: `conversation.seen_by_team` (03) -> `texts.seen` under latest team-visible message. Member name and avatar only when 03 workspace setting `seen_receipt_shows_name` true (Inbox settings, track 02; default false); polling synthesis in `/updates` follows same rule. "Seen" itself has no off switch.
 
 ## Typing to customers
 

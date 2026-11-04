@@ -60,6 +60,7 @@ Roadmap launch item 17 (`research/roadmap.md` "17. Importers"), scope audit gap 
 - Covered elsewhere, linked from `GET /import-sources` catalog (no 16 code): Markdown zip / Notion export / Git docs repo (GitBook, Mintlify, Docusaurus sources) = 08 knowledge source `import` mode (review queue); feedback CSV with Canny/Featurebase presets = 14 `/feedback-imports` (kept, decision below); changelog subscribers CSV = 13 `/changelog-subscriber-imports`.
 - Dry-run preview: counts per object, date range, attachment size estimate, ETA from rate budget, discovered mappings with suggestions, sample of 20 transformed conversations and 5 articles rendered, conflicts (existing contacts matched), warnings. Writes nothing to business tables.
 - Mapping step: teammates to members by email (unknown: "Former teammate" placeholder), teams, mailboxes/brands to inboxes, tags, custom attributes (rename, skip, type, `trusted` flag), statuses (feedback), boards, help center target + locale, changelog label.
+- Attributes: `data_attributes` map to 18 `attribute_definitions`, `origin imported`, with source type (mapping `attribute` keeps rename, skip, type). `client_writable` false always at import; source protected attributes stay false; admin opens later. Contact and company tags import as `contact_tag`, `company_tag` (03 records.md). Segments: Intercom API gives names only: draft saved audience stub per segment, rule `{"any": []}` (matches nobody), description says rules not available; never referenced by anything live.
 - Attribute trust (07 agent actions): imported custom attributes never trusted by default (never added to `contacts.trusted_attribute_keys`); admin marks specific attribute mappings `trusted` (e.g. `stripe_customer_id`); writer then adds key for `kind user` contacts where import wrote the value. Leads never. Audited.
 - Writers that preserve source timestamps (`created_at`, `first_seen_at`, `closed_at`, `published_at`), authorship (mapped member, placeholder, bot, contact), conversation status (`close_all` default or `preserve`), CCs, notes, attachments (re-uploaded via `Filesystem`), inline images, article HTML to Markdown, article cross-links rewritten, collections two levels.
 - Redirects: 08 `help_center_redirects` rows `source = 'import'` from every old article/collection path (+ id-only variant).
@@ -87,7 +88,6 @@ Kept in 14 (`feedback_imports`, `/feedback-imports`). Reasons: shipped design, f
 | OAuth app install for Intercom / Zendesk / Help Scout (instead of pasted token) | later: `import-oauth` (credentials shape already per-source) |
 | Intercom macros, Zendesk triggers/automations, SLAs, views, ticket fields as typed fields | later: macros after `more-import-sources`; rest with post-MVP: ticket fields, rules lite |
 | Inviting unmapped teammates during import | later (MVP: placeholder or manual invite first) |
-| Contact tags as entity (MVP: optional custom attribute string) | later (15 open question 1: no contact tags at MVP; custom attributes cover targeting) |
 | Multi-locale help center (one source locale per target help center at MVP) | post-MVP: auto-translation (reserved `/{locale}/` prefix) |
 | Two-way sync, writing back to source | never |
 | `window.Intercom` shim | owned by 01 (Required from 01); 16 defines mapping table |
@@ -555,6 +555,7 @@ None billable (12 D11). Imported messages carry `metadata.imported = true` (excl
 |---|---|
 | 00-foundation | KeyManager, Filesystem, httpclient SSRF, River, ratelimit (Valkey), events/realtime, Entitlements, RetentionGuard, ContactEraser registry, AuditSink via audit log, ids (`ids.NewV7At(t)` for source-time UUIDv7) |
 | 00-accounts | permissions catalog, roles, audit log, `password.confirm`, members/teams for mapping |
+| 18-audiences | `attribute_definitions`, `audiences` drafts; before 18 ships imported keys stay free-form and definitions are written by backfill on 18 M2 |
 | 03 | conversations, messages, contacts, contact_identities, companies, tags, attachments, saved replies, inboxes; import write helpers; `ChannelRehomer`; resource `imported` block; unread rule |
 | 04 | email connection used by rehome (`Channel.Send`); no contact mail from import |
 | 06, 07, 10 | guards ignore `metadata.imported` (defense in depth); 07 `contacts.trusted_attribute_keys` (core column owned by 07 migration) for trusted attribute mappings |

@@ -54,7 +54,7 @@ Roadmap launch item 8 (`research/roadmap.md`): "agent useless without docs. Publ
 
 - Help centers: many per workspace allowed by schema and API; cap = entitlement `help_center.max_per_workspace` (`Entitlements.Limit`, contracts.md; cloud default 3, self-host config 0 = unlimited; staff override per customer, 12). One marked `is_default` (agent default; prefill for new widgets' `help_center_id`; widget Help tab uses widget's own `widget_settings.help_center_id`). Auto-created on workspace create via workspace initializer hook (contracts.md, runs inside `CreateWorkspace` tx, idempotent).
 - Collections: two levels (collection, sub-collection). Articles may be uncollected.
-- Articles: Markdown canonical storage (CommonMark + GFM + alerts). Statuses `draft`, `published`, `archived`. Soft delete with 30-day trash. Visibility `public`, `agent_only`. `agent_only` = hidden from public surfaces, but conversation agent (07) may quote it to customers; never store secrets there (dashboard copy says so; `possible_secret` warning applies).
+- Articles: Markdown canonical storage (CommonMark + GFM + alerts). Statuses `draft`, `published`, `archived`. Soft delete with 30-day trash. Visibility `public`, `agent_only`, plus optional saved audience (18 M7, one audience for humans and dimmi). `agent_only` = hidden from public surfaces, but conversation agent (07) may quote it to customers; never store secrets there (dashboard copy says so; `possible_secret` warning applies).
 - Working copy + immutable versions. Publish pointer. Version history, diff any two versions, restore.
 - Slugs, automatic 301 redirects on slug/collection change, manual redirects (migration-ready).
 - SSR via templ + goldmark from monolith. Built-in theme with brand color, logo, light/dark (CSS only). Pages: home, collection, article, search, ask, 404/410.
@@ -88,7 +88,7 @@ Roadmap launch item 8 (`research/roadmap.md`): "agent useless without docs. Publ
 | `docs-pr-check`: pre-merge GitHub check listing articles a PR breaks | later (needs Checks write, GitHub App) |
 | Knowledge-gap report UI | post-MVP: knowledge-gap report (search log + zero-result data collected now) |
 | Translations, multi-locale URLs | post-MVP: auto-translation (URL scheme reserves `/{locale}/` prefix) |
-| Private help center (login required), audience targeting, `private` visibility | later (expand migration adds CHECK value) |
+| Private help center (login required on whole site), `private` visibility | later (expand migration adds CHECK value). Per-article and per-collection audience ships in 18 M7 |
 | Internal (teammate-only) articles excluded from customer agent | with post-MVP: agent assist |
 | PDF, DOCX ingestion; Notion, Confluence, Google Docs sync | later |
 | JS rendering for SPA crawl (headless browser) | later; MVP detects and explains |
@@ -156,6 +156,7 @@ New public ID prefixes (catalog `app/models/public_ids.go`, `framework/ids` Type
 | ask_ai_enabled | boolean not null default true | effective only when 07 agent ready |
 | public_mcp_enabled | boolean not null default true | |
 | cache_version | bigint not null default 1 | bumped by every public-visible change |
+| login_url | text null | https; signed-in reading (18 M7). Added by 18 migration |
 | deleted_at | timestamptz | soft delete, purge after 30 days |
 Indexes: `(workspace_id, created_at)`, unique `(subdomain) where deleted_at is null`.
 
@@ -169,6 +170,7 @@ Indexes: `(workspace_id, created_at)`, unique `(subdomain) where deleted_at is n
 | description | text | max 300 |
 | icon | text | emoji (1 grapheme) or icon name from allowlist |
 | position | integer not null | gaps of 1024; reorder renumbers |
+| audience_id | uuid null references audiences on delete restrict | saved only; added by 18 M7 |
 | deleted_at | timestamptz | |
 Indexes: `(workspace_id, help_center_id, parent_id, position)`.
 
@@ -183,6 +185,7 @@ Indexes: `(workspace_id, help_center_id, parent_id, position)`.
 | body_markdown | text not null default '' | max 256 KB |
 | status | text CHECK in ('draft','published','archived') | `published` = has live version |
 | visibility | text CHECK in ('public','agent_only') default 'public' | |
+| audience_id | uuid null references audiences on delete restrict | saved only (18 M7); collections get same column. Effective = article AND every collection above. Stays out of `content_hash`: change needs no review or re-embed |
 | published_version_id | uuid null references article_versions(id) deferrable initially deferred | live content; null for never-published |
 | has_unpublished_changes | boolean not null default false | working copy hash differs from published version hash |
 | content_hash | text not null | sha256 of canonical (title, slug, description, body, visibility, collection_id) |
@@ -251,7 +254,7 @@ Indexes: `(workspace_id, status, created_at desc)`, `(workspace_id, article_id, 
 | Column | Type | Notes |
 |---|---|---|
 | help_center_id | uuid not null references help_centers on delete cascade | |
-| hostname | citext not null | lowercase IDNA A-label (punycode), max 253; unique `(hostname) where status <> 'removed'`; claim check `customdomains.Claimed` also rejects platform hosts |
+| hostname | citext not null | lowercase IDNA A-label (punycode), max 253; unique `(hostname) where status <> 'removed'`; claim check `customdomains.Claimed` also covers `widget_domains` (01 hosted-and-domains.md) and rejects platform hosts |
 | status | text CHECK in ('pending','active','failed','removed') | |
 | verification_token | text not null | 32 random bytes base32; TXT value `dimmi-verify=<token>` at `_dimmi-verify.<hostname>` |
 | ownership_verified_at, routing_verified_at, tls_issued_at | timestamptz | |
@@ -343,6 +346,7 @@ Indexes: `(workspace_id, source_id, status)`, GIN trgm `(title_trgm)`.
 | token_estimate | integer not null | |
 | embed_hash | text not null | sha256(model-independent embed input: title + heading path + text) |
 | visibility | text | denormalized from document for filter without join |
+| effective_audience_ids | uuid[] | denormalized from document (18 M7), same on `knowledge_documents`; recomputed when article or collection chain changes |
 | help_center_id, source_id | uuid null | denormalized filters |
 | search | tsvector not null | written by indexer: `setweight(to_tsvector(cfg, f_unaccent(title || ' ' || heading_path)),'A') || setweight(to_tsvector(cfg, f_unaccent(text)),'B')` (not generated column: cfg is per workspace setting) |
 Indexes: GIN `(workspace_id, search)` (needs `btree_gin`), `(workspace_id, embed_hash)`, `(workspace_id, document_id, ordinal)`.
@@ -675,7 +679,7 @@ app/
 │   helpmarkdown/ options.go (help center dialect as `markdown.Options`: GFM, GitHub alerts (own ~100-line goldmark extension inside `framework/markdown`), heading ids, toc (go.abhg.dev/goldmark/toc), link/image rewrite, `Highlight` (chroma classes), `sanitize` policy), profiles: `Help()`, `Engage()` (15-announcements-surveys: no headings above H3, no footnotes, no embeds-as-cards, images `eas_` or https only); plain text via `markdown.PlainText`; front matter via `markdown.FrontMatter` (go.abhg.dev/goldmark/frontmatter v0.3.0, 16 KB cap)
 │   textdiff/ hunks.go, words.go: hunk model + review rules (app); diff engines from framework `support/diff` (aymanbagabas/go-udiff v0.4.1, sergi/go-diff v1.4.0). No diff3 at MVP (`review-rebase` later)
 │   crawl/ robots.go (framework `httpclient/robots` on temoto/robotstxt v1.1.2; RFC 9309 vectors kept as our test; 5xx = disallow is ours), sitemap.go (stdlib `encoding/xml`, `compress/gzip`), extract.go (`dom.Readable` on codeberg.org/readeck/go-readability/v2 v2.1.3 + `dom.ToMarkdown` on html-to-markdown/v2), politeness.go (per-host token bucket via framework `ratelimit.Limiter` local token-bucket mode (in-process, per crawl job; no `golang.org/x/time/rate` import in app zone; framework.md owner adds mode if absent) + concurrency semaphore); fetch via `a.HTTP` (SSRF guard)
-│   customdomains/ claims.go (`Claimed(hostname)`: `help_center_domains` + platform hosts), reserved_subdomains.go (shared reserved list), authorizer.go (wires `AuthorizeTLSHostname` into `framework/customdomain`)
+│   customdomains/ claims.go (`Claimed(hostname)`: `help_center_domains` + `widget_domains` + platform hosts), reserved_subdomains.go (shared reserved list), authorizer.go (wires `AuthorizeTLSHostname` into `framework/customdomain`)
 │   images/ images.go (allowed types, pixel/size caps, metadata strip, `a.Scanner` scan; on `framework/image`; shared with 15-announcements-surveys `engage_assets`)
 │   secretscan/ scan.go, redact.go (pure: secret patterns for `possible_secret` warning and docs sync diff redaction)
 │   ziputil/ safe_unzip.go (stdlib `archive/zip` + `filepath.IsLocal` via `framework/filesystem` path helpers; zip-slip, bomb guard)
@@ -1212,6 +1216,7 @@ None billable (`research/pricing.md` section 2):
 | 01-messenger-widget | consumes `/widget/v1/help/*`; Help tab UI; "Talk to human" from Ask AI deep link (SDK `startConversation(text)`); deep open `show('help', {article})` (sdk-contract.md Views); `widget_settings.help_center_id` + `help_tab_enabled` (present in 01 data model) scope widget Help routes |
 | 07-dimmi-agent | owns `ai_provider_keys`, key decryption (`ai.ResolveProviderKey`), AI spend cap, usage recording (`RecordAiSpend`), readiness (`CheckAgentReadiness`); provides `ai.AnswerQuestion` streaming for Ask AI (kind `help_center`, public-only retrieval enforced by 07); emits `ai.provider_key_changed`; consumes `contracts.Knowledge`. 07 provides `voyage` provider type (embeddings-only, never answer model) so Anthropic-only users get vectors |
 | 09-agent-native | MCP server runtime (auth + public stateless mount, protocol versions), CLI `dimmi docs *` wrappers, OAuth scopes mapping to abilities. Caller identity for accept/publish refusal (`human_review_required`, review-queue.md rule 2) comes from what 09 defines, no token claim: principal `Actor.Via` (contracts.md; `app` = first-party Dimmi app `ogr_`, `oauth_client` + client id = OAuth client, `personal_token`, session) and request surface (`/mcp` mount sets surface `mcp`, recorded as `messages.metadata.sent_via.surface`; first-party tokens never reach `/mcp`, 403 `first_party_token_not_allowed`). `dimmi-cli` treated as human at keyboard. 09 confirm gate does not apply: no MCP tool publishes, accepts or deletes articles (09 Contradiction 15, 08 rule wins) |
+| 18-audiences | `audiences`, `audience.Partial`, `access` mode, surfaces `help.article`, `help.collection`, `dimmi.knowledge`; 02 surface `help_center`; M7 adds columns and filters here |
 | 10-webhooks | delivers new webhook events (incl. `docs_sync_run.*`, `article.freshness_changed`) |
 | 11-self-host | Caddy compose profile with `on_demand_tls { ask http://dimmi:<admin_port>/internal/tls/ask }` (admin port, never public; 200 only for verified `help_center_domains`, else 404); event `system.app_url_changed` (08 rebuilds canonical/path-mode URLs); port 443 binding option; `dimmi doctor` hooks |
 | 12-cloud-billing | none billable; cloud `Entitlements` driver + `entitlement_overrides` back the 08 cap keys (incl. `docs_sync.*`); metering-rules "Not activity" row for docs sync |

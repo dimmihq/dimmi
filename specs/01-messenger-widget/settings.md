@@ -9,11 +9,21 @@ Style: caveman. Date 2026-11-04. Every customer-changeable field: storage, valid
 - Every write goes through `UpdateWidgetSettings` (or translation, asset actions): validate, bump `config_version`, emit `widget.settings_updated`, bust config cache. Live pages pick change up within 60 s.
 - Budgets hold: no setting adds a request on page load, config stays one response under 4 KB gz.
 
-## Audience seam
+## Audiences (18)
 
-audience rules arrive with the audiences spec. Nothing here decides who sees the messenger or who may start a conversation by person, segment, attribute or event. Builders add no audience field, no interface, no placeholder code. When that spec lands it plugs in at two named places only: `WidgetConfigResource` (what config says to show) and `StartWidgetConversation` (whether a start is accepted), and 15 segments are reusable there.
+Who sees messenger, who may start, which tabs appear: [18](../18-audiences/README.md) surfaces `messenger.launcher`, `messenger.start`, `messenger.tab.help|changelog|feedback`. One language, one evaluator, owned by 18.
 
-These stay plain settings, not audience rules: `enabled`, `allow_anonymous` (identity switch, existing), `allowed_origins` (trusted domains), `page_rules` (URL display), `open_to`, `collect_email`.
+Track 01 builds without audiences, except launcher page leaves (below). 18 M5 (track 13) adds rest after 01 M2 session API, at three named places: `WidgetConfigResource`, session resources, `StartWidgetConversation`. Added then:
+
+- `widget_settings.audiences` values for `start`, `tabs`, and launcher rules on people; builder on Messenger settings page.
+- `surface` block with `start`, `tabs` in config; `surface` in `GET /widget/v1/session`, `POST /widget/v1/sessions`; `GET /widget/v1/surface`; `GET /widget/v1/apps/{app}/decisions`; realtime `surface.changed`.
+- `POST /widget/v1/conversations` refused 403 `conversation_start_restricted` when `messenger.start` false, no reason detail.
+- `PATCH /widget/v1/contact` (from 18 M2): `custom_attributes` key without `client_writable` definition dropped silently, 18 problem row, 200.
+- `Dimmi('track')` network for `client_writable` names (18 M6); `POST /widget/v1/contact-events`.
+
+Workspace with no rule: no `surface` key, no request, no row.
+
+These stay plain settings, not audience rules: `enabled`, `allow_anonymous` (identity switch, existing), `allowed_origins` (trusted domains), `open_to`, `collect_email`.
 
 ## New widget_settings columns
 
@@ -27,7 +37,7 @@ Migration `20261201010001_add_settings_fields_to_widget_settings_table.sql`.
 | tab_order | text[] not null default '{home,messages,help,changelog,feedback}' | any order; exactly known tabs, no duplicates; missing known tabs appended by action |
 | privacy_notice | jsonb not null default '{}' | `models.WidgetPrivacyNotice`: `enabled` bool, `url` https url or null. Text in `texts.privacy_notice` |
 | home_links | jsonb not null default '[]' | max 6 `{title (1..40), url (https or mailto), icon: calendar\|book\|link}`. Static home "Get in touch" list. Titles translated via `texts`-style key `home_link_{index}` |
-| page_rules | jsonb not null default '{"mode":"all","patterns":[]}' | below |
+| audiences | jsonb not null default '{}' | `{launcher, start, tabs: {help, changelog, feedback}}`, each 18 inline audience. Absent = everyone. Track 01 writes only `launcher`, through "Pages" control below |
 | dev_context | jsonb not null default '{}' | `{console: bool, network: bool}`, both default false ([client.md](client.md) "Developer context") |
 | customer_status_enabled | boolean not null default true | show status chip in thread and list |
 | delay_notice_enabled | boolean not null default true | show `texts.delay_notice` when team away |
@@ -58,7 +68,7 @@ Config output resolves ids to URLs: `logo_url`, `launcher.image_url`, `backgroun
 
 ## Web-only fields
 
-Native SDKs (20) read same config, ignore: `appearance.position`, `padding_x`, `padding_y`, `launcher.*`, `font`, `page_rules`, `dev_context`, `allowed_origins`. Hosted page ignores launcher and position, keeps the rest. Colours, logo, background, texts, tabs, `open_to`, privacy notice, sound, team intro apply everywhere.
+Native SDKs (20) read same config, ignore: `appearance.position`, `padding_x`, `padding_y`, `launcher.*`, `font`, launcher residual in `surface`, `dev_context`, `allowed_origins`. Hosted page ignores launcher and position, keeps the rest. Colours, logo, background, texts, tabs, `open_to`, privacy notice, sound, team intro apply everywhere.
 
 ## Texts: keys and limits
 
@@ -109,19 +119,32 @@ Requested locale: config `?locale=` (SDK sends `Dimmi` option, else `navigator.l
 
 Offline email, push and availability text use `widgetstrings` with contact `locale`.
 
-## Page rules (show or hide on specific pages)
+## Pages (show or hide on specific pages)
 
-Plain URL display setting. Not an audience rule: knows nothing about the person, server never enforces it, API stays open.
+Simple control over one mechanism: launcher rule `audiences.launcher` in 18's language, page leaves only. No second matcher, no second column. Server never enforces it, API stays open: launcher gate is `display`, content not protected.
+
+Write form on `PATCH /widget-settings/{widget}` and page control:
 
 ```json
-{ "mode": "all | only | except", "patterns": ["/pricing", "/docs/*", "https://app.acme.com/*"] }
+{ "page_rules": { "mode": "all | only | except", "patterns": ["/pricing", "/docs/*", "https://app.acme.com/*"] } }
 ```
 
-- Max 50 patterns, each 1 to 500 chars. Starts `/` = matches path on any host; starts `https://` or `http://` = host + path. `*` = any run of characters. Trailing slash ignored, query and fragment never compared, case-sensitive path, case-insensitive host.
-- `all`: show. `only`: show when any matches. `except`: hide when any matches.
-- Evaluated in core on load and each route change (sdk-contract "SPA route detection"). Hidden = launcher hidden, panel closes unless visitor is mid-conversation with panel open (then stays until closed). Unread badge on `data-dimmi` elements keeps working.
-- `Dimmi.open()`, `show()`, `data-dimmi` buttons still work on hidden pages: host asked explicitly. Engage items (15) follow own URL triggers. Realtime and session unaffected.
-- No match logic on server. 422 only for shape errors. Dashboard tester shows yes or no for typed URL using same matcher.
+`UpdateWidgetSettings` compiles it, stores tree only:
+
+| Input | Stored `audiences.launcher.rules` |
+|---|---|
+| `all` | launcher key removed |
+| `only` | `{"any": [leaves]}` |
+| `except` | `{"not": {"any": [leaves]}}` |
+| `/docs/*` | `{"field": "page.path", "op": "matches", "value": "/docs/**"}` |
+| `https://app.acme.com/*` | `{"all": [{"field": "page.host", "op": "eq", "value": "app.acme.com"}, {"field": "page.path", "op": "matches", "value": "/**"}]}` |
+
+- Max 50 patterns, each 1 to 500 chars. Starts `/` = path on any host; starts `https://` or `http://` = host + path. In this control `*` = any run of characters, stored as 18 `**`. Trailing slash ignored, query and fragment never compared, case-insensitive (18 string rule).
+- Resource returns `page_rules` decompiled from tree. Tree richer than this shape (18 builder wrote it): `page_rules: null`, control shows "Custom rule" with link to builder; saving simple form replaces rule after confirm.
+- Config carries tree as `surface.anonymous.launcher`, no separate key. Before 18 M5 server copies tree as is, since it holds page leaves only.
+- Evaluated by `resources/widget/lib/rules.ts` (18 client evaluator, track 01 M8 ships page ops, 18 M5 extends) on load and each route change (sdk-contract "SPA route detection"). Hidden = launcher hidden, panel closes unless visitor is mid-conversation with panel open (then stays until closed). Unread badge on `data-dimmi` elements keeps working.
+- `Dimmi.open()`, `show()`, `data-dimmi` buttons still work on hidden pages: host asked explicitly. Engage items (15) follow own `trigger.page`. Realtime and session unaffected.
+- No match logic on server. 422 only for shape errors. Dashboard tester shows yes or no for typed URL using same `rules.ts`.
 
 ## Open straight into conversation
 
@@ -204,7 +227,7 @@ Loader at most 3 KB gz, core at most 35 KB gz: both unchanged. Named chunk budge
 
 | Feature | Where | Budget |
 |---|---|---|
-| colours, gradient, background image, logo, launcher image, company name, tab order, `open_to`, privacy notice, team intro, delay notice, welcome message, translated texts (arrive in config), status chip, seen, typing, AI deltas, page rule matcher (under 300 B) | core | counted in 35 KB. Today's core 18.8 KB gz includes sample content that moves out |
+| colours, gradient, background image, logo, launcher image, company name, tab order, `open_to`, privacy notice, team intro, delay notice, welcome message, translated texts (arrive in config), status chip, seen, typing, AI deltas, `lib/rules.ts` (at most 500 B, 18 bar) | core | counted in 35 KB. Today's core 18.8 KB gz includes sample content that moves out |
 | error capture listeners for dev context (`error`, `unhandledrejection`, ring of 10) | loader | under 250 B; loader stays under 3 KB |
 | console and network capture | new chunk `dev-context` | 3 KB. Loaded only when `dev_context` on |
 | sample content and `simulate` | new chunk `preview` | 12 KB. Loaded only by preview page, never in customer traffic |

@@ -58,7 +58,7 @@ Style: caveman. Base `/api/v1`. REST rules `00-foundation/rest.md` (binding): no
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | /widget/v1/apps/{app}/config | adds `workflow_openers: [{version_id, audience_hash, steps: [{kind: message|reply_time, text}], buttons: {text, options: [{id, label}], allow_typing}}]`; widget picks the first opener whose compiled audience matches the session (server sends only openers whose audience can be decided from session fields; the rest are evaluated server-side at create) |
+| GET | /widget/v1/apps/{app}/config | adds `workflow_openers: [{version_id, residual, steps: [{kind: message|reply_time, text}], buttons: {text, options: [{id, label}], allow_typing}}]`; widget picks first opener whose residual passes. Server runs 18 `audience.Partial`: `False` omits opener; residual holds page, device and locale leaves only; no attribute, event or audience name reaches browser. Session response recomputes with session known |
 | POST | /widget/v1/conversations | adds `opener: {version_id, answer: {button_id} or {typed: true}}`; body = button label or typed text. Server re-checks audience and claim; stale opener (version no longer live): conversation created, first-message matching applies instead |
 | POST | /widget/v1/conversations/{conv}/messages | adds `workflow_answer: {run_id, step_id, button_id}` for button clicks (body = label); ignored when the run no longer waits on that step (message stored as normal text) |
 

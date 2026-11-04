@@ -1,18 +1,18 @@
 # 15 Engage: tasks
 
-Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depends on M3 (01 + 02 + 03) done. Runs parallel to M4 tracks. Tests per `00-conventions/testing.md`: integration only for app logic (real App via `testkit.New(t)`, real Postgres `pgvector/pgvector:pg18`, real dispatcher, River drained with `tc.Queue.Drain(ctx)`, real RLS, real Valkey). No unit tests with mocks, no sqlmock/pgxmock/embedded-postgres. Fakes only at process boundaries: `tc.Mail` (captured MIME), `httpclienttest.New(tc.App.HTTP)`, `tc.Clock`. Pure helpers (`urlmatch` vectors, rule parser) may use table-driven tests without mocks or I/O. Tests named in plain words; every edge case covered. No real LLM, no network.
+Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depends on M3 (01 + 02 + 03) and 18 M1 to M4 done. Runs parallel to M4 tracks. Tests per `00-conventions/testing.md`: integration only for app logic (real App via `testkit.New(t)`, real Postgres `pgvector/pgvector:pg18`, real dispatcher, River drained with `tc.Queue.Drain(ctx)`, real RLS, real Valkey). No unit tests with mocks, no sqlmock/pgxmock/embedded-postgres. Fakes only at process boundaries: `tc.Mail` (captured MIME), `httpclienttest.New(tc.App.HTTP)`, `tc.Clock`. Pure helpers (`urlmatch` vectors, rule parser) may use table-driven tests without mocks or I/O. Tests named in plain words; every edge case covered. No real LLM, no network.
 
 ## E0 Foundation hooks (needs owner edits in "Required from other specs")
 
 - [ ] 1. Migrations `20261101001501`..`001510`, RLS, sqlc queries, factories. Accept: `dimmi migrate` clean up/down locally; cross-tenant query lint passes. Tests: factory create per table; RLS isolation test (other workspace sees nothing).
-- [ ] 2. Prefixes `seg_ ann_ svy_ svq_ svr_ erc_ eas_` in `app/models/public_ids.go` (`framework/ids` registry); abilities `engage:read`, `engage:write` in ability registry, permission `engage:manage` (00-accounts catalog); enums. Accept: wrong prefix 404; token without ability 403 `missing_ability`. Tests: ids round trip, ability matrix.
+- [ ] 2. Prefixes `ann_ svy_ svq_ svr_ erc_ eas_` in `app/models/public_ids.go` (`framework/ids` registry); abilities `engage:read`, `engage:write` in ability registry, permission `engage:manage` (00-accounts catalog); enums. Accept: wrong prefix 404; token without ability 403 `missing_ability`. Tests: ids round trip, ability matrix.
 - [ ] 3. `engage_settings` lazy ensure + `BumpEngageVersion` + `live_summary` compute; `GET/PATCH /engage-settings`; 01 config `engage` block + cache bust listener. Accept: publish item flips config `active` within one cache cycle; workspace without items returns `active:false`. Tests: version bump in same tx, rollback leaves version.
 
-## E1 Segments
+## E1 Consume 18 (15 builds no evaluator)
 
-- [ ] 4. Rule language parser + validator (`app/support/segments/rules.go`): fields, ops, limits, JSON-path errors. Tests: every field/op, limits, error paths.
-- [ ] 5. Go evaluator + SQL compiler + parity property test (10,000 random contacts, Go vs SQL equal). Accept: parity green; missing/mismatch semantics match README. Tests: integration on real Postgres (factory contacts) + parity; no mocked SQL.
-- [ ] 6. Segments CRUD, `segment_in_use`, `/segment-previews` (exact + sampled fallback, timeout), `/segments/{seg}/contacts`. Accept: preview on 1M seeded contacts returns within 3 s (approximate when needed). Tests: feature per endpoint, timeout path with real `SET LOCAL statement_timeout` set tiny in test (no fake).
+- [ ] 4. Item `audience` and `trigger.page` parsed, validated, linted through `app/support/audience`; surfaces `engage.announcement`, `engage.survey` registered; item save rewrites `audience_references`. Tests: 18 error codes returned with JSON path; page tree refuses non-page fields; references written and removed.
+- [ ] 5. Eligibility and anonymous list read `audience.Partial`; widget item carries residual; canary rule test. Accept: response holds no attribute, event or audience names; country-dependent rule absent from CDN list. Tests: integration on real Postgres, fake clock for hour bucket in ETag.
+- [ ] 6. Editors embed shared builder `resources/js/features/audiences/`; `filter[audience]` on `/announcements` and survey results; `meta.affected_items` on saved audience patch. Tests: feature per filter; e2e light and dark.
 
 ## E2 Assets and rendering
 
@@ -29,10 +29,10 @@ Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depen
 ## E4 Widget delivery
 
 - [ ] 13. Eligibility engine `ResolveEligibleItems` (audience, schedule, frequency, throttle, cooldown, priority, size cap, ETag). Accept: p95 under 20 ms at 1M contacts, 70 live items (bench). Tests: integration, table-driven per rule over factory data, throttle window, recurring cycles.
-- [ ] 14. `GET /widget/v1/engage-items` (session, ETag 304, `preview` for test sessions) and `GET /widget/v1/apps/{app}/engage-items` (anonymous-safe filter, CDN headers). Tests: anonymous never gets contact-targeted items, fallback variables, 304.
+- [ ] 14. `GET /widget/v1/engage-items` (session, ETag 304, `preview` for test sessions) and `GET /widget/v1/apps/{app}/engage-items` (partial evaluation, CDN headers). Tests: anonymous never gets contact-targeted items, fallback variables, 304.
 - [ ] 15. `POST /widget/v1/engage-events` (batch, receipts upsert, `next_eligible_at`, clamp times, local receipt upload, rate limits on Valkey `a.Limiter`). Tests: dismissal permanent, `until_engaged` counting, anonymous counters only, idempotent replay.
 - [ ] 16. Manual routes `GET /widget/v1/announcements/{ann}`, `/surveys/{svy}`; deep link contract; chat reply via 01 `announcement_id` + 03 event row. Tests: not eligible 404, reply creates contact-initiated conversation with `announcement.replied` row, no fair-use count.
-- [ ] 17. `app/support/urlmatch` + shared JSON vectors file consumed by widget repo tests. Tests: glob vectors incl. `**`, query, absolute host.
+- [ ] 17. Widget scheduler checks residual through 18 `resources/widget/lib/rules.ts` on each navigation. Tests: shared corpus from 18; SPA navigation cancels delay timer.
 - [ ] 18. E2E protocol test (Node, `tests/e2e/widget_engage_protocol_test.go`): config flag, anonymous list, session list, events, preview. Accept: green in CI.
 
 ## E5 Surveys
@@ -54,7 +54,7 @@ Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depen
 ## E7 Agent-native, integrations
 
 - [ ] 29. MCP toolset `engage` (8 tools), confirm gate on publish, token budget under 2,000. Tests: MCP integration (real tool handler): tools/list budget, confirm path (elicitation + `confirm` param), untrusted envelope.
-- [ ] 30. CLI `announcements`, `surveys`, `segments` with front matter parser, `--dry-run`, `--csv`. Tests: CLI integration against real App HTTP server (`testkit`), golden outputs.
+- [ ] 30. CLI `announcements`, `surveys` with front matter parser, `--dry-run`, `--csv`. Tests: CLI integration against real App HTTP server (`testkit`), golden outputs.
 - [ ] 31. Webhook catalog entry `survey_response.completed` + fixture; 06 `csat_negative` trigger wiring. Tests: catalog CI check, real dispatcher creates 06 `csat_negative` notification rows.
 
 ## E8 Privacy, ops, hardening
@@ -73,8 +73,8 @@ Style: caveman. Ordered. Each task about 1 day, with acceptance and tests. Depen
 
 1. `docker compose up`, sign in, seed demo app with widget (01) and 1,000 contacts (`dimmi db:seed --class=EngageSeeder`).
 2. Open demo site anonymous: DevTools shows only config request (no engage requests, `engage.active=false`).
-3. `dimmi segments preview` on rule `contact.custom.plan in [pro]`: count 312.
-4. `dimmi announcements create --file launch.md --publish --yes` (modal, segment Pro, `/dashboard*`). Reload demo site as Pro user (JWT): modal appears after 3 s, keyboard Tab cycles inside, Esc closes. Reload: not shown again. Same user on second browser: not shown.
+3. `dimmi audiences preview` on rule `contact.custom.plan in [pro]`: count 312.
+4. `dimmi announcements create --file launch.md --publish --yes` (modal, audience Pro, `/dashboard*`). Reload demo site as Pro user (JWT): modal appears after 3 s, keyboard Tab cycles inside, Esc closes. Reload: not shown again. Same user on second browser: not shown.
 5. Free user: no modal. Anonymous visitor: no modal (identified audience).
 6. Create critical banner via API to `everyone`, `bypass_throttle`: appears for anonymous visitor within 60 s; `PATCH {status: "ended"}`: gone on next load.
 7. Publish NPS popover (template `nps`, recurring 90 days). As Pro user answer 5, branch shows "What should we fix?", close tab mid-way, reopen on other browser: resumes at question 2, submit. `GET /surveys/{svy}/results`: NPS -100, 1 response. Webhook test endpoint (request bin) receives `survey_response.completed`.

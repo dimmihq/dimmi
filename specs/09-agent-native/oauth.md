@@ -92,7 +92,7 @@ Errors before redirect URI is trusted render HTML error page (never redirect). A
 10. `max_age` not non-negative integer, or `prompt` not in `none|login|consent`, or `device_id` over 64 chars or outside `[A-Za-z0-9-_]`: redirect `invalid_request`. First-party client and `apps.enabled=false`: redirect `access_denied` + `error_description=first_party_app_disabled`.
 11. Freshness: `prompt=login`, or `max_age` set and session `authenticated_at` older than `max_age` s: 302 `/login?intended=<authorize url without prompt=login>&reauth=1` (00-accounts forces full login on current session, incl. 2FA, rotates session); with `prompt=none`: redirect `login_required`.
 12. `prompt=none`: if auto-approve conditions met, issue code; else redirect `consent_required` or `login_required`.
-13. Create `oauth_authorization_requests` row (`auth_time` = `sessions.authenticated_at`, `auth_methods` = `sessions.auth_methods` snapshot, `device_name` param, `device_id` param), 302 to SPA consent route, or auto-approve.
+13. Create `oauth_authorization_requests` row (`auth_time` = `sessions.authenticated_at`, `auth_methods` = `sessions.auth_methods` snapshot, `sso_connection_id`, `auth_domain` from session (21 saml.md), `device_name` param, `device_id` param), 302 to SPA consent route, or auto-approve.
 
 `max_age` and `prompt=login` accepted for every client (OIDC semantics, no id_token). Main user: first-party sudo re-auth (`max_age=0`).
 
@@ -116,7 +116,7 @@ Errors before redirect URI is trusted render HTML error page (never redirect). A
 - Approve creates new grant every time (no merge), so each device revocable separately. Exception: auto-approve of third-party client reuses existing grant (new code under same grant). First-party auto-approve still creates new grant (one grant per app login).
 - Decision API: `PATCH /api/v1/oauth/authorization-requests/{oar}` body `{status: "approved", workspace_id, scopes}` or `{status: "denied"}`. Response 200 authorization request resource with `status` and `redirect_to` (`redirect_to` only in this response, never in later `GET`: code not stored in plaintext). Controller dispatches `ApproveAuthorizationRequest` or `DenyAuthorizationRequest` by `status`.
 - Transitions: only `pending` to `approved|denied`. Any other (incl. repeat of same decision, double click): 422 `invalid_transition` with `from`, `to`; SPA disables button on first click and follows first response. Past `expires_at`: 410 `authorization_request_expired` (checked before transition).
-- Approve: validate workspace membership again (race), scopes subset of grantable, policy allows client kind. Create grant + auth code in one tx (grant copies `auth_time`, `auth_methods`, `device_id` from request row); emit `oauth_grant.created` (only for new grant). First-party request: body must not carry `workspace_id` or `scopes` (422 `errors.workspace_id`/`errors.scopes` `prohibited`).
+- Approve: validate workspace membership again (race), scopes subset of grantable, policy allows client kind. Create grant + auth code in one tx (grant copies `auth_time`, `auth_methods`, `sso_connection_id`, `auth_domain`, `device_id` from request row); emit `oauth_grant.created` (only for new grant). First-party request: body must not carry `workspace_id` or `scopes` (422 `errors.workspace_id`/`errors.scopes` `prohibited`).
 - Deny: status `denied`, `redirect_to` carries `error=access_denied`.
 
 ### Code exchange
@@ -156,7 +156,7 @@ Errors before redirect URI is trusted render HTML error page (never redirect). A
   - approved: issue tokens, status `consumed`. Further polls: 400 `invalid_grant`.
 - User code lookup: `GET /api/v1/oauth/device-requests?filter[user_code]=BDWP-HQKX` (session). Filter required (missing: 400 `invalid_filter`). Normalized (uppercase, strip spaces and dashes, map ambiguous none since alphabet has no 0/O/1/I). Returns collection with 0 or 1 pending row (`meta` without cursors). No match: 200 `data: []` (counts as failed lookup). Per-user 10 lookups/minute, per-IP 100/minute (`a.Limiter`, Valkey): 429 `device_lookup_throttled`. Valkey unreachable: abuse guard fails closed (data-model.md policy): 503 + `Retry-After: 5` (`service_unavailable`). Brute force math: 20^8 = 2.56e10 codes, 100 pending max per IP, rate limits make guessing infeasible inside 15 minutes.
 - `user_code` in query string: access log and trace redaction replaces `filter[user_code]` value with first 2 chars + `******` (same rule as app logs). Response `Cache-Control: no-store`, `Referrer-Policy: no-referrer`.
-- Decision: `PATCH /api/v1/oauth/device-requests/{odr}` `{status: "approved", workspace_id, scopes}` or `{status: "denied"}`. Approve copies approving session `authenticated_at` to grant `auth_time` and `auth_methods`; grant `device_id` null at MVP (CLI device identity later, additive). Same transition rules as authorization requests (`pending` only; else 422 `invalid_transition`; expired 410). Requires same user that looked it up (lookup binds `user_id`); other user 404 `device_request_not_found`.
+- Decision: `PATCH /api/v1/oauth/device-requests/{odr}` `{status: "approved", workspace_id, scopes}` or `{status: "denied"}`. Approve copies approving session `authenticated_at` to grant `auth_time`, plus `auth_methods`, `sso_connection_id`, `auth_domain`; grant `device_id` null at MVP (CLI device identity later, additive). Same transition rules as authorization requests (`pending` only; else 422 `invalid_transition`; expired 410). Requires same user that looked it up (lookup binds `user_id`); other user 404 `device_request_not_found`.
 - Consent payload adds `device_name`, `request.ip`, `request.location` (country + city via optional GeoIP), `user_code` (user confirms matches terminal).
 - `verification_uri_complete` prefills code but page still shows code and requires click "Approve" (never auto-approve device).
 
@@ -266,9 +266,13 @@ Reached only when claimed link not handled by OS (app not installed, link opened
 - `max_age` / `prompt=login` (validation steps 10, 11): sudo re-auth. Fresh login sets session `authenticated_at = now`, copied to grant `auth_time`.
 - Platform and app version: from token endpoint `User-Agent` (app sends `Dimmi/<app version> (<ios|android> <os version>; <model>)`), parsed at code exchange and every refresh, written to grant `device_platform`, `app_version`, `user_agent`. Unparseable: `device_platform = 'unknown'`. Browser UA at authorize: consent display only.
 
+### Access policy refusals
+
+21 access policy 403 carries `{code, message, requirement, action_url}`. First-party app handles every `requirement` same way: open browser sheet on `/oauth/authorize` with `prompt=login` (session `sso_required` and method rules run in sheet), new grant replaces old. Never loops: refused again after sheet, app shows `message`.
+
 ### Grant and tokens
 
-- Grant: `first_party = true`, `workspace_id` null, `workspace_member_id` null, `scopes = {first_party}`, `resources = {APP_URL/api/v1}`, `auth_time`, `auth_methods`, `device_id`, device fields, `confirmed_at` / `confirmed_method` (null until in-app confirmation). CHECK in README data model. Auth code and token rows `workspace_id` null.
+- Grant: `first_party = true`, `workspace_id` null, `workspace_member_id` null, `scopes = {first_party}`, `resources = {APP_URL/api/v1}`, `auth_time`, `auth_methods`, `sso_connection_id`, `auth_domain`, `device_id`, device fields, `confirmed_at` / `confirmed_method` (null until in-app confirmation). CHECK in README data model. Auth code and token rows `workspace_id` null.
 - New grant per authorization (incl. re-auth, incl. auto-approve). After successful re-auth app revokes previous refresh token (`POST /oauth/revoke`, kills old grant). Missed revoke: old grant idles out (90 days) or user revokes it in session list.
 - Token response: `access_token`, `token_type`, `expires_in: 900`, `refresh_token`, `scope: "first_party"`, `grant_id`, `auth_time` (unix seconds). No `workspace` field.
 - Access TTL `oauth.first_party.access_token_ttl` (15 min). Refresh: same 90-day sliding idle window, rotation, reuse detection; reuse always revokes the family (section Refresh). Refresh never changes `auth_time`.
