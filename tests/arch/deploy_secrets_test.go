@@ -16,12 +16,15 @@ import (
 /*
 secretPatterns are what must never be committed under deploy, keyed by
 what they mean. The repository is public, so even an account id counts.
+A password is a quoted literal or a bare value ending the line, as in an
+env file; code that only names a password, such as a field typed Secret or
+a call reading one, is not a finding.
 */
 func secretPatterns() map[string]*regexp.Regexp {
 	return map[string]*regexp.Regexp{
 		"aws access key": regexp.MustCompile(`\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA)[0-9A-Z]{16}\b`),
 		"aws account id": regexp.MustCompile(`(^|[^0-9])[0-9]{12}([^0-9]|$)`),
-		"password":       regexp.MustCompile(`(?i)password["']?\s*[:=]\s*["']?[^\s"']+`),
+		"password":       regexp.MustCompile(`(?i)password["']?\s*[:=]\s*(?:["'][^\s"']{4,}["']|[^\s"'(){}\[\],;]+\s*$)`),
 		"private key":    regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY`),
 	}
 }
@@ -143,6 +146,24 @@ func TestDeploySecrets(t *testing.T) {
 		}
 
 		require.NoError(t, os.WriteFile(filepath.Join(root, "pnpm-lock.yaml"), seed, 0o600))
+
+		findings, err := scanForSecrets(root)
+
+		require.NoError(t, err)
+		assert.Empty(t, findings)
+	})
+
+	t.Run("code that only names a password is not a finding", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		lines := strings.Join([]string{
+			"  readonly gatePassword: Secret;",
+			`  PGPASSWORD: EcsSecret.fromSecretsManager(secret, "password"),`,
+			`  const password = secret.secretValueFromJson("password").unsafeUnwrap();`,
+			`  secretStringTemplate: JSON.stringify({ password: "" }),`,
+		}, "\n")
+		require.NoError(t, os.WriteFile(filepath.Join(root, "code.ts"), []byte(lines), 0o600))
 
 		findings, err := scanForSecrets(root)
 

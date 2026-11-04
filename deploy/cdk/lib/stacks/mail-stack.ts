@@ -1,11 +1,10 @@
-import { CfnOutput, Duration, Fn, Stack, Tags } from "aws-cdk-lib";
 import type { StackProps } from "aws-cdk-lib";
+import { CfnOutput, Duration, Fn, Stack } from "aws-cdk-lib";
 import { Alarm, ComparisonOperator, Metric, TreatMissingData } from "aws-cdk-lib/aws-cloudwatch";
 import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
 import { ManagedPolicy, PolicyStatement, ServicePrincipal } from "aws-cdk-lib/aws-iam";
-import { CnameRecord, HostedZone, MxRecord, TxtRecord } from "aws-cdk-lib/aws-route53";
-import type { IHostedZone } from "aws-cdk-lib/aws-route53";
 import { BlockPublicAccess, Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
+import type { IReceiptRuleAction, ReceiptRuleActionConfig } from "aws-cdk-lib/aws-ses";
 import {
   ConfigurationSet,
   DkimIdentity,
@@ -17,32 +16,27 @@ import {
   ReceiptRuleSet,
   TlsPolicy,
 } from "aws-cdk-lib/aws-ses";
-import type { IReceiptRuleAction, ReceiptRuleActionConfig } from "aws-cdk-lib/aws-ses";
+import type { ITopic } from "aws-cdk-lib/aws-sns";
 import { BackoffFunction, Subscription, SubscriptionProtocol, Topic } from "aws-cdk-lib/aws-sns";
-import { EmailSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { Queue, QueueEncryption } from "aws-cdk-lib/aws-sqs";
 import type { Construct } from "constructs";
-import { ActivateRuleSet } from "./mail/activate-rule-set.ts";
+import type { EnvironmentConfig } from "../config/environment.ts";
+import { ActivateRuleSet } from "../constructs/activate-rule-set.ts";
 
 export type MailStackProps = StackProps & {
-  /** Names every resource and tag, so stages in one account stay apart. */
-  stage: string;
-  /** The domain SES receives on and sends default mail from. */
-  inboundDomain: string;
-  /** Origin of the web host; the webhook paths are appended to it. */
-  webhookBaseUrl: string;
-  /** Who is mailed when an alarm fires. */
-  opsEmail: string;
-  /** Route 53 zone to write the records in. Without it they become outputs. */
-  hostedZone?: { id: string; name: string };
+  config: EnvironmentConfig;
+  /** Where alarms publish. */
+  alarms: ITopic;
 };
 
-type MailRecord =
-  | { kind: "MX"; name: string; value: string }
-  | { kind: "CNAME"; name: string; value: string }
-  | { kind: "TXT"; name: string; value: string };
+/**
+ * One DNS record the environment needs. All of them are mail only: none is
+ * a website and none may sit behind a proxy. The DNS script writes them.
+ */
+export type MailRecord = { type: "MX" | "CNAME" | "TXT"; name: string; value: string; priority?: number };
 
 const RAW_PREFIX = "raw/";
+const SYSTEM_PREFIX = "system/";
 const RAW_RETENTION_DAYS = 31;
 
 /**
@@ -60,72 +54,79 @@ const SENDING_EVENTS = [
 ];
 
 /**
- * Mail in and out for one stage. It deploys alone and knows nothing about what
- * runs the application: webhooks point at a configured origin, and the
- * application's permissions are a managed policy for whoever runs it to attach.
- * The stack holds no secret.
+ * Mail in and out for one environment, on two domains. The inbound domain
+ * receives customer mail, which lands under `raw/` with a notification to
+ * the application, and sends from customer addresses. The system domain sends
+ * sign-up and notification mail; replies to it are kept under `system/`.
+ *
+ * Webhooks point at the environment's host, and the application's
+ * permissions are a managed policy the task roles attach. The stack writes no
+ * DNS: every record it needs is the `DnsRecords` output, which the DNS script
+ * reads.
  */
 export class MailStack extends Stack {
+  readonly inboundBucket: Bucket;
+  readonly inboundTopic: Topic;
+  readonly applicationPolicy: ManagedPolicy;
+  readonly systemConfigurationSetName: string;
+  readonly customerConfigurationSetName: string;
+
   constructor(scope: Construct, id: string, props: MailStackProps) {
     super(scope, id, props);
 
-    Tags.of(this).add("Environment", props.stage);
-
-    const name = (suffix: string) => `dimmi-${props.stage}-${suffix}`;
-    const ops = this.opsTopic(name("ops"), props.opsEmail);
+    const { config } = props;
+    const name = (suffix: string) => `dimmi-${config.name}-${suffix}`;
+    this.systemConfigurationSetName = `dimmi-system-${config.name}`;
+    this.customerConfigurationSetName = `dimmi-customer-${config.name}`;
+    const setNames = [this.systemConfigurationSetName, this.customerConfigurationSetName];
 
     const ruleSetName = name("inbound");
-    const bucket = this.inboundBucket(ruleSetName);
-    const inboundTopic = this.inboundTopic(name("inbound"), ruleSetName);
-    const setNames = [`dimmi-system-${props.stage}`, `dimmi-customer-${props.stage}`];
+    this.inboundBucket = this.createInboundBucket(ruleSetName);
+    this.inboundTopic = this.topicFor(name("inbound"), ruleSetName);
     const eventsTopic = new Topic(this, "EventsTopic", { topicName: name("events") });
 
-    this.receiving(ruleSetName, props.inboundDomain, bucket, inboundTopic);
-    this.webhooks(name("webhook-dlq"), props.webhookBaseUrl, { inbound: inboundTopic, events: eventsTopic });
+    this.receiving(ruleSetName, config.mail, this.inboundBucket, this.inboundTopic);
+    this.webhooks(name("webhook-dlq"), `https://${config.host}`, { inbound: this.inboundTopic, events: eventsTopic });
 
-    const identity = this.sendingIdentity(props.inboundDomain);
+    const identities = [
+      this.sendingIdentity("InboundIdentity", config.mail.inbound),
+      this.sendingIdentity("SystemIdentity", config.mail.system),
+    ];
     this.configurationSets(setNames, eventsTopic);
 
-    const policy = this.applicationPolicy(name("mail-application"), setNames, bucket);
+    this.applicationPolicy = this.policy(name("mail-application"), setNames, this.inboundBucket);
 
-    this.alarms(name, ops, { bucket, topics: [inboundTopic, eventsTopic] });
-    this.publishRecords(this.records(props.inboundDomain, identity), props.hostedZone);
+    this.alarms(name, props.alarms, { bucket: this.inboundBucket, topics: [this.inboundTopic, eventsTopic] });
 
-    new CfnOutput(this, "InboundBucketName", { value: bucket.bucketName });
-    new CfnOutput(this, "InboundTopicArn", { value: inboundTopic.topicArn });
+    const records = [
+      ...this.records(config.mail.inbound, identities[0]),
+      ...this.records(config.mail.system, identities[1]),
+    ];
+
+    new CfnOutput(this, "DnsRecords", { value: Fn.toJsonString(records) });
+    new CfnOutput(this, "InboundBucketName", { value: this.inboundBucket.bucketName });
+    new CfnOutput(this, "InboundTopicArn", { value: this.inboundTopic.topicArn });
     new CfnOutput(this, "EventsTopicArn", { value: eventsTopic.topicArn });
-    new CfnOutput(this, "OpsTopicArn", { value: ops.topicArn });
     new CfnOutput(this, "ReceiptRuleSetName", { value: ruleSetName });
     new CfnOutput(this, "SystemConfigurationSetName", { value: setNames[0] });
     new CfnOutput(this, "CustomerConfigurationSetName", { value: setNames[1] });
-    new CfnOutput(this, "MailApplicationPolicyArn", { value: policy.managedPolicyArn });
+    new CfnOutput(this, "MailApplicationPolicyArn", { value: this.applicationPolicy.managedPolicyArn });
   }
 
   private ruleSetArn(ruleSetName: string): string {
-    return this.formatArn({ service: "ses", resource: "receipt-rule-set", resourceName: `${ruleSetName}:receipt-rule/*` });
-  }
-
-  private opsTopic(topicName: string, email: string): Topic {
-    const topic = new Topic(this, "OpsTopic", { topicName });
-    topic.addSubscription(new EmailSubscription(email));
-    topic.addToResourcePolicy(
-      new PolicyStatement({
-        actions: ["sns:Publish"],
-        principals: [new ServicePrincipal("cloudwatch.amazonaws.com")],
-        resources: [topic.topicArn],
-        conditions: { StringEquals: { "aws:SourceAccount": this.account } },
-      }),
-    );
-
-    return topic;
+    return this.formatArn({
+      service: "ses",
+      resource: "receipt-rule-set",
+      resourceName: `${ruleSetName}:receipt-rule/*`,
+    });
   }
 
   /**
-   * SES may only write under the raw prefix, and only for this account's own
-   * rules. Mail is encrypted by the bucket rather than by SES, whose client-side
+   * SES may only write under the raw and system prefixes, and only for this
+   * account's own rules. Mail is encrypted by the bucket rather than by SES, whose client-side
    * encryption the receiving driver cannot read.
    */
-  private inboundBucket(ruleSetName: string): Bucket {
+  private createInboundBucket(ruleSetName: string): Bucket {
     const bucket = new Bucket(this, "InboundBucket", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
@@ -138,7 +139,7 @@ export class MailStack extends Stack {
       new PolicyStatement({
         actions: ["s3:PutObject"],
         principals: [new ServicePrincipal("ses.amazonaws.com")],
-        resources: [bucket.arnForObjects(`${RAW_PREFIX}*`)],
+        resources: [bucket.arnForObjects(`${RAW_PREFIX}*`), bucket.arnForObjects(`${SYSTEM_PREFIX}*`)],
         conditions: {
           StringEquals: { "aws:SourceAccount": this.account },
           ArnLike: { "aws:SourceArn": this.ruleSetArn(ruleSetName) },
@@ -149,7 +150,7 @@ export class MailStack extends Stack {
     return bucket;
   }
 
-  private inboundTopic(topicName: string, ruleSetName: string): Topic {
+  private topicFor(topicName: string, ruleSetName: string): Topic {
     const topic = new Topic(this, "InboundTopic", { topicName });
     topic.addToResourcePolicy(
       new PolicyStatement({
@@ -166,30 +167,42 @@ export class MailStack extends Stack {
     return topic;
   }
 
-  private receiving(ruleSetName: string, domain: string, bucket: Bucket, topic: Topic): void {
+  /**
+   * Two rules in one set, each listing its recipients: a rule without any
+   * would match every verified domain in the Region.
+   */
+  private receiving(ruleSetName: string, mail: EnvironmentConfig["mail"], bucket: Bucket, topic: Topic): void {
     const ruleSet = new ReceiptRuleSet(this, "ReceiptRuleSet", { receiptRuleSetName: ruleSetName });
-    const store: IReceiptRuleAction = {
-      bind: (): ReceiptRuleActionConfig => ({
-        s3Action: { bucketName: bucket.bucketName, objectKeyPrefix: RAW_PREFIX, topicArn: topic.topicArn },
-      }),
-    };
-
-    const rule = ruleSet.addRule("Inbound", {
-      receiptRuleName: ruleSetName,
-      recipients: [domain],
-      scanEnabled: true,
-      tlsPolicy: TlsPolicy.OPTIONAL,
-      actions: [store],
+    const store = (objectKeyPrefix: string, topicArn?: string): IReceiptRuleAction => ({
+      bind: (): ReceiptRuleActionConfig => ({ s3Action: { bucketName: bucket.bucketName, objectKeyPrefix, topicArn } }),
     });
 
-    if (bucket.policy) {
-      rule.node.addDependency(bucket.policy);
+    const rules = [
+      ruleSet.addRule("Inbound", {
+        receiptRuleName: ruleSetName,
+        recipients: [mail.inbound],
+        scanEnabled: true,
+        tlsPolicy: TlsPolicy.OPTIONAL,
+        actions: [store(RAW_PREFIX, topic.topicArn)],
+      }),
+      ruleSet.addRule("System", {
+        receiptRuleName: `${ruleSetName}-system`,
+        recipients: [mail.system],
+        scanEnabled: true,
+        tlsPolicy: TlsPolicy.OPTIONAL,
+        actions: [store(SYSTEM_PREFIX)],
+      }),
+    ];
+
+    for (const rule of rules) {
+      if (bucket.policy) {
+        rule.node.addDependency(bucket.policy);
+      }
+      rule.node.addDependency(topic);
     }
 
-    rule.node.addDependency(topic);
-
     const activation = new ActivateRuleSet(this, "ActivateRuleSet", ruleSetName);
-    activation.node.addDependency(rule);
+    activation.node.addDependency(...rules);
   }
 
   /**
@@ -231,8 +244,8 @@ export class MailStack extends Stack {
     subscribe("EventsWebhook", topics.events, "/webhooks/ses/events");
   }
 
-  private sendingIdentity(domain: string): EmailIdentity {
-    return new EmailIdentity(this, "InboundIdentity", {
+  private sendingIdentity(id: string, domain: string): EmailIdentity {
+    return new EmailIdentity(this, id, {
       identity: Identity.domain(domain),
       dkimIdentity: DkimIdentity.easyDkim(),
       dkimSigning: true,
@@ -257,7 +270,7 @@ export class MailStack extends Stack {
    * a role, because whatever runs the application owns its own role and attaches
    * this. Raw mail can be read and erased, never written: only SES writes it.
    */
-  private applicationPolicy(managedPolicyName: string, setNames: string[], bucket: Bucket): ManagedPolicy {
+  private policy(managedPolicyName: string, setNames: string[], bucket: Bucket): ManagedPolicy {
     const ses = (resource: string, resourceName: string) => this.formatArn({ service: "ses", resource, resourceName });
     const identities = ses("identity", "*");
     const tenants = ses("tenant", "*");
@@ -310,7 +323,7 @@ export class MailStack extends Stack {
    * missing data breaches. The object count S3 publishes is daily, too coarse for
    * six hours, so that alarm reads request metrics on the raw prefix.
    */
-  private alarms(name: (suffix: string) => string, ops: Topic, on: { bucket: Bucket; topics: Topic[] }): void {
+  private alarms(name: (suffix: string) => string, ops: ITopic, on: { bucket: Bucket; topics: Topic[] }): void {
     const action = new SnsAction(ops);
     const hour = Duration.hours(1);
     const ses = (metricName: string) =>
@@ -366,59 +379,20 @@ export class MailStack extends Stack {
   }
 
   /**
-   * Every DNS name the stage needs. All of them are mail only: none is a website
-   * and none may sit behind a proxy.
+   * The records one mail domain needs: MX to SES receiving, SPF, DMARC,
+   * the MAIL FROM subdomain and the three Easy DKIM names.
    */
   private records(domain: string, identity: EmailIdentity): MailRecord[] {
     const mailFrom = `bounce.${domain}`;
+    const spf = "v=spf1 include:amazonses.com -all";
 
     return [
-      { kind: "MX", name: domain, value: `inbound-smtp.${this.region}.amazonaws.com` },
-      { kind: "TXT", name: domain, value: "v=spf1 include:amazonses.com -all" },
-      { kind: "TXT", name: `_dmarc.${domain}`, value: "v=DMARC1; p=reject;" },
-      { kind: "MX", name: mailFrom, value: `feedback-smtp.${this.region}.amazonses.com` },
-      { kind: "TXT", name: mailFrom, value: "v=spf1 include:amazonses.com -all" },
-      ...identity.dkimRecords.map((record): MailRecord => ({ kind: "CNAME", name: record.name, value: record.value })),
+      { type: "MX", name: domain, value: `inbound-smtp.${this.region}.amazonaws.com`, priority: 10 },
+      { type: "TXT", name: domain, value: spf },
+      { type: "TXT", name: `_dmarc.${domain}`, value: "v=DMARC1; p=reject;" },
+      { type: "MX", name: mailFrom, value: `feedback-smtp.${this.region}.amazonses.com`, priority: 10 },
+      { type: "TXT", name: mailFrom, value: spf },
+      ...identity.dkimRecords.map((record): MailRecord => ({ type: "CNAME", name: record.name, value: record.value })),
     ];
-  }
-
-  private publishRecords(records: MailRecord[], hostedZone: MailStackProps["hostedZone"]): void {
-    if (!hostedZone) {
-      records.forEach((record, index) => {
-        const priority = record.kind === "MX" ? "10 " : "";
-        new CfnOutput(this, `DnsRecord${index}`, {
-          value: Fn.join(" ", [record.name, record.kind, `${priority}${record.value}`]),
-        });
-      });
-
-      return;
-    }
-
-    if (!records[0].name.endsWith(`.${hostedZone.name}`)) {
-      throw new Error(`${records[0].name} is not inside the zone ${hostedZone.name}`);
-    }
-
-    const zone = HostedZone.fromHostedZoneAttributes(this, "Zone", {
-      hostedZoneId: hostedZone.id,
-      zoneName: hostedZone.name,
-    });
-
-    records.forEach((record, index) => this.writeRecord(zone, `DnsRecord${index}`, record));
-  }
-
-  private writeRecord(zone: IHostedZone, id: string, record: MailRecord): void {
-    const recordName = `${record.name}.`;
-
-    switch (record.kind) {
-      case "MX":
-        new MxRecord(this, id, { zone, recordName, values: [{ priority: 10, hostName: record.value }] });
-        break;
-      case "CNAME":
-        new CnameRecord(this, id, { zone, recordName, domainName: record.value });
-        break;
-      case "TXT":
-        new TxtRecord(this, id, { zone, recordName, values: [record.value] });
-        break;
-    }
   }
 }

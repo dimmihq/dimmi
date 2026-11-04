@@ -140,7 +140,7 @@ INFRA_ENV := env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TO
 infra-check:
 	cd deploy/cdk && pnpm install --frozen-lockfile
 	cd deploy/cdk && $(INFRA_ENV) pnpm run typecheck
-	cd deploy/cdk && $(INFRA_ENV) pnpm run synth:fixture
+	cd deploy/cdk && $(INFRA_ENV) pnpm run synth:all
 	cd deploy/cdk && $(INFRA_ENV) pnpm run test
 	go test -count=1 ./tests/arch/ -run '^TestDeploy'
 

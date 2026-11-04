@@ -1,76 +1,57 @@
 # dimmi infrastructure
 
-AWS CDK in TypeScript. Today it holds one stack, `Mail`: receiving, sending, notifications, alarms and DNS for one stage.
-It deploys alone and does not depend on what runs the application.
+AWS CDK in TypeScript for every environment. One app holds all of them; `-c env=<name>` picks one. The runbook for people
+is [`docs/deploy`](../../docs/deploy/README.md); this page is for changing the code.
 
-The package has its own lockfile and is not part of the browser app. Node runs the TypeScript directly, so it needs
-Node 22.18 or newer. Run every command below from `deploy/cdk`, after `pnpm install`.
+The package has its own lockfile and is not part of the browser app. Node runs the TypeScript directly, so it needs Node
+22.18 or newer. Run commands from `deploy/cdk` after `pnpm install`.
 
-## Settings
+## Layout
 
-Nothing that identifies an account is in this repository. Each setting comes from `--context name=value`, or from the
-environment variable beside it.
+| Path | Holds |
+|---|---|
+| `bin/dimmi.ts` | Entry point: reads `-c env=` and builds that environment |
+| `lib/config/environments.ts` | **Every difference between environments**: sizes, counts, Regions, hosts, protection |
+| `lib/config/environment.ts` | The config type and its validation |
+| `lib/environment-stacks.ts` | Wires one environment's stacks together, names and tags them |
+| `lib/stacks/` | One file per stack |
+| `lib/constructs/` | Pieces a stack is built from: database, Valkey, load balancer, app settings |
+| `lib/database/provision.sql` | Creates the owner and application roles; run by the `provision` task |
+| `test/` | Template assertions, run with Vitest, no AWS credentials needed |
 
-| Context | Environment | Meaning |
-|---|---|---|
-| `stage` | `DIMMI_STAGE` | Names and tags every resource, such as `staging` |
-| `region` | `DIMMI_REGION` | Where the stack lives. Stages in one account must use different Regions (below) |
-| `inboundDomain` | `DIMMI_INBOUND_DOMAIN` | The domain SES receives on and sends default mail from |
-| `webhookBaseUrl` | `DIMMI_WEBHOOK_BASE_URL` | Origin of the web host; `/webhooks/ses/inbound` and `/webhooks/ses/events` are added |
-| `opsEmail` | `DIMMI_OPS_EMAIL` | Who is mailed when an alarm fires |
-| `hostedZoneId` | `DIMMI_HOSTED_ZONE_ID` | Optional Route 53 zone for the DNS records. Without it they become stack outputs named `DnsRecord*` |
-| `hostedZoneName` | `DIMMI_HOSTED_ZONE_NAME` | The zone's name, required with the id. The stack does no lookup |
+## Stacks
 
-The account comes from your AWS credentials when you deploy. Keep your values in a local `.env*` file or your shell; both
-`.env*` and `cdk.context.json` are ignored by git.
+Each environment has these, named `dimmi-<env>-<role>` and tagged `Environment=<env>`:
 
-**One Region per stage.** SES has one active receipt rule set per account and Region. Two stages in one account and one
-Region would take each other's inbound mail, and deleting one stack would stop receiving for both.
+| Stack | Owns |
+|---|---|
+| `ops` | Alarm topic mailed to the alarm address, monthly budget on the environment tag |
+| `network` | VPC, public and isolated subnets, S3 gateway endpoint, security groups |
+| `registry` | ECR repository. Alone because it must hold an image before tasks can start |
+| `data` | RDS PostgreSQL 18, ElastiCache Valkey, files bucket, KMS key, every secret |
+| `mail` | SES identities, receipt rules, configuration sets, webhooks, mail alarms. Writes no DNS |
+| `app` | ECS cluster, web and worker services, `migrate` and `provision` tasks, NLB with Elastic IPs |
+| `ci` | The role GitHub Actions assumes to release; it cannot change infrastructure |
 
-## Synth
+`dimmi-account` holds the GitHub OIDC provider, once per account, in us-east-1.
 
-`make infra-check` from the repository root type-checks, synthesizes on fixture values, runs the template tests and scans
-`deploy/` for secrets. It hides AWS credentials from the toolchain, so it cannot reach an account.
+## Adding an environment
 
-For your own values:
+Add one entry to `lib/config/environments.ts`. Give it its own Region if another environment shares the account: SES
+keeps one active receipt rule set, one sandbox and one reputation per Region. Then follow the runbook from the top.
 
-```sh
-export DIMMI_STAGE=staging DIMMI_REGION=<region> DIMMI_INBOUND_DOMAIN=inbound.staging.trydimmi.com
-export DIMMI_WEBHOOK_BASE_URL=https://staging.trydimmi.com DIMMI_OPS_EMAIL=<address>
-export DIMMI_HOSTED_ZONE_ID=<zone id> DIMMI_HOSTED_ZONE_NAME=staging.trydimmi.com
-pnpm exec cdk synth --lookups=false
-```
-
-## Bootstrap
-
-Once per account and Region, with credentials for that account:
+## Commands
 
 ```sh
-pnpm exec cdk bootstrap aws://<account>/<region> --cloudformation-execution-policies <policy arn>
+pnpm run typecheck
+pnpm run test
+pnpm run synth -c env=staging            # one environment
+pnpm run synth:all                       # every environment, as CI does
+pnpm exec cdk diff --all -c env=staging  # needs credentials
 ```
 
-The default execution role is effectively administrator. In an account shared between stages, pass a narrower policy.
+`make infra-check` from the repository root runs typecheck, synth of both environments and the tests with every AWS
+credential hidden, then scans `deploy/` for secrets.
 
-## Diff
-
-```sh
-pnpm exec cdk diff Mail
-```
-
-## Deploy
-
-```sh
-pnpm exec cdk deploy Mail
-```
-
-Afterwards:
-
-- Confirm the subscription mail sent to the ops address. Alarms reach nobody until then.
-- Without a zone id, add the `DnsRecord*` outputs at your DNS host, with no proxy.
-- Attach the policy in the `MailApplicationPolicyArn` output to whatever role runs the application.
-- Point the application at the other outputs: bucket, topics and configuration set names.
-
-The application must answer on `webhookBaseUrl` for the HTTPS subscriptions to confirm. Until it does they stay pending,
-and SNS delivers nothing.
-
-Operating the stack is covered in [`docs/ops/ses-inbound.md`](../../docs/ops/ses-inbound.md).
+Synth never looks anything up and `cdk.context.json` is ignored by git, because lookups cache account ids and the
+repository is public. The account comes from the deploying credentials.
