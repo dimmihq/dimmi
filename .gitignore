@@ -23,3 +23,4 @@ coverage-app.filtered.out
 /deploy/**/.env*
 /deploy/cdk/node_modules/
 /deploy/dns/node_modules/
+/deploy/dns/outputs/

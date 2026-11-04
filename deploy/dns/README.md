@@ -10,6 +10,7 @@ It reads the environment's stack outputs, computes the records, and compares the
 | `pnpm dns plan --env staging --outputs <file>`   | Prints what apply would change. Changes nothing                                    | `VERCEL_TOKEN` |
 | `pnpm dns apply --env staging --outputs <file>`  | Creates and updates the environment's records, deletes the ones it no longer needs | `VERCEL_TOKEN` |
 | `pnpm dns verify --env staging --outputs <file>` | Looks each record up through public resolvers and says which are visible           | nothing        |
+| `pnpm dns remove --env staging` | Deletes every record it wrote for the environment, for teardown | `VERCEL_TOKEN` |
 
 `VERCEL_TEAM_ID` is needed too when the domain belongs to a Vercel team.
 

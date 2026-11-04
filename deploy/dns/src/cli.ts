@@ -2,10 +2,12 @@
 import { Resolver as DnsResolver } from "node:dns/promises";
 import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
+import type { EnvironmentConfig } from "../../cdk/lib/config/environment.ts";
 import { environmentNamed } from "../../cdk/lib/config/environments.ts";
 import type { OutputsFile } from "./outputs.ts";
 import { factsFromOutputs } from "./outputs.ts";
 import { formatPlan, ownerComment, plan } from "./plan.ts";
+import type { DnsRecord } from "./records.ts";
 import { desiredRecords } from "./records.ts";
 import type { Fetch } from "./vercel.ts";
 import { Vercel } from "./vercel.ts";
@@ -22,10 +24,12 @@ export type Dependencies = {
 };
 
 const USAGE = `usage: pnpm dns <plan|apply|verify> --env <name> --outputs <file>
+       pnpm dns remove --env <name>
 
   plan    show what apply would change at Vercel, changing nothing
   apply   create and update this environment's records, delete the ones it no longer needs
   verify  look every record up in public DNS and say which are visible
+  remove  delete every record this script wrote for the environment, when tearing it down
 
 --outputs is the file 'cdk deploy --outputs-file' wrote for the environment.
 plan and apply read VERCEL_TOKEN, and VERCEL_TEAM_ID when the domain belongs to a team.`;
@@ -42,15 +46,15 @@ export async function run(argv: string[], deps: Dependencies): Promise<number> {
     options: { env: { type: "string" }, outputs: { type: "string" } },
   });
   const command = positionals[0];
+  const known = ["plan", "apply", "verify", "remove"].includes(command ?? "");
 
-  if (!(command === "plan" || command === "apply" || command === "verify") || !values.env || !values.outputs) {
+  if (!known || !values.env || (command !== "remove" && !values.outputs)) {
     deps.write(`${USAGE}\n`);
     return 2;
   }
 
   const config = environmentNamed(values.env);
-  const outputs = JSON.parse(await deps.readFile(values.outputs)) as OutputsFile;
-  const desired = desiredRecords(config, factsFromOutputs(outputs, config.name));
+  const desired = command === "remove" ? [] : await desiredFromFile(deps, values.outputs ?? "", config);
 
   if (command === "verify") {
     const checks = await verify(desired, deps.resolver);
@@ -71,6 +75,7 @@ export async function run(argv: string[], deps: Dependencies): Promise<number> {
   if (command === "plan") {
     return 0;
   }
+
   if (changes.conflicts.length > 0) {
     deps.write("Nothing was changed. Remove or rename the clashing records at Vercel, then apply again.\n");
     return 1;
@@ -89,6 +94,12 @@ export async function run(argv: string[], deps: Dependencies): Promise<number> {
   deps.write("Applied. Run verify in a few minutes to see the records in public DNS.\n");
 
   return 0;
+}
+
+async function desiredFromFile(deps: Dependencies, path: string, config: EnvironmentConfig): Promise<DnsRecord[]> {
+  const outputs = JSON.parse(await deps.readFile(path)) as OutputsFile;
+
+  return desiredRecords(config, factsFromOutputs(outputs, config.name));
 }
 
 /**

@@ -97,6 +97,17 @@ describe("dns command", () => {
     expect(h.methods).toEqual([]);
   });
 
+  it("remove deletes only this environment's records", async () => {
+    const h = harness([
+      { id: "a", name: "staging", type: "A", value: "192.0.2.10", ttl: 300, comment: ownerComment("staging") },
+      { id: "b", name: "", type: "A", value: "192.0.2.20", ttl: 300, comment: ownerComment("production") },
+      { id: "c", name: "www", type: "CNAME", value: "cname.vercel-dns.com", ttl: 300, comment: "" },
+    ]);
+
+    expect(await run(["remove", "--env", "staging"], h.deps)).toBe(0);
+    expect(h.zone.map((record) => record.id)).toEqual(["b", "c"]);
+  });
+
   it("prints usage for anything else", async () => {
     const h = harness([]);
 

@@ -31,11 +31,12 @@ func secretPatterns() map[string]*regexp.Regexp {
 
 /*
 skippedForSecrets reports whether the walk leaves the entry out: installed
-packages and build output are not ours, and lockfiles are full of hashes.
+packages, build output and saved stack outputs are not committed, and
+lockfiles are full of hashes.
 */
 func skippedForSecrets(entry fs.DirEntry) bool {
 	if entry.IsDir() {
-		return entry.Name() == "node_modules" || entry.Name() == "cdk.out"
+		return entry.Name() == "node_modules" || entry.Name() == "cdk.out" || entry.Name() == "outputs"
 	}
 
 	return entry.Name() == "pnpm-lock.yaml"
@@ -140,7 +141,7 @@ func TestDeploySecrets(t *testing.T) {
 		root := t.TempDir()
 		seed := []byte(strings.Repeat("1", 12))
 
-		for _, dir := range []string{"node_modules", "cdk.out"} {
+		for _, dir := range []string{"node_modules", "cdk.out", "outputs"} {
 			require.NoError(t, os.MkdirAll(filepath.Join(root, dir), 0o750))
 			require.NoError(t, os.WriteFile(filepath.Join(root, dir, "file.json"), seed, 0o600))
 		}
