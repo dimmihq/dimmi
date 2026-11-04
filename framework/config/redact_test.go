@@ -107,8 +107,8 @@ func TestRedactCredentials(t *testing.T) {
 	t.Run("masks the password of a connection url and keeps the rest", func(t *testing.T) {
 		t.Parallel()
 
-		assert.Equal(t, "postgresql://dimmi_app:[redacted]@db.internal:5432/dimmi?sslmode=verify-full",
-			config.RedactCredentials("postgresql://dimmi_app:s3cr3t@db.internal:5432/dimmi?sslmode=verify-full"))
+		assert.Equal(t, "postgresql://svc_app:[redacted]@db.internal:5432/main?sslmode=verify-full",
+			config.RedactCredentials("postgresql://svc_app:s3cr3t@db.internal:5432/main?sslmode=verify-full"))
 		assert.Equal(t, "rediss://:[redacted]@cache.internal:6379",
 			config.RedactCredentials("rediss://:tok3n@cache.internal:6379"))
 		assert.Equal(t, "postgres://user:[redacted]@host/db",
@@ -118,8 +118,8 @@ func TestRedactCredentials(t *testing.T) {
 	t.Run("masks a password pair in a key value connection string", func(t *testing.T) {
 		t.Parallel()
 
-		assert.Equal(t, "host=db user=app password=[redacted] dbname=dimmi",
-			config.RedactCredentials("host=db user=app password=s3cr3t dbname=dimmi"))
+		assert.Equal(t, "host=db user=app password=[redacted] dbname=main",
+			config.RedactCredentials("host=db user=app password=s3cr3t dbname=main"))
 		assert.Equal(t, "host=db password=[redacted]", config.RedactCredentials("host=db password='a b'"))
 	})
 
