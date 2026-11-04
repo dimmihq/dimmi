@@ -132,7 +132,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootTeams(a)
 	bootTokens(a)
 
-	if err := bootAudit(a); err != nil {
+	if err := bootAccountAndAudit(a); err != nil {
 		return err
 	}
 
@@ -161,6 +161,18 @@ func bootChannels(ctx context.Context, a *app.App) error {
 	}
 
 	return bootEmailSending(a)
+}
+
+/*
+bootAccountAndAudit builds the actions on a person's own account, then
+those of the audit log, which records what they change.
+*/
+func bootAccountAndAudit(a *app.App) error {
+	if err := bootAccount(a); err != nil {
+		return err
+	}
+
+	return bootAudit(a)
 }
 
 /*
@@ -299,6 +311,7 @@ func registerJobs(a *app.App) error {
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
 		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
+		queue.Register(a.Queue, &jobs.RemindInviters{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
 		queue.Register(a.Queue, &jobs.PurgeExpiredAuthRecords{
 			DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,
 			SessionIdle: a.Config.Auth.Sessions.IdleLifetime,

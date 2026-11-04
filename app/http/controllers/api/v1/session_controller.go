@@ -58,7 +58,12 @@ func (c *SessionController) Store(ctx context.Context, in *requests.StoreSession
 		return nil, err
 	}
 
-	return signInOutput(c.Cookies, c.Server, signedIn, fhttp.StatusCreated), nil
+	out := signInOutput(ctx, c.Cookies, c.Server, signedIn)
+	if signedIn.Challenge == nil {
+		out.Status = fhttp.StatusCreated
+	}
+
+	return out, nil
 }
 
 /*

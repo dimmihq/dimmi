@@ -41,6 +41,17 @@ func (q *Queries) DeletePasswordResetToken(ctx context.Context, id ids.UUID) (in
 	return result.RowsAffected(), nil
 }
 
+const deleteUserPasswordResetTokens = `-- name: DeleteUserPasswordResetTokens :exec
+DELETE FROM password_reset_tokens WHERE user_id = $1
+`
+
+// DeleteUserPasswordResetTokens ends the user's reset, whatever its id, so a
+// link in a mailbox the account left behind stops working.
+func (q *Queries) DeleteUserPasswordResetTokens(ctx context.Context, userID ids.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserPasswordResetTokens, userID)
+	return err
+}
+
 const findPasswordResetToken = `-- name: FindPasswordResetToken :one
 SELECT id, user_id, token_hash, requested_ip, attempts, expires_at, created_at FROM password_reset_tokens WHERE id = $1
 `

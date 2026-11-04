@@ -1,6 +1,8 @@
 /*
  * Entry of the browser app. The Go server renders the page this mounts
- * into, so the router only takes over once the page has loaded.
+ * into, so the router only takes over once the page has loaded. Every
+ * page sits inside the app's language, which English starts in before
+ * the server says which language the person reads.
  */
 import "./app.css";
 
@@ -9,7 +11,9 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { LocaleRoot } from "./features/shell/locale-root";
 import { syncTheme } from "./features/theme/theme-sync";
+import "./lib/i18n";
 import { routeTree } from "./route-tree.gen";
 
 syncTheme();
@@ -29,7 +33,9 @@ if (root) {
   createRoot(root).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <LocaleRoot>
+          <RouterProvider router={router} />
+        </LocaleRoot>
       </QueryClientProvider>
     </StrictMode>,
   );

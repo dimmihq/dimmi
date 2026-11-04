@@ -1,6 +1,15 @@
-import { type AuditEntry, auditPath } from "@/lib/api/audit";
+import { type AuditEntry, auditPath, exportPath } from "@/lib/api/audit";
 
-import { actorDetail, actorName, auditEventLabel, formatTime, securityEventLabel } from "./log-labels";
+import {
+  actorDetail,
+  actorName,
+  auditEventGroups,
+  auditEventLabel,
+  auditEvents,
+  formatTime,
+  groupFilter,
+  securityEventLabel,
+} from "./log-labels";
 
 function actor(type: string, via: string | null): AuditEntry["actor"] {
   return { type, id: null, label: "", via: via ? { kind: via, id: null } : null };
@@ -12,6 +21,54 @@ describe("log labels", () => {
     expect(auditEventLabel("billing.plan_changed")).toBe("billing.plan_changed");
     expect(securityEventLabel("login.succeeded")).toBe("Signed in");
     expect(securityEventLabel("something.new")).toBe("something.new");
+  });
+
+  it("names every event the server records, colleagues' sign-ins and exports included", () => {
+    for (const event of [
+      "member.signed_in",
+      "member.sign_in_failed",
+      "member.sign_in_locked",
+      "member.sessions_revoked",
+      "member.two_factor_enabled",
+      "member.two_factor_disabled",
+      "member.auth_factor_added",
+      "member.auth_factor_removed",
+      "member.recovery_code_used",
+      "member.password_changed",
+      "member.password_reset",
+      "member.email_changed",
+      "member.identity_linked",
+      "member.identity_unlinked",
+      "member.two_factor_reset_requested",
+      "member.sign_in_lock_cleared",
+      "audit_logs.exported",
+      "members.exported",
+    ]) {
+      expect(auditEventLabel(event)).not.toBe(event);
+    }
+  });
+
+  it("groups the events by kind, each event in one group", () => {
+    expect(auditEventGroups().map((group) => group.name)).toEqual([
+      "Sign-in",
+      "Security settings",
+      "Members and teams",
+      "Tokens and apps",
+      "Inbox",
+      "Email",
+      "Data export",
+    ]);
+    const grouped = auditEventGroups().flatMap((group) => Object.keys(group.events));
+    expect(new Set(grouped).size).toBe(grouped.length);
+    expect(auditEvents).toHaveLength(grouped.length);
+  });
+
+  it("filters a group by every event in it", () => {
+    const signIn = auditEventGroups().find((group) => group.id === "sign_in");
+
+    expect(signIn && groupFilter(signIn)).toBe(
+      "member.signed_in,member.sign_in_failed,member.sign_in_locked,member.sessions_revoked",
+    );
   });
 
   it("shows a member's name without their address, and a token's name", () => {
@@ -27,7 +84,7 @@ describe("log labels", () => {
   });
 
   it("writes a time with its date", () => {
-    expect(formatTime("2026-11-01T10:00:00Z", "en-US")).toContain("2026");
+    expect(formatTime("2026-11-01T10:00:00Z", "UTC")).toContain("2026");
   });
 });
 
@@ -40,5 +97,23 @@ describe("auditPath", () => {
 
   it("leaves out what is not set", () => {
     expect(auditPath({}, null, 10)).toBe("/audit-logs?limit=10");
+  });
+
+  it("narrows by time", () => {
+    const path = auditPath({ from: "2026-11-01T00:00:00.000Z", to: "2026-11-02T00:00:00.000Z" }, null, 10);
+
+    expect(path).toBe(
+      "/audit-logs?limit=10&filter%5Bcreated_after%5D=2026-11-01T00%3A00%3A00.000Z" +
+        "&filter%5Bcreated_before%5D=2026-11-02T00%3A00%3A00.000Z",
+    );
+  });
+});
+
+describe("exportPath", () => {
+  it("asks for the file with the filters on screen", () => {
+    expect(exportPath({ event: "member.left,member.joined", from: "2026-11-01T00:00:00.000Z" })).toBe(
+      "/audit-logs?format=csv&filter%5Bevent%5D=member.left%2Cmember.joined" +
+        "&filter%5Bcreated_after%5D=2026-11-01T00%3A00%3A00.000Z",
+    );
   });
 });

@@ -38,10 +38,12 @@ type AppConfig struct {
 }
 
 /*
-APIConfig holds the version of the public API this server speaks.
+APIConfig holds the version of the public API this server speaks and
+its rate limits.
 */
 type APIConfig struct {
-	Version string `default:"2026-11-01" koanf:"version"`
+	Version string          `default:"2026-11-01" koanf:"version"`
+	Limits  APILimitsConfig `koanf:"limits"`
 }
 
 /*

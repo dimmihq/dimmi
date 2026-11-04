@@ -82,7 +82,6 @@ func TestInvitationsStore(t *testing.T) {
 			AssertJSONPath("data.0.invitation.email", "Grace@acme.com").
 			AssertJSONPath("data.0.invitation.role", "admin").
 			AssertJSONPath("data.0.invitation.status", "pending").
-			AssertJSONPath("data.0.invitation.accept_url", nil).
 			AssertJSONPath("data.0.invitation.invited_by.name", tc.Owner.Name).
 			AssertJSONPath("data.1.result", "already_member").
 			AssertJSONPath("data.1.invitation", nil).
@@ -90,6 +89,7 @@ func TestInvitationsStore(t *testing.T) {
 			AssertJSONPath("data.3.result", "invalid").
 			AssertJSONPath("data.3.error.code", "invalid_email")
 
+		assert.Contains(t, res.String("data.0.invitation.accept_url"), "/invitation#token=")
 		assert.Len(t, created.all(), 2)
 		mails, sent := tests.Sent[appmail.InvitationMail](tc, fake)
 		require.Len(t, mails, 2)
@@ -124,7 +124,7 @@ func TestInvitationsStore(t *testing.T) {
 			AssertNotFound()
 	})
 
-	t.Run("hands the link to the admin when the server cannot mail it", func(t *testing.T) {
+	t.Run("hands the link to the admin whether or not the server can mail it", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
@@ -247,6 +247,26 @@ func TestInvitationDeliveries(t *testing.T) {
 		fresh := tc.Fragment(sent.AcceptURL).Get("token")
 		assert.NotEqual(t, first, fresh)
 		tc.Client().WithHeader("Dimmi-Invitation-Token", fresh).GetJSON("/api/v1/invitations/preview").AssertOK()
+	})
+
+	t.Run("copy link rotates the token and the emailed link stops working", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		fake := tc.Mail()
+		mailed := mailedToken(tc, fake, "grace@example.com", "member")
+
+		res := in(tc, tc.Owner).PostJSON("/api/v1/invitations/"+invitationID(t, tc)+"/deliveries",
+			testkit.JSON{"channel": "link"}).AssertCreated().
+			AssertJSONPath("data.invitation.send_count", 2)
+		copied := tc.Fragment(res.String("data.invitation.accept_url")).Get("token")
+
+		mails, _ := tests.Sent[appmail.InvitationMail](tc, fake)
+		assert.Len(t, mails, 1)
+		tc.Client().WithHeader("Dimmi-Invitation-Token", mailed).GetJSON("/api/v1/invitations/preview").
+			AssertNotFound()
+		tc.Client().WithHeader("Dimmi-Invitation-Token", copied).GetJSON("/api/v1/invitations/preview").AssertOK()
+		in(tc, tc.Owner).PostJSON("/api/v1/invitations/"+invitationID(t, tc)+"/deliveries",
+			testkit.JSON{"channel": "fax"}).AssertValidationError("channel")
 	})
 
 	t.Run("sends one invitation at most three times a day", func(t *testing.T) {

@@ -26,7 +26,7 @@ func TestOAuthLinking(t *testing.T) {
 		attempt := tc.StartOAuth(browser, "/auth/google/redirect?intent=link")
 		res := tc.FinishOAuth(browser, attempt, person("110169", "someone-else@example.com"))
 
-		assertLands(t, res, "/d/settings/security")
+		assertLands(t, res, "/d/settings/security?linked=google")
 		tc.Table("oauth_identities").AssertHas(testkit.Row{
 			"user_id": tc.Owner.ID, "provider": "google", "email": "someone-else@example.com", "last_login_at": nil,
 		})

@@ -118,7 +118,7 @@ func TestUserIdentities(t *testing.T) {
 		tc.Table("oauth_identities").AssertCount(1)
 	})
 
-	t.Run("refuses to unlink the last way to sign in", func(t *testing.T) {
+	t.Run("unlinking the last way in is refused", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withProviders("DIMMI_AUTH__MAGIC_LINK__ENABLED=false"))
 		browser := signUpGrace(tc)

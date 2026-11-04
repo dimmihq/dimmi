@@ -153,12 +153,14 @@ func providerFailure(err error) string {
 }
 
 /*
-landing returns where the browser goes once the callback succeeded.
+landing returns where the browser goes once the callback succeeded. A
+link with nowhere else to go lands on the security settings, which name
+the provider just linked.
 */
 func landing(attempt appauth.OAuthAttempt, result auth.OAuthCallbackResult) string {
 	if result.Linked {
 		if attempt.Redirect == "/" {
-			return appauth.SecurityPage
+			return appauth.SecurityPage + "?" + url.Values{"linked": {attempt.Provider}}.Encode()
 		}
 
 		return attempt.Redirect

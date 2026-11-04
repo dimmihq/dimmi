@@ -142,4 +142,47 @@ it.describe("invitations", () => {
     await guest.goto(await mailedLink(invitee.email, "invited you", 2));
     await expect(guest.getByRole("heading", { name: "This invitation was revoked" })).toBeVisible();
   });
+
+  it("puts the invitee in the picked team and hands over a fresh link", async ({ page, guest, person, request }) => {
+    const invitee = inviteeOf(person);
+    await ownerOf(page, request, person, "Linked");
+    await page.goto("/d/settings/teams");
+    await page.getByRole("region", { name: "Teams" }).getByRole("button", { name: "New team" }).click();
+    await page.getByRole("alertdialog").getByRole("textbox", { name: "Team name" }).fill("Support");
+    await page.getByRole("alertdialog").getByRole("button", { name: "Create team" }).click();
+    await expect(page.getByRole("heading", { name: "Support", level: 1 })).toBeVisible();
+
+    await page.goto("/d/settings/members");
+    await page.getByRole("button", { name: "Invite", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Email addresses").fill(invitee.email);
+    await dialog.getByRole("group", { name: "Teams to join" }).getByText("Support").click();
+    await dialog.getByRole("button", { name: "Send invitations" }).click();
+    await expect(dialog.getByText("Invitation sent")).toBeVisible();
+    await dialog.getByRole("button", { name: "Done" }).click();
+
+    const pending = page.getByRole("region", { name: "Pending invitations" });
+    await pending.getByRole("button", { name: `Manage invitation for ${invitee.email}` }).click();
+    await page.getByRole("button", { name: "Copy a new link", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Make a new link" }).click();
+    const link = page.getByRole("textbox", { name: `Invitation link for ${invitee.email}` });
+    await expect(link).toHaveValue(/\/invitation#token=/);
+    await expect(page.getByText(/the mailed one no longer works/)).toBeVisible();
+
+    await guest.goto(await mailedLink(invitee.email, "invited you"));
+    await expect(guest.getByRole("heading", { name: /^This invitation/ })).toBeVisible();
+    await expect(guest.getByRole("heading", { name: `Join Linked ${suffixOf(person)}` })).toBeHidden();
+
+    await guest.goto("about:blank");
+    await guest.goto(await link.inputValue());
+    await expect(guest.getByRole("heading", { name: `Join Linked ${suffixOf(person)}` })).toBeVisible();
+    await guest.getByLabel("Full name").fill(invitee.name);
+    await guest.getByRole("textbox", { name: "Email" }).fill(invitee.email);
+    await guest.getByLabel("Password").fill(invitee.password);
+    await guest.getByRole("button", { name: "Create account" }).click();
+    await expect(guest).toHaveURL(inbox);
+
+    await page.goto("/d/settings/teams");
+    await expect(page.getByRole("region", { name: "Teams" }).getByText("1 member", { exact: true })).toBeVisible();
+  });
 });

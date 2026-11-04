@@ -14,6 +14,7 @@ package http
 
 import (
 	"io"
+	"mime/multipart"
 	"net/http"
 )
 
@@ -46,6 +47,12 @@ type Header = http.Header
 Cookie is a cookie sent or received.
 */
 type Cookie = http.Cookie
+
+/*
+MultipartForm is a parsed multipart upload, as the RawBody of a route's
+input.
+*/
+type MultipartForm = multipart.Form
 
 /*
 SameSite is the cross-site policy of a cookie.

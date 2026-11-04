@@ -5,13 +5,15 @@
 |
 | One entry of a workspace's audit log, as admins and their programs
 | read it. Every id is the public id of what it names; the labels are
-| the names things had when the entry was written.
+| the names things had when the entry was written. An exported row
+| carries the same values, flat, one cell each.
 |
 */
 
 package resources
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
@@ -108,6 +110,53 @@ func NewAuditLog(e models.AuditLog) AuditLog {
 	}
 
 	return out
+}
+
+/*
+NewAuditLogRow shapes one entry as a row of an exported audit log, in
+the order of audit.ExportColumns: ids as the API shows them, the time
+in RFC 3339 UTC, changes as compact JSON, and absent values empty.
+*/
+func NewAuditLogRow(e models.AuditLog) []string {
+	r := NewAuditLog(e)
+	row := []string{
+		r.ID, r.CreatedAt.Format(time.RFC3339), r.Event, r.Actor.Type, deref(r.Actor.ID), r.Actor.Label, "", "",
+		"", "", "", compact(r.Changes), deref(r.IP), deref(r.UserAgent), deref(r.RequestID),
+	}
+
+	if via := r.Actor.Via; via != nil {
+		row[6], row[7] = via.Kind, deref(via.ID)
+	}
+
+	if s := r.Subject; s != nil {
+		row[8], row[9], row[10] = s.Type, deref(s.ID), deref(s.Label)
+	}
+
+	return row
+}
+
+/*
+deref returns the value, or "" for none.
+*/
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+
+	return *s
+}
+
+/*
+compact returns the JSON without insignificant spaces. Stored changes
+are always valid JSON, so a failure leaves them as stored.
+*/
+func compact(raw json.RawMessage) string {
+	var out bytes.Buffer
+	if json.Compact(&out, raw) != nil {
+		return string(raw)
+	}
+
+	return out.String()
 }
 
 /*
