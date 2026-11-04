@@ -310,3 +310,45 @@ export function updateCompany(
 export function createCompany(workspace: string, fields: { name: string; domain?: string }): Promise<Company> {
   return request<Company>("POST", "/companies", fields, { workspace });
 }
+
+export interface ContactErasure {
+  id: string;
+  object: "contact_erasure";
+  contact_id: string;
+  status: "pending" | "pending_hold" | "completed" | "canceled";
+  scheduled_for: string;
+  completed_at: string | null;
+  counts: Record<string, number>;
+  identities_conflicted?: string[];
+  created_at: string;
+}
+
+export const erasureKeys = {
+  all: (workspace: string) => ["workspace", workspace, "contact-erasures"] as const,
+};
+
+export function erasuresQuery(workspace: string) {
+  return queryOptions({
+    queryKey: erasureKeys.all(workspace),
+    queryFn: () => request<ContactErasure[]>("GET", "/contact-erasures", undefined, { workspace }),
+  });
+}
+
+export function eraseContact(workspace: string, contact: string, immediate: boolean): Promise<ContactErasure> {
+  const query = immediate ? "erase=true&immediate=true" : "erase=true";
+
+  return request<ContactErasure>("DELETE", `/contacts/${encodeURIComponent(contact)}?${query}`, undefined, {
+    workspace,
+  });
+}
+
+export function cancelErasure(workspace: string, id: string): Promise<ContactErasure> {
+  return request<ContactErasure>(
+    "PATCH",
+    `/contact-erasures/${encodeURIComponent(id)}`,
+    { status: "canceled" },
+    {
+      workspace,
+    },
+  );
+}

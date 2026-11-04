@@ -326,6 +326,10 @@ Same session as the shared inbox above, `C` the conversation Ann started:
 | Try redaction | `POST $B/redaction-tests {"text":"4242424242424242"}` | 200 `object: redaction_test`, `text: •••• •••• •••• 4242`, one `redactions` entry; nothing stored |
 | Link safety settings | `PATCH $B/workspace {"link_safety":{"block_domains":["Evil.example"],"strip_inbound_email_links":true}}`, then `{"link_safety":{"block_domains":["co.uk"]}}` | 200, `link_safety.block_domains: ["evil.example"]`; then 422 `invalid_link_domains`; Bob 403 |
 | Links in a thread | a customer sends `[Sign in](https://login.evil.example)` and `https://bit.ly/x`; open the conversation | the first link is struck through and cannot be opened; the second asks "Opens bit.ly. Continue?" |
+| Erase a customer | `DELETE "$B/contacts/{ann}?erase=true"` | 202 `object: contact_erasure`, `status: pending`, `scheduled_for` 7 days out; Ann is gone from `GET $B/contacts` and her conversations from the lists; a reply to her is 422 `contact_unreachable_on_channel` |
+| Cancel an erasure | `PATCH $B/contact-erasures/{ces} {"status":"canceled"}` | 200 `status: canceled`; Ann and her address are back; again 409 `erasure_closed` |
+| Erase at once | `DELETE "$B/contacts/{ann}?erase=true&immediate=true"` more than 15 minutes after signing in, then after `POST $B/user/confirmation` | 423 `password_confirmation_required`, then 202; soon `GET $B/contact-erasures/{ces}` is `completed`, her conversation shows "Deleted contact" with empty messages |
+| Erasures page | open `$W/d/customers/erasures` as Ada, then as Bob | Ada sees the requests with Cancel on pending ones; Bob has no Erasures tab |
 | Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
 
 ### Two-factor authentication

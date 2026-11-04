@@ -72,7 +72,6 @@ type ContactController struct {
 	Create        *contacts.CreateContact
 	Upsert        *contacts.UpsertIdentifiedContact
 	Change        *contacts.UpdateContact
-	Remove        *contacts.DeleteContact
 	Conversations *conversations.ListRecordConversations
 	IDs           *ids.Registry
 	Cursors       *pagination.Cursors
@@ -392,22 +391,6 @@ func (c *ContactController) Update(ctx context.Context, in *requests.UpdateConta
 	}
 
 	return &ContactOutput{Body: fhttp.NewResource(resources.NewContactDetail(d))}, nil
-}
-
-/*
-Destroy removes a contact that has no conversations.
-*/
-func (c *ContactController) Destroy(ctx context.Context, in *requests.ShowContactRequest) (*EmptyOutput, error) {
-	id, err := c.IDs.Decode(string(models.PrefixContact), in.Contact)
-	if err != nil {
-		return nil, exceptions.ErrNotFound
-	}
-
-	if err := c.Remove.Handle(ctx, contacts.ShowContactInput{Membership: membership(ctx), ContactID: id}); err != nil {
-		return nil, err
-	}
-
-	return &EmptyOutput{}, nil
 }
 
 /*

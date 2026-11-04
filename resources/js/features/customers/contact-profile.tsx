@@ -31,6 +31,9 @@ import {
   identitiesQuery,
   updateContact,
 } from "@/lib/api/customers";
+import { callerQuery } from "@/lib/api/workspace";
+
+import { EraseCustomer } from "./erase-customer";
 import { CustomersFrame } from "./frame";
 import { personName, useWorkspace } from "./names";
 import { RecordConversations } from "./record-conversations";
@@ -318,6 +321,7 @@ export function ContactProfile({ id }: { id: string }) {
   const workspace = useWorkspace();
   const { data: contact, isPending } = useQuery({ ...contactQuery(workspace, id), retry: false });
   const conversations = useQuery(contactConversationsQuery(workspace, id, 20));
+  const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
 
   if (!contact) {
     return (
@@ -334,10 +338,12 @@ export function ContactProfile({ id }: { id: string }) {
   }
 
   const name = personName(contact);
+  const canErase = caller?.member?.permissions.includes("contacts:erase") ?? false;
 
   return (
     <CustomersFrame
       tabs={false}
+      actions={canErase ? <EraseCustomer contact={contact} /> : null}
       title={
         <span className="flex items-center gap-2">
           <Avatar size="xs" color={avatarColor(name)} initials={name.charAt(0).toUpperCase()} />

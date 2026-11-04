@@ -31,6 +31,7 @@ import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.tw
 import { Route as DCustomersIndexRouteImport } from './routes/d/customers/index'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
 import { Route as DCustomersBlockedRouteImport } from './routes/d/customers/blocked'
+import { Route as DCustomersErasuresRouteImport } from './routes/d/customers/erasures'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
@@ -155,6 +156,11 @@ const DCustomersBlockedRoute = DCustomersBlockedRouteImport.update({
   path: '/blocked',
   getParentRoute: () => DCustomersRoute,
 } as any)
+const DCustomersErasuresRoute = DCustomersErasuresRouteImport.update({
+  id: '/erasures',
+  path: '/erasures',
+  getParentRoute: () => DCustomersRoute,
+} as any)
 const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   id: '/inbox/$view',
   path: '/inbox/$view',
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/blocked': typeof DCustomersBlockedRoute
+  '/d/customers/erasures': typeof DCustomersErasuresRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/blocked': typeof DCustomersBlockedRoute
+  '/d/customers/erasures': typeof DCustomersErasuresRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
@@ -326,6 +334,7 @@ export interface FileRoutesById {
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/blocked': typeof DCustomersBlockedRoute
+  '/d/customers/erasures': typeof DCustomersErasuresRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
@@ -366,6 +375,7 @@ export interface FileRouteTypes {
     | '/login/two-factor'
     | '/d/customers/$contact'
     | '/d/customers/blocked'
+    | '/d/customers/erasures'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/login/two-factor'
     | '/d/customers/$contact'
     | '/d/customers/blocked'
+    | '/d/customers/erasures'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/_auth/login_/two-factor'
     | '/d/customers/$contact'
     | '/d/customers/blocked'
+    | '/d/customers/erasures'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
@@ -616,6 +628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersBlockedRouteImport
       parentRoute: typeof DCustomersRoute
     }
+    '/d/customers/erasures': {
+      id: '/d/customers/erasures'
+      path: '/erasures'
+      fullPath: '/d/customers/erasures'
+      preLoaderRoute: typeof DCustomersErasuresRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
     '/d/inbox/$view': {
       id: '/d/inbox/$view'
       path: '/inbox/$view'
@@ -720,6 +739,7 @@ declare module '@tanstack/react-router' {
 interface DCustomersRouteChildren {
   DCustomersContactRoute: typeof DCustomersContactRoute
   DCustomersBlockedRoute: typeof DCustomersBlockedRoute
+  DCustomersErasuresRoute: typeof DCustomersErasuresRoute
   DCustomersIndexRoute: typeof DCustomersIndexRoute
   DCustomersCompaniesCompanyRoute: typeof DCustomersCompaniesCompanyRoute
   DCustomersCompaniesIndexRoute: typeof DCustomersCompaniesIndexRoute
@@ -728,6 +748,7 @@ interface DCustomersRouteChildren {
 const DCustomersRouteChildren: DCustomersRouteChildren = {
   DCustomersContactRoute: DCustomersContactRoute,
   DCustomersBlockedRoute: DCustomersBlockedRoute,
+  DCustomersErasuresRoute: DCustomersErasuresRoute,
   DCustomersIndexRoute: DCustomersIndexRoute,
   DCustomersCompaniesCompanyRoute: DCustomersCompaniesCompanyRoute,
   DCustomersCompaniesIndexRoute: DCustomersCompaniesIndexRoute,

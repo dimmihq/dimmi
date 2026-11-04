@@ -71,6 +71,10 @@ func bootInbox(a *app.App) error {
 	bootRecords(a)
 	bootWorkbench(a)
 
+	if err := bootErasures(a); err != nil {
+		return err
+	}
+
 	return queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels})
 }
 

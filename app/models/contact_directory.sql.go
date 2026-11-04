@@ -14,7 +14,7 @@ import (
 )
 
 const contactsByIDs = `-- name: ContactsByIDs :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type ContactsByIDsParams struct {
@@ -57,6 +57,7 @@ func (q *Queries) ContactsByIDs(ctx context.Context, arg ContactsByIDsParams) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Notes,
+			&i.Placeholder,
 		); err != nil {
 			return nil, err
 		}
@@ -87,7 +88,7 @@ func (q *Queries) CountContactConversations(ctx context.Context, arg CountContac
 }
 
 const findContactForEmail = `-- name: FindContactForEmail :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1
   AND email = $2
   AND merged_into_id IS NULL
@@ -134,13 +135,14 @@ func (q *Queries) FindContactForEmail(ctx context.Context, arg FindContactForEma
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const findDuplicateContacts = `-- name: FindDuplicateContacts :many
 SELECT
-    c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes,
+    c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder,
     COALESCE(c.email = $1::citext, false)::boolean AS same_email,
     COALESCE(c.phone = $2::text, false)::boolean AS same_phone,
     COALESCE($2::text IS NOT NULL AND EXISTS (
@@ -234,6 +236,7 @@ func (q *Queries) FindDuplicateContacts(ctx context.Context, arg FindDuplicateCo
 			&i.Contact.CreatedAt,
 			&i.Contact.UpdatedAt,
 			&i.Contact.Notes,
+			&i.Contact.Placeholder,
 			&i.SameEmail,
 			&i.SamePhone,
 			&i.SameWhatsapp,
@@ -250,7 +253,7 @@ func (q *Queries) FindDuplicateContacts(ctx context.Context, arg FindDuplicateCo
 }
 
 const findUpsertCandidateByEmail = `-- name: FindUpsertCandidateByEmail :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1
   AND email = $2
   AND external_id IS NULL
@@ -298,12 +301,13 @@ func (q *Queries) FindUpsertCandidateByEmail(ctx context.Context, arg FindUpsert
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const listContacts = `-- name: ListContacts :many
-SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes FROM contacts AS c
+SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder FROM contacts AS c
 WHERE c.workspace_id = $1
   AND c.merged_into_id IS NULL
   AND c.deleted_at IS NULL
@@ -417,6 +421,7 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]C
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Notes,
+			&i.Placeholder,
 		); err != nil {
 			return nil, err
 		}
@@ -429,7 +434,7 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]C
 }
 
 const listUnverifiedEmailLeads = `-- name: ListUnverifiedEmailLeads :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1
   AND email = $2
   AND id <> $3
@@ -483,6 +488,7 @@ func (q *Queries) ListUnverifiedEmailLeads(ctx context.Context, arg ListUnverifi
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Notes,
+			&i.Placeholder,
 		); err != nil {
 			return nil, err
 		}
@@ -495,7 +501,7 @@ func (q *Queries) ListUnverifiedEmailLeads(ctx context.Context, arg ListUnverifi
 }
 
 const lockContact = `-- name: LockContact :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockContactParams struct {
@@ -533,6 +539,7 @@ func (q *Queries) LockContact(ctx context.Context, arg LockContactParams) (Conta
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
@@ -561,7 +568,7 @@ SET kind = $1, external_id = $2, email = $3, name = $4,
     trusted_attribute_keys = $7, blocked_at = $8,
     notes = $9, company_id = $10, email_verified = $11, updated_at = $12
 WHERE workspace_id = $13 AND id = $14
-RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes
+RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder
 `
 
 type UpdateContactParams struct {
@@ -625,6 +632,7 @@ func (q *Queries) UpdateContact(ctx context.Context, arg UpdateContactParams) (C
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }

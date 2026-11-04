@@ -42,6 +42,7 @@ type Config struct {
 
 	Frontend FrontendConfig `koanf:"frontend"`
 	Widget   WidgetConfig   `koanf:"widget"`
+	Contacts ContactsConfig `koanf:"contacts"`
 
 	Audit          AuditConfig          `koanf:"audit"`
 	SecurityEvents SecurityEventsConfig `koanf:"security_events"`

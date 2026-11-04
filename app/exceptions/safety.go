@@ -36,3 +36,17 @@ hostname a workspace could own, or a list longer than 500 domains.
 */
 var ErrInvalidLinkDomains = fault.New(fault.Invalid, "invalid_link_domains",
 	"Each domain must be a hostname such as example.com, at most 500 in a list.").OnField("link_safety")
+
+/*
+Erasure failures.
+
+ErrErasurePending refuses a second request to erase a customer whose
+erasure is already under way. ErrErasureClosed refuses to cancel an
+erasure that completed or was canceled already.
+*/
+var (
+	ErrErasurePending = fault.New(fault.Conflict, "erasure_pending",
+		"This customer is already being erased.")
+	ErrErasureClosed = fault.New(fault.Conflict, "erasure_closed",
+		"This erasure has already completed or been canceled.")
+)

@@ -309,7 +309,7 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 }
 
 const listCompanyContacts = `-- name: ListCompanyContacts :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1
   AND company_id = $2::uuid
   AND deleted_at IS NULL
@@ -373,6 +373,7 @@ func (q *Queries) ListCompanyContacts(ctx context.Context, arg ListCompanyContac
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Notes,
+			&i.Placeholder,
 		); err != nil {
 			return nil, err
 		}

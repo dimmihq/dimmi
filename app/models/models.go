@@ -127,6 +127,21 @@ type Contact struct {
 	CreatedAt            time.Time               `json:"created_at"`
 	UpdatedAt            time.Time               `json:"updated_at"`
 	Notes                *string                 `json:"notes"`
+	Placeholder          bool                    `json:"placeholder"`
+}
+
+type ContactErasure struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ContactID           ids.UUID        `json:"contact_id"`
+	Status              string          `json:"status"`
+	RequestedByMemberID *ids.UUID       `json:"requested_by_member_id"`
+	ScheduledFor        time.Time       `json:"scheduled_for"`
+	CompletedAt         *time.Time      `json:"completed_at"`
+	Counts              json.RawMessage `json:"counts"`
+	IdentitiesStash     []byte          `json:"identities_stash"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
 type ContactIdentity struct {

@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	emailactions "github.com/dimmihq/dimmi/app/actions/email"
+	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
@@ -63,7 +64,8 @@ Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
 Channels holds the channel drivers replies go out through.
 WorkspaceInitializers are the setup steps every new workspace goes
-through, registered by the parts of the product that need defaults.
+through, registered by the parts of the product that need defaults, and
+ContactErasers what each part removes when a customer is erased.
 Retention is asked before any purge destroys data. Entitlements answers
 what a workspace may have and BillingStatus whether it ever paid.
 EmailChannel is the email channel driver, which also receives inbound
@@ -101,6 +103,7 @@ type App struct {
 	Channels    *channels.Manager
 
 	WorkspaceInitializers *workspaces.Initializers
+	ContactErasers        *erasures.Erasers
 	Retention             contracts.RetentionGuard
 	Entitlements          contracts.Entitlements
 	BillingStatus         contracts.BillingStatus
@@ -137,6 +140,7 @@ func New(version string) *App {
 		IdentityProviders: providers.NewRegistry(),
 
 		WorkspaceInitializers: workspaces.NewInitializers(),
+		ContactErasers:        erasures.NewErasers(),
 		Retention:             retention.NoHolds{},
 	}
 }

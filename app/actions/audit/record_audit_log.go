@@ -65,6 +65,11 @@ const (
 	EventRedactionRuleUpdated     = "redaction_rule.updated"
 	EventRedactionRuleDeleted     = "redaction_rule.deleted"
 	EventRedactionSettingsUpdated = "redaction_settings.updated"
+
+	EventContactErasureRequested = "contact_erasure.requested"
+	EventContactErasureCanceled  = "contact_erasure.canceled"
+	EventContactErasureHeld      = "contact_erasure.held"
+	EventContactErasureCompleted = "contact_erasure.completed"
 )
 
 /*

@@ -47,7 +47,7 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		contacts: &v1.ContactController{
 			List: acts.ListContacts, Show: acts.ShowContact, Create: acts.CreateContact, Upsert: acts.UpsertContact,
-			Change: acts.UpdateContact, Remove: acts.DeleteContact, Conversations: acts.ListRecordConversations,
+			Change: acts.UpdateContact, Conversations: acts.ListRecordConversations,
 			IDs: a.IDs, Cursors: cursors,
 		},
 		conversations: &v1.ConversationController{

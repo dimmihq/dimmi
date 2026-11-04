@@ -72,20 +72,27 @@ func contextRoutes(r *routing.Router, a *app.App) {
 
 /*
 contactDetailRoutes declares the routes around a contact, beside the
-inbox's own contact routes.
+inbox's own contact routes, and the requests to erase customers.
 */
 func contactDetailRoutes(r *routing.Router, a *app.App) {
 	acts := a.Actions.Inbox
 	cursors := pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose))
-	contacts := &v1.ContactController{
-		Remove: acts.DeleteContact, Conversations: acts.ListRecordConversations, IDs: a.IDs, Cursors: cursors,
+	contacts := &v1.ContactController{Conversations: acts.ListRecordConversations, IDs: a.IDs, Cursors: cursors}
+	removal := &v1.ErasureController{
+		Remove: acts.DeleteContact, Request: acts.RequestErasure, Cancel: acts.CancelErasure,
+		List: acts.ListErasures, Show: acts.ShowErasure, IDs: a.IDs,
 	}
 	details := &v1.ContactIdentityController{
 		List: acts.ListIdentities, Detach: acts.DetachIdentity, Duplicates: acts.FindDuplicates, IDs: a.IDs,
 	}
 	path := "/contacts/{contact}"
 
-	routing.Delete(r, path, "contacts.destroy", contacts.Destroy).Ability("contacts:write")
+	routing.Delete(r, path, "contacts.destroy", removal.Destroy).Ability("contacts:write")
+	routing.Get(r, "/contact-erasures", "contact-erasures.index", removal.Index).Ability("contacts:write")
+	routing.Get(r, "/contact-erasures/{contact_erasure}", "contact-erasures.show", removal.Get).
+		Ability("contacts:write")
+	routing.Patch(r, "/contact-erasures/{contact_erasure}", "contact-erasures.update", removal.Update).
+		Ability("contacts:write")
 	routing.Get(r, path+"/conversations", "contacts.conversations.index", contacts.ConversationsIndex).
 		Ability("conversations:read")
 	routing.Get(r, path+"/identities", "contacts.identities.index", details.Index).Ability("contacts:read")

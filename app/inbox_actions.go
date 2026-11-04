@@ -17,6 +17,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/redaction"
@@ -92,4 +93,10 @@ type InboxActions struct {
 	UpdateRedactionRule     *redaction.UpdateRule
 	DeleteRedactionRule     *redaction.DeleteRule
 	TryRedaction            *redaction.TryRedaction
+
+	RequestErasure *erasures.RequestErasure
+	CancelErasure  *erasures.CancelErasure
+	ListErasures   *erasures.ListErasures
+	ShowErasure    *erasures.ShowErasure
+	EraseContact   *erasures.EraseContact
 }

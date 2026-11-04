@@ -21,7 +21,7 @@ INSERT INTO contacts (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9::timestamptz, $9::timestamptz, $9::timestamptz, $9::timestamptz
 )
-RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes
+RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder
 `
 
 type CreateContactParams struct {
@@ -76,6 +76,7 @@ func (q *Queries) CreateContact(ctx context.Context, arg CreateContactParams) (C
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
@@ -143,7 +144,7 @@ func (q *Queries) DeleteContactIdentity(ctx context.Context, arg DeleteContactId
 }
 
 const findContact = `-- name: FindContact :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = $2
 `
 
 type FindContactParams struct {
@@ -181,12 +182,13 @@ func (q *Queries) FindContact(ctx context.Context, arg FindContactParams) (Conta
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const findContactByExternalID = `-- name: FindContactByExternalID :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts WHERE workspace_id = $1 AND external_id = $2
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND external_id = $2
 `
 
 type FindContactByExternalIDParams struct {
@@ -224,12 +226,13 @@ func (q *Queries) FindContactByExternalID(ctx context.Context, arg FindContactBy
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const findContactByIdentity = `-- name: FindContactByIdentity :one
-SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes FROM contacts AS c
+SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder FROM contacts AS c
 JOIN contact_identities AS i ON i.contact_id = c.id AND i.workspace_id = c.workspace_id
 WHERE c.workspace_id = $1 AND i.type = $2 AND i.value = $3
 `
@@ -270,6 +273,7 @@ func (q *Queries) FindContactByIdentity(ctx context.Context, arg FindContactById
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
