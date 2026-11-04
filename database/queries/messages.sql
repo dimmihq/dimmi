@@ -5,11 +5,13 @@
 -- message is told apart from a new one.
 INSERT INTO messages (
     workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event,
-    channel_message_id, dedupe_key, delivery_status, substantive, metadata, sent_at, created_at, updated_at
+    channel_message_id, dedupe_key, delivery_status, substantive, metadata, sent_at, channel_connection_id,
+    created_at, updated_at
 ) VALUES (
     @workspace_id, @conversation_id, @type, @author_type, @author_id, @body,
     coalesce(sqlc.narg(body_format), 'markdown'), sqlc.narg(body_full), @body_html, @event,
-    @channel_message_id, @dedupe_key, @delivery_status, @substantive, @metadata, @sent_at, @now, @now
+    @channel_message_id, @dedupe_key, @delivery_status, @substantive, @metadata, @sent_at,
+    sqlc.narg(channel_connection_id), @now, @now
 )
 RETURNING *;
 

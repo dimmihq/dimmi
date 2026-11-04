@@ -49,11 +49,11 @@ func TestInboxBroadcasts(t *testing.T) {
 		require.Nil(t, live.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
 
 		owner(tc).PatchJSON("/api/v1/conversations/"+public(models.PrefixConversation, s.conversation.ID),
-			testkit.JSON{"priority": true}).AssertOK()
+			testkit.JSON{"priority": "high"}).AssertOK()
 
 		p := live.Publication()
 		assert.Equal(t, "conversation.priority_changed", p.Event)
 		assert.NotContains(t, string(p.Data), `"unread"`)
-		assert.Contains(t, string(p.Data), `"priority":true`)
+		assert.Contains(t, string(p.Data), `"priority":"high"`)
 	})
 }

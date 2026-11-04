@@ -33,7 +33,7 @@ func TestInboxWriteFailures(t *testing.T) {
 		},
 		{
 			"prioritizing when the timeline cannot be written", 500, failWrites("messages", "INSERT"),
-			on("PATCH", "", testkit.JSON{"priority": true}),
+			on("PATCH", "", testkit.JSON{"priority": "high"}),
 		},
 		{
 			"marking spam when the timeline cannot be written", 500, failWrites("messages", "INSERT"),
@@ -102,7 +102,7 @@ func TestInboxWriteFailures(t *testing.T) {
 		},
 		{
 			"changing a conversation that is not there", 404, noBreak,
-			fixed("PATCH", missing, testkit.JSON{"priority": true}),
+			fixed("PATCH", missing, testkit.JSON{"priority": "high"}),
 		},
 		{"showing a read state that is not there", 404, noBreak, fixed("GET", missing+"/read-state", nil)},
 		{
