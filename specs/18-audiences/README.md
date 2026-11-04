@@ -769,7 +769,7 @@ Ordered, each about 1 day, tests per `00-conventions/testing.md`: integration on
 
 - [x] Apply "Required from other specs" to 01, 02, 03, 07, 08, 09, 10, 13, 14, 15, 16, 17, 20.
   - Accept: grep finds no `app/support/segments`, `app/support/conditions`, `segment_id`, `url_rules`, `filter[segment]` outside this file and `research/`. Owner signed off.
-- [ ] Foundation prefixes, tables owner map, abilities; folder in `specs/README.md`; BUILD-TRACKS.
+- [x] Foundation prefixes, tables owner map, abilities; folder in `specs/README.md`; BUILD-TRACKS.
 
 Tracks: M1 to M4, M6 track 13 core. M5 track 13, needs 01 M2 session API per BUILD-TRACKS. M7 needs 08. M8 last.
 

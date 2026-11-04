@@ -960,7 +960,7 @@ Logs: item public id, contact public id, outcome. Never answer text at info. Nev
 3. `data-model.md` "One prefix per table" vs tables without public ids in other specs (`message_mentions`, `conversation_reads`). 15 follows practice: prefixes only for addressable tables.
 4. `00-foundation/data-model.md` lists no contact tags while brief mentions tags as targeting; resolved: contact and company tags ship (03 records.md, 18 rule fields).
 
-## Open questions (recommended default in bold)
+## Decisions (bold value stands)
 
 1. Contact tags for targeting: resolved **yes** (18 decision 8): tables 03 records.md, rule fields 18.
 2. Default global throttle 2 interruptive per day: **yes** (Chameleon docs use 2/day example).

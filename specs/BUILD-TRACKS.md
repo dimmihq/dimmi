@@ -156,7 +156,7 @@ Tracks free to start at once, no waiting: 01 M1 to M11; 02 A1 to A4; 03 W1 to W4
 ### Track 07 accounts-settings
 
 - **Goal:** every personal and member setting works or is gone.
-- **Build:** [00-accounts tasks](00-accounts/tasks.md) M10, M13 to M18, M20. Specs: settings-pages.md, audit.md, rate-limits.md, i18n.md, README, foundation api.md "Rate limits".
+- **Build:** [00-accounts tasks](00-accounts/tasks.md) M10, M13 to M18, M20; whatever is still open in M1 to M9, M11, M12 (mostly built: check code first). M11b goes with 09-agent-native. Specs: settings-pages.md, audit.md, rate-limits.md, i18n.md, README, foundation api.md "Rate limits".
 - **Depends:** M17 access dialog needs 02 A1. M17 `ReassignTeamConversations`: build here if 02 has not. M15 Available toggle calls 02 A2, hidden until merged. Signature section links 05 M14.
 - **Owns:** `resources/js/features/settings/pages/{account,workspace,team,teams,audit-log,admin}.tsx`, `app/actions/{users,members,invitations,teams,audit}/**`, `app/http/middleware` throttle wiring, `framework/http/middleware/throttle.go`, `app/support/entitlements/**`, `lang/` machinery, `resources/js/lib/i18n*`, `routes/account.go`, `tests/feature/{accounts,members,ratelimit}`.
 - **Touches additively:** `app/auth/access_policy.go` never (08's); `routes/api.go` throttle middleware line on API group.
@@ -188,7 +188,7 @@ Tracks free to start at once, no waiting: 01 M1 to M11; 02 A1 to A4; 03 W1 to W4
 
 - **Goal:** mobile app is another widget.
 - **Build:** [20 tasks](20-native-sdks/tasks.md) M1 to M6. Specs: 20 README, api-mapping.md, edge-cases.
-- **Depends:** 01 M3 merged and contract frozen (01 tasks "Freeze"). Audiences: native evaluates nothing server-side residual hides tab; no wait on 13.
+- **Depends:** 01 M3 merged and contract frozen (01 tasks "Freeze"). Audiences: native evaluates nothing, a tab with residual stays hidden; no wait on 13.
 - **Owns:** `sdk/packages/{headless,react-native}`, `sdk/ios`, `sdk/android`, `examples/{expo,ios,android}`, `framework/push/**`, `app/actions/widget_devices/**`, `tests/feature/widget_devices`.
 - **Touches additively:** `resources/widget/client/` no; 01 owns it, 10 consumes as source through build.
 - **Migrations:** `20261201100001`..`20261201109999`.
@@ -206,7 +206,7 @@ Tracks free to start at once, no waiting: 01 M1 to M11; 02 A1 to A4; 03 W1 to W4
 ### Track 13 audiences
 
 - **Goal:** one way to say who. Core before 15 and 17 start, per owner.
-- **Build:** [18](18-audiences/README.md) "Tasks": **M1 to M4 core** (language, attribute registry, contact columns, saved audiences, preview, test-as, builder, Data page); M5 widget surfaces after 01 M3; M6 events right after M5; M7 after 08 help center; M8 last.
+- **Build:** [18](18-audiences/README.md) "Tasks": **M1 to M4 core** (language, attribute registry, contact columns, saved audiences, preview, test-as, builder, Data page); M5 widget surfaces: server after 01 M2, client evaluator after 01 M3; M6 events right after M5; M7 after 08 help center; M8 last.
 - **Depends:** inbox tracks first: 02 A1, 03 W1, W2, 04 R1 (tags), R2 (panel). 01 M8 ships `resources/widget/lib/rules.ts`; M5 extends it. 09 for help center token in M7.
 - **Owns:** `app/support/audience/**`, `app/actions/{audiences,attributes,events}/**`, `routes/audiences.go`, `app/mcp/tools/audiences.go`, `database/queries/{audiences,attributes,events}.sql`, `resources/js/features/audiences/**`, `tests/feature/audiences`, `tests/e2e/audiences.spec.ts`.
 - **Touches additively:** `resources/js/features/automation/inspector.tsx` presets, 01 config `surface` block file, 03 contact resource file.
