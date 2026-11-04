@@ -61,7 +61,7 @@ func TestConversations(t *testing.T) {
 
 		count, countArgs := list.Count(1000)
 		assert.Contains(t, count, "SELECT count(*) FROM (SELECT 1 FROM conversations c WHERE")
-		assert.Equal(t, 1000, int(countArgs[len(countArgs)-1].(int64)))
+		assert.Equal(t, int64(1000), countArgs[len(countArgs)-1])
 	})
 
 	t.Run("lists one status by equality and the trash without the spam flag", func(t *testing.T) {
@@ -99,7 +99,8 @@ func TestConversations(t *testing.T) {
 			WorkspaceID: id, Sort: querybuilder.SortPriorityWaiting,
 			After: &querybuilder.Keyset{Priority: 2, At: &at, ID: id},
 		}.IDs()
-		assert.Contains(t, sql, "c.priority < $4 OR (c.priority = $4 AND (c.waiting_since > $3 OR c.waiting_since IS NULL")
+		assert.Contains(t, sql,
+			"c.priority < $4 OR (c.priority = $4 AND (c.waiting_since > $3 OR c.waiting_since IS NULL")
 
 		sql, _ = querybuilder.Conversations{
 			WorkspaceID: id, Sort: querybuilder.SortLatest, After: &querybuilder.Keyset{ID: id},
