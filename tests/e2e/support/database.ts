@@ -31,3 +31,11 @@ export function addTeammate(ownerEmail: string, email: string, role: "admin" | "
     { owner: ownerEmail, email, role },
   );
 }
+
+/*
+ * verifyEmail marks the person's address as proven, as following the
+ * mailed link would.
+ */
+export function verifyEmail(email: string) {
+  psql("UPDATE users SET email_verified_at = now() WHERE email = :'email'", { email });
+}

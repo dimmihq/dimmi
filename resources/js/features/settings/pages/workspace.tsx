@@ -32,6 +32,8 @@ import {
 } from "@/lib/api/workspace";
 
 import { Choice, Danger, Field } from "../controls";
+import { DeleteWorkspace } from "../delete-workspace";
+import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
 
@@ -119,11 +121,7 @@ export function WorkspaceSettings() {
           ) : null}
         </Row>
       </Section>
-      <Section title="Danger zone">
-        <Row label="Delete workspace" description="Owners only. It can be restored for 30 days.">
-          <Danger>Delete workspace</Danger>
-        </Row>
-      </Section>
+      <DeleteWorkspace id={me.workspace.id} name={name} slug={slug} />
     </SettingsPage>
   );
 }
@@ -366,11 +364,16 @@ export function MembersSettings() {
 
   return (
     <SettingsPage title="Members" description="Owners and admins manage the workspace; members work the inbox.">
-      <Section title="Members" description={`${active} active`}>
+      <Section
+        title="Members"
+        description={`${active} active`}
+        action={powers.write ? <InviteButton workspace={workspace} /> : null}
+      >
         {members.map((member) => (
           <Person key={member.id} member={member} powers={powers} onPick={setPending} />
         ))}
       </Section>
+      {powers.write ? <PendingInvitations workspace={workspace} /> : null}
       <Failure error={shownError ?? leave.error} />
       <Section title="Your access">
         <Row label={`Leave ${me.workspace.name}`} description="You lose access to its conversations straight away.">

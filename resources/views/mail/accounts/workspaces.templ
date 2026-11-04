@@ -1,0 +1,83 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+WorkspaceDeletionScheduled tells an owner the workspace went to the
+trash, who deleted it, and until when any owner can still restore it.
+*/
+
+templ WorkspaceDeletionScheduled(name, workspace, deletedBy, purgeAfter string) {
+	@layout(i18n.T(ctx, "mail.workspace_deletion_scheduled.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.workspace_deletion_scheduled.intro", i18n.Args{"workspace": workspace, "deleted_by": deletedBy}) }</p>
+		<p>{ i18n.T(ctx, "mail.workspace_deletion_scheduled.restore", i18n.Args{"date": purgeAfter}) }</p>
+	}
+}
+
+/*
+WorkspaceDeletionReminder tells an owner the workspace in the trash is
+purged in a few days, while it can still be restored.
+*/
+
+templ WorkspaceDeletionReminder(name, workspace, purgeAfter string) {
+	@layout(i18n.T(ctx, "mail.workspace_deletion_reminder.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.workspace_deletion_reminder.intro", i18n.Args{"workspace": workspace, "date": purgeAfter}) }</p>
+		<p>{ i18n.T(ctx, "mail.workspace_deletion_reminder.restore", nil) }</p>
+	}
+}
+
+/*
+WorkspaceRestored tells an owner the workspace is out of the trash and
+working again.
+*/
+
+templ WorkspaceRestored(name, workspace, restoredBy, appURL string) {
+	@layout(i18n.T(ctx, "mail.workspace_restored.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.workspace_restored.intro", i18n.Args{"workspace": workspace, "restored_by": restoredBy}) }</p>
+		<p>{ i18n.T(ctx, "mail.workspace_restored.revoked", nil) }</p>
+		@button(appURL, i18n.T(ctx, "mail.workspace_restored.action", nil))
+	}
+}
+
+/*
+OwnerPromotedBySystem tells a member they were made an owner because
+the workspace was left without one.
+*/
+
+templ OwnerPromotedBySystem(name, workspace, membersURL string) {
+	@layout(i18n.T(ctx, "mail.owner_promoted_by_system.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.owner_promoted_by_system.intro", i18n.Args{"workspace": workspace}) }</p>
+		@button(membersURL, i18n.T(ctx, "mail.owner_promoted_by_system.action", nil))
+	}
+}
+
+/*
+Invitation asks someone to join a workspace, says who asked and as
+what, and how long the link works.
+*/
+
+templ Invitation(workspace, inviter, role, expiresAt, acceptURL string) {
+	@layout(i18n.T(ctx, "mail.invitation.subject", i18n.Args{"workspace": workspace, "inviter": inviter})) {
+		<p>{ i18n.T(ctx, "mail.invitation.intro", i18n.Args{"workspace": workspace, "inviter": inviter, "role": role}) }</p>
+		@button(acceptURL, i18n.T(ctx, "mail.invitation.action", nil))
+		<p>{ i18n.T(ctx, "mail.invitation.expiry", i18n.Args{"date": expiresAt}) }</p>
+		<p>{ i18n.T(ctx, "mail.invitation.unexpected", nil) }</p>
+	}
+}
+
+/*
+InvitationAccepted tells whoever sent an invitation that the person
+joined.
+*/
+
+templ InvitationAccepted(name, workspace, member, membersURL string) {
+	@layout(i18n.T(ctx, "mail.invitation_accepted.subject", i18n.Args{"workspace": workspace, "member": member})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.invitation_accepted.intro", i18n.Args{"workspace": workspace, "member": member}) }</p>
+		@button(membersURL, i18n.T(ctx, "mail.invitation_accepted.action", nil))
+	}
+}
