@@ -11,6 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type Conversation,
   type ConversationChanges,
+  type ConversationPriority,
   type ConversationStatus,
   conversationQuery,
   updateConversation,
@@ -18,10 +19,6 @@ import {
 import { useMutationId } from "@/lib/realtime/context";
 
 export const statusLabel: Record<ConversationStatus, string> = { open: "Open", snoozed: "Snoozed", closed: "Done" };
-
-export type Priority = "normal" | "priority";
-
-export const priorityLabel: Record<Priority, string> = { normal: "Normal", priority: "Priority" };
 
 /*
  * useCase returns the case's controls for the conversation, and the
@@ -46,7 +43,7 @@ export function useCase(workspace: string, conversation: Conversation) {
     assign: (memberId: string | null) => change.mutate({ assignee_id: memberId }),
     setStatus: (status: ConversationStatus) =>
       change.mutate(status === "snoozed" ? { status, snooze_preset: "tomorrow" } : { status }),
-    setPriority: (priority: Priority) => change.mutate({ priority: priority === "priority" }),
+    setPriority: (priority: ConversationPriority) => change.mutate({ priority }),
     addTag: (name: string) => change.mutate({ add_tags: [name] }),
     removeTag: (id: string) => change.mutate({ remove_tags: [id] }),
   };

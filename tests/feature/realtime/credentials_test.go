@@ -81,7 +81,7 @@ func changeConversation(tc *tests.TestCase, s seed) {
 	tc.T.Helper()
 
 	owner(tc).PatchJSON("/api/v1/conversations/"+public(models.PrefixConversation, s.conversation.ID),
-		testkit.JSON{"priority": true}).AssertOK()
+		testkit.JSON{"priority": "high"}).AssertOK()
 }
 
 /*

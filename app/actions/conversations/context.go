@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 )
 
 /*
@@ -96,7 +97,7 @@ func (a *ShowContext) Handle(ctx context.Context, in ContextInput) (Context, err
 			return err
 		}
 
-		out, err = loadContext(ctx, q, in.Membership, c)
+		out, err = loadContext(ctx, tx, in.Membership, c)
 
 		return err
 	})
@@ -107,7 +108,9 @@ func (a *ShowContext) Handle(ctx context.Context, in ContextInput) (Context, err
 /*
 loadContext reads each part of the context with one query.
 */
-func loadContext(ctx context.Context, q *models.Queries, m authz.Membership, c models.Conversation) (Context, error) {
+func loadContext(ctx context.Context, tx *database.Tx, m authz.Membership, c models.Conversation) (Context, error) {
+	q := models.New(tx)
+
 	contact, err := contacts.Survivor(ctx, q, c.WorkspaceID, c.ContactID)
 	if err != nil {
 		return Context{}, err
@@ -130,40 +133,39 @@ func loadContext(ctx context.Context, q *models.Queries, m authz.Membership, c m
 		return Context{}, err
 	}
 
-	params, _ := listParams(m, Filters{View: ViewAll, AnyStatus: true}, Sort{Descending: true})
-	params.ContactID = &contact.ID
+	list, _ := listOf(m, Filters{View: ViewAll, AnyStatus: true, ContactID: &contact.ID}, querybuilder.SortLatest)
 
 	out := Context{Contact: detail, Identities: identities, Source: c.Source, Duplicates: len(duplicates)}
-	out.Past, out.PastTotal, err = pastConversations(ctx, q, params, c.ID)
+	out.Past, out.PastTotal, err = pastConversations(ctx, tx, list, c.ID)
 
 	return out, err
 }
 
 /*
 pastConversations reads the customer's newest conversations through the
-inbox's list the params describe, leaves the current one out, and
-counts the rest up to the limit.
+inbox's list, leaves the current one out, and counts the rest up to the
+limit.
 */
 func pastConversations(
-	ctx context.Context, q *models.Queries, params models.FilterConversationsParams, current ids.UUID,
+	ctx context.Context, tx *database.Tx, list querybuilder.Conversations, current ids.UUID,
 ) ([]Loaded, int, error) {
-	params.RowLimit = pastCountLimit + 1
+	list.Limit = pastCountLimit + 1
 
-	rows, err := q.FilterConversations(ctx, params)
+	rows, err := selectConversations(ctx, tx, list)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list past conversations: %w", err)
 	}
 
-	others := make([]models.FilterConversationsRow, 0, len(rows))
+	others := make([]models.Conversation, 0, len(rows))
 	for _, row := range rows {
-		if row.Conversation.ID != current {
+		if row.ID != current {
 			others = append(others, row)
 		}
 	}
 
 	total := min(len(others), pastCountLimit)
 
-	page, err := toPage(ctx, q, params.MemberID, others[:min(len(others), pastShown)])
+	page, err := toPage(ctx, models.New(tx), list.MemberID, others[:min(len(others), pastShown)])
 	if err != nil {
 		return nil, 0, err
 	}

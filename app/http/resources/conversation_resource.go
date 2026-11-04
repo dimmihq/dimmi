@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -30,10 +31,12 @@ type Conversation struct {
 	Subject                *string         `json:"subject"`
 	Status                 string          `json:"status"`
 	Spam                   bool            `json:"spam"`
-	Priority               bool            `json:"priority"`
+	Priority               string          `json:"priority"`
 	Unread                 bool            `json:"unread"`
+	WaitingSince           *time.Time      `json:"waiting_since"`
 	SnoozedUntil           *time.Time      `json:"snoozed_until"`
 	LastMessageAt          *time.Time      `json:"last_message_at"`
+	LastActivityAt         *time.Time      `json:"last_activity_at"`
 	FirstCustomerMessageAt *time.Time      `json:"first_customer_message_at"`
 	FirstReplyAt           *time.Time      `json:"first_reply_at"`
 	ClosedAt               *time.Time      `json:"closed_at"`
@@ -79,8 +82,10 @@ func NewConversation(l conversations.Loaded) Conversation {
 	c := l.Conversation
 	out := Conversation{
 		ID: models.PublicID(models.PrefixConversation, c.ID), Object: "conversation", Number: c.Number,
-		Subject: c.Subject, Status: c.Status, Spam: c.Spam, Priority: c.Priority, Unread: l.Unread,
-		SnoozedUntil: c.SnoozedUntil, LastMessageAt: c.LastMessageAt,
+		Subject: c.Subject, Status: c.Status, Spam: c.Spam, Unread: l.Unread,
+		Priority:     string(enums.ConversationPriorityOf(c.Priority)),
+		WaitingSince: c.WaitingSince, SnoozedUntil: c.SnoozedUntil, LastMessageAt: c.LastMessageAt,
+		LastActivityAt:         c.LastActivityAt,
 		FirstCustomerMessageAt: c.FirstCustomerMessageAt, FirstReplyAt: c.FirstReplyAt, ClosedAt: c.ClosedAt,
 		MessageCount: c.MessageCount, Channel: NewChannel(l.Connection),
 		Inbox:   Named{ID: models.PublicID(models.PrefixInbox, l.Inbox.ID), Object: "inbox", Name: l.Inbox.Name},

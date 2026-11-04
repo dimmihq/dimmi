@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 )
 
 /*
@@ -35,7 +36,7 @@ type RecordConversationsInput struct {
 	Membership authz.Membership
 	ContactID  *ids.UUID
 	CompanyID  *ids.UUID
-	After      *Cursor
+	After      *querybuilder.Keyset
 	Limit      int
 }
 
@@ -67,12 +68,12 @@ func (a *ListRecordConversations) Handle(ctx context.Context, in RecordConversat
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		params, err := recordParams(ctx, q, in)
+		list, err := recordList(ctx, q, in)
 		if err != nil {
 			return err
 		}
 
-		rows, err := q.FilterConversations(ctx, params)
+		rows, err := selectConversations(ctx, tx, list)
 		if err != nil {
 			return fmt.Errorf("list record conversations: %w", err)
 		}
@@ -85,6 +86,10 @@ func (a *ListRecordConversations) Handle(ctx context.Context, in RecordConversat
 		page, err = toPage(ctx, q, in.Membership.Member.ID, rows)
 		page.More = more
 
+		if len(rows) > 0 {
+			page.Last = new(positionOf(rows[len(rows)-1], querybuilder.SortLatest))
+		}
+
 		return err
 	})
 
@@ -92,45 +97,41 @@ func (a *ListRecordConversations) Handle(ctx context.Context, in RecordConversat
 }
 
 /*
-recordParams narrows the list to the record, following a merged contact
+recordList narrows the list to the record, following a merged contact
 to the one it was merged into.
 */
-func recordParams(
+func recordList(
 	ctx context.Context, q *models.Queries, in RecordConversationsInput,
-) (models.FilterConversationsParams, error) {
+) (querybuilder.Conversations, error) {
 	m := in.Membership
-	params, _ := listParams(m, Filters{View: ViewAll, AnyStatus: true}, Sort{Descending: true})
-	params.RowLimit = int64(in.Limit) + 1
-
-	if in.After != nil {
-		params.AfterAt, params.AfterID = &in.After.At, &in.After.ID
-	}
+	list, _ := listOf(m, Filters{View: ViewAll, AnyStatus: true}, querybuilder.SortLatest)
+	list.Limit, list.After = in.Limit+1, in.After
 
 	if in.ContactID != nil {
 		contact, err := contacts.Survivor(ctx, q, m.Workspace.ID, *in.ContactID)
 		if err != nil {
-			return params, err
+			return list, err
 		}
 
-		params.ContactID = &contact.ID
+		list.ContactID = &contact.ID
 
-		return params, nil
+		return list, nil
 	}
 
 	if in.CompanyID == nil {
-		return params, exceptions.ErrNotFound
+		return list, exceptions.ErrNotFound
 	}
 
 	company, err := q.FindCompany(ctx, models.FindCompanyParams{WorkspaceID: m.Workspace.ID, ID: *in.CompanyID})
 	if errors.Is(err, database.ErrNotFound) || (err == nil && company.DeletedAt != nil) {
-		return params, exceptions.ErrNotFound
+		return list, exceptions.ErrNotFound
 	}
 
 	if err != nil {
-		return params, fmt.Errorf("find company: %w", err)
+		return list, fmt.Errorf("find company: %w", err)
 	}
 
-	params.CompanyID = &company.ID
+	list.CompanyID = &company.ID
 
-	return params, nil
+	return list, nil
 }

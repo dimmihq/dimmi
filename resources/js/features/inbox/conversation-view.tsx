@@ -35,6 +35,7 @@ import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
+import { PriorityMenu } from "./priority/priority-menu";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
@@ -131,6 +132,7 @@ export function ConversationView({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <ConversationViewers conversation={conversation.id} self={userId} />
+          <PriorityMenu priority={conversation.priority} onChange={caze.setPriority} />
           {sideBySide ? (
             <IconButton
               size="small"

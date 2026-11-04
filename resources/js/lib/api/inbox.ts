@@ -15,6 +15,13 @@ import type { Tag } from "./tags";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
 
+/*
+ * The priority levels, lowest first.
+ */
+export const conversationPriorities = ["none", "low", "medium", "high", "urgent"] as const;
+
+export type ConversationPriority = (typeof conversationPriorities)[number];
+
 export interface Named {
   id: string;
   object: string;
@@ -49,8 +56,9 @@ export interface Conversation {
   subject: string | null;
   status: ConversationStatus;
   spam: boolean;
-  priority: boolean;
+  priority: ConversationPriority;
   unread: boolean;
+  waiting_since: string | null;
   snoozed_until: string | null;
   last_message_at: string | null;
   closed_at: string | null;
@@ -75,9 +83,9 @@ export interface TimelineEvent {
   actor: { type: string; id: string; name: string };
   reason?: string;
   until?: string;
-  priority?: boolean;
   tags?: string[];
-  to?: { member: Named | null; team: Named | null };
+  from?: string;
+  to?: { member: Named | null; team: Named | null } | string;
   changes?: Record<string, [unknown, unknown]>;
 }
 
@@ -110,7 +118,7 @@ export interface ConversationChanges {
   assignee_id?: string | null;
   status?: ConversationStatus;
   snooze_preset?: "later_today" | "tomorrow" | "next_week" | "one_week";
-  priority?: boolean;
+  priority?: ConversationPriority;
   unread?: boolean;
   add_tags?: string[];
   remove_tags?: string[];

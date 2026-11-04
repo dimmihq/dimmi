@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -100,11 +101,15 @@ func (c *ConversationController) Index(ctx context.Context, _ *requests.NoInput)
 
 	if query.Cursor != "" {
 		var start conversationCursor
-		if err := c.Cursors.Decode(query.Cursor, &start); err != nil || start.Hash != lq.hash {
+		if err := c.Cursors.Decode(query.Cursor, &start); err != nil {
 			return nil, pagination.ErrInvalidCursor
 		}
 
-		in.After = &conversations.Cursor{At: start.At, ID: start.ID}
+		if start.Hash != lq.hash {
+			return nil, exceptions.ErrCursorMismatch
+		}
+
+		in.After = &start.Keyset
 	}
 
 	page, err := c.List.Handle(ctx, in)
@@ -116,7 +121,7 @@ func (c *ConversationController) Index(ctx context.Context, _ *requests.NoInput)
 		Items: resources.NewConversations(page.Conversations), Limit: in.Limit,
 	}
 	if page.More && page.Last != nil {
-		cursor := conversationCursor{At: page.Last.At, ID: page.Last.ID, Hash: lq.hash}
+		cursor := conversationCursor{Keyset: *page.Last, Hash: lq.hash}
 		if out.NextCursor, err = c.Cursors.Encode(cursor); err != nil {
 			return nil, err
 		}
@@ -229,7 +234,11 @@ func (c *ConversationController) changes(
 	ch := conversations.Changes{
 		Spam: b.Spam, AssignMember: sent["assignee_id"], AssignTeam: sent["team_id"], Status: b.Status,
 		SnoozedUntil: b.SnoozedUntil, Note: b.Note, Unread: b.Unread,
-		Attributes: conversations.Attributes{Subject: b.Subject, Priority: b.Priority},
+		Attributes: conversations.Attributes{Subject: b.Subject},
+	}
+
+	if b.Priority != nil {
+		ch.Attributes.Priority = new(enums.ConversationPriority(*b.Priority))
 	}
 
 	if b.SnoozePreset != nil {

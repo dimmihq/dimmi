@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 )
 
 /*
@@ -331,12 +332,12 @@ func recordConversations(
 	in.Limit = query.Limit
 
 	if query.Cursor != "" {
-		var start timeCursor
+		var start querybuilder.Keyset
 		if err := cursors.Decode(query.Cursor, &start); err != nil {
 			return nil, err
 		}
 
-		in.After = &conversations.Cursor{At: start.At, ID: start.ID}
+		in.After = &start
 	}
 
 	page, err := list.Handle(ctx, in)
@@ -348,7 +349,7 @@ func recordConversations(
 		Items: resources.NewConversations(page.Conversations), Limit: in.Limit,
 	}
 	if page.More && page.Last != nil {
-		if out.NextCursor, err = cursors.Encode(timeCursor{At: page.Last.At, ID: page.Last.ID}); err != nil {
+		if out.NextCursor, err = cursors.Encode(page.Last); err != nil {
 			return nil, err
 		}
 	}
