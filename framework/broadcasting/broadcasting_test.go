@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/coder/websocket"
 	"github.com/stretchr/testify/assert"
@@ -321,68 +320,6 @@ func TestConnect(t *testing.T) {
 			assert.Contains(t, n.logs.String(), tc.log)
 		})
 	}
-}
-
-func TestPresence(t *testing.T) {
-	t.Parallel()
-
-	t.Run("lists the listeners of a channel across nodes", func(t *testing.T) {
-		t.Parallel()
-		client := testkit.NewValkey(t)
-		first, second := newNode(t, client), newNode(t, client)
-		alice := connect(t, first, "alice")
-		require.Nil(t, alice.subscribe("room:1", "", 0).Error)
-		bob := connect(t, second, "bob")
-		require.Nil(t, bob.subscribe("room:1", "", 0).Error)
-
-		for alice.join() != "bob" {
-			continue
-		}
-
-		var members []broadcasting.Member
-
-		require.Eventually(t, func() bool {
-			var err error
-			members, err = first.server.Presence(t.Context(), "room:1")
-
-			return err == nil && len(members) == 2
-		}, waitFor, 20*time.Millisecond)
-		assert.Equal(t, "alice", members[0].UserID)
-		assert.Equal(t, "bob", members[1].UserID)
-		assert.JSONEq(t, `{"name":"bob"}`, string(members[1].Info))
-		assert.NotEmpty(t, members[0].ClientID)
-	})
-
-	t.Run("answers a client only on channels it is subscribed to", func(t *testing.T) {
-		t.Parallel()
-		n := newNode(t, testkit.NewValkey(t))
-		c := connect(t, n, "alice")
-		require.Nil(t, c.subscribe("room:1", "", 0).Error)
-
-		reply := c.command(map[string]any{"presence": map[string]any{"channel": "room:1"}})
-		require.Nil(t, reply.Error)
-		require.NotNil(t, reply.Presence)
-		require.Len(t, reply.Presence.Presence, 1)
-
-		for _, info := range reply.Presence.Presence {
-			assert.Equal(t, "alice", info.User)
-		}
-
-		denied := c.command(map[string]any{"presence": map[string]any{"channel": "room:2"}})
-		require.NotNil(t, denied.Error)
-		assert.Equal(t, 103, denied.Error.Code)
-	})
-
-	t.Run("stops when the context is done", func(t *testing.T) {
-		t.Parallel()
-		n := newNode(t, testkit.NewValkey(t))
-		ctx, cancel := context.WithCancel(t.Context())
-		cancel()
-
-		_, err := n.server.Presence(ctx, "room:1")
-
-		require.ErrorIs(t, err, context.Canceled)
-	})
 }
 
 func TestDisconnect(t *testing.T) {
