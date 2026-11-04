@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <radialGradient id="bg" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#2a2a3a"/><stop offset="1" stop-color="#0b0b10"/></radialGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a5b4fc"/><stop offset="1" stop-color="#f0abfc"/></linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g font-family="Inter, system-ui, sans-serif">
+    <rect x="360" y="170" width="880" height="560" rx="32" fill="#16161d" stroke="#2c2c38" stroke-width="2"/>
+    <g transform="translate(420 230)">
+      <rect x="440" y="0" width="320" height="64" rx="22" fill="#5b5bd6"/>
+      <text x="472" y="41" font-size="22" fill="#fff">Can I use my own domain?</text>
+      <circle cx="22" cy="132" r="22" fill="url(#spark)"/>
+      <rect x="60" y="100" width="640" height="200" rx="22" fill="#23232d"/>
+      <rect x="92" y="132" width="540" height="14" rx="7" fill="#d4d4d8"/>
+      <rect x="92" y="162" width="480" height="14" rx="7" fill="#a1a1aa"/>
+      <rect x="92" y="192" width="380" height="14" rx="7" fill="#a1a1aa"/>
+      <g transform="translate(92 228)">
+        <rect width="250" height="44" rx="12" fill="#2f2f3c" stroke="#3d3d4d"/>
+        <text x="20" y="29" font-size="18" fill="#c7d2fe">1  Use a custom domain</text>
+        <rect x="266" width="230" height="44" rx="12" fill="#2f2f3c" stroke="#3d3d4d"/>
+        <text x="286" y="29" font-size="18" fill="#c7d2fe">2  Plans and pricing</text>
+      </g>
+      <text x="60" y="350" font-size="18" fill="#71717a">Dimmi Agent · Answered from 2 sources</text>
+    </g>
+  </g>
+</svg>

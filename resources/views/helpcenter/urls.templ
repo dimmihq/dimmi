@@ -1,0 +1,31 @@
+package helpcenter
+
+/*
+Href returns the address of a path under the help center's base.
+*/
+func Href(c Center, path string) templ.SafeURL {
+	if path == "/" && c.Base != "" {
+		return templ.SafeURL(c.Base)
+	}
+
+	return templ.SafeURL(c.Base + path)
+}
+
+/*
+Path returns a path under the help center's base as text, for form
+actions and attributes that are not links.
+*/
+func Path(c Center, path string) string {
+	return string(Href(c, path))
+}
+
+/*
+BrandStyle sets the brand color on the page's root.
+*/
+func BrandStyle(c Center) templ.SafeCSS {
+	if _, ok := luminance(c.Brand); !ok {
+		return ""
+	}
+
+	return templ.SafeCSS("--brand: " + c.Brand)
+}

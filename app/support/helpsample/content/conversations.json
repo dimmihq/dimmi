@@ -1,0 +1,23 @@
+[
+  {"id": "c-2041", "subject": "Webhook retries after a timeout", "status": "Waiting on you", "updated": "2h", "unread": true,
+   "preview": "Could you send us the request ID from one of the failed deliveries?",
+   "messages": [
+     {"author": "me", "at": "Today, 09:12",
+      "body": "Our endpoint timed out for a few minutes this morning. Will the webhooks we missed be retried?"},
+     {"author": "jonas", "at": "Today, 10:40",
+      "body": "Yes, every delivery is retried for up to 24 hours with backoff. Could you send us the request ID from one of the failed deliveries? I'll check they're queued."}
+   ]},
+  {"id": "c-1987", "subject": "Custom domain stuck on pending", "status": "Open", "updated": "Yesterday",
+   "preview": "We're looking into it with our certificate provider.",
+   "messages": [
+     {"author": "me", "at": "Yesterday, 16:02", "body": "help.acme.com has said pending for two hours. The CNAME is in place."},
+     {"author": "maya", "at": "Yesterday, 16:20",
+      "body": "Thanks Ada, the records look right on our side too. We're looking into it with our certificate provider and will update you here."}
+   ]},
+  {"id": "c-1820", "subject": "Invoice for October", "status": "Resolved", "updated": "Oct 28",
+   "preview": "Here it is, with your VAT number added.",
+   "messages": [
+     {"author": "me", "at": "Oct 28, 11:05", "body": "Could we get the October invoice with our VAT number on it?"},
+     {"author": "maya", "at": "Oct 28, 11:31", "body": "Here it is, with your VAT number added. It's also under Settings → Billing now."}
+   ]}
+]

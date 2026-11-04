@@ -39,6 +39,7 @@ import (
 	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/integrations/email"
+	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/app/support/retention"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
 	appconfig "github.com/dimmihq/dimmi/config"
@@ -66,8 +67,9 @@ Retention is asked before any purge destroys data. EmailChannel is the
 email channel driver, which also receives inbound mail.
 Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
-widget's build and WidgetAssets serves it. Realtime authenticates
-realtime connections.
+widget's build and WidgetAssets serves it. HelpSample is the sample help
+center and changelog the public pages show until their content lives in
+the database. Realtime authenticates realtime connections.
 */
 type App struct {
 	*foundation.Application
@@ -105,6 +107,7 @@ type App struct {
 	Vite          *vite.Bundle
 	Widget        fs.FS
 	WidgetAssets  *widgetassets.Assets
+	HelpSample    *helpsample.Library
 }
 
 /*

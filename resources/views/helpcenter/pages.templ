@@ -1,0 +1,145 @@
+package helpcenter
+
+/*
+CollectionPage lists a collection's articles and its sub-collections,
+under a header naming who writes them.
+*/
+
+templ CollectionPage(c Center, all []Collection, col Collection, trail []Crumb, assets templ.Component) {
+	@Layout(c, Meta{Title: col.Title + " | " + c.Name, Description: col.Description, Section: "help", Trail: helpTrail(trail, col.Title, ""), Markdown: "/collections/" + col.Slug + ".md"}, HelpSidebar(c, all, col.Slug, ""), assets) {
+		<div class="stagger mx-auto w-full max-w-[46rem] px-5 pt-12 md:pt-16">
+			<header>
+				<span class="grid size-11 place-items-center rounded-2xl border border-border-button-default bg-background-secondary-default text-link">
+					@Icon(col.Icon, "size-5")
+				</span>
+				<h1 class="mt-5 text-display-4-medium tracking-tight">{ col.Title }</h1>
+				<p class="mt-2 text-title-3-regular text-text-secondary">{ col.Description }</p>
+				<p class="mt-5 flex items-center gap-2.5 text-body-2-regular text-text-tertiary">
+					@Avatars(col.Authors)
+					{ byline(col.Authors) } · { Plural(col.Count, "article") }
+				</p>
+			</header>
+			if len(col.Articles) > 0 {
+				<div class="mt-10">
+					@ArticleList(c, col.Articles, false)
+				</div>
+			}
+			for _, sub := range col.Children {
+				<section class="mt-10">
+					<div class="flex items-baseline justify-between gap-4">
+						<h2 class="text-body-medium text-text-secondary">
+							<a href={ Href(c, "/collections/"+sub.Slug) } class="hover:text-text-primary">{ sub.Title }</a>
+						</h2>
+						<span class="text-caption-1-medium text-text-tertiary">{ Plural(sub.Count, "article") }</span>
+					</div>
+					<div class="mt-3">
+						@ArticleList(c, sub.Articles, false)
+					</div>
+				</section>
+			}
+		</div>
+	}
+}
+
+/*
+ArticlePage shows an article: its collection, title and summary, a menu
+to take its Markdown elsewhere, who wrote it and when it last changed,
+the body with its contents beside it, whether it helped, and the
+articles before and after it.
+*/
+
+templ ArticlePage(c Center, all []Collection, a Article, helpful string, assets templ.Component) {
+	@Layout(c, Meta{Title: a.Title + " | " + c.Name, Description: a.Description, Section: "help", Trail: helpTrail(a.Trail, "", a.Title), Markdown: "/articles/" + a.Slug + ".md"}, HelpSidebar(c, all, trailEnd(a.Trail), a.Slug), assets) {
+		<div class="mx-auto grid w-full max-w-[66rem] gap-16 px-5 pt-12 md:pt-16 xl:grid-cols-[minmax(0,1fr)_12.5rem]">
+			<article class="min-w-0 max-w-[42.5rem] animate-rise">
+				<p class="text-body-2-medium text-link">{ a.Collection }</p>
+				<div class="mt-2 flex items-start justify-between gap-6">
+					<h1 class="text-display-4-medium tracking-tight text-balance">{ a.Title }</h1>
+					<div class="pt-1.5 max-sm:hidden">
+						@copyMenu(c, a)
+					</div>
+				</div>
+				<p class="mt-3 text-title-3-regular text-text-secondary">{ a.Description }</p>
+				<p class="mt-6 flex flex-wrap items-center gap-2.5 border-b border-separator-border pb-6 text-body-2-regular text-text-tertiary">
+					@Avatar(a.Author, "size-6 text-caption-2-semibold")
+					<span class="text-body-2-medium text-text-secondary">{ a.Author.Name }</span>
+					<span aria-hidden="true">·</span>
+					<span>Updated <time datetime={ Stamp(a.Updated) }>{ Day(a.Updated) }</time></span>
+					<span aria-hidden="true">·</span>
+					<span>{ Plural(a.Minutes, "min") } read</span>
+				</p>
+				<div class="prose mt-8">
+					@templ.Raw(a.Body)
+				</div>
+				@feedback(c, a.Slug, helpful)
+				@neighbors(c, a.Previous, a.Next)
+			</article>
+			if len(a.Contents) > 0 {
+				@contents(a.Contents)
+			}
+		</div>
+	}
+}
+
+/*
+SearchPage shows what a question found, each article with where it
+lives and the text that matched.
+*/
+
+templ SearchPage(c Center, all []Collection, query string, results []Result, assets templ.Component) {
+	@Layout(c, Meta{Title: searchTitle(query) + " | " + c.Name, Section: "help", Trail: []Crumb{{Title: "Help center", Path: "/"}, {Title: "Search", Path: "/search"}}, NoIndex: true}, HelpSidebar(c, all, "", ""), assets) {
+		<div class="mx-auto w-full max-w-[46rem] animate-rise px-5 pt-12 md:pt-16">
+			@AskBox(c, query, nil)
+			if query == "" {
+				<p class="mt-8 text-body-regular text-text-secondary">Ask a question or type a few words, like “custom domain” or “invite my team”.</p>
+			} else if len(results) == 0 {
+				<div class="mt-8 rounded-2xl border border-dashed border-border-button-default px-6 py-12 text-center">
+					<span class="mx-auto grid size-11 place-items-center rounded-2xl bg-background-secondary-default text-foreground-icon-tertiary">
+						@Icon("search", "size-5")
+					</span>
+					<h1 class="mt-4 text-headline-semibold">No answers for “{ query }”</h1>
+					<p class="mt-1 text-body-regular text-text-secondary">Try fewer or different words, or ask our team.</p>
+					<a href={ Href(c, "/conversations/new") } class="button-brand mt-5 inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium">
+						@Icon("chat", "size-4")
+						Ask a human
+					</a>
+				</div>
+			} else {
+				<h1 class="mt-8 text-body-regular text-text-secondary">
+					{ Plural(len(results), "article") + " match " }<span class="text-body-medium text-text-primary">“{ query }”</span>
+				</h1>
+				<ul class="mt-4 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+					for _, r := range results {
+						<li class="border-separator-border [&+&]:border-t">
+							<a href={ Href(c, r.Path) } class="group block px-5 py-4 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover">
+								<span class="flex items-center gap-1.5 text-caption-1-medium text-text-tertiary">
+									@Icon(resultIcon(r.Kind), "size-3.5")
+									{ r.Trail }
+								</span>
+								<span class="mt-1 block text-body-semibold text-text-primary">{ r.Title }</span>
+								<span class="mt-1 line-clamp-2 block text-body-2-regular text-text-secondary">{ r.Excerpt }</span>
+							</a>
+						</li>
+					}
+				</ul>
+			}
+		</div>
+	}
+}
+
+/*
+NotFoundPage answers a path the portal has nothing at.
+*/
+
+templ NotFoundPage(c Center, all []Collection, popular []Summary, assets templ.Component) {
+	@Layout(c, Meta{Title: "Page not found | " + c.Name, Section: "help", Trail: []Crumb{{Title: "Help center", Path: "/"}, {Title: "Not found", Path: "/"}}, NoIndex: true}, HelpSidebar(c, all, "", ""), assets) {
+		<div class="stagger mx-auto w-full max-w-[40rem] px-5 pt-20 text-center">
+			<p class="text-body-medium text-link">404</p>
+			<h1 class="mt-2 text-display-4-medium tracking-tight">We couldn't find that page</h1>
+			<p class="mt-3 text-title-3-regular text-text-secondary">It may have moved, or the link may be mistyped. Ask us instead.</p>
+			<div class="mt-8 text-start">
+				@AskBox(c, "", popular)
+			</div>
+		</div>
+	}
+}

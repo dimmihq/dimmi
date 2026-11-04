@@ -1,0 +1,159 @@
+package changelog
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/dimmihq/dimmi/resources/views/helpcenter"
+)
+
+/*
+subscribe is the email form that signs a visitor up for announcements,
+or the note telling them to confirm from their inbox once they have.
+The hidden field catches bots that fill every input.
+*/
+
+templ subscribe(c helpcenter.Center, subscribed bool) {
+	if subscribed {
+		<p role="status" class="flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-primary-default px-4 py-3 text-body-regular">
+			<span class="grid size-7 place-items-center rounded-full bg-tint text-link">
+				@helpcenter.Icon("mail", "size-3.5")
+			</span>
+			Check your inbox to confirm your subscription.
+		</p>
+	} else {
+		<form method="post" action={ helpcenter.Href(c, "/changelog/subscriptions") } class="flex w-full gap-2 md:w-[22rem]">
+			<label class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint hover:border-border-button-hover">
+				@helpcenter.Icon("mail", "size-4 shrink-0 text-foreground-icon-tertiary")
+				<span class="sr-only">Email address</span>
+				<input type="email" name="email" required placeholder="you@company.com" autocomplete="email" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"/>
+			</label>
+			<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden"/>
+			<button type="submit" class="button-brand inline-flex h-10 shrink-0 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Subscribe</button>
+		</form>
+	}
+}
+
+/*
+labels lists an entry's labels as small links to their pages.
+*/
+
+templ labels(c helpcenter.Center, list []Label) {
+	if len(list) > 0 {
+		<span class="flex flex-wrap items-center gap-1.5">
+			for _, l := range list {
+				<a href={ helpcenter.Href(c, l.Path) } class="inline-flex h-6 items-center gap-1.5 rounded-full bg-background-secondary-default px-2.5 text-caption-1-medium text-text-secondary transition-colors hover:text-text-primary">
+					@dot(l.Color)
+					{ l.Name }
+				</a>
+			}
+		</span>
+	}
+}
+
+templ dot(color string) {
+	<svg viewBox="0 0 8 8" class="size-2 shrink-0" aria-hidden="true"><circle cx="4" cy="4" r="4" fill={ color }></circle></svg>
+}
+
+templ version(v string) {
+	<span class="inline-flex h-6 items-center rounded-md border border-border-button-default px-1.5 font-mono-source text-caption-1-medium text-text-secondary">{ v }</span>
+}
+
+/*
+reactions is the row of emoji visitors react with. Each is a button of
+a plain form, so reacting works without scripts.
+*/
+
+templ reactions(c helpcenter.Center, e Entry) {
+	<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
+		for _, r := range e.Reactions {
+			<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
+				<span class="text-[0.9375rem] leading-none">{ r.Emoji }</span>
+				if r.Count > 0 {
+					{ strconv.Itoa(r.Count) }
+				}
+			</button>
+		}
+	</form>
+}
+
+templ pageLink(c helpcenter.Center, path, label, icon string, before bool) {
+	<a href={ helpcenter.Href(c, path) } class="inline-flex h-10 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-4 text-body-medium shadow-xs transition hover:border-border-button-hover">
+		if before {
+			@helpcenter.Icon(icon, "size-4 rtl:-scale-x-100")
+		}
+		{ label }
+		if !before {
+			@helpcenter.Icon(icon, "size-4 rtl:-scale-x-100")
+		}
+	</a>
+}
+
+templ entryNeighbors(c helpcenter.Center, previous, next *Entry) {
+	if previous != nil || next != nil {
+		<nav aria-label="More updates" class="mt-6 grid gap-3 sm:grid-cols-2">
+			if previous != nil {
+				@neighbor(c, *previous, "Older", "")
+			} else {
+				<span></span>
+			}
+			if next != nil {
+				@neighbor(c, *next, "Newer", "sm:items-end sm:text-end")
+			}
+		</nav>
+	}
+}
+
+templ neighbor(c helpcenter.Center, e Entry, label, align string) {
+	<a href={ helpcenter.Href(c, e.Path) } class={ "group flex flex-col rounded-2xl border border-border-button-default p-4 transition hover:border-border-button-hover hover:bg-background-secondary-hover " + align }>
+		<span class="text-caption-1-medium text-text-tertiary">{ label } · { helpcenter.ShortDay(e.Published) }</span>
+		<span class="mt-1 text-body-medium group-hover:text-link">{ e.Title }</span>
+	</a>
+}
+
+func reactionLabel(r Reaction) string {
+	return r.Name + ", " + strconv.Itoa(r.Count)
+}
+
+func authorNames(people []helpcenter.Person) string {
+	names := make([]string, 0, len(people))
+	for _, p := range people {
+		names = append(names, p.Name)
+	}
+
+	return strings.Join(names, " & ")
+}
+
+func feedPath(label string) string {
+	if label == "" {
+		return "/changelog/feed.xml"
+	}
+
+	return "/changelog/labels/" + label + "/feed.xml"
+}
+
+func indexTrail(index Index) []helpcenter.Crumb {
+	trail := []helpcenter.Crumb{{Title: "Changelog", Path: "/changelog"}}
+	for _, l := range index.Labels {
+		if l.Slug == index.Active {
+			trail = append(trail, helpcenter.Crumb{Title: l.Name, Path: l.Path})
+		}
+	}
+
+	return trail
+}
+
+func yearText(year int) string {
+	return strconv.Itoa(year)
+}
+
+func indexTitle(c helpcenter.Center, index Index) string {
+	title := "Changelog | " + c.Product
+	for _, l := range index.Labels {
+		if l.Slug == index.Active {
+			return l.Name + " · " + title
+		}
+	}
+
+	return title
+}

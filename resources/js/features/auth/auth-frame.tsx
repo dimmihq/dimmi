@@ -12,7 +12,7 @@ import { cx } from "@/utils/cx";
 
 export function AuthCard({ children }: { children: ReactNode }) {
   return (
-    <div className="flex w-full max-w-[400px] flex-col rounded-3xl border border-border-button-default bg-background-primary-default p-6 shadow-xs sm:p-8 dark:bg-background-secondary-default">
+    <div className="flex w-full max-w-100 flex-col rounded-3xl border border-border-button-default bg-background-primary-default p-6 shadow-xs sm:p-8 dark:bg-background-secondary-default">
       {children}
     </div>
   );

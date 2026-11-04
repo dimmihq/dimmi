@@ -1,0 +1,206 @@
+package changelog
+
+import "github.com/dimmihq/dimmi/resources/views/helpcenter"
+
+/*
+IndexPage is the changelog: a centered header with the subscribe form,
+a strip of the year's weeks marking every release, then the entries on
+a timeline, each dated in a gutter that stays in view while its entry
+scrolls past.
+*/
+
+templ IndexPage(c helpcenter.Center, index Index, assets templ.Component) {
+	@helpcenter.Layout(c, helpcenter.Meta{Title: indexTitle(c, index), Description: "New features, improvements and fixes in " + c.Product + ".", Section: "changelog", Trail: indexTrail(index), Markdown: "/changelog.md"}, Sidebar(c, index.Labels, index.Active), assets) {
+		<div class="mx-auto w-full max-w-[58rem] px-5">
+			<header class="stagger flex flex-col items-center pt-14 text-center md:pt-20">
+				<h1 class="text-display-3-medium tracking-tight max-md:text-display-4-medium">Changelog</h1>
+				<p class="mt-3 text-title-3-regular text-text-secondary">The latest { c.Product } releases and improvements.</p>
+				<div class="mt-7 w-full max-w-[24rem]">
+					@subscribe(c, index.Subscribed)
+				</div>
+				<a href={ helpcenter.Href(c, feedPath(index.Active)) } data-turbo="false" class="mt-3 inline-flex items-center gap-1.5 text-body-2-regular text-text-tertiary transition-colors hover:text-text-primary">
+					@helpcenter.Icon("rss", "size-3.5")
+					Subscribe to RSS
+				</a>
+			</header>
+			@strip(c, index)
+			<ol class="mt-14">
+				for _, e := range index.Entries {
+					@timelineEntry(c, e)
+				}
+			</ol>
+			if index.Newer != "" || index.Older != "" {
+				<nav aria-label="Pages" class="flex gap-3 md:ps-[12.5rem]">
+					if index.Newer != "" {
+						@pageLink(c, index.Newer, "Newer updates", "arrow-left", true)
+					}
+					if index.Older != "" {
+						@pageLink(c, index.Older, "Older updates", "arrow-right", false)
+					}
+				</nav>
+			}
+		</div>
+	}
+}
+
+/*
+strip draws the year as a row of weeks, a tall brand-colored tick for
+each week something shipped, linking to it, with the months labelled.
+*/
+
+templ strip(c helpcenter.Center, index Index) {
+	if len(index.Weeks) > 0 {
+		<nav aria-label={ "Releases in " + yearText(index.Year) } class="mt-14 animate-rise">
+			<ol class="flex items-end">
+				for _, w := range index.Weeks {
+					<li class="relative flex h-16 flex-1 items-end justify-center">
+						if w.Month != "" {
+							<span class="absolute start-0 top-0 font-mono-source text-caption-2-medium text-text-tertiary">{ w.Month }</span>
+						}
+						if w.Path != "" {
+							<a href={ helpcenter.Href(c, w.Path) } title={ w.Title } aria-label={ w.Title } class="block h-8 w-1 rounded-full bg-brand outline-none transition-[height] hover:h-10 focus-visible:ring-2 focus-visible:ring-border-focus-ring"></a>
+						} else {
+							<span class="block h-4 w-px bg-border-button-default" aria-hidden="true"></span>
+						}
+					</li>
+				}
+			</ol>
+		</nav>
+	}
+}
+
+templ timelineEntry(c helpcenter.Center, e Entry) {
+	<li class="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-10">
+		<div class="md:pt-1.5">
+			<div class="flex items-center gap-3 md:sticky md:top-20 md:flex-col md:items-start md:gap-2">
+				<time datetime={ helpcenter.Stamp(e.Published) } class="text-body-medium text-text-secondary">{ helpcenter.Day(e.Published) }</time>
+				if e.Version != "" {
+					@version(e.Version)
+				}
+			</div>
+		</div>
+		<article class="relative min-w-0 pb-20 md:border-s md:border-separator-border md:ps-10">
+			<span class="absolute -start-[5px] top-3 size-[9px] rounded-full bg-brand ring-4 ring-background-full max-md:hidden" aria-hidden="true"></span>
+			@labels(c, e.Labels)
+			<h2 class="mt-3 text-display-4-medium tracking-tight text-balance max-md:text-title-1-medium">
+				<a href={ helpcenter.Href(c, e.Path) } class="outline-none hover:text-link focus-visible:underline">{ e.Title }</a>
+			</h2>
+			if e.Cover != "" {
+				<a href={ helpcenter.Href(c, e.Path) } class="mt-6 block overflow-hidden rounded-2xl border border-separator-border" tabindex="-1">
+					<img src={ helpcenter.Path(c, e.Cover) } alt="" width="1600" height="900" loading="lazy" decoding="async" class="aspect-video w-full object-cover transition duration-500 hover:scale-[1.01]"/>
+				</a>
+			}
+			if e.Full {
+				<div class="prose mt-6">
+					@templ.Raw(e.Body)
+				</div>
+			} else {
+				<p class="mt-4 text-headline-regular text-text-secondary">{ e.Summary }</p>
+				<a href={ helpcenter.Href(c, e.Path) } class="mt-3 inline-flex items-center gap-1 text-body-medium text-link hover:underline">
+					Read more
+					@helpcenter.Icon("arrow-right", "size-4 rtl:-scale-x-100")
+				</a>
+			}
+			<div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+				@reactions(c, e)
+				if len(e.Authors) > 0 {
+					<span class="ms-auto flex items-center gap-2 text-body-2-regular text-text-tertiary">
+						@helpcenter.Avatars(e.Authors)
+						{ authorNames(e.Authors) }
+					</span>
+				}
+			</div>
+		</article>
+	</li>
+}
+
+/*
+EntryPage shows one entry in full, with the articles that explain it,
+reactions, a way to ask about it and the entries around it.
+*/
+
+templ EntryPage(c helpcenter.Center, all []Label, p Page, assets templ.Component) {
+	@helpcenter.Layout(c, helpcenter.Meta{Title: p.Entry.Title + " | " + c.Product + " changelog", Description: p.Entry.Summary, Section: "changelog", Trail: []helpcenter.Crumb{{Title: "Changelog", Path: "/changelog"}, {Title: p.Entry.Title, Path: p.Entry.Path}}, Markdown: p.Entry.Path + ".md"}, Sidebar(c, all, ""), assets) {
+		<article class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
+			<div class="stagger">
+				<p class="flex flex-wrap items-center gap-3 text-body-medium text-text-secondary">
+					<time datetime={ helpcenter.Stamp(p.Entry.Published) }>{ helpcenter.Day(p.Entry.Published) }</time>
+					if p.Entry.Version != "" {
+						@version(p.Entry.Version)
+					}
+					@labels(c, p.Entry.Labels)
+				</p>
+				<h1 class="mt-4 text-display-3-medium tracking-tight text-balance max-md:text-display-4-medium">{ p.Entry.Title }</h1>
+				<p class="mt-3 text-title-3-regular text-text-secondary">{ p.Entry.Summary }</p>
+				if len(p.Entry.Authors) > 0 {
+					<p class="mt-6 flex items-center gap-2.5 text-body-2-regular text-text-tertiary">
+						@helpcenter.Avatars(p.Entry.Authors)
+						{ authorNames(p.Entry.Authors) }
+					</p>
+				}
+			</div>
+			if p.Entry.Cover != "" {
+				<img src={ helpcenter.Path(c, p.Entry.Cover) } alt="" width="1600" height="900" decoding="async" class="mt-10 aspect-video w-full animate-rise rounded-2xl border border-separator-border object-cover"/>
+			}
+			<div class="prose mt-10">
+				@templ.Raw(p.Entry.Body)
+			</div>
+			if len(p.Entry.Related) > 0 {
+				<section class="mt-12">
+					<h2 class="text-body-medium text-text-secondary">Learn more</h2>
+					<ul class="mt-3 grid gap-3 sm:grid-cols-2">
+						for _, a := range p.Entry.Related {
+							<li class="flex">
+								<a href={ helpcenter.Href(c, "/articles/"+a.Slug) } class="group flex w-full items-start gap-3 rounded-2xl border border-border-button-default bg-background-primary-default p-4 transition hover:border-border-button-hover hover:shadow-sm">
+									<span class="grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary-default text-link">
+										@helpcenter.Icon("book", "size-4")
+									</span>
+									<span class="min-w-0">
+										<span class="block text-body-medium">{ a.Title }</span>
+										<span class="mt-0.5 line-clamp-2 block text-body-2-regular text-text-tertiary">{ a.Description }</span>
+									</span>
+								</a>
+							</li>
+						}
+					</ul>
+				</section>
+			}
+			<div class="mt-12 flex flex-wrap items-center gap-4 border-y border-separator-border py-5">
+				@reactions(c, p.Entry)
+				<a href={ helpcenter.Href(c, "/conversations/new") } class="ms-auto inline-flex items-center gap-1.5 text-body-medium text-text-secondary transition-colors hover:text-text-primary">
+					@helpcenter.Icon("answers", "size-4")
+					Questions? Ask a human
+				</a>
+			</div>
+			@entryNeighbors(c, p.Previous, p.Next)
+			<section class="mt-12 flex flex-col items-center rounded-3xl border border-border-button-default bg-background-secondary-default px-6 py-8 text-center">
+				<h2 class="text-headline-semibold">Get updates in your inbox</h2>
+				<p class="mt-1 text-body-regular text-text-secondary">One email when we ship something worth knowing about.</p>
+				<div class="mt-5 w-full max-w-[24rem]">
+					@subscribe(c, false)
+				</div>
+			</section>
+		</article>
+	}
+}
+
+/*
+Sidebar lists every update and each label with how many entries carry
+it, marking the one being shown.
+*/
+
+templ Sidebar(c helpcenter.Center, labels []Label, active string) {
+	<nav aria-label="Changelog" class="flex flex-col gap-0.5">
+		@helpcenter.SidebarHeading("Changelog")
+		@helpcenter.SidebarLink(c, "/changelog", "All updates", "megaphone", "", 0, active == "")
+		@helpcenter.SidebarHeading("Labels")
+		for _, l := range labels {
+			@helpcenter.SidebarLink(c, l.Path, l.Name, "", l.Color, l.Count, active == l.Slug)
+		}
+		@helpcenter.SidebarHeading("Follow")
+		<a href={ helpcenter.Href(c, "/changelog/feed.xml") } data-turbo="false" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">
+			@helpcenter.Icon("rss", "size-4 opacity-80")
+			RSS feed
+		</a>
+	</nav>
+}

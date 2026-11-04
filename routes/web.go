@@ -20,10 +20,12 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/routing"
 	"github.com/dimmihq/dimmi/framework/view/static"
+	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
 	"github.com/dimmihq/dimmi/app/http/controllers/widget"
+	"github.com/dimmihq/dimmi/app/support/helpsample"
 )
 
 /*
@@ -53,6 +55,8 @@ func Web(a *app.App) {
 		for name, path := range authPages() {
 			pages.Handle(fhttp.MethodGet, path, name, fhttp.HandlerFunc(spa.ShowAuth))
 		}
+
+		helpCenter(pages, a)
 	})
 
 	a.Router.Handle(fhttp.MethodGet, "/build/*", "build",
@@ -71,6 +75,60 @@ func Web(a *app.App) {
 		browser.Handle(fhttp.MethodGet, "/auth/{provider}/callback", "oauth.callback",
 			fhttp.HandlerFunc(callback.Invoke))
 	})
+}
+
+/*
+helpCenter declares the public portal under the app's /hc/{center}
+path: the help center, its changelog, feature requests, the visitor's
+conversations, and the files their pages show.
+*/
+func helpCenter(pages *routing.Router, a *app.App) {
+	hc := &web.HelpCenterController{
+		Library: a.HelpSample, Errors: a.Errors, Assets: static.Handler(helpsample.Assets(), static.Options{}),
+		Vite: vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
+	}
+	cl := web.ChangelogController{HelpCenterController: hc}
+	get := func(path, name string, h fhttp.HandlerFunc) {
+		pages.Handle(fhttp.MethodGet, "/hc/{center}"+path, name, h)
+	}
+	post := func(path, name string, h fhttp.HandlerFunc) {
+		pages.Handle(fhttp.MethodPost, "/hc/{center}"+path, name, h)
+	}
+
+	get("", "hc.home", hc.Home)
+	get("/collections/{slug}", "hc.collections.show", hc.Collection)
+	get("/articles/{slug}", "hc.articles.show", hc.Article)
+	post("/articles/{slug}/feedback", "hc.articles.feedback", hc.Rate)
+	get("/search", "hc.search", hc.Search)
+	get("/changelog", "hc.changelog.index", cl.Index)
+	get("/changelog/page/{page}", "hc.changelog.index.page", cl.Index)
+	get("/changelog/labels/{label}", "hc.changelog.labels.show", cl.Index)
+	get("/changelog/labels/{label}/page/{page}", "hc.changelog.labels.page", cl.Index)
+	get("/changelog/{slug}", "hc.changelog.entries.show", cl.Entry)
+	post("/changelog/subscriptions", "hc.changelog.subscriptions.store", cl.Subscribe)
+	post("/changelog/{slug}/reactions", "hc.changelog.entries.reactions.store", cl.React)
+	portalPages(get, post, web.PortalController{HelpCenterController: hc})
+	get("/assets/{file}", "hc.assets", hc.Asset)
+	get("/*", "hc.missing", hc.NotFound)
+}
+
+/*
+portalPages declares the portal's pages beside the help center and
+changelog: feature requests, sign-in and the visitor's conversations.
+*/
+func portalPages(get, post func(path, name string, h fhttp.HandlerFunc), portal web.PortalController) {
+	get("/feedback", "hc.feedback.index", portal.Feedback)
+	get("/feedback/new", "hc.feedback.create", portal.NewIdea)
+	post("/feedback", "hc.feedback.store", portal.SubmitIdea)
+	post("/feedback/{idea}/votes", "hc.feedback.votes.store", portal.Vote)
+	get("/sign-in", "hc.sign-in", portal.SignIn)
+	post("/sign-in", "hc.sessions.store", portal.StartSession)
+	post("/sign-out", "hc.sessions.destroy", portal.EndSession)
+	get("/conversations", "hc.conversations.index", portal.Conversations)
+	get("/conversations/new", "hc.conversations.create", portal.NewConversation)
+	post("/conversations", "hc.conversations.store", portal.StartConversation)
+	get("/conversations/{conversation}", "hc.conversations.show", portal.Conversation)
+	post("/conversations/{conversation}/messages", "hc.conversations.messages.store", portal.Reply)
 }
 
 /*

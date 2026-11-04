@@ -6,7 +6,9 @@
  * tells the Go server to load scripts from it; the file is removed when
  * the dev server stops. A production build lands in public/build with a
  * manifest and is embedded in the binary; fonts stay files, since the
- * content security policy loads fonts from this origin only.
+ * content security policy loads fonts from this origin only. The public
+ * portal (help center, changelog, feedback) is a second entry, so its
+ * pages never load the dashboard.
  */
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -70,7 +72,7 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     manifest: true,
     assetsInlineLimit: (file) => (file.endsWith(".woff2") ? false : undefined),
-    rollupOptions: { input: "resources/js/app.tsx" },
+    rollupOptions: { input: ["resources/js/app.tsx", "resources/js/portal/portal.ts"] },
   },
   test: {
     projects: [

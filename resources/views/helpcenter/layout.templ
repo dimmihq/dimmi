@@ -1,0 +1,257 @@
+package helpcenter
+
+import "strconv"
+
+/*
+Layout is the frame of every portal page. A sidebar holds the logo and
+what the current section lists, such as the help center's collections;
+a top bar shows the trail to the page, the portal's sections and the
+visitor's sign-in; the page sits beside them. Turbo Drive swaps pages
+in place with a fade, fetching a link while the pointer rests on it;
+without scripts every link and form still works. The theme check in the
+head follows the visitor's light or dark setting before anything
+paints.
+*/
+
+templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en" style={ BrandStyle(c) } data-on-brand={ OnBrand(c.Brand) }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="color-scheme" content="light dark"/>
+			<meta name="view-transition" content="same-origin"/>
+			<meta name="csp-nonce" content={ templ.GetNonce(ctx) }/>
+			<title>{ m.Title }</title>
+			if m.Description != "" {
+				<meta name="description" content={ m.Description }/>
+				<meta property="og:description" content={ m.Description }/>
+			}
+			<meta property="og:title" content={ m.Title }/>
+			<meta property="og:site_name" content={ c.Name }/>
+			<meta name="theme-color" content={ c.Brand }/>
+			if m.NoIndex {
+				<meta name="robots" content="noindex"/>
+			}
+			if m.Markdown != "" {
+				<link rel="alternate" type="text/markdown" href={ Href(c, m.Markdown) }/>
+			}
+			<link rel="alternate" type="application/rss+xml" title={ c.Product + " changelog" } href={ Href(c, "/changelog/feed.xml") }/>
+			@followSystemTheme()
+			@assets
+		</head>
+		<body class="bg-background-full font-inter text-text-primary">
+			<a href="#main" class="sr-only rounded-xl bg-background-primary-default px-4 py-2 text-body-medium focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">Skip to content</a>
+			<div class="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+				<aside class="flex flex-col border-e border-separator-border max-lg:hidden lg:sticky lg:top-0 lg:h-dvh">
+					<div class="flex h-14 shrink-0 items-center justify-between gap-2 px-4">
+						@homeLink(c)
+						<a href={ Href(c, "/search") } aria-label="Search" class="grid size-8 place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+							@Icon("search", "size-4")
+						</a>
+					</div>
+					<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-2">
+						@sidebar
+					</div>
+					<div class="shrink-0 px-3 pb-3">
+						@askHuman(c)
+						<a href="https://trydimmi.com" class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border-button-default px-2.5 py-1 text-caption-1-medium text-text-tertiary transition-colors hover:text-text-primary">
+							<svg viewBox="4 4 40 40" class="size-3" fill="currentColor" aria-hidden="true">
+								<path d="M4 24a20 20 0 0 1 13.7-19L43 30.3A20 20 0 0 1 24 44H11a7 7 0 0 1-7-7Z"></path>
+								<path d="M19.8 4.5a20 20 0 0 1 4.9-.5L44 23.3a20 20 0 0 1-.5 4.9Z"></path>
+								<path d="M27.6 4.3A20 20 0 0 1 35 7.3l5.7 5.7a20 20 0 0 1 3 7.4Z"></path>
+							</svg>
+							Powered by dimmi
+						</a>
+					</div>
+				</aside>
+				<div class="flex min-h-dvh min-w-0 flex-col">
+					@topBar(c, m, sidebar)
+					<main id="main" class="flex-1 pb-24">
+						{ children... }
+					</main>
+				</div>
+			</div>
+		</body>
+	</html>
+}
+
+templ followSystemTheme() {
+	<script nonce={ templ.GetNonce(ctx) }>
+		(() => { const dark = matchMedia("(prefers-color-scheme: dark)"); const apply = () => document.documentElement.classList.toggle("dark", dark.matches); apply(); dark.addEventListener("change", apply) })()
+	</script>
+}
+
+templ homeLink(c Center) {
+	<a href={ Href(c, "/") } class="flex min-w-0 items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+		@Logo(c)
+	</a>
+}
+
+/*
+topBar shows the trail to the page, the portal's sections and the
+visitor's sign-in. On narrow screens it carries the logo and a menu
+holding the sections and what the sidebar lists.
+*/
+
+templ topBar(c Center, m Meta, sidebar templ.Component) {
+	<header class="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b border-separator-border bg-background-full/85 px-4 backdrop-blur-xl backdrop-saturate-150 lg:px-6">
+		<div class="lg:hidden">
+			@homeLink(c)
+		</div>
+		@trail(c, m)
+		<nav aria-label="Sections" class="ms-auto flex items-center gap-0.5 max-lg:hidden">
+			for _, s := range Sections(c) {
+				<a
+					href={ Href(c, s.Path) }
+					if s.Key == m.Section {
+						aria-current="page"
+					}
+					class="rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary outline-none transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:text-text-primary"
+				>{ s.Name }</a>
+			}
+		</nav>
+		<div class="flex items-center gap-2 max-lg:ms-auto">
+			@account(c)
+			<details class="group relative lg:hidden">
+				<summary aria-label="Menu" class="grid size-9 cursor-pointer list-none place-items-center rounded-xl border border-border-button-default text-foreground-icon-secondary">
+					@Icon("menu", "size-4")
+				</summary>
+				<div class="absolute end-0 top-11 z-40 max-h-[75dvh] w-72 overflow-y-auto rounded-2xl border border-border-button-default bg-background-primary-default p-2 shadow-lg">
+					for _, s := range Sections(c) {
+						<a href={ Href(c, s.Path) } class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-medium hover:bg-background-secondary-hover">
+							@Icon(s.Icon, "size-4 text-foreground-icon-tertiary")
+							{ s.Name }
+						</a>
+					}
+					<div class="my-2 h-px bg-separator-border"></div>
+					@sidebar
+				</div>
+			</details>
+		</div>
+	</header>
+}
+
+templ trail(c Center, m Meta) {
+	<nav aria-label="Breadcrumb" class="min-w-0 max-sm:hidden">
+		<ol class="flex items-center gap-1.5 text-body-medium">
+			for i, crumb := range m.Trail {
+				if i > 0 {
+					<li aria-hidden="true" class="text-text-placeholder">/</li>
+				}
+				if i == len(m.Trail)-1 {
+					<li aria-current="page" class="truncate text-text-primary">{ crumb.Title }</li>
+				} else {
+					<li class="shrink-0"><a href={ Href(c, crumb.Path) } class="text-text-secondary transition-colors hover:text-text-primary">{ crumb.Title }</a></li>
+				}
+			}
+		</ol>
+	</nav>
+}
+
+/*
+account is the visitor's way in: a sign-in button, or their initials
+linking to their conversations once signed in.
+*/
+
+templ account(c Center) {
+	if c.Visitor != nil {
+		<a href={ Href(c, "/conversations") } title={ c.Visitor.Name } class="flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+			@Avatar(*c.Visitor, "size-8 text-caption-1-semibold")
+		</a>
+	} else {
+		<a href={ Href(c, "/sign-in") } class="button-brand inline-flex h-8 items-center rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign in</a>
+	}
+}
+
+/*
+askHuman is the sidebar's card for visitors who would rather talk to
+someone than read.
+*/
+
+templ askHuman(c Center) {
+	<div class="rounded-2xl border border-border-button-default bg-background-secondary-default p-3.5">
+		<p class="text-body-2-semibold">Can't find what you need?</p>
+		<p class="mt-1 text-body-2-regular text-text-secondary">Our team replies within a few hours on weekdays.</p>
+		<a href={ Href(c, "/conversations/new") } class="mt-3 inline-flex items-center gap-1.5 text-body-2-medium text-link hover:underline">
+			@Icon("chat", "size-3.5")
+			Ask a human
+		</a>
+	</div>
+}
+
+/*
+Logo draws the portal's logo, in its light or dark version to match the
+page, or its initial on the brand color with the product's name when it
+has none.
+*/
+
+templ Logo(c Center) {
+	if c.LogoLight != "" {
+		<img src={ Path(c, c.LogoLight) } alt={ c.Product } class="theme-logo-light h-[1.375rem] w-auto"/>
+		<img src={ Path(c, c.LogoDark) } alt={ c.Product } class="theme-logo-dark h-[1.375rem] w-auto"/>
+	} else {
+		<span class="button-brand grid size-7 shrink-0 place-items-center rounded-lg text-body-semibold" aria-hidden="true">{ Initial(c) }</span>
+		<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
+	}
+}
+
+/*
+Icon draws one of the portal's icons in the current text color.
+*/
+
+templ Icon(name, class string) {
+	<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class={ class }>
+		<path d={ iconPath(name) }></path>
+	</svg>
+}
+
+/*
+Avatar draws a person's initials in a circle; Avatars overlaps several.
+*/
+
+templ Avatar(p Person, size string) {
+	<span title={ p.Name } class={ "grid shrink-0 place-items-center rounded-full bg-background-tertiary-default text-text-secondary ring-2 ring-background-full " + size }>{ p.Initials }</span>
+}
+
+templ Avatars(people []Person) {
+	<span class="flex -space-x-1">
+		for _, p := range people {
+			@Avatar(p, "size-6 text-caption-2-semibold")
+		}
+	</span>
+}
+
+/*
+SidebarHeading names a group of sidebar links.
+*/
+
+templ SidebarHeading(title string) {
+	<p class="px-2.5 pb-1.5 pt-5 text-caption-1-medium text-text-tertiary first:pt-0">{ title }</p>
+}
+
+/*
+SidebarLink is a link in the sidebar, marked when it is the page being
+shown, with an optional icon or colored dot and a count.
+*/
+
+templ SidebarLink(c Center, path, title, icon, dot string, count int, current bool) {
+	<a
+		href={ Href(c, path) }
+		if current {
+			aria-current="page"
+		}
+		class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:bg-background-secondary-default aria-[current=page]:text-text-primary"
+	>
+		if icon != "" {
+			@Icon(icon, "size-4 shrink-0 opacity-80")
+		}
+		if dot != "" {
+			<svg viewBox="0 0 8 8" class="size-2 shrink-0" aria-hidden="true"><circle cx="4" cy="4" r="4" fill={ dot }></circle></svg>
+		}
+		<span class="flex-1 truncate">{ title }</span>
+		if count > 0 {
+			<span class="text-caption-1-medium tabular-nums text-text-tertiary">{ strconv.Itoa(count) }</span>
+		}
+	</a>
+}

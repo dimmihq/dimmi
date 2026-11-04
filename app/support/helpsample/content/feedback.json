@@ -1,0 +1,32 @@
+[
+  {"name": "In progress", "slug": "in-progress", "color": "#f59e0b", "ideas": [
+    {"slug": "mobile-app", "title": "Mobile app", "icon": "chat", "votes": 64, "voted": true, "comments": 12,
+     "details": "Answer conversations from your phone, with push notifications."},
+    {"slug": "csat", "title": "Customer satisfaction surveys", "icon": "thumb-up", "votes": 31, "comments": 4,
+     "details": "Ask customers to rate a conversation once it's closed."}
+  ]},
+  {"name": "Planned", "slug": "planned", "color": "#3b82f6", "ideas": [
+    {"slug": "whatsapp", "title": "WhatsApp channel", "icon": "chat", "votes": 58, "comments": 9,
+     "details": "Receive and reply to WhatsApp messages in the shared inbox."},
+    {"slug": "translations", "title": "Help center translations", "icon": "book", "votes": 44, "comments": 6,
+     "details": "Publish articles in several languages, translated automatically."},
+    {"slug": "sla", "title": "Reply-time targets", "icon": "time", "votes": 27, "comments": 3,
+     "details": "Set first-reply targets per inbox and see what's about to miss them."}
+  ]},
+  {"name": "Under consideration", "slug": "under-consideration", "color": "#a1a1aa", "ideas": [
+    {"slug": "jira", "title": "Jira integration", "icon": "plug", "votes": 49, "comments": 7,
+     "details": "Link conversations to Jira issues and hear back when they're done."},
+    {"slug": "stripe", "title": "Stripe customer data", "icon": "card", "votes": 38, "comments": 2,
+     "details": "Show a customer's plan and invoices next to their conversation."},
+    {"slug": "csv-export", "title": "Export conversations to CSV", "icon": "file", "votes": 22, "comments": 1,
+     "details": "Download conversations with their tags and assignees."},
+    {"slug": "discord", "title": "Discord channel", "icon": "answers", "votes": 18,
+     "details": "Bring questions from your Discord community into the inbox."}
+  ]},
+  {"name": "Shipped", "slug": "shipped", "color": "#16a34a", "ideas": [
+    {"slug": "shared-inboxes", "title": "Shared inboxes for every team", "icon": "inbox", "votes": 87, "voted": true,
+     "comments": 15, "details": "Split conversations into inboxes with their own teammates and rules."},
+    {"slug": "voice-notes", "title": "Voice notes in the messenger", "icon": "chat", "votes": 41, "comments": 5,
+     "details": "Customers record a voice note instead of typing."}
+  ]}
+]

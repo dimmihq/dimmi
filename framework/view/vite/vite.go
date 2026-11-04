@@ -72,18 +72,24 @@ func Manifest(fsys fs.FS, base string) (*Assets, error) {
 /*
 Tags returns the component writing the tags an entry needs, such as
 "src/main.ts": its stylesheets and those of its imports, a preload link
-for each module it imports and its own module script. Rendering it fails
-with ErrUnknownEntry when the build has no such entry.
+for each module it imports and its own module script. An entry that is
+a stylesheet, such as "src/site.css", gets only its stylesheet link, so
+a page that needs no script loads none. Rendering it fails with
+ErrUnknownEntry when the build has no such entry.
 */
 func (a *Assets) Tags(entry string) view.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		if _, ok := a.manifest.GetChunk(entry); !ok {
+		chunk, ok := a.manifest.GetChunk(entry)
+		if !ok {
 			return fmt.Errorf("%w: %q", ErrUnknownEntry, entry)
 		}
 
 		tags := a.manifest.GenerateCSS(entry, a.base) +
 			a.manifest.GeneratePreloadModules(entry, a.base) +
 			a.manifest.GenerateModules(entry, a.base)
+		if strings.HasSuffix(chunk.File, ".css") {
+			tags = `<link rel="stylesheet" href="` + html.EscapeString(a.base+"/"+chunk.File) + `">`
+		}
 
 		if _, err := io.WriteString(w, withNonce(tags, view.Nonce(ctx))); err != nil {
 			return fmt.Errorf("write vite tags: %w", err)

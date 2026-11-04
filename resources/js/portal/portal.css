@@ -1,0 +1,457 @@
+/*
+ * The public help center's and changelog's stylesheet: BoardUI's tokens,
+ * type scale and Inter served from this origin, like the dashboard, with
+ * the help center's brand color in place of BoardUI's accent. The page's
+ * html carries the brand as --brand; every accent step derives from it, so
+ * buttons, links, focus rings and chips follow the one color the customer
+ * picked; dark pages lift a dark brand so fills stay visible and put dark
+ * text on them. data-on-brand says whether text on the brand reads black or
+ * white, decided on the server from the color's contrast. Articles render
+ * from Markdown into .prose, styled here since their HTML carries no
+ * utility classes.
+ */
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource-variable/jetbrains-mono";
+@import "../styles/globals.css";
+
+@source "../../views/helpcenter";
+@source "../../views/changelog";
+
+:root {
+  --font-inter: "Inter Variable";
+  --font-mono-source: "JetBrains Mono Variable";
+  --brand: oklch(20% 0 0);
+  --on-brand: #fff;
+  --color-accent-50: oklch(from var(--brand) 0.975 calc(c * 0.12) h);
+  --color-accent-100: oklch(from var(--brand) 0.95 calc(c * 0.25) h);
+  --color-accent-200: oklch(from var(--brand) 0.9 calc(c * 0.45) h);
+  --color-accent-300: oklch(from var(--brand) 0.83 calc(c * 0.7) h);
+  --color-accent-400: oklch(from var(--brand) calc(l + 0.1) c h);
+  --color-accent-500: var(--brand);
+  --color-accent-600: oklch(from var(--brand) calc(l - 0.05) c h);
+  --color-accent-700: oklch(from var(--brand) calc(l - 0.1) c h);
+  --color-accent-800: oklch(from var(--brand) calc(l - 0.16) c h);
+  --color-accent-900: oklch(from var(--brand) calc(l - 0.22) c h);
+  --color-accent-950: oklch(from var(--brand) 0.2 calc(c * 0.6) h);
+  --brand-fill: var(--brand);
+  --link: oklch(from var(--brand) min(l, 0.5) c h);
+  --tint: color-mix(in oklab, var(--brand) 8%, transparent);
+}
+
+:root[data-on-brand="dark"] {
+  --on-brand: oklch(18% 0 0);
+}
+
+.dark {
+  --brand-fill: oklch(from var(--brand) max(l, 0.74) c h);
+  --on-brand: oklch(18% 0 0);
+  --link: oklch(from var(--brand) max(l, 0.78) c h);
+  --tint: color-mix(in oklab, var(--brand) 14%, transparent);
+}
+
+@theme inline {
+  --color-brand: var(--brand-fill);
+  --color-on-brand: var(--on-brand);
+  --color-link: var(--link);
+  --color-tint: var(--tint);
+}
+
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1.25rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility container-read {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 46rem;
+  padding-inline: 1.25rem;
+}
+
+/*
+ * The hero's wash: the brand at a whisper behind the search, fading into
+ * the page, and a hairline grid that fades out with it.
+ */
+@utility hero-wash {
+  background:
+    radial-gradient(60rem 22rem at 50% -6rem, color-mix(in oklab, var(--brand) 16%, transparent), transparent 70%),
+    var(--color-background-full);
+}
+
+@utility hero-grid {
+  background-image:
+    linear-gradient(to right, var(--color-separator-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-separator-border) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, #000 20%, transparent 75%);
+  opacity: 0.6;
+}
+
+/*
+ * Primary buttons and the logo tile sit on the brand itself, with the
+ * text color the server chose for it.
+ */
+@utility button-brand {
+  background: var(--brand-fill);
+  color: var(--on-brand);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #fff 18%, transparent),
+    0 1px 2px color-mix(in oklab, #000 18%, transparent);
+
+  &:hover {
+    background: oklch(from var(--brand-fill) calc(l + 0.06) c h);
+  }
+
+  &:active {
+    scale: 0.98;
+  }
+}
+
+/*
+ * The reveal pages play as they load, after BoardUI's stagger reveal: a
+ * fade, an 8px rise and a 3px blur that clears. Children of .stagger
+ * follow one another by 50ms.
+ */
+@theme {
+  --animate-rise: rise 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+      filter: blur(3px);
+    }
+  }
+}
+
+.stagger > * {
+  animation: var(--animate-rise);
+}
+
+.stagger > :nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.stagger > :nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.stagger > :nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.stagger > :nth-child(n + 5) {
+  animation-delay: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > *,
+  .animate-rise {
+    animation: none;
+  }
+}
+
+/*
+ * The search box opens the results page as a plain form; the keyboard
+ * hint only shows where there is a keyboard to press it on.
+ */
+@media (hover: none) {
+  .kbd-hint {
+    display: none;
+  }
+}
+
+html {
+  scroll-padding-top: 5rem;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--brand) 22%, transparent);
+}
+
+/*
+ * Article bodies. Reading text is 16/28 in the secondary text color with
+ * headings in the primary one, links in the brand, code in JetBrains Mono
+ * on the tertiary surface, and alerts as tinted asides.
+ */
+.prose {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.006em;
+  overflow-wrap: break-word;
+}
+
+.prose > * + * {
+  margin-top: 1.25rem;
+}
+
+.prose :is(h2, h3, h4) {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  scroll-margin-top: 6rem;
+}
+
+.prose h2 {
+  margin-top: 3rem;
+  font-size: 1.375rem;
+  line-height: 1.875rem;
+}
+
+.prose h3 {
+  margin-top: 2.25rem;
+  font-size: 1.125rem;
+  line-height: 1.625rem;
+}
+
+.prose h4 {
+  margin-top: 1.75rem;
+  font-size: 1rem;
+}
+
+.prose :is(h2, h3, h4) + * {
+  margin-top: 0.75rem;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--link);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--link) 35%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms;
+}
+
+.prose a:hover {
+  text-decoration-color: var(--link);
+}
+
+.prose :is(ul, ol) {
+  padding-inline-start: 1.375rem;
+}
+
+.prose ul {
+  list-style: disc;
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose li + li {
+  margin-top: 0.5rem;
+}
+
+.prose li::marker {
+  color: var(--color-text-tertiary);
+}
+
+.prose ol > li::marker {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose :not(pre) > code {
+  border: 1px solid var(--color-separator-border);
+  border-radius: 0.375rem;
+  background: var(--color-background-secondary-default);
+  padding: 0.0625rem 0.3125rem;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono-source), ui-monospace, monospace;
+  font-size: 0.8125em;
+}
+
+.prose pre {
+  border: 1px solid var(--color-separator-border);
+  border-radius: 1rem;
+  background: var(--color-background-secondary-default);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono-source), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.375rem;
+}
+
+.prose blockquote {
+  border-inline-start: 2px solid var(--color-separator-border);
+  padding-inline-start: 1rem;
+  font-style: italic;
+}
+
+.prose hr {
+  margin-block: 2.5rem;
+  border: 0;
+  border-top: 1px solid var(--color-separator-border);
+}
+
+.prose img {
+  border: 1px solid var(--color-separator-border);
+  border-radius: 1rem;
+}
+
+.prose table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+.prose :is(th, td) {
+  border-bottom: 1px solid var(--color-separator-border);
+  padding: 0.625rem 1rem 0.625rem 0;
+  text-align: start;
+  vertical-align: top;
+}
+
+.prose th {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.prose kbd {
+  border: 1px solid var(--color-border-button-default);
+  border-bottom-width: 2px;
+  border-radius: 0.375rem;
+  padding: 0 0.375rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.8125em;
+}
+
+.prose .alert {
+  border: 1px solid color-mix(in oklab, var(--alert) 22%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--alert) 7%, transparent);
+  padding: 0.875rem 1.125rem;
+  font-size: 0.9375rem;
+  line-height: 1.625rem;
+}
+
+.prose .alert > * + * {
+  margin-top: 0.5rem;
+}
+
+.prose .alert::before {
+  content: var(--alert-title);
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--alert);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.prose .alert-note {
+  --alert: var(--color-blue-500);
+  --alert-title: "Note";
+}
+
+.prose .alert-tip {
+  --alert: var(--color-green-600);
+  --alert-title: "Tip";
+}
+
+.prose .alert-important {
+  --alert: var(--color-purple-500);
+  --alert-title: "Important";
+}
+
+.prose .alert-warning {
+  --alert: var(--color-amber-600);
+  --alert-title: "Warning";
+}
+
+.prose .alert-caution {
+  --alert: var(--color-red-500);
+  --alert-title: "Caution";
+}
+
+.prose input[type="checkbox"] {
+  margin-inline-end: 0.5rem;
+  accent-color: var(--brand);
+}
+
+/*
+Highlighted code. Colors come from Tailwind's palette at a darker step
+on light pages and a lighter one on dark pages, so every token keeps its
+contrast on the code block's surface.
+*/
+.prose pre {
+  --code-keyword: var(--color-purple-600);
+  --code-string: var(--color-emerald-700);
+  --code-name: var(--color-blue-600);
+  --code-tag: var(--color-rose-600);
+  --code-attribute: var(--color-amber-700);
+  --code-number: var(--color-orange-600);
+}
+
+.dark .prose pre {
+  --code-keyword: var(--color-purple-300);
+  --code-string: var(--color-emerald-300);
+  --code-name: var(--color-sky-300);
+  --code-tag: var(--color-rose-300);
+  --code-attribute: var(--color-amber-200);
+  --code-number: var(--color-orange-300);
+}
+
+.prose :is(.chroma-k, .chroma-kd, .chroma-kr, .chroma-kn, .chroma-kc, .chroma-kt) {
+  color: var(--code-keyword);
+}
+
+.prose :is(.chroma-s, .chroma-s1, .chroma-s2, .chroma-sb, .chroma-sx) {
+  color: var(--code-string);
+}
+
+.prose :is(.chroma-nf, .chroma-nb, .chroma-nc, .chroma-fm) {
+  color: var(--code-name);
+}
+
+.prose :is(.chroma-nt) {
+  color: var(--code-tag);
+}
+
+.prose :is(.chroma-na, .chroma-nv) {
+  color: var(--code-attribute);
+}
+
+.prose :is(.chroma-m, .chroma-mi, .chroma-mf) {
+  color: var(--code-number);
+}
+
+.prose :is(.chroma-c, .chroma-c1, .chroma-cm) {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.prose :is(.chroma-p, .chroma-o) {
+  color: var(--color-text-secondary);
+}
+
+/*
+The dotted ground of a collection card's icon panel, fading toward the
+card's text.
+*/
+@utility dot-grid {
+  background-image: radial-gradient(var(--color-separator-border) 1px, transparent 1px);
+  background-size: 12px 12px;
+}

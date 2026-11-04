@@ -37,6 +37,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
+	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
 )
 
@@ -87,6 +88,13 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	}
 
 	p.App.WidgetAssets = widget
+
+	sample, err := helpsample.Load()
+	if err != nil {
+		return fmt.Errorf("sample help center: %w", err)
+	}
+
+	p.App.HelpSample = sample
 
 	return nil
 }

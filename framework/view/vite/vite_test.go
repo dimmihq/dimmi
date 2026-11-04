@@ -26,6 +26,11 @@ const manifest = `{
   "_shared-9c1d.js": {
     "file": "assets/shared-9c1d.js",
     "css": ["assets/shared-1b2c.css"]
+  },
+  "src/site.css": {
+    "file": "assets/site-5e6f.css",
+    "src": "src/site.css",
+    "isEntry": true
   }
 }`
 
@@ -95,6 +100,15 @@ func TestTags(t *testing.T) {
 			`<link rel="modulepreload" href="/build/assets/main-4f2a.js">`+
 			`<link rel="modulepreload" href="/build/assets/shared-9c1d.js">`+
 			`<script type="module" src="/build/assets/main-4f2a.js"></script>`, got)
+	})
+
+	t.Run("links a stylesheet entry without any script", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := view.HTML(t.Context(), assets.Tags("src/site.css"))
+
+		require.NoError(t, err)
+		assert.Equal(t, `<link rel="stylesheet" href="/build/assets/site-5e6f.css">`, got)
 	})
 
 	t.Run("puts the request nonce on every tag", func(t *testing.T) {

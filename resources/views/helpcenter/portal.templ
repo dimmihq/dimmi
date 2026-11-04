@@ -1,0 +1,363 @@
+package helpcenter
+
+import "strconv"
+
+/*
+FeedbackPage lists feature requests grouped by where they stand, each
+with its vote button, and invites the visitor to suggest their own.
+Voting is a plain form, so it works without scripts.
+*/
+
+templ FeedbackPage(c Center, statuses []Status, submitted bool, assets templ.Component) {
+	@Layout(c, Meta{Title: "Feature requests | " + c.Product, Description: "Discover what " + c.Product + " is building next and suggest improvements.", Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}}}, FeedbackSidebar(c, statuses), assets) {
+		<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 md:pt-16">
+			<header class="stagger flex flex-wrap items-end justify-between gap-6">
+				<div>
+					<h1 class="text-display-4-medium tracking-tight">Feature requests</h1>
+					<p class="mt-2 text-title-3-regular text-text-secondary">See what we're building and vote for what you need next.</p>
+				</div>
+				<a href={ Href(c, "/feedback/new") } class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+					@Icon("edit", "size-4")
+					Submit idea
+				</a>
+			</header>
+			if submitted {
+				<p role="status" class="mt-8 flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-secondary-default px-4 py-3 text-body-regular">
+					<span class="grid size-7 place-items-center rounded-full bg-tint text-link">
+						@Icon("check", "size-3.5")
+					</span>
+					Thanks! We read every idea and will let you know when it moves.
+				</p>
+			}
+			<div class="mt-10 flex flex-col gap-6 animate-rise">
+				for _, s := range statuses {
+					<section id={ s.Slug } aria-labelledby={ s.Slug + "-title" } class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+						<h2 id={ s.Slug + "-title" } class="flex items-center gap-2 border-b border-separator-border bg-background-secondary-default px-4 py-2.5 text-body-2-semibold">
+							@statusIcon(s)
+							{ s.Name }
+							<span class="text-caption-1-medium text-text-tertiary">{ strconv.Itoa(s.Count) }</span>
+						</h2>
+						<ul>
+							for _, idea := range s.Ideas {
+								<li class="flex items-center gap-3 border-separator-border px-4 py-3 [&+&]:border-t">
+									<span class="grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary-default text-foreground-icon-secondary">
+										@Icon(idea.Icon, "size-4")
+									</span>
+									<span class="min-w-0 flex-1">
+										<span class="block truncate text-body-medium">{ idea.Title }</span>
+										<span class="block truncate text-body-2-regular text-text-tertiary">{ idea.Details }</span>
+									</span>
+									if idea.Comments > 0 {
+										<span class="flex items-center gap-1 text-caption-1-medium tabular-nums text-text-tertiary max-sm:hidden">
+											@Icon("comment", "size-3.5")
+											{ strconv.Itoa(idea.Comments) }
+										</span>
+									}
+									@voteButton(c, idea)
+								</li>
+							}
+						</ul>
+					</section>
+				}
+			</div>
+		</div>
+	}
+}
+
+templ voteButton(c Center, idea Idea) {
+	<form method="post" action={ Href(c, "/feedback/"+idea.Slug+"/votes") }>
+		<button
+			type="submit"
+			aria-label={ "Vote for " + idea.Title + ", " + strconv.Itoa(idea.Votes) + " votes" }
+			if idea.Voted {
+				aria-pressed="true"
+			}
+			class="flex h-12 w-11 cursor-pointer flex-col items-center justify-center rounded-xl border border-border-button-default bg-background-primary-default text-caption-1-semibold tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95 aria-pressed:border-transparent aria-pressed:bg-tint aria-pressed:text-link"
+		>
+			@Icon("vote", "size-4")
+			{ strconv.Itoa(idea.Votes) }
+		</button>
+	</form>
+}
+
+/*
+statusIcon draws a status as a ring that fills as requests move along:
+open while under consideration, dashed when planned, half full in
+progress and full once shipped.
+*/
+
+templ statusIcon(s Status) {
+	<svg viewBox="0 0 16 16" class="size-3.5 shrink-0" fill="none" stroke={ s.Color } stroke-width="1.6" aria-hidden="true">
+		switch s.Slug {
+			case "planned":
+				<circle cx="8" cy="8" r="6.2" stroke-dasharray="2.4 2"></circle>
+			case "in-progress":
+				<circle cx="8" cy="8" r="6.2"></circle>
+				<path d="M8 3.6a4.4 4.4 0 0 1 0 8.8Z" fill={ s.Color } stroke="none"></path>
+			case "shipped":
+				<circle cx="8" cy="8" r="6.2" fill={ s.Color }></circle>
+				<path d="m5.4 8.2 1.8 1.8 3.4-3.6" stroke="white"></path>
+			default:
+				<circle cx="8" cy="8" r="6.2"></circle>
+		}
+	</svg>
+}
+
+/*
+FeedbackSidebar lists the statuses with how many requests each holds,
+and a short invitation to suggest something.
+*/
+
+templ FeedbackSidebar(c Center, statuses []Status) {
+	<nav aria-label="Statuses" class="flex flex-col gap-0.5">
+		@SidebarHeading("Roadmap")
+		for _, s := range statuses {
+			<a href={ Href(c, "/feedback#"+s.Slug) } class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">
+				@statusIcon(s)
+				<span class="flex-1 truncate">{ s.Name }</span>
+				<span class="text-caption-1-medium tabular-nums text-text-tertiary">{ strconv.Itoa(s.Count) }</span>
+			</a>
+		}
+		@SidebarHeading("Your ideas")
+		@SidebarLink(c, "/feedback/new", "Submit an idea", "edit", "", 0, false)
+	</nav>
+}
+
+/*
+NewIdeaPage is the form a visitor suggests a feature with.
+*/
+
+templ NewIdeaPage(c Center, statuses []Status, assets templ.Component) {
+	@Layout(c, Meta{Title: "Submit an idea | " + c.Product, Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}, {Title: "Submit an idea", Path: "/feedback/new"}}, NoIndex: true}, FeedbackSidebar(c, statuses), assets) {
+		<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
+			<h1 class="text-display-4-medium tracking-tight">Submit an idea</h1>
+			<p class="mt-2 text-title-3-regular text-text-secondary">Tell us what you'd like to do and what gets in the way today.</p>
+			<form method="post" action={ Href(c, "/feedback") } class="mt-8 flex flex-col gap-5">
+				@field("title", "Title", "text", "Short, like “Export conversations to CSV”", true)
+				<label class="flex flex-col gap-1.5">
+					<span class="text-body-medium">Details</span>
+					<textarea name="details" rows="6" placeholder="What are you trying to do? How do you work around it today?" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
+				</label>
+				<div class="flex items-center gap-3">
+					<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Submit idea</button>
+					<a href={ Href(c, "/feedback") } class="text-body-medium text-text-secondary hover:text-text-primary">Cancel</a>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ field(name, label, kind, placeholder string, required bool) {
+	<label class="flex flex-col gap-1.5">
+		<span class="text-body-medium">{ label }</span>
+		<input type={ kind } name={ name } placeholder={ placeholder } required?={ required } class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"/>
+	</label>
+}
+
+/*
+SignInPage lets a visitor sign in with a link sent to their email, to
+see their conversations and follow their ideas.
+*/
+
+templ SignInPage(c Center, all []Collection, sent bool, assets templ.Component) {
+	@Layout(c, Meta{Title: "Sign in | " + c.Product, Section: "conversations", Trail: []Crumb{{Title: "Sign in", Path: "/sign-in"}}, NoIndex: true}, HelpSidebar(c, all, "", ""), assets) {
+		<div class="stagger mx-auto w-full max-w-[26rem] px-5 pt-16 md:pt-24">
+			<span class="button-brand grid size-11 place-items-center rounded-2xl">
+				@Icon("login", "size-5")
+			</span>
+			<h1 class="mt-6 text-title-1-medium tracking-tight">Sign in to { c.Product }</h1>
+			<p class="mt-2 text-body-regular text-text-secondary">Follow your conversations with our team and the ideas you voted for.</p>
+			<form method="post" action={ Href(c, "/sign-in") } class="mt-8 flex flex-col gap-4">
+				@field("email", "Email", "email", "you@company.com", true)
+				<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Email me a sign-in link</button>
+			</form>
+			<p class="mt-6 text-body-2-regular text-text-tertiary">Signed in to { c.Product } already? You'll be signed in here automatically when you open the portal from the app.</p>
+		</div>
+	}
+}
+
+/*
+ConversationsPage is the signed-in visitor's inbox: every conversation
+they had with the team, newest first, with where each stands.
+*/
+
+templ ConversationsPage(c Center, conversations []Conversation, assets templ.Component) {
+	@Layout(c, Meta{Title: "Your conversations | " + c.Product, Section: "conversations", Trail: []Crumb{{Title: "Conversations", Path: "/conversations"}}, NoIndex: true}, conversationsSidebar(c, conversations), assets) {
+		<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 md:pt-16">
+			<header class="stagger flex flex-wrap items-end justify-between gap-6">
+				<div>
+					<h1 class="text-display-4-medium tracking-tight">Your conversations</h1>
+					<p class="mt-2 text-title-3-regular text-text-secondary">Everything you asked us, in one place.</p>
+				</div>
+				<a href={ Href(c, "/conversations/new") } class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+					@Icon("edit", "size-4")
+					New conversation
+				</a>
+			</header>
+			<ul class="mt-10 animate-rise overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+				for _, conv := range conversations {
+					<li class="border-separator-border [&+&]:border-t">
+						<a href={ Href(c, "/conversations/"+conv.ID) } class="group flex items-center gap-4 px-4 py-3.5 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover">
+							<span class={ "size-2 shrink-0 rounded-full " + unreadDot(conv.Unread) } aria-hidden="true"></span>
+							<span class="min-w-0 flex-1">
+								<span class={ "block truncate text-body-medium " + unreadText(conv.Unread) }>{ conv.Subject }</span>
+								<span class="block truncate text-body-2-regular text-text-tertiary">{ conv.Preview }</span>
+							</span>
+							@conversationStatus(conv.Status)
+							<span class="w-14 shrink-0 text-end text-caption-1-regular text-text-tertiary">{ conv.Updated }</span>
+						</a>
+					</li>
+				}
+			</ul>
+		</div>
+	}
+}
+
+/*
+ConversationPage shows one conversation as a thread, with a box to
+reply in.
+*/
+
+templ ConversationPage(c Center, all []Conversation, conv Conversation, assets templ.Component) {
+	@Layout(c, Meta{Title: conv.Subject + " | " + c.Product, Section: "conversations", Trail: []Crumb{{Title: "Conversations", Path: "/conversations"}, {Title: conv.Subject, Path: "/conversations/" + conv.ID}}, NoIndex: true}, conversationsSidebar(c, all), assets) {
+		<div class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
+			<header class="stagger">
+				@conversationStatus(conv.Status)
+				<h1 class="mt-3 text-title-1-medium tracking-tight">{ conv.Subject }</h1>
+			</header>
+			<ol class="mt-8 flex flex-col gap-6 animate-rise">
+				for _, m := range conv.Messages {
+					<li class={ "flex gap-3 " + mineRow(m.Mine) }>
+						if !m.Mine {
+							@Avatar(m.Author, "size-8 text-caption-1-semibold")
+						}
+						<div class={ "flex max-w-[80%] flex-col gap-1 " + mineAlign(m.Mine) }>
+							<p class="text-caption-1-regular text-text-tertiary">{ m.Author.Name } · { m.At }</p>
+							<div class={ "rounded-2xl px-4 py-2.5 text-body-regular " + bubble(m.Mine) }>{ m.Body }</div>
+						</div>
+					</li>
+				}
+			</ol>
+			<form method="post" action={ Href(c, "/conversations/"+conv.ID+"/messages") } class="mt-10 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-sm transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint">
+				<label>
+					<span class="sr-only">Reply</span>
+					<textarea name="body" rows="3" required placeholder="Write a reply…" class="block w-full resize-none bg-transparent px-4 py-3 text-body-regular outline-none placeholder:text-text-placeholder"></textarea>
+				</label>
+				<div class="flex justify-end border-t border-separator-border bg-background-secondary-default px-2.5 py-2">
+					<button type="submit" class="button-brand inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-body-2-medium">
+						@Icon("send", "size-3.5")
+						Send
+					</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+/*
+NewConversationPage starts a conversation with the team.
+*/
+
+templ NewConversationPage(c Center, all []Conversation, assets templ.Component) {
+	@Layout(c, Meta{Title: "New conversation | " + c.Product, Section: "conversations", Trail: []Crumb{{Title: "Conversations", Path: "/conversations"}, {Title: "New conversation", Path: "/conversations/new"}}, NoIndex: true}, conversationsSidebar(c, all), assets) {
+		<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
+			<h1 class="text-display-4-medium tracking-tight">Ask a human</h1>
+			<p class="mt-2 text-title-3-regular text-text-secondary">Our team usually replies within a few hours on weekdays.</p>
+			<form method="post" action={ Href(c, "/conversations") } class="mt-8 flex flex-col gap-5">
+				if c.Visitor == nil {
+					@field("email", "Your email", "email", "you@company.com", true)
+				}
+				@field("subject", "Subject", "text", "What do you need help with?", true)
+				<label class="flex flex-col gap-1.5">
+					<span class="text-body-medium">Message</span>
+					<textarea name="body" rows="6" required placeholder="Tell us what happened and what you expected." class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
+				</label>
+				<div>
+					<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+						@Icon("send", "size-4")
+						Send message
+					</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+templ conversationsSidebar(c Center, all []Conversation) {
+	<nav aria-label="Conversations" class="flex flex-col gap-0.5">
+		@SidebarHeading("Support")
+		@SidebarLink(c, "/conversations", "Your conversations", "inbox", "", len(all), false)
+		@SidebarLink(c, "/conversations/new", "New conversation", "edit", "", 0, false)
+		if c.Visitor != nil {
+			@SidebarHeading("Account")
+			<p class="flex items-center gap-2.5 px-2.5 py-1.5 text-body-medium text-text-secondary">
+				@Avatar(*c.Visitor, "size-5 text-caption-2-semibold")
+				<span class="truncate">{ c.Visitor.Name }</span>
+			</p>
+			<form method="post" action={ Href(c, "/sign-out") }>
+				<button type="submit" class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">
+					@Icon("logout", "size-4 opacity-80")
+					Sign out
+				</button>
+			</form>
+		}
+	</nav>
+}
+
+templ conversationStatus(status string) {
+	<span class={ "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full px-2 text-caption-1-medium " + statusTone(status) }>
+		<span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+		{ status }
+	</span>
+}
+
+func statusTone(status string) string {
+	switch status {
+	case "Waiting on you":
+		return "bg-tint text-link"
+	case "Resolved":
+		return "bg-background-secondary-default text-text-tertiary"
+	default:
+		return "bg-background-secondary-default text-text-secondary"
+	}
+}
+
+func unreadDot(unread bool) string {
+	if unread {
+		return "bg-brand"
+	}
+
+	return "bg-transparent"
+}
+
+func unreadText(unread bool) string {
+	if unread {
+		return "font-semibold text-text-primary"
+	}
+
+	return "text-text-primary"
+}
+
+func mineRow(mine bool) string {
+	if mine {
+		return "justify-end"
+	}
+
+	return ""
+}
+
+func mineAlign(mine bool) string {
+	if mine {
+		return "items-end"
+	}
+
+	return ""
+}
+
+func bubble(mine bool) string {
+	if mine {
+		return "button-brand rounded-ee-md"
+	}
+
+	return "bg-background-secondary-default text-text-primary rounded-es-md"
+}
