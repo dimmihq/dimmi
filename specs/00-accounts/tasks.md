@@ -156,9 +156,9 @@ Spec: [audit.md](audit.md). Builds on F71 fix.
 - [ ] Member resource fields, filters, permission-gated. `features/settings/members/*`. Extend `workspace-members.spec.ts`: "an admin sees who has no second factor".
 - [ ] Member CSV export. Test formula guard.
 - [ ] `POST /member-imports`, dialog with dry run. Permission `members:import`. E2e `member-import.spec.ts`.
-- [ ] Migration `20261201070002_add_reminded_at_to_invitations`, `RemindInviters`, `InvitationPendingMail`, always-return `accept_url`, `{channel: "link"}`, team picker in dialog. Extend `invitations.spec.ts`.
-- [ ] `DELETE /teams/{team}` params, dialog, `include=conversation_counts`. 03 `ReassignTeamConversations` built here if track 02 has not; agreed shape in delta. Extend `teams.spec.ts`.
-- [ ] `team.member_added` payload `added_by_member_id`. Trigger delivery track 11.
+- [x] Migration `20261201070002_add_reminded_at_to_invitations`, `RemindInviters`, `InvitationPendingMail`, always-return `accept_url`, `{channel: "link"}`, team picker in dialog. Extend `invitations.spec.ts`. Open: the e2e extension waits for a build.
+- [x] `DELETE /teams/{team}` params, dialog, `include=conversation_counts`. 03 `ReassignTeamConversations` built here if track 02 has not; agreed shape in delta. Extend `teams.spec.ts`. Built as moves inside the delete transaction, through the conversation writer; no chunked job or silent flag yet. Open: the e2e extension waits for a build.
+- [x] `team.member_added` payload `added_by_member_id`. Trigger delivery track 11.
 - [ ] X1: `PATCH /members/{mem}` access fields + `member-access-dialog.tsx`, permission `members:manage_access`. **Needs track 02 access milestone** (columns + `VisibleScope`). Land last in M17.
 
 ## M18. Public API rate limits (track 07 accounts-settings)
