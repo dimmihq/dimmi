@@ -63,7 +63,7 @@ func TestDefaultInbox(t *testing.T) {
 		assert.Equal(t, "Support", inbox.Name)
 		tc.Table("inboxes").AssertCount(1, testkit.Row{"workspace_id": workspace})
 		tc.Table("channel_connections").
-			AssertCount(1, testkit.Row{"workspace_id": workspace}).
+			AssertCount(1, testkit.Row{"workspace_id": workspace, "type": "api"}).
 			AssertHas(testkit.Row{"inbox_id": inbox.ID, "type": "api", "name": "API", "status": "active"})
 	})
 
@@ -78,7 +78,7 @@ func TestDefaultInbox(t *testing.T) {
 
 		assert.Equal(t, before, defaultInbox(t, tc, workspace))
 		tc.Table("inboxes").AssertCount(1, testkit.Row{"workspace_id": workspace})
-		tc.Table("channel_connections").AssertCount(1, testkit.Row{"workspace_id": workspace})
+		tc.Table("channel_connections").AssertCount(1, testkit.Row{"workspace_id": workspace, "type": "api"})
 	})
 
 	t.Run("recreates a deleted default inbox on repair and keeps the other settings", func(t *testing.T) {
