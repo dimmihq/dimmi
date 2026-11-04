@@ -9,9 +9,9 @@
 | translations for. Requests apply them as
 | `validate:"timezone"` and `validate:"locale"`.
 |
-| The time zone database ships inside the binary, so a container image
-| without the system's zone files accepts the same zones as any other
-| host.
+| The binary carries its own copy of the time zone database, so a
+| container image without the system's zone files accepts the same zones
+| as any other host.
 |
 */
 
@@ -21,7 +21,6 @@ import (
 	"context"
 	"slices"
 	"time"
-	_ "time/tzdata"
 
 	"github.com/dimmihq/dimmi/framework/validation"
 )

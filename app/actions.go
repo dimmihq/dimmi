@@ -14,6 +14,7 @@ package app
 import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/factors"
+	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
@@ -55,6 +56,16 @@ type Actions struct {
 	ShowMember              *members.ShowMember
 	UpdateMember            *members.UpdateMember
 	LeaveWorkspace          *members.LeaveWorkspace
+	TrashWorkspace          *workspaces.TrashWorkspace
+	DeleteWorkspace         *workspaces.DeleteWorkspace
+	RestoreWorkspace        *workspaces.RestoreWorkspace
+	EnsureWorkspaceHasOwner *members.EnsureWorkspaceHasOwner
+	CreateInvitations       *invitations.CreateInvitations
+	ListInvitations         *invitations.ListInvitations
+	ResendInvitation        *invitations.ResendInvitation
+	RevokeInvitation        *invitations.RevokeInvitation
+	PreviewInvitation       *invitations.PreviewInvitation
+	AcceptInvitation        *invitations.AcceptInvitation
 
 	CompleteTwoFactorChallenge *auth.CompleteTwoFactorChallenge
 	ListAuthFactors            *factors.ListAuthFactors

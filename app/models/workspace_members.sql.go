@@ -108,6 +108,40 @@ func (q *Queries) DeactivateWorkspaceMember(ctx context.Context, arg DeactivateW
 	return i, err
 }
 
+const findOldestActiveMember = `-- name: FindOldestActiveMember :one
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via FROM workspace_members
+WHERE workspace_id = $1 AND role = $2 AND status = 'active'
+ORDER BY created_at, id
+LIMIT 1
+`
+
+type FindOldestActiveMemberParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Role        string   `json:"role"`
+}
+
+// FindOldestActiveMember returns the workspace's longest-standing active
+// member of the role.
+func (q *Queries) FindOldestActiveMember(ctx context.Context, arg FindOldestActiveMemberParams) (WorkspaceMember, error) {
+	row := q.db.QueryRow(ctx, findOldestActiveMember, arg.WorkspaceID, arg.Role)
+	var i WorkspaceMember
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.Role,
+		&i.Availability,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastAccessedAt,
+		&i.DeactivatedAt,
+		&i.DeactivatedByMemberID,
+		&i.JoinedVia,
+	)
+	return i, err
+}
+
 const findUserMembership = `-- name: FindUserMembership :one
 SELECT
     m.member_id::uuid AS member_id,
@@ -150,6 +184,40 @@ type FindWorkspaceMemberParams struct {
 // FindWorkspaceMember returns the member with the id in the workspace.
 func (q *Queries) FindWorkspaceMember(ctx context.Context, arg FindWorkspaceMemberParams) (WorkspaceMember, error) {
 	row := q.db.QueryRow(ctx, findWorkspaceMember, arg.WorkspaceID, arg.ID)
+	var i WorkspaceMember
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.Role,
+		&i.Availability,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastAccessedAt,
+		&i.DeactivatedAt,
+		&i.DeactivatedByMemberID,
+		&i.JoinedVia,
+	)
+	return i, err
+}
+
+const findWorkspaceMemberByEmail = `-- name: FindWorkspaceMemberByEmail :one
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = $1 AND u.email = $2::citext
+`
+
+type FindWorkspaceMemberByEmailParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Email       string   `json:"email"`
+}
+
+// FindWorkspaceMemberByEmail returns the membership of the workspace held
+// by the account with the address, active or not.
+func (q *Queries) FindWorkspaceMemberByEmail(ctx context.Context, arg FindWorkspaceMemberByEmailParams) (WorkspaceMember, error) {
+	row := q.db.QueryRow(ctx, findWorkspaceMemberByEmail, arg.WorkspaceID, arg.Email)
 	var i WorkspaceMember
 	err := row.Scan(
 		&i.ID,
@@ -252,6 +320,70 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 		&i.User.CreatedVia,
 	)
 	return i, err
+}
+
+const listActiveOwners = `-- name: ListActiveOwners :many
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = $1 AND m.role = 'owner' AND m.status = 'active'
+ORDER BY m.created_at, m.id
+`
+
+type ListActiveOwnersRow struct {
+	WorkspaceMember WorkspaceMember `json:"workspace_member"`
+	User            User            `json:"user"`
+}
+
+// ListActiveOwners returns the workspace's active owners with their
+// accounts, oldest membership first.
+func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([]ListActiveOwnersRow, error) {
+	rows, err := q.db.Query(ctx, listActiveOwners, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActiveOwnersRow
+	for rows.Next() {
+		var i ListActiveOwnersRow
+		if err := rows.Scan(
+			&i.WorkspaceMember.ID,
+			&i.WorkspaceMember.WorkspaceID,
+			&i.WorkspaceMember.UserID,
+			&i.WorkspaceMember.Role,
+			&i.WorkspaceMember.Availability,
+			&i.WorkspaceMember.Status,
+			&i.WorkspaceMember.CreatedAt,
+			&i.WorkspaceMember.UpdatedAt,
+			&i.WorkspaceMember.LastAccessedAt,
+			&i.WorkspaceMember.DeactivatedAt,
+			&i.WorkspaceMember.DeactivatedByMemberID,
+			&i.WorkspaceMember.JoinedVia,
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.EmailVerifiedAt,
+			&i.User.PasswordHash,
+			&i.User.TwoFactorConfirmedAt,
+			&i.User.AvatarPath,
+			&i.User.Locale,
+			&i.User.Timezone,
+			&i.User.LastSeenAt,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.DeletedAt,
+			&i.User.PasswordChangedAt,
+			&i.User.RiskFlags,
+			&i.User.CreatedVia,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listUserMemberships = `-- name: ListUserMemberships :many
@@ -507,6 +639,24 @@ func (q *Queries) LockWorkspaceMember(ctx context.Context, arg LockWorkspaceMemb
 		&i.JoinedVia,
 	)
 	return i, err
+}
+
+const purgeWorkspaceRows = `-- name: PurgeWorkspaceRows :one
+SELECT dimmi_purge_workspace_rows($1::uuid, $2::integer)::bigint AS removed
+`
+
+type PurgeWorkspaceRowsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	BatchSize   int32    `json:"batch_size"`
+}
+
+// PurgeWorkspaceRows deletes one batch of the workspace's rows from one
+// of its tables and returns how many went; nothing left returns zero.
+func (q *Queries) PurgeWorkspaceRows(ctx context.Context, arg PurgeWorkspaceRowsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, purgeWorkspaceRows, arg.WorkspaceID, arg.BatchSize)
+	var removed int64
+	err := row.Scan(&removed)
+	return removed, err
 }
 
 const reactivateWorkspaceMember = `-- name: ReactivateWorkspaceMember :one

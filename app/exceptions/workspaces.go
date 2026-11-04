@@ -55,12 +55,28 @@ var (
 )
 
 /*
+Workspace deletion failures.
+
+ErrConfirmSlugMismatch refuses a deletion whose confirmation does not
+spell the workspace's address, so a workspace is never deleted by a
+misdirected click. ErrWorkspacePurging refuses to restore a workspace
+whose purge has begun or whose time in the trash ran out.
+*/
+var (
+	ErrConfirmSlugMismatch = fault.New(fault.Invalid, "confirm_slug_mismatch",
+		"Type the workspace's address to confirm.").OnField("confirm_slug")
+	ErrWorkspacePurging = fault.New(fault.Gone, "workspace_purging",
+		"This workspace is being deleted for good and can no longer be restored.")
+)
+
+/*
 Member failures.
 
 ErrLastOwner refuses to demote, deactivate or remove the last active
 owner of a workspace; ownership must be handed over first.
-ErrInvalidTransition refuses a change of a member's state that cannot
-happen from where they stand; callers add the from and to states.
+ErrInvalidTransition refuses a change of state, of a member or an
+invitation, that cannot happen from where it stands; callers add the
+from and to states.
 ErrTargetUnverified and ErrTargetTwoFactorRequired refuse to hand
 ownership to a member who has not proved their email, or who lacks the
 second factor the workspace requires. ErrReassignTargetInvalid refuses
@@ -70,7 +86,7 @@ var (
 	ErrLastOwner = fault.New(fault.Conflict, "last_owner",
 		"A workspace needs an active owner. Make someone else an owner first.")
 	ErrInvalidTransition = fault.New(fault.Invalid, "invalid_transition",
-		"This change is not possible from the member's current state.")
+		"This change is not possible from the current state.")
 	ErrTargetUnverified = fault.New(fault.Conflict, "target_unverified",
 		"Ownership can only go to a member who verified their email address.")
 	ErrTargetTwoFactorRequired = fault.New(fault.Conflict, "target_two_factor_required",

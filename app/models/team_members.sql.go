@@ -7,9 +7,38 @@ package models
 
 import (
 	"context"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 )
+
+const addMemberToTeams = `-- name: AddMemberToTeams :exec
+INSERT INTO team_members (team_id, workspace_id, workspace_member_id, created_at)
+SELECT t.id, t.workspace_id, $1::uuid, $2::timestamptz
+FROM teams t
+WHERE t.workspace_id = $3 AND t.id = ANY ($4::uuid[]) AND t.deleted_at IS NULL
+ON CONFLICT DO NOTHING
+`
+
+type AddMemberToTeamsParams struct {
+	WorkspaceMemberID ids.UUID   `json:"workspace_member_id"`
+	Now               time.Time  `json:"now"`
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	TeamIds           []ids.UUID `json:"team_ids"`
+}
+
+// AddMemberToTeams puts the member in each of the teams that still
+// exists in the workspace; teams deleted meanwhile are skipped, and a
+// team the member is already in stays as it is.
+func (q *Queries) AddMemberToTeams(ctx context.Context, arg AddMemberToTeamsParams) error {
+	_, err := q.db.Exec(ctx, addMemberToTeams,
+		arg.WorkspaceMemberID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.TeamIds,
+	)
+	return err
+}
 
 const removeMemberFromTeams = `-- name: RemoveMemberFromTeams :exec
 DELETE FROM team_members WHERE workspace_id = $1 AND workspace_member_id = $2

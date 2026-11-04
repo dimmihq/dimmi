@@ -184,15 +184,7 @@ plan checks the update against the caller's power and the member's
 state, and works out what it changes.
 */
 func (a *UpdateMember) plan(ctx context.Context, s subject, in UpdateMemberInput) (memberChange, error) {
-	if ownerRoleChange(in, s.target) && !in.Principal.IsFirstParty() {
-		return memberChange{}, exceptions.ErrFirstPartyOnly
-	}
-
-	if err := refuseLastOwner(ctx, s, in); err != nil {
-		return memberChange{}, err
-	}
-
-	if err := a.authorize(in, s.target); err != nil {
+	if err := a.admit(ctx, s, in); err != nil {
 		return memberChange{}, err
 	}
 
@@ -219,6 +211,23 @@ func (a *UpdateMember) plan(ctx context.Context, s subject, in UpdateMemberInput
 	}
 
 	return change, nil
+}
+
+/*
+admit refuses an update the caller's credential may not make, one that
+would leave the workspace without an owner, and one the caller's power
+does not cover, in that order.
+*/
+func (a *UpdateMember) admit(ctx context.Context, s subject, in UpdateMemberInput) error {
+	if ownerRoleChange(in, s.target) && !in.Principal.IsFirstParty() {
+		return exceptions.ErrFirstPartyOnly
+	}
+
+	if err := refuseLastOwner(ctx, s, in); err != nil {
+		return err
+	}
+
+	return a.authorize(in, s.target)
 }
 
 /*
@@ -253,11 +262,11 @@ func refuseLastOwner(ctx context.Context, s subject, in UpdateMemberInput) error
 }
 
 /*
-ownerRoleChange reports whether the update moves the member into or out
-of the owner role.
+ownerRoleChange reports whether the update sets the role of an owner,
+or makes someone an owner.
 */
 func ownerRoleChange(in UpdateMemberInput, target models.WorkspaceMember) bool {
-	return in.AssignedRole != nil && *in.AssignedRole != enums.Role(target.Role) &&
+	return in.AssignedRole != nil &&
 		(appauth.IsOwnerRole(enums.Role(target.Role)) || appauth.IsOwnerRole(*in.AssignedRole))
 }
 

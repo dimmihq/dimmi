@@ -12,19 +12,27 @@
 
 package resources
 
-import "github.com/dimmihq/dimmi/app/models"
+import (
+	"time"
+
+	"github.com/dimmihq/dimmi/app/models"
+)
 
 /*
-Workspace is a workspace a member works in.
+Workspace is a workspace a member works in. DeletedAt and PurgeAfter
+are set while it is in the trash: when it was deleted, and when it is
+purged for good unless restored.
 */
 type Workspace struct {
-	ID       string `json:"id"`
-	Object   string `json:"object"`
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	Timezone string `json:"timezone"`
-	Locale   string `json:"locale"`
-	TestMode bool   `json:"test_mode"`
+	ID         string     `json:"id"`
+	Object     string     `json:"object"`
+	Name       string     `json:"name"`
+	Slug       string     `json:"slug"`
+	Timezone   string     `json:"timezone"`
+	Locale     string     `json:"locale"`
+	TestMode   bool       `json:"test_mode"`
+	DeletedAt  *time.Time `json:"deleted_at"`
+	PurgeAfter *time.Time `json:"purge_after"`
 }
 
 /*
@@ -32,13 +40,15 @@ NewWorkspace shapes the workspace.
 */
 func NewWorkspace(w models.Workspace) Workspace {
 	return Workspace{
-		ID:       models.PublicID(models.PrefixWorkspace, w.ID),
-		Object:   "workspace",
-		Name:     w.Name,
-		Slug:     w.Slug,
-		Timezone: w.Timezone,
-		Locale:   w.Locale,
-		TestMode: w.TestMode,
+		ID:         models.PublicID(models.PrefixWorkspace, w.ID),
+		Object:     "workspace",
+		Name:       w.Name,
+		Slug:       w.Slug,
+		Timezone:   w.Timezone,
+		Locale:     w.Locale,
+		TestMode:   w.TestMode,
+		DeletedAt:  w.DeletedAt,
+		PurgeAfter: w.PurgeAfter,
 	}
 }
 

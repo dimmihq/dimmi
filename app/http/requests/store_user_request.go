@@ -26,10 +26,11 @@ StoreUserRequest is the input of POST /users.
 */
 type StoreUserRequest struct {
 	Body struct {
-		Name          string `json:"name,omitempty"           validate:"required,max=80"`
-		Email         string `json:"email,omitempty"          validate:"required,email,max=254"`
-		Password      string `json:"password,omitempty"       validate:"required,max=256,password_length,password"`
-		WorkspaceName string `json:"workspace_name,omitempty" validate:"omitempty,max=80"`
+		Name            string `json:"name,omitempty"             validate:"required,max=80"`
+		Email           string `json:"email,omitempty"            validate:"required,email,max=254"`
+		Password        string `json:"password,omitempty"         validate:"required,max=256,password_length,password"`
+		WorkspaceName   string `json:"workspace_name,omitempty"   validate:"omitempty,max=80"`
+		InvitationToken string `json:"invitation_token,omitempty" validate:"omitempty,max=200"`
 	}
 }
 

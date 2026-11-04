@@ -35,11 +35,12 @@ Store registers a user and answers with their picture.
 */
 func (c *UserController) Store(ctx context.Context, in *requests.StoreUserRequest) (*MeOutput, error) {
 	signedIn, err := c.RegisterUser.Handle(ctx, auth.RegisterUserInput{
-		Name:          in.Body.Name,
-		Email:         in.Body.Email,
-		Password:      in.Body.Password,
-		WorkspaceName: in.Body.WorkspaceName,
-		Client:        clientOf(ctx, c.Cookies),
+		Name:            in.Body.Name,
+		Email:           in.Body.Email,
+		Password:        in.Body.Password,
+		WorkspaceName:   in.Body.WorkspaceName,
+		InvitationToken: in.Body.InvitationToken,
+		Client:          clientOf(ctx, c.Cookies),
 	})
 	if err != nil {
 		return nil, err

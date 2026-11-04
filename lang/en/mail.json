@@ -69,5 +69,42 @@
     "intro": "A {{.provider}} account with your email address was linked to your Dimmi account. You can now sign in with {{.provider}}.",
     "unknown": "If this was not you, unlink it in your security settings and change your password.",
     "action": "Review your sign-in methods"
+  },
+  "workspace_deletion_scheduled": {
+    "subject": "{{.workspace}} was deleted",
+    "intro": "{{.deleted_by}} deleted the workspace {{.workspace}}. Its members lost access, its access tokens stopped working and its pending invitations were withdrawn.",
+    "restore": "Any owner can restore it until {{.date}}. After that, it and everything in it is deleted for good."
+  },
+  "workspace_deletion_reminder": {
+    "subject": "{{.workspace}} will be deleted for good in a few days",
+    "intro": "The workspace {{.workspace}} is in the trash and will be deleted for good on {{.date}}, with every conversation, contact and file in it.",
+    "restore": "If that is a mistake, any owner can still restore it until then."
+  },
+  "workspace_restored": {
+    "subject": "{{.workspace}} was restored",
+    "intro": "{{.restored_by}} restored the workspace {{.workspace}}. Its members can work in it again.",
+    "revoked": "Access tokens and invitations ended by the deletion stay ended: create new ones where you need them.",
+    "action": "Open dimmi"
+  },
+  "owner_promoted_by_system": {
+    "subject": "You are now an owner of {{.workspace}}",
+    "intro": "The workspace {{.workspace}} had no active owner left, so you were made one as its longest-standing member. Owners can manage other owners and delete the workspace.",
+    "action": "Review the members"
+  },
+  "roles": {
+    "admin": "an admin",
+    "member": "a member"
+  },
+  "invitation": {
+    "subject": "{{.inviter}} invited you to join {{.workspace}} on dimmi",
+    "intro": "{{.inviter}} invited you to join the workspace {{.workspace}} on dimmi as {{.role}}.",
+    "action": "Accept the invitation",
+    "expiry": "The invitation works until {{.date}}.",
+    "unexpected": "If you did not expect this invitation, you can ignore this email."
+  },
+  "invitation_accepted": {
+    "subject": "{{.member}} joined {{.workspace}}",
+    "intro": "{{.member}} accepted your invitation and joined the workspace {{.workspace}}.",
+    "action": "Review the members"
   }
 }

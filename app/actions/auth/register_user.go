@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -29,7 +30,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -46,14 +49,16 @@ const signupWindow = time.Hour
 
 /*
 RegisterUserInput is the new account and, when WorkspaceName is set,
-its first workspace, with the client signing up.
+its first workspace, with the client signing up. InvitationToken is the
+link of an invitation the account answers, "" for none.
 */
 type RegisterUserInput struct {
-	Name          string
-	Email         string
-	Password      string
-	WorkspaceName string
-	Client        appauth.Client
+	Name            string
+	Email           string
+	Password        string
+	WorkspaceName   string
+	InvitationToken string
+	Client          appauth.Client
 }
 
 /*
@@ -61,17 +66,22 @@ RegisterUser creates an account and signs it in.
 
 Rules:
   - The login policy for the address is asked first.
-  - Only an open install takes new accounts.
+  - Only an open install takes new accounts, unless the person holds a
+    pending invitation to the address they sign up with.
   - One address creates a limited number of accounts per hour.
-  - A workspace name creates a workspace the new user owns.
-  - The new address is sent a verification link; nothing waits for it.
+  - An invitation makes the account a member of its workspace, and its
+    address verified; no workspace is created then.
+  - Otherwise a workspace name creates a workspace the new user owns.
+  - The new address is sent a verification link unless the invitation
+    proved it; nothing waits for it.
 
 Events: [appevents.UserRegistered], and those of
-[workspaces.CreateWorkspace] when a workspace is created.
+[workspaces.CreateWorkspace] or [invitations.AcceptInvitation].
 
 Errors: [exceptions.ErrSignupClosed], [exceptions.ErrTooManySignups],
 [exceptions.ErrEmailTaken], [exceptions.ErrSSORequired],
-[exceptions.ErrAuthBusy], or a wrapped error.
+[exceptions.ErrAuthBusy], [exceptions.ErrInvitationEmailMismatch], the
+errors of [invitations.AcceptInvitation], or a wrapped error.
 */
 type RegisterUser struct {
 	DB               *database.DB
@@ -85,13 +95,20 @@ type RegisterUser struct {
 	SendVerification *SendEmailVerification
 	StartSession     *StartSession
 	LoadMe           *LoadMe
+	Preview          *invitations.PreviewInvitation
+	Accept           *invitations.AcceptInvitation
 }
 
 /*
 Handle registers the user and starts their session.
 */
 func (a *RegisterUser) Handle(ctx context.Context, in RegisterUserInput) (SignedIn, error) {
-	if err := a.admit(ctx, in); err != nil {
+	invited, err := a.invitation(ctx, in)
+	if err != nil {
+		return SignedIn{}, err
+	}
+
+	if err := a.admit(ctx, in, invited); err != nil {
 		return SignedIn{}, err
 	}
 
@@ -104,7 +121,7 @@ func (a *RegisterUser) Handle(ctx context.Context, in RegisterUserInput) (Signed
 		return SignedIn{}, fmt.Errorf("hash password: %w", err)
 	}
 
-	user, workspaceID, err := a.create(ctx, in, hash)
+	user, workspaceID, err := a.create(ctx, in, hash, invited)
 	if err != nil {
 		return SignedIn{}, err
 	}
@@ -125,14 +142,15 @@ func (a *RegisterUser) Handle(ctx context.Context, in RegisterUserInput) (Signed
 }
 
 /*
-admit decides whether this signup may go ahead at all.
+admit decides whether this signup may go ahead at all. The invitation
+it answers, nil for none, lets it through where signup is closed.
 */
-func (a *RegisterUser) admit(ctx context.Context, in RegisterUserInput) error {
+func (a *RegisterUser) admit(ctx context.Context, in RegisterUserInput, invited *invitations.Preview) error {
 	if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, in.Email, appauth.MethodPassword); err != nil {
 		return err
 	}
 
-	if a.Signup.Mode != config.SignupOpen {
+	if a.Signup.Mode != config.SignupOpen && invited == nil {
 		return exceptions.ErrSignupClosed
 	}
 
@@ -149,42 +167,102 @@ func (a *RegisterUser) admit(ctx context.Context, in RegisterUserInput) error {
 }
 
 /*
-create writes the account and, when asked, its workspace, in one
-transaction. It returns the workspace id, or ids.Nil() for none.
+invitation returns the invitation the signup answers, nil for none,
+refusing one that is not pending or not addressed to the email signing
+up.
 */
-func (a *RegisterUser) create(ctx context.Context, in RegisterUserInput, hash string) (models.User, ids.UUID, error) {
+func (a *RegisterUser) invitation(ctx context.Context, in RegisterUserInput) (*invitations.Preview, error) {
+	if in.InvitationToken == "" {
+		return nil, nil
+	}
+
+	preview, err := a.Preview.Handle(ctx, in.InvitationToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if !strings.EqualFold(preview.Invitation.Email, strings.TrimSpace(in.Email)) {
+		return nil, exceptions.ErrInvitationEmailMismatch
+	}
+
+	return &preview, nil
+}
+
+/*
+create writes the account and, as asked, joins the workspace it was
+invited to or creates its first workspace, in one transaction. It
+returns the workspace id, or ids.Nil() for none. An invited account's
+transaction works in the invitation's workspace.
+*/
+func (a *RegisterUser) create(
+	ctx context.Context, in RegisterUserInput, hash string, invited *invitations.Preview,
+) (models.User, ids.UUID, error) {
 	var (
 		user        models.User
 		workspaceID = ids.Nil()
 	)
 
+	if invited != nil {
+		ctx = tenancy.With(ctx, invited.Invitation.WorkspaceID.String())
+	}
+
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 
 		user, err = a.CreateUser.Handle(ctx, users.CreateUserInput{
-			Name: in.Name, Email: in.Email, PasswordHash: &hash, CreatedVia: appauth.CreatedViaRegister,
+			Name: in.Name, Email: in.Email, PasswordHash: &hash, Verified: invited != nil,
+			CreatedVia: createdVia(invited),
 		})
 		if err != nil {
 			return err
 		}
 
-		if err := a.SendVerification.Handle(ctx, user, in.Client); err != nil {
+		workspaceID, err = a.join(ctx, in, user)
+		if err != nil {
 			return err
-		}
-
-		if in.WorkspaceName != "" {
-			created, err := a.CreateWorkspace.Handle(ctx, workspaces.CreateWorkspaceInput{
-				Owner: user, Name: in.WorkspaceName, JoinedVia: appauth.JoinedViaCreated,
-			})
-			if err != nil {
-				return err
-			}
-
-			workspaceID = created.Workspace.ID
 		}
 
 		return a.Events.Dispatch(ctx, tx, appevents.UserRegistered{UserID: user.ID})
 	})
 
 	return user, workspaceID, err
+}
+
+/*
+join accepts the invitation the new account answers, or else sends the
+verification link and creates the workspace the person named. It
+returns the workspace the account lands in, ids.Nil() for none.
+*/
+func (a *RegisterUser) join(ctx context.Context, in RegisterUserInput, user models.User) (ids.UUID, error) {
+	if in.InvitationToken != "" {
+		joined, err := a.Accept.Handle(ctx, invitations.AcceptInvitationInput{User: user, Token: in.InvitationToken})
+
+		return joined.Workspace.ID, err
+	}
+
+	if err := a.SendVerification.Handle(ctx, user, in.Client); err != nil {
+		return ids.Nil(), err
+	}
+
+	if in.WorkspaceName == "" {
+		return ids.Nil(), nil
+	}
+
+	created, err := a.CreateWorkspace.Handle(ctx, workspaces.CreateWorkspaceInput{
+		Owner: user, Name: in.WorkspaceName, JoinedVia: appauth.JoinedViaCreated,
+	})
+
+	return created.Workspace.ID, err
+}
+
+/*
+createdVia returns how the account came to be: through an invitation or
+by registering.
+*/
+func createdVia(invited *invitations.Preview) string {
+	if invited != nil {
+		return appauth.MethodInvitation
+	}
+
+	return appauth.CreatedViaRegister
 }

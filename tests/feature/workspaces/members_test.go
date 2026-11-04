@@ -368,16 +368,3 @@ func kinds(seen []any) []string {
 
 	return names
 }
-
-/*
-slicesWithout returns the statuses other than the one left out, once.
-*/
-func slicesWithout(statuses []int, leave int) []int {
-	for i, status := range statuses {
-		if status == leave {
-			return append(append([]int{}, statuses[:i]...), statuses[i+1:]...)
-		}
-	}
-
-	return statuses
-}

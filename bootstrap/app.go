@@ -10,11 +10,20 @@
 | binary runs it; tests boot the same options with their own
 | environment, so a test application is wired exactly like production.
 |
+| The product carries its own copy of the time zone database, so a host
+| or container image without zone files accepts the same time zones for
+| workspaces and members as any other.
+|
 */
 
 package bootstrap
 
 import (
+	/*
+		The embedded time zone database, used whenever the host has none.
+	*/
+	_ "time/tzdata"
+
 	"github.com/dimmihq/dimmi/framework/foundation"
 
 	"github.com/dimmihq/dimmi/app"

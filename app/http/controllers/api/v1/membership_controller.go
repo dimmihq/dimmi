@@ -4,10 +4,11 @@
 |--------------------------------------------------------------------------
 |
 | GET /user/memberships lists the workspaces the caller belongs to, the
-| one used last first, and DELETE /user/memberships/{membership} leaves
-| one. Both are the user's own business, so neither needs a workspace
-| header and leaving works even where the workspace's access rules
-| would stop everything else.
+| one used last first, POST /user/memberships joins one by accepting an
+| invitation, and DELETE /user/memberships/{membership} leaves one.
+| They are the user's own business, so none needs a workspace header,
+| and leaving works even where the workspace's access rules would stop
+| everything else.
 |
 */
 
@@ -20,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -39,9 +41,17 @@ type MembershipsOutput struct {
 MembershipController serves the caller's memberships.
 */
 type MembershipController struct {
-	List  *workspaces.ListMemberships
-	Leave *members.LeaveWorkspace
-	IDs   *ids.Registry
+	List   *workspaces.ListMemberships
+	Accept *invitations.AcceptInvitation
+	Leave  *members.LeaveWorkspace
+	IDs    *ids.Registry
+}
+
+/*
+MembershipOutput is one of the caller's memberships.
+*/
+type MembershipOutput struct {
+	Body fhttp.Resource[resources.Membership]
 }
 
 /*
@@ -70,6 +80,22 @@ func (c *MembershipController) Index(ctx context.Context, _ *requests.NoInput) (
 	page := pagination.Page[resources.Membership]{Items: items, Limit: len(items)}
 
 	return &MembershipsOutput{Body: fhttp.NewCollection(page)}, nil
+}
+
+/*
+Store accepts the invitation and answers with the membership it gave.
+*/
+func (c *MembershipController) Store(
+	ctx context.Context, in *requests.StoreMembershipRequest,
+) (*MembershipOutput, error) {
+	joined, err := c.Accept.Handle(ctx, invitations.AcceptInvitationInput{
+		User: caller(ctx).User, Token: in.Body.InvitationToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &MembershipOutput{Body: fhttp.NewResource(resources.NewMembership(joined.Member, joined.Workspace))}, nil
 }
 
 /*

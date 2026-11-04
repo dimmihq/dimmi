@@ -4,9 +4,10 @@
 |--------------------------------------------------------------------------
 |
 | GET /workspace shows the workspace a request works in to any of its
-| members, and PATCH /workspace changes its name, address, language and
-| time zone. The workspace is the one the request named, already
-| resolved and checked before these run.
+| members, PATCH /workspace changes its name, address, language and
+| time zone, and DELETE /workspace moves it to the trash. The workspace
+| is the one the request named, already resolved and checked before
+| these run.
 |
 */
 
@@ -35,6 +36,7 @@ CurrentWorkspaceController serves the workspace in play.
 */
 type CurrentWorkspaceController struct {
 	UpdateWorkspace *workspaces.UpdateWorkspace
+	DeleteWorkspace *workspaces.DeleteWorkspace
 }
 
 /*
@@ -59,6 +61,22 @@ func (c *CurrentWorkspaceController) Update(
 	}
 
 	return &WorkspaceOutput{Body: fhttp.NewResource(resources.NewWorkspace(updated))}, nil
+}
+
+/*
+Destroy moves the workspace to the trash and answers with it there.
+*/
+func (c *CurrentWorkspaceController) Destroy(
+	ctx context.Context, in *requests.DestroyCurrentWorkspaceRequest,
+) (*WorkspaceOutput, error) {
+	trashed, err := c.DeleteWorkspace.Handle(ctx, workspaces.DeleteWorkspaceInput{
+		Principal: caller(ctx), Membership: membership(ctx), ConfirmSlug: in.Body.ConfirmSlug,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &WorkspaceOutput{Body: fhttp.NewResource(resources.NewWorkspace(trashed))}, nil
 }
 
 /*

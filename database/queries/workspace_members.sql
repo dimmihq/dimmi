@@ -135,3 +135,33 @@ SELECT
     m.status::text AS status
 FROM auth_list_user_memberships(@user_id) AS m
 WHERE m.member_id = @member_id::uuid;
+
+-- name: ListActiveOwners :many
+-- ListActiveOwners returns the workspace's active owners with their
+-- accounts, oldest membership first.
+SELECT sqlc.embed(m), sqlc.embed(u)
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = @workspace_id AND m.role = 'owner' AND m.status = 'active'
+ORDER BY m.created_at, m.id;
+
+-- name: FindOldestActiveMember :one
+-- FindOldestActiveMember returns the workspace's longest-standing active
+-- member of the role.
+SELECT * FROM workspace_members
+WHERE workspace_id = @workspace_id AND role = @role AND status = 'active'
+ORDER BY created_at, id
+LIMIT 1;
+
+-- name: FindWorkspaceMemberByEmail :one
+-- FindWorkspaceMemberByEmail returns the membership of the workspace held
+-- by the account with the address, active or not.
+SELECT m.*
+FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = @workspace_id AND u.email = @email::citext;
+
+-- name: PurgeWorkspaceRows :one
+-- PurgeWorkspaceRows deletes one batch of the workspace's rows from one
+-- of its tables and returns how many went; nothing left returns zero.
+SELECT dimmi_purge_workspace_rows(@workspace_id::uuid, @batch_size::integer)::bigint AS removed;

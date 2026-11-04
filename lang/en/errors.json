@@ -15,7 +15,7 @@
   "two_factor_challenge_expired": "The sign-in took too long or had too many wrong codes. Sign in again.",
   "factor_type_not_available": "This kind of factor is not available.",
   "factor_limit_reached": "You cannot add more factors of this kind.",
-  "invalid_transition": "This factor is already active.",
+  "invalid_transition": "This change is not possible from the current state.",
   "preferred_not_allowed": "Recovery codes cannot be your preferred factor.",
   "prohibited": "The code cannot be sent with other changes.",
   "two_factor_not_enabled": "Turn on two-factor authentication first.",
@@ -32,5 +32,14 @@
   "oauth_email_unverified": "The provider has not verified your email address.",
   "identity_taken": "This account is already linked to another user.",
   "provider_already_linked": "You already linked an account of this provider.",
-  "last_login_method": "This is your only way to sign in. Set a password or link another account first."
+  "last_login_method": "This is your only way to sign in. Set a password or link another account first.",
+  "confirm_slug_mismatch": "Type the workspace's address to confirm.",
+  "workspace_purging": "This workspace is being deleted for good and can no longer be restored.",
+  "invalid_email": "The email must be a valid email address.",
+  "invitation_limit_reached": "This workspace sent as many invitations as it may today. Try again tomorrow.",
+  "invitation_email_mismatch": "This invitation was sent to another email address. Sign in with that address to accept it.",
+  "invitation_expired": "This invitation has expired. Ask for a new one.",
+  "invitation_revoked": "This invitation was withdrawn.",
+  "invitation_already_accepted": "This invitation was already accepted.",
+  "already_member": "You are already a member of this workspace."
 }

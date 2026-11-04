@@ -80,3 +80,27 @@ func NewMemberships(rows []models.ListUserMembershipsRow) []Membership {
 
 	return out
 }
+
+/*
+NewMembership shapes one membership of the caller, with its workspace.
+*/
+func NewMembership(m models.WorkspaceMember, w models.Workspace) Membership {
+	out := Membership{
+		ID:             models.PublicID(models.PrefixMember, m.ID),
+		Object:         "membership",
+		Role:           m.Role,
+		Status:         m.Status,
+		JoinedVia:      m.JoinedVia,
+		LastAccessedAt: m.LastAccessedAt,
+		Workspace: MembershipWorkspace{
+			ID:         models.PublicID(models.PrefixWorkspace, w.ID),
+			Object:     "workspace",
+			Name:       w.Name,
+			Slug:       w.Slug,
+			DeletedAt:  w.DeletedAt,
+			PurgeAfter: w.PurgeAfter,
+		},
+	}
+
+	return out
+}

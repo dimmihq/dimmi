@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
@@ -63,7 +64,8 @@ Rules:
   - Three requests per ten minutes per email, twenty an hour per
     address; more are dropped silently.
   - An existing account gets a link; an unknown address gets one only
-    when anyone may sign up, and nothing otherwise.
+    when anyone may sign up or an invitation waits for it, and nothing
+    otherwise.
   - At most three links work at once per address.
 
 Errors: [exceptions.ErrNotFound], [exceptions.ErrSSORequired],
@@ -72,6 +74,7 @@ error.
 */
 type SendMagicLink struct {
 	DB          *database.DB
+	Clock       clock.Clock
 	Mail        *mail.Manager
 	Limiter     *ratelimit.Limiter
 	Links       appauth.Links
@@ -123,11 +126,21 @@ func (a *SendMagicLink) Handle(ctx context.Context, in SendMagicLinkInput) error
 
 /*
 sendToNewcomer mails a sign-up link to an address without an account,
-remembering the name to give it, only where anyone may sign up.
+remembering the name to give it, only where anyone may sign up or a
+pending invitation waits for the address.
 */
 func (a *SendMagicLink) sendToNewcomer(ctx context.Context, email string, in SendMagicLinkInput) error {
 	if a.Signup.Mode != config.SignupOpen {
-		return nil
+		pending := models.CountPendingInvitationsForEmailParams{Email: email, Now: a.Clock.Now()}
+
+		invited, err := models.New(a.DB).CountPendingInvitationsForEmail(ctx, pending)
+		if err != nil {
+			return fmt.Errorf("count pending invitations: %w", err)
+		}
+
+		if invited == 0 {
+			return nil
+		}
 	}
 
 	pending := a.Mail.To(mail.Address{Email: strings.TrimSpace(in.Email)})
