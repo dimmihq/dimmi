@@ -40,6 +40,7 @@ func bootRecords(a *app.App) {
 	acts.DetachIdentity = &contacts.DetachIdentity{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.FindDuplicates = &contacts.FindDuplicateContacts{DB: a.DB}
 	acts.ListRecordConversations = &conversations.ListRecordConversations{DB: a.DB}
+	acts.ShowContext = &conversations.ShowContext{DB: a.DB}
 
 	acts.ListTags = &tags.ListTags{DB: a.DB}
 	acts.CreateTag = &tags.CreateTag{DB: a.DB, Events: a.Events, Clock: a.Clock, Payload: tagPayload}

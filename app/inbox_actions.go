@@ -57,6 +57,7 @@ type InboxActions struct {
 	UpdateReadState         *conversations.UpdateReadState
 	Search                  *conversations.Search
 	ListRecordConversations *conversations.ListRecordConversations
+	ShowContext             *conversations.ShowContext
 
 	ListTags          *tags.ListTags
 	CreateTag         *tags.CreateTag

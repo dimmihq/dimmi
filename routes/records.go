@@ -31,8 +31,20 @@ func recordRoutes(r *routing.Router, a *app.App) {
 	r.Middleware("csrf", "session", "auth", "workspace")
 
 	tagRoutes(r, a)
+	contextRoutes(r, a)
 	contactDetailRoutes(r, a)
 	companyRoutes(r, a)
+}
+
+/*
+contextRoutes declares what the panel beside a conversation shows about
+its customer.
+*/
+func contextRoutes(r *routing.Router, a *app.App) {
+	c := &v1.ConversationContextController{Show: a.Actions.Inbox.ShowContext, IDs: a.IDs}
+
+	routing.Get(r, "/conversations/{conversation}/context", "conversations.context.show", c.Get).
+		Ability("conversations:read", "contacts:read")
 }
 
 /*
