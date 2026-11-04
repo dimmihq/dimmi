@@ -25,6 +25,7 @@ import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DDocsRouteImport } from './routes/d/docs'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
+import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
@@ -118,6 +119,11 @@ const DNotificationsRoute = DNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DRouteRoute,
 } as any)
+const AuthEmailConfirmRoute = AuthEmailConfirmRouteImport.update({
+  id: '/email/confirm',
+  path: '/email/confirm',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
   id: '/login_/magic',
   path: '/login/magic',
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/d/notifications': typeof DNotificationsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
+  '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByTo {
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d': typeof DIndexRoute
+  '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/d/notifications': typeof DNotificationsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
+  '/_auth/email/confirm': typeof AuthEmailConfirmRoute
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/d/notifications'
     | '/d/'
     | '/d/inbox/$view'
+    | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
     | '/d/procedures/$procedure'
@@ -325,6 +335,7 @@ export interface FileRouteTypes {
     | '/d/feedback'
     | '/d/notifications'
     | '/d'
+    | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
     | '/d/procedures/$procedure'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
     | '/d/notifications'
     | '/d/'
     | '/d/inbox/$view'
+    | '/_auth/email/confirm'
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
     | '/d/procedures/$procedure'
@@ -488,6 +500,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/notifications'
       preLoaderRoute: typeof DNotificationsRouteImport
       parentRoute: typeof DRouteRoute
+    }
+    '/_auth/email/confirm': {
+      id: '/_auth/email/confirm'
+      path: '/email/confirm'
+      fullPath: '/email/confirm'
+      preLoaderRoute: typeof AuthEmailConfirmRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/login_/magic': {
       id: '/_auth/login_/magic'
@@ -647,6 +666,7 @@ interface AuthRouteChildren {
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSignupRoute: typeof AuthSignupRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthEmailConfirmRoute: typeof AuthEmailConfirmRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
   AuthLoginTwoFactorRoute: typeof AuthLoginTwoFactorRoute
 }
@@ -658,6 +678,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSignupRoute: AuthSignupRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthEmailConfirmRoute: AuthEmailConfirmRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,
   AuthLoginTwoFactorRoute: AuthLoginTwoFactorRoute,
 }

@@ -142,7 +142,14 @@ function TeamPage({ team, canManage }: { team: Team; canManage: boolean }) {
         {members.map((member) => (
           <Item
             key={member.id}
-            mark={<Avatar size="md" color={avatarColor(member.user.name)} initials={member.user.name.charAt(0)} />}
+            mark={
+              <Avatar
+                size="md"
+                color={avatarColor(member.user.name)}
+                initials={member.user.name.charAt(0)}
+                src={member.user.avatar_url ?? undefined}
+              />
+            }
             title={member.user.name}
             detail={member.user.email}
           >

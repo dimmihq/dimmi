@@ -77,7 +77,8 @@ export async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = { ...options.headers, Accept: "application/json" };
-  if (body !== undefined) {
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) {
     headers["Content-Type"] = "application/json";
   }
   if (options.workspace) {
@@ -88,7 +89,7 @@ export async function request<T>(
     method,
     headers,
     credentials: "same-origin",
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: isForm ? body : body === undefined ? undefined : JSON.stringify(body),
   });
 
   if (response.status === 204) {

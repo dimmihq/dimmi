@@ -31,6 +31,8 @@ export interface User {
   email_verified: boolean;
   has_password: boolean;
   two_factor_enabled: boolean;
+  avatar_url: string | null;
+  timezone: string | null;
 }
 
 export interface WorkspaceSummary {

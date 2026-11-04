@@ -54,7 +54,7 @@ function Filter({
   );
 }
 
-function Entries({ entries }: { entries: AuditEntry[] }) {
+function Entries({ entries, zone }: { entries: AuditEntry[]; zone?: string }) {
   return (
     <div className="overflow-hidden rounded-2xl bg-background-secondary-default">
       <Table aria-label="Audit log" size="sm" className="[&_th]:border-t-0">
@@ -89,7 +89,7 @@ function Entries({ entries }: { entries: AuditEntry[] }) {
               </TableCell>
               <TableCell>
                 <span className="whitespace-nowrap text-body-2-regular text-text-secondary">
-                  {formatTime(entry.created_at)}
+                  {formatTime(entry.created_at, undefined, zone)}
                 </span>
               </TableCell>
             </TableRow>
@@ -143,7 +143,7 @@ export function AuditLogSettings() {
           />
         </div>
         {error ? <p className="px-3 text-body-2-regular text-text-error-primary">{error.message}</p> : null}
-        <Entries entries={data?.items ?? []} />
+        <Entries zone={me.displayZone} entries={data?.items ?? []} />
         <div className="flex justify-end gap-2">
           <Button
             variant="secondary"

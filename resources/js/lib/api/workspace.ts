@@ -24,7 +24,7 @@ export interface Member {
   id: string;
   role: "owner" | "admin" | "member";
   status: "active" | "deactivated";
-  user: { id: string; name: string; email: string; email_verified: boolean };
+  user: { id: string; name: string; email: string; email_verified: boolean; avatar_url: string | null };
 }
 
 /*

@@ -90,8 +90,8 @@ export function actorDetail(entry: Pick<AuditEntry, "actor" | "ip">): string {
 
 /*
  * formatTime writes a moment as a date and a time in the reader's
- * locale and time zone.
+ * locale, in the time zone given, else the browser's.
  */
-export function formatTime(iso: string, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+export function formatTime(iso: string, locale?: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(iso));
 }
