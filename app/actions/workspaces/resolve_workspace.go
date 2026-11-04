@@ -95,7 +95,7 @@ func (a *ResolveWorkspace) Handle(ctx context.Context, in ResolveWorkspaceInput)
 		return authz.Membership{}, exceptions.ErrWorkspaceSuspended
 	}
 
-	permissions := authz.EffectivePermissions(a.Permissions, enums.Role(member.Role), in.Principal.Granted)
+	permissions := authz.PrincipalPermissions(a.Permissions, enums.Role(member.Role), in.Principal)
 
 	return authz.NewMembership(workspace, member, permissions), nil
 }

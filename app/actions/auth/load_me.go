@@ -171,7 +171,7 @@ func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUI
 	}
 
 	me.Workspace, me.Member = &workspace, &member
-	me.Permissions = authz.EffectivePermissions(a.Permissions, enums.Role(member.Role), me.Principal.Granted)
+	me.Permissions = authz.PrincipalPermissions(a.Permissions, enums.Role(member.Role), me.Principal)
 	me.Abilities = authz.EffectiveAbilities(a.Permissions, me.Permissions)
 
 	return nil

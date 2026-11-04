@@ -100,7 +100,7 @@ func (g *TokenGuard) Resolve(r *fhttp.Request, plain string) (fauth.Principal, e
 		return nil, err
 	}
 
-	member, err := activeMember(r.Context(), g.DB, tok.TenantID, tok.OwnerID)
+	member, minted, err := tokenMember(r.Context(), g.DB, tok)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (g *TokenGuard) Resolve(r *fhttp.Request, plain string) (fauth.Principal, e
 
 	return &Principal{
 		User: user, Kind: KindToken, CredentialID: tok.ID, WorkspaceID: member.WorkspaceID,
-		MemberID: member.ID, Granted: tok.Abilities,
+		MemberID: member.ID, Granted: tok.Abilities, MintedAsRole: minted,
 	}, nil
 }
 
@@ -160,35 +160,50 @@ func liveUser(ctx context.Context, db *database.DB, id ids.UUID) (models.User, e
 }
 
 /*
-activeMember returns the active member a token acts as, read inside
-the token's workspace, or fauth.ErrInvalidToken.
+tokenMember returns the active member a token acts as and the role they
+held when it was minted, read inside the token's workspace, or
+fauth.ErrInvalidToken.
 */
-func activeMember(ctx context.Context, db *database.DB, workspace string, id ids.UUID) (models.WorkspaceMember, error) {
-	workspaceID, err := ids.Parse(workspace)
+func tokenMember(ctx context.Context, db *database.DB, tok token.Token) (models.WorkspaceMember, enums.Role, error) {
+	workspaceID, err := ids.Parse(tok.TenantID)
 	if err != nil {
-		return models.WorkspaceMember{}, fauth.ErrInvalidToken
+		return models.WorkspaceMember{}, "", fauth.ErrInvalidToken
 	}
 
-	var member models.WorkspaceMember
+	var (
+		member models.WorkspaceMember
+		minted *string
+	)
 
-	err = db.Transaction(tenancy.With(ctx, workspace), func(ctx context.Context, tx *database.Tx) error {
-		member, err = models.New(tx).FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{
-			WorkspaceID: workspaceID, ID: id,
+	err = db.Transaction(tenancy.With(ctx, tok.TenantID), func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+
+		member, err = q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{
+			WorkspaceID: workspaceID, ID: tok.OwnerID,
 		})
+		if err != nil {
+			return err
+		}
+
+		minted, err = q.FindTokenMintedRole(ctx, models.FindTokenMintedRoleParams{WorkspaceID: workspaceID, ID: tok.ID})
 
 		return err
 	})
 	if errors.Is(err, database.ErrNotFound) {
-		return models.WorkspaceMember{}, fauth.ErrInvalidToken
+		return models.WorkspaceMember{}, "", fauth.ErrInvalidToken
 	}
 
 	if err != nil {
-		return models.WorkspaceMember{}, fmt.Errorf("load token member: %w", err)
+		return models.WorkspaceMember{}, "", fmt.Errorf("load token member: %w", err)
 	}
 
 	if member.Status != string(enums.MemberStatusActive) {
-		return models.WorkspaceMember{}, fauth.ErrInvalidToken
+		return models.WorkspaceMember{}, "", fauth.ErrInvalidToken
 	}
 
-	return member, nil
+	if minted == nil {
+		return member, "", nil
+	}
+
+	return member, enums.Role(*minted), nil
 }

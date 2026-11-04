@@ -34,6 +34,25 @@ func (q *Queries) CountLiveMemberTokens(ctx context.Context, arg CountLiveMember
 	return count, err
 }
 
+const findTokenMintedRole = `-- name: FindTokenMintedRole :one
+SELECT minted_as_role FROM personal_access_tokens
+WHERE workspace_id = $1::uuid AND id = $2
+`
+
+type FindTokenMintedRoleParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// FindTokenMintedRole returns the role the token's member held when it
+// was minted, NULL when none was recorded.
+func (q *Queries) FindTokenMintedRole(ctx context.Context, arg FindTokenMintedRoleParams) (*string, error) {
+	row := q.db.QueryRow(ctx, findTokenMintedRole, arg.WorkspaceID, arg.ID)
+	var minted_as_role *string
+	err := row.Scan(&minted_as_role)
+	return minted_as_role, err
+}
+
 const findWorkspaceToken = `-- name: FindWorkspaceToken :one
 SELECT
     t.id, t.owner_id, t.name, t.hint, t.abilities, t.expires_at, t.last_used_at, t.last_used_ip, t.revoked_at,
@@ -241,6 +260,24 @@ func (q *Queries) MarkTokenExpiryNotified(ctx context.Context, arg MarkTokenExpi
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const recordTokenMintedRole = `-- name: RecordTokenMintedRole :exec
+UPDATE personal_access_tokens SET minted_as_role = $1
+WHERE workspace_id = $2::uuid AND id = $3
+`
+
+type RecordTokenMintedRoleParams struct {
+	Role        *string  `json:"role"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// RecordTokenMintedRole remembers the role the token's member held when
+// it was minted, the most the token may ever do.
+func (q *Queries) RecordTokenMintedRole(ctx context.Context, arg RecordTokenMintedRoleParams) error {
+	_, err := q.db.Exec(ctx, recordTokenMintedRole, arg.Role, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const renameWorkspaceToken = `-- name: RenameWorkspaceToken :execrows

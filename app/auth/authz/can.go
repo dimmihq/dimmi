@@ -5,9 +5,10 @@
 |
 | A caller's power in a workspace is computed on every request, never
 | stored: the permissions of their role, and for a token only those
-| whose ability group the token holds. Demoting a member therefore
-| shrinks every token they minted at once, and a token can never do
-| more than its member.
+| whose ability group the token holds and that the role it was minted
+| under held. Demoting a member therefore shrinks every token they
+| minted at once, a token can never do more than its member, and a
+| promotion never widens a token minted before it.
 |
 */
 
@@ -50,6 +51,22 @@ func EffectivePermissions(catalog *auth.Catalog, role enums.Role, abilities []st
 
 		return !ok || !slices.Contains(groups, group)
 	})
+}
+
+/*
+PrincipalPermissions returns what the caller may do as a member of the
+role: [EffectivePermissions] for their credential, and for a token only
+what the role it was minted under held as well.
+*/
+func PrincipalPermissions(catalog *auth.Catalog, role enums.Role, p *auth.Principal) []string {
+	held := EffectivePermissions(catalog, role, p.Granted)
+	if p.MintedAsRole == "" {
+		return held
+	}
+
+	ceiling := auth.RolePermissions(p.MintedAsRole)
+
+	return slices.DeleteFunc(held, func(permission string) bool { return !slices.Contains(ceiling, permission) })
 }
 
 /*

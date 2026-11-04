@@ -564,6 +564,7 @@ type PersonalAccessToken struct {
 	WorkspaceID       *ids.UUID  `json:"workspace_id"`
 	ExpiryNotifiedAt  *time.Time `json:"expiry_notified_at"`
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
+	MintedAsRole      *string    `json:"minted_as_role"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 

@@ -39,6 +39,18 @@ JOIN workspace_members m ON m.id = t.owner_id AND m.workspace_id = t.workspace_i
 JOIN users u ON u.id = m.user_id
 WHERE t.workspace_id = @workspace_id::uuid AND t.id = @id;
 
+-- name: RecordTokenMintedRole :exec
+-- RecordTokenMintedRole remembers the role the token's member held when
+-- it was minted, the most the token may ever do.
+UPDATE personal_access_tokens SET minted_as_role = @role
+WHERE workspace_id = @workspace_id::uuid AND id = @id;
+
+-- name: FindTokenMintedRole :one
+-- FindTokenMintedRole returns the role the token's member held when it
+-- was minted, NULL when none was recorded.
+SELECT minted_as_role FROM personal_access_tokens
+WHERE workspace_id = @workspace_id::uuid AND id = @id;
+
 -- name: CountLiveMemberTokens :one
 -- CountLiveMemberTokens counts the member's tokens that still work: not
 -- revoked and not expired.

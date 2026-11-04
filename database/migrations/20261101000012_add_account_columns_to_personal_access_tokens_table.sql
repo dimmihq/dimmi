@@ -11,6 +11,7 @@ ALTER TABLE personal_access_tokens
     ADD COLUMN workspace_id uuid GENERATED ALWAYS AS (tenant_id::uuid) STORED,
     ADD COLUMN expiry_notified_at timestamptz,
     ADD COLUMN revoked_by_member_id uuid REFERENCES workspace_members ON DELETE SET NULL,
+    ADD COLUMN minted_as_role text,
     ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now(),
     ADD CONSTRAINT personal_access_tokens_workspace_id_fkey
         FOREIGN KEY (workspace_id) REFERENCES workspaces ON DELETE CASCADE,
@@ -42,6 +43,7 @@ ALTER TABLE personal_access_tokens
     DROP CONSTRAINT personal_access_tokens_owner_id_fkey,
     DROP CONSTRAINT personal_access_tokens_workspace_id_fkey,
     DROP COLUMN updated_at,
+    DROP COLUMN minted_as_role,
     DROP COLUMN revoked_by_member_id,
     DROP COLUMN expiry_notified_at,
     DROP COLUMN workspace_id;

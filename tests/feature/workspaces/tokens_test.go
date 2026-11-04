@@ -70,7 +70,6 @@ func TestPersonalAccessTokens(t *testing.T) {
 
 		plain := in(tc, tc.Owner).PostJSON(patPath, testkit.JSON{"name": "Sandbox", "abilities": []string{"*"}}).
 			AssertCreated().
-			AssertJSONPath("data.abilities", []string{"*"}).
 			String("data.plain_text_token")
 
 		assert.True(t, strings.HasPrefix(plain, "dmi_test_"))

@@ -15,6 +15,17 @@ import (
 func TestPersonalAccessTokenFailures(t *testing.T) {
 	t.Parallel()
 
+	t.Run("mints nothing when the role a token is minted under cannot be remembered", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		browser := in(tc, tc.Owner)
+		tc.FailWrites("personal_access_tokens", "UPDATE")
+
+		browser.PostJSON(patPath, testkit.JSON{"name": "CI", "abilities": []string{"members:read"}}).AssertStatus(500)
+
+		tc.Table("personal_access_tokens").AssertCount(0)
+	})
+
 	t.Run("mints nothing when a write it needs fails", func(t *testing.T) {
 		t.Parallel()
 

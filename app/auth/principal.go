@@ -25,6 +25,7 @@ import (
 	fauth "github.com/dimmihq/dimmi/framework/auth"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -46,7 +47,9 @@ User is their account. Kind is the kind of credential and CredentialID
 the session or token it was. WorkspaceID is the workspace a token is
 bound to, ids.Nil() for sessions, which reach every workspace of the
 user. MemberID is the member a token acts as. Granted lists the
-credential's abilities. SignIn says how a session was earned, with
+credential's abilities, and MintedAsRole the role a token's member held
+when it was minted, the most the token may ever do, empty when there is
+no such ceiling. SignIn says how a session was earned, with
 AuthenticatedAt the last full sign-in and Confirmed the last time the
 user proved who they are; tokens carry neither.
 */
@@ -57,6 +60,7 @@ type Principal struct {
 	WorkspaceID     ids.UUID
 	MemberID        ids.UUID
 	Granted         []string
+	MintedAsRole    enums.Role
 	SignIn          SignIn
 	AuthenticatedAt time.Time
 	Confirmed       time.Time

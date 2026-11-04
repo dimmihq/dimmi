@@ -7,6 +7,10 @@
 | token acts as the member in this one workspace, with only the ability
 | groups they chose, and never more than their role: what it may do is
 | worked out again on every request, so a demotion shrinks it at once.
+| A promotion never widens it: the role held at minting is remembered as
+| the most the token may ever do, and asking for everything means the
+| groups that role holds, written out one by one. Being trusted with more
+| later should not silently hand more to a script set up earlier.
 |
 | The secret is returned once and only its digest is kept. A token of a
 | test workspace carries the dmi_test_ prefix, so a leaked one is known
@@ -73,8 +77,10 @@ CreatePersonalAccessToken mints a token acting as the caller's member.
 
 Rules:
   - At most twenty tokens a user may mint per hour.
-  - Every ability is a known ability group, or * for every group.
+  - Every ability is a known ability group, or * for every group the
+    member's role holds a permission of, stored as those groups.
   - Every group must hold at least one permission of the member's role.
+  - The member's role is remembered as the token's ceiling.
   - The expiry is in the future and at most five years away.
   - A member holds at most the configured number of live tokens.
   - The owner is mailed and the creation recorded in their security log.
@@ -131,16 +137,15 @@ func (a *CreatePersonalAccessToken) Handle(ctx context.Context, in CreatePersona
 }
 
 /*
-abilities returns the chosen abilities in catalog order, or * alone,
-refusing any that is not a group or that the member's role holds no
-permission of.
+abilities returns the chosen abilities in catalog order, * standing for
+every group the member's role holds a permission of, refusing any that
+is not a group or that the role holds no permission of.
 */
 func (a *CreatePersonalAccessToken) abilities(in CreatePersonalAccessTokenInput) ([]string, error) {
-	if slices.Contains(in.Abilities, appauth.AllAbilities) {
-		return []string{appauth.AllAbilities}, nil
-	}
-
 	allowed := authz.EffectiveAbilities(a.Permissions, in.Membership.Principal.Permissions)
+	if slices.Contains(in.Abilities, appauth.AllAbilities) {
+		return allowed, nil
+	}
 
 	var refused []string
 
@@ -192,6 +197,13 @@ func (a *CreatePersonalAccessToken) mint(
 	})
 	if err != nil {
 		return NewToken{}, fmt.Errorf("mint token: %w", err)
+	}
+
+	err = q.RecordTokenMintedRole(ctx, models.RecordTokenMintedRoleParams{
+		WorkspaceID: m.Workspace.ID, ID: tok.ID, Role: &m.Member.Role,
+	})
+	if err != nil {
+		return NewToken{}, fmt.Errorf("remember role of minted token: %w", err)
 	}
 
 	stored, err := findManaged(ctx, q, m, tok.ID)
