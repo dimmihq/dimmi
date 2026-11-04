@@ -25,7 +25,8 @@ ErrDomainInUse refuses removing a domain addresses still send from.
 ErrDomainCheckThrottled refuses a check asked for too soon after the last.
 ErrDKIMRotationUnsupported refuses rotating a key the install does not
 hold. ErrEmailProviderUnavailable reports a provider that did not answer.
-ErrSendingNotConfigured refuses domains on an install whose customer mail
+ErrDNSSetupUnavailable refuses automatic setup a domain's host does not
+offer. ErrSendingNotConfigured refuses domains on an install whose customer mail
 goes nowhere.
 */
 var (
@@ -44,6 +45,8 @@ var (
 		"This domain's signing key is managed by the email provider.")
 	ErrEmailProviderUnavailable = fault.New(fault.Unavailable, "email_provider_unavailable",
 		"The email provider did not answer. Try again in a moment.")
+	ErrDNSSetupUnavailable = fault.New(fault.Invalid, "dns_setup_unavailable",
+		"Your DNS host cannot add these records for you. Add them by hand instead.")
 	ErrSendingNotConfigured = fault.New(fault.Invalid, "sending_not_configured",
 		"This server does not send customer email through a provider yet.")
 )

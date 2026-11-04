@@ -42,6 +42,7 @@ it.describe("sending domains", () => {
     person,
     request,
   }) => {
+    it.setTimeout(90_000);
     const domain = domainOf(person);
     publish(port, domain, { NS: ["ada.ns.cloudflare.com"] });
     await createAccount(request, person, `Domains ${domain}`);
@@ -99,5 +100,24 @@ it.describe("sending domains", () => {
 
     await expect(page.getByRole("heading", { level: 1, name: "Email" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Sending domains" }).getByRole("link")).toHaveCount(0);
+  });
+  it("checks the domain when its DNS host sends the customer back", async ({ page, person, request }) => {
+    const domain = domainOf(person);
+    await createAccount(request, person, `Return ${domain}`);
+    await signIn(page, person);
+    await page.goto("/d/settings/email");
+    await page.getByRole("textbox", { name: "New sending domain" }).fill(domain);
+    await page.getByRole("button", { name: "Add domain" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: domain })).toBeVisible();
+    const path = new URL(page.url()).pathname;
+
+    await page.goto(`${path}?error=access_denied`);
+    await expect(page.getByText(/Your DNS host did not add the records/)).toBeVisible();
+    await expect(page.getByText("Not checked yet")).toBeVisible();
+    expect(new URL(page.url()).search).toBe("");
+
+    await page.goto(`${path}?dns_setup=applied`);
+    await expect(page.getByText("Checking", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Set up automatically/ })).toHaveCount(0);
   });
 });

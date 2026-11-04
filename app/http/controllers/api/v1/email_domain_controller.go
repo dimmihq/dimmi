@@ -52,7 +52,8 @@ type EmailDomainShowOutput struct {
 }
 
 /*
-EmailDomainController serves the workspace's sending domains. Hosts reads
+EmailDomainController serves the workspace's sending domains. Setups
+finds and starts automatic DNS setup. Hosts reads
 who hosts a domain's DNS, and Base is the server's own address, which
 the domain's links start with.
 */
@@ -64,6 +65,7 @@ type EmailDomainController struct {
 	Change *email.UpdateEmailDomain
 	Remove *email.DeleteEmailDomain
 	Rotate *email.RotateEmailDomainKey
+	Setups *email.DNSSetups
 	Hosts  func(ctx context.Context, domain string) string
 	IDs    *ids.Registry
 	Base   string
@@ -211,7 +213,40 @@ func (c *EmailDomainController) answer(ctx context.Context, row models.EmailDoma
 		hint = c.Hosts(ctx, row.Domain)
 	}
 
-	return &EmailDomainOutput{Body: fhttp.NewResource(resources.NewEmailDomain(ctx, row, hint, c.Base))}
+	out := resources.NewEmailDomain(ctx, row, hint, c.Base)
+	if c.Setups != nil {
+		if setup, ok := c.Setups.Offer(ctx, row); ok {
+			out.DNSSetup = resources.NewDNSSetupOffer(setup)
+		}
+	}
+
+	return &EmailDomainOutput{Body: fhttp.NewResource(out)}
+}
+
+/*
+DNSSetupOutput is the signed link to approve automatic setup.
+*/
+type DNSSetupOutput struct {
+	Body fhttp.Resource[resources.DNSSetupOffer]
+}
+
+/*
+StoreDNSSetup starts automatic setup at the domain's DNS host.
+*/
+func (c *EmailDomainController) StoreDNSSetup(
+	ctx context.Context, in *requests.EmailDomainRequest,
+) (*DNSSetupOutput, error) {
+	id, err := c.domainID(in.Domain)
+	if err != nil {
+		return nil, err
+	}
+
+	setup, err := c.Setups.Start(ctx, membership(ctx), id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DNSSetupOutput{Body: fhttp.NewResource(*resources.NewDNSSetupOffer(setup))}, nil
 }
 
 /*

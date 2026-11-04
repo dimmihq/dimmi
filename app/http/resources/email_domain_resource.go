@@ -42,6 +42,7 @@ type EmailDomain struct {
 	Warnings        []DomainWarning  `json:"warnings"`
 	ProviderHint    string           `json:"provider_hint"`
 	HostGuide       HostGuide        `json:"host_guide"`
+	DNSSetup        *DNSSetupOffer   `json:"dns_setup"`
 	MailFromDomain  *string          `json:"mail_from_domain"`
 	ProviderTrusted bool             `json:"provider_trusted"`
 	FailureReason   *string          `json:"failure_reason"`

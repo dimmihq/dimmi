@@ -36,6 +36,8 @@ func emailSenderRoutes(workspace *routing.Router, a *app.App) {
 		Ability("settings:write").Status(fhttp.StatusNoContent)
 	routing.Post(workspace, "/email-domains/{domain}/checks", "email-domains.checks.store", c.StoreCheck).
 		Ability("settings:write").Status(fhttp.StatusAccepted)
+	routing.Post(workspace, "/email-domains/{domain}/dns-setups", "email-domains.dns-setups.store",
+		c.StoreDNSSetup).Ability("settings:write").Status(fhttp.StatusCreated)
 	routing.Post(workspace, "/email-domains/{domain}/dkim-rotations", "email-domains.dkim-rotations.store",
 		c.StoreRotation).Ability("settings:write").Status(fhttp.StatusCreated)
 }
@@ -59,6 +61,7 @@ func emailDomainController(a *app.App) *v1.EmailDomainController {
 		Change: &email.UpdateEmailDomain{Domains: d, Returns: returns},
 		Remove: &email.DeleteEmailDomain{Domains: d},
 		Rotate: &email.RotateEmailDomainKey{Domains: d},
+		Setups: &email.DNSSetups{Domains: d, HTTP: a.HTTP, Cache: a.Cache, Base: a.Application.Config.App.URL},
 		Hosts:  d.HostHint, IDs: a.IDs, Base: a.Application.Config.App.URL,
 	}
 }

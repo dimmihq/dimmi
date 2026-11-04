@@ -52,6 +52,7 @@ export interface EmailDomain {
   warnings: DomainWarning[];
   provider_hint: string;
   host_guide: HostGuide;
+  dns_setup: { host_name: string } | null;
   mail_from_domain: string | null;
   provider_trusted: boolean;
   failure_reason: string | null;
@@ -102,6 +103,12 @@ export function checkEmailDomain(workspace: string, domain: string): Promise<Ema
 
 export function updateEmailDomain(workspace: string, domain: string, changes: EmailDomainChanges) {
   return request<EmailDomain>("PATCH", `/email-domains/${encodeURIComponent(domain)}`, changes, { workspace });
+}
+
+export function startDNSSetup(workspace: string, domain: string): Promise<{ apply_url: string }> {
+  return request<{ apply_url: string }>("POST", `/email-domains/${encodeURIComponent(domain)}/dns-setups`, undefined, {
+    workspace,
+  });
 }
 
 export function rotateEmailDomainKey(workspace: string, domain: string): Promise<EmailDomain> {

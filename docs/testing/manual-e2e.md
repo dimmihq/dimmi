@@ -481,6 +481,8 @@ for: an ownership TXT record and a signing key TXT record. Checks read real DNS 
 | Check landed | `r show -b a.jar -H "$O" $ED/$EDM` after a few seconds | `last_checked_at` set, `next_check_at` a minute later, records `missing`, warning `dmarc_missing` with its message |
 | Return path and host | `r upd -b a.jar -X PATCH -H "$O" -H "$J" $ED/$EDM -d '{"dns_host":"cloudflare"}'` | 200, `provider_hint: cloudflare`, record `host` values without the domain |
 | New key | `r rot -b a.jar -X POST -H "$O" $ED/$EDM/dkim-rotations` as the owner, then as an admin | 201 with a `dkim_next` record, then 403 |
+| Automatic setup | `r dc -b a.jar -X POST -H "$O" $ED/$EDM/dns-setups` | 422 `dns_setup_unavailable` (needs the `ses` driver, `domain_connect.enabled` and a host that knows the template); the domain shows `dns_setup: null` |
+| Host sends back | open `$W/d/settings/email/domains/$EDM?error=access_denied`, then `?dns_setup=applied` | "Your DNS host did not add the records"; then the domain starts checking |
 | Remove | `r del -b a.jar -X DELETE -H "$O" $ED/$EDM` | 204; `GET` then 404 |
 | Doctor | `bin/dimmi-cloud email:doctor acme-$RUN.test` in `$E2E` with its env | `[ok]` relay line, `[info]` no mail server of its own, `[fail]` no MX for `inbound.e2e.test` (exit 1), `[warn]` DMARC missing |
 | In a browser | open `$W/d/settings/email`, add a domain | the domain page with its records, Copy buttons, the host's steps, "Check now", and "Remove domain" |

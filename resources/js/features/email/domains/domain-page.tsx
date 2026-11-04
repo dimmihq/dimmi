@@ -9,7 +9,7 @@
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
@@ -32,6 +32,7 @@ import { useRealtime } from "@/lib/realtime/context";
 import { channels } from "@/lib/realtime/keys";
 import { useChannel } from "@/lib/realtime/use-channel";
 
+import { DNSSetup } from "./dns-setup";
 import { DomainRecords } from "./domain-records";
 import { DomainStatusChip } from "./domain-status";
 import { HostGuide } from "./host-guide";
@@ -113,6 +114,7 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
   const changes = useDomainChanges(workspace, domain.id);
   const [removing, setRemoving] = useState<"ask" | "force" | null>(null);
   const manage = permissions.includes("email:manage");
+  const applied = useCallback(() => changes.check.mutate(), [changes.check.mutate]);
   const error = changes.check.error ?? changes.rotate.error ?? changes.host.error ?? changes.remove.error;
 
   const remove = async (force: boolean) => {
@@ -144,6 +146,7 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
         <Row label="Domain" description={domain.failure_message ?? undefined}>
           <DomainStatusChip status={domain.status} />
         </Row>
+        <DNSSetup workspace={workspace} domain={domain} manage={manage} onApplied={applied} />
         {domain.warnings.map((warning) => (
           <Row key={`${warning.code}-${warning.host ?? ""}`} label="To fix" description={warning.message} />
         ))}
