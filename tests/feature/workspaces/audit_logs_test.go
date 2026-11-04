@@ -14,6 +14,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/enums"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/database/factories"
@@ -321,6 +322,8 @@ func TestPruneAuditLogs(t *testing.T) {
 		tc.Clock.Travel(400 * 24 * time.Hour)
 		recent := seed(t, tc, "team.created")
 
+		require.NoError(t, tc.App.Queue.Push(t.Context(), jobs.PruneAuditLogsArgs{}))
+
 		keep := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock}
 		require.NoError(t, keep.Handle(t.Context(), nil))
 		tc.Table("audit_logs").AssertHas(testkit.Row{"id": old.ID})
@@ -328,5 +331,56 @@ func TestPruneAuditLogs(t *testing.T) {
 		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365}
 		require.NoError(t, prune.Handle(t.Context(), nil))
 		tc.Table("audit_logs").AssertMissing(testkit.Row{"id": old.ID}).AssertHas(testkit.Row{"id": recent.ID})
+	})
+
+	t.Run("reports a log it cannot reach", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		tc.BreakTable("audit_logs")
+
+		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365}
+		require.Error(t, prune.Handle(t.Context(), nil))
+	})
+}
+
+func TestAuditLogFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("answers a server error when the log cannot be read", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		entry := seed(t, tc, "team.created")
+		owner := in(tc, tc.Owner)
+		tc.BreakTable("audit_logs")
+
+		owner.GetJSON("/api/v1/audit-logs").AssertStatus(500)
+		owner.GetJSON("/api/v1/audit-logs/" + auditID(entry)).AssertStatus(500)
+	})
+
+	t.Run("refuses an entry naming a member the workspace does not have", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		_, err := factories.AuditLog(t.Context(), tc.App, audit.Entry{
+			WorkspaceID: tc.Workspace.Workspace.ID, Event: "team.created", ActorID: ids.New(),
+		})
+
+		require.Error(t, err)
+		tc.Table("audit_logs").AssertMissing(testkit.Row{"event": "team.created"})
+	})
+
+	t.Run("fails an event about a workspace or member that does not exist", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		ws, owner := tc.Workspace.Workspace.ID, tc.Workspace.Owner
+
+		for _, e := range []any{
+			appevents.WorkspaceCreated{WorkspaceID: ids.New(), CreatedBy: owner.UserID},
+			appevents.WorkspaceCreated{WorkspaceID: ws, CreatedBy: ids.New()},
+			appevents.WorkspaceUpdated{WorkspaceID: ids.New(), UpdatedBy: owner.ID, Changes: []string{"name"}},
+			appevents.MemberRoleChanged{WorkspaceID: ws, MemberID: ids.New(), ChangedBy: owner.ID},
+		} {
+			require.Error(t, tc.App.Events.Dispatch(t.Context(), nil, e))
+		}
 	})
 }

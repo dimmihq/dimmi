@@ -73,6 +73,8 @@ func TestPruneSecurityEvents(t *testing.T) {
 		tc.Clock.Travel(400 * 24 * time.Hour)
 		tc.ActingAsOwner()
 
+		require.NoError(t, tc.App.Queue.Push(t.Context(), jobs.PruneSecurityEventsArgs{}))
+
 		keep := &jobs.PruneSecurityEvents{DB: tc.App.DB, Clock: tc.Clock}
 		require.NoError(t, keep.Handle(t.Context(), nil))
 		tc.Table("security_events").AssertCount(2, testkit.Row{"user_id": tc.Owner.ID})
@@ -80,5 +82,16 @@ func TestPruneSecurityEvents(t *testing.T) {
 		prune := &jobs.PruneSecurityEvents{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365}
 		require.NoError(t, prune.Handle(t.Context(), nil))
 		tc.Table("security_events").AssertCount(1, testkit.Row{"user_id": tc.Owner.ID})
+	})
+
+	t.Run("reports a log it cannot reach, and so does the list", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		client := tc.ActingAsOwner()
+		tc.BreakTable("security_events")
+
+		prune := &jobs.PruneSecurityEvents{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365}
+		require.Error(t, prune.Handle(t.Context(), nil))
+		client.GetJSON("/api/v1/user/security-events").AssertStatus(500)
 	})
 }
