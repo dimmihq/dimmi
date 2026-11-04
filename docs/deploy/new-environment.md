@@ -103,8 +103,11 @@ since provisioning resets every role's password.
 
 ```sh
 cd deploy/cdk
-pnpm exec cdk deploy dimmi-staging-app -c env=staging --outputs-file ../dns/outputs/staging.json
+pnpm exec cdk deploy dimmi-staging-app -c env=staging
 ```
+
+Leave out `--outputs-file` here: it would rewrite `staging.json` with this one stack's outputs and drop the mail
+records. The load balancer's addresses do not change when the services start.
 
 Without `paused`, the web service starts its task. Check: the ECS console shows the service with one running task and the
 load balancer's targets turning healthy within about two minutes. Before DNS exists the binary has no certificate for
