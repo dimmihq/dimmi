@@ -16,24 +16,25 @@ import (
 )
 
 type Attachment struct {
-	ID             ids.UUID  `json:"id"`
-	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	MessageID      *ids.UUID `json:"message_id"`
-	UploadedByType string    `json:"uploaded_by_type"`
-	UploadedByID   *ids.UUID `json:"uploaded_by_id"`
-	Disk           string    `json:"disk"`
-	Path           string    `json:"path"`
-	Filename       string    `json:"filename"`
-	ContentType    string    `json:"content_type"`
-	SizeBytes      int64     `json:"size_bytes"`
-	Sha256         *string   `json:"sha256"`
-	Width          *int32    `json:"width"`
-	Height         *int32    `json:"height"`
-	Inline         bool      `json:"inline"`
-	ContentID      *string   `json:"content_id"`
-	ScanStatus     string    `json:"scan_status"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	MessageID      *ids.UUID  `json:"message_id"`
+	UploadedByType string     `json:"uploaded_by_type"`
+	UploadedByID   *ids.UUID  `json:"uploaded_by_id"`
+	Disk           string     `json:"disk"`
+	Path           string     `json:"path"`
+	Filename       string     `json:"filename"`
+	ContentType    string     `json:"content_type"`
+	SizeBytes      int64      `json:"size_bytes"`
+	Sha256         *string    `json:"sha256"`
+	Width          *int32     `json:"width"`
+	Height         *int32     `json:"height"`
+	Inline         bool       `json:"inline"`
+	ContentID      *string    `json:"content_id"`
+	ScanStatus     string     `json:"scan_status"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	UploadedAt     *time.Time `json:"uploaded_at"`
 }
 
 type AuditLog struct {
@@ -155,6 +156,8 @@ type Conversation struct {
 	DeletedAt              *time.Time      `json:"deleted_at"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
+	IsTest                 bool            `json:"is_test"`
+	PreviousConversationID *ids.UUID       `json:"previous_conversation_id"`
 }
 
 type ConversationParticipant struct {
@@ -672,6 +675,68 @@ type UserAuthFactor struct {
 	LastUsedAt      *time.Time        `json:"last_used_at"`
 	CreatedAt       time.Time         `json:"created_at"`
 	UpdatedAt       time.Time         `json:"updated_at"`
+}
+
+type WidgetSession struct {
+	ID               ids.UUID        `json:"id"`
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	WidgetSettingsID ids.UUID        `json:"widget_settings_id"`
+	ContactID        ids.UUID        `json:"contact_id"`
+	TokenHash        []byte          `json:"token_hash"`
+	Kind             string          `json:"kind"`
+	Test             bool            `json:"test"`
+	IdentitySecretID *ids.UUID       `json:"identity_secret_id"`
+	ExternalID       *string         `json:"external_id"`
+	VerifiedAt       *time.Time      `json:"verified_at"`
+	ExpiresAt        time.Time       `json:"expires_at"`
+	RevokedAt        *time.Time      `json:"revoked_at"`
+	RevokeReason     *string         `json:"revoke_reason"`
+	BotScore         int16           `json:"bot_score"`
+	PowSolvedAt      *time.Time      `json:"pow_solved_at"`
+	Origin           *string         `json:"origin"`
+	UserAgent        *string         `json:"user_agent"`
+	IpPrefix         *netip.Addr     `json:"ip_prefix"`
+	Country          *string         `json:"country"`
+	Locale           *string         `json:"locale"`
+	Timezone         *string         `json:"timezone"`
+	CurrentPage      json.RawMessage `json:"current_page"`
+	RecentPages      json.RawMessage `json:"recent_pages"`
+	Context          json.RawMessage `json:"context"`
+	LastSeenAt       time.Time       `json:"last_seen_at"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+}
+
+type WidgetSetting struct {
+	ID                      ids.UUID        `json:"id"`
+	WorkspaceID             ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID     ids.UUID        `json:"channel_connection_id"`
+	Name                    string          `json:"name"`
+	Enabled                 bool            `json:"enabled"`
+	Appearance              json.RawMessage `json:"appearance"`
+	Texts                   json.RawMessage `json:"texts"`
+	Locale                  string          `json:"locale"`
+	ReplyTime               string          `json:"reply_time"`
+	ShowTeamAvatars         bool            `json:"show_team_avatars"`
+	ShowAvailability        bool            `json:"show_availability"`
+	AllowedOrigins          []string        `json:"allowed_origins"`
+	AllowAnonymous          bool            `json:"allow_anonymous"`
+	CollectEmail            string          `json:"collect_email"`
+	RequireEmailWhenOffline bool            `json:"require_email_when_offline"`
+	AttachmentsEnabled      bool            `json:"attachments_enabled"`
+	MaxAttachmentMb         int32           `json:"max_attachment_mb"`
+	HelpCenterID            *ids.UUID       `json:"help_center_id"`
+	HelpTabEnabled          bool            `json:"help_tab_enabled"`
+	ShowBranding            *bool           `json:"show_branding"`
+	ConfigVersion           int64           `json:"config_version"`
+	LastBootAt              *time.Time      `json:"last_boot_at"`
+	LastBootOrigin          *string         `json:"last_boot_origin"`
+	DeletedAt               *time.Time      `json:"deleted_at"`
+	CreatedAt               time.Time       `json:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+	ChangelogTabEnabled     bool            `json:"changelog_tab_enabled"`
+	IntercomShim            bool            `json:"intercom_shim"`
+	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
 }
 
 type Workspace struct {

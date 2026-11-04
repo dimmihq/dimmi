@@ -62,7 +62,7 @@ INSERT INTO attachments (
     $1, $2, 'contact', $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12, $13::timestamptz, $13::timestamptz
 )
-RETURNING id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, path, filename, content_type, size_bytes, sha256, width, height, inline, content_id, scan_status, created_at, updated_at
+RETURNING id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, path, filename, content_type, size_bytes, sha256, width, height, inline, content_id, scan_status, created_at, updated_at, uploaded_at
 `
 
 type CreateEmailAttachmentParams struct {
@@ -119,6 +119,7 @@ func (q *Queries) CreateEmailAttachment(ctx context.Context, arg CreateEmailAtta
 		&i.ScanStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UploadedAt,
 	)
 	return i, err
 }
@@ -215,7 +216,7 @@ func (q *Queries) FindEmailSenderMember(ctx context.Context, arg FindEmailSender
 }
 
 const findLatestThreadConversation = `-- name: FindLatestThreadConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id FROM conversations
 WHERE workspace_id = $1 AND channel_connection_id = $2
   AND external_thread_key = $3 AND deleted_at IS NULL
 ORDER BY created_at DESC
@@ -260,6 +261,8 @@ func (q *Queries) FindLatestThreadConversation(ctx context.Context, arg FindLate
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 	)
 	return i, err
 }

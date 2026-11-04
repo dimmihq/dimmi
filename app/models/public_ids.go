@@ -34,6 +34,8 @@ The prefixes of the account tables and of the tables other parts of the
 product read here.
 */
 const (
+	PrefixWidget             Prefix = "wgt"
+	PrefixWidgetSession      Prefix = "wss"
 	PrefixUser               Prefix = "usr"
 	PrefixWorkspace          Prefix = "ws"
 	PrefixOrganization       Prefix = "org"

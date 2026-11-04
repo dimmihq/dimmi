@@ -75,6 +75,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	}
 
 	registerEmail(p.App, fa)
+	registerWidget(p.App, fa)
 
 	errs := []error{models.RegisterPublicIDs(fa.IDs)}
 
@@ -136,6 +137,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	}
 
 	if err := bootEmail(a); err != nil {
+		return err
+	}
+
+	if err := bootWidget(ctx, a); err != nil {
 		return err
 	}
 
