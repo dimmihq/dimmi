@@ -37,15 +37,19 @@ Check returns nil for a 2xx response and the mail error kind for
 anything else, including a request that never got an answer.
 */
 func Check(name string, resp *httpclient.Response, err error) error {
+	return classify(name+" send", resp, err)
+}
+
+func classify(label string, resp *httpclient.Response, err error) error {
 	if err != nil {
-		return fmt.Errorf("%s send: %w: %w", name, mail.ErrTemporary, err)
+		return fmt.Errorf("%s: %w: %w", label, mail.ErrTemporary, err)
 	}
 
 	if resp.Status >= 200 && resp.Status < 300 {
 		return nil
 	}
 
-	detail := fmt.Sprintf("%s send: status %d: %s", name, resp.Status, truncate(string(resp.Body)))
+	detail := fmt.Sprintf("%s: status %d: %s", label, resp.Status, truncate(string(resp.Body)))
 
 	switch {
 	case resp.Status == http.StatusTooManyRequests:
