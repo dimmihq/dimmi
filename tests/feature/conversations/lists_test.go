@@ -122,6 +122,19 @@ func TestConversationsIndex(t *testing.T) {
 		assert.Empty(t, listed(d.owner.GetJSON(all+"is:mine")))
 		assert.Empty(t, listed(d.owner.GetJSON(all+"is:priority")))
 	})
+
+	t.Run("finds conversations by the customer's name or email", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		rosa := d.customer(t, "rosalind", "Where is my order", "Nothing shipped yet")
+		d.customer(t, "bea", "Export", "The CSV export spins forever")
+		all := "/api/v1/conversations?filter[view]=all&q="
+
+		assert.Equal(t, []string{rosa}, listed(d.owner.GetJSON(all+"rosalind")))
+		assert.Equal(t, []string{rosa}, listed(d.owner.GetJSON(all+"rosa")))
+		assert.Equal(t, []string{rosa}, listed(d.owner.GetJSON(all+"rosalind@example.com")))
+		assert.Empty(t, listed(d.owner.GetJSON(all+"rosalind%20export")))
+	})
 }
 
 func TestConversationNeighbors(t *testing.T) {

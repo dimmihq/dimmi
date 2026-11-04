@@ -174,6 +174,12 @@ WHERE c.workspace_id = $2
             AND m.type <> 'event'
             AND m.search @@ to_tsquery('english', $14::text)
       )
+      OR c.contact_id IN (
+          SELECT ct.id FROM contacts ct
+          WHERE ct.workspace_id = $2
+            AND ct.deleted_at IS NULL
+            AND ct.search @@ to_tsquery('simple', $14::text)
+      )
   )
   AND (
       $15::uuid IS NULL
@@ -232,9 +238,9 @@ type FilterConversationsRow struct {
 // the first passes the sort key and id of the last row it saw, and gets
 // the rows after it in the list's direction. Unread is judged for the
 // member: a message or note someone else wrote after their read marker.
-// The query, when given, is a tsquery the conversation's subject or one
-// of its messages or notes must match; a query of only stop words
-// matches everything.
+// The query, when given, is a tsquery the conversation's subject, one of
+// its messages or notes, or its customer's name, email, phone or external
+// id must match; a query of only stop words matches everything.
 func (q *Queries) FilterConversations(ctx context.Context, arg FilterConversationsParams) ([]FilterConversationsRow, error) {
 	rows, err := q.db.Query(ctx, filterConversations,
 		arg.SortCreated,

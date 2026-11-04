@@ -30,6 +30,7 @@ CREATE TABLE contacts (
     merged_into_id uuid REFERENCES contacts ON DELETE SET NULL,
     search tsvector GENERATED ALWAYS AS (
         to_tsvector('simple', coalesce(name, '') || ' ' || coalesce(email::text, '') || ' '
+            || regexp_replace(coalesce(email::text, ''), '[^[:alnum:]]+', ' ', 'g') || ' '
             || coalesce(phone, '') || ' ' || coalesce(external_id, ''))
     ) STORED,
     deleted_at timestamptz,

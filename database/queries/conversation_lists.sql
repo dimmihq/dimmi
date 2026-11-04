@@ -5,9 +5,9 @@
 -- the first passes the sort key and id of the last row it saw, and gets
 -- the rows after it in the list's direction. Unread is judged for the
 -- member: a message or note someone else wrote after their read marker.
--- The query, when given, is a tsquery the conversation's subject or one
--- of its messages or notes must match; a query of only stop words
--- matches everything.
+-- The query, when given, is a tsquery the conversation's subject, one of
+-- its messages or notes, or its customer's name, email, phone or external
+-- id must match; a query of only stop words matches everything.
 SELECT
     sqlc.embed(c),
     (CASE WHEN @sort_created::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)::timestamptz
@@ -50,6 +50,12 @@ WHERE c.workspace_id = @workspace_id
             AND m.deleted_at IS NULL
             AND m.type <> 'event'
             AND m.search @@ to_tsquery('english', sqlc.narg(query)::text)
+      )
+      OR c.contact_id IN (
+          SELECT ct.id FROM contacts ct
+          WHERE ct.workspace_id = @workspace_id
+            AND ct.deleted_at IS NULL
+            AND ct.search @@ to_tsquery('simple', sqlc.narg(query)::text)
       )
   )
   AND (
