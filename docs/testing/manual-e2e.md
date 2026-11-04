@@ -474,7 +474,7 @@ Sign up a new account first (a workspace created before the inbound domain was s
 
 | Flow | Command | Expect |
 |---|---|---|
-| Default address | `r ea -b a.jar -H "$O" $EA; FWD=$(jq -r '.data[0].forwarding_address' body); EMA=$(jq -r '.data[0].id' body)` | 200, one `email_address`, `forwarding_address` `<slug>@inbound.e2e.test`, `is_default: true`, `setup_guides` from `gmail`, `inbound_verified_at: null` |
+| Default address | `r ea -b a.jar -H "$O" $EA; FWD=$(jq -r '.data[0].forwarding_address' body); EMA=$(jq -r '.data[0].id' body)` | 200, one `email_address`, `forwarding_address` `<slug>@inbound.e2e.test`, `is_default: true`, twelve `setup_guides`, the first `recommended` (`generic` for the e2e domain, which has no MX), each with filled-in `steps`, `warnings` and a `deep_link`, `inbound_verified_at: null` |
 | Source closed without the secret | `r no -X POST $W/webhooks/test/inbound --data-binary 'Subject: x'` | 401 `unauthenticated` |
 | Mail arrives | `mailraw $FWD 'Refund for order 1042' first.$RUN@customer.test '' 'Charged twice.' \| r in -X POST -H "$IN" --data-binary @- "$W/webhooks/test/inbound?to=$FWD"` | 202 `workspaces: 1` |
 | Activity log | `r act -b a.jar -H "$O" $EA/$EMA/inbound-emails` | 200, `status: processed`, `classification: normal`, a `conversation` and `message` id; the address now has `inbound_verified_at` |
@@ -487,6 +487,23 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Forwarding test | `r t -b a.jar -X POST -H "$O" $EA/$EMA/tests` | 201 `email_address_test` `sent_to` the public address; Mailpit holds it with an `X-Dimmi-Test` header; feeding that raw mail back through the source shows `ignore_reason: forwarding_test` |
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
+| Load run | `go build -tags dev -o bin/dimmi-dev ./cmd/dimmi`, then with the same env `bin/dimmi-dev email:load --url $W --to $FWD --secret e2e-inbound-secret --rate 20 --duration 10s` | `sent 200 … 0 refused`, then `processed 200 of 200` with p50 and p95; the full bar is `--rate 50 --duration 10m` with p95 under 10 s, on a database nothing else uses |
+| Metrics | restart with `DIMMI_TELEMETRY__METRICS=prometheus`, send one mail, `curl -s http://127.0.0.1:19090/metrics \| grep dimmi_email_` | `dimmi_email_inbound_total` by source, status and classification, `dimmi_email_inbound_latency_seconds` and `dimmi_email_auth_total`; provider webhooks also add `dimmi_email_inbound_bytes`; no address, subject or body in any label |
+
+Provider webhooks. Restart with `DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=test,postmark,cloudflare`,
+`DIMMI_MAILBOX__SOURCES__POSTMARK__DRIVER=postmark`, `__USERNAME=hook`, `__PASSWORD=pm-secret`,
+`DIMMI_MAILBOX__SOURCES__CLOUDFLARE__DRIVER=cloudflare` and `__SECRET=cf-secret`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Missing secret | start once without `__PASSWORD` | `dimmi serve` exits: `mailbox.sources.postmark username and password: mailbox: required option missing` |
+| Source off | `r off -X POST $W/webhooks/mailgun/inbound/mime -d x` | 404 `inbound_driver_disabled` |
+| Postmark | `mailraw $FWD 'Postmark hello' pm.$RUN@customer.test '' 'Hi.' \| jq -Rs "{MessageID:\"pm-$RUN\",OriginalRecipient:\"$FWD\",RawEmail:.}" \| r pm -X POST -u hook:pm-secret -H "$J" --data-binary @- $W/webhooks/postmark/inbound` | 200; the activity log shows it `processed`; the same again 200 and adds nothing |
+| Postmark without raw | the same with `{MessageID:"pm-x",OriginalRecipient:"'$FWD'"}` | 503; `dimmi email:inbound-doctor` names "Include raw email content in JSON payload" until the next good post |
+| Postmark bad credentials | `-u hook:wrong` | 403 |
+| Cloudflare | `TS=$(date +%s); mailraw $FWD 'Cloudflare hello' cf.$RUN@customer.test '' 'Hi.' > cf.eml; SIG=$(printf '%s.%s' $TS $(shasum -a 256 cf.eml \| cut -d' ' -f1) \| openssl dgst -sha256 -hmac cf-secret -r \| cut -d' ' -f1); r cf -X POST -H 'Content-Type: message/rfc822' -H "X-Inbound-Timestamp: $TS" -H "X-Inbound-Signature: $SIG" -H "X-Inbound-Envelope-From: cf.$RUN@customer.test" -H "X-Inbound-Envelope-To: $FWD" --data-binary @cf.eml $W/webhooks/cloudflare/inbound` | 200 and a conversation; a wrong `SIG` or a `TS` ten minutes old 401 |
+| Worker | `dimmi email:cloudflare-worker` | prints `worker.js` and `wrangler.toml` with `$W/webhooks/cloudflare/inbound` filled in |
+| Doctor | `dimmi email:inbound-doctor` | one line per check (`email.inbound_mx`, `email.inbound_source.*`, `email.inbound_url`, `email.misconfigured.*`, `email.clock`, `email.inbound_recent`); `fail` on the e2e domain's missing MX, `warn` on the http `app.url`, exit 1 |
 
 ### Sending domains
 

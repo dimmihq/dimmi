@@ -27,9 +27,11 @@ type hook struct{ name string }
 
 func (h hook) Name() string { return h.name }
 
-func (h hook) Receive(context.Context, []byte) (*mailbox.Envelope, error) {
+func (h hook) Receive(context.Context, mailbox.Delivery) (*mailbox.Envelope, error) {
 	return &mailbox.Envelope{Source: h.name}, nil
 }
+
+func (h hook) MaxWebhookBytes() int64 { return 1 }
 
 func newManager() *mailbox.Manager {
 	m := mailbox.NewManager(mailbox.Config{
@@ -67,7 +69,7 @@ func TestManager(t *testing.T) {
 		receiver, err := newManager().Receiver("inbound")
 		require.NoError(t, err)
 
-		env, err := receiver.Receive(t.Context(), nil)
+		env, err := receiver.Receive(t.Context(), mailbox.Delivery{})
 		require.NoError(t, err)
 		assert.Equal(t, "inbound", env.Source)
 	})

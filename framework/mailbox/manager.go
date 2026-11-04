@@ -15,12 +15,15 @@
 |         topic_arns: [arn:aws:sns:us-east-1:123456789012:inbound]
 |         disk: ses_inbound
 |
+| A source named after its driver may leave the driver out.
+|
 */
 
 package mailbox
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/manager"
@@ -45,7 +48,27 @@ type Manager struct {
 NewManager returns a manager for the sources in the configuration.
 */
 func NewManager(cfg Config) *Manager {
-	return &Manager{sources: manager.New[Source]("mailbox source", cfg.Sources, cfg.Default)}
+	sections := make(map[string]config.Section, len(cfg.Sources))
+	for name, section := range cfg.Sources {
+		sections[name] = withDriver(name, section)
+	}
+
+	return &Manager{sources: manager.New[Source]("mailbox source", sections, cfg.Default)}
+}
+
+/*
+withDriver names the driver of a section that leaves it out.
+*/
+func withDriver(name string, section config.Section) config.Section {
+	if section.String("driver") != "" {
+		return section
+	}
+
+	named := make(config.Section, len(section)+1)
+	maps.Copy(named, section)
+	named["driver"] = name
+
+	return named
 }
 
 /*

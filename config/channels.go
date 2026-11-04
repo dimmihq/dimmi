@@ -29,9 +29,24 @@ import (
 Inbound sources an install may enable.
 */
 const (
-	InboundSourceSES  = "ses"
-	InboundSourceTest = "test"
+	InboundSourceSES        = "ses"
+	InboundSourcePostmark   = "postmark"
+	InboundSourceMailgun    = "mailgun"
+	InboundSourceSendGrid   = "sendgrid"
+	InboundSourceResend     = "resend"
+	InboundSourceCloudflare = "cloudflare"
+	InboundSourceTest       = "test"
 )
+
+/*
+InboundSources returns every source an install may enable.
+*/
+func InboundSources() []string {
+	return []string{
+		InboundSourceSES, InboundSourcePostmark, InboundSourceMailgun, InboundSourceSendGrid, InboundSourceResend,
+		InboundSourceCloudflare, InboundSourceTest,
+	}
+}
 
 /*
 cloudInboundDomain is the domain the cloud receives mail on.
@@ -74,7 +89,8 @@ default disk when empty. SenderRate mails from one sender within
 SenderRateWindow are kept but never answered automatically;
 SenderQuarantine within SenderQuarantineWindow are set aside as spam.
 ReopenWindow is how long after closing a reply still reopens a
-conversation rather than starting a new one.
+conversation rather than starting a new one. ParseMemoryBudgetMB bounds
+the mail held in memory at once across webhooks and parsing.
 */
 type EmailInboundConfig struct {
 	Drivers                []string      `koanf:"drivers"`
@@ -88,6 +104,7 @@ type EmailInboundConfig struct {
 	SenderQuarantine       int           `default:"100"                    koanf:"sender_quarantine"`
 	SenderQuarantineWindow time.Duration `default:"1h"                     koanf:"sender_quarantine_window"`
 	ReopenWindow           time.Duration `default:"720h"                   koanf:"reopen_window"`
+	ParseMemoryBudgetMB    int64         `default:"64"                     koanf:"parse_memory_budget_mb"`
 }
 
 /*
@@ -140,7 +157,7 @@ check reports the first channel setting that cannot work.
 func (c *ChannelsConfig) check() error {
 	email := c.Email
 	unknown := slices.ContainsFunc(email.Inbound.Drivers, func(s string) bool {
-		return s != InboundSourceSES && s != InboundSourceTest
+		return !slices.Contains(InboundSources(), s)
 	})
 
 	problems := []struct {
@@ -154,6 +171,7 @@ func (c *ChannelsConfig) check() error {
 			"channels.email.inbound.test_secret",
 		},
 		{email.Inbound.MaxMessageBytes <= 0, "channels.email.inbound.max_message_bytes"},
+		{email.Inbound.ParseMemoryBudgetMB <= 0, "channels.email.inbound.parse_memory_budget_mb"},
 		{email.Inbound.MaxAttachments < 0, "channels.email.inbound.max_attachments"},
 		{email.Inbound.SenderRate <= 0 || email.Inbound.SenderRateWindow <= 0, "channels.email.inbound.sender_rate"},
 		{

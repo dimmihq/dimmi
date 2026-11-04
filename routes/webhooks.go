@@ -28,4 +28,6 @@ func Webhooks(a *app.App) {
 
 	a.Router.Handle(fhttp.MethodPost, "/webhooks/test/inbound", "webhooks.test.inbound",
 		fhttp.HandlerFunc(inbound.Store))
+
+	mailboxRoutes(a)
 }
