@@ -28,7 +28,7 @@ func (q *Queries) CountActiveOwners(ctx context.Context, workspaceID ids.UUID) (
 const createWorkspaceMember = `-- name: CreateWorkspaceMember :one
 INSERT INTO workspace_members (workspace_id, user_id, role, joined_via, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds
 `
 
 type CreateWorkspaceMemberParams struct {
@@ -62,6 +62,7 @@ func (q *Queries) CreateWorkspaceMember(ctx context.Context, arg CreateWorkspace
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
@@ -71,7 +72,7 @@ UPDATE workspace_members
 SET status = 'deactivated', deactivated_at = $1::timestamptz, deactivated_by_member_id = $2::uuid,
     updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds
 `
 
 type DeactivateWorkspaceMemberParams struct {
@@ -104,12 +105,13 @@ func (q *Queries) DeactivateWorkspaceMember(ctx context.Context, arg DeactivateW
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
 
 const findOldestActiveMember = `-- name: FindOldestActiveMember :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via FROM workspace_members
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds FROM workspace_members
 WHERE workspace_id = $1 AND role = $2 AND status = 'active'
 ORDER BY created_at, id
 LIMIT 1
@@ -138,6 +140,7 @@ func (q *Queries) FindOldestActiveMember(ctx context.Context, arg FindOldestActi
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
@@ -173,7 +176,7 @@ func (q *Queries) FindUserMembership(ctx context.Context, arg FindUserMembership
 }
 
 const findWorkspaceMember = `-- name: FindWorkspaceMember :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via FROM workspace_members WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds FROM workspace_members WHERE workspace_id = $1 AND id = $2
 `
 
 type FindWorkspaceMemberParams struct {
@@ -198,12 +201,13 @@ func (q *Queries) FindWorkspaceMember(ctx context.Context, arg FindWorkspaceMemb
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
 
 const findWorkspaceMemberByEmail = `-- name: FindWorkspaceMemberByEmail :one
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.undo_send_seconds
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND u.email = $2::citext
@@ -232,12 +236,13 @@ func (q *Queries) FindWorkspaceMemberByEmail(ctx context.Context, arg FindWorksp
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
 
 const findWorkspaceMemberForUser = `-- name: FindWorkspaceMemberForUser :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
 `
 
 type FindWorkspaceMemberForUserParams struct {
@@ -263,12 +268,13 @@ func (q *Queries) FindWorkspaceMemberForUser(ctx context.Context, arg FindWorksp
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
 
 const findWorkspaceMemberWithUser = `-- name: FindWorkspaceMemberWithUser :one
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.undo_send_seconds, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = $2
@@ -302,6 +308,7 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 		&i.WorkspaceMember.DeactivatedAt,
 		&i.WorkspaceMember.DeactivatedByMemberID,
 		&i.WorkspaceMember.JoinedVia,
+		&i.WorkspaceMember.UndoSendSeconds,
 		&i.User.ID,
 		&i.User.Name,
 		&i.User.Email,
@@ -323,7 +330,7 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 }
 
 const listActiveOwners = `-- name: ListActiveOwners :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.undo_send_seconds, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.role = 'owner' AND m.status = 'active'
@@ -359,6 +366,7 @@ func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([
 			&i.WorkspaceMember.DeactivatedAt,
 			&i.WorkspaceMember.DeactivatedByMemberID,
 			&i.WorkspaceMember.JoinedVia,
+			&i.WorkspaceMember.UndoSendSeconds,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
@@ -520,7 +528,7 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 }
 
 const listWorkspaceMembers = `-- name: ListWorkspaceMembers :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.undo_send_seconds, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
@@ -583,6 +591,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 			&i.WorkspaceMember.DeactivatedAt,
 			&i.WorkspaceMember.DeactivatedByMemberID,
 			&i.WorkspaceMember.JoinedVia,
+			&i.WorkspaceMember.UndoSendSeconds,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
@@ -611,7 +620,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 }
 
 const lockWorkspaceMember = `-- name: LockWorkspaceMember :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via FROM workspace_members WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds FROM workspace_members WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockWorkspaceMemberParams struct {
@@ -637,6 +646,7 @@ func (q *Queries) LockWorkspaceMember(ctx context.Context, arg LockWorkspaceMemb
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
@@ -663,7 +673,7 @@ const reactivateWorkspaceMember = `-- name: ReactivateWorkspaceMember :one
 UPDATE workspace_members
 SET status = 'active', role = $1, deactivated_at = NULL, deactivated_by_member_id = NULL, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds
 `
 
 type ReactivateWorkspaceMemberParams struct {
@@ -696,6 +706,7 @@ func (q *Queries) ReactivateWorkspaceMember(ctx context.Context, arg ReactivateW
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }
@@ -728,7 +739,7 @@ func (q *Queries) TouchWorkspaceMemberAccess(ctx context.Context, arg TouchWorks
 const updateWorkspaceMemberRole = `-- name: UpdateWorkspaceMemberRole :one
 UPDATE workspace_members SET role = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, undo_send_seconds
 `
 
 type UpdateWorkspaceMemberRoleParams struct {
@@ -760,6 +771,7 @@ func (q *Queries) UpdateWorkspaceMemberRole(ctx context.Context, arg UpdateWorks
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.UndoSendSeconds,
 	)
 	return i, err
 }

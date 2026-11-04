@@ -33,24 +33,26 @@ shows.
 const excerptLength = 140
 
 /*
-TimelineEntry is one entry of a conversation's timeline.
+TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
+is set while a reply waits to leave and its writer may still undo it.
 */
 type TimelineEntry struct {
-	ID             string          `json:"id"`
-	Object         string          `json:"object"`
-	ConversationID string          `json:"conversation_id"`
-	Type           string          `json:"type"`
-	Author         Author          `json:"author"`
-	Body           *string         `json:"body"`
-	DeliveryStatus *string         `json:"delivery_status"`
-	DeliveryError  *string         `json:"delivery_error"`
-	Substantive    bool            `json:"substantive"`
-	Event          json.RawMessage `json:"event"`
-	SentAt         *time.Time      `json:"sent_at"`
-	EditedAt       *time.Time      `json:"edited_at"`
-	DeletedAt      *time.Time      `json:"deleted_at"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ID              string          `json:"id"`
+	Object          string          `json:"object"`
+	ConversationID  string          `json:"conversation_id"`
+	Type            string          `json:"type"`
+	Author          Author          `json:"author"`
+	Body            *string         `json:"body"`
+	DeliveryStatus  *string         `json:"delivery_status"`
+	DeliveryError   *string         `json:"delivery_error"`
+	Substantive     bool            `json:"substantive"`
+	Event           json.RawMessage `json:"event"`
+	SentAt          *time.Time      `json:"sent_at"`
+	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
+	EditedAt        *time.Time      `json:"edited_at"`
+	DeletedAt       *time.Time      `json:"deleted_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 /*
@@ -87,7 +89,8 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID), Type: m.Type,
 		Author: author(m, contact, by), Body: m.Body, DeliveryStatus: m.DeliveryStatus,
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
-		EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
+		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
 	}
 
 	if m.DeletedAt != nil {

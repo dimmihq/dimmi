@@ -15,6 +15,7 @@
 package routes
 
 import (
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/routing"
 
@@ -55,8 +56,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 			Cursors: cursors,
 		},
 		messages: &v1.ConversationMessageController{
-			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage, IDs: a.IDs,
-			Cursors: cursors,
+			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
+			Undo: acts.UndoReply, IDs: a.IDs, Cursors: cursors,
 		},
 		views: &v1.InboxViewController{
 			Counts: acts.CountConversations, ReadShow: acts.ShowReadState, ReadSave: acts.UpdateReadState,
@@ -117,4 +118,6 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Ability("conversations:write")
 	routing.Post(r, conv+"/notes", "conversations.notes.store", c.messages.StoreNote).
 		Ability("conversations:write")
+	routing.Delete(r, conv+"/messages/{message}", "conversations.messages.destroy", c.messages.Destroy).
+		Ability("conversations:write").Status(fhttp.StatusOK)
 }

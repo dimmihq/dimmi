@@ -194,7 +194,7 @@ func (q *Queries) CountUnreadConversations(ctx context.Context, arg CountUnreadC
 }
 
 const latestMessagesOf = `-- name: LatestMessagesOf :many
-SELECT DISTINCT ON (conversation_id) id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT DISTINCT ON (conversation_id) id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1
   AND conversation_id = ANY ($2::uuid[])
   AND type = 'message'
@@ -242,6 +242,8 @@ func (q *Queries) LatestMessagesOf(ctx context.Context, arg LatestMessagesOfPara
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}

@@ -40,7 +40,16 @@ type ReplyRequest struct {
 		ExpectedLastMessageID *string     `json:"expected_last_message_id,omitempty"`
 		Then                  *string     `json:"then,omitempty"`
 		Snooze                *SnoozeBody `json:"snooze,omitempty"`
+		Delay                 bool        `json:"delay,omitempty"`
 	}
+}
+
+/*
+MessageRequest names one entry of a conversation's timeline.
+*/
+type MessageRequest struct {
+	Conversation string `path:"conversation"`
+	Message      string `path:"message"`
 }
 
 /*

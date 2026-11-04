@@ -85,16 +85,22 @@ func (d Delivery) Plan(conn models.ChannelConnection, contact models.Contact) (R
 
 /*
 Dispatch hands a pending reply to its job, in the transaction that
-wrote it, so the job only runs once the reply is committed.
+wrote it, so the job only runs once the reply is committed, and not
+before the moment a waiting reply is held until.
 */
 func (d Delivery) Dispatch(ctx context.Context, tx *database.Tx, msg models.Message) error {
 	if msg.DeliveryStatus == nil || *msg.DeliveryStatus != string(enums.DeliveryStatusPending) {
 		return nil
 	}
 
+	var opts []queue.Opt
+	if msg.ScheduledSendAt != nil {
+		opts = append(opts, queue.At(*msg.ScheduledSendAt))
+	}
+
 	err := d.Queue.PushTx(ctx, tx, jobs.SendChannelMessageArgs{
 		WorkspaceID: msg.WorkspaceID, ConversationID: msg.ConversationID, MessageID: msg.ID,
-	})
+	}, opts...)
 	if err != nil {
 		return fmt.Errorf("queue delivery: %w", err)
 	}

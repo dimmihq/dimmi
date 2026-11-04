@@ -25,6 +25,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/messages"
+	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -68,6 +69,7 @@ type ConversationMessageController struct {
 	Reply   *messages.ReplyToConversation
 	Note    *messages.AddNote
 	Relay   *messages.AddContactMessage
+	Undo    *messages.UndoReply
 	IDs     *ids.Registry
 	Cursors *pagination.Cursors
 }
@@ -186,7 +188,7 @@ func (c *ConversationMessageController) StoreReply(
 	b := in.Body
 	reply := messages.ReplyInput{
 		Membership: membership(ctx), Ref: ref, Body: b.Body, ClientMessageID: b.ClientMessageID,
-		Then: messages.ThenKeep, MutationID: mutationID(ctx),
+		Then: messages.ThenKeep, Delay: b.Delay && bySession(ctx), MutationID: mutationID(ctx),
 	}
 
 	if b.Then != nil {
@@ -279,4 +281,61 @@ func writtenOutput(w messages.Written) *WrittenOutput {
 	out.Body.Meta.Conversation = resources.NewConversation(w.Conversation)
 
 	return out
+}
+
+/*
+UndoneOutput is a reply taken back: its text, so the composer holds it
+again.
+*/
+type UndoneOutput struct {
+	Body struct {
+		Data struct {
+			Object string `json:"object"`
+			Undone bool   `json:"undone"`
+			Body   string `json:"body"`
+		} `json:"data"`
+		Meta struct {
+			Conversation resources.Conversation `json:"conversation"`
+		} `json:"meta"`
+	}
+}
+
+/*
+Destroy takes back one of the caller's replies still waiting to leave.
+*/
+func (c *ConversationMessageController) Destroy(
+	ctx context.Context, in *requests.MessageRequest,
+) (*UndoneOutput, error) {
+	ref, err := conversationRef(c.IDs, in.Conversation)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := c.IDs.Decode(string(models.PrefixMessage), in.Message)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	undone, err := c.Undo.Handle(ctx, messages.UndoInput{
+		Membership: membership(ctx), Ref: ref, MessageID: id, MutationID: mutationID(ctx),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := &UndoneOutput{}
+	out.Body.Data.Object, out.Body.Data.Undone, out.Body.Data.Body = "message", true, undone.Body
+	out.Body.Meta.Conversation = resources.NewConversation(undone.Conversation)
+
+	return out, nil
+}
+
+/*
+bySession reports whether the request came from a signed-in browser,
+the only caller whose replies wait for undo; programs send at once.
+*/
+func bySession(ctx context.Context) bool {
+	p, ok := auth.CurrentPrincipal(ctx)
+
+	return ok && p.Kind == auth.KindSession
 }

@@ -130,14 +130,14 @@ export default function RichEditor({
   linkRef.current = () => setLinking((editor?.getAttributes("link").href as string | undefined) ?? "https://");
 
   useEffect(() => {
-    if (editor && editor.getMarkdown() !== value) {
+    if (editor && !editor.isDestroyed && editor.isInitialized && editor.getMarkdown() !== value) {
       editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
     }
   }, [editor, value]);
 
   useEffect(() => {
-    if (focusKey) {
-      editor?.commands.focus("end");
+    if (focusKey && editor && !editor.isDestroyed && editor.isInitialized) {
+      editor.commands.focus("end");
     }
   }, [editor, focusKey]);
 

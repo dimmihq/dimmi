@@ -69,6 +69,7 @@ func bootInbox(a *app.App) error {
 		},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		UndoReply:         &messages.UndoReply{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
 	bootWorkbench(a)

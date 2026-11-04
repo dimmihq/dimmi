@@ -22,7 +22,7 @@ INSERT INTO messages (
     $9, $10, $11, $12, $13, $14,
     $15, $16, $16
 )
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type CreateMessageParams struct {
@@ -92,14 +92,17 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1
   AND conversation_id = $2
+  AND undone_at IS NULL
   AND (
       $3::uuid IS NULL
       OR (created_at, id) > ($4::timestamptz, $3::uuid)
@@ -118,7 +121,8 @@ type ListMessagesParams struct {
 
 // ListMessages returns a page of a conversation's timeline, oldest
 // first. A page after the first passes the created_at and id of the last
-// message it saw, and gets those that came after it.
+// message it saw, and gets those that came after it. Undone replies are
+// left out.
 func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]Message, error) {
 	rows, err := q.db.Query(ctx, listMessages,
 		arg.WorkspaceID,
@@ -158,6 +162,8 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -167,4 +173,326 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockMessage = `-- name: LockMessage :one
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND id = $3
+FOR UPDATE
+`
+
+type LockMessageParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+	ID             ids.UUID `json:"id"`
+}
+
+// LockMessage returns the entry with the id in the conversation and holds
+// its row until the transaction ends.
+func (q *Queries) LockMessage(ctx context.Context, arg LockMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, lockMessage, arg.WorkspaceID, arg.ConversationID, arg.ID)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
+	)
+	return i, err
+}
+
+const releaseScheduledMessage = `-- name: ReleaseScheduledMessage :exec
+UPDATE messages SET scheduled_send_at = NULL, updated_at = $1 WHERE workspace_id = $2 AND id = $3
+`
+
+type ReleaseScheduledMessageParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// ReleaseScheduledMessage ends a reply's wait as it starts to leave, so
+// it can no longer be undone.
+func (q *Queries) ReleaseScheduledMessage(ctx context.Context, arg ReleaseScheduledMessageParams) error {
+	_, err := q.db.Exec(ctx, releaseScheduledMessage, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const restoreConversationState = `-- name: RestoreConversationState :one
+UPDATE conversations
+SET status = $1::text,
+    snoozed_until = CASE WHEN $1::text = 'snoozed' THEN $2::timestamptz END,
+    closed_at = CASE WHEN $1::text = 'closed' THEN coalesce(closed_at, $3::timestamptz) END,
+    assignee_member_id = $4::uuid, updated_at = $3::timestamptz
+WHERE workspace_id = $5 AND id = $6
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+`
+
+type RestoreConversationStateParams struct {
+	Status           string     `json:"status"`
+	SnoozedUntil     *time.Time `json:"snoozed_until"`
+	Now              time.Time  `json:"now"`
+	AssigneeMemberID *ids.UUID  `json:"assignee_member_id"`
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	ID               ids.UUID   `json:"id"`
+}
+
+// RestoreConversationState puts back the status, snooze and holder an
+// undone reply changed.
+func (q *Queries) RestoreConversationState(ctx context.Context, arg RestoreConversationStateParams) (Conversation, error) {
+	row := q.db.QueryRow(ctx, restoreConversationState,
+		arg.Status,
+		arg.SnoozedUntil,
+		arg.Now,
+		arg.AssigneeMemberID,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Conversation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Number,
+		&i.InboxID,
+		&i.ChannelConnectionID,
+		&i.ContactID,
+		&i.Subject,
+		&i.Status,
+		&i.Spam,
+		&i.AssigneeMemberID,
+		&i.AssigneeTeamID,
+		&i.AiState,
+		&i.SnoozedUntil,
+		&i.ExternalThreadKey,
+		&i.Source,
+		&i.FirstCustomerMessageAt,
+		&i.LastCustomerMessageAt,
+		&i.FirstReplyAt,
+		&i.LastReplyAt,
+		&i.LastMessageAt,
+		&i.ClosedAt,
+		&i.MessageCount,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.PreviousConversationID,
+		&i.IsTest,
+		&i.Search,
+		&i.Priority,
+	)
+	return i, err
+}
+
+const scheduleMessage = `-- name: ScheduleMessage :one
+UPDATE messages
+SET scheduled_send_at = $1, metadata = metadata || $2::jsonb, updated_at = $3
+WHERE workspace_id = $4 AND id = $5
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+`
+
+type ScheduleMessageParams struct {
+	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
+	Metadata        json.RawMessage `json:"metadata"`
+	Now             time.Time       `json:"now"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	ID              ids.UUID        `json:"id"`
+}
+
+// ScheduleMessage holds a reply until the moment, keeping what undoing it
+// puts back in its metadata.
+func (q *Queries) ScheduleMessage(ctx context.Context, arg ScheduleMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, scheduleMessage,
+		arg.ScheduledSendAt,
+		arg.Metadata,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
+	)
+	return i, err
+}
+
+const uncountConversationMessage = `-- name: UncountConversationMessage :one
+UPDATE conversations AS c
+SET message_count = greatest(c.message_count - 1, 0),
+    last_message_id = latest.id,
+    last_message_at = latest.created_at,
+    waiting_since = $1,
+    first_reply_at = $2,
+    last_reply_at = $3,
+    updated_at = $4
+FROM (
+    SELECT (
+        SELECT m.id FROM messages m
+        WHERE m.workspace_id = $5 AND m.conversation_id = $6::uuid AND m.type = 'message'
+          AND m.undone_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ) AS id, (
+        SELECT m.created_at FROM messages m
+        WHERE m.workspace_id = $5 AND m.conversation_id = $6::uuid AND m.type = 'message'
+          AND m.undone_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ) AS created_at
+) AS latest
+WHERE c.workspace_id = $5 AND c.id = $6::uuid
+RETURNING c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.waiting_since, c.last_activity_at, c.last_message_id, c.previous_conversation_id, c.is_test, c.search, c.priority
+`
+
+type UncountConversationMessageParams struct {
+	WaitingSince *time.Time `json:"waiting_since"`
+	FirstReplyAt *time.Time `json:"first_reply_at"`
+	LastReplyAt  *time.Time `json:"last_reply_at"`
+	Now          time.Time  `json:"now"`
+	WorkspaceID  ids.UUID   `json:"workspace_id"`
+	ID           ids.UUID   `json:"id"`
+}
+
+// UncountConversationMessage takes an undone reply out of the
+// conversation's counts and puts back what the reply changed, the latest
+// live message becoming the last again.
+func (q *Queries) UncountConversationMessage(ctx context.Context, arg UncountConversationMessageParams) (Conversation, error) {
+	row := q.db.QueryRow(ctx, uncountConversationMessage,
+		arg.WaitingSince,
+		arg.FirstReplyAt,
+		arg.LastReplyAt,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Conversation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Number,
+		&i.InboxID,
+		&i.ChannelConnectionID,
+		&i.ContactID,
+		&i.Subject,
+		&i.Status,
+		&i.Spam,
+		&i.AssigneeMemberID,
+		&i.AssigneeTeamID,
+		&i.AiState,
+		&i.SnoozedUntil,
+		&i.ExternalThreadKey,
+		&i.Source,
+		&i.FirstCustomerMessageAt,
+		&i.LastCustomerMessageAt,
+		&i.FirstReplyAt,
+		&i.LastReplyAt,
+		&i.LastMessageAt,
+		&i.ClosedAt,
+		&i.MessageCount,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.PreviousConversationID,
+		&i.IsTest,
+		&i.Search,
+		&i.Priority,
+	)
+	return i, err
+}
+
+const undoMessage = `-- name: UndoMessage :one
+UPDATE messages
+SET undone_at = $1::timestamptz, body = '', body_html = NULL, scheduled_send_at = NULL, delivery_status = 'failed',
+    delivery_error = 'canceled', updated_at = $1
+WHERE workspace_id = $2 AND id = $3
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+`
+
+type UndoMessageParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// UndoMessage takes back a reply still waiting to leave: its text is
+// emptied, it is marked failed for good and it is shown nowhere again.
+func (q *Queries) UndoMessage(ctx context.Context, arg UndoMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, undoMessage, arg.Now, arg.WorkspaceID, arg.ID)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
+	)
+	return i, err
 }

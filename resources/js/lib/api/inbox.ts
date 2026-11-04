@@ -103,6 +103,7 @@ export interface Message {
   author: Author;
   body: string | null;
   delivery_status: string | null;
+  scheduled_send_at?: string | null;
   event: TimelineEvent | null;
   deleted_at: string | null;
   created_at: string;
@@ -303,9 +304,24 @@ export function reply(write: Write, id: string, body: string, then?: Then): Prom
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
-    { body, client_message_id: crypto.randomUUID(), ...after },
+    { body, client_message_id: crypto.randomUUID(), delay: true, ...after },
     writeOptions(write),
   );
+}
+
+/*
+ * undoReply takes back a reply still waiting to leave and returns its
+ * text, for the composer to hold again.
+ */
+export async function undoReply(write: Write, id: string, message: string): Promise<string> {
+  const undone = await request<{ body: string }>(
+    "DELETE",
+    `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}`,
+    undefined,
+    writeOptions(write),
+  );
+
+  return undone.body;
 }
 
 export function addNote(write: Write, id: string, body: string): Promise<Message> {

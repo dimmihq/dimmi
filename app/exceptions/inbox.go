@@ -188,3 +188,8 @@ var (
 	ErrDraftExists = fault.New(fault.Conflict, "draft_exists",
 		"There is already a draft of this conversation. Update it instead.")
 )
+
+/*
+ErrAlreadySent refuses to undo a reply whose wait is over: it has left.
+*/
+var ErrAlreadySent = fault.New(fault.Conflict, "already_sent", "This reply has already been sent.")

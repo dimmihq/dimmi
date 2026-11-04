@@ -77,7 +77,14 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * customers), an internal note, or an event such as a handover.
  */
 export type ThreadEntry =
-  | { kind: "customer" | "teammate" | "dimmi" | "note"; id: string; author: string; at: string; text: string }
+  | {
+      kind: "customer" | "teammate" | "dimmi" | "note";
+      id: string;
+      author: string;
+      at: string;
+      text: string;
+      held?: boolean;
+    }
   | { kind: "event"; id: string; at: string; text: string };
 
 const statusWords: Record<string, string> = {
@@ -123,5 +130,5 @@ export function toEntry(message: Message): ThreadEntry {
     return { kind: "dimmi", id: message.id, author, at, text };
   }
 
-  return { kind: "teammate", id: message.id, author, at, text };
+  return { kind: "teammate", id: message.id, author, at, text, held: Boolean(message.scheduled_send_at) };
 }

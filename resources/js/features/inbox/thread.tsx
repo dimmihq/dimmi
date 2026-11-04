@@ -8,7 +8,7 @@
  * and a lock. Every message's Markdown is rendered. Below the thread sits the composer; R and N open it for a
  * reply or a note from anywhere, and O opens or closes Operator.
  */
-import { RiLock2Line, RiSparkling2Line } from "@remixicon/react";
+import { RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -60,6 +60,12 @@ function Tag({ entry }: { entry: Said }) {
         </Chip>
       ) : null}
       <span className="text-body-2-regular text-text-tertiary">{entry.at}</span>
+      {entry.held ? (
+        <span className="flex items-center gap-0.5 text-body-2-regular text-text-tertiary">
+          <RiTimeLine aria-hidden className="size-3.5" />
+          Sending
+        </span>
+      ) : null}
     </span>
   );
 }

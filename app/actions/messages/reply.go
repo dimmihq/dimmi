@@ -52,8 +52,10 @@ const (
 ReplyInput is who replies to which conversation, and the reply.
 ClientMessageID makes a retried request find its first reply.
 ExpectedLastMessageID is the newest message the replier saw. Then is
-one of the Then values, with Snooze saying until when. MutationID is
-the id the client gave the change, empty when it gave none.
+one of the Then values, with Snooze saying until when. Delay holds the
+reply for the caller's undo window on a channel that cannot take it
+back. MutationID is the id the client gave the change, empty when it
+gave none.
 */
 type ReplyInput struct {
 	Membership            authz.Membership
@@ -63,6 +65,7 @@ type ReplyInput struct {
 	ExpectedLastMessageID *ids.UUID
 	Then                  string
 	Snooze                SnoozeInput
+	Delay                 bool
 	MutationID            string
 }
 
@@ -157,29 +160,31 @@ func (a *ReplyToConversation) Handle(ctx context.Context, in ReplyInput) (Writte
 }
 
 /*
-write writes the reply, hands it to its channel, ends the caller's
-reply draft, takes the conversation and applies what comes after.
+write writes the reply, holds it for the undo window when asked, hands
+it to its channel, ends the caller's reply draft, takes the
+conversation and applies what comes after.
 */
 func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInput, key *string) error {
-	conn, err := conversations.Connection(ctx, s.w.Q, s.c)
+	route, err := a.route(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	contact, err := s.w.Q.FindContact(ctx, models.FindContactParams{WorkspaceID: s.c.WorkspaceID, ID: s.c.ContactID})
-	if err != nil {
-		return fmt.Errorf("find contact: %w", err)
-	}
-
-	route, err := a.Delivery.Plan(conn, contact)
-	if err != nil {
-		return err
+	before, window := stateOf(s.c), time.Duration(0)
+	if in.Delay {
+		window = undoWindow(s.m, route)
 	}
 
 	if s.msg, s.c, err = s.w.Append(ctx, s.c, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: in.Body, DeliveryStatus: &route.Status, DedupeKey: key,
 	}); err != nil {
 		return err
+	}
+
+	if window > 0 {
+		if err := s.hold(ctx, window, before); err != nil {
+			return err
+		}
 	}
 
 	if err := a.Delivery.Dispatch(ctx, s.w.Tx, s.msg); err != nil {
@@ -198,7 +203,28 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 		}
 	}
 
-	return s.then(ctx, in)
+	if err := s.then(ctx, in); err != nil || window == 0 {
+		return err
+	}
+
+	return s.settle(ctx, before)
+}
+
+/*
+route finds how the reply travels to the conversation's customer.
+*/
+func (a *ReplyToConversation) route(ctx context.Context, s *session) (conversations.Route, error) {
+	conn, err := conversations.Connection(ctx, s.w.Q, s.c)
+	if err != nil {
+		return conversations.Route{}, err
+	}
+
+	contact, err := s.w.Q.FindContact(ctx, models.FindContactParams{WorkspaceID: s.c.WorkspaceID, ID: s.c.ContactID})
+	if err != nil {
+		return conversations.Route{}, fmt.Errorf("find contact: %w", err)
+	}
+
+	return a.Delivery.Plan(conn, contact)
 }
 
 /*

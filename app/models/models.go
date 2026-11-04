@@ -462,6 +462,8 @@ type Message struct {
 	UpdatedAt           time.Time               `json:"updated_at"`
 	Search              database.SearchDocument `json:"search"`
 	ChannelConnectionID *ids.UUID               `json:"channel_connection_id"`
+	ScheduledSendAt     *time.Time              `json:"scheduled_send_at"`
+	UndoneAt            *time.Time              `json:"undone_at"`
 }
 
 type MessageMention struct {
@@ -770,4 +772,5 @@ type WorkspaceMember struct {
 	DeactivatedAt         *time.Time `json:"deactivated_at"`
 	DeactivatedByMemberID *ids.UUID  `json:"deactivated_by_member_id"`
 	JoinedVia             *string    `json:"joined_via"`
+	UndoSendSeconds       *int16     `json:"undo_send_seconds"`
 }

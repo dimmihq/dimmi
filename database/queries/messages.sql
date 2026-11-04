@@ -16,13 +16,83 @@ RETURNING *;
 -- name: ListMessages :many
 -- ListMessages returns a page of a conversation's timeline, oldest
 -- first. A page after the first passes the created_at and id of the last
--- message it saw, and gets those that came after it.
+-- message it saw, and gets those that came after it. Undone replies are
+-- left out.
 SELECT * FROM messages
 WHERE workspace_id = @workspace_id
   AND conversation_id = @conversation_id
+  AND undone_at IS NULL
   AND (
       sqlc.narg(after_id)::uuid IS NULL
       OR (created_at, id) > (sqlc.narg(after_created_at)::timestamptz, sqlc.narg(after_id)::uuid)
   )
 ORDER BY created_at, id
 LIMIT @row_limit;
+
+-- name: ScheduleMessage :one
+-- ScheduleMessage holds a reply until the moment, keeping what undoing it
+-- puts back in its metadata.
+UPDATE messages
+SET scheduled_send_at = @scheduled_send_at, metadata = metadata || @metadata::jsonb, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: LockMessage :one
+-- LockMessage returns the entry with the id in the conversation and holds
+-- its row until the transaction ends.
+SELECT * FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id = @id
+FOR UPDATE;
+
+-- name: ReleaseScheduledMessage :exec
+-- ReleaseScheduledMessage ends a reply's wait as it starts to leave, so
+-- it can no longer be undone.
+UPDATE messages SET scheduled_send_at = NULL, updated_at = @now WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: UndoMessage :one
+-- UndoMessage takes back a reply still waiting to leave: its text is
+-- emptied, it is marked failed for good and it is shown nowhere again.
+UPDATE messages
+SET undone_at = @now::timestamptz, body = '', body_html = NULL, scheduled_send_at = NULL, delivery_status = 'failed',
+    delivery_error = 'canceled', updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: UncountConversationMessage :one
+-- UncountConversationMessage takes an undone reply out of the
+-- conversation's counts and puts back what the reply changed, the latest
+-- live message becoming the last again.
+UPDATE conversations AS c
+SET message_count = greatest(c.message_count - 1, 0),
+    last_message_id = latest.id,
+    last_message_at = latest.created_at,
+    waiting_since = @waiting_since,
+    first_reply_at = @first_reply_at,
+    last_reply_at = @last_reply_at,
+    updated_at = @now
+FROM (
+    SELECT (
+        SELECT m.id FROM messages m
+        WHERE m.workspace_id = @workspace_id AND m.conversation_id = @id::uuid AND m.type = 'message'
+          AND m.undone_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ) AS id, (
+        SELECT m.created_at FROM messages m
+        WHERE m.workspace_id = @workspace_id AND m.conversation_id = @id::uuid AND m.type = 'message'
+          AND m.undone_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ) AS created_at
+) AS latest
+WHERE c.workspace_id = @workspace_id AND c.id = @id::uuid
+RETURNING c.*;
+
+-- name: RestoreConversationState :one
+-- RestoreConversationState puts back the status, snooze and holder an
+-- undone reply changed.
+UPDATE conversations
+SET status = @status::text,
+    snoozed_until = CASE WHEN @status::text = 'snoozed' THEN sqlc.narg('snoozed_until')::timestamptz END,
+    closed_at = CASE WHEN @status::text = 'closed' THEN coalesce(closed_at, @now::timestamptz) END,
+    assignee_member_id = sqlc.narg('assignee_member_id')::uuid, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;

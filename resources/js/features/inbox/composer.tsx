@@ -22,6 +22,7 @@ import { type DragEvent, useEffect, useRef, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import type { Message } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
@@ -33,6 +34,8 @@ import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
 import { type Mode, modes } from "./modes";
 import { SendMenu } from "./send-menu";
+import { UndoToast } from "./undo/undo-toast";
+import { useHeld } from "./undo/use-held";
 import { useAttachments } from "./use-attachments";
 import type { Report } from "./use-typing-report";
 
@@ -40,7 +43,7 @@ import type { Report } from "./use-typing-report";
  * Send sends what the composer holds as a reply or a note, and for a
  * reply what then happens to the conversation: close or snooze.
  */
-export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Promise<unknown>;
+export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Promise<Message | undefined>;
 
 const surface =
   "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
@@ -162,6 +165,10 @@ function Panel({
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const note = mode === "note";
+  const held = useHeld(workspace, conversation, (body) => {
+    drafts.reply.edit(body);
+    onModeChange("reply");
+  });
   const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
 
   const text = draft.body.trim();
@@ -174,9 +181,10 @@ function Panel({
     onTyping(false);
     draft.pause();
     try {
-      await onSend(mode, text, note ? undefined : then);
+      const sent = await onSend(mode, text, note ? undefined : then);
       draft.sent();
       attachments.clear();
+      held.hold(sent);
     } catch (error) {
       draft.edit(draft.body);
       setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
@@ -230,6 +238,7 @@ function Panel({
         )}
       >
         <div className="flex flex-col gap-3 px-1.5">
+          <UndoToast held={held} />
           <DraftConflict draft={draft} />
           <AttachmentStrip files={attachments.files} onRemove={attachments.remove} />
           <ComposerField
