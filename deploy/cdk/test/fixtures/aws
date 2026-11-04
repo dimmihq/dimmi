@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# A stand-in for the AWS CLI that answers the calls the release scripts make
+# from files in $FAKE_AWS, and records every call in $FAKE_AWS/calls.
+
+set -euo pipefail
+printf '%s\n' "$*" >>"$FAKE_AWS/calls"
+
+arg() {
+  local name="$1"
+  shift
+  while [ $# -gt 0 ]; do
+    if [ "$1" = "$name" ]; then
+      printf '%s' "$2"
+      return
+    fi
+    shift
+  done
+}
+
+case "$1 $2" in
+"cloudformation describe-stacks")
+  key="$(arg --query "$@" | sed -E "s/.*OutputKey=='([A-Za-z]+)'.*/\1/")"
+  cat "$FAKE_AWS/outputs/$key"
+  ;;
+"ecr describe-images")
+  tag="$(arg --image-ids "$@")"
+  tag="${tag#imageTag=}"
+  [ -f "$FAKE_AWS/tags/$tag" ] || exit 254
+  cat "$FAKE_AWS/tags/$tag"
+  ;;
+"ecr batch-get-image")
+  digest="$(arg --image-ids "$@")"
+  printf 'manifest-of-%s\n' "${digest#imageDigest=}"
+  ;;
+"ecr put-image")
+  manifest="$(arg --image-manifest "$@")"
+  printf '%s\n' "${manifest#manifest-of-}" >"$FAKE_AWS/tags/$(arg --image-tag "$@")"
+  ;;
+"ecs run-task")
+  printf 'task/%s\n' "$(arg --task-definition "$@")"
+  ;;
+"ecs describe-tasks")
+  task="$(arg --tasks "$@")"
+  cat "$FAKE_AWS/exit-${task#task/}" 2>/dev/null || echo 0
+  ;;
+"ecs describe-services")
+  cat "$FAKE_AWS/rollout" 2>/dev/null || echo COMPLETED
+  ;;
+"ecs update-service" | "ecs wait") ;;
+*)
+  echo "unexpected call: $*" >&2
+  exit 1
+  ;;
+esac
