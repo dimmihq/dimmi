@@ -37,7 +37,7 @@ func TestInboxAbilities(t *testing.T) {
 			none.PostJSON(post, testkit.JSON{"body": "x"}).AssertForbidden()
 		}
 
-		none.PatchJSON(path, testkit.JSON{"priority": true}).AssertForbidden()
+		none.PatchJSON(path, testkit.JSON{"priority": "high"}).AssertForbidden()
 		none.PatchJSON(path+"/read-state", testkit.JSON{}).AssertForbidden()
 		none.PostJSON("/api/v1/conversations", testkit.JSON{"body": "x", "contact": testkit.JSON{}}).AssertForbidden()
 		none.PostJSON("/api/v1/contacts", testkit.JSON{"name": "x"}).AssertForbidden()

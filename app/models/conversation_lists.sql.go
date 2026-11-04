@@ -7,10 +7,73 @@ package models
 
 import (
 	"context"
-	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 )
+
+const conversationsByIDs = `-- name: ConversationsByIDs :many
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority FROM conversations WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+`
+
+type ConversationsByIDsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// ConversationsByIDs returns the conversations of a list page; the list
+// itself decides their order.
+func (q *Queries) ConversationsByIDs(ctx context.Context, arg ConversationsByIDsParams) ([]Conversation, error) {
+	rows, err := q.db.Query(ctx, conversationsByIDs, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Number,
+			&i.InboxID,
+			&i.ChannelConnectionID,
+			&i.ContactID,
+			&i.Subject,
+			&i.Status,
+			&i.Spam,
+			&i.AssigneeMemberID,
+			&i.AssigneeTeamID,
+			&i.AiState,
+			&i.SnoozedUntil,
+			&i.ExternalThreadKey,
+			&i.Source,
+			&i.FirstCustomerMessageAt,
+			&i.LastCustomerMessageAt,
+			&i.FirstReplyAt,
+			&i.LastReplyAt,
+			&i.LastMessageAt,
+			&i.ClosedAt,
+			&i.MessageCount,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.WaitingSince,
+			&i.LastActivityAt,
+			&i.LastMessageID,
+			&i.PreviousConversationID,
+			&i.IsTest,
+			&i.Search,
+			&i.Priority,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const countConversations = `-- name: CountConversations :one
 SELECT
@@ -130,186 +193,8 @@ func (q *Queries) CountUnreadConversations(ctx context.Context, arg CountUnreadC
 	return i, err
 }
 
-const filterConversations = `-- name: FilterConversations :many
-SELECT
-    c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.priority, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at,
-    (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)::timestamptz
-        AS sort_at
-FROM conversations c
-WHERE c.workspace_id = $2
-  AND c.deleted_at IS NULL
-  AND c.spam = $3
-  AND (coalesce(cardinality($4::text[]), 0) = 0 OR c.status = ANY ($4::text[]))
-  AND (NOT $5::boolean OR c.assignee_member_id IS NULL)
-  AND ($6::uuid IS NULL OR c.assignee_member_id = $6::uuid)
-  AND ($7::uuid IS NULL OR c.assignee_team_id = $7::uuid)
-  AND ($8::uuid IS NULL OR c.inbox_id = $8::uuid)
-  AND ($9::uuid IS NULL OR c.contact_id = $9::uuid)
-  AND ($10::boolean IS NULL OR c.priority = $10::boolean)
-  AND ($11::bigint IS NULL OR c.number = $11::bigint)
-  AND (
-      NOT $12::boolean
-      OR EXISTS (
-          SELECT 1 FROM messages m
-          WHERE m.workspace_id = c.workspace_id
-            AND m.conversation_id = c.id
-            AND m.type <> 'event'
-            AND m.deleted_at IS NULL
-            AND NOT (m.author_type = 'member' AND m.author_id IS NOT DISTINCT FROM $13::uuid)
-            AND m.id > coalesce((
-                SELECT r.last_read_message_id FROM conversation_reads r
-                WHERE r.workspace_id = c.workspace_id AND r.conversation_id = c.id
-                  AND r.workspace_member_id = $13::uuid
-            ), '00000000-0000-0000-0000-000000000000'::uuid)
-      )
-  )
-  AND (
-      $14::text IS NULL
-      OR numnode(to_tsquery('english', $14::text)) = 0
-      OR to_tsvector('english', coalesce(c.subject, '')) @@ to_tsquery('english', $14::text)
-      OR c.id IN (
-          SELECT m.conversation_id FROM messages m
-          WHERE m.workspace_id = $2
-            AND m.deleted_at IS NULL
-            AND m.type <> 'event'
-            AND m.search @@ to_tsquery('english', $14::text)
-      )
-      OR c.contact_id IN (
-          SELECT ct.id FROM contacts ct
-          WHERE ct.workspace_id = $2
-            AND ct.deleted_at IS NULL
-            AND ct.search @@ to_tsquery('simple', $14::text)
-      )
-  )
-  AND (
-      $15::uuid IS NULL
-      OR (
-          $16::boolean
-          AND ((CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END),
-              c.id) < ($17::timestamptz, $15::uuid)
-      )
-      OR (
-          NOT $16::boolean
-          AND ((CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END),
-              c.id) > ($17::timestamptz, $15::uuid)
-      )
-  )
-ORDER BY
-    CASE WHEN $16::boolean THEN
-        (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)
-    END DESC,
-    CASE WHEN $16::boolean THEN c.id END DESC,
-    CASE WHEN NOT $16::boolean THEN
-        (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)
-    END,
-    CASE WHEN NOT $16::boolean THEN c.id END
-LIMIT $18::bigint
-`
-
-type FilterConversationsParams struct {
-	SortCreated bool       `json:"sort_created"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	Spam        bool       `json:"spam"`
-	Statuses    []string   `json:"statuses"`
-	Unassigned  bool       `json:"unassigned"`
-	AssigneeID  *ids.UUID  `json:"assignee_id"`
-	TeamID      *ids.UUID  `json:"team_id"`
-	InboxID     *ids.UUID  `json:"inbox_id"`
-	ContactID   *ids.UUID  `json:"contact_id"`
-	Priority    *bool      `json:"priority"`
-	Number      *int64     `json:"number"`
-	OnlyUnread  bool       `json:"only_unread"`
-	MemberID    ids.UUID   `json:"member_id"`
-	Query       *string    `json:"query"`
-	AfterID     *ids.UUID  `json:"after_id"`
-	Descending  bool       `json:"descending"`
-	AfterAt     *time.Time `json:"after_at"`
-	RowLimit    int64      `json:"row_limit"`
-}
-
-type FilterConversationsRow struct {
-	Conversation Conversation `json:"conversation"`
-	SortAt       time.Time    `json:"sort_at"`
-}
-
-// FilterConversations returns a page of the workspace's live
-// conversations narrowed by the filters a list view sends, ordered by the
-// sort key, last message time or creation time, then id. A page after
-// the first passes the sort key and id of the last row it saw, and gets
-// the rows after it in the list's direction. Unread is judged for the
-// member: a message or note someone else wrote after their read marker.
-// The query, when given, is a tsquery the conversation's subject, one of
-// its messages or notes, or its customer's name, email, phone or external
-// id must match; a query of only stop words matches everything.
-func (q *Queries) FilterConversations(ctx context.Context, arg FilterConversationsParams) ([]FilterConversationsRow, error) {
-	rows, err := q.db.Query(ctx, filterConversations,
-		arg.SortCreated,
-		arg.WorkspaceID,
-		arg.Spam,
-		arg.Statuses,
-		arg.Unassigned,
-		arg.AssigneeID,
-		arg.TeamID,
-		arg.InboxID,
-		arg.ContactID,
-		arg.Priority,
-		arg.Number,
-		arg.OnlyUnread,
-		arg.MemberID,
-		arg.Query,
-		arg.AfterID,
-		arg.Descending,
-		arg.AfterAt,
-		arg.RowLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []FilterConversationsRow
-	for rows.Next() {
-		var i FilterConversationsRow
-		if err := rows.Scan(
-			&i.Conversation.ID,
-			&i.Conversation.WorkspaceID,
-			&i.Conversation.Number,
-			&i.Conversation.InboxID,
-			&i.Conversation.ChannelConnectionID,
-			&i.Conversation.ContactID,
-			&i.Conversation.Subject,
-			&i.Conversation.Status,
-			&i.Conversation.Spam,
-			&i.Conversation.Priority,
-			&i.Conversation.AssigneeMemberID,
-			&i.Conversation.AssigneeTeamID,
-			&i.Conversation.AiState,
-			&i.Conversation.SnoozedUntil,
-			&i.Conversation.ExternalThreadKey,
-			&i.Conversation.Source,
-			&i.Conversation.FirstCustomerMessageAt,
-			&i.Conversation.LastCustomerMessageAt,
-			&i.Conversation.FirstReplyAt,
-			&i.Conversation.LastReplyAt,
-			&i.Conversation.LastMessageAt,
-			&i.Conversation.ClosedAt,
-			&i.Conversation.MessageCount,
-			&i.Conversation.DeletedAt,
-			&i.Conversation.CreatedAt,
-			&i.Conversation.UpdatedAt,
-			&i.SortAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const latestMessagesOf = `-- name: LatestMessagesOf :many
-SELECT DISTINCT ON (conversation_id) id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at FROM messages
+SELECT DISTINCT ON (conversation_id) id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
 WHERE workspace_id = $1
   AND conversation_id = ANY ($2::uuid[])
   AND type = 'message'
@@ -353,9 +238,10 @@ func (q *Queries) LatestMessagesOf(ctx context.Context, arg LatestMessagesOfPara
 			&i.SentAt,
 			&i.ReadAt,
 			&i.DeletedAt,
-			&i.Search,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Search,
+			&i.ChannelConnectionID,
 		); err != nil {
 			return nil, err
 		}
@@ -372,9 +258,9 @@ SELECT DISTINCT ON (m.conversation_id)
     m.conversation_id,
     m.id,
     ts_headline(
-        'english',
+        'dimmi_search',
         replace(replace(replace(coalesce(m.body, ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;'),
-        to_tsquery('english', $1::text),
+        to_tsquery('dimmi_search', $1::text),
         'MaxFragments=2, MaxWords=18, MinWords=6, StartSel=<mark>, StopSel=</mark>'
     )::text AS highlight
 FROM messages m
@@ -382,7 +268,7 @@ WHERE m.workspace_id = $2
   AND m.conversation_id = ANY ($3::uuid[])
   AND m.deleted_at IS NULL
   AND m.type <> 'event'
-  AND m.search @@ to_tsquery('english', $1::text)
+  AND m.search @@ to_tsquery('dimmi_search', $1::text)
 ORDER BY m.conversation_id, m.created_at DESC, m.id DESC
 `
 
