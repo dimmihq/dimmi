@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { avatarColor } from "@/features/shell/avatar-color";
 
 import { Action, Choice, Danger, Field, Toggle } from "../controls";
-import { Empty, Glyph, Item, Logo, Row, Section, SettingsPage } from "../layout";
+import { Empty, Item, Logo, Row, Section, SettingsPage } from "../layout";
 import { RecentSecurityActivity } from "../security-activity";
 import { SessionsSection } from "../sessions";
 import { TwoFactorSection } from "../two-factor";
