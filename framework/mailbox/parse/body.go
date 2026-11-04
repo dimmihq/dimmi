@@ -157,10 +157,10 @@ leaf returns the content of a body part as text or HTML.
 */
 func leaf(part *enmime.Part) section {
 	if part.ContentType == typeHTML {
-		return section{html: string(part.Content)}
+		return section{html: decodedContent(part)}
 	}
 
-	return section{text: string(part.Content)}
+	return section{text: decodedContent(part)}
 }
 
 /*
@@ -242,18 +242,24 @@ func filesFirst(a, b Attachment) int {
 
 /*
 attachment describes a part as a file. A part counts as inline when it
-says so, or when it has a content id and says nothing.
+says so, or when it has a content id and says nothing. A text file is
+kept in UTF-8 like the rest of the text.
 */
 func attachment(part *enmime.Part) Attachment {
 	inline := part.Disposition == dispInline ||
 		(part.Disposition == "" && part.ContentType != typeBinary && part.ContentID != "")
 
+	content := part.Content
+	if strings.HasPrefix(part.ContentType, "text/") {
+		content = []byte(decodedContent(part))
+	}
+
 	return Attachment{
-		Filename:    part.FileName,
+		Filename:    decodeWords(repairUTF8([]byte(part.FileName))),
 		ContentType: part.ContentType,
 		ContentID:   part.ContentID,
 		Inline:      inline,
-		Size:        int64(len(part.Content)),
-		Content:     part.Content,
+		Size:        int64(len(content)),
+		Content:     content,
 	}
 }

@@ -174,12 +174,26 @@ func TestOversized(t *testing.T) {
 		assert.Equal(t, "café", got.Text)
 	})
 
-	t.Run("keeps the bytes of an unknown charset as valid text", func(t *testing.T) {
+	t.Run("reads the bytes of an unknown charset as well as it can", func(t *testing.T) {
 		t.Parallel()
 
 		got := parsed(t, []byte(large("x-nonsense", "caf\xe9")), limits)
 
-		assert.Equal(t, "caf�", got.Text)
+		assert.Equal(t, "café", got.Text)
+	})
+
+	t.Run("joins the text parts of a large message within the cap", func(t *testing.T) {
+		t.Parallel()
+
+		raw := "From: ana@sender.example\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n" +
+			"--b\r\nContent-Type: text/plain\r\n\r\nFirst\r\n" +
+			"--b\r\nContent-Type: application/zip\r\nContent-Disposition: attachment; filename=\"big.zip\"\r\n\r\n" +
+			strings.Repeat("z", 2000) + "\r\n" +
+			"--b\r\nContent-Type: text/plain\r\n\r\nSecond\r\n--b--\r\n"
+
+		got := parsed(t, []byte(raw), limits)
+
+		assert.Equal(t, "First\n\nSecond", got.Text)
 	})
 
 	t.Run("warns about a structure it cannot read", func(t *testing.T) {

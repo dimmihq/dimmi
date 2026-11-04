@@ -147,6 +147,7 @@ it cannot be read as MIME at all.
 func whole(raw []byte, limits Limits) *Parsed {
 	parser := enmime.NewParser(
 		enmime.MaxMIMEParts(limits.MaxParts), enmime.SkipMalformedParts(true), enmime.DisableTextConversion(true),
+		enmime.DisableCharacterDetection(true), enmime.SetCustomParseMediaType(mediaTypeReader()),
 	)
 
 	env, err := parser.ReadEnvelope(bytes.NewReader(raw))
@@ -174,7 +175,7 @@ func fromHeader(env *enmime.Envelope) *Parsed {
 		ReplyTo:    addresses(env, "Reply-To"),
 		To:         addresses(env, "To"),
 		Cc:         addresses(env, "Cc"),
-		Subject:    env.GetHeader("Subject"),
+		Subject:    decodeWords(env.Root.Header.Get("Subject")),
 		InReplyTo:  messageIDs(env.GetHeader("In-Reply-To")),
 		References: messageIDs(env.GetHeader("References")),
 	}
@@ -205,7 +206,7 @@ func addresses(env *enmime.Envelope, field string) []mail.Address {
 
 	out := make([]mail.Address, 0, len(list))
 	for _, a := range list {
-		out = append(out, mail.Address{Name: a.Name, Email: a.Address})
+		out = append(out, mail.Address{Name: decodeWords(a.Name), Email: a.Address})
 	}
 
 	return out

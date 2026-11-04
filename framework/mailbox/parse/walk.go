@@ -27,7 +27,6 @@ import (
 
 	"github.com/emersion/go-message"
 	"github.com/jhillyerd/enmime/v2"
-	"golang.org/x/net/html/charset"
 )
 
 /*
@@ -47,12 +46,8 @@ func walk(head []byte, rest io.Reader, limits Limits) (*Parsed, error) {
 	entity, rootErr := message.Read(io.MultiReader(bytes.NewReader(head), source))
 
 	if entity != nil {
-		rootErr = entity.Walk(func(path []int, part *message.Entity, err error) error {
-			if path == nil {
-				err = cmp.Or(err, rootErr)
-			}
-
-			return parsed.visit(part, limits, err)
+		rootErr = entity.Walk(func(_ []int, part *message.Entity, _ error) error {
+			return parsed.visit(part, limits)
 		})
 	}
 
@@ -71,26 +66,21 @@ func walk(head []byte, rest io.Reader, limits Limits) (*Parsed, error) {
 visit adds a part to the text or HTML body when it is one, and lists it
 as a dropped attachment otherwise.
 */
-func (p *Parsed) visit(part *message.Entity, limits Limits, partErr error) error {
+func (p *Parsed) visit(part *message.Entity, limits Limits) error {
 	mediaType, params, _ := part.Header.ContentType()
 	if strings.HasPrefix(mediaType, "multipart/") {
 		return nil
 	}
 
 	body := part.Body
-	if message.IsUnknownCharset(partErr) {
-		body = decodeCharset(body, params["charset"])
-	}
 
 	disposition, dispositionParams, _ := part.Header.ContentDisposition()
 	filename := cmp.Or(dispositionParams["filename"], params["name"])
 
 	if filename == "" && disposition != "attachment" {
 		switch mediaType {
-		case typePlain:
-			return keep(&p.Text, textSeparator, body, limits.MaxPartBytes)
-		case typeHTML:
-			return keep(&p.HTML, htmlSeparator, body, limits.MaxPartBytes)
+		case typePlain, typeHTML:
+			return p.keep(mediaType, params[charsetParam], body, limits.MaxPartBytes)
 		}
 	}
 
@@ -112,13 +102,16 @@ func (p *Parsed) visit(part *message.Entity, limits Limits, partErr error) error
 }
 
 /*
-keep adds a body to what was kept, up to the cap in all, and skips the
-rest of it.
+keep adds a body to what was kept of its type, up to the cap in all, and
+skips the rest of it.
 */
-func keep(target *string, separator string, body io.Reader, maxBytes int64) error {
-	room := max(maxBytes-int64(len(*target)), 0)
+func (p *Parsed) keep(mediaType, label string, body io.Reader, maxBytes int64) error {
+	target, separator := &p.Text, textSeparator
+	if mediaType == typeHTML {
+		target, separator = &p.HTML, htmlSeparator
+	}
 
-	kept, err := io.ReadAll(io.LimitReader(body, room))
+	kept, err := io.ReadAll(io.LimitReader(body, max(maxBytes-int64(len(*target)), 0)))
 	if err != nil {
 		return fmt.Errorf("read body: %w", err)
 	}
@@ -127,26 +120,13 @@ func keep(target *string, separator string, body io.Reader, maxBytes int64) erro
 		*target += separator
 	}
 
-	*target += string(kept)
+	*target += decodeBody(kept, label, mediaType)
 
 	if _, err := io.Copy(io.Discard, body); err != nil {
 		return fmt.Errorf("read body: %w", err)
 	}
 
 	return nil
-}
-
-/*
-decodeCharset converts a body from its declared charset. An unknown
-label leaves the bytes as they are, to be made valid UTF-8 later.
-*/
-func decodeCharset(body io.Reader, label string) io.Reader {
-	decoded, err := charset.NewReaderLabel(label, body)
-	if err != nil {
-		return body
-	}
-
-	return decoded
 }
 
 /*

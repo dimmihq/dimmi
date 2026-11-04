@@ -101,3 +101,31 @@ func TestBrokenBodiesAreStillRead(t *testing.T) {
 		tc.Table("attachments").AssertCount(0)
 	})
 }
+
+func TestWrongCharsetsAreStillRead(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reads Latin-1 words declared as UTF-8 and an unknown label in the subject", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, []byte("From: Ana <ana@customer.test>\r\nTo: "+address.ForwardingAddress+
+			"\r\nSubject: =?unknown-8bit?Q?caf=E9?=\r\nContent-Type: text/plain; charset=utf-8\r\n"+
+			"Content-Transfer-Encoding: 8bit\r\n\r\ncaf\xe9 au lait"), "")
+
+		assert.Equal(t, "café au lait", loneBody(t, tc))
+		assert.Equal(t, "café", *lastInbound(tc, address).Subject)
+	})
+
+	t.Run("reads Japanese escape sequences with no charset", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, []byte("From: Ana <ana@customer.test>\r\nTo: "+address.ForwardingAddress+
+			"\r\nSubject: Help\r\nContent-Type: text/plain;\r\n\r\n\x1b$B$3$s\x1b(B"), "")
+
+		assert.Equal(t, "こん", loneBody(t, tc))
+	})
+}
