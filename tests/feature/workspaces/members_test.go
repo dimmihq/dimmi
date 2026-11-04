@@ -117,9 +117,10 @@ func TestMembersUpdateRole(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		_, member := join(t, tc, enums.RoleMember)
+		owner := in(tc, tc.Owner)
 		all := record[any](tc)
 
-		in(tc, tc.Owner).PatchJSON("/api/v1/members/"+memberID(member), testkit.JSON{
+		owner.PatchJSON("/api/v1/members/"+memberID(member), testkit.JSON{
 			"role": "member", "status": "active",
 		}).AssertOK()
 		assert.Empty(t, all.all())
@@ -339,8 +340,8 @@ func TestMembersUpdateStatus(t *testing.T) {
 		_, third := join(t, tc, enums.RoleMember)
 		require.NoError(t, factories.Deactivate(t.Context(), tc.App, second))
 		require.NoError(t, factories.Deactivate(t.Context(), tc.App, third))
-		all := record[any](tc)
 		owner := in(tc, tc.Owner)
+		all := record[any](tc)
 
 		owner.PatchJSON("/api/v1/members/"+memberID(second), testkit.JSON{"status": "active"}).AssertOK().
 			AssertJSONPath("data.status", "active").
@@ -356,8 +357,8 @@ func TestMembersUpdateStatus(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		_, admin := join(t, tc, enums.RoleAdmin)
-		all := record[any](tc)
 		owner := in(tc, tc.Owner)
+		all := record[any](tc)
 		path := "/api/v1/members/" + memberID(admin)
 
 		owner.PatchJSON(path, testkit.JSON{

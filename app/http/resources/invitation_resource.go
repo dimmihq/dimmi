@@ -24,8 +24,8 @@ import (
 /*
 Invitation is an invitation to the workspace. Status reads expired once
 a pending invitation runs out. InvitedBy is who sent it, null once they
-are gone, and AcceptURL the link to pass on by hand, null unless it was
-just issued on a server that cannot mail it.
+are gone, and AcceptURL the link to pass on by hand, set only in the
+answer that issued it: afterwards only its digest is kept.
 */
 type Invitation struct {
 	ID         string          `json:"id"`

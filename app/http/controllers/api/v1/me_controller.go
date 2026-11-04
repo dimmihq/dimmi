@@ -53,5 +53,5 @@ func (c *MeController) Show(ctx context.Context, in *requests.WorkspaceRequest) 
 		return nil, err
 	}
 
-	return &MeOutput{Body: fhttp.NewResource(resources.NewMe(me, c.Server.instance()))}, nil
+	return &MeOutput{Body: fhttp.NewResource(resources.NewMe(ctx, me, c.Server.instance()))}, nil
 }

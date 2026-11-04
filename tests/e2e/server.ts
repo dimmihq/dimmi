@@ -6,13 +6,20 @@
  * shell or dimmi.yaml: it runs in an empty directory of its own, where
  * no config file waits. Playwright starts it and stops it. E2E_DATABASE
  * and E2E_PORT let several checkouts run their suites side by side.
+ * Google sign-in points at a local provider started here on a free port,
+ * which the binary is allowed to reach and nothing else is. It serves
+ * the pseudo locale en-XA beside English, so the language tests can
+ * switch to a language whose every word looks different.
  *
- * Build the binary first with `make build`; `make e2e` does both.
+ * Generate the pseudo locale and build the binary first, with
+ * `make pseudo-locale build`; `make e2e` does both.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { serveZone } from "./support/dns.ts";
+import { startIdentityProvider } from "./support/identity-provider.ts";
 
 const binary = resolve("bin/dimmi-cloud");
 const database = process.env.E2E_DATABASE ?? "dimmi_e2e";
@@ -20,6 +27,10 @@ const port = Number(process.env.E2E_PORT ?? 18090);
 
 if (!existsSync(binary)) {
   throw new Error(`${binary} is missing: run \`make build\` first`);
+}
+
+if (!existsSync(resolve("lang/en-XA"))) {
+  throw new Error("the pseudo locale is missing: run `make pseudo-locale build` first");
 }
 
 function psql(sql: string) {
@@ -34,10 +45,18 @@ psql(`CREATE DATABASE ${database}`);
 const home = mkdtempSync(join(tmpdir(), "dimmi-e2e-"));
 
 /*
+ * resolver answers the server's domain checks from the records tests
+ * publish through support/dns.ts.
+ */
+const resolver = await serveZone(port);
+
+/*
  * inboundSecret opens the test inbound source, through which the tests
  * hand the server raw emails; support/inbound.ts sends the same one.
  */
 const inboundSecret = "e2e-inbound-secret";
+
+const provider = await startIdentityProvider();
 
 const env = {
   PATH: process.env.PATH ?? "",
@@ -46,6 +65,7 @@ const env = {
   DIMMI_APP__KEY_AUTO_GENERATE: "true",
   DIMMI_APP__DATA_DIR: join(home, "storage"),
   DIMMI_APP__REGION: "us",
+  DIMMI_APP__LOCALES: "en,en-XA",
   DIMMI_HTTP__ADDR: `127.0.0.1:${port}`,
   DIMMI_HTTP__ADMIN_ADDR: "",
   DIMMI_HTTP__TRUSTED_PROXIES: "127.0.0.1/32",
@@ -59,6 +79,11 @@ const env = {
   DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE: "true",
   DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS: "ses,test",
   DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET: inboundSecret,
+  DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID: provider.clientId,
+  DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET: provider.clientSecret,
+  DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER: provider.issuer,
+  DIMMI_HTTP_CLIENT__ALLOW_HOSTS: new URL(provider.issuer).host,
+  DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS: resolver,
 };
 
 execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });

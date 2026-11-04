@@ -18,6 +18,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
+	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
@@ -29,7 +30,16 @@ import (
 Actions holds the business actions.
 */
 type Actions struct {
+	Widget                  *WidgetActions
 	CreateUser              *users.CreateUser
+	UpdateProfile           *users.UpdateProfile
+	UpdatePassword          *users.UpdatePassword
+	UpdateAvatar            *users.UpdateAvatar
+	DeleteAvatar            *users.DeleteAvatar
+	RequestEmailChange      *users.RequestEmailChange
+	ConfirmEmailChange      *users.ConfirmEmailChange
+	PreviewAccountDeletion  *members.PreviewAccountDeletion
+	DeleteAccount           *users.DeleteAccount
 	CreateWorkspace         *workspaces.CreateWorkspace
 	StartSession            *auth.StartSession
 	CompletePrimaryAuth     *auth.CompletePrimaryAuth
@@ -60,6 +70,9 @@ type Actions struct {
 	ListMembers             *members.ListMembers
 	ShowMember              *members.ShowMember
 	UpdateMember            *members.UpdateMember
+	StartTwoFactorReset     *members.StartTwoFactorReset
+	CompleteTwoFactorReset  *members.CompleteTwoFactorReset
+	ClearSignInLock         *members.ClearSignInLock
 	LeaveWorkspace          *members.LeaveWorkspace
 	TrashWorkspace          *workspaces.TrashWorkspace
 	DeleteWorkspace         *workspaces.DeleteWorkspace
@@ -91,10 +104,13 @@ type Actions struct {
 	PurgeTeam        *teams.PurgeTeam
 	AddTeamMembers   *teams.AddTeamMembers
 	RemoveTeamMember *teams.RemoveTeamMember
+	ImportMembers    *memberimports.ImportMembers
 
 	RecordAuditLog     *audit.RecordAuditLog
 	ListAuditLogs      *audit.ListAuditLogs
 	ShowAuditLog       *audit.ShowAuditLog
+	ExportAuditLogs    *audit.ExportAuditLogs
+	ExportMembers      *members.ExportMembers
 	ListSecurityEvents *auth.ListSecurityEvents
 
 	CreatePersonalAccessToken *tokens.CreatePersonalAccessToken

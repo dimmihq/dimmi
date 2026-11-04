@@ -5,11 +5,12 @@
  * nothing.
  */
 import { RiCheckboxCircleLine, RiErrorWarningLine } from "@remixicon/react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Spinner } from "@/components/base/spinner/spinner";
 import { ButtonLink } from "@/features/navigation/links";
+import { confirmEmailChange } from "@/lib/api/account";
 import { type SignInResult, signInWithLink, verifyEmail } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
@@ -161,4 +162,57 @@ export function VerifyEmailPage({ id, token }: { id: string; token: string }) {
   }
 
   return <Working title="Verifying your email…" />;
+}
+
+/*
+ * ConfirmEmailChangePage moves the account to the address this link was
+ * mailed to. It works in any browser, signed in or not: the link is the
+ * proof, and it is spent once.
+ */
+export function ConfirmEmailChangePage({ id, token }: { id: string; token: string }) {
+  const queryClient = useQueryClient();
+  const confirm = useMutation({
+    mutationFn: () => confirmEmailChange(id, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+  });
+  useOnce(() => {
+    if (id && token) {
+      confirm.mutate();
+    }
+  });
+
+  if (!(id && token)) {
+    return <BrokenLink />;
+  }
+
+  if (confirm.isSuccess) {
+    return (
+      <AuthStatus
+        icon={RiCheckboxCircleLine}
+        title="Email changed"
+        description={`Your account now uses ${confirm.data.email}. Sign in with it from now on.`}
+      >
+        <ButtonLink to="/d" className="mt-6 w-full">
+          Continue to dimmi
+        </ButtonLink>
+      </AuthStatus>
+    );
+  }
+
+  if (confirm.isError) {
+    return (
+      <AuthStatus
+        icon={RiErrorWarningLine}
+        tone="error"
+        title="This link does not work"
+        description={confirm.error.message}
+      >
+        <ButtonLink to="/d" className="mt-6 w-full">
+          Continue to dimmi
+        </ButtonLink>
+      </AuthStatus>
+    );
+  }
+
+  return <Working title="Changing your email…" />;
 }

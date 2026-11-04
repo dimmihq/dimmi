@@ -183,7 +183,7 @@ func TestApplication(t *testing.T) {
 		require.NoError(t, <-served)
 	})
 
-	t.Run("serves a worker without listeners until the context ends", func(t *testing.T) {
+	t.Run("serves a worker with only the admin listener until the context ends", func(t *testing.T) {
 		t.Parallel()
 		app, err := foundation.New(t.Context(), options(environ(t, "APP_APP__ROLES=worker")))
 		require.NoError(t, err)

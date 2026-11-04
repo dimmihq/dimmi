@@ -1,6 +1,6 @@
 import type { PersonalAccessToken } from "@/lib/api/tokens";
 
-import { abilityLabel, abilitySummary, expiryFor, isLive, tokenDetail } from "./token-format";
+import { abilityLabel, abilitySummary, expiryFor, isLive, rateLimitLine, tokenDetail } from "./token-format";
 
 const now = new Date("2026-11-02T09:00:00Z");
 
@@ -58,5 +58,19 @@ describe("isLive", () => {
     expect(isLive(token(), now)).toBe(true);
     expect(isLive(token({ revoked_at: "2026-11-02T08:00:00Z" }), now)).toBe(false);
     expect(isLive(token({ expires_at: "2026-11-02T09:00:00Z" }), now)).toBe(false);
+  });
+});
+
+describe("rateLimitLine", () => {
+  it("says the limits per token and per workspace", () => {
+    expect(rateLimitLine({ token_per_minute: 600, user_per_minute: 1200, workspace_per_minute: 6000 })).toBe(
+      "600 requests a minute per token, 6,000 for the workspace's tokens together.",
+    );
+  });
+
+  it("says when there is no limit", () => {
+    expect(rateLimitLine({ token_per_minute: 0, user_per_minute: 0, workspace_per_minute: 0 })).toBe(
+      "Tokens have no request limit.",
+    );
   });
 });

@@ -35,7 +35,7 @@ statement that touches it fails from now on.
 func (tc *TestCase) BreakTable(table string) {
 	tc.T.Helper()
 
-	_, err := tc.App.DB.Exec(tc.T.Context(), "DROP TABLE "+table+" CASCADE")
+	_, err := tc.operatorDB().Exec(tc.T.Context(), "DROP TABLE "+table+" CASCADE")
 	require.NoError(tc.T, err)
 }
 
@@ -55,7 +55,7 @@ func (tc *TestCase) FailWrites(table string, kinds ...string) {
 		"CREATE TRIGGER " + name + " BEFORE " + strings.Join(kinds, " OR ") + " ON " + table +
 			" FOR EACH STATEMENT EXECUTE FUNCTION " + name + "()",
 	} {
-		_, err := tc.App.DB.Exec(tc.T.Context(), statement)
+		_, err := tc.operatorDB().Exec(tc.T.Context(), statement)
 		require.NoError(tc.T, err)
 	}
 }

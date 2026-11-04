@@ -16,8 +16,8 @@ export type InvitationStatus = "pending" | "accepted" | "revoked" | "expired";
 
 /*
  * Invitation is one person asked to join the workspace. accept_url is
- * set only when this server cannot send mail, so an admin can pass the
- * link on by hand.
+ * set in the answer that issued a link, so an admin can pass it on by
+ * hand; only its digest is kept afterwards.
  */
 export interface Invitation {
   id: string;
@@ -111,16 +111,31 @@ export function sendInvitations(
   workspace: string,
   emails: string[],
   role: InvitationRole,
+  teamIds: string[] = [],
 ): Promise<InvitationResult[]> {
-  const invitations = emails.map((email) => ({ email, role }));
+  const invitations = emails.map((email) =>
+    teamIds.length > 0 ? { email, role, team_ids: teamIds } : { email, role },
+  );
 
   return request<InvitationResult[]>("POST", "/invitations", { invitations }, { workspace });
 }
 
-export function resendInvitation(workspace: string, invitation: string): Promise<InvitationDelivery> {
-  return request<InvitationDelivery>("POST", `/invitations/${encodeURIComponent(invitation)}/deliveries`, undefined, {
-    workspace,
-  });
+/*
+ * resendInvitation sends the invitation again with a fresh link: by mail,
+ * or, on the link channel, only back to the caller to pass on by hand.
+ * Either way the link sent before stops working.
+ */
+export function resendInvitation(
+  workspace: string,
+  invitation: string,
+  channel: "email" | "link" = "email",
+): Promise<InvitationDelivery> {
+  return request<InvitationDelivery>(
+    "POST",
+    `/invitations/${encodeURIComponent(invitation)}/deliveries`,
+    { channel },
+    { workspace },
+  );
 }
 
 export function revokeInvitation(workspace: string, invitation: string): Promise<void> {

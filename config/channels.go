@@ -60,6 +60,7 @@ type EmailConfig struct {
 	Mailer              string              `default:"customer"        koanf:"mailer"`
 	Inbound             EmailInboundConfig  `koanf:"inbound"`
 	Outbound            EmailOutboundConfig `koanf:"outbound"`
+	Sending             EmailSendingConfig  `koanf:"sending"`
 }
 
 /*
@@ -125,6 +126,8 @@ func (c *ChannelsConfig) settle(edition Edition) {
 		email.Inbound.Drivers = []string{InboundSourceSES}
 	}
 
+	email.Sending.settle(edition)
+
 	email.InboundDomain = strings.ToLower(strings.TrimSpace(email.InboundDomain))
 	if email.DefaultSenderDomain == "" {
 		email.DefaultSenderDomain = email.InboundDomain
@@ -166,7 +169,7 @@ func (c *ChannelsConfig) check() error {
 		}
 	}
 
-	return nil
+	return email.Sending.check()
 }
 
 /*

@@ -4,7 +4,10 @@
  * choices offered when minting one. Kept apart from the page so the
  * wording can be tested without rendering it.
  */
+
 import { allAbilities, type PersonalAccessToken } from "@/lib/api/tokens";
+import type { APILimits } from "@/lib/api/workspace";
+import { formatDate } from "@/lib/i18n/format";
 
 /*
  * expiryChoices are the lifetimes offered for a new token, in days, with
@@ -59,14 +62,12 @@ export function abilitySummary(abilities: string[]): string {
   return more > 0 ? `${named} and ${more} more` : named;
 }
 
-const dates = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
-
 /*
  * tokenDetail is the line under a token's name: its prefix, what it may
  * do, when it was last used and when it expires or ended.
  */
 export function tokenDetail(token: PersonalAccessToken, now: Date): string {
-  const used = token.last_used_at ? `Last used ${dates.format(new Date(token.last_used_at))}` : "Never used";
+  const used = token.last_used_at ? `Last used ${formatDate(token.last_used_at)}` : "Never used";
 
   return [`${token.prefix}…`, abilitySummary(token.abilities), used, ending(token, now)].join(" · ");
 }
@@ -76,7 +77,7 @@ export function tokenDetail(token: PersonalAccessToken, now: Date): string {
  */
 function ending(token: PersonalAccessToken, now: Date): string {
   if (token.revoked_at) {
-    return `Revoked ${dates.format(new Date(token.revoked_at))}`;
+    return `Revoked ${formatDate(token.revoked_at)}`;
   }
 
   if (!token.expires_at) {
@@ -85,7 +86,7 @@ function ending(token: PersonalAccessToken, now: Date): string {
 
   const expires = new Date(token.expires_at);
 
-  return expires.getTime() <= now.getTime() ? `Expired ${dates.format(expires)}` : `Expires ${dates.format(expires)}`;
+  return expires.getTime() <= now.getTime() ? `Expired ${formatDate(expires)}` : `Expires ${formatDate(expires)}`;
 }
 
 /*
@@ -93,4 +94,25 @@ function ending(token: PersonalAccessToken, now: Date): string {
  */
 export function isLive(token: PersonalAccessToken, now: Date): boolean {
   return !token.revoked_at && (!token.expires_at || new Date(token.expires_at).getTime() > now.getTime());
+}
+
+/*
+ * rateLimitLine says how fast tokens may call the API: per token, and
+ * for the workspace's tokens together.
+ */
+export function rateLimitLine(api: APILimits): string {
+  const count = (n: number) => n.toLocaleString("en-US");
+  if (api.token_per_minute <= 0 && api.workspace_per_minute <= 0) {
+    return "Tokens have no request limit.";
+  }
+
+  const parts = [];
+  if (api.token_per_minute > 0) {
+    parts.push(`${count(api.token_per_minute)} requests a minute per token`);
+  }
+  if (api.workspace_per_minute > 0) {
+    parts.push(`${count(api.workspace_per_minute)} for the workspace's tokens together`);
+  }
+
+  return `${parts.join(", ")}.`;
 }

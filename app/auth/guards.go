@@ -87,7 +87,7 @@ var _ fauth.TokenResolver = (*TokenGuard)(nil)
 /*
 Resolve returns the member a personal access token acts as. A token
 whose member is no longer active, or whose account was deleted, is
-refused as if it were unknown.
+refused as if it were unknown. Its use is recorded inside its workspace.
 */
 func (g *TokenGuard) Resolve(r *fhttp.Request, plain string) (fauth.Principal, error) {
 	tokens, ok := g.tokensFor(plain)
@@ -114,7 +114,10 @@ func (g *TokenGuard) Resolve(r *fhttp.Request, plain string) (fauth.Principal, e
 		return nil, err
 	}
 
-	if err := tokens.Use(r.Context(), tok, fhttp.ClientIP(r)); err != nil {
+	err = g.DB.Transaction(tenancy.With(r.Context(), tok.TenantID), func(ctx context.Context, _ *database.Tx) error {
+		return tokens.Use(ctx, tok, fhttp.ClientIP(r))
+	})
+	if err != nil {
 		return nil, err
 	}
 

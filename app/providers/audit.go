@@ -5,7 +5,9 @@
 |
 | The audit log and the security log: the one writer of audit entries,
 | the listener that records workspace and member events through it, the
-| actions that read both logs back, and the jobs that prune them.
+| queued listener that copies members' security events into it, the
+| actions that read both logs back and export the audit log, and the
+| jobs that prune them.
 |
 */
 
@@ -19,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/listeners"
 )
@@ -32,12 +35,22 @@ func bootAudit(a *app.App) error {
 	acts.RecordAuditLog = &audit.RecordAuditLog{DB: a.DB, Clock: a.Clock}
 	acts.ListAuditLogs = &audit.ListAuditLogs{DB: a.DB}
 	acts.ShowAuditLog = &audit.ShowAuditLog{DB: a.DB}
+	acts.ExportAuditLogs = &audit.ExportAuditLogs{
+		List: acts.ListAuditLogs, Record: acts.RecordAuditLog, Limiter: a.Limiter, Clock: a.Clock,
+	}
+	acts.ExportMembers = &members.ExportMembers{
+		List: &members.ListMembers{DB: a.DB}, DB: a.DB, Record: acts.RecordAuditLog,
+	}
 	acts.ListSecurityEvents = &auth.ListSecurityEvents{DB: a.DB}
 
 	writer := &listeners.WriteAuditLog{DB: a.DB, Record: acts.RecordAuditLog}
 	writer.Listen(a.Events)
 
+	mirror := &listeners.MirrorSecurityEventToAudit{DB: a.DB, Record: acts.RecordAuditLog}
+	mirror.Listen(a.Events)
+
 	return errors.Join(
+		queue.Register(a.Queue, mirror),
 		queue.Register(a.Queue, &jobs.PruneAuditLogs{
 			DB: a.DB, Clock: a.Clock, RetentionDays: auditRetention(a), Retention: a.Retention,
 		}),

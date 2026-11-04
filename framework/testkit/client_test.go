@@ -44,6 +44,20 @@ func app() http.Handler {
 		})
 	})
 
+	mux.HandleFunc("/forms", func(w http.ResponseWriter, r *http.Request) {
+		file, header, err := r.FormFile("upload")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		contents, _ := io.ReadAll(file)
+		fhttp.WriteJSON(w, http.StatusOK, testkit.JSON{
+			"method": r.Method, "name": header.Filename, "contents": string(contents), "mode": r.FormValue("mode"),
+		})
+	})
+
 	mux.HandleFunc("PATCH /items/{id}", func(w http.ResponseWriter, _ *http.Request) {
 		fhttp.WriteJSON(w, http.StatusUnprocessableEntity, testkit.JSON{
 			"code":   "validation_failed",
@@ -154,6 +168,20 @@ func TestClient(t *testing.T) {
 
 		assert.Equal(t, `{"a":1}`, string(client.PutJSON("/items/1", []byte(`{"a":1}`)).AssertOK().Body))
 		assert.Equal(t, "plain", string(client.PutJSON("/items/1", "plain").Body))
+	})
+
+	t.Run("uploads a file in a multipart form, with plain values", func(t *testing.T) {
+		t.Parallel()
+
+		file := testkit.FormFile{Field: "upload", Name: "a.csv", Contents: []byte("x,y")}
+		client.PostForm("/forms", file, map[string]string{"mode": "check"}).AssertOK().
+			AssertJSONPath("method", "POST").
+			AssertJSONPath("name", "a.csv").
+			AssertJSONPath("contents", "x,y").
+			AssertJSONPath("mode", "check")
+		client.PutFile("/forms", "upload", "b.csv", []byte("z")).AssertOK().
+			AssertJSONPath("method", "PUT").
+			AssertJSONPath("mode", "")
 	})
 
 	t.Run("makes requests as the caller through the impersonator", func(t *testing.T) {

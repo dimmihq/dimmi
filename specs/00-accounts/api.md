@@ -46,6 +46,7 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | PATCH | `/api/v1/user/password` | user.password.update | U | change password |
 | PUT | `/api/v1/user/avatar` | user.avatar.update | U | multipart upload (replaces whole image), 2 MB, png/jpeg/webp/gif, re-encoded 256x256 |
 | DELETE | `/api/v1/user/avatar` | user.avatar.destroy | U | remove |
+| GET | `/avatars/{file}` | avatars.show | public | stored picture, name is random uuid; not under `/api/v1` |
 | GET | `/api/v1/user/auth-factors` | user.auth-factors.index | U | list own factors (no secrets): `id, object: auth_factor, type, name, status, preferred, confirmed_at, last_used_at, created_at`; recovery set adds `remaining`, `total`. Pending listed with `status: pending` |
 | POST | `/api/v1/user/auth-factors` | user.auth-factors.store | U C | `{type: "totp", name?}`: 201 `auth_factor` status `pending` + one-time `setup` (`secret`, `otpauth_url`, `qr_svg`). `{type: "recovery_code"}`: regenerate set (2FA on only), 201 active `auth_factor` + one-time `codes` |
 | PATCH | `/api/v1/user/auth-factors/{fac}` | user.auth-factors.update | U | `{code}`: pending to active (response adds one-time `recovery_codes` when this activation enabled 2FA). `{name}`, `{preferred: true}` (any status). `code` combined with other fields: 422 `prohibited` |
@@ -72,8 +73,8 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | GET | `/api/v1/members/{mem}` | members.show | A W `members:read` | `me` alias allowed |
 | PATCH | `/api/v1/members/{mem}` | members.update | A W; per field below | `role`, `status` (+ `reassign_to_member_id`), `keep_owner`, `custom_role_id`, `conversation_access`, `conversation_access_unassigned`, `access_team_ids` |
 | PATCH | `/api/v1/members` | members.update-many | A W `members:write` | rest.md rule 8; `changes`: `role`, `custom_role_id` |
-| POST | `/api/v1/members/{mem}/two-factor-resets` | members.two-factor-resets.store | U W C `members:reset_two_factor` | mail teammate a reset link |
-| DELETE | `/api/v1/members/{mem}/sign-in-lock` | members.sign-in-lock.destroy | U W `members:reset_two_factor` | clear soft lock |
+| POST | `/api/v1/members/{mem}/two-factor-resets` | members.two-factor-resets.store | U W C `members:reset_two_factor` | mail teammate a reset link; 201 `two_factor_reset` |
+| DELETE | `/api/v1/members/{mem}/sign-in-lock` | members.sign-in-lock.destroy | U W `members:write` | clear the soft lock and every address's failure run at the account; 204 |
 | POST | `/api/v1/member-imports` | member-imports.store | U W C `members:import` | CSV, `dry_run`; synchronous |
 | PATCH | `/api/v1/members/me` `{availability}` | members.update | A W self; `conversations:write` | online/away (self may change only `availability`; other fields need role per PATCH /members/{mem} table) |
 | GET | `/api/v1/teams` | teams.index | A W `members:read` | list, `include=members` |
@@ -91,7 +92,7 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | POST | `/api/v1/tokens` | tokens.store | U W C V | create (returns secret once) |
 | DELETE | `/api/v1/tokens/{tok}` | tokens.destroy | U W (own or admin) | revoke |
 | GET | `/api/v1/tokens/abilities` | tokens.abilities.index | U W | ability groups (with member permissions) + `allowed` for my role |
-| GET | `/api/v1/audit-logs` | audit-logs.index | A W `audit_logs:read` (token: `settings:read`) | list/filter; `sort=-created_at` (default) or `created_at` (ascending tail for SIEM pull); `Accept: text/csv` streams CSV |
+| GET | `/api/v1/audit-logs` | audit-logs.index | A W `audit_logs:read` (token: `settings:read`) | list/filter; `sort=-created_at` (default) or `created_at` (ascending tail for SIEM pull); `Accept: text/csv` or `format=csv` streams CSV ([audit.md](audit.md)) |
 | GET | `/api/v1/audit-logs/{aud}` | audit-logs.show | A W `audit_logs:read` (token: `settings:read`) | single |
 | GET, POST | `/api/v1/roles` | roles.index, roles.store | [roles.md](roles.md) | |
 | GET, PATCH, DELETE | `/api/v1/roles/{rol}` | roles.show, .update, .destroy | [roles.md](roles.md) | |

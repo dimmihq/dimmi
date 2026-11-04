@@ -1,0 +1,32 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+TwoFactorReset carries the link an admin sent a teammate who lost their
+second factor, naming the admin and the workspace so the teammate knows
+whom to ask about it.
+*/
+
+templ TwoFactorReset(name, admin, workspace, url string) {
+	@layout(i18n.T(ctx, "mail.two_factor_reset.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.two_factor_reset.intro", i18n.Args{"admin": admin, "workspace": workspace}) }</p>
+		@button(url, i18n.T(ctx, "mail.two_factor_reset.action", nil))
+		<p>{ i18n.T(ctx, "mail.two_factor_reset.expiry", nil) }</p>
+	}
+}
+
+/*
+TwoFactorResetCompleted confirms the teammate turned their second factor
+off with the link, and asks them to set up a new one.
+*/
+
+templ TwoFactorResetCompleted(name, securityURL string) {
+	@layout(i18n.T(ctx, "mail.two_factor_reset_completed.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.two_factor_reset_completed.intro", nil) }</p>
+		<p>{ i18n.T(ctx, "mail.two_factor_reset_completed.advice", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.two_factor_reset_completed.action", nil))
+	}
+}

@@ -42,10 +42,11 @@ type InvitationDeliveryController struct {
 }
 
 /*
-Store sends the invitation again and answers with the sending.
+Store sends the invitation again, by mail or only as a link, and answers
+with the sending.
 */
 func (c *InvitationDeliveryController) Store(
-	ctx context.Context, in *requests.InvitationRequest,
+	ctx context.Context, in *requests.DeliverInvitationRequest,
 ) (*InvitationDeliveryOutput, error) {
 	id, err := c.IDs.Decode(string(models.PrefixInvitation), in.Invitation)
 	if err != nil {
@@ -53,7 +54,7 @@ func (c *InvitationDeliveryController) Store(
 	}
 
 	sent, err := c.Resend.Handle(ctx, invitations.ChangeInvitationInput{
-		Membership: membership(ctx), Caller: caller(ctx).User, InvitationID: id,
+		Membership: membership(ctx), Caller: caller(ctx).User, InvitationID: id, LinkOnly: in.LinkOnly(),
 	})
 	if err != nil {
 		return nil, err

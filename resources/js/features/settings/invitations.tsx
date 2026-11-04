@@ -2,9 +2,9 @@
  * Inviting people into the workspace, for those allowed to change its
  * members: a dialog that takes a batch of addresses and a role and says
  * what happened to each, and the list of invitations still waiting for
- * an answer, each of which can be sent again or withdrawn. A server
- * without mail hands back each invitation's link instead, so the admin
- * can pass it on themselves.
+ * an answer, each of which can be sent again, handed over as a fresh
+ * link, or withdrawn. Every new invitation comes back with its link, so
+ * the admin can also pass it on themselves, and can join teams at once.
  */
 import { RiFileCopyLine, RiMailLine, RiMore2Line, RiUserAddLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import { type FormEvent, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
@@ -27,6 +28,7 @@ import {
   revokeInvitation,
   sendInvitations,
 } from "@/lib/api/invitations";
+import { teamsQuery } from "@/lib/api/teams";
 import { cx } from "@/utils/cx";
 
 import { expiryLabel, maxInvitations, outcome, splitEmails } from "./invitation-text";
@@ -118,17 +120,20 @@ function InviteDialog({ workspace, isOpen, onClose }: { workspace: string; isOpe
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const [role, setRole] = useState<InvitationRole>("member");
+  const [teamIds, setTeamIds] = useState<string[]>([]);
+  const { data: teams = [] } = useQuery({ ...teamsQuery(workspace), enabled: isOpen });
   const emails = splitEmails(text);
   const tooMany = emails.length > maxInvitations;
 
   const send = useMutation({
-    mutationFn: () => sendInvitations(workspace, emails, role),
+    mutationFn: () => sendInvitations(workspace, emails, role, teamIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: invitationsQuery(workspace).queryKey }),
   });
 
   const close = () => {
     setText("");
     setRole("member");
+    setTeamIds([]);
     send.reset();
     onClose();
   };
@@ -183,6 +188,22 @@ function InviteDialog({ workspace, isOpen, onClose }: { workspace: string; isOpe
                 </SelectItem>
               ))}
             </Select>
+            {teams.length > 0 ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-body-2-medium text-text-secondary">Teams to join</legend>
+                {teams.map((team) => (
+                  <Checkbox
+                    key={team.id}
+                    isSelected={teamIds.includes(team.id)}
+                    onChange={(on) =>
+                      setTeamIds((ids) => (on ? [...ids, team.id] : ids.filter((id) => id !== team.id)))
+                    }
+                  >
+                    {team.name}
+                  </Checkbox>
+                ))}
+              </fieldset>
+            ) : null}
           </ModalBody>
           <ModalFooter className="mt-6">
             <Button variant="secondary" onClick={close}>
@@ -218,10 +239,12 @@ export function InviteButton({ workspace }: { workspace: string }) {
 function Waiting({
   invitation,
   onResend,
+  onLink,
   onRevoke,
 }: {
   invitation: Invitation;
   onResend: () => void;
+  onLink: () => void;
   onRevoke: () => void;
 }) {
   const label = `Manage invitation for ${invitation.email}`;
@@ -246,6 +269,9 @@ function Waiting({
         <DropdownPopover aria-label={label} placement="bottom end">
           <DropdownItem onSelect={pick(onResend)}>
             <span className="text-body-2-regular text-text-primary">Resend</span>
+          </DropdownItem>
+          <DropdownItem onSelect={pick(onLink)}>
+            <span className="text-body-2-regular text-text-primary">Copy a new link</span>
           </DropdownItem>
           <DropdownItem onSelect={pick(onRevoke)}>
             <span className="text-body-2-regular text-text-error-primary">Revoke</span>
@@ -272,12 +298,23 @@ export function PendingInvitations({ workspace }: { workspace: string }) {
   const queryClient = useQueryClient();
   const { data: invitations = [] } = useQuery(invitationsQuery(workspace));
   const [revoking, setRevoking] = useState<Invitation | null>(null);
+  const [linking, setLinking] = useState<Invitation | null>(null);
+  const [link, setLink] = useState<{ email: string; url: string } | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: invitationsQuery(workspace).queryKey });
 
   const resend = useMutation({
     mutationFn: (invitation: Invitation) => resendInvitation(workspace, invitation.id),
     onSuccess: (_, invitation) => setNotice({ tone: "status", text: `Sent again to ${invitation.email}.` }),
+    onError: (error) => setNotice({ tone: "alert", text: resendProblem(error) }),
+    onSettled: refresh,
+  });
+  const relink = useMutation({
+    mutationFn: (invitation: Invitation) => resendInvitation(workspace, invitation.id, "link"),
+    onSuccess: (sent, invitation) => {
+      setNotice(null);
+      setLink(sent.invitation.accept_url ? { email: invitation.email, url: sent.invitation.accept_url } : null);
+    },
     onError: (error) => setNotice({ tone: "alert", text: resendProblem(error) }),
     onSettled: refresh,
   });
@@ -289,7 +326,7 @@ export function PendingInvitations({ workspace }: { workspace: string }) {
     onSettled: refresh,
   });
 
-  if (invitations.length === 0 && notice === null) {
+  if (invitations.length === 0 && notice === null && link === null) {
     return null;
   }
 
@@ -302,6 +339,7 @@ export function PendingInvitations({ workspace }: { workspace: string }) {
               key={invitation.id}
               invitation={invitation}
               onResend={() => resend.mutate(invitation)}
+              onLink={() => setLinking(invitation)}
               onRevoke={() => setRevoking(invitation)}
             />
           ))}
@@ -318,6 +356,23 @@ export function PendingInvitations({ workspace }: { workspace: string }) {
           {notice.text}
         </p>
       ) : null}
+      {link ? (
+        <div className="flex flex-col gap-1 px-3">
+          <p role="status" className="text-body-2-regular text-text-secondary">
+            {`A new link for ${link.email}. Pass it on yourself: the mailed one no longer works.`}
+          </p>
+          <CopyLink email={link.email} url={link.url} />
+        </div>
+      ) : null}
+      <AlertDialog
+        isOpen={linking !== null}
+        onOpenChange={(open) => (open ? null : setLinking(null))}
+        title={`Copy a new link for ${linking?.email ?? ""}?`}
+        description="You get a fresh link to pass on yourself. The link in the mail stops working."
+        confirmLabel="Make a new link"
+        variant="default"
+        onConfirm={() => (linking ? relink.mutateAsync(linking).catch(() => undefined) : undefined)}
+      />
       <AlertDialog
         isOpen={revoking !== null}
         onOpenChange={(open) => (open ? null : setRevoking(null))}

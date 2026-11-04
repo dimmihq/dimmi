@@ -39,19 +39,31 @@ type Limiter interface {
 ThrottleOptions configure one limit.
 
 Name keeps the limit's counters apart from other limits. MaxAttempts
-requests are allowed per Decay. Key picks the counter for a request;
-without it the client's address is used. FailOpen lets requests through
-while the counters cannot be reached. Clock dates the reset header;
-without it the system clock is used.
+requests are allowed per Decay. Limit, when set, works out the number
+for each request instead, and a number of zero or less means no limit.
+Key picks the counter for a request; without it the client's address is
+used, and an empty key leaves the request unlimited. Skip lets a request
+through uncounted. Scope names the limit in the X-RateLimit-Scope
+header, so a client can tell which of several limits answered. FailOpen
+lets requests through while the counters cannot be reached. Clock dates
+the reset header; without it the system clock is used.
 */
 type ThrottleOptions struct {
 	Name        string
 	MaxAttempts int
 	Decay       time.Duration
+	Limit       func(r *http.Request) int
 	Key         func(r *http.Request) string
+	Skip        func(r *http.Request) bool
+	Scope       string
 	FailOpen    bool
 	Clock       clock.Clock
 }
+
+/*
+ScopeHeader names the limit that answered a limited response.
+*/
+const ScopeHeader = "X-RateLimit-Scope"
 
 /*
 Throttle limits requests, answering 429 too_many_requests with the rate
@@ -68,9 +80,14 @@ func Throttle(l Limiter, opts ThrottleOptions) fhttp.Middleware {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
+			key, limit, counted := opts.counter(r)
+			if !counted {
+				next.ServeHTTP(w, r)
 
-			res, err := l.Attempt(ctx, opts.Name+":"+opts.Key(r), opts.MaxAttempts, opts.Decay)
+				return
+			}
+
+			res, err := l.Attempt(r.Context(), opts.Name+":"+key, limit, opts.Decay)
 			if err != nil {
 				unchecked(r, err, opts)(next).ServeHTTP(w, r)
 
@@ -78,6 +95,9 @@ func Throttle(l Limiter, opts ThrottleOptions) fhttp.Middleware {
 			}
 
 			res.WriteHeaders(w.Header(), opts.Clock.Now())
+			if opts.Scope != "" {
+				w.Header().Set(ScopeHeader, opts.Scope)
+			}
 			if !res.Allowed {
 				refuse(w, r, fault.New(fault.RateLimited, "too_many_requests", "Too many requests."))
 
@@ -87,6 +107,29 @@ func Throttle(l Limiter, opts ThrottleOptions) fhttp.Middleware {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+/*
+counter returns the key and the number of requests allowed for the
+request, and whether it is counted at all.
+*/
+func (opts ThrottleOptions) counter(r *http.Request) (string, int, bool) {
+	if opts.Skip != nil && opts.Skip(r) {
+		return "", 0, false
+	}
+
+	limit := opts.MaxAttempts
+	if opts.Limit != nil {
+		limit = opts.Limit(r)
+	}
+
+	if limit <= 0 {
+		return "", 0, false
+	}
+
+	key := opts.Key(r)
+
+	return key, limit, key != ""
 }
 
 /*

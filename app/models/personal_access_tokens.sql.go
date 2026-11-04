@@ -53,6 +53,21 @@ func (q *Queries) FindTokenMintedRole(ctx context.Context, arg FindTokenMintedRo
 	return minted_as_role, err
 }
 
+const findTokenWorkspace = `-- name: FindTokenWorkspace :one
+SELECT t.workspace_id::uuid AS workspace_id
+FROM auth_find_token($1) AS t
+`
+
+// FindTokenWorkspace returns the workspace of the token the digest
+// belongs to. It runs through a security definer function, since the
+// workspace is only known once the token is found.
+func (q *Queries) FindTokenWorkspace(ctx context.Context, tokenDigest []byte) (ids.UUID, error) {
+	row := q.db.QueryRow(ctx, findTokenWorkspace, tokenDigest)
+	var workspace_id ids.UUID
+	err := row.Scan(&workspace_id)
+	return workspace_id, err
+}
+
 const findWorkspaceToken = `-- name: FindWorkspaceToken :one
 SELECT
     t.id, t.owner_id, t.name, t.hint, t.abilities, t.expires_at, t.last_used_at, t.last_used_ip, t.revoked_at,

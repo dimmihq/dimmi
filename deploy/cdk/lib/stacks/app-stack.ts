@@ -107,6 +107,8 @@ export class AppStack extends Stack {
   /**
    * One long-running service. 100% minimum and 200% maximum start the new
    * tasks before stopping the old, so a deploy never drops below capacity.
+   * Every task checks itself with `dimmi health`, which asks its own admin
+   * listener, so a worker with no load balancer is replaced when it hangs.
    */
   private service(name: string, service: ServiceConfig): FargateService {
     const task = this.taskDefinition(name, service.cpu, service.memoryMiB);
@@ -120,6 +122,13 @@ export class AppStack extends Stack {
       portMappings: ports.map((containerPort) => ({ containerPort })),
       logging: LogDrivers.awsLogs({ logGroup: this.logs, streamPrefix: name }),
       stopTimeout: Duration.seconds(SHUTDOWN_SECONDS + 5),
+      healthCheck: {
+        command: ["CMD", "/dimmi", "health"],
+        interval: Duration.seconds(30),
+        timeout: Duration.seconds(5),
+        retries: 3,
+        startPeriod: Duration.seconds(60),
+      },
     });
 
     const fargate = new FargateService(this, `${capitalize(name)}Service`, {

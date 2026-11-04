@@ -17,8 +17,10 @@ Register declares every route file's routes.
 */
 func Register(a *app.App) {
 	API(a)
+	Account(a)
 	Web(a)
 	Console(a)
 	Channels(a)
 	Webhooks(a)
+	Widget(a)
 }

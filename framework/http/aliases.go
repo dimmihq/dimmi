@@ -12,7 +12,11 @@
 
 package http
 
-import "net/http"
+import (
+	"io"
+	"mime/multipart"
+	"net/http"
+)
 
 /*
 Request is an incoming HTTP request.
@@ -43,6 +47,12 @@ type Header = http.Header
 Cookie is a cookie sent or received.
 */
 type Cookie = http.Cookie
+
+/*
+MultipartForm is a parsed multipart upload, as the RawBody of a route's
+input.
+*/
+type MultipartForm = multipart.Form
 
 /*
 SameSite is the cross-site policy of a cookie.
@@ -101,3 +111,11 @@ const (
 	StatusInternalServerError   = http.StatusInternalServerError
 	StatusServiceUnavailable    = http.StatusServiceUnavailable
 )
+
+/*
+MaxBytesReader limits how much of a request body a handler reads, answering
+an error once the limit is passed.
+*/
+func MaxBytesReader(w ResponseWriter, body io.ReadCloser, limit int64) io.ReadCloser {
+	return http.MaxBytesReader(w, body, limit)
+}

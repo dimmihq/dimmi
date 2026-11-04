@@ -14,8 +14,6 @@ package v1
 import (
 	"context"
 
-	fhttp "github.com/dimmihq/dimmi/framework/http"
-
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -61,5 +59,5 @@ func (c *PasswordResetController) Update(
 		return nil, err
 	}
 
-	return signInOutput(c.Cookies, c.Server, signedIn, fhttp.StatusOK), nil
+	return signInOutput(ctx, c.Cookies, c.Server, signedIn), nil
 }

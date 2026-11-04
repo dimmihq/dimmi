@@ -43,3 +43,7 @@ SELECT
         WHERE e.user_id = @user_id AND e.type = 'login.succeeded' AND e.created_at >= @since
           AND e.metadata ->> 'device_id' = @device_id::text
     )::boolean AS known_device;
+
+-- name: DeleteUserSecurityEvents :exec
+-- DeleteUserSecurityEvents removes the security log of a deleted account.
+DELETE FROM security_events WHERE user_id = @user_id;

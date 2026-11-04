@@ -125,5 +125,46 @@
     "intro": "Your API token \"{{.token}}\" in {{.workspace}} stops working on {{.date}}.",
     "advice": "Scripts that use it will stop too. Make a new token and switch them over before then.",
     "action": "Review your API tokens"
+  },
+  "email_change_verification": {
+    "subject": "Confirm your new dimmi email address",
+    "intro": "Open this link to make {{.email}} the address of your account.",
+    "action": "Confirm new email",
+    "expiry": "The link works for 24 hours. If you did not ask for it, ignore this email: nothing changes."
+  },
+  "email_change_requested": {
+    "subject": "Someone asked to change your Dimmi email address",
+    "intro": "A request was made to move your account to {{.email}}. Nothing changes until that address confirms it.",
+    "advice": "If this was not you, secure your account now.",
+    "action": "Secure your account"
+  },
+  "email_changed": {
+    "subject": "Your Dimmi email address changed",
+    "intro": "Your account now uses {{.email}}. This address no longer signs in to it.",
+    "advice": "If this was not you, reset your password and contact your workspace owner.",
+    "action": "Review your security settings"
+  },
+  "account_deleted": {
+    "subject": "Your Dimmi account was deleted",
+    "intro": "Your account and its sign-in details are gone, and this cannot be undone.",
+    "advice": "You can sign up again with this address at any time, as a new account."
+  },
+  "invitation_pending": {
+    "subject": "{{.email}} has not joined {{.workspace}} yet",
+    "intro": "You invited {{.email}} to {{.workspace}} on {{.date}}, and they have not answered.",
+    "advice": "The mail may have gone to spam. Send it again, or copy the link and pass it on yourself.",
+    "action": "See pending invitations"
+  },
+  "two_factor_reset": {
+    "subject": "Reset two-factor authentication on your dimmi account",
+    "intro": "{{.admin}} of {{.workspace}} sent you this link because you cannot sign in with your second factor. Open it to turn two-factor authentication off; you will need your password if your account has one.",
+    "action": "Reset two-factor authentication",
+    "expiry": "The link works for 30 minutes. If you did not ask for help, ignore this email: nothing changes."
+  },
+  "two_factor_reset_completed": {
+    "subject": "Two-factor authentication was reset on your dimmi account",
+    "intro": "You used the link your admin sent you, so your account no longer asks for a second factor. Every browser and app was signed out.",
+    "advice": "Sign in and set up a new authenticator. If this was not you, change your password now.",
+    "action": "Review your security settings"
   }
 }

@@ -153,6 +153,17 @@ describe("Bridge", () => {
     expect(stale(client, realtimeKeys.counts(ws))).toBe(true);
   });
 
+  it("refetches the members and the person when someone changes what teammates see", () => {
+    const { client, bridge } = setup();
+    client.setQueryData(realtimeKeys.members(ws), []);
+    client.setQueryData(realtimeKeys.me(), {});
+
+    bridge.apply(ws, `workspace:${ws}`, envelope("user.updated", { id: "mem_1", object: "member", changes: ["name"] }));
+
+    expect(stale(client, realtimeKeys.members(ws))).toBe(true);
+    expect(stale(client, realtimeKeys.me())).toBe(true);
+  });
+
   it("refetches the inbox after a reconnect that could not replay", () => {
     const { client, bridge } = setup();
     const list = [...realtimeKeys.conversations(ws), {}];

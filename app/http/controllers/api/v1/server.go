@@ -24,16 +24,18 @@ import (
 
 /*
 Server is what responses say about this server. Version is the release,
-APIVersion the API dialect, and MailConfigured whether mail actually
-leaves the server.
+APIVersion the API dialect, MailConfigured whether mail actually
+leaves the server, and AuditRetentionDays how long audit entries are
+kept, 0 for ever.
 */
 type Server struct {
-	Edition        string
-	Version        string
-	APIVersion     string
-	Region         string
-	MailConfigured bool
-	Clock          clock.Clock
+	Edition            string
+	Version            string
+	APIVersion         string
+	Region             string
+	MailConfigured     bool
+	AuditRetentionDays int
+	Clock              clock.Clock
 }
 
 /*
@@ -46,6 +48,7 @@ func (s Server) instance() resources.Instance {
 		APIVersion:     s.APIVersion,
 		Region:         s.Region,
 		MailConfigured: s.MailConfigured,
+		AuditRetention: s.AuditRetentionDays,
 		ServerTime:     s.Clock.Now().UTC(),
 	}
 }
