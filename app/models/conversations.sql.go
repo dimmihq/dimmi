@@ -220,6 +220,67 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 	return items, nil
 }
 
+const listTeamConversations = `-- name: ListTeamConversations :many
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at FROM conversations
+WHERE workspace_id = $1 AND assignee_team_id = $2::uuid AND deleted_at IS NULL
+ORDER BY id
+FOR UPDATE
+`
+
+type ListTeamConversationsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	TeamID      ids.UUID `json:"team_id"`
+}
+
+// ListTeamConversations returns the live conversations the team holds
+// and keeps them locked until the transaction ends.
+func (q *Queries) ListTeamConversations(ctx context.Context, arg ListTeamConversationsParams) ([]Conversation, error) {
+	rows, err := q.db.Query(ctx, listTeamConversations, arg.WorkspaceID, arg.TeamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Number,
+			&i.InboxID,
+			&i.ChannelConnectionID,
+			&i.ContactID,
+			&i.Subject,
+			&i.Status,
+			&i.Spam,
+			&i.Priority,
+			&i.AssigneeMemberID,
+			&i.AssigneeTeamID,
+			&i.AiState,
+			&i.SnoozedUntil,
+			&i.ExternalThreadKey,
+			&i.Source,
+			&i.FirstCustomerMessageAt,
+			&i.LastCustomerMessageAt,
+			&i.FirstReplyAt,
+			&i.LastReplyAt,
+			&i.LastMessageAt,
+			&i.ClosedAt,
+			&i.MessageCount,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setConversationThreadKey = `-- name: SetConversationThreadKey :exec
 UPDATE conversations SET external_thread_key = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND external_thread_key IS NULL

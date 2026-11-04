@@ -18,6 +18,14 @@ INSERT INTO conversations (
 )
 RETURNING *;
 
+-- name: ListTeamConversations :many
+-- ListTeamConversations returns the live conversations the team holds
+-- and keeps them locked until the transaction ends.
+SELECT * FROM conversations
+WHERE workspace_id = @workspace_id AND assignee_team_id = @team_id::uuid AND deleted_at IS NULL
+ORDER BY id
+FOR UPDATE;
+
 -- name: SetConversationThreadKey :exec
 -- SetConversationThreadKey records the thread the channel opened for the
 -- conversation, unless it already has one.

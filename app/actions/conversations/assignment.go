@@ -55,11 +55,56 @@ func (w *Writer) Assign(ctx context.Context, c models.Conversation, to Assignmen
 		return c, false, err
 	}
 
+	updated, err := w.writeAssignment(ctx, c, to, assignees{members: members, teams: teams})
+
+	return updated, err == nil, err
+}
+
+/*
+DropTeam takes the conversation away from its team, leaving the member
+who holds it as they are, as when the team is deleted. A conversation
+no team holds is left alone.
+*/
+func (w *Writer) DropTeam(ctx context.Context, c models.Conversation) (models.Conversation, error) {
+	if c.AssigneeTeamID == nil {
+		return c, nil
+	}
+
+	members, err := w.people(ctx, c, nil)
+	if err != nil {
+		return c, err
+	}
+
+	teams, err := w.teams(ctx, c, nil)
+	if err != nil {
+		return c, err
+	}
+
+	return w.writeAssignment(ctx, c, Assignment{Member: c.AssigneeMemberID}, assignees{members: members, teams: teams})
+}
+
+/*
+assignees are the members and teams an assignment names, loaded.
+*/
+type assignees struct {
+	members map[ids.UUID]Member
+	teams   teamPair
+}
+
+/*
+writeAssignment stores the assignment, records it on the timeline and
+dispatches it.
+*/
+func (w *Writer) writeAssignment(
+	ctx context.Context, c models.Conversation, to Assignment, a assignees,
+) (models.Conversation, error) {
+	members, teams := a.members, a.teams
+
 	updated, err := w.Q.SetConversationAssignment(ctx, models.SetConversationAssignmentParams{
 		AssigneeMemberID: to.Member, AssigneeTeamID: to.Team, Now: w.Now, WorkspaceID: c.WorkspaceID, ID: c.ID,
 	})
 	if err != nil {
-		return c, false, fmt.Errorf("assign conversation: %w", err)
+		return c, fmt.Errorf("assign conversation: %w", err)
 	}
 
 	data := map[string]any{
@@ -67,7 +112,7 @@ func (w *Writer) Assign(ctx context.Context, c models.Conversation, to Assignmen
 		"to":   map[string]any{"member": memberRef(to.Member, members), "team": teamRef(teams.to)},
 	}
 
-	return updated, true, w.emit(ctx, updated, entry{"conversation.assigned", data}, appevents.ConversationAssigned{
+	return updated, w.emit(ctx, updated, entry{"conversation.assigned", data}, appevents.ConversationAssigned{
 		Base: w.Base(c.WorkspaceID), ConversationRef: ref(c),
 		FromMemberID: c.AssigneeMemberID, ToMemberID: to.Member,
 		FromTeamID: c.AssigneeTeamID, ToTeamID: to.Team,

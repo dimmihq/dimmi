@@ -278,6 +278,28 @@ func TestTeamsDestroy(t *testing.T) {
 		tc.Table("team_members").AssertCount(1, testkit.Row{"team_id": support.ID})
 	})
 
+	t.Run("takes the team's conversations away from it first, each on its timeline", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		support := team(t, tc, "Support")
+		assigned := record[appevents.ConversationAssigned](tc)
+		owner := in(tc, tc.Owner)
+		inbox, err := factories.DefaultInbox(t.Context(), tc.App, tc.Workspace.Workspace)
+		require.NoError(t, err)
+		conversation := owner.PostJSON("/api/v1/conversations", testkit.JSON{
+			"inbox_id": models.PublicID(models.PrefixInbox, inbox.Inbox.ID), "author": "contact",
+			"body": "Hello", "contact": testkit.JSON{"email": "emily@example.com"},
+		}).AssertCreated().String("data.id")
+		owner.PatchJSON("/api/v1/conversations/"+conversation, testkit.JSON{"team_id": teamID(support)}).AssertOK()
+
+		owner.Delete("/api/v1/teams/" + teamID(support)).AssertNoContent()
+
+		owner.GetJSON("/api/v1/conversations/"+conversation).AssertOK().AssertJSONPath("data.team", nil)
+		require.Len(t, assigned.all(), 2)
+		assert.Equal(t, support.ID, *assigned.all()[1].FromTeamID)
+		assert.Nil(t, assigned.all()[1].ToTeamID)
+	})
+
 	t.Run("keeps members from deleting teams", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

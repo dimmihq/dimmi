@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -44,8 +45,10 @@ DeleteTeam hides a live team of the caller's workspace.
 Rules:
   - The caller needs members:write.
   - Deleted teams and teams of other workspaces are not found.
+  - Every live conversation the team holds is unassigned from it first.
 
-Events: [appevents.TeamDeleted].
+Events: [appevents.ConversationAssigned] for each conversation it held,
+then [appevents.TeamDeleted].
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
 wrapped database error.
@@ -72,6 +75,10 @@ func (a *DeleteTeam) Handle(ctx context.Context, in DeleteTeamInput) error {
 			return err
 		}
 
+		if err := a.unassign(ctx, tx, in.Membership, team); err != nil {
+			return err
+		}
+
 		_, err = q.SoftDeleteTeam(ctx, models.SoftDeleteTeamParams{
 			WorkspaceID: team.WorkspaceID, ID: team.ID, Now: a.Clock.Now(),
 		})
@@ -83,6 +90,33 @@ func (a *DeleteTeam) Handle(ctx context.Context, in DeleteTeamInput) error {
 			WorkspaceID: team.WorkspaceID, TeamID: team.ID, DeletedBy: in.Membership.Member.ID,
 		})
 	})
+}
+
+/*
+unassign takes every live conversation away from the team as the
+member deleting it, each recorded on its timeline, so no conversation
+waits on a team that is gone.
+*/
+func (a *DeleteTeam) unassign(ctx context.Context, tx *database.Tx, m authz.Membership, team models.Team) error {
+	w, err := conversations.NewWriter(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, m)
+	if err != nil {
+		return err
+	}
+
+	held, err := w.Q.ListTeamConversations(ctx, models.ListTeamConversationsParams{
+		WorkspaceID: team.WorkspaceID, TeamID: team.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("list team conversations: %w", err)
+	}
+
+	for _, c := range held {
+		if _, err := w.DropTeam(ctx, c); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*
