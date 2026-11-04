@@ -114,6 +114,7 @@ type Actions struct {
 	CreateEmailAddress   *email.CreateEmailAddress
 	ListEmailAddresses   *email.ListEmailAddresses
 	ShowEmailAddress     *email.ShowEmailAddress
+	RecommendGuide       *email.RecommendGuide
 	UpdateEmailAddress   *email.UpdateEmailAddress
 	DeleteEmailAddress   *email.DeleteEmailAddress
 	SendEmailAddressTest *email.SendEmailAddressTest
