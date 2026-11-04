@@ -27,6 +27,11 @@ export const auditEvents: Record<string, string> = {
   "team.deleted": "Deleted a team",
   "team.member_added": "Added someone to a team",
   "team.member_removed": "Removed someone from a team",
+  "workspace.access_policy_changed": "Changed the sign-in rules",
+  "role.created": "Created a custom role",
+  "role.updated": "Edited a custom role",
+  "role.deleted": "Deleted a custom role",
+  "member.custom_role_changed": "Changed someone's custom role",
 };
 
 const securityEvents: Record<string, string> = {

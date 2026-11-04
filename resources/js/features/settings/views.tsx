@@ -21,6 +21,7 @@ import {
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
 import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
+import { RolesSettings } from "./pages/roles";
 import { TeamsSettings } from "./pages/teams";
 import { TokensSettings } from "./pages/tokens";
 import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
@@ -52,6 +53,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   workspace: WorkspaceSettings,
   members: MembersSettings,
   teams: TeamsSettings,
+  roles: RolesSettings,
   "workspace-security": WorkspaceSecuritySettings,
   "audit-log": AuditLogSettings,
   import: ImportSettings,

@@ -321,6 +321,13 @@ export const settingsPages = {
     "/d/settings/teams",
     "Groups of teammates conversations can be assigned to.",
   ),
+  roles: page(
+    "settings-roles",
+    "Roles",
+    RiShieldUserLine,
+    "/d/settings/roles",
+    "What each person in the workspace may do.",
+  ),
   "workspace-security": page(
     "settings-workspace-security",
     "Security",
@@ -387,6 +394,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     pages.workspace,
     pages.members,
     pages.teams,
+    pages.roles,
     pages["workspace-security"],
     pages["audit-log"],
     pages.import,

@@ -442,6 +442,30 @@ P=$B/workspace/access-policy; WH="Dimmi-Workspace: $WS"
 | Operator clears the list | `bin/dimmi workspace:clear-access-policy acme --only ip_allowlist` | prints the cleared keys; the address works again; audit actor `system`; a second run prints "Nothing to clear" |
 | In a browser | `$W/d/settings/workspace-security`: untick a method, pick "Sign in again after: 1 hour", add an address | each change saves at once and survives a reload; a refused change shows its reason under the section; a refused workspace page shows "Sign in again to continue" with a button back to the same page |
 
+### Custom roles
+
+Ada (`a.jar`) owns Acme; Carol is a member. Shaping roles needs a recent confirmation. `R` is the roles path:
+
+```bash
+R=$B/roles
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Catalog | `r perms -b a.jar -H "$O" -H "$WH" $B/permissions` | 200, one entry per permission with `label`, `description`, `group`, `assignable` (false for owner-only and `system:*`) and `base_roles` |
+| Built-in roles | `r roles -b a.jar -H "$O" -H "$WH" $R` | 200, Owner, Admin and Member first with `kind: built_in` and `id: null`, then custom roles by name |
+| Create | `r mk -b a.jar -X POST -H "$O" -H "$J" -H "$WH" $R -d '{"name":"Read only","base_role":"member","permissions":["members:read","conversations:read"]}'; ROL=$(jq -r .data.id body)` | 201 `rol_…`, `kind: custom`, `member_count: 0`; audit `role.created` |
+| Above its base | same with `"permissions":["members:read","settings:write"]` | 422 `permission_above_base_role` naming `settings:write` |
+| Owner-only | same with `"base_role":"admin","permissions":["members:read","workspace:delete"]` | 422 `permission_not_assignable` |
+| Without members read | same with `"permissions":["conversations:read"]` | 422 `permission_required` |
+| Assign | `r as -b a.jar -X PATCH -H "$O" -H "$J" -H "$WH" $B/members/<Carol's mem_> -d '{"custom_role_id":"'$ROL'"}'` | 200, `role: member`, `custom_role` with the id and name; Carol's `/me` lists only `members:read` and `conversations:read` |
+| Narrowed | Carol replies to a conversation | 403 `forbidden`; her tokens narrow the same way |
+| Edit applies next request | `PATCH $R/$ROL` with `conversations:write` added | 200; Carol's next reply works; audit `role.updated` with `permissions.added` |
+| In use | `DELETE $R/$ROL` | 409 `role_in_use`, `member_count: 1` |
+| Move everyone | `PATCH $B/members -d '{"ids":["<Carol's mem_>"],"changes":{"custom_role_id":null}}'` | 200 `meta.updated: 1`; then the delete answers 204 |
+| Owners and self | assign a role to an owner or to yourself | 422 `invalid_transition` |
+| In a browser | `$W/d/settings/roles`, "New role" > "Read only", "Create role"; then `/d/settings/members`, the member's menu > "Make Read only" | the role is listed with "Based on member · 1 member"; the member's chip shows "Read only"; their reply shows "This action is unauthorized." |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.

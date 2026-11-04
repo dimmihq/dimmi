@@ -24,6 +24,7 @@ export interface Member {
   id: string;
   role: "owner" | "admin" | "member";
   status: "active" | "deactivated";
+  custom_role?: { id: string; name: string } | null;
   user: { id: string; name: string; email: string; email_verified: boolean };
 }
 
@@ -46,6 +47,7 @@ export interface WorkspaceChanges {
 export interface MemberChanges {
   role?: Member["role"];
   status?: Member["status"];
+  custom_role_id?: string | null;
 }
 
 export function workspaceQuery(workspace: string) {

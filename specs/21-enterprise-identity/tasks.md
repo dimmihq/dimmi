@@ -4,21 +4,21 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 
 ## M1. Sign-in rules and session length (track 08 enterprise-identity)
 
-- [ ] `app/models/workspace_security.go`: typed `SecuritySettings`, decode + with-methods, keys per access-policy.md. Test: bad JSON reads as no rules.
-- [ ] Migration 080004 (sessions context). `StartSession` writes `auth_domain` from Google `hd`. `Principal` adds `IP`, `LastActivityAt`, `SSOConnectionID`, `AuthDomain`. `AccessRule.Check` new signature; `AccessRules` holds clock.
-- [ ] Rules `SignInMethodRule`, `GoogleDomainRule`, `SessionLengthRule` in `app/auth/access_policy.go` (split files if over limit). Accept: refusal body per table; no query added (test counts queries).
-- [ ] `GET|PATCH /workspace/access-policy`, permission `security_policy:manage`, guards `sign_in_method_excludes_caller`, `no_owner_can_sign_in`. Audit + `AccessPolicyChangedMail`.
-- [ ] `routes/realtime` authorizers + refresh call policy. Listener closes sockets on change. Builds on F12 fix.
-- [ ] UI: `features/settings/workspace-security/{sign-in-rules,session-length}.tsx`, `features/auth/access-required.tsx`, 403 handler in `lib/api/client.ts` branches on `requirement`. E2e `workspace-security.spec.ts`: "an admin sets a session limit and an old session is asked to sign in again", "an admin allows only google and a password session is asked to sign in with it", light and dark.
-- [ ] Tests from access-policy.md "Tests".
+- [x] `app/models/workspace_security.go`: typed `SecuritySettings`, decode + with-methods, keys per access-policy.md. Test: bad JSON reads as no rules.
+- [x] Migration 080004 (sessions context). `StartSession` writes `auth_domain` from Google `hd`. `Principal` adds `IP`, `LastActivityAt`, `SSOConnectionID`, `AuthDomain`. `AccessRule.Check` new signature; `AccessRules` holds clock.
+- [x] Rules `SignInMethodRule`, `GoogleDomainRule`, `SessionLengthRule` in `app/auth/access_policy.go` (split files if over limit). Accept: refusal body per table; no query added (test counts queries).
+- [x] `GET|PATCH /workspace/access-policy`, permission `security_policy:manage`, guards `sign_in_method_excludes_caller`, `no_owner_can_sign_in`. Audit + `AccessPolicyChangedMail`.
+- [x] `routes/realtime` authorizers + refresh call policy. Listener closes sockets on change. Builds on F12 fix.
+- [x] UI: `features/settings/workspace-security/{sign-in-rules,session-length}.tsx`, `features/auth/access-required.tsx`, 403 handler in `lib/api/client.ts` branches on `requirement`. E2e `workspace-security.spec.ts`: "an admin sets a session limit and an old session is asked to sign in again", "an admin allows only google and a password session is asked to sign in with it", light and dark.
+- [x] Tests from access-policy.md "Tests".
 
 ## M2. IP allowlists (track 08 enterprise-identity)
 
-- [ ] Rules `DashboardAllowlistRule`, `APIAllowlistRule`. `netip.Prefix` parse once per decode. Accept: IPv4, IPv6, mapped forms.
-- [ ] `PATCH` guard `ip_allowlist_excludes_caller`; `tokens_outside` from `last_used_ip`; `your_ip`.
+- [x] Rules `DashboardAllowlistRule`, `APIAllowlistRule`. `netip.Prefix` parse once per decode. Accept: IPv4, IPv6, mapped forms.
+- [x] `PATCH` guard `ip_allowlist_excludes_caller`; `tokens_outside` from `last_used_ip`; `your_ip`.
 - [ ] MCP HTTP and CLI path checked. Test: "mcp over http obeys the api list". JSON-RPC body per `09-agent-native/mcp.md` wrapping 403.
 - [ ] `dimmi workspace:clear-access-policy <slug> [--only ip_allowlist]`, audit actor system. `dimmi doctor` proxy warning (11 check registry).
-- [ ] UI `ip-allowlists.tsx`. E2e: "an admin adds their own address and a range", "saving a list without your address explains why it failed".
+- [x] UI `ip-allowlists.tsx`. E2e: "an admin adds their own address and a range", "saving a list without your address explains why it failed".
 
 ## M3. Domains and connections (track 08 enterprise-identity)
 

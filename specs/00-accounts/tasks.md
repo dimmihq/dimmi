@@ -174,12 +174,12 @@ Spec: [rate-limits.md](rate-limits.md).
 
 Spec: [roles.md](roles.md). Migration `20261201080009_create_roles_table`.
 
-- [ ] Migration, prefix `rol_`, queries, factory `.WithCustomRole`.
-- [ ] `EffectivePermissions` with custom set; guard lookup joins; cache bust on `role.updated`. `tests/feature/authz` snapshot.
-- [ ] `permissions.Assignable`, labels `lang/en/permissions.json`, `GET /permissions`. `lang:check` covers.
-- [ ] CRUD, assign, bulk `PATCH /members`, escalation rules. Tests in roles.md.
+- [x] Migration, prefix `rol_`, queries, factory `.WithCustomRole`.
+- [x] `EffectivePermissions` with custom set; guard lookup joins; cache bust on `role.updated`. `tests/feature/authz` snapshot.
+- [x] `permissions.Assignable`, labels `lang/en/permissions.json`, `GET /permissions`. `lang:check` covers.
+- [x] CRUD, assign, bulk `PATCH /members`, escalation rules. Tests in roles.md.
 - [ ] Finer permissions registered, `roles.go` rows; policy swaps where routes exist. Needs tracks 03, 04 for call sites; missing routes use them when built.
-- [ ] Page + editor + presets + member picker. E2e `custom-roles.spec.ts`.
+- [x] Page + editor + presets + member picker. E2e `custom-roles.spec.ts`.
 
 ## M20. Interface language (track 07 accounts-settings)
 
