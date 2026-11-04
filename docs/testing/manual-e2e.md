@@ -198,6 +198,36 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Repair | `dimmi workspace:repair acme` | `acme: defaults checked, organization in order`, exit 0; unknown slug exits 1 "Workspace not found" |
 | In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
 
+### Shared inbox
+
+Ada (`a.jar`) in Acme, `H` as above, Bob a member. Ada adds an inbox, a customer writes through the API channel,
+and the team works the conversation:
+
+```bash
+IN=$(curl -s -b a.jar -H "$O" -H "$J" -H "$H" -X POST $B/inboxes -d '{"name":"Support"}' | jq -r .data.id)
+new(){ curl -s -b a.jar -H "$O" -H "$J" -H "$H" -X POST $B/conversations -d "{\"inbox_id\":\"$IN\",\"author\":\"contact\",
+  \"subject\":\"$1\",\"body\":\"$2\",\"contact\":{\"email\":\"$3\",\"name\":\"$4\"}}" | jq -r .data.id; }
+C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@example.com Ann)
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Inboxes | `r ib -b a.jar -H "$O" -H "$H" $B/inboxes` | 200, Support; Bob `POST $B/inboxes` 403 `forbidden` |
+| Customer starts | `r show -b a.jar -H "$O" -H "$H" $B/conversations/1` | 200 `number: 1`, `status: open`, `assignee: null`, `channel.type: api`, `unread: true`, `last_message.author.name: Ann` |
+| Views | `GET $B/conversations?filter[view]=unassigned`, `…=mine`, `…=all&sort=created_at` | Ann's conversation in unassigned and all, none in mine |
+| Counts | `r cnt -b a.jar -H "$O" -H "$H" $B/conversation-counts` | `views.unassigned.open: 1`, `views.unassigned.unread: 1`, `views.mine.open: 0` |
+| Reply | `r rp -b a.jar -X POST -H "$O" -H "$J" -H "$H" $B/conversations/$C/replies -d '{"body":"Refunded.","client_message_id":"r1"}'` | 201, `delivery_status: not_applicable`, `meta.conversation.assignee` Ada; again 200 with `Idempotent-Replayed: true` |
+| Stale reply | Bob replies with `"expected_last_message_id"` of Ann's first message after a `POST $B/conversations/$C/messages {"body":"Still waiting"}` | 409 `new_messages_since`, `data[0].excerpt` "Still waiting" |
+| Note | `POST $B/conversations/$C/notes {"body":"Fraud?"}` | 201 `type: note`, `substantive: false` |
+| Assign and close | `PATCH $B/conversations/$C {"assignee_id":"$BOBM","status":"closed","note":"Over to Bob"}` | 200, `meta.changed: ["assignee_id","status"]`; again `[]` |
+| Snooze from closed | `PATCH $B/conversations/$C {"status":"snoozed","snooze_preset":"tomorrow"}` | 422 `invalid_transition`, `from: closed`, `to: snoozed` |
+| Customer reopens | `POST $B/conversations/$C/messages {"body":"Hello?"}` | 201, `meta.conversation.status: open` |
+| Timeline | `GET "$B/conversations/$C/messages?filter[type]=event"` | assigned (by the reply, then to Bob), closed, reopened (`actor.name` Ann) in order |
+| Read state | `PATCH $B/conversations/$C/read-state {}`, then `{"unread":true}` | `unread: false`, then `unread: true` |
+| Search | `GET "$B/search?q=refund"`, `"$B/search?q=%231"`, `"$B/conversations?filter[view]=all&q=refunds"` | the conversation with the newest match marked in `highlight` (`<mark>Refunded</mark>`); `jump.number: 1`; one row |
+| Other workspace | Carol: `GET $B/conversations/$C` with her own workspace | 404 `not_found` |
+| In a browser | open `$W/d/inbox/unassigned`, open the conversation, reply, add a note, assign to me, mark as done, search | each change shows in the thread as a message or an event line; the list and counts follow |
+
 ### Two-factor authentication
 
 Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an

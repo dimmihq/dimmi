@@ -1,114 +1,111 @@
 /*
- * Conversations as the inbox shows them, and the example conversation a
- * new workspace sees until real ones arrive, so the inbox's panels can be
- * tried before anything is connected. The example lives in the browser
- * only and says so wherever it shows.
+ * How the inbox names and dates what the API returns: a customer by name,
+ * then address, then as a customer; times as how long ago they were; and
+ * a timeline entry as the kind of bubble the thread draws for it.
  */
-import type { InboxView } from "@/features/shell/navigation";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useCurrentWorkspace } from "@/features/shell/workspace";
+import { meQuery } from "@/lib/api/auth";
+import type { ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
 
-export interface Customer {
-  name: string;
-  email: string;
-  company: string;
-  initials: string;
-  location: string;
+/*
+ * useInbox returns the workspace the inbox works in and the person
+ * reading it.
+ */
+export function useInbox() {
+  const { data: me } = useSuspenseQuery(meQuery);
+  const { current } = useCurrentWorkspace(me?.workspaces ?? []);
+
+  return { workspace: current?.id ?? "", me: me?.user.name ?? "You" };
+}
+
+export function customerName(contact: ContactSummary): string {
+  return contact.name ?? contact.email ?? "Customer";
+}
+
+export function subjectOf(conversation: Conversation): string {
+  return conversation.subject ?? conversation.last_message?.excerpt ?? `Conversation #${conversation.number}`;
+}
+
+const units: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 31_536_000],
+  ["month", 2_592_000],
+  ["week", 604_800],
+  ["day", 86_400],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+/*
+ * ago says how long ago a moment was, in the reader's language: "Just
+ * now" under a minute, then minutes, hours and so on.
+ */
+export function ago(iso: string | null, now = Date.now()): string {
+  if (!iso) {
+    return "";
+  }
+  const seconds = Math.round((now - new Date(iso).getTime()) / 1000);
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "short" });
+  for (const [unit, size] of units) {
+    if (seconds >= size) {
+      return format.format(-Math.floor(seconds / size), unit);
+    }
+  }
+
+  return "Just now";
 }
 
 /*
- * A message in the thread: from the customer, from a teammate, from Dimmi
- * (the agent that answers customers), an internal note only teammates see,
- * or an event such as a handover.
+ * A thread entry is a timeline entry as the thread draws it: from the
+ * customer, from a teammate, from dimmi (the agent that answers
+ * customers), an internal note, or an event such as a handover.
  */
 export type ThreadEntry =
-  | { kind: "customer" | "teammate" | "dimmi"; id: string; author: string; at: string; text: string }
-  | { kind: "note"; id: string; author: string; at: string; text: string }
+  | { kind: "customer" | "teammate" | "dimmi" | "note"; id: string; author: string; at: string; text: string }
   | { kind: "event"; id: string; at: string; text: string };
 
-export interface Conversation {
-  id: string;
-  example: boolean;
-  subject: string;
-  preview: string;
-  updated: string;
-  status: "open" | "snoozed" | "done";
-  priority: "low" | "normal" | "high" | "urgent";
-  channel: string;
-  assignee: string | null;
-  customer: Customer;
-  thread: ThreadEntry[];
-  /* What Operator, the teammates' own agent, has gathered about the case. */
-  briefing: string;
-  /* Teammates the example can be assigned to, besides the person reading. */
-  teammates: string[];
-}
-
-const example: Conversation = {
-  id: "example",
-  example: true,
-  subject: "Can't log in",
-  preview: "I've been having trouble logging into my account for the past few days…",
-  updated: "14m ago",
-  status: "open",
-  priority: "normal",
-  channel: "Messenger",
-  assignee: null,
-  customer: {
-    name: "Emily Johnson",
-    email: "emily@northwind.example",
-    company: "Northwind",
-    initials: "EJ",
-    location: "Lisbon, Portugal",
-  },
-  thread: [
-    {
-      kind: "customer",
-      id: "m1",
-      author: "Emily Johnson",
-      at: "32m ago",
-      text: "I've been having trouble logging into my account for the past few days. It keeps saying my password is incorrect, but I'm sure I'm typing it right since I use a password manager.\n\nCan you help me out?",
-    },
-    {
-      kind: "dimmi",
-      id: "m2",
-      author: "Dimmi",
-      at: "31m ago",
-      text: "Sorry about that, Emily. Password managers sometimes keep an old password after a reset. Could you try “Forgot password?” on the sign-in page? The link works for 60 minutes and signs you in right after.",
-    },
-    {
-      kind: "customer",
-      id: "m3",
-      author: "Emily Johnson",
-      at: "18m ago",
-      text: "I tried that twice and the reset link says it has expired as soon as I open it.",
-    },
-    {
-      kind: "event",
-      id: "e1",
-      at: "18m ago",
-      text: "Dimmi handed the conversation to your team: the reset link fails for this customer.",
-    },
-    {
-      kind: "note",
-      id: "n1",
-      author: "Operator",
-      at: "17m ago",
-      text: "Two other customers reported expired reset links this week. Both use Outlook, which opens links in a preview first. Worth checking whether the preview spends the link.",
-    },
-  ],
-  teammates: ["Sam Okafor", "Lea Martin"],
-  briefing:
-    "Emily can't sign in: her saved password is refused, and both reset links she opened said they had expired. Dimmi handed over after the second failure.\n\nTwo similar reports this week came from Outlook users, whose mail preview may open the link before they do. Suggested next step: ask Emily which mail app she uses, and send a sign-in code instead of a link.",
+const statusWords: Record<string, string> = {
+  "conversation.closed": "closed the conversation",
+  "conversation.reopened": "reopened the conversation",
+  "conversation.snoozed": "snoozed the conversation",
+  "conversation.unsnoozed": "woke the conversation up",
+  "conversation.marked_spam": "marked the conversation as spam",
+  "conversation.unmarked_spam": "took the conversation out of spam",
+  "conversation.updated": "updated the conversation",
 };
 
 /*
- * conversationsIn returns the conversations of an inbox view. Until the
- * inbox is connected, only the example shows, in the views a new
- * conversation lands in.
+ * eventText says in words what an event entry records.
  */
-export function conversationsIn(view: InboxView): Conversation[] {
-  return view === "unassigned" || view === "all" ? [example] : [];
+export function eventText(event: TimelineEvent): string {
+  const actor = event.actor.name || "dimmi";
+  if (event.name === "conversation.assigned") {
+    const to = event.to?.member?.name ?? event.to?.team?.name;
+    return to ? `${actor} assigned the conversation to ${to}` : `${actor} unassigned the conversation`;
+  }
+  if (event.name === "conversation.priority_changed") {
+    return event.priority ? `${actor} marked the conversation as a priority` : `${actor} removed the priority`;
+  }
+
+  return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
 }
 
-export function findConversation(id: string): Conversation | undefined {
-  return id === example.id ? example : undefined;
+export function toEntry(message: Message): ThreadEntry {
+  const at = ago(message.created_at);
+  if (message.type === "event" && message.event) {
+    return { kind: "event", id: message.id, at, text: eventText(message.event) };
+  }
+  const text = message.body ?? "This message was deleted.";
+  const author = message.author.name;
+  if (message.type === "note") {
+    return { kind: "note", id: message.id, author, at, text };
+  }
+  if (message.author.type === "contact") {
+    return { kind: "customer", id: message.id, author, at, text };
+  }
+  if (message.author.type === "agent") {
+    return { kind: "dimmi", id: message.id, author, at, text };
+  }
+
+  return { kind: "teammate", id: message.id, author, at, text };
 }

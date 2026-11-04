@@ -14,7 +14,6 @@ import { Chip } from "@/components/base/badges/chip";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Panel, ScrollArea } from "@/features/shell/page";
 
-import type { Conversation } from "./conversations";
 import { Arrive } from "./motion";
 
 interface Said {
@@ -26,15 +25,15 @@ interface Said {
 const notConnected = "I can't look into this yet: Operator connects once the inbox does.";
 
 export function OperatorPanel({
-  conversation,
+  briefing,
   onClose,
   className,
 }: {
-  conversation: Conversation;
+  briefing: string;
   onClose: () => void;
   className?: string;
 }) {
-  const [said, setSaid] = useState<Said[]>([{ id: 0, role: "assistant", text: conversation.briefing }]);
+  const [said, setSaid] = useState<Said[]>([{ id: 0, role: "assistant", text: briefing }]);
   const [draft, setDraft] = useState("");
 
   const ask = () => {

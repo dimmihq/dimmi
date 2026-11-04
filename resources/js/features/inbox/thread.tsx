@@ -18,8 +18,8 @@ import { avatarColor } from "@/features/shell/avatar-color";
 import { ScrollArea } from "@/features/shell/page";
 import { cx } from "@/utils/cx";
 
-import { Composer } from "./composer";
-import type { Conversation, ThreadEntry } from "./conversations";
+import { Composer, type Send } from "./composer";
+import type { ThreadEntry } from "./conversations";
 import type { Mode } from "./modes";
 
 type Said = Extract<ThreadEntry, { author: string }>;
@@ -146,12 +146,16 @@ function useComposerKeys(keys: Record<string, () => void>) {
 }
 
 export function Thread({
-  conversation,
-  events,
+  entries,
+  customer,
+  channel,
+  onSend,
   onAskOperator,
 }: {
-  conversation: Conversation;
-  events: ThreadEntry[];
+  entries: ThreadEntry[];
+  customer: string;
+  channel: string;
+  onSend: Send;
   onAskOperator: () => void;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
@@ -174,9 +178,9 @@ export function Thread({
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="pt-2 pb-4">
         <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-          {[...conversation.thread, ...events].map((entry) => (
+          {entries.map((entry) => (
             <li key={entry.id}>
-              <Entry entry={entry} customer={conversation.customer.name} />
+              <Entry entry={entry} customer={customer} />
             </li>
           ))}
         </ol>
@@ -185,8 +189,9 @@ export function Thread({
         <Composer
           mode={mode}
           focusKey={focusKey}
-          customer={conversation.customer.name}
-          channel={conversation.channel}
+          customer={customer}
+          channel={channel}
+          onSend={onSend}
           onOpen={(next) => (next === "reply" ? keys.r() : keys.n())}
           onAskOperator={() => ask.current()}
         />
