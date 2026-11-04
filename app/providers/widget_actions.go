@@ -21,6 +21,7 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/attachments"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -50,6 +51,10 @@ func registerWidget(a *app.App, fa *foundation.Application) {
 	fa.Kernel.Alias("widget.session", func(args ...string) (fhttp.Middleware, error) {
 		if slices.Contains(args, "reviving") {
 			return appmiddleware.AuthenticateWidgetReviving(a.Actions.Widget.Authenticate, fa.Errors), nil
+		}
+
+		if slices.Contains(args, "ending") {
+			return appmiddleware.AuthenticateWidgetEnding(a.Actions.Widget.Authenticate, fa.Errors), nil
 		}
 
 		return appmiddleware.AuthenticateWidget(a.Actions.Widget.Authenticate, fa.Errors), nil
@@ -174,6 +179,7 @@ func bootWidgetRealtime(a *app.App) error {
 
 	a.Actions.Widget.Realtime = &widget.Realtime{
 		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Key: key, TTL: a.Config.Widget.RealtimeTokenTTL,
+		MaxStreams: a.Config.Widget.MaxConnectionsPerSession,
 	}
 
 	if a.Realtime != nil {
@@ -191,6 +197,12 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 	acts := a.Actions.Widget
 
 	acts.Conversations = &widget.ListWidgetConversations{DB: a.DB, Disk: disk}
+	acts.Uploads = &widget.Uploads{
+		Create:   &attachments.CreatePendingUpload{DB: a.DB, Clock: a.Clock, Disk: disk, DiskName: diskName},
+		Put:      &attachments.PutUploadContent{DB: a.DB, Disk: disk},
+		Complete: &attachments.CompleteUpload{DB: a.DB, Clock: a.Clock, Disk: disk},
+		Disk:     disk,
+	}
 	acts.MarkRead = &widget.MarkWidgetConversationRead{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.Ping = &widget.RecordWidgetPing{DB: a.DB, Clock: a.Clock, Cache: a.Cache}
 	acts.Updates = &widget.ListWidgetUpdates{DB: a.DB, Clock: a.Clock, Read: acts.Conversations}

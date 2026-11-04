@@ -44,4 +44,5 @@ type WidgetActions struct {
 	Realtime      *widget.Realtime
 	Updates       *widget.ListWidgetUpdates
 	Contacts      *widget.ContactSessions
+	Uploads       *widget.Uploads
 }

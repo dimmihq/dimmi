@@ -60,14 +60,18 @@ DisconnectCredential closes it by. Alive reports whether that credential
 still works; left nil, the connection is never asked. An error is not an
 answer: the connection stays until it can be asked again, but takes no
 new subscription.
+
+MaxConnections caps how many connections the user keeps open across
+every node; past it the oldest close with code 4004. Zero means no cap.
 */
 type Principal struct {
-	UserID     string
-	Info       any
-	Channels   []string
-	Subject    any
-	Credential string
-	Alive      func(ctx context.Context) (bool, error)
+	UserID         string
+	Info           any
+	Channels       []string
+	Subject        any
+	Credential     string
+	Alive          func(ctx context.Context) (bool, error)
+	MaxConnections int
 }
 
 /*
@@ -131,6 +135,12 @@ func (s *Server) connecting(ctx context.Context, event centrifuge.ConnectEvent) 
 		subscriptions[channel] = opts
 	}
 
+	if err := countConnection(principal, subscriptions); err != nil {
+		s.logger.ErrorContext(ctx, "stamp realtime connection", log.Err(err))
+
+		return centrifuge.ConnectReply{}, centrifuge.ErrorInternal
+	}
+
 	credentials := &centrifuge.Credentials{UserID: principal.UserID, Info: info}
 	if principal.Alive != nil {
 		credentials.ExpireAt = s.nextRecheck()
@@ -140,12 +150,17 @@ func (s *Server) connecting(ctx context.Context, event centrifuge.ConnectEvent) 
 }
 
 /*
-connected guards the subscriptions a client asks for, lets it list who
-else listens on a channel it is subscribed to, and keeps asking whether
-its credential is alive. Publishing and every other client command stay
+connected closes the user's oldest connections past their limit, guards
+the subscriptions a client asks for, lets it list who else listens on a
+channel it is subscribed to, and keeps asking whether its credential is
+alive. Publishing and every other client command stay
 unhandled, which the node refuses.
 */
 func (s *Server) connected(client *centrifuge.Client) {
+	if principal, ok := client.Context().Value(principalKey{}).(Principal); ok && principal.MaxConnections > 0 {
+		go s.enforceLimit(context.WithoutCancel(client.Context()), principal)
+	}
+
 	client.OnSubscribe(func(event centrifuge.SubscribeEvent, callback centrifuge.SubscribeCallback) {
 		if err := s.checkAlive(client.Context()); err != nil {
 			callback(centrifuge.SubscribeReply{}, err)

@@ -47,6 +47,12 @@ func Widget(a *app.App) {
 		api.Group("", func(visitor *routing.Router) {
 			visitor.Middleware("widget.session", "widget.origin")
 			widgetSessionRoutes(visitor, a)
+			widgetAttachmentRoutes(visitor, a)
+		})
+		api.Group("", func(leaving *routing.Router) {
+			leaving.Middleware("widget.session:ending", "widget.origin")
+			routing.Delete(leaving, "/session", "widget.session.destroy", sessionController(a).Destroy).
+				Status(fhttp.StatusNoContent)
 		})
 	})
 }
@@ -77,7 +83,6 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	sessions := sessionController(a)
 
 	routing.Get(visitor, "/session", "widget.session.show", sessions.Show)
-	routing.Delete(visitor, "/session", "widget.session.destroy", sessions.Destroy).Status(fhttp.StatusNoContent)
 
 	contact := &widget.ContactController{DB: a.DB, Update: a.Actions.Widget.UpdateContact}
 	routing.Get(visitor, "/contact", "widget.contact.show", contact.Show)
@@ -122,6 +127,23 @@ func sessionController(a *app.App) *widget.SessionController {
 		Start: acts.StartSession, Describe: acts.ShowSession, Revoke: acts.RevokeSession, Clock: a.Clock,
 		BaseURL: baseURLOf(a),
 	}
+}
+
+/*
+widgetAttachmentRoutes declares the three steps of a visitor's upload. The
+bytes route is a plain handler, so the body streams to the disk.
+*/
+func widgetAttachmentRoutes(visitor *routing.Router, a *app.App) {
+	files := &widget.AttachmentController{
+		Uploads: a.Actions.Widget.Uploads, IDs: a.IDs, Errors: a.Errors, BaseURL: baseURLOf(a),
+	}
+	one := "/attachments/{attachment}"
+
+	routing.Post(visitor, "/attachments", "widget.attachments.store", files.Store).Status(fhttp.StatusCreated)
+	routing.Patch(visitor, one, "widget.attachments.update", files.Update)
+
+	content := fhttp.HandlerFunc(files.Content)
+	visitor.Handle(fhttp.MethodPut, one+"/content", "widget.attachments.content.update", content)
 }
 
 /*

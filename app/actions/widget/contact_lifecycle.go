@@ -52,7 +52,7 @@ Repoint moves the merged lead's live sessions to the contact that survived,
 or ends them when it is a signed-in customer, and returns the sessions it
 ended so their streams close once the merge commits.
 */
-func (a *ContactSessions) Repoint(ctx context.Context, tx *database.Tx, in MergeInput) ([]ids.UUID, error) {
+func (a *ContactSessions) Repoint(ctx context.Context, tx *database.Tx, in MergeInput) ([]EndedSession, error) {
 	q := models.New(tx)
 
 	if !in.IntoUser {
@@ -74,7 +74,7 @@ func (a *ContactSessions) Repoint(ctx context.Context, tx *database.Tx, in Merge
 		return nil, fmt.Errorf("end merged widget sessions: %w", err)
 	}
 
-	return ended, nil
+	return endedFor(ended), nil
 }
 
 /*
@@ -82,19 +82,21 @@ EraseContact ends every session of the contact, closes their streams and
 forgets what they kept about the visitor.
 */
 func (a *ContactSessions) EraseContact(ctx context.Context, db *database.DB, workspaceID, contactID ids.UUID) error {
-	var ended []ids.UUID
+	var ended []EndedSession
 
 	err := db.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q, now := models.New(tx), a.Clock.Now()
 
 		var err error
 
-		ended, err = q.RevokeWidgetSessionsForContact(ctx, models.RevokeWidgetSessionsForContactParams{
+		rows, err := q.RevokeWidgetSessionsForContact(ctx, models.RevokeWidgetSessionsForContactParams{
 			Now: now, Reason: string(enums.WidgetRevokeContactErased), WorkspaceID: workspaceID, ContactID: contactID,
 		})
 		if err != nil {
 			return fmt.Errorf("end erased widget sessions: %w", err)
 		}
+
+		ended = endedFor(rows)
 
 		err = q.ScrubWidgetSessionsForContact(ctx, models.ScrubWidgetSessionsForContactParams{
 			Now: now, WorkspaceID: workspaceID, ContactID: contactID,
@@ -110,4 +112,16 @@ func (a *ContactSessions) EraseContact(ctx context.Context, db *database.DB, wor
 	}
 
 	return a.Streams.CloseSessions(ctx, ended)
+}
+
+/*
+endedFor lists the contact's sessions that just ended.
+*/
+func endedFor(rows []models.RevokeWidgetSessionsForContactRow) []EndedSession {
+	ended := make([]EndedSession, 0, len(rows))
+	for _, row := range rows {
+		ended = append(ended, EndedSession{ID: row.ID, ContactID: row.ContactID})
+	}
+
+	return ended
 }

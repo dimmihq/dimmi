@@ -56,13 +56,16 @@ type RealtimeToken struct {
 /*
 Realtime issues visitors' connect tokens and opens their streams. Key
 signs the tokens, IDs reads the session they name and TTL is how long one works.
+MaxStreams is how many streams one session keeps open; a newer one closes
+the oldest.
 */
 type Realtime struct {
-	DB    *database.DB
-	Clock clock.Clock
-	IDs   *ids.Registry
-	Key   jwt.Key
-	TTL   time.Duration
+	DB         *database.DB
+	Clock      clock.Clock
+	IDs        *ids.Registry
+	Key        jwt.Key
+	TTL        time.Duration
+	MaxStreams int
 }
 
 /*
@@ -124,9 +127,10 @@ func (a *Realtime) Resolve(ctx context.Context, token string) (fbroadcasting.Pri
 
 	return fbroadcasting.Principal{
 		UserID: userID, Info: map[string]any{"session_id": userID, "connected_at": a.Clock.Now().UTC()},
-		Channels:   []string{appbroadcasting.WidgetContactChannel(session.ContactID)},
-		Subject:    &appbroadcasting.WidgetSession{WorkspaceID: session.WorkspaceID, ContactID: session.ContactID},
-		Credential: "widget_session:" + session.ID.String(),
+		Channels:       []string{appbroadcasting.WidgetContactChannel(session.ContactID)},
+		Subject:        &appbroadcasting.WidgetSession{WorkspaceID: session.WorkspaceID, ContactID: session.ContactID},
+		Credential:     "widget_session:" + session.ID.String(),
+		MaxConnections: a.MaxStreams,
 		Alive: func(ctx context.Context) (bool, error) {
 			current, err := a.find(ctx, session.WorkspaceID, session.ID)
 			if errors.Is(err, database.ErrNotFound) {

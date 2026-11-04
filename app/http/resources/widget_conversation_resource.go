@@ -32,7 +32,8 @@ const (
 
 /*
 WidgetAttachment is a file on a message. URL is a short-lived link, null
-while the file is unchecked or when it was blocked.
+while the file is unchecked, when it was blocked, or when its disk signs no
+links. Blocked is set only when the malware scan refused the file.
 */
 type WidgetAttachment struct {
 	ID          string  `json:"id"`
@@ -180,14 +181,21 @@ func NewWidgetMessage(v widget.VisibleMessage) WidgetMessage {
 	}
 
 	for _, file := range v.Attachments {
-		out.Attachments = append(out.Attachments, WidgetAttachment{
-			ID: models.PublicID(models.PrefixAttachment, file.Row.ID), Object: "attachment",
-			Filename: file.Row.Filename, ContentType: file.Row.ContentType, SizeBytes: file.Row.SizeBytes,
-			URL: file.URL, Blocked: file.Blocked, Width: file.Row.Width, Height: file.Row.Height,
-		})
+		out.Attachments = append(out.Attachments, NewWidgetAttachment(file))
 	}
 
 	return out
+}
+
+/*
+NewWidgetAttachment presents a file as a visitor sees it.
+*/
+func NewWidgetAttachment(file widget.VisibleAttachment) WidgetAttachment {
+	return WidgetAttachment{
+		ID: models.PublicID(models.PrefixAttachment, file.Row.ID), Object: "attachment",
+		Filename: file.Row.Filename, ContentType: file.Row.ContentType, SizeBytes: file.Row.SizeBytes,
+		URL: file.URL, Blocked: file.Blocked, Width: file.Row.Width, Height: file.Row.Height,
+	}
 }
 
 /*

@@ -163,7 +163,9 @@ func TestWidgetSessionResume(t *testing.T) {
 		require.NotNil(t, row.RevokeReason)
 		assert.Equal(t, "logout", *row.RevokeReason)
 		v.client().GetJSON("/widget/v1/session").AssertUnauthorized().AssertJSONPath("code", "session_revoked")
-		v.client().Delete("/widget/v1/session").AssertUnauthorized()
+		v.client().Delete("/widget/v1/session").AssertNoContent()
+		tc.Client().WithHeader("Authorization", "Bearer dmi_ws_unknown").Delete("/widget/v1/session").
+			AssertUnauthorized()
 	})
 
 	t.Run("a session on a widget refusing its site is refused", func(t *testing.T) {
