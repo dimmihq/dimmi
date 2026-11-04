@@ -153,11 +153,11 @@ Spec: [audit.md](audit.md). Builds on F71 fix.
 
 ## M17. Members, invitations, teams (track 07 accounts-settings)
 
-- [ ] Member resource fields, filters, permission-gated. `features/settings/members/*`. Extend `workspace-members.spec.ts`: "an admin sees who has no second factor".
-- [ ] Member CSV export. Test formula guard.
-- [ ] `POST /member-imports`, dialog with dry run. Permission `members:import`. E2e `member-import.spec.ts`.
-- [x] Migration `20261201070002_add_reminded_at_to_invitations`, `RemindInviters`, `InvitationPendingMail`, always-return `accept_url`, `{channel: "link"}`, team picker in dialog. Extend `invitations.spec.ts`. Open: the e2e extension waits for a build.
-- [x] `DELETE /teams/{team}` params, dialog, `include=conversation_counts`. 03 `ReassignTeamConversations` built here if track 02 has not; agreed shape in delta. Extend `teams.spec.ts`. Built as moves inside the delete transaction, through the conversation writer; no chunked job or silent flag yet. Open: the e2e extension waits for a build.
+- [x] Member resource fields, filters, permission-gated. `features/settings/members/*`. Extend `workspace-members.spec.ts`: "an admin sees who has no second factor". The list keeps its rows rather than a table; `sign_in_locked` was already there.
+- [x] Member CSV export. Test formula guard.
+- [x] `POST /member-imports`, dialog with dry run. Permission `members:import`. E2e `member-import.spec.ts`. Custom roles do not exist yet, so a filled `custom_role` cell fails its row with `custom_role_unavailable`; no directory sync exists yet, so `managed_by_directory` is not checked.
+- [x] Migration `20261201070002_add_reminded_at_to_invitations`, `RemindInviters`, `InvitationPendingMail`, always-return `accept_url`, `{channel: "link"}`, team picker in dialog. Extend `invitations.spec.ts`.
+- [x] `DELETE /teams/{team}` params, dialog, `include=conversation_counts`. 03 `ReassignTeamConversations` built here if track 02 has not; agreed shape in delta. Extend `teams.spec.ts`. Built as moves inside the delete transaction, through the conversation writer; no chunked job or silent flag yet.
 - [x] `team.member_added` payload `added_by_member_id`. Trigger delivery track 11.
 - [ ] X1: `PATCH /members/{mem}` access fields + `member-access-dialog.tsx`, permission `members:manage_access`. **Needs track 02 access milestone** (columns + `VisibleScope`). Land last in M17.
 

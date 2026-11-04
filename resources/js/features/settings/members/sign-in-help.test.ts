@@ -11,6 +11,8 @@ function member(changes: Partial<Member> = {}): Member {
     status: "active",
     user: { id: "usr_ada", name: "Ada", email: "ada@example.com", email_verified: true, avatar_url: null },
     sign_in_locked: false,
+    two_factor_enabled: true,
+    last_active_at: null,
     ...changes,
   };
 }

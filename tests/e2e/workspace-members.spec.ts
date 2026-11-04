@@ -1,4 +1,4 @@
-import { addTeammate } from "./support/database";
+import { addTeammate, markTwoFactorOn } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 
 /*
@@ -130,5 +130,33 @@ it.describe("workspace and members", () => {
     await page.getByRole("button", { name: "Leave workspace" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Leave workspace" }).click();
     await expect(page).not.toHaveURL(/\/settings\/members$/);
+  });
+
+  it("an admin sees who has no second factor", async ({ page, person, request }) => {
+    const teammate = teammateOf(person);
+    await createAccount(request, person, `Review ${suffixOf(person)}`);
+    await createAccount(request, teammate);
+    addTeammate(person.email, teammate.email, "member");
+    await signIn(page, person);
+    markTwoFactorOn(person.email);
+
+    await page.goto("/d/settings/workspace");
+    await expect(page.getByText("1 member has no second factor yet.")).toBeVisible();
+    await page.getByRole("link", { name: "See who" }).click();
+    await expect(page).toHaveURL(/\/d\/settings\/members\?two_factor=false$/);
+
+    const members = page.getByRole("region", { name: "Members" });
+    await expect(members.getByText(teammate.name)).toBeVisible();
+    await expect(members.getByText(`${person.name} (you)`)).toBeHidden();
+    await expect(members.getByText("No two-factor")).toBeVisible();
+
+    await members.getByRole("button", { name: /Show/ }).click();
+    await page.getByRole("option", { name: "Everyone" }).click();
+    await expect(members.getByText(`${person.name} (you)`)).toBeVisible();
+    await expect(members.getByText("No two-factor")).toHaveCount(1);
+
+    const download = page.waitForEvent("download");
+    await members.getByRole("button", { name: "Export CSV" }).click();
+    expect((await download).suggestedFilename()).toBe(`dimmi-members-review-${suffixOf(person)}.csv`);
   });
 });

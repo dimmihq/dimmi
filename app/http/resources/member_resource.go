@@ -5,8 +5,11 @@
 |
 | A member as their teammates see them: their role and status in the
 | workspace and who they are, by name and email, never anything about
-| how they sign in. The caller's own membership, with the permissions
-| they hold, is the separate member block of the me resource.
+| how they sign in. Those who manage members also see whether each one
+| has a second factor and when they last used the workspace, so they can
+| chase the stragglers. The caller's own membership, with the
+| permissions they hold, is the separate member block of the me
+| resource.
 |
 */
 
@@ -22,7 +25,9 @@ import (
 WorkspaceMember is one member of a workspace, with their account. Teams
 is present only when the request included the member's teams.
 SignInLocked says whether failed guesses locked the member's account,
-and is null for callers who may not lift the lock.
+TwoFactorEnabled whether the account has a second factor, and
+LastActiveAt when the member last used the workspace; all three are
+null for callers who do not manage members.
 */
 type WorkspaceMember struct {
 	ID            string         `json:"id"`
@@ -36,6 +41,9 @@ type WorkspaceMember struct {
 	DeactivatedAt *time.Time     `json:"deactivated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
 	SignInLocked  *bool          `json:"sign_in_locked"`
+
+	TwoFactorEnabled *bool      `json:"two_factor_enabled"`
+	LastActiveAt     *time.Time `json:"last_active_at"`
 }
 
 /*
@@ -69,9 +77,21 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 			EmailVerified: u.IsVerified(),
 			AvatarURL:     u.AvatarURL(),
 		},
-		DeactivatedAt: m.DeactivatedAt,
-		CreatedAt:     m.CreatedAt,
+		DeactivatedAt:    m.DeactivatedAt,
+		CreatedAt:        m.CreatedAt,
+		TwoFactorEnabled: new(u.TwoFactorConfirmedAt != nil),
+		LastActiveAt:     m.LastAccessedAt,
 	}
+}
+
+/*
+ForTeammates returns the member without what only those who manage
+members may see.
+*/
+func (w WorkspaceMember) ForTeammates() WorkspaceMember {
+	w.SignInLocked, w.TwoFactorEnabled, w.LastActiveAt = nil, nil, nil
+
+	return w
 }
 
 /*

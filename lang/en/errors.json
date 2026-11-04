@@ -60,5 +60,18 @@
   "invalid_two_factor_reset_token": "This reset link is invalid or has expired.",
   "password_required": "Enter your password to turn two-factor authentication off.",
   "range_too_large": "An export covers a year at most. Pick a shorter date range.",
-  "too_many_exports": "This workspace exported its audit log as often as it may this hour. Try again later."
+  "too_many_exports": "This workspace exported its audit log as often as it may this hour. Try again later.",
+  "invalid_csv": "The file must be a CSV file with a header row.",
+  "unknown_column": "The file has a column the import does not know.",
+  "missing_email_column": "The file needs an email column.",
+  "too_many_rows": "The file has more rows than one import takes.",
+  "too_many_imports": "This workspace imported members too often. Try again later.",
+  "role_not_allowed": "An import cannot make someone an owner.",
+  "invalid_role": "The role must be admin or member.",
+  "invalid_status": "The status must be active or deactivated.",
+  "unknown_team": "A team in this row does not exist in the workspace.",
+  "duplicate_email": "An earlier row already names this address.",
+  "owner_not_changed": "An owner's role and status cannot change through an import.",
+  "custom_role_unavailable": "Custom roles are not available yet; leave the column empty.",
+  "unknown_member": "Only a member of the workspace can be deactivated."
 }

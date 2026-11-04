@@ -42,6 +42,7 @@ func adminRows() []string {
 		"knowledge:manage", "github:manage", "docs_sync:manage", "oauth_grants:manage_any", "agent_access:manage",
 		"feedback:delete", "feedback:manage", "engage:manage", "imports:read", "imports:manage", "imports:rollback",
 		"webhooks:read", "webhooks:write", "billing:read", "billing:write", "members:reset_two_factor",
+		"members:import",
 	}
 }
 

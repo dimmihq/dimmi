@@ -18,6 +18,7 @@ package v1
 import (
 	"context"
 	"slices"
+	"strconv"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
@@ -54,16 +55,20 @@ type MemberOutput struct {
 }
 
 /*
-MemberController serves the members of the workspace in play.
+MemberController serves the members of the workspace in play, as JSON
+or, through ServeCSV, as a CSV file. Errors renders what refuses an
+export before its file starts.
 */
 type MemberController struct {
 	ListMembers  *members.ListMembers
 	ShowMember   *members.ShowMember
 	UpdateMember *members.UpdateMember
+	Export       *members.ExportMembers
 	MemberTeams  *teams.ListMemberTeams
 	IDs          *ids.Registry
 	Cursors      *pagination.Cursors
 	Lockout      *appauth.Lockout
+	Errors       fhttp.Errors
 }
 
 /*
@@ -74,14 +79,16 @@ type memberPage struct {
 }
 
 /*
-Index lists a page of members, by name or, with sort=-created_at,
-newest first; filter[status], filter[role] and q narrow it.
+Index lists a page of members, by name, newest first with
+sort=-created_at or most recently active first with
+sort=-last_active_at; filter[status], filter[role], filter[team],
+filter[two_factor] and q narrow it.
 */
 func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*MembersOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
 	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
-		Filters: []string{"status", "role"}, Sorts: []string{"name", "created_at"}, Includes: []string{"teams"},
+		Filters: memberFilters(), Sorts: []string{"name", "created_at", "last_active_at"}, Includes: []string{"teams"},
 	})
 	if err != nil {
 		return nil, err
@@ -176,10 +183,15 @@ func (c *MemberController) includeTeams(
 
 /*
 markLocked says, for each shaped member, whether failed guesses locked
-their account, when the caller may change members.
+their account, when the caller may change members; other callers see
+none of what only those who manage members may see.
 */
 func (c *MemberController) markLocked(ctx context.Context, out []resources.WorkspaceMember) error {
 	if !membership(ctx).Can("members:write") {
+		for i := range out {
+			out[i] = out[i].ForTeammates()
+		}
+
 		return nil
 	}
 
@@ -274,15 +286,15 @@ filter values no member can have.
 func (c *MemberController) listInput(ctx context.Context, query pagination.Query) (members.ListMembersInput, error) {
 	in := members.ListMembersInput{
 		Membership: membership(ctx), Statuses: query.Filters["status"], Roles: query.Filters["role"],
-		Search: query.Search, Limit: query.Limit,
-	}
-
-	for _, sort := range query.Sorts {
-		in.NewestFirst = sort.Field == "created_at" && sort.Desc
+		Search: query.Search, Limit: query.Limit, Sort: memberSort(query.Sorts),
 	}
 
 	if !known(in.Statuses, enums.MemberStatuses()) || !known(in.Roles, enums.Roles()) {
 		return in, pagination.ErrInvalidFilter
+	}
+
+	if err := c.narrow(query.Filters, &in); err != nil {
+		return in, err
 	}
 
 	if query.Cursor != "" {
@@ -295,6 +307,67 @@ func (c *MemberController) listInput(ctx context.Context, query pagination.Query
 	}
 
 	return in, nil
+}
+
+/*
+memberFilters are the filters the member list and its export take.
+*/
+func memberFilters() []string {
+	return []string{"status", "role", "team", "two_factor"}
+}
+
+/*
+memberSort picks the order of the list: newest first or most recently
+active first when asked for descending, by name otherwise.
+*/
+func memberSort(sorts []pagination.Sort) string {
+	order := members.SortByName
+
+	for _, sort := range sorts {
+		switch {
+		case sort.Field == "created_at" && sort.Desc:
+			order = members.SortNewestFirst
+		case sort.Field == "last_active_at" && sort.Desc:
+			order = members.SortLastActivity
+		default:
+			order = members.SortByName
+		}
+	}
+
+	return order
+}
+
+/*
+narrow reads the team and second factor filters into the input,
+refusing team ids and values that cannot match.
+*/
+func (c *MemberController) narrow(filters map[string][]string, in *members.ListMembersInput) error {
+	for _, named := range filters["team"] {
+		id, err := c.IDs.Decode(string(models.PrefixTeam), named)
+		if err != nil {
+			return pagination.ErrInvalidFilter
+		}
+
+		in.TeamIDs = append(in.TeamIDs, id)
+	}
+
+	values := filters["two_factor"]
+	if len(values) == 0 {
+		return nil
+	}
+
+	if len(values) > 1 {
+		return pagination.ErrInvalidFilter
+	}
+
+	on, err := strconv.ParseBool(values[0])
+	if err != nil {
+		return pagination.ErrInvalidFilter
+	}
+
+	in.TwoFactor = &on
+
+	return nil
 }
 
 /*

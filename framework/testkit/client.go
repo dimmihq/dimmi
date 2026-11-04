@@ -188,24 +188,58 @@ field.
 func (c *Client) PutFile(path, field, name string, contents []byte) *Response {
 	c.tb.Helper()
 
+	return c.sendForm(http.MethodPut, path, FormFile{Field: field, Name: name, Contents: contents}, nil)
+}
+
+/*
+FormFile is one file of a multipart form: its field, its file name and
+its contents.
+*/
+type FormFile struct {
+	Field    string
+	Name     string
+	Contents []byte
+}
+
+/*
+PostForm posts a multipart form with the file and the plain values.
+*/
+func (c *Client) PostForm(path string, file FormFile, values map[string]string) *Response {
+	c.tb.Helper()
+
+	return c.sendForm(http.MethodPost, path, file, values)
+}
+
+/*
+sendForm sends a multipart form with the file and the plain values.
+*/
+func (c *Client) sendForm(method, path string, file FormFile, values map[string]string) *Response {
+	c.tb.Helper()
+
 	var body bytes.Buffer
 
 	form := multipart.NewWriter(&body)
 
-	part, err := form.CreateFormFile(field, name)
-	if err != nil {
-		c.tb.Fatalf("start form for PUT %s: %v", path, err)
+	for name, value := range values {
+		if err := form.WriteField(name, value); err != nil {
+			c.tb.Fatalf("write field for %s %s: %v", method, path, err)
+		}
 	}
 
-	if _, err := part.Write(contents); err != nil {
-		c.tb.Fatalf("write form for PUT %s: %v", path, err)
+	part, err := form.CreateFormFile(file.Field, file.Name)
+	if err != nil {
+		c.tb.Fatalf("start form for %s %s: %v", method, path, err)
+	}
+
+	if _, err := part.Write(file.Contents); err != nil {
+		c.tb.Fatalf("write form for %s %s: %v", method, path, err)
 	}
 
 	if err := form.Close(); err != nil {
-		c.tb.Fatalf("finish form for PUT %s: %v", path, err)
+		c.tb.Fatalf("finish form for %s %s: %v", method, path, err)
 	}
 
-	return c.request(http.MethodPut, path, &body, form.FormDataContentType())
+	return c.request(method, path, &body, form.FormDataContentType())
 }
 
 /*

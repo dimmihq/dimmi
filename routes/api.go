@@ -151,7 +151,8 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/workspace/entitlements", "workspace.entitlements.show", c.entitlements.Show)
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
 	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK)
-	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
+	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read").
+		Use(c.members.ServeCSV)
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read").
@@ -302,7 +303,8 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 	c.entitlements = &v1.WorkspaceEntitlementController{Entitlements: a.Entitlements, Limits: a.Config.API.Limits}
 	c.members = &v1.MemberController{
 		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-		MemberTeams: acts.ListMemberTeams, Cursors: cursors, Lockout: a.Lockout,
+		MemberTeams: acts.ListMemberTeams, Cursors: cursors, Lockout: a.Lockout, Export: acts.ExportMembers,
+		Errors: a.Errors,
 	}
 	c.auditLogs = &v1.AuditLogController{
 		List: acts.ListAuditLogs, Find: acts.ShowAuditLog, Export: acts.ExportAuditLogs, IDs: a.IDs, Cursors: cursors,

@@ -199,6 +199,9 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Old slug held | Bob in his own workspace: `PATCH $B/workspace {"slug":"acme"}` | 422 `slug_reserved`; Ada taking `acme` back: 200 |
 | Bad values | `{"slug":"admin"}`, `{"slug":"Not A Slug"}`, `{"timezone":"America/Nowhere"}`, `{"test_mode":true}` | 422 `slug_reserved`, `validation_failed`, `validation_failed`, `test_mode_immutable` |
 | Members | `r mem -b a.jar -H "$O" -H "$H" "$B/members?sort=-created_at"` | 200, Eve then Bob first, each with `user.name`, `user.email`; `members/me` is Ada |
+| Review members | Ada: `r rv -b a.jar -H "$O" -H "$H" "$B/members?filter[two_factor]=false&sort=-last_active_at"`; the same as Bob while he is a member | 200 with `two_factor_enabled` and `last_active_at` on each; Bob: 403 `forbidden`, and his plain list has both fields `null` |
+| Export members | Ada: `curl -s -b a.jar -H "$O" -H "$H" -H "Accept: text/csv" "$B/members?filter[role]=member"` | `text/csv`, header `name,email,role,custom_role,status,teams,two_factor,last_active_at,joined_at`; a name starting with `=` comes out with a leading `'`; the audit log gains `members.exported` |
+| Import members | Ada: `curl -s -b a.jar -H "$O" -H "$H" -F file=@members.csv -F dry_run=true $B/member-imports` with a file `email,role` holding Bob as admin, a new address and `not-an-address`; then without `dry_run` | 200 `member_import`, `dry_run: true`, `updated: 1`, `created: 1`, `failed: 1` with `invalid_email`, nothing changed; the real run makes Bob admin and invites the new address; a sixth import within the hour 429 `too_many_imports`; Bob: 403 |
 | Promote | `r pr -b a.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/members/$BOBM -d '{"role":"admin"}'` | 200 `role: admin`; again: 200, nothing changes |
 | Self-deactivate | Bob: `PATCH $B/members/me {"status":"deactivated"}` | 422 `invalid_transition`, `from: active`, `to: deactivated` |
 | Admin touches owner | Bob: `PATCH $B/members/<Ada's mem_> {"role":"admin"}` | 403 `forbidden` |
@@ -215,6 +218,9 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Restore | Bob: `r rs -b b.jar -X PATCH -H "$O" -H "$J" $B/workspaces/$WS -d '{"trashed":false}'` | 200 `deleted_at: null`; mail "Acme was restored"; Eve the same 404 `workspace_not_found`; `{"trashed":false,"name":"x"}` 422 `prohibited` on `name` |
 | In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
 | Invite in a browser | as an owner open Members, Invite, enter an address and send; open the mailed link in a private window and sign up there; back in Members, resend and revoke another pending invitation | the invitee lands in the workspace's inbox and shows in Members; the pending list updates; the revoked link says it was withdrawn |
+| Hand over a link | invite with a team ticked, then "Copy a new link" in its menu and confirm; open the old mailed link, then the new one | the old link no longer works; the new one signs the invitee up straight into the team |
+| Import in a browser | Members, Import, pick a CSV | the dialog says what the file would do and lists rows with problems; Apply changes updates the list and the pending invitations |
+| Review in a browser | with a teammate lacking a second factor, open Workspace settings, follow "See who", then "Export CSV" | the count line names them, the list shows only them with "No two-factor", and the file downloads |
 | Delete in a browser | as an owner open Workspace, Danger zone, Delete workspace, type the address | the button stays off until the address matches; the workspace disappears and the app opens another one |
 
 ### Teams
@@ -235,6 +241,8 @@ ADAM=$(curl -s -b b.jar -H "$H" "$B/members?q=$ADA" | jq -r '.data[0].id')
 | Rename | `PATCH $B/teams/$TEAM {"name":"Customer care"}` | 200 `name: Customer care` |
 | Unknown team | `r ut -b b.jar -H "$O" -H "$H" $B/teams/team_01jc0000000000000000000000` | 404 `not_found` |
 | Remove member | `r rm -b b.jar -X DELETE -H "$O" -H "$H" $B/teams/$TEAM/members/$BOBM`, twice | 204, then 404 |
+| Count before delete | `r cc -b b.jar -H "$O" -H "$H" "$B/teams/$TEAM?include=conversation_counts"` | 200 with `conversation_counts` `{open, snoozed, closed}` |
+| Delete with conversations | with a conversation assigned to the team: `DELETE $B/teams/$TEAM?reassign_to_team_id=$TEAM`, then `?reassign_to_team_id=<other team>` | 422 `reassign_to_invalid` (a team cannot take its own), then 204 and the conversation sits with the other team; with no target the conversations lose their team |
 | Delete | `r del -b b.jar -X DELETE -H "$O" -H "$H" $B/teams/$TEAM`, then `GET $B/teams/$TEAM` | 204, then 404; `teams` lists nothing; the row stays with `deleted_at` set for the inbox to sweep |
 | Name free again | `POST $B/teams {"name":"Customer care"}` | 201 |
 | In a browser | open `$W/d/settings/teams`, create a team, add a member from the picker, rename it, remove the member, go back to all teams and delete it | the team page opens on create; the member count follows each change; delete asks first and returns to the list |

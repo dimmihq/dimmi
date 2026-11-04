@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/listeners"
 )
@@ -36,6 +37,9 @@ func bootAudit(a *app.App) error {
 	acts.ShowAuditLog = &audit.ShowAuditLog{DB: a.DB}
 	acts.ExportAuditLogs = &audit.ExportAuditLogs{
 		List: acts.ListAuditLogs, Record: acts.RecordAuditLog, Limiter: a.Limiter, Clock: a.Clock,
+	}
+	acts.ExportMembers = &members.ExportMembers{
+		List: &members.ListMembers{DB: a.DB}, DB: a.DB, Record: acts.RecordAuditLog,
 	}
 	acts.ListSecurityEvents = &auth.ListSecurityEvents{DB: a.DB}
 

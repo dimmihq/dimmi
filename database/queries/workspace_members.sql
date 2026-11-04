@@ -37,18 +37,27 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- name: ListWorkspaceMembers :many
 -- ListWorkspaceMembers returns a page of the workspace's members with
 -- their accounts, narrowed to the statuses and roles asked for (none
--- means all) and to names or emails containing the search, by name or
--- newest first.
+-- means all), to members of any of the teams asked for, to accounts
+-- with or without a second factor when asked, and to names or emails
+-- containing the search. They come by name, newest first, or most
+-- recently active first with those never active last.
 SELECT sqlc.embed(m), sqlc.embed(u)
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = @workspace_id
   AND (coalesce(cardinality(@statuses::text[]), 0) = 0 OR m.status = ANY (@statuses::text[]))
   AND (coalesce(cardinality(@roles::text[]), 0) = 0 OR m.role = ANY (@roles::text[]))
+  AND (coalesce(cardinality(@team_ids::uuid[]), 0) = 0 OR EXISTS (
+      SELECT 1 FROM team_members tm
+      WHERE tm.workspace_member_id = m.id AND tm.team_id = ANY (@team_ids::uuid[])
+  ))
+  AND (sqlc.narg(two_factor)::boolean IS NULL
+      OR (u.two_factor_confirmed_at IS NOT NULL) = sqlc.narg(two_factor)::boolean)
   AND (@search::text = '' OR u.name ILIKE '%' || @search::text || '%' OR u.email ILIKE '%' || @search::text || '%')
 ORDER BY
-    CASE WHEN @newest_first::boolean THEN m.created_at END DESC,
-    CASE WHEN NOT @newest_first::boolean THEN lower(u.name) END,
+    CASE WHEN @sort::text = 'created_at' THEN m.created_at END DESC,
+    CASE WHEN @sort::text = 'last_active_at' THEN m.last_accessed_at END DESC NULLS LAST,
+    lower(u.name),
     m.id
 LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
 

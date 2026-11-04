@@ -9,6 +9,7 @@
  */
 import { RiMore2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -36,6 +37,9 @@ import { Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { MemberImportButton } from "../members/member-import-dialog";
+import { type FilterKey, filterFor, filterKeyFrom } from "../members/member-review";
+import { ExportMembersButton, LastActive, MemberFilterSelect, TwoFactorMark } from "../members/member-review-controls";
 import { type Help, type HelpPowers, helpLabel, helpOffers } from "../members/sign-in-help";
 import { SignInHelpDialogs } from "../members/two-factor-help-dialog";
 import { WorkspaceLanguageRow } from "../preferences/language-row";
@@ -278,11 +282,13 @@ function offers(member: Member, powers: Powers): Pending[] {
 function Person({
   member,
   powers,
+  timeZone,
   onPick,
   onHelp,
 }: {
   member: Member;
   powers: Powers;
+  timeZone?: string;
   onPick: (p: Pending) => void;
   onHelp: (help: Help) => void;
 }) {
@@ -297,6 +303,8 @@ function Person({
       title={member.id === powers.self ? `${name} (you)` : name}
       detail={detail}
     >
+      <LastActive member={member} timeZone={timeZone} />
+      <TwoFactorMark member={member} />
       <Chip variant="caption" color={member.role === "owner" ? "blue" : "neutral"}>
         {roleLabel(member.role)}
       </Chip>
@@ -380,8 +388,11 @@ export function MembersSettings() {
   const me = useAccount();
   const workspace = me.workspace.id;
   const queryClient = useQueryClient();
-  const { data: members = [] } = useQuery(membersQuery(workspace));
+  const [view, setView] = useState<FilterKey>(filterKeyFrom(useSearch({ strict: false })));
   const { data: caller } = useQuery(callerQuery(workspace));
+  const manages = caller?.member?.permissions.includes("members:write") ?? false;
+  const filter = manages ? filterFor(view) : {};
+  const { data: members = [] } = useQuery({ ...membersQuery(workspace, filter), enabled: caller !== undefined });
   const [pending, setPending] = useState<Pending | null>(null);
   const [retry, setRetry] = useState<Pending | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -420,10 +431,28 @@ export function MembersSettings() {
       <Section
         title="Members"
         description={`${active} active`}
-        action={powers.write ? <InviteButton workspace={workspace} /> : null}
+        action={
+          powers.write ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <MemberFilterSelect value={view} onChange={setView} />
+              <ExportMembersButton workspace={workspace} filter={filter} />
+              {permissions.includes("members:import") ? (
+                <MemberImportButton workspace={workspace} hasPassword={me.hasPassword} />
+              ) : null}
+              <InviteButton workspace={workspace} />
+            </div>
+          ) : null
+        }
       >
         {members.map((member) => (
-          <Person key={member.id} member={member} powers={powers} onPick={setPending} onHelp={setHelp} />
+          <Person
+            key={member.id}
+            member={member}
+            powers={powers}
+            timeZone={me.displayZone ?? undefined}
+            onPick={setPending}
+            onHelp={setHelp}
+          />
         ))}
       </Section>
       {powers.write ? <PendingInvitations workspace={workspace} /> : null}

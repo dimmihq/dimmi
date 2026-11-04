@@ -51,6 +51,9 @@
     },
     "audit_logs": {
       "exported": "Exported the audit log"
+    },
+    "members": {
+      "exported": "Exported the member list"
     }
   },
   "channels": {

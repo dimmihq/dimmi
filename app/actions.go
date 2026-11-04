@@ -18,6 +18,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
+	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
@@ -103,11 +104,13 @@ type Actions struct {
 	PurgeTeam        *teams.PurgeTeam
 	AddTeamMembers   *teams.AddTeamMembers
 	RemoveTeamMember *teams.RemoveTeamMember
+	ImportMembers    *memberimports.ImportMembers
 
 	RecordAuditLog     *audit.RecordAuditLog
 	ListAuditLogs      *audit.ListAuditLogs
 	ShowAuditLog       *audit.ShowAuditLog
 	ExportAuditLogs    *audit.ExportAuditLogs
+	ExportMembers      *members.ExportMembers
 	ListSecurityEvents *auth.ListSecurityEvents
 
 	CreatePersonalAccessToken *tokens.CreatePersonalAccessToken

@@ -614,22 +614,31 @@ JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
   AND (coalesce(cardinality($2::text[]), 0) = 0 OR m.status = ANY ($2::text[]))
   AND (coalesce(cardinality($3::text[]), 0) = 0 OR m.role = ANY ($3::text[]))
-  AND ($4::text = '' OR u.name ILIKE '%' || $4::text || '%' OR u.email ILIKE '%' || $4::text || '%')
+  AND (coalesce(cardinality($4::uuid[]), 0) = 0 OR EXISTS (
+      SELECT 1 FROM team_members tm
+      WHERE tm.workspace_member_id = m.id AND tm.team_id = ANY ($4::uuid[])
+  ))
+  AND ($5::boolean IS NULL
+      OR (u.two_factor_confirmed_at IS NOT NULL) = $5::boolean)
+  AND ($6::text = '' OR u.name ILIKE '%' || $6::text || '%' OR u.email ILIKE '%' || $6::text || '%')
 ORDER BY
-    CASE WHEN $5::boolean THEN m.created_at END DESC,
-    CASE WHEN NOT $5::boolean THEN lower(u.name) END,
+    CASE WHEN $7::text = 'created_at' THEN m.created_at END DESC,
+    CASE WHEN $7::text = 'last_active_at' THEN m.last_accessed_at END DESC NULLS LAST,
+    lower(u.name),
     m.id
-LIMIT $7::bigint OFFSET $6::bigint
+LIMIT $9::bigint OFFSET $8::bigint
 `
 
 type ListWorkspaceMembersParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	Statuses    []string `json:"statuses"`
-	Roles       []string `json:"roles"`
-	Search      string   `json:"search"`
-	NewestFirst bool     `json:"newest_first"`
-	RowOffset   int64    `json:"row_offset"`
-	RowLimit    int64    `json:"row_limit"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Statuses    []string   `json:"statuses"`
+	Roles       []string   `json:"roles"`
+	TeamIds     []ids.UUID `json:"team_ids"`
+	TwoFactor   *bool      `json:"two_factor"`
+	Search      string     `json:"search"`
+	Sort        string     `json:"sort"`
+	RowOffset   int64      `json:"row_offset"`
+	RowLimit    int64      `json:"row_limit"`
 }
 
 type ListWorkspaceMembersRow struct {
@@ -639,15 +648,19 @@ type ListWorkspaceMembersRow struct {
 
 // ListWorkspaceMembers returns a page of the workspace's members with
 // their accounts, narrowed to the statuses and roles asked for (none
-// means all) and to names or emails containing the search, by name or
-// newest first.
+// means all), to members of any of the teams asked for, to accounts
+// with or without a second factor when asked, and to names or emails
+// containing the search. They come by name, newest first, or most
+// recently active first with those never active last.
 func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMembersParams) ([]ListWorkspaceMembersRow, error) {
 	rows, err := q.db.Query(ctx, listWorkspaceMembers,
 		arg.WorkspaceID,
 		arg.Statuses,
 		arg.Roles,
+		arg.TeamIds,
+		arg.TwoFactor,
 		arg.Search,
-		arg.NewestFirst,
+		arg.Sort,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

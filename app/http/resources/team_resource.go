@@ -87,7 +87,7 @@ func NewTeam(t teams.Team) Team {
 
 	members := make([]WorkspaceMember, 0, len(t.Members))
 	for _, row := range t.Members {
-		members = append(members, NewWorkspaceMember(row.WorkspaceMember, row.User))
+		members = append(members, NewWorkspaceMember(row.WorkspaceMember, row.User).ForTeammates())
 	}
 
 	out.Members = &members

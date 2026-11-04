@@ -73,7 +73,7 @@ const groups: { id: string; events: string[] }[] = [
   { id: "tokens", events: ["token.created", "token.revoked"] },
   { id: "inbox", events: [] },
   { id: "email", events: [] },
-  { id: "export", events: ["audit_logs.exported"] },
+  { id: "export", events: ["audit_logs.exported", "members.exported"] },
 ];
 
 /*
