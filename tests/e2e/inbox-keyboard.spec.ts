@@ -70,13 +70,14 @@ it.describe("the inbox by keyboard", () => {
 
   it("opens the sheet with ? and practises the moves", async ({ page }) => {
     await page.goto("/d/inbox/all");
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toBeVisible();
     await page.keyboard.press("Shift+?");
     const sheet = page.getByRole("dialog", { name: "Keyboard shortcuts" });
     await expect(sheet).toContainText("Next conversation");
     await sheet.getByRole("link", { name: "Practise the shortcuts" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Press J");
+    await expect(page.getByRole("status", { name: "Next move" })).toContainText("Press J");
     await page.keyboard.press("j");
-    await expect(page.getByRole("status")).toContainText("Press K");
+    await expect(page.getByRole("status", { name: "Next move" })).toContainText("Press K");
   });
 });

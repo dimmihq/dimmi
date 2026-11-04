@@ -24,6 +24,7 @@ it.describe("the command menu", () => {
 
   it("finds a customer by email and opens a conversation by number", async ({ page }) => {
     await page.goto("/d/inbox/all");
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+k");
     const menu = page.getByRole("dialog", { name: "Command menu" });
     const search = menu.getByRole("searchbox", { name: "Search for a command or conversation" });

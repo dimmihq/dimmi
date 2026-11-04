@@ -55,7 +55,11 @@ export function ShortcutPractice() {
             description="You know the moves. Press ? whenever you forget."
           />
         ) : (
-          <p role="status" className="flex items-center gap-2 text-body-medium text-text-primary">
+          <p
+            role="status"
+            aria-label="Next move"
+            className="flex items-center gap-2 text-body-medium text-text-primary"
+          >
             <RiKeyboardLine aria-hidden className="size-5 text-foreground-icon-secondary" />
             {practiceSteps[step]?.prompt}
           </p>
