@@ -46,7 +46,7 @@ exec runs a statement as the tables' owner.
 func exec(t *testing.T, tc *tests.TestCase, sql string, args ...any) {
 	t.Helper()
 
-	_, err := tc.App.DB.Exec(t.Context(), sql, args...)
+	_, err := tc.Operator().Exec(t.Context(), sql, args...)
 	require.NoError(t, err)
 }
 
@@ -93,7 +93,7 @@ func TestDefaultInbox(t *testing.T) {
 
 		inbox := defaultInbox(t, tc, workspace)
 		var settings json.RawMessage
-		require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+		require.NoError(t, tc.Operator().QueryRow(t.Context(),
 			"SELECT settings FROM workspaces WHERE id = $1", workspace).Scan(&settings))
 
 		assert.NotEqual(t, deleted.ID, inbox.ID)

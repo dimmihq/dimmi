@@ -380,7 +380,7 @@ func addTeam(t *testing.T, tc *tests.TestCase, member models.WorkspaceMember) st
 
 	var team string
 
-	require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+	require.NoError(t, tc.Operator().QueryRow(t.Context(),
 		"INSERT INTO teams (workspace_id, name) VALUES ($1, 'Support') RETURNING id::text", member.WorkspaceID,
 	).Scan(&team))
 	exec(t, tc, "INSERT INTO team_members (team_id, workspace_id, workspace_member_id) VALUES ($1, $2, $3)",
