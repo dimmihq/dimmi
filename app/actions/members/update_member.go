@@ -71,7 +71,8 @@ Rules:
   - Any change to or from the owner role needs members:manage_owners,
     the user's own browser or app, and a recent confirmation.
   - Deactivating or reactivating an owner needs members:manage_owners,
-    anyone else members:write.
+    the user's own browser or app, and a recent confirmation; anyone
+    else needs members:write.
   - Members cannot deactivate themselves.
   - Ownership goes only to an active member who verified their email
     and has two-factor authentication where the workspace requires it;
@@ -219,7 +220,7 @@ would leave the workspace without an owner, and one the caller's power
 does not cover, in that order.
 */
 func (a *UpdateMember) admit(ctx context.Context, s subject, in UpdateMemberInput) error {
-	if ownerRoleChange(in, s.target) && !in.Principal.IsFirstParty() {
+	if touchesOwner(in, s.target) && !in.Principal.IsFirstParty() {
 		return exceptions.ErrFirstPartyOnly
 	}
 
@@ -271,35 +272,51 @@ func ownerRoleChange(in UpdateMemberInput, target models.WorkspaceMember) bool {
 }
 
 /*
+ownerStatusChange reports whether the update changes whether an owner
+is active.
+*/
+func ownerStatusChange(in UpdateMemberInput, target models.WorkspaceMember) bool {
+	return in.Status != nil && string(*in.Status) != target.Status && appauth.IsOwnerRole(enums.Role(target.Role))
+}
+
+/*
+touchesOwner reports whether the update does anything to an owner, or
+makes someone one, which only an owner's own recent confirmation may do.
+*/
+func touchesOwner(in UpdateMemberInput, target models.WorkspaceMember) bool {
+	return ownerRoleChange(in, target) || ownerStatusChange(in, target)
+}
+
+/*
 authorize checks that the caller may change each field asked for on
-this member.
+this member, and that a change touching an owner was recently confirmed.
 */
 func (a *UpdateMember) authorize(in UpdateMemberInput, target models.WorkspaceMember) error {
 	if in.Status != nil && !in.Membership.Can(statusPermission(target)) {
 		return exceptions.ErrForbidden
 	}
 
-	if in.AssignedRole == nil {
-		return nil
-	}
-
-	if !ownerRoleChange(in, target) {
-		if !in.Membership.Can("members:write") {
-			return exceptions.ErrForbidden
-		}
-
-		return nil
-	}
-
-	if !in.Membership.Can("members:manage_owners") {
+	if in.AssignedRole != nil && !in.Membership.Can(rolePermission(in, target)) {
 		return exceptions.ErrForbidden
 	}
 
-	if !fauth.Confirmed(in.Principal, a.Clock.Now(), a.ConfirmWindow) {
+	if touchesOwner(in, target) && !fauth.Confirmed(in.Principal, a.Clock.Now(), a.ConfirmWindow) {
 		return fauth.ErrConfirmationRequired
 	}
 
 	return nil
+}
+
+/*
+rolePermission returns the permission needed for the role change, stricter
+when it involves an owner.
+*/
+func rolePermission(in UpdateMemberInput, target models.WorkspaceMember) string {
+	if ownerRoleChange(in, target) {
+		return "members:manage_owners"
+	}
+
+	return "members:write"
 }
 
 /*
