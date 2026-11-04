@@ -140,6 +140,7 @@ func TestPurgeWorkspace(t *testing.T) {
 		ws := tc.Workspace.Workspace
 		overdue(t, tc)
 		exec(t, tc, `UPDATE workspaces SET settings = settings || '{"purge_started_at": "2026-11-01T00:00:00Z"}'`)
+		exec(t, tc, `DELETE FROM channel_connections WHERE workspace_id = $1`, ws.ID)
 		exec(t, tc, `DELETE FROM inboxes WHERE workspace_id = $1`, ws.ID)
 
 		push(tc, jobs.PurgeWorkspaceArgs{WorkspaceID: ws.ID})
