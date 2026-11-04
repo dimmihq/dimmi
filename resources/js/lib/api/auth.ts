@@ -4,6 +4,8 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
+import { type RequestOptions, signWithPasskey } from "@/lib/passkeys";
+
 import { ApiError, request } from "./client";
 
 export interface Provider {
@@ -52,13 +54,15 @@ export interface Me {
 
 /*
  * ChallengeMethod is one way the person may finish signing in: a second
- * factor they hold, such as an authenticator app or their recovery codes.
+ * factor they hold, such as an authenticator app, a passkey or their
+ * recovery codes. A passkey carries the options the device signs with.
  */
 export interface ChallengeMethod {
   method: string;
   factor_id: string;
   name: string;
   preferred: boolean;
+  options?: RequestOptions | null;
 }
 
 /*
@@ -125,6 +129,16 @@ export function signInWithCode(email: string, code: string): Promise<SignInResul
 
 export function signInWithSecondFactor(method: string, code: string): Promise<Me> {
   return request<Me>("POST", "/sessions", { grant: "two_factor", method, code });
+}
+
+/*
+ * signInWithPasskey has the device sign the challenge's options with one
+ * of the person's passkeys and finishes signing in with its answer.
+ */
+export async function signInWithPasskey(options: RequestOptions): Promise<Me> {
+  const credential = await signWithPasskey(options);
+
+  return request<Me>("POST", "/sessions", { grant: "two_factor", method: "passkey", credential });
 }
 
 export function signUp(input: { name: string; email: string; password: string }): Promise<Me> {

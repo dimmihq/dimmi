@@ -98,8 +98,12 @@ it.describe("two-factor authentication", () => {
 
     await turnOn(page);
     await page.goto("/d/settings/workspace");
+    const saved = page.waitForResponse(
+      (response) => response.url().endsWith("/api/v1/workspace") && response.request().method() === "PATCH",
+    );
     await rule.click({ force: true });
     await expect(rule).toBeChecked();
+    expect((await saved).status()).toBe(200);
 
     await page.reload();
     await expect(rule).toBeChecked();
