@@ -21,6 +21,7 @@ import { cx } from "@/utils/cx";
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
 import type { Mode } from "./modes";
+import type { Report } from "./use-typing-report";
 
 type Said = Extract<ThreadEntry, { author: string }>;
 
@@ -151,12 +152,16 @@ export function Thread({
   channel,
   onSend,
   onAskOperator,
+  onTyping,
+  status,
 }: {
   entries: ThreadEntry[];
   customer: string;
   channel: string;
   onSend: Send;
   onAskOperator: () => void;
+  onTyping: Report;
+  status?: ReactNode;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [focusKey, setFocusKey] = useState(0);
@@ -186,6 +191,7 @@ export function Thread({
         </ol>
       </ScrollArea>
       <div className="shrink-0 px-3 pb-3">
+        {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}
         <Composer
           mode={mode}
           focusKey={focusKey}
@@ -194,6 +200,7 @@ export function Thread({
           onSend={onSend}
           onOpen={(next) => (next === "reply" ? keys.r() : keys.n())}
           onAskOperator={() => ask.current()}
+          onTyping={onTyping}
         />
       </div>
     </div>

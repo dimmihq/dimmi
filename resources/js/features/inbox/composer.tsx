@@ -10,7 +10,9 @@
  * also be dropped on the panel or pasted. Sending goes to the server; a
  * sent draft empties, a refused one stays with the reason under it.
  * Files are not sent yet. Each time Reply or Note is chosen the field
- * takes the focus, sized to the draft it holds.
+ * takes the focus, sized to the draft it holds. While a reply is being
+ * written the composer says so through onTyping, and says it stopped
+ * once the reply is sent or the field is left.
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -24,6 +26,7 @@ import { AddMenu } from "./add-menu";
 import { AttachmentStrip } from "./attachments";
 import { type Mode, modes } from "./modes";
 import { useAttachments } from "./use-attachments";
+import type { Report } from "./use-typing-report";
 
 /*
  * Send sends what the composer holds as a reply or a note.
@@ -42,6 +45,7 @@ export function Composer({
   onSend,
   onOpen,
   onAskOperator,
+  onTyping,
 }: {
   mode: Mode | null;
   focusKey: number;
@@ -50,6 +54,7 @@ export function Composer({
   onSend: Send;
   onOpen: (mode: Mode) => void;
   onAskOperator: () => void;
+  onTyping: Report;
 }) {
   const still = useReducedMotion();
 
@@ -72,6 +77,7 @@ export function Composer({
               onSend={onSend}
               onModeChange={onOpen}
               onAskOperator={onAskOperator}
+              onTyping={onTyping}
             />
           </motion.div>
         ) : (
@@ -130,6 +136,7 @@ function Panel({
   onSend,
   onModeChange,
   onAskOperator,
+  onTyping,
 }: {
   mode: Mode;
   focusKey: number;
@@ -138,6 +145,7 @@ function Panel({
   onSend: Send;
   onModeChange: (mode: Mode) => void;
   onAskOperator: () => void;
+  onTyping: Report;
 }) {
   const [drafts, setDrafts] = useState<Record<Mode, string>>({ reply: "", note: "" });
   const [sending, setSending] = useState(false);
@@ -172,6 +180,7 @@ function Panel({
     }
     setSending(true);
     setFailure(null);
+    onTyping(false);
     try {
       await onSend(mode, text);
       setDrafts((before) => ({ ...before, [mode]: "" }));
@@ -232,7 +241,14 @@ function Panel({
             key={`${mode}-${focusKey}`}
             ref={arrive}
             value={drafts[mode]}
-            onChange={(event) => setDrafts((before) => ({ ...before, [mode]: event.target.value }))}
+            onChange={(event) => {
+              const value = event.target.value;
+              setDrafts((before) => ({ ...before, [mode]: value }));
+              if (!note) {
+                onTyping(value.trim() !== "");
+              }
+            }}
+            onBlur={() => onTyping(false)}
             onInput={(event) => sizeToText(event.currentTarget)}
             onPaste={(event) => attachments.add(event.clipboardData.files)}
             onKeyDown={(event) => {

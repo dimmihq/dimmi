@@ -3,9 +3,12 @@
  * conversation and its timeline, the sidebar's counts, and the calls a
  * teammate makes on a case: replying, adding a note, assigning, and
  * closing, reopening or snoozing it. Every call names the workspace in
- * the Dimmi-Workspace header.
+ * the Dimmi-Workspace header, every change the id the screen gave it,
+ * and every query is cached under the key realtime updates reach.
  */
 import { queryOptions } from "@tanstack/react-query";
+
+import { realtimeKeys } from "@/lib/realtime/keys";
 
 import { request } from "./client";
 
@@ -125,21 +128,21 @@ export function conversationsPath(view: string, search: string): string {
 
 export function conversationsQuery(workspace: string, view: string, search = "") {
   return queryOptions({
-    queryKey: ["workspace", workspace, "conversations", view, search],
+    queryKey: [...realtimeKeys.conversations(workspace), view, search],
     queryFn: () => request<Conversation[]>("GET", conversationsPath(view, search), undefined, { workspace }),
   });
 }
 
 export function conversationQuery(workspace: string, id: string) {
   return queryOptions({
-    queryKey: ["workspace", workspace, "conversation", id],
+    queryKey: realtimeKeys.conversation(workspace, id),
     queryFn: () => request<Conversation>("GET", `/conversations/${encodeURIComponent(id)}`, undefined, { workspace }),
   });
 }
 
 export function messagesQuery(workspace: string, id: string) {
   return queryOptions({
-    queryKey: ["workspace", workspace, "conversation", id, "messages"],
+    queryKey: realtimeKeys.messages(workspace, id),
     queryFn: () =>
       request<Message[]>("GET", `/conversations/${encodeURIComponent(id)}/messages?limit=100`, undefined, {
         workspace,
@@ -149,33 +152,60 @@ export function messagesQuery(workspace: string, id: string) {
 
 export function countsQuery(workspace: string) {
   return queryOptions({
-    queryKey: ["workspace", workspace, "conversation-counts"],
+    queryKey: realtimeKeys.counts(workspace),
     queryFn: () => request<Counts>("GET", "/conversation-counts", undefined, { workspace }),
   });
 }
 
-export function updateConversation(workspace: string, id: string, changes: ConversationChanges): Promise<Conversation> {
-  return request<Conversation>("PATCH", `/conversations/${encodeURIComponent(id)}`, changes, { workspace });
+/*
+ * A Write is one change a teammate makes: the workspace it is in, and
+ * the id the screen gave it, sent so the screen drops its own echo when
+ * the change comes back over realtime.
+ */
+export interface Write {
+  workspace: string;
+  mutation: string;
 }
 
-export function reply(workspace: string, id: string, body: string): Promise<Message> {
+function writeOptions(write: Write) {
+  return { workspace: write.workspace, headers: { "Dimmi-Client-Mutation-Id": write.mutation } };
+}
+
+export function updateConversation(write: Write, id: string, changes: ConversationChanges): Promise<Conversation> {
+  return request<Conversation>("PATCH", `/conversations/${encodeURIComponent(id)}`, changes, writeOptions(write));
+}
+
+export function reply(write: Write, id: string, body: string): Promise<Message> {
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
     { body, client_message_id: crypto.randomUUID() },
-    { workspace },
+    writeOptions(write),
   );
 }
 
-export function addNote(workspace: string, id: string, body: string): Promise<Message> {
+export function addNote(write: Write, id: string, body: string): Promise<Message> {
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/notes`,
     { body, client_message_id: crypto.randomUUID() },
-    { workspace },
+    writeOptions(write),
   );
 }
 
-export function markRead(workspace: string, id: string): Promise<unknown> {
-  return request<unknown>("PATCH", `/conversations/${encodeURIComponent(id)}/read-state`, {}, { workspace });
+export function markRead(write: Write, id: string): Promise<unknown> {
+  return request<unknown>("PATCH", `/conversations/${encodeURIComponent(id)}/read-state`, {}, writeOptions(write));
+}
+
+/*
+ * sendTyping tells teammates viewing the conversation that the person
+ * is writing a reply, or with "stop" that they stopped.
+ */
+export function sendTyping(workspace: string, id: string, state: "start" | "stop"): Promise<unknown> {
+  return request<unknown>(
+    "POST",
+    `/conversations/${encodeURIComponent(id)}/typing-indicators`,
+    { state, composer: "reply" },
+    { workspace },
+  );
 }

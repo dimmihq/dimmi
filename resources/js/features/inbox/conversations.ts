@@ -16,7 +16,7 @@ export function useInbox() {
   const { data: me } = useSuspenseQuery(meQuery);
   const { current } = useCurrentWorkspace(me?.workspaces ?? []);
 
-  return { workspace: current?.id ?? "", me: me?.user.name ?? "You" };
+  return { workspace: current?.id ?? "", me: me?.user.name ?? "You", userId: me?.user.id ?? "" };
 }
 
 export function customerName(contact: ContactSummary): string {

@@ -8,6 +8,9 @@
  * narrow for the side panels, Operator slides over the thread instead.
  * Opening a conversation reads it for the person, so it stops showing as
  * unread; a reply or note is added to the thread once the server has it.
+ * While it is open the conversation follows its realtime channel, so a
+ * teammate's reply shows without a reload; the header shows who else has
+ * it open, and the thread says when the customer is typing.
  */
 import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,19 +21,23 @@ import { Panel as Pane } from "react-resizable-panels";
 import { Chip } from "@/components/base/badges/chip";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Drawer } from "@/components/base/drawer/drawer";
+import { ConversationViewers, TypingIndicator } from "@/features/realtime/collision";
 import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
 import { addNote, type Conversation, markRead, messagesQuery, reply } from "@/lib/api/inbox";
+import { useMutationId } from "@/lib/realtime/context";
+import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
 import { statusLabel, useCase } from "./case";
-import { customerName, subjectOf, toEntry } from "./conversations";
+import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
+import { useTypingReport } from "./use-typing-report";
 
 const visible = { overflow: "visible" } as const;
 
@@ -50,9 +57,13 @@ const notConnected =
  */
 function useTimeline(workspace: string, conversation: Conversation) {
   const queryClient = useQueryClient();
+  const mutationId = useMutationId();
   const { data: messages = [] } = useQuery(messagesQuery(workspace, conversation.id));
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
-  const read = useMutation({ mutationFn: () => markRead(workspace, conversation.id), onSuccess: refresh });
+  const read = useMutation({
+    mutationFn: () => markRead({ workspace, mutation: mutationId() }, conversation.id),
+    onSuccess: refresh,
+  });
   const unread = conversation.unread;
   const mark = read.mutate;
   useEffect(() => {
@@ -62,7 +73,8 @@ function useTimeline(workspace: string, conversation: Conversation) {
   }, [unread, mark]);
 
   const send = async (mode: Mode, text: string) => {
-    await (mode === "note" ? addNote(workspace, conversation.id, text) : reply(workspace, conversation.id, text));
+    const write = { workspace, mutation: mutationId() };
+    await (mode === "note" ? addNote(write, conversation.id, text) : reply(write, conversation.id, text));
     await refresh();
   };
 
@@ -78,6 +90,9 @@ export function ConversationView({
   workspace: string;
   conversation: Conversation;
 }) {
+  useConversationRealtime(conversation.id);
+  const { userId } = useInbox();
+  const typing = useTypingReport(workspace, conversation.id);
   const caze = useCase(workspace, conversation);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
@@ -115,6 +130,7 @@ export function ConversationView({
           </Chip>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <ConversationViewers conversation={conversation.id} self={userId} />
           {sideBySide ? (
             <IconButton
               size="small"
@@ -141,6 +157,8 @@ export function ConversationView({
         channel={conversation.channel.name}
         onSend={timeline.send}
         onAskOperator={toggleOperator}
+        onTyping={typing}
+        status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
       />
     </Panel>
   );
