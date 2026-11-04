@@ -47,6 +47,7 @@ const env = {
   DIMMI_APP__REGION: "us",
   DIMMI_HTTP__ADDR: `127.0.0.1:${port}`,
   DIMMI_HTTP__ADMIN_ADDR: "",
+  DIMMI_HTTP__TRUSTED_PROXIES: "127.0.0.1/32",
   DIMMI_DATABASE__URL: `postgres://postgres:postgres@localhost:15432/${database}?sslmode=disable`,
   DIMMI_REDIS__URL: "redis://localhost:16379/5",
   DIMMI_REDIS__KEY_PREFIX: `e2e${Date.now()}:`,

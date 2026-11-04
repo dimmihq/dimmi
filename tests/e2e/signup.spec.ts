@@ -1,5 +1,20 @@
+import type { Page } from "@playwright/test";
+
 import { expect, inbox, test as it, signIn } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
+
+/*
+ * ownAddress has the page's requests come from an address of the test's
+ * own, since redeeming mailed links is limited per address and these tests
+ * redeem several.
+ */
+async function ownAddress(pages: Page[]) {
+  const octet = () => 1 + Math.floor(Math.random() * 250);
+  const address = `198.51.${octet()}.${octet()}`;
+  for (const page of pages) {
+    await page.context().setExtraHTTPHeaders({ "X-Forwarded-For": address });
+  }
+}
 
 it.describe("signing up", () => {
   it("creates an account, lands in the app and proves the email from the mailed link", async ({ page, person }) => {
@@ -20,6 +35,7 @@ it.describe("signing up", () => {
   });
 
   it("verifies nothing on another device until the person signs in there", async ({ page, guest, person }) => {
+    await ownAddress([page, guest]);
     await page.goto("/signup");
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
@@ -40,6 +56,7 @@ it.describe("signing up", () => {
   });
 
   it("takes the account back from a stranger who signed up with the address", async ({ page, guest, person }) => {
+    await ownAddress([page, guest]);
     await page.goto("/signup");
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
