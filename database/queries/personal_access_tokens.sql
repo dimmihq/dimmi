@@ -90,3 +90,10 @@ FROM auth_tokens_expiring(@expiring_after::timestamptz, @expiring_before::timest
 -- MarkTokenExpiryNotified records that the token's owner was warned, and
 -- returns 1, or 0 when someone already did.
 SELECT auth_mark_token_expiry_notified(@token_id::uuid, @now::timestamptz)::bigint;
+
+-- name: FindTokenWorkspace :one
+-- FindTokenWorkspace returns the workspace of the token the digest
+-- belongs to. It runs through a security definer function, since the
+-- workspace is only known once the token is found.
+SELECT t.workspace_id::uuid AS workspace_id
+FROM auth_find_token(@token_digest) AS t;

@@ -48,6 +48,24 @@ func countNotes(ctx context.Context, t *testing.T, db *database.DB) int {
 	return n
 }
 
+/*
+countInTenant counts the notes the tenant sees in a transaction of its
+own.
+*/
+func countInTenant(t *testing.T, db *database.DB, tenant string) int {
+	t.Helper()
+
+	var n int
+	err := db.Transaction(tenancy.With(t.Context(), tenant), func(ctx context.Context, _ *database.Tx) error {
+		n = countNotes(ctx, t, db)
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	return n
+}
+
 func TestTenantScoping(t *testing.T) {
 	t.Parallel()
 
@@ -68,6 +86,71 @@ func TestTenantScoping(t *testing.T) {
 		})
 
 		require.NoError(t, err)
+	})
+
+	t.Run("scopes a savepoint to the tenant its context names and then hands back the outer one", func(t *testing.T) {
+		t.Parallel()
+		db := openTenantNotes(t)
+
+		err := db.Transaction(t.Context(), func(ctx context.Context, _ *database.Tx) error {
+			assert.Zero(t, countNotes(ctx, t, db))
+
+			err := db.Transaction(tenancy.With(ctx, "a"), func(ctx context.Context, tx *database.Tx) error {
+				_, err := tx.Exec(ctx, "INSERT INTO notes VALUES ('a', 'nested')")
+
+				return err
+			})
+			require.NoError(t, err)
+			assert.Zero(t, countNotes(ctx, t, db))
+
+			return nil
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, 2, countInTenant(t, db, "a"))
+	})
+
+	t.Run("moves a savepoint to another tenant and back", func(t *testing.T) {
+		t.Parallel()
+		db := openTenantNotes(t)
+
+		err := db.Transaction(tenancy.With(t.Context(), "a"), func(ctx context.Context, tx *database.Tx) error {
+			err := tx.Transaction(tenancy.With(ctx, "b"), func(ctx context.Context, tx *database.Tx) error {
+				var body string
+				require.NoError(t, tx.QueryRow(ctx, "SELECT body FROM notes").Scan(&body))
+				assert.Equal(t, "note b", body)
+
+				return nil
+			})
+			require.NoError(t, err)
+
+			var body string
+			require.NoError(t, tx.QueryRow(ctx, "SELECT body FROM notes").Scan(&body))
+			assert.Equal(t, "note a", body)
+
+			return nil
+		})
+
+		require.NoError(t, err)
+	})
+
+	t.Run("keeps the outer tenant when a savepoint for another one fails", func(t *testing.T) {
+		t.Parallel()
+		db := openTenantNotes(t)
+
+		err := db.Transaction(tenancy.With(t.Context(), "a"), func(ctx context.Context, tx *database.Tx) error {
+			err := tx.Transaction(tenancy.With(ctx, "b"), func(context.Context, *database.Tx) error {
+				return assert.AnError
+			})
+			require.ErrorIs(t, err, assert.AnError)
+
+			_, err = tx.Exec(ctx, "INSERT INTO notes VALUES ('a', 'after')")
+
+			return err
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, countInTenant(t, db, "a"))
 	})
 
 	t.Run("shows tenant rows to no one outside a transaction", func(t *testing.T) {

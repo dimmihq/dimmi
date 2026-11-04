@@ -116,14 +116,14 @@ func TestProductionGuard(t *testing.T) {
 		require.Equal(t, console.ExitSuccess, code)
 		assert.Contains(t, stdout, "Rolled back app 20261102160000")
 
-		code, stdout, _ = run(t, opts, "20261102150000_create_idempotency_keys_table.sql\n", "migrate:rollback")
+		code, stdout, _ = run(t, opts, "20261201190002_create_maintenance_table.sql\n", "migrate:rollback")
 		require.Equal(t, console.ExitSuccess, code)
-		assert.Contains(t, stdout, "Rolled back framework 20261102150000")
+		assert.Contains(t, stdout, "Rolled back framework 20261201190002")
 	})
 
 	t.Run("takes production down only when confirmed", func(t *testing.T) {
 		t.Parallel()
-		opts := production(t)
+		opts := migrated(t)
 
 		code, _, stderr := run(t, opts, "", "down")
 		assert.Equal(t, console.ExitFailure, code)

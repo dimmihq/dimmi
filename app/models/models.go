@@ -425,6 +425,13 @@ type Invitation struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type Maintenance struct {
+	ID      bool       `json:"id"`
+	Enabled bool       `json:"enabled"`
+	Message string     `json:"message"`
+	Since   *time.Time `json:"since"`
+}
+
 type MemberInboxPreference struct {
 	WorkspaceID      ids.UUID        `json:"workspace_id"`
 	MemberID         ids.UUID        `json:"member_id"`
