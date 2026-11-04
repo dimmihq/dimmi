@@ -1,10 +1,10 @@
 /*
  * One customer's page: their details, which the team edits, what the
- * product told dimmi about them, the channels they reach the team on,
+ * product told dimmi about them and the attributes the team sets, the channels they reach the team on,
  * their tags, the team's notes, the people who look like them, and their
  * conversations as far as the reader may see them.
  */
-import { RiLinkUnlinkM, RiUserUnfollowLine } from "@remixicon/react";
+import { RiCloseLine, RiLinkUnlinkM, RiUserUnfollowLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
@@ -105,7 +105,63 @@ function Details({ contact }: { contact: Contact }) {
   );
 }
 
+/*
+ * attributeValue reads what a teammate typed the way the product sends
+ * it: true, false and numbers keep their type, anything else is text.
+ */
+function attributeValue(text: string): unknown {
+  const trimmed = text.trim();
+  if (trimmed === "true" || trimmed === "false") {
+    return trimmed === "true";
+  }
+
+  return trimmed !== "" && Number.isFinite(Number(trimmed)) ? Number(trimmed) : trimmed;
+}
+
+function NewAttribute({ contact }: { contact: Contact }) {
+  const write = useWrite(contact.id);
+  const [key, setKey] = useState("");
+  const [value, setValue] = useState("");
+  const refused = write.error instanceof ApiError ? write.error.message : null;
+
+  return (
+    <form
+      aria-label="Set an attribute"
+      className="flex flex-col gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        write.mutate(
+          { custom_attributes: { [key.trim()]: attributeValue(value) } },
+          {
+            onSuccess: () => {
+              setKey("");
+              setValue("");
+            },
+          },
+        );
+      }}
+    >
+      <div className="flex items-start gap-2">
+        <Input
+          aria-label="Attribute name"
+          size="small"
+          inputDir="ltr"
+          placeholder="plan"
+          value={key}
+          onChange={setKey}
+        />
+        <Input aria-label="Attribute value" size="small" placeholder="pro" value={value} onChange={setValue} />
+        <Button type="submit" variant="secondary" size="small" disabled={key.trim() === "" || write.isPending}>
+          Set
+        </Button>
+      </div>
+      {refused ? <p className="text-body-2-regular text-text-error-primary">{refused}</p> : null}
+    </form>
+  );
+}
+
 function Attributes({ contact }: { contact: Contact }) {
+  const write = useWrite(contact.id);
   const entries = Object.entries(contact.custom_attributes);
 
   return (
@@ -132,10 +188,19 @@ function Attributes({ contact }: { contact: Contact }) {
         <Row label="Last seen">{when(contact.last_seen_at)}</Row>
         {entries.map(([key, value]) => (
           <Row key={key} label={<span className="truncate">{key}</span>}>
-            <Copyable value={show(value)} label={key} />
+            <span className="flex min-w-0 items-center gap-1">
+              <Copyable value={show(value)} label={key} />
+              <IconButton
+                size="small"
+                icon={RiCloseLine}
+                aria-label={`Remove ${key}`}
+                onClick={() => write.mutate({ custom_attributes: { [key]: null } })}
+              />
+            </span>
           </Row>
         ))}
       </dl>
+      <NewAttribute contact={contact} />
     </Card>
   );
 }

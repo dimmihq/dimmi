@@ -85,6 +85,7 @@ export interface ContactChanges {
   phone?: string | null;
   notes?: string | null;
   company_id?: string | null;
+  custom_attributes?: Record<string, unknown>;
   add_tags?: string[];
   remove_tags?: string[];
 }
@@ -146,8 +147,16 @@ export interface NewContact {
 }
 
 /*
+ * Since is a window back from now: within the last day, week or month,
+ * or longer ago than a month.
+ */
+export type Since = "day" | "week" | "month" | "older";
+
+/*
  * PeopleFilters narrows the people list: q searches names, addresses and
- * phone numbers; the rest map to the list's filters.
+ * phone numbers; seen and created are windows back from the moment the
+ * page is fetched; attribute matches one custom attribute; the rest map
+ * to the list's filters.
  */
 export interface PeopleFilters {
   q?: string;
@@ -155,7 +164,26 @@ export interface PeopleFilters {
   tag?: string;
   company?: string;
   blocked?: boolean;
+  seen?: Since;
+  created?: Since;
+  attribute?: { key: string; value: string };
   sort?: "last_seen_at" | "-created_at" | "name";
+}
+
+const sinceDays: Record<Since, number> = { day: 1, week: 7, month: 30, older: 30 };
+
+/*
+ * windowFilter turns a window into the after or before bound of the
+ * named time filter.
+ */
+function windowFilter(name: string, since: Since | undefined, now: number): [string, string | undefined] {
+  if (!since) {
+    return [`filter[${name}_after]`, undefined];
+  }
+
+  const at = new Date(now - sinceDays[since] * 86_400_000).toISOString();
+
+  return [`filter[${name}_${since === "older" ? "before" : "after"}]`, at];
 }
 
 /*
@@ -179,6 +207,9 @@ function peoplePath(filters: PeopleFilters, cursor: string | null): string {
     ["filter[tag]", filters.tag],
     ["filter[company]", filters.company],
     ["filter[blocked]", filters.blocked ? "true" : undefined],
+    windowFilter("last_seen", filters.seen, Date.now()),
+    windowFilter("created", filters.created, Date.now()),
+    [`filter[custom.${filters.attribute?.key ?? ""}]`, filters.attribute?.value],
     ["sort", filters.sort],
     ["cursor", cursor ?? undefined],
   ];

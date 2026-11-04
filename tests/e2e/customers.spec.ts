@@ -56,4 +56,37 @@ it.describe("customers", () => {
     const listed = await api<unknown[]>(page, "GET", "/contacts");
     expect(listed.length).toBe(1);
   });
+
+  it("sets an attribute and narrows people by it and by company", async ({ page }) => {
+    await page.goto("/d/customers");
+    const ana = await api<{ id: string }>(page, "POST", "/contacts", { name: "Ana Lima", email: "ana@lima.example" });
+    await api(page, "POST", "/contacts", { name: "Bo Chen", email: "bo@chen.example" });
+    const acme = await api<{ id: string }>(page, "POST", "/companies", { name: "Acme" });
+    await api(page, "PATCH", `/contacts/${ana.id}`, { company_id: acme.id });
+
+    await page.goto(`/d/customers/${ana.id}`);
+    const attributes = page.getByRole("region", { name: "Attributes" });
+    await attributes.getByRole("textbox", { name: "Attribute name" }).fill("plan");
+    await attributes.getByRole("textbox", { name: "Attribute value" }).fill("pro");
+    await attributes.getByRole("button", { name: "Set" }).click();
+    await expect(attributes.getByRole("button", { name: "Remove plan" })).toBeVisible();
+
+    await page.goto("/d/customers");
+    const people = page.getByRole("grid", { name: "People" });
+    await expect(people.getByRole("link", { name: "Bo Chen" })).toBeVisible();
+    await page.getByRole("button", { name: "Attribute" }).click();
+    await page.getByRole("textbox", { name: "Attribute", exact: true }).fill("plan");
+    await page.getByRole("textbox", { name: "Value" }).fill("pro");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(people.getByRole("link", { name: "Bo Chen" })).toBeHidden();
+    await expect(people.getByRole("link", { name: "Ana Lima" })).toBeVisible();
+
+    await page.getByRole("button", { name: "plan is pro" }).click();
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect(people.getByRole("link", { name: "Bo Chen" })).toBeVisible();
+    await page.getByRole("button", { name: "Company" }).click();
+    await page.getByRole("option", { name: "Acme" }).click();
+    await expect(people.getByRole("link", { name: "Bo Chen" })).toBeHidden();
+    await expect(people.getByRole("link", { name: "Ana Lima" })).toBeVisible();
+  });
 });

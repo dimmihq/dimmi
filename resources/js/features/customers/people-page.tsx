@@ -1,44 +1,30 @@
 /*
  * Everyone the team has talked to or been told about, most recently seen
- * first. A teammate searches by name, address or phone, narrows by kind
- * or tag, sorts, and loads more as they go. Blocked customers stay out of
+ * first. A teammate searches by name, address or phone, narrows by kind,
+ * company, tag, when they were seen or added and one attribute, sorts,
+ * and loads more as they go. Blocked customers stay out of
  * the list and have a tab of their own. New contact adds someone the team
  * met elsewhere.
  */
 import { RiAddLine, RiSearchLine, RiUser3Line } from "@remixicon/react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type Key, useDeferredValue, useState } from "react";
+import { useDeferredValue, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
-import { Select, SelectItem } from "@/components/base/select/select";
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/base/table/table";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { EmptyState } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
 import { type Contact, createContact, customerKeys, type PeopleFilters, peopleQuery } from "@/lib/api/customers";
-import { tagsQuery } from "@/lib/api/tags";
 
 import { CustomersFrame } from "./frame";
 import { personName, useWorkspace } from "./names";
-
-const any = "any";
-
-const kinds = [
-  { id: any, label: "Everyone" },
-  { id: "user", label: "Users" },
-  { id: "lead", label: "Leads" },
-];
-
-const sorts: Record<NonNullable<PeopleFilters["sort"]>, string> = {
-  last_seen_at: "Last seen",
-  "-created_at": "Newest",
-  name: "Name",
-};
+import { PeopleFiltersBar } from "./people-filters";
 
 function seen(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "—";
@@ -91,60 +77,6 @@ function NewContactDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
         />
       </div>
     </AlertDialog>
-  );
-}
-
-function Filters({ filters, onChange }: { filters: PeopleFilters; onChange: (next: PeopleFilters) => void }) {
-  const workspace = useWorkspace();
-  const { data: tags = [] } = useQuery(tagsQuery(workspace));
-  const pick = (apply: (value: string) => PeopleFilters) => (key: Key | null) => {
-    if (key !== null) {
-      onChange(apply(String(key)));
-    }
-  };
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Select
-        aria-label="Kind"
-        size="sm"
-        className="w-32"
-        selectedKey={filters.kind ?? any}
-        onSelectionChange={pick((kind) => ({ ...filters, kind: kind === any ? undefined : (kind as "user" | "lead") }))}
-      >
-        {kinds.map((kind) => (
-          <SelectItem key={kind.id} id={kind.id}>
-            {kind.label}
-          </SelectItem>
-        ))}
-      </Select>
-      <Select
-        aria-label="Tag"
-        size="sm"
-        className="w-40"
-        selectedKey={filters.tag ?? any}
-        onSelectionChange={pick((tag) => ({ ...filters, tag: tag === any ? undefined : tag }))}
-      >
-        {[{ id: any, name: "Any tag" }, ...tags].map((tag) => (
-          <SelectItem key={tag.id} id={tag.id} textValue={tag.name}>
-            {tag.name}
-          </SelectItem>
-        ))}
-      </Select>
-      <Select
-        aria-label="Sort"
-        size="sm"
-        className="w-36"
-        selectedKey={filters.sort ?? "last_seen_at"}
-        onSelectionChange={pick((sort) => ({ ...filters, sort: sort as PeopleFilters["sort"] }))}
-      >
-        {Object.entries(sorts).map(([id, label]) => (
-          <SelectItem key={id} id={id}>
-            {label}
-          </SelectItem>
-        ))}
-      </Select>
-    </div>
   );
 }
 
@@ -242,7 +174,7 @@ export function PeoplePage({ blocked = false }: { blocked?: boolean }) {
             value={search}
             onChange={setSearch}
           />
-          <Filters filters={filters} onChange={setFilters} />
+          <PeopleFiltersBar filters={filters} onChange={setFilters} />
         </div>
         {list.isError ? (
           <EmptyState icon={RiUser3Line} title="People could not be loaded" description={list.error.message} />
