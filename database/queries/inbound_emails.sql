@@ -61,3 +61,18 @@ WHERE workspace_id = @workspace_id
   )
 ORDER BY received_at DESC, id DESC
 LIMIT @row_limit::bigint;
+
+-- name: LatestInboundEmails :many
+-- LatestInboundEmails returns when each source last delivered mail,
+-- across every workspace, for the operator's health check.
+SELECT source::text AS source, latest_at::timestamptz AS latest_at FROM email_inbound_latest();
+
+-- name: CountLiveEmailAddresses :one
+-- CountLiveEmailAddresses counts the live addresses across every
+-- workspace, for the operator's health check.
+SELECT email_live_address_count()::bigint;
+
+-- name: DatabaseNow :one
+-- DatabaseNow returns the database server's clock, which the operator's
+-- health check compares with this server's.
+SELECT now()::timestamptz AS now;

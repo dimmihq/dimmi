@@ -26,5 +26,8 @@ func All(a *app.App) []foundation.Command {
 	return []foundation.Command{
 		WorkspaceRepairCommand{App: a},
 		&UserDisableTwoFactorCommand{App: a},
+		EmailInboundDoctorCommand{App: a},
+		EmailCloudflareWorkerCommand{App: a},
+		EmailResendBackfillCommand{App: a},
 	}
 }

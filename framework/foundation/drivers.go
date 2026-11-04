@@ -39,6 +39,12 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail/drivers/sendgrid"
 	mailses "github.com/dimmihq/dimmi/framework/mail/drivers/ses"
 	"github.com/dimmihq/dimmi/framework/mail/drivers/smtp"
+	"github.com/dimmihq/dimmi/framework/mailbox"
+	inboundcloudflare "github.com/dimmihq/dimmi/framework/mailbox/drivers/cloudflare"
+	inboundmailgun "github.com/dimmihq/dimmi/framework/mailbox/drivers/mailgun"
+	inboundpostmark "github.com/dimmihq/dimmi/framework/mailbox/drivers/postmark"
+	inboundresend "github.com/dimmihq/dimmi/framework/mailbox/drivers/resend"
+	inboundsendgrid "github.com/dimmihq/dimmi/framework/mailbox/drivers/sendgrid"
 	inboundses "github.com/dimmihq/dimmi/framework/mailbox/drivers/ses"
 	"github.com/dimmihq/dimmi/framework/malware/drivers/clamav"
 	"github.com/dimmihq/dimmi/framework/malware/drivers/guardduty"
@@ -75,7 +81,13 @@ func (a *Application) registerDrivers(ctx context.Context) {
 	a.Mail.Extend("mailgun", mailgun.Factory(a.HTTP, a.Clock))
 	a.Mail.Extend("sendgrid", sendgrid.Factory(a.HTTP))
 
+	replays := mailbox.NewReplays(a.Cache)
 	a.Mailbox.Extend("ses", inboundses.Factory(a.HTTP, a.Storage))
+	a.Mailbox.Extend("postmark", inboundpostmark.Factory(a.Clock))
+	a.Mailbox.Extend("mailgun", inboundmailgun.Factory(a.Clock, replays))
+	a.Mailbox.Extend("sendgrid", inboundsendgrid.Factory(a.Clock))
+	a.Mailbox.Extend("resend", inboundresend.Factory(a.HTTP, a.Clock, replays))
+	a.Mailbox.Extend("cloudflare", inboundcloudflare.Factory(a.Clock, replays))
 
 	a.Notify.Extend("mail", mailchannel.Factory(a.Mail))
 	a.Notify.Extend("database", notifydb.Factory(a.DB, a.Clock))

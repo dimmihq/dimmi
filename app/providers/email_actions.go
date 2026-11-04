@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/mailbox"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
@@ -28,12 +29,18 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/email"
 	inbound "github.com/dimmihq/dimmi/app/integrations/email"
 	"github.com/dimmihq/dimmi/app/jobs"
+	appconfig "github.com/dimmihq/dimmi/config"
 )
 
 /*
 stampsKeyPurpose names the key that signs the email channel's stamps.
 */
 const stampsKeyPurpose = "email-stamps"
+
+/*
+bytesPerMB converts the memory budget's setting to bytes.
+*/
+const bytesPerMB = 1 << 20
 
 /*
 registerEmail registers the email channel's workspace defaults. It runs
@@ -74,6 +81,10 @@ func bootEmail(a *app.App) error {
 	acts.ReceiveInboundEmail = &email.ReceiveInboundEmail{
 		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Disk: disk, DiskName: diskName, Config: cfg,
 	}
+	if err := bootInboundSources(a); err != nil {
+		return err
+	}
+
 	acts.ProcessInboundEmail = &email.ProcessInboundEmail{
 		DB: a.DB, Clock: a.Clock, Storage: a.Storage, DNS: a.DNS, Limiter: a.Limiter, Config: cfg, Stamps: stamps,
 		Receiver: &conversations.ReceiveInboundMessage{
@@ -90,6 +101,45 @@ func bootEmail(a *app.App) error {
 	}
 
 	return queue.Register(a.Queue, &jobs.ProcessInboundEmail{Processor: acts.ProcessInboundEmail})
+}
+
+/*
+bootInboundSources builds the actions behind the provider webhooks and
+the operator's checks of them, after the receiving action exists.
+*/
+func bootInboundSources(a *app.App) error {
+	acts := a.Actions
+	cfg := a.Config.Channels.Email
+
+	acts.InboundHealth = &email.InboundHealth{Cache: a.Cache, Log: a.Log}
+	acts.InboundBudget = mailbox.NewBudget(cfg.Inbound.ParseMemoryBudgetMB * bytesPerMB)
+	acts.BackfillResend = &email.BackfillResend{Sources: a.Mailbox, Receive: acts.ReceiveInboundEmail}
+	acts.InboundDoctor = &email.InboundDoctor{
+		DB: a.DB, Clock: a.Clock, DNS: a.DNS, Sources: a.Mailbox, Health: acts.InboundHealth, Config: cfg,
+		AppURL: a.Application.Config.App.URL,
+	}
+
+	return checkInboundSources(a)
+}
+
+/*
+checkInboundSources builds every enabled source, so an install with a
+missing secret refuses to start and names the key, rather than failing on
+the first mail. The test source takes no options; SES reads a bucket and
+is checked when its route is wired.
+*/
+func checkInboundSources(a *app.App) error {
+	for _, source := range a.Config.Channels.Email.Inbound.Drivers {
+		if source == appconfig.InboundSourceTest || source == appconfig.InboundSourceSES {
+			continue
+		}
+
+		if _, err := a.Mailbox.Receiver(source); err != nil {
+			return fmt.Errorf("channels.email.inbound.drivers %s: %w", source, err)
+		}
+	}
+
+	return nil
 }
 
 /*

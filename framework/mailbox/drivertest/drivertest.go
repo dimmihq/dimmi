@@ -6,9 +6,8 @@
 | Every inbound source must hand the application the same envelope for
 | the same delivery, or the rest of the pipeline would depend on the
 | provider. A source's tests call Run with a constructor returning the
-| source and a way to make a delivery payload the way its provider
-| would: signed, and with the raw message stored where the source reads
-| it.
+| source and a way to make a delivery post the way its provider would:
+| signed, and with the raw message stored where the source reads it.
 |
 |   func TestSource(t *testing.T) {
 |       drivertest.Run(t, newHarness)
@@ -22,6 +21,8 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -43,18 +44,47 @@ type Delivery struct {
 }
 
 /*
+Post is one webhook request as the provider would send it.
+*/
+type Post struct {
+	Header http.Header
+	Query  url.Values
+	Body   []byte
+}
+
+/*
+Delivery returns the post as a source reads it, as many times as asked.
+*/
+func (p Post) Delivery() mailbox.Delivery {
+	header := p.Header
+	if header == nil {
+		header = http.Header{}
+	}
+
+	return mailbox.Delivery{
+		Header: header, Query: p.Query, Body: bytes.NewReader(p.Body), Size: int64(len(p.Body)),
+	}
+}
+
+/*
 Harness is a source under test.
 
-Payload stores the raw message where the source reads it and returns
-the webhook body the provider would post. Forged returns a body for the
-delivery whose signature does not check out. MaxBytes is the largest
-message the source accepts.
+Payload stores the raw message where the source reads it and returns the
+post the provider would send. Forged returns a post for the delivery
+whose signature does not check out. Junk returns a correctly signed post
+that is no delivery; left nil, an unsigned one is sent. MaxBytes is the
+largest message the source accepts. ExpectedID says which id a delivery
+should get; left nil, the delivery's own. Keyed says the source refuses a
+post it has already accepted.
 */
 type Harness struct {
-	Source   mailbox.Receiver
-	Payload  func(t *testing.T, d Delivery) []byte
-	Forged   func(t *testing.T, d Delivery) []byte
-	MaxBytes int64
+	Source     mailbox.Receiver
+	Payload    func(t *testing.T, d Delivery) Post
+	Forged     func(t *testing.T, d Delivery) Post
+	Junk       func(t *testing.T) Post
+	MaxBytes   int64
+	ExpectedID func(d Delivery) string
+	Keyed      bool
 }
 
 /*
@@ -70,6 +100,7 @@ func Run(t *testing.T, newHarness NewHarness) {
 
 	t.Run("envelopes", func(t *testing.T) { t.Parallel(); runEnvelopes(t, newHarness) })
 	t.Run("refusals", func(t *testing.T) { t.Parallel(); runRefusals(t, newHarness) })
+	t.Run("replays", func(t *testing.T) { t.Parallel(); runReplays(t, newHarness) })
 }
 
 /*
@@ -103,6 +134,14 @@ func Read(t *testing.T, env *mailbox.Envelope) []byte {
 	return got
 }
 
+func (h Harness) expectedID(d Delivery) string {
+	if h.ExpectedID != nil {
+		return h.ExpectedID(d)
+	}
+
+	return d.ID
+}
+
 func runEnvelopes(t *testing.T, newHarness NewHarness) {
 	t.Helper()
 
@@ -111,12 +150,12 @@ func runEnvelopes(t *testing.T, newHarness NewHarness) {
 		h := newHarness(t)
 		d := NewDelivery()
 
-		env, err := h.Source.Receive(t.Context(), h.Payload(t, d))
+		env, err := h.Source.Receive(t.Context(), h.Payload(t, d).Delivery())
 		require.NoError(t, err)
 		require.NotNil(t, env)
 
 		assert.Equal(t, h.Source.Name(), env.Source)
-		assert.Equal(t, d.ID, env.ProviderMessageID)
+		assert.Equal(t, h.expectedID(d), env.ProviderMessageID)
 		assert.Equal(t, d.EnvelopeFrom, env.EnvelopeFrom)
 		assert.Equal(t, d.Recipients, env.Recipients)
 		assert.Equal(t, int64(len(d.Raw)), env.SizeBytes)
@@ -129,11 +168,11 @@ func runEnvelopes(t *testing.T, newHarness NewHarness) {
 		t.Parallel()
 		h := newHarness(t)
 		d := NewDelivery()
-		payload := h.Payload(t, d)
+		post := h.Payload(t, d)
 
-		first, err := h.Source.Receive(t.Context(), payload)
+		first, err := h.Source.Receive(t.Context(), post.Delivery())
 		require.NoError(t, err)
-		again, err := h.Source.Receive(t.Context(), payload)
+		again, err := h.Source.Receive(t.Context(), post.Delivery())
 		require.NoError(t, err)
 
 		assert.Equal(t, first.ProviderMessageID, again.ProviderMessageID)
@@ -145,7 +184,7 @@ func runEnvelopes(t *testing.T, newHarness NewHarness) {
 		d := NewDelivery()
 		d.EnvelopeFrom = ""
 
-		env, err := h.Source.Receive(t.Context(), h.Payload(t, d))
+		env, err := h.Source.Receive(t.Context(), h.Payload(t, d).Delivery())
 		require.NoError(t, err)
 
 		assert.Empty(t, env.EnvelopeFrom)
@@ -159,15 +198,21 @@ func runRefusals(t *testing.T, newHarness NewHarness) {
 		t.Parallel()
 		h := newHarness(t)
 
-		_, err := h.Source.Receive(t.Context(), h.Forged(t, NewDelivery()))
+		_, err := h.Source.Receive(t.Context(), h.Forged(t, NewDelivery()).Delivery())
 
 		require.ErrorIs(t, err, mailbox.ErrRejected)
 	})
 
 	t.Run("rejects a body that is no delivery", func(t *testing.T) {
 		t.Parallel()
+		h := newHarness(t)
 
-		_, err := newHarness(t).Source.Receive(t.Context(), []byte("hello"))
+		post := Post{Body: []byte("hello")}
+		if h.Junk != nil {
+			post = h.Junk(t)
+		}
+
+		_, err := h.Source.Receive(t.Context(), post.Delivery())
 
 		require.ErrorIs(t, err, mailbox.ErrRejected)
 	})
@@ -178,8 +223,33 @@ func runRefusals(t *testing.T, newHarness NewHarness) {
 		d := NewDelivery()
 		d.Raw = append(d.Raw, bytes.Repeat([]byte("x"), int(h.MaxBytes))...)
 
-		_, err := h.Source.Receive(t.Context(), h.Payload(t, d))
+		_, err := h.Source.Receive(t.Context(), h.Payload(t, d).Delivery())
 
 		require.ErrorIs(t, err, mailbox.ErrTooLarge)
+	})
+}
+
+func runReplays(t *testing.T, newHarness NewHarness) {
+	t.Helper()
+
+	t.Run("refuses a post it accepted, not one that failed before", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		if !h.Keyed {
+			t.Skip("the source keeps no replay window")
+		}
+
+		post := h.Payload(t, NewDelivery())
+
+		failed, err := h.Source.Receive(t.Context(), post.Delivery())
+		require.NoError(t, err)
+		require.NotNil(t, failed.Accepted)
+
+		retried, err := h.Source.Receive(t.Context(), post.Delivery())
+		require.NoError(t, err)
+		require.NoError(t, retried.Accepted(t.Context()))
+
+		_, err = h.Source.Receive(t.Context(), post.Delivery())
+		require.ErrorIs(t, err, mailbox.ErrRejected)
 	})
 }

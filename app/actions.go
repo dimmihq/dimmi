@@ -12,6 +12,8 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/framework/mailbox"
+
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
@@ -116,6 +118,10 @@ type Actions struct {
 	SendEmailAddressTest *email.SendEmailAddressTest
 	ListInboundEmails    *email.ListInboundEmails
 	ReceiveInboundEmail  *email.ReceiveInboundEmail
+	InboundHealth        *email.InboundHealth
+	InboundDoctor        *email.InboundDoctor
+	BackfillResend       *email.BackfillResend
+	InboundBudget        *mailbox.Budget
 	ProcessInboundEmail  *email.ProcessInboundEmail
 	SendEmailMessage     *email.SendEmailMessage
 }

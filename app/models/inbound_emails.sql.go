@@ -13,6 +13,19 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countLiveEmailAddresses = `-- name: CountLiveEmailAddresses :one
+SELECT email_live_address_count()::bigint
+`
+
+// CountLiveEmailAddresses counts the live addresses across every
+// workspace, for the operator's health check.
+func (q *Queries) CountLiveEmailAddresses(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveEmailAddresses)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createInboundEmail = `-- name: CreateInboundEmail :one
 INSERT INTO inbound_emails (
     workspace_id, email_address_id, channel_connection_id, source, provider_message_id, envelope_from,
@@ -100,6 +113,19 @@ func (q *Queries) CreateInboundEmail(ctx context.Context, arg CreateInboundEmail
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const databaseNow = `-- name: DatabaseNow :one
+SELECT now()::timestamptz AS now
+`
+
+// DatabaseNow returns the database server's clock, which the operator's
+// health check compares with this server's.
+func (q *Queries) DatabaseNow(ctx context.Context) (time.Time, error) {
+	row := q.db.QueryRow(ctx, databaseNow)
+	var now time.Time
+	err := row.Scan(&now)
+	return now, err
 }
 
 const describeInboundEmail = `-- name: DescribeInboundEmail :exec
@@ -236,6 +262,37 @@ func (q *Queries) FinishInboundEmail(ctx context.Context, arg FinishInboundEmail
 		arg.ID,
 	)
 	return err
+}
+
+const latestInboundEmails = `-- name: LatestInboundEmails :many
+SELECT source::text AS source, latest_at::timestamptz AS latest_at FROM email_inbound_latest()
+`
+
+type LatestInboundEmailsRow struct {
+	Source   string    `json:"source"`
+	LatestAt time.Time `json:"latest_at"`
+}
+
+// LatestInboundEmails returns when each source last delivered mail,
+// across every workspace, for the operator's health check.
+func (q *Queries) LatestInboundEmails(ctx context.Context) ([]LatestInboundEmailsRow, error) {
+	rows, err := q.db.Query(ctx, latestInboundEmails)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LatestInboundEmailsRow
+	for rows.Next() {
+		var i LatestInboundEmailsRow
+		if err := rows.Scan(&i.Source, &i.LatestAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAddressInboundEmails = `-- name: ListAddressInboundEmails :many

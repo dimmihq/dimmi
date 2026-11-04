@@ -1,0 +1,11 @@
+name = "inbound-mail"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+WEBHOOK_URL = "{{webhook_url}}"
+# Set a verified Email Routing destination to keep mail while the install
+# is unreachable. Left empty, senders get a bounce instead.
+FALLBACK_ADDRESS = ""
+
+# Set the shared secret with: wrangler secret put INBOUND_SECRET

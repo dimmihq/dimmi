@@ -465,6 +465,21 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
 
+Provider webhooks. Restart with `DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=test,postmark,cloudflare`,
+`DIMMI_MAILBOX__SOURCES__POSTMARK__DRIVER=postmark`, `__USERNAME=hook`, `__PASSWORD=pm-secret`,
+`DIMMI_MAILBOX__SOURCES__CLOUDFLARE__DRIVER=cloudflare` and `__SECRET=cf-secret`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Missing secret | start once without `__PASSWORD` | `dimmi serve` exits: `mailbox.sources.postmark username and password: mailbox: required option missing` |
+| Source off | `r off -X POST $W/webhooks/mailgun/inbound/mime -d x` | 404 `inbound_driver_disabled` |
+| Postmark | `mailraw $FWD 'Postmark hello' pm.$RUN@customer.test '' 'Hi.' \| jq -Rs "{MessageID:\"pm-$RUN\",OriginalRecipient:\"$FWD\",RawEmail:.}" \| r pm -X POST -u hook:pm-secret -H "$J" --data-binary @- $W/webhooks/postmark/inbound` | 200; the activity log shows it `processed`; the same again 200 and adds nothing |
+| Postmark without raw | the same with `{MessageID:"pm-x",OriginalRecipient:"'$FWD'"}` | 503; `dimmi email:inbound-doctor` names "Include raw email content in JSON payload" until the next good post |
+| Postmark bad credentials | `-u hook:wrong` | 403 |
+| Cloudflare | `TS=$(date +%s); mailraw $FWD 'Cloudflare hello' cf.$RUN@customer.test '' 'Hi.' > cf.eml; SIG=$(printf '%s.%s' $TS $(shasum -a 256 cf.eml \| cut -d' ' -f1) \| openssl dgst -sha256 -hmac cf-secret -r \| cut -d' ' -f1); r cf -X POST -H 'Content-Type: message/rfc822' -H "X-Inbound-Timestamp: $TS" -H "X-Inbound-Signature: $SIG" -H "X-Inbound-Envelope-From: cf.$RUN@customer.test" -H "X-Inbound-Envelope-To: $FWD" --data-binary @cf.eml $W/webhooks/cloudflare/inbound` | 200 and a conversation; a wrong `SIG` or a `TS` ten minutes old 401 |
+| Worker | `dimmi email:cloudflare-worker` | prints `worker.js` and `wrangler.toml` with `$W/webhooks/cloudflare/inbound` filled in |
+| Doctor | `dimmi email:inbound-doctor` | one line per check (`email.inbound_mx`, `email.inbound_source.*`, `email.inbound_url`, `email.misconfigured.*`, `email.clock`, `email.inbound_recent`); `fail` on the e2e domain's missing MX, `warn` on the http `app.url`, exit 1 |
+
 ## Realtime connections end with their credential
 
 Open a socket with a browser's cookie (`a.jar`) and one with a token, using the SDK or `websocat`, and follow a conversation on each.
