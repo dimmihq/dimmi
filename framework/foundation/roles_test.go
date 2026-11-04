@@ -61,7 +61,7 @@ func TestRoles(t *testing.T) {
 		require.Eventually(t, func() bool { return len(ticks) > 0 }, 20*time.Second, pollEvery)
 
 		assert.Empty(t, scheduler.Addr())
-		assert.Empty(t, worker.AdminAddr())
+		assert.NotEmpty(t, worker.AdminAddr())
 	})
 
 	t.Run("serves the web role without an admin listener when it is off", func(t *testing.T) {

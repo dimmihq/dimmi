@@ -213,15 +213,27 @@ func (s *MaintenanceStore) apply(state MaintenanceState) {
 }
 
 /*
-read returns the stored state, or up when none was ever stored.
+read returns the stored state, or up when none was ever stored. A
+database not yet migrated has no maintenance table and so was never
+taken down; the process still boots, so an operator can migrate it.
 */
 func (s *MaintenanceStore) read(ctx context.Context) (MaintenanceState, error) {
 	var (
-		state MaintenanceState
-		since *time.Time
+		state   MaintenanceState
+		since   *time.Time
+		created bool
 	)
 
-	err := s.db.QueryRow(ctx, "SELECT enabled, message, since FROM maintenance WHERE id").
+	err := s.db.QueryRow(ctx, "SELECT to_regclass('maintenance') IS NOT NULL").Scan(&created)
+	if err != nil {
+		return MaintenanceState{}, fmt.Errorf("find maintenance state: %w", err)
+	}
+
+	if !created {
+		return MaintenanceState{}, nil
+	}
+
+	err = s.db.QueryRow(ctx, "SELECT enabled, message, since FROM maintenance WHERE id").
 		Scan(&state.Enabled, &state.Message, &since)
 	if errors.Is(err, database.ErrNotFound) {
 		return MaintenanceState{}, nil
