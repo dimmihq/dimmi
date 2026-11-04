@@ -22,3 +22,5 @@ coverage-app.filtered.out
 /deploy/**/cdk.context.json
 /deploy/**/.env*
 /deploy/cdk/node_modules/
+/deploy/dns/node_modules/
+/deploy/dns/outputs/

@@ -1,6 +1,7 @@
 package arch_test
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -16,23 +17,29 @@ import (
 /*
 secretPatterns are what must never be committed under deploy, keyed by
 what they mean. The repository is public, so even an account id counts.
+A password is a quoted literal or a bare value ending the line, as in an
+env file; code that only names a password, such as a field typed Secret or
+a call reading one, is not a finding.
 */
 func secretPatterns() map[string]*regexp.Regexp {
 	return map[string]*regexp.Regexp{
 		"aws access key": regexp.MustCompile(`\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA)[0-9A-Z]{16}\b`),
 		"aws account id": regexp.MustCompile(`(^|\D)\d{12}(\D|$)`),
-		"password":       regexp.MustCompile(`(?i)password["']?\s*[:=]\s*["']?[^\s"']+`),
-		"private key":    regexp.MustCompile(`-{5}BEGIN [A-Z ]*PRIVATE KEY`),
+		"password": regexp.MustCompile(
+			`(?i)password["']?\s*[:=]\s*(?:["'][^\s"']{4,}["']|[^\s"'(){}\[\],;]+\s*$)`,
+		),
+		"private key": regexp.MustCompile(`-{5}BEGIN [A-Z ]*PRIVATE KEY`),
 	}
 }
 
 /*
 skippedForSecrets reports whether the walk leaves the entry out: installed
-packages and build output are not ours, and lockfiles are full of hashes.
+packages, build output and saved stack outputs are not committed, and
+lockfiles are full of hashes.
 */
 func skippedForSecrets(entry fs.DirEntry) bool {
 	if entry.IsDir() {
-		return entry.Name() == "node_modules" || entry.Name() == "cdk.out"
+		return entry.Name() == "node_modules" || entry.Name() == "cdk.out" || entry.Name() == "outputs"
 	}
 
 	return entry.Name() == "pnpm-lock.yaml"
@@ -40,56 +47,60 @@ func skippedForSecrets(entry fs.DirEntry) bool {
 
 /*
 scanForSecrets returns one finding per line of the tree that matches a
-pattern, naming the kind of secret but never its value. The tree is read
-through a file system rooted at it, so a link never leads the scan out.
+pattern, naming the kind of secret but never its value. Files are read
+through a root, so a link inside the tree cannot lead the scan outside it.
 */
-func scanForSecrets(root string) ([]string, error) {
-	var findings []string
+func scanForSecrets(root string) (findings []string, err error) {
+	tree, err := os.OpenRoot(root)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", root, err)
+	}
 
-	tree := os.DirFS(root)
-	patterns := secretPatterns()
+	defer func() { err = errors.Join(err, tree.Close()) }()
 
-	err := fs.WalkDir(tree, ".", func(path string, entry fs.DirEntry, err error) error {
+	err = fs.WalkDir(tree.FS(), ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if skippedForSecrets(entry) && entry.IsDir() {
-			return fs.SkipDir
+			return filepath.SkipDir
 		}
 
 		if skippedForSecrets(entry) || entry.IsDir() {
 			return nil
 		}
 
-		contents, err := fs.ReadFile(tree, path)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", path, err)
-		}
+		found, err := scanFile(tree, path)
+		findings = append(findings, found...)
 
-		findings = append(findings, lineFindings(filepath.Join(root, path), string(contents), patterns)...)
-
-		return nil
+		return err
 	})
 
 	return findings, err
 }
 
 /*
-lineFindings names every line of the file that matches a pattern.
+scanFile returns the findings of one file, each named by its path inside
+the scanned tree.
 */
-func lineFindings(path, contents string, patterns map[string]*regexp.Regexp) []string {
+func scanFile(tree *os.Root, path string) ([]string, error) {
+	contents, err := tree.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+
 	var findings []string
 
-	for number, line := range strings.Split(contents, "\n") {
-		for kind, pattern := range patterns {
+	for number, line := range strings.Split(string(contents), "\n") {
+		for kind, pattern := range secretPatterns() {
 			if pattern.MatchString(line) {
 				findings = append(findings, fmt.Sprintf("%s:%d: %s", path, number+1, kind))
 			}
 		}
 	}
 
-	return findings
+	return findings, nil
 }
 
 func TestDeploySecrets(t *testing.T) {
@@ -146,12 +157,30 @@ func TestDeploySecrets(t *testing.T) {
 		root := t.TempDir()
 		seed := []byte(strings.Repeat("1", 12))
 
-		for _, dir := range []string{"node_modules", "cdk.out"} {
+		for _, dir := range []string{"node_modules", "cdk.out", "outputs"} {
 			require.NoError(t, os.MkdirAll(filepath.Join(root, dir), 0o750))
 			require.NoError(t, os.WriteFile(filepath.Join(root, dir, "file.json"), seed, 0o600))
 		}
 
 		require.NoError(t, os.WriteFile(filepath.Join(root, "pnpm-lock.yaml"), seed, 0o600))
+
+		findings, err := scanForSecrets(root)
+
+		require.NoError(t, err)
+		assert.Empty(t, findings)
+	})
+
+	t.Run("code that only names a password is not a finding", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		lines := strings.Join([]string{
+			"  readonly gatePassword: Secret;",
+			`  PGPASSWORD: EcsSecret.fromSecretsManager(secret, "password"),`,
+			`  const password = secret.secretValueFromJson("password").unsafeUnwrap();`,
+			`  secretStringTemplate: JSON.stringify({ password: "" }),`,
+		}, "\n")
+		require.NoError(t, os.WriteFile(filepath.Join(root, "code.ts"), []byte(lines), 0o600))
 
 		findings, err := scanForSecrets(root)
 

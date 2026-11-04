@@ -12,7 +12,10 @@
 
 package exceptions
 
-import "github.com/dimmihq/dimmi/framework/fault"
+import (
+	"github.com/dimmihq/dimmi/framework/fault"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+)
 
 /*
 Conversation state failures.
@@ -108,3 +111,13 @@ var (
 	ErrSearchQueryTooLong = fault.New(fault.Invalid, "search_query_too_long",
 		"Search for at most 256 characters.").OnField("q")
 )
+
+/*
+ErrCursorMismatch refuses a cursor made for another list or order, so a
+cursor taken elsewhere never silently skips rows. It is a malformed
+request rather than invalid input.
+*/
+var ErrCursorMismatch = &fhttp.ResponseError{
+	Status: fhttp.StatusBadRequest, Code: "cursor_mismatch",
+	Message: "This cursor belongs to a different list.",
+}

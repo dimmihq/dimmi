@@ -286,6 +286,7 @@ C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@exam
 | Snooze from closed | `PATCH $B/conversations/$C {"status":"snoozed","snooze_preset":"tomorrow"}` | 422 `invalid_transition`, `from: closed`, `to: snoozed` |
 | Customer reopens | `POST $B/conversations/$C/messages {"body":"Hello?"}` | 201, `meta.conversation.status: open` |
 | Timeline | `GET "$B/conversations/$C/messages?filter[type]=event"` | assigned (by the reply, then to Bob), closed, reopened (`actor.name` Ann) in order |
+| Priority | `PATCH $B/conversations/$C {"priority":"urgent"}`, then `{"priority":true}`; `GET "$B/conversations?filter[view]=all&filter[priority]=high,urgent&sort=-priority"` | 200 `priority: urgent`, `meta.changed: ["priority"]`; 422; the conversation listed first |
 | Read state | `PATCH $B/conversations/$C/read-state {}`, then `{"unread":true}` | `unread: false`, then `unread: true` |
 | Search | `GET "$B/search?q=refund"`, `"$B/search?q=%231"`, `"$B/conversations?filter[view]=all&q=refunds"` | the conversation with the newest match marked in `highlight` (`<mark>Refunded</mark>`); `jump.number: 1`; one row |
 | Other workspace | Carol: `GET $B/conversations/$C` with her own workspace | 404 `not_found` |

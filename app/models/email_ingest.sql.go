@@ -148,7 +148,7 @@ func (q *Queries) FailEmailMessageDelivery(ctx context.Context, arg FailEmailMes
 }
 
 const findEmailMessage = `-- name: FindEmailMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at FROM messages WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages WHERE workspace_id = $1 AND id = $2
 `
 
 type FindEmailMessageParams struct {
@@ -180,9 +180,10 @@ func (q *Queries) FindEmailMessage(ctx context.Context, arg FindEmailMessagePara
 		&i.SentAt,
 		&i.ReadAt,
 		&i.DeletedAt,
-		&i.Search,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
 	)
 	return i, err
 }
@@ -215,7 +216,7 @@ func (q *Queries) FindEmailSenderMember(ctx context.Context, arg FindEmailSender
 }
 
 const findLatestThreadConversation = `-- name: FindLatestThreadConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority FROM conversations
 WHERE workspace_id = $1 AND channel_connection_id = $2
   AND external_thread_key = $3 AND deleted_at IS NULL
 ORDER BY created_at DESC
@@ -243,7 +244,6 @@ func (q *Queries) FindLatestThreadConversation(ctx context.Context, arg FindLate
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -260,6 +260,13 @@ func (q *Queries) FindLatestThreadConversation(ctx context.Context, arg FindLate
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.PreviousConversationID,
+		&i.IsTest,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }

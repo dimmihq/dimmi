@@ -130,7 +130,8 @@ e2e: build
 
 # Checks the infrastructure code without reaching any account: credentials
 # are hidden from the toolchain, so a machine that holds some cannot use them
-# by accident. deploy/cdk has its own lockfile and is not part of the browser app.
+# by accident. deploy/cdk and deploy/dns have their own lockfiles and are not
+# part of the browser app.
 INFRA_ENV := env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE -u AWS_DEFAULT_PROFILE \
 	AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null AWS_EC2_METADATA_DISABLED=true \
 	CDK_DISABLE_CLI_TELEMETRY=true
@@ -140,8 +141,11 @@ INFRA_ENV := env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TO
 infra-check:
 	cd deploy/cdk && pnpm install --frozen-lockfile
 	cd deploy/cdk && $(INFRA_ENV) pnpm run typecheck
-	cd deploy/cdk && $(INFRA_ENV) pnpm run synth:fixture
+	cd deploy/cdk && $(INFRA_ENV) pnpm run synth:all
 	cd deploy/cdk && $(INFRA_ENV) pnpm run test
+	cd deploy/dns && pnpm install --frozen-lockfile
+	cd deploy/dns && $(INFRA_ENV) pnpm run typecheck
+	cd deploy/dns && $(INFRA_ENV) pnpm run test
 	go test -count=1 ./tests/arch/ -run '^TestDeploy'
 
 # Sends real mail through real mailboxes and refuses to start without their
