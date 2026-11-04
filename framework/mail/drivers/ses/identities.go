@@ -35,20 +35,12 @@ import (
 ErrIdentityNotFound means SES has no such identity. It also matches
 mail.ErrPermanent.
 */
-var ErrIdentityNotFound = fmt.Errorf("ses: identity not found: %w", mail.ErrPermanent)
+var ErrIdentityNotFound = mail.ErrIdentityNotFound
 
 /*
-Identity is a sending domain as SES sees it. Tokens are the signing tokens
-whose aliases point into SigningHostedZone. DKIMStatus and MailFromStatus
-are what SES last found, in its own words, such as SUCCESS or PENDING.
+Identity is a sending domain as SES sees it; see mail.Identity.
 */
-type Identity struct {
-	Tokens            []string
-	SigningHostedZone string
-	DKIMStatus        string
-	MailFromStatus    string
-	Verified          bool
-}
+type Identity = mail.Identity
 
 /*
 Identities manages SES sending identities.

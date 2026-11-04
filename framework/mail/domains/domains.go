@@ -13,14 +13,18 @@
 package domains
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/dimmihq/dimmi/framework/aws"
+	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/mail/drivers/mailgun"
 	"github.com/dimmihq/dimmi/framework/mail/drivers/postmark"
 	"github.com/dimmihq/dimmi/framework/mail/drivers/resend"
 	"github.com/dimmihq/dimmi/framework/mail/drivers/sendgrid"
+	"github.com/dimmihq/dimmi/framework/mail/drivers/ses"
 )
 
 /*
@@ -45,4 +49,17 @@ func For(client *httpclient.Client, driver string, opts mail.DomainOptions) (mai
 	default:
 		return nil, fmt.Errorf("%s: %w", driver, mail.ErrDomainsUnsupported)
 	}
+}
+
+/*
+Identities returns the identity manager of an SES mailer, built from its
+configuration section. The context bounds loading AWS credentials.
+*/
+func Identities(ctx context.Context, client *httpclient.Client, section config.Section) (mail.IdentityManager, error) {
+	cfg, err := aws.Config(ctx, section, client)
+	if err != nil {
+		return nil, fmt.Errorf("ses identities: %w", err)
+	}
+
+	return ses.NewIdentities(cfg), nil
 }

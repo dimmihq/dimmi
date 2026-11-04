@@ -147,14 +147,14 @@ func TestMessageSigningKey(t *testing.T) {
 		mailer := newMailer(t, nil)
 		to := drivertest.Address("Bea")
 		msg := drivertest.Message(to)
-		msg.Signing = &mail.SigningKey{Domain: "acme.example", Selector: "dimmi1", PrivateKey: key.PrivatePEM}
+		msg.Signing = &mail.SigningKey{Domain: "acme.example", Selector: "sel1", PrivateKey: key.PrivatePEM}
 
 		_, err = mailer.Send(t.Context(), msg)
 		require.NoError(t, err)
 
 		verifications, err := dkim.VerifyWithOptions(bytes.NewReader(raw(t, to.Email)), &dkim.VerifyOptions{
 			LookupTXT: func(name string) ([]string, error) {
-				assert.Equal(t, "dimmi1._domainkey.acme.example", name)
+				assert.Equal(t, "sel1._domainkey.acme.example", name)
 
 				return []string{"v=DKIM1; k=rsa; p=" + key.Public}, nil
 			},

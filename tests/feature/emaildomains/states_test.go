@@ -9,12 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dimmihq/dimmi/framework/aws"
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/dns"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient/httpclienttest"
-	"github.com/dimmihq/dimmi/framework/mail/drivers/ses"
+	maildomains "github.com/dimmihq/dimmi/framework/mail/domains"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/actions/email"
@@ -307,11 +306,9 @@ func TestSESDomains(t *testing.T) {
 		tc.App.EmailDomains.Provider = &email.SESDomains{
 			DB: tc.App.DB, Clock: tc.App.Clock, Region: "eu-west-1",
 			Connect: func(ctx context.Context) (email.SESIdentities, error) {
-				cfg, err := aws.Config(ctx, config.Section{
+				return maildomains.Identities(ctx, tc.App.HTTP, config.Section{
 					"region": "eu-west-1", "access_key_id": "AKID", "secret_access_key": "secret",
-				}, tc.App.HTTP)
-
-				return ses.NewIdentities(cfg), err
+				})
 			},
 		}
 

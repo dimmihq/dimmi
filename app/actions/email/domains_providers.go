@@ -22,7 +22,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mail"
-	"github.com/dimmihq/dimmi/framework/mail/drivers/ses"
 
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -38,32 +37,7 @@ const (
 /*
 SESIdentities is the part of SES a domain needs.
 */
-type SESIdentities interface {
-	/*
-		Create registers the domain and returns its state.
-	*/
-	Create(ctx context.Context, domain string) (ses.Identity, error)
-
-	/*
-		Get returns the domain's state.
-	*/
-	Get(ctx context.Context, domain string) (ses.Identity, error)
-
-	/*
-		SetMailFrom points the domain's return path at the name.
-	*/
-	SetMailFrom(ctx context.Context, domain, mailFrom string) error
-
-	/*
-		RestartDKIM makes SES look for the signing records again.
-	*/
-	RestartDKIM(ctx context.Context, domain string) error
-
-	/*
-		AssociateTenant ties the resource to the tenant.
-	*/
-	AssociateTenant(ctx context.Context, tenant, resourceARN string) error
-}
+type SESIdentities = mail.IdentityManager
 
 /*
 SESDomains sets domains up at SES. Connect returns the identities API,
@@ -145,7 +119,7 @@ func (s *SESDomains) Inspect(ctx context.Context, row models.EmailDomain) (Inspe
 	}
 
 	identity, err := identities.Get(ctx, row.Domain)
-	if errors.Is(err, ses.ErrIdentityNotFound) {
+	if errors.Is(err, mail.ErrIdentityNotFound) {
 		return Inspection{Status: "NOT_FOUND"}, nil
 	}
 

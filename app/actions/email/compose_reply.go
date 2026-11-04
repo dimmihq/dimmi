@@ -77,7 +77,12 @@ func (a *SendEmailMessage) compose(
 		return err
 	}
 
-	from := mail.Address{Name: senderName(out.address, out.msg.Author), Email: out.address.ForwardingAddress}
+	sender, err := a.sender(ctx, q, out)
+	if err != nil {
+		return err
+	}
+
+	from := mail.Address{Name: senderName(out.address, out.msg.Author), Email: sender.Email}
 	messageID := previous.MessageIDHeader
 	if messageID == "" {
 		messageID = inbound.MessageID(models.PublicID(models.PrefixMessage, out.msg.MessageID), domainOf(from.Email))
@@ -87,7 +92,7 @@ func (a *SendEmailMessage) compose(
 		From: from, To: to, Cc: cc, Subject: subjectOf(out.msg, refs), Text: out.msg.BodyText, HTML: out.msg.BodyHTML,
 		MessageID: messageID, References: inbound.TrimReferences(refs.ids, a.Config.Outbound.ReferencesMax),
 		InReplyTo: refs.inReplyTo, Automated: out.msg.Author.Type == enums.AuthorTypeAgent,
-		LoopStamp: a.Stamps.Loop(out.msg.WorkspaceID.String(), messageID),
+		LoopStamp: a.Stamps.Loop(out.msg.WorkspaceID.String(), messageID), Signing: sender.Signing,
 	}
 
 	if out.address.ReplyToMode == string(enums.ReplyToModeToken) {
@@ -97,6 +102,18 @@ func (a *SendEmailMessage) compose(
 	}
 
 	return a.quote(ctx, q, out)
+}
+
+/*
+sender returns the address the reply leaves from: its own while its
+domain is verified, its forwarding address otherwise.
+*/
+func (a *SendEmailMessage) sender(ctx context.Context, q *models.Queries, out *outbound) (Sender, error) {
+	if a.Senders == nil {
+		return Sender{Email: out.address.ForwardingAddress, State: SendingDefaultSender}, nil
+	}
+
+	return a.Senders.ResolveSender(ctx, q, out.msg.WorkspaceID, out.address)
 }
 
 /*

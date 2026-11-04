@@ -19,10 +19,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/dimmihq/dimmi/framework/aws"
 	"github.com/dimmihq/dimmi/framework/mail"
 	maildomains "github.com/dimmihq/dimmi/framework/mail/domains"
-	"github.com/dimmihq/dimmi/framework/mail/drivers/ses"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
@@ -45,6 +43,7 @@ func bootEmailSending(a *app.App) error {
 
 	domains.Provider, domains.Region = domainProvider(a, domains.Driver, cfg.Sending)
 	a.EmailDomains = domains
+	a.Actions.SendEmailMessage.Senders = domains
 
 	(&appbroadcasting.EmailSending{Server: a.Broadcast}).Listen(a.Events)
 
@@ -91,7 +90,7 @@ customer-stream mailer's AWS account.
 func sesConnector(a *app.App) func(ctx context.Context) (email.SESIdentities, error) {
 	var (
 		mu         sync.Mutex
-		identities *ses.Identities
+		identities email.SESIdentities
 	)
 
 	return func(ctx context.Context) (email.SESIdentities, error) {
@@ -102,12 +101,12 @@ func sesConnector(a *app.App) func(ctx context.Context) (email.SESIdentities, er
 			return identities, nil
 		}
 
-		cfg, err := aws.Config(context.WithoutCancel(ctx), customerSection(a), a.HTTP)
+		built, err := maildomains.Identities(context.WithoutCancel(ctx), a.HTTP, customerSection(a))
 		if err != nil {
 			return nil, err
 		}
 
-		identities = ses.NewIdentities(cfg)
+		identities = built
 
 		return identities, nil
 	}

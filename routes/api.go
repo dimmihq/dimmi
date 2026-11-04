@@ -316,6 +316,7 @@ func emailAddressController(a *app.App, cursors *pagination.Cursors) *v1.EmailAd
 		Create: acts.CreateEmailAddress, List: acts.ListEmailAddresses, Show: acts.ShowEmailAddress,
 		Change: acts.UpdateEmailAddress, Remove: acts.DeleteEmailAddress, Test: acts.SendEmailAddressTest,
 		Activity: acts.ListInboundEmails, IDs: a.IDs, Provider: a.EmailChannel.Transport, Cursors: cursors,
+		Senders: a.EmailDomains,
 	}
 }
 
