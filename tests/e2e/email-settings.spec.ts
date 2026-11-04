@@ -55,7 +55,7 @@ it.describe("email settings", () => {
     await page.getByRole("button", { name: "Send test email" }).click();
     await expect(page.getByText(/^Sent to .*It shows as receiving once it comes back\.$/)).toBeVisible();
 
-    const added = `sales.${suffixOf(person)}@acme.test`;
+    const added = `sales@acme-${suffixOf(person)}.test`;
     await page.getByRole("textbox", { name: "New email address" }).fill(added);
     await page.getByRole("button", { name: "Add address" }).click();
     await expect(page.getByRole("region", { name: added })).toBeVisible();
