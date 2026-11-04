@@ -1,0 +1,19 @@
+From: {{MEMBER_NAME}} <{{MEMBER}}>
+To: {{TO}}
+Subject: Fwd: Broken export
+Date: Tue, 3 Nov 2026 15:00:00 +0000
+Message-ID: <member-forward-0001@acme.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Can someone take this one? He is on the enterprise plan.
+
+---------- Forwarded message ---------
+From: Gina Park <gina@bigco.test>
+Date: Tue, Nov 3, 2026 at 2:40 PM
+Subject: Broken export
+To: {{MEMBER_NAME}} <{{MEMBER}}>
+
+Hi, the CSV export has been failing since yesterday. Can you look?
+
+Gina

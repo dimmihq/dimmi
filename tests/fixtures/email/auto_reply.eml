@@ -1,0 +1,12 @@
+From: Bob Stone <bob@customer.test>
+To: {{TO}}
+Subject: Automatic reply: Refund for order 1042
+Date: Tue, 3 Nov 2026 09:30:00 +0000
+Message-ID: <ooo-reply-0001@customer.test>
+In-Reply-To: <{{IN_REPLY_TO}}>
+Auto-Submitted: auto-replied
+X-Auto-Response-Suppress: All
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+I am out of the office until Monday and will reply when I am back.

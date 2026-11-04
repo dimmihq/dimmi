@@ -32,6 +32,12 @@ psql(`CREATE DATABASE ${database}`);
 
 const home = mkdtempSync(join(tmpdir(), "dimmi-e2e-"));
 
+/*
+ * inboundSecret opens the test inbound source, through which the tests
+ * hand the server raw emails; support/inbound.ts sends the same one.
+ */
+const inboundSecret = "e2e-inbound-secret";
+
 const env = {
   PATH: process.env.PATH ?? "",
   HOME: process.env.HOME ?? "",
@@ -49,6 +55,8 @@ const env = {
   DIMMI_MAIL__MAILERS__SYSTEM__HOST: "localhost",
   DIMMI_MAIL__MAILERS__SYSTEM__PORT: "11025",
   DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE: "true",
+  DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS: "ses,test",
+  DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET: inboundSecret,
 };
 
 execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });

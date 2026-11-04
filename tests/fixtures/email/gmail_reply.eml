@@ -1,0 +1,27 @@
+Delivered-To: {{FORWARDING}}
+MIME-Version: 1.0
+Date: Tue, 3 Nov 2026 09:12:00 -0800
+Message-ID: <CAF=x7QreplyRefund1042@mail.gmail.com>
+In-Reply-To: <{{IN_REPLY_TO}}>
+References: <{{REFERENCES}}> <{{IN_REPLY_TO}}>
+Subject: Re: Refund for order 1042
+From: Bob Stone <bob@customer.test>
+To: {{TO}}
+Content-Type: multipart/alternative; boundary="000000000000f6e5d4c3b2a1"
+
+--000000000000f6e5d4c3b2a1
+Content-Type: text/plain; charset="UTF-8"
+
+Perfect, thank you so much!
+
+On Mon, Nov 2, 2026 at 10:04 AM Acme Support <support@acme.test> wrote:
+
+> Hi Bob, the refund is on its way.
+>
+
+--000000000000f6e5d4c3b2a1
+Content-Type: text/html; charset="UTF-8"
+
+<div dir="ltr">Perfect, thank you so much!</div><br><div class="gmail_quote"><div dir="ltr" class="gmail_attr">On Mon, Nov 2, 2026 at 10:04 AM Acme Support &lt;support@acme.test&gt; wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">Hi Bob, the refund is on its way.</blockquote></div>
+
+--000000000000f6e5d4c3b2a1--

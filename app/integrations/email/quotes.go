@@ -216,5 +216,5 @@ func plainLine(line string) string {
 	line = strings.TrimSpace(line)
 	line = strings.ReplaceAll(line, `\`, "")
 
-	return strings.TrimSpace(strings.Trim(line, "*_"))
+	return strings.TrimSpace(strings.Trim(line, "*"))
 }

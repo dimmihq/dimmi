@@ -21,7 +21,7 @@ import {
   WorkspaceSecuritySettings,
 } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
-import { ConnectionsSettings, EmailSettings, MessengerSettings } from "./pages/channels";
+import { ConnectionsSettings, MessengerSettings } from "./pages/channels";
 import {
   ChangelogSettings,
   EngageSettings,
@@ -30,6 +30,7 @@ import {
   KnowledgeSettings,
 } from "./pages/content";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
+import { EmailSettings } from "./pages/email";
 import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
 import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 

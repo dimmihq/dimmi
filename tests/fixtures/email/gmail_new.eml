@@ -1,0 +1,27 @@
+Delivered-To: {{FORWARDING}}
+Received: by 2002:a05:6400:1a4f:b0:2a1:9c2b:e0f1 with SMTP id k15csp1234567rpb;
+        Mon, 2 Nov 2026 08:55:12 -0800 (PST)
+MIME-Version: 1.0
+Date: Mon, 2 Nov 2026 08:55:00 -0800
+Message-ID: <CAF=x7QnewRefund1042@mail.gmail.com>
+Subject: Refund for order 1042
+From: Bob Stone <bob@customer.test>
+To: {{TO}}
+Content-Type: multipart/alternative; boundary="000000000000a1b2c3d4e5f6"
+
+--000000000000a1b2c3d4e5f6
+Content-Type: text/plain; charset="UTF-8"
+
+Hi there,
+
+I was charged twice for order 1042. Could you refund the second charge?
+
+Thanks,
+Bob
+
+--000000000000a1b2c3d4e5f6
+Content-Type: text/html; charset="UTF-8"
+
+<div dir="ltr"><div>Hi there,</div><div><br></div><div>I was charged twice for order 1042. Could you refund the second charge?</div><div><br></div><div>Thanks,</div><div>Bob</div></div>
+
+--000000000000a1b2c3d4e5f6--
