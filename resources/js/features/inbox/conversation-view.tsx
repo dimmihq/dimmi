@@ -32,7 +32,7 @@ import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
 import { statusLabel, useCase } from "./case";
 import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
-import { DetailsPanel } from "./details-panel";
+import { DetailsPanel } from "./customer/details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
 import { Thread } from "./thread";
