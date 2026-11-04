@@ -73,8 +73,8 @@ function useLocales(): Locale[] {
   return config?.locales ?? [];
 }
 
-function nameOf(locales: Locale[], code: string | undefined): string {
-  return locales.find((locale) => locale.code === code)?.name ?? code ?? "";
+function nameOf(locales: Locale[], code: string): string {
+  return locales.find((locale) => locale.code === code)?.name ?? code;
 }
 
 export function LanguageRow() {
@@ -95,12 +95,12 @@ export function LanguageRow() {
     },
   });
 
-  if (locales.length < 2) {
+  if (locales.length < 2 || !workspace) {
     return null;
   }
 
   const options = [
-    { id: followWorkspace, label: t("language.followWorkspace", { name: nameOf(locales, workspace?.locale) }) },
+    { id: followWorkspace, label: t("language.followWorkspace", { name: nameOf(locales, workspace.locale) }) },
     ...locales.map((locale) => ({ id: locale.code, label: locale.name })),
   ];
 
