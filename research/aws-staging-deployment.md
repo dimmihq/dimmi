@@ -44,8 +44,7 @@ Facts from the code, each checked at the path given.
 
 Specs disagree with the request on two points. `specs/12-cloud-billing/infrastructure.md`, marked an outline, says EC2
 with no containers, and CloudFormation; the owner asked for CDK. `specs/11-self-host/operations.md` and spec 12 use an
-ALB idle timeout of 300 s, which section 4 changes. `specs/BUILD-TRACKS.md` does not exist, and no `specs/18-*` folder
-existed when this was written; 19 was used as instructed.
+ALB idle timeout of 300 s, which section 4 changes. `specs/BUILD-TRACKS.md` does not exist. This plan takes number 19, after `specs/17-workflows` and `specs/18-audiences`.
 
 ## 2. Accounts
 
