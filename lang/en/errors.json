@@ -16,6 +16,7 @@
   "factor_type_not_available": "This kind of factor is not available.",
   "factor_limit_reached": "You cannot add more factors of this kind.",
   "invalid_transition": "Cannot change from {{.from}} to {{.to}}.",
+  "factor_already_active": "This factor is already active.",
   "preferred_not_allowed": "Recovery codes cannot be your preferred factor.",
   "prohibited": "The code cannot be sent with other changes.",
   "two_factor_not_enabled": "Turn on two-factor authentication first.",

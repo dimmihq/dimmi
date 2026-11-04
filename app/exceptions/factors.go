@@ -43,8 +43,8 @@ var (
 		"This kind of factor is not available.").OnField("type")
 	ErrFactorLimitReached = fault.New(fault.Invalid, "factor_limit_reached",
 		"You cannot add more factors of this kind.").OnField("type")
-	ErrFactorAlreadyActive = fault.New(fault.Invalid, "invalid_transition",
-		"This factor is already active.").OnField("code").With("from", "active").With("to", "active")
+	ErrFactorAlreadyActive = fault.New(fault.Invalid, "factor_already_active",
+		"This factor is already active.").OnField("code")
 	ErrPreferredNotAllowed = fault.New(fault.Invalid, "preferred_not_allowed",
 		"Recovery codes cannot be your preferred factor.").OnField("preferred")
 	ErrCodeProhibited = fault.New(fault.Invalid, "prohibited",

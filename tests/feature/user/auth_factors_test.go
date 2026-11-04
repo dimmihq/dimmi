@@ -224,7 +224,7 @@ func TestAuthFactorActivate(t *testing.T) {
 		rotated(tc, res).GetJSON("/api/v1/me").AssertOK().AssertJSONPath("data.user.two_factor_enabled", true)
 		rotated(tc, res).PatchJSON(factorsPath+"/"+added.id, testkit.JSON{"code": "123456"}).
 			AssertValidationError("code").
-			AssertJSONPath("code", "invalid_transition")
+			AssertJSONPath("code", "factor_already_active")
 	})
 
 	t.Run("throws an unfinished authenticator away after five wrong codes", func(t *testing.T) {
