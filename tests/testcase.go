@@ -261,7 +261,7 @@ Table returns assertions on a table, read outside any workspace, as an
 operator would.
 */
 func (tc *TestCase) Table(table string) *testkit.TableAssertions {
-	return testkit.Table(tc.T, tc.operatorDB(), table)
+	return testkit.Table(tc.T, tc.Operator(), table)
 }
 
 /*

@@ -134,7 +134,7 @@ func TestPasswordResetUpdate(t *testing.T) {
 
 		bearer.GetJSON("/api/v1/me").AssertUnauthorized()
 		var metadata map[string]any
-		err := tc.App.DB.QueryRow(t.Context(),
+		err := tc.Operator().QueryRow(t.Context(),
 			"SELECT metadata FROM security_events WHERE user_id = $1 AND type = 'password.reset'",
 			tc.Owner.ID).Scan(&metadata)
 		require.NoError(t, err)
@@ -238,7 +238,7 @@ func TestPasswordResetUpdate(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		id, token := resetLink(t, tc, tc.Owner.Email)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET password_hash = $1 WHERE id = $2",
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE users SET password_hash = $1 WHERE id = $2",
 			*tc.CreateUser().PasswordHash, tc.Owner.ID)
 		require.NoError(t, err)
 

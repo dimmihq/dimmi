@@ -153,7 +153,7 @@ func TestUserIdentities(t *testing.T) {
 		tc := tests.New(t, withProviders("DIMMI_AUTH__MAGIC_LINK__ENABLED=false"))
 		browser := signUpGrace(tc)
 		user := userByEmail(t, tc, "grace@example.com")
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"INSERT INTO oauth_identities (user_id, provider, provider_user_id) VALUES ($1, 'gitlab', '7')", user.ID)
 		require.NoError(t, err)
 

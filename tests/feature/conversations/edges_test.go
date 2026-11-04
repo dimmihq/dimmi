@@ -16,7 +16,7 @@ func TestInboxEdges(t *testing.T) {
 	t.Run("reads snooze presets in the person's own time zone", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE users SET timezone = 'America/New_York'")
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE users SET timezone = 'America/New_York'")
 		require.NoError(t, err)
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Hi")
 

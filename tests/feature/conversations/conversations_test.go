@@ -111,7 +111,8 @@ func TestConversationsStore(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		res := d.owner.PostJSON("/api/v1/inboxes", testkit.JSON{"name": "Sales"}).AssertCreated()
-		_, err := d.tc.App.DB.Exec(t.Context(), "DELETE FROM channel_connections WHERE type = 'api' AND inbox_id <> $1",
+		_, err := d.tc.Operator().Exec(t.Context(),
+			"DELETE FROM channel_connections WHERE type = 'api' AND inbox_id <> $1",
 			d.inbox.Inbox.ID)
 		require.NoError(t, err)
 
@@ -143,7 +144,7 @@ func TestConversationsShow(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		id := d.customer(t, "bob", "Refund", "Please refund me")
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET deleted_at = now()")
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE conversations SET deleted_at = now()")
 		require.NoError(t, err)
 
 		d.owner.GetJSON("/api/v1/conversations/" + id).AssertNotFound()
@@ -385,7 +386,7 @@ func createTeam(t *testing.T, d desk, name string) string {
 
 	var id ids.UUID
 
-	err := d.tc.App.DB.QueryRow(t.Context(), "INSERT INTO teams (workspace_id, name) VALUES ($1, $2) RETURNING id",
+	err := d.tc.Operator().QueryRow(t.Context(), "INSERT INTO teams (workspace_id, name) VALUES ($1, $2) RETURNING id",
 		d.tc.Workspace.Workspace.ID, name).Scan(&id)
 	require.NoError(t, err)
 

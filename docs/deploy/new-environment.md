@@ -103,8 +103,11 @@ since provisioning resets every role's password.
 
 ```sh
 cd deploy/cdk
-pnpm exec cdk deploy dimmi-staging-app -c env=staging --outputs-file ../dns/outputs/staging.json
+pnpm exec cdk deploy dimmi-staging-app -c env=staging
 ```
+
+Leave out `--outputs-file` here: it would rewrite `staging.json` with this one stack's outputs and drop the mail
+records. The load balancer's addresses do not change when the services start.
 
 Without `paused`, the web service starts its task. Check: the ECS console shows the service with one running task and the
 load balancer's targets turning healthy within about two minutes. Before DNS exists the binary has no certificate for
@@ -147,12 +150,13 @@ SES checks the DKIM records by itself, usually within an hour. Check: the SES co
 
 In the repository settings, Environments:
 
-- `staging`: deployment branch `main` only. Variables `AWS_REGION=us-east-2`, `AWS_ACCOUNT_ID`, and
+- `staging`: deployment branch `main` only. Variable `AWS_REGION=us-east-2`; secrets `AWS_ACCOUNT_ID` and
   `AWS_DEPLOY_ROLE_ARN` (the `DeployRoleArn` output of `dimmi-staging-ci`).
-- `production`: required reviewers, deployment branch `main` only. Variables `AWS_REGION=us-east-1`, `AWS_ACCOUNT_ID`,
-  `AWS_DEPLOY_ROLE_ARN` from `dimmi-production-ci`, and `SOURCE_AWS_REGION=us-east-2`.
+- `production`: required reviewers, deployment branch `main` only. Variables `AWS_REGION=us-east-1` and
+  `SOURCE_AWS_REGION=us-east-2`; secrets `AWS_ACCOUNT_ID` and `AWS_DEPLOY_ROLE_ARN` from `dimmi-production-ci`.
 
-No secrets are needed: the workflows assume roles through OIDC. Check: the next push to `main` runs the `main` workflow
+The account id and role are secrets only so GitHub masks them in the public logs; they grant nothing. The workflows
+assume roles through OIDC, so no AWS keys exist anywhere. Check: the next push to `main` runs the `main` workflow
 through `staging`, ending with `smoke: https://staging.trydimmi.com is healthy`.
 
 ## 13. HUMAN: billing and SES production access

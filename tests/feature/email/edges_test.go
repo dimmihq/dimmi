@@ -183,7 +183,7 @@ func TestInboundEdges(t *testing.T) {
 		assert.Len(t, conversations(tc), 1)
 
 		ctx := tenancy.With(t.Context(), row.WorkspaceID.String())
-		_, err := tc.App.DB.Exec(ctx, "UPDATE inbound_emails SET status = 'received', raw_path = 'missing.eml'")
+		_, err := tc.Operator().Exec(ctx, "UPDATE inbound_emails SET status = 'received', raw_path = 'missing.eml'")
 		require.NoError(t, err)
 
 		require.Error(t, tc.App.Actions.ProcessInboundEmail.Handle(t.Context(), row.WorkspaceID, row.ID))

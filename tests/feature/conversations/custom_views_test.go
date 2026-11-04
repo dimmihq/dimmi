@@ -111,7 +111,7 @@ func TestCustomViews(t *testing.T) {
 	t.Run("stops at fifty personal views", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		_, err := d.tc.App.DB.Exec(t.Context(), `
+		_, err := d.tc.Operator().Exec(t.Context(), `
 			INSERT INTO conversation_views (workspace_id, name, scope, owner_member_id, definition)
 			SELECT $1, 'v' || n, 'personal', $2, '{"op":"and","groups":[]}'
 			FROM generate_series(1, 50) n`, d.tc.Workspace.Workspace.ID, d.tc.Workspace.Owner.ID)

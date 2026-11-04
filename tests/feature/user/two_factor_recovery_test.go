@@ -61,7 +61,7 @@ func TestAuthFactorSealing(t *testing.T) {
 		require.NoError(t, err)
 		attacker, err := factories.WithTwoFactor(t.Context(), tc.App, tc.CreateUser())
 		require.NoError(t, err)
-		_, err = tc.App.DB.Exec(t.Context(),
+		_, err = tc.Operator().Exec(t.Context(),
 			"UPDATE user_auth_factors SET secret_encrypted = $1 WHERE id = $2",
 			[]byte(victim.TOTP.SecretEncrypted), attacker.TOTP.ID)
 		require.NoError(t, err)

@@ -168,7 +168,7 @@ func (c *Client) Delete(path string) *Response {
 /*
 Send sends a request and returns the response. A nil body sends none, a
 byte slice or string is sent as it is, and anything else is encoded as
-JSON.
+JSON. A body is labeled JSON unless the client set its own content type.
 */
 func (c *Client) Send(method, path string, body any) *Response {
 	c.tb.Helper()
@@ -251,7 +251,7 @@ func (c *Client) request(method, path string, payload io.Reader, contentType str
 	r := httptest.NewRequestWithContext(c.tb.Context(), method, path, payload)
 	r.Header = c.header.Clone()
 
-	if payload != nil {
+	if payload != nil && r.Header.Get("Content-Type") == "" {
 		r.Header.Set("Content-Type", contentType)
 	}
 
