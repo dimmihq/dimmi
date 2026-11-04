@@ -76,8 +76,8 @@ func (l *WriteAuditLog) teamDeleted(ctx context.Context, e appevents.TeamDeleted
 teamMemberAdded records a member joining a team.
 */
 func (l *WriteAuditLog) teamMemberAdded(ctx context.Context, e appevents.TeamMemberAdded) error {
-	return l.teamMember(ctx, e.WorkspaceID, e.TeamID, e.MemberID, audit.Entry{
-		Event: audit.EventTeamMemberAdded, ActorID: e.AddedBy,
+	return l.teamMember(ctx, e.TeamID, e.MemberID, audit.Entry{
+		WorkspaceID: e.WorkspaceID, Event: audit.EventTeamMemberAdded, ActorID: e.AddedBy,
 	})
 }
 
@@ -85,18 +85,17 @@ func (l *WriteAuditLog) teamMemberAdded(ctx context.Context, e appevents.TeamMem
 teamMemberRemoved records a member leaving a team.
 */
 func (l *WriteAuditLog) teamMemberRemoved(ctx context.Context, e appevents.TeamMemberRemoved) error {
-	return l.teamMember(ctx, e.WorkspaceID, e.TeamID, e.MemberID, audit.Entry{
-		Event: audit.EventTeamMemberRemoved, ActorID: e.RemovedBy,
+	return l.teamMember(ctx, e.TeamID, e.MemberID, audit.Entry{
+		WorkspaceID: e.WorkspaceID, Event: audit.EventTeamMemberRemoved, ActorID: e.RemovedBy,
 	})
 }
 
 /*
-teamMember records the entry about the member, naming the team.
+teamMember records the entry about the member, naming the team. The
+entry names the workspace.
 */
-func (l *WriteAuditLog) teamMember(
-	ctx context.Context, workspaceID, teamID, memberID ids.UUID, entry audit.Entry,
-) error {
-	name, err := l.teamName(ctx, workspaceID, teamID)
+func (l *WriteAuditLog) teamMember(ctx context.Context, teamID, memberID ids.UUID, entry audit.Entry) error {
+	name, err := l.teamName(ctx, entry.WorkspaceID, teamID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +104,7 @@ func (l *WriteAuditLog) teamMember(
 		"team": map[string]any{"id": models.PublicID(models.PrefixTeam, teamID), "name": name},
 	}
 
-	return l.member(ctx, workspaceID, memberID, entry)
+	return l.member(ctx, entry.WorkspaceID, memberID, entry)
 }
 
 /*
