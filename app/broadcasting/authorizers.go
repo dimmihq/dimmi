@@ -53,20 +53,6 @@ type ConversationScope interface {
 }
 
 /*
-WorkspaceScope lets a member see every conversation of the workspace
-except those in the trash, which only members who may delete
-conversations see.
-*/
-type WorkspaceScope struct{}
-
-/*
-Contains reports whether the member may see the conversation.
-*/
-func (WorkspaceScope) Contains(_ context.Context, m authz.Membership, conversation models.Conversation) bool {
-	return conversation.DeletedAt == nil || m.Can("conversations:delete")
-}
-
-/*
 WidgetSession is the subject of a messenger widget connection: the
 contact a visitor is, in their workspace.
 */

@@ -126,6 +126,20 @@ func Lock(ctx context.Context, q *models.Queries, workspaceID ids.UUID, ref Ref)
 }
 
 /*
+VisibleScope is the rule the inbox shows conversations by, for the
+realtime channels: a member who may read conversations sees every live
+one of the workspace, and none in the trash, as lists and search do.
+*/
+type VisibleScope struct{}
+
+/*
+Contains reports whether the member may see the conversation.
+*/
+func (VisibleScope) Contains(_ context.Context, m authz.Membership, c models.Conversation) bool {
+	return CanRead(m) == nil && c.DeletedAt == nil
+}
+
+/*
 visible turns a missing or deleted conversation into
 exceptions.ErrNotFound.
 */

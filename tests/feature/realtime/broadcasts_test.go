@@ -15,6 +15,7 @@ import (
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -97,7 +98,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		assert.Equal(t, "message.created", timeline.Event)
 		assert.Equal(t, "m-2", timeline.Meta["client_mutation_id"])
 
-		var entry appbroadcasting.MessagePayload
+		var entry resources.TimelineEntry
 		require.NoError(t, json.Unmarshal(timeline.Data, &entry))
 		assert.Equal(t, public(models.PrefixMessage, m.ID), entry.ID)
 		assert.Equal(t, "Tried twice, still declined", *entry.Body)
@@ -148,7 +149,7 @@ func TestConversationBroadcasts(t *testing.T) {
 			p := c.Publication()
 			assert.True(t, strings.HasPrefix(p.ID, "evt_"), "an event without an id still gets one")
 
-			var entry appbroadcasting.MessagePayload
+			var entry resources.TimelineEntry
 			require.NoError(t, json.Unmarshal(p.Data, &entry))
 			assert.Equal(t, string(tt.author), entry.Author.Type)
 			assert.Equal(t, tt.expected, entry.Author.ID)

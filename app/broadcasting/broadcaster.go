@@ -219,12 +219,8 @@ reference is what a broadcast carries when its subject is too large.
 */
 func reference(prefix models.Prefix, object string, id ids.UUID, subject any) Reference {
 	r := Reference{ID: models.PublicID(prefix, id), Object: object}
-
-	switch s := subject.(type) {
-	case ConversationPayload:
-		r.UpdatedAt = s.UpdatedAt
-	case MessagePayload:
-		r.UpdatedAt = s.UpdatedAt
+	if s, ok := subject.(Stamped); ok {
+		r.UpdatedAt = s.LastUpdated()
 	}
 
 	return r

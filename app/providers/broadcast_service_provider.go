@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
+	"github.com/dimmihq/dimmi/app/http/resources"
 )
 
 /*
@@ -49,7 +50,7 @@ func (p BroadcastServiceProvider) Register(fa *foundation.Application) error {
 	p.App.Realtime = &appbroadcasting.Connections{Guards: fa.Guards, Sessions: fa.Session, Origins: origins}
 
 	broadcaster := &appbroadcasting.Broadcaster{
-		Server: fa.Broadcast, Payloads: appbroadcasting.RecordPayloads{DB: fa.DB},
+		Server: fa.Broadcast, Payloads: resources.BroadcastPayloads{DB: fa.DB},
 	}
 	broadcaster.Listen(fa.Events)
 
@@ -65,7 +66,7 @@ Boot builds the typing relay.
 func (p BroadcastServiceProvider) Boot(context.Context, *foundation.Application) error {
 	a := p.App
 	a.Actions.RecordTyping = &conversations.RecordTyping{
-		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Scope: appbroadcasting.WorkspaceScope{}, Publisher: a.Broadcast,
+		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Scope: conversations.VisibleScope{}, Publisher: a.Broadcast,
 	}
 
 	return nil

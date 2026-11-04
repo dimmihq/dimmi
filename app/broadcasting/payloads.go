@@ -22,9 +22,6 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
-
-	"github.com/dimmihq/dimmi/app/enums"
-	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -59,158 +56,21 @@ type Reference struct {
 }
 
 /*
-Ref is a related record by its public id.
+Stamped is a broadcast subject that knows when it last changed, which a
+reference in its place carries.
 */
-type Ref struct {
-	ID     string `json:"id"`
-	Object string `json:"object"`
+type Stamped interface {
+	/*
+		LastUpdated returns when the subject last changed.
+	*/
+	LastUpdated() time.Time
 }
 
 /*
-ConversationPayload is a conversation as broadcasts show it.
-*/
-type ConversationPayload struct {
-	ID            string     `json:"id"`
-	Object        string     `json:"object"`
-	Number        int64      `json:"number"`
-	Subject       *string    `json:"subject"`
-	Status        string     `json:"status"`
-	Spam          bool       `json:"spam"`
-	Priority      bool       `json:"priority"`
-	AIState       string     `json:"ai_state"`
-	Inbox         Ref        `json:"inbox"`
-	Channel       Ref        `json:"channel"`
-	Contact       Ref        `json:"contact"`
-	Assignee      *Ref       `json:"assignee"`
-	Team          *Ref       `json:"team"`
-	MessageCount  int32      `json:"message_count"`
-	LastMessageAt *time.Time `json:"last_message_at"`
-	SnoozedUntil  *time.Time `json:"snoozed_until"`
-	ClosedAt      *time.Time `json:"closed_at"`
-	DeletedAt     *time.Time `json:"deleted_at"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-}
-
-/*
-MessagePayload is a timeline entry as broadcasts show it. A deleted
-entry keeps its place but loses its body.
-*/
-type MessagePayload struct {
-	ID             string     `json:"id"`
-	Object         string     `json:"object"`
-	ConversationID string     `json:"conversation_id"`
-	Type           string     `json:"type"`
-	Author         AuthorRef  `json:"author"`
-	Body           *string    `json:"body"`
-	BodyHTML       *string    `json:"body_html"`
-	DeliveryStatus *string    `json:"delivery_status"`
-	EditedAt       *time.Time `json:"edited_at"`
-	DeletedAt      *time.Time `json:"deleted_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
-/*
-AuthorRef is who wrote a timeline entry: its type and, for a member or
-contact, their public id.
+AuthorRef is who is acting in a broadcast: their type and, for a member
+or contact, their public id.
 */
 type AuthorRef struct {
 	Type string  `json:"type"`
 	ID   *string `json:"id"`
-}
-
-/*
-NewConversationPayload shapes a conversation for broadcasts.
-*/
-func NewConversationPayload(c models.Conversation) ConversationPayload {
-	return ConversationPayload{
-		ID:            models.PublicID(models.PrefixConversation, c.ID),
-		Object:        "conversation",
-		Number:        c.Number,
-		Subject:       c.Subject,
-		Status:        c.Status,
-		Spam:          c.Spam,
-		Priority:      c.Priority,
-		AIState:       c.AiState,
-		Inbox:         ref(models.PrefixInbox, "inbox", c.InboxID),
-		Channel:       ref(models.PrefixChannelConnection, "channel_connection", c.ChannelConnectionID),
-		Contact:       ref(models.PrefixContact, "contact", c.ContactID),
-		Assignee:      optionalRef(models.PrefixMember, "member", c.AssigneeMemberID),
-		Team:          optionalRef(models.PrefixTeam, "team", c.AssigneeTeamID),
-		MessageCount:  c.MessageCount,
-		LastMessageAt: c.LastMessageAt,
-		SnoozedUntil:  c.SnoozedUntil,
-		ClosedAt:      c.ClosedAt,
-		DeletedAt:     c.DeletedAt,
-		CreatedAt:     c.CreatedAt,
-		UpdatedAt:     c.UpdatedAt,
-	}
-}
-
-/*
-NewMessagePayload shapes a timeline entry for broadcasts.
-*/
-func NewMessagePayload(m models.Message) MessagePayload {
-	payload := MessagePayload{
-		ID:             models.PublicID(models.PrefixMessage, m.ID),
-		Object:         "message",
-		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID),
-		Type:           m.Type,
-		Author:         authorRef(m.AuthorType, m.AuthorID),
-		Body:           m.Body,
-		BodyHTML:       m.BodyHtml,
-		DeliveryStatus: m.DeliveryStatus,
-		EditedAt:       m.EditedAt,
-		DeletedAt:      m.DeletedAt,
-		CreatedAt:      m.CreatedAt,
-		UpdatedAt:      m.UpdatedAt,
-	}
-
-	if m.DeletedAt != nil {
-		payload.Body, payload.BodyHTML = nil, nil
-	}
-
-	return payload
-}
-
-/*
-authorRef names the author of an entry. Only members and contacts have
-ids clients can look up.
-*/
-func authorRef(authorType string, id *ids.UUID) AuthorRef {
-	author := AuthorRef{Type: authorType}
-	if id == nil {
-		return author
-	}
-
-	var prefix models.Prefix
-
-	switch enums.AuthorType(authorType) {
-	case enums.AuthorTypeMember:
-		prefix = models.PrefixMember
-	case enums.AuthorTypeContact:
-		prefix = models.PrefixContact
-	case enums.AuthorTypeAgent, enums.AuthorTypeSystem, enums.AuthorTypeIntegration:
-		return author
-	}
-
-	public := models.PublicID(prefix, *id)
-	author.ID = &public
-
-	return author
-}
-
-func ref(prefix models.Prefix, object string, id ids.UUID) Ref {
-	return Ref{ID: models.PublicID(prefix, id), Object: object}
-}
-
-func optionalRef(prefix models.Prefix, object string, id *ids.UUID) *Ref {
-	if id == nil {
-		return nil
-	}
-
-	r := ref(prefix, object, *id)
-
-	return &r
 }

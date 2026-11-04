@@ -14,6 +14,7 @@ package routes
 
 import (
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 )
 
@@ -23,7 +24,7 @@ Channels declares the realtime channel authorizers.
 func Channels(a *app.App) {
 	channels := a.Broadcast.Channels()
 	authorize := &appbroadcasting.Authorizers{
-		DB: a.DB, IDs: a.IDs, Resolve: a.Actions.ResolveWorkspace, Scope: appbroadcasting.WorkspaceScope{},
+		DB: a.DB, IDs: a.IDs, Resolve: a.Actions.ResolveWorkspace, Scope: conversations.VisibleScope{},
 	}
 
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)

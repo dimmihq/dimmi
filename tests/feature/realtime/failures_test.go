@@ -35,18 +35,18 @@ func TestRealtimeFailures(t *testing.T) {
 		tc := tests.New(t)
 		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
 		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
-		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
+		require.Nil(t, c.Subscribe(appbroadcasting.ConversationChannel(s.conversation.ID)).Error)
 
 		tc.BreakTable("messages")
 		dispatch(t, tc, appevents.MessageCreated{
 			Base: base(tc, ""), MessageRef: messageRef(s.conversation.ID, s.conversation.ID),
 		})
-		mark := appevents.ConversationClosed{
+		dispatch(t, tc, appevents.ContactTyping{
 			Base: base(tc, ""), ConversationRef: appevents.ConversationRef{ConversationID: s.conversation.ID},
-		}
-		dispatch(t, tc, mark)
+			ContactID: s.contact.ID, Started: true,
+		})
 
-		assert.Equal(t, "conversation.closed", c.Publication().Event, "the failed broadcast is skipped, not retried")
+		assert.Equal(t, "typing.started", c.Publication().Event, "the failed broadcast is skipped, not retried")
 	})
 
 	t.Run("reports a typing report it cannot throttle or load", func(t *testing.T) {

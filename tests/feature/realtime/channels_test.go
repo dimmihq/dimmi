@@ -130,7 +130,7 @@ func TestRealtimeChannels(t *testing.T) {
 		assert.Equal(t, unknownChannel, c.Subscribe("lobby").Error.Code)
 	})
 
-	t.Run("refuses a conversation outside what the member may see", func(t *testing.T) {
+	t.Run("refuses a conversation in the trash, which the inbox shows nobody", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
@@ -143,7 +143,7 @@ func TestRealtimeChannels(t *testing.T) {
 		assert.Equal(t, permissionDenied, member.Subscribe(channel).Error.Code)
 
 		owner := tc.ListenAs(tc.Owner, tc.RealtimeURL())
-		assert.Nil(t, owner.Subscribe(channel).Error, "owners see the trash")
+		assert.Equal(t, permissionDenied, owner.Subscribe(channel).Error.Code)
 	})
 
 	t.Run("refuses a token without conversations:read", func(t *testing.T) {
