@@ -115,8 +115,10 @@ frag(){ python3 -c 'import sys,urllib.parse as u; print(u.parse_qs(u.urlparse(sy
 | Flow | Command | Expect |
 |---|---|---|
 | Verification mail | `mail $ADA Verify` | "Verify your email address" from `no-reply@localhost`, link `http://localhost:18080/verify-email#id=ott_…&token=…`; the token only after the `#`, never in the subject |
-| Verify, any device | `L=$(link $ADA Verify); r verify -X PATCH -H "$O" -H "$J" $B/email-verifications/$(frag $L id) -d "{\"token\":\"$(frag $L token)\"}"` (no cookie jar) | 200, `object: email_verification`, `status: verified`, `user_id: usr_…` |
-| Second click | same command again | 200, same body (idempotent) |
+| Verify, another device | `L=$(link $ADA Verify); r verify -X PATCH -H "$O" -H "$J" $B/email-verifications/$(frag $L id) -d "{\"token\":\"$(frag $L token)\"}"` (no cookie jar) | 409 `verification_needs_choice`; the link stays good, nothing changes |
+| Verify, signed-in browser | same, with `-b a.jar` | 200, `object: email_verification`, `status: verified`, `user_id: usr_…`; password and session stay |
+| Take back an address | sign up `$MAL` with jar `m.jar`, then the mailed link with no jar and `{"token":"…","claim":true}` | 200; `GET /me` with `m.jar` 401, `m.jar`'s password 422 `invalid_credentials`, providers, factors and tokens gone, its workspace in `GET /user/memberships?filter[trashed]=only` after signing in by magic link |
+| Second click | the signed-in command again, or with no cookie jar | 200, same body (idempotent) |
 | Wrong token | same id, `{"token":"nope"}` | 422 `invalid_verification_token` |
 | Already verified | `r resend -b a.jar -X POST -H "$O" $B/email-verifications` | 200 "Your email address is already verified." |
 | Resend, once a minute | sign up `$BOB` with jar `b.jar`, then `POST $B/email-verifications` twice with `b.jar` | 202, then 429 `too_many_attempts` "Too many attempts. Try again in 60 seconds." |

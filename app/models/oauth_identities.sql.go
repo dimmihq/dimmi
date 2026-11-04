@@ -90,6 +90,21 @@ func (q *Queries) DeleteOAuthIdentity(ctx context.Context, arg DeleteOAuthIdenti
 	return result.RowsAffected(), nil
 }
 
+const deleteUserOAuthIdentities = `-- name: DeleteUserOAuthIdentities :execrows
+DELETE FROM oauth_identities WHERE user_id = $1
+`
+
+// DeleteUserOAuthIdentities unlinks every identity of the user and
+// returns how many there were, when the owner of the inbox takes back
+// an account whose links a stranger may have made.
+func (q *Queries) DeleteUserOAuthIdentities(ctx context.Context, userID ids.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUserOAuthIdentities, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findOAuthIdentity = `-- name: FindOAuthIdentity :one
 SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE provider = $1 AND provider_user_id = $2
 `

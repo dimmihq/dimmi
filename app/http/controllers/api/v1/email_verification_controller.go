@@ -65,7 +65,7 @@ func (c *EmailVerificationController) Update(
 	ctx context.Context, in *requests.UpdateEmailVerificationRequest,
 ) (*EmailVerificationOutput, error) {
 	verification, err := c.Verify.Handle(ctx, auth.VerifyEmailInput{
-		ID: in.Verification, Token: in.Body.Token, Client: clientOf(ctx, c.Cookies),
+		ID: in.Verification, Token: in.Body.Token, Claim: in.Body.Claim, Client: clientOf(ctx, c.Cookies),
 	})
 	if err != nil {
 		return nil, err

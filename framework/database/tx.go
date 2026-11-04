@@ -123,6 +123,24 @@ func (tx *Tx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 }
 
 /*
+SetTenant scopes the rest of this transaction to the tenant, for work
+that crosses tenants one at a time inside a single commit. An empty
+tenant scopes it to none. The scope outlives the savepoint it was set
+in, so the caller sets it back when its work is done.
+*/
+func (tx *Tx) SetTenant(ctx context.Context, tenant string) error {
+	if tx.db.tenantSetting == "" {
+		return nil
+	}
+
+	if _, err := tx.tx.Exec(ctx, "SELECT set_config($1, $2, true)", tx.db.tenantSetting, tenant); err != nil {
+		return fmt.Errorf("set tenant: %w", tx.db.mapError(err))
+	}
+
+	return nil
+}
+
+/*
 AfterCommit registers a hook to run once the outermost transaction
 commits. If this level is a savepoint that rolls back, the hook is
 dropped.

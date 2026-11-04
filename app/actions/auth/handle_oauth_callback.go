@@ -255,7 +255,7 @@ address, proving that address first.
 func (a *HandleOAuthCallback) adopt(
 	ctx context.Context, tx *database.Tx, user models.User, in OAuthCallbackInput,
 ) (models.User, error) {
-	user, err := a.prove(ctx, tx, user, in.Client)
+	user, err := a.ClaimAccount.Prove(ctx, tx, user, in.Client)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -263,37 +263,6 @@ func (a *HandleOAuthCallback) adopt(
 	return user, a.Link.Attach(ctx, tx, user, LinkOAuthIdentityInput{
 		UserID: user.ID, Identity: in.Identity, Client: in.Client,
 	})
-}
-
-/*
-prove marks the account's address proven by the provider, claiming the
-account first from whoever set its password when it never was.
-*/
-func (a *HandleOAuthCallback) prove(
-	ctx context.Context, tx *database.Tx, user models.User, client appauth.Client,
-) (models.User, error) {
-	if user.IsVerified() {
-		return user, nil
-	}
-
-	if user.HasPassword() {
-		if err := a.ClaimAccount.Handle(ctx, tx, user, client); err != nil {
-			return models.User{}, err
-		}
-
-		user.PasswordHash = nil
-	}
-
-	now := a.Clock.Now()
-
-	err := models.New(tx).MarkUserEmailVerified(ctx, models.MarkUserEmailVerifiedParams{ID: user.ID, Now: now})
-	if err != nil {
-		return models.User{}, fmt.Errorf("mark email verified by provider: %w", err)
-	}
-
-	user.EmailVerifiedAt = &now
-
-	return user, nil
 }
 
 /*

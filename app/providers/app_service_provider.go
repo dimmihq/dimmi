@@ -119,10 +119,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 
 	bootInvitations(a)
 	bootSignIn(a, dummy)
+	bootWorkspaceLifecycle(a)
 	bootMailedSecrets(a)
 	bootIdentities(a)
 	bootWorkspaces(a)
-	bootWorkspaceLifecycle(a)
 	bootFactors(a)
 	bootTeams(a)
 	bootTokens(a)
@@ -180,9 +180,16 @@ redeem them.
 */
 func bootMailedSecrets(a *app.App) {
 	acts := a.Actions
+	claim := &auth.ClaimAccount{
+		Clock: a.Clock, Events: a.Events, Mail: a.Mail, Links: a.Links, Sessions: a.Session, AppGrants: a.AppGrants,
+		SecurityLog: a.SecurityLog,
+		Memberships: &members.ReleaseMemberships{Events: a.Events, Clock: a.Clock, Trash: acts.TrashWorkspace},
+	}
+
 	acts.ResendEmailVerification = &auth.ResendEmailVerification{Limiter: a.Limiter, Send: acts.SendEmailVerification}
 	acts.VerifyEmail = &auth.VerifyEmail{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, IDs: a.IDs, Limiter: a.Limiter, Tokens: a.Secrets,
+		Claim: claim,
 	}
 
 	acts.SendPasswordResetLink = &auth.SendPasswordResetLink{
@@ -190,9 +197,9 @@ func bootMailedSecrets(a *app.App) {
 	}
 
 	acts.ResetPassword = &auth.ResetPassword{
-		DB: a.DB, Clock: a.Clock, Hash: a.Hash, Mail: a.Mail, Limiter: a.Limiter, IDs: a.IDs, Links: a.Links,
-		LoginPolicy: a.LoginPolicy, Sessions: a.Session, AppGrants: a.AppGrants, SecurityLog: a.SecurityLog,
-		CompletePrimaryAuth: acts.CompletePrimaryAuth,
+		DB: a.DB, Clock: a.Clock, Events: a.Events, Hash: a.Hash, Mail: a.Mail, Limiter: a.Limiter, IDs: a.IDs,
+		Links: a.Links, LoginPolicy: a.LoginPolicy, Sessions: a.Session, AppGrants: a.AppGrants,
+		SecurityLog: a.SecurityLog, ClaimAccount: claim, CompletePrimaryAuth: acts.CompletePrimaryAuth,
 	}
 
 	acts.SendMagicLink = &auth.SendMagicLink{
@@ -204,11 +211,7 @@ func bootMailedSecrets(a *app.App) {
 	acts.ConsumeMagicLink = &auth.ConsumeMagicLink{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Limiter: a.Limiter, Lockout: a.Lockout, Tokens: a.Secrets,
 		LoginPolicy: a.LoginPolicy, MagicLink: a.Config.Auth.MagicLink, SecurityLog: a.SecurityLog,
-		CreateUser: acts.CreateUser, CompletePrimaryAuth: acts.CompletePrimaryAuth,
-		ClaimAccount: &auth.ClaimAccount{
-			Clock: a.Clock, Mail: a.Mail, Links: a.Links, Sessions: a.Session, AppGrants: a.AppGrants,
-			SecurityLog: a.SecurityLog,
-		},
+		CreateUser: acts.CreateUser, CompletePrimaryAuth: acts.CompletePrimaryAuth, ClaimAccount: claim,
 	}
 
 	acts.SendConfirmCode = &auth.SendConfirmCode{DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Tokens: a.Secrets}

@@ -102,6 +102,25 @@ func TestPasswordResetStore(t *testing.T) {
 func TestPasswordResetUpdate(t *testing.T) {
 	t.Parallel()
 
+	t.Run("ends every access token of the user and counts them in the log", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		_, plain := tc.MintToken(membershipOf(t, tc, tc.Owner), "*")
+		bearer := tc.Client().WithHeader("Authorization", "Bearer "+plain)
+		bearer.GetJSON("/api/v1/me").AssertOK()
+		id, token := resetLink(t, tc, tc.Owner.Email)
+
+		redeem(tc.Client(), id, token).AssertOK()
+
+		bearer.GetJSON("/api/v1/me").AssertUnauthorized()
+		var metadata map[string]any
+		err := tc.App.DB.QueryRow(t.Context(),
+			"SELECT metadata FROM security_events WHERE user_id = $1 AND type = 'password.reset'",
+			tc.Owner.ID).Scan(&metadata)
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, metadata["tokens_revoked"])
+	})
+
 	t.Run("sets the new password, ends every session and signs the requester in", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

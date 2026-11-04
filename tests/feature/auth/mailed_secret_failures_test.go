@@ -12,7 +12,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/enums"
 	appmail "github.com/dimmihq/dimmi/app/mail"
+	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -95,7 +97,7 @@ func TestMailedSecretFailures(t *testing.T) {
 		for _, res := range []*testkit.Response{
 			withLink(tc.Client(), link, tc),
 			withCode(tc.Client(), tc.Owner.Email, "000-000"),
-			verify(tc, id, token),
+			disown(tc, id, token),
 			verify(tc, id, "wrong-token"),
 			passwordless.PostJSON("/api/v1/user/confirmation", testkit.JSON{"method": "email_code", "code": code.Code}),
 			tc.Client().PostJSON("/api/v1/magic-links", testkit.JSON{"email": tc.Owner.Email}),
@@ -147,7 +149,7 @@ func TestMailedSecretFailures(t *testing.T) {
 
 		assertServerError(redeem(tc.Client(), id, token))
 		assertServerError(withLink(tc.Client(), unverifiedLink, tc))
-		assertServerError(verify(tc, verifyID, verifyToken))
+		assertServerError(disown(tc, verifyID, verifyToken))
 		elsewhere.GetJSON("/api/v1/me").AssertOK()
 	})
 
@@ -191,6 +193,9 @@ func TestMailedSecretFailures(t *testing.T) {
 			{"personal_access_tokens", "UPDATE"},
 			{"security_events", "INSERT"},
 			{"river_job", "INSERT"},
+			{"oauth_identities", "DELETE"},
+			{"user_auth_factors", "DELETE"},
+			{"workspaces", "UPDATE"},
 		} {
 			tc := tests.New(t)
 			link := magicLink(t, tc, "grace@example.com", nil)
@@ -200,6 +205,34 @@ func TestMailedSecretFailures(t *testing.T) {
 			assertServerError(withLink(tc.Client(), link, tc))
 			tc.Table("users").AssertCount(0, testkit.Row{"email": "grace@example.com", "password_hash": nil})
 		}
+	})
+
+	t.Run("claims nothing when the account's memberships cannot be listed or left", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		link := magicLink(t, tc, "grace@example.com", nil)
+		tc.Client().PostJSON("/api/v1/users", registration("grace@example.com")).AssertCreated()
+		member := membershipOf(t, tc, userByEmail(t, tc, "grace@example.com"))
+		_, err := factories.Member(t.Context(), tc.App, factories.Membership{
+			Workspace: models.Workspace{ID: member.WorkspaceID}, User: tc.CreateUser(), Role: enums.RoleOwner,
+		})
+		require.NoError(t, err)
+		tc.FailWrites("workspace_members", "UPDATE")
+
+		assertServerError(withLink(tc.Client(), link, tc))
+		tc.Table("users").AssertCount(0, testkit.Row{"email": "grace@example.com", "password_hash": nil})
+	})
+
+	t.Run("resets nothing when the user's access tokens cannot be revoked", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		id, token := resetLink(t, tc, tc.Owner.Email)
+		tc.MintToken(membershipOf(t, tc, tc.Owner), "*")
+		tc.FailWrites("personal_access_tokens", "UPDATE")
+
+		assertServerError(redeem(tc.Client(), id, token))
+
+		tc.Table("password_reset_tokens").AssertCount(1, testkit.Row{"user_id": tc.Owner.ID})
 	})
 
 	t.Run("creates no account when signing up through a link fails", func(t *testing.T) {

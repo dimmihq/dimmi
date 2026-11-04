@@ -157,8 +157,16 @@ export function resetPassword(id: string, token: string, password: string): Prom
   return request<SignInResult>("PATCH", `/password-resets/${encodeURIComponent(id)}`, { token, password });
 }
 
-export function verifyEmail(id: string, token: string): Promise<unknown> {
-  return request<unknown>("PATCH", `/email-verifications/${encodeURIComponent(id)}`, { token });
+/*
+ * verifyEmail proves the address a mailed link names. With claim, the
+ * person holding the link says they did not create the account and takes
+ * it back from whoever did.
+ */
+export function verifyEmail(id: string, token: string, claim = false): Promise<unknown> {
+  return request<unknown>("PATCH", `/email-verifications/${encodeURIComponent(id)}`, {
+    token,
+    ...(claim ? { claim } : {}),
+  });
 }
 
 export function signOut(): Promise<void> {

@@ -70,8 +70,9 @@ Rules:
     touched.
   - With Reauth on a signed-in session, the link must be for the
     session's user.
-  - An unverified account with a password is claimed from whoever set
-    it; any account is marked verified; an unknown address signs up.
+  - An unverified account is claimed from whoever registered it, unless
+    this browser is signed in to it; any account is marked verified; an
+    unknown address signs up.
 
 Events: [appevents.UserRegistered] for a new account.
 
@@ -246,37 +247,15 @@ func (a *ConsumeMagicLink) spend(ctx context.Context, p proof) (models.User, err
 
 /*
 settle returns the account the proof signs into: a new one for an
-address without any, else the existing one, claimed from whoever set
-its password when the address was never proven, and verified.
+address without any, else the existing one, claimed from whoever
+registered it when the address was never proven, and verified.
 */
 func (a *ConsumeMagicLink) settle(ctx context.Context, tx *database.Tx, p proof) (models.User, error) {
 	if p.account == nil {
 		return a.signUp(ctx, tx, p.token)
 	}
 
-	user := *p.account
-	if user.IsVerified() {
-		return user, nil
-	}
-
-	if user.HasPassword() {
-		if err := a.ClaimAccount.Handle(ctx, tx, user, p.client); err != nil {
-			return models.User{}, err
-		}
-
-		user.PasswordHash = nil
-	}
-
-	now := a.Clock.Now()
-
-	err := models.New(tx).MarkUserEmailVerified(ctx, models.MarkUserEmailVerifiedParams{ID: user.ID, Now: now})
-	if err != nil {
-		return models.User{}, fmt.Errorf("mark email verified by magic link: %w", err)
-	}
-
-	user.EmailVerifiedAt = &now
-
-	return user, nil
+	return a.ClaimAccount.Prove(ctx, tx, *p.account, p.client)
 }
 
 /*

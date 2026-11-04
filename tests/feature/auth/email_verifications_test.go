@@ -41,18 +41,33 @@ func verificationLink(t *testing.T, tc *tests.TestCase) (*testkit.Client, string
 verify redeems a verification link with a client carrying nothing.
 */
 func verify(tc *tests.TestCase, id, token string) *testkit.Response {
-	return tc.Client().PatchJSON("/api/v1/email-verifications/"+id, testkit.JSON{"token": token})
+	return verifyIn(tc.Client(), id, token)
+}
+
+/*
+verifyIn redeems a verification link in the browser.
+*/
+func verifyIn(browser *testkit.Client, id, token string) *testkit.Response {
+	return browser.PatchJSON("/api/v1/email-verifications/"+id, testkit.JSON{"token": token})
+}
+
+/*
+disown redeems a verification link with a client carrying nothing,
+saying the account the link names is not theirs.
+*/
+func disown(tc *tests.TestCase, id, token string) *testkit.Response {
+	return tc.Client().PatchJSON("/api/v1/email-verifications/"+id, testkit.JSON{"token": token, "claim": true})
 }
 
 func TestEmailVerificationUpdate(t *testing.T) {
 	t.Parallel()
 
-	t.Run("proves the address from any device, without a session", func(t *testing.T) {
+	t.Run("proves the address from the browser signed in to the account, keeping everything", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		browser, id, token := verificationLink(t, tc)
 
-		res := verify(tc, id, token).AssertOK()
+		res := verifyIn(browser, id, token).AssertOK()
 
 		res.AssertJSONPath("data.object", "email_verification").
 			AssertJSONPath("data.id", id).
@@ -60,18 +75,47 @@ func TestEmailVerificationUpdate(t *testing.T) {
 			AssertJSONPath("data.status", "verified").
 			AssertJSONPath("data.verified_at", tests.Epoch().Format(time.RFC3339))
 		assert.Contains(t, res.String("data.user_id"), "usr_")
-		browser.GetJSON("/api/v1/me").AssertJSONPath("data.user.email_verified", true)
+		browser.GetJSON("/api/v1/me").
+			AssertJSONPath("data.user.email_verified", true).
+			AssertJSONPath("data.user.has_password", true)
+		tc.Client().PostJSON("/api/v1/sessions", login("grace@example.com", factories.Password)).AssertCreated()
 	})
 
-	t.Run("verifies the account the link names even while another user is signed in", func(t *testing.T) {
+	t.Run("asks another device for a choice, verifying nothing and spending nothing", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		browser, id, token := verificationLink(t, tc)
+
+		verify(tc, id, token).AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "verification_needs_choice")
+
+		browser.GetJSON("/api/v1/me").
+			AssertJSONPath("data.user.email_verified", false).
+			AssertJSONPath("data.user.has_password", true)
+		verifyIn(browser, id, token).AssertOK()
+	})
+
+	t.Run("lets the registrant finish on another device by signing in there first", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		_, id, token := verificationLink(t, tc)
+		phone := tc.Browser(tc.Client().
+			PostJSON("/api/v1/sessions", login("grace@example.com", factories.Password)).AssertCreated())
+
+		verifyIn(phone, id, token).AssertOK()
+
+		phone.GetJSON("/api/v1/me").AssertJSONPath("data.user.has_password", true)
+	})
+
+	t.Run("asks for a choice while another user is signed in, and claims the named account on it", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		_, id, token := verificationLink(t, tc)
 		owner := tc.ActingAsOwner()
 
-		res := owner.PatchJSON("/api/v1/email-verifications/"+id, testkit.JSON{"token": token}).AssertOK()
+		verifyIn(owner, id, token).AssertStatus(fhttp.StatusConflict)
 
-		res.AssertJSONPath("data.email", "grace@example.com")
+		owner.PatchJSON("/api/v1/email-verifications/"+id, testkit.JSON{"token": token, "claim": true}).AssertOK().
+			AssertJSONPath("data.email", "grace@example.com")
 		owner.GetJSON("/api/v1/me").AssertJSONPath("data.user.email", tc.Owner.Email)
 		tc.Table("users").AssertCount(0, testkit.Row{"email": "grace@example.com", "email_verified_at": nil})
 	})
@@ -79,8 +123,8 @@ func TestEmailVerificationUpdate(t *testing.T) {
 	t.Run("answers that the address is verified on a second click, even once the link ran out", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
-		_, id, token := verificationLink(t, tc)
-		verify(tc, id, token).AssertOK()
+		browser, id, token := verificationLink(t, tc)
+		verifyIn(browser, id, token).AssertOK()
 		tc.Clock.Advance(48 * time.Hour)
 
 		verify(tc, id, token).AssertOK().
@@ -174,7 +218,7 @@ func TestEmailVerificationUpdate(t *testing.T) {
 		verify(tc, oldest.Get("id"), oldest.Get("token")).
 			AssertStatus(fhttp.StatusGone).
 			AssertJSONPath("code", "verification_link_expired")
-		verify(tc, newer.Get("id"), newer.Get("token")).AssertOK()
+		verifyIn(tc.ActingAs(user), newer.Get("id"), newer.Get("token")).AssertOK()
 	})
 
 	t.Run("refuses an address that keeps trying links", func(t *testing.T) {

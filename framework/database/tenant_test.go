@@ -107,3 +107,59 @@ func TestTenantScoping(t *testing.T) {
 		require.ErrorContains(t, err, "set tenant")
 	})
 }
+
+func TestTxSetTenant(t *testing.T) {
+	t.Parallel()
+
+	t.Run("moves one transaction between tenants and back to none", func(t *testing.T) {
+		t.Parallel()
+		db := openTenantNotes(t)
+
+		err := db.Transaction(t.Context(), func(ctx context.Context, tx *database.Tx) error {
+			assert.Equal(t, 0, countNotes(ctx, t, db))
+
+			require.NoError(t, tx.SetTenant(ctx, "a"))
+			assert.Equal(t, 1, countNotes(ctx, t, db))
+			_, err := tx.Exec(ctx, "UPDATE notes SET body = 'seen'")
+			require.NoError(t, err)
+
+			require.NoError(t, tx.SetTenant(ctx, "b"))
+			assert.Equal(t, 1, countNotes(ctx, t, db))
+
+			require.NoError(t, tx.SetTenant(ctx, ""))
+			assert.Equal(t, 0, countNotes(ctx, t, db))
+
+			return nil
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("does nothing without a tenant setting", func(t *testing.T) {
+		t.Parallel()
+		db, err := database.Open(t.Context(), database.Config{
+			URL: testkit.NewDatabase(t).URL, MaxConns: 2, PoolMode: database.PoolModeSession,
+		})
+		require.NoError(t, err)
+		t.Cleanup(db.Close)
+
+		err = db.Transaction(t.Context(), func(ctx context.Context, tx *database.Tx) error {
+			return tx.SetTenant(ctx, "a")
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("reports a transaction that already failed", func(t *testing.T) {
+		t.Parallel()
+		db := openTenantNotes(t)
+
+		err := db.Transaction(t.Context(), func(ctx context.Context, tx *database.Tx) error {
+			_, failed := tx.Exec(ctx, "SELECT no_such_function()")
+			require.Error(t, failed)
+
+			assert.Error(t, tx.SetTenant(ctx, "a"))
+
+			return failed
+		})
+		require.Error(t, err)
+	})
+}

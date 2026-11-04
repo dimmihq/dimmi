@@ -39,3 +39,9 @@ WHERE id = @id;
 -- DeleteOAuthIdentity unlinks one of the user's identities and reports
 -- whether it was still there.
 DELETE FROM oauth_identities WHERE id = @id AND user_id = @user_id;
+
+-- name: DeleteUserOAuthIdentities :execrows
+-- DeleteUserOAuthIdentities unlinks every identity of the user and
+-- returns how many there were, when the owner of the inbox takes back
+-- an account whose links a stranger may have made.
+DELETE FROM oauth_identities WHERE user_id = @user_id;

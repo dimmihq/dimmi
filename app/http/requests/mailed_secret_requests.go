@@ -46,12 +46,14 @@ type UpdatePasswordResetRequest struct {
 
 /*
 UpdateEmailVerificationRequest is the input of PATCH
-/email-verifications/{verification}: the link's token.
+/email-verifications/{verification}: the link's token, and whether the
+person holding it did not create the account and takes it back.
 */
 type UpdateEmailVerificationRequest struct {
 	Verification string `path:"verification"`
 	Body         struct {
 		Token string `json:"token,omitempty" validate:"required,max=256"`
+		Claim bool   `json:"claim,omitempty"`
 	}
 }
 

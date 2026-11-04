@@ -7,9 +7,11 @@
 import { RiCheckboxCircleLine, RiErrorWarningLine } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { Button } from "@/components/base/buttons/button";
 import { Spinner } from "@/components/base/spinner/spinner";
 import { ButtonLink } from "@/features/navigation/links";
 import { type SignInResult, signInWithLink, verifyEmail } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 
 import { AuthCard, AuthHeader, AuthStatus } from "./auth-frame";
 import { BrokenLink } from "./password-reset-forms";
@@ -73,16 +75,43 @@ export function MagicLinkPage({ token, onSignedIn }: { token: string; onSignedIn
   return <Working title="Signing you in…" />;
 }
 
+/*
+ * verificationNeedsChoice is the server's answer to a browser not signed
+ * in to the account the link names: only the person can say whether they
+ * created it.
+ */
+const verificationNeedsChoice = "verification_needs_choice";
+
+/*
+ * VerifyEmailPage proves the address. Opened in the browser signed in to
+ * the account it verifies at once. Anywhere else it asks, because the
+ * mail may have reached someone whose address a stranger signed up with:
+ * they may sign in here and open the link again, or take the account back.
+ */
 export function VerifyEmailPage({ id, token }: { id: string; token: string }) {
-  const verify = useMutation({ mutationFn: () => verifyEmail(id, token) });
+  const verify = useMutation({ mutationFn: (claim: boolean) => verifyEmail(id, token, claim) });
   useOnce(() => {
     if (id && token) {
-      verify.mutate();
+      verify.mutate(false);
     }
   });
 
   if (!(id && token)) {
     return <BrokenLink />;
+  }
+
+  if (verify.isSuccess && verify.variables) {
+    return (
+      <AuthStatus
+        icon={RiCheckboxCircleLine}
+        title="This address is yours"
+        description="Whoever signed up with your address has lost all access. Sign in with a link sent to this address. Any workspace they made is in the trash for you to restore or ignore."
+      >
+        <ButtonLink to="/login" className="mt-6 w-full">
+          Sign in
+        </ButtonLink>
+      </AuthStatus>
+    );
   }
 
   if (verify.isSuccess) {
@@ -95,6 +124,23 @@ export function VerifyEmailPage({ id, token }: { id: string; token: string }) {
         <ButtonLink to="/d" className="mt-6 w-full">
           Continue to Dimmi
         </ButtonLink>
+      </AuthStatus>
+    );
+  }
+
+  if (verify.error instanceof ApiError && verify.error.code === verificationNeedsChoice) {
+    return (
+      <AuthStatus
+        icon={RiErrorWarningLine}
+        title="Did you create this account?"
+        description="If you did, sign in on this device and open the link from your mail again, or open it on the device you signed up on. If you did not, someone used your address: take the account back and everything they set up ends, including the password, which you would then replace."
+      >
+        <ButtonLink to="/login" className="mt-6 w-full">
+          Sign in
+        </ButtonLink>
+        <Button variant="secondary" className="mt-3 w-full" onClick={() => verify.mutate(true)}>
+          I did not create this account
+        </Button>
       </AuthStatus>
     );
   }

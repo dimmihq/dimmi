@@ -128,8 +128,10 @@ ErrInvalidCredential a passkey answer that did not verify, ran out or
 came from a copied key.
 ErrMagicLinkExpired answers a sign-in link that was used, ran out, or
 never existed. ErrVerificationLinkStale answers a verification sent to
-an address the account no longer has, and ErrVerificationLinkExpired
-one that ran out before the account was verified.
+an address the account no longer has, ErrVerificationLinkExpired one
+that ran out before the account was verified, and
+ErrVerificationNeedsChoice one opened in a browser not signed in to the
+account, whose holder must sign in or say the account is not theirs.
 */
 var (
 	ErrInvalidResetToken = fault.New(fault.Invalid, "invalid_reset_token",
@@ -146,6 +148,8 @@ var (
 		"This verification link was sent to an address the account no longer uses.")
 	ErrVerificationLinkExpired = fault.New(fault.Gone, "verification_link_expired",
 		"This verification link has expired. Sign in and ask for a new one.")
+	ErrVerificationNeedsChoice = fault.New(fault.Conflict, "verification_needs_choice",
+		"Sign in to this account to verify it, or say that you did not create it.")
 )
 
 /*

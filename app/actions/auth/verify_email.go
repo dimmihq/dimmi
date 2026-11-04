@@ -3,10 +3,18 @@
 | Verify Email
 |--------------------------------------------------------------------------
 |
-| Opening a verification link proves the account's address. The link
-| works from any device and needs no session: whoever holds it proves
-| the inbox, and the account it names is verified even when another
-| user is signed in on the browser.
+| Opening a verification link proves the account's address, but it does
+| not by itself say that whoever registered the account owns that inbox:
+| a stranger may have signed up with someone else's address, and the
+| mail then reaches the real owner, who may click it out of habit. A
+| click must never hand that person's address to the stranger.
+|
+| So only a browser signed in to the account verifies it outright: the
+| registrant is holding the session and the inbox together. Any other
+| browser, such as a phone or a mail scanner that runs the page, spends
+| nothing and is answered that a choice is needed. The person may sign
+| in here and open the link again, or say they never created the account,
+| which claims it from whoever did and leaves them nothing.
 |
 | A wrong token, an unknown id and an id of another kind of secret fail
 | alike, so a guess learns nothing. Once the account is verified, by
@@ -39,11 +47,13 @@ import (
 
 /*
 VerifyEmailInput is the link's public id and token, and the client
-that opened it.
+that opened it. Claim says the person holding the link did not create
+the account and takes it back.
 */
 type VerifyEmailInput struct {
 	ID     string
 	Token  string
+	Claim  bool
 	Client appauth.Client
 }
 
@@ -68,12 +78,17 @@ Rules:
   - A link sent to an address the account no longer has: stale.
   - An account already verified: verified, nothing changes.
   - Otherwise an expired or spent link: expired.
+  - A browser not signed in to the account, without Claim: a choice is
+    needed, and the link stays good.
+  - With Claim, the account is claimed by [ClaimAccount] as it is
+    verified.
 
-Events: [appevents.UserEmailVerified].
+Events: [appevents.UserEmailVerified], and those of [ClaimAccount].
 
 Errors: [exceptions.ErrInvalidVerificationToken],
 [exceptions.ErrVerificationLinkStale],
 [exceptions.ErrVerificationLinkExpired],
+[exceptions.ErrVerificationNeedsChoice],
 [exceptions.ErrTooManyAttempts], [exceptions.ErrAuthBusy], or a
 wrapped error.
 */
@@ -84,6 +99,7 @@ type VerifyEmail struct {
 	IDs     *ids.Registry
 	Limiter *ratelimit.Limiter
 	Tokens  *appauth.OneTimeTokens
+	Claim   *ClaimAccount
 }
 
 /*
@@ -110,7 +126,24 @@ func (a *VerifyEmail) Handle(ctx context.Context, in VerifyEmailInput) (Verifica
 		return Verification{ID: tok.ID, UserID: user.ID, Email: user.Email, VerifiedAt: *user.EmailVerifiedAt}, nil
 	}
 
-	return a.verify(ctx, tok, user)
+	if !in.Claim && !signedInAs(ctx, user) {
+		return Verification{}, a.needsChoice(tok)
+	}
+
+	return a.verify(ctx, tok, user, in.Client)
+}
+
+/*
+needsChoice answers a browser that may not verify the account as it
+stands: a link still good waits for the person's choice, and one that
+ran out or was spent says so at once, since no choice could save it.
+*/
+func (a *VerifyEmail) needsChoice(tok models.OneTimeToken) error {
+	if tok.ConsumedAt != nil || !tok.ExpiresAt.After(a.Clock.Now()) {
+		return exceptions.ErrVerificationLinkExpired
+	}
+
+	return exceptions.ErrVerificationNeedsChoice
 }
 
 /*
@@ -154,11 +187,12 @@ func (a *VerifyEmail) find(ctx context.Context, in VerifyEmailInput) (models.One
 
 /*
 verify spends the link and marks the address proven, in one
-transaction. A link that ran out or was spent cannot be spent again.
+transaction, claiming the account unless this browser is signed in to
+it. A link that ran out or was spent cannot be spent again.
 */
-func (a *VerifyEmail) verify(ctx context.Context, tok models.OneTimeToken, user models.User) (Verification, error) {
-	now := a.Clock.Now()
-
+func (a *VerifyEmail) verify(
+	ctx context.Context, tok models.OneTimeToken, user models.User, client appauth.Client,
+) (Verification, error) {
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		spent, err := a.Tokens.Spend(ctx, tok)
 		if err != nil {
@@ -169,9 +203,9 @@ func (a *VerifyEmail) verify(ctx context.Context, tok models.OneTimeToken, user 
 			return exceptions.ErrVerificationLinkExpired
 		}
 
-		err = models.New(tx).MarkUserEmailVerified(ctx, models.MarkUserEmailVerifiedParams{ID: user.ID, Now: now})
+		user, err = a.Claim.Prove(ctx, tx, user, client)
 		if err != nil {
-			return fmt.Errorf("mark email verified: %w", err)
+			return err
 		}
 
 		return a.Events.Dispatch(ctx, tx, appevents.UserEmailVerified{UserID: user.ID})
@@ -180,5 +214,5 @@ func (a *VerifyEmail) verify(ctx context.Context, tok models.OneTimeToken, user 
 		return Verification{}, err
 	}
 
-	return Verification{ID: tok.ID, UserID: user.ID, Email: user.Email, VerifiedAt: now}, nil
+	return Verification{ID: tok.ID, UserID: user.ID, Email: user.Email, VerifiedAt: *user.EmailVerifiedAt}, nil
 }
