@@ -218,6 +218,12 @@ func (ap *applier) assign(ctx context.Context, ch Changes) error {
 		ap.changed = append(ap.changed, fields...)
 	}
 
+	if err != nil || !changed || ch.Status != nil || sameID(c.AssigneeMemberID, &ap.m.Member.ID) {
+		return err
+	}
+
+	ap.c, err = ap.w.WakeIf(ctx, ap.m.Workspace, ap.c, ReasonAssigned)
+
 	return err
 }
 

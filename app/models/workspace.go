@@ -103,3 +103,35 @@ func WithSetting(settings json.RawMessage, area, key string, value any) (json.Ra
 
 	return json.Marshal(values)
 }
+
+/*
+SnoozeWakeDefaults returns whether each teammate move wakes a snoozed
+conversation when the workspace has not chosen: a reply does, a note by
+someone other than the holder and handing it on do not.
+*/
+func SnoozeWakeDefaults() map[string]bool {
+	return map[string]bool{"member_reply": true, "others_note": false, "assigned": false}
+}
+
+/*
+WakesSnoozeOn reports whether the move, named by its wake reason, wakes
+a snoozed conversation in the workspace. Settings live under snooze as
+wake_on_reply, wake_on_others_note and wake_on_assignment.
+*/
+func (w Workspace) WakesSnoozeOn(reason string) bool {
+	var settings struct {
+		Snooze map[string]bool `json:"snooze"`
+	}
+
+	keys := map[string]string{
+		"member_reply": "wake_on_reply", "others_note": "wake_on_others_note", "assigned": "wake_on_assignment",
+	}
+
+	if len(w.Settings) > 0 && json.Unmarshal(w.Settings, &settings) == nil {
+		if on, ok := settings.Snooze[keys[reason]]; ok {
+			return on
+		}
+	}
+
+	return SnoozeWakeDefaults()[reason]
+}

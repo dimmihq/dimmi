@@ -215,7 +215,10 @@ func (s *session) then(ctx context.Context, in ReplyInput) error {
 
 		to.Status, to.Until = string(enums.ConversationStatusSnoozed), until
 	default:
-		return nil
+		c, err := s.w.WakeIf(ctx, s.m.Workspace, s.c, conversations.ReasonMemberReply)
+		s.c = c
+
+		return err
 	}
 
 	c, _, err := s.w.ChangeStatus(ctx, s.c, to)
