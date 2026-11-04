@@ -89,6 +89,11 @@ type Resolver interface {
 		Addrs returns the IPv4 and IPv6 addresses, following aliases.
 	*/
 	Addrs(ctx context.Context, name string) ([]netip.Addr, error)
+
+	/*
+		NS returns the name servers the name delegates to.
+	*/
+	NS(ctx context.Context, name string) ([]string, error)
 }
 
 /*
@@ -128,6 +133,13 @@ CNAME returns the canonical name of the name.
 */
 func (c *Client) CNAME(ctx context.Context, name string) (string, error) {
 	return c.current().CNAME(ctx, name)
+}
+
+/*
+NS returns the name servers of the name.
+*/
+func (c *Client) NS(ctx context.Context, name string) ([]string, error) {
+	return c.current().NS(ctx, name)
 }
 
 /*
