@@ -37,6 +37,29 @@ func (q *Queries) CountActiveOwners(ctx context.Context, workspaceID ids.UUID) (
 	return count, err
 }
 
+const countUserMembershipsOutsideOrganization = `-- name: CountUserMembershipsOutsideOrganization :one
+SELECT count(*)
+FROM auth_list_user_memberships($1) AS m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.status = 'active' AND w.organization_id <> $2::uuid
+`
+
+type CountUserMembershipsOutsideOrganizationParams struct {
+	UserID         ids.UUID `json:"user_id"`
+	OrganizationID ids.UUID `json:"organization_id"`
+}
+
+// CountUserMembershipsOutsideOrganization counts the user's active
+// memberships in workspaces of other organizations, those in the trash
+// included, through a security definer function since they span
+// workspaces.
+func (q *Queries) CountUserMembershipsOutsideOrganization(ctx context.Context, arg CountUserMembershipsOutsideOrganizationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserMembershipsOutsideOrganization, arg.UserID, arg.OrganizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createWorkspaceMember = `-- name: CreateWorkspaceMember :one
 INSERT INTO workspace_members (workspace_id, user_id, role, joined_via, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)

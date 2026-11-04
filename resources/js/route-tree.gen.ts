@@ -16,6 +16,7 @@ import { Route as AuthInvitationRouteImport } from './routes/_auth/invitation'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-factor-reset'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
 import { Route as DAgentRouteImport } from './routes/d/agent'
@@ -72,6 +73,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthTwoFactorResetRoute = AuthTwoFactorResetRouteImport.update({
+  id: '/two-factor-reset',
+  path: '/two-factor-reset',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
+  '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
+  '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/two-factor-reset'
     | '/verify-email'
     | '/d/agent'
     | '/d/announcements'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/two-factor-reset'
     | '/verify-email'
     | '/d/agent'
     | '/d/announcements'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/reset-password'
     | '/_auth/signup'
+    | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
     | '/d/agent'
     | '/d/announcements'
@@ -436,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/two-factor-reset': {
+      id: '/_auth/two-factor-reset'
+      path: '/two-factor-reset'
+      fullPath: '/two-factor-reset'
+      preLoaderRoute: typeof AuthTwoFactorResetRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/verify-email': {
@@ -665,6 +684,7 @@ interface AuthRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  AuthTwoFactorResetRoute: typeof AuthTwoFactorResetRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
   AuthEmailConfirmRoute: typeof AuthEmailConfirmRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
@@ -677,6 +697,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSignupRoute: AuthSignupRoute,
+  AuthTwoFactorResetRoute: AuthTwoFactorResetRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
   AuthEmailConfirmRoute: AuthEmailConfirmRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,

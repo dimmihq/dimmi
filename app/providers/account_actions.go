@@ -23,9 +23,12 @@ import (
 )
 
 /*
-bootAccount builds the actions on a person's own account.
+bootAccount builds the actions on a person's own account, and those an
+admin uses to help a teammate back into theirs.
 */
 func bootAccount(a *app.App) error {
+	bootSignInHelp(a)
+
 	disk, err := a.Storage.Default()
 	if err != nil {
 		return fmt.Errorf("avatar disk: %w", err)

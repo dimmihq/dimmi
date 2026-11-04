@@ -148,5 +148,17 @@
     "subject": "Your Dimmi account was deleted",
     "intro": "Your account and its sign-in details are gone, and this cannot be undone.",
     "advice": "You can sign up again with this address at any time, as a new account."
+  },
+  "two_factor_reset": {
+    "subject": "Reset two-factor authentication on your dimmi account",
+    "intro": "{{.admin}} of {{.workspace}} sent you this link because you cannot sign in with your second factor. Open it to turn two-factor authentication off; you will need your password if your account has one.",
+    "action": "Reset two-factor authentication",
+    "expiry": "The link works for 30 minutes. If you did not ask for help, ignore this email: nothing changes."
+  },
+  "two_factor_reset_completed": {
+    "subject": "Two-factor authentication was reset on your dimmi account",
+    "intro": "You used the link your admin sent you, so your account no longer asks for a second factor. Every browser and app was signed out.",
+    "advice": "Sign in and set up a new authenticator. If this was not you, change your password now.",
+    "action": "Review your security settings"
   }
 }

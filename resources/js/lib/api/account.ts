@@ -71,3 +71,19 @@ export const deletionPreviewQuery = queryOptions({
 export function deleteAccount(confirmEmail: string): Promise<void> {
   return request<void>("DELETE", "/user", { confirm_email: confirmEmail });
 }
+
+export interface TwoFactorReset {
+  object: "two_factor_reset";
+  id: string;
+  member_id: string;
+  status: "pending" | "completed";
+  expires_at: string;
+}
+
+/*
+ * completeTwoFactorReset turns the person's second factor off with the
+ * link an admin had mailed them, and their password when they have one.
+ */
+export function completeTwoFactorReset(id: string, token: string, password?: string): Promise<TwoFactorReset> {
+  return request<TwoFactorReset>("PATCH", `/two-factor-resets/${encodeURIComponent(id)}`, { token, password });
+}

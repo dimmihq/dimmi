@@ -27,6 +27,9 @@ export const auditEvents: Record<string, string> = {
   "team.deleted": "Deleted a team",
   "team.member_added": "Added someone to a team",
   "team.member_removed": "Removed someone from a team",
+  "member.two_factor_reset_requested": "Sent a two-factor reset link",
+  "member.two_factor_reset_completed": "Turned off two-factor with a reset link",
+  "member.sign_in_lock_cleared": "Cleared a sign-in lock",
 };
 
 const securityEvents: Record<string, string> = {
@@ -50,6 +53,8 @@ const securityEvents: Record<string, string> = {
   "session.revoked": "Signed out a session",
   "sessions.revoked_others": "Signed out every other session",
   "magic_link.used": "Signed in with an email link",
+  "two_factor.reset_requested": "An admin sent a two-factor reset link",
+  "two_factor.reset_completed": "Turned off two-factor with a reset link",
   "token.created": "Created an API token",
 };
 

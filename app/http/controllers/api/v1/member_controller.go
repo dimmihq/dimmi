@@ -8,6 +8,8 @@
 | changes their role or status, handing ownership over included. "me"
 | names the caller's own membership. Ids of other workspaces' members
 | are simply not found. include=teams adds the teams each member is in.
+| Callers who may change members also see whose account failed guesses
+| locked, so they can lift the lock.
 |
 */
 
@@ -23,6 +25,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/teams"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -60,6 +63,7 @@ type MemberController struct {
 	MemberTeams  *teams.ListMemberTeams
 	IDs          *ids.Registry
 	Cursors      *pagination.Cursors
+	Lockout      *appauth.Lockout
 }
 
 /*
@@ -99,6 +103,9 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 	if err := c.includeTeams(ctx, query, out.Items, memberIDs(page.Members)); err != nil {
 		return nil, err
 	}
+	if err := c.markLocked(ctx, out.Items); err != nil {
+		return nil, err
+	}
 	if page.More {
 		if out.NextCursor, err = c.Cursors.Encode(memberPage{Offset: in.Offset + in.Limit}); err != nil {
 			return nil, err
@@ -134,6 +141,10 @@ func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequ
 		return nil, err
 	}
 
+	if err := c.markLocked(ctx, out); err != nil {
+		return nil, err
+	}
+
 	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
 }
 
@@ -158,6 +169,33 @@ func (c *MemberController) includeTeams(
 	for i, id := range memberIDs {
 		summaries := resources.NewTeamSummaries(byMember[id])
 		out[i].Teams = &summaries
+	}
+
+	return nil
+}
+
+/*
+markLocked says, for each shaped member, whether failed guesses locked
+their account, when the caller may change members.
+*/
+func (c *MemberController) markLocked(ctx context.Context, out []resources.WorkspaceMember) error {
+	if !membership(ctx).Can("members:write") {
+		return nil
+	}
+
+	emails := make([]string, 0, len(out))
+	for _, member := range out {
+		emails = append(emails, member.User.Email)
+	}
+
+	locked, err := c.Lockout.Locked(ctx, emails)
+	if err != nil {
+		return err
+	}
+
+	for i := range out {
+		state := locked[out[i].User.Email]
+		out[i].SignInLocked = &state
 	}
 
 	return nil
@@ -205,7 +243,12 @@ func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMember
 		return nil, err
 	}
 
-	return &MemberOutput{Body: fhttp.NewResource(resources.NewWorkspaceMember(row.WorkspaceMember, row.User))}, nil
+	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
+	if err := c.markLocked(ctx, out); err != nil {
+		return nil, err
+	}
+
+	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
 }
 
 /*

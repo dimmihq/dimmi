@@ -49,7 +49,7 @@ Preferences page. `PATCH /user {timezone}`; IANA validated by `timezone_rule.go`
 - Password row links to its section; passkeys listed under two-factor (`two-factor.tsx`), since they are second factors. Provider unconfigured: row absent.
 - SSO identities (21): listed read-only, "Managed by {connection}".
 - Callback returns to `/d/settings/security?linked=github`; notification toast. Provider link conflict 409 `identity_in_use`.
-E2e `tests/e2e/sign-in-methods.spec.ts`, provider via `Social.Fake` not reachable from e2e, so uses `framework/socialite/drivertest` local provider configured by `tests/e2e/server.ts`.
+E2e `tests/e2e/sign-in-methods.spec.ts`, provider via `Social.Fake` not reachable from e2e, and `framework/socialite/drivertest` is Go-only, so `tests/e2e/support/identity-provider.ts` (Node OpenID Connect provider: discovery, signed ID tokens, PKCE, a sign-in page) starts in `tests/e2e/server.ts` on a free port; config only: `auth.oauth.google` client, `socialite.providers.google.issuer`, `http_client.allow_hosts`.
 
 ## Admin helps locked-out teammate (A-05)
 
@@ -59,14 +59,14 @@ Routes (U W C): `POST /members/{mem}/two-factor-resets` 201, `DELETE /members/{m
 
 Flow:
 1. Admin opens member menu "Help with two-factor", dialog says what happens, `recent-auth` confirmation (fresh within `auth.password_confirmation.ttl`).
-2. Server checks: target active, target has 2FA (else 409 `two_factor_not_enabled`), target not caller (422), 3 per target per 24 h (429). Target holds active membership in workspace of another organization: 409 `two_factor_reset_blocked`, text "Ask them to use recovery codes or contact support". Reason: admin of one company must never weaken account security for another company's workspace.
+2. Server checks: target active (else 409 `member_inactive`), target has 2FA (else 409 `two_factor_not_enabled`), target not caller (422 `cannot_reset_self`), 3 per target per 24 h (429). Target holds active membership in workspace of another organization: 409 `two_factor_reset_blocked`, text "Ask them to use recovery codes or contact support". Reason: admin of one company must never weaken account security for another company's workspace.
 3. `one_time_tokens` purpose `two_factor_reset` (new CHECK value, migration 20261201070003 add_two_factor_reset_purpose), 30 min. `TwoFactorResetMail` to target's verified email with `/two-factor-reset#id=ott_...&token=...`. Requires verified email: else 409 `target_unverified`.
-4. Target redeems: page asks password when account has one. Wrong password: 422 `invalid_credentials`, 5 tries burn. Passwordless: token alone, email is their primary proof.
+4. Target redeems: page asks password when account has one (first try without: 422 `password_required` on `password`). Wrong password: 422 `invalid_credentials`, 5 tries burn. Passwordless: token alone, email is their primary proof.
 5. Success: `RemoveAllAuthFactors{force}`, all sessions and first-party grants ended (`two_factor_disabled`), soft lock cleared, `TwoFactorResetCompletedMail`. Target signs in, meets `two_factor_required` if workspace requires, enrolls.
 
 Mailbox plus password still required; mailbox alone is not enough unless passwordless. Audit: `member.two_factor_reset_requested` (actor admin), `member.two_factor_reset_completed` (actor target); security event both. Cloud support and `user:disable-2fa` stay for blocked case.
 
-Sign-in lock: `DELETE /members/{mem}/sign-in-lock` clears per-email soft lock and IP+email counter for that address (`app/auth/lockout.go` adds `Clear`). Audit `member.sign_in_lock_cleared`. Menu item shown when `sign_in_locked: true` on member resource (`members:write` only).
+Sign-in lock: `DELETE /members/{mem}/sign-in-lock` (`members:write`) clears per-email soft lock and IP+email counter for that address (`app/auth/lockout.go` adds `Clear`: IP+email keys carry a per-account generation that `Clear` moves on, so every address restarts without listing them; spray blocks stay). Audit `member.sign_in_lock_cleared`. Menu item shown when `sign_in_locked: true` on member resource (`members:write` only).
 
 UI: `features/settings/members/two-factor-help-dialog.tsx`; `routes/_auth/two-factor-reset.tsx`. E2e `tests/e2e/two-factor-help.spec.ts`: "an admin starts a reset and the teammate finishes it from the email", against Mailpit.
 

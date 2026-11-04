@@ -57,6 +57,9 @@ const (
 	EventTeamDeleted          = "team.deleted"
 	EventTeamMemberAdded      = "team.member_added"
 	EventTeamMemberRemoved    = "team.member_removed"
+	EventTwoFactorResetAsked  = "member.two_factor_reset_requested"
+	EventTwoFactorResetDone   = "member.two_factor_reset_completed"
+	EventSignInLockCleared    = "member.sign_in_lock_cleared"
 )
 
 /*

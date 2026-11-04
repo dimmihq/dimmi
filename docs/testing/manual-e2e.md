@@ -537,6 +537,26 @@ needs no workspace header.
 Browser: `/d/settings/profile`, `/d/settings/security`, `/d/settings/preferences` and `/email/confirm` from the
 mailed link, in light and dark. Every control on them does something.
 
+## Sign-in methods and sign-in help
+
+Start the server with Google pointed at a local OpenID Connect provider, as `tests/e2e/server.ts` does:
+`DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID`, `..._CLIENT_SECRET`, `DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER` and
+`DIMMI_HTTP_CLIENT__ALLOW_HOSTS` set to the provider's host. `a.jar` is the owner, `$WS` its workspace id, `$M`
+a teammate's `mem_` id whose account has two-factor on, `t.jar` the teammate's browser.
+
+| Flow | Command | Expect |
+|---|---|---|
+| List sign-in methods | `r ids -b a.jar $B/user/identities`; `r cfg $B/auth/config` | 200 linked accounts; `providers` lists `google` |
+| Link a provider | open `$W/auth/google/redirect?intent=link` in the signed-in browser, approve at the provider | lands on `/d/settings/security?linked=google`; a toast says Google is linked; mail "linked" |
+| Unlink the last way in | `r un -b a.jar -X DELETE -H "$O" $B/user/identities/<idn_>` on an account with no password and mail sign-in off | 409 `last_login_method`; the page says "Set a password first" |
+| Start a reset | `r rst -b a.jar -X POST -H "$O" -H "$J" -H "Dimmi-Workspace: $WS" $B/members/$M/two-factor-resets` | 201 `two_factor_reset` `pending`; mail "Reset two-factor" to the teammate; audit `member.two_factor_reset_requested` |
+| Refused resets | same for an owner as an admin; for a teammate without two-factor; for one who also works in another organization's workspace; a fourth time in a day | 403; 409 `two_factor_not_enabled`; 409 `two_factor_reset_blocked`; 429 |
+| Finish a reset | `L=$(link <teammate> "Reset two-factor"); r fin -X PATCH -H "$O" -H "$J" $B/two-factor-resets/$(frag $L id) -d "{\"token\":\"$(frag $L token)\"}"`, then with `"password"` | 422 `password_required`; then 200 `completed`; `t.jar` `me` 401; mail "was reset"; audit `member.two_factor_reset_completed` |
+| Clear a sign-in lock | fail the teammate's password until 429, `r lock -b a.jar -H "$O" -H "Dimmi-Workspace: $WS" $B/members/$M`, then `-X DELETE $B/members/$M/sign-in-lock` | `sign_in_locked: true`; 204; signing in works again; audit `member.sign_in_lock_cleared` |
+
+Browser: the security page's "Sign-in methods" section, the member menu's "Help with two-factor" and "Clear
+sign-in lock", and `/two-factor-reset` from the mailed link, in light and dark.
+
 ## Reporting
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in

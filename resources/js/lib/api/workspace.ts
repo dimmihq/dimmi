@@ -25,6 +25,7 @@ export interface Member {
   role: "owner" | "admin" | "member";
   status: "active" | "deactivated";
   user: { id: string; name: string; email: string; email_verified: boolean; avatar_url: string | null };
+  sign_in_locked: boolean | null;
 }
 
 /*
@@ -91,6 +92,22 @@ export function restoreWorkspace(workspace: string): Promise<Workspace> {
 
 export function updateMember(workspace: string, member: string, changes: MemberChanges): Promise<Member> {
   return request<Member>("PATCH", `/members/${encodeURIComponent(member)}`, changes, { workspace });
+}
+
+/*
+ * startTwoFactorReset mails the member a link that turns off the second
+ * factor they lost.
+ */
+export function startTwoFactorReset(workspace: string, member: string): Promise<unknown> {
+  return request<unknown>("POST", `/members/${encodeURIComponent(member)}/two-factor-resets`, {}, { workspace });
+}
+
+/*
+ * clearSignInLock lifts the lock failed guesses set on the member's
+ * account.
+ */
+export function clearSignInLock(workspace: string, member: string): Promise<void> {
+  return request<void>("DELETE", `/members/${encodeURIComponent(member)}/sign-in-lock`, undefined, { workspace });
 }
 
 export function leaveWorkspace(membership: string): Promise<void> {

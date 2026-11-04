@@ -131,10 +131,10 @@ Migrations range `20261201070001+`. Spec: [settings-pages.md](settings-pages.md)
 
 ## M14. Sign-in methods page, 2FA help (track 07 accounts-settings)
 
-- [ ] `sign-in-methods.tsx` wired to `/auth/config` + `/user/identities`, link + unlink. E2e `sign-in-methods.spec.ts` with drivertest provider.
-- [ ] Migration `20261201070003_add_two_factor_reset_purpose`. Permission `members:reset_two_factor`. `POST /members/{mem}/two-factor-resets`, `PATCH /two-factor-resets/{ott}`, cross-organization block, mails.
-- [ ] `Lockout.Clear`, `DELETE /members/{mem}/sign-in-lock`, `sign_in_locked` on member resource.
-- [ ] Dialog + `routes/_auth/two-factor-reset.tsx`. E2e `two-factor-help.spec.ts`.
+- [x] `sign-in-methods.tsx` wired to `/auth/config` + `/user/identities`, link + unlink; link callback lands on `?linked=<provider>`. E2e `sign-in-methods.spec.ts` with a local OpenID Connect provider (`tests/e2e/support/identity-provider.ts`, config only).
+- [x] Migration `20261201070003_add_two_factor_reset_purpose` (phase=contract: drops and re-adds the CHECK). Permission `members:reset_two_factor`. `POST /members/{mem}/two-factor-resets`, `PATCH /two-factor-resets/{ott}`, cross-organization block, mails.
+- [x] `Lockout.Clear`, `DELETE /members/{mem}/sign-in-lock`, `sign_in_locked` on member resource.
+- [x] Dialog + `routes/_auth/two-factor-reset.tsx`. E2e `two-factor-help.spec.ts`.
 
 ## M15. Preferences, customer-facing name (track 07 accounts-settings)
 

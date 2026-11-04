@@ -73,8 +73,8 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | GET | `/api/v1/members/{mem}` | members.show | A W `members:read` | `me` alias allowed |
 | PATCH | `/api/v1/members/{mem}` | members.update | A W; per field below | `role`, `status` (+ `reassign_to_member_id`), `keep_owner`, `custom_role_id`, `conversation_access`, `conversation_access_unassigned`, `access_team_ids` |
 | PATCH | `/api/v1/members` | members.update-many | A W `members:write` | rest.md rule 8; `changes`: `role`, `custom_role_id` |
-| POST | `/api/v1/members/{mem}/two-factor-resets` | members.two-factor-resets.store | U W C `members:reset_two_factor` | mail teammate a reset link |
-| DELETE | `/api/v1/members/{mem}/sign-in-lock` | members.sign-in-lock.destroy | U W `members:reset_two_factor` | clear soft lock |
+| POST | `/api/v1/members/{mem}/two-factor-resets` | members.two-factor-resets.store | U W C `members:reset_two_factor` | mail teammate a reset link; 201 `two_factor_reset` |
+| DELETE | `/api/v1/members/{mem}/sign-in-lock` | members.sign-in-lock.destroy | U W `members:write` | clear the soft lock and every address's failure run at the account; 204 |
 | POST | `/api/v1/member-imports` | member-imports.store | U W C `members:import` | CSV, `dry_run`; synchronous |
 | PATCH | `/api/v1/members/me` `{availability}` | members.update | A W self; `conversations:write` | online/away (self may change only `availability`; other fields need role per PATCH /members/{mem} table) |
 | GET | `/api/v1/teams` | teams.index | A W `members:read` | list, `include=members` |

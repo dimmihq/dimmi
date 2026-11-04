@@ -88,6 +88,7 @@ func API(a *app.App) {
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
 		accountRoutes(api, a)
+		signInHelpRoutes(api, a)
 	})
 }
 
@@ -295,7 +296,7 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 	}
 	c.members = &v1.MemberController{
 		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-		MemberTeams: acts.ListMemberTeams, Cursors: cursors,
+		MemberTeams: acts.ListMemberTeams, Cursors: cursors, Lockout: a.Lockout,
 	}
 	c.auditLogs = &v1.AuditLogController{
 		List: acts.ListAuditLogs, Find: acts.ShowAuditLog, IDs: a.IDs, Cursors: cursors,

@@ -183,3 +183,13 @@ WHERE m.status = 'active';
 -- name: CountActiveMembers :one
 -- CountActiveMembers counts the people who can still work in the workspace.
 SELECT count(*) FROM workspace_members WHERE workspace_id = @workspace_id AND status = 'active';
+
+-- name: CountUserMembershipsOutsideOrganization :one
+-- CountUserMembershipsOutsideOrganization counts the user's active
+-- memberships in workspaces of other organizations, those in the trash
+-- included, through a security definer function since they span
+-- workspaces.
+SELECT count(*)
+FROM auth_list_user_memberships(@user_id) AS m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.status = 'active' AND w.organization_id <> @organization_id::uuid;

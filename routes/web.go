@@ -145,6 +145,7 @@ func authPages() map[string]string {
 		"reset-password":   "/reset-password",
 		"verify-email":     "/verify-email",
 		"email.confirm":    "/email/confirm",
+		"two-factor-reset": "/two-factor-reset",
 		"invitation":       "/invitation",
 	}
 }

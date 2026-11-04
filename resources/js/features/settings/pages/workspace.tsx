@@ -35,6 +35,8 @@ import { Choice, Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { type Help, type HelpPowers, helpLabel, helpOffers } from "../members/sign-in-help";
+import { SignInHelpDialogs } from "../members/two-factor-help-dialog";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
 
@@ -146,13 +148,9 @@ interface Pending {
 
 /*
  * Powers is what the caller may do to members: change members and
- * admins (write), and change owners (owners).
+ * admins (write), change owners (owners), and help them back in (reset).
  */
-interface Powers {
-  self: string;
-  write: boolean;
-  owners: boolean;
-}
+type Powers = HelpPowers;
 
 /*
  * canManage reports whether the caller may change the member's status.
@@ -242,9 +240,20 @@ function offers(member: Member, powers: Powers): Pending[] {
   return list;
 }
 
-function Person({ member, powers, onPick }: { member: Member; powers: Powers; onPick: (p: Pending) => void }) {
+function Person({
+  member,
+  powers,
+  onPick,
+  onHelp,
+}: {
+  member: Member;
+  powers: Powers;
+  onPick: (p: Pending) => void;
+  onHelp: (help: Help) => void;
+}) {
   const name = member.user.name;
   const choices = offers(member, powers);
+  const helps = helpOffers(member, powers);
   const detail = member.status === "deactivated" ? `${member.user.email} · Deactivated` : member.user.email;
 
   return (
@@ -256,7 +265,7 @@ function Person({ member, powers, onPick }: { member: Member; powers: Powers; on
       <Chip variant="caption" color={member.role === "owner" ? "blue" : "neutral"}>
         {roleLabel(member.role)}
       </Chip>
-      {choices.length > 0 ? (
+      {choices.length + helps.length > 0 ? (
         <Dropdown>
           <DropdownTrigger
             aria-label={`Manage ${name}`}
@@ -268,6 +277,11 @@ function Person({ member, powers, onPick }: { member: Member; powers: Powers; on
             {choices.map((choice) => (
               <DropdownItem key={choice.title} onSelect={() => onPick(choice)}>
                 <span className="text-body-2-regular text-text-primary">{choice.confirm}</span>
+              </DropdownItem>
+            ))}
+            {helps.map((help) => (
+              <DropdownItem key={help.kind} onSelect={() => onHelp(help)}>
+                <span className="text-body-2-regular text-text-primary">{helpLabel(help)}</span>
               </DropdownItem>
             ))}
           </DropdownPopover>
@@ -336,6 +350,7 @@ export function MembersSettings() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [retry, setRetry] = useState<Pending | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [help, setHelp] = useState<Help | null>(null);
 
   const self = caller?.member?.id ?? "";
   const permissions = caller?.member?.permissions ?? [];
@@ -343,6 +358,7 @@ export function MembersSettings() {
     self,
     write: permissions.includes("members:write"),
     owners: permissions.includes("members:manage_owners"),
+    reset: permissions.includes("members:reset_two_factor"),
   };
   const active = members.filter((member) => member.status === "active").length;
 
@@ -372,7 +388,7 @@ export function MembersSettings() {
         action={powers.write ? <InviteButton workspace={workspace} /> : null}
       >
         {members.map((member) => (
-          <Person key={member.id} member={member} powers={powers} onPick={setPending} />
+          <Person key={member.id} member={member} powers={powers} onPick={setPending} onHelp={setHelp} />
         ))}
       </Section>
       {powers.write ? <PendingInvitations workspace={workspace} /> : null}
@@ -391,6 +407,7 @@ export function MembersSettings() {
         confirmLabel={pending?.confirm}
         onConfirm={() => (pending ? change.mutateAsync(pending).catch(() => undefined) : undefined)}
       />
+      <SignInHelpDialogs workspace={workspace} help={help} hasPassword={me.hasPassword} onClose={() => setHelp(null)} />
       <PasswordPrompt
         isOpen={retry !== null}
         onClose={() => setRetry(null)}
