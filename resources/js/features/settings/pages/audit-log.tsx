@@ -72,7 +72,7 @@ function EventFilter({
   value: string | undefined;
   onChange: (event: string | undefined) => void;
 }) {
-  const groups = auditEventGroups.filter((group) => Object.keys(group.events).length > 0);
+  const groups = auditEventGroups().filter((group) => Object.keys(group.events).length > 0);
   const chosenGroup = groups.find((group) => groupFilter(group) === value);
   const selected = chosenGroup ? groupKey + chosenGroup.id : (value ?? everything);
   const choose = (key: string) => {
@@ -152,7 +152,7 @@ function Entries({ entries, zone, onOpen }: { entries: AuditEntry[]; zone?: stri
               </TableCell>
               <TableCell>
                 <span className="whitespace-nowrap text-body-2-regular text-text-secondary">
-                  {formatTime(entry.created_at, undefined, zone)}
+                  {formatTime(entry.created_at, zone)}
                 </span>
               </TableCell>
             </TableRow>

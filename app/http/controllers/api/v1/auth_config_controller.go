@@ -14,6 +14,7 @@ import (
 	"context"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/i18n"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/providers"
@@ -59,5 +60,6 @@ func (c *AuthConfigController) Show(ctx context.Context, _ *requests.NoInput) (*
 		Factors:           resources.NewFactors(appauth.OfferedFactors(c.Factors)),
 		Capabilities:      appauth.Capabilities(c.Auth),
 		MinClientVersions: map[string]*string{"ios": nil, "android": nil, "cli": nil},
+		Locales:           resources.NewLocales(ctx, i18n.From(ctx)),
 	})}, nil
 }

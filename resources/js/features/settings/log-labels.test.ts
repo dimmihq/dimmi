@@ -39,6 +39,8 @@ describe("log labels", () => {
       "member.email_changed",
       "member.identity_linked",
       "member.identity_unlinked",
+      "member.two_factor_reset_requested",
+      "member.sign_in_lock_cleared",
       "audit_logs.exported",
     ]) {
       expect(auditEventLabel(event)).not.toBe(event);
@@ -46,7 +48,7 @@ describe("log labels", () => {
   });
 
   it("groups the events by kind, each event in one group", () => {
-    expect(auditEventGroups.map((group) => group.name)).toEqual([
+    expect(auditEventGroups().map((group) => group.name)).toEqual([
       "Sign-in",
       "Security settings",
       "Members and teams",
@@ -55,13 +57,13 @@ describe("log labels", () => {
       "Email",
       "Data export",
     ]);
-    const grouped = auditEventGroups.flatMap((group) => Object.keys(group.events));
+    const grouped = auditEventGroups().flatMap((group) => Object.keys(group.events));
     expect(new Set(grouped).size).toBe(grouped.length);
-    expect(Object.keys(auditEvents)).toHaveLength(grouped.length);
+    expect(auditEvents).toHaveLength(grouped.length);
   });
 
   it("filters a group by every event in it", () => {
-    const signIn = auditEventGroups.find((group) => group.id === "sign_in");
+    const signIn = auditEventGroups().find((group) => group.id === "sign_in");
 
     expect(signIn && groupFilter(signIn)).toBe(
       "member.signed_in,member.sign_in_failed,member.sign_in_locked,member.sessions_revoked",
@@ -81,7 +83,7 @@ describe("log labels", () => {
   });
 
   it("writes a time with its date", () => {
-    expect(formatTime("2026-11-01T10:00:00Z", "en-US")).toContain("2026");
+    expect(formatTime("2026-11-01T10:00:00Z", "UTC")).toContain("2026");
   });
 });
 

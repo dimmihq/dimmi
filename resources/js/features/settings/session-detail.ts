@@ -3,33 +3,23 @@
  * how long ago it was last used, and where from.
  */
 import type { Session } from "@/lib/api/sessions";
-
-const units: [Intl.RelativeTimeFormatUnit, number][] = [
-  ["day", 86_400_000],
-  ["hour", 3_600_000],
-  ["minute", 60_000],
-];
-
-const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+import { i18n } from "@/lib/i18n";
+import { formatRelative } from "@/lib/i18n/format";
 
 /*
  * lastActive says how long ago the session was used, in the largest
- * unit that fits.
+ * unit that fits, or that it is in use right now.
  */
 export function lastActive(at: string, now = Date.now()): string {
-  const elapsed = now - new Date(at).getTime();
-
-  for (const [unit, size] of units) {
-    if (elapsed >= size) {
-      return `Last active ${relative.format(-Math.floor(elapsed / size), unit)}`;
-    }
+  if (now - new Date(at).getTime() < 60_000) {
+    return i18n.t("settings:sessions.activeJustNow");
   }
 
-  return "Active just now";
+  return i18n.t("settings:sessions.lastActive", { time: formatRelative(at, { now }) });
 }
 
 export function sessionDetail(session: Session, now = Date.now()): string {
-  const seen = session.current ? "This session" : lastActive(session.last_activity_at, now);
+  const seen = session.current ? i18n.t("settings:sessions.current") : lastActive(session.last_activity_at, now);
   const where = [session.ip, session.country].filter(Boolean).join(" · ");
 
   return where ? `${seen} · ${where}` : seen;

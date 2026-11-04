@@ -1,0 +1,140 @@
+{
+  "audit": {
+    "invitation": {
+      "accepted": "Accepted an invitation",
+      "created": "Invited someone",
+      "revoked": "Withdrew an invitation"
+    },
+    "member": {
+      "deactivated": "Deactivated a member",
+      "joined": "Joined the workspace",
+      "left": "Left the workspace",
+      "reactivated": "Reactivated a member",
+      "role_changed": "Changed a role",
+      "signed_in": "Signed in",
+      "sign_in_failed": "Failed to sign in",
+      "sign_in_locked": "Sign-in blocked after failed attempts",
+      "sessions_revoked": "Signed out every other session",
+      "two_factor_enabled": "Turned on two-factor authentication",
+      "two_factor_disabled": "Turned off two-factor authentication",
+      "auth_factor_added": "Added a second factor",
+      "auth_factor_removed": "Removed a second factor",
+      "recovery_code_used": "Used a recovery code",
+      "password_changed": "Changed their password",
+      "password_reset": "Reset their password",
+      "email_changed": "Changed their email",
+      "identity_linked": "Linked a sign-in provider",
+      "identity_unlinked": "Unlinked a sign-in provider",
+      "two_factor_reset_requested": "Sent a two-factor reset link",
+      "two_factor_reset_completed": "Turned off two-factor with a reset link",
+      "sign_in_lock_cleared": "Cleared a sign-in lock"
+    },
+    "ownership": {
+      "transferred": "Handed over ownership"
+    },
+    "team": {
+      "created": "Created a team",
+      "deleted": "Deleted a team",
+      "member_added": "Added someone to a team",
+      "member_removed": "Removed someone from a team",
+      "updated": "Renamed a team"
+    },
+    "token": {
+      "created": "Created an API token",
+      "revoked": "Revoked an API token"
+    },
+    "workspace": {
+      "created": "Created the workspace",
+      "deleted": "Deleted the workspace",
+      "restored": "Restored the workspace",
+      "updated": "Changed workspace settings"
+    },
+    "audit_logs": {
+      "exported": "Exported the audit log"
+    }
+  },
+  "channels": {
+    "app": "App",
+    "automatic": "Automatic",
+    "cli": "Command line",
+    "oauth_client": "Connected app",
+    "personal_token": "API token",
+    "session": "Browser"
+  },
+  "invitations": {
+    "alreadyMember": "Already a member",
+    "cannotInvite": "This address cannot be invited.",
+    "expires": "Expires {{date}}",
+    "roleAdmin": "an admin",
+    "roleMember": "a member",
+    "sent": "Invitation sent"
+  },
+  "language": {
+    "description": "Falls back to the workspace's language.",
+    "followWorkspace": "Workspace default ({{name}})",
+    "label": "Language",
+    "workspaceDescription": "Members who pick no language, and mail to them, use this one.",
+    "workspaceLabel": "Workspace language"
+  },
+  "security": {
+    "auth_factor": {
+      "added": "Added an authenticator",
+      "recovery_code_used": "Used a recovery code",
+      "recovery_codes_regenerated": "Made new recovery codes",
+      "removed": "Removed an authenticator",
+      "renamed": "Renamed an authenticator"
+    },
+    "email": {
+      "change_requested": "Asked to change the email",
+      "changed": "Changed the email"
+    },
+    "identity": {
+      "linked": "Linked a sign-in provider",
+      "unlinked": "Unlinked a sign-in provider"
+    },
+    "login": {
+      "failed": "Failed sign-in",
+      "locked": "Sign-in blocked after failed attempts",
+      "succeeded": "Signed in"
+    },
+    "logout": {
+      "succeeded": "Signed out"
+    },
+    "magic_link": {
+      "used": "Signed in with an email link"
+    },
+    "password": {
+      "changed": "Changed the password",
+      "reset": "Reset the password"
+    },
+    "session": {
+      "revoked": "Signed out a session"
+    },
+    "sessions": {
+      "revoked_others": "Signed out every other session"
+    },
+    "token": {
+      "created": "Created an API token"
+    },
+    "two_factor": {
+      "disabled": "Turned off two-factor authentication",
+      "enabled": "Turned on two-factor authentication",
+      "reset_requested": "An admin sent a two-factor reset link",
+      "reset_completed": "Turned off two-factor with a reset link"
+    }
+  },
+  "sessions": {
+    "activeJustNow": "Active just now",
+    "current": "This session",
+    "lastActive": "Last active {{time}}"
+  },
+  "audit_groups": {
+    "sign_in": "Sign-in",
+    "security": "Security settings",
+    "members": "Members and teams",
+    "tokens": "Tokens and apps",
+    "inbox": "Inbox",
+    "email": "Email",
+    "export": "Data export"
+  }
+}

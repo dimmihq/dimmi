@@ -14,7 +14,10 @@
 package resources
 
 import (
+	"context"
 	"time"
+
+	"github.com/dimmihq/dimmi/framework/i18n"
 
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -24,7 +27,8 @@ import (
 /*
 Me is the caller's picture. Workspace and Member are null when no
 workspace is in play; Workspaces is null for tokens, which cannot
-switch.
+switch. Locale is the language the caller reads in: their own choice,
+else the workspace's, else the one the request was served in.
 */
 type Me struct {
 	Object     string             `json:"object"`
@@ -34,6 +38,7 @@ type Me struct {
 	Auth       Auth               `json:"auth"`
 	Workspaces []WorkspaceSummary `json:"workspaces"`
 	Instance   Instance           `json:"instance"`
+	Locale     string             `json:"locale"`
 }
 
 /*
@@ -83,18 +88,25 @@ type Instance struct {
 /*
 NewMe shapes the caller's picture.
 */
-func NewMe(me auth.Me, instance Instance) Me {
+func NewMe(ctx context.Context, me auth.Me, instance Instance) Me {
 	out := Me{
 		Object:   "me",
 		User:     NewUser(me.Principal.User),
 		Auth:     newAuth(me),
 		Instance: instance,
+		Locale:   i18n.Locale(ctx),
 	}
 
+	var workspaceLocale *string
 	if me.Workspace != nil {
 		workspace := NewWorkspace(*me.Workspace)
 		out.Workspace = &workspace
 		out.Member = newMember(*me.Member, me.Permissions)
+		workspaceLocale = &me.Workspace.Locale
+	}
+
+	if locale, ok := appauth.PreferredLocale(i18n.From(ctx), me.Principal.User.Locale, workspaceLocale); ok {
+		out.Locale = locale
 	}
 
 	if me.Workspaces != nil {

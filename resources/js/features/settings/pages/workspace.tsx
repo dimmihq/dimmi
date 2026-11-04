@@ -38,6 +38,7 @@ import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
 import { type Help, type HelpPowers, helpLabel, helpOffers } from "../members/sign-in-help";
 import { SignInHelpDialogs } from "../members/two-factor-help-dialog";
+import { WorkspaceLanguageRow } from "../preferences/language-row";
 import { ZonePicker } from "../preferences/zone-picker";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
@@ -145,7 +146,8 @@ export function WorkspaceSettings() {
         ) : null}
       </Section>
       <Failure error={save.error} />
-      <Section title="Region" description="Members fall back to this time zone.">
+      <Section title="Language and region" description="Members and customers fall back to these.">
+        <WorkspaceLanguageRow workspace={me.workspace.id} />
         <Row label="Time zone">
           {workspace ? (
             <ZonePicker

@@ -3,8 +3,10 @@
  * origin with the session cookie, so the server's cross-origin
  * protection lets them through, and every failure comes back as an
  * ApiError carrying the server's stable code and its message, already in
- * the reader's language.
+ * the reader's language: every request names the language the app reads
+ * in, so the server writes its messages in the same one.
  */
+import { activeLocale, i18n } from "@/lib/i18n";
 
 const base = "/api/v1";
 
@@ -50,7 +52,7 @@ function toApiError(status: number, body: ErrorBody | null): ApiError {
   return new ApiError(
     status,
     body?.code ?? "unexpected_response",
-    body?.message ?? "Something went wrong. Try again.",
+    body?.message ?? i18n.t("common:errors.unexpected"),
     fields,
   );
 }
@@ -76,7 +78,11 @@ export async function request<T>(
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { ...options.headers, Accept: "application/json" };
+  const headers: Record<string, string> = {
+    ...options.headers,
+    Accept: "application/json",
+    "Accept-Language": activeLocale(),
+  };
   const isForm = body instanceof FormData;
   if (body !== undefined && !isForm) {
     headers["Content-Type"] = "application/json";
@@ -118,7 +124,7 @@ export interface Page<T> {
  * the next page the server puts beside the data.
  */
 export async function requestPage<T>(path: string, options: RequestOptions = {}): Promise<Page<T>> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: "application/json", "Accept-Language": activeLocale() };
   if (options.workspace) {
     headers["Dimmi-Workspace"] = options.workspace;
   }

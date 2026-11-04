@@ -80,7 +80,7 @@ DAVE=dave.$RUN@example.com
 
 | Flow | Command | Expect |
 |---|---|---|
-| Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true` |
+| Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true`, `locales` `[{"code":"en","name":"English"}]` |
 | Common password | `r weak -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada\",\"email\":\"$ADA\",\"password\":\"password123\"}"` | 422, message "The password is too common. Choose another one." |
 | Sign up | `r signup -c a.jar -b a.jar -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada Lovelace\",\"email\":\"$ADA\",\"password\":\"analytical-engine-1843\",\"workspace_name\":\"Acme\"}"` | 201, `dimmi_session` and `dimmi_device` cookies, HttpOnly, SameSite=Lax, `email_verified: false` |
 | Email taken, any case | same body with the email in capitals | 422 `email_taken` |
@@ -531,6 +531,9 @@ needs no workspace header.
 | Read profile | `r user -b a.jar $B/user` | 200 `user`, `avatar_url` null, `timezone` null |
 | Rename | `r rename -b a.jar -X PATCH -H "$O" -H "$J" $B/user -d '{"name":"Ada L"}'` | 200, `name` "Ada L"; `user.updated` on each workspace channel |
 | Time zone | same route with `{"timezone":"Asia/Tokyo"}`, `{"timezone":"Mars/Base"}`, `{"timezone":null}` | 200 set; 422 `errors.timezone`; 200 null |
+| Language | same route with `{"locale":"en"}`, `{"locale":"fr"}` (not in `app.locales`), `{"locale":null}` | 200 `locale` "en"; 422 `errors.locale`; 200 `locale` null |
+| Resolved language | `r me -b a.jar -H "Dimmi-Workspace: $WS" $B/me` after `{"locale":null}` | 200, `user.locale` null, `locale` the workspace's language |
+| Messages follow the person | start the server with `DIMMI_APP__LOCALES=en,en-XA` after `make pseudo-locale build`, `PATCH /user {"locale":"en-XA"}`, then `{"timezone":"Mars/Base"}` with `Accept-Language: en` | 422 with an accented `errors.timezone` message and `Content-Language: en-XA`; `/auth/config` lists `en-XA` second |
 | Upload picture | `r pic -b a.jar -X PUT -H "$O" -F avatar=@logo.png $B/user/avatar`, then `curl -I $HOST$(jq -r .data.avatar_url pic.json)` | 200 with `avatar_url` `/avatars/<uuid>.png`; 200 `image/png`, `immutable`, `nosniff` |
 | Refuse non-picture | same with a text file | 422 `invalid_avatar` |
 | Remove picture | `r nopic -b a.jar -X DELETE -H "$O" $B/user/avatar` | 204; the old address 404 once the worker ran |
@@ -548,7 +551,8 @@ needs no workspace header.
 
 Browser: `/d/settings/profile`, `/d/settings/security`, `/d/settings/preferences`, `/d/settings/workspace` and
 `/email/confirm` from the mailed link, in light and dark. Every control on them does something; there is no
-Notifications page in settings yet.
+Notifications page in settings yet. The Language rows on Preferences and on the workspace page show only when
+`app.locales` lists more than one language; picking one changes the page's text and `<html lang>` without a reload.
 
 ## Sign-in methods and sign-in help
 

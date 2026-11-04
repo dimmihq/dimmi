@@ -36,10 +36,7 @@ export function AuditEntryDetail({
     <Drawer isOpen={entry !== null} onOpenChange={(open) => !open && onClose()} size="lg">
       {entry ? (
         <>
-          <DrawerHeader
-            title={auditEventLabel(entry.event)}
-            description={formatTime(entry.created_at, undefined, zone)}
-          />
+          <DrawerHeader title={auditEventLabel(entry.event)} description={formatTime(entry.created_at, zone)} />
           <DrawerBody>
             <dl aria-label="Entry details" className="flex flex-col rounded-2xl bg-background-secondary-default px-3">
               <Fact label="Event" value={entry.event} code />

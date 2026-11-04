@@ -3,6 +3,8 @@
  * however they are separated, and saying what happened to each one.
  */
 import type { InvitationResult } from "@/lib/api/invitations";
+import { i18n } from "@/lib/i18n";
+import { formatDate } from "@/lib/i18n/format";
 
 /*
  * maxInvitations is how many addresses one batch may carry; the server
@@ -49,11 +51,11 @@ export function outcome(result: InvitationResult): Outcome {
     case "created":
     case "resent":
     case "reactivation":
-      return { tone: "sent", text: "Invitation sent" };
+      return { tone: "sent", text: i18n.t("settings:invitations.sent") };
     case "already_member":
-      return { tone: "skipped", text: "Already a member" };
+      return { tone: "skipped", text: i18n.t("settings:invitations.alreadyMember") };
     default:
-      return { tone: "failed", text: result.error?.message ?? "This address cannot be invited." };
+      return { tone: "failed", text: result.error?.message ?? i18n.t("settings:invitations.cannotInvite") };
   }
 }
 
@@ -62,7 +64,7 @@ export function outcome(result: InvitationResult): Outcome {
  * member" or "an admin".
  */
 export function roleName(role: string): string {
-  return role === "admin" ? "an admin" : "a member";
+  return role === "admin" ? i18n.t("settings:invitations.roleAdmin") : i18n.t("settings:invitations.roleMember");
 }
 
 /*
@@ -70,10 +72,10 @@ export function roleName(role: string): string {
  * reader's language.
  */
 export function expiryLabel(iso: string, locale?: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
+  const date = formatDate(iso, { locale });
+  if (date === "") {
     return "";
   }
 
-  return `Expires ${new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date)}`;
+  return i18n.t("settings:invitations.expires", { date });
 }
