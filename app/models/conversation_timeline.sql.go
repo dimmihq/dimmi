@@ -132,6 +132,7 @@ func (q *Queries) FindMessageByDedupeKey(ctx context.Context, arg FindMessageByD
 const latestConversationMessage = `-- name: LatestConversationMessage :one
 SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event' AND deleted_at IS NULL
+  AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1
 `
@@ -179,7 +180,7 @@ func (q *Queries) LatestConversationMessage(ctx context.Context, arg LatestConve
 const latestForeignMessage = `-- name: LatestForeignMessage :one
 SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event'
-  AND deleted_at IS NULL AND NOT (author_type = 'member' AND author_id IS NOT DISTINCT FROM $3::uuid)
+  AND deleted_at IS NULL AND undone_at IS NULL AND NOT (author_type = 'member' AND author_id IS NOT DISTINCT FROM $3::uuid)
 ORDER BY id DESC
 LIMIT 1
 `
@@ -362,7 +363,7 @@ func (q *Queries) ListTimeline(ctx context.Context, arg ListTimelineParams) ([]M
 const messagesAfter = `-- name: MessagesAfter :many
 SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event'
-  AND deleted_at IS NULL AND id > $3
+  AND deleted_at IS NULL AND undone_at IS NULL AND id > $3
 ORDER BY id
 LIMIT 20
 `
