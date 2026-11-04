@@ -11,6 +11,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { realtimeKeys } from "@/lib/realtime/keys";
 
 import { request } from "./client";
+import type { Tag } from "./tags";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
 
@@ -60,6 +61,7 @@ export interface Conversation {
   assignee: Named | null;
   team: Named | null;
   last_message: MessageSummary | null;
+  tags: Tag[];
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +76,7 @@ export interface TimelineEvent {
   reason?: string;
   until?: string;
   priority?: boolean;
+  tags?: string[];
   to?: { member: Named | null; team: Named | null };
   changes?: Record<string, [unknown, unknown]>;
 }
@@ -109,6 +112,8 @@ export interface ConversationChanges {
   snooze_preset?: "later_today" | "tomorrow" | "next_week" | "one_week";
   priority?: boolean;
   unread?: boolean;
+  add_tags?: string[];
+  remove_tags?: string[];
 }
 
 /*

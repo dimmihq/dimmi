@@ -291,6 +291,23 @@ C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@exam
 | Other workspace | Carol: `GET $B/conversations/$C` with her own workspace | 404 `not_found` |
 | In a browser | open `$W/d/inbox/unassigned`, open the conversation, reply, add a note, assign to me, mark as done, search | each change shows in the thread as a message or an event line; the list and counts follow |
 
+### Customer records
+
+Same session as the shared inbox above, `C` the conversation Ann started:
+
+| Flow | Command | Expect |
+|---|---|---|
+| Tag a conversation | `r tg -b a.jar -X POST -H "$O" -H "$J" -H "$H" $B/conversations/$C/tags -d '{"tags":["Billing","billing"]}'` | 200, one tag `Billing` in `data.tags`; the timeline gains a `conversation.tagged` event |
+| Tag vocabulary | `GET "$B/tags?q=bil&include=counts"` | 200, `Billing` with `counts.conversations: 1`; Bob `PATCH $B/tags/{id}` 403, `POST $B/tags {"name":"VIP"}` 201 |
+| Duplicate name | `POST $B/tags {"name":"BILLING"}` | 409 `tag_exists`; `{"name":"x","color":"red"}` 422 on `color` |
+| Filter by tag | `GET "$B/conversations?filter[view]=all&filter[tag]={id}"`, `…&filter[tag_any]={id},{other}` | Ann's conversation; `filter[tag]=bogus` 400 `invalid_filter` |
+| Delete a tag | `DELETE $B/tags/{id}` | 204; the conversation's `tags` is empty; again 404 |
+| Contact tags and notes | `PATCH $B/contacts/{ann} {"add_tags":["vip"],"notes":"Prefers email"}` | 200 with the tag and notes; `GET "$B/contacts?filter[tag]={vip}"` lists Ann only |
+| Upsert a user | `POST "$B/contacts?upsert=true" {"external_id":"user_42","email":"Bob@Acme.dev"}`, then again with `"name":"Robert"` | 201 `meta.upserted: created`, `kind: user`, email lower-cased; then 200 `updated`, same id |
+| Duplicates | `GET $B/contacts/{ann}/duplicates` after adding a contact with Ann's phone | the other contact with `reasons: ["same_phone"]` |
+| Companies | `POST $B/companies {"name":"Acme","domain":"acme.dev"}`, link Ann with `PATCH $B/contacts/{ann} {"company_id":…}` | 201; `GET $B/companies/{id}/contacts` and `/conversations` list Ann and her conversation |
+| Delete a company | Bob `DELETE $B/companies/{id}` 403; Ada again | 204; Ann's `company` is `null` |
+
 ### Two-factor authentication
 
 Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an

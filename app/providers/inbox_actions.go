@@ -67,5 +67,7 @@ func bootInbox(a *app.App) error {
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
+	bootRecords(a)
+
 	return queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels})
 }

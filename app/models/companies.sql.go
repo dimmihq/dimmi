@@ -13,10 +13,52 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const companiesByIDs = `-- name: CompaniesByIDs :many
+SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes FROM companies
+WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND deleted_at IS NULL
+`
+
+type CompaniesByIDsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// CompaniesByIDs returns the live companies of the workspace with the ids.
+func (q *Queries) CompaniesByIDs(ctx context.Context, arg CompaniesByIDsParams) ([]Company, error) {
+	rows, err := q.db.Query(ctx, companiesByIDs, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Company
+	for rows.Next() {
+		var i Company
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ExternalID,
+			&i.Name,
+			&i.Domain,
+			&i.CustomAttributes,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies (workspace_id, external_id, name, domain, custom_attributes, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $6)
-RETURNING id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes
 `
 
 type CreateCompanyParams struct {
@@ -50,6 +92,7 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
@@ -97,7 +140,7 @@ func (q *Queries) DetachCompanyContacts(ctx context.Context, arg DetachCompanyCo
 }
 
 const findCompany = `-- name: FindCompany :one
-SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at FROM companies WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes FROM companies WHERE workspace_id = $1 AND id = $2
 `
 
 type FindCompanyParams struct {
@@ -120,12 +163,13 @@ func (q *Queries) FindCompany(ctx context.Context, arg FindCompanyParams) (Compa
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const findCompanyByDomain = `-- name: FindCompanyByDomain :one
-SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at FROM companies
+SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes FROM companies
 WHERE workspace_id = $1 AND domain = $2 AND deleted_at IS NULL
 ORDER BY created_at, id
 LIMIT 1
@@ -152,12 +196,13 @@ func (q *Queries) FindCompanyByDomain(ctx context.Context, arg FindCompanyByDoma
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const findCompanyByExternalID = `-- name: FindCompanyByExternalID :one
-SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at FROM companies
+SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes FROM companies
 WHERE workspace_id = $1 AND external_id = $2 AND deleted_at IS NULL
 `
 
@@ -181,43 +226,55 @@ func (q *Queries) FindCompanyByExternalID(ctx context.Context, arg FindCompanyBy
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const listCompanies = `-- name: ListCompanies :many
-SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at FROM companies
-WHERE workspace_id = $1
-  AND deleted_at IS NULL
+SELECT c.id, c.workspace_id, c.external_id, c.name, c.domain, c.custom_attributes, c.deleted_at, c.created_at, c.updated_at, c.notes FROM companies AS c
+WHERE c.workspace_id = $1
+  AND c.deleted_at IS NULL
   AND (
       $2::text IS NULL
-      OR strpos(lower(name), lower($2::text)) > 0
-      OR strpos(lower(coalesce(domain::text, '')), lower($2::text)) > 0
+      OR strpos(lower(c.name), lower($2::text)) > 0
+      OR strpos(lower(coalesce(c.domain::text, '')), lower($2::text)) > 0
   )
   AND (
-      $3::uuid IS NULL
-      OR (created_at, id) < ($4::timestamptz, $3::uuid)
+      coalesce(cardinality($3::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.company_id FROM company_tag AS ct
+          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($3::uuid[])
+          GROUP BY ct.company_id
+          HAVING count(*) = cardinality($3::uuid[])
+      )
   )
-ORDER BY created_at DESC, id DESC
-LIMIT $5
+  AND (
+      $4::uuid IS NULL
+      OR (c.created_at, c.id) < ($5::timestamptz, $4::uuid)
+  )
+ORDER BY c.created_at DESC, c.id DESC
+LIMIT $6::bigint
 `
 
 type ListCompaniesParams struct {
 	WorkspaceID     ids.UUID   `json:"workspace_id"`
 	Search          *string    `json:"search"`
+	TagIds          []ids.UUID `json:"tag_ids"`
 	BeforeID        *ids.UUID  `json:"before_id"`
 	BeforeCreatedAt *time.Time `json:"before_created_at"`
-	RowLimit        int32      `json:"row_limit"`
+	RowLimit        int64      `json:"row_limit"`
 }
 
 // ListCompanies returns a page of the workspace's live companies, newest
-// first, narrowed to those whose name or domain contains the search
-// when one is given. A page after the first passes the created_at and id
-// of the last company it saw.
+// first, narrowed to those carrying every tag given and whose name or
+// domain contains the search when one is given. A page after the first
+// passes the created_at and id of the last company it saw.
 func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([]Company, error) {
 	rows, err := q.db.Query(ctx, listCompanies,
 		arg.WorkspaceID,
 		arg.Search,
+		arg.TagIds,
 		arg.BeforeID,
 		arg.BeforeCreatedAt,
 		arg.RowLimit,
@@ -239,6 +296,7 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -251,7 +309,7 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 }
 
 const listCompanyContacts = `-- name: ListCompanyContacts :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes FROM contacts
 WHERE workspace_id = $1
   AND company_id = $2::uuid
   AND deleted_at IS NULL
@@ -261,7 +319,7 @@ WHERE workspace_id = $1
       OR (created_at, id) < ($4::timestamptz, $3::uuid)
   )
 ORDER BY created_at DESC, id DESC
-LIMIT $5
+LIMIT $5::bigint
 `
 
 type ListCompanyContactsParams struct {
@@ -269,7 +327,7 @@ type ListCompanyContactsParams struct {
 	CompanyID       ids.UUID   `json:"company_id"`
 	BeforeID        *ids.UUID  `json:"before_id"`
 	BeforeCreatedAt *time.Time `json:"before_created_at"`
-	RowLimit        int32      `json:"row_limit"`
+	RowLimit        int64      `json:"row_limit"`
 }
 
 // ListCompanyContacts returns a page of the live contacts that work for
@@ -314,6 +372,7 @@ func (q *Queries) ListCompanyContacts(ctx context.Context, arg ListCompanyContac
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -325,12 +384,43 @@ func (q *Queries) ListCompanyContacts(ctx context.Context, arg ListCompanyContac
 	return items, nil
 }
 
+const lockCompany = `-- name: LockCompany :one
+SELECT id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes FROM companies
+WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+type LockCompanyParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// LockCompany returns the live company and holds its row until the
+// transaction ends.
+func (q *Queries) LockCompany(ctx context.Context, arg LockCompanyParams) (Company, error) {
+	row := q.db.QueryRow(ctx, lockCompany, arg.WorkspaceID, arg.ID)
+	var i Company
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ExternalID,
+		&i.Name,
+		&i.Domain,
+		&i.CustomAttributes,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const updateCompany = `-- name: UpdateCompany :one
 UPDATE companies
 SET external_id = $1, name = $2, domain = $3, custom_attributes = $4,
-    updated_at = $5
-WHERE workspace_id = $6 AND id = $7 AND deleted_at IS NULL
-RETURNING id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at
+    notes = $5, updated_at = $6
+WHERE workspace_id = $7 AND id = $8 AND deleted_at IS NULL
+RETURNING id, workspace_id, external_id, name, domain, custom_attributes, deleted_at, created_at, updated_at, notes
 `
 
 type UpdateCompanyParams struct {
@@ -338,6 +428,7 @@ type UpdateCompanyParams struct {
 	Name             string          `json:"name"`
 	Domain           *string         `json:"domain"`
 	CustomAttributes json.RawMessage `json:"custom_attributes"`
+	Notes            *string         `json:"notes"`
 	Now              time.Time       `json:"now"`
 	WorkspaceID      ids.UUID        `json:"workspace_id"`
 	ID               ids.UUID        `json:"id"`
@@ -351,6 +442,7 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		arg.Name,
 		arg.Domain,
 		arg.CustomAttributes,
+		arg.Notes,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -366,6 +458,7 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }

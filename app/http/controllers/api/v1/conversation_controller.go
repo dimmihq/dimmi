@@ -245,6 +245,7 @@ func (c *ConversationController) changes(
 		return ch, err
 	}
 
+	ch.AddTags, ch.RemoveTags = tagRefs(c.IDs, b.AddTags), decodeTagIDs(c.IDs, b.RemoveTags)
 	ch.Attributes.InboxID, err = decodeField(c.IDs, models.PrefixInbox, b.InboxID, exceptions.ErrInboxNotFound)
 
 	return ch, err

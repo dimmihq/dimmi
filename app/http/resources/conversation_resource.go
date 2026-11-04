@@ -44,6 +44,7 @@ type Conversation struct {
 	Assignee               *MemberSummary  `json:"assignee"`
 	Team                   *Named          `json:"team"`
 	LastMessage            *MessageSummary `json:"last_message"`
+	Tags                   []Tag           `json:"tags"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
 }
@@ -83,7 +84,7 @@ func NewConversation(l conversations.Loaded) Conversation {
 		FirstCustomerMessageAt: c.FirstCustomerMessageAt, FirstReplyAt: c.FirstReplyAt, ClosedAt: c.ClosedAt,
 		MessageCount: c.MessageCount, Channel: NewChannel(l.Connection),
 		Inbox:   Named{ID: models.PublicID(models.PrefixInbox, l.Inbox.ID), Object: "inbox", Name: l.Inbox.Name},
-		Contact: NewContactSummary(l.Contact), CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
+		Contact: NewContactSummary(l.Contact), Tags: NewTags(l.Tags), CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
 
 	if l.Assignee != nil {

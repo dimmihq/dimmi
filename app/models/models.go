@@ -89,6 +89,16 @@ type Company struct {
 	DeletedAt        *time.Time      `json:"deleted_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
+	Notes            *string         `json:"notes"`
+}
+
+type CompanyTag struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	CompanyID     ids.UUID  `json:"company_id"`
+	TagID         ids.UUID  `json:"tag_id"`
+	CreatedByType string    `json:"created_by_type"`
+	CreatedByID   *ids.UUID `json:"created_by_id"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Contact struct {
@@ -115,6 +125,7 @@ type Contact struct {
 	DeletedAt            *time.Time              `json:"deleted_at"`
 	CreatedAt            time.Time               `json:"created_at"`
 	UpdatedAt            time.Time               `json:"updated_at"`
+	Notes                *string                 `json:"notes"`
 }
 
 type ContactIdentity struct {
@@ -126,6 +137,15 @@ type ContactIdentity struct {
 	Verified    bool      `json:"verified"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type ContactTag struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	ContactID     ids.UUID  `json:"contact_id"`
+	TagID         ids.UUID  `json:"tag_id"`
+	CreatedByType string    `json:"created_by_type"`
+	CreatedByID   *ids.UUID `json:"created_by_id"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Conversation struct {
@@ -182,6 +202,7 @@ type ConversationTag struct {
 	CreatedByType  string    `json:"created_by_type"`
 	CreatedByID    *ids.UUID `json:"created_by_id"`
 	CreatedAt      time.Time `json:"created_at"`
+	MessageID      *ids.UUID `json:"message_id"`
 }
 
 type EmailAddress struct {

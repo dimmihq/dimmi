@@ -63,6 +63,7 @@ func (b *Broadcaster) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, b.messageEvent)
 	events.Listen(d, events.AfterCommit, b.conversationEvent)
 	events.Listen(d, events.AfterCommit, b.contactTyping)
+	events.Listen(d, events.AfterCommit, b.workspaceEvent)
 	b.listenAccounts(d)
 }
 
@@ -121,6 +122,14 @@ func (b *Broadcaster) conversationEvent(ctx context.Context, e appevents.Convers
 
 	return b.publishOrRefer(ctx, ConversationChannel(e.Conversation()), message(e, full),
 		reference(models.PrefixConversation, "conversation", e.Conversation(), full))
+}
+
+/*
+workspaceEvent reaches everyone viewing the workspace, with what the
+event carries.
+*/
+func (b *Broadcaster) workspaceEvent(ctx context.Context, e appevents.WorkspaceEvent) error {
+	return b.publish(ctx, []string{WorkspaceChannel(e.Header().WorkspaceID)}, message(e, e.BroadcastData()))
 }
 
 /*

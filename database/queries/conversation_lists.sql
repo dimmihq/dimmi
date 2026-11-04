@@ -22,8 +22,30 @@ WHERE c.workspace_id = @workspace_id
   AND (sqlc.narg(team_id)::uuid IS NULL OR c.assignee_team_id = sqlc.narg(team_id)::uuid)
   AND (sqlc.narg(inbox_id)::uuid IS NULL OR c.inbox_id = sqlc.narg(inbox_id)::uuid)
   AND (sqlc.narg(contact_id)::uuid IS NULL OR c.contact_id = sqlc.narg(contact_id)::uuid)
+  AND (
+      sqlc.narg(company_id)::uuid IS NULL
+      OR c.contact_id IN (
+          SELECT co.id FROM contacts co
+          WHERE co.workspace_id = @workspace_id AND co.company_id = sqlc.narg(company_id)::uuid
+      )
+  )
   AND (sqlc.narg(priority)::boolean IS NULL OR c.priority = sqlc.narg(priority)::boolean)
   AND (sqlc.narg(number)::bigint IS NULL OR c.number = sqlc.narg(number)::bigint)
+  AND (
+      coalesce(cardinality(@tag_ids::uuid[]), 0) = 0
+      OR (
+          SELECT count(*) FROM conversation_tag ct
+          WHERE ct.workspace_id = c.workspace_id AND ct.conversation_id = c.id AND ct.tag_id = ANY (@tag_ids::uuid[])
+      ) = cardinality(@tag_ids::uuid[])
+  )
+  AND (
+      coalesce(cardinality(@any_tag_ids::uuid[]), 0) = 0
+      OR EXISTS (
+          SELECT 1 FROM conversation_tag ct
+          WHERE ct.workspace_id = c.workspace_id AND ct.conversation_id = c.id
+            AND ct.tag_id = ANY (@any_tag_ids::uuid[])
+      )
+  )
   AND (
       NOT @only_unread::boolean
       OR EXISTS (

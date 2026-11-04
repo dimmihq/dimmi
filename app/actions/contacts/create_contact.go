@@ -36,6 +36,7 @@ import (
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/attributes"
 )
 
 /*
@@ -131,7 +132,7 @@ func Create(ctx context.Context, tx *database.Tx, now time.Time, n NewContact) (
 		}
 	}
 
-	attrs, keys, err := MergeAttributes(nil, f.CustomAttributes)
+	attrs, keys, err := attributes.Merge(nil, f.CustomAttributes)
 	if err != nil {
 		return models.Contact{}, err
 	}
@@ -167,11 +168,10 @@ func trust(ctx context.Context, q *models.Queries, c models.Contact, keys []stri
 		return c, nil
 	}
 
-	trusted, err := q.UpdateContact(ctx, models.UpdateContactParams{
-		Kind: c.Kind, ExternalID: c.ExternalID, Email: c.Email, Name: c.Name, Phone: c.Phone,
-		CustomAttributes: c.CustomAttributes, TrustedAttributeKeys: keys, BlockedAt: c.BlockedAt, Now: c.UpdatedAt,
-		WorkspaceID: c.WorkspaceID, ID: c.ID,
-	})
+	params := paramsOf(c, c.UpdatedAt)
+	params.TrustedAttributeKeys = keys
+
+	trusted, err := q.UpdateContact(ctx, params)
 	if err != nil {
 		return c, fmt.Errorf("trust custom attributes: %w", err)
 	}

@@ -7,7 +7,8 @@
 | (mine, unassigned, all, member:mem_..., spam, mentions),
 | filter[status] (a comma list or any), filter[inbox],
 | filter[assignee] (mem_..., me or none), filter[team],
-| filter[contact], filter[priority], filter[unread], q, and sort
+| filter[contact], filter[company], filter[priority], filter[unread], filter[tag] (has
+| all of up to 5 tags), filter[tag_any] (has one of up to 20), q, and sort
 | (-last_message_at by default, last_message_at, -created_at,
 | created_at). A cursor carries a hash of the filters and sort it was
 | made for, so a cursor taken to another list is refused rather than
@@ -37,8 +38,11 @@ conversationAllow is what the conversation list accepts.
 */
 func conversationAllow() pagination.Allow {
 	return pagination.Allow{
-		Filters: []string{"view", "status", "inbox", "assignee", "team", "contact", "priority", "unread"},
-		Sorts:   []string{"last_message_at", "created_at"},
+		Filters: []string{
+			"view", "status", "inbox", "assignee", "team", "contact", "priority", "unread", "tag", "tag_any",
+			"company",
+		},
+		Sorts: []string{"last_message_at", "created_at"},
 	}
 }
 
@@ -172,7 +176,19 @@ func (p filterParser) refs(f *conversations.Filters) error {
 		return err
 	}
 
+	if f.TagIDs, err = p.tags("tag", maxTagFilter); err != nil {
+		return err
+	}
+
+	if f.AnyTagIDs, err = p.tags("tag_any", maxAnyTagFilter); err != nil {
+		return err
+	}
+
 	if f.ContactID, err = p.ref("contact", models.PrefixContact); err != nil {
+		return err
+	}
+
+	if f.CompanyID, err = p.ref("company", models.PrefixCompany); err != nil {
 		return err
 	}
 
@@ -188,6 +204,13 @@ func (p filterParser) refs(f *conversations.Filters) error {
 	}
 
 	return p.assignee(f)
+}
+
+/*
+tags reads a filter naming up to limit tags.
+*/
+func (p filterParser) tags(name string, limit int) ([]ids.UUID, error) {
+	return decodeTagFilter(p.ids, p.filters[name], limit)
 }
 
 /*

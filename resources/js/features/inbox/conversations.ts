@@ -87,6 +87,13 @@ export function eventText(event: TimelineEvent): string {
     return event.priority ? `${actor} marked the conversation as a priority` : `${actor} removed the priority`;
   }
 
+  if (event.name === "conversation.tagged") {
+    return `${actor} tagged the conversation ${(event.tags ?? []).join(", ")}`;
+  }
+  if (event.name === "conversation.untagged") {
+    return `${actor} removed the tag ${(event.tags ?? []).join(", ")}`;
+  }
+
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
 }
 

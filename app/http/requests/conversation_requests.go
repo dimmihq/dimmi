@@ -77,6 +77,8 @@ type UpdateConversationRequest struct {
 		Priority     *bool      `json:"priority,omitempty"`
 		InboxID      *string    `json:"inbox_id,omitempty"`
 		Unread       *bool      `json:"unread,omitempty"`
+		AddTags      []string   `json:"add_tags,omitempty"      validate:"omitempty,max=50,dive,min=1,max=100"`
+		RemoveTags   []string   `json:"remove_tags,omitempty"   validate:"omitempty,max=50"`
 	}
 	RawBody []byte
 }

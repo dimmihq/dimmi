@@ -1,6 +1,6 @@
 /*
- * How conversations are organised: the inboxes they land in, the tags
- * teammates put on them, and the replies the team saves for reuse.
+ * How conversations are organised: the inboxes they land in and the
+ * replies the team saves for reuse.
  */
 import { RiChatQuoteLine, RiInbox2Line } from "@remixicon/react";
 
@@ -44,36 +44,6 @@ export function InboxesSettings() {
         <Row label="Name in seen receipts" description="Show customers which teammate read their message.">
           <Toggle label="Name in seen receipts" />
         </Row>
-      </Section>
-    </SettingsPage>
-  );
-}
-
-const tags: [string, "blue" | "rose" | "lime" | "yellow" | "purple", number][] = [
-  ["Bug", "rose", 42],
-  ["Billing", "yellow", 18],
-  ["Sign-in", "blue", 11],
-  ["Feature request", "purple", 7],
-  ["VIP", "lime", 3],
-];
-
-export function TagsSettings() {
-  return (
-    <SettingsPage title="Tags" description="Any teammate can create tags; admins rename, recolour and delete them.">
-      <Section title="Tags" action={<Action>New tag</Action>}>
-        {tags.map(([name, color, count]) => (
-          <Row
-            key={name}
-            label={
-              <Chip variant="caption" color={color}>
-                {name}
-              </Chip>
-            }
-          >
-            <span className="text-body-2-regular text-text-tertiary">{count} conversations</span>
-            <Action>Edit</Action>
-          </Row>
-        ))}
       </Section>
     </SettingsPage>
   );

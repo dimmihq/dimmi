@@ -39,8 +39,9 @@ const (
 Filters narrow a list. View is one of the views, with ViewMember naming
 the member. Statuses are the statuses shown, none meaning open, unless
 AnyStatus. Assignee narrows to one member's conversations and
-Unassigned to nobody's. The pointers narrow only when set. Search is
-what the caller typed.
+Unassigned to nobody's. The pointers narrow only when set. TagIDs keeps
+conversations carrying every tag and AnyTagIDs those carrying one of
+them. Search is what the caller typed.
 */
 type Filters struct {
 	View       string
@@ -52,8 +53,11 @@ type Filters struct {
 	TeamID     *ids.UUID
 	InboxID    *ids.UUID
 	ContactID  *ids.UUID
+	CompanyID  *ids.UUID
 	Priority   *bool
 	Unread     bool
+	TagIDs     []ids.UUID
+	AnyTagIDs  []ids.UUID
 	Search     string
 }
 
@@ -83,7 +87,8 @@ func listParams(m authz.Membership, f Filters, s Sort) (models.FilterConversatio
 	p := models.FilterConversationsParams{
 		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, SortCreated: s.Created, Descending: s.Descending,
 		Statuses: f.Statuses, Unassigned: f.Unassigned, AssigneeID: f.Assignee, TeamID: f.TeamID,
-		InboxID: f.InboxID, ContactID: f.ContactID, Priority: f.Priority, OnlyUnread: f.Unread,
+		InboxID: f.InboxID, ContactID: f.ContactID, CompanyID: f.CompanyID, Priority: f.Priority, OnlyUnread: f.Unread,
+		TagIds: f.TagIDs, AnyTagIds: f.AnyTagIDs,
 	}
 
 	if f.View == ViewMentions {

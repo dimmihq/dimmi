@@ -145,65 +145,87 @@ WHERE c.workspace_id = $2
   AND ($7::uuid IS NULL OR c.assignee_team_id = $7::uuid)
   AND ($8::uuid IS NULL OR c.inbox_id = $8::uuid)
   AND ($9::uuid IS NULL OR c.contact_id = $9::uuid)
-  AND ($10::boolean IS NULL OR c.priority = $10::boolean)
-  AND ($11::bigint IS NULL OR c.number = $11::bigint)
   AND (
-      NOT $12::boolean
+      $10::uuid IS NULL
+      OR c.contact_id IN (
+          SELECT co.id FROM contacts co
+          WHERE co.workspace_id = $2 AND co.company_id = $10::uuid
+      )
+  )
+  AND ($11::boolean IS NULL OR c.priority = $11::boolean)
+  AND ($12::bigint IS NULL OR c.number = $12::bigint)
+  AND (
+      coalesce(cardinality($13::uuid[]), 0) = 0
+      OR (
+          SELECT count(*) FROM conversation_tag ct
+          WHERE ct.workspace_id = c.workspace_id AND ct.conversation_id = c.id AND ct.tag_id = ANY ($13::uuid[])
+      ) = cardinality($13::uuid[])
+  )
+  AND (
+      coalesce(cardinality($14::uuid[]), 0) = 0
+      OR EXISTS (
+          SELECT 1 FROM conversation_tag ct
+          WHERE ct.workspace_id = c.workspace_id AND ct.conversation_id = c.id
+            AND ct.tag_id = ANY ($14::uuid[])
+      )
+  )
+  AND (
+      NOT $15::boolean
       OR EXISTS (
           SELECT 1 FROM messages m
           WHERE m.workspace_id = c.workspace_id
             AND m.conversation_id = c.id
             AND m.type <> 'event'
             AND m.deleted_at IS NULL
-            AND NOT (m.author_type = 'member' AND m.author_id IS NOT DISTINCT FROM $13::uuid)
+            AND NOT (m.author_type = 'member' AND m.author_id IS NOT DISTINCT FROM $16::uuid)
             AND m.id > coalesce((
                 SELECT r.last_read_message_id FROM conversation_reads r
                 WHERE r.workspace_id = c.workspace_id AND r.conversation_id = c.id
-                  AND r.workspace_member_id = $13::uuid
+                  AND r.workspace_member_id = $16::uuid
             ), '00000000-0000-0000-0000-000000000000'::uuid)
       )
   )
   AND (
-      $14::text IS NULL
-      OR numnode(to_tsquery('english', $14::text)) = 0
-      OR to_tsvector('english', coalesce(c.subject, '')) @@ to_tsquery('english', $14::text)
+      $17::text IS NULL
+      OR numnode(to_tsquery('english', $17::text)) = 0
+      OR to_tsvector('english', coalesce(c.subject, '')) @@ to_tsquery('english', $17::text)
       OR c.id IN (
           SELECT m.conversation_id FROM messages m
           WHERE m.workspace_id = $2
             AND m.deleted_at IS NULL
             AND m.type <> 'event'
-            AND m.search @@ to_tsquery('english', $14::text)
+            AND m.search @@ to_tsquery('english', $17::text)
       )
       OR c.contact_id IN (
           SELECT ct.id FROM contacts ct
           WHERE ct.workspace_id = $2
             AND ct.deleted_at IS NULL
-            AND ct.search @@ to_tsquery('simple', $14::text)
+            AND ct.search @@ to_tsquery('simple', $17::text)
       )
   )
   AND (
-      $15::uuid IS NULL
+      $18::uuid IS NULL
       OR (
-          $16::boolean
+          $19::boolean
           AND ((CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END),
-              c.id) < ($17::timestamptz, $15::uuid)
+              c.id) < ($20::timestamptz, $18::uuid)
       )
       OR (
-          NOT $16::boolean
+          NOT $19::boolean
           AND ((CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END),
-              c.id) > ($17::timestamptz, $15::uuid)
+              c.id) > ($20::timestamptz, $18::uuid)
       )
   )
 ORDER BY
-    CASE WHEN $16::boolean THEN
+    CASE WHEN $19::boolean THEN
         (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)
     END DESC,
-    CASE WHEN $16::boolean THEN c.id END DESC,
-    CASE WHEN NOT $16::boolean THEN
+    CASE WHEN $19::boolean THEN c.id END DESC,
+    CASE WHEN NOT $19::boolean THEN
         (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)
     END,
-    CASE WHEN NOT $16::boolean THEN c.id END
-LIMIT $18::bigint
+    CASE WHEN NOT $19::boolean THEN c.id END
+LIMIT $21::bigint
 `
 
 type FilterConversationsParams struct {
@@ -216,8 +238,11 @@ type FilterConversationsParams struct {
 	TeamID      *ids.UUID  `json:"team_id"`
 	InboxID     *ids.UUID  `json:"inbox_id"`
 	ContactID   *ids.UUID  `json:"contact_id"`
+	CompanyID   *ids.UUID  `json:"company_id"`
 	Priority    *bool      `json:"priority"`
 	Number      *int64     `json:"number"`
+	TagIds      []ids.UUID `json:"tag_ids"`
+	AnyTagIds   []ids.UUID `json:"any_tag_ids"`
 	OnlyUnread  bool       `json:"only_unread"`
 	MemberID    ids.UUID   `json:"member_id"`
 	Query       *string    `json:"query"`
@@ -252,8 +277,11 @@ func (q *Queries) FilterConversations(ctx context.Context, arg FilterConversatio
 		arg.TeamID,
 		arg.InboxID,
 		arg.ContactID,
+		arg.CompanyID,
 		arg.Priority,
 		arg.Number,
+		arg.TagIds,
+		arg.AnyTagIds,
 		arg.OnlyUnread,
 		arg.MemberID,
 		arg.Query,

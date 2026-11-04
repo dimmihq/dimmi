@@ -32,6 +32,8 @@ import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
 import { type CaseControls, type Priority, priorityLabel, statusLabel } from "../case";
 import { customerName } from "../conversations";
+import { TagChip } from "../tags/tag-chip";
+import { TagPicker } from "../tags/tag-picker";
 
 const nobody = "nobody";
 const statusDot = { open: "green", snoozed: "yellow", closed: "indigo" } as const;
@@ -207,6 +209,18 @@ export function DetailsPanel({
           <Actions conversation={conversation} caze={caze} me={caller?.member?.id ?? null} />
           <Refusal error={caze.error} />
           <CaseFields conversation={conversation} caze={caze} people={people} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {conversation.tags.map((tag) => (
+              <TagChip key={tag.id} tag={tag} onRemove={() => caze.removeTag(tag.id)} />
+            ))}
+            <TagPicker
+              workspace={workspace}
+              selected={conversation.tags}
+              onAdd={caze.addTag}
+              onRemove={(tag) => caze.removeTag(tag.id)}
+              shortcut
+            />
+          </div>
         </div>
         <Accordion
           variant="divided"

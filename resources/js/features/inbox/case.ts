@@ -47,6 +47,8 @@ export function useCase(workspace: string, conversation: Conversation) {
     setStatus: (status: ConversationStatus) =>
       change.mutate(status === "snoozed" ? { status, snooze_preset: "tomorrow" } : { status }),
     setPriority: (priority: Priority) => change.mutate({ priority: priority === "priority" }),
+    addTag: (name: string) => change.mutate({ add_tags: [name] }),
+    removeTag: (id: string) => change.mutate({ remove_tags: [id] }),
   };
 }
 

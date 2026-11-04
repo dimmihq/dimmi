@@ -62,6 +62,7 @@ type Loaded struct {
 	Team         *models.Team
 	LastMessage  *models.Message
 	LastAuthor   *Member
+	Tags         []models.Tag
 	Unread       bool
 }
 
