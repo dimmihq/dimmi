@@ -38,6 +38,57 @@ func fail(t *testing.T, client *testkit.Client, email string, times int) {
 func TestLockout(t *testing.T) {
 	t.Parallel()
 
+	t.Run("lifts the lock once a reset proves the inbox, so the new password signs in at once", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(behindProxy))
+		client := from(tc, "198.51.100.7")
+		fail(t, client, tc.Owner.Email, 5)
+		id, token := resetLink(t, tc, tc.Owner.Email)
+
+		redeem(client, id, token).AssertOK()
+
+		client.PostJSON("/api/v1/sessions", login(tc.Owner.Email, "grace-hopper-1906")).AssertCreated()
+	})
+
+	t.Run("lets a locked person finish their second factor after a reset", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(behindProxy, "DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))
+		account := protectedAccount(t, tc)
+		client := from(tc, "198.51.100.7")
+		fail(t, client, account.User.Email, 5)
+		id, token := resetLink(t, tc, account.User.Email)
+
+		res := redeem(client, id, token).AssertOK()
+
+		browser := client.WithCookie(res.Cookie(tc.App.Cookies.TwoFactorName()))
+		answer(browser, "totp", codeNow(t, tc, account.Secret)).AssertCreated()
+	})
+
+	t.Run("keeps the lock of another address guessing at the account after a reset", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(behindProxy, "DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))
+		guesser := from(tc, "203.0.113.9")
+		fail(t, guesser, tc.Owner.Email, 5)
+		id, token := resetLink(t, tc, tc.Owner.Email)
+
+		redeem(from(tc, "198.51.100.7"), id, token).AssertOK()
+
+		guesser.PostJSON("/api/v1/sessions", login(tc.Owner.Email, "grace-hopper-1906")).AssertStatus(429)
+	})
+
+	t.Run("lifts the lock against strangers once a reset proves the inbox", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(behindProxy, "DIMMI_AUTH__LOCKOUT__PER_EMAIL_SOFT_LOCK=3"))
+		fail(t, from(tc, "203.0.113.9"), tc.Owner.Email, 3)
+		client := from(tc, "198.51.100.7")
+		client.PostJSON("/api/v1/sessions", login(tc.Owner.Email, factories.Password)).AssertStatus(429)
+		id, token := resetLink(t, tc, tc.Owner.Email)
+
+		redeem(client, id, token).AssertOK()
+
+		client.PostJSON("/api/v1/sessions", login(tc.Owner.Email, "grace-hopper-1906")).AssertCreated()
+	})
+
 	t.Run("locks an address out of an account for longer with each run of failures", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))

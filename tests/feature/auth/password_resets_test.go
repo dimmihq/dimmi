@@ -3,6 +3,7 @@ package auth_test
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,6 +102,25 @@ func TestPasswordResetStore(t *testing.T) {
 
 func TestPasswordResetUpdate(t *testing.T) {
 	t.Parallel()
+
+	t.Run("refuses a new password that is the person's own email or name, keeping the link good", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		user := tc.CreateUser(func(u models.User) models.User {
+			u.Email, u.Name = "correct-horse-battery@example.com", "Staple Battery Horse"
+
+			return u
+		})
+		id, token := resetLink(t, tc, user.Email)
+
+		for _, personal := range []string{user.Email, strings.ToUpper(user.Email), user.Name} {
+			tc.Client().PatchJSON("/api/v1/password-resets/"+id, testkit.JSON{"token": token, "password": personal}).
+				AssertValidationError("password").
+				AssertJSONPath("code", "password_too_common")
+		}
+
+		redeem(tc.Client(), id, token).AssertOK()
+	})
 
 	t.Run("ends every access token of the user and counts them in the log", func(t *testing.T) {
 		t.Parallel()

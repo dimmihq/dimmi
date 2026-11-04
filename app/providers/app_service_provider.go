@@ -198,7 +198,7 @@ func bootMailedSecrets(a *app.App) {
 
 	acts.ResetPassword = &auth.ResetPassword{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Hash: a.Hash, Mail: a.Mail, Limiter: a.Limiter, IDs: a.IDs,
-		Links: a.Links, LoginPolicy: a.LoginPolicy, Sessions: a.Session, AppGrants: a.AppGrants,
+		Links: a.Links, LoginPolicy: a.LoginPolicy, Sessions: a.Session, AppGrants: a.AppGrants, Lockout: a.Lockout,
 		SecurityLog: a.SecurityLog, ClaimAccount: claim, CompletePrimaryAuth: acts.CompletePrimaryAuth,
 	}
 

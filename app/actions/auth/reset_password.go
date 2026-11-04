@@ -15,6 +15,12 @@
 | it. Only then is the user signed in, still through their second factor
 | if they have one: a reset proves the inbox, never the second factor.
 |
+| The reset also lifts the sign-in locks failed guesses set on the account
+| for the address that redeemed it, so a person locked out by their own
+| wrong passwords can finish signing in with the new one. And it refuses a
+| new password that is the person's own email or name, which sign-up
+| refuses too.
+|
 | An address nobody proved before is different: the reset is the owner's
 | first proof, so the account is claimed from whoever registered it,
 | second factors included, before the new password is set.
@@ -27,6 +33,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -65,17 +72,22 @@ Rules:
   - Unknown, malformed, wrong or expired: invalid, with the same answer
     and the same work; five wrong tokens delete the reset.
   - The login policy is asked once the link proved the inbox.
+  - A new password that is the account's email or name is refused, and
+    the link stays good.
   - An account never proven is claimed by [ClaimAccount] first, unless
     this browser is signed in to it.
   - The password is set, the email marked proven, the reset deleted,
     and every session, first-party app grant and access token of the
     user ended, in one transaction.
+  - The sign-in locks on the account for this address are lifted once
+    that committed.
   - The user then signs in like after any primary method.
 
 Events: [appevents.UserSignedOutEverywhere], and those of
 [ClaimAccount].
 
-Errors: [exceptions.ErrInvalidResetToken], [exceptions.ErrSSORequired],
+Errors: [exceptions.ErrInvalidResetToken],
+[exceptions.ErrPasswordTooCommon], [exceptions.ErrSSORequired],
 [exceptions.ErrAuthBusy], [exceptions.ErrTooManyAttempts], those of
 [CompletePrimaryAuth], or a wrapped error.
 */
@@ -91,6 +103,7 @@ type ResetPassword struct {
 	LoginPolicy         appauth.LoginPolicyResolver
 	Sessions            *session.Manager
 	AppGrants           appauth.AppGrants
+	Lockout             *appauth.Lockout
 	SecurityLog         *appauth.SecurityLog
 	ClaimAccount        *ClaimAccount
 	CompletePrimaryAuth *CompletePrimaryAuth
@@ -116,6 +129,10 @@ func (a *ResetPassword) Handle(ctx context.Context, in ResetPasswordInput) (Sign
 		return SignedIn{}, err
 	}
 
+	if strings.EqualFold(in.Password, user.Email) || strings.EqualFold(in.Password, user.Name) {
+		return SignedIn{}, exceptions.ErrPasswordTooCommon
+	}
+
 	hash, err := a.Hash.Make(ctx, in.Password)
 	if errors.Is(err, hashing.ErrBusy) {
 		return SignedIn{}, exceptions.ErrAuthBusy
@@ -128,6 +145,11 @@ func (a *ResetPassword) Handle(ctx context.Context, in ResetPasswordInput) (Sign
 	user.PasswordHash = &hash
 
 	if err := a.reset(ctx, reset, user, in.Client); err != nil {
+		return SignedIn{}, err
+	}
+
+	email := strings.ToLower(strings.TrimSpace(user.Email))
+	if err := a.Lockout.InboxProven(ctx, appauth.Attempt{IP: in.Client.IP, Email: email}); err != nil {
 		return SignedIn{}, err
 	}
 

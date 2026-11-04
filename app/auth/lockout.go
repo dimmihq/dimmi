@@ -207,6 +207,28 @@ func (l *Lockout) Succeeded(ctx context.Context, a Attempt) error {
 }
 
 /*
+InboxProven lifts what failed guesses set against the account for the
+owner, who just proved its inbox from this address: the address's run
+of failures with its lock, and the lock against strangers with its
+count. Locks on other addresses stay, and a stranger who keeps guessing
+starts counting again.
+*/
+func (l *Lockout) InboxProven(ctx context.Context, a Attempt) error {
+	err := errors.Join(
+		l.Limiter.Clear(ctx, "login:attempts:"+a.IP+":"+a.Email),
+		l.Limiter.Clear(ctx, "login:streak:"+a.IP+":"+a.Email),
+		l.Limiter.Clear(ctx, "login:failures:email:"+a.Email),
+		l.Cache.Delete(ctx, l.streakKey(a)),
+		l.Cache.Delete(ctx, l.emailKey(a)),
+	)
+	if err != nil {
+		return Unavailable(ctx, err)
+	}
+
+	return nil
+}
+
+/*
 streakLock returns how long a run of consecutive failures locks the
 address at the email: 30 seconds at five, five minutes at ten, half an
 hour at fifteen, and an hour for every failure from twenty on.
