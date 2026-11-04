@@ -6,11 +6,13 @@
  * fold away from the header or by dragging them past their smallest size;
  * each browser remembers its layout. Details start open. On screens too
  * narrow for the side panels, Operator slides over the thread instead.
+ * Opening a conversation reads it for the person, so it stops showing as
+ * unread; a reply or note is added to the thread once the server has it.
  */
 import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -20,11 +22,12 @@ import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
-import { meQuery } from "@/lib/api/auth";
+import { addNote, type Conversation, markRead, messagesQuery, reply } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
-import { useCase } from "./case";
-import type { Conversation } from "./conversations";
+import { statusLabel, useCase } from "./case";
+import { customerName, subjectOf, toEntry } from "./conversations";
 import { DetailsPanel } from "./details-panel";
+import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
@@ -37,10 +40,47 @@ const visible = { overflow: "visible" } as const;
 const pane = { group: "dimmi:conversation", thread: "thread", details: "details", operator: "operator" } as const;
 const pressed = "border-border-button-active bg-background-primary-active";
 
-export function ConversationView({ view, conversation }: { view: string; conversation: Conversation }) {
-  const { data: me } = useSuspenseQuery(meQuery);
-  const actor = me?.user.name ?? "You";
-  const caze = useCase(conversation, actor);
+const notConnected =
+  "I can't brief you on this conversation yet: Operator connects later. Ask your question and I'll say what I can.";
+
+/*
+ * useTimeline reads the conversation's timeline, marks it read once it
+ * has loaded, and sends replies and notes, reading everything the inbox
+ * shows again once the server has them.
+ */
+function useTimeline(workspace: string, conversation: Conversation) {
+  const queryClient = useQueryClient();
+  const { data: messages = [] } = useQuery(messagesQuery(workspace, conversation.id));
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
+  const read = useMutation({ mutationFn: () => markRead(workspace, conversation.id), onSuccess: refresh });
+  const unread = conversation.unread;
+  const mark = read.mutate;
+  useEffect(() => {
+    if (unread) {
+      mark();
+    }
+  }, [unread, mark]);
+
+  const send = async (mode: Mode, text: string) => {
+    await (mode === "note" ? addNote(workspace, conversation.id, text) : reply(workspace, conversation.id, text));
+    await refresh();
+  };
+
+  return { entries: messages.map(toEntry), send };
+}
+
+export function ConversationView({
+  view,
+  workspace,
+  conversation,
+}: {
+  view: string;
+  workspace: string;
+  conversation: Conversation;
+}) {
+  const caze = useCase(workspace, conversation);
+  const timeline = useTimeline(workspace, conversation);
+  const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);
   const operatorDefault = useWide(1280);
   const sides = useSidePanes(
@@ -69,12 +109,10 @@ export function ConversationView({ view, conversation }: { view: string; convers
           >
             <RiArrowLeftSLine aria-hidden className="size-5" />
           </Link>
-          <h1 className="min-w-0 truncate ps-1.5 text-body-medium text-text-primary">{conversation.subject}</h1>
-          {conversation.example ? (
-            <Chip variant="caption" color="neutral">
-              Example
-            </Chip>
-          ) : null}
+          <h1 className="min-w-0 truncate ps-1.5 text-body-medium text-text-primary">{subjectOf(conversation)}</h1>
+          <Chip variant="caption" color="neutral">
+            #{conversation.number} · {statusLabel[conversation.status]}
+          </Chip>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {sideBySide ? (
@@ -97,7 +135,13 @@ export function ConversationView({ view, conversation }: { view: string; convers
           />
         </div>
       </header>
-      <Thread conversation={conversation} events={caze.events} onAskOperator={toggleOperator} />
+      <Thread
+        entries={timeline.entries}
+        customer={customer}
+        channel={conversation.channel.name}
+        onSend={timeline.send}
+        onAskOperator={toggleOperator}
+      />
     </Panel>
   );
 
@@ -113,7 +157,7 @@ export function ConversationView({ view, conversation }: { view: string; convers
           aria-label="Operator"
           className="p-0"
         >
-          <OperatorPanel conversation={conversation} onClose={() => setDrawer(false)} className="h-full" />
+          <OperatorPanel briefing={notConnected} onClose={() => setDrawer(false)} className="h-full" />
         </Drawer>
       </div>
     );
@@ -144,7 +188,12 @@ export function ConversationView({ view, conversation }: { view: string; convers
         style={visible}
         className={cx("flex h-full", !detailsOpen && "invisible")}
       >
-        <DetailsPanel conversation={conversation} caze={caze} me={actor} onClose={() => toggle(pane.details)} />
+        <DetailsPanel
+          workspace={workspace}
+          conversation={conversation}
+          caze={caze}
+          onClose={() => toggle(pane.details)}
+        />
       </Pane>
       <PaneHandle hidden={!operatorOpen} />
       <Pane
@@ -161,7 +210,7 @@ export function ConversationView({ view, conversation }: { view: string; convers
         style={visible}
         className={cx("flex h-full", !operatorOpen && "invisible")}
       >
-        <OperatorPanel conversation={conversation} onClose={() => toggle(pane.operator)} className="h-full w-full" />
+        <OperatorPanel briefing={notConnected} onClose={() => toggle(pane.operator)} className="h-full w-full" />
       </Pane>
     </PaneGroup>
   );

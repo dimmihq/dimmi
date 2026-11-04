@@ -7,9 +7,10 @@
  * attachments as tiles above the text, a field that grows with what is
  * typed, and a toolbar with the add menu (files, help articles, saved
  * replies and more from the workspace) and a way to ask Operator. Files can
- * also be dropped on the panel or pasted. Sending is not connected yet,
- * so the composer says so instead of pretending. Each time Reply or Note
- * is chosen the field takes the focus, sized to the draft it holds.
+ * also be dropped on the panel or pasted. Sending goes to the server; a
+ * sent draft empties, a refused one stays with the reason under it.
+ * Files are not sent yet. Each time Reply or Note is chosen the field
+ * takes the focus, sized to the draft it holds.
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -24,6 +25,11 @@ import { AttachmentStrip } from "./attachments";
 import { type Mode, modes } from "./modes";
 import { useAttachments } from "./use-attachments";
 
+/*
+ * Send sends what the composer holds as a reply or a note.
+ */
+export type Send = (mode: Mode, text: string) => Promise<unknown>;
+
 const surface =
   "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
 const settle = [0.22, 1, 0.36, 1] as const;
@@ -33,6 +39,7 @@ export function Composer({
   focusKey,
   customer,
   channel,
+  onSend,
   onOpen,
   onAskOperator,
 }: {
@@ -40,6 +47,7 @@ export function Composer({
   focusKey: number;
   customer: string;
   channel: string;
+  onSend: Send;
   onOpen: (mode: Mode) => void;
   onAskOperator: () => void;
 }) {
@@ -61,6 +69,7 @@ export function Composer({
               focusKey={focusKey}
               customer={customer}
               channel={channel}
+              onSend={onSend}
               onModeChange={onOpen}
               onAskOperator={onAskOperator}
             />
@@ -118,6 +127,7 @@ function Panel({
   focusKey,
   customer,
   channel,
+  onSend,
   onModeChange,
   onAskOperator,
 }: {
@@ -125,10 +135,13 @@ function Panel({
   focusKey: number;
   customer: string;
   channel: string;
+  onSend: Send;
   onModeChange: (mode: Mode) => void;
   onAskOperator: () => void;
 }) {
   const [drafts, setDrafts] = useState<Record<Mode, string>>({ reply: "", note: "" });
+  const [sending, setSending] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const attachments = useAttachments();
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
@@ -150,6 +163,24 @@ function Panel({
         field.current.focus();
       }
     });
+  };
+
+  const text = drafts[mode].trim();
+  const send = async () => {
+    if (!text || sending) {
+      return;
+    }
+    setSending(true);
+    setFailure(null);
+    try {
+      await onSend(mode, text);
+      setDrafts((before) => ({ ...before, [mode]: "" }));
+      attachments.clear();
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const drop = (event: DragEvent) => {
@@ -204,6 +235,12 @@ function Panel({
             onChange={(event) => setDrafts((before) => ({ ...before, [mode]: event.target.value }))}
             onInput={(event) => sizeToText(event.currentTarget)}
             onPaste={(event) => attachments.add(event.clipboardData.files)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault();
+                void send();
+              }
+            }}
             rows={4}
             aria-label={note ? "Internal note" : `Reply to ${customer}`}
             placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
@@ -232,12 +269,19 @@ function Panel({
             <RiSparkling2Line aria-hidden className="size-4" />
             Ask Operator
           </button>
-          <span className="ms-auto hidden truncate text-body-2-regular text-text-tertiary sm:inline">
-            Sending arrives with the inbox
+          <span
+            role={failure ? "alert" : undefined}
+            className={cx(
+              "ms-auto truncate text-body-2-regular",
+              failure ? "text-text-error-primary" : "hidden text-text-tertiary sm:inline",
+            )}
+          >
+            {failure ?? (note ? "Only your team sees notes" : `Sends on ${channel}`)}
           </span>
           <button
             type="button"
-            disabled
+            disabled={!text || sending}
+            onClick={() => void send()}
             aria-label={note ? "Add note" : "Send"}
             className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-button-primary p-2 text-text-white outline-none transition-opacity duration-200 ease focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
           >

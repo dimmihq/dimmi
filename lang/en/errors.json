@@ -15,7 +15,7 @@
   "two_factor_challenge_expired": "The sign-in took too long or had too many wrong codes. Sign in again.",
   "factor_type_not_available": "This kind of factor is not available.",
   "factor_limit_reached": "You cannot add more factors of this kind.",
-  "invalid_transition": "This change is not possible from the current state.",
+  "invalid_transition": "Cannot change from {{.from}} to {{.to}}.",
   "preferred_not_allowed": "Recovery codes cannot be your preferred factor.",
   "prohibited": "The code cannot be sent with other changes.",
   "two_factor_not_enabled": "Turn on two-factor authentication first.",

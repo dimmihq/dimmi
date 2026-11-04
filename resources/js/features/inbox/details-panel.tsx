@@ -15,6 +15,7 @@ import {
   RiUser3Line,
   RiUserSharedLine,
 } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
 import type { Key, ReactNode } from "react";
 
 import { Accordion, AccordionItem } from "@/components/base/accordion/accordion";
@@ -25,17 +26,25 @@ import { IconButton } from "@/components/base/buttons/icon-button";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { ApiError } from "@/lib/api/client";
+import type { Conversation, ConversationStatus } from "@/lib/api/inbox";
+import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
-import { type CaseControls, type Priority, priorityLabel, type Status, statusLabel } from "./case";
-import type { Conversation } from "./conversations";
+import { type CaseControls, type Priority, priorityLabel, statusLabel } from "./case";
+import { customerName } from "./conversations";
 
 const nobody = "nobody";
-const statusDot = { open: "green", snoozed: "yellow", done: "indigo" } as const;
+const statusDot = { open: "green", snoozed: "yellow", closed: "indigo" } as const;
 
 /*
  * The sections' keys, which the accordion uses to remember which are open.
  */
 const section = { customer: "customer", links: "links", articles: "articles" } as const;
+
+interface Person {
+  id: string;
+  name: string;
+}
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -46,7 +55,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Person({ name }: { name: string }) {
+function PersonName({ name }: { name: string }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
       <Avatar size="xs" color={avatarColor(name)} initials={name.charAt(0)} />
@@ -67,22 +76,32 @@ function choose<T extends string>(apply: (value: T) => void) {
   };
 }
 
-function CaseFields({ caze, people }: { caze: CaseControls; people: string[] }) {
+function CaseFields({
+  conversation,
+  caze,
+  people,
+}: {
+  conversation: Conversation;
+  caze: CaseControls;
+  people: Person[];
+}) {
+  const priority: Priority = conversation.priority ? "priority" : "normal";
+
   return (
     <dl className="flex flex-col">
       <Row label="Assignee">
         <Select
           aria-label="Assignee"
           size="sm"
-          selectedKey={caze.assignee ?? nobody}
+          selectedKey={conversation.assignee?.id ?? nobody}
           onSelectionChange={choose((key) => caze.assign(key === nobody ? null : key))}
         >
           <SelectItem id={nobody} textValue="Unassigned">
             Unassigned
           </SelectItem>
           {people.map((person) => (
-            <SelectItem key={person} id={person} textValue={person}>
-              <Person name={person} />
+            <SelectItem key={person.id} id={person.id} textValue={person.name}>
+              <PersonName name={person.name} />
             </SelectItem>
           ))}
         </Select>
@@ -91,10 +110,10 @@ function CaseFields({ caze, people }: { caze: CaseControls; people: string[] }) 
         <Select
           aria-label="Status"
           size="sm"
-          selectedKey={caze.status}
-          onSelectionChange={choose<Status>(caze.setStatus)}
+          selectedKey={conversation.status}
+          onSelectionChange={choose<ConversationStatus>(caze.setStatus)}
         >
-          {(Object.keys(statusLabel) as Status[]).map((status) => (
+          {(Object.keys(statusLabel) as ConversationStatus[]).map((status) => (
             <SelectItem key={status} id={status} textValue={statusLabel[status]}>
               <span className="flex items-center gap-2">
                 <StatusDot color={statusDot[status]} />
@@ -108,12 +127,12 @@ function CaseFields({ caze, people }: { caze: CaseControls; people: string[] }) 
         <Select
           aria-label="Priority"
           size="sm"
-          selectedKey={caze.priority}
+          selectedKey={priority}
           onSelectionChange={choose<Priority>(caze.setPriority)}
         >
-          {(Object.keys(priorityLabel) as Priority[]).map((priority) => (
-            <SelectItem key={priority} id={priority} textValue={priorityLabel[priority]}>
-              {priorityLabel[priority]}
+          {(Object.keys(priorityLabel) as Priority[]).map((value) => (
+            <SelectItem key={value} id={value} textValue={priorityLabel[value]}>
+              {priorityLabel[value]}
             </SelectItem>
           ))}
         </Select>
@@ -122,25 +141,25 @@ function CaseFields({ caze, people }: { caze: CaseControls; people: string[] }) 
   );
 }
 
-function Actions({ caze, me }: { caze: CaseControls; me: string }) {
+function Actions({ conversation, caze, me }: { conversation: Conversation; caze: CaseControls; me: string | null }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {caze.assignee === me ? null : (
+      {me === null || conversation.assignee?.id === me ? null : (
         <Button variant="secondary" size="small" leadingIcon={RiUserSharedLine} onClick={() => caze.assign(me)}>
           Assign to me
         </Button>
       )}
-      {caze.status === "snoozed" ? null : (
+      {conversation.status === "open" ? (
         <Button variant="secondary" size="small" leadingIcon={RiTimeLine} onClick={() => caze.setStatus("snoozed")}>
           Snooze
         </Button>
-      )}
-      {caze.status === "done" ? (
+      ) : null}
+      {conversation.status === "closed" ? (
         <Button variant="secondary" size="small" onClick={() => caze.setStatus("open")}>
           Reopen
         </Button>
       ) : (
-        <Button size="small" leadingIcon={RiCheckLine} onClick={() => caze.setStatus("done")}>
+        <Button size="small" leadingIcon={RiCheckLine} onClick={() => caze.setStatus("closed")}>
           Mark as done
         </Button>
       )}
@@ -148,18 +167,35 @@ function Actions({ caze, me }: { caze: CaseControls; me: string }) {
   );
 }
 
+function Refusal({ error }: { error: Error | null }) {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <p role="alert" className="text-body-2-regular text-text-error-primary">
+      {error instanceof ApiError ? (Object.values(error.fields)[0] ?? error.message) : error.message}
+    </p>
+  );
+}
+
 export function DetailsPanel({
+  workspace,
   conversation,
   caze,
-  me,
   onClose,
 }: {
+  workspace: string;
   conversation: Conversation;
   caze: CaseControls;
-  me: string;
   onClose: () => void;
 }) {
-  const { customer } = conversation;
+  const { data: members = [] } = useQuery(membersQuery(workspace));
+  const { data: caller } = useQuery(callerQuery(workspace));
+  const people = members
+    .filter((member) => member.status === "active")
+    .map((member) => ({ id: member.id, name: member.user.name }));
+  const customer = customerName(conversation.contact);
 
   return (
     <Panel label="Details" className="h-full w-full">
@@ -168,8 +204,9 @@ export function DetailsPanel({
       </PageHeader>
       <ScrollArea className="px-4 pb-4">
         <div className="flex flex-col gap-2 pt-1 pb-2">
-          <Actions caze={caze} me={me} />
-          <CaseFields caze={caze} people={[me, ...conversation.teammates]} />
+          <Actions conversation={conversation} caze={caze} me={caller?.member?.id ?? null} />
+          <Refusal error={caze.error} />
+          <CaseFields conversation={conversation} caze={caze} people={people} />
         </div>
         <Accordion
           variant="divided"
@@ -181,16 +218,18 @@ export function DetailsPanel({
           <AccordionItem id={section.customer} title="Customer" icon={RiUser3Line}>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2.5">
-                <Avatar size="md" color={avatarColor(customer.name)} initials={customer.initials.charAt(0)} />
+                <Avatar size="md" color={avatarColor(customer)} initials={customer.charAt(0).toUpperCase()} />
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-body-2-medium text-text-primary">{customer.name}</span>
-                  <span className="truncate text-body-2-regular text-text-tertiary">{customer.email}</span>
+                  <span className="truncate text-body-2-medium text-text-primary">{customer}</span>
+                  <span className="truncate text-body-2-regular text-text-tertiary">
+                    {conversation.contact.email ?? "No email address"}
+                  </span>
                 </div>
               </div>
               <dl className="flex flex-col">
-                <Row label="Company">{customer.company}</Row>
-                <Row label="Location">{customer.location}</Row>
-                <Row label="Channel">{conversation.channel}</Row>
+                <Row label="Kind">{conversation.contact.kind === "user" ? "User" : "Lead"}</Row>
+                <Row label="Inbox">{conversation.inbox.name}</Row>
+                <Row label="Channel">{conversation.channel.name}</Row>
               </dl>
             </div>
           </AccordionItem>
@@ -198,7 +237,7 @@ export function DetailsPanel({
             <Nothing>Issues and tickets linked to this conversation show here.</Nothing>
           </AccordionItem>
           <AccordionItem id={section.articles} title="Help center articles" icon={RiArticleLine}>
-            <Nothing>Articles Dimmi used or suggested show here.</Nothing>
+            <Nothing>Articles dimmi used or suggested show here.</Nothing>
           </AccordionItem>
         </Accordion>
       </ScrollArea>

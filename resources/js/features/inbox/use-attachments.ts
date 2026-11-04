@@ -115,7 +115,12 @@ export function useAttachments() {
     setFiles((before) => before.filter((file) => file.id !== id));
   };
 
-  return { files, add, link, remove };
+  const clear = () => {
+    files.forEach(release);
+    setFiles([]);
+  };
+
+  return { files, add, link, remove, clear };
 }
 
 /*

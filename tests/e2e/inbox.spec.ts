@@ -1,6 +1,19 @@
 import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
+import { type Customer, startConversation } from "./support/inbox";
 
-const example = /\/d\/inbox\/unassigned\/example$/;
+const emily: Customer = {
+  name: "Emily Johnson",
+  email: "emily@northwind.example",
+  subject: "Can't log in",
+  body: "My password manager's password is refused.",
+};
+
+const omar: Customer = {
+  name: "Omar Haddad",
+  email: "omar@contoso.example",
+  subject: "Invoice question",
+  body: "The VAT number on my invoice is wrong.",
+};
 
 /*
  * workspaceOf names the person's workspace after them, so workspaces
@@ -18,25 +31,114 @@ it.describe("the inbox", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("opens the example conversation with the sidebar folded to a rail", async ({ page }) => {
-    await page.getByRole("link", { name: /Emily Johnson/ }).click();
+  it("shows an empty view, then a conversation a customer starts", async ({ page }) => {
+    await expect(page.getByText("No conversations")).toBeVisible();
 
-    await expect(page).toHaveURL(example);
+    await startConversation(page, emily);
+    await page.reload();
+
+    const row = page.getByRole("link", { name: /Emily Johnson/ });
+    await expect(row).toContainText("Can't log in");
+    await expect(row).toContainText("Unread");
+    await expect(page.getByText("1 open")).toBeVisible();
+
+    await row.click();
+    await expect(page).toHaveURL(/\/d\/inbox\/unassigned\/conv_/);
     await expect(page.getByRole("heading", { name: "Can't log in" })).toBeVisible();
-    await expect(page.getByRole("article", { name: "Internal note from Operator" })).toContainText(
+    await expect(page.getByRole("article", { name: "Message from Emily Johnson" })).toContainText("password manager");
+    await expect(page.getByRole("region", { name: "Details" })).toContainText("emily@northwind.example");
+  });
+
+  it("replies to the customer and takes the conversation", async ({ page, person }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+
+    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await page.getByRole("textbox", { name: "Reply to Emily Johnson" }).fill("Try a sign-in code instead.");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    await expect(page.getByRole("article", { name: `Message from ${person.name}` })).toContainText(
+      "Try a sign-in code instead.",
+    );
+    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveValue("");
+    await expect(page.getByRole("region", { name: "Details" }).getByRole("button", { name: /Assignee/ })).toContainText(
+      person.name,
+    );
+  });
+
+  it("adds a note only the team sees", async ({ page, person }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    await expect(page.getByRole("button", { name: /Reply to Emily Johnson/ })).toBeVisible();
+
+    await page.keyboard.press("n");
+    await page.getByRole("textbox", { name: "Internal note" }).fill("Outlook previews may spend the link.");
+    await page.getByRole("button", { name: "Add note" }).click();
+
+    await expect(page.getByRole("article", { name: `Internal note from ${person.name}` })).toContainText(
       "Not visible to Emily Johnson",
     );
-    await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
+  });
 
-    await page.getByRole("link", { name: "Back to the list" }).click();
-    await expect(page).toHaveURL(inbox);
-    await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
+  it("assigns, closes and reopens the conversation from the details", async ({ page, person }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    const details = page.getByRole("region", { name: "Details" });
+
+    await details.getByRole("button", { name: "Assign to me" }).click();
+    await expect(details.getByRole("button", { name: /Assignee/ })).toContainText(person.name);
+    await expect(page.getByText(`${person.name} assigned the conversation to ${person.name}`)).toBeVisible();
+
+    await details.getByRole("button", { name: /Assignee/ }).click();
+    await page.getByRole("option", { name: "Unassigned" }).click();
+    await expect(page.getByText(`${person.name} unassigned the conversation`)).toBeVisible();
+
+    await details.getByRole("button", { name: "Mark as done" }).click();
+    await expect(details.getByRole("button", { name: /Status/ })).toContainText("Done");
+    await expect(page.getByText(`${person.name} closed the conversation`)).toBeVisible();
+
+    await details.getByRole("button", { name: "Reopen" }).click();
+    await expect(details.getByRole("button", { name: /Status/ })).toContainText("Open");
+    await expect(page.getByText(`${person.name} reopened the conversation`)).toBeVisible();
+
+    await details.getByRole("button", { name: "Snooze" }).click();
+    await expect(details.getByRole("button", { name: /Status/ })).toContainText("Snoozed");
+  });
+
+  it("searches the view's conversations", async ({ page }) => {
+    await startConversation(page, emily);
+    await startConversation(page, omar);
+    await page.goto("/d/inbox/all");
+    await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Search conversations" }).fill("invoice");
+    await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toBeHidden();
+
+    await page.getByRole("textbox", { name: "Search conversations" }).fill("nothing like this");
+    await expect(page.getByText("No matches")).toBeVisible();
+  });
+
+  it("talks the case over with Operator", async ({ page }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    const operator = page.getByRole("region", { name: "Operator" });
+
+    await operator.getByRole("textbox", { name: "Ask Operator about this conversation" }).fill("Which mail app?");
+    await operator.getByRole("button", { name: "Send message" }).click();
+    await expect(operator).toContainText("Which mail app?");
+
+    await operator.getByRole("button", { name: "Close Operator" }).click();
+    await expect(operator).toBeHidden();
+    await page.keyboard.press("o");
+    await expect(operator).toBeVisible();
   });
 
   it("toggles the details and remembers the choice", async ({ page }) => {
-    await page.goto("/d/inbox/unassigned/example");
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
     const details = page.getByRole("region", { name: "Details" });
-    await expect(details).toContainText("Northwind");
+    await expect(details).toContainText("Emily Johnson");
 
     await page.getByRole("button", { name: "Hide details" }).click();
     await expect(details).toBeHidden();
@@ -46,126 +148,41 @@ it.describe("the inbox", () => {
     await expect(details).toBeHidden();
   });
 
-  it("assigns the conversation and works the case from the details", async ({ page, person }) => {
-    await page.goto("/d/inbox/unassigned/example");
-    const details = page.getByRole("region", { name: "Details" });
-
-    await details.getByRole("button", { name: "Assign to me" }).click();
-    await expect(details.getByRole("button", { name: /Assignee/ })).toContainText(person.name);
-    await expect(page.getByText(`${person.name} assigned the conversation to ${person.name}`)).toBeVisible();
-
-    await details.getByRole("button", { name: /Assignee/ }).click();
-    await page.getByRole("option", { name: "Sam Okafor" }).click();
-    await expect(page.getByText(`${person.name} assigned the conversation to Sam Okafor`)).toBeVisible();
-
-    await details.getByRole("button", { name: "Mark as done" }).click();
-    await expect(details.getByRole("button", { name: /Status/ })).toContainText("Done");
-    await expect(details.getByRole("button", { name: "Reopen" })).toBeVisible();
-  });
-
-  it("talks the case over with Operator", async ({ page }) => {
-    await page.goto("/d/inbox/unassigned/example");
-    const operator = page.getByRole("region", { name: "Operator" });
-    await expect(operator).toContainText("Emily can't sign in");
-
-    await operator.getByRole("textbox", { name: "Ask Operator about this conversation" }).fill("Which mail app?");
-    await operator.getByRole("button", { name: "Send message" }).click();
-    await expect(operator).toContainText("Which mail app?");
-    await expect(operator).toContainText("Operator connects once the inbox does");
-
-    await operator.getByRole("button", { name: "Close Operator" }).click();
-    await expect(operator).toBeHidden();
-    await page.keyboard.press("o");
-    await expect(operator).toBeVisible();
-  });
-
-  it("opens the composer for a reply or a note and keeps each draft", async ({ page }) => {
-    await page.goto("/d/inbox/unassigned/example");
+  it("keeps each draft and attaches files", async ({ page }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
     const reply = page.getByRole("textbox", { name: "Reply to Emily Johnson" });
-    await expect(reply).toBeHidden();
 
     await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
     await expect(reply).toBeFocused();
-    await reply.fill("Hi Emily");
-    await expect(page.getByText("To Emily Johnson · Messenger")).toBeVisible();
     await expect(page.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
+    await reply.fill("Hi Emily");
 
     await page.getByRole("radio", { name: "Note" }).click();
-    const note = page.getByRole("textbox", { name: "Internal note" });
-    await expect(note).toBeFocused();
-    await expect(note).toHaveValue("");
-    await expect(page.getByText("Only your team sees this")).toBeVisible();
-
+    await expect(page.getByRole("textbox", { name: "Internal note" })).toHaveValue("");
     await page.getByRole("radio", { name: "Reply" }).click();
     await expect(reply).toHaveValue("Hi Emily");
-  });
 
-  it("opens the note composer from the keyboard", async ({ page }) => {
-    await page.goto("/d/inbox/unassigned/example");
-    await expect(page.getByRole("button", { name: /Reply to Emily Johnson/ })).toBeVisible();
-    await page.keyboard.press("n");
-
-    await expect(page.getByRole("textbox", { name: "Internal note" })).toBeFocused();
-    await expect(page.getByRole("button", { name: "Add note" })).toBeDisabled();
-  });
-
-  it("attaches files, uploads them in turn and removes them", async ({ page }) => {
-    await page.goto("/d/inbox/unassigned/example");
-    await expect(page.getByRole("button", { name: /Reply to Emily Johnson/ })).toBeVisible();
-    await page.keyboard.press("r");
-
-    await page.getByLabel("Attach files").setInputFiles([
-      { name: "refund-policy.pdf", mimeType: "application/pdf", buffer: Buffer.from("policy") },
-      { name: "accounts.csv", mimeType: "text/csv", buffer: Buffer.from("a,b") },
-    ]);
-    const strip = page.getByRole("list", { name: "Attachments" });
-    await expect(strip.getByRole("listitem")).toHaveCount(2);
-    await expect(strip.getByRole("button", { name: "Remove accounts.csv" })).toBeEnabled();
-
-    await strip.getByRole("button", { name: "Remove refund-policy.pdf" }).click();
-    await expect(strip.getByRole("listitem")).toHaveCount(1);
-  });
-
-  it("adds help articles, saved replies and issues from the add menu", async ({ page }) => {
-    await page.goto("/d/inbox/unassigned/example");
-    await expect(page.getByRole("button", { name: /Reply to Emily Johnson/ })).toBeVisible();
-    await page.keyboard.press("r");
-    const strip = page.getByRole("list", { name: "Attachments" });
-    const menu = page.getByRole("dialog", { name: "Add to message" });
-
-    await page.getByRole("button", { name: "Add to message" }).click();
-    await menu.getByRole("button", { name: /^Help article/ }).click();
-    await menu.getByRole("textbox", { name: "Search articles" }).fill("expire");
-    await expect(menu.getByRole("option")).toHaveCount(1);
-    await page.keyboard.press("Enter");
-    await expect(strip.getByRole("button", { name: "Remove Why reset links expire" })).toBeVisible();
-
-    await page.getByRole("button", { name: "Add to message" }).click();
-    await menu.getByRole("button", { name: /^Saved reply/ }).click();
-    await menu.getByRole("option", { name: "Send a sign-in code" }).click();
-    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveValue(/one-time sign-in code/);
-
-    await page.getByRole("button", { name: "Add to message" }).click();
-    await menu.getByRole("button", { name: /^Issue/ }).click();
-    await menu.getByRole("option", { name: "Mail previews spend single-use links" }).click();
-    await expect(strip.getByRole("listitem")).toHaveCount(2);
+    await page
+      .getByLabel("Attach files")
+      .setInputFiles([{ name: "refund-policy.pdf", mimeType: "application/pdf", buffer: Buffer.from("policy") }]);
+    await expect(page.getByRole("list", { name: "Attachments" }).getByRole("listitem")).toHaveCount(1);
   });
 
   it("slides Operator over the thread on a narrow screen", async ({ page }) => {
+    const id = await startConversation(page, emily);
     await page.setViewportSize({ width: 900, height: 800 });
-    await page.goto("/d/inbox/unassigned/example");
+    await page.goto(`/d/inbox/unassigned/${id}`);
     await page.getByRole("button", { name: "Operator", exact: true }).click();
 
     const drawer = page.getByRole("dialog", { name: "Operator" });
-    await expect(drawer).toContainText("Emily can't sign in");
+    await expect(drawer).toContainText("Operator connects later");
     await drawer.getByRole("button", { name: "Close Operator" }).click();
     await expect(drawer).toBeHidden();
   });
 
-  it("shows no conversations in the views the example does not land in", async ({ page }) => {
-    await page.goto("/d/inbox/mine");
-    await expect(page.getByText("No conversations")).toBeVisible();
-    await page.goto("/d/inbox/unassigned/missing");
-    await expect(page.getByRole("heading", { name: "Can't log in" })).toBeHidden();
+  it("says when a conversation does not exist", async ({ page }) => {
+    await page.goto("/d/inbox/unassigned/conv_01jbd0k3a8x9t2m4q5r6s7v8w9");
+    await expect(page.getByText("Conversation not found")).toBeVisible();
   });
 });

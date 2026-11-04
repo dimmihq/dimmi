@@ -3,20 +3,26 @@
  * open conversation, each in its own floating panel, resizable on the gap
  * between them. While a conversation is open the list steps aside unless
  * the screen is very wide, so the thread, its details and Operator have
- * room. On phones one of the two shows at a time.
+ * room. On phones one of the two shows at a time. The list's search
+ * looks through every conversation of the view, closed ones included.
  */
-import { RiChatSmile3Line, RiInbox2Line } from "@remixicon/react";
+import { RiChatSmile3Line, RiInbox2Line, RiSearchLine } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import { useDeferredValue, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
+import { Input } from "@/components/base/input/input";
+import { Spinner } from "@/components/base/spinner/spinner";
 import { PageOutlet } from "@/features/layout/page-outlet";
 import { type InboxView, inboxViews } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
+import { type Counts, conversationsQuery, countsQuery } from "@/lib/api/inbox";
 import { ConversationList } from "./conversation-list";
-import { conversationsIn } from "./conversations";
+import { useInbox } from "./conversations";
 
 const visible = { overflow: "visible" } as const;
 
@@ -70,25 +76,105 @@ export function InboxPage({ view }: { view: InboxView }) {
   );
 }
 
+/*
+ * openCount is how many open conversations wait in the view, as the
+ * sidebar counts them.
+ */
+function openCount(counts: Counts | undefined, view: InboxView): number | undefined {
+  if (!counts) {
+    return undefined;
+  }
+  if (view === "mentions") {
+    return counts.views.mentions.unread;
+  }
+
+  return counts.views[view].open;
+}
+
 function ListPanel({ view, openId }: { view: InboxView; openId: string | undefined }) {
   const page = inboxViews[view];
-  const conversations = conversationsIn(view);
+  const { workspace } = useInbox();
+  const [search, setSearch] = useState("");
+  const query = useDeferredValue(search);
+  const {
+    data: conversations,
+    isPending,
+    isError,
+  } = useQuery({
+    ...conversationsQuery(workspace, view, query),
+    enabled: workspace !== "",
+  });
+  const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: workspace !== "" });
+  const count = openCount(counts, view);
 
   return (
     <Panel label={`${page.label} conversations`} className="h-full w-full">
       <PageHeader title={page.label}>
         <Chip variant="caption" color="neutral">
-          Open
+          {count === undefined ? "Open" : `${count} open`}
         </Chip>
       </PageHeader>
-      {conversations.length > 0 ? (
-        <ScrollArea>
-          <ConversationList view={view} conversations={conversations} openId={openId} />
-        </ScrollArea>
-      ) : (
-        <EmptyState icon={RiInbox2Line} title="No conversations" description={page.description} />
-      )}
+      <div className="shrink-0 px-[7px] pb-2">
+        <Input
+          aria-label="Search conversations"
+          placeholder="Search conversations"
+          leadingIcon={RiSearchLine}
+          value={search}
+          onChange={setSearch}
+        />
+      </div>
+      <ListBody
+        view={view}
+        openId={openId}
+        search={query}
+        state={isPending ? "loading" : isError ? "error" : "ready"}
+        conversations={conversations ?? []}
+      />
     </Panel>
+  );
+}
+
+function ListBody({
+  view,
+  openId,
+  search,
+  state,
+  conversations,
+}: {
+  view: InboxView;
+  openId: string | undefined;
+  search: string;
+  state: "loading" | "error" | "ready";
+  conversations: NonNullable<Parameters<typeof ConversationList>[0]["conversations"]>;
+}) {
+  if (state === "loading") {
+    return (
+      <div className="flex flex-1 items-center justify-center py-12">
+        <Spinner aria-label="Loading conversations" />
+      </div>
+    );
+  }
+  if (state === "error") {
+    return (
+      <EmptyState
+        icon={RiInbox2Line}
+        title="Conversations did not load"
+        description="Check your connection and try again."
+      />
+    );
+  }
+  if (conversations.length === 0) {
+    return search.trim() ? (
+      <EmptyState icon={RiSearchLine} title="No matches" description={`Nothing in this view matches “${search}”.`} />
+    ) : (
+      <EmptyState icon={RiInbox2Line} title="No conversations" description={inboxViews[view].description} />
+    );
+  }
+
+  return (
+    <ScrollArea>
+      <ConversationList view={view} conversations={conversations} openId={openId} />
+    </ScrollArea>
   );
 }
 

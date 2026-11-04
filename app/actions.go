@@ -90,14 +90,16 @@ type Actions struct {
 	AddTeamMembers   *teams.AddTeamMembers
 	RemoveTeamMember *teams.RemoveTeamMember
 
-	RecordAuditLog            *audit.RecordAuditLog
-	ListAuditLogs             *audit.ListAuditLogs
-	ShowAuditLog              *audit.ShowAuditLog
-	ListSecurityEvents        *auth.ListSecurityEvents
+	RecordAuditLog     *audit.RecordAuditLog
+	ListAuditLogs      *audit.ListAuditLogs
+	ShowAuditLog       *audit.ShowAuditLog
+	ListSecurityEvents *auth.ListSecurityEvents
+
 	CreatePersonalAccessToken *tokens.CreatePersonalAccessToken
 	ListPersonalAccessTokens  *tokens.ListPersonalAccessTokens
 	ShowPersonalAccessToken   *tokens.ShowPersonalAccessToken
 	RenamePersonalAccessToken *tokens.RenamePersonalAccessToken
 	RevokePersonalAccessToken *tokens.RevokePersonalAccessToken
 	ListTokenAbilities        *tokens.ListTokenAbilities
+	Inbox                     *InboxActions
 }

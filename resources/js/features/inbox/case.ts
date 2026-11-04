@@ -1,56 +1,48 @@
 /*
- * The state of a conversation that teammates change while working it:
- * who it is assigned to, its status and its priority. Each change also
- * lands in the thread as an event, so the history says who did what.
- * Until the inbox is connected, changes live in this page only.
+ * The moves a teammate makes on a case: who holds it, its status and
+ * its priority. Each goes to the server, which records it in the
+ * thread as an event so the history says who did what; the open
+ * conversation, its timeline, the lists and the sidebar's counts are
+ * then read again.
  */
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { Conversation, ThreadEntry } from "./conversations";
+import {
+  type Conversation,
+  type ConversationChanges,
+  type ConversationStatus,
+  conversationQuery,
+  updateConversation,
+} from "@/lib/api/inbox";
 
-export type Status = Conversation["status"];
-export type Priority = Conversation["priority"];
+export const statusLabel: Record<ConversationStatus, string> = { open: "Open", snoozed: "Snoozed", closed: "Done" };
 
-export const statusLabel: Record<Status, string> = { open: "Open", snoozed: "Snoozed", done: "Done" };
-export const priorityLabel: Record<Priority, string> = { low: "Low", normal: "Normal", high: "High", urgent: "Urgent" };
+export type Priority = "normal" | "priority";
 
-export interface Case {
-  assignee: string | null;
-  status: Status;
-  priority: Priority;
-  events: ThreadEntry[];
-}
+export const priorityLabel: Record<Priority, string> = { normal: "Normal", priority: "Priority" };
 
 /*
- * useCase holds a conversation's case and the moves a teammate (actor)
- * makes on it.
+ * useCase returns the case's controls for the conversation, and the
+ * last change the server refused.
  */
-export function useCase(conversation: Conversation, actor: string) {
-  const [state, setState] = useState<Case>({
-    assignee: conversation.assignee,
-    status: conversation.status,
-    priority: conversation.priority,
-    events: [],
+export function useCase(workspace: string, conversation: Conversation) {
+  const queryClient = useQueryClient();
+  const change = useMutation({
+    mutationFn: (changes: ConversationChanges) => updateConversation(workspace, conversation.id, changes),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(conversationQuery(workspace, conversation.id).queryKey, updated);
+
+      return queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
+    },
   });
 
-  const record = (change: Partial<Omit<Case, "events">>, text: string) =>
-    setState((before) => ({
-      ...before,
-      ...change,
-      events: [...before.events, { kind: "event", id: `case-${before.events.length}`, at: "Just now", text }],
-    }));
-
   return {
-    ...state,
-    assign: (assignee: string | null) =>
-      record(
-        { assignee },
-        assignee ? `${actor} assigned the conversation to ${assignee}` : `${actor} unassigned the conversation`,
-      ),
-    setStatus: (status: Status) =>
-      record({ status }, `${actor} marked the conversation ${statusLabel[status].toLowerCase()}`),
-    setPriority: (priority: Priority) =>
-      record({ priority }, `${actor} set the priority to ${priorityLabel[priority].toLowerCase()}`),
+    pending: change.isPending,
+    error: change.error,
+    assign: (memberId: string | null) => change.mutate({ assignee_id: memberId }),
+    setStatus: (status: ConversationStatus) =>
+      change.mutate(status === "snoozed" ? { status, snooze_preset: "tomorrow" } : { status }),
+    setPriority: (priority: Priority) => change.mutate({ priority: priority === "priority" }),
   };
 }
 
