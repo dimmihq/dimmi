@@ -328,9 +328,23 @@ func TestPruneAuditLogs(t *testing.T) {
 		require.NoError(t, keep.Handle(t.Context(), nil))
 		tc.Table("audit_logs").AssertHas(testkit.Row{"id": old.ID})
 
-		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365}
+		held := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365, Retention: legalHold{}}
+		require.NoError(t, held.Handle(t.Context(), nil))
+		tc.Table("audit_logs").AssertHas(testkit.Row{"id": old.ID})
+
+		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365, Retention: tc.App.Retention}
 		require.NoError(t, prune.Handle(t.Context(), nil))
 		tc.Table("audit_logs").AssertMissing(testkit.Row{"id": old.ID}).AssertHas(testkit.Row{"id": recent.ID})
+	})
+
+	t.Run("reports a retention guard it cannot ask", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		seed(t, tc, "team.created")
+		tc.Clock.Travel(400 * 24 * time.Hour)
+
+		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365, Retention: failingGuard{}}
+		require.Error(t, prune.Handle(t.Context(), nil))
 	})
 
 	t.Run("reports a log it cannot reach", func(t *testing.T) {
@@ -338,7 +352,7 @@ func TestPruneAuditLogs(t *testing.T) {
 		tc := tests.New(t)
 		tc.BreakTable("audit_logs")
 
-		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365}
+		prune := &jobs.PruneAuditLogs{DB: tc.App.DB, Clock: tc.Clock, RetentionDays: 365, Retention: tc.App.Retention}
 		require.Error(t, prune.Handle(t.Context(), nil))
 	})
 }

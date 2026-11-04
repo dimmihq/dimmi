@@ -2,6 +2,7 @@ package workspaces_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -34,6 +35,18 @@ MayDestroy refuses.
 */
 func (legalHold) MayDestroy(context.Context, ids.UUID, contracts.RetentionSubject) (bool, error) {
 	return false, nil
+}
+
+/*
+failingGuard is a retention guard that cannot answer.
+*/
+type failingGuard struct{}
+
+/*
+MayDestroy fails.
+*/
+func (failingGuard) MayDestroy(context.Context, ids.UUID, contracts.RetentionSubject) (bool, error) {
+	return false, errors.New("retention service down")
 }
 
 /*

@@ -39,7 +39,7 @@ func bootAudit(a *app.App) error {
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.PruneAuditLogs{
-			DB: a.DB, Clock: a.Clock, RetentionDays: auditRetention(a),
+			DB: a.DB, Clock: a.Clock, RetentionDays: auditRetention(a), Retention: a.Retention,
 		}),
 		queue.Register(a.Queue, &jobs.PruneSecurityEvents{
 			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.SecurityEvents.RetentionDays,

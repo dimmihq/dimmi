@@ -6,7 +6,10 @@
 | Audit entries older than the retention period are deleted once a day,
 | a batch at a time so no single statement holds locks for long. This
 | job is the only thing that ever deletes an audit entry; with no
-| retention period, it deletes nothing.
+| retention period, it deletes nothing. A workspace whose records are
+| held, such as for a legal hold, keeps its entries however old: the
+| retention guard is asked about each workspace before any of its
+| entries go.
 |
 */
 
@@ -19,8 +22,10 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -56,12 +61,14 @@ func (PruneAuditLogsArgs) Options() queue.Options {
 
 /*
 PruneAuditLogs deletes audit entries older than RetentionDays days; 0
-keeps them for ever.
+keeps them for ever. Retention decides which workspaces' entries may
+go.
 */
 type PruneAuditLogs struct {
 	DB            *database.DB
 	Clock         clock.Clock
 	RetentionDays int
+	Retention     contracts.RetentionGuard
 }
 
 /*
@@ -74,9 +81,44 @@ func (w *PruneAuditLogs) Handle(ctx context.Context, _ *queue.Job[PruneAuditLogs
 
 	cutoff := w.Clock.Now().Add(-time.Duration(w.RetentionDays) * day)
 
+	allowed, err := w.unheld(ctx, cutoff)
+	if err != nil || len(allowed) == 0 {
+		return err
+	}
+
 	return prune(ctx, func(ctx context.Context) (int64, error) {
-		return models.New(w.DB).PruneAuditLogs(ctx, models.PruneAuditLogsParams{Cutoff: cutoff, Batch: pruneBatch})
+		return models.New(w.DB).PruneAuditLogs(ctx, models.PruneAuditLogsParams{
+			Cutoff: cutoff, WorkspaceIds: allowed, Batch: pruneBatch,
+		})
 	})
+}
+
+/*
+unheld returns the workspaces with entries before the cutoff whose
+entries the retention guard lets go.
+*/
+func (w *PruneAuditLogs) unheld(ctx context.Context, cutoff time.Time) ([]ids.UUID, error) {
+	workspaces, err := models.New(w.DB).ListAuditLogWorkspacesBefore(ctx, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("list workspaces to prune: %w", err)
+	}
+
+	allowed := make([]ids.UUID, 0, len(workspaces))
+
+	for _, workspaceID := range workspaces {
+		subject := contracts.RetentionSubject{Kind: contracts.RetentionAuditLog, ID: workspaceID}
+
+		ok, err := w.Retention.MayDestroy(ctx, workspaceID, subject)
+		if err != nil {
+			return nil, fmt.Errorf("ask retention guard: %w", err)
+		}
+
+		if ok {
+			allowed = append(allowed, workspaceID)
+		}
+	}
+
+	return allowed, nil
 }
 
 /*

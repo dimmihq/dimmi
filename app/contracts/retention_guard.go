@@ -20,9 +20,13 @@ import (
 )
 
 /*
-RetentionWorkspace is the kind of subject a workspace purge asks about.
+The kinds of subject a job asks about: a whole workspace its purge is
+about to destroy, and a workspace's expired audit entries.
 */
-const RetentionWorkspace = "workspace"
+const (
+	RetentionWorkspace = "workspace"
+	RetentionAuditLog  = "audit_log"
+)
 
 /*
 RetentionSubject is what a job is about to destroy: Kind says what it
