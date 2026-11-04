@@ -13,7 +13,7 @@ Style: caveman. Each: case. decided behavior. Session and transport cases shared
 7. Base64 with padding `=` or standard alphabet. Strict base64url without padding per RFC 7515: `token_malformed`; hint "use base64url without padding (any JWT library does this)".
 8. Token with whitespace or `Bearer ` prefix. Trimmed of surrounding whitespace; `Bearer ` prefix rejected with hint.
 9. Token 9 KB (huge custom attributes). `token_too_large`; hint to use REST contacts update (03).
-10. HS256 secret pasted with trailing newline in `.env`, or base64-decoded by host. `token_signature_invalid` with static hint naming common causes; no variant-key retries (detection deferred: identity-validations); variant never accepted.
+10. HS256 secret pasted with trailing newline in `.env`, or base64-decoded by host. `token_signature_invalid` with static hint naming common causes; mistake detector names exact cause (validations.md); variant key never accepted.
 11. RS256 public key under 2048 bits uploaded. 422 `public_key.weak`.
 12. EdDSA key not Ed25519 (Ed448). 422 `public_key.unsupported_curve`.
 13. PEM with private key uploaded by mistake. 422 `public_key.private_key_uploaded` with message "Upload public key only. Rotate this key: it was sent to Dimmi." Private material never stored or logged (request body excluded from logs).
@@ -69,7 +69,7 @@ Style: caveman. Each: case. decided behavior. Session and transport cases shared
 51. Host sends JWT email without `email_verified` equal to email of email-channel contact D. No merge (R3). `C.email` set; inbox shows "possible duplicate" only if D is verified user; otherwise nothing.
 52. JWT with `email_verified: true` matches email-channel lead D with verified email (confirmed via reply). Auto-merge D into C (both verified, foundation rule).
 53. JWT `email_verified: true` matches other user contact D (different `sub`). No merge (R7); duplicate flag.
-54. Host app lets users sign up with unconfirmed email and sets `email_verified: true` wrongly. Host bug; docs warn loudly in snippets; Dimmi cannot detect. No unmerge in MVP; merge audit logged with full from/to ids for manual repair.
+54. Host app lets users sign up with unconfirmed email and sets `email_verified: true` wrongly. Host bug; docs warn loudly in snippets; Dimmi cannot detect. No unmerge action; merge audit logged with full from/to ids for manual repair.
 55. Contact `C` erased (GDPR), same `sub` starts session again. New contact created (erased tombstone has no `external_id`).
 56. Contact `C` merged into `C2` by teammate; session start with old `sub`. Lookup follows `merged_into_id`; `C2` gets `external_id` if it had none; if `C2` has different `external_id`, session uses `C2` and logs conflict (teammate decided same person).
 57. Contact blocked. Verified session start succeeds (no tell); messages land as spam.
@@ -98,7 +98,7 @@ Style: caveman. Each: case. decided behavior. Session and transport cases shared
 ## Seams (`00-foundation/extensibility.md`)
 
 70. Admin demoted to member between page load and secret rotation. `authz.Can(principal, "identity:manage")` evaluated per request from current role: 403. Admin token of demoted user same (role permissions intersect abilities).
-71. JWT `company` claim while contact already linked to other company via REST. JWT company becomes `contacts.company_id` (primary). Later many-companies (`contact_companies`) keeps both; MVP overwrites primary only, never deletes company row.
+71. JWT `company` claim while contact already linked to other company via REST. JWT company becomes `contacts.company_id` (primary). Overwrites primary only, never deletes company row.
 72. Legal hold (later guard driver) on workspace. Nonce keys expire by TTL; contact erasure stays held by 03.
 
 ## Identity source and token lifetime (SDK redesign)
@@ -134,4 +134,23 @@ Style: caveman. Each: case. decided behavior. Session and transport cases shared
 89. Lead wrote `plan: "enterprise"` via widget, then logs in; token has no `plan`. Upgrade in place keeps value; key stays untrusted (absent from list) until a claim writes it. 07 never binds it.
 90. Token omits key previously written by JWT (absent, not null). Value and trusted flag unchanged (absent keys untouched).
 91. Claims hash unchanged (skip path). No writes; trusted list unchanged (written on first application).
+
+## Modes, validations, JWKS
+
+92. Switch to `required` with under 95% verified last 7 days or no traffic. 409 `rollout_guard` with numbers; retry with `force: true` + recent confirmation succeeds, audit logged.
+93. Mode `required`, identified visitor's token fails (expired source). 401, widget hidden, console error; existing outbox kept, not sent.
+94. Mode `required`, existing anonymous sessions. Next request 403 `identity_required`; SDK hides launcher; data kept. Switch back restores.
+95. Mode `off`, JWT sent. Ignored, no verification, no error beyond one console warn. Stored identified session: `PATCH /session` answers 200 without extending; expires naturally, then anonymous.
+96. Validator gets production token. Not stored, not logged, no nonce consumed, no session, no contact written.
+97. Validator with token signed by other workspace's `kid`. Authenticated caller told "belongs to a different workspace" with no name; widget route keeps generic `token_kid_unknown`.
+98. Session route token with newline-variant key. 401 `token_signature_invalid`, `mistake: secret_trailing_newline`. Never accepted. Detector runs at most 5 secrets times 5 variants, per-IP throttle 10/min then static hint.
+99. Detector leak check: variant match reveals only that key was misused, to someone already holding it. Not an oracle for outsiders: needs valid HMAC.
+100. JWKS URL private address or redirect to one. safedial refuses; `jwks_error`, secret stays pending; 422 at create with `jwks_unreachable`.
+101. JWKS endpoint down. Cached keys used up to 24 h; after that `token_jwks_unavailable` 401 (fails closed), banner in page.
+102. Unknown `kid` from JWKS secret. Refetch at most once per 5 min, then `token_kid_unknown`. Flood of random kids: no extra fetches.
+103. JWKS key with `alg: none`, symmetric key or weak RSA. Key skipped, never used.
+104. Provider token lacks our claims (`email_verified` shape differs). Same claim rules; unknown ignored. `iss` must equal `jwks_issuer` when set.
+105. Stats flush lost on crash. Up to 60 s of counts missing; hint data, not billing.
+106. Client-writable attribute on verified contact, key also claimed by JWT. Client write stores value, removes key from trusted list; next JWT write trusts it again. Default list empty: 403 `identity_locked` as before.
+107. `DELETE /contacts/{ctc}/widget-sessions` while streaming. All revoked `admin`, disconnected within 5 s; next handshake with valid JWT starts new session.
 

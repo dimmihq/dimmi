@@ -1,6 +1,6 @@
 # 11 Self-host: packaging and operations
 
-Style: caveman. Scope trim 2026-11-02: inbound mail = SES only (later: `imap-adapter`, `extra-mail-adapters`); `dimmi listen` proxy note dropped (later: `dimmi-listen`). Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`. Extra files: [packaging.md](packaging.md) (image, release, compose, templates, install.sh + systemd), [operations.md](operations.md) (config, first run, upgrades, backups, doctor, maintenance, proxy, scale, budget, hardening). Final sweep 2026-11-02: Valkey required in every deployment (PO decision), framework reuse (automemlimit, realclientip-go, goose session locker, age backups, go-systemd), mail final model (04), realtime on centrifuge with Redis broker on Valkey, feedback (14) doctor checks, integration-only app tests. Deployment simplification 2026-11-02 (PO): one image, two self-host paths (compose, bare binary) + six one-click templates on managed services; no single-container bundle ever; no AWS guide for self-hosters (AWS = Dimmi cloud only, 12).
+Style: caveman. Scope trim 2026-11-02: inbound mail: SES plus providers and IMAP since 2026-11-04 (operations.md section 15); `dimmi listen` proxy note dropped (later: `dimmi-listen`). Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`. Extra files: [packaging.md](packaging.md) (image, release, compose, templates, install.sh + systemd), [operations.md](operations.md) (config, first run, upgrades, backups, doctor, maintenance, proxy, scale, budget, hardening). Final sweep 2026-11-02: Valkey required in every deployment (PO decision), framework reuse (automemlimit, realclientip-go, goose session locker, age backups, go-systemd), mail final model (04), realtime on centrifuge with Redis broker on Valkey, feedback (14) doctor checks, integration-only app tests. Deployment simplification 2026-11-02 (PO): one image, two self-host paths (compose, bare binary) + six one-click templates on managed services; no single-container bundle ever; no AWS guide for self-hosters (AWS = Dimmi cloud only, 12).
 
 ## Goal
 
@@ -57,7 +57,7 @@ Why: roadmap launch item 11 ("One-command self-host"), `research/roadmap.md`. Co
 - Importers: launch: importers, owned by `16-importers` (11 documents config keys + doctor check only; operations.md "Feature config notes").
 - Telemetry of any kind: not planned. Decision below.
 - License keys: never. No enterprise edition.
-- `extra-mail-adapters` (audit B6) / `imap-adapter` (audit C1): self-host inbound via Cloudflare Email Routing worker, Postmark/Mailgun inbound webhooks, IMAP: later. MVP inbound = SES receiving; outbound drivers unchanged.
+- Moved to launch scope 2026-11-04: `extra-mail-adapters`, `imap-adapter` ([operations.md](operations.md) section 15, [../04-email-channel/sources.md](../04-email-channel/sources.md)). Outbound drivers unchanged.
 
 ### Decisions
 

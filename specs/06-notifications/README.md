@@ -1,8 +1,16 @@
 # 06 Notifications
 
-Style: caveman. Date 2026-11-01. Read with `specs/00-conventions/README.md` and `specs/00-foundation/*`. Backend only.
+Style: caveman. Date 2026-11-01, revised 2026-11-04 (UI in scope; gap T-03, X10). Read with `specs/00-conventions/README.md` and `specs/00-foundation/*`.
 
 Files: [README.md](README.md) (this), [delivery.md](delivery.md) (per-channel payload formats, provider facts, failure handling), [edge-cases.md](edge-cases.md), [tasks.md](tasks.md).
+
+## Gap map
+
+| Gap | Where specified | Milestone |
+|---|---|---|
+| I-50 delivery | Triggers `mentioned`; write side 03 `collaboration.md` | M1, M9 |
+| T-03 | "Settings page and notifications page" below | M9, M10 |
+| X10 team-joined | Triggers `team_joined` | M9 |
 
 ## Goal
 
@@ -44,6 +52,8 @@ Why: roadmap launch item 6 "Notifications where solo dev lives" (`research/roadm
 - Delivery failure handling: push 404/410 cleanup, Slack revoked webhooks mark destination `error` + `system_alert` to admins.
 - APIs (REST per `00-foundation/rest.md`): notifications list, `PATCH` read/unread, bulk `PATCH /notifications` (read all, seen), preferences (+ `DELETE` reset), settings, push config, push subscriptions register/unregister (`kind` web; `apns`/`fcm` reserved), destinations CRUD + `tests`, focus heartbeat, `notification-tests`, signed `notification-unsubscriptions`.
 - MCP tools for notifications list and mark read.
+- Screens: `/d/notifications` page and bell, settings matrix wired to real API, push enable, personal and workspace Slack destinations. Section "Settings page and notifications page".
+- Conversation access: fan-out recipients pass `VisibleScope` (03 `access.md`).
 
 ### Out (later)
 
@@ -74,7 +84,11 @@ Why: roadmap launch item 6 "Notifications where solo dev lives" (`research/roadm
 | `new_conversation` | `conversation.created`; `conversation.assigned` where `to.team` set, `to.member` null, team changed | not spam, contact not blocked, `assignee_member_id` null, `ai_state <> 'active'` unless recipient `include_ai_handled` | audience(conversation) |
 | `conversation_assigned` | `conversation.assigned` where `to.member` set | `to.member <> actor` | `to.member` |
 | `customer_replied` | `message.created` with `type='message'`, `author_type='contact'` | not first customer message of conversation (that is `new_conversation`), not spam, `ai_state <> 'active'` unless `include_ai_handled` | assignee member; if none and message reopened conversation: audience(conversation); if none and not reopened: audience only for members with `customer_replied` preference explicitly on for unassigned (`notify_unassigned_replies` setting, default false) |
-| `mentioned` | `message.created` with `type='note'` and `MentionedMemberIDs` non-empty; `message.updated` with `AddedMentionedMemberIDs` non-empty (note edit) | mentioned member active, not author | each member from 03 `message_mentions` rows for message (team mentions already expanded; edit: only added ids) |
+| `mentioned` | `message.created` with `type='note'` and `MentionedMemberIDs` non-empty; `message.updated` with `AddedMentionedMemberIDs` non-empty (note edit) | mentioned member active, not author, can see conversation (`VisibleScope`) | each member from 03 `message_mentions` rows for message (team mentions already expanded; edit: only added ids) |
+| `team_joined` | `team.member_added` (00-accounts fires, nothing else) | member active, actor not self | added member. In-app and email default: "You were added to Billing", link to team view |
+| `note_reacted` | `message.reactions_changed` added | reactor not author, note not deleted | note author |
+| `side_conversation_replied` | `side_message.created` inbound (03) | parent not trashed | parent assignee, else audience(parent) |
+| `data_export_ready` | `data_export.ready` (03) | export still ready | requester |
 | `ai_handoff_requested` | `ai.handoff_requested` | conversation `ai_state='handed_off'` | assignee member else audience(conversation) |
 | `snooze_expired` | `conversation.unsnoozed` with `reason='expired'` | status open | assignee member else audience(conversation) |
 | `system_alert` | `notification_destination.errored`, `webhook_endpoint.failing` / `webhook_endpoint.disabled` (10), direct `Notify` calls; sources by owner: 05 `channel.errored`, `channel.disconnected` (deduped per connection per 24 h; `channel.connected` reason `recovered` marks unread alert resolved, no new notification); 07 `ai.action_connection_failed` (class `ai_action_connection_failed` owned by 07, once per connection per 24 h); 08 `github_connection.errored` (token expiring, invalid, expired) and `github_repository.webhook_status_changed` to `failing` (optional, once per repo per 24 h); 13 `changelog_source.errored`, changelog mailing `blocked`/`failed`, scheduled publish failed; 06 own `system_mail.suppressed` (member's own address bounced, to that member only) | none | active members holding `notification_alerts:receive` (MVP: owners and admins via `roles.go`); `system_mail.suppressed`: affected member only |
@@ -94,7 +108,7 @@ Triggers registered by other specs (registry `enums.NotificationTrigger.Register
 
 Subject column: feedback triggers set `notifications.feedback_post_id`; `csat_negative` sets `conversation_id` (+ `data.survey_response_id`); `ai_action_approval_requested` sets `conversation_id` (+ `data.action_call_id`, `data.action_title`).
 
-audience(conversation): active members of `conversations.assignee_team_id` team if set; else members of `inboxes.default_team_id` team if set; else all active members. Always minus actor. Deactivated members and members of `status='deactivated'` never included.
+audience(conversation): active members of `conversations.assignee_team_id` team if set; else members of `inboxes.default_team_id` team if set; else all active members. Always minus actor. Always filtered by each recipient's `VisibleScope` at fan-out and again at send (`conversation_gone` reason `hidden`): a restricted member never learns of conversation. `conversation_assigned`: assignment grants sight, passes. All triggers with `conversation_id` follow same rule. Deactivated members and members of `status='deactivated'` never included.
 
 Actor: from event `Actor`. Actor `system` or `agent` never excluded member (no member to exclude).
 
@@ -110,6 +124,10 @@ Actor: from event `Actor`. Actor `system` or `agent` never excluded member (no m
 | mentioned | on | on | on | on |
 | ai_handoff_requested | on | on | on | on |
 | snooze_expired | on | on | off | off |
+| team_joined | on | off | on | off |
+| note_reacted | on | off | off | off |
+| side_conversation_replied | on | on | on | off |
+| data_export_ready | on | off | off | off |
 | system_alert | on (locked) | off | on (locked for owners) | off |
 | feedback_post_submitted (14) | on | off | off | on |
 | feedback_post_pending (14) | on | off | on (delayed 300 s, skipped if moderated) | off |
@@ -130,7 +148,7 @@ Order matters. First match wins, recorded as delivery `status='suppressed'` + `r
 
 1. `preference_off`: channel disabled for trigger.
 2. `member_inactive`: member deactivated or removed since fan-out.
-3. `conversation_gone`: conversation deleted, spam, or contact blocked.
+3. `conversation_gone`: conversation deleted, spam, contact blocked, or no longer in member's `VisibleScope`.
 4. `condition_changed`: trigger condition no longer true (see triggers table; e.g. `new_conversation` now assigned to someone, `ai_handoff_requested` but member already replied after handoff, `customer_replied` but teammate or AI replied after this message).
 5. `already_read`: member `conversation_reads.last_read_at >= message.created_at` (only checked for delayed email and digest items).
 6. `focused`: member focus heartbeat (Valkey key `ntf:focus:{mem}:{device}` EX 75 s, last 75 s) shows dashboard visible on this conversation. For `new_conversation` and `system_alert`: dashboard visible on any page. Applies to push, email, slack. Never to in_app.
@@ -173,6 +191,35 @@ All mail to Dimmi users/members (`app/mail` Mailables on `mail.mailers.system`: 
 | created_at, updated_at | timestamptz | |
 
 Retention: row deleted on lift; user erase deletes row (00-accounts eraser hook).
+
+## Settings page and notifications page
+
+Real pages, BoardUI, no sample data. Replaces placeholder `resources/js/routes/d/notifications.tsx` and static matrix `NotificationsSettings` in `resources/js/features/settings/pages/account.tsx`. Feature folder `resources/js/features/notifications/`, query layer `resources/js/lib/api/notifications.ts`.
+
+### Bell and /d/notifications
+
+- Install BoardUI block `notification-center` (`components/application/notification-center/`), edit to take real data (repo rule: source owned).
+- Sidebar bell (`components/application/dashboard/dashboard-sidebar.tsx`) shows `unseen_count` (cap 100, "99+"); click opens popover (latest 20) then "See all". Opening marks seen (`PATCH /notifications {filter: {before}, changes: {seen: true}}`).
+- Page `/d/notifications`: `Tabs` All, Unread, Mentions (`filter[trigger]=mentioned`), Assigned. Row: actor avatar, title, excerpt, time, unread dot; click marks read, deep link. Mark all read. Cursor "Load more". Empty state.
+- Live: `notification.created`, `notifications.read` on `member:{mem}`; no poll. Reconnect `recovered: false`: refetch.
+- Focus heartbeat hook `use-notification-focus.ts`: `POST /notification-focus` per 30 s while visible and on change, wired to current conversation.
+- e2e `tests/e2e/notifications.spec.ts` light and dark, two browsers: Ada mentions Bob, Bob's bell rises under 1 s, click opens conversation, count drops.
+
+### Settings
+
+`resources/js/features/settings/pages/notifications.tsx` (moved out of `account.tsx`; route stays in settings nav).
+
+- Matrix `GET /notification-preferences`: trigger rows, channel columns, `Switch`es. `locked` disabled with tooltip. `default` shows dot when overridden. Optimistic `PATCH`; Reset calls `DELETE`. API lists registered triggers; registry field `requires` (permission) hides rows viewer can never receive.
+- Slack column only with active personal destination, else "Connect Slack".
+- Settings `GET/PATCH /notification-settings`: quiet hours (time pickers, day mask, zone), pause until, previews, AI-handled, unassigned replies, email delay, bypass list.
+- Push: "Enable notifications on this device" runs permission prompt + `POST /push-subscriptions`; device list `GET /push-subscriptions`, remove. iOS hint from `push-config`. Test button `POST /notification-tests` per channel, outcome inline.
+- Workspace destinations `features/settings/pages/notification-destinations.tsx` (`notification_destinations:manage`): list, add Slack webhook, triggers, inbox filter, test, status with error. Slack app install button.
+- Mentions mute = turn off `mentioned` cells; in-app cell not locked (decided: Intercom allows; a mute must mean mute).
+- e2e `tests/e2e/notification-settings.spec.ts`: turn off email for mentioned, send mention, Mailpit nothing, in-app still; quiet hours; stubbed push via route interception; Slack destination via `httpclienttest`-backed fake URL in test binary.
+
+### Native mobile push
+
+Stays out (see Out). Member mobile app is not in this round; `kind` column keeps door open. Web Push on installed PWA covers phone needs. No gap requires it.
 
 ## Data model
 
@@ -916,8 +963,12 @@ None. Notifications to members are not messages to contacts: never substantive r
 4. Ownership map lists 3 tables for 06; spec adds `notification_settings`, `notification_destinations`, `notification_deliveries`.
 5. Ownership map implies `push_subscriptions` tenant table; push subscriptions are per browser per user, made user-scoped.
 
-## Open questions (with recommended default)
+## Decisions
 
-1. Declarative Web Push `app_badge` placement not in W3C draft (WebKit-only). Default: set `mutable: true`, service worker sets badge via `navigator.setAppBadge(data.unread_count)`; revisit when spec settles.
-2. Slack DMs on self-host need own Slack app. Default: pasted incoming webhook is the zero-setup path; DM via app documented as optional.
-3. `new_conversation` email for workspaces with many members could be noisy. Default stays on (first users are solo); revisit when member count over 5 by showing "turn off email for new conversations" hint (frontend).
+| # | Topic | Decided | Why |
+|---|---|---|---|
+| 1 | Declarative Web Push `app_badge` | `mutable: true`, service worker sets `navigator.setAppBadge(data.unread_count)` | Placement not in W3C draft (WebKit only) |
+| 2 | Slack DMs on self-host | Pasted incoming webhook is zero-setup path; DM via own Slack app documented as optional | No shared app on self-host |
+| 3 | `new_conversation` email noise | Default stays on; settings page shows hint "Turn off email for new conversations" when workspace has over 5 active members | First users are solo |
+| 4 | Team mention rows | One notification per member, aggregated per conversation | 03 expands at write |
+| 5 | Native push | Out this round | PWA covers it; no gap requires |

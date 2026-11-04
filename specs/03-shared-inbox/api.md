@@ -1,6 +1,6 @@
 # 03 Shared inbox: HTTP API
 
-Style: caveman. Base `/api/v1`. REST rules: `00-foundation/rest.md` (binding). Shapes, pagination, idempotency, errors per `00-foundation/api.md`. Auth: every route `A` (`auth`: browser session, first-party app, or token; abilities apply to tokens only, session and first-party app use member permissions), plus `workspace`, `throttle:api`; POST routes also `idempotent`. Ability column = token ability group; "admin" = caller needs the 03 permission named in README Permissions matrix (`conversations:delete`, `conversations:moderate`, `contacts:erase`, `contacts:manage_external_id`, `companies:delete`, `inboxes:manage`, `tags:manage`, `saved_replies:manage_shared`), held by owner/admin via 00-accounts `roles.go`; policies call `authz.Can`, never role names. Every conversation read (list, show, counts, neighbors, search, exports, realtime authorizers) scoped by `conversations.VisibleScope(principal)` (MVP: whole workspace); conversation outside scope = 404. Member references use `mem_` ids (workspace member public id; `usr_` = user, never used for members here, see README open question 3); `"me"` accepted wherever member id accepted.
+Style: caveman. Base `/api/v1`. REST rules: `00-foundation/rest.md` (binding). Shapes, pagination, idempotency, errors per `00-foundation/api.md`. Auth: every route `A` (`auth`: browser session, first-party app, or token; abilities apply to tokens only, session and first-party app use member permissions), plus `workspace`, `throttle:api`; POST routes also `idempotent`. Ability column = token ability group; "admin" = caller needs the 03 permission named in README Permissions matrix (`conversations:delete`, `conversations:moderate`, `contacts:erase`, `contacts:manage_external_id`, `companies:delete`, `inboxes:manage`, `tags:manage`, `saved_replies:manage_shared`, and README additions), held by owner/admin via 00-accounts `roles.go`; policies call `authz.Can`, never role names. Every conversation read (list, show, counts, neighbors, search, exports, realtime authorizers) scoped by `conversations.VisibleScope(principal)` ([access.md](access.md)); conversation outside scope = 404. Member references use `mem_` ids (workspace member public id; `usr_` = user, never used for members here, see README Decisions 3); `"me"` accepted wherever member id accepted.
 
 Optional request header on every write: `Dimmi-Client-Mutation-Id: <string up to 64>` echoed in realtime event `meta.client_mutation_id`.
 
@@ -20,14 +20,15 @@ Optional request header on every write: `Dimmi-Client-Mutation-Id: <string up to
 |---|---|---|---|---|
 | GET | /conversations | conversations.index | conversations:read | list with view, filters, sort, `q` |
 | POST | /conversations | conversations.store | conversations:write | create (API channel contact message, or member outbound) |
-| PATCH | /conversations | conversations.update-many | conversations:write (per-field rules as single PATCH) | bulk: `{ids, changes}` (max 100) or `{filter, changes, confirm_count}` (max 1,000 matches). See Bulk |
+| PATCH | /conversations | conversations.update-many | conversations:write (per-field rules as single PATCH) | bulk: `{ids, changes}` (max 1,000) or `{filter, changes, confirm_count}` (max 10,000 matches); over 100 runs as job, 202. See Bulk |
 | GET | /conversations/{conversation} | conversations.show | conversations:read | `{conversation}` = `conv_…` or number |
-| PATCH | /conversations/{conversation} | conversations.update | conversations:write (per-field rules, see Update) | attributes (`subject`, `priority`, `inbox_id`) and state fields (`status`, `assignee_id`, `team_id`, `spam`, `trashed`, `ai_state`, `add_tags`, `remove_tags`, `unread`) |
+| PATCH | /conversations/{conversation} | conversations.update | conversations:write (per-field rules, see Update) | attributes (`subject`, `priority` level, `inbox_id`, `custom_attributes`) and state fields (`status`, `assignee_id`, `team_id`, `spam`, `trashed` both directions, `ai_state`, `add_tags`, `remove_tags`, `unread`) |
 | DELETE | /conversations/{conversation} | conversations.destroy | conversations:write, `conversations:delete` | soft delete (trash); same as PATCH `{trashed: true}` |
 | POST | /conversations/{conversation}/merges | conversations.merges.store | conversations:write | merge `from: [conv_…]` into this (target) conversation |
 | POST | /conversations/{conversation}/tags | conversations.tags.store | conversations:write | add tags (ids or names) |
 | DELETE | /conversations/{conversation}/tags/{tag} | conversations.tags.destroy | conversations:write | remove tag |
-| POST | /conversations/{conversation}/participants | conversations.participants.store | conversations:write | add CC participant |
+| POST | /conversations/{conversation}/participants | conversations.participants.store | conversations:write | add `to` or `cc` participant |
+| PATCH | /conversations/{conversation}/participants/{contact} | conversations.participants.update | conversations:write | change `role` |
 | DELETE | /conversations/{conversation}/participants/{contact} | conversations.participants.destroy | conversations:write | remove participant |
 | GET | /conversations/{conversation}/read-state | conversations.read-state.show | conversations:read | my read pointer + `unread` |
 | PATCH | /conversations/{conversation}/read-state | conversations.read-state.update | conversations:read | `{last_read_message_id}` (read up to) or `{unread: true}` (mark unread); empty body = read to latest |
@@ -45,7 +46,7 @@ Optional request header on every write: `Dimmi-Client-Mutation-Id: <string up to
 | POST | /conversations/{conversation}/replies | conversations.replies.store | conversations:write | customer-visible reply |
 | POST | /conversations/{conversation}/notes | conversations.notes.store | conversations:write | internal note |
 | PATCH | /conversations/{conversation}/messages/{message} | conversations.messages.update | conversations:write | edit own note (replies not editable) |
-| DELETE | /conversations/{conversation}/messages/{message} | conversations.messages.destroy | conversations:write | delete own / redact (`conversations:moderate`) |
+| DELETE | /conversations/{conversation}/messages/{message} | conversations.messages.destroy | conversations:write | undo inside window (returns body), delete own, delete others' note or reply or redact (`conversations:moderate`) |
 | POST | /conversations/{conversation}/messages/{message}/delivery-attempts | conversations.messages.delivery-attempts.store | conversations:write | retry failed delivery; 202 |
 
 ### Attachments
@@ -103,10 +104,13 @@ Optional request header on every write: `Dimmi-Client-Mutation-Id: <string up to
 
 | Param | Values | Notes |
 |---|---|---|
-| `filter[view]` | `mine` (default), `unassigned`, `all`, `team:<team_id>`, `member:<mem_id>`, `mentions`, `spam`, `deleted` | spam view ignores status filter default; deleted view needs `conversations:delete` |
+| `filter[view]` | `mine` (default), `unassigned`, `all`, `team:<team_id>`, `member:<mem_id>`, `inbox:<inbox_id>`, `cvw_…`, `mentions`, `spam`, `deleted` | spam view ignores status filter default; deleted view needs `conversations:delete`; custom view: definition ANDed with other params (views.md) |
 | `filter[status]` | `open` (default), `snoozed`, `closed`, comma list, `any` | |
-| `filter[priority]` | `true`/`false` | |
+| `filter[priority]` | levels comma list `none,low,medium,high,urgent` | `true`/`false` 400 |
 | `filter[tag]` | tag ids comma list (AND semantics: has all) | max 5 |
+| `filter[tag_any]` | tag ids comma list (OR) | max 20 |
+| `filter[attr.<key>]` | value | defined conversation attribute; max 3 |
+| `filter[assignment_waiting]` | `true` | waiting for capacity (assignment.md) |
 | `filter[channel]` | channel types comma list (`email,telegram`) | resolved to connection ids |
 | `filter[channel_connection]` | `chn_` ids | |
 | `filter[inbox]` | `inbox_` ids | |
@@ -121,8 +125,8 @@ Optional request header on every write: `Dimmi-Client-Mutation-Id: <string up to
 | `filter[import_id]` | `imp_` id | conversations written by that import |
 | `filter[trashed]` | `only` | rest.md rule 7 form; same as `filter[view]=deleted` (needs `conversations:delete`). `with` 400 (trash never mixed into views) |
 | `q` | search query (search.md) | switches default sort to `relevance` |
-| `sort` | `-last_message_at` (default), `last_message_at`, `waiting_since` (longest first), `-created_at`, `created_at`, `snoozed_until` (snoozed view default), `relevance` (only with q), `-priority` (priority first, then `-last_message_at`) | |
-| `include` | `contact`, `assignee`, `team`, `tags`, `last_message`, `inbox`, `unread`, `csat`, `feedback_requests` | list default includes `contact,assignee,tags,last_message,unread` compact. `csat` (15) and `feedback_requests` (14) batch-loaded per page (one query each) |
+| `sort` | `-last_message_at` (default), `last_message_at`, `waiting_since` (longest first), `-created_at`, `created_at`, `snoozed_until` (snoozed view default), `relevance` (only with q), `-priority` (highest first, then `-last_message_at`), `-priority,waiting_since`, `attr:<key>`, `-attr:<key>` | |
+| `include` | `contact`, `assignee`, `team`, `tags`, `last_message`, `inbox`, `unread`, `csat`, `feedback_requests`, `viewers`, `company`, `custom_attributes` | list default includes `contact,assignee,tags,last_message,unread` compact. `csat` (15) and `feedback_requests` (14) batch-loaded per page (one query each) |
 | `limit`, `cursor` | | default 25 max 100 |
 
 Unknown filter 400 `invalid_filter`; unknown sort 400 `invalid_sort`; tampered cursor 400 `invalid_cursor`; cursor from different sort/filter set 400 `cursor_mismatch` (cursor embeds hash of filter+sort).
@@ -139,7 +143,7 @@ Example `GET /api/v1/conversations?filter[view]=mine&filter[status]=open&sort=wa
       "subject": "Card declined on upgrade",
       "status": "open",
       "spam": false,
-      "priority": true,
+      "priority": "high",
       "unread": true,
       "waiting_since": "2026-11-01T09:12:44Z",
       "last_message_at": "2026-11-01T09:12:44Z",
@@ -222,12 +226,12 @@ Rules:
 
 | Field | Values | Side params | Action (business name) | Event(s) | Role / ability |
 |---|---|---|---|---|---|
-| `trashed` | `true` (trash; `false` 422: restore later) | none | `DeleteConversation` | `conversation.deleted` | `conversations:delete`; `conversations:write` |
+| `trashed` | `true` trash, `false` restore (409 `thread_conflict` when thread key held) | none | `DeleteConversation` / `RestoreConversation` | `conversation.deleted` / `conversation.restored` | `conversations:delete`; `conversations:write` |
 | `spam` | bool | `block_contact` (bool, only with `spam: true`) | `MarkConversationSpam` / `UnmarkConversationSpam` (+ `BlockContact`) | `conversation.marked_spam` / `conversation.unmarked_spam` (+ `contact.blocked`) | member; `conversations:write` (+ `contacts:write` when `block_contact: true`) |
 | `assignee_id`, `team_id` | `mem_…` / `"me"` / `null`; `team_…` / `null` | none | `AssignConversation` (both keys handled together) | one `conversation.assigned` with `from`/`to` for member and team | member; `conversations:write` |
-| `status` | `open`, `closed`, `snoozed` | `snoozed_until` or `snooze_preset` (exactly one, only with `snoozed`); `note` (only with `closed`) | `CloseConversation`, `ReopenConversation` (from closed), `UnsnoozeConversation` (from snoozed), `SnoozeConversation` | `conversation.closed` / `reopened` (reason `manual`) / `unsnoozed` (reason `manual`) / `snoozed` | member; `conversations:write` |
+| `status` | `open`, `closed`, `snoozed` | `snoozed_until`, `snooze_preset` or `snooze_option` (exactly one, only with `snoozed`); `note` (only with `closed`) | `CloseConversation`, `ReopenConversation` (from closed), `UnsnoozeConversation` (from snoozed), `SnoozeConversation` | `conversation.closed` / `reopened` (reason `manual`) / `unsnoozed` (reason `manual`) / `snoozed` | member; `conversations:write` |
 | `ai_state` | `handed_off`, `active` | none | 07 `PauseConversationAi` (reason `member_paused`) / 07 `ResumeConversationAi` | `ai.state_changed` (07) | member; `conversations:write` |
-| `subject`, `priority`, `inbox_id` | 1 to 255 chars; bool; `inbox_…` | none | `UpdateConversation` (one call for all three) | `conversation.updated` (`changes: {field: [from, to]}` for subject/inbox), `conversation.priority_changed` | member; `conversations:write` |
+| `subject`, `priority`, `inbox_id`, `custom_attributes` | 1 to 255 chars; `none\|low\|medium\|high\|urgent`; `inbox_…`; object, null removes key | none | `UpdateConversation` (one call for all) | `conversation.updated` (`changes: {field: [from, to]}` for subject/inbox), `conversation.priority_changed` | member; `conversations:write` |
 | `add_tags`, `remove_tags` | ids or names (add; unknown names auto-created); tag ids (remove) | none | `TagConversation` / `UntagConversation` | `conversation.tagged` / `conversation.untagged` | member; `conversations:write` |
 | `unread` | bool (viewer field: acting member's read state) | none | `MarkConversationUnread` / `MarkConversationRead` (to latest) | `conversation.read` (`member:{mem}` only) | member; `conversations:write` (read-only tokens use `read-state`) |
 
@@ -250,8 +254,8 @@ Why: `trashed` first (sent alone anyway); spam before status so status events al
 
 ### Rules
 
-- `trashed: true` must be only field in body (422 field error `trashed`: "must be sent alone"). `trashed: false`: 422 (restore later).
-- Writes on trashed conversation: 409 `conversation_trashed` (only `conversations:delete` sees trash; others get 404).
+- `trashed` must be only field in body (422 field error `trashed`: "must be sent alone").
+- Writes on trashed conversation other than `trashed: false`: 409 `conversation_trashed` (only `conversations:delete` sees trash; others get 404).
 - Writes on merged source: 409 `conversation_merged` with `data.merged_into`.
 - Permission checked per field (policy `ConversationPolicy.UpdateField`) for every sent field before any work. One forbidden field: whole request 403 (`forbidden`, or `missing_ability` with `required_ability`), nothing changes.
 - Atomic: any field failing (validation, transition, conflict) rolls back every field. Error names failing field (`errors.<field>` on 422).
@@ -278,9 +282,11 @@ Snooze params:
 
 `ai_state` transitions (07 rules; 07 `README.md` "HTTP API"): `active|off -> handed_off` (reason `member_paused`, no customer notice); `handed_off -> active` (resume; 409 `ai_not_active` when conversation closed or spam after status step); `off -> active` 422 `invalid_transition` (AI activates only through gate); `off` not settable (422 validation).
 
+Close by member actor with required attribute missing: 422 `required_attributes_missing` `{keys}` (records.md).
+
 Assignment: omitted key unchanged; `null` unassigns that part; `"me"` = actor. Assignee must be active member (422 `member_inactive`). Team must exist in workspace (422 `team_not_found` field error).
 
-Spam: `spam: true` sets flag (status untouched), timeline event, optional contact block. Pending outbound messages stay pending (reply sent before spam mark is legitimate); replies created after return 409 `conversation_spam`. `spam: false`: status unchanged.
+Spam: `spam: true` sets flag (status untouched), timeline event, optional contact block (safety.md). Pending outbound messages stay pending (reply sent before spam mark is legitimate); replies created after return 409 `conversation_spam`. `spam: false`: status unchanged.
 
 ### Example: close and assign in one call
 
@@ -297,13 +303,14 @@ Same request repeated: 200, `meta.changed: []`, no events.
 
 ## Merge conversations
 
-`POST /conversations/{target}/merges` `{ "from": ["conv_a", "conv_b"] }` (max 10). Target in path; each source merged into it. Moves messages, tags union (cap 50), participants union (source contact becomes `participant` of target if different), each source closed with `merged_into_id = target`. Rules:
+`POST /conversations/{target}/merges` `{ "from": ["conv_a", "conv_b"] }` (max 10). Target in path; each source merged into it. Moves messages, tags union (cap 50), participants union (source contact becomes `cc` participant of target if different), each source closed with `merged_into_id = target`. Rules:
 - Same workspace; target and sources not trashed (404 without `conversations:delete`; 409 `conversation_trashed` with it).
 - Target in `from`: 422 `merge_self`. Duplicate ids deduped.
 - Target already merged: 409 `conversation_merged` (`data.merged_into`).
 - Source already merged into this target: skipped (`skipped_ids`). Source merged into other conversation: 409 `conversation_merged`.
 - All-or-nothing: rows locked in UUID order (target + sources), one tx; any source failing aborts whole merge.
-- Contacts may differ. Target inbox, status, assignee win.
+- Contacts differ: 422 `merge_different_contacts` unless workspace `inbox.merge_different_customers` true (default false; records.md). Target inbox, status, assignee win.
+- Both inside caller's `VisibleScope`, else 404. Irreversible.
 - Response 201 (computed result, not stored; event + timeline rows are record):
 ```json
 { "data": { "object": "conversation_merge", "target": { "id": "conv_…", "object": "conversation", "…": "full" },
@@ -318,7 +325,7 @@ Same request repeated: 200, `meta.changed: []`, no events.
 
 `DELETE /conversations/{id}/tags/{tag}`: not present: 200 no-op.
 
-`POST /conversations/{id}/participants` `{ "contact": { "email": "cfo@acme.dev", "name": "Ann" }, "role": "cc" }` (contact upsert semantics; 50 max 422 `participant_limit_reached`). Only channels with `ParticipantsCC` accept `cc` role (else 422 `channel_participants_unsupported`).
+`POST /conversations/{id}/participants` `{ "contact": { "email": "cfo@acme.dev", "name": "Ann" }, "role": "cc" }` (`to` or `cc`; contact upsert semantics; 50 max 422 `participant_limit_reached`). Only channels with `ParticipantsCC` accept (else 422 `channel_participants_unsupported`). Reply-level `to`, `cc`, `bcc`, `remove_participants`: below, records.md.
 
 Read state (singleton per member per conversation, `ConversationReadStateController`):
 - `GET /conversations/{id}/read-state` returns `{ "data": { "object": "conversation_read_state", "conversation_id": "conv_…", "last_read_message_id": "msg_…", "last_read_at": "…", "unread": false } }` for acting member.
@@ -357,13 +364,13 @@ Current conversation no longer matches view (just closed): neighbors computed fr
   "duplicates_count": 1
 } }
 ```
-`past_conversations` = 5 newest of same contact excluding current, deleted excluded, `total_estimate` capped at 100. AI sidebar block (agent state, citations, pending agent action calls) comes from 07 `GET /conversations/{conversation}/ai`, not from context.
+`past_conversations` = 3 newest of same contact excluding current, within `VisibleScope`, (panel expands to 20 through `GET /contacts/{id}/conversations`), deleted excluded, `total_estimate` capped at 100. AI sidebar block (agent state, citations, pending agent action calls) comes from 07 `GET /conversations/{conversation}/ai`, not from context.
 
 ## Bulk
 
 `PATCH /conversations` (rest.md rule 8). `changes` accepts exactly single-PATCH fields and side params (Update above), validated once up front (unknown field or bad value: 422, nothing runs). Per-field permission checked once for whole request before any work (member sending `trashed`: 403, nothing runs). Each conversation then runs `ApplyConversationChanges` in own tx (same order, same rules, same events as single PATCH). Partial success allowed, never silent.
 
-By ids (max 100, `inbox.bulk.max_ids`; 101: 422 `bulk_too_many`; duplicates deduped):
+By ids (`inbox.bulk.max_ids` 1,000; 1,001: 422 `bulk_too_many`; duplicates deduped; 101 or more: job, see below):
 ```json
 { "ids": ["conv_a", "conv_b", "conv_c", "conv_d"], "changes": { "status": "snoozed", "snooze_preset": "tomorrow" } }
 ```
@@ -386,12 +393,13 @@ By filter (allowed for conversations, capped, explicit count confirmation):
 ```
 - `filter` keys = `GET /conversations` `filter[…]` keys (same allowlist and validation, 400 `invalid_filter`). `q` not allowed (ranking unstable).
 - Two-step confirmation: request without `confirm_count` changes nothing, returns 422 `confirmation_required` with `meta.matched`. Client shows "Mark 412 conversations as spam?" and resends with `confirm_count`. Server re-counts inside request: differs from `confirm_count`: 409 `bulk_count_mismatch` with `meta.matched`, nothing changed.
-- Cap: `inbox.bulk.max_filter_matches` (default 1,000). More matches: 422 `bulk_too_many` with `meta.matched` (narrow filter or repeat after first batch).
+- Cap: `inbox.bulk.max_filter_matches` (default 10,000). More matches: 422 `bulk_too_many` with `meta.matched`.
+- Over `inbox.bulk.sync_max` (100) matched or ids: 202 `{ "data": { "id": "blk_…", "object": "bulk_operation", "status": "pending", "matched": 412, "updated": 0, "skipped": 0, "failed": 0 } }`. Progress `GET /bulk-operations/{id}`, `bulk_operation.updated`. Workbench.md "Bulk actions".
 - Snapshot: ids selected once at start (keyset order of filter); each processed per own tx with current-state validation (conversation closed meanwhile: `skipped` or `failed` per rules). New matches arriving mid-run not included.
 - Response 200 meta only (rule 8): `{ "meta": { "matched": 412, "updated": 409, "skipped": 2, "failed": 1, "errors": [ { "id": "conv_…", "code": "conversation_merged" } ] } }`; `errors` lists every failed id (max 1,000, never silent).
 - Bulk by filter audit-logged (`WriteAuditLog`, filter + changes + counts), like bulk trash.
 
-Events emitted per conversation (catalog), workspace channel coalesced by foundation. Over 1,000 matches (async bulk job): post-MVP.
+Events emitted per conversation (catalog), workspace channel coalesced by foundation. Bulk reply and note: `POST /bulk-operations` (workbench.md).
 
 ## Counts
 
@@ -400,6 +408,8 @@ Events emitted per conversation (catalog), workspace channel coalesced by founda
 { "data": { "object": "conversation_counts",
   "views": {
     "mine": { "open": 12, "unread": 3, "snoozed": 4 },
+    "members": { "mem_01…": { "open": 7 } },
+    "views": { "cvw_01…": { "open": 18 } },
     "unassigned": { "open": 41, "unread": 41 },
     "all": { "open": 999, "capped": true },
     "mentions": { "unread": 1 },
@@ -408,7 +418,7 @@ Events emitted per conversation (catalog), workspace channel coalesced by founda
     "inboxes": { "inbox_01…": { "open": 230 } } },
   "computed_at": "2026-11-01T09:15:00Z" } }
 ```
-Unread computed only for `mine`, `unassigned`, `mentions` (bounded sets). Others open counts only, capped at 999.
+Unread computed only for `mine`, `unassigned`, `mentions` (bounded sets). Others open counts only, capped at 999. Hidden conversations never counted; teams and members only as reachable by caller's scope. `views`: pinned only.
 
 ## Messages
 
@@ -446,11 +456,17 @@ Message resource:
   "expected_last_message_id": "msg_01jb…",
   "then": "close",
   "snooze": null,
-  "channel_options": null
+  "channel_options": null,
+  "to": [],
+  "cc": [{ "email": "cfo@acme.dev" }],
+  "bcc": [],
+  "remove_participants": [],
+  "delay": true
 }
 ```
+- Added fields: `to`, `cc`, `bcc`, `remove_participants` (records.md), `delay` (undo window, workbench.md), `original` (translation, collaboration.md). `snooze` adds `{option}`. Success deletes caller's matching draft in same tx.
 - Body keys strict: unknown key 422 `unknown_field` (same as PATCH). MCP/CLI sugar `reopen` / `close_after` is not a reply field: tools translate to `then` (09). 03 never emits `conversation_closed`: reply on closed conversation follows `then` (default `keep`).
-- Order inside reply tx: (1) lock conversation; (2) rehome when connection driver implements `ChannelRehomer` (16 `import`: moves conversation to inbox's live email connection, `conversation.updated`; 422 `import_channel_cannot_send` when inbox has no email connection or contact has no email); (3) collision guard, validation vs (new) connection, insert message, dispatch `message.created` (billing gate); (4) auto-assign, `then`. Any failure rolls back all. Server-side drafts (`draft_id`) and send modes: later (reply-drafts, agent-send-modes).
+- Order inside reply tx: (1) lock conversation; (2) rehome when connection driver implements `ChannelRehomer` (16 `import`: moves conversation to inbox's live email connection, `conversation.updated`; 422 `import_channel_cannot_send` when inbox has no email connection or contact has no email); (3) collision guard, validation vs (new) connection, insert message, dispatch `message.created` (billing gate); (4) auto-assign, `then`. Any failure rolls back all. No `draft_id`: reply consumes draft by conversation + mode. Send modes stay 09.
 - `body` 1 to 64 KB Markdown (required unless attachments present). NFC normalized. Saved reply variables already rendered by client via render endpoint; server renders any remaining `{{…}}` with same engine (unknown blank).
 - `client_message_id` (UUID string): dedupe within conversation per author; repeat returns 200 with existing message (not 201) and header `Idempotent-Replayed: true`.
 - `expected_last_message_id`: collision guard (README). Mismatch 409 `new_messages_since`:
@@ -458,7 +474,7 @@ Message resource:
 { "message": "New messages arrived since you started typing.", "code": "new_messages_since",
   "data": [ { "id": "msg_…", "object": "message", "author": { "type": "member", "name": "Ada" }, "excerpt": "Refunded, closing.", "created_at": "…" } ] }
 ```
-- `then`: `keep` (default), `open`, `close`, `snooze` (requires `snooze` object `{preset}` or `{until}`, same rules as PATCH `snooze_preset`/`snoozed_until`). Closed conversation + `keep`: stays closed, message sent. `open` on closed: reopen reason `reply`. `snooze` on closed: 422 `invalid_transition` (whole reply rolled back).
+- `then`: `keep` (default), `open`, `close`, `snooze` (requires `snooze` object `{preset}`, `{until}` or `{option}`, same rules as PATCH). Closed conversation + `keep`: stays closed, message sent. Snoozed + `keep`: wakes, reason `member_reply`, when `snooze.wake_on_reply` true. `open` on closed: reopen reason `reply`. `snooze` on closed: 422 `invalid_transition` (whole reply rolled back).
 - Response 201 `{ "data": message, "meta": { "conversation": compact } }`.
 - Side effects in tx: auto-assign (inbox `assign_on_reply`, unassigned member, actor member), clear `waiting_since`, `first_reply_at`, mark read for author, typing stop relay.
 - Billing gate (cloud): `events.Dispatch(message.created)` runs 12 InTx listener `MeterMessageActivity` (contracts.md "Event dispatch phases") inside reply tx. Activation blocked: listener returns `ErrActivationBlocked{Reason}`, whole tx rolls back (no message, no assign, no `then`), 12 records pause via `tx.AfterRollback`. Controller maps to 423 with 12's `billing` block:
@@ -480,7 +496,9 @@ Message resource:
 - Emits `message.updated`. Sets `edited_at`, `metadata.edited_by`. Note edit re-parses mentions: added members get `message_mentions` rows, `message.updated.AddedMentionedMemberIDs` set (06 notifies only those); removed rows deleted, no unmention notification.
 
 `DELETE /conversations/{c}/messages/{m}`:
-- Own reply: any time. Still `pending`: cancels send. Sent: deleted locally (widget hides it from visitor); push channel copy (email, chat apps) stays, no provider call (channel delete sync: later).
+- Own reply inside undo window (`scheduled_send_at` in future): undo, 200 with `undone: true`, `body` (workbench.md).
+- Own reply: any time. Others' reply: `conversations:moderate`. Still `pending`: cancels send. Sent: deleted locally (widget hides it from visitor); push channel copy (email, chat apps) stays, no provider call (channel delete sync: later).
+- Every delete clears body, html, attachments, runs `MessageEraser` hooks in job.
 - Own note: any time. Others' notes: `conversations:moderate`.
 - Contact message: `conversations:moderate` only, local redaction (`metadata.redacted_by`), never touches channel.
 - Event rows: 422 `message_not_deletable`.
@@ -494,7 +512,7 @@ Message resource:
 
 ## Attachments
 
-`POST /attachments` multipart `file` (+ optional `inline=true`). Limits: 25 MB (413 `payload_too_large`), blocked types (executables) 422 `attachment_type_blocked`. Real type sniffed. Response 201:
+`POST /attachments` multipart `file` (+ optional `inline=true`). Limits: 25 MB (413 `payload_too_large`), blocked types (executables) 422 `attachment_type_blocked`. Scan states and download rules: safety.md. Real type sniffed. Response 201:
 ```json
 { "data": { "id": "att_01jb…", "object": "attachment", "filename": "receipt.pdf", "content_type": "application/pdf", "size_bytes": 48211, "sha256": "…", "scan_status": "skipped", "url": "https://…signed", "created_at": "…" } }
 ```
@@ -502,7 +520,7 @@ Linking: `attachment_ids` in reply/note/conversation create. Rules: same workspa
 
 ## Contacts
 
-`GET /contacts` filters: `filter[kind]=user|lead`, `filter[email]`, `filter[external_id]`, `filter[company]`, `filter[blocked]=true`, `filter[last_seen_after]`, `filter[last_seen_before]`, `filter[created_after]`, `filter[custom.<key>]=<value>` (equality, max 3, JSON containment), `filter[segment]=seg_...` (15 segment compiler builds predicate; statement timeout 5 s, over: 422 `segment_too_slow`; unknown or other workspace segment: 400 `invalid_filter`), `q`. Sort: `-last_seen_at` (default), `-created_at`, `name`. Excludes merged and deleted.
+`GET /contacts` filters: `filter[tag]`, `filter[kind]=user|lead`, `filter[email]`, `filter[external_id]`, `filter[company]`, `filter[blocked]=true` (default false: blocked hidden unless asked), `filter[last_seen_after]`, `filter[last_seen_before]`, `filter[created_after]`, `filter[custom.<key>]=<value>` (equality, max 3, JSON containment), `filter[segment]=seg_...` (15 segment compiler builds predicate; statement timeout 5 s, over: 422 `segment_too_slow`; unknown or other workspace segment: 400 `invalid_filter`), `q`. Sort: `-last_seen_at` (default), `-created_at`, `name`. Excludes merged and deleted.
 
 ### Upsert (developer identify)
 `POST /contacts?upsert=true` (rest.md rule 10). Same controller as create (`ContactController.Store`), calls action `UpsertIdentifiedContact` (02 owns separate `identity.IdentifyContact`). Match keys in order: `external_id`, then `email`. Neither given: 422 `upsert_key_required`. `upsert` accepts `true`/`false` only (else 400 `invalid_parameter`). Without `upsert=true`: plain create, existing `external_id` 409 `contact_exists`.
@@ -530,18 +548,69 @@ Companies: `POST /companies?upsert=true`, action `IdentifyCompany`, match keys `
 `PATCH /contacts/{id}` `{ "blocked": true }` / `{ "blocked": false }`. Field-dispatch in `ContactController.Update`: plain attributes first (`UpdateContact`, `contact.updated`), then `blocked` (`BlockContact` / `UnblockContact`, `contact.blocked` / `contact.unblocked`), one tx. Same value as current: no-op, no event. Effects: edge-cases.md 124.
 
 ### Merge
-`POST /contacts/{target}/merges` `{ "from": ["ctc_a", "ctc_b"] }` (max 10). Target in path. Rules: different non-null `external_id` on target and source: 409 `merge_conflict_external_id`. Target in list: 422 `merge_self`. Source already merged into target: skipped. Source merged elsewhere or target merged: 409 `contact_merged` naming survivor. All-or-nothing per request (rows locked in UUID order). Response 201 (one `contact_merges` row per source written; not exposed by id at MVP):
+`POST /contacts/{target}/merges` `{ "from": ["ctc_a", "ctc_b"] }` (max 10). Target in path. Rules: both verified with different identity values: 422 `merge_different_contacts` unless `inbox.merge_different_customers` (records.md); different non-null `external_id` on target and source: 409 `merge_conflict_external_id`. Target in list: 422 `merge_self`. Source already merged into target: skipped. Source merged elsewhere or target merged: 409 `contact_merged` naming survivor. All-or-nothing per request (rows locked in UUID order). Response 201 (one `contact_merges` row per source written; not exposed by id at MVP):
 ```json
 { "data": { "object": "contact_merge", "target": { "id": "ctc_…", "object": "contact", "…": "full" }, "merged_ids": ["ctc_a"], "skipped_ids": ["ctc_b"] } }
 ```
 `trusted_attribute_keys`: survivor keeps own list; attribute copied from source (survivor lacked key) keeps source's trust; survivor value wins otherwise (07 binding rule). Over 50k conversations to move: 202 `{ "data": { "object": "contact_merge", "status": "pending", "target": { "id": "ctc_…" } } }`, job finishes, `contact.merged` on completion. See edge cases for field precedence and widget identity drop.
 
 ### Export
-`POST /contacts/{id}/exports` (`contacts:erase`) empty body: 202 `{ "data": { "id": "exp_…", "object": "contact_export", "status": "pending" } }`. One running per contact: 409 `export_in_progress`. `GET /contacts/{id}/exports/{export}`: status, signed `url` when `ready` (24 h). `contact.export_ready` to requester `member:{mem}`. Zip sections: core (`contact`, `identities`, `conversations`, `messages`, attachments) plus one per registered export hook (`changelog` 13, `feedback` 14, `engage` 15; README Security).
+`POST /contacts/{id}/exports` (`contacts:erase` + `conversation_access = all`, else 403 `conversation_access_required`) body `{include_notes?}`: 202 `{ "data": { "id": "exp_…", "object": "contact_export", "status": "pending" } }`. One running per contact: 409 `export_in_progress`. `GET /contacts/{id}/exports/{export}`: status, signed `url` when `ready` (24 h). `contact.export_ready` to requester `member:{mem}`. Zip sections: core (`contact`, `identities`, `conversations`, `messages`, attachments) plus one per registered export hook (`changelog` 13, `feedback` 14, `engage` 15; README Security).
 
 ### Delete / erase
 `DELETE /contacts/{id}`: contact with zero conversations: soft delete, 204. Has conversations: 409 `contact_has_conversations` (use `?erase=true`).
-`DELETE /contacts/{id}?erase=true` (`contacts:erase`): 202 `{ "data": { "object": "contact_erasure", "status": "pending" } }`; contact immediately hidden (`deleted_at`), `erase_contact` job wipes per security.md. Irreversible; audit logged. Job calls `RetentionGuard` first: held = erasure status `pending_hold` (audit row, nothing wiped, contact stays hidden; resumes when hold released, later). MVP guard noop. Erasure status values: `pending`, `pending_hold`, `completed`.
+`DELETE /contacts/{id}?erase=true[&immediate=true]` (`contacts:erase` + `conversation_access = all`; immediate also needs `password.confirm`): 202 `{ "data": { "id": "ces_…", "object": "contact_erasure", "status": "pending", "scheduled_for": "…" } }`; contact immediately hidden, `erase_contact` job wipes after grace (default 7 days, safety.md). Cancel: `PATCH /contact-erasures/{ces} {status: "cancelled"}` inside grace. Audit logged. Job calls `RetentionGuard` first: held = status `pending_hold` (nothing wiped, contact stays hidden; resumes when hold released). Status values: `pending`, `pending_hold`, `completed`, `cancelled`.
+
+## Added endpoints
+
+Details in owning file. Route names follow rest.md rule 14. Auth `A` unless stated.
+
+| Method | Path | Ability, permission | File |
+|---|---|---|---|
+| GET, POST | /conversation-views | conversations:read; conversations:write (`views:manage_shared` for shared) | views.md |
+| GET, PATCH, DELETE | /conversation-views/{view} | same | views.md |
+| PATCH | /conversation-views | `views:manage_shared` (`order`) | views.md |
+| GET, PATCH | /inbox-preferences | conversations:read | views.md |
+| POST | /conversation-searches | conversations:read | search.md |
+| GET | /snooze-lists, /snooze-options | conversations:read | workbench.md |
+| PATCH | /snooze-lists/{scope} | settings:write, `inboxes:manage` | workbench.md |
+| GET, POST (`?upsert=true`) | /drafts | conversations:read; conversations:write | workbench.md |
+| PATCH, DELETE | /drafts/{draft} | conversations:write | workbench.md |
+| POST | /bulk-operations | conversations:write | workbench.md |
+| GET, PATCH | /bulk-operations/{bulk_operation} | conversations:read; conversations:write | workbench.md |
+| GET | /inboxes/{inbox}/assignment-status | settings:read | assignment.md |
+| GET, POST, PATCH | /away-reasons | conversations:read; settings:write, `inboxes:manage` | assignment.md |
+| PATCH, DELETE | /away-reasons/{away_reason} | settings:write, `inboxes:manage` | assignment.md |
+| POST | /member-activity | `U` + workspace; 204 | assignment.md |
+| GET | /conversations/{conversation}/mentionables | conversations:read | collaboration.md |
+| POST | /conversations/{conversation}/messages/{message}/reactions | conversations:write | collaboration.md |
+| DELETE | /conversations/{conversation}/messages/{message}/reactions/{emoji} | conversations:write | collaboration.md |
+| GET, POST | /conversations/{conversation}/side-conversations | conversations:read; `conversations:side` | collaboration.md |
+| GET, PATCH | /conversations/{conversation}/side-conversations/{side_conversation} | same | collaboration.md |
+| POST | /conversations/{conversation}/side-conversations/{side_conversation}/messages | `conversations:side` | collaboration.md |
+| GET | /conversations/{conversation}/similar | conversations:read | collaboration.md |
+| POST | /conversations/{conversation}/messages/{message}/translations | conversations:read | collaboration.md |
+| POST | /conversations/{conversation}/reply-translations | conversations:write | collaboration.md |
+| GET, POST | /attribute-definitions | conversations:read; settings:write, `attributes:manage` | records.md |
+| PATCH, DELETE | /attribute-definitions/{attribute_definition} | settings:write, `attributes:manage` | records.md |
+| GET | /companies/{company}/conversations | conversations:read | records.md |
+| POST | /attachments/{attachment}/download-grants | conversations:read | safety.md |
+| GET, POST, PATCH | /redaction-rules | settings:read; settings:write, `redaction:manage` | safety.md |
+| PATCH, DELETE | /redaction-rules/{redaction_rule} | settings:write, `redaction:manage` | safety.md |
+| POST | /redaction-tests | settings:write, `redaction:manage` | safety.md |
+| GET | /contact-erasures, /contact-erasures/{contact_erasure} | contacts:write, `contacts:erase` | safety.md |
+| PATCH | /contact-erasures/{contact_erasure} | contacts:write, `contacts:erase` | safety.md |
+| GET, POST | /data-exports | conversations:read, `conversations:export` or `contacts:export` | safety.md |
+| GET, DELETE | /data-exports/{data_export} | same; requester | safety.md |
+| GET, POST | /export-destinations | exports:read; exports:write | safety.md |
+| PATCH, DELETE | /export-destinations/{export_destination} | exports:write | safety.md |
+| POST | /export-destinations/{export_destination}/tests | exports:write | safety.md |
+| GET, POST | /export-schedules | exports:read; exports:write | safety.md |
+| PATCH, DELETE | /export-schedules/{export_schedule} | exports:write | safety.md |
+
+`PATCH /members/{mem}`, `PATCH /members/me` (00-accounts routes) gain `conversation_access*` (access.md), `availability`, `away_reassign`, `away_reason_id`, `assign_on_reply`, `undo_send_seconds`, `conversation_capacity`, `capacity_by_channel` (assignment.md, workbench.md).
+
+`PATCH /contacts/{id}`, `PATCH /companies/{id}` gain `add_tags`, `remove_tags`, `notes`. `POST /conversations` member-authored gains `to`, `cc`, `bcc`, `delay`.
 
 ## Saved replies
 
@@ -580,6 +649,9 @@ See [search.md](search.md). `GET /search?q=refund&limit=5`:
 | 409 | bulk_count_mismatch | filter bulk: matches differ from `confirm_count` (`meta.matched`) |
 | 409 | ai_not_active | `ai_state: active` on closed or spam conversation (07) |
 | 409 | new_messages_since | collision guard |
+| 409 | attachment_scan_pending, attachment_scan_warning | download before scan or without grant (safety.md) |
+| 403 | conversation_access_required | contact export or erase by restricted member |
+| 410 | attachment_infected | download of removed file |
 | 409 | channel_window_closed | messaging window over (`data.window_closed_at`) |
 | 409 | channel_disconnected | routed connection disconnected and no fallback |
 | 409 | channel_not_api | contact message on non-api conversation |
@@ -597,7 +669,9 @@ See [search.md](search.md). `GET /search?q=refund&limit=5`:
 | 422 | invalid_transition | illegal `status` / `ai_state` change; body `from`, `to` (rest.md rule 3) |
 | 422 | segment_too_slow | `GET /contacts?filter[segment]` over 5 s statement timeout (15) |
 | 422 | unknown_field, confirmation_required, upsert_key_required, message_not_in_conversation | PATCH unknown key; filter bulk without `confirm_count` (`meta.matched`); upsert without match key; read-state message of other conversation |
+| 422 | merge_different_contacts, required_attributes_missing, attribute_unknown, snooze_option_unknown, invalid_definition, view_limit_reached, away_reason_required, away_reason_limit_reached, owner_access_unrestricted, attribute_definition_limit_reached, redaction_rule_limit_reached, reaction_limit_reached, message_not_reactable, export_too_large, translation_unavailable | this round |
 | 422 | snooze_in_past, snooze_too_far, member_inactive, tag_limit_reached, participant_limit_reached, bulk_too_many, merge_self, attachment_infected, attachment_type_blocked, message_not_editable, message_not_deletable, search_query_too_long | |
 | 423 | spend_cap_reached, payment_method_required, billing_restricted, billing_locked, test_mode_limit_reached | 12 InTx listener `MeterMessageActivity` aborts reply / member-authored create tx (cloud); body carries `billing` block. Inbound always captured |
 | 429 | outbound_fair_use_exceeded | 12 InTx guard on `conversation.created` with workspace `initiated_by` (cloud) |
-| 503 | search_timeout | search statement timeout |
+| 502 | translation_failed | LLM provider error (07) |
+| 503 | search_timeout, list_timeout | search or attribute sort statement timeout |

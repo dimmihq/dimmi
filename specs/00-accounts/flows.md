@@ -17,7 +17,7 @@ Style: caveman. Exact behavior per flow. Endpoint paths from [api.md](api.md) (R
 7. Over 100 active sessions for user: delete oldest by `last_activity_at`.
 
 ### LoginPolicy (every primary method)
-`LoginPolicyResolver.ForEmail(email)` runs first in every primary method, before any secret check: password grant, magic link request and consume, email code, OAuth callback (after provider identity resolved, before link/session), password reset redeem, register. MVP driver `allowAll` returns empty policy (all methods allowed). Later: method not in `AllowedMethods` or `SSORedirectURL` set: 409 `sso_required` with `redirect_url` (domain-level answer, no account enumeration). Contract in README Support.
+`LoginPolicyResolver.ForEmail(email)` runs first in every primary method, before any secret check: password grant, magic link request and consume, email code, OAuth callback (after provider identity resolved, before link/session), password reset redeem, register. Driver `OrganizationLoginPolicy` (`21-enterprise-identity`): email under verified domain of enforced connection: 409 `sso_required` with `redirect_url` (domain-level answer, no account enumeration); otherwise all methods allowed. Owner `sso_bypass` per 19 README. Contract in README Support.
 
 ### Primary auth then 2FA (`CompletePrimaryAuth(user, method, opts{reauth})`)
 Any primary method (password, magic link, email code, OAuth, password reset) ends here:
@@ -217,7 +217,7 @@ All member state changes go through `PATCH /api/v1/members/{mem}` (rest.md rule 
 ## 17. Teams
 
 - Create/update `{name}` 1 to 50 chars, NFC, unique case-insensitive among non-deleted (422). Max 500 teams per workspace.
-- Delete: set `deleted_at`, dispatch `team.deleted`; 03 listener unassigns conversations (chunked, events), sets `inboxes.default_team_id` null, then calls `PurgeTeam` (deletes team_members, team row). `PurgeDeletedTeams` hourly safety net.
+- Delete (`?reassign_to_team_id=` or `?reassign_to_member_id=`, [settings-pages.md](settings-pages.md)): set `deleted_at`, dispatch `team.deleted` with target; 03 listener reassigns or unassigns conversations (chunked, events), sets `inboxes.default_team_id` null, then calls `PurgeTeam` (deletes team_members, team row). `PurgeDeletedTeams` hourly safety net.
 - Membership `POST /api/v1/teams/{team}/members {member_ids: [...]}` (max 100 per call, active members only; inactive skipped with per-id result), `DELETE /api/v1/teams/{team}/members/{mem}`. Idempotent (adding existing = no-op, no event).
 
 ## 18. Invitations

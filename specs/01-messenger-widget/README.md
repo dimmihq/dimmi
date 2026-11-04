@@ -1,8 +1,20 @@
-# 01 Messenger widget (backend)
+# 01 Messenger widget
 
-Style: caveman. Date 2026-11-01. Backend only. Widget UI (Preact, Shadow DOM) built later against this spec and [sdk-contract.md](sdk-contract.md). Full endpoint shapes in [api.md](api.md). Edge cases in [edge-cases.md](edge-cases.md). Build order in [tasks.md](tasks.md).
+Style: caveman. Date 2026-11-04. Backend, browser widget and dashboard page. Static widget exists in `resources/widget`, static settings page in `resources/js/features/settings/pages/channels.tsx`; this spec connects both. Files:
 
-Sibling spec: [02-widget-identity](../02-widget-identity/README.md) owns JWT verification, identity secrets, merge-on-login. This spec calls 02 actions; never re-implements them.
+| File | Covers |
+|---|---|
+| this README | goal, scope, data model, code map, boot handshake, HTTP, events, jobs, permissions |
+| [api.md](api.md) | endpoint shapes |
+| [settings.md](settings.md) | every setting, translations, assets, site import, page rules, audience seam, budgets |
+| [settings-page.md](settings-page.md) | dashboard page: control bindings, several widgets, live preview, installed status, snippets |
+| [client.md](client.md) | connecting static widget; same-person rule, status, seen, typing, AI streaming, developer context |
+| [hosted-and-domains.md](hosted-and-domains.md) | apps without Origin, hosted page, custom API domain, per-widget help center |
+| [sdk-contract.md](sdk-contract.md) | public JS SDK |
+| [edge-cases.md](edge-cases.md) | decided behavior |
+| [tasks.md](tasks.md) | build order, binding |
+
+Sibling specs: [02-widget-identity](../02-widget-identity/README.md) owns JWT verification, identity secrets, merge-on-login; this spec calls 02 actions, never re-implements them. [20-native-sdks](../20-native-sdks/README.md) owns React Native, iOS, Android and headless SDKs on same `/widget/v1`.
 
 ## Goal
 
@@ -15,7 +27,7 @@ Why: roadmap launch item 1 (`research/roadmap.md` "1. Messenger widget"). Feeds 
 | Bar | Target |
 |---|---|
 | Loader script (`loader.js`) | at most 3 KB gzipped, async, zero blocking work, `requestIdleCallback` before fetching core |
-| Core bundle (launcher + panel + chat + realtime client + engage scheduler) | at most 35 KB gzipped. Realtime client = plain `EventSource` on centrifuge uni-SSE (about 1 KB gz, no centrifuge-js). Engage scheduler at most 1.5 KB inside core (15). Lazy chunks at most 20 KB gz each, named budgets: `help` (08), `changelog` 8 KB (13), `feedback` 15 KB (14), `engage-banner` 6 KB, `engage-modal` 10 KB, `engage-survey` 14 KB (15), `intercom-shim` 2 KB (16), `markdown`, `emoji`, `attachments`. CI size budget fails build on regression |
+| Core bundle (launcher + panel + chat + realtime client + engage scheduler) | at most 35 KB gzipped. Realtime client = plain `EventSource` on centrifuge uni-SSE (about 1 KB gz, no centrifuge-js). Engage scheduler at most 1.5 KB inside core (15). Lazy chunks at most 20 KB gz each, named budgets: `help` (08), `changelog` 8 KB (13), `feedback` 15 KB (14), `engage-banner` 6 KB, `engage-modal` 10 KB, `engage-survey` 14 KB (15), `intercom-shim` 2 KB (16), `markdown`, `emoji`, `attachments`, plus `preview` 12 KB (never in customer traffic), `dev-context` 3 KB, `voice` 3 KB ([settings.md](settings.md) "Lazy chunks"). CI size budget fails build on regression |
 | Lighthouse impact on host page | TBT +0 ms, no layout shift (launcher fixed position, reserved), no third-party cookies |
 | `GET /widget/v1/apps/{app}/config` | p95 under 5 ms server (in-memory cache), CDN cacheable 60 s |
 | Boot handshake (`GET /widget/v1/session`, `PATCH /widget/v1/session`, `POST /widget/v1/sessions` identified) | p95 under 30 ms server. Anonymous page load without stored token: zero requests beyond config |
@@ -28,7 +40,7 @@ Why: roadmap launch item 1 (`research/roadmap.md` "1. Messenger widget"). Feeds 
 
 ## Scope
 
-### In (MVP)
+### In
 
 - Widget public API `/widget/v1`: app config, boot handshake (session resume, identified/test session start, lazy anonymous session), session refresh, logout, contact read/update (unverified, leads only), conversations list/create/show, messages list/send, attachments (presigned S3 PUT or direct upload), typing indicators, read state, human handoff request, page-view/context ping, realtime connect tokens, polling fallback for realtime, team availability. Route group shared with feature tabs owned elsewhere: Help (08), What's new `/widget/v1/changelog*` (13), Feedback `/widget/v1/feedback/*` (14), engage `/widget/v1/engage-items`, `/engage-events`, `/announcements/*`, `/surveys/*`, `/engage-assets/*` (15). Config carries their blocks (`features.changelog`, `features.feedback`, `engage`).
 - Default widget: created by workspace initializer hook (`EnsureDefaultWidget`, contracts.md) at workspace creation, never lazily; install snippet ready immediately.
@@ -43,28 +55,29 @@ Why: roadmap launch item 1 (`research/roadmap.md` "1. Messenger widget"). Feeds 
 - `window.Intercom` shim (launch: importers, 16): loader installs `window.Intercom` when `widget_settings.intercom_shim` or SDK option `intercomShim: true`; maps Intercom calls onto Dimmi SDK (sdk-contract "Intercom shim"; mapping table owned by 16 `sources.md`). Identity through shim always unverified (`user_id` -> `claimed_user_id`, 02 R5), attributes ignored (02 R8); verified identity only via Dimmi identity source.
 - Agent action confirmation card (07 agent actions): widget renders `metadata.ai.confirmation` card, Confirm/Cancel via `PATCH /widget/v1/conversations/{conversation}/action-calls/{call}` (07 controller, 01 route group), live status via `ai.action_call_updated` (section "Agent action card").
 - MCP tools for widget install and settings.
+- Several widgets per workspace, up to 10, each own settings, snippet, inbox. Short list on messenger settings page. Mobile app = another widget ([settings.md](settings.md) "Web-only fields").
+- Same-person rule: verified customer one contact across widgets; anonymous separate per widget; conversation stays on starting widget ([client.md](client.md) "Several widgets, same person").
+- All settings in [settings.md](settings.md): logo, company name, open straight into conversation, privacy notice, sounds, header and button colours, site import, page rules, launcher image, tab order, gradients and background images, team introduction, delay notice, welcome message, strings in 28 shipped languages plus customer translations.
+- Dashboard settings page with live preview running real widget code ([settings-page.md](settings-page.md)).
+- Static widget connected ([client.md](client.md)). Customer-visible status, seen on chat, typing to customers, AI token streaming (07 `ai.reply_delta`), console error and network capture.
+- Hosted full-page messenger URL, custom widget API domain, trusted domains, per-widget help center ([hosted-and-domains.md](hosted-and-domains.md)).
+- Per-stack packages: `@dimmi/sveltekit`, `@dimmi/nuxt`, `@dimmi/vue`, `@dimmi/astro`, Rails, Laravel, Python, Go libraries, `@dimmi/server/fastify`, Supabase helpers (02 tasks M6, sdk-contract Packages). Native and headless SDKs: 18.
+- Realtime stays one-way SSE with polling fallback: keeps bundle budget. No WebSocket in widget (decision).
+- Office hours: widget reads 17 schedule through `schedule_id`. Schedule-based auto-replies are workflows (17), not widget code.
 
-### Out (later)
+### Out
 
-| Item | When |
+| Item | Why |
 |---|---|
-| Server-side `track` ingestion and event audiences | post-MVP: upmarket set (outbound). MVP `track()` is client-only (15 engage triggers, no network) |
-| Office hours schedule (rules), auto-replies by schedule | post-MVP: rules lite. MVP has free-text office hours + reply time expectation only |
-| Console error / network capture (developer context) | standout: developer context |
-| AI token streaming into widget | later; MVP shows agent typing indicator, reply arrives complete |
-| Custom widget API domain (CNAME + TLS) | later; MVP solves ad-blockers via first-party proxy path (`api_base`) documented in sdk-contract |
-| React Native / mobile SDKs | post-MVP: mobile SDKs. Same `/widget/v1` API, headless |
-| Headless hooks SDK (`useConversation`) | standout: headless widget SDK. API already sufficient |
-| Translations of widget strings beyond `en` + workspace locale overrides | post-MVP: auto-translation. MVP ships `en`, dictionary keyed for later |
-| Multi-brand widgets with separate help centers | later. MVP: up to 10 widgets per workspace, each may link one help center |
-| Per-stack packages `@dimmi/sveltekit`, `@dimmi/nuxt`, `@dimmi/vue`, `@dimmi/astro`, Rails/Laravel/Python/Go libs, `@dimmi/server/fastify`, Supabase helpers | later: identity-helper-packages. MVP: script tag, `@dimmi/browser`, `@dimmi/react`, `@dimmi/nextjs`, `@dimmi/server`; other stacks get install text = tag + 02 raw snippet |
-| Bidirectional WebSocket / centrifuge-js in widget | not planned. Widget stream is receive-only uni-SSE; writes are REST. Long-poll fallback only when proxy buffers streaming |
+| Rules for who sees the messenger or can start a conversation | audience rules arrive with the audiences spec ([settings.md](settings.md) "Audience seam") |
+| Server-side `track` ingestion and event audiences | depends on same audiences spec. `track()` stays client-only (15 triggers, no network) |
+| Bidirectional WebSocket, centrifuge-js in widget | decided no. Writes are REST, stream is uni-SSE, long-poll only when proxy buffers |
 
 CSAT prompt on close ships in 15 (system message `survey_request`, widget card). What's new tab ships in 13. Feedback tab ships in 14. `window.Intercom` shim ships with 16 importers (launch: importers).
 
 ## User stories
 
-- Workspace member (owner/admin): set colors, launcher, greeting, reply-time text, allowed origins, email capture rule; copy install snippet for my framework; see "installed, last seen on https://app.acme.com 2 minutes ago"; preview widget as test without paying.
+- Workspace member (owner/admin): set colors, launcher, greeting, reply-time text, allowed origins, email capture rule, languages; run several widgets; see changes in live preview before saving; copy install snippet for my framework; see "installed, last seen on https://app.acme.com 2 minutes ago"; preview widget as test without paying.
 - Workspace member (member): read install snippet, mint test session to try widget, see visitor's current page in inbox sidebar.
 - End customer (anonymous): open widget, ask question, attach screenshot, see typing and replies live, leave email when team offline, get reply by email, reply to that email and land in same conversation.
 - End customer (logged in host app): see my past conversations on any device; logout on shared laptop leaves nothing behind.
@@ -77,7 +90,7 @@ New tables owned by 01. Conventions apply (UUIDv7 `id`, `workspace_id` first in 
 
 ### widget_settings
 
-One row per widget install. Public id prefix `wgt_` = **app id** in snippet. Each row owns one `channel_connections` row of type `widget` (created in same tx).
+One row per widget install. Public id prefix `wgt_` = **app id** in snippet. Columns below plus [settings.md](settings.md) "New widget_settings columns". Each row owns one `channel_connections` row of type `widget` (created in same tx).
 
 | Column | Type | Notes |
 |---|---|---|
@@ -86,8 +99,8 @@ One row per widget install. Public id prefix `wgt_` = **app id** in snippet. Eac
 | channel_connection_id | uuid not null unique references channel_connections on delete cascade | type `widget`, carries `inbox_id` |
 | name | text not null | 1 to 60 chars, default "Website" |
 | enabled | boolean not null default true | false: config returns 403 `widget_disabled` |
-| appearance | jsonb not null default '{}' | typed `models.WidgetAppearance`: `primary_color` (#RRGGBB), `theme` (`light`,`dark`,`auto`), `position` (`right`,`left`), `padding_x`, `padding_y` (0 to 200 px), `launcher.style` (`bubble`,`tab`,`hidden`), `launcher.label` (0 to 24 chars), `launcher.icon` (`chat`,`help`,`wave`), `font` (`system`,`inherit`). Max 4 KB |
-| texts | jsonb not null default '{}' | typed `models.WidgetTexts`: `greeting_title` (60), `greeting_body` (280), `office_hours_text` (140), `offline_message` (280), `email_prompt` (140), `composer_placeholder` (60), `feedback_tab_label` (24, 14). Plain text, NFC, no HTML |
+| appearance | jsonb not null default '{}' | typed `models.WidgetAppearance`: `primary_color` (#RRGGBB), `theme` (`light`,`dark`,`auto`), `position` (`right`,`left`), `padding_x`, `padding_y` (0 to 200 px), `font` (`system`,`inherit`), `launcher.*`, colours, logo, background ([settings.md](settings.md)). Max 8 KB |
+| texts | jsonb not null default '{}' | typed `models.WidgetTexts`: customer text in `default_locale`, keys and limits in [settings.md](settings.md) "Texts". `feedback` tab label replaces `feedback_tab_label` (14). Other languages: `widget_translations`. Plain text, NFC, no HTML |
 | locale | text not null default 'auto' | `auto` = browser, else BCP 47 |
 | reply_time | text not null default 'auto' CHECK in ('auto','minutes','hours','day') | `auto` from team availability |
 | show_team_avatars | boolean not null default true | up to 3 most recently active members with avatars |
@@ -151,6 +164,8 @@ Tenant resolution before workspace known: two `SECURITY DEFINER` SQL functions r
 
 Contact identity row: anonymous lead gets `contact_identities (type 'widget_visitor', value = wss_ id of first session, verified false)`.
 
+New tables: `widget_translations`, `widget_assets`, `widget_site_imports` ([settings.md](settings.md)), `widget_domains` ([hosted-and-domains.md](hosted-and-domains.md)). Native push tables `widget_devices`, `widget_push_credentials` owned by 18.
+
 Registry enums (`00-foundation/extensibility.md` P1, 03 data model): 01 registers channel type `widget` (`enums.ChannelType`) and identity type `widget_visitor` (`enums.IdentityType`) in Go registry at boot (`app_service_provider.go`, beside eraser registration). No CHECK value, no migration.
 
 ### Core table changes
@@ -174,6 +189,14 @@ Test flag: 01 adds no conversations column. Uses 03 `conversations.is_test` (`20
 | `20261101000106_add_uploaded_at_to_attachments_table.sql` | core change |
 | `20261101000107_add_changelog_tab_enabled_to_widget_settings_table.sql` | `changelog_tab_enabled` (13) |
 | `20261101000108_add_intercom_shim_to_widget_settings_table.sql` | `intercom_shim` (16 shim) |
+| `20261201010001_add_settings_fields_to_widget_settings_table.sql` | settings.md columns |
+| `20261201010002_create_widget_translations_table.sql` | |
+| `20261201010003_create_widget_assets_table.sql` | |
+| `20261201010004_create_widget_site_imports_table.sql` | |
+| `20261201010005_create_widget_domains_table.sql` | |
+| `20261201010006_create_widget_resolve_domain_function.sql` | SECURITY DEFINER, returns `(workspace_id, id)` only |
+| `20261201010007_add_native_apps_enabled_to_widget_settings_table.sql` | built in M1 |
+| `20261201010008_add_transferred_from_to_widget_sessions_table.sql` | hosted page transfer |
 
 ## Code map
 
@@ -269,7 +292,7 @@ app/actions/attachments/                           # shared with 03 (see Depende
 
 app/integrations/widget/
   adapter.go                                       # contracts.Channel impl (03): Type, Capabilities, Send (realtime delivery + offline email schedule); passes tests/contracts/channel_test.go
-  capabilities.go                                  # Transport realtime; attachments yes, typing yes, read receipts yes; deletes via realtime (03 rule; edits later: message-edit); reactions no; window none
+  capabilities.go                                  # Transport realtime; attachments yes, typing yes, read receipts yes; deletes and edits via realtime (03 rule); reactions no; window none
   payloads.go                                      # widget-safe broadcast payload builders (10 KB cap, fallback {id,object,updated_at})
 
 app/broadcasting/widget_contact_channel.go         # authorizer for widget_contact:{ctc} (connection JWT `sub` session must own contact, session not revoked); used by OnConnecting server-side subscription
@@ -307,9 +330,25 @@ app/mcp/tools/
   dimmi_list_widgets.go
   dimmi_update_widget_settings.go
 
-database/migrations/2026110100010{1..8}_*.sql
+# Added with settings, hosted page and domains (detail in sibling files)
+app/http/controllers/api/v1/widget_translation_controller.go, widget_asset_controller.go, widget_site_import_controller.go, widget_domain_controller.go, widget_domain_check_controller.go
+app/http/controllers/widget/widget_asset_content_controller.go   # Show  public asset
+app/http/controllers/widget/session_transfer_controller.go       # Store POST /session-transfers
+app/http/controllers/web/hosted_messenger_controller.go          # Show  GET /messenger/{app}
+app/http/middleware/resolve_widget_host.go                       # widget.host: custom API domain, path allowlist
+app/actions/widget/upsert_widget_translation.go, delete_widget_translation.go, resolve_widget_texts.go, store_widget_asset.go, start_widget_site_import.go, add_widget_domain.go, check_widget_domain.go, transfer_widget_session.go, redact_dev_context.go
+app/jobs/import_widget_brand_from_site.go, check_widget_domain_job.go, prune_widget_assets.go
+app/support/widgetstrings/                         # embeds resources/widget/lang/*.json, locale negotiation, fallback chain
+app/support/brandimport/                           # parses site signals, colour filter, logo histogram
+routes/widget_hosted.go                            # hosted page; routes/widget_settings.go  dashboard routes for new child collections
+resources/views/widget/hosted.templ
+resources/widget/client/                           # protocol layer (client.md)
+resources/js/features/settings/messenger/          # dashboard page (settings-page.md)
+
+database/migrations/2026110100010{1..8}_*.sql, 2026120101000{1..8}_*.sql
 database/queries/widget_settings.sql               # FindWidgetSettings, ListWidgetSettings, CreateWidgetSettings, UpdateWidgetSettings, DeleteWidgetSettings, UpdateWidgetLastBoot, CountWidgetSettings
 database/queries/widget_sessions.sql               # FindWidgetSessionByTokenHash, CreateWidgetSession, UpdateWidgetSessionActivity, ExtendWidgetSession, RevokeWidgetSession, RevokeWidgetSessionsForContact, RevokeWidgetSessionsForSecret, RepointWidgetSessions, ListActiveWidgetSessionsForContact, DeleteExpiredWidgetSessions
+database/queries/widget_translations.sql, widget_assets.sql, widget_site_imports.sql, widget_domains.sql
 database/queries/widget_conversations.sql          # ListWidgetConversationsForContact, ListWidgetMessages, ListWidgetUpdatesSince, CountWidgetUnread, MarkWidgetMessagesRead
 database/factories/widget_settings_factory.go, widget_session_factory.go
 
@@ -344,7 +383,7 @@ Rules:
 - 401 `session_expired` / `session_revoked` / `session_invalid` on `GET /session`: SDK drops token, continues with "stored token none" row. Identified + `session_expired` + JWT: `PATCH /session` (revives). Anonymous expired: old lead stays in inbox, no merge.
 - `previous_token` (body only, never URL or query): honored only when valid (not expired, not revoked) and same widget. Else ignored silently, treated as none. Never returned or logged.
 - `POST /sessions` with `previous_token` identified, same `sub`: no new session; 200 with existing session extended (`token` omitted). Same as `PATCH /session`.
-- Failed `POST /sessions` (invalid JWT, any 4xx) has no side effects: previous session untouched, nothing revoked, no contact. Invalid JWT returns 401 with 02 code (no modes at MVP, 02 "Identity behavior"). SDK continues as if no JWT (stored anonymous: `GET /session`; none: lazy) plus `console.error`.
+- Failed `POST /sessions` (invalid JWT, any 4xx) has no side effects: previous session untouched, nothing revoked, no contact. Invalid JWT returns 401 with 02 code (mode `optional`; other modes 02 validations.md). SDK continues as if no JWT (stored anonymous: `GET /session`; none: lazy) plus `console.error`.
 - Mid-session re-check (navigation, tab visible, `identify()`, source `subscribe` callback; rules in sdk-contract "Identity sources"): same table (stored anonymous: `POST /sessions` with `previous_token`; stored identified same `sub`, claims changed or near expiry: `PATCH /session`; same `sub`, nothing changed: no request).
 - Identity source error (network, 5xx, server action rejected): page load = treated as no token (fail closed); mid-session = keep state, retry next trigger.
 - `identity_mismatch` (409) kept only on `PATCH /session` (refresh or resume with other `sub`). Fix: `POST /sessions` with `previous_token`. Old "reboot" hint replaced.
@@ -406,6 +445,9 @@ Auth legend: `app` = public, app id resolved and origin checked; `widget` = `aut
 | * | `/widget/v1/changelog*` | widget.changelog.* | app or widget | owned by 13; shares group + middleware, like Help |
 | * | `/widget/v1/feedback/*` | widget.feedback.* | app (reads) or widget | owned by 14; CORS allows `Dimmi-Feedback-Session` request header |
 | * | `/widget/v1/engage-items`, `/engage-events`, `/announcements/*`, `/surveys/*`, `/engage-assets/*` | widget.engage-items.*, ... | per 15 api.md | owned by 15; test sessions may pass `preview` |
+| POST | `/widget/v1/session-transfers` | widget.session-transfers.store | widget | 60 s single-use token for hosted page in WebView ([hosted-and-domains.md](hosted-and-domains.md)) |
+| GET | `/widget/v1/apps/{app}/assets/{wga}/{file}` | widget.apps.assets.show | none | logo, launcher image, background; immutable ([settings.md](settings.md)) |
+| POST, GET, PATCH, DELETE | `/widget/v1/devices*` | widget.devices.* | widget | native push registration, owned by 18 |
 | GET | `/widget/v1/openapi.json` | widget.openapi | none | |
 | GET | `/connection/uni_sse?cf_connect=<json>` | broadcasting.uni-sse (framework) | connect token in `cf_connect` | own small uni-SSE handler in `framework/broadcasting` on centrifuge public API; not under `/widget/v1`, not REST (rest.md exceptions). `OnConnecting` verifies token + session, returns server-side subscription with recovery from client `offset`/`epoch`. `cf_connect` redacted in access logs |
 
@@ -416,7 +458,8 @@ Auth legend: `app` = public, app id resolved and origin checked; `widget` = `aut
 | GET | `/widget/v1/loader.js` | widget.loader | `public, max-age=300, stale-while-revalidate=86400`, ETag |
 | GET | `/widget/assets/{file}` (hashed names) | widget.assets | `public, max-age=31536000, immutable` |
 | GET | `/widget/v1/manifest.json` | widget.manifest | `max-age=60`; lists version, files, sizes, SRI `sha384` |
-| GET | `/widget-preview/{widget}` | widget.preview | `no-store`; session auth (member). Bare SSR host page that boots widget with test token from URL fragment; also reads `#preview=ann_...` or `#preview=svy_...` and forwards to SDK (15 preview) |
+| GET | `/widget-preview/{widget}` | widget.preview | `no-store`; session auth (member). Bare SSR host page that boots widget with test token from URL fragment; also reads `#preview=ann_...` or `#preview=svy_...` and forwards to SDK (15 preview). `?embed=1`: dashboard live preview ([settings-page.md](settings-page.md)) |
+| GET | `/messenger/{app}` | widget.hosted.show | hosted page, `max-age=60`, noindex ([hosted-and-domains.md](hosted-and-domains.md)) |
 
 Headers on all: `Cross-Origin-Resource-Policy: cross-origin`, `Timing-Allow-Origin: *`, `X-Content-Type-Options: nosniff`, `Content-Type: text/javascript; charset=utf-8`. Precompressed `.br` and `.gz` picked by `Accept-Encoding`, `Vary: Accept-Encoding`. `widget.assets_base_url` set (CDN): loader points chunk URLs there; monolith remains origin.
 
@@ -431,6 +474,13 @@ Headers on all: `Cross-Origin-Resource-Policy: cross-origin`, `Timing-Allow-Orig
 | DELETE | `/api/v1/widget-settings/{widget}` | widget-settings.destroy | `widgets:manage` (settings:write) | soft delete, revoke sessions |
 | GET | `/api/v1/widget-settings/{widget}/install` | widget-settings.install.show | `widgets:read` (settings:read) | `?framework=<id>` (09 `dimmi init` ids, api.md): snippet + install status + origins seen |
 | POST | `/api/v1/widget-settings/{widget}/test-sessions` | widget-settings.test-sessions.store | `widgets:read` (settings:read), session, app or token | one-time test token for preview |
+
+| GET, POST | `/api/v1/widget-settings/{widget}/translations` | widget-settings.translations.* | read / manage | list with missing counts; `POST` `{locale, strings, enabled}`, `?upsert=true` allowed (rest rule 10) |
+| GET, PATCH, DELETE | `/api/v1/widget-settings/{widget}/translations/{locale}` | same | read / manage | one language |
+| GET, POST, DELETE | `/api/v1/widget-settings/{widget}/assets[/{wga}]` | widget-settings.assets.* | read / manage | multipart upload |
+| POST, GET | `/api/v1/widget-settings/{widget}/site-imports[/{wsi}]` | widget-settings.site-imports.* | manage / read | brand import job |
+| GET, POST, DELETE | `/api/v1/widget-settings/{widget}/domains[/{wdm}]`, POST `.../checks` | widget-settings.domains.* | read / manage | custom API domain |
+| GET, POST, PATCH, DELETE | `/api/v1/widget-settings/{widget}/push-credentials[/{wpc}]`, POST `.../tests` | widget-settings.push-credentials.* | manage | owned by 18 |
 
 `{widget}` accepts `wgt_` id. Other workspace id returns 404.
 
@@ -597,10 +647,12 @@ New events (add rows to catalog):
 | widget.created | yes (workspace channel) | no | |
 | widget.settings_updated | yes (workspace channel) | no | `changes` keys; drives config cache bust across replicas |
 | widget.deleted | yes | no | |
+| widget.site_import_finished | yes (workspace channel) | no | `{widget_id, import_id, status}` |
+| widget_domain.status_changed | yes (workspace channel) | no | `{widget_id, domain_id, status}` |
 
 "Seen" receipt: widget never receives `conversation.read` (catalog: member only). 03 emits widget-safe `conversation.seen_by_team` (03 README New events) when member read passes latest workspace message; payload `{conversation_id, seen_at}` only; `seen_by: {name, avatar_url}` added only when workspace setting `seen_receipt_shows_name = true` (03 key, default false). Never member id. Widget shows "Seen" under latest team message with `created_at <= seen_at`.
 
-Widget channel event list (what `widget_contact:{ctc}` carries; history on for stored events, ephemeral events published without history so recovery never replays them): `message.created` (type message, not deleted), `message.deleted`, `message.delivery_updated`, `conversation.created`, `conversation.closed`, `conversation.reopened`, `conversation.seen_by_team` (`{conversation_id, seen_at, seen_by?}`), `typing.started`, `typing.stopped` (author `{type: member|agent, name, avatar_url}`), `ai.handoff_requested` (`{conversation_id}`), `ai.reply_started`, `ai.reply_delta` (ephemeral), `ai.reply_discarded`, `ai.state_changed` (state only; 07 broadcasts widget-safe payloads), `ai.action_call_updated` (07: `{id, conversation_id, title, status}`, never payloads), `contact.updated`, `contact.merged`, `message.created` with `survey_request` (15 CSAT card), `widget.session_revoked` (pseudo-event before disconnect, not in catalog, never stored).
+Widget channel event list (what `widget_contact:{ctc}` carries; history on for stored events, ephemeral events published without history so recovery never replays them): `message.created` (type message, not deleted), `message.updated`, `message.deleted`, `message.delivery_updated`, `conversation.created`, `conversation.closed`, `conversation.reopened`, `conversation.seen_by_team` (`{conversation_id, seen_at, seen_by?}`), `typing.started`, `typing.stopped` (author `{type: member|agent, name, avatar_url}`), `ai.handoff_requested` (`{conversation_id}`), `ai.reply_started`, `ai.reply_delta` (ephemeral), `ai.reply_discarded`, `ai.state_changed` (state only; 07 broadcasts widget-safe payloads), `ai.action_call_updated` (07: `{id, conversation_id, title, status}`, never payloads), `contact.updated`, `contact.merged`, `message.created` with `survey_request` (15 CSAT card), `widget.session_revoked` (pseudo-event before disconnect, not in catalog, never stored).
 
 ## Jobs
 
@@ -608,6 +660,9 @@ Widget channel event list (what `widget_contact:{ctc}` carries; history on for s
 |---|---|---|---|---|
 | SendWidgetOfflineReplyEmail | mail | listener on member/agent `message.created` in widget conversation, `ScheduledAt = now + widget.offline_email_delay` (120 s) | 5, backoff | unique by `conversation_id` while pending (later replies join same email) |
 | RevokeWidgetSessionsForSecret | default | 02 `RevokeIdentitySecret` with `revoke_sessions` when over 10,000 sessions | 5 | unique by `identity_secret_id`; batches 1,000, disconnects realtime per batch |
+| ImportWidgetBrandFromSite | default | `POST .../site-imports` | 1 | unique by widget, 60 s deadline |
+| CheckWidgetDomain | maintenance | `next_check_at`, `POST .../checks` | per 08 pattern | unique by domain |
+| PruneWidgetAssets | maintenance | daily | 3 | periodic singleton, guard per workspace |
 | PruneWidgetSessions | maintenance | daily 03:10 UTC | 3 | periodic singleton; deletes rows revoked or expired over 30 days ago, batches 1,000 per workspace; `RetentionGuard.MayDestroy(ws, {workspace, ws})` per batch, then `{contact, contact_id}` per distinct contact (rows hold `current_page`/`recent_pages`/context); held: rows kept, `retention_held` logged, `dimmi_retention_held_total{kind}` |
 | CompleteUpload scan | (03 `ScanAttachment`) | CompleteUpload | per 03 | per attachment |
 
@@ -645,6 +700,9 @@ SendWidgetOfflineReplyEmail worker: re-fetch conversation; skip when contact has
 | widget.rate.contact_updates_per_session_day | 20 | email changes max 5/day |
 | widget.config_cache_ttl | 60 s | otter (per replica), plus Valkey PubSub bust |
 | widget.install_flush_interval | 60 s | install tracker flush (`last_boot_at`, origins seen/blocked) |
+| widget.max_translations | 60 | languages per widget |
+| widget.session_transfer_ttl | 60 s | hosted page handover token |
+| widget.site_import_per_hour | 10 | per widget |
 
 Self-host: every rate limit configurable, `0` disables.
 
@@ -653,7 +711,7 @@ Config resource blocks owned by other specs (01 serves, cache key and ETag inclu
 | Block | Shape | Owner |
 |---|---|---|
 | `features.changelog` | `{enabled, title, latest_announced_at, spotlight: {id, title, summary, cover_url, published_at} \| null}` from 13 `changelog.WidgetConfigFragment` | 13 |
-| `features.feedback` | `{enabled, boards_count, roadmap}`; label in `texts.feedback_tab_label` | 14 |
+| `features.feedback` | `{enabled, boards_count, roadmap}`; label in `texts.feedback` | 14 |
 | `engage` | `{active, anonymous, version, refresh_interval_ms}` | 15 |
 | `features.intercom_shim` | boolean (from `widget_settings.intercom_shim`) | 01 (mapping 16) |
 
@@ -695,10 +753,10 @@ Implemented as permissions (`00-foundation/extensibility.md` section 4, P2). `wi
 | list / view widget settings, install snippet | yes | yes | yes | `widgets:read` (settings:read) |
 | create / update / delete widget | yes | yes | no | `widgets:manage` (settings:write) |
 | mint test session | yes | yes | yes | `widgets:read` (settings:read) |
-| change `allowed_origins`, `allow_anonymous` | yes | yes | no | `widgets:manage` (settings:write); audit logged |
+| change `allowed_origins`, `allow_anonymous`, `native_apps_enabled`, `dev_context`, custom domain | yes | yes | no | `widgets:manage` (settings:write); audit logged |
 | MCP `dimmi_update_widget_settings` | yes | yes | no | `widgets:manage` (settings:write) |
 
-Visitor (widget session) can only touch own contact and conversations where `conversations.contact_id = session.contact_id` and channel type in (`widget`,`email`,`api`), plus imported conversations (channel type `import`, 16) read-only for identified sessions: listed as history, posting to one creates linked new widget conversation (`meta.redirected_from`, same as past reopen window). Anonymous sessions never see imported conversations. Everything else 404.
+Visitor (widget session) can only touch own contact and conversations where `conversations.contact_id = session.contact_id`, on this widget ([client.md](client.md) "Several widgets, same person": `source.widget_id` equals session widget, or non-widget origin in this widget's inbox) and channel type in (`widget`,`email`,`api`), plus imported conversations (channel type `import`, 16) read-only for identified sessions: listed as history, posting to one creates linked new widget conversation (`meta.redirected_from`, same as past reopen window). Anonymous sessions never see imported conversations. Everything else 404.
 
 ## Performance budgets
 
@@ -764,6 +822,8 @@ Logs: app id, session public id, contact public id, outcome, error code. Never t
 | 13-changelog | `/widget/v1/changelog*` controllers, `changelog.WidgetConfigFragment`, session `changelog {last_seen_at, unread_count}`, `changelog_entry.published/unpublished` for config bust |
 | 14-feedback-roadmap | `/widget/v1/feedback/*` controllers, `feedback_tab_enabled` migration `001421`, config `features.feedback`, `feedback_unread_count`, `RevokePortalSessions` (01 calls on session revoke) |
 | 15-announcements-surveys | engage widget routes, config `engage` block, `BumpWidgetConfigForEngage`, `announcement_id` validation on conversation create, `survey_request` system messages via 03 `SendSystemMessage` |
+| 17-workflows | schedules (`schedule_id`, `within_hours`), openers, quick replies; FK added by 17 |
+| 20-native-sdks | builds on frozen `/widget/v1` (tasks.md "Freeze"); owns `/widget/v1/devices*`, push credentials |
 | 16-importers | Intercom shim mapping table (`16-importers/sources.md`), import records lookup for `filter[intercom_id]` (via 08 help route) |
 
 ## Contradictions noted with foundation and research
@@ -772,12 +832,38 @@ Logs: app id, session public id, contact public id, outcome, error code. Never t
 - `research/tech-stack.md` says widget realtime "WebSocket with SSE/long-poll fallback". Resolved (research/build-vs-reuse.md section 1): widget uses centrifuge uni-SSE only (receive), REST for writes; long-poll (`GET /widget/v1/updates`) only when proxy blocks or buffers streaming. No WebSocket, no centrifuge-js in widget.
 - `research/tech-stack.md` suggests iframe for "identity verification" surfaces. Not needed: JWT verified server side; widget never handles secrets.
 - Size budget wording: brief says "loader under 35 KB gz"; tech-stack says loader under 3 KB and widget under 35 KB. This spec adopts both: loader at most 3 KB, core at most 35 KB.
-- `data-model.md` ownership map lists only `widget_settings`, `widget_sessions` for 01 and `identity_secrets` for 02; 02 adds no other table (nonce replay cache in Valkey; settings/stats tables deferred with identity-validations).
+- `data-model.md` ownership map gains 01 and 18 tables (delta). 02 adds `identity_verification_stats`; mode is a settings registry key, no `identity_settings` table.
 - `security.md` "visitor session token random 32 bytes, stored hashed": kept; token transport is header bearer (not cookie), so no `SameSite`/CSRF concerns apply.
 
-## Open questions (recommended default in bold)
+## Decisions
 
-1. Anonymous session lifetime: 180 days sliding vs 30 days for privacy. **180 days** (Safari wipes after 7 idle days anyway; leads value continuity).
-2. Custom widget API domain (CNAME + TLS) at launch vs first-party proxy only. **Proxy only at MVP**; revisit when ad-block reports appear.
-3. Offline reply email delay: 120 s vs 5 minutes. **120 s**, configurable.
-4. Widget test conversation cap: shares D10 sandbox cap of 1,000/month. **Yes, shared counter** (12 confirms; entitlement `billing.test_mode_cap`, counter per billing account).
+1. Anonymous session lifetime 180 days sliding. Safari wipes after 7 idle days anyway; leads value continuity.
+2. Custom widget API domain ships ([hosted-and-domains.md](hosted-and-domains.md)); first-party proxy path stays documented, works without DNS.
+3. Offline reply email delay 120 s, configurable. Native devices also get push first (20); email still only when unread after delay.
+4. Widget test conversations share `billing.test_mode_cap` counter per billing account (12).
+5. Mobile app = widget, no `platform` column: same settings, native clients ignore web-only fields.
+6. No mobile key: `native_apps_enabled` boolean (reason in hosted-and-domains.md).
+7. Widget stays own JSX runtime and controllers, not Preact: built, smaller. Roadmap wording superseded.
+8. Static widget's option names win over earlier spec names, since code is finished design.
+9. One `widget_contact:{ctc}` channel, `widget_id` in payload (reason in client.md).
+
+## Gap map
+
+Gap ids from `research/competitors/intercom-gaps-in-built-features.md` and roadmap names.
+
+| Gap | Where specified | Milestone |
+|---|---|---|
+| I-130 seen on chat (widget narrowed, email never, X12) | [client.md](client.md) "Seen on chat" | M12 |
+| Messenger: customer-visible status | [client.md](client.md) "Customer-visible status" | M12 |
+| Messenger: typing to customers | [client.md](client.md) "Typing to customers" | M12 |
+| Messenger: trusted domains | README `allowed_origins`, [hosted-and-domains.md](hosted-and-domains.md) "Clients without Origin" | M1, M2 |
+| Messenger: identity verification with JWT, identity-validations | [02 README](../02-widget-identity/README.md), [02 validations.md](../02-widget-identity/validations.md) | M7, 02 tasks |
+| Messenger: conversation-started filters, audience upload rules | not specified: audience rules arrive with the audiences spec | none |
+| S-02 widget upload switch | README `attachments_enabled`, `max_attachment_mb`; policy owner 03 (X7) | M2, M4 |
+| I-11, I-12 away, T-04 customer-facing name | availability reads 03 status; `company_name` chain [settings.md](settings.md) | M1, M8 |
+| widget: logo, company name, open straight, privacy, sounds, colours, import, pages, launcher image, tab order, backgrounds, team intro, delay notice | [settings.md](settings.md) | M8, M10 |
+| translations | [settings.md](settings.md) "widget_translations" | M9 |
+| hosted page, custom domain, per-widget help center | [hosted-and-domains.md](hosted-and-domains.md) | M11, M14, M15 |
+| developer context, AI streaming | [client.md](client.md) | M13, M12 |
+| mobile SDKs, headless SDK | [20](../20-native-sdks/README.md) | 18 tasks |
+| identity-helper-packages | [02 snippets.md](../02-widget-identity/snippets.md) "Per-stack packages" | 02 M6 |

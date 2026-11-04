@@ -52,7 +52,8 @@ Agent actions (07) bind only to trusted values: put ids your APIs need (`stripe_
 | Next.js Pages Router | `@dimmi/nextjs` | same | `pages/api/dimmi/token.ts` one-line re-export |
 | Express / Hono | `@dimmi/server/express`, `@dimmi/server/hono` | handler argument | yours, `/api/dimmi/token` |
 | Any Fetch-API server (React Router v7 / Remix resource route, SvelteKit `+server.ts`, Astro endpoint, Nuxt via `toWebRequest`, Workers, Bun, Deno) | `@dimmi/server` `createIdentityHandler` | handler argument | yours, `/api/dimmi/token` |
-| Rails, Laravel, plain PHP, Django, FastAPI, Go, Fastify, Supabase Edge Function (edge snippet) | none (later: identity-helper-packages) | raw snippet below | yours, `/api/dimmi/token` |
+| Rails, Laravel, plain PHP, Django, FastAPI, Go, Fastify, Supabase Edge Function | package below, raw snippet stays for those who skip it | package or raw snippet | yours, `/api/dimmi/token` |
+| Native app, WebView | none on device: app's backend signs with same helper or snippet, app passes token through identity provider ([20](../20-native-sdks/api-mapping.md)) or `#dimmi-identity` fragment | server side | yours |
 
 Install text per stack: 01 sdk-contract.md "Install by stack". Low-level signer for custom flows: `signIdentityToken(user)` (`@dimmi/server`). Same rules as table above.
 
@@ -119,7 +120,7 @@ Options (second argument of `createIdentityHandler` and adapter-level `identityH
 
 ## Raw snippets (no Dimmi package)
 
-Same contract. Use when helper package not wanted or language not covered (every non-JS stack at MVP). Each: sign function + handler.
+Same contract. Use when helper package not wanted or language not covered (raw path stays for any stack). Each: sign function + handler.
 
 ### Node.js (no dependencies)
 
@@ -395,7 +396,26 @@ export function Sidebar() {
 
 SSO route: signed in: 302 to `{DIMMI_PORTAL_URL}/feedback/sso#token=...&return_to=...`. Signed out: 302 to app login (`loginUrl` option, default `/login`) with `return_to` back to SSO route. Portal setting `sso_login_url` = `https://app.acme.com/api/dimmi/sso` (redirect-back when portal visitor clicks "Sign in"). `return_to`: relative portal path, or absolute URL under `DIMMI_PORTAL_URL` (portal "Sign in" button sends absolute; route converts to path); anything else ignored (open redirect guard, same rule as 14).
 
-## Common mistakes (docs; automatic detection later: identity-validations)
+## Per-stack packages
+
+Same model as `@dimmi/server`: `identify(request) -> user | null`, helper signs 10 minute token, route answers `{"token": ...}` with `Cache-Control: no-store, private`. No package ever accepts a client-side secret. Secret from `DIMMI_IDENTITY_SECRET`.
+
+| Package | Registry | Surface | Reuse |
+|---|---|---|---|
+| `@dimmi/sveltekit` | npm | `<Dimmi />` Svelte component, `dimmiHandle({identify})` hook mounting `/api/dimmi/token` | `@dimmi/server`, `@dimmi/browser` |
+| `@dimmi/nuxt` | npm | Nuxt module `modules: ['@dimmi/nuxt']`, `identify` in server handler, `useDimmi()` composable | same |
+| `@dimmi/vue` | npm | plugin + `useDimmi()` composable, browser only | `@dimmi/browser` |
+| `@dimmi/astro` | npm | integration, `<Dimmi />`, endpoint helper | same |
+| `@dimmi/server/fastify` | npm subpath | Fastify plugin | `@dimmi/server` |
+| `@dimmi/server/supabase`, `@dimmi/react/supabase` | npm subpath | Edge Function handler verifying Supabase session; React identity source object | `@dimmi/server`, `jose` |
+| `dimmi` | RubyGems | Rails engine: `dimmi_tag` helper, `Dimmi.identity_token(user)`, mounted route, `config.identify` | ruby-jwt |
+| `dimmi/dimmi`, `dimmi/laravel` | Packagist | `Dimmi::identityToken($user)`; Laravel service provider, `@dimmi` Blade directive, route | firebase/php-jwt |
+| `dimmi` | PyPI | `dimmi.identity_token(user)`, `dimmi.django` view + template tag, `dimmi.fastapi` router | PyJWT |
+| `github.com/dimmihq/dimmi-go` | Go module | `dimmi.IdentityToken(user)`, `dimmi.Handler(identify)` net/http | golang-jwt |
+
+All send `sdk.name` via script tag attribute `data-sdk`. All licensed MIT. Names claimed on registries = human step.
+
+## Common mistakes (docs; automatic detection: [validations.md](validations.md))
 
 | Mistake | Symptom code | Fix |
 |---|---|---|

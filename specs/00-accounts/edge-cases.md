@@ -330,3 +330,70 @@ Style: caveman. Each: case. Decided behavior. Renumbered 2026-11-02 (extensibili
 271. Member approves `approval: teammate` agent action call (07). Allowed (`ai_action_calls:approve` in member role, group `ai:write`, `U` guard). Same member edits action or connection: 403 (`ai_actions:manage` admin/owner). Admin PAT with `ai:write` only (no `ai:actions`): publish 403 `missing_ability` `required_ability: ai:actions`.
 272. Admin token with `settings:read` only lists imports (`imports:read`) but `POST /imports/{imp}/runs {kind: rollback}`: 403 `missing_ability` (`imports:rollback` in `settings:write`). Member session any import route: 403 (no `imports:*` in member role).
 273. Member adds GitHub repository or docs sync source (08). 403 (`github:manage`, `docs_sync:manage` admin/owner). Member lists repositories and sync runs: allowed (`github:read`).
+
+## Settings screens (2026-11-04)
+
+274. Control whose server work is not merged. Removed from page, never static.
+275. Password change, person has API tokens. Tokens stay; response `tokens_remaining`; dialog names count. Reset revokes them (F11 fix).
+276. Name change while teammates online. `user.updated` realtime; sent mail already queued keeps old name.
+277. Time zone null and workspace zone changes. Person follows new zone.
+278. Time zone unknown to browser `Intl` list but valid IANA in DB. Shown as extra option first.
+279. Unlink provider, second session mid-use. Session keeps running; next login needs another method.
+280. Link provider whose identity belongs to another user. 409 `identity_in_use`, nothing moved.
+281. Two-factor reset, teammate also in another organization's workspace. 409 `two_factor_reset_blocked`. Other workspace of same org (org 1:1 today) cannot occur.
+282. Two-factor reset, teammate lost mailbox. Link never reaches them; cloud support or operator CLI.
+283. Two-factor reset link used after teammate fixed things themselves (factor removed). Token burned, 200 no-op text "nothing to reset".
+284. Admin deactivated between request and redeem. Token still valid: reset concerns the person's account, not admin's standing. Audit keeps both.
+285. Two pending resets. New request replaces earlier token.
+286. Workspace requires 2FA, reset completes. Next `W` request 403 `two_factor_required`; enrollment path reachable.
+287. Reset requested on SSO-managed user. 409 `two_factor_not_enabled` when no factor; IdP owns MFA.
+288. Clear sign-in lock while IP spray block on attacker IP. Only email-scoped counters cleared; IP block stays.
+289. Member list CSV with 10,000 rows. Stream; batch 1,000.
+290. CSV cell starts with `=`. Prefixed `'`.
+291. Import: same email twice. Second row `duplicate_row`.
+292. Import: `teams` names team deleted. Row error `unknown_team`.
+293. Import: target is caller, role change. Row error `cannot_change_self`.
+294. Import: file not UTF-8. 422 `invalid_encoding`.
+295. Import: deactivate last admin. Allowed; owner always exists.
+296. Copy link on expired invitation. 410 `invitation_expired`; resend first.
+297. Copy link rotated, invitee opens old mail. 410 `invitation_revoked` text "ask for a new link".
+298. Reminder job, inviter deactivated. Skipped, `reminded_at` set.
+299. Team delete, target team deleted during job. Job falls back to unassign for rest, audit notes it.
+300. Team delete, target member deactivated during job. Same fallback.
+301. Team delete, no conversations. Dialog skips choice.
+302. Team member added by SCIM. No 06 trigger.
+303. Self-add to team. No 06 trigger.
+304. Send with Enter on phone. Soft keyboard Enter inserts newline whatever preference; 03 composer rule.
+305. Available toggled by last online teammate. 03 presence: widget shows offline (X3).
+306. Customer-facing name with HTML. Stored as text; escaped wherever rendered; mail header encoded.
+307. Language removed from install. Resolved to next in chain; stored value kept.
+
+## Custom roles
+
+308. Owner assigned custom role. 422 `invalid_transition`.
+309. Promote custom-role member to owner. `custom_role_id` cleared same tx.
+310. Catalog gains new permission after role saved. Role does not gain it. Admin adds. Reason: narrow roles stay narrow.
+311. Catalog removes permission. Stale key ignored at read; removed on next save.
+312. Role edit removes permission caller's token used. Next request 403 `forbidden`.
+313. Admin-based role lacking `members:write`, holder opens members settings. Client gates on `member.permissions`.
+314. Role delete while invitations hold it. `custom_role_id` null on invitations, accept uses `role`.
+315. Custom-role member deactivated. Row kept with role; reactivated same role.
+316. Group map assigns role over manual custom role. Directory wins at next sync; dashboard shows read-only.
+317. Holder of `roles:manage` edits role they hold, removing `roles:manage`. Allowed; next request they lose it.
+318. Holder adds to own role a permission they lack. 422 `permission_not_held`.
+319. Member with `members:write` but no `roles:manage` sets `role`. Clears custom role; permitted only when target's custom role is subset of caller permissions, else 403.
+320. Non-owner tries to assign role containing billing to self. Self-assign refused.
+
+## API rate limits
+
+321. Two replicas. Counters in Valkey; shared.
+322. Clock skew between replicas. Valkey owns window.
+323. Token with `*` ability on two workspaces. Tokens are one workspace.
+324. First-party app and browser of one user. Same `usr:` bucket, per foundation.
+325. Streaming CSV. One request counted.
+326. 429 from burst. Scope `burst`, `Retry-After` under 10 s; minute remaining unaffected.
+327. Limit lowered mid-window by override. New max next request; cached 60 s.
+328. Valkey down. Fail open, WARN; sign-in limits keep own fail-closed rule.
+329. Self-host sets 0. No headers, no counting.
+330. MCP bulk tool. One request one count; tool limits separate (09).
+331. Replayed idempotent write refused 429. Client retries with same key; nothing happened on refused call.

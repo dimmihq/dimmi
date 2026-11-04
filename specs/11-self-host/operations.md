@@ -501,3 +501,39 @@ Contract `Entitlements{Has, Limit}` (foundation `contracts.md`, extensibility.md
 - No DB reads, no cache needed (config in memory; reload on SIGHUP config reload).
 - `GET /api/v1/workspace/entitlements` on self-host: features all true, limits `-1` unless operator set them; dashboard shows "unlimited".
 - `dimmi entitlement:set` (12, cloud staff) not registered on self-host.
+
+## 15. Inbound email providers
+
+Owner 04 ([../04-email-channel/sources.md](../04-email-channel/sources.md)); tasks 04 M17, track 06. Self-host receives without AWS. One MX per inbound domain, so normally one driver. Empty `channels.email.inbound_domain` plus mailbox connections only is valid.
+
+Config: `channels.email.inbound.drivers` list; options under `mailbox.sources.<name>` (`DIMMI_MAILBOX__SOURCES__<NAME>__<KEY>`). Secrets support `_FILE`.
+
+| Driver | Keys | Inbound domain MX | Webhook URL to set at provider |
+|---|---|---|---|
+| ses | `topic_arns`, `disk`, `max_message_bytes` | `inbound-smtp.<region>.amazonaws.com` | SNS HTTPS `/webhooks/ses/inbound` |
+| postmark | `username`, `password` | `inbound.postmarkapp.com` | `https://user:pass@host/webhooks/postmark/inbound`, include raw email |
+| mailgun | `signing_key` | `mxa.mailgun.org`, `mxb.mailgun.org` | route `forward()` to `/webhooks/mailgun/inbound/mime` |
+| sendgrid | `public_key` | `mx.sendgrid.net` | Inbound Parse `/webhooks/sendgrid/inbound`, raw MIME on, security policy on |
+| resend | `webhook_secret`, `api_key` | as Resend shows | event `email.received` to `/webhooks/resend/inbound` |
+| cloudflare | `secret` | `route1,2,3.mx.cloudflare.net` | `dimmi email:cloudflare-worker`; worker posts to `/webhooks/cloudflare/inbound`; set `FALLBACK_ADDRESS` |
+
+Mailbox connections (per address, not MX): `channels.email.imap.*`, `channels.email.oauth.google.*`, `channels.email.oauth.microsoft.*` ([../04-email-channel/README.md](../04-email-channel/README.md) Config keys). Google: own Cloud client; Workspace-only org picks Internal user type (no verification); External unverified has warning and 100-user cap. Push optional, poll otherwise. Microsoft: own app registration. `app.url` must be public for push; else 60 s poll.
+
+Proxy: webhook bodies reach 64 MiB: reverse proxy limit must allow it on `/webhooks/*` (section 10); SendGrid signature needs unmodified body.
+
+Doctor rows (added to section 5 registry, run by `dimmi doctor`, `GET /system/health`):
+
+| Id | Checks | Fail / warn |
+|---|---|---|
+| email.inbound_mx | MX of `inbound_domain` matches driver table | fail no MX or other host; warn when resend (cannot match, presence only) |
+| email.inbound_source | each driver in `inbound.drivers` has required keys; `app.url` https and public | fail missing key; warn private `app.url` |
+| email.inbound_recent | latest `inbound_emails` by source | warn none in 7 days while addresses exist |
+| email.misconfigured | last provider signal (Postmark no `RawEmail`, Cloudflare no fallback) | fail, warn; message names the setting |
+| email.provider_domain_api | `domain_api_token` valid for customer-stream driver (read call) | warn invalid |
+| email.oauth | client configured when enabled; redirect URL reachable form | fail missing; warn push topic without audience |
+| email.mailbox_connections | count by status; watches expiring under 24 h; oldest `last_synced_at` | warn `reauth_required` over 0; fail sync lag over 1 h with active rows |
+| email.imap | `allow_private_hosts` on | warn |
+| email.round_trip | enabled: last success under 2 h | fail over 2 h |
+
+Data exports: `email_mailbox_connections.credentials_encrypted`, `client_state_encrypted` excluded (section 8 secret rule). Backups keep them sealed; restore needs same KEK.
+

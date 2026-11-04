@@ -4,7 +4,7 @@ Style: caveman. Shapes follow `specs/00-foundation/api.md` (`data`, `object`, pr
 
 ## Common widget request rules
 
-- `Origin` header checked against `allowed_origins` on every request (preflight included). Missing `Origin` on browser-only handshake routes (`POST /sessions`, `GET`/`PATCH /session`) with non-empty allowlist: 403 `origin_not_allowed`. Every request feeds install tracker (README "Install tracking"). Headless/native clients: allowlist empty, or later mobile app keys (post-MVP: mobile SDKs).
+- `Origin` header checked against `allowed_origins` on every request (preflight included). Missing `Origin` on browser-only handshake routes (`POST /sessions`, `GET`/`PATCH /session`) with non-empty allowlist: 403 `origin_not_allowed`. Every request feeds install tracker (README "Install tracking"). Requests with no `Origin` (native, headless): [hosted-and-domains.md](hosted-and-domains.md) "Clients without Origin" table.
 - Auth: `Authorization: Bearer dmi_ws_<43 chars>`. Token never in query string. Exception: none (polling uses header too).
 - Body limit 1 MB (JSON). Upload body limit `max_attachment_mb`.
 - Strings NFC-normalized; control chars except `\n` `\t` stripped; bidi override chars (U+202A..U+202E, U+2066..U+2069) stripped from `name`.
@@ -12,7 +12,7 @@ Style: caveman. Shapes follow `specs/00-foundation/api.md` (`data`, `object`, pr
 
 ## GET /widget/v1/apps/{app}/config
 
-Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-while-revalidate=600`, `ETag: "wgt_...:14"`, `Vary: Origin`.
+Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-while-revalidate=600`, `ETag: "wgt_...:14:fr"`, `Vary: Origin`. Query `locale` (normalized before cache, [settings.md](settings.md)), `v` cache-buster.
 
 ```json
 {
@@ -20,22 +20,36 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
     "object": "widget_config",
     "app_id": "wgt_01jbd2k7m3q8r5t6v9w0x1y2z3",
     "config_version": 14,
-    "workspace": { "name": "Acme", "logo_url": "https://.../logo.png" },
+    "company": { "name": "Acme", "logo_url": "https://.../logo.png" },
     "appearance": {
-      "primary_color": "#5B5BD6", "theme": "auto", "position": "right",
+      "primary_color": "#5B5BD6", "header_color": "#111827", "button_color": "#5B5BD6",
+      "header_ink": "light", "button_ink": "light",
+      "background": { "type": "gradient", "gradient": { "from": "#111827", "to": "#5B5BD6", "angle": 160 } },
+      "theme": "auto", "position": "right",
       "padding_x": 20, "padding_y": 20,
-      "launcher": { "style": "bubble", "label": "", "icon": "chat" },
-      "font": "system"
+      "launcher": { "style": "bubble", "shape": "circle", "label": "", "icon": "chat", "image_url": null },
+      "font": "system", "sound": true
     },
     "texts": {
-      "greeting_title": "Hi there 👋",
-      "greeting_body": "Ask us anything. We read every message.",
+      "greeting_intro": "Hey there.",
+      "greeting": "How can we help?",
+      "welcome_message": "",
+      "team_intro": "We read every message.",
+      "delay_notice": "We're away right now. We'll reply as soon as we're back.",
+      "privacy_notice": "We handle your data as described in our privacy policy.",
       "office_hours_text": "Mon to Fri, 9 to 17 CET",
       "offline_message": "We're away. Leave a message and we'll email you.",
       "email_prompt": "Where should we reply?",
-      "composer_placeholder": "Write a message..."
+      "composer_placeholder": "Write a message...",
+      "...": "every key in settings.md, resolved for this locale"
     },
-    "locale": "auto",
+    "locale": "fr", "dir": "ltr", "locales": ["en", "fr", "de"],
+    "tabs": ["home", "messages", "help"],
+    "open_to": "home",
+    "show_team_avatars": true, "show_availability": true, "customer_status": true, "delay_notice": true,
+    "privacy": { "enabled": true, "url": "https://acme.com/privacy" },
+    "home_links": [{ "title": "Book a call", "url": "https://acme.com/call", "icon": "calendar" }],
+    "page_rules": { "mode": "except", "patterns": ["/checkout/*"] },
     "features": {
       "attachments": true, "max_attachment_mb": 10,
       "help_tab": true, "ai_agent": true,
@@ -43,7 +57,8 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
       "allow_anonymous": true,
       "changelog": { "enabled": true, "title": "What's new", "latest_announced_at": "2026-10-30T08:00:00Z", "spotlight": { "id": "cle_01jb...", "title": "CSV export is 10x faster", "summary": "...", "cover_url": "https://.../cover.png", "published_at": "2026-10-30T08:00:00Z" } },
       "feedback": { "enabled": true, "boards_count": 2, "roadmap": true },
-      "intercom_shim": false
+      "intercom_shim": false,
+      "dev_context": { "console": false, "network": false }
     },
     "branding": { "show": true, "locked": true, "url": "https://trydimmi.com/?utm_source=widget&utm_medium=badge&ref=acme" },
     "realtime": { "url": "https://app.trydimmi.com/connection/uni_sse", "token_url": "https://app.trydimmi.com/widget/v1/realtime-tokens", "polling_interval_ms": 5000 },
@@ -53,7 +68,7 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
 }
 ```
 
-`ai_agent` true when 07 agent active for widget's inbox. Blocks owned by other specs (README "Config resource blocks"): `features.changelog` (13, only when `changelog_tab_enabled`), `features.feedback` + `texts.feedback_tab_label` (14, only when `feedback_tab_enabled`), `engage` (15; cache key includes `engage_settings.version`). `features.intercom_shim` (01, 16 switchers): loader installs `window.Intercom` shim. Agent action button labels (`action_confirm`, `action_cancel`, 07 lang keys) ship in config `strings` for widget locale. Errors: 404 `app_not_found`, 403 `widget_disabled`, `origin_not_allowed`, `workspace_suspended`.
+`ai_agent` true when 07 agent active for widget's inbox. Blocks owned by other specs (README "Config resource blocks"): `features.changelog` (13, only when `changelog_tab_enabled`), `features.feedback` + `texts.feedback` (14, only when `feedback_tab_enabled`), `engage` (15; cache key includes `engage_settings.version`). `features.intercom_shim` (01, 16 switchers): loader installs `window.Intercom` shim. Agent action labels (`action_confirm`, `action_cancel`) ship in `texts`. Reserved: audience rules arrive with the audiences spec; no audience key now. Errors: 404 `app_not_found`, 403 `widget_disabled`, `origin_not_allowed`, `workspace_suspended`.
 
 ## GET /widget/v1/apps/{app}/availability
 
@@ -64,6 +79,7 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
   "data": {
     "object": "widget_availability",
     "online": true,
+    "within_hours": true,
     "reply_time": "minutes",
     "reply_time_text": "Usually replies in a few minutes",
     "team": [{ "name": "Kim", "avatar_url": "https://.../kim.png" }],
@@ -72,7 +88,7 @@ Public, CDN cacheable. `Cache-Control: public, max-age=60, s-maxage=60, stale-wh
 }
 ```
 
-`online` = at least one active member in widget inbox's default team (or workspace when none) with availability `online` and realtime connection seen within 60 s (centrifuge presence on Valkey, foundation rule). `reply_time` `auto` resolves: online -> `minutes`, else `hours`. `team` max 3, members with avatar, ordered by last activity; first name or display name only.
+`online` = at least one active member in widget inbox's default team (or workspace when none) with availability `online` and realtime connection seen within 60 s (centrifuge presence on Valkey, foundation rule). `within_hours`: widget `schedule_id` or default schedule (17) open now; true until 17 is live. `reply_time` `auto` resolves: online -> `minutes`, else `hours`. `team` max 3, members with avatar, ordered by last activity; first name or display name only. Text in `locale` query language.
 
 ## Boot handshake
 
@@ -87,6 +103,7 @@ Starts session. App auth (`app_id` body), origin checked. Three kinds by body:
 | `{app_id}` (no `user_jwt`, no `test_token`) | anonymous lead. Lazy: first write (open conversation, email capture), never on page view | rules below | 201 |
 | `{app_id, user_jwt, previous_token?}` | identified (02 `VerifyIdentityToken` + `IdentifyVisitor`) | never | 201; 200 when `previous_token` is identified session with same `sub` (reused, extended, `token` omitted) |
 | `{app_id, test_token}` | test lead (`test = true`) | never | 201 |
+| `{app_id, transfer_token}` | same kind and contact as source session ([hosted-and-domains.md](hosted-and-domains.md)) | never | 201; used or expired 401 `transfer_token_invalid` |
 
 `user_jwt` with `test_token`: 422 (`test_token` preview only).
 
@@ -105,7 +122,7 @@ Request fields:
 | context | object | page context, max 4 KB |
 | pow | object or null | anonymous only |
 | website | string | honeypot |
-| sdk | `{name, version}` | logged, metrics. `name` in (`dimmi-browser` (script tag + `@dimmi/browser`), `dimmi-react`, `dimmi-nextjs`); unknown names accepted, bucketed `other` in metrics |
+| sdk | `{name, version}` | logged, metrics. `name` in (`dimmi-browser` (script tag + `@dimmi/browser`), `dimmi-react`, `dimmi-nextjs`, per-stack package names, `dimmi-headless`, `dimmi-react-native`, `dimmi-ios`, `dimmi-android`, `dimmi-hosted`); unknown names accepted, bucketed `other` in metrics |
 
 Failure never has side effects: invalid JWT returns 401 with 02 code, `previous_token` session untouched, no contact created.
 
@@ -158,18 +175,18 @@ Query: `cursor`, `limit` (default 20, max 50), `filter[status]=open,closed`.
   "data": [{
     "id": "conv_01jb...", "object": "conversation", "number": 1042, "status": "open",
     "subject": "Still can't export CSV", "last_message": { "id": "msg_...", "author": { "type": "member", "name": "Kim", "avatar_url": "..." }, "excerpt": "Fixed! Try again.", "created_at": "..." },
-    "unread_count": 1, "ai_state": "handed_off", "created_at": "...", "last_message_at": "..."
+    "unread_count": 1, "ai_state": "handed_off", "customer_status": "waiting_on_you", "widget_id": "wgt_...", "created_at": "...", "last_message_at": "..."
   }],
   "meta": { "next_cursor": null, "prev_cursor": null, "per_page": 20 }
 }
 ```
 
-Scope: `contact_id = session.contact_id`, origin channel type in (`widget`,`email`,`api`), plus imported (`source.imported`, channel type `import`, 16) for identified sessions only (read-only history; `imported: true` in item), `deleted_at IS NULL`. Spam conversations included (visitor never learns spam flag). `ai_state` exposed (drives "AI answering" chip); `assignee` never.
+Scope: `contact_id = session.contact_id`, on this widget (`source.widget_id` = session widget; non-widget origin only when conversation inbox = widget inbox), origin channel type in (`widget`,`email`,`api`), plus imported (`source.imported`, channel type `import`, 16) for identified sessions only (read-only history; `imported: true` in item), `deleted_at IS NULL`. Spam conversations included (visitor never learns spam flag). `ai_state` exposed (drives "AI answering" chip); `assignee` never.
 
 ## POST /widget/v1/conversations
 
 ```json
-{ "client_id": "uuid-v4", "body": "Hi, export fails", "attachment_ids": [], "page": { "url": "...", "title": "..." }, "context": { "plan": "pro" }, "website": "" }
+{ "client_id": "uuid-v4", "body": "Hi, export fails", "attachment_ids": [], "page": { "url": "...", "title": "..." }, "context": { "plan": "pro" }, "dev_context": null, "website": "" }
 ```
 
 Optional `context` keys from SDK `startConversation(text, {context})` land in `source.context`; reserved key lifted to `source`: `announcement_id` (15, `ann_`; chat-format announcement, contact has receipt, item live or ended within 7 days, else 422 `announcement_not_replyable`; `StartWidgetConversation` passes `source.announcement_id` + event row `announcement.replied` to 03).
@@ -189,6 +206,8 @@ See README example. Rules:
 - Conversation deleted: 404; SDK starts new conversation with same draft.
 - Imported conversation (16, channel `import`): never appended; creates linked new widget conversation, `meta.redirected_from` (same as past reopen window).
 - Server stamps `metadata.widget {session_id, identity_verified}` (README Core table changes); client cannot set it (unknown body keys ignored).
+- `dev_context` optional, widget with `dev_context` on only, else ignored; shape, limits and redaction in [client.md](client.md) "Developer context"; stored `metadata.dev_context`, never returned on widget routes.
+- Conversation of other widget: 404 same as other contact.
 
 ## POST /widget/v1/conversations/{conversation}/typing-indicators
 
@@ -212,6 +231,10 @@ GET 200:
 ```
 
 PATCH `{ "status": "confirmed" }` or `{ "status": "canceled" }`. Requires session `kind = identified`, verified, not expired, identity equal to call snapshot. 200 same shape, status `confirmed` (or `pending_approval` when action needs teammate/admin approval) or `canceled`. Errors: 409 `action_call_not_pending` (already confirmed, canceled, superseded), 409 `action_call_expired`, 409 `identity_changed` (session user differs from snapshot or session anonymous). Idempotent: repeat of same status on already-confirmed call 200.
+
+## POST /widget/v1/session-transfers
+
+Bearer. 201 `{ "data": { "object": "session_transfer", "token": "dmi_wst_...", "expires_at": "+60 s", "url": "https://app.trydimmi.com/messenger/wgt_...#dimmi-transfer=dmi_wst_..." } }`. Expired identified session: 401 per auth:widget. Rate 10/min per session. Token hashed in Valkey, single use, never logged.
 
 ## Attachments
 
@@ -287,6 +310,11 @@ Owned by 08 (routes, controllers, resources, shapes: `08-help-center/rendering.m
     "allowed_origins": ["https://acme.com", "https://*.acme.com"],
     "allow_anonymous": true, "collect_email": "offline", "require_email_when_offline": true,
     "attachments_enabled": true, "max_attachment_mb": 10,
+    "company_name": "Acme", "default_locale": "en", "open_to": "home", "tab_order": ["home", "messages", "help", "changelog", "feedback"],
+    "privacy_notice": { "enabled": true, "url": "https://acme.com/privacy" }, "home_links": [],
+    "page_rules": { "mode": "all", "patterns": [] }, "dev_context": { "console": false, "network": false },
+    "customer_status_enabled": true, "delay_notice_enabled": true, "native_apps_enabled": false, "hosted_page_enabled": true, "schedule_id": null,
+    "hosted_url": "https://app.trydimmi.com/messenger/wgt_...",
     "help_center_id": "hc_...", "help_tab_enabled": true, "changelog_tab_enabled": false, "feedback_tab_enabled": false,
     "intercom_shim": false,
     "show_branding": null, "branding": { "show": false, "locked": false },
@@ -321,10 +349,23 @@ POST body: `name`, `inbox_id` (default workspace default inbox), any settings fi
   }
 }
 ```
-`installed`, `last_boot_*`, `origins_*` come from install tracker (README "Install tracking"; any widget request incl. config GET). `framework` required, enum = 09 `dimmi init` ids: `nextjs-app`, `nextjs-pages`, `react`, `react-router`, `sveltekit`, `nuxt`, `vue`, `astro`, `rails`, `laravel`, `django`, `fastapi`, `go`, `express`, `hono`, `html`, `proxy` (unknown: 422 with allowed list). `blocks` rendered from `resources/widget/install/<id>.tmpl`; text exact per [sdk-contract.md](sdk-contract.md) "Install by stack"; `{{.AppID}}` filled in env lines only (code never contains `wgt_`). Secret never included (created via 02 API by `dimmi init`).
+`installed`, `last_boot_*`, `origins_*` come from install tracker (README "Install tracking"; any widget request incl. config GET). `framework` required, enum = 09 `dimmi init` ids: `nextjs-app`, `nextjs-pages`, `react`, `react-router`, `sveltekit`, `nuxt`, `vue`, `astro`, `rails`, `laravel`, `django`, `fastapi`, `go`, `express`, `hono`, `html`, `proxy`, plus `react-native`, `expo`, `ios`, `android` (18 text), `webview` (hosted URL) (unknown: 422 with allowed list). `api_base` = active custom domain when one exists. `blocks` rendered from `resources/widget/install/<id>.tmpl`; text exact per [sdk-contract.md](sdk-contract.md) "Install by stack"; `{{.AppID}}` filled in env lines only (code never contains `wgt_`). Secret never included (created via 02 API by `dimmi init`).
 
 ## Dashboard: test sessions
 
 `POST /api/v1/widget-settings/{widget}/test-sessions` -> 201 `{ "data": { "object": "widget_test_token", "token": "dmi_wtt_...", "expires_at": "+10 min", "preview_url": "https://app.trydimmi.com/widget-preview/wgt_...#dmi_wtt_..." } }`. One-time, bound to minting member. `POST /widget/v1/sessions {app_id, test_token}` creates session `test = true` (session field; conversations it starts get 03 `conversations.is_test = true` via `InboundMessage.IsTest`), contact = per-member test lead (`custom_attributes.test_member_id`, name "Test: Kim"). Over monthly cap: 429 `test_quota_exceeded`.
 
-`/widget-preview/{wgt}` is SSR page in web routes (dashboard origin) that loads widget with test token from fragment; not a UI design, just host page. 15 preview: fragment `#preview=ann_...` or `#preview=svy_...` forwarded to SDK, which shows that item; test sessions may pass `preview` param on 15 engage routes (draft items allowed, receipts `is_test`).
+`/widget-preview/{wgt}` is SSR page in web routes (dashboard origin) that loads widget with test token from fragment; not a UI design, just host page. `?embed=1` variant runs live preview ([settings-page.md](settings-page.md)). 15 preview: fragment `#preview=ann_...` or `#preview=svy_...` forwarded to SDK, which shows that item; test sessions may pass `preview` param on 15 engage routes (draft items allowed, receipts `is_test`).
+
+## Dashboard: child collections
+
+Translations, assets, site imports, domains: shapes in [settings.md](settings.md) and [hosted-and-domains.md](hosted-and-domains.md).
+
+`GET .../translations`:
+```json
+{ "data": [{ "object": "widget_translation", "locale": "fr", "enabled": true, "strings": { "greeting": "Comment pouvons-nous aider ?" }, "missing_keys": ["delay_notice"], "updated_at": "..." }], "meta": { "default_locale": "en", "shipped_locales": ["en", "fr", "..."] } }
+```
+
+`POST .../assets` 201: `{ "data": { "id": "wga_...", "object": "widget_asset", "kind": "logo", "url": "https://.../widget/v1/apps/wgt_.../assets/wga_.../abc.png", "width": 256, "height": 256, "size_bytes": 8120, "luminance": 22 } }`. Errors: 413 `asset_too_large`, 422 `asset_type_not_allowed`, 409 `asset_in_use` on delete.
+
+`POST .../site-imports {url}` 202, `GET` 200: `{ "data": { "id": "wsi_...", "object": "widget_site_import", "url": "https://acme.com", "status": "succeeded", "result": { "company_name": "Acme", "primary_color": "#5B5BD6", "header_color": null, "button_color": "#5B5BD6", "colors": ["#5B5BD6", "#111827"], "logo": { "id": "wga_...", "url": "..." }, "found": ["theme_color", "logo", "name"] }, "error_code": null } }`.

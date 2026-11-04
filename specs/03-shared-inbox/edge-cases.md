@@ -54,7 +54,7 @@ Style: caveman. Each: case. Behavior. All decided.
 42. Routed connection disconnected (Slack app uninstalled). Fallback to origin if active else 409 `channel_disconnected`; nothing stored.
 43. Connection disconnected after message stored but before job runs. Job marks `failed` `channel_disconnected` final; member sees error and retry button (retry re-validates, fails fast while disconnected).
 44. WhatsApp window closed (last customer message 25 h ago). 409 `channel_window_closed` unless `channel_options.template` given (05 validates template).
-45. Reply body longer than channel limit (Telegram, Discord). 422 with channel name and limit; never auto-split in MVP (splitting changes meaning of receipts). Post-MVP: optional split.
+45. Reply body longer than channel limit (Telegram, Discord). 422 with channel name and limit; never auto-split (splitting changes meaning of receipts).
 46. Reply with 12 attachments. 422 (global 10). Channel lower limit: 422 naming channel.
 47. Attachment of 30 MB to email (limit 25 MB total). 422 before insert.
 48. Two replies sent 100 ms apart. Second job snoozes until first leaves `pending` (ordering guard), so customer sees order. First stuck failing: after 2 min second sends anyway.
@@ -179,7 +179,7 @@ Style: caveman. Each: case. Behavior. All decided.
 140. Search for conversation in trash. Excluded except `filter[view]=deleted` (admin).
 141. Search statement times out. 503 `search_timeout` with `Retry-After: 1`.
 142. Query contains SQL/tsquery syntax (`a & b | !c :*`). Parser treats as text tokens; lexemes bound as parameters; never syntax error 500.
-143. CJK text. Default parser splits poorly; trigram fallback on subject/contact helps; message body CJK search weak in MVP (open question, post-MVP pg_bigm or ngram).
+143. CJK text. Default parser splits poorly; trigram fallback on subject/contact helps; builds on F57 fix for messages; no pg_bigm or ngram this round (extension not on every managed Postgres).
 
 ## M. Bulk, delete, purge
 
@@ -232,7 +232,7 @@ Style: caveman. Each: case. Behavior. All decided.
 175. Redefining `messages.search` generated column on existing data (if foundation shipped first with data). Migration adds new column `search_v2` generated, builds index concurrently, swaps in later release (expand, migrate, contract).
 176. Self-host single node. Valkey still required (counts cache, presence, realtime broker, pubsub); same behavior as multi-replica.
 177. Cloud RLS. Every query in jobs (`unsnooze_conversation`, purge) sets `app.workspace_id` per workspace batch before touching tenant rows; cross-tenant maintenance selects (orphan attachments, snooze reconcile list of workspaces) run as maintenance role documented in 11/foundation.
-178. Spam wave: 10k new widget conversations from bots. Spam heuristics flag; spam conversations hidden from default views, no notifications, no AI; member bulk-marks remainder spam by filter (`filter: {channel: "widget", created_after}`, `changes: {spam: true}`, `confirm_count`, up to 1,000 per request; repeat for rest); async bulk over 1,000 post-MVP.
+178. Spam wave: 10k new widget conversations from bots. Spam heuristics flag; spam conversations hidden from default views, no notifications, no AI; member bulk-marks remainder spam by filter (`filter: {channel: "widget", created_after}`, `changes: {spam: true}`, `confirm_count`, up to 10,000 as job, workbench.md).
 179. Abuse: API client loops creating conversations. `throttle:api` 600/min/token; outbound fair-use (12) for member-started outbound.
 180. Abuse: huge `filter[tag]` list. Max 5 tag ids (400 `invalid_filter`).
 181. Abuse: deep cursor pagination of all conversations to scrape. Allowed for authorized token (own data); rate limits apply.
@@ -245,7 +245,7 @@ Style: caveman. Each: case. Behavior. All decided.
 185. PATCH `{assignee_id: "mem_ada"}` where Ada already assignee plus `{priority: true}` change. Assignment no-op (no event); only `conversation.priority_changed`; `meta.changed: ["priority"]`.
 186. PATCH `{snoozed_until: "…"}` without `status`. 422 field error `snoozed_until` (side param needs `status: snoozed`). Both `snoozed_until` and `snooze_preset`: 422.
 187. PATCH `{status: "snoozed", snoozed_until: X}` on conversation already snoozed until X. No-op. Different time: re-snooze, new `conversation.snoozed`, old job no-ops (case 9).
-188. PATCH `{trashed: true, status: "closed"}`. 422 field error `trashed` ("must be sent alone"); nothing changes. `{trashed: false}`: 422 (restore later).
+188. PATCH `{trashed: true, status: "closed"}`. 422 field error `trashed` ("must be sent alone"); nothing changes. `{trashed: false, status: "open"}`: same 422. `{trashed: false}` alone restores.
 189. Member PATCH any field on trashed conversation. 404 (members never see trash). Admin PATCH `{priority: true}` on trashed: 409 `conversation_trashed`.
 190. Member PATCH `{priority: true, trashed: true}` (mixed allowed + forbidden). 403 for whole request; per-field policy runs before any work.
 191. Token with `conversations:write` but no `contacts:write` sends `{spam: true, block_contact: true}`. 403 `missing_ability` `required_ability: contacts:write`; spam not set either.
@@ -258,7 +258,7 @@ Style: caveman. Each: case. Behavior. All decided.
 198. Bulk ids with duplicates. Deduped; one result per unique id.
 199. Bulk `changes: {}` or `changes` with unknown field. 422 before any conversation touched.
 200. Bulk filter without `confirm_count`. 422 `confirmation_required`, `meta.matched: 412`; nothing changes. Resend with 412 while 3 new matching conversations arrived: 409 `bulk_count_mismatch` `meta.matched: 415`; nothing changes; client confirms again.
-201. Bulk filter matching 1,500. 422 `bulk_too_many` `meta.matched: 1500`. Client narrows filter (e.g. `created_before`) or runs in slices.
+201. Bulk filter matching 15,000. 422 `bulk_too_many` `meta.matched: 15000`. Client narrows filter (e.g. `created_before`) or runs slices. Matching 1,500: confirmation, then 202 job.
 202. Bulk filter containing `q`. 400 `invalid_filter` (ranking not stable enough to confirm count).
 203. Bulk filter snapshot: conversation in snapshot closed by teammate mid-run while changes `{status: "closed"}`. That id `skipped`. Conversation trashed mid-run: `failed` `not_found` (listed in `meta.errors`).
 204. Merge `POST /conversations/T/merges {from: [A, B]}` where B already merged into C. 409 `conversation_merged`; A not merged either (all-or-nothing).
@@ -285,8 +285,8 @@ Style: caveman. Each: case. Behavior. All decided.
 222. Member without `conversations:delete` (later custom role) lists `filter[view]=deleted`. 403 `forbidden`. Same caller fetching trashed conversation by id: 404.
 223. Policy code compares role name. Review/lint fails (`Role ==` outside `roles.go`); 03 policies call `authz.Can` only.
 224. Token owned by admin with ability `conversations:write` deletes conversation. Allowed: effective permissions = role permissions (has `conversations:delete`) intersect ability group `conversations:write` (contains `conversations:delete`). Same token owned by member: 403 `forbidden` (role lacks permission).
-225. Later inbox-restricted `VisibleScope`: member searches word present only in hidden inbox. Phase 2 drops candidate; result empty, `meta.search.capped` unaffected; `#1042` jump to hidden conversation returns no jump. MVP: scope = workspace, test asserts every list/search/count/neighbor/realtime authorizer calls `VisibleScope` (fake scope hiding one conversation hides it everywhere).
-226. Realtime: member subscribes `conversation:{conv}` outside `VisibleScope` (fake scope). Subscribe denied; no presence entry.
+225. Restricted `VisibleScope`: member searches word present only in hidden conversation. Phase 2 drops candidate; result empty, `meta.search.capped` unaffected; `#1042` jump to hidden conversation returns no jump. Test asserts every list/search/count/neighbor/realtime authorizer calls `VisibleScope` (restricted member hides it everywhere).
+226. Realtime: member subscribes `conversation:{conv}` outside `VisibleScope`. Subscribe denied; no presence entry.
 227. Inbound identity with type not in registry (05 driver unregistered after upgrade, old rows exist). Existing rows render (`type` shown raw); new writes of that type rejected by action (`ErrUnknownIdentityType`, logged), inbound message stored without new identity row.
 228. Contact with company via JWT `company` claim, then `POST /companies?upsert=true` + contact `company` field with different company. `company_id` (primary) replaced; old company keeps no link (single primary at MVP). Webhook `contact.updated` `changes.company_id` shows swap.
 229. `POST /conversations/{id}/replies {body, reopen: true}` (MCP arg leaked to REST). 422 `unknown_field` `reopen`; nothing sent. Correct REST field `then: "open"`.
@@ -333,3 +333,166 @@ Style: caveman. Each: case. Behavior. All decided.
 261. `SendChannelOutbound` receives `message.created` for message with `metadata.imported` (defense; 16 never dispatches). No job inserted, warn log.
 262. Merge live conversation (source) into imported target. 422 `merge_imported_target`; merge imported into live target allowed (imported messages move, keep `metadata.imported`).
 
+## X. Conversation access (access.md)
+
+263. Member `teams` mode, conversation assigned to them on hidden team. Visible (own assignment). Reassigned away: `conversation.hidden`, subscription dropped, open tab shows no-access page.
+264. Member `assigned` mode mentioned in note on conversation they cannot see. Row written, no notification, not in Mentions. Later assigned: appears unread.
+265. Restricted member opens `#1042` by number. 404. Search `#1042`: no jump.
+266. Restricted member uses `filter[contact]` for customer with conversations on hidden team. Only visible rows; `total_estimate` counts visible only.
+267. Access changed while tab open with composer draft. Socket disconnect, refetch; hidden conversation page. Draft kept on server, reachable if access returns.
+268. Team in member's list deleted. Rows cascade. `teams` mode narrows, `all_except_teams` widens. No notice beyond audit of team delete.
+269. Restricted member holds `conversations:delete`, opens trash. Only visible rows.
+270. Token of restricted member lists conversations. Same scope; integration token with no member sees all.
+271. Bulk by filter from restricted admin, access reduced while job runs. Rechecked per id: `failed` `not_found`.
+272. Admin tries changing own access. 403. Promoting restricted member to owner: access reset `all`, audit row.
+273. Restricted member on `workspace_conversations` channel. Authorizer denies, client uses `member:` copies. Client subscribes by capability from `/me` `conversation_access`.
+274. Restricted member count in workspace large (200). Fan-out per event loops cached list; budget 5 ms for 200; metric. Above that unchanged (linear, fine at this scale).
+
+## Y. Assignment and availability (assignment.md)
+
+275. Round robin arrival, all pool members away, `include_away` false. Waits with `no_available_member`; team set, member null, explanation in panel. Someone back online: drain assigns.
+276. Pool member deactivated between pick and commit. Cursor lock + active check inside tx; none lost, next eligible picked.
+277. Two arrivals same millisecond. Cursor row lock serializes; different members.
+278. Member at capacity of 10, closes one. Close triggers drain; oldest waiting assigned.
+279. Team-only assign by member on inbox with `manual`. No pick; stays team.
+280. Assign to team on `balanced` inbox when conversation `ai_state = active`. Skipped until `ai.handoff_requested`.
+281. Conversation assigned manually while `assign_on_arrival` queued. Re-check member null under lock: no-op.
+282. Assignee `away_reassign` true, customer replies. Member cleared, team kept, event; mode manual: visible in team or Unassigned. Second reply no further change.
+283. Away member set back online. Reassigned conversations do not return.
+284. Member sets away with reason required and no reason. 422 `away_reason_required`. Auto-away: allowed without.
+285. Auto-away member keeps tab idle, returns, moves mouse. Activity call flips online since source `auto`. Manual away: stays away.
+286. Valkey flush, auto-away enabled. Missing key: skip, nobody marked away.
+287. `assign_on_reply: always` member reopens unassigned conversation. Assigned. `never` member replies with inbox rule on: stays unassigned.
+288. Inbox `overflow_team_id` team has nobody eligible too. Waits with reason of primary.
+289. Pool empty (team has no members). `no_available_member`; warning chip on inbox settings.
+290. Inbox deleted with waiting conversations. `move_to` inbox rules apply next drain.
+291. Workflow claim present on conversation (17). `AssignOnArrival` no-op; 17 run end calls it when member still null.
+
+## Z. Views, sort, priority (views.md)
+
+292. Custom view uses deleted tag. Condition matches nothing, warning on row, editor flags. View still lists by other groups.
+293. Personal view of removed member. Cascades.
+294. Definition with text condition plus sort `waiting_since`. Allowed, candidate cap applies; `meta.search.capped`.
+295. Edit view while another tab paginates. Cursor hash differs: 400 `cursor_mismatch`, client restarts page.
+296. Sort `waiting_since` with rows null. Nulls last; keyset handles null branch separately. Filter `waiting` hides them.
+297. Sort `snoozed_until` on open status. 400 `invalid_sort`.
+298. PATCH `priority: true` from old client. 422 validation listing levels. `filter[priority]=true`: 400 `invalid_filter`.
+299. Status filter Closed + search for number. Number jump ignores status.
+300. Presence lookup slow. `viewers` omitted; list returns.
+301. Setting `inbox.show_viewers_on_list` false. No `viewers` include honored, no `conversation.viewers_changed`.
+302. Preferences blob over 64 KB. 422; client trims columns.
+303. Folder references team now hidden by access. Skipped at render, not pruned.
+
+## AA. Workbench (workbench.md)
+
+304. `J` at end of list. No move, soft bump. List empty: no-op.
+305. Shortcut typed in composer. Plain letters go to composer; `allowInInput` ones act.
+306. Cmd+K while modal open. Ignored; closes modal first on second press.
+307. Snooze option key deleted between open and click. 422 `snooze_option_unknown`, picker reloads.
+308. Team list present but conversation has no team. Workspace list, else built-ins.
+309. Note by assignee on snoozed. Never wakes. Note by other: wakes only with `snooze.wake_on_others_note`.
+310. Draft saved on phone, older tab saves. Older `client_updated_at` ignored, 200 with newer; tab updates when clean, else shows "Newer draft on another device" with Use and Keep.
+311. Local storage blocked. Server path only; nothing throws.
+312. Draft attachment past 24 h. Kept (orphan purge skips draft ids). Draft purged after 30 days: then purge removes.
+313. Reply sent; draft save in flight arrives after. Client aborts pending save with `AbortController` on send. Drafts keep no tombstone; rare leftover reappears as draft with same text, teammate discards. Accepted.
+314. Conversation merged while draft exists. Draft moves to target unless target already has same mode: then stays orphaned on source hidden, purged by age.
+315. Undo after job already started. Lock shows `scheduled_send_at` cleared: normal delete path, toast "Already sent".
+316. Undo after teammate reassigned meanwhile. Reversal skips assignee (current differs), restores rest.
+317. Undo with `then: close`, teammate reopened. Status left as is.
+318. Two replies, first undone. Second job ordering guard sees first `undone_at`: no wait.
+319. Undo window and restart of server. River job persists; sends at ScheduledAt.
+320. Member override 0. No window on their email replies.
+321. Reply to widget conversation with delay true. Delay ignored, 0.
+322. Tiptap fails to load chunk. Falls back to plain textarea shell: Markdown typed; send works.
+323. Markdown round trip fails to preserve (raw HTML pasted). Pasted HTML reduced to subset, never stored as HTML.
+324. Mention token in reply body. Treated as text, no rows.
+325. Inline image scan infected after send. Bubble shows removed; email already sent only if scan passed (send waits).
+326. Giphy down or key revoked. Picker shows error, no other effect.
+327. GIF remote image when key removed later. Old message renders link text.
+328. Delete message with active side effects: last message. Counters per edge 83; raw purge via hook.
+329. Hook fails repeatedly (04 store down). Job retries; body already cleared; metric alerts.
+330. New conversation to address with active hard bounce. 04 send fails with reason; conversation exists with failed message and retry.
+331. Send separately with one failure among 5. Results list; four created; retry just failed.
+332. Bulk 5,000 assign while restricted member watches. Fan-out coalesced per conversation; `bulk_operation.updated` to requester only.
+333. Second bulk job same workspace. Queued; `status: pending` until first ends.
+334. Job cancelled mid chunk. Finishes current id; rest untouched; counts true.
+335. Bulk reply hits billing block at conversation 40. That id `failed` `spend_cap_reached`; continues (others may be inside open windows).
+336. Bulk reply `then: close` with required attributes missing on some. Those `failed` `required_attributes_missing`, no message stored for them.
+337. Seen on email. Never shown. Delivered status only.
+
+## AB. Records (records.md)
+
+338. Merge conversations different contacts, setting off. 422 `merge_different_contacts`. On: allowed, source contact `cc` if email known.
+339. Setting turned off after merges. Past merges stay.
+340. Merge target holds 48 participants, source 5. 422 `participant_limit_reached`, nothing merged.
+341. Opening merged source. Client redirects to target, banner. API 200 with `merged_into`.
+342. Contact merge both verified different email, setting off. 422. Lead into user: allowed. Different `external_id`: 409 whatever setting.
+343. Duplicate suggestion dismissed. No stored dismissal this round: banner stays until merged or identifiers differ. Why: small state, low annoyance, one line text.
+344. Bcc address equals To participant. To wins; removed from Bcc, no double mail.
+345. Bcc on chat channel. 422 `channel_participants_unsupported`.
+346. Teammate reads thread later. Sees event row with Bcc list, not on message resource. API token same.
+347. Remove primary contact as participant. 422: primary is implicit. Change contact not in scope.
+348. Inbound from removed participant. Stored, flagged `from_non_participant`, no re-add.
+349. Participant email suppressed. 04 per-recipient failure; other recipients delivered; warning on message.
+350. Attribute required but definition team-limited, conversation on other team. Not required.
+351. Automation closes with missing required attribute. Allowed.
+352. Attribute type change attempt. 422 immutable; archive and recreate.
+353. List option deleted with values in use. Option `archived`, values render label; new writes refused.
+354. Attribute sort on 100k rows unindexed. Under 2 s or 503 `list_timeout`; UI suggests filter.
+355. Tag on contact via API by token with `contacts:write`. Allowed; auto-create tag by name.
+356. E-05: panel lift by member without permission. Button hidden; API 403.
+357. Company with 50k contacts. Paginated; panel shows count capped 999+.
+358. Export contact CSV with 200k rows. Over limit 422 `export_too_large`.
+359. Directory row for erasure-pending contact. Hidden; `GET` 404.
+
+## AC. Safety (safety.md)
+
+360. Scanner offline. Status `pending` until retries end, then `inconclusive`; teammates can grant, customers cannot. Metric alerts.
+361. Download in `pending`. 409 `attachment_scan_pending`; UI spinner, `attachment.scanned` refreshes.
+362. File large for clamd (unscanned). `inconclusive`, warning flow.
+363. GuardDuty `ErrPending` over 15 min. `inconclusive`.
+364. Name says `.pdf`, bytes are zip. `mismatch`, warning. Bytes HTML: edge 88 applies too, never inline.
+365. Infected attachment on already sent email. Sent only after clear, so case is inbound or later rule; bytes removed, row kept, message stands.
+366. Outbound over `scan_wait_max` with `pending`. Send fails `attachment_not_cleared`, retry available.
+367. `customer_uploads` false, widget mid-upload. API 403 `uploads_disabled`; widget notice (01).
+368. Extra extension in hard block (`exe`). 422 on save.
+369. Signed URL after delete. 404. After erase 404. Infected 410.
+370. Card inside email subject. Redacted in subject too; thread key unaffected (uses headers).
+371. Redaction on number passing Luhn but is order id. Stored masked, irreversible; admin can disable rule. False positive accepted over storing cards.
+372. Custom regex matches everything. Allowed; `POST /redaction-tests` exists; change audited.
+373. Regex invalid or lookaround (RE2 refuses). 422 with compile message.
+374. Rule hit on inbound email. Raw dropped, `raw_email_purged` for view original; 04 reprocess impossible for that mail, stated.
+375. Attachment with card inside. Not scanned. Settings copy says so.
+376. Redaction at reply: teammate pastes card to customer. Masked before channel; teammate sees masked bubble, badge.
+377. Blocked domain in teammate reply. Not checked; policy is for reading customer links.
+378. Strip links on, chat messages. Email only.
+379. Erase requested, customer writes in grace. New lead, new conversation. Cancel erase: address conflict listed `identities_conflicted`, teammate merges.
+380. Erase twice. 202 same row.
+381. Restricted member erases. 403 `conversation_access_required`.
+382. Retention job meets `RetentionGuard` false. Skips row, metric.
+383. Retention turned on with 200k rows. Batched 500 per tx, daily job loops until done, per-run cap 50,000.
+384. Restore with thread conflict. 409; merge or close other.
+385. Restore after contact erased. Contact tombstone; row still restorable, reply 422 unreachable.
+386. Export includes hidden conversations for restricted requester. Never: scope at job time; bulk selection ids silently dropped, `warnings` counts them.
+387. PDF with Arabic or CJK. `missing_glyphs` warning; txt suggested.
+388. Scheduled export destination credentials revoked. Two fails: `error`, `system_alert`, schedule pauses; test button clears.
+389. Marked not spam, trust offered, sender is free mail domain. Trust exact address only (04 rule).
+390. Bulk not spam 3,000. Job; `changes.spam: false`.
+
+## AD. Collaboration (collaboration.md)
+
+391. Team mention with team mentions off. Plain text, no rows.
+392. Mention deactivated member. Typeahead omits; manual token: plain text.
+393. Mention on closed conversation. Allowed; notification normal; view lists.
+394. Reaction on deleted note. 404.
+395. Reaction by member later removed. Cascades.
+396. Side conversation reply from address not on it. Stored, flagged; never reaches customer.
+397. Customer replies to forwarded side email chain. Routed by thread ref to side; stored there; teammate sees. Never appears in main thread automatically.
+398. Parent closed, side reply arrives. Parent stays closed; unread mark, notification.
+399. Bounced side mail. `delivery_status` failed, reason; no customer effect.
+400. Similar empty or timed out. Section hidden.
+401. Translation with no key. 422 `translation_unavailable`, controls hidden.
+402. Translate message later redacted or deleted. Row cascades; cached copy gone.
+403. Customer text with instruction "ignore previous". Treated as data, delimited; output only translation; never drives tools. Result shown as untrusted text.
+404. Spend cap reached. 07 refuses: 502 `translation_failed` reason; original shown.
+405. Reply `original` without translation enabled. 422 `translation_unavailable`.

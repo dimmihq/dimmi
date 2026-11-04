@@ -11,10 +11,11 @@ Auth letters (foundation `api.md` "Who calls what"): `S` = `auth:session` (brows
 |---|---|---|---|---|
 | GET | `/api/v1/auth/config` | auth.config.show | G | login options + capability discovery: providers and factors (arrays of objects), signup mode, magic link, captcha site key, setup required, mail configured, edition, `server_version`, `api_version`, `region`, `capabilities`, `min_client_versions` |
 | POST | `/api/v1/users` | users.store | G | register: user + session (+ workspace or membership via `invitation_token`) |
-| POST | `/api/v1/sessions` | sessions.store | G (`two_factor` grant: challenge cookie) | log in. Body `grant`: `password` `{email, password}`, `two_factor` `{method, code}` (`method` required: `totp`, `recovery_code` with `code`; `passkey` with `credential`, the assertion JSON), `magic_link` `{token}`, `email_code` `{email, code}`. Optional `reauth: true` (any primary grant): result must be session cookie's user (flows.md 24). 201 `MeResource` + session cookie, or 200 `two_factor_challenge`. Later grants `passkey`, `sso` (registry) |
+| POST | `/api/v1/sessions` | sessions.store | G (`two_factor` grant: challenge cookie) | log in. Body `grant`: `password` `{email, password}`, `two_factor` `{method, code}` (`method` required: `totp`, `recovery_code` with `code`; `passkey` with `credential`, the assertion JSON), `magic_link` `{token}`, `email_code` `{email, code}`. Optional `reauth: true` (any primary grant): result must be session cookie's user (flows.md 24). 201 `MeResource` + session cookie, or 200 `two_factor_challenge`. SSO starts on web route `/auth/sso/{ssoc}/redirect` (21), not a grant here. Optional `sso_bypass: true` (21) |
 | GET | `/api/v1/sessions` | sessions.index | U | own browser sessions and first-party app grants, `kind`, `current` flag |
 | DELETE | `/api/v1/sessions/{ses}` | sessions.destroy | U | revoke one. `{ses}` = `ses_...` (browser), `ogr_...` (first-party app grant) or `current` (logout) |
 | DELETE | `/api/v1/sessions` | sessions.destroy-many | U C | revoke every session and app grant except current |
+| PATCH | `/api/v1/two-factor-resets/{ott}` | two-factor-resets.update | G | `{token, password?}`; finish admin-started reset ([settings-pages.md](settings-pages.md)) |
 | POST | `/api/v1/magic-links` | magic-links.store | G | request magic link + code, always 202 |
 | POST | `/api/v1/password-resets` | password-resets.store | G | request reset, always 202 |
 | PATCH | `/api/v1/password-resets/{prs}` | password-resets.update | G | `{token, password}`; sets password, then session or `two_factor_challenge` |
@@ -39,7 +40,7 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 |---|---|---|---|---|
 | GET | `/api/v1/me` | me.show | A (any ability) | actor, workspace (if header/token), abilities, instance info |
 | GET | `/api/v1/user` | user.show | A | own profile |
-| PATCH | `/api/v1/user` | user.update | U | name, locale, timezone |
+| PATCH | `/api/v1/user` | user.update | U | name, locale, timezone, `preferences` (merge). Managed user: name, email 403 `managed_by_organization` |
 | DELETE | `/api/v1/user` | user.destroy | U C | delete account |
 | GET | `/api/v1/user/deletion-preview` | user.deletion-preview.show | U | blocking/affected workspaces |
 | PATCH | `/api/v1/user/password` | user.password.update | U | change password |
@@ -67,20 +68,24 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | GET | `/api/v1/workspace` | workspace.show | A W, any member; `settings:read` for full settings | current workspace |
 | PATCH | `/api/v1/workspace` | workspace.update | A W `settings:write`; field `require_two_factor` (setting `security.require_two_factor`) U C only | update |
 | DELETE | `/api/v1/workspace` | workspace.destroy | U W C owner | soft delete (trash) |
-| GET | `/api/v1/members` | members.index | A W `members:read` | list; `filter[status]=active,deactivated`, `filter[role]`, `filter[team]`, `q` (name/email), `sort=name\|-created_at`, `include=teams,user` |
+| GET | `/api/v1/members` | members.index | A W `members:read` | list; `filter[status]=active,deactivated`, `filter[role]`, `filter[team]`, `filter[two_factor]` (`members:write`), `q` (name/email), `sort=name\|-created_at\|-last_active_at`, `include=teams,user`; `Accept: text/csv` (`members:write`) streams CSV |
 | GET | `/api/v1/members/{mem}` | members.show | A W `members:read` | `me` alias allowed |
-| PATCH | `/api/v1/members/{mem}` | members.update | A W; per field below | `role`, `status` (+ `reassign_to_member_id`), `keep_owner` |
+| PATCH | `/api/v1/members/{mem}` | members.update | A W; per field below | `role`, `status` (+ `reassign_to_member_id`), `keep_owner`, `custom_role_id`, `conversation_access`, `conversation_access_unassigned`, `access_team_ids` |
+| PATCH | `/api/v1/members` | members.update-many | A W `members:write` | rest.md rule 8; `changes`: `role`, `custom_role_id` |
+| POST | `/api/v1/members/{mem}/two-factor-resets` | members.two-factor-resets.store | U W C `members:reset_two_factor` | mail teammate a reset link |
+| DELETE | `/api/v1/members/{mem}/sign-in-lock` | members.sign-in-lock.destroy | U W `members:reset_two_factor` | clear soft lock |
+| POST | `/api/v1/member-imports` | member-imports.store | U W C `members:import` | CSV, `dry_run`; synchronous |
 | PATCH | `/api/v1/members/me` `{availability}` | members.update | A W self; `conversations:write` | online/away (self may change only `availability`; other fields need role per PATCH /members/{mem} table) |
 | GET | `/api/v1/teams` | teams.index | A W `members:read` | list, `include=members` |
 | POST | `/api/v1/teams` | teams.store | A W admin `members:write` | create |
-| GET | `/api/v1/teams/{team}` | teams.show | A W `members:read` | |
+| GET | `/api/v1/teams/{team}` | teams.show | A W `members:read` | `include=conversation_counts` (`members:write`) |
 | PATCH | `/api/v1/teams/{team}` | teams.update | A W admin `members:write` | rename |
-| DELETE | `/api/v1/teams/{team}` | teams.destroy | A W admin `members:write` | delete |
+| DELETE | `/api/v1/teams/{team}` | teams.destroy | A W admin `members:write` | delete; optional `reassign_to_team_id` or `reassign_to_member_id` query |
 | POST | `/api/v1/teams/{team}/members` | teams.members.store | A W admin `members:write` | add members (bulk) |
 | DELETE | `/api/v1/teams/{team}/members/{mem}` | teams.members.destroy | A W admin `members:write` | remove |
 | GET | `/api/v1/invitations` | invitations.index | A W admin `members:read` | `filter[status]` default pending |
 | POST | `/api/v1/invitations` | invitations.store | A W V admin `members:write` | bulk invite |
-| POST | `/api/v1/invitations/{inv}/deliveries` | invitations.deliveries.store | A W admin `members:write` | resend (rotates token), 201 `invitation_delivery` |
+| POST | `/api/v1/invitations/{inv}/deliveries` | invitations.deliveries.store | A W admin `members:write` | resend (rotates token), 201 `invitation_delivery`; `{channel: "link"}` rotates without mail, returns `accept_url` |
 | DELETE | `/api/v1/invitations/{inv}` | invitations.destroy | A W admin `members:write` | revoke |
 | GET | `/api/v1/tokens` | tokens.index | U W | own; admin `filter[member]` |
 | POST | `/api/v1/tokens` | tokens.store | U W C V | create (returns secret once) |
@@ -88,6 +93,12 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | GET | `/api/v1/tokens/abilities` | tokens.abilities.index | U W | ability groups (with member permissions) + `allowed` for my role |
 | GET | `/api/v1/audit-logs` | audit-logs.index | A W `audit_logs:read` (token: `settings:read`) | list/filter; `sort=-created_at` (default) or `created_at` (ascending tail for SIEM pull); `Accept: text/csv` streams CSV |
 | GET | `/api/v1/audit-logs/{aud}` | audit-logs.show | A W `audit_logs:read` (token: `settings:read`) | single |
+| GET, POST | `/api/v1/roles` | roles.index, roles.store | [roles.md](roles.md) | |
+| GET, PATCH, DELETE | `/api/v1/roles/{rol}` | roles.show, .update, .destroy | [roles.md](roles.md) | |
+| GET | `/api/v1/permissions` | permissions.index | A W `members:read` | catalog with labels |
+| GET, PATCH | `/api/v1/workspace/access-policy` | workspace.access-policy.show, .update | [21 access-policy.md](../21-enterprise-identity/access-policy.md) | |
+
+SSO connections, organization domains, SCIM tokens, SSO lookups: [21 README](../21-enterprise-identity/README.md).
 
 `PATCH /members/{mem}` field permissions (policy `UpdateField` calls `authz.Can` per field; any field denied: whole request rejected, nothing changes):
 | Field | Values | Permission | Ability (tokens) |
@@ -96,6 +107,8 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | `role` | `owner` (transfer; caller becomes admin same tx unless `keep_owner: true`) | `members:manage_owners`, U C | n/a: token 403 `first_party_only` |
 | `role` | from `owner` to `admin`/`member` (demote owner, incl. self) | `members:manage_owners`, U C | n/a: token 403 `first_party_only` |
 | `status` | `deactivated` (+ `reassign_to_member_id?`), `active` | `members:write` for member/admin target; `members:manage_owners` for owner target | `members:write` |
+| `custom_role_id` | `rol_` or null | `roles:manage` + holds every permission in role | `members:write` |
+| `conversation_access`, `conversation_access_unassigned`, `access_team_ids` | per 03 `access.md` | `members:manage_access` | `members:write` |
 Illegal transition: 422 `invalid_transition` with `from`, `to`. Same value as current: 200, no event. Each changed field fires own event (`member.role_changed`, `member.deactivated`, `member.reactivated`).
 
 Tokens (PAT, third-party OAuth) cannot create tokens, change owner roles, delete or restore workspaces, or reach any `U` route (403 `first_party_only`). Reason: stolen token must not escalate or persist. First-party app token can (it is the user, same as session).
@@ -222,7 +235,7 @@ Link: `https://{app}/verify-email#id=ott_01jc...&token=...`. Body `{"token":"...
   ]
 }
 ```
-`accept_url` non-null only when `mail_configured=false`.
+`accept_url` returned to every caller with `members:write` (A-07). Token only hashed, so a later copy needs `deliveries {channel: "link"}`, which rotates it.
 
 ### POST /api/v1/invitations/{inv}/deliveries
 No body. 201:
@@ -348,7 +361,7 @@ Capability discovery (P7): apps read before login; newer app against older serve
 | 403 | `first_party_only` | PAT or third-party OAuth token on `U` route or owner-only field |
 | 403 | `missing_ability` | foundation, with `required_ability` |
 | 403 | `forbidden` | role insufficient |
-| 403 | `two_factor_required` | `AccessPolicy` failure (workspace `security.require_two_factor`, user without 2FA). Body `{code, message, requirement: "two_factor", action_url: "/settings/security/two-factor"}`. Every policy failure uses this shape; clients branch on `requirement` (later `reauthentication_required`, `sso_required`, `ip_not_allowed`) |
+| 403 | `two_factor_required` | `AccessPolicy` failure (workspace `security.require_two_factor`, user without 2FA). Body `{code, message, requirement: "two_factor", action_url: "/settings/security/two-factor"}`. Every policy failure uses this shape; clients branch on `requirement` (`two_factor`, `reauthentication_required`, `sign_in_method`, `sso_required`, `ip_not_allowed`; 19 access-policy.md) |
 | 403 | `email_unverified` | `verified` middleware |
 | 403 | `membership_deactivated` | member of workspace but deactivated or removed |
 | 403 | `signup_closed` | signup not allowed |
@@ -365,7 +378,12 @@ Capability discovery (P7): apps read before login; newer app against older serve
 | 409 | `invitation_already_accepted` | |
 | 503 / 410 | `setup_required` / `setup_completed` | first-run state (11 owns) |
 | 409 | `two_factor_not_enabled` / `two_factor_required_by_workspace` / `recovery_codes_required` | regenerate recovery codes or toggle workspace requirement without 2FA; removing last 2FA factor blocked (with `workspaces` list); deleting recovery set while 2FA on |
-| 409 | `sso_required` | reserved (later `LoginPolicy` SSO-enforced domain, with `redirect_url`) |
+| 409 | `sso_required` | `LoginPolicy`: address under enforced verified domain, with `redirect_url` (21) |
+| 403 | `sign_in_method_required` / `reauthentication_required` / `ip_not_allowed` | `AccessPolicy` failures (21) |
+| 403 | `managed_by_organization` | managed account field or delete (21) |
+| 409 | `managed_by_directory` | change to directory-managed member (21) |
+| 409 | `two_factor_reset_blocked` | teammate works in another organization |
+| 409 | `role_in_use` | delete custom role with members |
 | 409 | `last_login_method` | unlink would lock user out |
 | 409 | `token_limit_reached` / `workspace_limit_reached` | |
 | 409 | `email_taken` | email change race |
@@ -374,15 +392,17 @@ Capability discovery (P7): apps read before login; newer app against older serve
 | 426 | `client_upgrade_required` | foundation `client.version`: `Dimmi-Client-Version` below `apps.min_versions.<platform>`; body `{code, message, min_version, upgrade_url}` |
 | 400 | `invalid_api_version` | foundation: unknown `Dimmi-Version` |
 | 410 | `magic_link_expired` / `invitation_expired` / `invitation_revoked` / `verification_link_stale` / `verification_link_expired` | |
-| 422 | Laravel shape; codes inside: `invalid_credentials`, `invalid_code`, `method_not_available`, `factor_limit_reached`, `reauth_user_mismatch`, `setting_locked` (reserved, org lock later), `invalid_reset_token`, `invalid_verification_token`, `invalid_email_change_token`, `grant_not_allowed`, `invalid_transition` (with `from`, `to`), `disposable_email`, `ability_not_allowed`, `captcha_failed`, `password_compromised`, `password_too_common`, `slug_reserved`, `range_too_large`, `test_mode_immutable`, `invitation_email_mismatch`, `prohibited` | |
+| 422 | Laravel shape; codes inside: `invalid_credentials`, `invalid_code`, `method_not_available`, `factor_limit_reached`, `reauth_user_mismatch`, `setting_locked` (reserved: no org lock UI exists), `sign_in_method_excludes_caller`, `no_owner_can_sign_in`, `ip_allowlist_excludes_caller`, `permission_not_assignable`, `permission_above_base_role`, `permission_not_held`, `unknown_column`, `invalid_reset_token`, `invalid_verification_token`, `invalid_email_change_token`, `grant_not_allowed`, `invalid_transition` (with `from`, `to`), `disposable_email`, `ability_not_allowed`, `captcha_failed`, `password_compromised`, `password_too_common`, `slug_reserved`, `range_too_large`, `test_mode_immutable`, `invitation_email_mismatch`, `prohibited` | |
 | 423 | `password_confirmation_required` | recent auth missing (Laravel `password.confirm` semantics). 423 shared: 12 billing returns 423 `spend_cap_reached` (and other billing block codes) on replies. Clients switch on `code`, never on status alone |
-| 429 | `too_many_attempts` / `invitation_limit_reached` | with `Retry-After` |
+| 429 | `too_many_attempts` / `invitation_limit_reached` / `too_many_requests` | with `Retry-After`; last is API bucket ([rate-limits.md](rate-limits.md)) |
 | 503 | `auth_busy` | hash semaphore wait over 2 s |
 | 503 | `captcha_unavailable` | cloud register when captcha provider unreachable |
 
 Revoked token note: return `token_revoked` (helps owner debug CI); token secret already proves possession so no new information leaks.
 
 ## Rate limits (in addition to foundation buckets)
+
+API buckets per token, user, workspace: [rate-limits.md](rate-limits.md). Table below: per-action limits.
 
 | Bucket | Limit | Key |
 |---|---|---|
@@ -402,6 +422,9 @@ Revoked token note: return `token_revoked` (helps owner debug CI); token secret 
 | `POST /invitations/{inv}/deliveries` | 3 per invitation per 24 h | invitation |
 | token create | 20/hour | user |
 | `POST /email-changes` | 5/hour | user |
+| `POST /members/{mem}/two-factor-resets` | 3/24 h | target member |
+| `POST /member-imports` | 5/hour | workspace |
+| audit log, member CSV | 10/hour | workspace |
 Self-host: `throttle` config can raise or disable all except lockout (always on).
 
 ## MCP tools (`app/mcp/tools`)
@@ -466,5 +489,8 @@ Queue `mail`. Auth-critical (*) use River priority 1 and never batched. All temp
 | `WorkspaceRestoredMail` | owners | restore |
 | `WorkspaceSuspendedMail` | owners | suspend |
 | `OwnerPromotedBySystemMail` | promoted member | `CheckWorkspaceOwners` repair |
+| `TwoFactorResetMail`* | teammate | admin starts reset (A-05) |
+| `TwoFactorResetCompletedMail` | teammate | reset finished |
+| `InvitationPendingMail` | inviter | pending 3 days, once (A-07) |
 
 SMTP not configured (self-host, `mail.default=log`): mails rendered to log at WARN with `mail_fallback=true`, subject, recipient, and every link; `auth/config` and `/me` expose `mail_configured=false`; invitation responses include `accept_url`.

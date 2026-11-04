@@ -144,12 +144,12 @@ Style: caveman. Each: case. decided behavior. Identity-specific cases live in [0
 105. Name with bidi override to spoof "Kim (Staff)". Bidi controls stripped from names; widget-side names of teammates come from member profile only.
 106. Page URL with unicode path. Stored as given (percent-encoded form preserved), max 2,048 chars, truncated at char boundary.
 107. Visitor timezone invalid (`Mars/Base`). Ignored; contact timezone unchanged.
-108. DST jump during session. All server times UTC; office hours text is free text (no computation in MVP).
+108. DST jump during session. All server times UTC; `office_hours_text` is free text; `within_hours` computed by 17 `officehours` in schedule timezone.
 
 ## Boot handshake
 
 109. Host forgot `logout()`; next person on shared device loads page signed out (stored identified token, no JWT). SDK sends `DELETE /widget/v1/session` (revoked `logout`), wipes storage, continues without session. Buggy or forked client sending `GET /widget/v1/session` instead gets 409 `identity_proof_required`: identified session never resumes without JWT for same `sub` (02 R6).
-110. Stored anonymous token + host JWT, `POST /widget/v1/sessions` fails (invalid JWT). No side effects: old anonymous session untouched, nothing revoked. SDK resumes via `GET /widget/v1/session` + `console.error` (no modes at MVP).
+110. Stored anonymous token + host JWT, `POST /widget/v1/sessions` fails (invalid JWT). No side effects: old anonymous session untouched, nothing revoked. SDK resumes via `GET /widget/v1/session` + `console.error` (mode `optional`; `required`: widget hidden, 02 validations.md).
 111. `previous_token` invalid, expired, revoked, or of other widget. Ignored silently (treated as none); no merge from expired lead; no error (no token oracle).
 112. Two tabs load at once with same stored anonymous token and new JWT. Both `POST /widget/v1/sessions` with same `previous_token`. 02 advisory lock serializes: first upgrades/merges lead, revokes old token; second finds `previous_token` revoked (ignored), `IdentifyVisitor` finds user contact: second identified session, same contact. Storage `storage` event makes tabs converge on last written token.
 113. Config served from CDN cache. Origin server sees each origin at least once per cache window (`s-maxage` 60 s, key varies by Origin; revalidations and 304 count). `last_boot_at` about 2 minutes stale worst case; install status still turns "installed". Self-host without CDN: every load reaches tracker.
@@ -212,4 +212,85 @@ Style: caveman. Each: case. decided behavior. Identity-specific cases live in [0
 149. `Intercom('showArticle', 123)` for article not imported or unpublished. Resolver 404; shim opens Help home, `console.warn` `article_not_found`.
 150. `intercom_shim = false` but SDK option `intercomShim: true`. Option wins for that page (opt-in per page); dashboard flag only sets default.
 151. Identified user whose contact has imported Intercom conversations opens widget. Imported conversations listed read-only (history); reply composer on imported one starts linked new widget conversation (`meta.redirected_from`). Anonymous session with same email (unverified): imported history never shown.
+
+## Several widgets and same person
+
+152. Verified user chats on widget A, opens widget B. Same contact. Teammates see both threads on contact. Visitor on B sees only B threads; `GET /conversations/{A's conv}` 404.
+153. Verified user has email-origin conversation; two widgets on different inboxes. Listed only on widget whose inbox equals conversation inbox. Neither matches: not listed in widget; email continues.
+154. Visitor anonymous on A and B, same browser, different origins or same origin. Separate leads, separate tokens (`dimmi:{app}:*`). Typed same email: stays unverified, no merge.
+155. Lead on A signs in, already has conversations on A and B as other leads. Only lead of `previous_token` merges (same widget). B's lead merges only when visitor signs in on B. Each conversation keeps own `source.widget_id`.
+156. Admin moves widget to other inbox. New conversations new inbox (E88). Email-origin listing follows current inbox.
+157. Widget deleted while verified user has threads there. Conversations stay in inbox; reply cannot reach widget B (stays on starting widget); offline email still sends when email known. Contact keeps other widgets.
+158. Publication for other widget reaches stream on shared contact channel. Client drops by `widget_id`. Unread badge on B unaffected.
+159. Eleventh widget. 422 `entitlement_limit_reached`, button disabled in page.
+160. Last widget deleted. Page shows empty state + New widget; (`EnsureDefaultWidget` counts live rows, so explicit `dimmi workspace:repair` restores default).
+
+## Settings
+
+161. Locale `fr-CA` requested, rows `fr`. Uses `fr` row, then built-in `fr`. `locale` in response `fr`.
+162. Attacker sends 10,000 random `?locale=`. Normalized before cache to bounded set; no cache growth; CDN key still varies by query, CDN origin hits answered from otter.
+163. Customer writes English greeting, French visitor, no `fr` row. Shows English greeting (customer's words), French for untouched keys. Dashboard shows `fr` missing count when row exists.
+164. `default_locale` changed to `de` with `texts` in English. Texts stay, label now wrong language; page warns "texts are read as German". `de` row, if any, deleted after confirm (row may not equal default).
+165. RTL locale with launcher `position: right`. Launcher keeps physical side; panel content mirrors.
+166. Translation row disabled. Same as missing. `locales` omits it unless shipped built-in.
+167. Page rule hides launcher on `/checkout/*` while panel open mid-conversation, route changes. Stays open until visitor closes, then launcher gone.
+168. Bad pattern `pricing` (no `/` or scheme). 422 `page_rules.patterns.0`.
+169. Page rule hides everywhere (`only` with empty list). Allowed; launcher hidden everywhere; page warns; `Dimmi.open()` still works; install status still updates.
+170. `open_to = conversation` with no open thread and `allow_anonymous = false`, anonymous. E89 wins, nothing shown.
+171. Open conversation exists but closed by team. `open_to` opens new thread composer with welcome; closed ones in Messages tab.
+172. `open_to = conversation`, all optional tabs off. Tab bar hidden; back goes to Messages only when visitor has more than one conversation.
+173. `privacy_notice.enabled` with empty URL. Text only, no link. Empty text uses built-in.
+174. `tab_order` missing `feedback`, or unknown value. Missing appended; unknown 422.
+175. White header colour, white logo. `header_ink` dark handles text; logo unreadable is customer's choice; page shows contrast warning under 2:1 tile vs header.
+176. Dark mode with custom colours. Brand surfaces keep customer colours; page surfaces follow theme. No auto-darkening of images.
+177. Background image deleted while in use. 409 `asset_in_use`. Widget deleted: assets cascade after grace by prune.
+178. Cached config refers to replaced logo. Old file still served until prune at 30 days.
+179. Uploaded PNG is really HTML. `Sniff` rejects, 422 `asset_type_not_allowed`. Animated GIF logo: keeps frames, size cap applies.
+180. Unsaved draft, other admin saves. Own save sends only changed keys; other keys keep other admin's values. Preview refreshes after save.
+181. Sound on, visitor has never interacted with page. Browser blocks audio; no error; sound starts after first gesture.
+182. Two edits within preview debounce. Latest wins; preview never saved to server.
+183. Preview iframe is same origin as dashboard. Parent posts draft only to own origin; child checks origin; other frames ignored.
+
+## Site import
+
+184. URL resolves to private address or redirects to one. safedial refuses, `site_unreachable`; same code as dead host (no network oracle).
+185. Response never ends (slowloris). 10 s timeout, 60 s total, `site_timeout`.
+186. HTML 50 MB. `MaxBody` cut; `site_too_large`.
+187. Script-only single-page site. Usually theme-color and icon only; else `nothing_found`; no JS run.
+188. Logo URL returns SVG only. Skipped, `found` omits logo, page notes "SVG logos need a PNG upload".
+189. Image decompression bomb from site. `framework/image` limits refuse; logo skipped; import still succeeds on colours.
+190. Second import while first runs. Same row returned; 11th in hour 429.
+191. Customer never clicks "Use these". Nothing changes; imported logo pruned as unreferenced after 30 days.
+192. Stylesheet on other CDN host. Only first same-origin sheet read; cross-origin skipped by design. Theme-color and icon still work.
+
+## Hosted page and apps
+
+193. Request without `Origin`, allowlist set, `native_apps_enabled` false. 403 `origin_not_allowed`; SDK error names setting.
+194. Hosted page opened with `#dimmi-transfer` twice (reload). Fragment removed after first read; replay 401 `transfer_token_invalid`; page falls to anonymous + "Open again from the app".
+195. `#dimmi-identity` JWT expired. 401 02 code, anonymous with console; no refresh source.
+196. Hosted page framed by site not on allowlist. `frame-ancestors` blocks. WebView top-level load unaffected.
+197. Hosted page disabled. 404 page; existing script installs unaffected.
+198. WebView clears storage. New anonymous lead. SDK-driven transfer restores session each open.
+199. Hosted URL with `conversation=` of someone else. Own-only rule; 404 shows list + toast.
+
+## Custom domain
+
+200. Hostname already used by help center or other widget. 422 `hostname_claimed`.
+201. Domain active, then DNS moved away. Check fails per 08 failure policy, status `failed` after threshold; old certificates expire; snippet warning in page; `app.trydimmi.com` keeps working for same widget id.
+202. Request to `chat.acme.com/api/v1/...` or dashboard paths. 404. No cookies ever set there.
+203. `chat.acme.com/widget/v1/apps/{other_app}/config`. 404 `app_not_found`.
+204. Session token from default host used on custom domain, same widget. Works. Other widget: 401 `session_invalid`.
+205. CDN `assets_base_url` plus custom domain. Custom domain request gets own-host chunk URLs.
+
+## Live features
+
+206. Delta for unknown run (joined mid-stream). Ignored; final `message.created` renders.
+207. Stream drops mid reply. Bubble kept, deltas stop; on reconnect message arrives or 60 s removal then refetch.
+208. `reply_discarded` after final message (ordering race). Final wins, discard ignored by run id already finished.
+209. Status chip on conversation with only agent replies. `waiting_on_you`, unless `ai_state = active` then AI chip.
+210. Dev context contains secret in URL query. Stripped both sides. Secret inside path segment: not detected, documented; customer can keep network capture off.
+211. Host page overrides `console.error` after core wraps. Their wrapper runs ours; no recursion because ours guards re-entry.
+212. Host fetch wrapper throws. Original exception passes through untouched.
+213. Dev context turned off while session open. Next config stops sending; earlier stored data stays until erased with conversation.
+214. Customer turned on capture with strict CSP. No extra network; only same POST bodies.
 

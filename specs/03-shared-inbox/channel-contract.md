@@ -49,7 +49,8 @@ type ChannelCapabilities struct {
     Typing               bool          // driver implements ChannelTyping
     DeliveryReceipts     bool          // driver will call UpdateMessageDelivery with delivered
     ReadReceipts         bool          // driver will call UpdateMessageDelivery with read
-    ParticipantsCC       bool          // email CC
+    ParticipantsCC       bool          // email To and CC beyond primary
+    ParticipantsBCC      bool          // email Bcc per send (records.md)
     MessagingWindow      time.Duration // 0 = none; WhatsApp 24h since last customer message
     RetryWindow          time.Duration // transient-error retry budget for send_channel_message; 0 = core default (inbox.outbound.retry_window, about 3 h); email (04) about 24 h
 }
@@ -80,7 +81,9 @@ type OutboundMessage struct {
     BodyText          string            // plain-text rendering (app/support/excerpt full mode, on markdown.PlainText)
     BodyHTML          string            // safe HTML rendering (goldmark safe); email uses
     Recipient         Recipient
+    To                []Recipient       // added To participants, only when ParticipantsCC
     CC                []Recipient       // only when ParticipantsCC
+    BCC               []Recipient       // this send only, only when ParticipantsBCC; never stored by driver on thread
     Author            OutboundAuthor
     Attachments       []OutboundAttachment
     ReplyTo           []string          // channel_message_ids of earlier messages in thread, newest last (email References/In-Reply-To, Slack thread)

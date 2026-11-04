@@ -1,6 +1,6 @@
 # 01 Messenger widget: SDK public contract
 
-Style: caveman prose, code exact. Contract only. Frontend team implements (Preact core, Shadow DOM, `resources/widget`; packages in `sdk/` workspace). `tests/e2e/widget_protocol_test.go` exercises same handshake. Server identity helpers + raw per-language snippets: [02 snippets.md](../02-widget-identity/snippets.md). HTTP wire (`/widget/v1`, snake_case bodies) unchanged by this file; only SDK surface defined here. Anything published here is breaking to change: additive only inside v1.
+Style: caveman prose, code exact. Contract only. Frontend team implements (own JSX runtime and controllers, Shadow DOM, `resources/widget`, [client.md](client.md); packages in `sdk/` workspace). `tests/e2e/widget_protocol_test.go` exercises same handshake. Server identity helpers + raw per-language snippets: [02 snippets.md](../02-widget-identity/snippets.md). HTTP wire (`/widget/v1`, snake_case bodies) unchanged by this file; only SDK surface defined here. Anything published here is breaking to change: additive only inside v1.
 
 ## Before / after
 
@@ -94,13 +94,13 @@ No API route, no fetch, no `'use client'`, no token in code, no id in code. Sign
 | `@dimmi/nextjs` | Next.js 14.2+ (App + Pages Router) | `<Dimmi />` (server component), `useDimmi`, `useDimmiEvent`; `/config` (`defineDimmi`), `/plugin` (`withDimmi`), `/server` (`identityToken`, `portalLink`), `/portal-sso` (14 SSO route), adapters `/clerk`, `/authjs`, `/supabase`, `/better-auth`; `/pages` (Pages Router component), `/pages-api` (Pages Router token route) | +1.5 KB over browser; server code zero client bytes |
 | `@dimmi/server` | Node 18+, Bun, Deno, Workers, Vercel Edge (Web Crypto) | `createIdentityHandler()` (Fetch `Request -> Response`), `signIdentityToken()`, `createPortalLink()`, `createPortalSsoHandler()` (14); subpaths `/express`, `/hono` | n/a (server) |
 
-MVP ships these 4 packages + script tag only. Every other stack (SvelteKit, Nuxt, Vue, Astro, Rails, Laravel, Django, FastAPI, Go, Fastify, Supabase) = script tag or `@dimmi/browser` + raw identity snippet (02 snippets.md) or `@dimmi/server` Fetch handler. Per-stack packages: later (identity-helper-packages).
+Per-stack packages join these in 02 tasks M6: `@dimmi/sveltekit`, `@dimmi/nuxt`, `@dimmi/vue`, `@dimmi/astro`, gem `dimmi`, composer `dimmi/laravel` + `dimmi/dimmi`, pip `dimmi`, Go `github.com/dimmihq/dimmi-go`, `@dimmi/server/fastify`, `@dimmi/server/supabase`, `@dimmi/react/supabase` (02 snippets.md "Per-stack packages"). Until each ships: script tag or `@dimmi/browser` + raw identity snippet or `@dimmi/server` Fetch handler. Native and headless: `@dimmi/headless`, `@dimmi/react-native`, Swift `Dimmi`, Maven `com.trydimmi:dimmi-android` ([20](../20-native-sdks/README.md)). Per-stack packages: later (identity-helper-packages).
 
 Rules:
 - React Router v7 / Remix use `@dimmi/react` + `@dimmi/server` (no separate package: route changes go through `history`, already detected).
 - All JS packages: ESM + CJS, `sideEffects: false`, full `.d.ts`, `exports` map with `react-server`/`browser`/`node`/`worker` conditions. No runtime deps except framework peers. Server entry imports `server-only` where framework supports it.
 - `@dimmi/nextjs` ships one `'use server'` module (token action). Precedent: `@clerk/nextjs` ships `'use server'` in package. `withDimmi` adds package to `transpilePackages`.
-- Every package sends `sdk: {name, version}` on `POST /widget/v1/sessions` (`dimmi-browser`, `dimmi-react`, `dimmi-nextjs`).
+- Every package sends `sdk: {name, version}` on `POST /widget/v1/sessions` (`dimmi-browser`, `dimmi-react`, `dimmi-nextjs`, others per package).
 - Retired names (never publish): `@dimmi/messenger`, `@dimmi/next`, `@dimmi/svelte`, `@dimmi/widget`, `DimmiMessenger`, boot option `user_jwt`.
 
 ## Environment
@@ -284,7 +284,7 @@ app.get('/api/dimmi/token', identityHandler((c) => {
 
 Anything else speaking Fetch API: `createIdentityHandler(identify)` from `@dimmi/server` returns `(request: Request) => Promise<Response>`. Fastify and non-JS backends: 02 raw snippets.
 
-Bearer-token auth (Supabase, Firebase: no session cookie). Pass identity source object instead of URL (Supabase helper packages: later, identity-helper-packages):
+Bearer-token auth (Supabase, Firebase: no session cookie). Pass identity source object instead of URL (`@dimmi/react/supabase` wraps this, 02 snippets.md):
 
 ```tsx
 // src/App.tsx (Supabase)
@@ -359,7 +359,7 @@ Remix v2: same, imports from `@remix-run/react`.
 
 ### Other stacks (`sveltekit`, `nuxt`, `vue`, `astro`, `rails`, `laravel`, `django`, `fastapi`, `go`)
 
-No Dimmi package at MVP (later: identity-helper-packages). Install text = script tag (`html` block below, or `@dimmi/browser` in Vite SPAs) in root layout + identity route from 02 snippets.md.
+Package path replaces this text once 02 M6 ships each package. Install text = script tag (`html` block below, or `@dimmi/browser` in Vite SPAs) in root layout + identity route from 02 snippets.md.
 
 | Id | Tag goes in | Identity route `GET /api/dimmi/token` |
 |---|---|---|
@@ -533,7 +533,7 @@ View disabled in workspace (tab off, entity not live, not in audience): no-op + 
 | `close()`, `toggle()` | `Promise<void>` | |
 | `show(view, options?)` | `Promise<void>` | table above |
 | `startConversation(message?, options?)` | `Promise<void>` | composer with draft; `options.context` attached to conversation (`source`), e.g. `{ announcement_id }` (15). Never sends by itself |
-| `track(event, properties?)` | `void` | client-only (15): no network, no storage. Matches cached engage items with `trigger.on = track_event`. Name `[a-z0-9_.:-]{1,64}`; properties flat scalars, max 1 KB, ignored at MVP. Invalid name: `console.error` `invalid_event_name` |
+| `track(event, properties?)` | `void` | client-only (15): no network, no storage. Matches cached engage items with `trigger.on = track_event`. Name `[a-z0-9_.:-]{1,64}`; properties flat scalars, max 1 KB, ignored. Invalid name: `console.error` `invalid_event_name` |
 | `update(options)` | `void` | `{ context?, locale?, appearance? }`; merges, sends ping when session exists |
 | `identify()` | `Promise<IdentityStatus>` | re-ask identity source now (after login without navigation) |
 | `logout()` | `Promise<void>` | `DELETE /widget/v1/session`, wipe `dimmi:{app}:*`, close realtime stream, wipe memory, remount anonymous. Never shows previous history. Usually unnecessary (sign-out detected) |
@@ -582,6 +582,8 @@ Framework components accept same names as props (camelCase everywhere in JS; wir
 | `engage` | `boolean` | `true` | `false`: no announcements/surveys on this page (15) |
 | `intercomShim` | `boolean` | widget setting `intercom_shim` | install `window.Intercom` shim (16 switchers). Script tag: `data-intercom-shim` |
 | `testToken` | `string` | none | dashboard preview only (`POST /widget/v1/sessions {test_token}`) |
+| `transferToken` | `string` | none | hosted page only, from `#dimmi-transfer` fragment |
+| `mode` | `'launcher' \| 'page'` | `'launcher'` | `page`: full viewport, no launcher (hosted page). Script tag: `data-mode` |
 | `debug` | `boolean` | dev: `true` | verbose logs (never tokens). Dev = `NODE_ENV !== 'production'` in packages; script tag: `localhost`, `127.0.0.1`, `*.localhost`, `*.test` |
 
 ### Events
@@ -652,6 +654,9 @@ export interface DimmiAppearance {
   offset?: { x?: number; y?: number };
   launcher?: boolean;
   zIndex?: number;
+  headerColor?: `#${string}`;
+  buttonColor?: `#${string}`;
+  sound?: boolean;
 }
 
 export interface DimmiViews {
@@ -853,7 +858,7 @@ Codemod rules for this contract: one-line inserts carry no `dimmi:start/end` mar
 - Boot handshake: [README](README.md) "Boot handshake" decision table, binding. SDK picks row from stored session + identity source answer (Identity sources). `test_token`: `POST /widget/v1/sessions {app_id, test_token}`.
 - 401 `session_expired`/`token_expired` on identified session: ask identity source, `PATCH /widget/v1/session {user_jwt}` (admits expired identified token), retry once. No source: drop to anonymous, `console.warn` `identity_refresh_missing`.
 - 401 `session_revoked`/`session_invalid`: wipe storage, remount anonymous.
-- Invalid token (401 `token_*`): continue anonymous + `console.error` with 02 message and stack-specific fix (no modes at MVP; 02).
+- Invalid token (401 `token_*`): continue anonymous + `console.error` with 02 message and stack-specific fix (mode `optional`; `required` hides widget for that visitor, 02 validations.md).
 - Realtime: centrifuge uni-SSE via plain `EventSource` (no centrifuge-js, about 1 KB gz). `POST /widget/v1/realtime-tokens` (bearer) returns 60 s connect token, then `new EventSource(realtime.url + '?cf_connect=' + encodeURIComponent(JSON.stringify({token, subs: {[channel]: {recover: true, offset, epoch}}})))`. Server subscribes stream to `widget_contact:{ctc}`; SDK never names other channels. Visitor session token never in URL. Typing, read state, sends stay REST (stream is receive-only).
 - Reconnect: on `error` close EventSource (built-in retry would reuse expired token URL), backoff 1, 2, 4, 8, 15, 30 s with jitter, fresh token, reopen with last `offset`/`epoch`. 2 failed connects in 30 s or no first frame in 10 s: poll `GET /widget/v1/updates` every `polling_interval_ms` (15 s when hidden), retry SSE every 5 min.
 - Resume: connect reply `recovered: true` replays missed publications (history 10 min); `recovered: false` (or after polling): refetch conversations + `/updates?since=<cursor>`; dedupe by event `id` and message `id`.
@@ -897,11 +902,13 @@ Fix text is stack-aware: package knows its stack (Next fix says `.env.local`, Vi
 | `intercom_user_hash_ignored` | browser warn | "Intercom user_hash ignored; visitor stays unverified." ("Use a Dimmi identity source: data-identity-url or identityUrl.") |
 | `intercom_attributes_ignored` | browser info | "Intercom attributes (company, custom) ignored; send them as identify() attributes from your server." |
 | `intercom_method_unsupported` | browser info | "Intercom('<method>') has no Dimmi equivalent; ignored." (once per method) |
+| `native_not_allowed` | SDK | "This widget does not accept apps while allowed sites are set." ("Turn on Accept mobile apps in Settings > Messenger.") |
+| `page_hidden` | browser debug | "Launcher hidden on this page by show or hide rules." |
 | `article_not_found` | browser warn | "show('help', {article}): article not found or not published; opened Help home." |
 
 ## Host page requirements
 
 - CSP: `script-src <api_base>`, `connect-src <api_base>` (uni-SSE and REST share API origin; no `wss:`), `img-src <api_base> <attachment bucket host> data:`. No `unsafe-inline`/`unsafe-eval` (styles via constructable stylesheets inside Shadow DOM; CI page with strict CSP). Script tag on server-rendered stacks: add your framework's CSP nonce attribute yourself. Docs list exact values per region/self-host.
-- Size: loader at most 3 KB gz; core at most 35 KB gz; lazy chunks at most 20 KB gz each, named budgets: `help`, `changelog` (8 KB, 13), `feedback` (15 KB, 14), `engage-banner` (6 KB), `engage-modal` (10 KB), `engage-survey` (14 KB) (15), `intercom-shim` (2 KB, 16), `markdown`, `emoji`, `attachments`. Engage scheduler at most 1.5 KB inside core. Framework package client deltas per Packages table. Published at `/widget/v1/manifest.json` and docs badge; CI fails on regression.
+- Size: loader at most 3 KB gz; core at most 35 KB gz; lazy chunks at most 20 KB gz each, named budgets: `help`, `changelog` (8 KB, 13), `feedback` (15 KB, 14), `engage-banner` (6 KB), `engage-modal` (10 KB), `engage-survey` (14 KB) (15), `intercom-shim` (2 KB, 16), `dev-context` (3 KB), `voice` (3 KB), `preview` (12 KB, preview only), `markdown`, `emoji`, `attachments`. Engage scheduler at most 1.5 KB inside core. Framework package client deltas per Packages table. Published at `/widget/v1/manifest.json` and docs badge; CI fails on regression.
 - SRI pinning: hashed files and `integrity` values in manifest for customers pinning exact version.
 - Example apps per install id in `sdk/examples/<id>` (Clerk, Auth.js, Supabase, Better Auth variants for Next). Playwright suite per example: anonymous boot, sign in (soft navigation), account switch, sign out (soft navigation, widget anonymous within one navigation), static page stays static (`next build` output check), `track` triggers survey, `show` every view.

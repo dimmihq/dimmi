@@ -180,3 +180,20 @@ Style: caveman. Each: case. Decided behavior.
 135. 16 import of 50k conversations. Zero notifications: no `message.created`/`conversation.created` dispatched. Bug dispatches one with `metadata.imported`: `SendMemberNotifications` skips (counter `dimmi_notifications_skipped_total{reason="imported"}`).
 136. Live customer reply on imported conversation after import. Normal `customer_replied` rules (message not imported); assignee from import mapping or audience fallback.
 
+## Access, new triggers, screens (2026-11-04)
+
+137. Mention of member who cannot see conversation (03 `access.md`). Row in `message_mentions`, no notification, no destination to them; author warned at compose.
+138. Member's access narrowed between fan-out and delayed email. Send-time check: `conversation_gone`, reason recorded `hidden`; in-app row deleted, `notifications.read` broadcast adjusts count.
+139. Access widened later. Old conversations produce no retro notifications.
+140. Workspace destination (Slack channel) with restricted members. Destination is workspace-level, unaffected; admin who set it chose that audience. Stated on page.
+141. Team mention of 80 members. 80 rows, burst rules per member; author excluded.
+142. `team_joined` added by self (`POST /teams/{team}/members` with own id). Skipped.
+143. `team_joined` for 50 members added in one call. One each; no digest since per person.
+144. Bulk assignment of 1,000 to one member (03 job). Aggregated: burst 5 pushes then digest; in-app row per conversation grouped by subject; email cap applies.
+145. Reaction added and removed under 5 s. Delivery re-check `condition_changed`; in-app row removed.
+146. Export expired before read. Row stays, link shows expired.
+147. Undo send (03): `message.created` already fired; `customer_replied` unaffected, teammate-side triggers none for replies.
+148. Conversation hidden (`conversation.hidden`) while popover open. Next fetch drops row; click 404 page.
+149. Settings matrix opened with stale data, cell locked meanwhile. PATCH 422 `preference_locked`; cell reverts, toast.
+150. Browser denies push permission. UI shows blocked steps; no subscription posted.
+

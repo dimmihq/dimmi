@@ -5,7 +5,7 @@ Style: caveman. Owner: 04-email-channel. Every inbound source ends in same pipel
 ## 1. Overview
 
 ```
-source driver (ses | test)
+source (ses | postmark | mailgun | sendgrid | resend | cloudflare | imap | gmail | microsoft | test)
   -> mailbox.Envelope{source, provider_message_id, envelope_from, recipients, size, received_at, verdicts, raw opener}
   -> actions/email.ReceiveInboundEmail            (fast, in request)
        1. route recipients -> workspaces + email_addresses   (no match: unroutable metric, drop)
@@ -33,7 +33,7 @@ Framework `mailbox.Source` + `mailbox.Envelope` (framework.md `mailbox`; driver 
 
 ```go
 type Source interface {
-    Name() string // ses, test
+    Name() string // driver name; list in sources.md
 }
 
 type Envelope struct {
@@ -61,7 +61,7 @@ Contract test suite (`framework/mailbox/drivertest`): each driver given fixture 
 - SES verdicts trusted (SES is receiving MTA, sees real connecting IP). Mapping: PASS -> pass, FAIL -> fail, GRAY -> none, PROCESSING_FAILED -> unknown. Own DKIM verify still runs when SES DKIM is GRAY (multiple signatures, alignment calc).
 - Self-host with own SES: same controller; config `ses.inbound_topic_arn`; IAM role/keys from standard AWS chain.
 
-No built-in SMTP receiver (README "Never": no port 25 listener, no mail server). IMAP and other inbound adapters (Postmark, Mailgun, Cloudflare worker) deferred (README Out).
+No built-in SMTP receiver (README "Never": no port 25 listener, no mail server). Other sources: [sources.md](sources.md) (Postmark, Mailgun, SendGrid, Resend, Cloudflare, IMAP), [mailbox-connections.md](mailbox-connections.md) (Gmail API, Microsoft Graph). SES wired to real route by tasks M5: today only `/webhooks/test/inbound` is routed.
 
 ### 2.2 Test source
 
@@ -106,7 +106,7 @@ Address formats on inbound domain `D` (`channels.email.inbound_domain`):
 Output `auth = {spf, dkim, dmarc, result, aligned_domain, source}`; `result` in pass, fail, none, unknown. Primitives from `framework/mailbox/authcheck` (go-msgauth dkim/dmarc/authres); trust and alignment policy below stays 04 (`app/integrations/email/auth.go`).
 
 Order:
-1. Source verdicts trusted (SES receipt verdicts only; Authentication-Results headers never trusted at MVP).
+1. Source verdicts trusted when source is the receiving host: SES receipt verdicts, fields named per driver in [sources.md](sources.md) 2, top Authentication-Results only for `gmail`, `microsoft` ([mailbox-connections.md](mailbox-connections.md) 5). Any other Authentication-Results header never trusted. `imap`: nothing trusted.
 2. DKIM: go-msgauth `dkim.Verify` on raw (max 5 signatures, 3 s DNS timeout each). Pass list of `d=` domains.
 3. SPF: never computed locally (Dimmi never sees connecting IP: no receiver). From SES verdict or `unknown`.
 4. DMARC: go-msgauth `dmarc.Lookup` on From domain (org domain fallback via public suffix list). Alignment relaxed unless record `adkim=s`/`aspf=s`. DMARC pass = aligned DKIM pass OR aligned SPF pass.
@@ -115,10 +115,10 @@ Order:
    - `fail`: DMARC record exists with p=quarantine/reject and no aligned pass; or SES dmarcVerdict FAIL.
    - `none`: no aligned pass and no enforcing DMARC record (typical small domains, forwarded SPF-only mail).
    - `unknown`: DNS temp errors, PROCESSING_FAILED.
-- Forwarded mail (Gmail/Workspace/M365 forward to our address): SPF breaks, DKIM usually survives; aligned DKIM pass still yields pass. ARC not verified in MVP.
+- Forwarded mail (Gmail/Workspace/M365 forward to our address): SPF breaks, DKIM usually survives; aligned DKIM pass still yields pass. ARC not verified (README Decisions 7).
 - Effects:
   - `pass`: sender email identity `verified = true` (contact_identities) when created or matched; enables 03 auto-merge with verified identities of same email.
-  - not `pass`: identity unverified; never auto-merge into verified contact. No visible flag at MVP (later: unverified-sender-flag); verdict shown in "view original" (`GET /messages/{id}/email`).
+  - not `pass`: identity unverified; never auto-merge into verified contact. Visible flag per [sender-rules.md](sender-rules.md) 5 (`metadata.email.unverified_sender`, `spoof_risk`); verdict also shown in "view original" (`GET /messages/{id}/email`).
   - not `pass` AND matched existing contact has verified email identity or `kind = user`: message attaches to that contact (teammate sees history) BUT `metadata.ai_skip = "unverified_sender"`, outbound replies use contact's verified address, Reply-To ignored.
   - `fail` with `dmarcPolicy = reject` from SES (SES still delivered): classify spam (quarantine) unless sender is existing participant of matched thread (then keep).
 
@@ -144,18 +144,28 @@ First match wins (order matters). Each yields `classification`, `substantive`, a
 
 `bulk_mail_handling` (per address): `close` (default): new conversation created with status closed, tag `bulk-email`, substantive false, no notify, no AI; `open`: open, substantive false, no AI, normal notify; `drop`: ignore `bulk_drop`.
 
-Classification stored in `inbound_emails.classification` and `messages.metadata.email.classification`. Members can reclassify by "Not auto-reply" action (03 UI, 04 endpoint not needed: 03 message update sets `substantive=true`, clears `auto_reply`, re-dispatch AI trigger is 07's call). Reclassification feedback not learned in MVP.
+Classification stored in `inbound_emails.classification` and `messages.metadata.email.classification`. Members can reclassify by "Not auto-reply" action (03 UI, 04 endpoint not needed: 03 message update sets `substantive=true`, clears `auto_reply`, re-dispatch AI trigger is 07's call). Reclassification feedback not learned: classifier stays deterministic and testable.
 
 Never auto-respond (07 and future rules) when: classification not normal/forwarded/test, `Auto-Submitted` non-no, envelope from `<>`, `metadata.ai_skip` set, or message `metadata.imported` (16; imported mail never enters this pipeline, guard is defense).
+
+Trusted senders ([sender-rules.md](sender-rules.md) 4): before rule 7, sender matching `email_trusted_senders` with `auth.result = pass` skips rules 7 (spam verdicts only, never virus or DMARC reject or blocked contact), 10, 11, 12, subject branch of 6, and rate limits below. Header branch of 6 still applies.
+
+Setup findings ([setup.md](setup.md) 4) run after parse on every address still in watch window; no effect on classification.
 
 ### Rate limits (step e)
 
 - Counters via `a.Limiter` (Valkey sliding window, key `email:sender:{ws}:{sha256(sender)}`); rebuildable, lost counters only loosen limits briefly.
-- Per workspace per sender address: over `sender_rate` (20 per 10 min): message stored normally but `metadata.ai_skip = "throttled"`, notifications suppressed (`metadata.email.throttled = true`). Over `sender_quarantine` (100 per hour): classified spam (quarantined).
+- Per workspace per sender address: over `sender_rate` (20 per 10 min): message stored normally but `metadata.ai_skip = "throttled"`, notifications suppressed (`metadata.email.throttled = true`), conversation carries `source.email_throttled` so inbox row shows "Too many emails" with way back ([sender-rules.md](sender-rules.md) 4). Over `sender_quarantine` (100 per hour): classified spam (quarantined).
 - Per workspace total inbound: no cap (customer mail never refused); cloud abuse alert at 50,000/day.
 - Automated outbound per recipient (`automated_per_recipient_hourly` 10): AI replies, widget offline mail over limit not sent; AI run skips with handoff (07 consults `email.limits.CanAutoReply` via message metadata `ai_skip = "recipient_rate"` on next inbound).
 
 ## 7. Sender identity
+
+### 7.0 Ignored addresses
+
+Check `email_ignored_addresses` ([sender-rules.md](sender-rules.md) 1) first. Own addresses: F23 fix rule. Ignored in To, Cc: dropped from participants. Ignored From: forwarded block present: section 7.3 path; else `ignored`, `ignore_reason = ignored_address`.
+
+Group in front: builds on F22 fix. `X-Original-Sender`, `X-Original-From` give contact only when group address is this address's own forwarding source; mail stays open, finding `google_group_in_front` recorded.
 
 ### 7.1 Form relays
 

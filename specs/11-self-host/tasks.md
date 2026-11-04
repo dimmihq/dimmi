@@ -113,3 +113,7 @@ Style: caveman. Ordered. Each task about 1 day, merged with tests. Depends on fo
   7. Bump image tag N-1 to N on 2-replica compose (`--scale dimmi=2` with S3 via Garage): migrations once, no failed requests in load script.
   8. `dimmi down --hard` (needs framework follow-up: hard mode), widget shows offline form, `dimmi up`, queued widget message delivered.
   9. `cosign verify ghcr.io/dimmihq/dimmi:<v>` passes; SBOM downloaded from release.
+
+## Email inbound operator surface (owned by 04)
+
+Built in 04 tasks M17 (track 06 email-inbound): operations.md section 15 config docs and doctor rows. No 11 milestone.

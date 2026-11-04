@@ -205,17 +205,17 @@ Style: caveman. Format: "Case. Behavior." Tests named in plain words; every case
 
 ## K. Instance provider, streams, no mail servers
 
-168. Self-host operator asks for built-in SMTP receiver on port 25. Not offered (README Never). `dimmi email:doctor` points to SES receipt (own AWS); IMAP and other inbound adapters later (README Out).
+168. Self-host operator asks for built-in SMTP receiver on port 25. Not offered (README Never). `dimmi email:doctor` points to [sources.md](sources.md) 2.6 choices.
 169. Operator points `smtp` driver at recipient MX or any host on port 25 without AUTH (direct-to-MX attempt). Dimmi never does outbound MX lookup; driver sends only to `mail.smtp.host`. Doctor warns "looks like direct MX delivery; use relay/submission port 587 or 465"; boot allows (operator choice) but README Never applies to Dimmi code, not operator relays.
 170. Instance provider rejects From as not verified at provider (domain verified in Dimmi, but operator removed it at Postmark/SES/Resend; or manual-driver domain listed in config but never set up). Domain `degraded` reason `provider_rejected_sender`, admins notified (06), Send transient -> retry from default sender. Default sender also rejected: `ErrPermanent` `sender_not_verified`, health red, instance admin alert.
 171. Manual-driver domain (self-host Postmark): ownership TXT verified, domain not in `provider_verified_domains`. Stays `verifying`, warning `provider_setup_unconfirmed` naming config key; default sender meanwhile; 72 h -> `failed` as usual.
 172. Provider event for unknown message (other app shares Postmark server / Mailgun domain / SendGrid account). Ignored after retries; metric `unknown_message`; never touches suppression.
 173. Provider event arrives before Send commit (instant bounce on bad mailbox). Lookup miss -> `ProcessMailProviderEvent` retries 3x 30 s; row committed by then -> applied normally.
-174. Provider rewrites Message-ID (SES always; SendGrid, Postmark, Resend [verify]). Driver reports `mail.SendResult.MessageID` -> stored `outbound_provider` ref. Not reported: customer reply In-Reply-To misses; Reply-To token (step 1) threads; metric `thread_resolution{method=token}`.
+174. Provider rewrites Message-ID (SES always; SendGrid, Postmark, Resend [staging]). Driver reports `mail.SendResult.MessageID` -> stored `outbound_provider` ref. Not reported: customer reply In-Reply-To misses; Reply-To token (step 1) threads; metric `thread_resolution{method=token}`.
 175. Self-host operator switches provider (ses -> postmark) with mail queued. Queued sends use new driver at run time (transport recorded per row); domains re-enter `verifying` (107); events for old transport still accepted 7 days (lookup by `(transport, provider_message_id)`); old provider webhook kept registered until then (doctor reminder).
 176. One workspace's complaint spike on cloud. SES tenant + customer config set pause only that workspace's customer stream; system stream (password reset, invitations, member notifications) never paused by workspace reputation; other workspaces unaffected.
 177. Workspace on Microsoft 365 wants Dimmi to send "from their Outlook". No per-workspace SMTP (Never). Path: verify `acme.com` on instance provider (cloud: SES DKIM CNAMEs + MAIL FROM; SPF include merged beside `spf.protection.outlook.com`), inbound by forwarding (M365 external auto-forward policy note).
-178. Gmail/Workspace user expects replies in Gmail Sent folder. Not at MVP (no BYO SMTP; Sent copy needs later IMAP adapter). Docs say so in forwarding setup guide; conversation history lives in Dimmi.
+178. Gmail/Workspace user expects replies in Gmail Sent folder. Forward-only cannot do it: guide says so and offers connection. OAuth mailbox: replies are in Sent automatically. IMAP: APPEND to Sent. No BYO SMTP.
 179. Customer-stream mailer misconfigured to `log` in production (self-host). Boot fails with config error naming `channels.email.mailer`; system stream unaffected by this check.
 180. 13 changelog or 14 feedback tries to send subscriber/voter mail through `app/mail` Mailable. Arch test `email_streams_test.go` fails CI; only `SendContactMail` reaches contacts.
 181. Complaint on changelog mail (13). Suppression `complaint` scope `changelog`; `email_suppression.created{outbound_kind: changelog}`; next support reply to same person still sent; next changelog mail skipped `suppressed`.
@@ -239,4 +239,88 @@ Style: caveman. Format: "Case. Behavior." Tests named in plain words; every case
 196. `acme+cunsub-k7f3@inbound...` mailto unsubscribe for changelog (13). Recognized before classification; 13 handler unsubscribes subscriber (reason `mailto`); message discarded, no conversation. Token invalid: handler no-op, message still discarded (never becomes conversation), metric `result=invalid`.
 197. Mailto `+xyz-token` with unregistered prefix. Treated as reply-token miss: routes by local part to forwarding address as normal mail.
 198. Billing email (12) to non-member finance address `billing_email`. Sent on system stream via 12 Mailable (arch test allowlist); never customer stream, never workspace suppression.
+
+## L. Sending identity
+
+199. Verified domain goes `degraded` while reply queued. Send resolves at send time: default sender, Reply-To token. Banner; `sending_blocked_reason = domain_degraded`.
+200. Member picks From address of other inbox. Allowed with `email:send_as_any`; thread keeps refs; new `email_threads` row per sending address; customer reply via any token threads to same conversation.
+201. Member without `email:send_as_any` crafts `from_address_id`. 403. Same id as conversation address: allowed.
+202. Default address deleted. Next oldest active becomes default in same tx; none left: `EnsureDefaultEmailAddress` recreates forwarding address.
+203. Signature references `{{member_title}}`, member has no title. Whole line dropped.
+204. Signature logo fails malware scan after save. Logo left out, text kept, editor chip. Scan pending at send: left out.
+205. Address signature exists, member has disabled personal one. `enabled = false` skips to next level, address signature used. `email.signature: false` on reply: none.
+206. Member deactivated. Personal signature ignored; address signature used by others unaffected.
+207. Link-mode mail, file deleted or conversation erased afterwards. Link 410; customer replies to ask.
+208. Branded logo removed from storage. Plain header, send continues, warning on settings.
+209. NS lookup fails or unknown host. `other` guide, BIND export. Domain Connect button hidden.
+210. Domain Connect applied, host merged SPF wrong or proxied CNAME. Checker treats it as any record: shows warning. No trust in apply result.
+211. Domain Connect redirect with error or denied. Back on domain page, plain message, records table unchanged.
+212. Provider domain API down during add. Row created `pending`, `CheckEmailDomain` retries creating; UI "Waiting for Postmark". Ownership TXT still shown.
+213. Provider says verified, ownership TXT missing. Not `verified`: ownership always required on shared instance.
+214. Provider domain deleted at provider by hand. Next check `degraded`, `provider_domain_missing`, offer re-create.
+
+## M. Sender rules
+
+215. Pattern both ignored and trusted. 422 `pattern_conflict`.
+
+## N. Setup
+
+216. Two tests running on same address. Throttle 30 s; later result matches own token; old one times out alone.
+217. Test mail stripped of X-header by forward. Token also in body last line: matched.
+218. Test token replayed by outsider mailing forwarding address later. Test already complete: row ignored as stale; no conversation; still no message because token format matches: `ignored test_stale`.
+219. Google routing rule still propagating. `timed_out` shows "Google can take up to 24 h" with Retry.
+220. Group address: Group holds mail in moderation. `timed_out`; hint lists moderation; routing guide offered.
+221. Finding fixed. 20 clean mails clear it; passing test clears at once.
+222. IT admin address on suppression list of system stream. Mail skipped; 202 still; toast from status "could not reach". 06 feedback records it.
+223. Share link after address deleted or expired. 410 page, no detail.
+224. Share page test abuse. Same throttle per address; robots noindex; signature required on POST too.
+
+## O. Inbound sources
+
+225. Same mail delivered twice by provider retry. Same `ProviderMessageID` or raw hash: dedupe unique index. Two providers on same domain impossible: one MX.
+226. Postmark `RawEmail` setting off. 503, mail retried by Postmark, health red, doctor names checkbox; turned on within 10 h nothing lost; beyond: Postmark retry API, runbook.
+227. Mailgun token reused. Refused after window key set; 406 no retry. Attempt that failed before persist did not set key, so retry passes.
+228. SendGrid multipart rewritten by proxy. Signature fails, 401; doctor warns on reverse proxy body changes.
+229. Resend `raw.download_url` expired before fetch. Retrieve again, new URL. `raw` null: 503, Svix retries.
+230. Cloudflare webhook down. Worker retries, forward fallback else SMTP reject bounces sender. Doctor warns when fallback unset.
+231. Worker signature older than 5 min (clock skew). 401, worker falls back as above; doctor checks clock.
+232. Over-limit mail at provider (Cloudflare 25 MiB, Postmark 35 MB). Provider refuses; never reaches us; guide states limit per source.
+233. Message over our 30 MB in webhook body under 64 MiB. Stored, `truncated` path. Over 64 MiB: 413.
+234. Operator enables driver with missing secret. Boot fails naming key (config validation).
+235. Request to disabled source route. 404 `inbound_driver_disabled`.
+236. IMAP UIDVALIDITY changes. Rescan `SINCE`, dedupe, no duplicates.
+237. IMAP host resolves to private IP. Refused (`imap_host_blocked`), rebinding covered by safedial.
+238. IMAP password wrong after change. 3 failures: `reauth_required`, polling stops, no lockout.
+239. IMAP mailbox moved or folder deleted by user. Read errors: `degraded`, `last_error`. Mail moved before poll with new UID: seen by Message-ID dedupe if returned.
+240. Customer reads or deletes mail in host before poll. Read unaffected (`PEEK`); deleted before fetch: gone; accepted limit of polling; guide states.
+241. No Sent folder on IMAP server. Sent sync off, chip explains; APPEND skipped.
+
+## P. Connected mailboxes
+
+242. Reply arrives before Sent copy synced (Graph real Message-ID not known). Sent synced first each run; reference miss falls to `conversationId`-less heuristics, subject guard; metric.
+243. Same mail from forward and sync. One message, second row `ignored duplicate`, either order, under sender lock.
+244. Gmail history gap (404). Full list since last sync minus 1 day; dedupe; no user effect.
+245. Push lost or Pub/Sub down. Poll every 5 min finds it.
+246. Subscription expired while app down over 7 days. Renew fails, recreate, delta recovers (delta token valid) else list since.
+247. Forged Graph notification. `clientState` mismatch: 202, dropped, metric.
+248. Forged Pub/Sub push. JWT fail 401. Even real push only wakes sync: no mail data trusted.
+249. Refresh token revoked. `reauth_required`; pending send failed `ErrConnectionBroken`; From never silently switches.
+250. Mailbox connected to two addresses. Unique per address and per workspace mailbox: 409 `address_in_use`.
+251. Personal Gmail with all its mail. Consent warning; `address_only` when alias; classification rules bulk/auto apply; member can disconnect anytime. Ingested rows stay.
+252. Member sends from Gmail in existing thread. Appended as member message (F24 fix), no send, UI "Sent from Gmail".
+253. Member sends from Gmail unrelated mail. Ignored `sent_no_thread` unless setting on.
+254. Member sends in Gmail while dimmi also sends. Two real mails, two messages; each own Message-ID.
+255. AI reply on connected mailbox. Goes through mailbox with `Auto-Submitted: auto-replied`; loop guards same; per-recipient limit same.
+256. Gmail daily send limit. Rate-limited retry within 24 h window, then failed final, banner names cause.
+257. Shared M365 mailbox lost permission. 403: `degraded`, then `reauth_required` after 24 h.
+258. Workspace deleted or suspended. Suspended: sync pauses, watches lapse, resume recovers. Deleted: cascade; `DisconnectEmailMailbox` runs from deletion hook first, best-effort revoke.
+259. KEK rotation. `RewrapAll` covers; tokens not re-sealed. AAD bound to row: backup restored row opens; moved row fails.
+260. Contact erased. `email_mailbox_messages` rows removed; customer's own mailbox unchanged, stated in privacy docs.
+261. Own address on connected mailbox appears as customer (F23). Fixed path: treated outgoing.
+262. Outlook rule or mail moved out of Inbox before sync. Graph delta on folder misses; `mail moved` accepted; guide says keep in Inbox.
+
+## Q. Cloud limits
+
+263. Mailbox sends at cap. Not counted, not blocked.
+264. Paused workspace with connected mailbox. Conversation mail flows via mailbox; contact mail blocked. Banner names both.
 

@@ -13,6 +13,10 @@ Files in this folder:
 | [edge-cases.md](edge-cases.md) | decided behaviour per case |
 | [tasks.md](tasks.md) | milestones with acceptance tests |
 
+## Boundary with 03 assignment
+
+Round robin, balanced and capacity also work with no workflow: inbox setting in [03 assignment.md](../03-shared-inbox/assignment.md). This spec's `assign` step calls same `assignment.PickAssignee`, never own logic. `team_assignment_cursors` moved to 03 (track 02 migration; `20261101001710` not built here). `conversation.priority` is level `none|low|medium|high|urgent`, no longer bool (03 views.md).
+
 ## Goal
 
 One engine that decides what happens to a conversation without a human: what the customer sees first, which questions get asked, when dimmi (the AI agent, 07) answers and when it steps back, who owns the conversation, what gets tagged, when it closes, when an SLA clock starts, when your own systems hear about it. Built visually, versioned, testable before it goes live, explainable after it ran, and fully driveable by API, CLI and MCP.

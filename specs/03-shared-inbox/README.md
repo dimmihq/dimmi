@@ -1,6 +1,6 @@
 # 03 Shared inbox
 
-Style: caveman. Date 2026-11-01. Backend only. Read with `specs/00-conventions/README.md` and `specs/00-foundation/*`.
+Style: caveman. Date 2026-11-01, revised 2026-11-04 ("everything now" round: UI in scope, gap map below). Read with `specs/00-conventions/README.md` and `specs/00-foundation/*`.
 
 Files in this folder:
 
@@ -10,8 +10,88 @@ Files in this folder:
 | [api.md](api.md) | every endpoint, filters, sorts, request/response examples, error codes |
 | [channel-contract.md](channel-contract.md) | `contracts.Channel` interface, inbound `ReceiveInboundMessage` contract, outbound pipeline, delivery status |
 | [search.md](search.md) | search query language, SQL shape, ranking, indexes |
+| [access.md](access.md) | team-based conversation access, `VisibleScope`, realtime split (S-04) |
+| [assignment.md](assignment.md) | round robin, balanced, capacity, away status, inbox settings page (I-10 to I-14, T-01) |
+| [views.md](views.md) | sidebar views, status filter, sort, priority levels, custom views, folders, table layout, list row (I-01 to I-07, I-62) |
+| [workbench.md](workbench.md) | keyboard, command menu, snooze, composer, drafts, undo send, emoji/GIF, inline images, delete and edit, thread extras, start conversation, bulk (I-20s, I-30s, I-40, I-70, I-110s, I-130) |
+| [records.md](records.md) | tags, attributes, customer panel, directory, companies, merges, participants (I-60s, I-71, I-72, I-80, I-90s) |
+| [safety.md](safety.md) | malware, attachment policy, expiring links, redaction, link warnings, spam, block, trash, erase, export, retention, exports (S-*, I-120s, I-140s, P-03) |
+| [collaboration.md](collaboration.md) | mentions, reactions, side conversations, similar, translation (I-50s, I-37, I-38) |
 | [edge-cases.md](edge-cases.md) | decided behavior per edge case |
 | [tasks.md](tasks.md) | build checklist |
+
+## Gap map
+
+Every Intercom gap assigned to this spec. Tasks in [tasks.md](tasks.md).
+
+| Gap | Where specified | Milestone |
+|---|---|---|
+| I-01 | views.md "Sidebar and views" | W2 |
+| I-02 | views.md "Status filter" | W2 |
+| I-03 | views.md "Sort" | W2 |
+| I-04 | views.md "Custom views" | W3 |
+| I-05 | views.md "Personal folders" | X3 |
+| I-06 | views.md "Table layout" | X3 |
+| I-07 | views.md "List row" | W2 |
+| I-10 | assignment.md "Modes", "Picker" | A3 |
+| I-11 | assignment.md "Away status" | A2 |
+| I-12 | assignment.md "Away reasons and automatic away" | X1 |
+| I-13 | assignment.md "Modes", "Waiting and explanation", "Member capacity" | A3 |
+| I-14 | assignment.md "Per-member self assign" | A2 |
+| I-20 | workbench.md "Snooze picker" | W5 |
+| I-21 | workbench.md "Snooze lists" | W5 |
+| I-22 | workbench.md "Waking a snooze" | W5 |
+| I-30 | workbench.md "Send and close" | W6 |
+| I-31 | workbench.md "Drafts" | W6 |
+| I-32 | workbench.md "Undo send" | W7 |
+| I-33 | workbench.md "Formatting" | W6 |
+| I-34 | workbench.md "Emoji and GIF" | W8 |
+| I-35 | workbench.md "Inline images" | W8 |
+| I-36 | workbench.md "Delete reply or note" | W8 |
+| I-37 | collaboration.md "Reactions on notes" | W9 |
+| I-38 | collaboration.md "Translation" | X5 |
+| I-39 | workbench.md "Thread extras" | W8 |
+| I-40 | workbench.md "Start conversation" | W10 |
+| I-50 | collaboration.md "Mentions" | W9 |
+| I-51 | collaboration.md "Side conversations" | X4 |
+| I-52 | collaboration.md "Similar conversations" | X4 |
+| I-60 | records.md "Conversation tags" | R1 |
+| I-61 | records.md "People and company tags" | R1 |
+| I-62 | views.md "Priority levels" | W1 |
+| I-63 | records.md "Custom attributes" | X2 |
+| I-70 | workbench.md "Bulk actions" | W11 |
+| I-71 | records.md "Merge conversations" | R5 |
+| I-72 | records.md "Merge contacts, duplicates" | R5 |
+| I-80 | records.md "Participants" | R6 |
+| I-90 | records.md "Customer panel" | R2 |
+| I-91 | records.md "Customer panel" | R2 |
+| I-92 | records.md "Contact directory" | R3 |
+| I-93 | records.md "Companies" | R4 |
+| I-100 | search.md "Query language", "Filter screen" | W12 |
+| I-101 | search.md "Search everywhere", workbench.md "Command menu" | W4 |
+| I-102 | search.md "Sorts" | W12 |
+| I-110 | workbench.md "Keyboard" | W4 |
+| I-111 | workbench.md "Command menu" | W4 |
+| I-112 | workbench.md "Shortcut sheet" | W4 |
+| I-120 | safety.md "Conversation export" | R11 |
+| I-121 | safety.md "Scheduled export" | X6 |
+| I-130 | workbench.md "Seen indicator" (narrowed, X12) | W8 |
+| I-140 | safety.md "Spam folder" | R7 |
+| I-141 | safety.md "Block" | R7 |
+| S-01 | safety.md "Malware scan" | R8 |
+| S-02 | safety.md "Attachment policy" | R8 |
+| S-03 | safety.md "Expiring links" | R8 |
+| S-04 | access.md | A1 |
+| S-11 | safety.md "Redaction" | R9 |
+| S-12 | safety.md "Link safety" | R9 |
+| S-15 | safety.md "Erase and export one customer" | R10 |
+| S-16 | safety.md "Retention" | R11 |
+| E-05 | records.md "Customer panel" (panel display; API 04) | R2 |
+| E-06 | safety.md "Link safety" (strip option) | R9 |
+| P-03 | safety.md "Trash and restore" | R7 |
+| P-04 | search.md "Structured search" | W12 |
+| T-01 | assignment.md "Inbox settings page" | A4 |
+| T-03 | 06 README "Settings page and notifications page" | 06 M9 |
 
 ## Goal
 
@@ -38,10 +118,12 @@ Why: roadmap launch item 3 (`research/roadmap.md` "3. Shared inbox"). Core job. 
 
 ## Scope
 
-### In (MVP)
+### In (launch)
+
+UI in scope wherever a gap has a screen. Everything in new files above is launch scope; list below keeps backend summary.
 
 - Inboxes CRUD, default inbox, per-inbox settings (reopen window, assign-on-reply, default team).
-- Conversations: list with views (mine, unassigned, all, team, mentions, spam, deleted) and filters (status, priority, tag, channel type, channel connection, inbox, contact, company, assignee, team, unread, created range), sorts (newest activity, oldest, waiting longest, created, snooze ends); get; create via API (contact-authored on `api` channel, member-authored outbound 1:1 on channel that can initiate); update via one `PATCH` (attributes subject, priority, inbox, plus state fields: status open/closed/snoozed with presets and custom time, assignee member and/or team, spam, trashed, AI state, tags, unread; field-dispatch to business actions in fixed order, one tx); auto-assign on reply; bulk `PATCH /conversations` (100 ids, or filter up to 1,000 matches with `confirm_count`); soft delete to trash (admin); conversation merge (many sources into target); participants (CC) add/remove.
+- Conversations: list with views (mine, unassigned, all, team, mentions, spam, deleted) and filters (status, priority, tag, channel type, channel connection, inbox, contact, company, assignee, team, unread, created range), sorts (newest activity, oldest, waiting longest, created, priority, snooze ends, custom attribute); custom views; get; create via API (contact-authored on `api` channel, member-authored outbound 1:1 on channel that can initiate); update via one `PATCH` (attributes subject, priority, inbox, plus state fields: status open/closed/snoozed with presets and custom time, assignee member and/or team, spam, trashed, AI state, tags, unread; field-dispatch to business actions in fixed order, one tx); auto-assign on reply; bulk `PATCH /conversations` (sync to 100, job to 1,000 ids or 10,000 filter matches, confirmation for filters); bulk reply and note; soft delete to trash and restore; conversation merge (many sources into target); participants (`to`, `cc`) add/remove, per-send `bcc`.
 - State machine exactly as `00-foundation/data-model.md`, reopen window rule, conversation numbering.
 - Messages: reply, internal note with `@member` / `@team` mentions, contact message via API (API channel only), note edit, delete, timeline cursor both directions + `around`, attachments upload and linking, retry failed delivery, collision guard `expected_last_message_id`.
 - `contracts.Channel` interface, outbound pipeline (`SendChannelOutbound` listener, `SendChannelMessage` job), delivery status updates, inbound contract (`ReceiveInboundMessage` action) used by 01, 04, 05.
@@ -60,27 +142,23 @@ Why: roadmap launch item 3 (`research/roadmap.md` "3. Shared inbox"). Core job. 
 
 ### Out (later)
 
-| Item | Later |
+Rows here need things unbuilt and no assigned gap implies them. Everything else moved in.
+
+| Item | Why stays out |
 |---|---|
-| Saved views (personal/shared custom filters) | post-MVP: ticket types, custom fields, views, macros. Built-in views + filter params cover MVP; dashboard may remember last filter locally |
-| Rules: auto-assign round robin, auto-tag, auto-close, SLA timers, office hours | post-MVP: rules lite. Only built-in rule here: assign-to-replier |
-| Macros (multi-action) | post-MVP: ticket types, custom fields, views, macros |
-| Custom fields, ticket types, back-office tickets | post-MVP: ticket types, custom fields, views, macros |
-| Agent assist (draft, summarize, translate) | post-MVP: agent assist |
-| Server-side composer drafts | later: conversation-drafts (client stores draft locally) |
-| Server-side reply drafts over REST/MCP/CLI (`draft_id` on replies, `ConsumeDraft`, send modes `drafts_only`/`direct`) | later: reply-drafts, agent-send-modes (09). MVP: MCP reply always confirms in client (09 confirm gate) |
-| Reply via different channel than conversation routing picks (manual channel switch) | post-MVP |
-| Bulk by filter over 1,000 matches ("select all 3,000", async bulk job) | post-MVP; MVP bulk: ids max 100, or filter max 1,000 matches with `confirm_count` |
-| Private inboxes / per-inbox access control | post-MVP: upmarket set. MVP: all active members see all inboxes |
-| Semantic (vector) search over conversations | post-MVP; FTS + trigram only |
-| Undo send window | post-MVP |
-| Followers / watching conversations | post-MVP; mentions view covers MVP |
+| Macros (multi-action) | post-MVP: ticket types, custom fields, views, macros. Saved replies and macros excluded from gap round |
+| Ticket types, back-office tickets | same set; custom conversation attributes moved in (I-63), ticket types did not |
+| Rules beyond assignment: auto-tag, auto-close, SLA timers, office hours | owned by 17 workflows. Round robin, balanced, capacity moved in (assignment.md) |
+| Agent assist: draft, summarize | 07 later. Translation moved in (I-38) |
+| Agent send modes `drafts_only`/`direct` over REST, MCP, CLI | 09 (`agent-send-modes`). MCP reply still confirms in client. Composer drafts moved in (I-31) |
+| Reply via different channel than routing picks (manual channel switch) | post-MVP; no gap |
+| Semantic (vector) search over conversations | post-MVP; FTS + trigram only. Similar conversations uses FTS |
+| Followers / watching conversations | post-MVP; mentions view covers it |
 | Reports beyond counts | post-MVP: reports |
-| later: message-edit | customer-visible reply edit + edit window + edit propagation to channels (`ChannelEditor`, `apply_channel_edit`). MVP: notes editable, replies delete only |
-| later: message-edit (channel sync) | outbound delete propagation (`ChannelDeleter`) and inbound customer edits/deletes from channels (`ApplyInboundEdit`/`ApplyInboundDelete`). MVP: delete is local; channel copy stays |
-| later: teammate-typing | "Jane is typing" relay between teammates on `conversation:{conv}`. MVP: "who is viewing" presence + 409 `new_messages_since` guard |
-| later: conversation-restore | restore from trash (PATCH `trashed: false`, `RestoreConversation`, `conversation.restored`). MVP: trash purges after `inbox.deleted_retention_days` |
-| later: teammate-echo (X2) | teammate native reply inside Slack/Discord thread recorded as reply (`InboundMessage.Echo`) |
+| later: message-edit | customer-visible reply edit, edit window, edit propagation (`ChannelEditor`, `apply_channel_edit`). Notes editable, replies delete only |
+| later: message-edit (channel sync) | outbound delete propagation (`ChannelDeleter`), inbound customer edits and deletes from channels. Delete is local; channel copy stays |
+| later: teammate-typing | "Jane is typing" between teammates. Presence, list viewers (I-07), 409 guard cover collisions |
+| later: teammate-echo (X2 of 05) | teammate native reply inside Slack or Discord thread |
 
 CSAT ships at launch in 15 (system message via `SendSystemMessage`, `include=csat` here). Importers and `imported` messages: launch: importers (16-importers, in; helpers below).
 
@@ -97,6 +175,16 @@ Workspace member:
 8. Merge duplicate contact (same person on email and Telegram) and duplicate conversation.
 9. Mark spam; spam never notifies, never bills.
 10. Use saved reply `/refund` with `{{contact.first_name | fallback: "there"}}`.
+10a. Work my team's queue oldest first, from a team view, by keyboard only; `Cmd+K` reaches every move.
+10b. Leave a half written answer, come back on another device, find it (server draft).
+10c. Select 3,000 spam conversations matching a filter; job finishes while I keep working.
+10d. Take five seconds to undo an email I just sent.
+10e. Set myself away; customer replies go to the team, not sit on me.
+
+Team lead:
+10f. Round robin new conversations among my team, capped at 10 open each, and see why one waits.
+10g. Limit a contractor to conversations of one team.
+10h. Answer a privacy request: export, then erase one customer, recoverable for 7 days.
 
 End customer:
 11. Write on any channel; reply reaches me on channel I last wrote from.
@@ -109,7 +197,7 @@ Developer (API):
 
 AI agent (MCP / Dimmi Agent):
 16. Dimmi Agent (07) replies through same action; its acknowledgement-only messages flagged non-substantive.
-17. Claude Code via MCP lists unassigned conversations, proposes reply, sends only after human confirms (09 confirm gate; server drafts later: reply-drafts).
+17. Claude Code via MCP lists unassigned conversations, proposes reply, sends only after human confirms (09 confirm gate).
 
 ## Data model
 
@@ -130,6 +218,8 @@ Doc rules on core tables (`00-foundation/extensibility.md` sections 1 P1, 10):
 
 `workspaces.settings` keys owned by 03 (`models.WorkspaceSettings`): `default_inbox_id` (uuid), `seen_receipt_shows_name` (bool, default false; widget "Seen" shows replying member name + avatar, see `conversation.seen_by_team`).
 
+`workspaces.settings` keys added this round (registry, delta): `inbox.merge_different_customers`, `inbox.undo_send_seconds`, `inbox.team_mentions_enabled`, `inbox.show_viewers_on_list`, `inbox.gif_picker`, `inbox.translation_enabled`, `snooze.wake_*`, `availability.*`, `attachments.customer_uploads`, `attachments.allowed_extra_extensions`, `redaction.card_numbers`, `redaction.us_ssn`, `link_safety.*`, `retention.*`. Meaning in owning file.
+
 `conversations.source` (`models.ConversationSource`), written once at creation by channel adapter:
 ```json
 { "page_url": "https://app.acme.dev/billing", "page_title": "Billing", "referrer": "https://google.com",
@@ -142,7 +232,7 @@ Other documented `source` keys: widget keys (01 README), `announcement_id` (15: 
 
 `messages.metadata` keys owned by 03: `mentions` (array of `{type: "member"|"team", id}`; render only, as typed; consumers read `message_mentions`), `client_message_id`, `edited_by`, `redacted_by` (contact message deleted by admin), `merged_from_conversation_id`, `email` subset written by 04, `ai` written by 07 (07-owned subtree; card status via `inbox.SetMessageMetadataKey`), `survey_request` (`{survey_id, response_id}`, 15 via `SendSystemMessage` allowlist), `widget` (`{session_id, identity_verified}`, 01 stamp), `imported` (bool) + `import` (`{import_id, source, external_id, author: {kind: member|former_teammate|bot|unknown, name}}`, 16 helpers only).
 
-`messages.event` for `type = event` (system timeline rows), names reuse catalog: `conversation.assigned`, `conversation.closed`, `conversation.reopened`, `conversation.snoozed`, `conversation.unsnoozed`, `conversation.priority_changed`, `conversation.tagged`, `conversation.untagged`, `conversation.marked_spam`, `conversation.unmarked_spam`, `conversation.merged`, `conversation.participants_changed`, `contact.merged`, `announcement.replied` (15: first message of conversation started from announcement), `ai.action_call_completed`, `ai.action_call_approval_requested` (07 agent actions via `inbox.RecordTimelineEvent`). Shape `{"name": "...", "actor": {"type","id"}, "from": ..., "to": ..., "reason": ...}`. Event rows do not change `last_message_at`, `last_activity_at`, `message_count`, unread.
+`messages.event` for `type = event` (system timeline rows), names reuse catalog: `conversation.assigned`, `conversation.closed`, `conversation.reopened`, `conversation.snoozed`, `conversation.unsnoozed`, `conversation.priority_changed`, `conversation.tagged`, `conversation.untagged`, `conversation.marked_spam`, `conversation.unmarked_spam`, `conversation.merged`, `conversation.participants_changed`, `conversation.restored`, `conversation.assignment_waiting`, `conversation.bcc_sent`, `side_conversation.replied`, `contact.merged`, `announcement.replied` (15: first message of conversation started from announcement), `ai.action_call_completed`, `ai.action_call_approval_requested` (07 agent actions via `inbox.RecordTimelineEvent`). Shape `{"name": "...", "actor": {"type","id"}, "from": ..., "to": ..., "reason": ...}`. Event rows do not change `last_message_at`, `last_activity_at`, `message_count`, unread.
 
 ### New tables
 
@@ -197,6 +287,32 @@ GDPR export jobs.
 
 Index `(workspace_id, contact_id, created_at desc)`. Partial unique `(workspace_id, contact_id) WHERE status IN ('pending','running')` (one export at time).
 
+#### Tables added this round
+
+Columns in owning file. Track numbers per [tasks.md](tasks.md).
+
+| Table | Prefix | File |
+|---|---|---|
+| member_access_teams | none | access.md |
+| team_assignment_cursors (moved from 17) | none | assignment.md |
+| away_reasons | `awr_` | assignment.md |
+| conversation_views | `cvw_` | views.md |
+| member_inbox_preferences | none | views.md |
+| snooze_lists | none | workbench.md |
+| conversation_drafts | `drf_` | workbench.md |
+| bulk_operations | `blk_` | workbench.md |
+| contact_tag, company_tag | none | records.md |
+| attribute_definitions | `atd_` | records.md |
+| redaction_rules | `rxr_` | safety.md |
+| contact_erasures | `ces_` | safety.md |
+| data_exports | `dex_` | safety.md |
+| export_destinations, export_schedules | `dxd_`, `dxs_` | safety.md |
+| message_reactions | none | collaboration.md |
+| side_conversations, side_messages | `sdc_`, `sdm_` | collaboration.md |
+| message_translations | none | collaboration.md |
+
+Core column changes this round: `conversations.priority` boolean to smallint level (views.md); `workspace_members` access, availability, capacity (access.md, assignment.md); `conversations.assignment_wait_reason`, `assignment_waiting_since`, `custom_attributes`; `messages.scheduled_send_at`, `undone_at`; `conversation_participants.role` values `to`, `cc`, `removed_at`; `conversation_tag.message_id`; `contacts.notes`, `companies.notes`; `attachments.scan_status` values + `scan_signature`, `scanned_at`, `side_message_id`.
+
 ### Core table changes
 
 All in migrations owned by this spec. Expand-only (no drops in MVP except duplicate foundation indexes, dropped in later contract migration after bench proves replacements).
@@ -218,7 +334,7 @@ All in migrations owned by this spec. Expand-only (no drops in MVP except duplic
 | `20261101000313_create_contact_exports_table.sql` | new table | |
 | `20261101000314_add_snooze_index_to_conversations.sql` | `(workspace_id, snoozed_until, id) WHERE status = 'snoozed' AND deleted_at IS NULL` | snoozed view sort, reconcile job |
 
-Conversation list indexes (`20261101000304`). Common predicate `P = deleted_at IS NULL AND merged_into_id IS NULL`.
+Conversation list indexes (`20261101000304`, renumbered track 03). Common predicate `P = deleted_at IS NULL`. Query adds `merged_into_id IS NULL` at runtime once track 04 ships column (keeps tracks independent).
 
 | Name | Columns | Partial | Serves |
 |---|---|---|---|
@@ -228,7 +344,7 @@ Conversation list indexes (`20261101000304`). Common predicate `P = deleted_at I
 | conversations_inbox_activity_idx | `(workspace_id, inbox_id, status, last_message_at desc, id desc)` | `P AND NOT spam` | Inbox view |
 | conversations_waiting_idx | `(workspace_id, status, waiting_since, id)` | `P AND NOT spam AND waiting_since IS NOT NULL` | Waiting longest sort |
 | conversations_created_idx | `(workspace_id, created_at desc, id desc)` | `P` | Created sort |
-| conversations_priority_idx | `(workspace_id, status, last_message_at desc, id desc)` | `P AND NOT spam AND priority` | Priority filter |
+| conversations_priority_idx | `(workspace_id, status, priority desc, last_message_at desc, id desc)` | `P AND NOT spam AND priority > 0` | Priority filter and sort (views.md) |
 | conversations_spam_idx | `(workspace_id, last_message_at desc, id desc)` | `deleted_at IS NULL AND spam` | Spam view |
 | conversations_deleted_idx | `(workspace_id, deleted_at desc, id desc)` | `deleted_at IS NOT NULL` | Deleted (trash) view |
 | conversations_search_idx | GIN `(workspace_id, search)` | | subject search |
@@ -262,7 +378,7 @@ Foundation indexes `(workspace_id, status, last_message_at desc)`, `(workspace_i
 Laravel-style paths. Tests listed per milestone in tasks.md.
 
 ### Enums (`app/enums/`)
-`conversation_status.go` (open, snoozed, closed), `message_type.go`, `author_type.go`, `delivery_status.go` (with `CanTransition(from, to)`), `channel_type.go` (registry enum: channel specs register at boot), `contact_kind.go`, `identity_type.go` (registry enum: channel specs register at boot), `participant_role.go`, `snooze_preset.go` (later_today, tomorrow, next_week, one_week), `conversation_view.go` (mine, unassigned, all, team, mentions, spam, deleted), `conversation_sort.go`, `reopen_reason.go`, `unsnooze_reason.go`, `merge_reason.go`, `export_status.go`, `bulk_result_status.go` (updated, skipped, failed), `reply_then.go` (keep, open, close, snooze), `initiated_by.go` (contact, member, agent, api, import; `import` reserved: 16 helpers dispatch no `conversation.created`).
+`conversation_status.go` (open, snoozed, closed), `message_type.go`, `author_type.go`, `delivery_status.go` (with `CanTransition(from, to)`), `channel_type.go` (registry enum: channel specs register at boot), `contact_kind.go`, `identity_type.go` (registry enum: channel specs register at boot), `participant_role.go`, `snooze_preset.go` (later_today, tomorrow, next_week, one_week), `conversation_priority.go` (none, low, medium, high, urgent to 0..4), `conversation_access.go`, `assignment_mode.go`, `draft_mode.go`, `bulk_operation_status.go`, `conversation_view.go` (mine, unassigned, all, team, member, inbox, mentions, spam, deleted, snoozed; custom views by `cvw_` id), `conversation_sort.go`, `reopen_reason.go`, `unsnooze_reason.go`, `merge_reason.go`, `export_status.go`, `bulk_result_status.go` (updated, skipped, failed), `reply_then.go` (keep, open, close, snooze), `initiated_by.go` (contact, member, agent, api, import; `import` reserved: 16 helpers dispatch no `conversation.created`).
 
 ### Contracts (`app/contracts/`)
 - `channel.go` – `Channel`, `ChannelCapabilities`, `OutboundMessage`, `SendResult`, optional `ChannelTyping`, `ChannelReadMarker`, `ChannelRehomer` (16 `import` driver), sentinel errors. Full text: [channel-contract.md](channel-contract.md).
@@ -287,7 +403,7 @@ Laravel-style paths. Tests listed per milestone in tasks.md.
 - `add_conversation_participant.go`, `remove_conversation_participant.go`
 - `bulk_update_conversations.go` (ids or filter snapshot + `confirm_count` check; per-id tx via `ApplyConversationChanges`)
 - `mark_conversation_read.go`, `mark_conversation_unread.go`
-- `visible_scope.go` (`conversations.VisibleScope(principal) querybuilder.Scope`): single visibility builder. Every conversation list, view, neighbor, count, search (conversation section + `#1042` jump), bulk filter snapshot, contact/company conversation list, export, MCP/CLI list, and realtime `conversation:{conv}` subscribe authorizer (incl. presence) goes through it; show endpoints use `VisibleScope(principal).Contains(conv)` (miss = 404). MVP: all conversations in workspace (trash adds `conversations:delete`). Later inbox/team restriction = change this one function + `inbox_members` table, no call-site edits. Lint: raw `FROM conversations` in list/search queries outside `querybuilder` fails review
+- `visible_scope.go` (`conversations.VisibleScope(principal)`; full rule and arch test: [access.md](access.md)): single visibility builder. Every conversation list, view, neighbor, count, search (conversation section + `#1042` jump), bulk filter snapshot, contact/company conversation list, export, MCP/CLI list, and realtime `conversation:{conv}` subscribe authorizer (incl. presence) goes through it; show endpoints use `VisibleScope(principal).Contains(conv)` (miss = 404). Member modes `all`, `assigned`, `teams`, `all_except_teams`; trash adds `conversations:delete`. Arch test fails raw conversation reads outside scope
 - `list_conversations.go` (view + filters + sort to query builder, scoped by `VisibleScope`), `find_neighbor_conversations.go`, `count_conversations.go` (capped counts, cached), `build_conversation_context.go`
 - `record_typing.go` (`RecordTyping`: REST `typing-indicators`, only typing path for every client; throttle 1 per 2 s per member per conversation in Valkey; relay to widget / push channel only, see Collision)
 
@@ -302,6 +418,10 @@ Laravel-style paths. Tests listed per milestone in tasks.md.
 `inbox/` (package `app/actions/inbox`; cross-spec timeline helpers, no HTTP): `record_timeline_event.go` (`inbox.RecordTimelineEvent(ctx, tx, RecordTimelineEventInput{ConversationID, Name, Actor, Data})`: inserts `type = event` row, name must be in `messages.event` list (registry), no counters, no unread, dispatches nothing (caller owns its own event)), `set_message_metadata_key.go` (`inbox.SetMessageMetadataKey(ctx, tx, messageID, key, value)`: `jsonb_set` on one owned top-level key (`ai` 07; allowlist), no `message.updated`, no `updated_at` bump beyond row).
 
 `conversations/importing/` (16 import write helpers; 16 calls, 03 owns invariants; no events, no outbound, no billing listeners, no auto-assign, no 07 trigger): `import_conversations.go` (`ImportConversations(ctx, tx, []ImportedConversationRow)`: number block via one `UPDATE workspaces ... RETURNING`, preserved timestamps, counters `message_count`, `first_customer_message_at`, `last_message_at`, `closed_at`, `waiting_since = null`, `ai_state = 'off'`, `is_test = false`, `source.imported`), `import_messages.go` (`ImportMessages`: `tx.CopyFrom` into temp staging table + `INSERT ... SELECT ... ON CONFLICT (workspace_id, dedupe_key) DO NOTHING` (COPY cannot load RLS tenant tables for the app role); `author_id` null allowed for `member`/`agent` when `metadata.imported`; `substantive` as source says, never metered), `import_contacts.go` (`ImportContacts`: match `external_id`, then verified email identity, then exactly one contact with same email; identities `verified = false` unless attested (`email_trust`); `trusted_attribute_keys` appended only for keys in `TrustedKeys` (mappings `trusted = true`) on `kind user` rows where helper wrote value), `import_companies.go` (`ImportCompanies`: match `external_id` then `domain`), `import_tags.go`, `import_saved_replies.go`, `attach_imported_file.go` (`AttachImportedFile`: attachment row linked to imported message, scan queued).
+
+`assignment/`: `pick_assignee.go`, `assign_on_arrival.go`, `drain_assignment_queue.go`, `set_member_availability.go`, `assignment_status.go`, `auto_away_members.go` (track 12); [assignment.md](assignment.md).
+
+`conversation_views/`, `inbox_preferences/`, `snooze_lists/`, `drafts/`, `bulk_operations/`, `reactions/`, `side_conversations/`, `translations/`, `attribute_definitions/`, `redaction/`, `data_exports/`, `export_schedules/`, `erasures/`: one action per file, per owning spec file; `restore_conversation.go`, `resolve_snooze_option.go`, `undo_reply.go`, `set_conversation_access.go` under `conversations/` and `workspaces/` respectively.
 
 `attachments/`: `store_upload.go`, `link_attachments.go` (targets `message`, `feedback_post`, `feedback_comment` (14; caller passes ownership, limits and image-only check); ownership + limits + channel capability check for messages; rejects `uploaded_at IS NULL` rows, 01 core change), `sign_attachment_url.go`, `purge_orphan_attachments.go` (attached = `message_id` or `feedback_post_id` or `feedback_comment_id` set), `scan_attachment.go`. Same package hosts 01-owned `create_pending_upload.go`, `complete_upload.go` (presigned/direct widget uploads); both end by queuing `ScanAttachment`.
 
@@ -321,6 +441,9 @@ Laravel-style paths. Tests listed per milestone in tasks.md.
 - `templating/` – saved reply variable renderer (`{{path | fallback: "x"}}`), no logic, no loops, HTML-escaped when rendered to HTML.
 - `excerpt/` – Markdown to plain-text excerpt (subjects, previews, notifications).
 - `mentions/` – `<@mem_...>` / `<@team_...>` token parse/render.
+- `redaction/` – built-in and custom rules applied before save ([safety.md](safety.md)).
+- `attachments/policy.go` – default allowlist, hard block.
+- `querybuilder/conversation_definition.go` – custom view and structured search compiler ([views.md](views.md)).
 - `spam/` – inbound heuristics (link count, known patterns, honeypot flag from widget, repeated body hash per contact).
 
 ### HTTP
@@ -376,11 +499,12 @@ Full table, filters, examples, error codes: [api.md](api.md). REST rules: `00-fo
 | Companies | list, create (`?upsert=true`), show, update, delete, contacts |
 | Tags | list, create, update, delete |
 | Saved replies | list, create, show, update, delete, renderings |
-| Search | `GET /search` |
+| Search | `GET /search`, `POST /conversation-searches` |
+| Added this round | custom views, inbox preferences, snooze lists and options, drafts, bulk operations, reactions, mentionables, assignment status, away reasons, member activity, attribute definitions, redaction rules and tests, contact erasures, data exports, export destinations and schedules, side conversations, similar, translations, download grants. api.md "Added endpoints" |
 
 ## MCP tools
 
-Canonical tool list, names, confirmation flow (elicitation; MVP always confirms sends; send modes later: agent-send-modes; server drafts later: reply-drafts): 09 (`09-agent-native/mcp.md`). 03 supplies actions, resources, abilities. Ability required = same as REST.
+Canonical tool list, names, confirmation flow (elicitation; always confirms sends; send modes later: agent-send-modes, 09): 09 (`09-agent-native/mcp.md`). 03 supplies actions, resources, abilities. Ability required = same as REST.
 
 | 09 tool | 03 action | Ability |
 |---|---|---|
@@ -392,14 +516,14 @@ Canonical tool list, names, confirmation flow (elicitation; MVP always confirms 
 | `dimmi_assign_conversation`, `dimmi_close_conversation`, `dimmi_reopen_conversation`, `dimmi_snooze_conversation` | same-named actions; REST equivalent `PATCH /conversations/{id}` with `assignee_id`/`team_id`, `status: closed`, `status: open`, `status: snoozed` (rest.md rule 15: tools keep task names) | conversations:write |
 | `dimmi_search_contacts` / `dimmi_get_contact` / `dimmi_update_contact` | contacts actions | contacts:read / contacts:write |
 
-03 feature toolset `inbox_extra` (09 "Feature toolsets" rules; files in `app/mcp/tools/`, off by default): `dimmi_untag_conversation`, `dimmi_list_tags`, `dimmi_list_saved_replies`, `dimmi_render_saved_reply`. All internal or read-only, no confirm gate.
+03 feature toolset `inbox_extra` (09 "Feature toolsets" rules; files in `app/mcp/tools/`, off by default): `dimmi_untag_conversation`, `dimmi_list_tags`, `dimmi_list_saved_replies`, `dimmi_render_saved_reply`, `dimmi_set_priority`, `dimmi_merge_conversations`, `dimmi_add_participant`, `dimmi_list_views`, `dimmi_structured_search`. All internal or read-only, no confirm gate, except merge (irreversible: 09 confirm gate). All follow caller's `VisibleScope`.
 
 No CLI commands owned (09 generates CLI from OpenAPI).
 
 ## Events
 
 ### Emitted (catalog names)
-`conversation.created`, `conversation.assigned`, `conversation.closed`, `conversation.reopened` (reason: customer_message, manual, reply), `conversation.snoozed`, `conversation.unsnoozed` (reason: expired, customer_message, manual), `conversation.priority_changed`, `conversation.tagged`, `conversation.untagged`, `conversation.marked_spam`, `conversation.unmarked_spam`, `conversation.deleted`, `conversation.read`, `message.created`, `message.updated`, `message.deleted`, `message.delivery_updated` (from `UpdateMessageDelivery`, invoked by channels), `contact.created`, `contact.updated`, `contact.merged`, `contact.deleted`.
+`conversation.created`, `conversation.assigned`, `conversation.closed`, `conversation.reopened` (reason: customer_message, manual, reply), `conversation.snoozed`, `conversation.unsnoozed` (reason: expired, customer_message, manual, member_reply, others_note, assigned, attribute_changed, side_reply), `conversation.priority_changed`, `conversation.tagged`, `conversation.untagged`, `conversation.marked_spam`, `conversation.unmarked_spam`, `conversation.deleted`, `conversation.read`, `message.created`, `message.updated`, `message.deleted`, `message.delivery_updated` (from `UpdateMessageDelivery`, invoked by channels), `contact.created`, `contact.updated`, `contact.merged`, `contact.deleted`.
 
 Payload additions (all events): `client_mutation_id` (from request header `Dimmi-Client-Mutation-Id`, max 64 chars, echoed into broadcast `meta`), `actor`.
 
@@ -454,6 +578,23 @@ Dispatch phases (contracts.md "Event dispatch phases"): `message.created` and `c
 | inbox.created / inbox.updated / inbox.deleted | yes | no | settings change |
 | contact.blocked / contact.unblocked | yes | yes | separate from contact.updated so webhooks can filter |
 | contact.export_ready | yes (`member:{mem}` of requester) | no | download link via REST |
+| conversation.restored | yes | yes | trash path reactivated; safety.md |
+| conversation.hidden | yes (`member:{mem}`) | no | ephemeral, access.md |
+| conversation.viewers_changed | yes (fan-out chokepoint) | no | ephemeral, coalesced 1 s, views.md |
+| member.access_changed | yes (`member:{mem}`) | no | access.md; owner 03, row in 00-accounts catalog |
+| member.availability_changed | yes (`workspace:{ws}`) | no | assignment.md |
+| conversation_view.created / updated / deleted | yes (shared `workspace:{ws}`, personal `member:{mem}`) | no | views.md |
+| inbox_preferences.updated | yes (`member:{mem}`) | no | views.md |
+| snooze_list.updated | yes (`workspace:{ws}`) | no | workbench.md |
+| draft.updated | yes (`member:{mem}`) | no | workbench.md |
+| bulk_operation.updated | yes (`member:{mem}`) | no | workbench.md |
+| message.reactions_changed | yes (`conversation:{conv}`) | no | collaboration.md |
+| attachment.scanned | yes (`conversation:{conv}`) | no | safety.md |
+| data_export.ready | yes (`member:{mem}`) | no | safety.md |
+| attribute_definition.created / updated / deleted | yes (`workspace:{ws}`) | yes | records.md |
+| side_conversation.created / updated, side_message.created | yes (`conversation:{conv}`) | no | collaboration.md |
+
+Conversation list events move to new channel `workspace_conversations:{ws}` plus per-member copies ([access.md](access.md) Realtime).
 
 ## Jobs
 
@@ -462,6 +603,16 @@ Dispatch phases (contracts.md "Event dispatch phases"): `message.created` and `c
 | `send_channel_message` | `mail` for email, `channels` others | `SendChannelOutbound` listener (InsertTx), manual retry | River backoff capped at 30 min until driver `Capabilities.RetryWindow` elapsed (default about 3 h, email about 24 h; channel-contract.md); rate limit snooze does not count; then `failed` | `ByArgs` (message_id) while pending/scheduled/running |
 | `send_channel_typing` | `channels` | typing relay for channels with `Typing` capability | 0 (ephemeral) | `ByArgs` (conversation_id) + `ByPeriod` 4 s |
 | `unsnooze_conversation` | `default` | `ScheduleUnsnooze`, ScheduledAt = snoozed_until | 5 | `ByArgs` (conversation_id, snoozed_until) |
+| `assign_on_arrival` | `default` | listener on `conversation.created`, `ai.handoff_requested`, team assignment, reopened | 5 | `ByArgs` (conversation_id, reason); assignment.md |
+| `drain_assignment_queue` | `default` | capacity change, periodic 1 min | 3 | `ByArgs` (inbox, pool) + `ByPeriod` 5 s |
+| `auto_away_members` | `maintenance` | periodic 1 min | 1 | `ByPeriod` |
+| `run_bulk_operation` | `default` | 202 bulk | 10 | `ByArgs` (bulk_operation_id); one running per workspace |
+| `erase_message_copies` | `default` | message delete, redact | 10 | `ByArgs` (message_id); runs `MessageEraser` hooks |
+| `purge_stale_drafts` | `maintenance` | daily | 3 | `ByPeriod` |
+| `apply_conversation_retention` | `maintenance` | daily | 3 | guard per row; safety.md |
+| `build_data_export`, `expire_data_exports` | `default`, `maintenance` | `POST /data-exports`, hourly | 3 | `ByArgs` (export_id) |
+| `run_export_schedule` | `maintenance` | hourly check | 5 | `ByArgs` (schedule, period) |
+| `send_side_message` | `mail` | side message created | as `send_channel_message` | `ByArgs` (side_message_id) |
 | `reconcile_snoozes` | `maintenance` | periodic every 10 min | 1 | `ByPeriod` 10 min; per workspace batch, unsnoozes rows with `snoozed_until < now() - 2 min` (lost-job safety net) |
 | `purge_deleted_conversations` | `maintenance` | daily 03:00 UTC | 3 | `ByPeriod` 24 h; hard delete conversations `deleted_at < now() - inbox.deleted_retention_days` via `PurgeConversation` (guard per row), 500 per tx, attachments files deleted after commit |
 | `purge_spam_conversations` | `maintenance` | daily | 3 | spam conversations with no activity for `inbox.spam_retention_days`; `RetentionGuard.MayDestroy(ws, {conversation, id})` per row (false = stays in spam); soft delete (go to trash), then normal purge (guarded again) |
@@ -469,7 +620,7 @@ Dispatch phases (contracts.md "Event dispatch phases"): `message.created` and `c
 | `scan_attachment` (`ScanAttachment`) | `default` | upload complete (03 multipart, 01 `CompleteUpload`, 04/05 inbound) | 5 | `ByArgs` (attachment_id); computes `sha256` when missing, runs `attachments.scan_driver` (`none` default sets `skipped`; ClamAV/GuardDuty set `clean`/`infected`); `infected` deletes file bytes, keeps row; outbound waits per channel-contract `scan_wait_max` |
 | `build_contact_export` | `default` | `POST /contacts/{id}/exports` | 3 | `ByArgs` (export_id); core sections then every registered export hook (Security: "Contact export hooks") |
 | `expire_contact_exports` | `maintenance` | hourly | 3 | delete zips past `expires_at`, status `expired` |
-| `erase_contact` | `default` | `DELETE /contacts/{id}?erase=true` (row marked in request tx, heavy work in job) | 10 | `ByArgs` (contact_id); `RetentionGuard` first (false = erasure `pending_hold`, audit `retention_held`, nothing wiped, contact stays hidden; re-dispatched when hold released, later); after core wipe runs contact eraser hooks (below), then dispatches `contact.deleted` (`erased: true`) |
+| `erase_contact` | `default` | `DELETE /contacts/{id}?erase=true`, scheduled at `contact_erasures.scheduled_for` (grace 7 days, safety.md); row marked in request tx, heavy work in job | 10 | `ByArgs` (contact_id); `RetentionGuard` first (false = erasure `pending_hold`, audit `retention_held`, nothing wiped, contact stays hidden; re-dispatched when hold released); after core wipe runs contact eraser hooks (below), then dispatches `contact.deleted` (`erased: true`) |
 
 Retention rule (`00-foundation/contracts.md` `RetentionGuard`, extensibility.md section 8): every job and action above that destroys data calls `RetentionGuard.MayDestroy` before destroying. MVP driver noop (always true). Held row skipped, counted `dimmi_retention_held_total{kind}`, logged with `retention_held`. `expire_contact_exports` not guarded (export zip is derived copy, not source data). Feature test per job with fake guard returning false.
 
@@ -496,12 +647,20 @@ Queued listeners from catalog run as jobs owned by their specs (`QueueWebhookDel
 | `inbox.outbound.scan_wait_max` | `DIMMI_INBOX_OUTBOUND_SCAN_WAIT_MAX` | 10m | wait for attachment scan |
 | `inbox.deleted_retention_days` | `DIMMI_INBOX_DELETED_RETENTION_DAYS` | 30 | trash |
 | `inbox.spam_retention_days` | `DIMMI_INBOX_SPAM_RETENTION_DAYS` | 30 | 0 = keep forever |
-| `inbox.bulk.max_ids` | `DIMMI_INBOX_BULK_MAX_IDS` | 100 | rest.md rule 8 max |
-| `inbox.bulk.max_filter_matches` | `DIMMI_INBOX_BULK_MAX_FILTER_MATCHES` | 1000 | filter-based bulk cap; over cap 422 `bulk_too_many` |
+| `inbox.bulk.sync_max` | `DIMMI_INBOX_BULK_SYNC_MAX` | 100 | at or below: sync (rest.md rule 8); above: job |
+| `inbox.bulk.max_ids` | `DIMMI_INBOX_BULK_MAX_IDS` | 1000 | ids per request |
+| `inbox.bulk.max_filter_matches` | `DIMMI_INBOX_BULK_MAX_FILTER_MATCHES` | 10000 | filter cap; over cap 422 `bulk_too_many` |
+| `inbox.drafts.retention_days` | `DIMMI_INBOX_DRAFTS_RETENTION_DAYS` | 30 | stale draft purge |
+| `inbox.gif.giphy_api_key` | `DIMMI_INBOX_GIF_GIPHY_API_KEY` | empty | empty hides GIF picker, no CSP change |
+| `inbox.exports.pdf_font_path` | `DIMMI_INBOX_EXPORTS_PDF_FONT_PATH` | empty | optional TTF for scripts outside embedded font |
+| `inbox.exports.max_csv_rows` | `DIMMI_INBOX_EXPORTS_MAX_CSV_ROWS` | 50000 | |
+| `contacts.erase_grace_days` | `DIMMI_CONTACTS_ERASE_GRACE_DAYS` | 7 | 0 = wipe at once |
 | `inbox.typing.relay_to_widget` | `DIMMI_INBOX_TYPING_RELAY_TO_WIDGET` | true | |
 | `attachments.scan_driver` | `DIMMI_ATTACHMENTS_SCAN_DRIVER` | none | `none`, `clamav` (`attachments.clamav.address`), `guardduty` (S3 tag read); `ScanAttachment` job |
 | `contacts.export_ttl` | `DIMMI_CONTACTS_EXPORT_TTL` | 24h | |
 | `contacts.merge.max_chain` | | 5 | redirect depth for merged ids |
+
+Fixed product limits this round (not catalog keys): 200 shared and 50 personal views, 100 away reasons, 100 attribute definitions per object, 10 redaction rules, 10 snooze options, 20 reactions per message, 50 Bcc. No new entitlement keys: every gap on for every workspace.
 
 Limits reuse foundation global limits (message body 64 KB, 10 attachments, 25 MB, 50 tags, 50 participants, 100 custom attributes, page size 25/100).
 
@@ -522,6 +681,14 @@ Implemented as permissions (`00-foundation/extensibility.md` section 4, P2). Pol
 | `inboxes:manage` | settings:write | owner, admin | inbox create/update/delete |
 | `tags:manage` | settings:write | owner, admin | tag rename/recolor/delete |
 | `saved_replies:manage_shared` | settings:write | owner, admin | shared saved replies CRUD |
+| `members:manage_access` | members:write | owner, admin | set `conversation_access` (access.md) |
+| `members:manage_availability` | members:write | owner, admin | set another member's away status, capacity |
+| `views:manage_shared` | conversations:write | owner, admin | shared custom views |
+| `conversations:side` | conversations:write | owner, admin, member | side conversations |
+| `conversations:export` | conversations:read | owner, admin | `POST /data-exports` conversations |
+| `contacts:export` | contacts:read | owner, admin | `POST /data-exports` contacts |
+| `attributes:manage` | settings:write | owner, admin | attribute definitions |
+| `redaction:manage` | settings:write | owner, admin | redaction rules and tests |
 
 | Action | Owner | Admin | Member | Permission (token ability group) |
 |---|---|---|---|---|
@@ -531,8 +698,8 @@ Implemented as permissions (`00-foundation/extensibility.md` section 4, P2). Pol
 | Read state (`read-state` show/update) | yes | yes | yes | conversations:read |
 | Create conversation via API | yes | yes | yes | conversations:write |
 | Edit own note, delete own message | yes | yes | yes | conversations:write |
-| Delete others' notes, redact contact messages | yes | yes | no | `conversations:moderate` (conversations:write) |
-| Delete conversation to trash (`DELETE`, PATCH `trashed: true`) | yes | yes | no | `conversations:delete` (conversations:write) |
+| Delete others' notes and replies, redact contact messages | yes | yes | no | `conversations:moderate` (conversations:write) |
+| Delete to trash and restore (`DELETE`, PATCH `trashed`) | yes | yes | no | `conversations:delete` (conversations:write) |
 | Bulk update (ids or filter); per-field rules same as single PATCH (`trashed`: `conversations:delete`) | yes | yes | yes | conversations:write |
 | Inboxes create/update/delete | yes | yes | no | `inboxes:manage` (settings:write) |
 | Inboxes list/show | yes | yes | yes | conversations:read |
@@ -546,6 +713,14 @@ Implemented as permissions (`00-foundation/extensibility.md` section 4, P2). Pol
 | Contact `external_id` change/clear | yes | yes | no | `contacts:manage_external_id` (contacts:write) |
 | Companies CRUD | yes | yes | yes | contacts:write (delete: `companies:delete`) |
 | Search | yes | yes | yes | conversations:read (contacts section needs contacts:read; missing ability omits section, never 403) |
+| Own drafts, inbox preferences | yes | yes | yes | conversations:write / conversations:read |
+| Custom views personal | yes | yes | yes | conversations:write |
+| Custom views shared | yes | yes | no | `views:manage_shared` |
+| Set own away status | yes | yes | yes | conversations:write |
+| Set others' away status, capacity | yes | yes | no | `members:manage_availability` |
+| Side conversations | yes | yes | yes | `conversations:side` |
+| Export conversations or contacts | yes | yes | no | `conversations:export`, `contacts:export` |
+| Redaction, attributes, attachment policy, retention, link safety | yes | yes | no | `redaction:manage`, `attributes:manage`, settings:write |
 | Subscribe `conversation:{conv}` (incl. presence) | yes | yes | yes | session or token; `VisibleScope` contains conversation |
 
 Deactivated member: no access (00-accounts disconnects realtime connections). Agent actor (07) uses its own internal actor, not tokens; allowed: reply, note, assign to human/team, close (if 07 policy allows), tag.
@@ -600,13 +775,14 @@ Traces: span per action, per adapter `Send`, per search phase.
 - Notes never leave member surfaces: excluded from widget resources, channel outbound, customer webhooks unless endpoint sets `include_notes = true` (10), MCP only for member/admin tokens.
 - Mentions validated: only active members of same workspace; unknown `<@mem_x>` rendered as plain text, no notification.
 - Saved reply variables: no code execution; only allowlisted paths; values HTML-escaped when rendered into HTML channels; custom attributes rendered as strings.
-- Attachments: ownership check (uploaded by same workspace, unattached, uploaded by same actor unless admin); signed URLs valid 5 min for API/dashboard, 1 h for widget. Email outbound attaches file bytes (04), never links. SVG/HTML never served inline.
+- Attachments: ownership check (uploaded by same workspace, unattached, uploaded by same actor unless admin); signed URLs valid 5 min for API/dashboard, 30 min for widget ([safety.md](safety.md)). Email outbound attaches file bytes (04), never links. SVG/HTML never served inline.
 - Contact messages redaction by admin: body cleared, attachments deleted from disk, `metadata.redacted_by`; channel copy unaffected (stated in UI copy by frontend).
 - Identify API marks `email_verified = true` (trusted server) and adds written `custom_attributes` keys to `trusted_attribute_keys` (07 agent actions bind only trusted keys; widget writes never trusted). Widget unverified email never auto-merges (data-model rule). Manual merge of unverified lead drops lead's `widget_visitor` identities (see edge cases) so impostor browser cannot read merged history.
 - Search runs with `SET LOCAL statement_timeout` (2 s) and query length cap (256) to stop pathological tsquery.
 - Merged/erased contact ids: other-workspace ids return 404 (tenancy rule).
 - GDPR erase keeps conversation shells, `contact_id` repointed to per-workspace "Deleted contact" tombstone (created lazily, `kind = lead`, `deleted_at` set, name null).
 - Bulk trash (`changes.trashed`), any filter-based bulk, and erase written to audit log (`WriteAuditLog`). Erase held by `RetentionGuard` audited as `contact_erasure` status `pending_hold`.
+- Message eraser hooks (`contracts.MessageEraser`): delete and redaction reach copies; [workbench.md](workbench.md).
 - Contact eraser hooks (`app/providers` registry, like workspace initializers; each idempotent, chunked, re-run safe on job retry; names `Erase<Domain>ContactData`): 01 `EraseWidgetContactData` revoke widget sessions + scrub `current_page`/`recent_pages`; 04 `EraseEmailContactData` delete raw `.eml`, `inbound_emails`/`outbound_emails` bodies, thread refs, suppressions keep hashed address only; 05 `EraseChannelContactData` `channel_message_refs`, `channel_contact_states`, inbound event payloads; 06 `EraseNotificationContactData` scrub `notifications.data` excerpts/names for contact's conversations; 07 `EraseAiContactData` delete `ai_runs`/`ai_run_steps` prompt and output text for contact's conversations; 08 `EraseHelpCenterContactData` `help_center_searches` rows linked to contact's visitor; 10 `EraseWebhookContactData` purge stored delivery payloads; 13 `EraseChangelogContactData` changelog subscribers (by contact or contact emails), reactions, reads; 14 `EraseFeedbackContactData` votes, posts, comments, requests, portal sessions; 15 `EraseEngageContactData` survey responses (answers cascade), receipts, `contact_id` scrub on requested CSAT rows. Registration order = spec number; no cross-hook dependencies. Hook missing for spec with contact PII = CI test failure (table list in test includes 13, 14, 15 tables). Erase completes (`contact_erasure.status = completed` in audit row) only after every hook returns nil.
 - Contact export hooks (`contacts.ExportContributor` registry in `app/providers`, same shape as erasers: `Export<Domain>ContactData(ctx, workspace, contact) (section string, data any, files []ExportFile, err)`): `build_contact_export` adds one top-level section per hook. Registered: 13 `ExportChangelogContactData` (`changelog`: subscriptions, optional), 14 `ExportFeedbackContactData` (`feedback`: votes, posts, comments, requests), 15 `ExportEngageContactData` (`engage`: `survey_responses`, `engage_receipts`). Hook error fails export (`failed`, retry).
 
@@ -648,12 +824,22 @@ Traces: span per action, per adapter `Send`, per search phase.
 | 14-feedback-roadmap | eraser + export hook, `feedback.RequestsForConversation` query | `ResolveInboundContact` verified-claim takeover, `LinkAttachments` feedback targets, orphan purge rule, `include=feedback_requests`, `changed_attribute_keys` |
 | 15-announcements-surveys | eraser + export hook, segment compiler (`filter[segment]`), latest CSAT query | `SendSystemMessage`, `announcement.replied` event row, `source.announcement_id`, `include=csat`, `filter[segment]` on contacts |
 | 16-importers | `import` channel driver implementing `ChannelRehomer`; calls import write helpers | `conversations/importing` helpers, `imported` resource block, filters `filter[imported]`/`filter[import_id]`, search `imported:`, unread rule, outbound/auto-assign skip |
+| 17-workflows | calls `assignment.PickAssignee`, `AssignOnArrival` on run end; adds claim check in `AssignOnArrival` | one picker, cursor table, no round robin inside engine |
 | 12-cloud-billing | InTx listener `MeterMessageActivity` on `message.created` (reply/create gate, `ErrActivationBlocked` -> 423), InTx `GuardOutboundFairUse` on `conversation.created`, queued `ApplyBillingCredits` | event fields per Metering table, `initiated_by`, `conversation.merged`, 423 mapping with `billing` block |
 
-## Open questions (recommended default in bold)
+## Decisions
 
-1. Text search language: **`english` stemmer + unaccent for all workspaces**; per-workspace config (`simple` or language-specific) post-MVP via second generated column.
-2. Reply to closed conversation without `then`: **keeps closed** (data-model: teammate reply reopens only with flag). Dashboard sends `then: "open"` by default in composer.
-3. Members public id prefix. **Resolved: `mem_` (workspace member id) everywhere member referenced (assignee, author, mentions, presence, filters); `usr_` reserved for users (account-level, 00-accounts).**
-4. Public id prefixes not in foundation list: **`rpl_` saved replies, `exp_` contact exports.** Add to `app/models/public_ids.go` (`framework/ids` registry).
-5. Spam retention: **30 days then trash, then 30 more days then purge.** Configurable.
+| # | Topic | Decided | Why |
+|---|---|---|---|
+| 1 | Text search language | `english` stemmer + unaccent base, F57 fix adjusts tokenization for non-Latin scripts; per-workspace config not in this round | Parser is one column; second generated column costs write amplification |
+| 2 | Reply to closed conversation without `then` | Keeps closed. Dashboard sends `then: "open"` by default | Data-model rule: reopen by explicit flag |
+| 3 | Members public id | `mem_` everywhere member referenced; `usr_` for accounts | One person can be in several workspaces |
+| 4 | Prefixes not in foundation | `rpl_`, `exp_`, plus delta list | Registry rule |
+| 5 | Spam retention | 30 days then trash, then 30 more days then purge. Per workspace settable | Rescue window before irreversible |
+| 6 | Undo window | 5 s default, email and chat apps; widget and api 0; member override | workbench.md |
+| 7 | Priority | 5 levels, smallint, old true = high | views.md |
+| 8 | Bulk limits | Sync 100; job 1,000 ids or 10,000 filter matches | workbench.md |
+| 9 | Different-customer merge | Off by default | records.md |
+| 10 | Erase grace | 7 days, immediate on request with confirmation | safety.md |
+| 11 | Spam mark and status | Status untouched, unlike Intercom | Unmark restores exactly |
+| 12 | Blocked sender mail | Kept as spam, not refused | Never lose mail; no bounce backscatter |

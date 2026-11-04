@@ -27,18 +27,19 @@ Style: caveman. Owner: 04-email-channel. Read with `README.md` and `pipeline.md`
 
 ## 2. Sender resolution
 
-Address used: `email.from_address_id` option, else conversation's channel connection address, else workspace default address.
+Address used: `email.from_address_id` option ([sending.md](sending.md) 2; builds on F16 fix), else conversation's channel connection address, else workspace default address.
 
 | Address state | From header | Envelope (Return-Path) | Signed by |
 |---|---|---|---|
 | Cloud or self-host `ses`, address domain verified | `"<name>" <support@acme.com>` | `bounce.acme.com` (custom MAIL FROM success) else SES default `amazonses.com` subdomain | SES Easy DKIM `d=acme.com` |
+| Any instance, active mailbox connection, `send_mode = mailbox`, kind reply, ai_reply, system, new_conversation, test | `"<name>" <support@acme.com>` | Google or Microsoft | Google or Microsoft (customer's own setup); [mailbox-connections.md](mailbox-connections.md) 6 |
 | Cloud, domain not verified | `"<name> (Acme)" <acme@inbound.trydimmi.com>` (forwarding address) | SES default | SES DKIM `d=inbound.trydimmi.com` (operator-verified) |
 | Self-host `smtp` relay, domain verified | `"<name>" <support@acme.com>` | relay's bounce domain or `bounces+<token>@<inbound_domain>` when relay allows | Dimmi DKIM `d=acme.com s=dimmi202611` + relay's own |
 | Self-host `postmark` / `resend` / `mailgun` / `sendgrid`, domain verified (ownership TXT + `provider_verified_domains`) | `"<name>" <support@acme.com>` | provider return-path set up at provider (Postmark `pm-bounces`, Resend `send.`, Mailgun `email.`/`mg.`, SendGrid `em<id>.`) | provider DKIM `d=acme.com` (set up by operator at provider) |
 | Self-host, any driver, domain not verified | `mail.from` config address (or `default_sender_domain` forwarding address when set up at provider) with display name; Reply-To token address | provider default | provider only |
 | Self-host with no `mail.from`, no verified address, or customer-stream mailer missing | 422 `no_sender_available` at reply time; Send returns `contracts.ErrPermanent` (`no_sender_available`) | | |
 
-No row sends through workspace-owned credentials: provider is instance config (README "Never").
+Instance provider is deploy config. Only workspace-held credential that may send: OAuth grant of a connected mailbox, to that mailbox's own API (README "Never"). No BYO SMTP.
 
 Display name (`from_name_style`):
 - `member_and_name`: human reply `"Sam from Acme Support"`; AI reply `"<agent name> from Acme Support"` (agent name from 07 `ai_agents`; empty: address display name only); system `"Acme Support"`.
@@ -107,16 +108,16 @@ On Mon, 2 Nov 2026 at 10:04, Bob <bob@customer.io> wrote:
 
 ## 6. Transports
 
-One customer-stream mailer per instance (section 15). `transport` = its driver. Never direct-to-MX; never per-workspace credentials.
+One customer-stream mailer per instance (section 15). `transport` = its driver, or `gmail`/`microsoft` for connected mailbox ([mailbox-connections.md](mailbox-connections.md) 6). Never direct-to-MX; never per-workspace provider credentials or BYO SMTP.
 
 | Transport | Used when | Send call | Accept = |
 |---|---|---|---|
 | ses | cloud; self-host `ses` (own AWS) | `Mailer.Send(mail.Message{Raw, ConfigurationSet: ses.configuration_set, Tags: stream, workspace, kind, message, TenantName})`; driver SESv2 `SendEmail` `Content.Raw`, `ConfigurationSetName`, `EmailTags`, `TenantName` | `ProviderMessageID` = SES `MessageId`; `MessageID` = `<MessageId>@<region>.amazonses.com` (SES rewrites) |
 | smtp | self-host relay/submission (Postmark SMTP, Mailgun SMTP, Brevo, company relay); never port 25 MX of recipient | framework `mail` `smtp` driver (go-mail) to `mail.smtp.host` (TLS/STARTTLS required unless `mail.smtp.allow_insecure`), DKIM signed by `framework/mail/dkim` when domain verified with own key | 250 after DATA; `ProviderMessageID` = queue id parsed from 250 text when present |
-| postmark | self-host | driver decomposes `Raw` into Postmark `/email` JSON, `MessageStream` = `postmark.message_stream`, `Metadata` = tags | `ProviderMessageID` = `MessageID`; Message-ID header kept or rewritten [verify], driver reports in `MessageID` |
-| resend | self-host | driver decomposes `Raw` into `/emails` JSON, `tags`, custom `headers` | `id`; Message-ID handling [verify] |
+| postmark | self-host | driver decomposes `Raw` into Postmark `/email` JSON, `MessageStream` = `postmark.message_stream`, `Metadata` = tags | `ProviderMessageID` = `MessageID`; Message-ID header kept or rewritten [staging], driver reports in `MessageID` |
+| resend | self-host | driver decomposes `Raw` into `/emails` JSON, `tags`, custom `headers` | `id`; Message-ID handling [staging] |
 | mailgun | self-host | driver posts `Raw` to `/v3/<domain>/messages.mime`, `o:tag`, `v:` vars | `id` (`<...@domain>`, also Message-ID) |
-| sendgrid | self-host | driver decomposes `Raw` into `/v3/mail/send` JSON, `custom_args`, `categories` | `X-Message-Id` response header; SendGrid sets own Message-ID [verify], reported in `MessageID` |
+| sendgrid | self-host | driver decomposes `Raw` into `/v3/mail/send` JSON, `custom_args`, `categories` | `X-Message-Id` response header; SendGrid sets own Message-ID [staging], reported in `MessageID` |
 | log | dev/test | framework `mail` `log` driver writes `.eml` to `storage/logs/mail/` | always; boot refuses `log` for customer stream in production |
 
 Errors (Mailer returns foundation `mail` errors; Send maps to 03 channel errors; 03 result table decides message state):
@@ -130,7 +131,7 @@ Errors (Mailer returns foundation `mail` errors; Send maps to 03 channel errors;
 | sender rejected | Postmark `Sender signature not defined`, Resend domain not verified, SES `Email address is not verified`, Mailgun/SendGrid 403 sender | domain `degraded` (`provider_rejected_sender`), `SendError{Err: nil}` | retry resolves default sender (edge 170); default sender rejected: `ErrPermanent` `sender_not_verified` |
 | own checks (no transport call) | sending paused / suppressed / daily limit | paused: `ErrPermanent` `email_sending_paused`; suppressed To: `ErrRecipientUnreachable` `recipient_suppressed`; daily limit: `*contracts.RateLimitedError` code `entitlement_limit_reached` (key `email.verified_daily`/`email.unverified_daily`) (RetryAfter min(15 min, until next UTC day 00:05), repeats; status pending, UI "queued until tomorrow") | per 03 table |
 
-At-least-once guard: before transport call, `outbound_emails` row inserted status queued with Message-ID (unique per message); retry after crash between accept and commit could double-send: SES and SMTP have no idempotency key (Postmark/Resend/Mailgun/SendGrid idempotency headers used where offered [verify]), so Send checks `outbound_emails.status` for same `IdempotencyKey` first; window accepted (rare duplicate mail with same Message-ID; recipients' clients dedupe by Message-ID).
+At-least-once guard: before transport call, `outbound_emails` row inserted status queued with Message-ID (unique per message); retry after crash between accept and commit could double-send: SES and SMTP have no idempotency key (Postmark/Resend/Mailgun/SendGrid idempotency headers used where offered [staging]), so Send checks `outbound_emails.status` for same `IdempotencyKey` first; window accepted (rare duplicate mail with same Message-ID; recipients' clients dedupe by Message-ID).
 
 ## 7. Delivery events (SES)
 
@@ -169,9 +170,9 @@ Operator registers one webhook per provider (instance config; `dimmi email:docto
 | complaint | `SpamComplaint` | `email.complained` | `complained` | `spamreport` |
 | ignore | `Open`, `Click`, `SubscriptionChange` (no tracking on: never enabled) | `email.sent`, `email.opened`, `email.clicked` | `accepted`, `opened`, `clicked` | `processed`, `open`, `click` |
 
-- Exact event names and fields [verify] against provider docs at implementation; table is the mapping contract, fixtures per provider in `tests/unit/email/provider_events_test.go`.
+- Exact event names and fields [staging] against provider docs at implementation; table is the mapping contract, fixtures per provider in `tests/unit/email/provider_events_test.go`.
 - Same rules as SES: out-of-order terminal failed, at most one final failed per message (03 monotonic), suppression `hard_bounce` / `complaint` with source `provider`, stats + reputation counters (section 13).
-- Provider-side suppression lists (Postmark inactive recipients, SendGrid suppressions, Mailgun bounces) mirrored into workspace suppression on event; lift (section 8) also calls provider reactivate API when operator key allows [verify], else UI says "also remove at provider (operator)".
+- Provider-side suppression lists (Postmark inactive recipients, SendGrid suppressions, Mailgun bounces) mirrored into workspace suppression on event; lift (section 8) also calls provider reactivate API when operator key allows [staging], else UI says "also remove at provider (operator)".
 - Unknown provider id (other app on same provider account, or event before commit): retry 3x 30 s, then ignore + metric (edges 172, 173).
 - Open/click tracking always off at provider (driver sets `TrackOpens=false`, `TrackLinks=None` or equivalent per message).
 
@@ -238,14 +239,14 @@ Ownership split: 01 owns listener `ScheduleWidgetOfflineEmail`, job `SendWidgetO
 | return_path_spf | TXT `<mail_from_sub>.<domain>` = `v=spf1 include:amazonses.com ~all` | root SPF include for relay preset (e.g. `include:spf.mtasv.net`) merged into existing SPF | provider include merged into existing SPF | no |
 | dmarc | TXT `_dmarc.<domain>` = `v=DMARC1; p=none;` only when absent | same | same | no (warning when absent: Gmail/Yahoo bulk sender rules need DMARC; Outlook.com too) |
 
-- Manual drivers: workspace admin adds domain in Dimmi (ownership TXT); operator sets domain up at provider (provider verifies DKIM + return path) and lists it in `channels.email.provider_verified_domains` (parent entry covers subdomains). Dimmi never holds per-workspace provider keys. Provider domain API automation post-MVP (README Out). Cloud uses `ses` only.
+- Manual drivers: workspace admin adds domain in Dimmi (ownership TXT); operator sets domain up at provider (provider verifies DKIM + return path) and lists it in `channels.email.provider_verified_domains` (parent entry covers subdomains). Dimmi never holds per-workspace provider keys. With `<provider>.domain_api_token` set, API does this and records get real per-record status ([sending.md](sending.md) 7). Cloud uses `ses` only.
 
 - SES identity created on `POST /email-domains` (`CreateEmailIdentity`, `DkimSigningAttributes.NextSigningKeyLength = RSA_2048_BIT`), tenant association (`CreateTenantResourceAssociation`) when tenant per workspace, `PutEmailIdentityMailFromAttributes` with `BehaviorOnMxFailure = USE_DEFAULT_VALUE` (never reject mail because MX missing).
 - SES identity per region unique in account: second workspace adding same domain reuses existing SES identity (same DKIM tokens) but cannot become verified without own ownership TXT (section 11.4).
 - Existing records merge: SPF: if root SPF exists, show merged value (insert include before `~all`/`-all`); never propose second SPF record. DMARC: existing kept, shown read-only with policy summary.
 - Subdomain sending (`mail.acme.com`) allowed: records relative to subdomain; DMARC lookup falls back to org domain policy (shown).
 - IDN domains: A-label in records, U-label display.
-- `?format=bind` zone snippet; `provider_hint` from NS lookup (cloudflare, route53, godaddy, namecheap, google, vercel, netlify, porkbun, hover, other) -> UI shows provider steps (frontend), API returns `host` relative form because many providers append domain.
+- `?format=bind` zone snippet; `provider_hint` from NS lookup (cloudflare, route53, godaddy, namecheap, google, vercel, netlify, porkbun, hover, other) -> API returns host guide, deep link and `host` in that host's form ([sending.md](sending.md) 6).
 
 ### 11.2 Checker (`dns/checker.go`)
 
@@ -312,14 +313,16 @@ any --(DELETE)--> deleted (soft)
 - Over daily: job reschedules to next UTC day 00:05 (pending, UI banner "Daily email limit reached (200). Verify your domain to raise to 2,000."); API reply still accepted (message created) but `delivery_status` pending. Over hourly: reschedule next hour.
 - `EvaluateEmailReputation` every 15 min: trailing 500 sends (min 100) per workspace: hard bounce rate over 5% or complaint rate over 0.1% -> `status = paused`, `paused_reason`, event `email_sending.paused`, owners/admins notified (system stream to members, never through paused customer stream), cloud ops alerted. Paused: sends fail fast `email_sending_paused` (status failed, not queued; teammate sees banner; prevents silent backlog). Resume: cloud: ops sets `review -> active` after review (owner requests via `PATCH /email-sending-status {status: "review"}`: `paused -> review`, notifies ops); self-host: owner resumes directly with `PATCH /email-sending-status {status: "active"}`.
 - SES account protection (cloud): global kill switch config `channels.email.ses.pause_all` (ops, customer stream only; system stream unaffected), SES tenant auto-pause respected (SES returns error -> treat as paused with reason `ses_tenant_paused`). Shared SES IP pools only; never dedicated IPs or warming (README Never).
+- UI ([tasks.md](tasks.md) M11): `resources/js/features/email/sending/sending-status.tsx`, section on Email settings (usage against limits, rates, state, request review or resume); red banner + reason realtime on `email_sending.paused`; composer banner on 423 `email_sending_paused`. Limits table and cloud defaults: [../12-cloud-billing/README.md](../12-cloud-billing/README.md) "Email sending limits".
+- Connected mailbox sends skip caps and pause ([mailbox-connections.md](mailbox-connections.md) 6).
 - Self-host any driver: same evaluation from SES or provider events when `reputation.*` config set (default off); provider's own account-level pause (Postmark, SendGrid) surfaces as provider errors (section 6), not Dimmi state.
 - D7 fair-use (pricing): enforced by 12 InTx `GuardOutboundFairUse` on 03 `conversation.created` (`initiated_by` member/agent/api): over `max(1,000, 10 x previous billable)`: 429 `outbound_fair_use_exceeded` on new conversation creation (not replies). 04 adds no own counter; daily send caps above are separate (reputation, not billing).
 - Content safety on default sender (cloud): outbound from unverified domain with more than 10 links or URL shorteners (bit.ly etc.) to new recipient (never wrote in) blocked 422 `outbound_content_blocked` (phishing via our domain). Replies to existing customers unaffected.
 
 ## 14. Signatures
 
-- Per member, optional, per address override. Markdown subset (bold, italic, links, line breaks; images not allowed MVP). Max 2,000 chars. Rendered under reply body above quote, separated by blank line; text part uses `-- ` delimiter line (RFC 3676) so receiving clients and our own stripper recognize it.
-- AI replies never use member signature; 07 may add agent signature text in body.
+- Per member, per address override, per address team signature ([sending.md](sending.md) 3). Markdown subset (bold, italic, links, line breaks) + variables + one inline logo. Max 2,000 chars. Rendered under reply body above quote, separated by blank line; text part uses `-- ` delimiter line (RFC 3676) so receiving clients and our own stripper recognize it.
+- AI replies and system messages never use member signature; they use address signature when set. 07 may add agent signature text in body.
 - Member deactivated: signature kept for history, not used.
 
 ## 15. Streams (system vs customer)

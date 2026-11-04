@@ -92,7 +92,7 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 - [ ] Audit API list/show/filters (`filter[via]` incl. `ogr_`) + ascending `sort=created_at` cursor + CSV streaming + range cap. `PruneAuditLogs` calls `RetentionGuard`; `forward_audit_logs` listener calls `AuditSink` (noop). Test: 1M-row seeded benchmark p95 under 50 ms (CI benchmark job); ascending cursor stable; `via_kind = app` row accepted; fake guard false skips prune.
 - [ ] Security events writer (registry types incl. `auth_factor.*`, rate-limited failure rows) + `/user/security-events`. Prune jobs. Test.
 
-## M10. Email change, account deletion
+## M10. Email change, account deletion (track 07 accounts-settings)
 
 - [ ] `POST /email-changes` + `PATCH /email-changes/{ott} {token}` with both mails, race 409. Test: second redemption 422, wrong token 422.
 - [ ] Deletion preview + delete account (anonymize, delete factors, cascade, workspace deletion, `RevokeUserAppGrants(user_deleted)`, events). Test: sole_owner 409, re-signup same email works, factors gone.
@@ -119,6 +119,77 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 - [ ] Security review checklist: OWASP ASVS L2 auth/session sections walkthrough, recorded in PR.
 - [ ] Event catalog rows added to `00-foundation/events-and-realtime.md` (via foundation owner PR).
 - [ ] Route lint: no path from rest.md old column in routes or OpenAPI (incl. every `/user/two-factor*` path); every route name equals noun path (`sessions.store`, `user.memberships.destroy`, `password-resets.update`, `user.auth-factors.destroy-many`). Test: OpenAPI snapshot.
+
+## M13. Own profile, password, time zone (track 07 accounts-settings)
+
+Migrations range `20261201070001+`. Spec: [settings-pages.md](settings-pages.md). Removes every dead control on `pages/account.tsx` first (delete, then re-add wired).
+
+- [ ] `routes/account.go`: `GET|PATCH /user`, `PATCH /user/password`, `PUT|DELETE /user/avatar`; actions `update_profile`, `update_password`, `update_avatar`, `delete_avatar`. Accept: `user.updated` realtime; `tokens_remaining`. Test list in settings-pages.md.
+- [ ] Profile page wired; `lib/api/account.ts`; email change dialog + `routes/_auth/email.confirm.tsx`. Needs M10 routes. E2e `profile.spec.ts`: "a person changes their name and picture", "a person changes their email and confirms from the new mailbox" (Mailpit).
+- [ ] Password dialog (change and set). E2e `password.spec.ts`: "changing the password signs out the other browser".
+- [ ] Time zone picker, `lib/location.ts` uses `/me.user.timezone`. Test: "the snooze preset uses the person's zone" with 03.
+
+## M14. Sign-in methods page, 2FA help (track 07 accounts-settings)
+
+- [ ] `sign-in-methods.tsx` wired to `/auth/config` + `/user/identities`, link + unlink. E2e `sign-in-methods.spec.ts` with drivertest provider.
+- [ ] Migration `20261201070003_add_two_factor_reset_purpose`. Permission `members:reset_two_factor`. `POST /members/{mem}/two-factor-resets`, `PATCH /two-factor-resets/{ott}`, cross-organization block, mails.
+- [ ] `Lockout.Clear`, `DELETE /members/{mem}/sign-in-lock`, `sign_in_locked` on member resource.
+- [ ] Dialog + `routes/_auth/two-factor-reset.tsx`. E2e `two-factor-help.spec.ts`.
+
+## M15. Preferences, customer-facing name (track 07 accounts-settings)
+
+- [ ] Migration `20261201070001_add_preferences_to_users_table`; `app/auth/preferences.go`; `PATCH /user {preferences}`; `/me` returns.
+- [ ] Preferences page: each row per table in settings-pages.md; Available, Send with Enter, signature rows appear only with owner track merged. Hide Notifications nav until track 11. E2e `preferences.spec.ts`: "every control on the preferences page changes something".
+- [ ] `customer_facing_name` key, `Workspace.CustomerFacingName()`, workspace page row. Accept: 01 and 04 read through method (their tracks).
+
+## M16. Audit export and scope (track 07 accounts-settings)
+
+Spec: [audit.md](audit.md). Builds on F71 fix.
+
+- [ ] `export_audit_logs.go`, CSV stream, `app/support/csvsafe`, `audit_logs.exported`. Tests in audit.md.
+- [ ] `MirrorSecurityEventToAudit` queued listener + label + filter groups in `log-labels.ts`.
+- [ ] UI date range + export. Extend `audit-log.spec.ts`.
+- [ ] Event names list for other specs in delta verified against what is registered at milestone end; labels added.
+
+## M17. Members, invitations, teams (track 07 accounts-settings)
+
+- [ ] Member resource fields, filters, permission-gated. `features/settings/members/*`. Extend `workspace-members.spec.ts`: "an admin sees who has no second factor".
+- [ ] Member CSV export. Test formula guard.
+- [ ] `POST /member-imports`, dialog with dry run. Permission `members:import`. E2e `member-import.spec.ts`.
+- [ ] Migration `20261201070002_add_reminded_at_to_invitations`, `RemindInviters`, `InvitationPendingMail`, always-return `accept_url`, `{channel: "link"}`, team picker in dialog. Extend `invitations.spec.ts`.
+- [ ] `DELETE /teams/{team}` params, dialog, `include=conversation_counts`. 03 `ReassignTeamConversations` built here if track 02 has not; agreed shape in delta. Extend `teams.spec.ts`.
+- [ ] `team.member_added` payload `added_by_member_id`. Trigger delivery track 11.
+- [ ] X1: `PATCH /members/{mem}` access fields + `member-access-dialog.tsx`, permission `members:manage_access`. **Needs track 02 access milestone** (columns + `VisibleScope`). Land last in M17.
+
+## M18. Public API rate limits (track 07 accounts-settings)
+
+Spec: [rate-limits.md](rate-limits.md).
+
+- [ ] Entitlements catalog + `self_host`, cloud default drivers if still absent (contracts.md). Keys incl. `api.workspace_rate_limit_per_minute`.
+- [ ] `ThrottleOptions` `Limit`, `Skip`, `Scope` + framework tests (90% coverage kept).
+- [ ] `api_throttle.go`; mount on every authenticated group + `/mcp`; bad-credential bucket in guards. `tests/arch/api_throttle_test.go`.
+- [ ] `lib/api/client.ts` 429 handling; tokens page line; docs; `dimmi_api_throttled_total`. Tests in rate-limits.md. `docs/testing/manual-e2e.md` row.
+
+## M19. Custom roles (track 08 enterprise-identity)
+
+Spec: [roles.md](roles.md). Migration `20261201080009_create_roles_table`.
+
+- [ ] Migration, prefix `rol_`, queries, factory `.WithCustomRole`.
+- [ ] `EffectivePermissions` with custom set; guard lookup joins; cache bust on `role.updated`. `tests/feature/authz` snapshot.
+- [ ] `permissions.Assignable`, labels `lang/en/permissions.json`, `GET /permissions`. `lang:check` covers.
+- [ ] CRUD, assign, bulk `PATCH /members`, escalation rules. Tests in roles.md.
+- [ ] Finer permissions registered, `roles.go` rows; policy swaps where routes exist. Needs tracks 03, 04 for call sites; missing routes use them when built.
+- [ ] Page + editor + presets + member picker. E2e `custom-roles.spec.ts`.
+
+## M20. Interface language (track 07 accounts-settings)
+
+Spec: [i18n.md](i18n.md). Last milestone of track, after wave-1 screens merge (L5).
+
+- [ ] `lib/i18n`, i18next init, `DirectionProvider` wiring, `Accept-Language` from client, `/auth/config.locales`, `PATCH /user {locale}` rule.
+- [ ] `lib/i18n/format.ts`; replace ad hoc date and number formatting.
+- [ ] Extract strings per namespace (one PR per feature folder), `i18next-cli` config, pseudo locale.
+- [ ] Gates in `pnpm lint`; Go test locale dirs. E2e `language.spec.ts`.
+- [ ] Human: machine first pass + reviewer per language, each listing in `app.locales` is its own change. Owner approves any LLM run.
 
 ## Done when
 

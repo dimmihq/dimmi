@@ -74,6 +74,10 @@ Test-mode drafts (section 15) evaluated after live candidates with the same chec
 - Background runs never claim.
 - Customer-facing runs started by non-start triggers (customer quiet, teammate quiet, rated, dimmi resolved, reusable) claim only if the conversation is unclaimed, else skip `held` (manual and API reusable starts get 409 `conversation_held` unless `replace: true`).
 
+### Assignment boundary
+
+Conversation with claim: 03 `AssignOnArrival` no-op (03 assignment.md). Run ends with member still null: engine calls `assignment.AssignOnArrival(conversation, "arrival")`, so inbox round robin still applies after routing that assigned nobody. `assign` step modes `team_round_robin`, `team_balanced` delegate to `assignment.PickAssignee`; capacity rules apply there too.
+
 ## 5. Ordering and priority
 
 - **Customer-facing**: candidates in list order; first that passes all checks starts; the rest get `lower_priority`. If the started run ends `passed` (section 6), matching re-runs for the same event from the next position (once; max 10 hops per event), so a workflow whose audience matched but whose branches had nowhere to go hands over to the next.

@@ -34,6 +34,17 @@ Style: caveman. Scope trim 2026-11-02: hosted survey links, send modes, provider
 - Workspace (later org) policies enforced only through `AccessPolicy` middleware `access.policy` (contracts.md): one place, one 403 body `{code, message, requirement, action_url}`. MVP rule `security.require_two_factor`.
 - Every primary login method calls `LoginPolicyResolver.ForEmail` before verifying secrets (MVP allow-all; later domain-level SSO enforcement, no account enumeration).
 
+## Sign-in rules (added 2026-11-04, `21-enterprise-identity`)
+
+- `LoginPolicyResolver` driver answers `sso_required` at domain level for verified, enforced organization domains. Never by user. Owner bypass gives same answer as wrong password to anyone else.
+- `AccessPolicy` rules, order: IP allowlist, SSO enforced, sign-in method, Google domain, session length, 2FA. No query per request; settings read from loaded workspace.
+- Session length only shortens install limits; evaluated per workspace, so one strict workspace never ends sessions in others.
+- SSO connection may sign in only addresses under domains its organization verified, plus identities linked from a signed-in session. Stops one customer's IdP asserting another's people.
+- SAML: unsolicited responses never start a session. Assertion ids stored until expiry in Valkey; Valkey down refuses sign-in. Responses and client secrets never logged.
+- Client IP for allowlists from framework trust config; `dimmi doctor` warns when proxy trust looks wrong.
+- Admin-started 2FA reset: mailbox + password of target, refused across organizations ([settings-pages.md](../00-accounts/settings-pages.md)).
+- Log redaction adds `SAMLResponse`, `dmi_scim_`.
+
 ## First-party apps (Dimmi mobile, later desktop)
 
 - Login runs in system browser sheet (ASWebAuthenticationSession on iOS, Custom Tabs on Android), never an embedded webview: password, magic link, GitHub, Google (Google blocks embedded webviews) and 2FA reuse web login unchanged. App never sees a password for login.

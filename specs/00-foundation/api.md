@@ -126,7 +126,16 @@ Cursor opaque, encodes sort key + id, signed (tamper returns 400). Stable under 
 | Widget per IP | 1,200 requests/minute (NAT friendly) |
 | Login per IP + email | 10/minute, lockout escalates |
 | Webhooks in per provider connection | 3,000/minute |
-Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` on 429. Self-host configurable, can disable. API defaults read from `Entitlements.Limit` (contracts.md), not direct config: per-contract limits later = override row.
+Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` on 429. Self-host configurable, can disable. API defaults read from `Entitlements.Limit` (contracts.md), not direct config: per-contract limits = override row.
+
+Added 2026-11-04 (build: `00-accounts/rate-limits.md`):
+| Bucket | Default |
+|---|---|
+| API per workspace, token traffic only | 6,000/minute (entitlement key `api.workspace_rate_limit_per_minute`) |
+| Token burst | limit/6 per 10 s (the "burst 100" above) |
+| Failed credential per IP | 60/minute |
+| SCIM per token | 600/minute (21) |
+Also on every limited response `X-RateLimit-Scope` (`token`, `burst`, `user`, `workspace`); 429 adds `X-RateLimit-Reset`. Body `{message, code: "too_many_requests"}`. Sign-in throttles answer `too_many_attempts`. Fairness limits fail open when Valkey is down. Applied to every authenticated `/api/v1` route and `/mcp`. Widget buckets above owned by 01.
 
 ## Errors
 

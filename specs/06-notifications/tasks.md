@@ -4,9 +4,9 @@ Style: caveman. Ordered. Each about 1 day, merged with tests. Requires foundatio
 
 Test rule (00-conventions/testing.md): business logic tested only through integration tests (real Postgres, real Valkey, real App via `testkit`); fakes only at process boundary (`tc.Mail`, `httpclienttest.New(tc.App.HTTP)`, push service stubbed via `httpclienttest` (webpush channel sends through `a.HTTP`), `tc.Clock`). No app unit tests; "unit test" items below run as feature/action tests. Tests named in plain words; every edge case covered.
 
-## M1: Schema and in-app
+## M1: Schema and in-app (track 11 notifications)
 
-- [ ] Migrations 20261101000601..607 (0601 ALTERs framework `notifications` base table, never CREATE) + sqlc queries (`notifications.sql`, `notification_preferences.sql`, `notification_settings.sql`, `notification_deliveries.sql`) + factories. Add `notifications` queue to `config/queue.go`, prefixes `ntf_ psub_ ndst_ ndlv_ mem_` to `app/models/public_ids.go` (`framework/ids` registry), abilities `notifications:read|write`.
+- [ ] Migrations 20261101000601..607, renumbered at build to `20261201110001..7` (0601 ALTERs framework `notifications` base table, never CREATE) + sqlc queries (`notifications.sql`, `notification_preferences.sql`, `notification_settings.sql`, `notification_deliveries.sql`) + factories. Add `notifications` queue to `config/queue.go`, prefixes `ntf_ psub_ ndst_ ndlv_ mem_` to `app/models/public_ids.go` (`framework/ids` registry), abilities `notifications:read|write`.
   - Accept: `dimmi migrate` clean up/down; tenant lint passes (push_subscriptions allowlisted); ids round-trip tests.
 - [ ] Enums + `defaults.go` matrix + locked cells. `notifications.trigger` (and preferences/deliveries/destination trigger columns) as registry enum: format CHECK + `NotificationTrigger` Go registry with per-trigger defaults; other specs register at boot.
   - Accept: integration test every trigger x channel default via `GET /notification-preferences`; locked cells listed; registering fake trigger in test adds matrix row with no migration; unknown trigger 422 (edge case 115).
@@ -27,7 +27,7 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
 - [ ] MCP tools `dimmi_list_notifications`, `dimmi_mark_notifications_read`.
   - Accept: MCP tool tests via in-process MCP client, schema from OpenAPI types.
 
-## M2: Preferences, settings, suppression
+## M2: Preferences, settings, suppression (track 11 notifications)
 
 - [ ] Preferences API (matrix, PATCH sparse, `DELETE /notification-preferences` reset 204) + settings API (quiet hours, pause, previews, include_ai_handled, delay, timezone).
   - Accept: tests for locked 422, unknown trigger 422, default-equal deletes row, timezone validation, start==end 422.
@@ -40,7 +40,7 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
 - [ ] Burst (`a.Limiter` sliding windows, Valkey) + cooldown (`SET NX EX 30`) + `SendNotificationDigest`.
   - Accept: 20 conversations in 1 minute (clock frozen): 5 push sent, 15 batched, 1 digest; items read before digest dropped.
 
-## M3: Email
+## M3: Email (track 11 notifications)
 
 - [ ] `MemberNotificationMail` + templ templates per trigger + layout footer (open, manage, unsubscribe) + headers (List-Unsubscribe, One-Click, Auto-Submitted, Message-ID threading).
   - Accept: `tc.Mail` asserts system mailer used (tag `stream=system`), headers, subject format, preview off hides body, HTML escaping of `<script>` in excerpt.
@@ -52,7 +52,7 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
   - Accept: fake entitlements driver limit 3: 4th email goes to digest; limit -1 never caps; override change honored after cache bust (edge case 116).
   - Accept: suppressed items during window produce one summary email at end; nothing if all read.
 
-## M4: Web Push
+## M4: Web Push (track 11 notifications)
 
 - [ ] Push channel on framework `notifications/channels/webpush` (wraps SherClockHolmes/webpush-go v1.4.x; RFC 8291 + VAPID in library, own crypto removed): options (`HTTPClient` = `a.HTTP.StdClient()`, TTL, Urgency, Topic, `VapidExpiration` 12 h, Subscriber).
   - Accept: `httpclienttest` stub captures push request; `VapidExpiration` under 24 h; Topic length 32 and URL-safe. RFC 8291 vectors live in framework tests.
@@ -65,7 +65,7 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
 - [ ] Test notification endpoint (`POST /notification-tests`, 201 `notification_test` outcome) sync result + `dimmi notifications:test`.
   - Accept: returns per-device outcome within 10 s with fake push server.
 
-## M5: Slack
+## M5: Slack (track 11 notifications)
 
 - [ ] Destinations CRUD API (workspace + member scope), URL shape validation, encryption, `url_hint`, policy (`authz.Can(p, "notification_destinations:manage")` for workspace scope; no role names), limit 25, audit log. `system_alert` recipients resolved by `notification_alerts:receive` permission (both 06 permissions registered in 00-accounts catalog).
   - Accept: member creating workspace destination 403; URL with `hooks.slack.com.evil.com` rejected; secrets never in response.
@@ -78,7 +78,7 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
 - [ ] Destination test endpoint `POST /notification-destinations/{id}/tests`.
   - Accept: sync outcome resource (201) returned, error surfaced with Slack error string; throttle 6/min.
 
-## M6: Triggers from 05, 07, 08, 13, 14, 15-announcements-surveys, 16 guard
+## M6: Triggers from 05, 07, 08, 13, 14, 15-announcements-surveys, 16 guard (track 11 notifications)
 
 - [ ] Registry entries + defaults for 14 `feedback_post_submitted`, `feedback_post_pending` (email delay 300 s, `condition_changed` when moderated), `feedback_comment_created`, `feedback_mentioned`; 15-announcements-surveys `csat_negative`; destination-only `changelog_entry_published` (13, `announce = true`) with `destination_eligible` flag; owner specs register at boot, 06 ships fan-out + aggregation on `feedback_post_id`.
   - Accept: feature tests per trigger with real source events (factories from 13/14/15 or stubs until merged); aggregation per feedback post; `csat_negative` assignee then team fallback, `is_test` skip; changelog post appears only on destinations listing it; edges 119-123.
@@ -88,12 +88,12 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
   - Accept: feature tests with real source events (factories until owners merge); edges 129-134.
 - [ ] Imported guard (16): `SendMemberNotifications` skips `metadata.imported`; metric reason `imported`. Accept: edges 135, 136.
 
-## M7: System stream feedback
+## M7: System stream feedback (track 11 notifications)
 
-- [ ] Migration `20261101000608_create_system_mail_suppressions_table.sql` + `RecordSystemMailFeedback` (called by 04 router for `stream=system` events; event-id dedupe Valkey + unique) + `system_suppression_guard.go` on system mailer (critical auth bypass 3/day) + email channel `email_suppressed` + `system_alert` `system_mail.suppressed` + lift listener (`user.email_verified`, email change) + `dimmi mail:suppressions --stream system` + ops alert gauges.
+- [ ] Migration `20261101000608_create_system_mail_suppressions_table.sql` (renumbered `20261201110008`) + `RecordSystemMailFeedback` (called by 04 router for `stream=system` events; event-id dedupe Valkey + unique) + `system_suppression_guard.go` on system mailer (critical auth bypass 3/day) + email channel `email_suppressed` + `system_alert` `system_mail.suppressed` + lift listener (`user.email_verified`, email change) + `dimmi mail:suppressions --stream system` + ops alert gauges.
   - Accept: SES and Postmark fixtures routed through 04 webhooks reach 06; member notification email skipped after hard bounce; magic link still sent (critical) up to 3/day; complaint never touches 04 `email_suppressions`; edges 124-128.
 
-## M8: Hardening
+## M8: Hardening (track 11 notifications)
 
 - [ ] Metrics, logs (redaction of endpoints/URLs/tokens), traces; `dimmi doctor` checks (VAPID, subject, From vs inbox, push host reachability).
   - Accept: doctor output tests; log redaction test with Slack URL and `xoxb-`.
@@ -102,6 +102,20 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
 - [ ] Latency benchmark: 1,000 events with 10 members each, fake providers with 200 ms latency; assert p95 commit-to-accept under 5 s, p99 under 10 s on CI runner.
   - Accept: CI benchmark job, regression over 10% fails.
 - [ ] Docs: notifications page (channels, iOS Home Screen steps, Slack setup, quiet hours, troubleshooting via `notification-tests` outcomes), changelog policy for default changes.
+
+## M9: Inbox triggers and access (track 11 notifications)
+
+Needs 03 milestones A1 (`VisibleScope`), W9 (mentions), W11 (bulk), 00-accounts `team.member_added`. Wave 2, all wave-1.
+
+- [ ] Fan-out and send-time scope filter for every trigger with conversation. Test: restricted member no row on new conversation of hidden team, edges 137 to 140.
+- [ ] Registered `team_joined`, `note_reacted`, `side_conversation_replied` (when 03 X4 ships), `data_export_ready` + defaults + copy. Test: per trigger, self skip, edges 141 to 146.
+- [ ] Mention flow end to end through real `AddNote`: team expand, edit added only, mute by preference. Test: feature; `tc.Mail` email, fake push.
+
+## M10: Screens (track 11 notifications)
+
+- [ ] Install `notification-center`, bell, `/d/notifications`, realtime, seen and read, focus hook; placeholder gone. e2e `notifications.spec.ts`.
+- [ ] Settings matrix real, settings form, push enable and devices, test buttons; static matrix out of `account.tsx`. e2e `notification-settings.spec.ts`.
+- [ ] Workspace destinations page, Slack install. e2e with fake webhook target.
 
 ## Done when
 
@@ -117,3 +131,4 @@ Test rule (00-conventions/testing.md): business logic tested only through integr
   8. iPhone (iOS 18.4+), dashboard added to Home Screen, enable push: lock-screen notification arrives, tap opens conversation. Delete PWA: next send 410 and subscription row gone.
   9. Logout on browser: next notification sends no push to that browser.
   10. `PATCH /notifications {filter: {}, changes: {read: true}}`: bell count 0 on every open tab and first-party app via `notifications.read`.
+  11. Restricted member: mention from colleague on hidden team conversation shows no bell. Mention on visible conversation: bell under 1 s, opens conversation.

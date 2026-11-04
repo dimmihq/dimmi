@@ -11,6 +11,10 @@ Style: caveman. Per-channel payloads, provider facts (verified 2026-11-01), fail
 | customer_replied | `{contact} replied` / `{contact} sent {count} messages` | latest excerpt | `#{number}` |
 | mentioned | `{actor} mentioned you in #{number}` | note excerpt | `Internal note` |
 | ai_handoff_requested | `{agent} handed #{number} to a human` | AI summary excerpt or last customer message | `{contact} needs a human` |
+| team_joined | `{actor} added you to {team}` | `Conversations for {team} now show in your sidebar` | same |
+| note_reacted | `{actor} reacted {emoji} to your note` | note excerpt | `#{number}` |
+| side_conversation_replied | `{from} replied to a side conversation on #{number}` | excerpt | `#{number}` |
+| data_export_ready | `Your export is ready` | `{row_count} conversations, available for {days} days` | same |
 | snooze_expired | `#{number} is back` | `Snoozed conversation with {contact} reopened` | same |
 | system_alert | per kind, e.g. `Slack destination #support stopped working` | error explanation + fix step | same |
 | digest | `{n} new notifications` | top 5 lines `#{number} {contact}: {title}` | same without excerpts |

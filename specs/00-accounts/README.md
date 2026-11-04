@@ -1,6 +1,6 @@
 # 00 Accounts: auth, users, workspaces, members, teams, tokens
 
-Style: caveman. Date: 2026-11-01. Scope trim 2026-11-02: domain join deferred (later: `domain-join`, audit B16); invitations only. Updated 2026-11-02: extensibility seams applied (`00-foundation/extensibility.md` sections 1-5, 7, 8, 12, 14: auth factors, identity providers, organizations, permissions, session auth context, access policy, capability discovery). Final sweep 2026-11-02: framework migration (`00-conventions/framework.md` section 10), CSRF via `http.CrossOriginProtection`, realtime kick via centrifuge, permissions + audit names for 13-15; consistency pass 2026-11-02: permissions + audit names for 07 agent actions (`ai:actions`), 08 GitHub/docs sync, 16 importers; testing policy (integration only for app logic). Backend only. Read with `specs/00-conventions/README.md` and `specs/00-foundation/*`.
+Style: caveman. Date: 2026-11-01. Scope trim 2026-11-02: domain join deferred (later: `domain-join`, audit B16); invitations only. Updated 2026-11-02: extensibility seams applied (`00-foundation/extensibility.md` sections 1-5, 7, 8, 12, 14: auth factors, identity providers, organizations, permissions, session auth context, access policy, capability discovery). Final sweep 2026-11-02: framework migration (`00-conventions/framework.md` section 10), CSRF via `http.CrossOriginProtection`, realtime kick via centrifuge, permissions + audit names for 13-15; consistency pass 2026-11-02: permissions + audit names for 07 agent actions (`ai:actions`), 08 GitHub/docs sync, 16 importers; testing policy (integration only for app logic). Updated 2026-11-04: settings screens, passkeys recorded as built, enterprise identity moved into scope (`21-enterprise-identity`), custom roles, rate limits, interface language; no longer backend only. Read with `specs/00-conventions/README.md` and `specs/00-foundation/*`.
 
 ## Files
 
@@ -11,6 +11,41 @@ Style: caveman. Date: 2026-11-01. Scope trim 2026-11-02: domain join deferred (l
 | [api.md](api.md) | HTTP endpoint table, request/response examples, error codes, rate limits, MCP tools, CLI commands, mail templates |
 | [edge-cases.md](edge-cases.md) | numbered decided behaviors |
 | [tasks.md](tasks.md) | build checklist |
+| [settings-pages.md](settings-pages.md) | screens and member management: profile, password, time zone, sign-in methods, 2FA help, members columns + CSV, invitations, team delete, preferences, customer-facing name |
+| [roles.md](roles.md) | custom roles and fine permissions |
+| [audit.md](audit.md) | audit CSV, date filter, wider event scope, colleague sign-ins |
+| [rate-limits.md](rate-limits.md) | public API rate limits |
+| [i18n.md](i18n.md) | interface language |
+| [../21-enterprise-identity/README.md](../21-enterprise-identity/README.md) | sign-in rules, session length, SAML, OIDC, SCIM, IP allowlists |
+
+## Gap map
+
+| Gap | Where specified | Tasks milestone |
+|---|---|---|
+| A-01 | [settings-pages.md](settings-pages.md) "Own profile" | [tasks.md](tasks.md) M13, M10 |
+| A-02 | settings-pages.md "Password" | M13 |
+| A-03 | settings-pages.md "Time zone" | M13 |
+| A-04 | settings-pages.md "Sign-in methods page" | M14 |
+| A-05 | settings-pages.md "Admin helps locked-out teammate" | M14 |
+| A-06 | settings-pages.md "Members page" | M17 |
+| A-07 | settings-pages.md "Invitation extras" | M17 |
+| A-08 | settings-pages.md "Bulk updates by CSV" | M17 |
+| A-09 | settings-pages.md "Team delete with reassign" | M17 |
+| A-10 | settings-pages.md "Team join notice" | M17 |
+| T-02 | settings-pages.md "Preferences" | M15 |
+| T-04 | settings-pages.md "Customer-facing name" | M15 |
+| T-05 | [i18n.md](i18n.md) | M20 |
+| S-05 | [roles.md](roles.md) | M19 (track 08) |
+| S-06 | [21 access-policy.md](../21-enterprise-identity/access-policy.md) "Session length" | 19 tasks M1 |
+| S-07 | 19 access-policy.md "Sign-in methods", "Google domains" | 19 tasks M1 |
+| S-08 | [21 saml.md](../21-enterprise-identity/saml.md) | 19 tasks M3, M4, M5 |
+| S-09 | [21 scim.md](../21-enterprise-identity/scim.md) | 19 tasks M6 |
+| S-10 | 19 access-policy.md "Dashboard allowlist" | 19 tasks M2 |
+| S-13 | [audit.md](audit.md) "Export and date filter" | M16 |
+| S-14 | audit.md "Wider scope" | M16 |
+| P-01 | [rate-limits.md](rate-limits.md) | M18 |
+| P-02 | 19 access-policy.md "API allowlist" | 19 tasks M2 |
+| X1 UI | settings-pages.md "Conversation access"; API api.md | M17 (needs track 02) |
 
 ## Goal
 
@@ -32,8 +67,8 @@ Not roadmap item; prerequisite of all 12 launch must-haves (`research/roadmap.md
 | Magic link email contains link AND 6-digit code | works cross-device, immune to link scanners (token in URL fragment, consumed only by POST) |
 | Account enumeration | zero on login, magic link, password reset (same status, body, timing within 10 ms p50) |
 | Lockout | real user never locked out by attacker on their known device; attacker capped at 10 guesses/min per IP+email, escalating |
-| 2FA | factor driver registry; MVP TOTP RFC 6238 + 10 recovery codes; passkeys later = new driver, zero migration; workspace "require 2FA" enforced on session, app AND token through `AccessPolicy` |
-| Auth context | every session and first-party grant records `auth_methods`, `authenticated_at`, `device_id` (step-up, org policies, SSO enforcement read it later; cannot be backfilled) |
+| 2FA | factor driver registry; TOTP RFC 6238, passkeys (built, `app/auth/factors/passkey.go`) + 10 recovery codes; workspace "require 2FA" enforced on session, app AND token through `AccessPolicy` |
+| Auth context | every session and first-party grant records `auth_methods`, `authenticated_at`, `device_id` (step-up, access policy and SSO rules read it; cannot be backfilled) |
 | Tokens | Sanctum abilities, shown once, prefix visible, optional expiry, `last_used_at` within 60 s accuracy, revoke effective under 2 s |
 | Self-host first run | `docker compose up` then browser wizard secured by setup token printed in logs, or `dimmi user:create`; no mail server needed |
 | Audit | every member/role/token/settings/security change recorded with actor, IP, UA, redacted diff; CSV export |
@@ -46,8 +81,8 @@ Not roadmap item; prerequisite of all 12 launch must-haves (`research/roadmap.md
 - Signup: email + password, magic link (link + code), GitHub OAuth, Google OIDC. Email verification (async, non-blocking except gated actions).
 - Login, logout, logout other sessions, password confirmation ("sudo mode", 15 min), password reset, password change. Reauth mode (`reauth`) forcing full login on existing session (09 `prompt=login` / `max_age=0` sudo for apps).
 - Sessions list and revoke (`/sessions`): browser sessions and first-party app grants (Dimmi mobile, 09 `ListUserAppGrants`) in one list. New-device sign-in mail. Sessions record `auth_methods`, `authenticated_at`, `confirmed_method`, `device_id`.
-- Auth factors: TOTP + recovery codes via factor driver registry (`user_auth_factors`, `app/auth/factors`; TOTP math in `framework/auth/twofactor` on pquerna/otp); REST collection `/user/auth-factors`; 2FA challenge `methods` as objects; workspace setting `security.require_two_factor` enforced by `AccessPolicy` middleware (`access.policy`).
-- Identity providers: GitHub, Google as `IdentityProvider` drivers (registry, config map `auth.oauth.<key>.*`). `LoginPolicyResolver` hook called by every primary method (MVP driver allow-all).
+- Auth factors: TOTP, passkeys + recovery codes via factor driver registry (`user_auth_factors`, `app/auth/factors`; TOTP math in `framework/auth/twofactor` on pquerna/otp; passkeys on go-webauthn); REST collection `/user/auth-factors`; 2FA challenge `methods` as objects; workspace setting `security.require_two_factor` enforced by `AccessPolicy` middleware (`access.policy`).
+- Identity providers: GitHub, Google as `IdentityProvider` drivers (registry, config map `auth.oauth.<key>.*`). `LoginPolicyResolver` hook called by every primary method (driver: organization SSO policy, `21-enterprise-identity`).
 - OAuth identity link/unlink in settings, automatic link on verified email match.
 - Organizations: thin `organizations` row, 1:1 with workspace, created inside `CreateWorkspace`, soft-deleted by `PurgeWorkspace`. No org API, no `organization_id` in resources (extensibility.md section 3).
 - Permissions: permission catalog + `roles.go` (only place mapping role to permissions); policies call `authz.Can(principal, perm)`; token abilities = permission groups; `/me` returns `member.permissions`.
@@ -65,27 +100,28 @@ Not roadmap item; prerequisite of all 12 launch must-haves (`research/roadmap.md
 - Audit log table, writer, API (`GET /api/v1/audit-logs`, CSV). User security events log.
 - Cloud: disposable email block, signup velocity limits, optional Turnstile captcha, breached password check, workspace suspension.
 - Mail templates (list in [api.md](api.md#mail-templates)).
+- Screens for all of the above, `resources/js/features/settings`: [settings-pages.md](settings-pages.md).
+- SAML SSO, enterprise OIDC, SCIM, JIT, verified org domains, sign-in rules, session length, IP allowlists: owned by [21-enterprise-identity](../21-enterprise-identity/README.md), attached to `organizations`.
+- Custom roles: [roles.md](roles.md). Audit CSV and scope: [audit.md](audit.md). API rate limits: [rate-limits.md](rate-limits.md). Interface language: [i18n.md](i18n.md).
 - CLI: `user:*`, `workspace:*`, `token:create` (`setup:link` owned by 11).
 
-### Out (later)
+### Out
 
-| Item | When |
+| Item | Why out |
 |---|---|
-| SAML SSO, enterprise OIDC, SCIM provisioning, verified org domains, JIT | post-MVP: SSO + SCIM (upmarket set); cloud pricing promises free when shipped. Attach to `organizations` (`sso_connections`, `organization_domains`, `scim_tokens`), new `IdentityProvider` drivers per connection, `LoginPolicyResolver` driver enforcing SSO (409 `sso_required`). extensibility.md section 2 |
-| Passkeys / WebAuthn (go-webauthn) | post-MVP. `webauthn` factor driver (second factor first, then `Primary` passkey login: `POST /passkey-challenges`, grant `passkey`, user resolved by `user_auth_factors.lookup_hash`). No migration |
-| Email OTP as second factor | later: `email_otp` factor driver, `POST /two-factor-challenge-codes` (guest, challenge cookie) |
-| "Remember this device" for 2FA | later: `user_devices` backfilled from `sessions.device_id` / grant `device_id`; sessions last 30 days so 2FA once per session |
-| Organization API, org members, org settings, second workspace in same org | later, additive (`organization_members`, `POST /workspaces {organization_id}`) |
-| Service accounts (tokens not tied to member) | later; see Open questions |
-| Custom roles / granular permissions | post-MVP: custom roles (upmarket set): `roles` table + `workspace_members.custom_role_id` additive; permission layer already in place |
-| Microsoft, GitLab, Apple login | later: new `IdentityProvider` driver + config block, same `oauth_identities` table (provider is registry enum) |
+| Passkey as primary login (no password step) | code has passkey as second factor only; not asked by any gap. Path: `Primary` capability, grant `passkey` |
+| Email OTP as second factor | weaker than TOTP and passkeys; not asked by any gap. Path: `email_otp` factor driver, `POST /two-factor-challenge-codes` |
+| "Remember this device" for 2FA | sessions last 30 days, so 2FA once per session; not asked by any gap. Path: `user_devices` from `sessions.device_id` |
+| Organization API, org members, org settings, second workspace in same org | org stays 1:1, not asked by any gap. Additive (`organization_members`, `POST /workspaces {organization_id}`) |
+| Service accounts (tokens not tied to member) | not asked by any gap; see Decisions |
+| Microsoft, GitLab, Apple login | not asked by any gap; Entra users covered by SSO. Path: new `IdentityProvider` driver + config block |
 | SMS 2FA | never (SIM swap); no `sms` driver |
-| Custom invitation message | later (spam vector on cloud) |
+| Custom invitation message | spam vector on cloud |
 | OAuth server, device flow, OAuth tokens `dmi_oat_`, first-party app login (browser sheet + PKCE) and grants | 09-agent-native (this spec provides session login used by consent screen, `auth:user` guard group, and lists/revokes first-party grants in `/sessions`) |
 | Notification preferences | 06-notifications |
 | Billing role extras, invoices | 12-cloud-billing |
 | SMTP configuration UI, system settings | 11-self-host |
-| `domain-join` (audit B16): workspace email domains, joinable-workspaces list, self-join by domain, signup exception for domain match | later; invitations only at MVP |
+| `domain-join` (audit B16): workspace email domains, joinable-workspaces list, self-join by domain | not asked by any gap; invitations, JIT and SCIM cover joining |
 
 ## User stories
 
@@ -170,7 +206,7 @@ Table created by framework migration set (`framework/session`; columns `id`, `to
 | id | uuid pk default uuidv7() | public `ses_` |
 | token_hash | bytea unique not null | SHA-256 of cookie value (32 random bytes, base64url). Raw value never stored |
 | user_id | uuid not null references users on delete cascade | |
-| auth_method | text not null CHECK (format) | registry enum (P1). Primary method only. MVP registry: `password`, `magic_link`, `email_code`, `password_reset`, `setup`, `invitation`, plus every `IdentityProvider` key (`github`, `google`). Later `passkey`, `sso` |
+| auth_method | text not null CHECK (format) | registry enum (P1). Primary method only. Registry: `password`, `magic_link`, `email_code`, `password_reset`, `setup`, `invitation`, `sso`, plus every `IdentityProvider` key (`github`, `google`) |
 | auth_methods | text[] not null default '{}' | every method passed at last full login: `{password,totp}`, `{github}`, `{password,recovery_code}`. Replaces `two_factor_used`. Resource keeps `two_factor_used` (derived: contains any second-factor method) |
 | authenticated_at | timestamptz not null default now() | last full login incl. factors. Set by `StartSession` and reauth; never by confirmation, rotation or activity. 09 copies into `oauth_authorization_requests.auth_time` / grant `auth_time`; `max_age` compares it |
 | ip | text (framework) | last seen IP |
@@ -179,7 +215,7 @@ Table created by framework migration set (`framework/session`; columns `id`, `to
 | device_id | text | SHA-256 hex of `__Host-dimmi_device` cookie value (set by `StartSession`). Internal: never in resources. Joins session, push rows (06) and later `user_devices` |
 | country | text | ISO 3166-1 alpha-2 from optional GeoIP, null otherwise |
 | confirmed_at | timestamptz | last sudo confirmation (password, factor, email code) or full login |
-| confirmed_method | text | method of last confirmation (`password`, `email_code`, factor type e.g. `totp`; full login: last method of `auth_methods`). Later policy "sudo needs phishing-resistant" reads it |
+| confirmed_method | text | method of last confirmation (`password`, `email_code`, factor type e.g. `totp`; full login: last method of `auth_methods`). Reserved for a rule requiring phishing-resistant confirmation; none set |
 | last_activity_at | timestamptz not null default now() | written at most once per 5 min per session |
 | expires_at | timestamptz not null | created_at + `auth.sessions.absolute_lifetime` (30 d) |
 | created_at, updated_at | timestamptz | |
@@ -191,13 +227,13 @@ Replaces `users.two_factor_secret_encrypted`, `two_factor_recovery_codes_encrypt
 |---|---|---|
 | id | uuid pk default uuidv7() | public `fac_` |
 | user_id | uuid not null references users on delete cascade | |
-| type | text not null CHECK (type ~ '^[a-z][a-z0-9_]{1,39}$') | registry enum. MVP: `totp`, `recovery_code`. Later `webauthn`, `email_otp`. `sms` never |
+| type | text not null CHECK (type ~ '^[a-z][a-z0-9_]{1,39}$') | registry enum: `totp`, `passkey`, `recovery_code`. `sms` never |
 | name | text not null | user label 1..60 chars, NFC, control chars stripped. Defaults: totp "Authenticator app", recovery_code "Recovery codes" |
 | status | text not null default 'pending' CHECK in ('pending','active') | pending = enrollment unfinished; pending older than 1 h deleted by `PurgeExpiredAuthRecords` |
-| secret_encrypted | bytea (`encryption.Sealed`) | totp: 20-byte seed; recovery_code: list of SHA-256 code hashes with used flags. `encryption.Seal` with `encryption.KeyManager` system scope (`encryption.Scope{Kind: "system"}`), AAD = factor id. Null for public-key factors (later) |
-| credential | jsonb not null default '{}' | non-secret driver data, max 8 KB. totp `{algorithm: "SHA1", digits: 6, period: 30}`; recovery_code `{total: 10, remaining: 10}`; later webauthn `{public_key_cose, aaguid, transports, backup_eligible, backup_state, attestation_fmt}` |
-| lookup_hash | bytea | SHA-256 of external credential id (WebAuthn). Null at MVP. Passkey login resolves user by it |
-| last_counter | bigint | totp: last accepted step (RFC 6238 5.2 replay); later WebAuthn sign count |
+| secret_encrypted | bytea (`encryption.Sealed`) | totp: 20-byte seed; recovery_code: list of SHA-256 code hashes with used flags. `encryption.Seal` with `encryption.KeyManager` system scope (`encryption.Scope{Kind: "system"}`), AAD = factor id. Null for public-key factors (passkey) |
+| credential | jsonb not null default '{}' | non-secret driver data, max 8 KB. totp `{algorithm: "SHA1", digits: 6, period: 30}`; recovery_code `{total: 10, remaining: 10}`; passkey `{public_key_cose, aaguid, transports, backup_eligible, backup_state, attestation_fmt}` |
+| lookup_hash | bytea | SHA-256 of external credential id (WebAuthn). Passkey login resolves user by it |
+| last_counter | bigint | totp: last accepted step (RFC 6238 5.2 replay); passkey: sign count |
 | is_preferred | boolean not null default false | listed first in challenge |
 | confirmed_at | timestamptz | activation time |
 | last_used_at | timestamptz | last successful challenge or confirmation |
@@ -213,7 +249,7 @@ Rules (maintained in same tx by factor actions):
 |---|---|---|
 | id | uuid pk | `idn_` |
 | user_id | uuid not null references users on delete cascade | |
-| provider | text not null CHECK (format) | registry enum = `IdentityProvider.Key()` (`github`, `google`; later `microsoft`, `apple`, SSO) |
+| provider | text not null CHECK (format) | registry enum = `IdentityProvider.Key()` (`github`, `google`, `sso` with `sso_connection_id`, 19) |
 | provider_user_id | text not null | GitHub numeric id as string; Google `sub` |
 | email | citext | provider email at last login (display only, never identity key) |
 | email_verified | boolean not null default false | |
@@ -229,7 +265,7 @@ Short-lived single-use secrets: magic links, 2FA login challenge, email verifica
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid pk | public `ott_` (exposed only for `email_verification`, `email_change` redemption: `PATCH /email-verifications/{ott}`, `PATCH /email-changes/{ott}`) |
-| purpose | text not null CHECK in ('magic_link','two_factor_challenge','email_verification','email_change','confirm_code') | |
+| purpose | text not null CHECK in ('magic_link','two_factor_challenge','email_verification','email_change','confirm_code','two_factor_reset') | last added by track 07 migration |
 | user_id | uuid null references users on delete cascade | null for magic-link signup of unknown email |
 | email | citext not null | target address (`email_verification`: user email at send time; mismatch with current email = stale) |
 | token_hash | bytea unique not null | SHA-256 of 32-byte random token |
@@ -237,7 +273,7 @@ Short-lived single-use secrets: magic links, 2FA login challenge, email verifica
 | attempts | smallint not null default 0 | code/2FA/wrong-token attempts; burned at 5 |
 | data | jsonb not null default '{}' | `new_email`, `invitation_id`, `redirect`, `session_intent`, `name`. `two_factor_challenge`: `primary_method`, `methods` (types offered), `factor_ids`, `driver_state` (per-driver challenge state; later WebAuthn nonce), `reauth_session_id` (reauth mode), `device_id` |
 | ip | inet, user_agent text | requester |
-| expires_at | timestamptz not null | magic_link 15 min, two_factor_challenge 5 min, email_verification 24 h, email_change 24 h, confirm_code 10 min |
+| expires_at | timestamptz not null | magic_link 15 min, two_factor_challenge 5 min, email_verification 24 h, email_change 24 h, confirm_code 10 min, two_factor_reset 30 min |
 | consumed_at | timestamptz | set once; consume = `UPDATE ... WHERE consumed_at IS NULL AND expires_at > now() RETURNING` |
 | created_at | timestamptz | |
 Indexes: `(email, purpose, created_at desc)`, `(user_id, purpose)`, `(expires_at)`.
@@ -321,7 +357,7 @@ Account-level security log visible to user only (login has no workspace).
 |---|---|---|
 | id | uuid pk | `sev_` |
 | user_id | uuid not null references users on delete cascade | |
-| type | text not null CHECK (dotted format) | registry enum. MVP: `login.succeeded`, `login.failed`, `login.locked`, `logout`, `password.changed`, `password.reset`, `two_factor.enabled`, `two_factor.disabled` (account state), `auth_factor.added`, `auth_factor.removed`, `auth_factor.renamed`, `auth_factor.recovery_code_used`, `auth_factor.recovery_codes_regenerated`, `email.change_requested`, `email.changed`, `identity.linked`, `identity.unlinked`, `session.revoked`, `sessions.revoked_others`, `magic_link.used`, `token.created`, `account.deletion_requested` |
+| type | text not null CHECK (dotted format) | registry enum. MVP: `login.succeeded`, `login.failed`, `login.locked`, `logout`, `password.changed`, `password.reset`, `two_factor.enabled`, `two_factor.disabled` (account state), `auth_factor.added`, `auth_factor.removed`, `auth_factor.renamed`, `auth_factor.recovery_code_used`, `auth_factor.recovery_codes_regenerated`, `two_factor.reset_requested`, `two_factor.reset_completed`, `sso.signed_in`, `sso.bypass_used`, `sso.link_added`, `email.change_requested`, `email.changed`, `identity.linked`, `identity.unlinked`, `session.revoked`, `sessions.revoked_others`, `magic_link.used`, `token.created`, `account.deletion_requested` |
 | ip | inet, user_agent text, device_label text, country text | |
 | metadata | jsonb not null default '{}' | method(s), session id, provider, failure reason, `reauth`; factor events `{factor_id, type}` (no secrets) |
 | created_at | timestamptz | |
@@ -337,8 +373,8 @@ Index `(user_id, created_at desc)`. Pruned after 365 days (both editions). `logi
 | deleted_at | timestamptz | account deletion anonymizes row (FKs from members, messages stay valid) |
 | password_changed_at | timestamptz | display, session invalidation reasoning, reset mails |
 | risk_flags | text[] not null default '{}' | cloud: `disposable_email`, `signup_velocity`, `breached_password_reuse` |
-| created_via | text CHECK (format) | registry enum: `register`, `magic_link`, `invitation`, `setup`, `cli`, plus every `IdentityProvider` key (`github`, `google`). Later `sso`, `scim` |
-Index `(email) WHERE deleted_at IS NULL` not needed (email unique already); anonymized email `deleted+<uuid>@users.invalid` keeps unique constraint. (`two_factor_last_used_step` dropped: TOTP step lives in factor `last_counter`.)
+| created_via | text CHECK (format) | registry enum: `register`, `magic_link`, `invitation`, `setup`, `cli`, `sso`, `scim`, plus every `IdentityProvider` key (`github`, `google`) |
+Track 07: `preferences jsonb not null default '{}'` (migration `20261201070001_add_preferences_to_users_table`, [settings-pages.md](settings-pages.md)). Track 08: `managed_by_organization_id` (21). Index `(email) WHERE deleted_at IS NULL` not needed (email unique already); anonymized email `deleted+<uuid>@users.invalid` keeps unique constraint. (`two_factor_last_used_step` dropped: TOTP step lives in factor `last_counter`.)
 
 `workspaces` (000003): `organization_id uuid not null references organizations` (no cascade; org outlives purge for billing retention), index `(organization_id)`. Not in workspace resource (additive later).
 
@@ -349,7 +385,7 @@ Index `(email) WHERE deleted_at IS NULL` not needed (email unique already); anon
 | deleted_by_user_id | uuid null references users on delete set null | restore authorization, reminder mail |
 | purge_after | timestamptz | `deleted_at + 30 days`; index `(purge_after) WHERE deleted_at IS NOT NULL` |
 | suspended_reason | text | ops note, shown to owners |
-`settings` keys owned here, declared in foundation settings registry (`app/support/settings`, scope `workspace`; typed in `models.WorkspaceSettings`): `security.require_two_factor bool` (default false; `Enforceable`: org may lock later, 422 `setting_locked`), `previous_slugs [{slug, until}]`. Stored nested in jsonb (`{"security": {"require_two_factor": true}}`). API field on workspace resource stays `require_two_factor` (maps to key).
+`settings` keys owned here, declared in foundation settings registry (`app/support/settings`, scope `workspace`; typed in `models.WorkspaceSettings`): `security.require_two_factor bool` (default false; `Enforceable`: org may lock, 422 `setting_locked`), `previous_slugs [{slug, until}]`, `customer_facing_name` (T-04, X5). Rule keys `security.*` from [21 access-policy.md](../21-enterprise-identity/access-policy.md). Stored nested in jsonb (`{"security": {"require_two_factor": true}}`). API field on workspace resource stays `require_two_factor` (maps to key).
 
 `20261101000018_add_access_columns_to_workspace_members_table.sql`
 | Column | Type | Why |
@@ -357,8 +393,8 @@ Index `(email) WHERE deleted_at IS NULL` not needed (email unique already); anon
 | last_accessed_at | timestamptz | workspace switcher order and default workspace; written once per 5 min |
 | deactivated_at | timestamptz | |
 | deactivated_by_member_id | uuid null references workspace_members on delete set null | |
-| joined_via | text CHECK (format) | registry enum: `created`, `invitation`, `setup`, `cli`. Later `domain`, `sso`, `scim` |
-Index `(user_id, last_accessed_at desc)` (no `workspace_id` lead: queried only through SECURITY DEFINER function by user; documented exception to tenant index rule). `role` stays strict CHECK owner/admin/member: role key only; permissions come from `roles.go`.
+| joined_via | text CHECK (format) | registry enum: `created`, `invitation`, `setup`, `cli`, `sso`, `scim` |
+Index `(user_id, last_accessed_at desc)` (no `workspace_id` lead: queried only through SECURITY DEFINER function by user; documented exception to tenant index rule). `role` stays strict CHECK owner/admin/member: role key only; permissions come from `roles.go`, narrowed by `custom_role_id` ([roles.md](roles.md)). Directory columns: 19. Conversation access columns (`conversation_access`, `conversation_access_unassigned`) + `member_access_teams`: owner 03 `access.md`.
 
 `teams` / `team_members` (000005): `teams.deleted_at` (team delete is two-phase: hide, unassign conversations in chunks (03), then purge); unique `(workspace_id, lower(name)) WHERE deleted_at IS NULL` (name reusable right after delete); `team_members.workspace_id` (tenant rule P8, RLS, lint FK rule). `AddTeamMember` sets it from team.
 
@@ -376,7 +412,7 @@ After lookup, request sets `app.workspace_id` and uses normal tenant queries.
 
 ### Public ID prefixes (new)
 
-`mem_` workspace_members, `inv_` invitations, `ses_` sessions, `aud_` audit_logs, `idn_` oauth_identities, `sev_` security_events, `ott_` one_time_tokens (email verification, email change redemption), `prs_` password_reset_tokens, `fac_` user_auth_factors, `org_` organizations (registered, not exposed in MVP). Existing used: `usr_`, `ws_`, `team_`, `tok_`. Read from 09: `ogr_` (first-party app grants in `/sessions`), `ocl_`. Reserved (do not reuse): `ssoc_`, `odom_`, `rol_`, `dev_`, `dom_` (workspace_domains, later). Registered in `app/models/public_ids.go` (`framework/ids` registry, TypeID encoding).
+`mem_` workspace_members, `inv_` invitations, `ses_` sessions, `aud_` audit_logs, `idn_` oauth_identities, `sev_` security_events, `ott_` one_time_tokens (email verification, email change redemption), `prs_` password_reset_tokens, `fac_` user_auth_factors, `org_` organizations (registered, not exposed in MVP). Existing used: `usr_`, `ws_`, `team_`, `tok_`. Read from 09: `ogr_` (first-party app grants in `/sessions`), `ocl_`. Now in use: `rol_` ([roles.md](roles.md)), `ssoc_`, `odom_`, `sct_`, `scg_` (21). Reserved (do not reuse): `dev_`, `dom_` (workspace_domains). Registered in `app/models/public_ids.go` (`framework/ids` registry, TypeID encoding).
 
 ## Code map
 
@@ -431,7 +467,7 @@ One controller per resource or sub-resource (rest.md rule 14). Actions keep busi
 
 ### Requests `app/http/requests/`
 `store_user_request.go` (register), `store_session_request.go` (grant-discriminated: `password`, `two_factor`, `magic_link`, `email_code` rule sets), `store_magic_link_request.go`, `store_password_reset_request.go`, `update_password_reset_request.go`, `update_email_verification_request.go`, `store_email_change_request.go`, `update_email_change_request.go`, `store_user_confirmation_request.go`, `setup_request.go`, `update_user_request.go`, `update_password_request.go`, `update_avatar_request.go`, `store_auth_factor_request.go` (`type` in enabled registry, `name?`), `update_auth_factor_request.go` (`code` alone, or any of `name`, `preferred`), `destroy_user_request.go`, `store_membership_request.go` (`invitation_token` required), `store_workspace_request.go`, `update_workspace_request.go` (`/workspaces/{ws}`: `trashed` only), `update_current_workspace_request.go`, `destroy_current_workspace_request.go`, `update_member_request.go` (`role`, `status`, `reassign_to_member_id`, `keep_owner`), `update_availability_request.go`, `store_team_request.go`, `update_team_request.go`, `store_team_member_request.go`, `store_invitations_request.go`, `store_personal_access_token_request.go`, `list_audit_logs_request.go`.
-`store_session_request.go` `two_factor` rule set: `method` required (registry), `code` (later `credential`); every grant accepts optional `reauth` boolean.
+`store_session_request.go` `two_factor` rule set: `method` required (registry), `code`, or `credential` for passkey; every grant accepts optional `reauth` boolean.
 Custom rules `app/rules/`: `password_rule.go` (length, common list, breached), `slug_rule.go` (format + reserved), `timezone_rule.go`, `email_deliverable_rule.go` (syntax, IDNA, disposable on cloud), `abilities_rule.go`, `registry_rule.go` (value registered in named Go registry: factor types, auth methods, providers).
 
 ### Resources `app/http/resources/`
@@ -451,7 +487,7 @@ Custom rules `app/rules/`: `password_rule.go` (length, common list, breached), `
 ### Support, services, middleware
 - Framework (no app code): password hashing = `framework/hashing` (`a.Hash`; argon2id PHC via alexedwards/argon2id, `NeedsRehash`, semaphore, `auth_busy`); token format = `framework/auth/token` (random base62, CRC32 checksum; `dmi_live_`/`dmi_test_` prefixes stay app constants in `app/auth/tokens.go`); TOTP + recovery code primitives = `framework/auth/twofactor` (pquerna/otp); validation = `framework/validation` tag engine (`validate:"required,min=12,password"`, Laravel-style English messages, translated per request locale); `password` rule (common list + breached check) = app `validation.Rule` registered on `a.Validator` in `AppServiceProvider` (framework has no password rule; HIBP range client one GET with `Add-Padding: true`, via `a.HTTP`); UA parse = `framework/http/useragent` (medama-io/go-useragent per `research/build-vs-reuse.md`); OAuth/OIDC login = `framework/socialite` drivers `github`, `google` (golang.org/x/oauth2 PKCE, coreos/go-oidc v3, go-jose v4 underneath); session mechanics (id, rotation, expiry) = `framework/session` (`a.Session`, Postgres store on framework `sessions` table, product columns ALTERed by 00-accounts); CSRF = `framework/http/middleware` `CSRF` (`http.CrossOriginProtection`).
 - `app/auth/` (was `app/support/auth/`): `lockout.go` (escalating limiter on `ratelimit.Limiter` / `a.Limiter`), `device.go` (UA label via `framework/http/useragent`, `__Host-dimmi_device` cookie, `DeviceID()` = SHA-256 hex of cookie value), `disposable_domains.go` (embedded CC0 list `resources/data/disposable_email_blocklist.conf`), `guards.go` (session, app and token guards implementing `auth.Guard`, cached lookup; caller class decided by lookup, never client claim; `dmi_oat_` handed to 09 `oauth.ResolveAccessToken`), `principal.go` (builds `contracts.Principal` from guard result: `UserID`, `AuthMethods`, `AuthenticatedAt`, `ConfirmedAt`, `DeviceID`, `IP`, `Via`, `TwoFactorEnabled`; session: from row; app: from 09 principal `AuthTime` + `ConfirmedAt` + grant `auth_methods`, `device_id`; token: empty methods), `usage_recorder.go` (coalesced `last_used_at` / `last_activity_at`, flushed in provider `Shutdown`), `login_policy.go` (`LoginPolicyResolver`, MVP driver `allowAll`), `access_policy.go` (MVP `AccessPolicy` driver, rule list), `registries.go` (registry enums: auth methods, created_via, joined_via, security event types, revoke reasons passed to 09: `user`, `logout_others`, `password_changed`, `password_reset`, `two_factor_disabled`, `user_deleted`, `admin`, `pre_hijack_defense`).
-- `app/auth/factors/` (driver registry; contract pointer in `00-foundation/contracts.md`): `registry.go` (`Register`, `Enabled()` filtered by `auth.factors.enabled`, `Find(type)`), `totp.go` (product rules on `framework/auth/twofactor`: RFC 6238 SHA1, 6 digits, 30 s, window ±1, replay via `last_counter`, otpauth URL; QR SVG rendered from `otpauth_url`), `recovery_code.go` (codes from `twofactor.RecoveryCodes`: 10 codes `xxxxx-xxxxx` Crockford base32 lowercase, SHA-256 list, one use each, `remaining` in `credential`). Interface:
+- `app/auth/factors/` (driver registry; contract pointer in `00-foundation/contracts.md`): `registry.go` (`Register`, `Enabled()` filtered by `auth.factors.enabled`, `Find(type)`), `totp.go` (product rules on `framework/auth/twofactor`: RFC 6238 SHA1, 6 digits, 30 s, window ±1, replay via `last_counter`, otpauth URL; QR SVG rendered from `otpauth_url`), `passkey.go` (go-webauthn; several per user, one per device; sign counter check), `recovery_code.go` (codes from `twofactor.RecoveryCodes`: 10 codes `xxxxx-xxxxx` Crockford base32 lowercase, SHA-256 list, one use each, `remaining` in `credential`). Interface:
 
 ```go
 package factors
@@ -459,10 +495,10 @@ package factors
 type Capabilities struct {
     SecondFactor      bool // satisfies 2FA challenge (totp, recovery_code)
     Backup            bool // recovery-only: never enables 2FA alone (recovery_code). Added here (00-accounts owns interface)
-    Primary           bool // logs in alone (passkey); false for all at MVP
+    Primary           bool // logs in alone; false for every driver today (passkey is second factor only)
     Confirmation      bool // satisfies password.confirm (totp true, recovery_code false)
-    PhishingResistant bool // webauthn later
-    Multiple          bool // user may hold several (MVP: false for both)
+    PhishingResistant bool // passkey
+    Multiple          bool // user may hold several (passkey true; totp, recovery_code false)
     UserVisible       bool // listed in GET /user/auth-factors (both true; recovery set shown with remaining)
 }
 
@@ -498,7 +534,7 @@ Registered in `auth_service_provider.go`. Unknown type in `auth.factors.enabled`
 `purge_expired_auth_records.go`, `schedule_workspace_purges.go`, `purge_workspace.go`, `send_workspace_deletion_reminders.go`, `check_workspace_owners.go`, `prune_audit_logs.go`, `prune_security_events.go`, `notify_expiring_tokens.go`, `fetch_user_avatar.go`, `purge_deleted_teams.go`.
 
 ### Mail `app/mail/` + templates `resources/views/mail/accounts/*.templ`
-See [api.md](api.md#mail-templates) (28 mailables).
+See [api.md](api.md#mail-templates) (31 mailables).
 
 ### MCP `app/mcp/tools/`
 `list_members.go`, `list_teams.go`, `update_availability.go` (toolset `accounts`; `dimmi_get_workspace` core tool owned by 09).
@@ -609,7 +645,7 @@ Token `last_used_at` and session `last_activity_at` use in-process coalescer (`a
 | `auth.oauth.<key>.*` | map; `github`, `google` at MVP | | adding provider = driver + config block. `client_id` empty = provider hidden. Secrets via `_FILE` |
 | `auth.oauth.github.client_id` / `client_secret` | empty (button hidden) | set | |
 | `auth.oauth.google.client_id` / `client_secret` | empty | set | |
-| `auth.factors.enabled` | `[totp, recovery_code]` | same | enabled factor drivers; unknown type: boot panic |
+| `auth.factors.enabled` | `[totp, passkey, recovery_code]` | same | enabled factor drivers; unknown type: boot panic |
 | `auth.factors.max_per_user` | 10 | 10 | active factors per user (recovery set counts) |
 | `auth.factors.totp.issuer` | `app.name` | `Dimmi` | otpauth issuer (was `auth.two_factor.issuer`) |
 | `auth.factors.pending_ttl` | 1h | 1h | unfinished enrollment purge |
@@ -620,6 +656,8 @@ Token `last_used_at` and session `last_activity_at` use in-process coalescer (`a
 | `auth.captcha.driver` | `none` | `turnstile` | `none`, `turnstile` |
 | `auth.captcha.site_key` / `secret_key` | | | |
 | `http.trusted_origins` | `[]` | `[]` | extra origins allowed by CSRF (`http.CrossOriginProtection.AddTrustedOrigin`); `app.url` origin always trusted. Split dashboard deploys, local Vite dev server. Framework key, listed here because 00-accounts relies on it |
+| `api.limits.token_per_minute` / `user_per_minute` / `workspace_per_minute` | 600 / 1200 / 6000 | catalog defaults | `self_host` entitlement driver reads these; 0 = no limit ([rate-limits.md](rate-limits.md)) |
+| `api.bad_credential_per_minute` | 60 | 60 | per IP |
 | `auth.geoip.database_path` | empty | set | optional MaxMind/DB-IP mmdb for session country; read with oschwald/maxminddb-golang v2 (mmap) |
 | `workspaces.max_owned_per_user` | 0 (unlimited) | 10 | |
 | `workspaces.max_test_mode_per_user` | 0 | 3 | |
@@ -656,9 +694,9 @@ Permission groups (each permission in exactly one group):
 | `contacts:write` | `contacts:write`, `contacts:erase`, `contacts:manage_external_id`, `companies:delete` (03); `email_suppressions:manage`, `email_suppressions:lift_complaint` (04) | 03, 04 |
 | `articles:read` / `articles:write` | the ability itself | 08 |
 | `members:read` | `members:read` | 00-accounts |
-| `members:write` | `members:write`, `members:manage_owners` (U-only field), `tokens:manage_any` (U-only route) | 00-accounts |
+| `members:write` | `members:write`, `members:manage_owners` (U-only field), `tokens:manage_any` (U-only route), `members:manage_access`, `members:reset_two_factor`, `members:import`, `roles:manage` | 00-accounts |
 | `settings:read` | `settings:read`, `audit_logs:read` (00-accounts); `widgets:read` (01); `identity:read` (02); `email:read`, `email:read_raw` (04); `channels:inspect` (05); `help_centers:read_settings`, `github:read` (08); `imports:read` (16) | many |
-| `settings:write` | `settings:write`, `workspace:delete` (U-only route) (00-accounts); `widgets:manage` (01); `identity:manage` (02); `inboxes:manage`, `tags:manage` (03); `email:manage`, `email:rotate_dkim`, `email:resume_sending`, `email_signatures:manage_own`, `email_signatures:manage_any` (04); `channels:manage` (05); `notification_destinations:manage` (06); `help_centers:manage`, `help_centers:delete`, `knowledge:manage`, `knowledge:sync`, `github:manage`, `docs_sync:manage` (08); `oauth_grants:manage_any`, `agent_access:manage` (09); `feedback:manage` (14); `imports:manage`, `imports:rollback` (16) | many |
+| `settings:write` | `settings:write`, `workspace:delete` (U-only route) (00-accounts); `security_policy:manage`, `sso:manage`, `scim:manage` (21); `widgets:manage` (01); `identity:manage` (02); `inboxes:manage`, `tags:manage` (03); `email:manage`, `email:rotate_dkim`, `email:resume_sending`, `email_signatures:manage_own`, `email_signatures:manage_any` (04); `channels:manage` (05); `notification_destinations:manage` (06); `help_centers:manage`, `help_centers:delete`, `knowledge:manage`, `knowledge:sync`, `github:manage`, `docs_sync:manage` (08); `oauth_grants:manage_any`, `agent_access:manage` (09); `feedback:manage` (14); `imports:manage`, `imports:rollback` (16) | many |
 | `webhooks:read` / `webhooks:write` | the ability itself (permissions of same name) | 10 |
 | `notifications:read` | `notifications:read`, `notification_alerts:receive` | 06 |
 | `notifications:write` | `notifications:write` | 06 |
@@ -682,7 +720,9 @@ Role map (`roles.go`; nested: owner ⊇ admin ⊇ member). Rows for other specs 
 |---|---|---|---|
 | conversations:read/write, contacts:read/write, articles:read/write, members:read, notifications:read/write | yes | yes | yes |
 | widgets:read (01), identity:read (02), email:read, email_signatures:manage_own (04), help_centers:read_settings, knowledge:sync, github:read (08), ai:read, ai:write, ai_actions:read, ai_action_calls:approve (07) | yes | yes | yes |
-| settings:read, settings:write, audit_logs:read, members:write, tokens:manage_any | no | yes | yes |
+| settings:read, settings:write, audit_logs:read, members:write, tokens:manage_any, members:manage_access, members:reset_two_factor, members:import, roles:manage | no | yes | yes |
+| security_policy:manage (21) | no | yes | yes |
+| sso:manage, scim:manage (21) | no | no | yes |
 | widgets:manage (01), identity:manage (02) | no | yes | yes |
 | conversations:delete, conversations:moderate, saved_replies:manage_shared, contacts:erase, contacts:manage_external_id, companies:delete, inboxes:manage, tags:manage (03) | no | yes | yes |
 | email:read_raw, email:manage, email_suppressions:manage, email_signatures:manage_any (04) | no | yes | yes |
@@ -727,6 +767,12 @@ Action table (permission checked by policy):
 | List/revoke own tokens | none (self) | yes | yes | yes | yes |
 | List/revoke any member token | `tokens:manage_any` | yes | yes | no | yes |
 | Audit logs read/export | `audit_logs:read` (token: `settings:read` group) | yes | yes | no | |
+| Set conversation access | `members:manage_access` | yes | yes | no | |
+| Start 2FA reset, clear sign-in lock | `members:reset_two_factor` (owner target also `members:manage_owners`) | yes | yes | no | yes + confirm |
+| Bulk CSV import | `members:import` | yes | yes | no | yes + confirm |
+| Roles CRUD, assign custom role | `roles:manage` | yes | yes | no | CRUD yes + confirm |
+| Access policy | `security_policy:manage` | yes | yes | no | yes + confirm |
+| SSO connections, domains, SCIM tokens | `sso:manage`, `scim:manage` | yes | no | no | yes + confirm |
 | Billing (12) | `billing:read` / `billing:write` (`billing:cap_unrestricted` owner only) | yes | yes | no | |
 
 Audit event names registered by feature specs (written by `WriteAuditLog`; `audit_logs.event` dotted, no CHECK; listed so `filter[event]` docs and CSV consumers know them):
@@ -775,7 +821,7 @@ Logs: event name, user id (`usr_`), workspace id, session id (`ses_`), token id 
 - Session id rotated on login, reauth, 2FA completion, first 2FA-enabling factor activation, password change, email change; role change of user in any workspace not needed (role checked live).
 - Password change revokes all other sessions and first-party app grants (keeps caller's own session or grant). Password reset revokes all sessions and all first-party app grants. 2FA disable (last 2FA-enabling factor removed, any path) revokes first-party app grants except caller's (09 `RevokeUserAppGrants`). Adding, renaming or removing a factor that leaves 2FA on revokes nothing. PATs and third-party OAuth grants unaffected (documented; user revokes explicitly).
 - 2FA enforced after every primary method (password, magic link, email code, OAuth, password reset), including reauth. Setup token login and CLI bypass by design (operator).
-- `LoginPolicyResolver.ForEmail` runs before any secret is verified on every primary method (MVP allow-all). Later SSO-enforced domain answers 409 `sso_required` at domain level (no account enumeration).
+- `LoginPolicyResolver.ForEmail` runs before any secret is verified on every primary method. SSO-enforced domain answers 409 `sso_required` at domain level (no account enumeration; 19).
 - Every session and first-party grant records `auth_methods`, `authenticated_at`, `device_id` (P3); `device_id` never leaves server (not in resources, logs only hashed already).
 - Account linking by verified email only; unverified local account matched by verified OAuth email gets pre-hijack defense (password cleared, sessions killed, first-party grants revoked with reason `pre_hijack_defense`).
 - Factor secrets (`user_auth_factors.secret_encrypted`: TOTP seed, recovery code hashes) use `encryption.Seal(ctx, keys, encryption.Slot{Scope: encryption.Scope{Kind: "system"}, AAD: factorID}, value)` (keys = `a.Crypt.Keys(store)`) (`encryption.KeyManager`) (`encryption_keys` system row; not workspace key, users span workspaces). Setup secret and codes returned once, `Cache-Control: no-store`, never logged.
@@ -809,11 +855,13 @@ No billable activity created here. Inputs to metering:
 | 11-self-host | `system_settings` override of `auth.signup.mode`; SMTP setup; `dimmi doctor` checks (cookie mode, mail); `region` (self-host default `self`), `server_version` | setup wizard API, CLI user commands |
 | 12-cloud-billing | owner-only billing; keeps ledger/invoices outside workspace cascade; may call `SuspendWorkspace`; initializer creates billing account per org if absent | workspace lifecycle events, test_mode flag, `organizations` row (billing account owner), `auth_organization_for_workspace` |
 
-## Open questions (with recommended default)
+## Decisions
 
-1. Service accounts / workspace bot tokens (survive member leaving). Default: not in MVP; tokens tied to member; docs recommend dedicated "CI" member. Later path: nullable `personal_access_tokens.owner_id` + `service_account_id` (extensibility.md section 10).
-2. Password minimum length. NIST SP 800-63B-4 (2025): 15 chars when password single factor, 8 when part of MFA. Default: 10 + common-password list + breach check on cloud; revisit 15 once telemetry shows signup impact.
-3. Audit log ability. Resolved: permission `audit_logs:read` exists in catalog, grouped under token ability `settings:read` (no new ability).
-4. Self-host open signup toggle in UI. Default: config/env only in this spec; 11 may expose via `system_settings`.
-5. Second workspace created by same user: new org or same org? Default (extensibility.md OQ1): new org at MVP; merge decided with org UI launch.
-6. Expose `organization_id` in workspace resource? Default: no (additive later).
+Was "Open questions"; each decided.
+
+1. Service accounts: out. Tokens stay tied to member; docs recommend dedicated "CI" member. Reason: no gap asks; `personal_access_tokens.service_account_id` path stays open (extensibility.md section 10).
+2. Password minimum length: 10 + common list + breach check on cloud. Reason: NIST 15-for-single-factor hurts signup with no telemetry to justify; passkeys and SSO now cover strong paths.
+3. Audit log ability: `audit_logs:read` in `settings:read` group, no new ability.
+4. Self-host open signup toggle: config and env only here; 11 may expose via `system_settings`.
+5. Second workspace by same user: new org. Reason: org stays 1:1 (extensibility.md section 3); SSO attaches per org, so second workspace does not inherit it. Stated in enforce dialog.
+6. `organization_id` in workspace resource: no. Reason: no org API exists; enterprise routes resolve org from workspace (19 D3).

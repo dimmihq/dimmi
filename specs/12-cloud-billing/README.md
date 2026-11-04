@@ -405,6 +405,22 @@ tests/feature/billing/ (every endpoint, reply blocked 423, concurrency, webhooks
 tests/contracts/stripe_test.go (stripe-mock; adapter only)
 ```
 
+## Email sending limits
+
+Owner 04 (`outbound.md` 13; tasks 04 M11, track 05 email-sending). 12 supplies cloud `Entitlements` driver and overrides only; 04 enforces. Not billing: nothing here reaches ledger.
+
+| Key | Kind | Cloud default | Over limit |
+|---|---|---|---|
+| `email.verified_daily` | daily | 2,000 | message stays `pending`, retried next UTC day; 429 `entitlement_limit_reached` on direct send API |
+| `email.unverified_daily` | daily | 200 | same; banner says verify domain to raise |
+| `email.new_workspace_hourly` | hourly, first 7 days | 50 | retry next hour |
+| `email.unverified_relay_workspace_daily` | daily | 200 | widget offline `skipped limited` |
+| `email.connected_mailboxes` | count | 25 | 422 `entitlement_limit_reached` at connect |
+
+Auto-pause (not an entitlement): trailing 500 sends, min 100: hard bounce over 5% or complaint over 0.1%: `paused`. Owner requests review (`paused -> review`); ops clears `review -> active` per `outbound.md` 13. Cap too low: staff raises with `dimmi entitlement:set`. Connected mailbox sends skip caps and pause (customer's own account). Staff raise applies within 60 s through entitlement bust.
+
+Fair use D7 stays separate (`GuardOutboundFairUse`).
+
 ## Internal API (other specs)
 
 ```go
