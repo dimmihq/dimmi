@@ -32,7 +32,7 @@ func TestUserPasswordUpdate(t *testing.T) {
 			AssertJSONPath("data.tokens_remaining", 0)
 
 		other.GetJSON("/api/v1/me").AssertUnauthorized()
-		here.WithCookie(res.Cookie(tc.App.Session.CookieName())).GetJSON("/api/v1/me").AssertOK()
+		tc.Client().WithCookie(res.Cookie(tc.App.Session.CookieName())).GetJSON("/api/v1/me").AssertOK()
 		tc.Client().PostJSON("/api/v1/sessions", testkit.JSON{
 			"grant": "password", "email": tc.Owner.Email, "password": nextPhrase,
 		}).AssertCreated()

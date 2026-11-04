@@ -70,7 +70,7 @@ it.describe("own profile", () => {
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByText(/incorrect|invalid/i).first()).toBeVisible();
+    await expect(page.getByText("These credentials do not match our records.")).toBeVisible();
   });
 });
 

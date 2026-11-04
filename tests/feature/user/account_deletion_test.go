@@ -62,7 +62,7 @@ func TestUserDestroy(t *testing.T) {
 
 		destroy(owner, tc.Owner.Email).AssertStatus(fhttp.StatusConflict).
 			AssertJSONPath("code", "sole_owner").
-			AssertJSONPath("meta.workspaces.0", models.PublicID(models.PrefixWorkspace, tc.Workspace.Workspace.ID))
+			AssertJSONPath("workspaces.0", models.PublicID(models.PrefixWorkspace, tc.Workspace.Workspace.ID))
 
 		owner.GetJSON("/api/v1/me").AssertOK()
 		tc.Table("users").AssertHas(testkit.Row{"id": tc.Owner.ID, "email": tc.Owner.Email})
@@ -174,9 +174,9 @@ func TestUserDestroy(t *testing.T) {
 		tc := tests.New(t)
 		fake := tc.Mail()
 		coOwner, _ := teammate(t, tc, enums.RoleOwner)
-		tc.ActingAsOwner().PostJSON("/api/v1/invitations", testkit.JSON{
+		tc.ActingAsOwner().PostJSON("/api/v1/invitations", testkit.JSON{"invitations": []testkit.JSON{{
 			"email": "invitee@example.com", "role": "member",
-		}).AssertOK()
+		}}}).AssertOK()
 		sent, _ := tests.LastSent[appmail.InvitationMail](tc, fake)
 		invite := tc.Fragment(sent.AcceptURL).Get("token")
 

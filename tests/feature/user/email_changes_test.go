@@ -190,6 +190,7 @@ func TestEmailChangeUpdate(t *testing.T) {
 		tc := tests.New(t)
 		owner := tc.ActingAsOwner()
 		firstID, firstToken := askToMove(t, tc, owner, newAddress)
+		tc.Clock.Advance(time.Second)
 		secondID, secondToken := askToMove(t, tc, owner, "second@example.com")
 
 		confirmMove(tc.Client(), firstID, firstToken).AssertValidationError("token")
@@ -246,9 +247,9 @@ func TestEmailChangeUpdate(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		fake := tc.Mail()
-		tc.ActingAsOwner().PostJSON("/api/v1/invitations", testkit.JSON{
+		tc.ActingAsOwner().PostJSON("/api/v1/invitations", testkit.JSON{"invitations": []testkit.JSON{{
 			"email": newAddress, "role": "member",
-		}).AssertOK()
+		}}}).AssertOK()
 		sent, _ := tests.LastSent[appmail.InvitationMail](tc, fake)
 		invite := tc.Fragment(sent.AcceptURL).Get("token")
 		user := tc.CreateUser()
@@ -257,6 +258,6 @@ func TestEmailChangeUpdate(t *testing.T) {
 
 		moved := tc.Client().WithCookie(confirmMove(browser, id, token).AssertOK().Cookie(tc.App.Session.CookieName()))
 
-		moved.PostJSON("/api/v1/user/memberships", testkit.JSON{"invitation_token": invite}).AssertOK()
+		moved.PostJSON("/api/v1/user/memberships", testkit.JSON{"invitation_token": invite}).AssertCreated()
 	})
 }

@@ -73,7 +73,7 @@ it.describe("settings", () => {
     const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
     const target = dark ? "Light" : "Dark";
 
-    await page.getByRole("button", { name: /^Theme/ }).click();
+    await page.getByRole("button", { name: /Theme$/ }).click();
     await page.getByRole("option", { name: target }).click();
 
     await expect(page.locator("html")).toHaveClass(dark ? /^(?!.*\bdark\b)/ : /\bdark\b/);

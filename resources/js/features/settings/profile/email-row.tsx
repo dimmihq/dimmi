@@ -53,19 +53,21 @@ export function EmailRow({ email, hasPassword }: { email: string; hasPassword: b
   };
 
   return (
-    <Row
-      label="Email"
-      description={
-        pending
-          ? `Open the link we sent to ${pending.change.email} to finish. It works for 24 hours.`
-          : "Changing it sends a link to the new address first."
-      }
-    >
-      <span className="text-body-2-regular text-text-secondary">
-        <bdi>{email}</bdi>
-      </span>
-      {pending ? <Action onPress={() => send.mutate(pending.address)}>Resend</Action> : null}
-      <Action onPress={() => setOpen(true)}>{pending ? "Use another address" : "Change"}</Action>
+    <>
+      <Row label="Email" description="Changing it sends a link to the new address first.">
+        <span className="max-w-64 truncate text-body-2-regular text-text-secondary">
+          <bdi>{email}</bdi>
+        </span>
+        <Action onPress={() => setOpen(true)}>{pending ? "Use another address" : "Change"}</Action>
+      </Row>
+      {pending ? (
+        <Row
+          label="Waiting for the new address"
+          description={`Open the link we sent to ${pending.change.email} to finish. It works for 24 hours.`}
+        >
+          <Action onPress={() => send.mutate(pending.address)}>Resend</Action>
+        </Row>
+      ) : null}
       <Modal size="sm" isOpen={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <form onSubmit={submit}>
           <ModalHeader
@@ -102,6 +104,6 @@ export function EmailRow({ email, hasPassword }: { email: string; hasPassword: b
         </form>
       </Modal>
       {prompt}
-    </Row>
+    </>
   );
 }

@@ -74,8 +74,9 @@ function PasswordDialog({
     },
   });
   const mismatch = again !== "" && again !== password ? "The passwords do not match." : undefined;
-  const currentError = fieldError(save.error, "current_password", ["current_password"], "current_password");
-  const passwordError = fieldError(save.error, "password", ["password"], "password");
+  const fields = ["current_password", "password"];
+  const currentError = fieldError(save.error, "current_password", fields, "password");
+  const passwordError = fieldError(save.error, "password", fields, "password");
 
   const close = () => {
     setCurrent("");
