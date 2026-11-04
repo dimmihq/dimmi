@@ -30,6 +30,24 @@ var ErrNoTLSDriver = errors.New(
 )
 
 /*
+hstsHeader tells browsers to use HTTPS only for a year. It leaves
+subdomains out: other hosts under the same domain are not this
+application's to promise for.
+*/
+const hstsHeader = "max-age=31536000"
+
+/*
+strictTransport adds Strict-Transport-Security to every HTTPS response.
+The application terminates TLS itself, so it is the edge that must ask.
+*/
+func strictTransport(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Strict-Transport-Security", hstsHeader)
+		next.ServeHTTP(w, r)
+	})
+}
+
+/*
 redirectHandler serves the plain listener in TLS mode: health as on
 every listener, challenges first, and a permanent redirect to the same
 host and path over HTTPS for anything else. The redirect names no port,

@@ -108,6 +108,25 @@ HTTP/1.1 by hand so the test can choose the Host and see redirects.
 */
 func rawGet(t *testing.T, conn net.Conn, host, path string) (status int, location string) {
 	t.Helper()
+
+	header := rawHeaders(t, conn, host, path)
+
+	return header.status, header.values.Get("Location")
+}
+
+/*
+answer is the status and headers of a response read by hand.
+*/
+type answer struct {
+	status int
+	values http.Header
+}
+
+/*
+rawHeaders sends one GET over the connection and returns the answer.
+*/
+func rawHeaders(t *testing.T, conn net.Conn, host, path string) answer {
+	t.Helper()
 	t.Cleanup(func() { _ = conn.Close() })
 
 	_, err := fmt.Fprintf(conn, "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host)
@@ -117,7 +136,7 @@ func rawGet(t *testing.T, conn net.Conn, host, path string) (status int, locatio
 	require.NoError(t, err)
 	require.NoError(t, response.Body.Close())
 
-	return response.StatusCode, response.Header.Get("Location")
+	return answer{status: response.StatusCode, values: response.Header}
 }
 
 /*
@@ -173,8 +192,9 @@ func TestServeTLS(t *testing.T) {
 
 		conn, err := dialTLS(t, app.TLSAddr(), pool, "http/1.1")
 		require.NoError(t, err)
-		code, _ := rawGet(t, conn, "localhost", foundation.PathReady)
-		assert.Equal(t, http.StatusOK, code)
+		got := rawHeaders(t, conn, "localhost", foundation.PathReady)
+		assert.Equal(t, http.StatusOK, got.status)
+		assert.Equal(t, "max-age=31536000", got.values.Get("Strict-Transport-Security"))
 	})
 
 	t.Run("plain http answers health and challenges and redirects the rest", func(t *testing.T) {
@@ -187,6 +207,10 @@ func TestServeTLS(t *testing.T) {
 			assert.Equal(t, http.StatusOK, code, path)
 			assert.Empty(t, location, path)
 		}
+
+		conn, err := new(net.Dialer).DialContext(t.Context(), "tcp", app.Addr())
+		require.NoError(t, err)
+		assert.Empty(t, rawHeaders(t, conn, "localhost", foundation.PathUp).values.Get("Strict-Transport-Security"))
 
 		code, location := plainGet(t, app.Addr(), "Staging.Example.com:8080", "/d/orders?tab=open")
 		assert.Equal(t, http.StatusPermanentRedirect, code)

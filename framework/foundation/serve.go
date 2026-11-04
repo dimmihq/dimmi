@@ -212,7 +212,7 @@ func (a *Application) listenPublic(ctx context.Context, web *webServers, public 
 		return ErrNoTLSDriver
 	}
 
-	web.secure, err = a.listen(ctx, endpoint{"https", a.Config.HTTP.TLSAddr, public, secure}, web.errs)
+	web.secure, err = a.listen(ctx, endpoint{"https", a.Config.HTTP.TLSAddr, strictTransport(public), secure}, web.errs)
 	if err != nil {
 		return err
 	}
