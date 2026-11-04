@@ -73,6 +73,7 @@ const (
 	PrefixTag               Prefix = "tag"
 	PrefixSavedReply        Prefix = "rpl"
 	PrefixContactIdentity   Prefix = "cid"
+	PrefixRedactionRule     Prefix = "rxr"
 )
 
 /*
@@ -171,6 +172,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
 		{PrefixContactIdentity, "contact_identities"},
+		{PrefixRedactionRule, "redaction_rules"},
 		{"exp", "contact_exports"},
 		{"evt", "events"},
 	}

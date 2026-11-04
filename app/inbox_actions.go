@@ -18,6 +18,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
+	"github.com/dimmihq/dimmi/app/actions/redaction"
 	"github.com/dimmihq/dimmi/app/actions/tags"
 )
 
@@ -70,4 +71,11 @@ type InboxActions struct {
 	Reply             *messages.ReplyToConversation
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
+
+	ListRedactionRules      *redaction.ListRules
+	UpdateRedactionSettings *redaction.UpdateSettings
+	CreateRedactionRule     *redaction.CreateRule
+	UpdateRedactionRule     *redaction.UpdateRule
+	DeleteRedactionRule     *redaction.DeleteRule
+	TryRedaction            *redaction.TryRedaction
 }

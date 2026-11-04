@@ -8,7 +8,8 @@
 | possible duplicates, and companies. Every route works inside the
 | workspace the request names, behind the same guards as the inbox.
 | Adding a tag is part of working a conversation; renaming and deleting
-| one change what every record means, so they are a settings change.
+| one change what every record means, so they are a settings change, as
+| are the workspace's redaction rules.
 |
 */
 
@@ -34,6 +35,28 @@ func recordRoutes(r *routing.Router, a *app.App) {
 	contextRoutes(r, a)
 	contactDetailRoutes(r, a)
 	companyRoutes(r, a)
+	redactionRoutes(r, a)
+}
+
+/*
+redactionRoutes declares the routes on the workspace's redaction rules,
+a settings change since they alter what every later message stores.
+*/
+func redactionRoutes(r *routing.Router, a *app.App) {
+	acts := a.Actions.Inbox
+	c := &v1.RedactionController{
+		List: acts.ListRedactionRules, Settings: acts.UpdateRedactionSettings, Create: acts.CreateRedactionRule,
+		Change: acts.UpdateRedactionRule, Remove: acts.DeleteRedactionRule, Try: acts.TryRedaction, IDs: a.IDs,
+	}
+	path := "/redaction-rules/{redaction_rule}"
+
+	routing.Get(r, "/redaction-rules", "redaction-rules.index", c.Index).Ability("settings:read")
+	routing.Patch(r, "/redaction-rules", "redaction-rules.settings", c.UpdateSettings).Ability("settings:write")
+	routing.Post(r, "/redaction-rules", "redaction-rules.store", c.Store).Ability("settings:write")
+	routing.Patch(r, path, "redaction-rules.update", c.Update).Ability("settings:write")
+	routing.Delete(r, path, "redaction-rules.destroy", c.Destroy).Ability("settings:write")
+	routing.Post(r, "/redaction-tests", "redaction-tests.store", c.Test).Ability("settings:write").
+		Status(http.StatusOK)
 }
 
 /*

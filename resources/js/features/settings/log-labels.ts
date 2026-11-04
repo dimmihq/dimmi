@@ -27,6 +27,10 @@ export const auditEvents: Record<string, string> = {
   "team.deleted": "Deleted a team",
   "team.member_added": "Added someone to a team",
   "team.member_removed": "Removed someone from a team",
+  "redaction_rule.created": "Added a redaction rule",
+  "redaction_rule.updated": "Changed a redaction rule",
+  "redaction_rule.deleted": "Deleted a redaction rule",
+  "redaction_settings.updated": "Changed the built-in redaction rules",
 };
 
 const securityEvents: Record<string, string> = {

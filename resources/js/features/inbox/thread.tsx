@@ -5,7 +5,8 @@
  * pills. What Operator adds is a full-width card across the thread, so
  * the team's own agent never reads as part of the exchange with the
  * customer. Teammates' notes sit on the team's side with a dashed edge
- * and a lock. Every message's Markdown is rendered. Below the thread sits the composer; R and N open it for a
+ * and a lock. A message the workspace's redaction rules changed says how
+ * many items they removed. Every message's Markdown is rendered. Below the thread sits the composer; R and N open it for a
  * reply or a note from anywhere, and O opens or closes Operator.
  */
 import { RiLock2Line, RiSparkling2Line } from "@remixicon/react";
@@ -60,6 +61,11 @@ function Tag({ entry }: { entry: Said }) {
         </Chip>
       ) : null}
       <span className="text-body-2-regular text-text-tertiary">{entry.at}</span>
+      {entry.redacted ? (
+        <span className="text-body-2-regular text-text-tertiary">
+          · {entry.redacted === 1 ? "1 item redacted" : `${entry.redacted} items redacted`}
+        </span>
+      ) : null}
     </span>
   );
 }

@@ -39,7 +39,8 @@ type Attributes struct {
 
 /*
 SetAttributes changes the conversation's details and returns the names
-of the fields that changed, in the order subject, priority, inbox_id.
+of the fields that changed, in the order subject, priority, inbox_id. A
+new subject passes the workspace's redaction rules first.
 */
 func (w *Writer) SetAttributes(
 	ctx context.Context, c models.Conversation, a Attributes,
@@ -50,6 +51,11 @@ func (w *Writer) SetAttributes(
 	changes := map[string][2]any{}
 
 	var changed []string
+
+	a.Subject = copyText(a.Subject)
+	if _, err := redactText(ctx, w.Q, c.WorkspaceID, a.Subject); err != nil {
+		return c, nil, err
+	}
 
 	if a.Subject != nil && (c.Subject == nil || *c.Subject != *a.Subject) {
 		changes["subject"] = [2]any{c.Subject, *a.Subject}

@@ -60,6 +60,11 @@ const (
 
 	EventWidgetSettingsUpdated = "widget.settings_updated"
 	EventWidgetDeleted         = "widget.deleted"
+
+	EventRedactionRuleCreated     = "redaction_rule.created"
+	EventRedactionRuleUpdated     = "redaction_rule.updated"
+	EventRedactionRuleDeleted     = "redaction_rule.deleted"
+	EventRedactionSettingsUpdated = "redaction_settings.updated"
 )
 
 /*

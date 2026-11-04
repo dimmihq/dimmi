@@ -16,6 +16,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/companies"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/redaction"
 	"github.com/dimmihq/dimmi/app/actions/tags"
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
@@ -56,4 +57,11 @@ func bootRecords(a *app.App) {
 	acts.UpdateCompany = &companies.UpdateCompany{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.DeleteCompany = &companies.DeleteCompany{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ListCompanyContacts = &companies.ListCompanyContacts{DB: a.DB}
+
+	acts.ListRedactionRules = &redaction.ListRules{DB: a.DB}
+	acts.UpdateRedactionSettings = &redaction.UpdateSettings{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.CreateRedactionRule = &redaction.CreateRule{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.UpdateRedactionRule = &redaction.UpdateRule{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.DeleteRedactionRule = &redaction.DeleteRule{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.TryRedaction = &redaction.TryRedaction{DB: a.DB}
 }

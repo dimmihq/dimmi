@@ -606,6 +606,18 @@ type PersonalAccessToken struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type RedactionRule struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Name        string    `json:"name"`
+	Pattern     string    `json:"pattern"`
+	Replacement string    `json:"replacement"`
+	Enabled     bool      `json:"enabled"`
+	Position    int32     `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type SavedReply struct {
 	ID            ids.UUID  `json:"id"`
 	WorkspaceID   ids.UUID  `json:"workspace_id"`

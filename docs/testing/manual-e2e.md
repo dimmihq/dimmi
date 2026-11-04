@@ -310,6 +310,13 @@ Same session as the shared inbox above, `C` the conversation Ann started:
 | Customer context | `r ctx -b a.jar -H "$O" -H "$H" $B/conversations/$C/context` | 200 `object: conversation_context`, Ann with notes and tags, `identities[0].type: email`, `past_conversations.total_estimate`, `duplicates_count` |
 | Delete a company | Bob `DELETE $B/companies/{id}` 403; Ada again | 204; Ann's `company` is `null` |
 | Customer pages | open `$W/d/customers`, search, open Ann, edit her phone; open a conversation and edit her name in the details panel | the list narrows; the profile saves; the panel shows the new name and her other conversations |
+| People filters | on `$W/d/customers` pick a company, "Seen this week" and Attribute `plan` is `pro`; on Ann's page set attribute `plan` to `pro` | the list narrows to Ann; her Attributes card shows `plan` with a remove button |
+| Redaction defaults | `GET $B/redaction-rules` | 200 `object: redaction`, `built_ins.card_numbers: true`, `built_ins.us_ssn: false`, `rules: []`; Bob 403 |
+| Redaction rule | `POST $B/redaction-rules {"name":"Accounts","pattern":"ACCT-\\d+"}`, then `{"name":"x","pattern":"("}` | 201 `object: redaction_rule`, `replacement: [redacted]`; then 422 `invalid_pattern`; an eleventh rule 422 `redaction_rule_limit_reached` |
+| Redaction on write | `POST $B/conversations` as a contact with body `Card 4242 4242 4242 4242 ACCT-7` | the message body reads `Card •••• •••• •••• 4242 [redacted]`, `redactions` lists `card_numbers` and the rule's id; the database holds no original |
+| Redaction switches | `PATCH $B/redaction-rules {"us_ssn":true,"order":[…]}`, then a note `SSN 123-45-6789` | 200 with the new order; the note reads `SSN •••-••-••••`; the audit log has `redaction_settings.updated` |
+| Try redaction | `POST $B/redaction-tests {"text":"4242424242424242"}` | 200 `object: redaction_test`, `text: •••• •••• •••• 4242`, one `redactions` entry; nothing stored |
+| Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
 
 ### Two-factor authentication
 

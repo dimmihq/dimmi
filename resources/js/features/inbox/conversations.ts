@@ -61,7 +61,14 @@ export function ago(iso: string | null, now = Date.now()): string {
  * customers), an internal note, or an event such as a handover.
  */
 export type ThreadEntry =
-  | { kind: "customer" | "teammate" | "dimmi" | "note"; id: string; author: string; at: string; text: string }
+  | {
+      kind: "customer" | "teammate" | "dimmi" | "note";
+      id: string;
+      author: string;
+      at: string;
+      text: string;
+      redacted?: number;
+    }
   | { kind: "event"; id: string; at: string; text: string };
 
 const statusWords: Record<string, string> = {
@@ -102,17 +109,18 @@ export function toEntry(message: Message): ThreadEntry {
   if (message.type === "event" && message.event) {
     return { kind: "event", id: message.id, at, text: eventText(message.event) };
   }
-  const text = message.body ?? "This message was deleted.";
-  const author = message.author.name;
+  const said = { id: message.id, author: message.author.name, at, text: message.body ?? "This message was deleted." };
+  const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
+  const marked = redacted ? { ...said, redacted } : said;
   if (message.type === "note") {
-    return { kind: "note", id: message.id, author, at, text };
+    return { kind: "note", ...marked };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", id: message.id, author, at, text };
+    return { kind: "customer", ...marked };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", id: message.id, author, at, text };
+    return { kind: "dimmi", ...marked };
   }
 
-  return { kind: "teammate", id: message.id, author, at, text };
+  return { kind: "teammate", ...marked };
 }

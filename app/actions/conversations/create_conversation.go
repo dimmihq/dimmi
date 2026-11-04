@@ -237,7 +237,8 @@ func (a *CreateConversation) connection(
 }
 
 /*
-insert writes the conversation with the workspace's next number.
+insert writes the conversation with the workspace's next number and its
+subject after the workspace's redaction rules.
 */
 func (o opening) insert(ctx context.Context, w *Writer) (models.Conversation, error) {
 	number, err := w.Q.AllocateConversationNumber(ctx, o.conn.WorkspaceID)
@@ -245,9 +246,14 @@ func (o opening) insert(ctx context.Context, w *Writer) (models.Conversation, er
 		return models.Conversation{}, fmt.Errorf("allocate conversation number: %w", err)
 	}
 
+	subject := copyText(o.in.Subject)
+	if _, err := redactText(ctx, w.Q, o.conn.WorkspaceID, subject); err != nil {
+		return models.Conversation{}, err
+	}
+
 	c, err := w.Q.CreateConversation(ctx, models.CreateConversationParams{
 		WorkspaceID: o.conn.WorkspaceID, Number: number, InboxID: o.conn.InboxID, ChannelConnectionID: o.conn.ID,
-		ContactID: o.contact.ID, Subject: o.in.Subject, Status: string(enums.ConversationStatusOpen),
+		ContactID: o.contact.ID, Subject: subject, Status: string(enums.ConversationStatusOpen),
 		Source: json.RawMessage(`{}`), Now: w.Now,
 	})
 	if err != nil {

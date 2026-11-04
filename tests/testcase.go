@@ -36,6 +36,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/mail"
 	notifydb "github.com/dimmihq/dimmi/framework/notifications/channels/database"
 	"github.com/dimmihq/dimmi/framework/queue"
@@ -159,8 +160,9 @@ func New(tb testing.TB, opts ...Option) *TestCase {
 
 	return &TestCase{
 		T: tb, App: application, Clock: fake, Owner: owner, Workspace: workspace,
-		Database: booted.database, handler: application.Kernel.Handler(routes), environ: booted.environ,
-		before: o.before,
+		Database: booted.database, handler: withLogger(application.Kernel.Handler(routes), application.Log),
+		environ: booted.environ,
+		before:  o.before,
 	}
 }
 
@@ -225,6 +227,16 @@ func collect(opts []Option) *options {
 	}
 
 	return o
+}
+
+/*
+withLogger gives every request the application's logger, as the server
+does, so what a request logs goes where WithLogs points.
+*/
+func withLogger(next fhttp.Handler, logger log.Logger) fhttp.Handler {
+	return fhttp.HandlerFunc(func(w fhttp.ResponseWriter, r *fhttp.Request) {
+		next.ServeHTTP(w, r.WithContext(log.NewContext(r.Context(), logger)))
+	})
 }
 
 /*

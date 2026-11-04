@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/redaction"
 )
 
 /*
@@ -33,7 +34,9 @@ shows.
 const excerptLength = 140
 
 /*
-TimelineEntry is one entry of a conversation's timeline.
+TimelineEntry is one entry of a conversation's timeline. Redactions
+names the redaction rules that changed it before it was stored and how
+often, and is left out when none did.
 */
 type TimelineEntry struct {
 	ID             string          `json:"id"`
@@ -51,6 +54,8 @@ type TimelineEntry struct {
 	DeletedAt      *time.Time      `json:"deleted_at"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
+
+	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
 
 /*
@@ -98,7 +103,25 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		out.Event = json.RawMessage(`null`)
 	}
 
+	out.Redactions = redactionsOf(m.Metadata)
+
 	return out
+}
+
+/*
+redactionsOf reads which rules changed the entry before it was stored,
+nil when none did.
+*/
+func redactionsOf(metadata json.RawMessage) []redaction.Hit {
+	var stamped struct {
+		Redactions []redaction.Hit `json:"redactions"`
+	}
+
+	if json.Unmarshal(metadata, &stamped) != nil {
+		return nil
+	}
+
+	return stamped.Redactions
 }
 
 /*

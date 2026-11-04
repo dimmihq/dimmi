@@ -99,6 +99,7 @@ export interface Message {
   event: TimelineEvent | null;
   deleted_at: string | null;
   created_at: string;
+  redactions?: { rule: string; count: number }[];
 }
 
 export interface Counts {

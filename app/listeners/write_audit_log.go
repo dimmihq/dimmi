@@ -64,6 +64,7 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	l.listenAccess(d)
 	l.listenTeams(d)
 	l.listenWidgets(d)
+	l.listenRedaction(d)
 }
 
 /*

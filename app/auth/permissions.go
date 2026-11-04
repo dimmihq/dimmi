@@ -188,5 +188,6 @@ func settingsWritePermissions() []string {
 		"email_signatures:manage_any", "channels:manage", "notification_destinations:manage", "help_centers:manage",
 		"help_centers:delete", "knowledge:manage", "knowledge:sync", "github:manage", "docs_sync:manage",
 		"oauth_grants:manage_any", "agent_access:manage", "feedback:manage", "imports:manage", "imports:rollback",
+		"redaction:manage",
 	}
 }
