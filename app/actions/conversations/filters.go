@@ -40,16 +40,17 @@ const (
 
 /*
 Filters narrow a list. View is one of the views, with ViewMember naming
-the member. Statuses are the statuses shown, none meaning open, unless
-AnyStatus. Assignee narrows to one member's conversations, Unassigned
-to nobody's and AssigneeMe to the caller's. NoTeam narrows to those no
-team holds. AssignmentWaiting narrows to those automatic assignment
-could not place yet. The pointers and lists narrow only when set.
-Search is what the caller typed.
+the member and ViewID the saved view. Statuses are the statuses shown,
+none meaning open, unless AnyStatus. Assignee narrows to one member's
+conversations, Unassigned to nobody's and AssigneeMe to the caller's.
+NoTeam narrows to those no team holds. AssignmentWaiting narrows to
+those automatic assignment could not place yet. The pointers and lists
+narrow only when set. Search is what the caller typed.
 */
 type Filters struct {
 	View          string
 	ViewMember    ids.UUID
+	ViewID        ids.UUID
 	Statuses      []string
 	AnyStatus     bool
 	Assignee      *ids.UUID

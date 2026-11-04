@@ -30,6 +30,7 @@ import (
 Actions holds the business actions.
 */
 type Actions struct {
+	Widget                  *WidgetActions
 	CreateUser              *users.CreateUser
 	CreateWorkspace         *workspaces.CreateWorkspace
 	StartSession            *auth.StartSession

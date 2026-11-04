@@ -17,39 +17,43 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
-Conversation is one conversation with what is shown beside it.
+Conversation is one conversation with what is shown beside it. Viewers
+are the teammates viewing it, present only when the list asked for them
+and they arrived in time.
 */
 type Conversation struct {
-	ID                     string          `json:"id"`
-	Object                 string          `json:"object"`
-	Number                 int64           `json:"number"`
-	Subject                *string         `json:"subject"`
-	Status                 string          `json:"status"`
-	Spam                   bool            `json:"spam"`
-	Priority               string          `json:"priority"`
-	Unread                 bool            `json:"unread"`
-	WaitingSince           *time.Time      `json:"waiting_since"`
-	SnoozedUntil           *time.Time      `json:"snoozed_until"`
-	LastMessageAt          *time.Time      `json:"last_message_at"`
-	LastActivityAt         *time.Time      `json:"last_activity_at"`
-	FirstCustomerMessageAt *time.Time      `json:"first_customer_message_at"`
-	FirstReplyAt           *time.Time      `json:"first_reply_at"`
-	ClosedAt               *time.Time      `json:"closed_at"`
-	MessageCount           int32           `json:"message_count"`
-	Channel                Channel         `json:"channel"`
-	Inbox                  Named           `json:"inbox"`
-	Contact                ContactSummary  `json:"contact"`
-	Assignee               *MemberSummary  `json:"assignee"`
-	Team                   *Named          `json:"team"`
-	AssignmentWait         *AssignmentWait `json:"assignment_wait"`
-	LastMessage            *MessageSummary `json:"last_message"`
-	CreatedAt              time.Time       `json:"created_at"`
-	UpdatedAt              time.Time       `json:"updated_at"`
+	ID                     string                           `json:"id"`
+	Object                 string                           `json:"object"`
+	Number                 int64                            `json:"number"`
+	Subject                *string                          `json:"subject"`
+	Status                 string                           `json:"status"`
+	Spam                   bool                             `json:"spam"`
+	Priority               string                           `json:"priority"`
+	Unread                 bool                             `json:"unread"`
+	WaitingSince           *time.Time                       `json:"waiting_since"`
+	SnoozedUntil           *time.Time                       `json:"snoozed_until"`
+	LastMessageAt          *time.Time                       `json:"last_message_at"`
+	LastActivityAt         *time.Time                       `json:"last_activity_at"`
+	FirstCustomerMessageAt *time.Time                       `json:"first_customer_message_at"`
+	FirstReplyAt           *time.Time                       `json:"first_reply_at"`
+	ClosedAt               *time.Time                       `json:"closed_at"`
+	MessageCount           int32                            `json:"message_count"`
+	Channel                Channel                          `json:"channel"`
+	Inbox                  Named                            `json:"inbox"`
+	Contact                ContactSummary                   `json:"contact"`
+	Assignee               *MemberSummary                   `json:"assignee"`
+	Team                   *Named                           `json:"team"`
+	AssignmentWait         *AssignmentWait                  `json:"assignment_wait"`
+	LastMessage            *MessageSummary                  `json:"last_message"`
+	Viewers                *[]appbroadcasting.ViewerPayload `json:"viewers,omitempty"`
+	CreatedAt              time.Time                        `json:"created_at"`
+	UpdatedAt              time.Time                        `json:"updated_at"`
 }
 
 /*

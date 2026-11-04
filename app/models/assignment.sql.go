@@ -139,7 +139,7 @@ func (q *Queries) EnsureAssignmentCursor(ctx context.Context, arg EnsureAssignme
 }
 
 const findNextWaitingConversation = `-- name: FindNextWaitingConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations
 WHERE workspace_id = $1 AND inbox_id = $2 AND assignment_wait_reason IS NOT NULL
   AND NOT (id = ANY ($3::uuid[]))
 ORDER BY CASE WHEN $4::boolean THEN priority END DESC NULLS LAST, assignment_waiting_since, id
@@ -191,13 +191,13 @@ func (q *Queries) FindNextWaitingConversation(ctx context.Context, arg FindNextW
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.AssignmentWaitReason,
 		&i.AssignmentWaitingSince,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -357,7 +357,7 @@ const setConversationAssignmentWait = `-- name: SetConversationAssignmentWait :o
 UPDATE conversations
 SET assignment_wait_reason = $1, assignment_waiting_since = coalesce(assignment_waiting_since, $2)
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationAssignmentWaitParams struct {
@@ -403,13 +403,13 @@ func (q *Queries) SetConversationAssignmentWait(ctx context.Context, arg SetConv
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.AssignmentWaitReason,
 		&i.AssignmentWaitingSince,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)

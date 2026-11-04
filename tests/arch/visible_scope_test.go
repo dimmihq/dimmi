@@ -34,6 +34,8 @@ func unscopedQueries() map[string]string {
 		"ListPoolCandidates":           "counts each member's own load for assignment: names no conversation",
 		"FindNextWaitingConversation":  "the assignment drain: the system picks, no member is asking",
 		"ListWaitingInboxes":           "the assignment drain: names inboxes, not conversations",
+		"ListWidgetConversations":      "a widget visitor's own conversations: the customer asks, not a member",
+		"FindWidgetConversation":       "a widget visitor's own conversations: the customer asks, not a member",
 		"CountWaitingConversations":    "inbox-wide queue totals for inbox settings: names no conversation",
 		"CountInboxConversations":      "whether an inbox being deleted is empty: names no conversation",
 	}

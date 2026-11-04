@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dimmihq/dimmi/framework/cache"
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
@@ -35,13 +37,13 @@ type CountsInput struct {
 Counts is how many conversations wait in each view of the sidebar, each
 capped at CountCap: the caller's open, unread and snoozed ones, the
 open and unread ones nobody holds, every open one, spam, and the open
-ones of each inbox.
+ones of each inbox, team, member and pinned saved view.
 */
 type Counts struct {
 	MineOpen, MineUnread, MineSnoozed int64
 	UnassignedOpen, UnassignedUnread  int64
 	AllOpen, SpamTotal                int64
-	Inboxes                           map[ids.UUID]int64
+	Inboxes, Teams, Members, Views    map[ids.UUID]int64
 }
 
 /*
@@ -58,7 +60,10 @@ Rules:
 Errors: [exceptions.ErrForbidden], or a wrapped database error.
 */
 type CountConversations struct {
-	DB *database.DB
+	DB    *database.DB
+	IDs   *ids.Registry
+	Clock clock.Clock
+	Cache *cache.Store
 }
 
 /*
@@ -70,7 +75,7 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 	}
 
 	ws, me, access := in.Membership.Workspace.ID, in.Membership.Member.ID, VisibleScope(in.Membership).Params()
-	out := Counts{Inboxes: map[ids.UUID]int64{}}
+	out := Counts{Inboxes: map[ids.UUID]int64{}, Teams: map[ids.UUID]int64{}, Members: map[ids.UUID]int64{}}
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
@@ -107,8 +112,44 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 			out.Inboxes[row.InboxID] = row.Open
 		}
 
-		return nil
+		out.Views = a.countViews(ctx, tx, in.Membership)
+
+		return countHolders(ctx, q, in.Membership, out)
 	})
 
 	return out, err
+}
+
+/*
+countHolders counts the open conversations of each team and member,
+among those the member may see.
+*/
+func countHolders(ctx context.Context, q *models.Queries, m authz.Membership, out Counts) error {
+	ws, access := m.Workspace.ID, VisibleScope(m).Params()
+
+	teams, err := q.CountOpenConversationsByTeam(ctx, models.CountOpenConversationsByTeamParams{
+		WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+		AccessUnassigned: access.Unassigned,
+	})
+	if err != nil {
+		return fmt.Errorf("count conversations by team: %w", err)
+	}
+
+	members, err := q.CountOpenConversationsByAssignee(ctx, models.CountOpenConversationsByAssigneeParams{
+		WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+		AccessUnassigned: access.Unassigned,
+	})
+	if err != nil {
+		return fmt.Errorf("count conversations by member: %w", err)
+	}
+
+	for _, row := range teams {
+		out.Teams[row.TeamID] = row.Open
+	}
+
+	for _, row := range members {
+		out.Members[row.MemberID] = row.Open
+	}
+
+	return nil
 }

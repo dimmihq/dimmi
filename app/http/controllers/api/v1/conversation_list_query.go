@@ -54,27 +54,31 @@ func conversationAllow() pagination.Allow {
 			"priority", "tag", "tag_any", "created_after", "created_before", "waiting", "unread",
 			"assignment_waiting",
 		},
-		Sorts: []string{"last_message_at", "created_at", "waiting_since", "priority", "snoozed_until"},
+		Sorts:    []string{"last_message_at", "created_at", "waiting_since", "priority", "snoozed_until"},
+		Includes: []string{"viewers"},
 	}
 }
 
 /*
-conversationCursor is where a page of conversations starts, and the
-hash of the list it belongs to.
+conversationCursor is where a page of conversations starts, the hash of
+the list it belongs to, and for a saved view the hash of the version it
+was made for.
 */
 type conversationCursor struct {
 	querybuilder.Keyset
 
-	Hash string `json:"h"`
+	Hash     string `json:"h"`
+	ViewHash string `json:"v,omitempty"`
 }
 
 /*
 listQuery is a parsed conversation list query.
 */
 type listQuery struct {
-	filters conversations.Filters
-	sort    querybuilder.Sort
-	hash    string
+	filters     conversations.Filters
+	sort        querybuilder.Sort
+	defaultSort bool
+	hash        string
 }
 
 /*
@@ -99,7 +103,7 @@ func parseListQuery(registry *ids.Registry, query pagination.Query) (listQuery, 
 		return lq, err
 	}
 
-	lq.hash = listHash(query)
+	lq.hash, lq.defaultSort = listHash(query), len(query.Sorts) == 0
 
 	return lq, nil
 }
@@ -180,6 +184,17 @@ func (p filterParser) view(f *conversations.Filters) error {
 
 	if named, ok := strings.CutPrefix(view, "inbox:"); ok {
 		return p.scopedView(f, models.PrefixInbox, named, &f.InboxID)
+	}
+
+	if strings.HasPrefix(view, string(models.PrefixConversationView)+"_") {
+		id, err := p.ids.Decode(string(models.PrefixConversationView), view)
+		if err != nil {
+			return pagination.ErrInvalidFilter
+		}
+
+		f.View, f.ViewID = conversations.ViewCustom, id
+
+		return nil
 	}
 
 	switch view {

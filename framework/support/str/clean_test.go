@@ -30,3 +30,15 @@ func TestClean(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanText(t *testing.T) {
+	t.Parallel()
+
+	t.Run("keeps lines and tabs and drops what nobody sees", func(t *testing.T) {
+		t.Parallel()
+
+		got := str.CleanText("  first\r\nsecond\tthird\u0000\u202e\xff  ")
+
+		assert.Equal(t, "first\nsecond\tthird", got)
+	})
+}

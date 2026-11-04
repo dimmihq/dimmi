@@ -89,7 +89,7 @@ func TestConversationsStore(t *testing.T) {
 		}).AssertStatus(422)
 	})
 
-	t.Run("refuses customer messages off the api channel and channels without a driver", func(t *testing.T) {
+	t.Run("refuses customer messages off the api channel and channels that cannot initiate", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		widget, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "widget")
@@ -101,7 +101,7 @@ func TestConversationsStore(t *testing.T) {
 		}).AssertStatus(409).AssertJSONPath("code", "channel_not_api")
 		d.owner.PostJSON("/api/v1/conversations", testkit.JSON{
 			"channel_connection_id": id, "body": "Hi", "contact": testkit.JSON{"email": "a@b.co"},
-		}).AssertStatus(422).AssertJSONPath("code", "channel_unsupported")
+		}).AssertStatus(422).AssertJSONPath("code", "channel_cannot_initiate")
 		d.owner.PostJSON("/api/v1/conversations", testkit.JSON{
 			"channel_connection_id": "chn_nope", "body": "Hi", "contact": testkit.JSON{"email": "a@b.co"},
 		}).AssertStatus(422).AssertJSONPath("code", "channel_cannot_initiate")

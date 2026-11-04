@@ -67,11 +67,13 @@ type ReplyInput struct {
 }
 
 /*
-SnoozeInput is when a snooze ends: a time, or a preset.
+SnoozeInput is when a snooze ends: a time, a preset, or the key of one
+of the conversation's snooze options.
 */
 type SnoozeInput struct {
 	Until  *time.Time
 	Preset string
+	Option string
 }
 
 /*
@@ -204,15 +206,20 @@ func (s *session) then(ctx context.Context, in ReplyInput) error {
 	case ThenClose:
 		to.Status = string(enums.ConversationStatusClosed)
 	case ThenSnooze:
-		until, err := conversations.SnoozeUntil(s.w.Now, in.Snooze.Until, in.Snooze.Preset,
-			conversations.Location(s.w.Timezone, s.m.Workspace))
+		until, err := conversations.SnoozeEnd(ctx, s.w, s.c, conversations.SnoozeWhen{
+			Until: in.Snooze.Until, Preset: in.Snooze.Preset, Option: in.Snooze.Option,
+			Location: conversations.Location(s.w.Timezone, s.m.Workspace),
+		})
 		if err != nil {
 			return err
 		}
 
 		to.Status, to.Until = string(enums.ConversationStatusSnoozed), until
 	default:
-		return nil
+		c, err := s.w.WakeIf(ctx, s.m.Workspace, s.c, conversations.ReasonMemberReply)
+		s.c = c
+
+		return err
 	}
 
 	c, _, err := s.w.ChangeStatus(ctx, s.c, to)
