@@ -41,6 +41,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -94,7 +95,7 @@ func (r *ReceiveInboundMessage) ReceiveInboundMessage(
 		return contracts.InboundResult{}, fmt.Errorf("read workspace: %w", err)
 	}
 
-	files, err := r.storeFiles(ctx, msg.Attachments)
+	files, err := r.storeFiles(ctx, workspaceID, msg.Attachments)
 	if err != nil {
 		return contracts.InboundResult{}, err
 	}
@@ -377,10 +378,11 @@ func optional(text string) *string {
 
 /*
 storeFiles writes the message's attachments to disk before anything
-else, so the transaction only records them.
+else, so the transaction only records them. They go in the workspace's
+folder, which its purge deletes with it.
 */
 func (r *ReceiveInboundMessage) storeFiles(
-	ctx context.Context, files []contracts.InboundAttachment,
+	ctx context.Context, workspaceID ids.UUID, files []contracts.InboundAttachment,
 ) ([]storedFile, error) {
 	stored := make([]storedFile, 0, len(files))
 
@@ -390,7 +392,7 @@ func (r *ReceiveInboundMessage) storeFiles(
 			return nil, err
 		}
 
-		path := "attachments/" + ids.NewV7At(r.Clock.Now()).String()
+		path := jobs.WorkspaceStoragePrefix(workspaceID) + "attachments/" + ids.NewV7At(r.Clock.Now()).String()
 
 		err = r.Disk.Put(ctx, path, content, filesystem.PutOptions{ContentType: file.ContentType})
 		if err != nil {
