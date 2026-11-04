@@ -132,7 +132,7 @@ breakLine starts a new line at the edge of a block element.
 */
 func (s *stripper) breakLine(name string) {
 	blocks := []string{
-		"address", "article", "aside", "blockquote", "br", "center", "dd", "div", "dl", "dt", "footer", "h1", "h2",
+		"address", "aside", "blockquote", "br", "center", "dd", "div", "dl", "dt", "footer", "h1", "h2",
 		"h3", "h4", "h5", "h6", "header", "hr", "li", "main", "nav", "ol", "p", "pre", "section", "table", "tr", "ul",
 	}
 	if slices.Contains(blocks, name) {

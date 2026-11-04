@@ -6,9 +6,9 @@
 | An address field is first read by the rules. Real mail breaks them all
 | the time, with an unquoted comma or colon in a name, a trailing dot on
 | a domain, an empty address beside a good one, or no brackets at all. The
-| address is still plainly there, and losing it would lose the customer,
-| so a field that breaks the rules is scanned for whatever is an address
-| and the text before it is taken as the name.
+| address is still plainly there, and losing it would lose the sender, so
+| a field that breaks the rules is scanned for whatever is an address and
+| the text before it is taken as the name.
 |
 | The sender is what the first readable From field says, else the Sender
 | field, else just a name. A sender read this way is never proven: mail

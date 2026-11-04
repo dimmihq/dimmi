@@ -1,6 +1,7 @@
 package email_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -302,6 +303,33 @@ func TestUnnamedAndDisguisedFiles(t *testing.T) {
 			tc.Table("attachments").AssertHas(map[string]any{"filename": want})
 		})
 	}
+
+	t.Run("gives each unnamed file the extension of its type", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		types := map[string]string{
+			"message/rfc822": ".eml", "text/plain": ".txt", "text/html": ".html", "image/jpeg": ".jpg",
+			"image/gif": ".gif", "image/webp": ".webp", "application/pdf": ".pdf", "application/zip": ".zip",
+		}
+
+		var parts strings.Builder
+
+		names := make([]string, 0, len(types))
+		for contentType, extension := range types {
+			parts.WriteString("--m\r\nContent-Type: " + contentType +
+				"\r\nContent-Disposition: attachment\r\n\r\nx\r\n")
+			names = append(names, "attachment-"+strconv.Itoa(len(names)+1)+extension)
+		}
+
+		deliver(tc, []byte("From: Hans <hans@customer.test>\r\nTo: "+address.ForwardingAddress+
+			"\r\nSubject: Files\r\nContent-Type: multipart/mixed; boundary=m\r\n\r\n"+parts.String()+"--m--\r\n"), "")
+
+		for _, name := range names {
+			tc.Table("attachments").AssertHas(map[string]any{"filename": name})
+		}
+	})
 
 	t.Run("names an attached mail after its subject", func(t *testing.T) {
 		t.Parallel()
