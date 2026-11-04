@@ -56,6 +56,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.4.1
 	github.com/m-mizutani/masq v0.2.3
+	github.com/maypok86/otter/v2 v2.4.0
 	github.com/medama-io/go-useragent v1.2.5
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -183,7 +184,6 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
-	github.com/maypok86/otter/v2 v2.4.0 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/mholt/acmez/v3 v3.1.7 // indirect
 	github.com/miekg/dns v1.1.73 // indirect

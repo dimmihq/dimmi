@@ -84,6 +84,50 @@ func TestClient(t *testing.T) {
 	})
 }
 
+func TestVia(t *testing.T) {
+	t.Parallel()
+
+	t.Run("asks the named server", func(t *testing.T) {
+		t.Parallel()
+		server := serveZone(t, map[string]dns.Records{"example.test": {TXT: []string{"from server"}}})
+		via := dns.New(dns.Config{AllowFakes: true}).Via(server)
+
+		txt, err := via.TXT(t.Context(), "example.test")
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"from server"}, txt)
+	})
+
+	t.Run("answers from the fake once the client is faked", func(t *testing.T) {
+		t.Parallel()
+		silent := silentServer(t)
+		client := dns.New(dns.Config{AllowFakes: true, Timeout: 50 * time.Millisecond})
+		via := client.Via(silent)
+		addr := netip.MustParseAddr("192.0.2.9")
+		client.Fake().Set("example.test", dns.Records{
+			TXT: []string{"t"}, MX: []dns.MX{{Host: "mx.example.test"}}, Addrs: []netip.Addr{addr},
+			NS: []string{"ns.example.test"},
+		}).Set("alias.example.test", dns.Records{CNAME: "example.test"})
+
+		txt, err := via.TXT(t.Context(), "example.test")
+		require.NoError(t, err)
+		mx, err := via.MX(t.Context(), "example.test")
+		require.NoError(t, err)
+		canonical, err := via.CNAME(t.Context(), "alias.example.test")
+		require.NoError(t, err)
+		addrs, err := via.Addrs(t.Context(), "example.test")
+		require.NoError(t, err)
+		ns, err := via.NS(t.Context(), "example.test")
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"t"}, txt)
+		assert.Equal(t, []dns.MX{{Host: "mx.example.test"}}, mx)
+		assert.Equal(t, "example.test", canonical)
+		assert.Equal(t, []netip.Addr{addr}, addrs)
+		assert.Equal(t, []string{"ns.example.test"}, ns)
+	})
+}
+
 func TestFake(t *testing.T) {
 	t.Parallel()
 

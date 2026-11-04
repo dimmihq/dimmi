@@ -1,0 +1,64 @@
+{
+  "warnings": {
+    "doubled_domain": "We found this record at {{.value}}. Your DNS host adds your domain for you, so enter only the first part of the name.",
+    "cloudflare_proxied": "The record at {{.host}} is proxied through Cloudflare. Open it, set Proxy status to DNS only, and save.",
+    "duplicate_spf": "{{.host}} has two SPF records and mail servers reject both. Replace them with this one record: {{.value}}",
+    "spf_too_many_lookups": "The SPF record of {{.host}} needs more than 10 lookups, so mail servers stop reading it. Remove includes you no longer use.",
+    "spf_missing_include": "The SPF record of {{.host}} does not allow your email provider yet. Change it to: {{.value}}",
+    "dmarc_missing": "{{.host}} has no DMARC record. Gmail, Yahoo and Outlook expect one. Add the DMARC record below.",
+    "dmarc_multiple": "{{.host}} has more than one DMARC record, so mail servers ignore all of them. Keep only one.",
+    "dmarc_reject_without_alignment": "Your DMARC policy rejects mail that is not signed. Add the signing records before sending from this domain, or mail will be refused.",
+    "mx_conflict_return_path": "{{.host}} already receives mail through another server. Use another name for the return path, such as {{.value}}.",
+    "cname_with_other_records": "{{.host}} is an alias, so it cannot hold the text record too. Remove the alias and add the TXT record.",
+    "wrong_selector_record_type": "The record at {{.host}} has the wrong type. Delete it and add it again with the type shown in the table.",
+    "ownership_token_other_workspace": "The record at {{.host}} holds the code of another dimmi workspace. Replace its value with the one shown here.",
+    "propagating": "One DNS server sees a record and another does not yet. This usually clears within an hour. Nothing to do.",
+    "domain_claimed": "Another dimmi workspace sends from {{.host}}. To move it here, remove that workspace's verification record and keep this one."
+  },
+  "failures": {
+    "not_verified": "The records were not found within three days. Check them and select Check now to try again.",
+    "records_removed": "The records were removed from DNS, so replies are sent from your dimmi address. Add them again to send from this domain.",
+    "ownership_transferred": "Another workspace proved it owns this domain, so replies are sent from your dimmi address.",
+    "provider_rejected_sender": "The email provider refused to send from this domain, so replies are sent from your dimmi address."
+  },
+  "hosts": {
+    "common": {
+      "step_add": "Add each record below with the type, name and value shown.",
+      "step_check": "Come back and select Check now. Most hosts publish records within minutes."
+    },
+    "cloudflare": {
+      "step_open": "Open your domain in Cloudflare and go to DNS, then Records.",
+      "quirk_proxy": "Set Proxy status to DNS only for every record. A proxied alias cannot sign mail."
+    },
+    "route53": {
+      "step_open": "Open the hosted zone of your domain in Amazon Route 53.",
+      "quirk_quote": "Enter TXT values inside double quotes, and split values longer than 255 characters into several quoted strings."
+    },
+    "godaddy": {
+      "step_open": "Open My Products in GoDaddy, then DNS for your domain.",
+      "quirk_root": "Enter @ as the name of a record at the domain itself."
+    },
+    "namecheap": {
+      "step_open": "Open Domain List in Namecheap, select Manage, then Advanced DNS.",
+      "quirk_name": "Enter only the first part of each name. Namecheap adds your domain."
+    },
+    "squarespace": {
+      "step_open": "Open Domains in Squarespace, select your domain, then DNS settings."
+    },
+    "vercel": {
+      "step_open": "Open Domains in your Vercel dashboard and select your domain."
+    },
+    "netlify": {
+      "step_open": "Open Domains in Netlify, select your domain, then DNS records."
+    },
+    "porkbun": {
+      "step_open": "Open Domain Management in Porkbun and select DNS for your domain."
+    },
+    "hover": {
+      "step_open": "Open your domain in Hover and go to the DNS tab."
+    },
+    "other": {
+      "step_open": "Sign in where you manage your domain's DNS records."
+    }
+  }
+}

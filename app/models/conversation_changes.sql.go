@@ -13,7 +13,7 @@ import (
 )
 
 const findConversationByNumber = `-- name: FindConversationByNumber :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority FROM conversations WHERE workspace_id = $1 AND number = $2
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations WHERE workspace_id = $1 AND number = $2
 `
 
 type FindConversationByNumberParams struct {
@@ -52,11 +52,11 @@ func (q *Queries) FindConversationByNumber(ctx context.Context, arg FindConversa
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -64,7 +64,7 @@ func (q *Queries) FindConversationByNumber(ctx context.Context, arg FindConversa
 }
 
 const lockConversation = `-- name: LockConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority FROM conversations WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type LockConversationParams struct {
@@ -104,11 +104,11 @@ func (q *Queries) LockConversation(ctx context.Context, arg LockConversationPara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -138,7 +138,7 @@ SET message_count = message_count + 1,
         ELSE $1::timestamptz END,
     updated_at = $1::timestamptz
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type RecordConversationMessageParams struct {
@@ -192,11 +192,11 @@ func (q *Queries) RecordConversationMessage(ctx context.Context, arg RecordConve
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -208,7 +208,7 @@ UPDATE conversations
 SET assignee_member_id = $1, assignee_team_id = $2,
     updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationAssignmentParams struct {
@@ -256,11 +256,11 @@ func (q *Queries) SetConversationAssignment(ctx context.Context, arg SetConversa
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -271,7 +271,7 @@ const setConversationAttributes = `-- name: SetConversationAttributes :one
 UPDATE conversations
 SET subject = $1, priority = $2, inbox_id = $3, updated_at = $4
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationAttributesParams struct {
@@ -321,11 +321,11 @@ func (q *Queries) SetConversationAttributes(ctx context.Context, arg SetConversa
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -335,7 +335,7 @@ func (q *Queries) SetConversationAttributes(ctx context.Context, arg SetConversa
 const setConversationSpam = `-- name: SetConversationSpam :one
 UPDATE conversations SET spam = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationSpamParams struct {
@@ -381,11 +381,11 @@ func (q *Queries) SetConversationSpam(ctx context.Context, arg SetConversationSp
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)
@@ -400,7 +400,7 @@ SET status = $1::text,
     waiting_since = CASE WHEN $1::text = 'closed' THEN NULL ELSE waiting_since END,
     updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, waiting_since, last_activity_at, last_message_id, previous_conversation_id, is_test, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationStatusParams struct {
@@ -449,11 +449,11 @@ func (q *Queries) SetConversationStatus(ctx context.Context, arg SetConversation
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
 		&i.WaitingSince,
 		&i.LastActivityAt,
 		&i.LastMessageID,
-		&i.PreviousConversationID,
-		&i.IsTest,
 		&i.Search,
 		&i.Priority,
 	)

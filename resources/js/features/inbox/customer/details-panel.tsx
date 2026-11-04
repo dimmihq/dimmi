@@ -24,6 +24,7 @@ import { StatusDot } from "@/components/base/badges/status-dot";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { TeamRow } from "@/features/inbox/team-select";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
@@ -110,6 +111,7 @@ function CaseFields({
           ))}
         </Select>
       </Row>
+      <TeamRow conversation={conversation} caze={caze} />
       <Row label="Status">
         <Select
           aria-label="Status"
