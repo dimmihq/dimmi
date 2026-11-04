@@ -21,7 +21,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/telemetry"
-	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -118,8 +117,9 @@ func (m *InboundMetrics) Processed(ctx context.Context, row models.InboundEmail)
 
 /*
 MeteredInboundProcessor processes received email inside a trace span and
-records the outcome once processing settled. Reading the outcome failing
-loses only the figure.
+records the outcome once processing settled. The outcome is read inside a
+workspace transaction, the only place row security lets it be seen;
+reading it failing loses only the figure.
 */
 type MeteredInboundProcessor struct {
 	Processor *ProcessInboundEmail
@@ -139,8 +139,14 @@ func (p *MeteredInboundProcessor) Handle(ctx context.Context, workspaceID, inbou
 		span.Fail(err)
 	}
 
-	row, findErr := models.New(p.DB).FindInboundEmail(tenancy.With(ctx, workspaceID.String()),
-		models.FindInboundEmailParams{WorkspaceID: workspaceID, ID: inboundEmailID})
+	var row models.InboundEmail
+
+	findErr := within(inWorkspace(ctx, workspaceID), p.DB, func(ctx context.Context, q *models.Queries) error {
+		var err error
+		row, err = q.FindInboundEmail(ctx, models.FindInboundEmailParams{WorkspaceID: workspaceID, ID: inboundEmailID})
+
+		return err
+	})
 	if findErr == nil && row.Status != string(enums.InboundEmailStatusProcessing) {
 		p.Metrics.Processed(ctx, row)
 	}
