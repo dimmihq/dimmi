@@ -63,21 +63,23 @@ TestCase is one test's running application with a workspace and its
 owner. Database is the test's own database the application runs on.
 */
 type TestCase struct {
-	T         testing.TB
-	App       *app.App
-	Clock     *clock.Fake
-	Owner     models.User
-	Workspace workspaces.CreatedWorkspace
-	Database  testkit.Database
-	handler   fhttp.Handler
-	mail      *mail.Fake
-	mailOnce  sync.Once
-	social    *socialite.Fake
-	oauthOnce sync.Once
-	role      *database.DB
-	roleOnce  sync.Once
-	environ   []string
-	before    []func(a *app.App)
+	T            testing.TB
+	App          *app.App
+	Clock        *clock.Fake
+	Owner        models.User
+	Workspace    workspaces.CreatedWorkspace
+	Database     testkit.Database
+	handler      fhttp.Handler
+	mail         *mail.Fake
+	mailOnce     sync.Once
+	social       *socialite.Fake
+	oauthOnce    sync.Once
+	role         *database.DB
+	roleOnce     sync.Once
+	operator     *database.DB
+	operatorOnce sync.Once
+	environ      []string
+	before       []func(a *app.App)
 }
 
 /*
@@ -201,7 +203,7 @@ func start(tb testing.TB, o *options) (booted, error) {
 
 	fake := clock.NewFake(Epoch())
 	db := MigratedDatabase(tb)
-	foundationOptions.Environ = append(environment(tb, db.URL), o.env...)
+	foundationOptions.Environ = append(environment(tb, applicationURL(tb, db)), o.env...)
 	foundationOptions.LogWriter = cmp.Or[io.Writer](o.logs, io.Discard)
 	foundationOptions.Clock = fake
 
@@ -240,7 +242,7 @@ Table returns assertions on a table, read outside any workspace, as an
 operator would.
 */
 func (tc *TestCase) Table(table string) *testkit.TableAssertions {
-	return testkit.Table(tc.T, tc.App.DB, table)
+	return testkit.Table(tc.T, tc.operatorDB(), table)
 }
 
 /*
