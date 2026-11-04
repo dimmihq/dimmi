@@ -26,6 +26,7 @@ UPDATE conversations
 SET status = @status::text,
     snoozed_until = CASE WHEN @status::text = 'snoozed' THEN sqlc.narg(snoozed_until)::timestamptz END,
     closed_at = CASE WHEN @status::text = 'closed' THEN @now::timestamptz END,
+    waiting_since = CASE WHEN @status::text = 'closed' THEN NULL ELSE waiting_since END,
     updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
@@ -49,10 +50,18 @@ RETURNING *;
 -- RecordConversationMessage counts a new message into the conversation:
 -- its message count and last message time, and, by who wrote it, the
 -- first and last customer message or the first and last reply. An
--- automatic message, such as an auto-reply, only moves the timeline.
+-- automatic message, such as an auto-reply, only moves the timeline. The
+-- customer starts waiting at their first unanswered message and stops
+-- when anyone but them replies.
 UPDATE conversations
 SET message_count = message_count + 1,
     last_message_at = @at::timestamptz,
+    last_activity_at = @at::timestamptz,
+    last_message_id = @message_id::uuid,
+    waiting_since = CASE
+        WHEN NOT @from_customer::boolean THEN NULL
+        WHEN @automatic::boolean THEN waiting_since
+        ELSE coalesce(waiting_since, @at::timestamptz) END,
     first_customer_message_at = CASE
         WHEN @from_customer::boolean AND NOT @automatic::boolean
         THEN coalesce(first_customer_message_at, @at::timestamptz)
@@ -69,6 +78,6 @@ WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
 -- name: TouchConversation :exec
--- TouchConversation records that the conversation changed, such as by a
--- new note, without changing anything else.
-UPDATE conversations SET updated_at = @now WHERE workspace_id = @workspace_id AND id = @id;
+-- TouchConversation records activity that is not a message, such as a new
+-- note, without moving the conversation in lists sorted by message.
+UPDATE conversations SET updated_at = @now, last_activity_at = @now WHERE workspace_id = @workspace_id AND id = @id;

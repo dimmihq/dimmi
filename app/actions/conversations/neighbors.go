@@ -21,6 +21,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 )
 
 /*
@@ -31,7 +32,7 @@ type NeighborsInput struct {
 	Membership authz.Membership
 	Ref        Ref
 	Filters    Filters
-	Sort       Sort
+	Sort       querybuilder.Sort
 }
 
 /*
@@ -67,31 +68,24 @@ func (a *ShowNeighbors) Handle(ctx context.Context, in NeighborsInput) (Neighbor
 	var out Neighbors
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-
-		c, err := Find(ctx, q, in.Membership.Workspace.ID, in.Ref)
+		c, err := Find(ctx, models.New(tx), in.Membership.Workspace.ID, in.Ref)
 		if err != nil {
 			return err
 		}
 
-		params, ok := listParams(in.Membership, in.Filters, in.Sort)
+		list, ok := listOf(in.Membership, in.Filters, in.Sort)
 		if !ok {
 			return nil
 		}
 
-		at := c.CreatedAt
-		if !in.Sort.Created && c.LastMessageAt != nil {
-			at = *c.LastMessageAt
-		}
+		list.After, list.Limit = new(positionOf(c, in.Sort)), 1
 
-		params.AfterAt, params.AfterID, params.RowLimit = &at, &c.ID, 1
-
-		if out.Next, err = first(ctx, q, params); err != nil {
+		if out.Next, err = first(ctx, tx, list); err != nil {
 			return err
 		}
 
-		params.Descending = !params.Descending
-		out.Prev, err = first(ctx, q, params)
+		list.Reverse = true
+		out.Prev, err = first(ctx, tx, list)
 
 		return err
 	})
@@ -103,8 +97,8 @@ func (a *ShowNeighbors) Handle(ctx context.Context, in NeighborsInput) (Neighbor
 first returns the first conversation of the list, nil when it is
 empty.
 */
-func first(ctx context.Context, q *models.Queries, p models.FilterConversationsParams) (*models.Conversation, error) {
-	rows, err := q.FilterConversations(ctx, p)
+func first(ctx context.Context, tx *database.Tx, list querybuilder.Conversations) (*models.Conversation, error) {
+	rows, err := selectConversations(ctx, tx, list)
 	if err != nil {
 		return nil, fmt.Errorf("find neighbor: %w", err)
 	}
@@ -113,5 +107,5 @@ func first(ctx context.Context, q *models.Queries, p models.FilterConversationsP
 		return nil, nil
 	}
 
-	return &rows[0].Conversation, nil
+	return &rows[0], nil
 }

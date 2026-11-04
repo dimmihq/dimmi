@@ -195,6 +195,10 @@ func (c *ConversationMessageController) StoreReply(
 
 	if b.Snooze != nil {
 		reply.Snooze.Until = b.Snooze.Until
+		if b.Snooze.Option != nil {
+			reply.Snooze.Option = *b.Snooze.Option
+		}
+
 		if b.Snooze.Preset != nil {
 			reply.Snooze.Preset = *b.Snooze.Preset
 		}

@@ -56,6 +56,22 @@ export function ago(iso: string | null, now = Date.now()): string {
 }
 
 /*
+ * waitedFor says how long since the moment, in the shortest unit that
+ * reads well: minutes, hours, then days.
+ */
+export function waitedFor(iso: string, now = Date.now()): string {
+  const minutes = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60_000));
+  if (minutes < 60) {
+    return `${Math.max(minutes, 1)} m`;
+  }
+  if (minutes < 1440) {
+    return `${Math.floor(minutes / 60)} h`;
+  }
+
+  return `${Math.floor(minutes / 1440)} d`;
+}
+
+/*
  * A thread entry is a timeline entry as the thread draws it: from the
  * customer, from a teammate, from dimmi (the agent that answers
  * customers), an internal note, or an event such as a handover.
@@ -79,12 +95,12 @@ const statusWords: Record<string, string> = {
  */
 export function eventText(event: TimelineEvent): string {
   const actor = event.actor.name || "dimmi";
-  if (event.name === "conversation.assigned") {
+  if (event.name === "conversation.assigned" && typeof event.to !== "string") {
     const to = event.to?.member?.name ?? event.to?.team?.name;
     return to ? `${actor} assigned the conversation to ${to}` : `${actor} unassigned the conversation`;
   }
   if (event.name === "conversation.priority_changed") {
-    return event.priority ? `${actor} marked the conversation as a priority` : `${actor} removed the priority`;
+    return event.to === "none" ? `${actor} removed the priority` : `${actor} set the priority to ${event.to}`;
   }
 
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;

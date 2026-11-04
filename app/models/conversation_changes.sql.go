@@ -13,7 +13,7 @@ import (
 )
 
 const findConversationByNumber = `-- name: FindConversationByNumber :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id FROM conversations WHERE workspace_id = $1 AND number = $2
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations WHERE workspace_id = $1 AND number = $2
 `
 
 type FindConversationByNumberParams struct {
@@ -36,7 +36,6 @@ func (q *Queries) FindConversationByNumber(ctx context.Context, arg FindConversa
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -55,12 +54,17 @@ func (q *Queries) FindConversationByNumber(ctx context.Context, arg FindConversa
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
 
 const lockConversation = `-- name: LockConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id FROM conversations WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type LockConversationParams struct {
@@ -84,7 +88,6 @@ func (q *Queries) LockConversation(ctx context.Context, arg LockConversationPara
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -103,6 +106,11 @@ func (q *Queries) LockConversation(ctx context.Context, arg LockConversationPara
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
@@ -111,24 +119,31 @@ const recordConversationMessage = `-- name: RecordConversationMessage :one
 UPDATE conversations
 SET message_count = message_count + 1,
     last_message_at = $1::timestamptz,
+    last_activity_at = $1::timestamptz,
+    last_message_id = $2::uuid,
+    waiting_since = CASE
+        WHEN NOT $3::boolean THEN NULL
+        WHEN $4::boolean THEN waiting_since
+        ELSE coalesce(waiting_since, $1::timestamptz) END,
     first_customer_message_at = CASE
-        WHEN $2::boolean AND NOT $3::boolean
+        WHEN $3::boolean AND NOT $4::boolean
         THEN coalesce(first_customer_message_at, $1::timestamptz)
         ELSE first_customer_message_at END,
     last_customer_message_at = CASE
-        WHEN $2::boolean AND NOT $3::boolean THEN $1::timestamptz
+        WHEN $3::boolean AND NOT $4::boolean THEN $1::timestamptz
         ELSE last_customer_message_at END,
-    first_reply_at = CASE WHEN $2::boolean OR $3::boolean THEN first_reply_at
+    first_reply_at = CASE WHEN $3::boolean OR $4::boolean THEN first_reply_at
         ELSE coalesce(first_reply_at, $1::timestamptz) END,
-    last_reply_at = CASE WHEN $2::boolean OR $3::boolean THEN last_reply_at
+    last_reply_at = CASE WHEN $3::boolean OR $4::boolean THEN last_reply_at
         ELSE $1::timestamptz END,
     updated_at = $1::timestamptz
-WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id
+WHERE workspace_id = $5 AND id = $6
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type RecordConversationMessageParams struct {
 	At           time.Time `json:"at"`
+	MessageID    ids.UUID  `json:"message_id"`
 	FromCustomer bool      `json:"from_customer"`
 	Automatic    bool      `json:"automatic"`
 	WorkspaceID  ids.UUID  `json:"workspace_id"`
@@ -138,10 +153,13 @@ type RecordConversationMessageParams struct {
 // RecordConversationMessage counts a new message into the conversation:
 // its message count and last message time, and, by who wrote it, the
 // first and last customer message or the first and last reply. An
-// automatic message, such as an auto-reply, only moves the timeline.
+// automatic message, such as an auto-reply, only moves the timeline. The
+// customer starts waiting at their first unanswered message and stops
+// when anyone but them replies.
 func (q *Queries) RecordConversationMessage(ctx context.Context, arg RecordConversationMessageParams) (Conversation, error) {
 	row := q.db.QueryRow(ctx, recordConversationMessage,
 		arg.At,
+		arg.MessageID,
 		arg.FromCustomer,
 		arg.Automatic,
 		arg.WorkspaceID,
@@ -158,7 +176,6 @@ func (q *Queries) RecordConversationMessage(ctx context.Context, arg RecordConve
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -177,6 +194,11 @@ func (q *Queries) RecordConversationMessage(ctx context.Context, arg RecordConve
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
@@ -186,7 +208,7 @@ UPDATE conversations
 SET assignee_member_id = $1, assignee_team_id = $2,
     updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationAssignmentParams struct {
@@ -218,7 +240,6 @@ func (q *Queries) SetConversationAssignment(ctx context.Context, arg SetConversa
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -237,6 +258,11 @@ func (q *Queries) SetConversationAssignment(ctx context.Context, arg SetConversa
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
@@ -245,12 +271,12 @@ const setConversationAttributes = `-- name: SetConversationAttributes :one
 UPDATE conversations
 SET subject = $1, priority = $2, inbox_id = $3, updated_at = $4
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationAttributesParams struct {
 	Subject     *string   `json:"subject"`
-	Priority    bool      `json:"priority"`
+	Priority    int16     `json:"priority"`
 	InboxID     ids.UUID  `json:"inbox_id"`
 	Now         time.Time `json:"now"`
 	WorkspaceID ids.UUID  `json:"workspace_id"`
@@ -279,7 +305,6 @@ func (q *Queries) SetConversationAttributes(ctx context.Context, arg SetConversa
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -298,6 +323,11 @@ func (q *Queries) SetConversationAttributes(ctx context.Context, arg SetConversa
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
@@ -305,7 +335,7 @@ func (q *Queries) SetConversationAttributes(ctx context.Context, arg SetConversa
 const setConversationSpam = `-- name: SetConversationSpam :one
 UPDATE conversations SET spam = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationSpamParams struct {
@@ -335,7 +365,6 @@ func (q *Queries) SetConversationSpam(ctx context.Context, arg SetConversationSp
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -354,6 +383,11 @@ func (q *Queries) SetConversationSpam(ctx context.Context, arg SetConversationSp
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
@@ -363,9 +397,10 @@ UPDATE conversations
 SET status = $1::text,
     snoozed_until = CASE WHEN $1::text = 'snoozed' THEN $2::timestamptz END,
     closed_at = CASE WHEN $1::text = 'closed' THEN $3::timestamptz END,
+    waiting_since = CASE WHEN $1::text = 'closed' THEN NULL ELSE waiting_since END,
     updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type SetConversationStatusParams struct {
@@ -398,7 +433,6 @@ func (q *Queries) SetConversationStatus(ctx context.Context, arg SetConversation
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -417,12 +451,17 @@ func (q *Queries) SetConversationStatus(ctx context.Context, arg SetConversation
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
 
 const touchConversation = `-- name: TouchConversation :exec
-UPDATE conversations SET updated_at = $1 WHERE workspace_id = $2 AND id = $3
+UPDATE conversations SET updated_at = $1, last_activity_at = $1 WHERE workspace_id = $2 AND id = $3
 `
 
 type TouchConversationParams struct {
@@ -431,8 +470,8 @@ type TouchConversationParams struct {
 	ID          ids.UUID  `json:"id"`
 }
 
-// TouchConversation records that the conversation changed, such as by a
-// new note, without changing anything else.
+// TouchConversation records activity that is not a message, such as a new
+// note, without moving the conversation in lists sorted by message.
 func (q *Queries) TouchConversation(ctx context.Context, arg TouchConversationParams) error {
 	_, err := q.db.Exec(ctx, touchConversation, arg.Now, arg.WorkspaceID, arg.ID)
 	return err

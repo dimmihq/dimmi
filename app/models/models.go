@@ -130,34 +130,38 @@ type ContactIdentity struct {
 }
 
 type Conversation struct {
-	ID                     ids.UUID        `json:"id"`
-	WorkspaceID            ids.UUID        `json:"workspace_id"`
-	Number                 int64           `json:"number"`
-	InboxID                ids.UUID        `json:"inbox_id"`
-	ChannelConnectionID    ids.UUID        `json:"channel_connection_id"`
-	ContactID              ids.UUID        `json:"contact_id"`
-	Subject                *string         `json:"subject"`
-	Status                 string          `json:"status"`
-	Spam                   bool            `json:"spam"`
-	Priority               bool            `json:"priority"`
-	AssigneeMemberID       *ids.UUID       `json:"assignee_member_id"`
-	AssigneeTeamID         *ids.UUID       `json:"assignee_team_id"`
-	AiState                string          `json:"ai_state"`
-	SnoozedUntil           *time.Time      `json:"snoozed_until"`
-	ExternalThreadKey      *string         `json:"external_thread_key"`
-	Source                 json.RawMessage `json:"source"`
-	FirstCustomerMessageAt *time.Time      `json:"first_customer_message_at"`
-	LastCustomerMessageAt  *time.Time      `json:"last_customer_message_at"`
-	FirstReplyAt           *time.Time      `json:"first_reply_at"`
-	LastReplyAt            *time.Time      `json:"last_reply_at"`
-	LastMessageAt          *time.Time      `json:"last_message_at"`
-	ClosedAt               *time.Time      `json:"closed_at"`
-	MessageCount           int32           `json:"message_count"`
-	DeletedAt              *time.Time      `json:"deleted_at"`
-	CreatedAt              time.Time       `json:"created_at"`
-	UpdatedAt              time.Time       `json:"updated_at"`
-	IsTest                 bool            `json:"is_test"`
-	PreviousConversationID *ids.UUID       `json:"previous_conversation_id"`
+	ID                     ids.UUID                `json:"id"`
+	WorkspaceID            ids.UUID                `json:"workspace_id"`
+	Number                 int64                   `json:"number"`
+	InboxID                ids.UUID                `json:"inbox_id"`
+	ChannelConnectionID    ids.UUID                `json:"channel_connection_id"`
+	ContactID              ids.UUID                `json:"contact_id"`
+	Subject                *string                 `json:"subject"`
+	Status                 string                  `json:"status"`
+	Spam                   bool                    `json:"spam"`
+	AssigneeMemberID       *ids.UUID               `json:"assignee_member_id"`
+	AssigneeTeamID         *ids.UUID               `json:"assignee_team_id"`
+	AiState                string                  `json:"ai_state"`
+	SnoozedUntil           *time.Time              `json:"snoozed_until"`
+	ExternalThreadKey      *string                 `json:"external_thread_key"`
+	Source                 json.RawMessage         `json:"source"`
+	FirstCustomerMessageAt *time.Time              `json:"first_customer_message_at"`
+	LastCustomerMessageAt  *time.Time              `json:"last_customer_message_at"`
+	FirstReplyAt           *time.Time              `json:"first_reply_at"`
+	LastReplyAt            *time.Time              `json:"last_reply_at"`
+	LastMessageAt          *time.Time              `json:"last_message_at"`
+	ClosedAt               *time.Time              `json:"closed_at"`
+	MessageCount           int32                   `json:"message_count"`
+	DeletedAt              *time.Time              `json:"deleted_at"`
+	CreatedAt              time.Time               `json:"created_at"`
+	UpdatedAt              time.Time               `json:"updated_at"`
+	IsTest                 bool                    `json:"is_test"`
+	PreviousConversationID *ids.UUID               `json:"previous_conversation_id"`
+	WaitingSince           *time.Time              `json:"waiting_since"`
+	LastActivityAt         *time.Time              `json:"last_activity_at"`
+	LastMessageID          *ids.UUID               `json:"last_message_id"`
+	Search                 database.SearchDocument `json:"search"`
+	Priority               int16                   `json:"priority"`
 }
 
 type ConversationParticipant struct {
@@ -185,6 +189,23 @@ type ConversationTag struct {
 	CreatedByType  string    `json:"created_by_type"`
 	CreatedByID    *ids.UUID `json:"created_by_id"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ConversationView struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Icon              *string         `json:"icon"`
+	Scope             string          `json:"scope"`
+	OwnerMemberID     *ids.UUID       `json:"owner_member_id"`
+	Definition        json.RawMessage `json:"definition"`
+	Sort              *string         `json:"sort"`
+	StatusFilter      *string         `json:"status_filter"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	Position          int32           `json:"position"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+	DeletedAt         *time.Time      `json:"deleted_at"`
 }
 
 type EmailAddress struct {
@@ -395,29 +416,48 @@ type Invitation struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type MemberInboxPreference struct {
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	MemberID         ids.UUID        `json:"member_id"`
+	Sidebar          json.RawMessage `json:"sidebar"`
+	Views            json.RawMessage `json:"views"`
+	PinnedAttributes json.RawMessage `json:"pinned_attributes"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+}
+
 type Message struct {
-	ID               ids.UUID                `json:"id"`
-	WorkspaceID      ids.UUID                `json:"workspace_id"`
-	ConversationID   ids.UUID                `json:"conversation_id"`
-	Type             string                  `json:"type"`
-	AuthorType       string                  `json:"author_type"`
-	AuthorID         *ids.UUID               `json:"author_id"`
-	Body             *string                 `json:"body"`
-	BodyHtml         *string                 `json:"body_html"`
-	Event            json.RawMessage         `json:"event"`
-	ChannelMessageID *string                 `json:"channel_message_id"`
-	DedupeKey        *string                 `json:"dedupe_key"`
-	DeliveryStatus   *string                 `json:"delivery_status"`
-	DeliveryError    *string                 `json:"delivery_error"`
-	Substantive      bool                    `json:"substantive"`
-	Metadata         json.RawMessage         `json:"metadata"`
-	EditedAt         *time.Time              `json:"edited_at"`
-	SentAt           *time.Time              `json:"sent_at"`
-	ReadAt           *time.Time              `json:"read_at"`
-	DeletedAt        *time.Time              `json:"deleted_at"`
-	Search           database.SearchDocument `json:"search"`
-	CreatedAt        time.Time               `json:"created_at"`
-	UpdatedAt        time.Time               `json:"updated_at"`
+	ID                  ids.UUID                `json:"id"`
+	WorkspaceID         ids.UUID                `json:"workspace_id"`
+	ConversationID      ids.UUID                `json:"conversation_id"`
+	Type                string                  `json:"type"`
+	AuthorType          string                  `json:"author_type"`
+	AuthorID            *ids.UUID               `json:"author_id"`
+	Body                *string                 `json:"body"`
+	BodyHtml            *string                 `json:"body_html"`
+	Event               json.RawMessage         `json:"event"`
+	ChannelMessageID    *string                 `json:"channel_message_id"`
+	DedupeKey           *string                 `json:"dedupe_key"`
+	DeliveryStatus      *string                 `json:"delivery_status"`
+	DeliveryError       *string                 `json:"delivery_error"`
+	Substantive         bool                    `json:"substantive"`
+	Metadata            json.RawMessage         `json:"metadata"`
+	EditedAt            *time.Time              `json:"edited_at"`
+	SentAt              *time.Time              `json:"sent_at"`
+	ReadAt              *time.Time              `json:"read_at"`
+	DeletedAt           *time.Time              `json:"deleted_at"`
+	CreatedAt           time.Time               `json:"created_at"`
+	UpdatedAt           time.Time               `json:"updated_at"`
+	Search              database.SearchDocument `json:"search"`
+	ChannelConnectionID *ids.UUID               `json:"channel_connection_id"`
+}
+
+type MessageMention struct {
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	MessageID         ids.UUID  `json:"message_id"`
+	ConversationID    ids.UUID  `json:"conversation_id"`
+	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	ViaTeamID         *ids.UUID `json:"via_team_id"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type OauthAuthorizationCode struct {
@@ -614,6 +654,13 @@ type Session struct {
 	ExpiresAt       time.Time       `json:"expires_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type SnoozeList struct {
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TeamID      *ids.UUID       `json:"team_id"`
+	Options     json.RawMessage `json:"options"`
+	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
 type Tag struct {

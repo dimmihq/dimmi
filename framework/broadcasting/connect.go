@@ -152,9 +152,9 @@ func (s *Server) connecting(ctx context.Context, event centrifuge.ConnectEvent) 
 /*
 connected closes the user's oldest connections past their limit, guards
 the subscriptions a client asks for, lets it list who else listens on a
-channel it is subscribed to, and keeps asking whether its credential is
-alive. Publishing and every other client command stay
-unhandled, which the node refuses.
+channel it is subscribed to, keeps asking whether its credential is alive
+and reports who comes and goes. Publishing and every other client command
+stay unhandled, which the node refuses.
 */
 func (s *Server) connected(client *centrifuge.Client) {
 	if principal, ok := client.Context().Value(principalKey{}).(Principal); ok && principal.MaxConnections > 0 {
@@ -170,6 +170,13 @@ func (s *Server) connected(client *centrifuge.Client) {
 
 		opts, err := s.authorize(client.Context(), event.Channel)
 		callback(centrifuge.SubscribeReply{Options: opts}, err)
+
+		if err == nil {
+			s.listenersChanged(client, event.Channel)
+		}
+	})
+	client.OnUnsubscribe(func(event centrifuge.UnsubscribeEvent) {
+		s.listenersChanged(client, event.Channel)
 	})
 	client.OnRefresh(func(_ centrifuge.RefreshEvent, callback centrifuge.RefreshCallback) {
 		err := s.checkAlive(client.Context())
@@ -190,6 +197,20 @@ func (s *Server) connected(client *centrifuge.Client) {
 
 		callback(centrifuge.PresenceReply{}, nil)
 	})
+}
+
+/*
+listenersChanged tells the channel's pattern, when it asked, that the
+connection started or stopped listening.
+*/
+func (s *Server) listenersChanged(client *centrifuge.Client, channel string) {
+	r, _, ok := s.channels.match(channel)
+	if !ok || r.opts.ListenersChanged == nil {
+		return
+	}
+
+	principal, _ := client.Context().Value(principalKey{}).(Principal)
+	r.opts.ListenersChanged(client.Context(), principal, channel)
 }
 
 /*

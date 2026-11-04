@@ -33,7 +33,7 @@ func TestInboxWriteFailures(t *testing.T) {
 		},
 		{
 			"prioritizing when the timeline cannot be written", 500, failWrites("messages", "INSERT"),
-			on("PATCH", "", testkit.JSON{"priority": true}),
+			on("PATCH", "", testkit.JSON{"priority": "high"}),
 		},
 		{
 			"marking spam when the timeline cannot be written", 500, failWrites("messages", "INSERT"),
@@ -102,7 +102,7 @@ func TestInboxWriteFailures(t *testing.T) {
 		},
 		{
 			"changing a conversation that is not there", 404, noBreak,
-			fixed("PATCH", missing, testkit.JSON{"priority": true}),
+			fixed("PATCH", missing, testkit.JSON{"priority": "high"}),
 		},
 		{"showing a read state that is not there", 404, noBreak, fixed("GET", missing+"/read-state", nil)},
 		{
@@ -160,9 +160,9 @@ func TestInboxDeliveryFailures(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		conv := d.customer(t, "ann", "Billing", "Hi")
-		widget, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "widget")
+		sms, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "sms")
 		require.NoError(t, err)
-		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET channel_connection_id = $1", widget.ID)
+		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET channel_connection_id = $1", sms.ID)
 		require.NoError(t, err)
 
 		d.owner.PostJSON("/api/v1/conversations/"+conv+"/replies", testkit.JSON{"body": "x"}).

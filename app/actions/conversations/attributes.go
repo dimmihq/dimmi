@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
@@ -32,7 +33,7 @@ Attributes are the details to change, nil to leave as they are.
 */
 type Attributes struct {
 	Subject  *string
-	Priority *bool
+	Priority *enums.ConversationPriority
 	InboxID  *ids.UUID
 }
 
@@ -55,8 +56,10 @@ func (w *Writer) SetAttributes(
 		params.Subject, changed = a.Subject, append(changed, "subject")
 	}
 
-	if a.Priority != nil && *a.Priority != c.Priority {
-		params.Priority, changed = *a.Priority, append(changed, "priority")
+	if a.Priority != nil {
+		if level, ok := a.Priority.Level(); ok && level != c.Priority {
+			params.Priority, changed = level, append(changed, "priority")
+		}
 	}
 
 	if a.InboxID != nil && *a.InboxID != c.InboxID {
@@ -102,9 +105,12 @@ func (w *Writer) attributeEvents(
 		return nil
 	}
 
-	return w.emit(ctx, after, entry{"conversation.priority_changed", map[string]any{"priority": after.Priority}},
+	from := string(enums.ConversationPriorityOf(before.Priority))
+	to := string(enums.ConversationPriorityOf(after.Priority))
+
+	return w.emit(ctx, after, entry{"conversation.priority_changed", map[string]any{"from": from, "to": to}},
 		appevents.ConversationPriorityChanged{
-			Base: w.Base(after.WorkspaceID), ConversationRef: ref(after), Priority: after.Priority,
+			Base: w.Base(after.WorkspaceID), ConversationRef: ref(after), From: from, To: to,
 		})
 }
 

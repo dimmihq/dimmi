@@ -37,7 +37,7 @@ INSERT INTO conversations (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $10
 )
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type CreateConversationParams struct {
@@ -79,7 +79,6 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -98,12 +97,17 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
 
 const findConversation = `-- name: FindConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id FROM conversations WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations WHERE workspace_id = $1 AND id = $2
 `
 
 type FindConversationParams struct {
@@ -126,7 +130,6 @@ func (q *Queries) FindConversation(ctx context.Context, arg FindConversationPara
 		&i.Subject,
 		&i.Status,
 		&i.Spam,
-		&i.Priority,
 		&i.AssigneeMemberID,
 		&i.AssigneeTeamID,
 		&i.AiState,
@@ -145,12 +148,17 @@ func (q *Queries) FindConversation(ctx context.Context, arg FindConversationPara
 		&i.UpdatedAt,
 		&i.IsTest,
 		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
 	)
 	return i, err
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations
 WHERE workspace_id = $1
   AND deleted_at IS NULL
   AND (
@@ -196,7 +204,6 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 			&i.Subject,
 			&i.Status,
 			&i.Spam,
-			&i.Priority,
 			&i.AssigneeMemberID,
 			&i.AssigneeTeamID,
 			&i.AiState,
@@ -215,6 +222,11 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 			&i.UpdatedAt,
 			&i.IsTest,
 			&i.PreviousConversationID,
+			&i.WaitingSince,
+			&i.LastActivityAt,
+			&i.LastMessageID,
+			&i.Search,
+			&i.Priority,
 		); err != nil {
 			return nil, err
 		}
@@ -227,7 +239,7 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 }
 
 const listTeamConversations = `-- name: ListTeamConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations
 WHERE workspace_id = $1 AND assignee_team_id = $2::uuid AND deleted_at IS NULL
 ORDER BY id
 FOR UPDATE
@@ -259,7 +271,6 @@ func (q *Queries) ListTeamConversations(ctx context.Context, arg ListTeamConvers
 			&i.Subject,
 			&i.Status,
 			&i.Spam,
-			&i.Priority,
 			&i.AssigneeMemberID,
 			&i.AssigneeTeamID,
 			&i.AiState,
@@ -278,6 +289,11 @@ func (q *Queries) ListTeamConversations(ctx context.Context, arg ListTeamConvers
 			&i.UpdatedAt,
 			&i.IsTest,
 			&i.PreviousConversationID,
+			&i.WaitingSince,
+			&i.LastActivityAt,
+			&i.LastMessageID,
+			&i.Search,
+			&i.Priority,
 		); err != nil {
 			return nil, err
 		}

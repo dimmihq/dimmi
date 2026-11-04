@@ -72,9 +72,10 @@ type UpdateConversationRequest struct {
 		Status       *string    `json:"status,omitempty"        validate:"omitempty,oneof=open closed snoozed"`
 		SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 		SnoozePreset *string    `json:"snooze_preset,omitempty"`
+		SnoozeOption *string    `json:"snooze_option,omitempty" validate:"omitempty,max=40"`
 		Note         *string    `json:"note,omitempty"          validate:"omitempty,min=1,max=65536"`
 		Subject      *string    `json:"subject,omitempty"       validate:"omitempty,min=1,max=255"`
-		Priority     *bool      `json:"priority,omitempty"`
+		Priority     *string    `json:"priority,omitempty"      validate:"omitempty,oneof=none low medium high urgent"`
 		InboxID      *string    `json:"inbox_id,omitempty"`
 		Unread       *bool      `json:"unread,omitempty"`
 	}
@@ -97,11 +98,11 @@ func (r *UpdateConversationRequest) Validate(ctx context.Context, _ *validation.
 		return violation(ctx, "snoozed_until", "prohibited", "validation.prohibited")
 	}
 
-	if !snoozing && b.SnoozePreset != nil {
+	if !snoozing && (b.SnoozePreset != nil || b.SnoozeOption != nil) {
 		return violation(ctx, "snooze_preset", "prohibited", "validation.prohibited")
 	}
 
-	if snoozing && (b.SnoozedUntil == nil) == (b.SnoozePreset == nil) {
+	if snoozing && countSet(b.SnoozedUntil != nil, b.SnoozePreset != nil, b.SnoozeOption != nil) != 1 {
 		return violation(ctx, "snoozed_until", "required", "validation.required")
 	}
 
@@ -154,4 +155,19 @@ func (r *ReadStateRequest) Validate(ctx context.Context, _ *validation.Factory) 
 	}
 
 	return nil
+}
+
+/*
+countSet counts the fields sent.
+*/
+func countSet(sent ...bool) int {
+	n := 0
+
+	for _, s := range sent {
+		if s {
+			n++
+		}
+	}
+
+	return n
 }

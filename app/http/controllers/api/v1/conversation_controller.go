@@ -15,6 +15,7 @@ package v1
 
 import (
 	"context"
+	"slices"
 	"strconv"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
@@ -23,6 +24,8 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -74,6 +77,7 @@ type ConversationController struct {
 	Create    *conversations.CreateConversation
 	Apply     *conversations.ApplyConversationChanges
 	Neighbors *conversations.ShowNeighbors
+	Viewers   *appbroadcasting.Viewers
 	IDs       *ids.Registry
 	Cursors   *pagination.Cursors
 }
@@ -95,16 +99,17 @@ func (c *ConversationController) Index(ctx context.Context, _ *requests.NoInput)
 	}
 
 	in := conversations.ListConversationsInput{
-		Membership: membership(ctx), Filters: lq.filters, Sort: lq.sort, Limit: query.Limit,
+		Membership: membership(ctx), Filters: lq.filters, Sort: lq.sort, DefaultSort: lq.defaultSort,
+		Limit: query.Limit,
 	}
 
-	if query.Cursor != "" {
-		var start conversationCursor
-		if err := c.Cursors.Decode(query.Cursor, &start); err != nil || start.Hash != lq.hash {
-			return nil, pagination.ErrInvalidCursor
-		}
+	start, err := c.cursor(query.Cursor, lq.hash)
+	if err != nil {
+		return nil, err
+	}
 
-		in.After = &conversations.Cursor{At: start.At, ID: start.ID}
+	if start != nil {
+		in.After = &start.Keyset
 	}
 
 	page, err := c.List.Handle(ctx, in)
@@ -112,11 +117,19 @@ func (c *ConversationController) Index(ctx context.Context, _ *requests.NoInput)
 		return nil, err
 	}
 
+	if start != nil && start.ViewHash != page.ViewHash {
+		return nil, exceptions.ErrCursorMismatch
+	}
+
 	out := pagination.Page[resources.Conversation]{
 		Items: resources.NewConversations(page.Conversations), Limit: in.Limit,
 	}
+	if slices.Contains(query.Includes, "viewers") {
+		c.includeViewers(ctx, out.Items, page.Conversations)
+	}
+
 	if page.More && page.Last != nil {
-		cursor := conversationCursor{At: page.Last.At, ID: page.Last.ID, Hash: lq.hash}
+		cursor := conversationCursor{Keyset: *page.Last, Hash: lq.hash, ViewHash: page.ViewHash}
 		if out.NextCursor, err = c.Cursors.Encode(cursor); err != nil {
 			return nil, err
 		}
@@ -229,11 +242,19 @@ func (c *ConversationController) changes(
 	ch := conversations.Changes{
 		Spam: b.Spam, AssignMember: sent["assignee_id"], AssignTeam: sent["team_id"], Status: b.Status,
 		SnoozedUntil: b.SnoozedUntil, Note: b.Note, Unread: b.Unread,
-		Attributes: conversations.Attributes{Subject: b.Subject, Priority: b.Priority},
+		Attributes: conversations.Attributes{Subject: b.Subject},
+	}
+
+	if b.Priority != nil {
+		ch.Attributes.Priority = new(enums.ConversationPriority(*b.Priority))
 	}
 
 	if b.SnoozePreset != nil {
 		ch.SnoozePreset = *b.SnoozePreset
+	}
+
+	if b.SnoozeOption != nil {
+		ch.SnoozeOption = *b.SnoozeOption
 	}
 
 	var err error
@@ -339,4 +360,59 @@ func mutationID(ctx context.Context) string {
 	}
 
 	return appmiddleware.ClientMutationID(r)
+}
+
+/*
+includeViewers adds who views each conversation of the page, the caller
+left out, when the workspace shows viewers. Viewers that do not arrive
+by the deadline are left out rather than holding the list back.
+*/
+func (c *ConversationController) includeViewers(
+	ctx context.Context, items []resources.Conversation, page []conversations.Loaded,
+) {
+	m := membership(ctx)
+	if !m.Workspace.ShowsViewersOnList() || len(page) == 0 {
+		return
+	}
+
+	wanted := make([]ids.UUID, len(page))
+	for i, l := range page {
+		wanted[i] = l.Conversation.ID
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, appbroadcasting.ViewersDeadline)
+	defer cancel()
+
+	viewers, err := c.Viewers.Of(ctx, m.Workspace.ID, wanted)
+	if err != nil {
+		return
+	}
+
+	for i, id := range wanted {
+		others := slices.DeleteFunc(viewers[id], func(v appbroadcasting.Viewer) bool {
+			return v.MemberID == m.Member.ID
+		})
+		items[i].Viewers = new(appbroadcasting.NewViewerPayloads(others))
+	}
+}
+
+/*
+cursor decodes where the page starts, nil for the first page, refusing
+a cursor made for another list.
+*/
+func (c *ConversationController) cursor(encoded, hash string) (*conversationCursor, error) {
+	if encoded == "" {
+		return nil, nil
+	}
+
+	var start conversationCursor
+	if err := c.Cursors.Decode(encoded, &start); err != nil {
+		return nil, pagination.ErrInvalidCursor
+	}
+
+	if start.Hash != hash {
+		return nil, exceptions.ErrCursorMismatch
+	}
+
+	return &start, nil
 }

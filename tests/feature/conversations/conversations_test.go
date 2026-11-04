@@ -89,7 +89,7 @@ func TestConversationsStore(t *testing.T) {
 		}).AssertStatus(422)
 	})
 
-	t.Run("refuses customer messages off the api channel and channels without a driver", func(t *testing.T) {
+	t.Run("refuses customer messages off the api channel and channels that cannot initiate", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		widget, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "widget")
@@ -101,7 +101,7 @@ func TestConversationsStore(t *testing.T) {
 		}).AssertStatus(409).AssertJSONPath("code", "channel_not_api")
 		d.owner.PostJSON("/api/v1/conversations", testkit.JSON{
 			"channel_connection_id": id, "body": "Hi", "contact": testkit.JSON{"email": "a@b.co"},
-		}).AssertStatus(422).AssertJSONPath("code", "channel_unsupported")
+		}).AssertStatus(422).AssertJSONPath("code", "channel_cannot_initiate")
 		d.owner.PostJSON("/api/v1/conversations", testkit.JSON{
 			"channel_connection_id": "chn_nope", "body": "Hi", "contact": testkit.JSON{"email": "a@b.co"},
 		}).AssertStatus(422).AssertJSONPath("code", "channel_cannot_initiate")
@@ -256,7 +256,7 @@ func TestConversationsUpdate(t *testing.T) {
 		require.NoError(t, factories.Deactivate(t.Context(), d.tc.App, gone))
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Charged twice")
 
-		d.owner.PatchJSON(path, testkit.JSON{"priority": true, "assignee_id": memberID(gone)}).
+		d.owner.PatchJSON(path, testkit.JSON{"priority": "high", "assignee_id": memberID(gone)}).
 			AssertStatus(422).AssertJSONPath("code", "member_inactive")
 		d.owner.PatchJSON(path, testkit.JSON{"assignee_id": "mem_nope"}).
 			AssertStatus(422).AssertJSONPath("code", "member_inactive")
@@ -267,7 +267,7 @@ func TestConversationsUpdate(t *testing.T) {
 			AssertStatus(422).AssertJSONPath("code", "inbox_not_found")
 		d.owner.PatchJSON(path, testkit.JSON{"inbox_id": "nope"}).AssertStatus(422)
 
-		d.owner.GetJSON(path).AssertOK().AssertJSONPath("data.priority", false)
+		d.owner.GetJSON(path).AssertOK().AssertJSONPath("data.priority", "none")
 	})
 
 	t.Run("assigns to me and a team, and unassigns with null", func(t *testing.T) {
@@ -293,10 +293,10 @@ func TestConversationsUpdate(t *testing.T) {
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Charged twice")
 		updated := record[appevents.ConversationUpdated](d.tc)
 
-		d.owner.PatchJSON(path, testkit.JSON{"subject": "Double charge", "priority": true, "inbox_id": sales}).
+		d.owner.PatchJSON(path, testkit.JSON{"subject": "Double charge", "priority": "high", "inbox_id": sales}).
 			AssertOK().
 			AssertJSONPath("data.subject", "Double charge").
-			AssertJSONPath("data.priority", true).
+			AssertJSONPath("data.priority", "high").
 			AssertJSONPath("data.inbox.id", sales).
 			AssertJSONPath("meta.changed", []any{"subject", "priority", "inbox_id"})
 		require.Len(t, updated.all(), 1)
@@ -307,7 +307,7 @@ func TestConversationsUpdate(t *testing.T) {
 			AssertJSONPath("data.status", "open")
 		d.owner.GetJSON("/api/v1/conversations?filter[view]=all").AssertOK().AssertJSONPath("data.#", 0)
 		d.owner.GetJSON("/api/v1/conversations?filter[view]=spam").AssertOK().AssertJSONPath("data.#", 1)
-		d.owner.PatchJSON(path, testkit.JSON{"spam": false, "priority": false}).AssertOK().
+		d.owner.PatchJSON(path, testkit.JSON{"spam": false, "priority": "none"}).AssertOK().
 			AssertJSONPath("meta.changed", []any{"spam", "priority"})
 	})
 

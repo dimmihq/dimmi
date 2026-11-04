@@ -1,6 +1,7 @@
 /*
- * The list of an inbox view: one row per conversation with the customer,
- * the subject and the time of the latest message, newest first. Rows
+ * The list of an inbox view: one row per conversation with the channel,
+ * the customer, who is viewing it, the subject, how long the customer
+ * has waited, its priority and who holds it, in the view's order. Rows
  * follow BoardUI's chat list: the open conversation sits on the tertiary
  * surface, the rest light up on hover. A conversation with something the
  * reader has not seen carries a dot and reads in the stronger weight.
@@ -14,15 +15,19 @@ import type { Conversation } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { ago, customerName, subjectOf } from "./conversations";
+import { PriorityChip } from "./priority/priority-menu";
+import { AssigneeAvatar, ChannelIcon, Viewers, Waiting } from "./row-extras";
 
 export function ConversationList({
   view,
   conversations,
   openId,
+  me,
 }: {
   view: string;
   conversations: Conversation[];
   openId?: string;
+  me?: string;
 }) {
   return (
     <ul className="flex flex-col gap-1 px-[7px] pb-[7px]">
@@ -45,7 +50,9 @@ export function ConversationList({
               <Avatar size="md" color={avatarColor(name)} initials={name.charAt(0).toUpperCase()} />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-2">
+                  <ChannelIcon channel={conversation.channel} />
                   <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{name}</span>
+                  <Viewers viewers={conversation.viewers} me={me} />
                   <span className="shrink-0 text-caption-1-medium text-text-tertiary">
                     {ago(conversation.last_message_at ?? conversation.created_at)}
                   </span>
@@ -59,6 +66,9 @@ export function ConversationList({
                   >
                     {subjectOf(conversation)}
                   </span>
+                  <Waiting conversation={conversation} />
+                  <PriorityChip priority={conversation.priority} />
+                  <AssigneeAvatar assignee={conversation.assignee} />
                   {conversation.unread ? (
                     <>
                       <StatusDot color="indigo" />
