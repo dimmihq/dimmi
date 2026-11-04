@@ -13,9 +13,13 @@
 package tests
 
 import (
+	"context"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/auth/token"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/models"
@@ -72,13 +76,25 @@ func (tc *TestCase) ActingAsToken(member models.WorkspaceMember, abilities ...st
 
 /*
 MintToken creates a personal access token for the member and returns it
-with its plain value.
+with its plain value, inside the member's workspace as the application
+does, so it works when the application connects as the application role.
 */
 func (tc *TestCase) MintToken(member models.WorkspaceMember, abilities ...string) (token.Token, string) {
 	tc.T.Helper()
 
-	tok, plain, err := tc.App.Tokens.Live.Create(tc.T.Context(), token.Token{
-		OwnerID: member.ID, TenantID: member.WorkspaceID.String(), Name: "Test token", Abilities: abilities,
+	var (
+		tok   token.Token
+		plain string
+	)
+
+	ctx := tenancy.With(tc.T.Context(), member.WorkspaceID.String())
+	err := tc.App.DB.Transaction(ctx, func(ctx context.Context, _ *database.Tx) error {
+		var err error
+		tok, plain, err = tc.App.Tokens.Live.Create(ctx, token.Token{
+			OwnerID: member.ID, TenantID: member.WorkspaceID.String(), Name: "Test token", Abilities: abilities,
+		})
+
+		return err
 	})
 	require.NoError(tc.T, err)
 
