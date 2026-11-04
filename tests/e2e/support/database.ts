@@ -6,7 +6,7 @@
  */
 import { execFileSync } from "node:child_process";
 
-const database = "dimmi_e2e";
+const database = process.env.E2E_DATABASE ?? "dimmi_e2e";
 
 function psql(sql: string, variables: Record<string, string>): string {
   const args = ["compose", "exec", "-T", "postgres", "psql", "-U", "postgres", "-d", database, "-v", "ON_ERROR_STOP=1"];

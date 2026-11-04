@@ -148,7 +148,7 @@ func (r Runner) open(ctx context.Context) (*session, error) {
 	s.unlock = func(ctx context.Context) error { return locker.SessionUnlock(ctx, conn) }
 
 	s.sets, err = r.providers(func(fsys fs.FS, opts ...goose.ProviderOption) (*goose.Provider, error) {
-		return goose.NewProvider(goose.DialectPostgres, db, fsys, opts...)
+		return goose.NewProvider(goose.DialectPostgres, db, fsys, append(opts, goose.WithAllowOutofOrder(true))...)
 	})
 	if err != nil {
 		_ = s.close()

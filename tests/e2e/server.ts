@@ -4,7 +4,8 @@
  * applied with the production command, Valkey keys under a prefix of
  * this run, mail through Mailpit, and nothing from the developer's
  * shell or dimmi.yaml: it runs in an empty directory of its own, where
- * no config file waits. Playwright starts it and stops it.
+ * no config file waits. Playwright starts it and stops it. E2E_DATABASE
+ * and E2E_PORT let several checkouts run their suites side by side.
  *
  * Build the binary first with `make build`; `make e2e` does both.
  */
@@ -14,8 +15,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const binary = resolve("bin/dimmi-cloud");
-const database = "dimmi_e2e";
-const port = 18090;
+const database = process.env.E2E_DATABASE ?? "dimmi_e2e";
+const port = Number(process.env.E2E_PORT ?? 18090);
 
 if (!existsSync(binary)) {
   throw new Error(`${binary} is missing: run \`make build\` first`);

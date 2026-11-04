@@ -116,6 +116,24 @@ func TestUp(t *testing.T) {
 		assert.Empty(t, again, "nothing left to apply")
 	})
 
+	t.Run("applies a migration older than the newest one already applied", func(t *testing.T) {
+		t.Parallel()
+		url := testkit.NewDatabase(t).URL
+		newer := migration("CREATE TABLE newer (id int);", "DROP TABLE newer;")
+		first := migrate.Runner{URL: url, App: fstest.MapFS{"002_newer.sql": newer}}
+		_, err := first.Up(t.Context())
+		require.NoError(t, err)
+
+		results, err := migrate.Runner{URL: url, App: fstest.MapFS{
+			"001_older.sql": migration("CREATE TABLE older (id int);", "DROP TABLE older;"),
+			"002_newer.sql": newer,
+		}}.Up(t.Context())
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"app/001_older.sql"}, names(results))
+		assert.True(t, tableExists(t, connect(t, url), "older"))
+	})
+
 	t.Run("runs steps under the lock before the sets", func(t *testing.T) {
 		t.Parallel()
 		url := testkit.NewDatabase(t).URL

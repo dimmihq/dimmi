@@ -14,7 +14,7 @@ import { addTeammate, startConversation } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { startConversation as relayConversation } from "./support/inbox";
 
-const base = "http://localhost:18090";
+const base = `http://localhost:${process.env.E2E_PORT ?? 18090}`;
 
 function teammateOf(person: Person): Person {
   return { name: "Ada Lovelace", email: person.email.replace("grace.", "ada."), password: person.password };
