@@ -61,7 +61,7 @@ RETURNING *;
 -- name: FindQuotableMessage :one
 -- FindQuotableMessage returns the customer's latest message in the
 -- conversation, with who wrote it, for quoting below a reply.
-SELECT m.body, m.created_at, c.name, c.email
+SELECT m.body, m.body_format, m.created_at, c.name, c.email
 FROM messages AS m
 JOIN contacts AS c ON c.id = m.author_id AND c.workspace_id = m.workspace_id
 WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id AND m.type = 'message'

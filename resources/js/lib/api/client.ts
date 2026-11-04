@@ -104,6 +104,26 @@ export async function request<T>(
 }
 
 /*
+ * requestFile downloads a file the API answers with, such as a raw
+ * email, which an ordinary link could not fetch because the workspace
+ * travels in a header. Failures come back as an ApiError like any call.
+ */
+export async function requestFile(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const headers: Record<string, string> = { ...options.headers };
+  if (options.workspace) {
+    headers["Dimmi-Workspace"] = options.workspace;
+  }
+
+  const response = await fetch(base + path, { headers, credentials: "same-origin" });
+  if (!response.ok) {
+    const json: unknown = await response.json().catch(() => null);
+    throw toApiError(response.status, json as ErrorBody | null);
+  }
+
+  return response.blob();
+}
+
+/*
  * Page is one page of a list and the cursor of the next, null on the
  * last page.
  */

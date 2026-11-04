@@ -400,6 +400,8 @@ type Message struct {
 	AuthorType       string                  `json:"author_type"`
 	AuthorID         *ids.UUID               `json:"author_id"`
 	Body             *string                 `json:"body"`
+	BodyFormat       string                  `json:"body_format"`
+	BodyFull         *string                 `json:"body_full"`
 	BodyHtml         *string                 `json:"body_html"`
 	Event            json.RawMessage         `json:"event"`
 	ChannelMessageID *string                 `json:"channel_message_id"`

@@ -6,8 +6,8 @@
 | The words of a document without its markup, for search indexes, word
 | counts, excerpts and prompts. Each paragraph, heading, list item, table
 | row and code block becomes one line. Links keep their text, images
-| their alt text, and escapes and entities are resolved. Raw HTML, which
-| never renders, contributes nothing.
+| their alt text, and escapes and entities are resolved. Raw HTML counts
+| as the words it is, the same way the renderer shows it as text.
 |
 */
 
@@ -81,7 +81,7 @@ func blockText(n ast.Node, src []byte) (string, bool) {
 	case *extast.TableRow, *extast.TableHeader:
 		return rowText(n, src), true
 	case *ast.HTMLBlock:
-		return "", true
+		return htmlBlockText(n, src), true
 	default:
 		return "", false
 	}
@@ -130,6 +130,7 @@ func writeInline(out *strings.Builder, n ast.Node, src []byte) {
 		case *ast.CodeSpan:
 			writeCode(out, c, src)
 		case *ast.RawHTML:
+			out.WriteString(rawHTMLText(c, src))
 		default:
 			writeInline(out, c, src)
 		}

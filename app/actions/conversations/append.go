@@ -36,6 +36,8 @@ which only moves the timeline and never counts as anyone's latest word.
 type NewMessage struct {
 	Type             string
 	Body             string
+	BodyFormat       *string
+	BodyFull         *string
 	BodyHTML         *string
 	ChannelMessageID *string
 	SentAt           *time.Time
@@ -61,8 +63,9 @@ func (w *Writer) Append(
 
 	msg, err := w.Q.CreateMessage(ctx, models.CreateMessageParams{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, Type: m.Type, AuthorType: w.Actor.Type,
-		AuthorID: w.authorID(), Body: &m.Body, BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID,
-		DedupeKey: m.DedupeKey, DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: metadata,
+		AuthorID: w.authorID(), Body: &m.Body, BodyFormat: m.BodyFormat, BodyFull: m.BodyFull,
+		BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID, DedupeKey: m.DedupeKey,
+		DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: metadata,
 		SentAt: m.SentAt, Now: w.Now,
 	})
 	if err != nil {

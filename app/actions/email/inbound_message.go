@@ -71,7 +71,9 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 		Sender:            inboundSender(d.who),
 		Participants:      a.participants(d),
 		Subject:           inbound.DisplaySubject(mail.parsed.Subject),
-		Body:              insp.body.Markdown,
+		Body:              insp.body.Visible,
+		BodyFormat:        insp.body.Format,
+		BodyFull:          insp.body.Full,
 		BodyHTML:          insp.body.HTML,
 		Attachments:       files,
 		ChannelMessageID:  mail.parsed.MessageID,
@@ -92,7 +94,7 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 	}
 
 	if insp.forward != nil {
-		msg.Body, msg.BodyHTML = insp.forward.Body, ""
+		msg.Body, msg.BodyFormat, msg.BodyHTML = insp.forward.Body, enums.BodyFormatPlain, ""
 		msg.Subject = inbound.DisplaySubject(cmp.Or(insp.forward.Subject, mail.parsed.Subject))
 	}
 
@@ -147,6 +149,8 @@ func metadata(d decision, p plan, skipped []skippedFile) map[string]any {
 			"quote": insp.body.Quote, "signature": insp.body.Signature, "fallback": insp.body.Fallback,
 		},
 		"truncated":           insp.body.Truncated || mail.parsed.Truncated,
+		"full_truncated":      insp.body.FullTruncated || mail.parsed.Truncated,
+		"html_too_large":      insp.body.HTMLTooLarge,
 		"skipped_attachments": skipped,
 		"form_relay":          optional(insp.relay),
 		"bcc":                 bcc(mail),
@@ -289,7 +293,7 @@ identityOf returns what identifies the email when it arrives again.
 func identityOf(mail *received, insp inspection) inbound.Identity {
 	return inbound.Identity{
 		MessageID: mail.parsed.MessageID, From: mail.from, Date: mail.parsed.Header.Get("Date"),
-		Subject: mail.parsed.Subject, Body: insp.body.Markdown,
+		Subject: mail.parsed.Subject, Body: insp.body.Visible,
 	}
 }
 

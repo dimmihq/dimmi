@@ -35,6 +35,7 @@ import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
+import { OriginalMessage } from "./original-message";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
@@ -107,6 +108,7 @@ export function ConversationView({
   const [operatorOpen, setOperatorOpen] = useState(operatorDefault);
   const [drawer, setDrawer] = useState(false);
   const [easing, ease] = useEasing();
+  const [original, setOriginal] = useState<string | null>(null);
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
   const toggleOperator = () => (sideBySide ? toggle(pane.operator) : setDrawer(!drawer));
@@ -158,8 +160,17 @@ export function ConversationView({
         onSend={timeline.send}
         onAskOperator={toggleOperator}
         onTyping={typing}
+        onOpenOriginal={setOriginal}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
       />
+      {original ? (
+        <OriginalMessage
+          workspace={workspace}
+          conversation={conversation.id}
+          message={original}
+          onClose={() => setOriginal(null)}
+        />
+      ) : null}
     </Panel>
   );
 

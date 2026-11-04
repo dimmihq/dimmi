@@ -221,7 +221,7 @@ func (a *SendEmailMessage) quote(ctx context.Context, q *models.Queries, out *ou
 		zone = time.UTC
 	}
 
-	text := *last.Body
+	text := models.BodyWords(*last.Body, last.BodyFormat)
 	if runes := []rune(text); len(runes) > maxQuoteLength {
 		text = string(runes[:maxQuoteLength]) + "…"
 	}

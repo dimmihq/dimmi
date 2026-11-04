@@ -10,7 +10,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { realtimeKeys } from "@/lib/realtime/keys";
 
-import { request } from "./client";
+import { request, requestFile } from "./client";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
 
@@ -84,6 +84,9 @@ export interface Message {
   type: "message" | "note" | "event";
   author: Author;
   body: string | null;
+  body_format: "markdown" | "plain";
+  has_original: boolean;
+  truncated: boolean;
   delivery_status: string | null;
   event: TimelineEvent | null;
   deleted_at: string | null;
@@ -148,6 +151,37 @@ export function messagesQuery(workspace: string, id: string) {
         workspace,
       }),
   });
+}
+
+/*
+ * MessageOriginal is the whole of a received email: its full text, its
+ * sanitized HTML when it had any, whether either was cut at a size
+ * limit, and whether the caller may download the email as it arrived.
+ */
+export interface MessageOriginal {
+  id: string;
+  text: string;
+  text_truncated: boolean;
+  html: string | null;
+  html_too_large: boolean;
+  raw_available: boolean;
+}
+
+function messagePath(conversation: string, message: string): string {
+  return `/conversations/${encodeURIComponent(conversation)}/messages/${encodeURIComponent(message)}`;
+}
+
+export function messageOriginalQuery(workspace: string, conversation: string, message: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "message-original", message],
+    queryFn: () =>
+      request<MessageOriginal>("GET", `${messagePath(conversation, message)}/original`, undefined, { workspace }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function downloadRawEmail(workspace: string, conversation: string, message: string): Promise<Blob> {
+  return requestFile(`${messagePath(conversation, message)}/original/raw`, { workspace });
 }
 
 export function countsQuery(workspace: string) {

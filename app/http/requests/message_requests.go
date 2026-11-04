@@ -93,3 +93,12 @@ type ContactMessageRequest struct {
 		DedupeKey *string `json:"dedupe_key,omitempty" validate:"omitempty,min=1,max=200"`
 	}
 }
+
+/*
+ConversationMessageRequest is the input of the endpoints that name a
+message of a conversation.
+*/
+type ConversationMessageRequest struct {
+	Conversation string `path:"conversation"`
+	Message      string `path:"message"`
+}

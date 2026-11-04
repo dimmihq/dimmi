@@ -98,7 +98,7 @@ func NewConversation(l conversations.Loaded) Conversation {
 		out.LastMessage = &MessageSummary{
 			ID: models.PublicID(models.PrefixMessage, l.LastMessage.ID), Object: "message", Type: l.LastMessage.Type,
 			Author:  author(*l.LastMessage, l.Contact, l.LastAuthor),
-			Excerpt: excerpt(l.LastMessage.Body), CreatedAt: l.LastMessage.CreatedAt,
+			Excerpt: excerpt(l.LastMessage), CreatedAt: l.LastMessage.CreatedAt,
 		}
 	}
 

@@ -180,7 +180,7 @@ func (q *Queries) FindOutboundEmailByMessageIDHeader(ctx context.Context, arg Fi
 }
 
 const findQuotableMessage = `-- name: FindQuotableMessage :one
-SELECT m.body, m.created_at, c.name, c.email
+SELECT m.body, m.body_format, m.created_at, c.name, c.email
 FROM messages AS m
 JOIN contacts AS c ON c.id = m.author_id AND c.workspace_id = m.workspace_id
 WHERE m.workspace_id = $1 AND m.conversation_id = $2 AND m.type = 'message'
@@ -195,10 +195,11 @@ type FindQuotableMessageParams struct {
 }
 
 type FindQuotableMessageRow struct {
-	Body      *string   `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
-	Name      *string   `json:"name"`
-	Email     *string   `json:"email"`
+	Body       *string   `json:"body"`
+	BodyFormat string    `json:"body_format"`
+	CreatedAt  time.Time `json:"created_at"`
+	Name       *string   `json:"name"`
+	Email      *string   `json:"email"`
 }
 
 // FindQuotableMessage returns the customer's latest message in the
@@ -208,6 +209,7 @@ func (q *Queries) FindQuotableMessage(ctx context.Context, arg FindQuotableMessa
 	var i FindQuotableMessageRow
 	err := row.Scan(
 		&i.Body,
+		&i.BodyFormat,
 		&i.CreatedAt,
 		&i.Name,
 		&i.Email,

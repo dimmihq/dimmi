@@ -297,7 +297,7 @@ func senderOf(mail *received, insp inspection) sender {
 			return sender{name: mail.parsed.ReplyTo[0].Name, email: replyTo[0]}
 		}
 
-		if email := inbound.BodyEmail(mail.parsed.Text + "\n" + insp.body.Markdown); email != "" {
+		if email := inbound.BodyEmail(mail.parsed.Text + "\n" + insp.body.Visible); email != "" {
 			return sender{name: mail.parsed.From.Name, email: email}
 		}
 

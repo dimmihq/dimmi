@@ -309,7 +309,7 @@ func (q *Queries) FilterConversations(ctx context.Context, arg FilterConversatio
 }
 
 const latestMessagesOf = `-- name: LatestMessagesOf :many
-SELECT DISTINCT ON (conversation_id) id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at FROM messages
+SELECT DISTINCT ON (conversation_id) id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, search, created_at, updated_at FROM messages
 WHERE workspace_id = $1
   AND conversation_id = ANY ($2::uuid[])
   AND type = 'message'
@@ -341,6 +341,8 @@ func (q *Queries) LatestMessagesOf(ctx context.Context, arg LatestMessagesOfPara
 			&i.AuthorType,
 			&i.AuthorID,
 			&i.Body,
+			&i.BodyFormat,
+			&i.BodyFull,
 			&i.BodyHtml,
 			&i.Event,
 			&i.ChannelMessageID,

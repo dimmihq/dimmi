@@ -60,8 +60,22 @@ export function ago(iso: string | null, now = Date.now()): string {
  * customer, from a teammate, from dimmi (the agent that answers
  * customers), an internal note, or an event such as a handover.
  */
+/*
+ * ThreadEntry is one entry as the thread shows it. A said entry carries
+ * how its text is read, Markdown or plain words, and for received email
+ * whether more of it can be opened and whether its body was cut short.
+ */
 export type ThreadEntry =
-  | { kind: "customer" | "teammate" | "dimmi" | "note"; id: string; author: string; at: string; text: string }
+  | {
+      kind: "customer" | "teammate" | "dimmi" | "note";
+      id: string;
+      author: string;
+      at: string;
+      text: string;
+      format: Message["body_format"];
+      original: boolean;
+      truncated: boolean;
+    }
   | { kind: "event"; id: string; at: string; text: string };
 
 const statusWords: Record<string, string> = {
@@ -95,17 +109,24 @@ export function toEntry(message: Message): ThreadEntry {
   if (message.type === "event" && message.event) {
     return { kind: "event", id: message.id, at, text: eventText(message.event) };
   }
-  const text = message.body ?? "This message was deleted.";
-  const author = message.author.name;
+  const said = {
+    id: message.id,
+    author: message.author.name,
+    at,
+    text: message.body ?? "This message was deleted.",
+    format: message.body === null ? "plain" : (message.body_format ?? "markdown"),
+    original: message.has_original ?? false,
+    truncated: message.truncated ?? false,
+  } as const;
   if (message.type === "note") {
-    return { kind: "note", id: message.id, author, at, text };
+    return { kind: "note", ...said };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", id: message.id, author, at, text };
+    return { kind: "customer", ...said };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", id: message.id, author, at, text };
+    return { kind: "dimmi", ...said };
   }
 
-  return { kind: "teammate", id: message.id, author, at, text };
+  return { kind: "teammate", ...said };
 }

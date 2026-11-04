@@ -98,7 +98,7 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 
 	insp.class = inbound.Classify(inbound.Signals{
 		Header: mail.parsed.Header, Subject: mail.parsed.Subject, From: mail.from,
-		VisibleChars: len(body.Markdown),
+		VisibleChars: len(body.Visible),
 		Loop: a.Stamps.ValidLoop(mail.parsed.Header.Get(inbound.LoopHeader), mail.row.WorkspaceID.String(),
 			mail.parsed.MessageID) || known.outboundRefs > 0,
 		SystemNotice: insp.confirmation != nil || insp.forwardingTest,

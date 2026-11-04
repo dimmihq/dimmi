@@ -54,8 +54,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 			Apply: acts.ApplyChanges, Neighbors: acts.ShowNeighbors, IDs: a.IDs, Cursors: cursors,
 		},
 		messages: &v1.ConversationMessageController{
-			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage, IDs: a.IDs,
-			Cursors: cursors,
+			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
+			Original: acts.ShowOriginal, Raw: acts.DownloadOriginal, IDs: a.IDs, Cursors: cursors,
 		},
 		views: &v1.InboxViewController{
 			Counts: acts.CountConversations, ReadShow: acts.ShowReadState, ReadSave: acts.UpdateReadState,
@@ -108,6 +108,10 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Ability("conversations:read")
 	routing.Get(r, conv+"/messages", "conversations.messages.index", c.messages.Index).
 		Ability("conversations:read")
+	routing.Get(r, conv+"/messages/{message}/original", "conversations.messages.original.show",
+		c.messages.ShowOriginal).Ability("conversations:read")
+	routing.Get(r, conv+"/messages/{message}/original/raw", "conversations.messages.original.raw",
+		c.messages.DownloadRaw).Ability("conversations:read")
 	routing.Post(r, conv+"/messages", "conversations.messages.store", c.messages.Store).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/replies", "conversations.replies.store", c.messages.StoreReply).

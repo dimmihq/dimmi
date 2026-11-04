@@ -206,6 +206,52 @@ func (q *Queries) FindInboundEmail(ctx context.Context, arg FindInboundEmailPara
 	return i, err
 }
 
+const findMessageInboundEmail = `-- name: FindMessageInboundEmail :one
+SELECT id, workspace_id, email_address_id, channel_connection_id, source, provider_message_id, message_id_header, envelope_from, envelope_to, from_address, subject, size_bytes, raw_disk, raw_path, raw_deleted_at, status, classification, auth, provider_verdicts, conversation_id, message_id, ignore_reason, error, attempts, received_at, processed_at, created_at, updated_at FROM inbound_emails WHERE workspace_id = $1 AND message_id = $2 LIMIT 1
+`
+
+type FindMessageInboundEmailParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MessageID   *ids.UUID `json:"message_id"`
+}
+
+// FindMessageInboundEmail returns the received email a message came from.
+func (q *Queries) FindMessageInboundEmail(ctx context.Context, arg FindMessageInboundEmailParams) (InboundEmail, error) {
+	row := q.db.QueryRow(ctx, findMessageInboundEmail, arg.WorkspaceID, arg.MessageID)
+	var i InboundEmail
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.EmailAddressID,
+		&i.ChannelConnectionID,
+		&i.Source,
+		&i.ProviderMessageID,
+		&i.MessageIDHeader,
+		&i.EnvelopeFrom,
+		&i.EnvelopeTo,
+		&i.FromAddress,
+		&i.Subject,
+		&i.SizeBytes,
+		&i.RawDisk,
+		&i.RawPath,
+		&i.RawDeletedAt,
+		&i.Status,
+		&i.Classification,
+		&i.Auth,
+		&i.ProviderVerdicts,
+		&i.ConversationID,
+		&i.MessageID,
+		&i.IgnoreReason,
+		&i.Error,
+		&i.Attempts,
+		&i.ReceivedAt,
+		&i.ProcessedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const finishInboundEmail = `-- name: FinishInboundEmail :exec
 UPDATE inbound_emails
 SET status = $1, ignore_reason = $2, conversation_id = $3,

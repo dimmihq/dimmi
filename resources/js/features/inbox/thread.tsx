@@ -5,8 +5,11 @@
  * pills. What Operator adds is a full-width card across the thread, so
  * the team's own agent never reads as part of the exchange with the
  * customer. Teammates' notes sit on the team's side with a dashed edge
- * and a lock. Every message's Markdown is rendered. Below the thread sits the composer; R and N open it for a
- * reply or a note from anywhere, and O opens or closes Operator.
+ * and a lock. Markdown is rendered and a customer's plain text mail is
+ * shown as written. An email whose quoted thread was cut, or whose long
+ * body was cut short, offers its full message below it. Below the thread
+ * sits the composer; R and N open it for a reply or a note from
+ * anywhere, and O opens or closes Operator.
  */
 import { RiLock2Line, RiSparkling2Line } from "@remixicon/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -78,7 +81,7 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
         </Chip>
         <span className="ms-auto text-body-2-regular text-text-tertiary">{entry.at}</span>
       </header>
-      <MessageBody text={entry.text} className="text-body-regular text-text-primary" />
+      <MessageBody text={entry.text} format={entry.format} className="text-body-regular text-text-primary" />
       <p className="flex items-center gap-1 text-body-2-regular text-text-tertiary">
         <RiLock2Line aria-hidden className="size-3.5" />
         Not visible to {customer}
@@ -87,7 +90,34 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
   );
 }
 
-function Entry({ entry, customer }: { entry: ThreadEntry; customer: string }) {
+function More({ entry, onOpen }: { entry: Said; onOpen?: (id: string) => void }) {
+  if (!onOpen || !(entry.original || entry.truncated)) {
+    return null;
+  }
+
+  return (
+    <span className="flex items-center gap-1.5 text-body-2-regular text-text-tertiary">
+      {entry.truncated ? "Shortened ·" : null}
+      <button
+        type="button"
+        onClick={() => onOpen(entry.id)}
+        className="rounded-md text-body-2-medium text-text-secondary underline outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        Show full message
+      </button>
+    </span>
+  );
+}
+
+function Entry({
+  entry,
+  customer,
+  onOpenOriginal,
+}: {
+  entry: ThreadEntry;
+  customer: string;
+  onOpenOriginal?: (id: string) => void;
+}) {
   if (entry.kind === "event") {
     return <Pill>{entry.text}</Pill>;
   }
@@ -112,10 +142,11 @@ function Entry({ entry, customer }: { entry: ThreadEntry; customer: string }) {
           note && "border border-dashed border-border-button-hover",
         )}
       >
-        <MessageBody text={entry.text} />
+        <MessageBody text={entry.text} format={entry.format} />
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
       <Tag entry={entry} />
+      <More entry={entry} onOpen={onOpenOriginal} />
       {note ? (
         <span aria-hidden className="text-body-2-regular text-text-tertiary">
           Not visible to {customer}
@@ -154,6 +185,7 @@ export function Thread({
   onSend,
   onAskOperator,
   onTyping,
+  onOpenOriginal,
   status,
 }: {
   entries: ThreadEntry[];
@@ -162,6 +194,7 @@ export function Thread({
   onSend: Send;
   onAskOperator: () => void;
   onTyping: Report;
+  onOpenOriginal?: (id: string) => void;
   status?: ReactNode;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
@@ -186,7 +219,7 @@ export function Thread({
         <ol className="mx-auto flex max-w-3xl flex-col gap-3">
           {entries.map((entry) => (
             <li key={entry.id}>
-              <Entry entry={entry} customer={customer} />
+              <Entry entry={entry} customer={customer} onOpenOriginal={onOpenOriginal} />
             </li>
           ))}
         </ol>

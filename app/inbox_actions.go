@@ -43,6 +43,8 @@ type InboxActions struct {
 	Search             *conversations.Search
 
 	ListMessages      *messages.ListMessages
+	ShowOriginal      *messages.ShowOriginal
+	DownloadOriginal  *messages.DownloadOriginal
 	Reply             *messages.ReplyToConversation
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage

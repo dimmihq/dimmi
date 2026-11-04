@@ -457,6 +457,9 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Activity log | `r act -b a.jar -H "$O" $EA/$EMA/inbound-emails` | 200, `status: processed`, `classification: normal`, a `conversation` and `message` id; the address now has `inbound_verified_at` |
 | Redelivery | the same command with `&id=p1` twice | 202 twice; the activity log holds it once (a different `id` with the same Message-ID is stored `ignored`, `duplicate`) |
 | Reply threads | `mailraw $FWD 'Re: Refund for order 1042' reply.$RUN@customer.test "In-Reply-To: <first.$RUN@customer.test>" 'Thanks!' \| r re …` | 202; `select count(*) from conversations` unchanged, the message joins the first conversation |
+| Plain text kept | `mailraw $FWD 'Broken page' plain.$RUN@customer.test '' $'The <div> tag and 2*3*4.\r\n\r\nOn Mon, Nov 2, 2026 at 9:00 AM Ann <ann@example.com> wrote:\r\n> Which page?' \| r pl …`, then `r tl -b a.jar -H "$O" $B/conversations/<its conv_>/messages` | the message has `body` "The <div> tag and 2*3*4.", `body_format: plain`, `has_original: true` |
+| Full message | `r og -b a.jar -H "$O" $B/conversations/<conv_>/messages/<msg_>/original` | 200 `message_original`, `text` with the quoted lines, `html: null`, `raw_available: true` for an owner |
+| Raw email | `r raw -b a.jar -H "$O" $B/conversations/<conv_>/messages/<msg_>/original/raw` | 200 `application/octet-stream`, `Content-Disposition: attachment; filename="msg_….eml"`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`; a member without `email:read_raw` gets 403 and `raw_available: false` |
 | Out of office | `mailraw $FWD 'Automatic reply: away' ooo.$RUN@customer.test 'Auto-Submitted: auto-replied' 'Away.' \| r ooo …` | 202; activity `ignore_reason: auto_reply_no_thread`, no new conversation |
 | Unknown address | the first mail to `ghost@inbound.e2e.test` | 202 `workspaces: 0`, nothing stored |
 | Add an address | `r add -b a.jar -X POST -H "$O" -H "$J" $EA -d '{"address":"sales@acme.test"}'` | 201, `forwarding_address` `<slug>.sales@inbound.e2e.test`; the same again 409 `address_in_use`; `x@inbound.e2e.test` 422 `invalid_address` |
@@ -464,6 +467,7 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Forwarding test | `r t -b a.jar -X POST -H "$O" $EA/$EMA/tests` | 201 `email_address_test` `sent_to` the public address; Mailpit holds it with an `X-Dimmi-Test` header; feeding that raw mail back through the source shows `ignore_reason: forwarding_test` |
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
+| Full message in a browser | open the "Broken page" conversation, then "Show full message" | the thread shows the text with its `<div>` and stars as typed; the dialog shows the quoted thread and offers "Download original" |
 
 ## Realtime connections end with their credential
 

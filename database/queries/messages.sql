@@ -4,10 +4,11 @@
 -- messages_workspace_id_dedupe_key_key, which is how a retried inbound
 -- message is told apart from a new one.
 INSERT INTO messages (
-    workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id,
-    dedupe_key, delivery_status, substantive, metadata, sent_at, created_at, updated_at
+    workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event,
+    channel_message_id, dedupe_key, delivery_status, substantive, metadata, sent_at, created_at, updated_at
 ) VALUES (
-    @workspace_id, @conversation_id, @type, @author_type, @author_id, @body, @body_html, @event,
+    @workspace_id, @conversation_id, @type, @author_type, @author_id, @body,
+    coalesce(sqlc.narg(body_format), 'markdown'), sqlc.narg(body_full), @body_html, @event,
     @channel_message_id, @dedupe_key, @delivery_status, @substantive, @metadata, @sent_at, @now, @now
 )
 RETURNING *;

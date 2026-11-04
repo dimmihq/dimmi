@@ -3,8 +3,10 @@
  * notes in Markdown, and email arrives converted to it, so the thread
  * renders it: emphasis, lists, quotes, code and links, with single line
  * breaks kept the way the writer typed them. Raw HTML in a message is
- * dropped, never rendered, and links open in a new tab without handing
- * the thread to the page they open.
+ * never rendered, and links open in a new tab without handing the thread
+ * to the page they open. A customer's plain text email is not Markdown,
+ * so it is shown exactly as written: a "*" stays a star and a "<div>"
+ * stays those five characters.
  */
 import type { ComponentProps } from "react";
 import Markdown, { type Components } from "react-markdown";
@@ -13,7 +15,29 @@ import remarkGfm from "remark-gfm";
 
 import { cx } from "@/utils/cx";
 
-const plugins = [remarkGfm, remarkBreaks];
+interface MarkdownNode {
+  type: string;
+  value?: string;
+  children?: MarkdownNode[];
+}
+
+/*
+ * htmlAsText turns raw HTML in Markdown into the words it is, so that
+ * "Use the <div> tag" keeps its tag on screen, the same as in search and
+ * excerpts, and nothing a writer typed silently disappears.
+ */
+function htmlAsText() {
+  const walk = (node: MarkdownNode) => {
+    if (node.type === "html") {
+      node.type = "text";
+    }
+    node.children?.forEach(walk);
+  };
+
+  return walk;
+}
+
+const plugins = [remarkGfm, remarkBreaks, htmlAsText];
 
 function Link({ href, children }: ComponentProps<"a">) {
   return (
@@ -32,7 +56,11 @@ const components: Components = {
   a: Link,
   p: ({ children }) => <p>{children}</p>,
   ul: ({ children }) => <ul className="list-disc ps-5">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal ps-5">{children}</ol>,
+  ol: ({ children, start }) => (
+    <ol start={start} className="list-decimal ps-5">
+      {children}
+    </ol>
+  ),
   blockquote: ({ children }) => (
     <blockquote className="border-s-2 border-separator-border ps-3 text-text-secondary">{children}</blockquote>
   ),
@@ -49,10 +77,22 @@ const components: Components = {
   h3: ({ children }) => <p className="text-body-medium">{children}</p>,
 };
 
-export function MessageBody({ text, className }: { text: string; className?: string }) {
+export function MessageBody({
+  text,
+  format = "markdown",
+  className,
+}: {
+  text: string;
+  format?: "markdown" | "plain";
+  className?: string;
+}) {
+  if (format === "plain") {
+    return <p className={cx("whitespace-pre-wrap wrap-break-word", className)}>{text}</p>;
+  }
+
   return (
     <div className={cx("flex flex-col gap-2 wrap-break-word", className)}>
-      <Markdown remarkPlugins={plugins} components={components} skipHtml>
+      <Markdown remarkPlugins={plugins} components={components}>
         {text}
       </Markdown>
     </div>

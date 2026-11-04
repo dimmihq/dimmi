@@ -59,7 +59,9 @@ func bootInbox(a *app.App) error {
 		UpdateReadState:    &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
 
-		ListMessages: &messages.ListMessages{DB: a.DB},
+		ListMessages:     &messages.ListMessages{DB: a.DB},
+		ShowOriginal:     &messages.ShowOriginal{DB: a.DB},
+		DownloadOriginal: &messages.DownloadOriginal{DB: a.DB, Storage: a.Storage},
 		Reply: &messages.ReplyToConversation{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
 		},
