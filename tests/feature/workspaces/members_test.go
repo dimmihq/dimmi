@@ -9,10 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
@@ -214,6 +216,45 @@ func TestMembersUpdateRole(t *testing.T) {
 
 func TestMembersUpdateStatus(t *testing.T) {
 	t.Parallel()
+
+	t.Run("withdraws what a deactivated member sent, so an invitation of theirs brings nobody in", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, mailServer())
+		fake := tc.Mail()
+		admin, adminMember := join(t, tc, enums.RoleAdmin)
+		in(tc, admin).PostJSON("/api/v1/invitations", testkit.JSON{
+			"invitations": []testkit.JSON{{"email": "alt@example.com", "role": "admin"}},
+		}).AssertOK()
+		theirs, _ := tests.LastSent[appmail.InvitationMail](tc, fake)
+		token := tc.Fragment(theirs.AcceptURL).Get("token")
+		kept := mailedToken(tc, fake, "kept@example.com", "member")
+
+		in(tc, tc.Owner).PatchJSON("/api/v1/members/"+memberID(adminMember), testkit.JSON{"status": "deactivated"}).
+			AssertOK()
+
+		res := tc.Client().PostJSON("/api/v1/users", testkit.JSON{
+			"name": "Alt", "email": "alt@example.com", "password": factories.Password, "invitation_token": token,
+		})
+		assert.NotEqual(t, fhttp.StatusCreated, res.Status)
+		tc.Table("workspace_members").AssertCount(0, testkit.Row{"role": "admin", "status": "active"})
+		tc.Table("invitations").AssertHas(testkit.Row{"email": "alt@example.com", "status": "revoked"})
+		tc.Table("invitations").AssertHas(testkit.Row{"email": "kept@example.com", "status": "pending"})
+		tc.Table("audit_logs").AssertCount(1, testkit.Row{"event": "invitation.revoked"})
+		tc.Client().WithHeader("Dimmi-Invitation-Token", kept).GetJSON("/api/v1/invitations/preview").AssertOK()
+	})
+
+	t.Run("withdraws what a member sent when they leave the workspace", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, mailServer())
+		admin, adminMember := join(t, tc, enums.RoleAdmin)
+		in(tc, admin).PostJSON("/api/v1/invitations", testkit.JSON{
+			"invitations": []testkit.JSON{{"email": "alt@example.com", "role": "member"}},
+		}).AssertOK()
+
+		tc.ActingAs(admin).Delete("/api/v1/user/memberships/" + memberID(adminMember)).AssertNoContent()
+
+		tc.Table("invitations").AssertHas(testkit.Row{"email": "alt@example.com", "status": "revoked"})
+	})
 
 	t.Run("deactivates a member, revoking tokens and teams, with the reassignment hint", func(t *testing.T) {
 		t.Parallel()

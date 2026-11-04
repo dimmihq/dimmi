@@ -82,6 +82,14 @@ UPDATE invitations
 SET status = 'revoked', revoked_at = @now::timestamptz, revoked_by_member_id = sqlc.narg(revoked_by)::uuid, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND status = 'pending';
 
+-- name: RevokeMemberInvitations :many
+-- RevokeMemberInvitations withdraws every pending invitation the member
+-- sent, recording who withdrew them, and returns which.
+UPDATE invitations
+SET status = 'revoked', revoked_at = @now::timestamptz, revoked_by_member_id = @revoked_by::uuid, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND invited_by_member_id = @invited_by AND status = 'pending'
+RETURNING id;
+
 -- name: AcceptInvitation :one
 -- AcceptInvitation records that the user accepted the invitation.
 UPDATE invitations

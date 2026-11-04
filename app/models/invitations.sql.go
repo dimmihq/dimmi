@@ -487,6 +487,47 @@ func (q *Queries) RevokeInvitation(ctx context.Context, arg RevokeInvitationPara
 	return i, err
 }
 
+const revokeMemberInvitations = `-- name: RevokeMemberInvitations :many
+UPDATE invitations
+SET status = 'revoked', revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND invited_by_member_id = $4 AND status = 'pending'
+RETURNING id
+`
+
+type RevokeMemberInvitationsParams struct {
+	Now         time.Time `json:"now"`
+	RevokedBy   ids.UUID  `json:"revoked_by"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	InvitedBy   *ids.UUID `json:"invited_by"`
+}
+
+// RevokeMemberInvitations withdraws every pending invitation the member
+// sent, recording who withdrew them, and returns which.
+func (q *Queries) RevokeMemberInvitations(ctx context.Context, arg RevokeMemberInvitationsParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, revokeMemberInvitations,
+		arg.Now,
+		arg.RevokedBy,
+		arg.WorkspaceID,
+		arg.InvitedBy,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const revokePendingInvitations = `-- name: RevokePendingInvitations :execrows
 UPDATE invitations
 SET status = 'revoked', revoked_at = $1::timestamptz, revoked_by_member_id = $2::uuid, updated_at = $1::timestamptz

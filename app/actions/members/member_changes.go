@@ -8,9 +8,10 @@
 | change that could leave the workspace without an active owner counts
 | the owners again before the transaction may commit.
 |
-| A deactivated member leaves every team and every token they minted
-| stops working at once; their row stays, so their history keeps their
-| name.
+| A deactivated member leaves every team, every token they minted stops
+| working at once, and every invitation they sent and nobody accepted yet
+| is withdrawn, so someone cut off cannot still bring people in. Their
+| row stays, so their history keeps their name.
 |
 */
 
@@ -80,8 +81,9 @@ func (w memberWriter) changeRole(
 
 /*
 deactivate ends a member's access: their row is marked, they leave
-every team, and their tokens are revoked. The member named by
-reassignTo takes their open work; ids.Nil() names nobody.
+every team, their tokens are revoked and their pending invitations
+withdrawn. The member named by reassignTo takes their open work;
+ids.Nil() names nobody.
 */
 func (w memberWriter) deactivate(ctx context.Context, m models.WorkspaceMember, reassignTo ids.UUID) error {
 	q := models.New(w.tx)
@@ -104,9 +106,37 @@ func (w memberWriter) deactivate(ctx context.Context, m models.WorkspaceMember, 
 		return fmt.Errorf("revoke member tokens: %w", err)
 	}
 
+	if err := w.withdrawInvitations(ctx, m); err != nil {
+		return err
+	}
+
 	return w.events.Dispatch(ctx, w.tx, appevents.MemberDeactivated{
 		WorkspaceID: m.WorkspaceID, MemberID: m.ID, UserID: m.UserID, DeactivatedBy: w.by, ReassignTo: reassignTo,
 	})
+}
+
+/*
+withdrawInvitations withdraws the pending invitations the member sent,
+announcing each.
+*/
+func (w memberWriter) withdrawInvitations(ctx context.Context, m models.WorkspaceMember) error {
+	withdrawn, err := models.New(w.tx).RevokeMemberInvitations(ctx, models.RevokeMemberInvitationsParams{
+		WorkspaceID: m.WorkspaceID, InvitedBy: &m.ID, RevokedBy: w.by, Now: w.now,
+	})
+	if err != nil {
+		return fmt.Errorf("withdraw member invitations: %w", err)
+	}
+
+	for _, id := range withdrawn {
+		err := w.events.Dispatch(ctx, w.tx, appevents.InvitationRevoked{
+			WorkspaceID: m.WorkspaceID, InvitationID: id, RevokedBy: w.by,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*
