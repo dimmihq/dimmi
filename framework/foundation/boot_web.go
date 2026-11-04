@@ -122,6 +122,7 @@ func (a *Application) bootKernel() error {
 		}
 
 		a.Kernel.Use(trust)
+		a.trustProxies = trust
 	}
 
 	a.Kernel.Use(middleware.Maintenance(a.Maintenance, a.Config.Maintenance.RetryAfter, a.opts.MaintenanceExcept...))

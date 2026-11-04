@@ -196,6 +196,7 @@ type push struct {
 	} `json:"join"`
 	Connect    *connected  `json:"connect"`
 	Disconnect *protoError `json:"disconnect"`
+	Unsub      *struct{}   `json:"unsubscribe"`
 }
 
 /*

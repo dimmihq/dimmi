@@ -187,12 +187,25 @@ func (a *Application) publicHandler() (http.Handler, error) {
 
 	mux := a.healthMux()
 	for path, handler := range a.Broadcast.Handlers() {
-		mux.Handle(path, handler)
+		mux.Handle(path, a.behindProxies(handler))
 	}
 
 	mux.Handle("/", a.Kernel.Handler(routes))
 
 	return a.Domains.HTTPHandler(mux), nil
+}
+
+/*
+behindProxies makes a handler outside the kernel read the client's address
+the way the kernel's routes do, so an address rule judges a realtime
+connection by the same address as an API request.
+*/
+func (a *Application) behindProxies(next http.Handler) http.Handler {
+	if a.trustProxies == nil {
+		return next
+	}
+
+	return a.trustProxies(next)
 }
 
 /*

@@ -37,7 +37,7 @@ columns lists the stored columns in the order every query reads them.
 */
 const columns = "id, token_hash, user_id, data, flash, ip, user_agent, authenticated_at, confirmed_at, " +
 	"last_activity_at, expires_at, created_at, auth_method, auth_methods, confirmed_method, device_id, " +
-	"device_label, country, updated_at"
+	"device_label, country, updated_at, sso_connection_id, auth_domain"
 
 /*
 PostgresStore keeps sessions in a PostgreSQL table.
@@ -97,19 +97,21 @@ func (s *PostgresStore) Save(ctx context.Context, r Record) error {
 	}
 
 	sql := "INSERT INTO " + s.table + " (" + columns + ") " +
-		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) " +
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) " +
 		"ON CONFLICT (id) DO UPDATE SET " +
 		"token_hash = EXCLUDED.token_hash, user_id = EXCLUDED.user_id, data = EXCLUDED.data, " +
 		"flash = EXCLUDED.flash, authenticated_at = EXCLUDED.authenticated_at, " +
 		"confirmed_at = EXCLUDED.confirmed_at, last_activity_at = EXCLUDED.last_activity_at, " +
 		"auth_method = EXCLUDED.auth_method, auth_methods = EXCLUDED.auth_methods, " +
 		"confirmed_method = EXCLUDED.confirmed_method, device_id = EXCLUDED.device_id, " +
-		"device_label = EXCLUDED.device_label, country = EXCLUDED.country, updated_at = EXCLUDED.updated_at"
+		"device_label = EXCLUDED.device_label, country = EXCLUDED.country, updated_at = EXCLUDED.updated_at, " +
+		"sso_connection_id = EXCLUDED.sso_connection_id, auth_domain = EXCLUDED.auth_domain"
 
 	_, err = s.db.Exec(ctx, sql, r.ID, r.TokenHash, nullID(r.UserID), data, flash, r.IP, r.UserAgent,
 		nullTime(r.AuthenticatedAt), nullTime(r.ConfirmedAt), r.LastActivityAt, r.ExpiresAt, r.CreatedAt,
 		nullString(r.AuthMethod), nonNilSlice(r.AuthMethods), nullString(r.ConfirmedMethod),
-		nullString(r.DeviceID), nullString(r.DeviceLabel), nullString(r.Country), r.UpdatedAt)
+		nullString(r.DeviceID), nullString(r.DeviceLabel), nullString(r.Country), r.UpdatedAt,
+		nullID(r.ConnectionID), nullString(r.AuthDomain))
 	if err != nil {
 		return fmt.Errorf("save session: %w", err)
 	}
@@ -207,11 +209,13 @@ func scanRecord(row pgx.Row) (Record, error) {
 		confirmedAt                *time.Time
 		authMethod, confirmed      *string
 		deviceID, deviceLabel, cty *string
+		connectionID               *ids.UUID
+		authDomain                 *string
 	)
 
 	err := row.Scan(&r.ID, &r.TokenHash, &userID, &data, &flash, &ip, &userAgent, &authenticatedAt,
 		&confirmedAt, &r.LastActivityAt, &r.ExpiresAt, &r.CreatedAt, &authMethod, &r.AuthMethods, &confirmed,
-		&deviceID, &deviceLabel, &cty, &r.UpdatedAt)
+		&deviceID, &deviceLabel, &cty, &r.UpdatedAt, &connectionID, &authDomain)
 	if err != nil {
 		return Record{}, err
 	}
@@ -229,6 +233,7 @@ func scanRecord(row pgx.Row) (Record, error) {
 	r.AuthenticatedAt, r.ConfirmedAt = deref(authenticatedAt, time.Time{}), deref(confirmedAt, time.Time{})
 	r.AuthMethod, r.ConfirmedMethod = deref(authMethod, ""), deref(confirmed, "")
 	r.DeviceID, r.DeviceLabel, r.Country = deref(deviceID, ""), deref(deviceLabel, ""), deref(cty, "")
+	r.ConnectionID, r.AuthDomain = deref(connectionID, ids.Nil()), deref(authDomain, "")
 
 	return r, nil
 }
