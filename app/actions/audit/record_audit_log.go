@@ -33,7 +33,8 @@ import (
 )
 
 /*
-The audit events of workspaces and their members.
+The audit events of workspaces and their members, of the ways in, such
+as access tokens and invitations, and of teams.
 */
 const (
 	EventWorkspaceCreated     = "workspace.created"
@@ -44,6 +45,18 @@ const (
 	EventMemberReactivated    = "member.reactivated"
 	EventMemberLeft           = "member.left"
 	EventOwnershipTransferred = "ownership.transferred"
+	EventWorkspaceDeleted     = "workspace.deleted"
+	EventWorkspaceRestored    = "workspace.restored"
+	EventTokenCreated         = "token.created"
+	EventTokenRevoked         = "token.revoked"
+	EventInvitationCreated    = "invitation.created"
+	EventInvitationAccepted   = "invitation.accepted"
+	EventInvitationRevoked    = "invitation.revoked"
+	EventTeamCreated          = "team.created"
+	EventTeamUpdated          = "team.updated"
+	EventTeamDeleted          = "team.deleted"
+	EventTeamMemberAdded      = "team.member_added"
+	EventTeamMemberRemoved    = "team.member_removed"
 )
 
 /*

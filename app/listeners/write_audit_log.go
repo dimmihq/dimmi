@@ -3,9 +3,10 @@
 | Write Audit Log
 |--------------------------------------------------------------------------
 |
-| Changes to a workspace and its members reach the audit log through
-| their domain events, inside the transaction that dispatched them: the
-| action never writes the log itself, and no change commits without its
+| Changes to a workspace and its members, its access tokens,
+| invitations and teams, and its trash reach the audit log through their
+| domain events, inside the transaction that dispatched them: the action
+| never writes the log itself, and no change commits without its
 | entry. A workspace update carries only the names of the fields that
 | changed, so its entry records the values they changed to, read from
 | the workspace as it now is.
@@ -33,8 +34,11 @@ import (
 The kinds of subject the entries written here are about.
 */
 const (
-	subjectWorkspace = "workspace"
-	subjectMember    = "member"
+	subjectWorkspace  = "workspace"
+	subjectMember     = "member"
+	subjectToken      = "token"
+	subjectInvitation = "invitation"
+	subjectTeam       = "team"
 )
 
 /*
@@ -56,6 +60,9 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.InTx, l.memberRoleChanged)
 	events.Listen(d, events.InTx, l.memberDeactivated)
 	events.Listen(d, events.InTx, l.memberReactivated)
+	l.listenTrash(d)
+	l.listenAccess(d)
+	l.listenTeams(d)
 }
 
 /*

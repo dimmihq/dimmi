@@ -15,6 +15,18 @@ export const auditEvents: Record<string, string> = {
   "member.deactivated": "Deactivated a member",
   "member.reactivated": "Reactivated a member",
   "member.left": "Left the workspace",
+  "workspace.deleted": "Deleted the workspace",
+  "workspace.restored": "Restored the workspace",
+  "token.created": "Created an API token",
+  "token.revoked": "Revoked an API token",
+  "invitation.created": "Invited someone",
+  "invitation.accepted": "Accepted an invitation",
+  "invitation.revoked": "Withdrew an invitation",
+  "team.created": "Created a team",
+  "team.updated": "Renamed a team",
+  "team.deleted": "Deleted a team",
+  "team.member_added": "Added someone to a team",
+  "team.member_removed": "Removed someone from a team",
 };
 
 const securityEvents: Record<string, string> = {
