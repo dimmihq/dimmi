@@ -228,3 +228,39 @@ func TestServeTLS(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestDomainAuthorizer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("the host of app.url always gets a certificate and others are refused", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t, "APP_APP__URL=https://Staging.Example.com")))
+
+		require.NoError(t, app.Domains.Ensure(t.Context(), "staging.example.com"))
+		require.ErrorIs(t, app.Domains.Ensure(t.Context(), "other.example.com"), customdomain.ErrNotAuthorized)
+	})
+
+	t.Run("a plain http app.url gets no certificate", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t, "APP_APP__URL=http://localhost:8080")))
+
+		require.ErrorIs(t, app.Domains.Ensure(t.Context(), "localhost"), customdomain.ErrNotAuthorized)
+	})
+
+	t.Run("other hosts are up to the application's authorizer", func(t *testing.T) {
+		t.Parallel()
+		opts := options(environ(t, "APP_APP__URL=https://staging.example.com"))
+		opts.Domains = func(_ context.Context, host string) error {
+			if host == "help.customer.example" {
+				return nil
+			}
+
+			return customdomain.ErrNotAuthorized
+		}
+		app := newApp(t, opts)
+
+		require.NoError(t, app.Domains.Ensure(t.Context(), "staging.example.com"))
+		require.NoError(t, app.Domains.Ensure(t.Context(), "help.customer.example"))
+		require.ErrorIs(t, app.Domains.Ensure(t.Context(), "other.example.com"), customdomain.ErrNotAuthorized)
+	})
+}
