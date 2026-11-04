@@ -73,20 +73,6 @@ func (r *Registry) Find(kind string) (Factor, bool) {
 }
 
 /*
-Enabled returns the enabled drivers, in the order the configuration
-lists them.
-*/
-func (r *Registry) Enabled() []Factor {
-	out := make([]Factor, 0, len(r.enabled))
-	for _, kind := range r.enabled {
-		d, _ := r.Known(kind)
-		out = append(out, d)
-	}
-
-	return out
-}
-
-/*
 Types returns the enabled types, in the order the configuration lists
 them.
 */

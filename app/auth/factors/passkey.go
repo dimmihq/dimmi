@@ -125,7 +125,9 @@ func (d *Passkey) Activate(_ context.Context, factor *models.UserAuthFactor, ans
 		return refused(err)
 	}
 
-	return keep(factor, made)
+	keep(factor, made)
+
+	return nil
 }
 
 /*
@@ -156,7 +158,9 @@ func (d *Passkey) Verify(_ context.Context, factor *models.UserAuthFactor, answe
 		return refused(err)
 	}
 
-	return keep(factor, checked)
+	keep(factor, checked)
+
+	return nil
 }
 
 /*
@@ -184,17 +188,14 @@ func refused(err error) error {
 
 /*
 keep stores the credential on the factor, with its digest and counter.
+A credential holds only bytes, strings, numbers and flags, so it always
+encodes.
 */
-func keep(factor *models.UserAuthFactor, c webauthn.Credential) error {
-	encoded, err := json.Marshal(c)
-	if err != nil {
-		return fmt.Errorf("encode passkey: %w", err)
-	}
+func keep(factor *models.UserAuthFactor, c webauthn.Credential) {
+	encoded, _ := json.Marshal(c)
 
 	counter := int64(c.SignCount)
 	factor.Credential, factor.LookupHash, factor.LastCounter = encoded, LookupHash(c.ID), &counter
-
-	return nil
 }
 
 /*
