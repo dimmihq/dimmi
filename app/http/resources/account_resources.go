@@ -46,7 +46,8 @@ func NewEmailChange(c users.EmailChange) EmailChange {
 
 	return EmailChange{
 		Object: "email_change", ID: models.PublicID(models.PrefixOneTimeToken, c.ID), Email: c.Email, Status: status,
-		ExpiresAt: utc(c.ExpiresAt), ConfirmedAt: utc(c.ConfirmedAt), UserID: models.PublicID(models.PrefixUser, c.UserID),
+		ExpiresAt: utc(c.ExpiresAt), ConfirmedAt: utc(c.ConfirmedAt),
+		UserID: models.PublicID(models.PrefixUser, c.UserID),
 	}
 }
 

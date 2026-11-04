@@ -46,6 +46,7 @@ First-party app (Dimmi mobile) never calls `POST /sessions`, `POST /users`, `/ma
 | PATCH | `/api/v1/user/password` | user.password.update | U | change password |
 | PUT | `/api/v1/user/avatar` | user.avatar.update | U | multipart upload (replaces whole image), 2 MB, png/jpeg/webp/gif, re-encoded 256x256 |
 | DELETE | `/api/v1/user/avatar` | user.avatar.destroy | U | remove |
+| GET | `/avatars/{file}` | avatars.show | public | stored picture, name is random uuid; not under `/api/v1` |
 | GET | `/api/v1/user/auth-factors` | user.auth-factors.index | U | list own factors (no secrets): `id, object: auth_factor, type, name, status, preferred, confirmed_at, last_used_at, created_at`; recovery set adds `remaining`, `total`. Pending listed with `status: pending` |
 | POST | `/api/v1/user/auth-factors` | user.auth-factors.store | U C | `{type: "totp", name?}`: 201 `auth_factor` status `pending` + one-time `setup` (`secret`, `otpauth_url`, `qr_svg`). `{type: "recovery_code"}`: regenerate set (2FA on only), 201 active `auth_factor` + one-time `codes` |
 | PATCH | `/api/v1/user/auth-factors/{fac}` | user.auth-factors.update | U | `{code}`: pending to active (response adds one-time `recovery_codes` when this activation enabled 2FA). `{name}`, `{preferred: true}` (any status). `code` combined with other fields: 422 `prohibited` |

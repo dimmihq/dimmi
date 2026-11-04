@@ -94,8 +94,8 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 
 ## M10. Email change, account deletion (track 07 accounts-settings)
 
-- [ ] `POST /email-changes` + `PATCH /email-changes/{ott} {token}` with both mails, race 409. Test: second redemption 422, wrong token 422.
-- [ ] Deletion preview + delete account (anonymize, delete factors, cascade, workspace deletion, `RevokeUserAppGrants(user_deleted)`, events). Test: sole_owner 409, re-signup same email works, factors gone.
+- [x] `POST /email-changes` + `PATCH /email-changes/{ott} {token}` with both mails, race 409. Test: second redemption 422, wrong token 422.
+- [x] Deletion preview + delete account (anonymize, delete factors, cascade, workspace deletion, `RevokeUserAppGrants(user_deleted)`, events). Test: sole_owner 409, re-signup same email works, factors gone.
 
 ## M11. Self-host first run and CLI
 
@@ -124,10 +124,10 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 
 Migrations range `20261201070001+`. Spec: [settings-pages.md](settings-pages.md). Removes every dead control on `pages/account.tsx` first (delete, then re-add wired).
 
-- [ ] `routes/account.go`: `GET|PATCH /user`, `PATCH /user/password`, `PUT|DELETE /user/avatar`; actions `update_profile`, `update_password`, `update_avatar`, `delete_avatar`. Accept: `user.updated` realtime; `tokens_remaining`. Test list in settings-pages.md.
-- [ ] Profile page wired; `lib/api/account.ts`; email change dialog + `routes/_auth/email.confirm.tsx`. Needs M10 routes. E2e `profile.spec.ts`: "a person changes their name and picture", "a person changes their email and confirms from the new mailbox" (Mailpit).
-- [ ] Password dialog (change and set). E2e `password.spec.ts`: "changing the password signs out the other browser".
-- [ ] Time zone picker, `lib/location.ts` uses `/me.user.timezone`. Test: "the snooze preset uses the person's zone" with 03.
+- [x] `routes/account.go`: `GET|PATCH /user`, `PATCH /user/password`, `PUT|DELETE /user/avatar`; actions `update_profile`, `update_password`, `update_avatar`, `delete_avatar`. Accept: `user.updated` realtime; `tokens_remaining`. Test list in settings-pages.md.
+- [x] Profile page wired; `lib/api/account.ts`; email change dialog + `routes/_auth/email.confirm.tsx`. Needs M10 routes. E2e `profile.spec.ts`: "a person changes their name and picture", "a person changes their email and confirms from the new mailbox" (Mailpit).
+- [x] Password dialog (change and set). E2e `password.spec.ts`: "changing the password signs out the other browser".
+- [x] Time zone picker, `lib/location.ts` uses `/me.user.timezone`. Open: test "the snooze preset uses the person's zone" lands with track 03 W5.
 
 ## M14. Sign-in methods page, 2FA help (track 07 accounts-settings)
 

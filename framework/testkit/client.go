@@ -178,7 +178,7 @@ func (c *Client) Send(method, path string, body any) *Response {
 		c.tb.Fatalf("encode %s %s body: %v", method, path, err)
 	}
 
-	return c.send(method, path, payload, "application/json")
+	return c.request(method, path, payload, "application/json")
 }
 
 /*
@@ -205,13 +205,13 @@ func (c *Client) PutFile(path, field, name string, contents []byte) *Response {
 		c.tb.Fatalf("finish form for PUT %s: %v", path, err)
 	}
 
-	return c.send(http.MethodPut, path, &body, form.FormDataContentType())
+	return c.request(http.MethodPut, path, &body, form.FormDataContentType())
 }
 
 /*
-send makes the request, naming the payload's type when there is one.
+request makes the request, naming the payload's type when there is one.
 */
-func (c *Client) send(method, path string, payload io.Reader, contentType string) *Response {
+func (c *Client) request(method, path string, payload io.Reader, contentType string) *Response {
 	c.tb.Helper()
 
 	r := httptest.NewRequestWithContext(c.tb.Context(), method, path, payload)

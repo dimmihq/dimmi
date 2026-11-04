@@ -16,10 +16,10 @@ package web
 import (
 	"errors"
 	"io"
-	"net/http"
 	"regexp"
 
 	"github.com/dimmihq/dimmi/framework/filesystem"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 )
 
 /*
@@ -47,30 +47,30 @@ type AvatarController struct {
 /*
 Show writes the picture the path names, or answers not found.
 */
-func (c *AvatarController) Show(w http.ResponseWriter, r *http.Request) {
+func (c *AvatarController) Show(w fhttp.ResponseWriter, r *fhttp.Request) {
 	name := r.PathValue("file")
 	if !avatarName.MatchString(name) {
-		http.NotFound(w, r)
+		w.WriteHeader(fhttp.StatusNotFound)
 
 		return
 	}
 
 	disk, err := c.Disks.Default()
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		w.WriteHeader(fhttp.StatusInternalServerError)
 
 		return
 	}
 
 	file, err := disk.Open(r.Context(), "avatars/"+name)
 	if errors.Is(err, filesystem.ErrNotFound) {
-		http.NotFound(w, r)
+		w.WriteHeader(fhttp.StatusNotFound)
 
 		return
 	}
 
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		w.WriteHeader(fhttp.StatusInternalServerError)
 
 		return
 	}

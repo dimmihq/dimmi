@@ -11,8 +11,8 @@ Style: caveman. Date: 2026-11-04. Backend routes named here live in [api.md](api
 | Control | Calls | Behavior |
 |---|---|---|
 | Full name | `PATCH /user {name}` | 1..120, NFC. Save on button. Fires `user.updated`; sender name on outgoing mail uses it |
-| Picture | `PUT /user/avatar`, `DELETE /user/avatar` | BoardUI `file-upload`; 2 MB, png/jpeg/webp/gif, re-encoded. Avatar shows image, initials fallback |
-| Email | `POST /email-changes`, confirm page `/email/confirm` | dialog with `recent-auth`; shows pending address with resend + cancel (`POST` again replaces). New SPA route `routes/_auth/email.confirm.tsx` calls `PATCH /email-changes/{ott}` from fragment |
+| Picture | `PUT /user/avatar`, `DELETE /user/avatar` | BoardUI `file-upload`; 2 MB, png/jpeg/webp/gif, re-encoded. Avatar shows image, initials fallback. Served same origin at `GET /avatars/{uuid}.png`, immutable, any disk; `avatar_url` is that path |
+| Email | `POST /email-changes`, confirm page `/email/confirm` | dialog with `recent-auth`; row shows pending masked address with resend + use another address (`POST` again replaces; no server cancel: no route, link dies in 24 h, old mailbox warned). New SPA route `routes/_auth/email.confirm.tsx` calls `PATCH /email-changes/{ott}` from fragment |
 | Leave workspace | `DELETE /user/memberships/{mem}` | confirm dialog; 409 `last_owner` shows hand over text; 409 `managed_by_directory` (21) |
 | Delete account | `GET /user/deletion-preview`, `DELETE /user` | lists blocking workspaces; confirm typed email |
 
@@ -36,7 +36,7 @@ Events: `user.updated` realtime on each workspace channel. Audit: `member.email_
 
 Preferences page. `PATCH /user {timezone}`; IANA validated by `timezone_rule.go`; `null` = follow workspace.
 
-- Choices from `Intl.supportedValuesOf("timeZone")`, BoardUI `select` with search, first option "Workspace default ({zone})". Button-less: saves on pick.
+- Choices from `Intl.supportedValuesOf("timeZone")` plus UTC, react-aria `ComboBox` on BoardUI `InputBase` + `SelectItem` (BoardUI `select` has no search), first option "Workspace default ({zone})". Button-less: saves on pick.
 - First visit with null and browser zone differing from workspace: quiet hint row with "Use {zone}". Never auto-writes.
 - `users.timezone` already read by `Location` in `status.go`; 03 snooze presets read it (X6). `/me.user.timezone` drives display formatting in `lib/location.ts`. 06 quiet hours read it.
 

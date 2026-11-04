@@ -5,9 +5,7 @@
 |
 | Inputs of the endpoints on a person's own account. Every field of a
 | profile update is optional and a missing one stays as it is; a language
-| or time zone sent as null goes back to following the workspace. A new
-| address comes in the body and a confirmation token too, never in the
-| address, so neither reaches a log.
+| or time zone sent as null goes back to following the workspace.
 |
 */
 
@@ -15,8 +13,8 @@ package requests
 
 import (
 	"context"
-	"mime/multipart"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/support/str"
 	"github.com/dimmihq/dimmi/framework/validation"
 )
@@ -62,7 +60,7 @@ UpdateUserAvatarRequest is the input of PUT /user/avatar: a multipart form
 with the picture in the avatar field.
 */
 type UpdateUserAvatarRequest struct {
-	RawBody multipart.Form
+	RawBody fhttp.MultipartForm
 }
 
 /*
@@ -72,25 +70,5 @@ confirm.
 type DestroyUserRequest struct {
 	Body struct {
 		ConfirmEmail string `json:"confirm_email,omitempty" validate:"required,max=254"`
-	}
-}
-
-/*
-StoreEmailChangeRequest is the input of POST /email-changes.
-*/
-type StoreEmailChangeRequest struct {
-	Body struct {
-		Email string `json:"email,omitempty" validate:"required,email,max=254"`
-	}
-}
-
-/*
-UpdateEmailChangeRequest is the input of PATCH /email-changes/{change}:
-the link's token.
-*/
-type UpdateEmailChangeRequest struct {
-	Change string `path:"change"`
-	Body   struct {
-		Token string `json:"token,omitempty" validate:"required,max=256"`
 	}
 }

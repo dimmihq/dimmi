@@ -42,7 +42,8 @@ func (EmailChangeVerificationMail) Envelope() mail.Envelope {
 Content renders the mail.
 */
 func (m EmailChangeVerificationMail) Content(ctx context.Context) (mail.Content, error) {
-	return content(ctx, "mail.email_change_verification.subject", accounts.EmailChangeVerification(m.Name, m.Email, m.URL)), nil
+	return content(ctx, "mail.email_change_verification.subject",
+		accounts.EmailChangeVerification(m.Name, m.Email, m.URL)), nil
 }
 
 /*
@@ -66,7 +67,8 @@ func (EmailChangeRequestedMail) Envelope() mail.Envelope {
 Content renders the mail.
 */
 func (m EmailChangeRequestedMail) Content(ctx context.Context) (mail.Content, error) {
-	return content(ctx, "mail.email_change_requested.subject", accounts.EmailChangeRequested(m.Name, m.MaskedEmail, m.SecurityURL)), nil
+	return content(ctx, "mail.email_change_requested.subject",
+		accounts.EmailChangeRequested(m.Name, m.MaskedEmail, m.SecurityURL)), nil
 }
 
 /*

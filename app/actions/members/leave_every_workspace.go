@@ -105,7 +105,7 @@ func (a *PreviewAccountDeletion) Handle(ctx context.Context, userID ids.UUID) (D
 }
 
 func (p *DeletionPreview) add(fate int, row models.ListUserActiveMembershipsRow) {
-	workspace := DeletedWorkspace{ID: row.WorkspaceID, Name: row.WorkspaceName, Slug: string(row.WorkspaceSlug)}
+	workspace := DeletedWorkspace{ID: row.WorkspaceID, Name: row.WorkspaceName, Slug: row.WorkspaceSlug}
 
 	switch fate {
 	case fateBlock:

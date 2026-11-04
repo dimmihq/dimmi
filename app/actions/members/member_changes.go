@@ -34,8 +34,8 @@ import (
 
 /*
 memberWriter writes changes to members inside one transaction, on
-behalf of the member making them, at one moment. keepInvitations leaves
-the invitations a deactivated member sent standing.
+behalf of the member making them, at one moment. Setting keepInvitations
+leaves the invitations a deactivated member sent standing.
 */
 type memberWriter struct {
 	tx              *database.Tx

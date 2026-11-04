@@ -512,6 +512,31 @@ pkill -TERM -f 'bin/dimmi serve'
 docker compose exec -T postgres psql -U postgres -c 'DROP DATABASE dimmi_e2e'
 ```
 
+## Own account
+
+A signed-in browser session in `a.jar`, `$O`, `$J`, `$B`, `r`, `link` and `frag` as above. A person's own account
+needs no workspace header.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Read profile | `r user -b a.jar $B/user` | 200 `user`, `avatar_url` null, `timezone` null |
+| Rename | `r rename -b a.jar -X PATCH -H "$O" -H "$J" $B/user -d '{"name":"Ada L"}'` | 200, `name` "Ada L"; `user.updated` on each workspace channel |
+| Time zone | same route with `{"timezone":"Asia/Tokyo"}`, `{"timezone":"Mars/Base"}`, `{"timezone":null}` | 200 set; 422 `errors.timezone`; 200 null |
+| Upload picture | `r pic -b a.jar -X PUT -H "$O" -F avatar=@logo.png $B/user/avatar`, then `curl -I $HOST$(jq -r .data.avatar_url pic.json)` | 200 with `avatar_url` `/avatars/<uuid>.png`; 200 `image/png`, `immutable`, `nosniff` |
+| Refuse non-picture | same with a text file | 422 `invalid_avatar` |
+| Remove picture | `r nopic -b a.jar -X DELETE -H "$O" $B/user/avatar` | 204; the old address 404 once the worker ran |
+| Change password | `r pw -b a.jar -c a.jar -X PATCH -H "$O" -H "$J" $B/user/password -d '{"current_password":"...","password":"..."}'` | 200 `tokens_remaining`; new session cookie; another browser's `me` 401; tokens still work; mail "Your Dimmi password changed" |
+| Wrong password | same with a wrong `current_password` | 422 `invalid_password` on `current_password` |
+| Ask to move | `r mv -b a.jar -X POST -H "$O" -H "$J" $B/email-changes -d "{\"email\":\"moved.$RUN@example.com\"}"` | 201 `email_change` `pending`, masked; mails "Confirm your new" to the new address and "Someone asked" to the old |
+| Bad link | `L=$(link moved.$RUN@example.com Confirm); r mvbad -X PATCH -H "$O" -H "$J" $B/email-changes/$(frag $L id) -d '{"token":"nope"}'` | 422 `invalid_email_change_token` |
+| Confirm move | same with `$(frag $L token)`, then again | 200 `confirmed` with the full address, mail "email address changed" to the old; second 422 |
+| Preview deletion | `r prev -b a.jar $B/user/deletion-preview` | 200 `blocking` with workspaces it alone owns with teammates, `will_be_deleted` with those it is alone in |
+| Blocked deletion | `r del -b a.jar -X DELETE -H "$O" -H "$J" $B/user -d "{\"confirm_email\":\"$ADA\"}"` with teammates present | 409 `sole_owner`, `meta.workspaces` |
+| Delete account | same once nothing blocks | 204, cookie cleared; `me` 401; tokens 401; mail "account was deleted"; signing up with the address again works as a new user; old member rows show "Former teammate" |
+
+Browser: `/d/settings/profile`, `/d/settings/security`, `/d/settings/preferences` and `/email/confirm` from the
+mailed link, in light and dark. Every control on them does something.
+
 ## Reporting
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in

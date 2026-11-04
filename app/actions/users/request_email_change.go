@@ -91,8 +91,8 @@ type RequestEmailChange struct {
 Handle starts the change and returns it, with the new address masked.
 */
 func (a *RequestEmailChange) Handle(ctx context.Context, in RequestEmailChangeInput) (EmailChange, error) {
-	email := strings.ToLower(strings.TrimSpace(in.Email))
-	if strings.EqualFold(email, in.User.Email) {
+	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
+	if strings.EqualFold(in.Email, in.User.Email) {
 		return EmailChange{}, exceptions.ErrEmailUnchanged
 	}
 
@@ -103,7 +103,7 @@ func (a *RequestEmailChange) Handle(ctx context.Context, in RequestEmailChangeIn
 		return EmailChange{}, err
 	}
 
-	if err := a.ensureFree(ctx, email); err != nil {
+	if err := a.ensureFree(ctx, in.Email); err != nil {
 		return EmailChange{}, err
 	}
 
@@ -112,20 +112,20 @@ func (a *RequestEmailChange) Handle(ctx context.Context, in RequestEmailChangeIn
 	err = a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		issued, err = a.Tokens.Issue(ctx, appauth.Issue{
 			Purpose: enums.OneTimePurposeEmailChange, UserID: &in.User.ID, Email: in.User.Email,
-			Data: map[string]any{emailChangeDataKey: email}, Client: in.Client, TTL: emailChangeTTL, Live: 1,
+			Data: map[string]any{emailChangeDataKey: in.Email}, Client: in.Client, TTL: emailChangeTTL, Live: 1,
 		})
 		if err != nil {
 			return err
 		}
 
-		return a.tell(ctx, tx, in, email, issued)
+		return a.tell(ctx, tx, in, issued)
 	})
 	if err != nil {
 		return EmailChange{}, err
 	}
 
 	return EmailChange{
-		ID: issued.ID, UserID: in.User.ID, Email: maskEmail(email), ExpiresAt: &issued.ExpiresAt,
+		ID: issued.ID, UserID: in.User.ID, Email: maskEmail(in.Email), ExpiresAt: &issued.ExpiresAt,
 	}, nil
 }
 
@@ -150,9 +150,9 @@ tell mails the link to the new address, warns the old one and logs the
 request.
 */
 func (a *RequestEmailChange) tell(
-	ctx context.Context, tx *database.Tx, in RequestEmailChangeInput, email string, issued appauth.Issued,
+	ctx context.Context, tx *database.Tx, in RequestEmailChangeInput, issued appauth.Issued,
 ) error {
-	user := in.User
+	user, email := in.User, in.Email
 	moved := user
 	moved.Email = email
 

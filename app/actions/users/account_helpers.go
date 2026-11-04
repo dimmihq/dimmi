@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
@@ -50,5 +51,7 @@ func maskEmail(email string) string {
 		return "***"
 	}
 
-	return string([]rune(local)[0]) + "***@" + domain
+	first, _ := utf8.DecodeRuneInString(local)
+
+	return string(first) + "***@" + domain
 }

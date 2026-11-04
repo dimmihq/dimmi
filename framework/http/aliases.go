@@ -12,7 +12,10 @@
 
 package http
 
-import "net/http"
+import (
+	"mime/multipart"
+	"net/http"
+)
 
 /*
 Request is an incoming HTTP request.
@@ -43,6 +46,12 @@ type Header = http.Header
 Cookie is a cookie sent or received.
 */
 type Cookie = http.Cookie
+
+/*
+MultipartForm is a parsed multipart upload, as the RawBody of a route's
+input.
+*/
+type MultipartForm = multipart.Form
 
 /*
 SameSite is the cross-site policy of a cookie.
