@@ -431,19 +431,17 @@ export function MembersSettings() {
       <Section
         title="Members"
         description={`${active} active`}
-        action={
-          powers.write ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <MemberFilterSelect value={view} onChange={setView} />
-              <ExportMembersButton workspace={workspace} filter={filter} />
-              {permissions.includes("members:import") ? (
-                <MemberImportButton workspace={workspace} hasPassword={me.hasPassword} />
-              ) : null}
-              <InviteButton workspace={workspace} />
-            </div>
-          ) : null
-        }
+        action={powers.write ? <InviteButton workspace={workspace} /> : null}
       >
+        {powers.write ? (
+          <div className="flex flex-wrap items-center gap-2 py-2.5 pe-3">
+            <MemberFilterSelect value={view} onChange={setView} />
+            <ExportMembersButton workspace={workspace} filter={filter} />
+            {permissions.includes("members:import") ? (
+              <MemberImportButton workspace={workspace} hasPassword={me.hasPassword} />
+            ) : null}
+          </div>
+        ) : null}
         {members.map((member) => (
           <Person
             key={member.id}
