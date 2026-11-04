@@ -258,7 +258,9 @@ func TestConversationListPlans(t *testing.T) {
 	spam.Statuses, spam.Spam = nil, true
 	urgent := base
 	urgent.Sort, urgent.PriorityMin = querybuilder.SortPriority, new(int16(1))
-	deleted := querybuilder.Conversations{WorkspaceID: workspace, MemberID: me, Deleted: true, Limit: 25}
+	deleted := querybuilder.Conversations{
+		WorkspaceID: workspace, MemberID: me, Deleted: true, Limit: 25, Access: querybuilder.Access{Mode: "all"},
+	}
 
 	for name, tc := range map[string]struct {
 		list  querybuilder.Conversations
