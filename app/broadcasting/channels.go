@@ -68,11 +68,12 @@ func MemberOptions() fbroadcasting.ChannelOptions {
 }
 
 /*
-WidgetContactOptions keeps the last 100 broadcasts of one contact's
-channel.
+WidgetContactOptions tracks which of the contact's messengers are open,
+so a reply nobody is watching can be emailed instead, and keeps the last
+300 broadcasts.
 */
 func WidgetContactOptions() fbroadcasting.ChannelOptions {
-	return fbroadcasting.ChannelOptions{HistorySize: 100, HistoryTTL: historyTTL}
+	return fbroadcasting.ChannelOptions{Presence: true, HistorySize: 300, HistoryTTL: historyTTL}
 }
 
 /*

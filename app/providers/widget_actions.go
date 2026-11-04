@@ -133,6 +133,11 @@ func bootWidget(ctx context.Context, a *app.App) error {
 	}
 
 	bootWidgetSessions(a)
+
+	if err := bootWidgetRealtime(a); err != nil {
+		return err
+	}
+
 	bootWidgetConversations(a, disk, a.Application.Config.Filesystems.Default)
 
 	return startWidget(ctx, a)
@@ -157,6 +162,27 @@ func bootWidgetSessions(a *app.App) {
 }
 
 /*
+bootWidgetRealtime builds the visitors' stream tokens and lets the realtime
+server open their streams.
+*/
+func bootWidgetRealtime(a *app.App) error {
+	key, err := widget.NewRealtimeKey(a.DerivedKey("widget.realtime"))
+	if err != nil {
+		return fmt.Errorf("widget realtime key: %w", err)
+	}
+
+	a.Actions.Widget.Realtime = &widget.Realtime{
+		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Key: key, TTL: a.Config.Widget.RealtimeTokenTTL,
+	}
+
+	if a.Realtime != nil {
+		a.Realtime.Widget = a.Actions.Widget.Realtime
+	}
+
+	return nil
+}
+
+/*
 bootWidgetConversations builds the actions on visitors' conversations,
 which enter the inbox through its inbound path on the widget's disk.
 */
@@ -164,6 +190,16 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 	acts := a.Actions.Widget
 
 	acts.Conversations = &widget.ListWidgetConversations{DB: a.DB, Disk: disk}
+	acts.MarkRead = &widget.MarkWidgetConversationRead{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.Ping = &widget.RecordWidgetPing{DB: a.DB, Clock: a.Clock, Cache: a.Cache}
+
+	broadcaster := &widgetchannel.Broadcaster{
+		Server: a.Broadcast, Payloads: widgetchannel.Payloads{DB: a.DB, Read: acts.Conversations},
+	}
+	broadcaster.Listen(a.Events)
+	acts.Typing = &widget.BroadcastVisitorTyping{
+		DB: a.DB, Events: a.Events, Clock: a.Clock, Cache: a.Cache, Throttle: a.Config.Widget.TypingThrottle,
+	}
 	acts.PostMessage = &widget.PostWidgetMessage{
 		DB: a.DB, Clock: a.Clock, Team: acts.Availability,
 		Receiver: &conversations.ReceiveInboundMessage{

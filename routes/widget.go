@@ -83,6 +83,12 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Get(visitor, "/contact", "widget.contact.show", contact.Show)
 	routing.Patch(visitor, "/contact", "widget.contact.update", contact.Patch)
 
+	tokens := &widget.RealtimeTokenController{Realtime: a.Actions.Widget.Realtime, BaseURL: baseURLOf(a)}
+	routing.Post(visitor, "/realtime-tokens", "widget.realtime-tokens.store", tokens.Store)
+
+	pings := &widget.PingController{Record: a.Actions.Widget.Ping}
+	routing.Post(visitor, "/pings", "widget.pings.store", pings.Store)
+
 	conv := &widget.ConversationController{
 		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage, IDs: a.IDs, Clock: a.Clock,
 		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
@@ -94,6 +100,10 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
 	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
 	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")
+
+	activity := &widget.ActivityController{Read: a.Actions.Widget.MarkRead, Tell: a.Actions.Widget.Typing, IDs: a.IDs}
+	routing.Patch(visitor, one+"/read-state", "widget.conversations.read-state.update", activity.ReadState)
+	routing.Post(visitor, one+"/typing-indicators", "widget.conversations.typing-indicators.store", activity.Typing)
 }
 
 /*

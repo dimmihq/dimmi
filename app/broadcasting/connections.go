@@ -43,13 +43,26 @@ import (
 Connections authenticates realtime connections. Guards are the API's
 guards, Sessions loads the browser's session from its cookie and
 Origins refuses cookie connections opened from another origin. Live says
-whether a connection's credential still works.
+whether a connection's credential still works. Widget opens messenger
+visitors' streams, which carry a connect token of their own.
 */
 type Connections struct {
 	Guards   *fauth.Guards
 	Sessions *session.Manager
 	Origins  *middleware.OriginCheck
 	Live     *appauth.LiveCredentials
+	Widget   WidgetResolver
+}
+
+/*
+WidgetResolver opens messenger visitors' streams.
+*/
+type WidgetResolver interface {
+	/*
+		Resolve returns the visitor behind a connect token, and false for a
+		token that is not the messenger's.
+	*/
+	Resolve(ctx context.Context, token string) (fbroadcasting.Principal, bool, error)
 }
 
 /*
@@ -68,6 +81,12 @@ of a same-origin upgrade. Missing, invalid and cross-origin credentials
 are refused as unauthenticated.
 */
 func (c *Connections) Resolve(ctx context.Context, r *fhttp.Request, token string) (fbroadcasting.Principal, error) {
+	if c.Widget != nil && token != "" {
+		if visitor, ours, err := c.Widget.Resolve(ctx, token); ours {
+			return visitor, err
+		}
+	}
+
 	authenticated, err := c.authenticate(ctx, r, token)
 	if err != nil {
 		return fbroadcasting.Principal{}, err

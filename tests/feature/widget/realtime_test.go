@@ -1,0 +1,159 @@
+package widget_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dimmihq/dimmi/framework/testkit"
+
+	"github.com/dimmihq/dimmi/tests"
+)
+
+func TestWidgetRealtime(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a connect token opens the visitor's own channel only", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v, other := startVisitor(t, tc), startVisitor(t, tc)
+		base := streamURL(t, tc)
+
+		res := v.client().PostJSON("/widget/v1/realtime-tokens", nil).AssertCreated()
+		res.AssertJSONPath("data.object", "realtime_token")
+		res.AssertJSONPath("data.channel", "widget_contact:"+v.contact)
+
+		s := dialStream(t, base, map[string]any{
+			"token": res.String("data.token"),
+			"subs":  map[string]any{"widget_contact:" + other.contact: map[string]any{"recover": true}},
+		})
+		connected := s.next()
+		require.NotNil(t, connected.Connect)
+		assert.Contains(t, connected.Connect.Subs, "widget_contact:"+v.contact)
+		assert.NotContains(t, connected.Connect.Subs, "widget_contact:"+other.contact)
+	})
+
+	t.Run("a connect token is no bearer token for the API", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		token := v.client().PostJSON("/widget/v1/realtime-tokens", nil).AssertCreated().String("data.token")
+
+		tc.Client().WithHeader("Authorization", "Bearer "+token).GetJSON("/widget/v1/session").
+			AssertUnauthorized().AssertJSONPath("code", "session_invalid")
+		tc.Client().WithHeader("Authorization", "Bearer "+token).GetJSON("/api/v1/me").AssertUnauthorized()
+	})
+
+	t.Run("an expired connect token or an ended session opens nothing", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		base := streamURL(t, tc)
+		token := v.client().PostJSON("/widget/v1/realtime-tokens", nil).AssertCreated().String("data.token")
+
+		tc.Clock.Travel(tc.App.Config.Widget.RealtimeTokenTTL * 2)
+		refused := dialStream(t, base, map[string]any{"token": token}).next()
+		require.NotNil(t, refused.Disconnect)
+
+		fresh := v.client().PostJSON("/widget/v1/realtime-tokens", nil).AssertCreated().String("data.token")
+		v.client().Delete("/widget/v1/session").AssertNoContent()
+		require.NotNil(t, dialStream(t, base, map[string]any{"token": fresh}).next().Disconnect)
+	})
+
+	t.Run("signing out closes the open stream", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		s := v.openStream(t, streamURL(t, tc), nil)
+		require.NotNil(t, s.next().Connect)
+
+		v.client().Delete("/widget/v1/session").AssertNoContent()
+
+		for {
+			p := s.next()
+			if p.Disconnect != nil {
+				assert.Equal(t, 4009, p.Disconnect.Code)
+
+				break
+			}
+		}
+	})
+
+	t.Run("an ended session cannot get a token", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		v.client().Delete("/widget/v1/session").AssertNoContent()
+
+		v.client().PostJSON("/widget/v1/realtime-tokens", testkit.JSON{}).AssertUnauthorized()
+	})
+}
+
+func TestWidgetBroadcasts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a teammate's reply reaches the visitor live with its widget, a note never", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		s := v.openStream(t, streamURL(t, tc), nil)
+		require.NotNil(t, s.next().Connect)
+
+		owner(tc).PostJSON("/api/v1/conversations/"+id+"/notes", testkit.JSON{"body": "secret note"}).AssertCreated()
+		reply(t, tc, id, "Hi from Kim")
+
+		event, data := s.event()
+		assert.Equal(t, "message.created", event)
+		assert.NotContains(t, string(data), "secret note")
+		assert.Contains(t, string(data), "Hi from Kim")
+		assert.Contains(t, string(data), `"widget_id":"`+appID(t, tc)+`"`)
+		assert.Contains(t, string(data), `"customer_status":"waiting_on_you"`)
+		assert.NotContains(t, string(data), tc.Owner.Email)
+	})
+
+	t.Run("closing the conversation reaches the visitor", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		s := v.openStream(t, streamURL(t, tc), nil)
+		require.NotNil(t, s.next().Connect)
+
+		owner(tc).PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"status": "closed"}).AssertOK()
+
+		for {
+			event, data := s.event()
+			if event == "conversation.closed" {
+				assert.Contains(t, string(data), `"customer_status":"closed"`)
+
+				break
+			}
+		}
+	})
+
+	t.Run("a reconnect recovers what it missed from its position", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		base := streamURL(t, tc)
+		channel := "widget_contact:" + v.contact
+
+		first := v.openStream(t, base, nil).next()
+		require.NotNil(t, first.Connect)
+		position := first.Connect.Subs[channel]
+
+		reply(t, tc, id, "while you were away")
+
+		again := v.openStream(t, base, map[string]any{
+			channel: map[string]any{"recover": true, "epoch": position.Epoch, "offset": position.Offset},
+		}).next()
+		require.NotNil(t, again.Connect)
+		recovered := again.Connect.Subs[channel]
+		assert.True(t, recovered.Recovered)
+		require.NotEmpty(t, recovered.Publications)
+		assert.Contains(t, string(recovered.Publications[len(recovered.Publications)-1]), "while you were away")
+	})
+}

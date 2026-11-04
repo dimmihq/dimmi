@@ -46,12 +46,21 @@ type BroadcastVisitorTyping struct {
 }
 
 /*
+TypingInput is a visitor starting or stopping to type in a conversation.
+*/
+type TypingInput struct {
+	Auth         Authenticated
+	Conversation ids.UUID
+	Started      bool
+}
+
+/*
 Handle passes the visitor's typing on, or quietly drops it inside the
 throttle window.
 */
-func (a *BroadcastVisitorTyping) Handle(
-	ctx context.Context, auth Authenticated, conversation ids.UUID, started bool,
-) error {
+func (a *BroadcastVisitorTyping) Handle(ctx context.Context, in TypingInput) error {
+	auth, conversation, started := in.Auth, in.Conversation, in.Started
+
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		_, err := models.New(tx).FindWidgetConversation(ctx, scopeOf(auth, conversation))
 
@@ -65,7 +74,7 @@ func (a *BroadcastVisitorTyping) Handle(
 		return fmt.Errorf("find widget conversation: %w", err)
 	}
 
-	pass, err := a.admit(ctx, auth.Session.ID, conversation, started)
+	pass, err := a.admit(ctx, in)
 	if err != nil || !pass {
 		return err
 	}
@@ -84,12 +93,10 @@ func (a *BroadcastVisitorTyping) Handle(
 admit lets one start per window through and opens the window again on a
 stop.
 */
-func (a *BroadcastVisitorTyping) admit(
-	ctx context.Context, session, conversation ids.UUID, started bool,
-) (bool, error) {
-	key := "widget:typing:" + session.String() + ":" + conversation.String()
+func (a *BroadcastVisitorTyping) admit(ctx context.Context, in TypingInput) (bool, error) {
+	key := "widget:typing:" + in.Auth.Session.ID.String() + ":" + in.Conversation.String()
 
-	if !started {
+	if !in.Started {
 		if err := a.Cache.Delete(ctx, key); err != nil {
 			return false, fmt.Errorf("reset visitor typing throttle: %w", err)
 		}
