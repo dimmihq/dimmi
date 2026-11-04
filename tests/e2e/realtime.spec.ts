@@ -1,6 +1,7 @@
 /*
  * Realtime end to end: a change one person makes shows on a teammate's
- * open screen without a reload, and the centrifuge-js SDK, the one the
+ * open screen without a reload, a reply one teammate sends lands in the
+ * conversation another has open, and the centrifuge-js SDK, the one the
  * dashboard and integrations use, speaks to the server from Node:
  * connecting with the session cookie, following the workspace and a
  * conversation, listing who is viewing, and recovering what it missed
@@ -11,6 +12,7 @@ import { Centrifuge, type PublicationContext, type SubscribedContext } from "cen
 
 import { addTeammate, startConversation } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
+import { startConversation as relayConversation } from "./support/inbox";
 
 const base = "http://localhost:18090";
 
@@ -82,6 +84,48 @@ it.describe("realtime", () => {
     expect(renamed.status()).toBe(200);
 
     await expect(watching.getByText(`Renamed ${suffixOf(person)}`).first()).toBeVisible();
+    expect(problems).toEqual([]);
+    await other.close();
+  });
+
+  it("shows a teammate's reply in a conversation another has open", async ({ page, person, request, browser }) => {
+    const teammate = teammateOf(person);
+    await createAccount(request, person, `Desk ${suffixOf(person)}`);
+    await createAccount(request, teammate);
+    addTeammate(person.email, teammate.email, "member");
+
+    await signIn(page, person);
+    const id = await relayConversation(page, {
+      name: "Emily Johnson",
+      email: "emily@northwind.example",
+      subject: "Can't log in",
+      body: "My password manager's password is refused.",
+    });
+
+    const other = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const watching = await other.newPage();
+    const problems: string[] = [];
+    watching.on("pageerror", (error) => problems.push(error.message));
+    watching.on("console", (message) => {
+      if (message.type() === "error") {
+        problems.push(message.text());
+      }
+    });
+
+    await signIn(watching, teammate);
+    await watching.goto(`/d/inbox/all/${id}`);
+    await expect(watching.getByRole("heading", { name: "Can't log in" })).toBeVisible();
+    await expect(watching.locator('[data-realtime="connected"]')).toBeAttached();
+
+    await page.goto(`/d/inbox/all/${id}`);
+    await expect(page.getByRole("status", { name: /Ada Lovelace/ })).toBeVisible();
+    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await page.getByRole("textbox", { name: "Reply to Emily Johnson" }).fill("Try a sign-in code instead.");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    await expect(watching.getByRole("article", { name: `Message from ${person.name}` })).toContainText(
+      "Try a sign-in code instead.",
+    );
     expect(problems).toEqual([]);
     await other.close();
   });
