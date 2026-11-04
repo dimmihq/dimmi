@@ -23,15 +23,15 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 ## M3. Domains and connections (track 08 enterprise-identity)
 
 - [ ] Migrations 080001, 080002, 080003, 080005, 080011. Prefixes `ssoc_`, `odom_` registered (`app/models/public_ids.go`). Lint annotations.
-- [ ] Domain actions + API. DNS via `framework/dns` with test resolver fake (boundary). Freemail list embed. `RecheckOrganizationDomains`, `sso:verify-domain`.
-- [ ] Connection CRUD, state machine, secret sealing (`Scope{Kind: "organization"}`), settings mirrors in same tx. Audit events.
-- [ ] Permissions `sso:manage`, `scim:manage` in catalog + `roles.go`; label keys.
-- [ ] UI `pages/single-sign-on.tsx`, `connections`, `connection-steps`, `domains`. Nav entry gated on `sso:manage`. E2e: "an owner verifies a domain with the operator command and sees it verified" using test resolver env flag only in testing env.
+- [x] Domain actions + API. DNS via `framework/dns` with test resolver fake (boundary). Freemail list embed. `RecheckOrganizationDomains`, `sso:verify-domain`.
+- [x] Connection CRUD, state machine, secret sealing (`Scope{Kind: "organization"}`), settings mirrors in same tx. Audit events.
+- [x] Permissions `sso:manage`, `scim:manage` in catalog + `roles.go`; label keys.
+- [x] UI `pages/single-sign-on.tsx`, `connections`, `connection-steps`, `domains`. Nav entry gated on `sso:manage`. E2e: "an owner verifies a domain with the operator command and sees it verified" using test resolver env flag only in testing env.
 
 ## M4. SAML (track 08 enterprise-identity)
 
-- [ ] First: add gosaml2 + goxmldsig v1.6.1 floor, one `framework/saml` call; `tests/arch` and binary size check pass. Fails: stop, report.
-- [ ] `framework/saml` wrapper + `samltest`. Tests list in saml.md. 90% coverage. `doc.go`, no product words.
+- [x] First: add gosaml2 + goxmldsig v1.6.1 floor, one `framework/saml` call; `tests/arch` and binary size check pass. Fails: stop, report.
+- [x] `framework/saml` wrapper + `samltest`. Tests list in saml.md. 90% coverage. `doc.go`, no product words.
 - [ ] Web routes redirect, ACS (CSRF off for this route only), metadata. Attempt store on Valkey, `__Host-dimmi_sso` cookie, replay guard, IdP-initiated restart.
 - [ ] `CompleteSSOLogin`, `ResolveSSOUser`, `ApplyGroupRoles`, JIT. `OrganizationLoginPolicy` replaces `AllowAll` in provider; `CheckLoginPolicy` path for password, magic link, email code, reset, register, OAuth.
 - [ ] `POST /sso-lookups`. Login page "Continue with SSO". `POST /sessions {sso_bypass}` + `SSOBypassUsedMail`.

@@ -10,7 +10,7 @@
  * Build the binary first with `make build`; `make e2e` does both.
  */
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -62,6 +62,13 @@ const env = {
 };
 
 execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });
+
+/*
+ * The tests run operator commands against this same install, so they
+ * read its directory and environment from a file named after the
+ * database; support/operator.ts finds it.
+ */
+writeFileSync(join(tmpdir(), `${database}.install.json`), JSON.stringify({ home, env }));
 
 const server = spawn(binary, ["serve"], { cwd: home, env, stdio: "inherit" });
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

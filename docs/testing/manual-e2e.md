@@ -467,6 +467,30 @@ R=$B/roles
 | Owners and self | assign a role to an owner or to yourself | 422 `invalid_transition` |
 | In a browser | `$W/d/settings/roles`, "New role" > "Read only", "Create role"; then `/d/settings/members`, the member's menu > "Make Read only" | the role is listed with "Based on member · 1 member"; the member's chip shows "Read only"; their reply shows "This action is unauthorized." |
 
+### Single sign-on connections and domains
+
+Ada (`a.jar`) owns Acme. Changes need a recent confirmation. `C` and `D` are the connection and domain paths:
+
+```bash
+C=$B/sso-connections; D=$B/organization-domains
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Create SAML | `r sc -b a.jar -X POST -H "$O" -H "$J" -H "$WH" $C -d '{"protocol":"saml","name":"Okta"}'; SSO=$(jq -r .data.id body)` | 201 `ssoc_…`, `status: draft`, `sp.acs_url` ends in `/auth/saml/$SSO/acs`, `config.sp_certificate` set, no secret in the body; audit `sso_connection.created` |
+| Bad certificate | same with `"config":{"idp_certificates":["nope"]}` | 422 `invalid_saml_metadata` |
+| OpenID without secret | `-d '{"protocol":"oidc","name":"Entra","config":{"issuer":"https://login.example.com","client_id":"x"}}'` | 422 `invalid_saml_metadata` |
+| Activate untested | `PATCH $C/$SSO -d '{"status":"active"}'` | 422 `invalid_transition` |
+| Add domain | `r da -b a.jar -X POST -H "$O" -H "$J" -H "$WH" $D -d '{"domain":"acme.com"}'; DOM=$(jq -r .data.id body)` | 201 `odom_…`, `status: pending`, `record_name: _dimmi-verify.acme.com`, `record_value: dimmi-domain-verification=…` |
+| Free mail | same with `gmail.com` | 422 `domain_not_claimable` |
+| Check without record | `POST $D/$DOM/checks` | 201, `status: pending`, `found_records: []` |
+| Operator proof | `./bin/dimmi sso:verify-domain acme.com` | prints "Verified acme.com"; the domain shows `verified_via: cli`; audit `organization_domain.verified` by the system |
+| Route | `PATCH $D/$DOM -d '{"sso_connection_id":"'$SSO'"}'` | 200 with the connection id |
+| Same domain elsewhere | another organization adds and proves `acme.com` | 409 `domain_taken` on proof |
+| Members cannot see it | a member's `GET $C` | 403 `forbidden` |
+| Operator off switch | `./bin/dimmi sso:disable <slug>` | every connection of the workspace's organization is `disabled` and unenforced |
+| In a browser | `$W/d/settings/single-sign-on`, "New connection", then "Add domain" and the operator command | the connection is listed as "Draft" with its reply URL under "Details"; after a reload the domain shows "Verified by the operator" with a connection picker |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.

@@ -30,6 +30,7 @@ import {
   RiKey2Line,
   RiLightbulbLine,
   RiListOrdered2,
+  RiLoginBoxLine,
   RiMailLine,
   RiMegaphoneLine,
   RiNotification3Line,
@@ -335,6 +336,13 @@ export const settingsPages = {
     "/d/settings/workspace-security",
     "Rules every member signs in under.",
   ),
+  "single-sign-on": page(
+    "settings-single-sign-on",
+    "Single sign-on",
+    RiLoginBoxLine,
+    "/d/settings/single-sign-on",
+    "Sign in through your company's identity provider.",
+  ),
   "audit-log": page(
     "settings-audit-log",
     "Audit log",
@@ -396,6 +404,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     pages.teams,
     pages.roles,
     pages["workspace-security"],
+    pages["single-sign-on"],
     pages["audit-log"],
     pages.import,
   ];
