@@ -39,7 +39,10 @@ it.describe("the inbox by keyboard", () => {
     await expect(page.getByRole("heading", { name: "Export fails", level: 1 })).toBeVisible();
 
     await page.keyboard.press("z");
-    await page.getByRole("dialog", { name: "Snooze until" }).getByRole("button", { name: /Tomorrow/ }).click();
+    await page
+      .getByRole("dialog", { name: "Snooze until" })
+      .getByRole("button", { name: /Tomorrow/ })
+      .click();
     await expect(page.getByRole("heading", { name: "Invoice question", level: 1 })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+Shift+Y");
     await expect(page.getByRole("heading", { name: "Can't log in", level: 1 })).toBeVisible();
@@ -50,6 +53,19 @@ it.describe("the inbox by keyboard", () => {
     await expect(page.getByRole("link", { name: /Lena Park/ })).toBeVisible();
     await page.getByRole("radio", { name: "Closed" }).click();
     await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
+  });
+
+  it("assigns from the keyboard", async ({ page, person }) => {
+    await page.goto("/d/inbox/all");
+    await page.getByRole("link", { name: /Lena Park/ }).click();
+    await expect(page.getByRole("heading", { name: "Export fails", level: 1 })).toBeVisible();
+
+    await page.keyboard.press("a");
+    await page.getByRole("dialog", { name: "Assign to" }).getByRole("button", { name: person.name }).click();
+
+    await expect(page.getByRole("region", { name: "Details" }).getByRole("button", { name: /Assignee/ })).toContainText(
+      person.name,
+    );
   });
 
   it("opens the sheet with ? and practises the moves", async ({ page }) => {

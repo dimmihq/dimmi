@@ -15,7 +15,7 @@
 import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -30,6 +30,7 @@ import { addNote, type Conversation, markRead, messagesQuery, reply } from "@/li
 import { useMutationId } from "@/lib/realtime/context";
 import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
+import { AssignPicker } from "./assign/assign-picker";
 import { statusLabel, useCase } from "./case";
 import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
@@ -98,8 +99,17 @@ export function ConversationView({
   const typing = useTypingReport(workspace, conversation.id);
   const caze = useCase(workspace, conversation);
   const [snoozing, setSnoozing] = useState(false);
-  const openSnooze = useCallback(() => setSnoozing(true), []);
-  const walk = useWalk(view, workspace, conversation, caze, openSnooze);
+  const [assigning, setAssigning] = useState(false);
+  const toggleRef = useRef<() => void>(() => undefined);
+  const panels = useMemo(
+    () => ({
+      openSnooze: () => setSnoozing(true),
+      openAssign: () => setAssigning(true),
+      toggleDetails: () => toggleRef.current(),
+    }),
+    [],
+  );
+  const walk = useWalk(view, workspace, conversation, caze, panels);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);
@@ -115,6 +125,7 @@ export function ConversationView({
   const [easing, ease] = useEasing();
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
+  toggleRef.current = () => toggle(pane.details);
   const toggleOperator = () => (sideBySide ? toggle(pane.operator) : setDrawer(!drawer));
   const operatorShown = sideBySide ? operatorOpen : drawer;
 
@@ -137,6 +148,15 @@ export function ConversationView({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <ConversationViewers conversation={conversation.id} self={userId} />
+          <AssignPicker
+            workspace={workspace}
+            assignee={conversation.assignee?.id ?? null}
+            team={conversation.team?.id ?? null}
+            isOpen={assigning}
+            onOpenChange={setAssigning}
+            onMember={caze.assign}
+            onTeam={caze.assignTeam}
+          />
           <SnoozePicker
             workspace={workspace}
             conversation={conversation.id}

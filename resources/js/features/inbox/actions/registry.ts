@@ -30,6 +30,8 @@ export interface ConversationMoves {
   reopen: () => void;
   snooze: () => void;
   assignToMe: () => void;
+  assign: () => void;
+  toggleDetails: () => void;
   next: () => void;
   previous: () => void;
   advance: () => void;

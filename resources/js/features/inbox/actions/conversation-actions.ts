@@ -7,7 +7,9 @@ import {
   RiArrowDownLine,
   RiArrowUpLine,
   RiCheckboxCircleLine,
+  RiLayoutRightLine,
   RiRefreshLine,
+  RiUserAddLine,
   RiUserReceivedLine,
 } from "@remixicon/react";
 
@@ -73,5 +75,25 @@ export const conversationActions: InboxAction[] = [
     keys: ["Shift", "A"],
     when: (ctx) => ctx.conversation !== null,
     run: (ctx) => ctx.conversation?.assignToMe(),
+  },
+  {
+    id: "conversation.assign",
+    label: "Assign",
+    group: "Conversation",
+    icon: RiUserAddLine,
+    shortcut: "a",
+    keys: ["A"],
+    when: (ctx) => ctx.conversation !== null,
+    run: (ctx) => ctx.conversation?.assign(),
+  },
+  {
+    id: "conversation.details",
+    label: "Show or hide the details",
+    group: "Conversation",
+    icon: RiLayoutRightLine,
+    shortcut: "]",
+    keys: ["]"],
+    when: (ctx) => ctx.conversation !== null,
+    run: (ctx) => ctx.conversation?.toggleDetails(),
   },
 ];

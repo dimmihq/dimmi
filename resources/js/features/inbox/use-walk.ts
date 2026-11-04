@@ -47,7 +47,7 @@ export function useWalk(
   workspace: string,
   conversation: Conversation,
   caze: CaseControls,
-  openSnooze: () => void,
+  panels: { openSnooze: () => void; openAssign: () => void; toggleDetails: () => void },
 ) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -79,13 +79,15 @@ export function useWalk(
       status: conversation.status,
       close: thenNext(() => caze.setStatus("closed")),
       reopen: () => caze.setStatus("open"),
-      snooze: openSnooze,
+      snooze: panels.openSnooze,
+      assign: panels.openAssign,
+      toggleDetails: panels.toggleDetails,
       assignToMe: caze.assignToMe,
       next: () => open(next),
       previous: () => open(previous),
       advance: () => open(next ?? previous),
     };
-  }, [caze, conversation.id, conversation.status, navigate, next, previous, view, openSnooze]);
+  }, [caze, conversation.id, conversation.status, navigate, next, previous, view, panels]);
 
   useConversationMoves(moves);
 
