@@ -102,6 +102,7 @@ swaps in a fake, in place, so code holding the client sees the fake too.
 */
 type Client struct {
 	allowFakes bool
+	timeout    time.Duration
 
 	mu       sync.RWMutex
 	resolver Resolver
@@ -111,7 +112,17 @@ type Client struct {
 New returns a client that asks real servers.
 */
 func New(cfg Config) *Client {
-	return &Client{allowFakes: cfg.AllowFakes, resolver: newSystem(cfg)}
+	return &Client{allowFakes: cfg.AllowFakes, timeout: cfg.Timeout, resolver: newSystem(cfg)}
+}
+
+/*
+Via returns a resolver that asks the given server, host:port, with the
+client's timeout. A check that must not trust one cache asks two servers
+this way. Once the client is faked the resolver answers from the fake
+too, so tests never reach a real server.
+*/
+func (c *Client) Via(nameserver string) Resolver {
+	return &via{client: c, direct: newSystem(Config{Nameserver: nameserver, Timeout: c.timeout})}
 }
 
 /*
@@ -175,4 +186,55 @@ func (c *Client) current() Resolver {
 	defer c.mu.RUnlock()
 
 	return c.resolver
+}
+
+/*
+via asks its own server until the client it came from is faked.
+*/
+type via struct {
+	client *Client
+	direct Resolver
+}
+
+func (v *via) pick() Resolver {
+	if fake, ok := v.client.current().(*Fake); ok {
+		return fake
+	}
+
+	return v.direct
+}
+
+/*
+TXT returns the TXT records of the name.
+*/
+func (v *via) TXT(ctx context.Context, name string) ([]string, error) {
+	return v.pick().TXT(ctx, name)
+}
+
+/*
+MX returns the mail exchangers of the name.
+*/
+func (v *via) MX(ctx context.Context, name string) ([]MX, error) {
+	return v.pick().MX(ctx, name)
+}
+
+/*
+CNAME returns the canonical name of the name.
+*/
+func (v *via) CNAME(ctx context.Context, name string) (string, error) {
+	return v.pick().CNAME(ctx, name)
+}
+
+/*
+NS returns the name servers of the name.
+*/
+func (v *via) NS(ctx context.Context, name string) ([]string, error) {
+	return v.pick().NS(ctx, name)
+}
+
+/*
+Addrs returns the addresses of the name.
+*/
+func (v *via) Addrs(ctx context.Context, name string) ([]netip.Addr, error) {
+	return v.pick().Addrs(ctx, name)
 }

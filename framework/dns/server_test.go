@@ -151,7 +151,8 @@ func writeRecords(b *dnsmessage.Builder, name string, records dns.Records, qtype
 
 	for _, host := range records.NS {
 		if qtype == dnsmessage.TypeNS {
-			errs = append(errs, b.NSResource(rrHeader(name), dnsmessage.NSResource{NS: dnsmessage.MustNewName(host + ".")}))
+			ns := dnsmessage.NSResource{NS: dnsmessage.MustNewName(host + ".")}
+			errs = append(errs, b.NSResource(rrHeader(name), ns))
 		}
 	}
 
