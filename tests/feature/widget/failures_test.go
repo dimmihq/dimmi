@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -109,6 +110,68 @@ func failures() map[string]failure {
 		},
 		"creating a widget whose channel cannot be stored": {
 			none, func(tc *tests.TestCase) { tc.FailWrites("channel_connections", "INSERT") },
+			func(v *visitor, _ string) *testkit.Response {
+				return owner(v.tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Shop"})
+			},
+		},
+		"resuming a session whose visit cannot be noted": {
+			func(t *testing.T, v *visitor) string {
+				t.Helper()
+				v.tc.Clock.Travel(2 * time.Minute)
+
+				return ""
+			},
+			func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "UPDATE") },
+			func(v *visitor, _ string) *testkit.Response { return v.client().GetJSON("/widget/v1/session") },
+		},
+		"reading a profile that cannot be read": {
+			none, func(tc *tests.TestCase) { tc.BreakTable("contacts") },
+			func(v *visitor, _ string) *testkit.Response { return v.client().GetJSON("/widget/v1/contact") },
+		},
+		"leaving an email that cannot be kept": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("contact_identities", "INSERT", "UPDATE", "DELETE") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.client().PatchJSON("/widget/v1/contact", testkit.JSON{"email": "grace@shop.example"})
+			},
+		},
+		"starting a conversation that cannot be stored": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("conversations", "INSERT") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.client().PostJSON("/widget/v1/conversations", testkit.JSON{
+					"client_id": ids.New().String(), "body": "hello",
+				})
+			},
+		},
+		"sending a file that cannot be linked": {
+			func(t *testing.T, v *visitor) string {
+				t.Helper()
+				id := v.upload(t, "notes.txt", "text/plain", []byte("hi"))
+				v.complete(id).AssertOK()
+
+				return id
+			},
+			func(tc *tests.TestCase) { tc.FailWrites("attachments", "UPDATE") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().PostJSON("/widget/v1/conversations", testkit.JSON{
+					"client_id": ids.New().String(), "body": "see", "attachment_ids": []string{id},
+				})
+			},
+		},
+		"typing in a conversation that cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("conversations") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().PostJSON("/widget/v1/conversations/"+id+"/typing-indicators",
+					testkit.JSON{"state": "started"})
+			},
+		},
+		"deleting a widget whose sessions cannot be ended": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "UPDATE") },
+			func(v *visitor, _ string) *testkit.Response {
+				return owner(v.tc).Delete("/api/v1/widget-settings/" + appIDOf(v))
+			},
+		},
+		"creating a widget that cannot be stored": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("widget_settings", "INSERT") },
 			func(v *visitor, _ string) *testkit.Response {
 				return owner(v.tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Shop"})
 			},
