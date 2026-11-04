@@ -127,6 +127,8 @@ export class Bridge {
       this.refetch(realtimeKeys.members(workspace), realtimeKeys.caller(workspace));
     } else if (envelope.event === "conversation.hidden") {
       this.hide(workspace, envelope.data);
+    } else if (envelope.event === "user.updated") {
+      this.refetch(realtimeKeys.members(workspace), realtimeKeys.caller(workspace), realtimeKeys.me());
     } else if (isObjectRecord(envelope.data)) {
       this.applyRecord(workspace, namespace, envelope.event, envelope.data);
     } else if (namespace === "member") {

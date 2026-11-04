@@ -207,7 +207,7 @@ func TestSendChannelMessageJob(t *testing.T) {
 			"customer":     breakTable("contacts"),
 			"author":       breakTable("workspace_members"),
 			"driver": func(d desk) {
-				_, err := d.tc.App.DB.Exec(d.tc.T.Context(), "UPDATE channel_connections SET type = 'retired'")
+				_, err := d.tc.Operator().Exec(d.tc.T.Context(), "UPDATE channel_connections SET type = 'retired'")
 				require.NoError(d.tc.T, err)
 			},
 		} {

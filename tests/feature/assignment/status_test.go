@@ -122,7 +122,7 @@ func TestAssignmentStatus(t *testing.T) {
 
 		cursors := func() int {
 			var n int
-			require.NoError(t, d.tc.App.DB.QueryRow(t.Context(),
+			require.NoError(t, d.tc.Operator().QueryRow(t.Context(),
 				"SELECT count(*) FROM team_assignment_cursors WHERE pool_id = $1", s.team.ID).Scan(&n))
 
 			return n

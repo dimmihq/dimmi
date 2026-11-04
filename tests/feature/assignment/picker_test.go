@@ -60,7 +60,7 @@ func (d desk) rule(t *testing.T, team *ids.UUID, settings map[string]any) {
 	raw, err := json.Marshal(map[string]any{"assignment": settings})
 	require.NoError(t, err)
 
-	_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE inboxes SET default_team_id = $1, settings = $2 WHERE id = $3",
+	_, err = d.tc.Operator().Exec(t.Context(), "UPDATE inboxes SET default_team_id = $1, settings = $2 WHERE id = $3",
 		team, raw, d.inbox.Inbox.ID)
 	require.NoError(t, err)
 }
@@ -330,7 +330,7 @@ func TestArrivalRules(t *testing.T) {
 		d.crew(t, 1, map[string]any{"mode": "round_robin"})
 		d.rule(t, nil, map[string]any{"mode": "manual"})
 		id := d.customer(t, "ann")
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET ai_state = 'active' WHERE id = $1",
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE conversations SET ai_state = 'active' WHERE id = $1",
 			d.decode(t, id))
 		require.NoError(t, err)
 

@@ -8,6 +8,8 @@
 | changes their role or status, handing ownership over included. "me"
 | names the caller's own membership. Ids of other workspaces' members
 | are simply not found. include=teams adds the teams each member is in.
+| Callers who may change members also see whose account failed guesses
+| locked, so they can lift the lock.
 |
 */
 
@@ -16,14 +18,15 @@ package v1
 import (
 	"context"
 	"slices"
+	"strconv"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/ids"
 
-	"github.com/dimmihq/dimmi/app/actions/availability"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/teams"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -52,16 +55,21 @@ type MemberOutput struct {
 }
 
 /*
-MemberController serves the members of the workspace in play.
+MemberController serves the members of the workspace in play, as JSON
+or, through ServeCSV, as a CSV file. Errors renders what refuses an
+export before its file starts.
 */
 type MemberController struct {
 	ListMembers  *members.ListMembers
 	ShowMember   *members.ShowMember
 	UpdateMember *members.UpdateMember
+	Export       *members.ExportMembers
 	MemberTeams  *teams.ListMemberTeams
 	AccessTeams  *members.ListAccessTeams
 	IDs          *ids.Registry
 	Cursors      *pagination.Cursors
+	Lockout      *appauth.Lockout
+	Errors       fhttp.Errors
 }
 
 /*
@@ -72,14 +80,16 @@ type memberPage struct {
 }
 
 /*
-Index lists a page of members, by name or, with sort=-created_at,
-newest first; filter[status], filter[role] and q narrow it.
+Index lists a page of members, by name, newest first with
+sort=-created_at or most recently active first with
+sort=-last_active_at; filter[status], filter[role], filter[team],
+filter[two_factor] and q narrow it.
 */
 func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*MembersOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
 	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
-		Filters: []string{"status", "role"}, Sorts: []string{"name", "created_at"}, Includes: []string{"teams"},
+		Filters: memberFilters(), Sorts: []string{"name", "created_at", "last_active_at"}, Includes: []string{"teams"},
 	})
 	if err != nil {
 		return nil, err
@@ -102,6 +112,9 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 		return nil, err
 	}
 	if err := c.includeAccessTeams(ctx, out.Items, memberRows(page.Members)); err != nil {
+		return nil, err
+	}
+	if err := c.markLocked(ctx, out.Items); err != nil {
 		return nil, err
 	}
 	if page.More {
@@ -142,6 +155,10 @@ func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequ
 		return nil, err
 	}
 
+	if err := c.markLocked(ctx, out); err != nil {
+		return nil, err
+	}
+
 	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
 }
 
@@ -166,6 +183,38 @@ func (c *MemberController) includeTeams(
 	for i, id := range memberIDs {
 		summaries := resources.NewTeamSummaries(byMember[id])
 		out[i].Teams = &summaries
+	}
+
+	return nil
+}
+
+/*
+markLocked says, for each shaped member, whether failed guesses locked
+their account, when the caller may change members; other callers see
+none of what only those who manage members may see.
+*/
+func (c *MemberController) markLocked(ctx context.Context, out []resources.WorkspaceMember) error {
+	if !membership(ctx).Can("members:write") {
+		for i := range out {
+			out[i] = out[i].ForTeammates()
+		}
+
+		return nil
+	}
+
+	emails := make([]string, 0, len(out))
+	for _, member := range out {
+		emails = append(emails, member.User.Email)
+	}
+
+	locked, err := c.Lockout.Locked(ctx, emails)
+	if err != nil {
+		return err
+	}
+
+	for i := range out {
+		state := locked[out[i].User.Email]
+		out[i].SignInLocked = &state
 	}
 
 	return nil
@@ -251,82 +300,11 @@ func (c *MemberController) applyUpdate(
 	if err := c.includeAccessTeams(ctx, out, []models.WorkspaceMember{row.WorkspaceMember}); err != nil {
 		return nil, err
 	}
+	if err := c.markLocked(ctx, out); err != nil {
+		return nil, err
+	}
 
 	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
-}
-
-/*
-accessChange reads the conversation access fields of an update, nil when
-it names none. A team id that cannot be read names no team.
-*/
-func (c *MemberController) accessChange(b requests.UpdateMemberBody) (*members.AccessChange, error) {
-	if b.Access == nil && b.AccessUnassigned == nil && b.AccessTeamIDs == nil {
-		return nil, nil
-	}
-
-	change := &members.AccessChange{
-		Mode: (*enums.ConversationAccess)(b.Access), Unassigned: b.AccessUnassigned,
-	}
-	if b.AccessTeamIDs == nil {
-		return change, nil
-	}
-
-	teamIDs := make([]ids.UUID, 0, len(*b.AccessTeamIDs))
-	for _, public := range *b.AccessTeamIDs {
-		id, err := c.IDs.Decode(string(models.PrefixTeam), public)
-		if err != nil {
-			return nil, exceptions.ErrAccessTeamNotFound
-		}
-
-		teamIDs = append(teamIDs, id)
-	}
-
-	change.TeamIDs = &teamIDs
-
-	return change, nil
-}
-
-/*
-availabilityChange reads the availability fields of an update, nil when
-it names none. A capacity sent as null lifts the limit.
-*/
-func availabilityChange(b requests.UpdateMemberBody, raw []byte) *availability.Change {
-	clearCapacity := requests.Nulls(raw)["conversation_capacity"]
-	if b.Availability == nil && b.AwayReassign == nil && b.AssignOnReply == nil && b.Capacity == nil &&
-		b.CapacityByChannel == nil && !clearCapacity {
-		return nil
-	}
-
-	change := &availability.Change{
-		Availability: (*enums.Availability)(b.Availability), AwayReassign: b.AwayReassign,
-		AssignOnReply: (*enums.AssignOnReply)(b.AssignOnReply), CapacityByChannel: b.CapacityByChannel,
-	}
-
-	if b.Capacity != nil || clearCapacity {
-		change.Capacity = &availability.Limit{Max: b.Capacity}
-	}
-
-	return change
-}
-
-/*
-includeAccessTeams adds to each shaped member the teams their
-conversation access names. The shaped members and the rows come in the
-same order, and only modes that read a list cost a query.
-*/
-func (c *MemberController) includeAccessTeams(
-	ctx context.Context, out []resources.WorkspaceMember, rows []models.WorkspaceMember,
-) error {
-	byMember, err := c.AccessTeams.Handle(ctx, members.ListAccessTeamsInput{Membership: membership(ctx), Members: rows})
-	if err != nil {
-		return err
-	}
-
-	for i, row := range rows {
-		out[i].AccessTeamIDs = resources.PublicTeamIDs(byMember[row.ID])
-	}
-
-	return nil
 }
 
 /*
@@ -352,15 +330,15 @@ filter values no member can have.
 func (c *MemberController) listInput(ctx context.Context, query pagination.Query) (members.ListMembersInput, error) {
 	in := members.ListMembersInput{
 		Membership: membership(ctx), Statuses: query.Filters["status"], Roles: query.Filters["role"],
-		Search: query.Search, Limit: query.Limit,
-	}
-
-	for _, sort := range query.Sorts {
-		in.NewestFirst = sort.Field == "created_at" && sort.Desc
+		Search: query.Search, Limit: query.Limit, Sort: memberSort(query.Sorts),
 	}
 
 	if !known(in.Statuses, enums.MemberStatuses()) || !known(in.Roles, enums.Roles()) {
 		return in, pagination.ErrInvalidFilter
+	}
+
+	if err := c.narrow(query.Filters, &in); err != nil {
+		return in, err
 	}
 
 	if query.Cursor != "" {
@@ -373,6 +351,67 @@ func (c *MemberController) listInput(ctx context.Context, query pagination.Query
 	}
 
 	return in, nil
+}
+
+/*
+memberFilters are the filters the member list and its export take.
+*/
+func memberFilters() []string {
+	return []string{"status", "role", "team", "two_factor"}
+}
+
+/*
+memberSort picks the order of the list: newest first or most recently
+active first when asked for descending, by name otherwise.
+*/
+func memberSort(sorts []pagination.Sort) string {
+	order := members.SortByName
+
+	for _, sort := range sorts {
+		switch {
+		case sort.Field == "created_at" && sort.Desc:
+			order = members.SortNewestFirst
+		case sort.Field == "last_active_at" && sort.Desc:
+			order = members.SortLastActivity
+		default:
+			order = members.SortByName
+		}
+	}
+
+	return order
+}
+
+/*
+narrow reads the team and second factor filters into the input,
+refusing team ids and values that cannot match.
+*/
+func (c *MemberController) narrow(filters map[string][]string, in *members.ListMembersInput) error {
+	for _, named := range filters["team"] {
+		id, err := c.IDs.Decode(string(models.PrefixTeam), named)
+		if err != nil {
+			return pagination.ErrInvalidFilter
+		}
+
+		in.TeamIDs = append(in.TeamIDs, id)
+	}
+
+	values := filters["two_factor"]
+	if len(values) == 0 {
+		return nil
+	}
+
+	if len(values) > 1 {
+		return pagination.ErrInvalidFilter
+	}
+
+	on, err := strconv.ParseBool(values[0])
+	if err != nil {
+		return pagination.ErrInvalidFilter
+	}
+
+	in.TwoFactor = &on
+
+	return nil
 }
 
 /*

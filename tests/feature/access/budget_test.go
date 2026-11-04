@@ -36,7 +36,7 @@ apart, split across the team and nobody, as the tables' owner.
 func seedBudgetConversations(t *testing.T, d desk, team ids.UUID) {
 	t.Helper()
 
-	_, err := d.tc.App.DB.Exec(t.Context(), `
+	_, err := d.tc.Operator().Exec(t.Context(), `
 		WITH contact AS (
 			INSERT INTO contacts (workspace_id, kind, name) VALUES ($1, 'lead', 'Ada') RETURNING id
 		)
@@ -50,7 +50,7 @@ func seedBudgetConversations(t *testing.T, d desk, team ids.UUID) {
 		d.workspaceUUID(), d.inbox.Inbox.ID, d.inbox.API.ID, team, budgetConversations)
 	require.NoError(t, err)
 
-	_, err = d.tc.App.DB.Exec(t.Context(), "ANALYZE conversations")
+	_, err = d.tc.Operator().Exec(t.Context(), "ANALYZE conversations")
 	require.NoError(t, err)
 }
 

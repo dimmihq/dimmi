@@ -12,6 +12,7 @@ package providers
 
 import (
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 )
 
@@ -29,4 +30,8 @@ func bootTeams(a *app.App) {
 	acts.PurgeTeam = &teams.PurgeTeam{DB: a.DB}
 	acts.AddTeamMembers = &teams.AddTeamMembers{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.RemoveTeamMember = &teams.RemoveTeamMember{DB: a.DB, Events: a.Events}
+	acts.ImportMembers = &memberimports.ImportMembers{
+		DB: a.DB, Limiter: a.Limiter, Update: acts.UpdateMember, Add: acts.AddTeamMembers,
+		Remove: acts.RemoveTeamMember, Invite: acts.CreateInvitations,
+	}
 }

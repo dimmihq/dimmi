@@ -5,8 +5,10 @@
 |
 | Everyone in a workspace can see who else works in it: names, emails,
 | roles and whether each member is still active. Lists come a page at a
-| time, by name or newest first, narrowed by status, role or a search of
-| names and emails.
+| time, by name, newest first or most recently active first, narrowed by
+| status, role, team or a search of names and emails. Whether a member
+| has a second factor is only for those who manage members, so only they
+| may narrow by it.
 |
 */
 
@@ -26,18 +28,31 @@ import (
 )
 
 /*
+The orders a list of members comes in.
+*/
+const (
+	SortByName       = "name"
+	SortNewestFirst  = "created_at"
+	SortLastActivity = "last_active_at"
+)
+
+/*
 ListMembersInput is who asks, through their membership, and which page
-of which members they want. Statuses and Roles narrow the list, none
-meaning all; Search matches names and emails.
+of which members they want. Statuses, Roles and TeamIDs narrow the
+list, none meaning all; TwoFactor, when set, keeps members with or
+without a second factor; Search matches names and emails; Sort is one
+of the Sort constants, by name when empty.
 */
 type ListMembersInput struct {
-	Membership  authz.Membership
-	Statuses    []string
-	Roles       []string
-	Search      string
-	NewestFirst bool
-	Offset      int
-	Limit       int
+	Membership authz.Membership
+	Statuses   []string
+	Roles      []string
+	TeamIDs    []ids.UUID
+	TwoFactor  *bool
+	Search     string
+	Sort       string
+	Offset     int
+	Limit      int
 }
 
 /*
@@ -53,6 +68,7 @@ ListMembers lists the members of the caller's workspace.
 
 Rules:
   - The caller needs members:read.
+  - Narrowing by second factor needs members:write.
 
 Errors: [exceptions.ErrForbidden], or a wrapped database error.
 */
@@ -64,7 +80,7 @@ type ListMembers struct {
 Handle returns the page of members.
 */
 func (a *ListMembers) Handle(ctx context.Context, in ListMembersInput) (MemberPage, error) {
-	if !in.Membership.Can("members:read") {
+	if !in.Membership.Can("members:read") || (in.TwoFactor != nil && !in.Membership.Can("members:write")) {
 		return MemberPage{}, exceptions.ErrForbidden
 	}
 
@@ -74,8 +90,9 @@ func (a *ListMembers) Handle(ctx context.Context, in ListMembersInput) (MemberPa
 		var err error
 
 		rows, err = models.New(tx).ListWorkspaceMembers(ctx, models.ListWorkspaceMembersParams{
-			WorkspaceID: in.Membership.Workspace.ID, Statuses: in.Statuses, Roles: in.Roles, Search: in.Search,
-			NewestFirst: in.NewestFirst, RowOffset: int64(in.Offset), RowLimit: int64(in.Limit + 1),
+			WorkspaceID: in.Membership.Workspace.ID, Statuses: in.Statuses, Roles: in.Roles, TeamIds: in.TeamIDs,
+			TwoFactor: in.TwoFactor, Search: in.Search, Sort: in.Sort,
+			RowOffset: int64(in.Offset), RowLimit: int64(in.Limit + 1),
 		})
 
 		return err

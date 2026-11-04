@@ -125,7 +125,7 @@ func TestAssignmentQueue(t *testing.T) {
 		id := d.arrivals(t, 1)[0]
 		d.show(t, id).AssertJSONPath("data.assignment_wait.reason", "no_available_member")
 
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE workspace_members SET availability = 'online', "+
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE workspace_members SET availability = 'online', "+
 			"away_since = NULL WHERE id = $1", s.members[0].member.ID)
 		require.NoError(t, err)
 		d.tc.Drain()

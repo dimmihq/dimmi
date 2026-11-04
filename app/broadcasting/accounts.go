@@ -82,6 +82,9 @@ func (d *Disconnects) Listen(dispatcher *events.Dispatcher) {
 	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.UserSignedOutEverywhere) error {
 		return d.user(ctx, e.UserID)
 	})
+	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.UserDeleted) error {
+		return d.user(ctx, e.UserID)
+	})
 	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.SessionRevoked) error {
 		return d.credential(ctx, e.UserID, appauth.KindSession, e.SessionID)
 	})
@@ -143,6 +146,17 @@ func (b *Broadcaster) listenAccounts(d *events.Dispatcher) {
 			ID: ids.Encode("evt", ids.New()), Event: "member.access_changed",
 			Data: map[string]string{"from": e.From.Mode, "to": e.To.Mode},
 		})
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.UserUpdated) error {
+		for _, m := range e.Memberships {
+			data := changed{ID: models.PublicID(models.PrefixMember, m.MemberID), Object: "member", Changes: e.Changes}
+
+			if err := b.account(ctx, m.WorkspaceID, "user.updated", data); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 }
 

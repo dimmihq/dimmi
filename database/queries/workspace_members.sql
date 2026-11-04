@@ -37,18 +37,27 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- name: ListWorkspaceMembers :many
 -- ListWorkspaceMembers returns a page of the workspace's members with
 -- their accounts, narrowed to the statuses and roles asked for (none
--- means all) and to names or emails containing the search, by name or
--- newest first.
+-- means all), to members of any of the teams asked for, to accounts
+-- with or without a second factor when asked, and to names or emails
+-- containing the search. They come by name, newest first, or most
+-- recently active first with those never active last.
 SELECT sqlc.embed(m), sqlc.embed(u)
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = @workspace_id
   AND (coalesce(cardinality(@statuses::text[]), 0) = 0 OR m.status = ANY (@statuses::text[]))
   AND (coalesce(cardinality(@roles::text[]), 0) = 0 OR m.role = ANY (@roles::text[]))
+  AND (coalesce(cardinality(@team_ids::uuid[]), 0) = 0 OR EXISTS (
+      SELECT 1 FROM team_members tm
+      WHERE tm.workspace_member_id = m.id AND tm.team_id = ANY (@team_ids::uuid[])
+  ))
+  AND (sqlc.narg(two_factor)::boolean IS NULL
+      OR (u.two_factor_confirmed_at IS NOT NULL) = sqlc.narg(two_factor)::boolean)
   AND (@search::text = '' OR u.name ILIKE '%' || @search::text || '%' OR u.email ILIKE '%' || @search::text || '%')
 ORDER BY
-    CASE WHEN @newest_first::boolean THEN m.created_at END DESC,
-    CASE WHEN NOT @newest_first::boolean THEN lower(u.name) END,
+    CASE WHEN @sort::text = 'created_at' THEN m.created_at END DESC,
+    CASE WHEN @sort::text = 'last_active_at' THEN m.last_accessed_at END DESC NULLS LAST,
+    lower(u.name),
     m.id
 LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
 
@@ -165,3 +174,31 @@ WHERE m.workspace_id = @workspace_id AND u.email = @email::citext;
 -- PurgeWorkspaceRows deletes one batch of the workspace's rows from one
 -- of its tables and returns how many went; nothing left returns zero.
 SELECT dimmi_purge_workspace_rows(@workspace_id::uuid, @batch_size::integer)::bigint AS removed;
+
+-- name: ListUserActiveMemberships :many
+-- ListUserActiveMemberships returns every workspace the user is an active
+-- member of, those in the trash included. It runs before any workspace is
+-- chosen, through a security definer function.
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.workspace_name::text AS workspace_name,
+    m.workspace_slug::citext AS workspace_slug,
+    m.role::text AS role,
+    (m.deleted_at IS NOT NULL)::boolean AS trashed
+FROM auth_user_memberships(@user_id) AS m
+WHERE m.status = 'active';
+
+-- name: CountActiveMembers :one
+-- CountActiveMembers counts the people who can still work in the workspace.
+SELECT count(*) FROM workspace_members WHERE workspace_id = @workspace_id AND status = 'active';
+
+-- name: CountUserMembershipsOutsideOrganization :one
+-- CountUserMembershipsOutsideOrganization counts the user's active
+-- memberships in workspaces of other organizations, those in the trash
+-- included, through a security definer function since they span
+-- workspaces.
+SELECT count(*)
+FROM auth_list_user_memberships(@user_id) AS m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.status = 'active' AND w.organization_id <> @organization_id::uuid;

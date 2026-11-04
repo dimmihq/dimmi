@@ -179,8 +179,8 @@ func TestAssignOnReply(t *testing.T) {
 		d := open(t)
 		follower, always := d.join(t), d.join(t)
 		always.client.PatchJSON("/api/v1/members/me", testkit.JSON{"assign_on_reply": "always"}).AssertOK()
-		_, err := d.tc.App.DB.Exec(t.Context(), `UPDATE inboxes SET settings = settings || '{"assign_on_reply": false}'
-			WHERE id = $1`, d.inbox.Inbox.ID)
+		_, err := d.tc.Operator().Exec(t.Context(),
+			`UPDATE inboxes SET settings = settings || '{"assign_on_reply": false}' WHERE id = $1`, d.inbox.Inbox.ID)
 		assert.NoError(t, err)
 		first, second := d.customer(t, "ann"), d.customer(t, "bob")
 

@@ -6,8 +6,11 @@
 | A member as their teammates see them: their role and status in the
 | workspace and who they are, by name and email, never anything about
 | how they sign in, plus which conversations they see, which matters to
-| whoever manages access. The caller's own membership, with the
-| permissions they hold, is the separate member block of the me resource.
+| whoever manages access. Those who manage members also see whether each
+| one has a second factor and when they last used the workspace, so they
+| can chase the stragglers. The caller's own membership, with the
+| permissions they hold, is the separate member block of the me
+| resource.
 |
 */
 
@@ -25,6 +28,10 @@ import (
 /*
 WorkspaceMember is one member of a workspace, with their account. Teams
 is present only when the request included the member's teams.
+SignInLocked says whether failed guesses locked the member's account,
+TwoFactorEnabled whether the account has a second factor, and
+LastActiveAt when the member last used the workspace; all three are
+null for callers who do not manage members.
 */
 type WorkspaceMember struct {
 	ID           string  `json:"id"`
@@ -44,6 +51,10 @@ type WorkspaceMember struct {
 	Teams         *[]TeamSummary `json:"teams,omitempty"`
 	DeactivatedAt *time.Time     `json:"deactivated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
+	SignInLocked  *bool          `json:"sign_in_locked"`
+
+	TwoFactorEnabled *bool      `json:"two_factor_enabled"`
+	LastActiveAt     *time.Time `json:"last_active_at"`
 }
 
 /*
@@ -82,9 +93,12 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 			Name:          u.Name,
 			Email:         u.Email,
 			EmailVerified: u.IsVerified(),
+			AvatarURL:     u.AvatarURL(),
 		},
-		DeactivatedAt: m.DeactivatedAt,
-		CreatedAt:     m.CreatedAt,
+		DeactivatedAt:    m.DeactivatedAt,
+		CreatedAt:        m.CreatedAt,
+		TwoFactorEnabled: new(u.TwoFactorConfirmedAt != nil),
+		LastActiveAt:     m.LastAccessedAt,
 	}
 }
 
@@ -99,6 +113,16 @@ func PublicTeamIDs(teamIDs []ids.UUID) []string {
 	}
 
 	return out
+}
+
+/*
+ForTeammates returns the member without what only those who manage
+members may see.
+*/
+func (w WorkspaceMember) ForTeammates() WorkspaceMember {
+	w.SignInLocked, w.TwoFactorEnabled, w.LastActiveAt = nil, nil, nil
+
+	return w
 }
 
 /*

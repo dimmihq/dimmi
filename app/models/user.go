@@ -42,3 +42,17 @@ anonymized.
 func (u User) IsDeleted() bool {
 	return u.DeletedAt != nil
 }
+
+/*
+AvatarURL returns the address of the user's picture on this server, or
+nil when they have none.
+*/
+func (u User) AvatarURL() *string {
+	if u.AvatarPath == nil {
+		return nil
+	}
+
+	url := "/" + *u.AvatarPath
+
+	return &url
+}

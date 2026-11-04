@@ -34,7 +34,6 @@ func bootInvitations(a *app.App) {
 	acts := a.Actions
 	delivery := invitations.Delivery{
 		Clock: a.Clock, Mail: a.Mail, Links: a.Links, TTL: a.Config.Invitations.TTL,
-		MailConfigured: a.MailConfigured(),
 	}
 
 	acts.CreateInvitations = &invitations.CreateInvitations{

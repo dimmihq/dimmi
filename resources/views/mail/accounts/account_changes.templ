@@ -1,0 +1,56 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+EmailChangeVerification proves the new address of an account, from
+inside its mailbox.
+*/
+
+templ EmailChangeVerification(name, email, url string) {
+	@layout(i18n.T(ctx, "mail.email_change_verification.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.email_change_verification.intro", i18n.Args{"email": email}) }</p>
+		@button(url, i18n.T(ctx, "mail.email_change_verification.action", nil))
+		<p>{ i18n.T(ctx, "mail.email_change_verification.expiry", nil) }</p>
+	}
+}
+
+/*
+EmailChangeRequested warns the old address that someone asked to move
+the account away from it.
+*/
+
+templ EmailChangeRequested(name, maskedEmail, securityURL string) {
+	@layout(i18n.T(ctx, "mail.email_change_requested.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.email_change_requested.intro", i18n.Args{"email": maskedEmail}) }</p>
+		<p>{ i18n.T(ctx, "mail.email_change_requested.advice", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.email_change_requested.action", nil))
+	}
+}
+
+/*
+EmailChanged tells the old address the account moved away from it.
+*/
+
+templ EmailChanged(name, maskedEmail, securityURL string) {
+	@layout(i18n.T(ctx, "mail.email_changed.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.email_changed.intro", i18n.Args{"email": maskedEmail}) }</p>
+		<p>{ i18n.T(ctx, "mail.email_changed.advice", nil) }</p>
+		@button(securityURL, i18n.T(ctx, "mail.email_changed.action", nil))
+	}
+}
+
+/*
+AccountDeleted confirms an account is gone.
+*/
+
+templ AccountDeleted(name string) {
+	@layout(i18n.T(ctx, "mail.account_deleted.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.account_deleted.intro", nil) }</p>
+		<p>{ i18n.T(ctx, "mail.account_deleted.advice", nil) }</p>
+	}
+}

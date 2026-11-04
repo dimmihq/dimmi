@@ -119,7 +119,7 @@ func (q *Queries) ListMemberTeams(ctx context.Context, arg ListMemberTeamsParams
 }
 
 const listTeamMembers = `-- name: ListTeamMembers :many
-SELECT tm.team_id, m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT tm.team_id, m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM team_members tm
 JOIN workspace_members m ON m.id = tm.workspace_member_id
 JOIN users u ON u.id = m.user_id
@@ -189,6 +189,7 @@ func (q *Queries) ListTeamMembers(ctx context.Context, arg ListTeamMembersParams
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
 		); err != nil {
 			return nil, err
 		}

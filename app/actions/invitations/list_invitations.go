@@ -62,9 +62,16 @@ func (a *ListInvitations) Handle(ctx context.Context, in ListInvitationsInput) (
 		return Page{}, exceptions.ErrForbidden
 	}
 
-	rows, err := models.New(a.DB).ListInvitations(ctx, models.ListInvitationsParams{
-		WorkspaceID: in.Membership.Workspace.ID, Statuses: in.Statuses, Now: a.Clock.Now(),
-		RowLimit: int64(in.Limit + 1), RowOffset: int64(in.Offset),
+	var rows []models.ListInvitationsRow
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		rows, err = models.New(tx).ListInvitations(ctx, models.ListInvitationsParams{
+			WorkspaceID: in.Membership.Workspace.ID, Statuses: in.Statuses, Now: a.Clock.Now(),
+			RowLimit: int64(in.Limit + 1), RowOffset: int64(in.Offset),
+		})
+
+		return err
 	})
 	if err != nil {
 		return Page{}, fmt.Errorf("list invitations: %w", err)

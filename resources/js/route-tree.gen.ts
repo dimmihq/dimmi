@@ -16,6 +16,7 @@ import { Route as AuthInvitationRouteImport } from './routes/_auth/invitation'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-factor-reset'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
 import { Route as DAgentRouteImport } from './routes/d/agent'
@@ -26,6 +27,7 @@ import { Route as DDocsRouteImport } from './routes/d/docs'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
+import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
@@ -74,6 +76,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthTwoFactorResetRoute = AuthTwoFactorResetRouteImport.update({
+  id: '/two-factor-reset',
+  path: '/two-factor-reset',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
@@ -125,6 +132,11 @@ const DShortcutsRoute = DShortcutsRouteImport.update({
   id: '/shortcuts',
   path: '/shortcuts',
   getParentRoute: () => DRouteRoute,
+} as any)
+const AuthEmailConfirmRoute = AuthEmailConfirmRouteImport.update({
+  id: '/email/confirm',
+  path: '/email/confirm',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
   id: '/login_/magic',
@@ -211,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
+  '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
@@ -222,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
+  '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
@@ -244,6 +258,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/signup': typeof AuthSignupRoute
+  '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
@@ -254,6 +269,7 @@ export interface FileRoutesByTo {
   '/d/notifications': typeof DNotificationsRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d': typeof DIndexRoute
+  '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
@@ -278,6 +294,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
@@ -289,6 +306,7 @@ export interface FileRoutesById {
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
+  '/_auth/email/confirm': typeof AuthEmailConfirmRoute
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
@@ -314,6 +332,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/two-factor-reset'
     | '/verify-email'
     | '/d/agent'
     | '/d/announcements'
@@ -325,6 +344,7 @@ export interface FileRouteTypes {
     | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
+    | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
     | '/d/procedures/$procedure'
@@ -347,6 +367,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/two-factor-reset'
     | '/verify-email'
     | '/d/agent'
     | '/d/announcements'
@@ -357,6 +378,7 @@ export interface FileRouteTypes {
     | '/d/notifications'
     | '/d/shortcuts'
     | '/d'
+    | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
     | '/d/procedures/$procedure'
@@ -380,6 +402,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/reset-password'
     | '/_auth/signup'
+    | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
     | '/d/agent'
     | '/d/announcements'
@@ -391,6 +414,7 @@ export interface FileRouteTypes {
     | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
+    | '/_auth/email/confirm'
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
     | '/d/procedures/$procedure'
@@ -463,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/two-factor-reset': {
+      id: '/_auth/two-factor-reset'
+      path: '/two-factor-reset'
+      fullPath: '/two-factor-reset'
+      preLoaderRoute: typeof AuthTwoFactorResetRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/verify-email': {
       id: '/_auth/verify-email'
       path: '/verify-email'
@@ -532,6 +563,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/shortcuts'
       preLoaderRoute: typeof DShortcutsRouteImport
       parentRoute: typeof DRouteRoute
+    }
+    '/_auth/email/confirm': {
+      id: '/_auth/email/confirm'
+      path: '/email/confirm'
+      fullPath: '/email/confirm'
+      preLoaderRoute: typeof AuthEmailConfirmRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/login_/magic': {
       id: '/_auth/login_/magic'
@@ -710,7 +748,9 @@ interface AuthRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  AuthTwoFactorResetRoute: typeof AuthTwoFactorResetRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthEmailConfirmRoute: typeof AuthEmailConfirmRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
   AuthLoginTwoFactorRoute: typeof AuthLoginTwoFactorRoute
 }
@@ -721,7 +761,9 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSignupRoute: AuthSignupRoute,
+  AuthTwoFactorResetRoute: AuthTwoFactorResetRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthEmailConfirmRoute: AuthEmailConfirmRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,
   AuthLoginTwoFactorRoute: AuthLoginTwoFactorRoute,
 }

@@ -6,7 +6,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
-import { ApiError, requestPage } from "./client";
+import { ApiError, requestFile, requestPage } from "./client";
 
 export interface AuditEntry {
   id: string;
@@ -15,6 +15,8 @@ export interface AuditEntry {
   subject: { type: string; id: string | null; label: string | null } | null;
   changes: Record<string, unknown>;
   ip: string | null;
+  user_agent?: string | null;
+  request_id?: string | null;
   created_at: string;
 }
 
@@ -27,9 +29,34 @@ export interface SecurityEvent {
   created_at: string;
 }
 
+/*
+ * AuditFilters narrows the log: event is one event name or a comma
+ * list of them, actor a member's id, and from and to the start and the
+ * end of a time range as RFC 3339 instants.
+ */
 export interface AuditFilters {
   event?: string;
   actor?: string;
+  from?: string;
+  to?: string;
+}
+
+/*
+ * filterParams writes the filters as query parameters.
+ */
+function filterParams(params: URLSearchParams, filters: AuditFilters) {
+  const names: [keyof AuditFilters, string][] = [
+    ["event", "filter[event]"],
+    ["actor", "filter[actor]"],
+    ["from", "filter[created_after]"],
+    ["to", "filter[created_before]"],
+  ];
+  for (const [key, name] of names) {
+    const value = filters[key];
+    if (value) {
+      params.set(name, value);
+    }
+  }
 }
 
 /*
@@ -37,17 +64,30 @@ export interface AuditFilters {
  */
 export function auditPath(filters: AuditFilters, cursor: string | null, limit: number): string {
   const params = new URLSearchParams({ limit: String(limit) });
-  if (filters.event) {
-    params.set("filter[event]", filters.event);
-  }
-  if (filters.actor) {
-    params.set("filter[actor]", filters.actor);
-  }
+  filterParams(params, filters);
   if (cursor) {
     params.set("cursor", cursor);
   }
 
   return `/audit-logs?${params.toString()}`;
+}
+
+/*
+ * exportPath builds the address of the audit log as a CSV file,
+ * narrowed by the same filters as the page on screen.
+ */
+export function exportPath(filters: AuditFilters): string {
+  const params = new URLSearchParams({ format: "csv" });
+  filterParams(params, filters);
+
+  return `/audit-logs?${params.toString()}`;
+}
+
+/*
+ * exportAuditLog fetches the audit log as a CSV file.
+ */
+export function exportAuditLog(workspace: string, filters: AuditFilters) {
+  return requestFile(exportPath(filters), "text/csv", { workspace });
 }
 
 export function auditLogsQuery(workspace: string, filters: AuditFilters, cursor: string | null) {

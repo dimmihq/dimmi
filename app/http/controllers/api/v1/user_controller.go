@@ -48,6 +48,6 @@ func (c *UserController) Store(ctx context.Context, in *requests.StoreUserReques
 
 	return &MeOutput{
 		SetCookie: deviceCookies(c.Cookies, signedIn.DeviceToken),
-		Body:      fhttp.NewResource(resources.NewMe(signedIn.Me, c.Server.instance())),
+		Body:      fhttp.NewResource(resources.NewMe(ctx, signedIn.Me, c.Server.instance())),
 	}, nil
 }

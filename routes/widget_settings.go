@@ -26,7 +26,7 @@ import (
 widgetSettingsRoutes declares the routes on a workspace's widgets.
 */
 func widgetSettingsRoutes(r *routing.Router, a *app.App) {
-	r.Middleware("csrf", "session", "auth", "workspace", "access.policy")
+	r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
 
 	acts := a.Actions.Widget
 	c := &v1.WidgetSettingsController{
