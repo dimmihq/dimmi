@@ -100,10 +100,7 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 		msg.Subject = inbound.DisplaySubject(cmp.Or(insp.forward.Subject, mail.parsed.Subject))
 	}
 
-	if d.who.fromWorkspace {
-		msg.FromWorkspace = true
-		msg.Body = "Sent from " + mail.from + " outside dimmi:\n\n" + msg.Body
-	}
+	ownSide(&msg, d)
 
 	a.continueThread(&msg, d.hit, ownID)
 	if d.hit.reused {
@@ -112,6 +109,21 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 	msg.AfterPersist = a.afterPersist(persisting{mail: mail, insp: insp, plan: p, ownID: ownID})
 
 	return msg
+}
+
+/*
+ownSide marks mail the workspace's own people sent: from one of its
+addresses outside dimmi, or a teammate answering by email.
+*/
+func ownSide(msg *contracts.InboundMessage, d decision) {
+	if d.who.fromWorkspace {
+		msg.FromWorkspace = true
+		msg.Body = "Sent from " + d.mail.from + " outside dimmi:\n\n" + msg.Body
+	}
+
+	if d.who.member != nil {
+		msg.FromMemberID, msg.FromMemberName = &d.who.member.ID, d.who.member.Name
+	}
 }
 
 /*

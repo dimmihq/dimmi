@@ -157,6 +157,17 @@ func (w *Writer) AsSystem() *Writer {
 }
 
 /*
+AsMember returns a writer acting as the teammate.
+*/
+func (w *Writer) AsMember(id ids.UUID, name string) *Writer {
+	clone := *w
+	clone.Actor = Actor{Type: string(enums.AuthorTypeMember), ID: id, Name: name}
+	clone.Timezone = nil
+
+	return &clone
+}
+
+/*
 AsContact returns a writer acting as the conversation's customer.
 */
 func (w *Writer) AsContact(contact models.Contact) *Writer {

@@ -4,10 +4,15 @@
 |--------------------------------------------------------------------------
 |
 | Bounces and spam complaints arrive as mail about mail the workspace
-| sent. Each is matched to the sent email by its Message-ID. A hard
-| bounce stops mail to the address and fails the reply meant for it; a
-| delay is only noted. A complaint stops all mail to the complainer.
-| A report about nothing the workspace sent is recorded as unmatched.
+| sent. Each is matched to the sent email by its Message-ID, and only
+| ever acts on addresses that email went to, so a forged report cannot
+| silence anyone else. A bounce saying the address does not exist stops
+| mail to it until its owner writes in again; any other refusal, such as
+| a full mailbox or a policy block, stops it for a few days only. Both
+| fail the reply meant for the address; a delay is only noted. A
+| complaint stops all mail to the complainer, the recipients it names
+| when it names any. A report about nothing the workspace sent is
+| recorded as unmatched.
 |
 | A mail system's notice without a readable report is still matched,
 | through the ids it quotes, and fails the reply it names. It suppresses
@@ -23,6 +28,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 
@@ -37,20 +43,40 @@ that failed.
 var quotedMessageID = regexp.MustCompile(`(?im)^[ \t>]*message-id:\s*<([^<>\s]+)>`)
 
 /*
+lapsingBounce is how long a refusal that does not say the address is
+gone stops mail to it.
+*/
+const lapsingBounce = 72 * time.Hour
+
+/*
+addressGone reports whether a delivery status code says the address
+itself does not exist or cannot be reached at all.
+*/
+func addressGone(status string) bool {
+	switch status {
+	case "5.1.0", "5.1.1", "5.1.2", "5.1.3", "5.1.6", "5.1.10":
+		return true
+	}
+
+	return false
+}
+
+/*
 noticeDiagnostic explains a failure read from a notice with no report.
 */
 const noticeDiagnostic = "the receiving mail system said the email could not be delivered"
 
 /*
 outcome is one recipient's fate to record: the address, what became of
-it, the suppression it causes, if any, and the status of the whole
-email afterwards.
+it, the suppression it causes, if any, when that lapses, and the status
+of the whole email afterwards.
 */
 type outcome struct {
 	address string
 	status  recipientStatus
 	reason  enums.EmailSuppressionReason
 	source  string
+	expires *time.Time
 	overall string
 }
 
@@ -84,7 +110,7 @@ func (a *ProcessInboundEmail) complaint(ctx context.Context, mail *received) err
 		run := reportRun{a: a, q: q, sent: sent}
 		complained := string(enums.OutboundEmailStatusComplained)
 
-		for _, recipient := range slices.Concat(sent.ToAddresses, sent.CcAddresses) {
+		for _, recipient := range complainers(report.OriginalRcptTo, sent) {
 			err := run.record(ctx, outcome{
 				address: recipient, status: recipientStatus{Status: complained, At: a.Clock.Now()},
 				reason: enums.EmailSuppressionReasonComplaint, source: "arf", overall: complained,
@@ -144,11 +170,17 @@ func (a *ProcessInboundEmail) bounce(ctx context.Context, mail *received) error 
 }
 
 /*
-bounced records one recipient of a delivery report. A hard bounce stops
-mail to the address and fails the reply when it was meant for it.
+bounced records one recipient of a delivery report, when the sent email
+went to it. A permanent failure stops mail to the address, for good
+when the address is gone and for a few days otherwise, and fails the
+reply when it was meant for it.
 */
 func (run reportRun) bounced(ctx context.Context, r dsn.Recipient) error {
 	address := lower(r.FinalRecipient)
+	if !sentTo(run.sent, address) {
+		return nil
+	}
+
 	status := recipientStatus{
 		Status: "delayed", Code: r.Status, Diagnostic: diagnostic(r.DiagnosticCode), At: run.a.Clock.Now(),
 	}
@@ -158,11 +190,17 @@ func (run reportRun) bounced(ctx context.Context, r dsn.Recipient) error {
 	}
 
 	status.Status = string(enums.OutboundEmailStatusBounced)
-
-	err := run.record(ctx, outcome{
+	failed := outcome{
 		address: address, status: status, reason: enums.EmailSuppressionReasonHardBounce, source: "dsn",
 		overall: status.Status,
-	})
+	}
+
+	if !addressGone(r.Status) {
+		failed.reason = enums.EmailSuppressionReasonSoftBounce
+		failed.expires = new(run.a.Clock.Now().Add(lapsingBounce))
+	}
+
+	err := run.record(ctx, failed)
 	if err != nil {
 		return err
 	}
@@ -263,7 +301,7 @@ func failedNamed(mail *received, sent models.OutboundEmail) []string {
 
 	for field := range strings.SplitSeq(mail.parsed.Header.Get("X-Failed-Recipients"), ",") {
 		address := lower(strings.TrimSpace(field))
-		if slices.Contains(sent.ToAddresses, address) || slices.Contains(sent.CcAddresses, address) {
+		if sentTo(sent, address) {
 			named = append(named, address)
 		}
 	}
@@ -276,6 +314,35 @@ func failedNamed(mail *received, sent models.OutboundEmail) []string {
 }
 
 /*
+complainers returns the sent email's recipients a complaint names, or
+all of them when it names none.
+*/
+func complainers(named []string, sent models.OutboundEmail) []string {
+	everyone := slices.Concat(sent.ToAddresses, sent.CcAddresses)
+
+	var out []string
+
+	for _, address := range named {
+		if address = lower(address); sentTo(sent, address) {
+			out = append(out, address)
+		}
+	}
+
+	if len(out) == 0 {
+		return everyone
+	}
+
+	return out
+}
+
+/*
+sentTo reports whether the sent email went to the address.
+*/
+func sentTo(sent models.OutboundEmail, address string) bool {
+	return slices.Contains(sent.ToAddresses, address) || slices.Contains(sent.CcAddresses, address)
+}
+
+/*
 record stores a recipient's outcome on the sent email, and suppresses
 the address when the outcome calls for it.
 */
@@ -285,7 +352,7 @@ func (run reportRun) record(ctx context.Context, o outcome) error {
 			WorkspaceID: run.sent.WorkspaceID, Email: o.address, Reason: string(o.reason),
 			Scope: string(enums.EmailSuppressionScopeAll), Source: o.source,
 			Details:         jsonOf(map[string]string{"code": o.status.Code, "diagnostic": o.status.Diagnostic}),
-			OutboundEmailID: &run.sent.ID, Now: run.a.Clock.Now(),
+			OutboundEmailID: &run.sent.ID, ExpiresAt: o.expires, Now: run.a.Clock.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("suppress email: %w", err)

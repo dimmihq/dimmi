@@ -345,8 +345,9 @@ func (run *ingestRun) existing(ctx context.Context, conn models.ChannelConnectio
 }
 
 /*
-store appends the message as its sender, or as an internal note by
-dimmi when the workspace itself sent it.
+store appends the message as its sender, as an internal note by dimmi
+when the workspace itself sent it, or as the teammate's note when they
+answered by email.
 */
 func (run *ingestRun) store(
 	ctx context.Context, sender *Writer, conn models.ChannelConnection, conv models.Conversation,
@@ -359,8 +360,11 @@ func (run *ingestRun) store(
 	sentAt := run.msg.SentAt
 	kind := enums.MessageTypeMessage
 
-	if run.msg.FromWorkspace {
+	switch {
+	case run.msg.FromWorkspace:
 		kind, sender = enums.MessageTypeNote, sender.AsSystem()
+	case run.msg.FromMemberID != nil:
+		kind, sender = enums.MessageTypeNote, sender.AsMember(*run.msg.FromMemberID, run.msg.FromMemberName)
 	}
 
 	return sender.Append(ctx, conv, NewMessage{
