@@ -257,3 +257,13 @@ func (a *Authorizers) conversationIn(ctx context.Context, workspaceID, id ids.UU
 
 	return conversation, err
 }
+
+/*
+Locate returns the workspace of a conversation the caller reaches, and
+false when they reach none with that id.
+*/
+func (a *Authorizers) Locate(ctx context.Context, caller *appauth.Principal, id ids.UUID) (ids.UUID, bool, error) {
+	conversation, found, err := a.findConversation(ctx, caller, id)
+
+	return conversation.WorkspaceID, found, err
+}

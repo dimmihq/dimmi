@@ -78,7 +78,7 @@ play.
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
 [exceptions.ErrDomainNotClaimable], [exceptions.ErrDomainLimitReached],
 [exceptions.ErrDomainTaken], [exceptions.ErrDomainNotVerified],
-[exceptions.ErrDomainInUse], or a wrapped error.
+[exceptions.ErrDomainRoutesEnforced], or a wrapped error.
 */
 type Domains struct {
 	DB     *database.DB
@@ -355,7 +355,7 @@ func (a *Domains) notEnforced(ctx context.Context, q *models.Queries, domain mod
 	}
 
 	if err == nil && routed.Enforced {
-		return exceptions.ErrDomainInUse
+		return exceptions.ErrDomainRoutesEnforced
 	}
 
 	return nil

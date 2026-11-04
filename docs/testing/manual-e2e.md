@@ -287,6 +287,12 @@ C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@exam
 | Customer reopens | `POST $B/conversations/$C/messages {"body":"Hello?"}` | 201, `meta.conversation.status: open` |
 | Timeline | `GET "$B/conversations/$C/messages?filter[type]=event"` | assigned (by the reply, then to Bob), closed, reopened (`actor.name` Ann) in order |
 | Priority | `PATCH $B/conversations/$C {"priority":"urgent"}`, then `{"priority":true}`; `GET "$B/conversations?filter[view]=all&filter[priority]=high,urgent&sort=-priority"` | 200 `priority: urgent`, `meta.changed: ["priority"]`; 422; the conversation listed first |
+| Team and holder views | `POST $B/teams {"name":"Billing"}`; `PATCH $B/conversations/$C {"team_id":"$TEAM"}`; `GET "$B/conversations?filter[view]=team:$TEAM"`, `…=inbox:$IN`, `…=member:$BOBM` | the conversation in the team's and inbox's views; `GET $B/conversation-counts` shows `views.teams.$TEAM.open: 1` and `views.members` per holder |
+| Inbox preferences | `PATCH $B/inbox-preferences {"views":{"all":{"sort":"-created_at","status":"any"}}}`, then `GET`; `{"views":{"nowhere":{}}}` | 200 with the view kept, `updated_at` set; 422 `invalid_preferences`; a body over 64 KB 422 `preferences_too_large` |
+| Viewers | Bob opens `$W/d/inbox/all/{conversation}` in a second browser; Ada `GET "$B/conversations?filter[view]=all&include=viewers"` | Bob under `viewers`; Bob's own list leaves him out; `PATCH $B/workspace {"show_viewers_on_list":false}` drops the key |
+| Saved views | `POST $B/conversation-views {"name":"Refunds","scope":"personal","definition":{"op":"and","groups":[{"op":"and","conditions":[{"field":"subject","op":"contains","value":"refund"}]}]}}`; `GET "$B/conversations?filter[view]=$CVW"` | 201 `cvw_…`; the list holds only matching conversations; Bob `GET $B/conversation-views/$CVW` 404; Bob `POST` with `"scope":"shared"` 403 |
+| View rules | a definition with an unknown field, 6 groups or 21 conditions; a cursor reused after `PATCH $B/conversation-views/$CVW` | 422 `invalid_definition` with `path`; 400 `cursor_mismatch` |
+| Pinned view counts | `PATCH $B/inbox-preferences {"sidebar":{"pinned_views":["$CVW"]}}`; `GET $B/conversation-counts` | `views.custom.$CVW.open` set |
 | Read state | `PATCH $B/conversations/$C/read-state {}`, then `{"unread":true}` | `unread: false`, then `unread: true` |
 | Search | `GET "$B/search?q=refund"`, `"$B/search?q=%231"`, `"$B/conversations?filter[view]=all&q=refunds"` | the conversation with the newest match marked in `highlight` (`<mark>Refunded</mark>`); `jump.number: 1`; one row |
 | Other workspace | Carol: `GET $B/conversations/$C` with her own workspace | 404 `not_found` |
@@ -541,6 +547,28 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Forwarding test | `r t -b a.jar -X POST -H "$O" $EA/$EMA/tests` | 201 `email_address_test` `sent_to` the public address; Mailpit holds it with an `X-Dimmi-Test` header; feeding that raw mail back through the source shows `ignore_reason: forwarding_test` |
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
+
+### Sending domains
+
+The release binary sends customer mail through the `smtp` mailer to Mailpit, so a domain is set up for a relay we sign
+for: an ownership TXT record and a signing key TXT record. Checks read real DNS unless
+`DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS` points at a server you run; with no records published a domain stays
+`verifying`, which is what the rows below expect. `ED=$B/email-domains`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Add | `r ed -b a.jar -X POST -H "$O" -H "$J" $ED -d '{"domain":"acme-'$RUN'.test"}'; EDM=$(jq -r .data.id body)` | 201 `email_domain`, `status: pending`, `driver: smtp`, records `ownership`, `dkim` (TXT `v=DKIM1; k=rsa; p=…`) and `dmarc`, `host_guide.key` `other` |
+| Refused names | the same with `gmail.com`, `com`, `inbound.e2e.test`, then the first domain again | 422 `invalid_domain` three times, then 409 `domain_exists` |
+| Zone file | `curl -s -b a.jar -H "$O" "$ED/$EDM?format=bind"` | `text/plain`, one `3600 IN TXT` line per record, the key split into quoted strings of 255 bytes |
+| Check | `r chk -b a.jar -X POST -H "$O" $ED/$EDM/checks`, again at once | 202 `status: verifying`, then 429 `domain_check_throttled` with `Retry-After` |
+| Check landed | `r show -b a.jar -H "$O" $ED/$EDM` after a few seconds | `last_checked_at` set, `next_check_at` a minute later, records `missing`, warning `dmarc_missing` with its message |
+| Return path and host | `r upd -b a.jar -X PATCH -H "$O" -H "$J" $ED/$EDM -d '{"dns_host":"cloudflare"}'` | 200, `provider_hint: cloudflare`, record `host` values without the domain |
+| New key | `r rot -b a.jar -X POST -H "$O" $ED/$EDM/dkim-rotations` as the owner, then as an admin | 201 with a `dkim_next` record, then 403 |
+| Automatic setup | `r dc -b a.jar -X POST -H "$O" $ED/$EDM/dns-setups` | 422 `dns_setup_unavailable` (needs the `ses` driver, `domain_connect.enabled` and a host that knows the template); the domain shows `dns_setup: null` |
+| Host sends back | open `$W/d/settings/email/domains/$EDM?error=access_denied`, then `?dns_setup=applied` | "Your DNS host did not add the records"; then the domain starts checking |
+| Remove | `r del -b a.jar -X DELETE -H "$O" $ED/$EDM` | 204; `GET` then 404 |
+| Doctor | `bin/dimmi-cloud email:doctor acme-$RUN.test` in `$E2E` with its env | `[ok]` relay line, `[info]` no mail server of its own, `[fail]` no MX for `inbound.e2e.test` (exit 1), `[warn]` DMARC missing |
+| In a browser | open `$W/d/settings/email`, add a domain | the domain page with its records, Copy buttons, the host's steps, "Check now", and "Remove domain" |
 
 ## Realtime connections end with their credential
 

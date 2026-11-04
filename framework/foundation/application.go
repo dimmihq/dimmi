@@ -191,6 +191,14 @@ func (a *Application) DerivedKey(purpose string) []byte {
 }
 
 /*
+OnShutdown registers a release that runs when the application shuts down,
+before what booted earlier is released.
+*/
+func (a *Application) OnShutdown(name string, fn func(ctx context.Context) error) {
+	a.onClose(name, fn)
+}
+
+/*
 Shutdown stops the roles and releases everything boot opened, in reverse
 order, giving up on what is left when the context ends: the listeners
 stop accepting, realtime clients are told to reconnect elsewhere, the

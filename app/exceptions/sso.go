@@ -48,7 +48,7 @@ var (
 Refusals of domains.
 
 ErrDomainNotClaimable refuses a public suffix or a domain anyone can get
-mail under. ErrDomainInUse refuses to remove a domain routing to an
+mail under. ErrDomainRoutesEnforced refuses to remove a domain routing to an
 enforced connection. ErrDomainTaken refuses a domain another organization
 verified. ErrDomainNotVerified refuses to route a domain still unproven.
 ErrDomainLimitReached refuses a domain past the limit.
@@ -56,7 +56,7 @@ ErrDomainLimitReached refuses a domain past the limit.
 var (
 	ErrDomainNotClaimable = fault.New(fault.Invalid, "domain_not_claimable",
 		"This domain cannot be claimed by one company.").OnField("domain")
-	ErrDomainInUse = fault.New(fault.Conflict, "domain_in_use",
+	ErrDomainRoutesEnforced = fault.New(fault.Conflict, "domain_in_use",
 		"This domain routes to an enforced connection. Stop enforcing it first.")
 	ErrDomainTaken = fault.New(fault.Conflict, "domain_taken",
 		"Another organization already verified this domain.")

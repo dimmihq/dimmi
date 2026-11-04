@@ -66,7 +66,8 @@ func adminPermissions() []string {
 	return []string{
 		"settings:read", "settings:write", "audit_logs:read", "members:write", "tokens:manage_any",
 		"widgets:manage", "identity:manage", "conversations:delete", "conversations:moderate",
-		"saved_replies:manage_shared", "contacts:erase", "contacts:manage_external_id", "companies:delete",
+		"saved_replies:manage_shared", "views:manage_shared", "contacts:erase", "contacts:manage_external_id",
+		"companies:delete",
 		"inboxes:manage", "tags:manage", "email:read_raw", "email:manage", "email_suppressions:manage",
 		"email_signatures:manage_any", "channels:manage", "channels:inspect", "notification_destinations:manage",
 		"notification_alerts:receive", "ai_runs:read_payloads", "ai_agent:manage", "ai:keys", "ai_actions:manage",
@@ -74,7 +75,7 @@ func adminPermissions() []string {
 		"agent_access:manage", "feedback:delete", "feedback:manage", "engage:manage", "imports:read",
 		"imports:manage", "imports:rollback", "webhooks:read", "webhooks:write", "billing:read", "billing:write",
 		"security_policy:manage", "roles:manage",
-		"conversations:export", "conversations:manage_notes", "views:manage_shared", "contacts:export",
+		"conversations:export", "conversations:manage_notes", "contacts:export",
 	}
 }
 

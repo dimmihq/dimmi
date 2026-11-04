@@ -84,11 +84,13 @@ func API(a *app.App) {
 		api.Group("", func(workspace *routing.Router) {
 			workspaceRoutes(workspace, c)
 			realtimeRoutes(workspace, a)
+			emailSenderRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
 		identityRoutes(api, a)
 		roleRoutes(api, a)
+		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 	})
 }
 
@@ -318,6 +320,7 @@ func emailAddressController(a *app.App, cursors *pagination.Cursors) *v1.EmailAd
 		Create: acts.CreateEmailAddress, List: acts.ListEmailAddresses, Show: acts.ShowEmailAddress,
 		Change: acts.UpdateEmailAddress, Remove: acts.DeleteEmailAddress, Test: acts.SendEmailAddressTest,
 		Activity: acts.ListInboundEmails, IDs: a.IDs, Provider: a.EmailChannel.Transport, Cursors: cursors,
+		Senders: a.EmailDomains,
 	}
 }
 

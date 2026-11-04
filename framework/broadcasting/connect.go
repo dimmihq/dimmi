@@ -215,7 +215,7 @@ func (s *Server) listenersChanged(client *centrifuge.Client, channel string) {
 	}
 
 	principal, _ := client.Context().Value(principalKey{}).(Principal)
-	r.opts.ListenersChanged(principal, channel)
+	r.opts.ListenersChanged(client.Context(), principal, channel)
 }
 
 /*

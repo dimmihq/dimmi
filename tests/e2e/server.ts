@@ -14,6 +14,8 @@ import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { serveZone } from "./support/dns.ts";
+
 const binary = resolve("bin/dimmi-cloud");
 const database = process.env.E2E_DATABASE ?? "dimmi_e2e";
 const port = Number(process.env.E2E_PORT ?? 18090);
@@ -32,6 +34,12 @@ psql(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
 psql(`CREATE DATABASE ${database}`);
 
 const home = mkdtempSync(join(tmpdir(), "dimmi-e2e-"));
+
+/*
+ * resolver answers the server's domain checks from the records tests
+ * publish through support/dns.ts.
+ */
+const resolver = await serveZone(port);
 
 /*
  * inboundSecret opens the test inbound source, through which the tests
@@ -59,6 +67,7 @@ const env = {
   DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE: "true",
   DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS: "ses,test",
   DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET: inboundSecret,
+  DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS: resolver,
 };
 
 execFileSync(binary, ["migrate", "--force"], { cwd: home, env, stdio: "inherit" });

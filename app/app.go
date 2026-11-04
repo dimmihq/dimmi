@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
+	emailactions "github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
@@ -63,13 +64,16 @@ services providers build at boot, and Actions every business action.
 Channels holds the channel drivers replies go out through.
 WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults.
-Retention is asked before any purge destroys data. EmailChannel is the
-email channel driver, which also receives inbound mail.
+Retention is asked before any purge destroys data. Entitlements answers
+what a workspace may have and BillingStatus whether it ever paid.
+EmailChannel is the email channel driver, which also receives inbound
+mail. EmailDomains is what the sending domain actions share.
 Frontend is the browser app's production build and Vite links it, or
 the dev server while one runs, into pages. Widget is the messenger
 widget's build and WidgetAssets serves it. HelpSample is the sample help
 center and changelog the public pages show until their content lives in
-the database. Realtime authenticates realtime connections.
+the database. Realtime authenticates realtime connections, and Viewers
+finds who views conversations.
 */
 type App struct {
 	*foundation.Application
@@ -98,9 +102,13 @@ type App struct {
 
 	WorkspaceInitializers *workspaces.Initializers
 	Retention             contracts.RetentionGuard
+	Entitlements          contracts.Entitlements
+	BillingStatus         contracts.BillingStatus
 	EmailChannel          *email.Channel
+	EmailDomains          *emailactions.Domains
 
 	Realtime *appbroadcasting.Connections
+	Viewers  *appbroadcasting.Viewers
 
 	OAuthAttempts auth.OAuthAttempts
 	Frontend      fs.FS

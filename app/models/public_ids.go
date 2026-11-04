@@ -34,6 +34,8 @@ The prefixes of the account tables and of the tables other parts of the
 product read here.
 */
 const (
+	PrefixWidget             Prefix = "wgt"
+	PrefixWidgetSession      Prefix = "wss"
 	PrefixUser               Prefix = "usr"
 	PrefixWorkspace          Prefix = "ws"
 	PrefixOrganization       Prefix = "org"
@@ -70,6 +72,7 @@ const (
 	PrefixAttachment        Prefix = "att"
 	PrefixTag               Prefix = "tag"
 	PrefixSavedReply        Prefix = "rpl"
+	PrefixConversationView  Prefix = "cvw"
 )
 
 /*
@@ -170,6 +173,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixAttachment, "attachments"},
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
+		{PrefixConversationView, "conversation_views"},
 		{"exp", "contact_exports"},
 		{"evt", "events"},
 	}
