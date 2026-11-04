@@ -22,11 +22,10 @@ func TestCloudBootGuards(t *testing.T) {
 			"DIMMI_APP__ENV=production",
 			"DIMMI_APP__URL=http://localhost:8080",
 			"DIMMI_MAIL__MAILERS__SYSTEM__DRIVER=log",
-			"DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN=",
 		))
 
 		require.ErrorIs(t, err, providers.ErrCloudMisconfigured)
-		keys := []string{"filesystems.default", "mail.default", "app.url", "channels.email.inbound_domain"}
+		keys := []string{"filesystems.default", "mail.default", "app.url"}
 		for _, key := range keys {
 			assert.ErrorContains(t, err, key)
 		}

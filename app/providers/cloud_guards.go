@@ -5,11 +5,11 @@
 |
 | Defaults that make a self-hosted install easy are quietly wrong for
 | the cloud: files on a container's own disk vanish with it, a log
-| mailer sends nobody anything, a plain or local app.url breaks cookies,
-| passkeys and links, and no inbound domain means no forwarding address.
-| The cloud binary in production refuses to boot with any of them, and
-| says which. The self-hosted edition and every other environment are
-| left alone.
+| mailer sends nobody anything, and a plain or local app.url breaks
+| cookies, passkeys and links. The cloud binary in production refuses
+| to boot with any of them, and says which. The self-hosted edition and
+| every other environment are left alone. The inbound domain needs no
+| guard: each environment sets its own, and the cloud has a default.
 |
 */
 
@@ -56,10 +56,6 @@ func checkCloudProduction(app *appconfig.Config, cfg *foundation.Config) error {
 
 	if !publicHTTPS(cfg.App.URL) {
 		add("app.url", "must be a public https URL")
-	}
-
-	if app.Channels.Email.InboundDomain == "" {
-		add("channels.email.inbound_domain", "is required for forwarding addresses")
 	}
 
 	return errors.Join(problems...)
