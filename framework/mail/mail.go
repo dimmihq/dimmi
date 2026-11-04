@@ -104,7 +104,9 @@ set through it. Raw is a message already built as MIME: when set, the
 body fields are ignored and the addresses, when empty, are read from its
 headers. Bcc recipients are never written into the message. Tags label
 the message at the provider for matching its delivery events later.
-ConfigurationSet and TenantName are used by SES only.
+ConfigurationSet and TenantName are used by SES only. Signing is the key
+a driver that signs mail itself signs this message with, in place of
+its configured one, so one relay can send for many domains.
 */
 type Message struct {
 	From, ReplyTo    Address
@@ -117,6 +119,7 @@ type Message struct {
 	Tags             map[string]string
 	ConfigurationSet string
 	TenantName       string
+	Signing          *SigningKey
 }
 
 /*

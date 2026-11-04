@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/mail"
+	maildkim "github.com/dimmihq/dimmi/framework/mail/dkim"
 	"github.com/dimmihq/dimmi/framework/mail/drivers/smtp"
 	"github.com/dimmihq/dimmi/framework/mail/drivertest"
 	"github.com/dimmihq/dimmi/framework/mail/mime"
@@ -133,6 +134,45 @@ func TestDKIM(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, verifications, 1)
 		require.NoError(t, verifications[0].Err)
+	})
+}
+
+func TestMessageSigningKey(t *testing.T) {
+	t.Parallel()
+
+	t.Run("signs with the message's own key for its domain", func(t *testing.T) {
+		t.Parallel()
+		key, err := maildkim.GenerateKey()
+		require.NoError(t, err)
+		mailer := newMailer(t, nil)
+		to := drivertest.Address("Bea")
+		msg := drivertest.Message(to)
+		msg.Signing = &mail.SigningKey{Domain: "acme.example", Selector: "sel1", PrivateKey: key.PrivatePEM}
+
+		_, err = mailer.Send(t.Context(), msg)
+		require.NoError(t, err)
+
+		verifications, err := dkim.VerifyWithOptions(bytes.NewReader(raw(t, to.Email)), &dkim.VerifyOptions{
+			LookupTXT: func(name string) ([]string, error) {
+				assert.Equal(t, "sel1._domainkey.acme.example", name)
+
+				return []string{"v=DKIM1; k=rsa; p=" + key.Public}, nil
+			},
+		})
+		require.NoError(t, err)
+		require.Len(t, verifications, 1)
+		require.NoError(t, verifications[0].Err)
+		assert.Equal(t, "acme.example", verifications[0].Domain)
+	})
+
+	t.Run("refuses a message whose key cannot sign", func(t *testing.T) {
+		t.Parallel()
+		msg := drivertest.Message(drivertest.Address("Cid"))
+		msg.Signing = &mail.SigningKey{Domain: "acme.example", Selector: "s", PrivateKey: "nope"}
+
+		_, err := newMailer(t, nil).Send(t.Context(), msg)
+
+		require.ErrorIs(t, err, mail.ErrPermanent)
 	})
 }
 

@@ -45,6 +45,10 @@ func (brokenResolver) CNAME(context.Context, string) (string, error) {
 	return "", errTimeout
 }
 
+func (brokenResolver) NS(context.Context, string) ([]string, error) {
+	return nil, errors.New("dns is down")
+}
+
 func (brokenResolver) Addrs(context.Context, string) ([]netip.Addr, error) {
 	return nil, errTimeout
 }

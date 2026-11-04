@@ -39,6 +39,7 @@ import { Route as DWorkflowsNewRouteImport } from './routes/d/workflows/new'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
+import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -189,6 +190,12 @@ const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   path: '/settings/teams/$team',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsEmailDomainsDomainRoute =
+  DSettingsEmailDomainsDomainRouteImport.update({
+    id: '/settings/email/domains/$domain',
+    path: '/settings/email/domains/$domain',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/d': typeof DRouteRouteWithChildren
@@ -221,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthRouteWithChildren
@@ -251,6 +259,7 @@ export interface FileRoutesByTo {
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -284,6 +293,7 @@ export interface FileRoutesById {
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/d/inbox/$view/$conversation'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view/'
+    | '/d/settings/email/domains/$domain'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/d/inbox/$view/$conversation'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view'
+    | '/d/settings/email/domains/$domain'
   id:
     | '__root__'
     | '/d'
@@ -380,6 +392,7 @@ export interface FileRouteTypes {
     | '/d/inbox/$view/$conversation'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view/'
+    | '/d/settings/email/domains/$domain'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -599,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsTeamsTeamRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/email/domains/$domain': {
+      id: '/d/settings/email/domains/$domain'
+      path: '/settings/email/domains/$domain'
+      fullPath: '/d/settings/email/domains/$domain'
+      preLoaderRoute: typeof DSettingsEmailDomainsDomainRouteImport
+      parentRoute: typeof DRouteRoute
+    }
   }
 }
 
@@ -635,6 +655,7 @@ interface DRouteRouteChildren {
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
@@ -656,6 +677,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
 }
 
 const DRouteRouteWithChildren =
