@@ -7,7 +7,8 @@
 | with a part for people, a machine readable part of header-like field
 | blocks, and the original message or just its headers. Servers order
 | and nest these parts loosely, so parts are found by type wherever they
-| are rather than by position.
+| are rather than by position, and the report itself may sit inside the
+| message, as when a server wraps it in a multipart/mixed.
 |
 */
 
@@ -44,8 +45,9 @@ type Report struct {
 }
 
 /*
-Read finds the part of one of the machine readable types in the report
-and reads its field blocks and the original message header.
+Read finds the report in the message, the part of one of the machine
+readable types in it, and reads its field blocks and the original
+message header.
 */
 func Read(raw []byte, types ...string) (*Report, error) {
 	root, err := enmime.ReadParts(bytes.NewReader(raw))
@@ -54,7 +56,11 @@ func Read(raw []byte, types ...string) (*Report, error) {
 	}
 
 	if root.ContentType != "multipart/report" {
-		return nil, fmt.Errorf("%w: content type %s", ErrNotReport, root.ContentType)
+		root = root.DepthMatchFirst(func(p *enmime.Part) bool { return p.ContentType == "multipart/report" })
+	}
+
+	if root == nil {
+		return nil, fmt.Errorf("%w: no multipart/report part", ErrNotReport)
 	}
 
 	machine := root.DepthMatchFirst(func(p *enmime.Part) bool { return slices.Contains(types, p.ContentType) })

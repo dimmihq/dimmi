@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -41,7 +42,10 @@ Forward is the message a teammate forwarded. Relay names the form
 service that sent it for a visitor. Confirmation is a provider's
 forwarding confirmation, ForwardingTest a forwarding test of the
 address. Throttled means the sender wrote too often to be answered
-automatically. Own lists the workspace's own addresses.
+automatically. Own lists the workspace's own addresses. AutoSubject
+means a short mail's subject reads like an automatic reply. FromOwn
+means it was sent from one of the workspace's own addresses, which a
+group in front of the inbox does when it sends a customer's mail on.
 */
 type inspection struct {
 	class          enums.EmailClassification
@@ -53,6 +57,8 @@ type inspection struct {
 	confirmation   *inbound.Confirmation
 	forwardingTest bool
 	throttled      bool
+	autoSubject    bool
+	fromOwn        bool
 	own            []string
 }
 
@@ -77,7 +83,9 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 		return inspection{}, err
 	}
 
-	insp := inspection{auth: a.authenticate(ctx, mail), body: body, own: known.own}
+	insp := inspection{
+		auth: a.authenticate(ctx, mail), body: body, own: known.own, fromOwn: slices.Contains(known.own, mail.from),
+	}
 	if known.member != nil && insp.auth.Passed() {
 		insp.member = known.member
 		if forward, ok := inbound.FindForward(mail.parsed.Text); ok {
@@ -96,9 +104,9 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 	throttled, quarantined := a.rate(ctx, mail)
 	insp.throttled = throttled
 
+	insp.autoSubject = inbound.AutoReplySubject(mail.parsed.Subject, len(body.Visible))
 	insp.class = inbound.Classify(inbound.Signals{
-		Header: mail.parsed.Header, Subject: mail.parsed.Subject, From: mail.from,
-		VisibleChars: len(body.Visible),
+		Header: mail.parsed.Header, From: mail.from,
 		Loop: a.Stamps.ValidLoop(mail.parsed.Header.Get(inbound.LoopHeader), mail.row.WorkspaceID.String(),
 			mail.parsed.MessageID) || known.outboundRefs > 0,
 		SystemNotice: insp.confirmation != nil || insp.forwardingTest,
@@ -106,6 +114,7 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 		Bounce:       isBounce(mail),
 		Spam:         spam(mail.verdicts) || quarantined,
 		Member:       insp.member != nil, Forwarded: insp.forward != nil, FormRelay: insp.relay != "",
+		GroupRelay: insp.fromOwn && mail.parsed.OriginalSender.Email != "",
 	})
 
 	return insp, nil
@@ -214,7 +223,7 @@ func isBounce(mail *received) bool {
 		envelopeFrom = *mail.row.EnvelopeFrom
 	}
 
-	return inbound.BounceNotice(envelopeFrom, mail.from, mail.parsed.Subject)
+	return inbound.BounceNotice(mail.parsed.Header, envelopeFrom, mail.from, mail.parsed.Subject)
 }
 
 /*

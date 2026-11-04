@@ -57,7 +57,9 @@ type skippedFile struct {
 }
 
 /*
-message builds the inbound message of the email.
+message builds the inbound message of the email. Mail that answers
+nothing starts a conversation of its own, even when an earlier mail
+reused its Message-ID.
 */
 func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessage {
 	mail, insp := d.mail, d.insp
@@ -98,7 +100,15 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 		msg.Subject = inbound.DisplaySubject(cmp.Or(insp.forward.Subject, mail.parsed.Subject))
 	}
 
+	if d.who.fromWorkspace {
+		msg.FromWorkspace = true
+		msg.Body = "Sent from " + mail.from + " outside dimmi:\n\n" + msg.Body
+	}
+
 	a.continueThread(&msg, d.hit, ownID)
+	if d.hit.reused {
+		msg.ExternalThreadKey = msg.DedupeKey
+	}
 	msg.AfterPersist = a.afterPersist(persisting{mail: mail, insp: insp, plan: p, ownID: ownID})
 
 	return msg

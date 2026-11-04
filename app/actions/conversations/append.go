@@ -146,6 +146,17 @@ func (w *Writer) AddNote(ctx context.Context, c models.Conversation, body string
 }
 
 /*
+AsSystem returns a writer acting as dimmi itself.
+*/
+func (w *Writer) AsSystem() *Writer {
+	clone := *w
+	clone.Actor = Actor{Type: string(enums.AuthorTypeSystem)}
+	clone.Timezone = nil
+
+	return &clone
+}
+
+/*
 AsContact returns a writer acting as the conversation's customer.
 */
 func (w *Writer) AsContact(contact models.Contact) *Writer {
