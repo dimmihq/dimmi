@@ -79,13 +79,16 @@ func (MessageDeleted) EventName() string { return "message.deleted" }
 
 /*
 MessageDeliveryUpdated is dispatched when a channel reports a message
-sent, delivered, read or failed.
+sent, delivered, read or failed. MessageIDs lists every message of the
+conversation the report covers, the one MessageRef names last, when one
+report covers several, such as a visitor reading a run of replies.
 */
 type MessageDeliveryUpdated struct {
 	Base
 	MessageRef
 
-	Status string
+	Status     string
+	MessageIDs []ids.UUID
 }
 
 /*
