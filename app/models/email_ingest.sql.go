@@ -215,7 +215,7 @@ func (q *Queries) FindEmailSenderMember(ctx context.Context, arg FindEmailSender
 }
 
 const findLatestThreadConversation = `-- name: FindLatestThreadConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, priority, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, assignment_wait_reason, assignment_waiting_since FROM conversations
 WHERE workspace_id = $1 AND channel_connection_id = $2
   AND external_thread_key = $3 AND deleted_at IS NULL
 ORDER BY created_at DESC
@@ -260,6 +260,8 @@ func (q *Queries) FindLatestThreadConversation(ctx context.Context, arg FindLate
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AssignmentWaitReason,
+		&i.AssignmentWaitingSince,
 	)
 	return i, err
 }

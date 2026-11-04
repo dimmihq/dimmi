@@ -31,6 +31,10 @@ func unscopedQueries() map[string]string {
 		"FindEmailThreadByToken":       "inbound routing: the mail decides the conversation, no member is asking",
 		"FindSubjectThreadCandidates":  "inbound routing: the mail decides the conversation, no member is asking",
 		"CountTaggedConversations":     "workspace-wide tag totals for managing tags: names no conversation",
+		"ListPoolCandidates":           "counts each member's own load for assignment: names no conversation",
+		"FindNextWaitingConversation":  "the assignment drain: the system picks, no member is asking",
+		"ListWaitingInboxes":           "the assignment drain: names inboxes, not conversations",
+		"CountWaitingConversations":    "inbox-wide queue totals for inbox settings: names no conversation",
 	}
 }
 

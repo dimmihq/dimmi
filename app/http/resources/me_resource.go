@@ -53,6 +53,8 @@ type Member struct {
 	ConversationAccess           string   `json:"conversation_access"`
 	ConversationAccessUnassigned bool     `json:"conversation_access_unassigned"`
 	AccessTeamIDs                []string `json:"access_team_ids"`
+
+	MemberAvailability
 }
 
 /*
@@ -119,6 +121,8 @@ func newMember(m models.WorkspaceMember, permissions []string, accessTeams []ids
 		ConversationAccess:           m.ConversationAccess,
 		ConversationAccessUnassigned: m.ConversationAccessUnassigned,
 		AccessTeamIDs:                PublicTeamIDs(accessTeams),
+
+		MemberAvailability: NewMemberAvailability(m),
 	}
 }
 

@@ -37,6 +37,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/availability"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -52,7 +53,8 @@ Principal is the caller and Membership their membership of the
 workspace. AssignedRole and Status are the requested values, nil to
 leave as they are. ReassignTo names the member to hand a deactivated member's
 open work to, KeepOwner keeps the caller an owner when they make someone
-else one, and Access changes which conversations the member sees.
+else one, Access changes which conversations the member sees, and
+Availability how available they are for new conversations.
 */
 type UpdateMemberInput struct {
 	Principal    *appauth.Principal
@@ -63,6 +65,7 @@ type UpdateMemberInput struct {
 	ReassignTo   *ids.UUID
 	KeepOwner    bool
 	Access       *AccessChange
+	Availability *availability.Change
 }
 
 /*
@@ -85,6 +88,8 @@ Rules:
   - Conversation access needs members:manage_access, is never the
     caller's own, and stays full for an owner; becoming an owner lifts
     any limit.
+  - Availability follows availability.Plan: members set their own,
+    members:manage_availability sets anyone's and every capacity.
   - Values equal to the current ones change nothing.
 
 Events: [appevents.MemberReactivated], [appevents.MemberRoleChanged]
@@ -98,7 +103,8 @@ Errors: [exceptions.ErrNotFound], [exceptions.ErrFirstPartyOnly],
 [exceptions.ErrReassignTargetInvalid], [exceptions.ErrLastOwner],
 [exceptions.ErrOwnerAccessUnrestricted],
 [exceptions.ErrAccessTeamNotFound], [exceptions.ErrAccessTeamsNotUsed],
-[exceptions.ErrTooManyAccessTeams], or a wrapped database error.
+[exceptions.ErrTooManyAccessTeams], [exceptions.ErrAwayReassignOnline],
+or a wrapped database error.
 */
 type UpdateMember struct {
 	DB            *database.DB
@@ -112,7 +118,8 @@ memberChange is what an update does to its member, worked out before
 anything is written: whether they are reactivated and with which role
 (comeBackAs), the role they end with, whether the caller steps down
 from owner, whether they are deactivated, handing their open work to
-reassignTo, and the conversation access they end with, nil when it stays.
+reassignTo, and the conversation access and availability they end with,
+each nil when it stays.
 */
 type memberChange struct {
 	reactivate  bool
@@ -123,6 +130,7 @@ type memberChange struct {
 	deactivate  bool
 	reassignTo  ids.UUID
 	access      *appevents.ConversationAccessState
+	available   *appevents.AvailabilityState
 }
 
 /*
@@ -221,7 +229,11 @@ func (a *UpdateMember) plan(ctx context.Context, s subject, in UpdateMemberInput
 	}
 
 	var err error
-	change.access, err = planAccess(ctx, s, in)
+	if change.access, err = planAccess(ctx, s, in); err != nil {
+		return memberChange{}, err
+	}
+
+	change.available, err = availability.Plan(in.Membership, s.target, in.Availability)
 
 	return change, err
 }
@@ -408,6 +420,13 @@ func (w memberWriter) apply(
 
 	if c.access != nil {
 		if err := w.changeAccess(ctx, member, *c.access); err != nil {
+			return err
+		}
+	}
+
+	if c.available != nil {
+		writer := availability.Writer{Tx: w.tx, Events: w.events, By: w.by, Now: w.now}
+		if _, err := writer.Write(ctx, member, *c.available); err != nil {
 			return err
 		}
 	}

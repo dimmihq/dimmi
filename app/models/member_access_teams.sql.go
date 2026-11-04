@@ -124,7 +124,7 @@ func (q *Queries) ListMemberAccessTeamIDs(ctx context.Context, arg ListMemberAcc
 }
 
 const listRestrictedMembers = `-- name: ListRestrictedMembers :many
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned FROM workspace_members
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at FROM workspace_members
 WHERE workspace_id = $1 AND status = 'active' AND conversation_access <> 'all'
 ORDER BY id
 `
@@ -155,6 +155,14 @@ func (q *Queries) ListRestrictedMembers(ctx context.Context, workspaceID ids.UUI
 			&i.JoinedVia,
 			&i.ConversationAccess,
 			&i.ConversationAccessUnassigned,
+			&i.AwayReassign,
+			&i.AwaySince,
+			&i.AvailabilitySource,
+			&i.AwayReasonID,
+			&i.AssignOnReply,
+			&i.ConversationCapacity,
+			&i.CapacityByChannel,
+			&i.LastAssignedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -171,7 +179,7 @@ UPDATE workspace_members
 SET conversation_access = $1, conversation_access_unassigned = $2,
     updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at
 `
 
 type SetMemberConversationAccessParams struct {
@@ -207,6 +215,14 @@ func (q *Queries) SetMemberConversationAccess(ctx context.Context, arg SetMember
 		&i.JoinedVia,
 		&i.ConversationAccess,
 		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 	)
 	return i, err
 }

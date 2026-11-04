@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/availability"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -199,19 +200,37 @@ Update changes a member's role, status or conversation access and
 answers with the member as they now are.
 */
 func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMemberRequest) (*MemberOutput, error) {
-	id, err := c.memberID(ctx, in.Member)
+	return c.applyUpdate(ctx, in.Member, in.Body, in.RawBody)
+}
+
+/*
+UpdateMe changes the caller's own membership, as Update does for
+"me", for a credential that may only write conversations.
+*/
+func (c *MemberController) UpdateMe(ctx context.Context, in *requests.UpdateOwnMemberRequest) (*MemberOutput, error) {
+	return c.applyUpdate(ctx, requests.CurrentMember, in.Body, in.RawBody)
+}
+
+/*
+applyUpdate applies the body to the member named and answers with the member
+as they now are.
+*/
+func (c *MemberController) applyUpdate(
+	ctx context.Context, named string, b requests.UpdateMemberBody, raw []byte,
+) (*MemberOutput, error) {
+	id, err := c.memberID(ctx, named)
 	if err != nil {
 		return nil, err
 	}
 
 	update := members.UpdateMemberInput{
 		Principal: caller(ctx), Membership: membership(ctx), MemberID: id,
-		AssignedRole: (*enums.Role)(in.Body.AssignedRole), Status: (*enums.MemberStatus)(in.Body.Status),
-		KeepOwner: in.Body.KeepOwner != nil && *in.Body.KeepOwner,
+		AssignedRole: (*enums.Role)(b.AssignedRole), Status: (*enums.MemberStatus)(b.Status),
+		KeepOwner: b.KeepOwner != nil && *b.KeepOwner, Availability: availabilityChange(b, raw),
 	}
 
-	if in.Body.ReassignToMemberID != nil {
-		reassign, err := c.IDs.Decode(string(models.PrefixMember), *in.Body.ReassignToMemberID)
+	if b.ReassignToMemberID != nil {
+		reassign, err := c.IDs.Decode(string(models.PrefixMember), *b.ReassignToMemberID)
 		if err != nil {
 			return nil, exceptions.ErrReassignTargetInvalid
 		}
@@ -219,7 +238,7 @@ func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMember
 		update.ReassignTo = &reassign
 	}
 
-	if update.Access, err = c.accessChange(in); err != nil {
+	if update.Access, err = c.accessChange(b); err != nil {
 		return nil, err
 	}
 
@@ -240,8 +259,7 @@ func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMember
 accessChange reads the conversation access fields of an update, nil when
 it names none. A team id that cannot be read names no team.
 */
-func (c *MemberController) accessChange(in *requests.UpdateMemberRequest) (*members.AccessChange, error) {
-	b := in.Body
+func (c *MemberController) accessChange(b requests.UpdateMemberBody) (*members.AccessChange, error) {
 	if b.Access == nil && b.AccessUnassigned == nil && b.AccessTeamIDs == nil {
 		return nil, nil
 	}
@@ -266,6 +284,29 @@ func (c *MemberController) accessChange(in *requests.UpdateMemberRequest) (*memb
 	change.TeamIDs = &teamIDs
 
 	return change, nil
+}
+
+/*
+availabilityChange reads the availability fields of an update, nil when
+it names none. A capacity sent as null lifts the limit.
+*/
+func availabilityChange(b requests.UpdateMemberBody, raw []byte) *availability.Change {
+	clearCapacity := requests.Nulls(raw)["conversation_capacity"]
+	if b.Availability == nil && b.AwayReassign == nil && b.AssignOnReply == nil && b.Capacity == nil &&
+		b.CapacityByChannel == nil && !clearCapacity {
+		return nil
+	}
+
+	change := &availability.Change{
+		Availability: (*enums.Availability)(b.Availability), AwayReassign: b.AwayReassign,
+		AssignOnReply: (*enums.AssignOnReply)(b.AssignOnReply), CapacityByChannel: b.CapacityByChannel,
+	}
+
+	if b.Capacity != nil || clearCapacity {
+		change.Capacity = &availability.Limit{Max: b.Capacity}
+	}
+
+	return change
 }
 
 /*

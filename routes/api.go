@@ -148,6 +148,7 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK)
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read")
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
+	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).Ability("conversations:write")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read")
 	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")

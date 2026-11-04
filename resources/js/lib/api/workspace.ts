@@ -40,6 +40,8 @@ export interface Caller {
     conversation_access: ConversationAccess;
     conversation_access_unassigned: boolean;
     access_team_ids: string[];
+    availability: "online" | "away";
+    away_reassign: boolean;
   } | null;
 }
 

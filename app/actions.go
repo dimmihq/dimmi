@@ -12,6 +12,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/actions/assignment"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
@@ -106,6 +107,9 @@ type Actions struct {
 	ListTokenAbilities        *tokens.ListTokenAbilities
 
 	Inbox *InboxActions
+
+	Assignment       *assignment.Assigner
+	AssignmentStatus *assignment.ShowAssignmentStatus
 
 	RecordTyping *conversations.RecordTyping
 

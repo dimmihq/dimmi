@@ -135,6 +135,10 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
+	if err := bootAssignment(a); err != nil {
+		return err
+	}
+
 	if err := bootEmail(a); err != nil {
 		return err
 	}

@@ -14,6 +14,7 @@
 package resources
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -36,6 +37,8 @@ type WorkspaceMember struct {
 	ConversationAccess           string   `json:"conversation_access"`
 	ConversationAccessUnassigned bool     `json:"conversation_access_unassigned"`
 	AccessTeamIDs                []string `json:"access_team_ids"`
+
+	MemberAvailability
 
 	User          Teammate       `json:"user"`
 	Teams         *[]TeamSummary `json:"teams,omitempty"`
@@ -70,6 +73,8 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 		ConversationAccess:           m.ConversationAccess,
 		ConversationAccessUnassigned: m.ConversationAccessUnassigned,
 		AccessTeamIDs:                []string{},
+
+		MemberAvailability: NewMemberAvailability(m),
 
 		User: Teammate{
 			ID:            models.PublicID(models.PrefixUser, u.ID),
@@ -106,4 +111,32 @@ func NewWorkspaceMembers(rows []models.ListWorkspaceMembersRow) []WorkspaceMembe
 	}
 
 	return out
+}
+
+/*
+MemberAvailability is how available a member is for new conversations:
+whether customers' answers go back to the pool while they are away,
+since when they are away, their own rule for taking conversations by
+replying, and the most open conversations they hold, overall and per
+channel type, null for no limit.
+*/
+type MemberAvailability struct {
+	AwayReassign      bool           `json:"away_reassign"`
+	AwaySince         *time.Time     `json:"away_since"`
+	AssignOnReply     string         `json:"assign_on_reply"`
+	Capacity          *int32         `json:"conversation_capacity"`
+	CapacityByChannel map[string]int `json:"capacity_by_channel"`
+}
+
+/*
+NewMemberAvailability shapes the member's availability.
+*/
+func NewMemberAvailability(m models.WorkspaceMember) MemberAvailability {
+	byChannel := map[string]int{}
+	_ = json.Unmarshal(m.CapacityByChannel, &byChannel)
+
+	return MemberAvailability{
+		AwayReassign: m.AwayReassign, AwaySince: m.AwaySince, AssignOnReply: m.AssignOnReply,
+		Capacity: m.ConversationCapacity, CapacityByChannel: byChannel,
+	}
 }

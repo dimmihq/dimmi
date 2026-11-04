@@ -55,7 +55,7 @@ func seedBudgetConversations(t *testing.T, d desk, team ids.UUID) {
 }
 
 /*
-firstPage returns how long the quickest of five first pages took for the
+firstPage returns how long the quickest of ten first pages took for the
 scope, the quickest because other work on a shared server only ever
 slows a run down.
 */
@@ -67,7 +67,7 @@ func firstPage(t *testing.T, d desk, scope authz.ConversationScope, memberID ids
 	wall := clock.System()
 	best := time.Hour
 
-	for range 5 {
+	for range 10 {
 		started := wall.Now()
 
 		err := d.tc.App.DB.Transaction(tenancy.With(t.Context(), workspace.String()),

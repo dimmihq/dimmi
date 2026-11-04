@@ -220,8 +220,9 @@ func (ap *applier) assign(ctx context.Context, ch Changes) error {
 }
 
 /*
-status applies the status, working out when a snooze ends, and adds the
-closing note.
+status applies the status, working out when a snooze ends, gives a
+conversation woken by hand to a member who always takes what they work
+on, and adds the closing note.
 */
 func (ap *applier) status(ctx context.Context, ch Changes) error {
 	if ch.Status == nil {
@@ -238,6 +239,8 @@ func (ap *applier) status(ctx context.Context, ch Changes) error {
 		to.Until = until
 	}
 
+	from := ap.c.Status
+
 	c, changed, err := ap.w.ChangeStatus(ctx, ap.c, to)
 	ap.c = c
 
@@ -245,7 +248,11 @@ func (ap *applier) status(ctx context.Context, ch Changes) error {
 		ap.changed = append(ap.changed, "status")
 	}
 
-	if err != nil || ch.Note == nil {
+	if err != nil {
+		return err
+	}
+
+	if ap.c, err = ap.w.takeOnWake(ctx, from, ap.c, ap.m.Member); err != nil || ch.Note == nil {
 		return err
 	}
 

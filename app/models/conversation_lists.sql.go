@@ -181,7 +181,7 @@ func (q *Queries) CountUnreadConversations(ctx context.Context, arg CountUnreadC
 
 const filterConversations = `-- name: FilterConversations :many
 SELECT
-    c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.priority, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at,
+    c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.priority, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.assignment_wait_reason, c.assignment_waiting_since,
     (CASE WHEN $1::boolean THEN c.created_at ELSE coalesce(c.last_message_at, c.created_at) END)::timestamptz
         AS sort_at
 FROM conversations c
@@ -357,6 +357,8 @@ func (q *Queries) FilterConversations(ctx context.Context, arg FilterConversatio
 			&i.Conversation.DeletedAt,
 			&i.Conversation.CreatedAt,
 			&i.Conversation.UpdatedAt,
+			&i.Conversation.AssignmentWaitReason,
+			&i.Conversation.AssignmentWaitingSince,
 			&i.SortAt,
 		); err != nil {
 			return nil, err

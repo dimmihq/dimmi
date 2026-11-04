@@ -155,6 +155,8 @@ type Conversation struct {
 	DeletedAt              *time.Time      `json:"deleted_at"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
+	AssignmentWaitReason   *string         `json:"assignment_wait_reason"`
+	AssignmentWaitingSince *time.Time      `json:"assignment_waiting_since"`
 }
 
 type ConversationParticipant struct {
@@ -638,6 +640,15 @@ type Team struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+type TeamAssignmentCursor struct {
+	PoolKind       string     `json:"pool_kind"`
+	PoolID         ids.UUID   `json:"pool_id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	LastMemberID   *ids.UUID  `json:"last_member_id"`
+	LastAssignedAt *time.Time `json:"last_assigned_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
 type TeamMember struct {
 	TeamID            ids.UUID  `json:"team_id"`
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
@@ -702,18 +713,26 @@ type Workspace struct {
 }
 
 type WorkspaceMember struct {
-	ID                           ids.UUID   `json:"id"`
-	WorkspaceID                  ids.UUID   `json:"workspace_id"`
-	UserID                       ids.UUID   `json:"user_id"`
-	Role                         string     `json:"role"`
-	Availability                 string     `json:"availability"`
-	Status                       string     `json:"status"`
-	CreatedAt                    time.Time  `json:"created_at"`
-	UpdatedAt                    time.Time  `json:"updated_at"`
-	LastAccessedAt               *time.Time `json:"last_accessed_at"`
-	DeactivatedAt                *time.Time `json:"deactivated_at"`
-	DeactivatedByMemberID        *ids.UUID  `json:"deactivated_by_member_id"`
-	JoinedVia                    *string    `json:"joined_via"`
-	ConversationAccess           string     `json:"conversation_access"`
-	ConversationAccessUnassigned bool       `json:"conversation_access_unassigned"`
+	ID                           ids.UUID        `json:"id"`
+	WorkspaceID                  ids.UUID        `json:"workspace_id"`
+	UserID                       ids.UUID        `json:"user_id"`
+	Role                         string          `json:"role"`
+	Availability                 string          `json:"availability"`
+	Status                       string          `json:"status"`
+	CreatedAt                    time.Time       `json:"created_at"`
+	UpdatedAt                    time.Time       `json:"updated_at"`
+	LastAccessedAt               *time.Time      `json:"last_accessed_at"`
+	DeactivatedAt                *time.Time      `json:"deactivated_at"`
+	DeactivatedByMemberID        *ids.UUID       `json:"deactivated_by_member_id"`
+	JoinedVia                    *string         `json:"joined_via"`
+	ConversationAccess           string          `json:"conversation_access"`
+	ConversationAccessUnassigned bool            `json:"conversation_access_unassigned"`
+	AwayReassign                 bool            `json:"away_reassign"`
+	AwaySince                    *time.Time      `json:"away_since"`
+	AvailabilitySource           string          `json:"availability_source"`
+	AwayReasonID                 *ids.UUID       `json:"away_reason_id"`
+	AssignOnReply                string          `json:"assign_on_reply"`
+	ConversationCapacity         *int32          `json:"conversation_capacity"`
+	CapacityByChannel            json.RawMessage `json:"capacity_by_channel"`
+	LastAssignedAt               *time.Time      `json:"last_assigned_at"`
 }
