@@ -1,11 +1,14 @@
 package widget_test
 
 import (
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/tests"
@@ -155,5 +158,43 @@ func TestWidgetBroadcasts(t *testing.T) {
 		assert.True(t, recovered.Recovered)
 		require.NotEmpty(t, recovered.Publications)
 		assert.Contains(t, string(recovered.Publications[len(recovered.Publications)-1]), "while you were away")
+	})
+}
+
+func TestWidgetUpdates(t *testing.T) {
+	t.Parallel()
+
+	t.Run("polling catches up from the database without notes", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+
+		first := v.client().GetJSON("/widget/v1/updates").AssertOK()
+		first.AssertJSONPath("data", []any{})
+		cursor := first.String("meta.cursor")
+
+		tc.Clock.Travel(time.Second)
+		reply(t, tc, id, "polled reply")
+		owner(tc).PostJSON("/api/v1/conversations/"+id+"/notes", testkit.JSON{"body": "secret note"}).AssertCreated()
+		tc.Clock.Travel(time.Second)
+
+		res := v.client().GetJSON("/widget/v1/updates?since=" + url.QueryEscape(cursor)).AssertOK()
+		assert.Contains(t, string(res.Body), "polled reply")
+		assert.NotContains(t, string(res.Body), "secret note")
+		res.AssertJSONPath("data.0.event", "message.created")
+		res.AssertJSONPath("meta.has_more", false)
+		res.AssertJSONPath("meta.poll_after_ms", float64(tc.App.Config.Widget.PollingInterval.Milliseconds()))
+
+		again := v.client().GetJSON("/widget/v1/updates?since=" + url.QueryEscape(res.String("meta.cursor"))).AssertOK()
+		assert.NotContains(t, string(again.Body), "polled reply")
+	})
+
+	t.Run("a forged cursor is refused", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+
+		v.client().GetJSON("/widget/v1/updates?since=forged").AssertStatus(fhttp.StatusBadRequest)
 	})
 }

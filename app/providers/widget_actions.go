@@ -159,6 +159,7 @@ func bootWidgetSessions(a *app.App) {
 	acts.ShowSession = &widget.ShowWidgetSession{DB: a.DB}
 	acts.RevokeSession = &widget.RevokeWidgetSession{DB: a.DB, Clock: a.Clock, Streams: streams}
 	acts.UpdateContact = &widget.UpdateWidgetContact{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.Contacts = &widget.ContactSessions{Clock: a.Clock, Streams: streams}
 }
 
 /*
@@ -192,6 +193,7 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 	acts.Conversations = &widget.ListWidgetConversations{DB: a.DB, Disk: disk}
 	acts.MarkRead = &widget.MarkWidgetConversationRead{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.Ping = &widget.RecordWidgetPing{DB: a.DB, Clock: a.Clock, Cache: a.Cache}
+	acts.Updates = &widget.ListWidgetUpdates{DB: a.DB, Clock: a.Clock, Read: acts.Conversations}
 
 	broadcaster := &widgetchannel.Broadcaster{
 		Server: a.Broadcast, Payloads: widgetchannel.Payloads{DB: a.DB, Read: acts.Conversations},

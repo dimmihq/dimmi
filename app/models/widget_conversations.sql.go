@@ -189,6 +189,88 @@ func (q *Queries) LatestWidgetMessages(ctx context.Context, arg LatestWidgetMess
 	return items, nil
 }
 
+const listWidgetConversationChanges = `-- name: ListWidgetConversationChanges :many
+SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.priority, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.is_test, c.previous_conversation_id FROM conversations c
+JOIN channel_connections cc ON cc.id = c.channel_connection_id AND cc.workspace_id = c.workspace_id
+WHERE c.workspace_id = $1 AND c.contact_id = $2 AND c.deleted_at IS NULL
+  AND (
+      c.source->>'widget_id' = $3::text
+      OR (cc.type IN ('email', 'api') AND c.inbox_id = $4::uuid)
+  )
+  AND c.updated_at > $5::timestamptz AND c.updated_at <= $6::timestamptz
+ORDER BY c.updated_at, c.id
+LIMIT $7::bigint
+`
+
+type ListWidgetConversationChangesParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	WidgetID    string    `json:"widget_id"`
+	InboxID     ids.UUID  `json:"inbox_id"`
+	SinceAt     time.Time `json:"since_at"`
+	UntilAt     time.Time `json:"until_at"`
+	RowLimit    int64     `json:"row_limit"`
+}
+
+// ListWidgetConversationChanges returns the visitor's conversations on the
+// widget that changed after the time, oldest change first.
+func (q *Queries) ListWidgetConversationChanges(ctx context.Context, arg ListWidgetConversationChangesParams) ([]Conversation, error) {
+	rows, err := q.db.Query(ctx, listWidgetConversationChanges,
+		arg.WorkspaceID,
+		arg.ContactID,
+		arg.WidgetID,
+		arg.InboxID,
+		arg.SinceAt,
+		arg.UntilAt,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Number,
+			&i.InboxID,
+			&i.ChannelConnectionID,
+			&i.ContactID,
+			&i.Subject,
+			&i.Status,
+			&i.Spam,
+			&i.Priority,
+			&i.AssigneeMemberID,
+			&i.AssigneeTeamID,
+			&i.AiState,
+			&i.SnoozedUntil,
+			&i.ExternalThreadKey,
+			&i.Source,
+			&i.FirstCustomerMessageAt,
+			&i.LastCustomerMessageAt,
+			&i.FirstReplyAt,
+			&i.LastReplyAt,
+			&i.LastMessageAt,
+			&i.ClosedAt,
+			&i.MessageCount,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.IsTest,
+			&i.PreviousConversationID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWidgetConversations = `-- name: ListWidgetConversations :many
 SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.priority, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.is_test, c.previous_conversation_id, cc.type AS channel_type,
     (SELECT count(*) FROM messages m
@@ -326,6 +408,83 @@ func (q *Queries) ListWidgetMemberAuthors(ctx context.Context, arg ListWidgetMem
 	for rows.Next() {
 		var i ListWidgetMemberAuthorsRow
 		if err := rows.Scan(&i.ID, &i.Name, &i.AvatarPath); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWidgetMessageChanges = `-- name: ListWidgetMessageChanges :many
+SELECT m.id, m.workspace_id, m.conversation_id, m.type, m.author_type, m.author_id, m.body, m.body_html, m.event, m.channel_message_id, m.dedupe_key, m.delivery_status, m.delivery_error, m.substantive, m.metadata, m.edited_at, m.sent_at, m.read_at, m.deleted_at, m.search, m.created_at, m.updated_at FROM messages m
+JOIN conversations c ON c.id = m.conversation_id AND c.workspace_id = m.workspace_id
+JOIN channel_connections cc ON cc.id = c.channel_connection_id AND cc.workspace_id = c.workspace_id
+WHERE m.workspace_id = $1 AND c.contact_id = $2 AND c.deleted_at IS NULL AND m.type = 'message'
+  AND (
+      c.source->>'widget_id' = $3::text
+      OR (cc.type IN ('email', 'api') AND c.inbox_id = $4::uuid)
+  )
+  AND (m.updated_at, m.id) > ($5::timestamptz, $6::uuid)
+ORDER BY m.updated_at, m.id
+LIMIT $7::bigint
+`
+
+type ListWidgetMessageChangesParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	WidgetID    string    `json:"widget_id"`
+	InboxID     ids.UUID  `json:"inbox_id"`
+	SinceAt     time.Time `json:"since_at"`
+	SinceID     ids.UUID  `json:"since_id"`
+	RowLimit    int64     `json:"row_limit"`
+}
+
+// ListWidgetMessageChanges returns the visitor's messages on the widget that
+// changed after the cursor, oldest change first: new, edited or deleted.
+func (q *Queries) ListWidgetMessageChanges(ctx context.Context, arg ListWidgetMessageChangesParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, listWidgetMessageChanges,
+		arg.WorkspaceID,
+		arg.ContactID,
+		arg.WidgetID,
+		arg.InboxID,
+		arg.SinceAt,
+		arg.SinceID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ConversationID,
+			&i.Type,
+			&i.AuthorType,
+			&i.AuthorID,
+			&i.Body,
+			&i.BodyHtml,
+			&i.Event,
+			&i.ChannelMessageID,
+			&i.DedupeKey,
+			&i.DeliveryStatus,
+			&i.DeliveryError,
+			&i.Substantive,
+			&i.Metadata,
+			&i.EditedAt,
+			&i.SentAt,
+			&i.ReadAt,
+			&i.DeletedAt,
+			&i.Search,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

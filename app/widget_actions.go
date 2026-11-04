@@ -42,4 +42,6 @@ type WidgetActions struct {
 	Typing        *widget.BroadcastVisitorTyping
 	Ping          *widget.RecordWidgetPing
 	Realtime      *widget.Realtime
+	Updates       *widget.ListWidgetUpdates
+	Contacts      *widget.ContactSessions
 }

@@ -86,6 +86,12 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	tokens := &widget.RealtimeTokenController{Realtime: a.Actions.Widget.Realtime, BaseURL: baseURLOf(a)}
 	routing.Post(visitor, "/realtime-tokens", "widget.realtime-tokens.store", tokens.Store)
 
+	updates := &widget.UpdateController{
+		List: a.Actions.Widget.Updates, Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Clock: a.Clock,
+		Interval: a.Config.Widget.PollingInterval,
+	}
+	routing.Get(visitor, "/updates", "widget.updates.index", updates.Index)
+
 	pings := &widget.PingController{Record: a.Actions.Widget.Ping}
 	routing.Post(visitor, "/pings", "widget.pings.store", pings.Store)
 
