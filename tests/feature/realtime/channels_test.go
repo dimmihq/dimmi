@@ -179,8 +179,13 @@ func TestRealtimeChannels(t *testing.T) {
 
 		widget := testkit.ConnectRealtime(t, widgetNode(t, tc, s.contact), testkit.RealtimeOptions{Token: "visitor"})
 		assert.Nil(t, widget.Subscribe(channel).Error)
-		assert.Equal(t, permissionDenied,
-			widget.Subscribe("workspace:"+public(models.PrefixWorkspace, tc.Workspace.Workspace.ID)).Error.Code)
+		for _, other := range []string{
+			"workspace:" + public(models.PrefixWorkspace, tc.Workspace.Workspace.ID),
+			"conversation:" + public(models.PrefixConversation, s.conversation.ID),
+			"member:" + public(models.PrefixMember, tc.Workspace.Owner.ID),
+		} {
+			assert.Equal(t, permissionDenied, widget.Subscribe(other).Error.Code, other)
+		}
 	})
 
 	t.Run("never lets a client publish", func(t *testing.T) {

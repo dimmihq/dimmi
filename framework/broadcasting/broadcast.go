@@ -104,9 +104,10 @@ type envelope struct {
 }
 
 /*
-revoked closes the connections of a user whose access ended. Its code
-is in the range client libraries treat as final, so they do not
-reconnect.
+revoked closes the connections of a user whose access ended. Client
+libraries reconnect after a code in this range, and the new connection
+is then refused every channel the user may no longer follow, so a
+client knows to drop what it showed.
 */
 func revoked() centrifuge.Disconnect {
 	return centrifuge.Disconnect{Code: 4009, Reason: "member_removed"}

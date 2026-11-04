@@ -120,6 +120,41 @@ func TestConversationBroadcasts(t *testing.T) {
 		}
 	})
 
+	t.Run("names member authors by id and others by type alone", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
+		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
+		require.Nil(t, c.Subscribe(appbroadcasting.ConversationChannel(s.conversation.ID)).Error)
+		owner := tc.Workspace.Owner.ID
+		agent := ids.New()
+
+		cases := []struct {
+			author   enums.AuthorType
+			id       *ids.UUID
+			expected *string
+		}{
+			{author: enums.AuthorTypeMember, id: &owner, expected: new(public(models.PrefixMember, owner))},
+			{author: enums.AuthorTypeAgent, id: &agent},
+			{author: enums.AuthorTypeSystem},
+		}
+		for _, tt := range cases {
+			m := addAuthoredMessage(t, tc, s.conversation, author{kind: tt.author, id: tt.id})
+			e := appevents.MessageCreated{MessageRef: messageRef(s.conversation.ID, m.ID)}
+			e.WorkspaceID = tc.Workspace.Workspace.ID
+
+			dispatch(t, tc, e)
+
+			p := c.Publication()
+			assert.True(t, strings.HasPrefix(p.ID, "evt_"), "an event without an id still gets one")
+
+			var entry appbroadcasting.MessagePayload
+			require.NoError(t, json.Unmarshal(p.Data, &entry))
+			assert.Equal(t, string(tt.author), entry.Author.Type)
+			assert.Equal(t, tt.expected, entry.Author.ID)
+		}
+	})
+
 	t.Run("hides the body of a deleted message", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

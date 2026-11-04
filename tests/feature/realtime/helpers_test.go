@@ -136,6 +136,30 @@ func addMessage(t *testing.T, tc *tests.TestCase, c models.Conversation, body st
 }
 
 /*
+author is who writes a message: their type and row, none for the
+system.
+*/
+type author struct {
+	kind enums.AuthorType
+	id   *ids.UUID
+}
+
+/*
+addAuthoredMessage appends a message by the author to the conversation.
+*/
+func addAuthoredMessage(t *testing.T, tc *tests.TestCase, c models.Conversation, by author) models.Message {
+	t.Helper()
+
+	return query(t, tc, c.WorkspaceID, func(ctx context.Context, q *models.Queries) (models.Message, error) {
+		return q.CreateMessage(ctx, models.CreateMessageParams{
+			WorkspaceID: c.WorkspaceID, ConversationID: c.ID, Type: string(enums.MessageTypeMessage),
+			AuthorType: string(by.kind), AuthorID: by.id, Body: new("Hello"),
+			Metadata: json.RawMessage(`{}`), Now: tc.Clock.Now(),
+		})
+	})
+}
+
+/*
 dispatch dispatches the event outside a transaction, so its broadcast
 goes out at once.
 */
