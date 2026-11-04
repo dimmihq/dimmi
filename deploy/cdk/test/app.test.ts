@@ -139,6 +139,12 @@ describe("app stack", () => {
     expect(names.includes("dimmi-staging-app-migrate-execution")).toBeTruthy();
   });
 
+  it("a paused environment keeps its services at zero tasks", () => {
+    const paused = synthEnvironment("production", true).app;
+
+    expect(() => paused.allResourcesProperties("AWS::ECS::Service", { DesiredCount: 0 })).not.toThrow();
+  });
+
   it("the release script finds everything it needs in the outputs", () => {
     for (const output of [
       "LoadBalancerAddresses",

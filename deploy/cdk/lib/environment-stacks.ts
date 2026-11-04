@@ -28,7 +28,12 @@ export type EnvironmentStacks = {
  * tagged with `Environment`, which is what IAM conditions, cost reports
  * and budgets key on.
  */
-export function buildEnvironment(app: App, config: EnvironmentConfig, account?: string): EnvironmentStacks {
+export function buildEnvironment(
+  app: App,
+  config: EnvironmentConfig,
+  options: { account?: string; paused?: boolean } = {},
+): EnvironmentStacks {
+  const { account } = options;
   const env = { account, region: config.region };
   const id = (role: string) => `dimmi-${config.name}-${role}`;
   const common = (role: string) => ({ env, config, stackName: id(role) });
@@ -56,6 +61,7 @@ export function buildEnvironment(app: App, config: EnvironmentConfig, account?: 
     mail,
     repository: registry.repository,
     alarms: ops.topic,
+    paused: options.paused,
   });
   const ci = new CiStack(app, id("ci"), { ...common("ci"), repository: registry.repository, app: appStack, data });
 

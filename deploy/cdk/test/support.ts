@@ -13,8 +13,8 @@ export type Resource = { Properties: Record<string, unknown> };
  * Templates of every stack of one environment, synthesized once per test
  * file with no account, as `make infra-check` does.
  */
-export function synthEnvironment(name: string): Record<keyof EnvironmentStacks, Template> {
-  const stacks = buildEnvironment(new App(), environments[name]);
+export function synthEnvironment(name: string, paused = false): Record<keyof EnvironmentStacks, Template> {
+  const stacks = buildEnvironment(new App(), environments[name], { paused });
 
   return Object.fromEntries(
     Object.entries(stacks).map(([role, stack]) => [role, Template.fromStack(stack as Stack)]),

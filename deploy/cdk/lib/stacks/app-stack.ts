@@ -33,6 +33,12 @@ import { RELEASE_TAG } from "./registry-stack.ts";
 
 export type AppStackProps = StackProps & {
   config: EnvironmentConfig;
+  /**
+   * Runs every service at zero tasks while everything else stays. Used for
+   * the first deploy, before the database has roles and a schema, and to stop
+   * an environment's compute without losing anything.
+   */
+  paused?: boolean;
   network: NetworkStack;
   data: DataStack;
   mail: MailStack;
@@ -120,7 +126,7 @@ export class AppStack extends Stack {
       serviceName: `dimmi-${this.props.config.name}-${name}`,
       cluster: this.cluster,
       taskDefinition: task,
-      desiredCount: service.desiredCount,
+      desiredCount: this.props.paused ? 0 : service.desiredCount,
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
       circuitBreaker: { enable: true, rollback: true },

@@ -2,7 +2,6 @@ import type { EnvironmentConfig } from "./environment.ts";
 import { validate } from "./environment.ts";
 
 const REPOSITORY = "dimmihq/dimmi";
-const LETS_ENCRYPT_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory";
 const LETS_ENCRYPT = "https://acme-v02.api.letsencrypt.org/directory";
 
 /**
@@ -16,7 +15,7 @@ const staging: EnvironmentConfig = {
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.staging.trydimmi.com", system: "mail.staging.trydimmi.com" },
   alarmEmail: "ops@trydimmi.com",
-  acmeDirectory: LETS_ENCRYPT_STAGING,
+  acmeDirectory: LETS_ENCRYPT,
   gate: true,
   github: { repository: REPOSITORY, environment: "staging" },
   network: { maxAzs: 2, natGateways: 0 },

@@ -6,9 +6,13 @@ import { buildEnvironment } from "../lib/environment-stacks.ts";
 /**
  * One app, every environment. `-c env=staging` picks which one to
  * synthesize, so `cdk deploy --all -c env=staging` touches staging alone.
- * The account comes from the deploying credentials and is never written
- * down; synth runs without any.
+ * `-c paused=true` runs its services at zero tasks. The account comes from
+ * the deploying credentials and is never written down; synth runs without
+ * any.
  */
 const app = new App();
 
-buildEnvironment(app, environmentNamed(app.node.tryGetContext("env")), process.env.CDK_DEFAULT_ACCOUNT);
+buildEnvironment(app, environmentNamed(app.node.tryGetContext("env")), {
+  account: process.env.CDK_DEFAULT_ACCOUNT,
+  paused: String(app.node.tryGetContext("paused")) === "true",
+});

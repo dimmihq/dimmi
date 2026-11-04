@@ -39,7 +39,11 @@ export type EnvironmentConfig = {
   mail: { inbound: string; system: string };
   /** Who is mailed when an alarm fires. */
   alarmEmail: string;
-  /** Let's Encrypt directory: staging certificates until the first real run is proved. */
+  /**
+   * The ACME directory certificates come from. Both environments use Let's
+   * Encrypt's real one: SNS refuses certificates from its staging CA, and
+   * certificates live in PostgreSQL, so restarts never order again.
+   */
   acmeDirectory: string;
   /** Turns on the shared-password gate in front of the application. */
   gate: boolean;
