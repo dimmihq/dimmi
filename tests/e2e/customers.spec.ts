@@ -89,4 +89,33 @@ it.describe("customers", () => {
     await expect(people.getByRole("link", { name: "Bo Chen" })).toBeHidden();
     await expect(people.getByRole("link", { name: "Ana Lima" })).toBeVisible();
   });
+
+  it("picks the people list's columns and keeps them", async ({ page }) => {
+    await page.goto("/d/customers");
+    await api(page, "POST", "/contacts", { name: "Ana Lima", email: "ana@lima.example", phone: "+15550101" });
+    await page.reload();
+    const people = page.getByRole("grid", { name: "People" });
+    await expect(people.getByRole("columnheader", { name: "Email" })).toBeVisible();
+    await expect(people.getByRole("columnheader", { name: "Phone" })).toBeHidden();
+
+    await page.getByRole("button", { name: "Columns" }).click();
+    const chooser = page.getByRole("dialog", { name: "Columns" });
+    await chooser.getByText("Phone", { exact: true }).click();
+    await expect(chooser.getByRole("checkbox", { name: "Phone" })).toBeChecked();
+    await chooser.getByText("Email", { exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(people.getByRole("columnheader", { name: "Phone" })).toBeVisible();
+    await expect(people.getByRole("columnheader", { name: "Email" })).toBeHidden();
+    await expect(people.getByText("+15550101")).toBeVisible();
+
+    await expect
+      .poll(
+        async () =>
+          (await api<{ views: { people?: { columns?: string[] } } }>(page, "GET", "/inbox-preferences")).views.people
+            ?.columns,
+      )
+      .toEqual(["phone", "company", "tags", "last_seen"]);
+    await page.reload();
+    await expect(people.getByRole("columnheader", { name: "Phone" })).toBeVisible();
+  });
 });

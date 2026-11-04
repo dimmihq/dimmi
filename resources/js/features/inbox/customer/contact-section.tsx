@@ -18,7 +18,8 @@ import { type ContactChanges, type ConversationContext, updateContact } from "@/
 
 import { TagChip } from "../tags/tag-chip";
 import { TagPicker } from "../tags/tag-picker";
-import { show, when } from "./format";
+import { AttributeRows } from "./attribute-rows";
+import { when } from "./format";
 import { Copyable, Nothing, Row } from "./rows";
 
 /*
@@ -110,23 +111,6 @@ function Notes({ workspace, context }: { workspace: string; context: Conversatio
   );
 }
 
-function Attributes({ context }: { context: ConversationContext }) {
-  const entries = Object.entries(context.contact.custom_attributes);
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return (
-    <>
-      {entries.map(([key, value]) => (
-        <Row key={key} label={<span className="truncate">{key}</span>}>
-          <Copyable value={show(value)} label={key} />
-        </Row>
-      ))}
-    </>
-  );
-}
-
 function Origin({ context }: { context: ConversationContext }) {
   const source = context.source;
   const rows: [string, string | undefined][] = [
@@ -189,6 +173,7 @@ export function ContactSection({ workspace, context }: { workspace: string; cont
         </div>
       </div>
       <dl className="flex flex-col">
+        <AttributeRows workspace={workspace} context={context} pinnedOnly />
         <Row label="Email">
           {contact.email ? <Copyable value={contact.email} label="email" /> : "—"}
           {contact.email && contact.email_verified ? (
@@ -207,7 +192,7 @@ export function ContactSection({ workspace, context }: { workspace: string; cont
         ) : null}
         {where ? <Row label="Location">{where}</Row> : null}
         {time ? <Row label="Local time">{time}</Row> : null}
-        <Attributes context={context} />
+        <AttributeRows workspace={workspace} context={context} pinnedOnly={false} />
         <Row label="First seen">{when(contact.first_seen_at ?? contact.created_at)}</Row>
         <Row label="Last seen">{when(contact.last_seen_at)}</Row>
         <Origin context={context} />

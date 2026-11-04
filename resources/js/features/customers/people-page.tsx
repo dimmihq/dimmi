@@ -2,33 +2,26 @@
  * Everyone the team has talked to or been told about, most recently seen
  * first. A teammate searches by name, address or phone, narrows by kind,
  * company, tag, when they were seen or added and one attribute, sorts,
- * and loads more as they go. Blocked customers stay out of
- * the list and have a tab of their own. New contact adds someone the team
- * met elsewhere.
+ * picks the columns, and loads more as they go. Blocked customers stay
+ * out of the list and have a tab of their own. New contact adds someone
+ * the team met elsewhere.
  */
 import { RiAddLine, RiSearchLine, RiUser3Line } from "@remixicon/react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useDeferredValue, useState } from "react";
 
-import { Avatar } from "@/components/base/avatar/avatar";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/base/table/table";
-import { TagChip } from "@/features/inbox/tags/tag-chip";
-import { avatarColor } from "@/features/shell/avatar-color";
 import { EmptyState } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
-import { type Contact, createContact, customerKeys, type PeopleFilters, peopleQuery } from "@/lib/api/customers";
+import { createContact, customerKeys, type PeopleFilters, peopleQuery } from "@/lib/api/customers";
 
 import { CustomersFrame } from "./frame";
-import { personName, useWorkspace } from "./names";
+import { useWorkspace } from "./names";
 import { PeopleFiltersBar } from "./people-filters";
-
-function seen(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "—";
-}
+import { ColumnsChooser, PeopleTable } from "./people-table";
 
 function NewContactDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const workspace = useWorkspace();
@@ -80,67 +73,6 @@ function NewContactDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
   );
 }
 
-function PeopleTable({ people, blocked }: { people: Contact[]; blocked: boolean }) {
-  return (
-    <Table aria-label={blocked ? "Blocked people" : "People"} size="sm" className="[&_th]:border-t-0">
-      <TableHeader>
-        <TableColumn isRowHeader>Name</TableColumn>
-        <TableColumn>Email</TableColumn>
-        <TableColumn>Company</TableColumn>
-        <TableColumn>Tags</TableColumn>
-        <TableColumn>Last seen</TableColumn>
-      </TableHeader>
-      <TableBody
-        items={people}
-        renderEmptyState={() => (
-          <p className="py-2 text-body-2-regular text-text-tertiary">
-            {blocked ? "No one is blocked." : "No one matches."}
-          </p>
-        )}
-      >
-        {(person) => (
-          <TableRow id={person.id}>
-            <TableCell>
-              <Link
-                to="/d/customers/$contact"
-                params={{ contact: person.id }}
-                className="flex items-center gap-2 rounded-md text-body-2-medium text-text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-              >
-                <Avatar
-                  size="xs"
-                  color={avatarColor(personName(person))}
-                  initials={personName(person).charAt(0).toUpperCase()}
-                />
-                <span className="truncate">{personName(person)}</span>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <span dir="auto" className="text-body-2-regular text-text-secondary">
-                {person.email ?? "—"}
-              </span>
-            </TableCell>
-            <TableCell>
-              <span className="text-body-2-regular text-text-secondary">{person.company?.name ?? "—"}</span>
-            </TableCell>
-            <TableCell>
-              <span className="flex flex-wrap gap-1">
-                {person.tags.map((tag) => (
-                  <TagChip key={tag.id} tag={tag} />
-                ))}
-              </span>
-            </TableCell>
-            <TableCell>
-              <span className="whitespace-nowrap text-body-2-regular text-text-secondary">
-                {seen(person.last_seen_at)}
-              </span>
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  );
-}
-
 export function PeoplePage({ blocked = false }: { blocked?: boolean }) {
   const workspace = useWorkspace();
   const [search, setSearch] = useState("");
@@ -175,6 +107,7 @@ export function PeoplePage({ blocked = false }: { blocked?: boolean }) {
             onChange={setSearch}
           />
           <PeopleFiltersBar filters={filters} onChange={setFilters} />
+          <ColumnsChooser />
         </div>
         {list.isError ? (
           <EmptyState icon={RiUser3Line} title="People could not be loaded" description={list.error.message} />

@@ -65,4 +65,26 @@ it.describe("customer panel", () => {
     await details.getByRole("link", { name: "Review" }).click();
     await expect(page.getByRole("region", { name: "Possible duplicates" })).toContainText("same phone");
   });
+
+  it("pins an attribute so it shows first, for every customer", async ({ page }) => {
+    const id = await startConversation(page, customer);
+    const conversation = await api<{ contact: { id: string } }>(page, "GET", `/conversations/${id}`);
+    await api(page, "PATCH", `/contacts/${conversation.contact.id}`, {
+      custom_attributes: { plan: "pro", seats: 12 },
+    });
+
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    const details = page.getByRole("region", { name: "Details" });
+    await details.getByRole("button", { name: "Pin seats" }).click();
+    await expect(details.getByRole("button", { name: "Unpin seats" })).toBeVisible();
+    await expect
+      .poll(
+        async () => (await api<{ pinned_attributes: string[] }>(page, "GET", "/inbox-preferences")).pinned_attributes,
+      )
+      .toEqual(["seats"]);
+
+    const labels = await details.locator("dt").allInnerTexts();
+    expect(labels.indexOf("seats")).toBeLessThan(labels.indexOf("Email"));
+    expect(labels.indexOf("plan")).toBeGreaterThan(labels.indexOf("Email"));
+  });
 });

@@ -317,6 +317,8 @@ Same session as the shared inbox above, `C` the conversation Ann started:
 | Delete a company | Bob `DELETE $B/companies/{id}` 403; Ada again | 204; Ann's `company` is `null` |
 | Customer pages | open `$W/d/customers`, search, open Ann, edit her phone; open a conversation and edit her name in the details panel | the list narrows; the profile saves; the panel shows the new name and her other conversations |
 | People filters | on `$W/d/customers` pick a company, "Seen this week" and Attribute `plan` is `pro`; on Ann's page set attribute `plan` to `pro` | the list narrows to Ann; her Attributes card shows `plan` with a remove button |
+| People columns | on `$W/d/customers` open Columns, tick Phone, untick Email, reload | the table keeps Phone and drops Email; `GET $B/inbox-preferences` has `views.people.columns` |
+| Pinned attributes | in a conversation's details panel, star an attribute | it moves above Email for every customer; `pinned_attributes` lists it |
 | Redaction defaults | `GET $B/redaction-rules` | 200 `object: redaction`, `built_ins.card_numbers: true`, `built_ins.us_ssn: false`, `rules: []`; Bob 403 |
 | Redaction rule | `POST $B/redaction-rules {"name":"Accounts","pattern":"ACCT-\\d+"}`, then `{"name":"x","pattern":"("}` | 201 `object: redaction_rule`, `replacement: [redacted]`; then 422 `invalid_pattern`; an eleventh rule 422 `redaction_rule_limit_reached` |
 | Redaction on write | `POST $B/conversations` as a contact with body `Card 4242 4242 4242 4242 ACCT-7` | the message body reads `Card •••• •••• •••• 4242 [redacted]`, `redactions` lists `card_numbers` and the rule's id; the database holds no original |
