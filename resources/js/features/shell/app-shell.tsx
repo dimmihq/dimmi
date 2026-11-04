@@ -18,7 +18,7 @@ import {
   RiShieldUserLine,
   RiUserLine,
 } from "@remixicon/react";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 
@@ -32,6 +32,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
+import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 
 import { GetStarted } from "./get-started";
@@ -180,7 +181,13 @@ function SignedInShell({
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
-  const sections = inSettings ? settingsSections(me.instance?.edition === "cloud") : appSections();
+  const { data: caller } = useQuery({ ...callerQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
+  const access = caller?.member;
+  const seesUnassigned =
+    !access || !["assigned", "teams"].includes(access.conversation_access) || access.conversation_access_unassigned;
+  const sections = inSettings
+    ? settingsSections(me.instance?.edition === "cloud")
+    : appSections({ unassigned: seesUnassigned });
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (

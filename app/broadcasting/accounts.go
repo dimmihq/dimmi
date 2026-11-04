@@ -14,7 +14,9 @@
 | no longer theirs to see. The same goes for a credential that ends: a
 | session signed out or revoked and a token revoked close the connections
 | opened with them, and a reset or a taken-back account closes all of the
-| user's.
+| user's. A change of which conversations someone sees closes their
+| connections too: the client comes back at once and every channel is
+| authorized again under the new rule.
 |
 */
 
@@ -72,6 +74,9 @@ Listen makes the disconnects hear what ends access, once it commits.
 */
 func (d *Disconnects) Listen(dispatcher *events.Dispatcher) {
 	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.MemberDeactivated) error {
+		return d.user(ctx, e.UserID)
+	})
+	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.MemberAccessChanged) error {
 		return d.user(ctx, e.UserID)
 	})
 	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.UserSignedOutEverywhere) error {
@@ -132,6 +137,12 @@ func (b *Broadcaster) listenAccounts(d *events.Dispatcher) {
 	})
 	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.MemberReactivated) error {
 		return b.member(ctx, e.WorkspaceID, "member.reactivated", e.MemberID)
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.MemberAccessChanged) error {
+		return b.publish(ctx, []string{MemberChannel(e.MemberID)}, fbroadcasting.Message{
+			ID: ids.Encode("evt", ids.New()), Event: "member.access_changed",
+			Data: map[string]string{"from": e.From.Mode, "to": e.To.Mode},
+		})
 	})
 }
 

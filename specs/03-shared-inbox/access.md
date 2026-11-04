@@ -52,22 +52,35 @@ Single statement, no `SECURITY DEFINER`, so planner inlines it and `mode = 'all'
 
 ## Builder
 
-`app/actions/conversations/visible_scope.go` replaces today's empty `VisibleScope{}` in `loaded.go`.
+`app/actions/conversations/visible_scope.go` is entry point. Rule itself lives in `app/auth/authz/conversation_scope.go`, because `app/broadcasting` needs it and `conversations` imports `broadcasting`; `conversations.Scope` is alias. `conversations.Find`, `conversations.Lock` take `Membership` and return `exceptions.ErrNotFound` outside scope.
 
 ```go
 type Scope struct {
-    Mode       string     // all, assigned, teams, all_except_teams
+    Mode       enums.ConversationAccess // all, assigned, teams, all_except_teams
     MemberID   *ids.UUID  // nil for workspace-level actors
     TeamIDs    []ids.UUID
     Unassigned bool
     Trash      bool       // holds conversations:delete
 }
-func VisibleScope(ctx context.Context, p authz.Principal) (Scope, error) // loads once per request, memoized on request context
-func (s Scope) Contains(c models.Conversation) bool                      // same logic in Go, table test equals SQL function
-func (s Scope) Params() VisibleParams                                    // sqlc args: mode, viewer, teams, unassigned
+func VisibleScope(m authz.Membership) Scope                 // no I/O: ResolveWorkspace loads list once per request into Membership.AccessTeams
+func authz.WorkspaceScope() Scope                           // jobs, agent, anyone with no member: sees all
+func (s Scope) Contains(c models.Conversation) bool         // same logic in Go, table test equals SQL function
+func (s Scope) Sees(member, team *ids.UUID) bool            // same, for a holding without a row (before state)
+func (s Scope) Params() VisibleParams                       // sqlc args: Mode, Viewer, Teams, Unassigned
+func Find(ctx, q *models.Queries, m authz.Membership, ref Ref) (models.Conversation, error)
+func Lock(ctx, q *models.Queries, m authz.Membership, ref Ref) (models.Conversation, error)
 ```
 
-Surfaces that must use it (table test `tests/feature/inbox/access_test.go` hides one conversation, walks each):
+Every new listing query calls function with same four arg names, so sqlc fields match:
+
+```sql
+AND dimmi_conversation_visible(c.assignee_member_id, c.assignee_team_id, @access_mode::text,
+    sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean)
+```
+
+`Teams` never nil (null array hides everything); `Params()` guarantees it. Why no ctx and error: list is read when workspace resolves, so scope costs no query and cannot fail mid-action.
+
+Surfaces that must use it (table test `tests/feature/access/scope_test.go` hides one conversation, walks each):
 
 list, every view, custom views, show, neighbors, counts, `/search` (conversation section, number jump, id jump), `POST /conversation-searches`, bulk (at snapshot and again per id), exports (`data_exports` at job run with requester's scope), contact conversations, company conversations, context panel (`past_conversations`, `total_estimate`), mentions view, similar, side conversations, notifications audience and mention delivery (06), realtime subscribe, list fan-out, typing, drafts, attachments show and download, merges, reactions.
 
@@ -109,6 +122,7 @@ PATCH /api/v1/members/mem_01jb...
 ```
 
 - Team ids replace list (max 200). Unknown team 422 `team_not_found`. Mode `assigned` or `all` with non-empty ids: 422 field error.
+- Mode `assigned` or `all` with ids is `access_teams_not_used`, over 200 ids `too_many_access_teams`, both 422 on field `access_team_ids`.
 - Self change 403 `forbidden`, any role. Why: restricted admin must not lift own limit.
 - Owner target 422 `owner_access_unrestricted`.
 - Same value no-op, no event. Change writes audit `member.access_changed` `{from, to}`.

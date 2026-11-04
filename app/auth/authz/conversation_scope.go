@@ -88,6 +88,13 @@ func MemberScope(member models.WorkspaceMember, teamIDs []ids.UUID, trash bool) 
 }
 
 /*
+Restricted reports whether the scope hides any conversation.
+*/
+func (s ConversationScope) Restricted() bool {
+	return s.Mode != enums.ConversationAccessAll
+}
+
+/*
 LoadAccessTeams returns the teams the member's conversation access
 names, reading them only for a mode that uses them, which most members'
 does not.

@@ -46,7 +46,7 @@ func TestInboxBroadcasts(t *testing.T) {
 		tc := tests.New(t)
 		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "api")
 		live := tc.ListenAs(tc.Owner, tc.RealtimeURL())
-		require.Nil(t, live.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
+		require.Nil(t, live.Subscribe(appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID)).Error)
 
 		owner(tc).PatchJSON("/api/v1/conversations/"+public(models.PrefixConversation, s.conversation.ID),
 			testkit.JSON{"priority": true}).AssertOK()

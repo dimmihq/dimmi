@@ -28,10 +28,37 @@ describe("Bridge", () => {
     client.setQueryData(realtimeKeys.counts(ws), { mine: 1 });
 
     const row = { id: "conv_1", object: "conversation", status: "closed" };
-    expect(bridge.apply(ws, `workspace:${ws}`, envelope("conversation.closed", row))).toBe(true);
+    expect(bridge.apply(ws, `workspace_conversations:${ws}`, envelope("conversation.closed", row))).toBe(true);
 
     expect(client.getQueryData(mine)).toEqual({ data: [row] });
     expect(stale(client, mine)).toBe(false);
+    expect(stale(client, all)).toBe(true);
+    expect(stale(client, realtimeKeys.counts(ws))).toBe(true);
+  });
+
+  it("patches lists from a restricted member's own copy", () => {
+    const { client, bridge } = setup();
+    const all = [...realtimeKeys.conversations(ws), { view: "all" }];
+    client.setQueryData(all, { data: [{ id: "conv_1", object: "conversation", status: "open" }] });
+
+    const row = { id: "conv_1", object: "conversation", status: "closed" };
+    bridge.apply(ws, "member:mem_1", envelope("conversation.closed", row));
+
+    expect(client.getQueryData(all)).toEqual({ data: [row] });
+  });
+
+  it("refetches a conversation the member lost sight of, with lists and counts", () => {
+    const { client, bridge } = setup();
+    const open = realtimeKeys.conversation(ws, "conv_1");
+    const all = [...realtimeKeys.conversations(ws), { view: "all" }];
+    client.setQueryData(open, { id: "conv_1", object: "conversation", status: "open" });
+    client.setQueryData(all, { data: [] });
+    client.setQueryData(realtimeKeys.counts(ws), { all: 1 });
+
+    bridge.apply(ws, "member:mem_1", envelope("conversation.hidden", { id: "conv_1" }));
+    bridge.apply(ws, "member:mem_1", envelope("conversation.hidden", null));
+
+    expect(stale(client, open)).toBe(true);
     expect(stale(client, all)).toBe(true);
     expect(stale(client, realtimeKeys.counts(ws))).toBe(true);
   });

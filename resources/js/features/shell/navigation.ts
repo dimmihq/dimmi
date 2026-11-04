@@ -353,12 +353,17 @@ export const settingsPages = {
 export type SettingsSection = keyof typeof settingsPages;
 
 /*
- * appSections lists the workspace's pages in the sidebar.
+ * appSections lists the workspace's pages in the sidebar, leaving out
+ * Unassigned for a member who cannot see conversations nobody holds.
  */
-export function appSections(): DashboardNavSection[] {
+export function appSections({ unassigned = true }: { unassigned?: boolean } = {}): DashboardNavSection[] {
+  const views = unassigned
+    ? [inboxViews.unassigned, inboxViews.all, inboxViews.mentions]
+    : [inboxViews.all, inboxViews.mentions];
+
   return [
     { key: "you", items: [workspacePages.notifications, inboxViews.mine] },
-    { key: "inbox", label: "Inbox", items: [inboxViews.unassigned, inboxViews.all, inboxViews.mentions] },
+    { key: "inbox", label: "Inbox", items: views },
     { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },
     {
       key: "workspace",

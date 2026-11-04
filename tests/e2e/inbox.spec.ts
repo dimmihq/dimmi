@@ -203,6 +203,6 @@ it.describe("the inbox", () => {
 
   it("says when a conversation does not exist", async ({ page }) => {
     await page.goto("/d/inbox/unassigned/conv_01jbd0k3a8x9t2m4q5r6s7v8w9");
-    await expect(page.getByText("Conversation not found")).toBeVisible();
+    await expect(page.getByText("You do not have access to this conversation")).toBeVisible();
   });
 });

@@ -240,6 +240,8 @@ func nodeWith(t *testing.T, tc *tests.TestCase, cfg broadcasting.Config) string 
 	}
 	channels := server.Channels()
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)
+	channels.MustAuthorize(appbroadcasting.WorkspaceConversationsPattern,
+		appbroadcasting.WorkspaceConversationsOptions(), authorize.WorkspaceConversations)
 	channels.MustAuthorize(appbroadcasting.ConversationPattern, appbroadcasting.ConversationOptions(),
 		authorize.Conversation)
 	channels.MustAuthorize(appbroadcasting.MemberPattern, appbroadcasting.MemberOptions(), authorize.Member)

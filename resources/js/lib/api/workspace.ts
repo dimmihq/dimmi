@@ -33,7 +33,14 @@ export interface Member {
  * never from the role.
  */
 export interface Caller {
-  member: { id: string; role: string; permissions: string[] } | null;
+  member: {
+    id: string;
+    role: string;
+    permissions: string[];
+    conversation_access: ConversationAccess;
+    conversation_access_unassigned: boolean;
+    access_team_ids: string[];
+  } | null;
 }
 
 export interface WorkspaceChanges {
@@ -61,6 +68,12 @@ export function membersQuery(workspace: string) {
     queryFn: () => request<Member[]>("GET", "/members?limit=100", undefined, { workspace }),
   });
 }
+
+/*
+ * ConversationAccess is how much of the workspace's conversations a
+ * member sees.
+ */
+export type ConversationAccess = "all" | "assigned" | "teams" | "all_except_teams";
 
 export function callerQuery(workspace: string) {
   return queryOptions({

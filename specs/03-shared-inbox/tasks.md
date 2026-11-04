@@ -62,7 +62,7 @@ Tests: business logic = integration only (real App, Postgres, Valkey, River, cen
 
 ## M4. List, neighbors, counts, read state (track 03 inbox-workbench)
 
-- [ ] Superseded by A1. `conversations.VisibleScope(principal)` single visibility builder (trash needs `conversations:delete`) used by list, show, neighbors, counts, search, bulk filter, contact/company conversation lists, exports, realtime authorizers. Test lives in A1.
+- [ ] Superseded by A1. `conversations.VisibleScope(membership)` single visibility builder (trash needs `conversations:delete`) used by list, show, neighbors, counts, search, bulk filter, contact/company conversation lists, exports, realtime authorizers. Test lives in A1.
 - [ ] `querybuilder/conversations.go`: views, filters, sorts, keyset cursor with filter hash. Test: feature for each filter/sort combo on seeded data (rows + order, `EXPLAIN` uses intended index); pagination stable under inserts, `cursor_mismatch`, invalid filter 400.
 - [ ] List endpoint with batch includes (contact, assignee, tags, last_message preview, unread). Test: query count assertion (max 5 queries per page).
 - [ ] Neighbors endpoint. Test: prev/next at edges, after close still resolves.
@@ -136,7 +136,7 @@ Tests: business logic = integration only (real App, Postgres, Valkey, River, cen
 
 ## A1. Conversation access core (track 02 inbox-access)
 
-- [ ] Migrations `20261201020001` to `003`, `Scope` builder, `Scope.Contains` equals SQL function (table test every mode x assignment shape). Replace `VisibleScope{}` in `loaded.go`; existing queries `FilterConversations`, counts, neighbors, search, show go through it. Test: restricted member per mode list, show 404, neighbors, counts, search, number jump, contact conversations.
+- [ ] Migrations `20261201020001` to `003`, `Scope` builder, `Scope.Contains` equals SQL function (table test every mode x assignment shape). Existing queries `FilterConversations`, counts, neighbors, search, show go through it. Test: restricted member per mode list, show 404, neighbors, counts, search, number jump, contact conversations.
 - [ ] Arch test `tests/arch/visible_scope_test.go` (query naming rule, allowlist with reasons). Test: planted query fails.
 - [ ] `PATCH /members/{mem}` fields + `members:manage_access` + member resource fields + audit. Test: self 403, owner 422, team ids rule, no-op no event, ability enforced, token of restricted member, integration token sees all.
 - [ ] Realtime split: `workspace_conversations:{ws}`, `conversation_fanout.go` chokepoint, `FanOutToRestrictedMembers`, `conversation.hidden`, `member.access_changed` disconnect. Test (real centrifuge + Valkey): restricted member denied new channel, gets `member:` copies only for visible, reassigned away gets `conversation.hidden` and loses subscription, access change disconnects under 5 s. Update `resources/js/features/realtime` subscription by `conversation_access`. Existing e2e `realtime.spec.ts` still green.

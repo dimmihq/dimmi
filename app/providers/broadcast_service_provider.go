@@ -54,7 +54,8 @@ func (p BroadcastServiceProvider) Register(fa *foundation.Application) error {
 	}
 
 	broadcaster := &appbroadcasting.Broadcaster{
-		Server: fa.Broadcast, Payloads: resources.BroadcastPayloads{DB: fa.DB},
+		Server: fa.Broadcast, Payloads: resources.BroadcastPayloads{DB: fa.DB}, Unsubscribe: fa.Broadcast,
+		Fanout: &appbroadcasting.Fanout{DB: fa.DB, Cache: fa.Cache},
 	}
 	broadcaster.Listen(fa.Events)
 

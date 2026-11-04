@@ -79,6 +79,27 @@ func (a *Authorizers) Workspace(
 }
 
 /*
+WorkspaceConversations admits active members who may read conversations
+and see every one of them. Everyone else is refused and hears about
+their conversations on their own channel.
+*/
+func (a *Authorizers) WorkspaceConversations(
+	ctx context.Context, p fbroadcasting.Principal, params map[string]string,
+) (bool, error) {
+	caller, ok := p.Subject.(*appauth.Principal)
+	if !ok {
+		return false, nil
+	}
+
+	m, ok, err := a.membership(ctx, caller, params["workspace"])
+	if err != nil || !ok {
+		return false, err
+	}
+
+	return m.Can(readConversations) && !m.ConversationScope().Restricted(), nil
+}
+
+/*
 Conversation admits members who may read conversations and may see
 this one.
 */

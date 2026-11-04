@@ -479,6 +479,23 @@ Open a socket with a browser's cookie (`a.jar`) and one with a token, using the 
 | Taken back | magic link, reset or `claim: true` on an unverified account | every socket of the stranger closes |
 | Runs out or lost | delete the session row by hand or let a token expire | the socket closes with 3005 at its next subscribe, or within `DIMMI_BROADCASTING__RECHECK` (one minute) on its own |
 
+## Conversation access
+
+Restrict a teammate with `PATCH $B/members/{mem}`, then act as them in a browser and with their token.
+
+| Flow | Request or action | Expect |
+|---|---|---|
+| Restrict to teams | `PATCH $B/members/{mem}` `{"conversation_access":"teams","access_team_ids":["team_..."]}` | 200 with the fields; `member.access_changed` in the audit log; their sockets close with 4009 and reconnect |
+| Own change | same on `/members/me` | 403 `forbidden` |
+| Owner target | same on an owner | 422 `owner_access_unrestricted` |
+| Team list unusable | `{"conversation_access":"assigned","access_team_ids":["team_..."]}` | 422 `access_teams_not_used`; an unknown team 422 `team_not_found` |
+| Hidden conversation | `GET $B/conversations/{id}`, `/conversations/{number}`, `/messages`, `/neighbors`, `/read-state` as them | 404 `not_found` on each |
+| Lists and counts | `GET $B/conversations?filter[view]=all`, `GET $B/conversation-counts`, `GET $B/search?q=%23{number}` | hidden conversation absent, not counted, `jump` null |
+| Token | their token on the same requests | same answers as their browser |
+| List channel | subscribe `workspace_conversations:{ws}` as them | refused; copies arrive on `member:{mem}` for visible conversations only |
+| Reassigned away | owner moves a conversation they can see | `conversation.hidden` on `member:{mem}`, their `conversation:` subscription ends, open tab shows the no-access page |
+| Sidebar | sign in as them | no Unassigned, unless `conversation_access_unassigned` |
+
 ## 4. Check what was stored
 
 ```bash

@@ -33,6 +33,13 @@ interface ObjectRecord extends Identified {
 const seenLimit = 500;
 
 /*
+ * listNamespaces are the channels a change to a conversation list
+ * arrives on: the shared one for those who see everything, a person's
+ * own for everybody else.
+ */
+const listNamespaces = new Set(["workspace_conversations", "member"]);
+
+/*
  * MutationIds hands out ids for a screen's own changes, sent in the
  * Dimmi-Client-Mutation-Id header, and recognizes them when they come
  * back in a broadcast.
@@ -99,10 +106,12 @@ export class Bridge {
       this.refetch(realtimeKeys.me());
     } else if (envelope.event.startsWith("member.")) {
       this.refetch(realtimeKeys.members(workspace), realtimeKeys.caller(workspace));
-    } else if (namespace === "member") {
-      this.refetch(realtimeKeys.counts(workspace));
+    } else if (envelope.event === "conversation.hidden") {
+      this.hide(workspace, envelope.data);
     } else if (isObjectRecord(envelope.data)) {
       this.applyRecord(workspace, namespace, envelope.event, envelope.data);
+    } else if (namespace === "member") {
+      this.refetch(realtimeKeys.counts(workspace));
     }
 
     return true;
@@ -121,6 +130,19 @@ export class Bridge {
     );
   }
 
+  /*
+   * hide drops a conversation the person can no longer see: fetching
+   * it again finds nothing, which an open screen shows as no access,
+   * and the lists and counts no longer hold it.
+   */
+  private hide(workspace: string, data: unknown) {
+    const id = (data as { id?: unknown } | null)?.id;
+    if (typeof id === "string") {
+      this.refetch(realtimeKeys.conversation(workspace, id));
+    }
+    this.refetch(realtimeKeys.conversations(workspace), realtimeKeys.counts(workspace));
+  }
+
   private applyRecord(workspace: string, namespace: string, event: string, record: ObjectRecord) {
     if (record.object === "message") {
       this.applyMessage(workspace, event, record);
@@ -137,7 +159,7 @@ export class Bridge {
     }
 
     this.patch(realtimeKeys.conversation(workspace, record.id), record);
-    if (namespace === "workspace") {
+    if (listNamespaces.has(namespace)) {
       this.patchLists(workspace, record);
       this.refetch(realtimeKeys.counts(workspace));
     }
