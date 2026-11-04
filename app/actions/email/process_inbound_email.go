@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -184,9 +185,29 @@ func (a *ProcessInboundEmail) load(ctx context.Context, mail *received) error {
 	mail.verdicts = readVerdicts(mail.row.ProviderVerdicts)
 	mail.feedback, _ = arf.Parse(mail.raw)
 	mail.delivery, _ = dsn.Parse(mail.raw)
-	mail.from = lower(mail.parsed.From.Email)
+	mail.from = senderAddress(mail)
 
 	return nil
+}
+
+/*
+senderAddress returns the address to answer. When no header field holds
+one, the mail is still somebody's: the envelope sender, then Reply-To,
+say who. Such a sender is never proven, since mail authentication reads
+the From field alone.
+*/
+func senderAddress(mail *received) string {
+	if mail.parsed.From.Email != "" {
+		return lower(mail.parsed.From.Email)
+	}
+
+	if mail.row.EnvelopeFrom != nil {
+		if envelope := lower(strings.Trim(*mail.row.EnvelopeFrom, "<> ")); strings.Contains(envelope, "@") {
+			return envelope
+		}
+	}
+
+	return first(addressesOf(mail.parsed.ReplyTo))
 }
 
 /*

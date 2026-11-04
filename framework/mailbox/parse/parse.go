@@ -5,8 +5,10 @@
 |
 | Received mail is written by every kind of software, much of it sloppy
 | and some of it hostile, so parsing never gives up on a message: broken
-| parts become warnings, a document that is not MIME at all becomes its
-| own plain text body, and text is always valid, normalized UTF-8.
+| parts become warnings, a body that cannot be read as MIME becomes plain
+| text under the header it still has, a document that is not mail at all
+| becomes its own plain text body, and text is always valid, normalized
+| UTF-8.
 |
 | Memory stays bounded. A message within the size limit is parsed whole.
 | A larger one is walked as a stream instead: its headers and the first
@@ -22,6 +24,7 @@ import (
 	"cmp"
 	"fmt"
 	"io"
+	netmail "net/mail"
 	"net/textproto"
 	"strings"
 	"time"
@@ -141,89 +144,115 @@ func Message(raw io.Reader, limits Limits) (*Parsed, error) {
 }
 
 /*
-whole parses a message held in memory, falling back to plain text when
-it cannot be read as MIME at all.
+whole parses a message held in memory. Its header is read whatever state
+the rest is in, and a body the parser cannot make sense of becomes the
+message's plain text.
 */
 func whole(raw []byte, limits Limits) *Parsed {
+	top, ok := readHead(raw)
+	if !ok {
+		return &Parsed{Text: decodeText(raw, ""), Warnings: []string{"not a mime message"}}
+	}
+
+	parsed := fromHeader(top)
 	parser := enmime.NewParser(
 		enmime.MaxMIMEParts(limits.MaxParts), enmime.SkipMalformedParts(true), enmime.DisableTextConversion(true),
 		enmime.DisableCharacterDetection(true), enmime.SetCustomParseMediaType(mediaTypeReader()),
+		enmime.MultipartWOBoundaryAsSinglePart(true),
 	)
 
-	env, err := parser.ReadEnvelope(bytes.NewReader(raw))
+	env, err := parser.ReadEnvelope(bytes.NewReader(top.message))
 	if err != nil {
-		return &Parsed{Text: string(raw), Warnings: []string{"not a mime message: " + err.Error()}}
+		parsed.Text = plainBody(top)
+		parsed.Warnings = append(parsed.Warnings, "unreadable structure: "+err.Error())
+
+		return parsed
 	}
 
-	parsed := fromHeader(env)
-	readBodies(parsed, env)
+	broken := readBodies(parsed, env)
 
 	for _, problem := range env.Errors {
 		parsed.Warnings = append(parsed.Warnings, problem.Error())
 	}
 
+	if (parsed.empty() || (broken && parsed.wordless())) && len(bytes.TrimSpace(top.body)) > 0 {
+		parsed.Text = plainBody(top)
+		parsed.Warnings = append(parsed.Warnings, "unreadable structure: body read as plain text")
+	}
+
 	return parsed
+}
+
+/*
+plainBody reads a body that makes no sense as MIME as plain text, still
+undoing the transfer encoding the header names.
+*/
+func plainBody(top head) string {
+	encoding := strings.TrimSpace(top.fields.Get("Content-Transfer-Encoding"))
+	if encoding == "" || strings.ContainsAny(encoding, "\r\n") {
+		return decodeText(top.body, "")
+	}
+
+	header := "Content-Transfer-Encoding: " + encoding + "\r\nContent-Type: text/plain\r\n\r\n"
+	message := append([]byte(header), top.body...)
+
+	root, err := enmime.NewParser().ReadParts(bytes.NewReader(message))
+	if err != nil {
+		return decodeText(top.body, "")
+	}
+
+	return decodeText(root.Content, "")
+}
+
+/*
+empty reports whether nothing was read from the message below its header.
+*/
+func (p *Parsed) empty() bool {
+	return p.wordless() && len(p.Attachments) == 0
+}
+
+/*
+wordless reports whether no body was read from the message.
+*/
+func (p *Parsed) wordless() bool {
+	return strings.TrimSpace(p.Text) == "" && strings.TrimSpace(p.HTML) == ""
 }
 
 /*
 fromHeader reads the top-level header fields, with encoded words and
 addresses decoded.
 */
-func fromHeader(env *enmime.Envelope) *Parsed {
+func fromHeader(top head) *Parsed {
 	parsed := &Parsed{
-		Header:     env.Root.Header,
-		ReplyTo:    addresses(env, "Reply-To"),
-		To:         addresses(env, "To"),
-		Cc:         addresses(env, "Cc"),
-		Subject:    decodeWords(env.Root.Header.Get("Subject")),
-		InReplyTo:  messageIDs(env.GetHeader("In-Reply-To")),
-		References: messageIDs(env.GetHeader("References")),
+		Header:     top.fields,
+		From:       readSender(top.fields, top.message),
+		ReplyTo:    readList(top.fields, "Reply-To", top.message),
+		To:         readList(top.fields, "To", top.message),
+		Cc:         readList(top.fields, "Cc", top.message),
+		Subject:    decodeWords(repairHeader(top.fields.Get("Subject"), top.message)),
+		InReplyTo:  messageIDs(top.fields.Get("In-Reply-To")),
+		References: messageIDs(top.fields.Get("References")),
 	}
 
-	if from := addresses(env, "From"); len(from) > 0 {
-		parsed.From = from[0]
-	}
-
-	if ids := messageIDs(env.GetHeader("Message-ID")); len(ids) > 0 {
+	if ids := messageIDs(top.fields.Get("Message-Id")); len(ids) > 0 {
 		parsed.MessageID = ids[0]
 	}
 
-	date, err := env.Date()
-	if err == nil {
-		parsed.Date = date
-	} else if env.GetHeader("Date") != "" {
-		parsed.Warnings = append(parsed.Warnings, "unreadable date: "+env.GetHeader("Date"))
+	date := top.fields.Get("Date")
+	if date == "" {
+		return parsed
 	}
+
+	when, err := netmail.ParseDate(date)
+	if err != nil {
+		parsed.Warnings = append(parsed.Warnings, "unreadable date: "+date)
+
+		return parsed
+	}
+
+	parsed.Date = when
 
 	return parsed
-}
-
-func addresses(env *enmime.Envelope, field string) []mail.Address {
-	list, err := env.AddressList(field)
-	if err != nil {
-		return nil
-	}
-
-	out := make([]mail.Address, 0, len(list))
-	for _, a := range list {
-		out = append(out, mail.Address{Name: decodeWords(a.Name), Email: a.Address})
-	}
-
-	return out
-}
-
-/*
-headerBlock returns the top-level header of a raw message, ending with
-the blank line that closes it.
-*/
-func headerBlock(raw []byte) []byte {
-	for _, end := range [][]byte{[]byte("\r\n\r\n"), []byte("\n\n")} {
-		if i := bytes.Index(raw, end); i >= 0 {
-			return raw[:i+len(end)]
-		}
-	}
-
-	return append(raw, "\r\n\r\n"...)
 }
 
 /*

@@ -66,17 +66,20 @@ func (s section) blank() bool {
 
 /*
 collector gathers the attachments of a message while its bodies are
-read, and remembers text files that may have to serve as the body.
+read, remembers text files that may have to serve as the body, and notes
+whether a container in it held nothing it could read.
 */
 type collector struct {
 	attachments []Attachment
 	named       []*enmime.Part
+	broken      bool
 }
 
 /*
-readBodies fills in the bodies and attachments of a parsed envelope.
+readBodies fills in the bodies and attachments of a parsed envelope, and
+reports whether it may have missed words in a broken container.
 */
-func readBodies(parsed *Parsed, env *enmime.Envelope) {
+func readBodies(parsed *Parsed, env *enmime.Envelope) bool {
 	body := &collector{}
 	found := body.root(env)
 
@@ -91,12 +94,14 @@ func readBodies(parsed *Parsed, env *enmime.Envelope) {
 	if strings.TrimSpace(parsed.Text) == "" && parsed.HTML != "" {
 		parsed.Text, parsed.TextDerived = dom.ToText(parsed.HTML), true
 	}
+
+	return body.broken
 }
 
 /*
 root reads the top of a message. Unlike a nested part, a top-level text
 part with a file name is still the body, unless it says it is an
-attachment.
+attachment, and so is a part with a type that is no type at all.
 */
 func (c *collector) root(env *enmime.Envelope) section {
 	root := env.Root
@@ -104,7 +109,8 @@ func (c *collector) root(env *enmime.Envelope) section {
 		return c.read(root)
 	}
 
-	if slices.Contains(env.Attachments, root) || slices.Contains(env.Inlines, root) {
+	fileLike := slices.Contains(env.Attachments, root) || slices.Contains(env.Inlines, root)
+	if fileLike && strings.Contains(root.ContentType, "/") {
 		c.attachments = append(c.attachments, attachment(root))
 
 		return section{}
@@ -114,12 +120,15 @@ func (c *collector) root(env *enmime.Envelope) section {
 }
 
 /*
-read returns the body of a part, listing every file it comes across.
+read returns the body of a part, listing every file it comes across, and
+notes a container whose boundary matched nothing.
 */
 func (c *collector) read(part *enmime.Part) section {
 	if !strings.HasPrefix(part.ContentType, prefixMultipart) {
 		return c.single(part)
 	}
+
+	c.broken = c.broken || part.FirstChild == nil
 
 	var children []section
 	for child := part.FirstChild; child != nil; child = child.NextSibling {

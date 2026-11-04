@@ -129,3 +129,124 @@ func TestWrongCharsetsAreStillRead(t *testing.T) {
 		assert.Equal(t, "こん", loneBody(t, tc))
 	})
 }
+
+func TestSloppySendersAreStillHeard(t *testing.T) {
+	t.Parallel()
+
+	mailTo := func(address, top, body string) []byte {
+		return []byte(top + "\r\nTo: " + address + "\r\nSubject: Help\r\n\r\n" + body)
+	}
+
+	t.Run("keeps an email whose sender name has an unquoted comma", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "From: Mueller, Hans <hans@customer.test>", "Hello"), "")
+
+		assert.Equal(t, "Hello", loneBody(t, tc))
+		tc.Table("contacts").AssertHas(map[string]any{"email": "hans@customer.test", "name": "Mueller, Hans"})
+	})
+
+	t.Run("answers the envelope sender when the header holds no address", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "From: Hans Mueller", "Hello"),
+			to(address.ForwardingAddress, "from", "hans@customer.test"))
+
+		assert.Equal(t, "Hello", loneBody(t, tc))
+		tc.Table("contacts").AssertHas(map[string]any{"email": "hans@customer.test", "name": "Hans Mueller"})
+		assert.Equal(t, "hans@customer.test", *lastInbound(tc, address).FromAddress)
+	})
+
+	t.Run("answers the Sender field when From holds no address", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "From: <>\r\nSender: Hans <hans@customer.test>", "Hello"), "")
+
+		tc.Table("contacts").AssertHas(map[string]any{"email": "hans@customer.test"})
+	})
+
+	t.Run("answers Reply-To when nothing else holds an address", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "Reply-To: Hans <hans@customer.test>", "Hello"),
+			to(address.ForwardingAddress, "from", "<>"))
+
+		tc.Table("contacts").AssertHas(map[string]any{"email": "hans@customer.test"})
+	})
+
+	t.Run("keeps an email with only a sender name as a contact without an address", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "From: Hans Mueller", "Hello"), "")
+
+		assert.Equal(t, "Hello", loneBody(t, tc))
+		tc.Table("contacts").AssertHas(map[string]any{"name": "Hans Mueller"})
+	})
+
+	t.Run("reads the sender of an email with a junk line above its header", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress,
+			"---- Original email message ----\r\nFrom: Hans <hans@customer.test>", "Hello"), "")
+
+		assert.Equal(t, "Hello", loneBody(t, tc))
+		tc.Table("contacts").AssertHas(map[string]any{"email": "hans@customer.test"})
+	})
+
+	t.Run("reads a multipart email with no boundary as text", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress,
+			"From: Hans <hans@customer.test>\r\nContent-Type: multipart/mixed", "Hello"), "")
+
+		assert.Equal(t, "Hello", loneBody(t, tc))
+	})
+
+	t.Run("reads a multipart email whose boundary matches nothing as raw text", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress,
+			"From: Hans <hans@customer.test>\r\nContent-Type: multipart/mixed; boundary=zzz",
+			"--yyy\r\n\r\nHello there\r\n--yyy--"), "")
+
+		assert.Contains(t, loneBody(t, tc), "Hello there")
+	})
+
+	t.Run("never takes a teammate's address from a broken From field as proven", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "From: Boss, The <"+tc.Owner.Email+">", "Wire the money"),
+			to(address.ForwardingAddress, "spf", "pass", "dkim", "pass", "dmarc", "pass", "from", tc.Owner.Email))
+
+		tc.Table("contact_identities").AssertHas(map[string]any{"value": tc.Owner.Email, "verified": false})
+	})
+
+	t.Run("never takes a teammate's address from the envelope as proven", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, mailTo(address.ForwardingAddress, "From: The Boss", "Wire the money"),
+			to(address.ForwardingAddress, "spf", "pass", "dkim", "pass", "dmarc", "pass", "from", tc.Owner.Email))
+
+		tc.Table("contact_identities").AssertHas(map[string]any{"value": tc.Owner.Email, "verified": false})
+	})
+}

@@ -26,24 +26,24 @@ import (
 	"strings"
 
 	"github.com/emersion/go-message"
-	"github.com/jhillyerd/enmime/v2"
 )
 
 /*
 walk reads the header fields from the start of the message, then the
-rest of it as a stream.
+rest of it as a stream. A body that yields nothing is kept as plain text,
+up to the cap.
 */
-func walk(head []byte, rest io.Reader, limits Limits) (*Parsed, error) {
-	env, err := enmime.ReadEnvelope(bytes.NewReader(headerBlock(head)))
-	if err != nil {
-		return nil, fmt.Errorf("read message header: %w", err)
+func walk(first []byte, rest io.Reader, limits Limits) (*Parsed, error) {
+	top, ok := readHead(first)
+	if !ok {
+		top = head{message: first, body: first}
 	}
 
-	parsed := fromHeader(env)
+	parsed := fromHeader(top)
 	parsed.Truncated = true
 
 	source := &tracked{Reader: rest}
-	entity, rootErr := message.Read(io.MultiReader(bytes.NewReader(head), source))
+	entity, rootErr := message.Read(io.MultiReader(bytes.NewReader(top.message), source))
 
 	if entity != nil {
 		rootErr = entity.Walk(func(_ []int, part *message.Entity, _ error) error {
@@ -57,6 +57,10 @@ func walk(head []byte, rest io.Reader, limits Limits) (*Parsed, error) {
 
 	if rootErr != nil {
 		parsed.Warnings = append(parsed.Warnings, "unreadable structure: "+rootErr.Error())
+	}
+
+	if parsed.empty() {
+		parsed.Text = decodeText(top.body[:min(int64(len(top.body)), limits.MaxPartBytes)], "")
 	}
 
 	return parsed, nil

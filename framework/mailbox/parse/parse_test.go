@@ -95,14 +95,34 @@ func TestMessage(t *testing.T) {
 		assert.NotEmpty(t, got.Warnings)
 	})
 
-	t.Run("reads a message with too many parts as plain text", func(t *testing.T) {
+	t.Run("reads a message with too many parts as plain text under its header", func(t *testing.T) {
 		t.Parallel()
 		raw := fixture(t, "attachments.eml")
 
 		got := parsed(t, raw, parse.Limits{MaxParts: 1})
 
-		assert.Equal(t, string(raw), got.Text)
+		assert.Equal(t, "ana@sender.example", got.From.Email)
+		assert.Equal(t, "Invoice attached", got.Subject)
+		assert.True(t, strings.HasPrefix(got.Text, "--mixed"))
 		assert.Len(t, got.Warnings, 1)
+	})
+
+	t.Run("reads text that is not mail as its own body", func(t *testing.T) {
+		t.Parallel()
+
+		got := parsed(t, []byte("Just words\nNote: not a header\n\nmore"), parse.Limits{})
+
+		assert.Equal(t, "Just words\nNote: not a header\n\nmore", got.Text)
+		assert.Empty(t, got.From)
+		assert.Len(t, got.Warnings, 1)
+	})
+
+	t.Run("reads text with no header line at all as its own body", func(t *testing.T) {
+		t.Parallel()
+
+		got := parsed(t, []byte("one\ntwo\nthree\nfour\nfive\nsix: seven"), parse.Limits{})
+
+		assert.Equal(t, "one\ntwo\nthree\nfour\nfive\nsix: seven", got.Text)
 	})
 
 	t.Run("caps the warnings it keeps", func(t *testing.T) {
@@ -204,6 +224,28 @@ func TestOversized(t *testing.T) {
 
 		assert.True(t, got.Truncated)
 		assert.NotEmpty(t, got.Warnings)
+	})
+
+	t.Run("reads the header of a large message below a line of junk", func(t *testing.T) {
+		t.Parallel()
+
+		got := parsed(t, []byte("---- Original email message ----\r\n"+large("utf-8", "Words")), limits)
+
+		assert.Equal(t, "ana@sender.example", got.From.Email)
+		assert.Equal(t, "Words", got.Text)
+	})
+
+	t.Run("keeps a large message with a broken structure as plain text", func(t *testing.T) {
+		t.Parallel()
+
+		raw := "From: ana@sender.example\r\nContent-Type: multipart/mixed; boundary=nope\r\n\r\n" +
+			strings.Repeat("words ", 300)
+
+		got := parsed(t, []byte(raw), limits)
+
+		assert.Equal(t, "ana@sender.example", got.From.Email)
+		assert.Contains(t, got.Text, "words")
+		assert.LessOrEqual(t, int64(len(got.Text)), limits.MaxPartBytes)
 	})
 
 	t.Run("reports a source that fails while walking", func(t *testing.T) {
