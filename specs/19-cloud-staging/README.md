@@ -3,305 +3,206 @@
 **Draft: awaiting owner approval.** Nothing has been created in any account. Research, options and sources:
 [`research/aws-staging-deployment.md`](../../research/aws-staging-deployment.md). Work list: [tasks.md](tasks.md).
 
-Prices are us-east-1, read 2026-11-04. The repository is public, so account ids, secret values and environment-specific
-identifiers never go in the repository.
+**Compute and deployment are open.** The owner is choosing how to run disposable containers with zero-downtime deploys.
+Until then this page holds only what stays true under any choice. Earlier text on Fargate, an ALB and a separate account was
+withdrawn after owner review. Nothing here decides compute, rollout, or the monthly total.
+
+The repository is public, so account ids, secret values and environment-specific identifiers never go in it.
 
 ## Goal
 
-A staging environment used exactly like production, with everything real, on tiny instances: the cloud edition only, real
-deployments on every push to `main`, real Valkey, real DNS on `trydimmi.com`, real mail both ways through Amazon SES, all
-defined with AWS CDK in this repository and fully documented, so everything we have built can be tested by hand in a browser.
+A staging environment used exactly like production, with everything real on tiny instances: the cloud edition only, deployed on
+every push to `main`, real Valkey, real DNS on `trydimmi.com`, real mail both ways through Amazon SES, defined with AWS CDK in
+TypeScript at `deploy/cdk`, documented in `docs/deploy` including manual steps, so everything we have built can be tested by hand.
 
-## Recommended architecture
+## Decided by the owner
 
-```
- Vercel (registrar, DNS for trydimmi.com, later the marketing site)
-   | 4 NS records: staging.trydimmi.com
-   v
- Route 53 zone staging.trydimmi.com, in the dimmi-staging AWS account, us-east-1
-   |
-   |  app.staging.trydimmi.com          inbound.staging.trydimmi.com (MX)
-   v                                      v
- ALB, TLS by ACM                        SES receiving, spam and virus scan on
-   | gate rules: IP / CI key / SES path    | rule: S3 raw/ + SNS topic
-   | idle 60 s                             v
-   |                                     S3 inbound bucket (31 days)
-   v                                       |
- ECS on Fargate, ARM, one image            | SNS HTTPS, signed, retried 1 h, DLQ
-   web x2     0.25 vCPU 512 MiB   <--------+  POST /webhooks/ses/inbound
-              roles=web           <---------- POST /webhooks/ses/events
-   worker x1  0.25 vCPU 1 GiB                 (SES config sets: bounces, complaints...)
-              roles=worker,scheduler
-   migrate    one-off, owner role, before each rollout
-   | outbound through public IP, no NAT: SES API, OAuth, SNS certificates
-   v
- Isolated subnets, no internet route
-   RDS PostgreSQL 18  db.t4g.micro, single AZ, 7 days of backups, app connects as dimmi_app
-   ElastiCache Valkey 8 cache.t4g.micro, TLS + AUTH
+### One AWS account
 
- S3 files bucket, KMS key for encryption.kek, Secrets Manager into DIMMI_* env
- GitHub Actions --OIDC, no keys--> ECR + cdk deploy, on push to main
-```
+No Organization and no separate staging account. Staging and production share one account. What that costs, plainly:
 
-## Decisions and why
+- **SES must be split by Region.** Sandbox status, quotas, verified identities, Easy DKIM, the suppression list, receipt rules and
+  feedback settings are per account and Region, so staging's SES runs in a different Region from production's. AWS describes
+  account status and a sending pause as applying to the current Region, but no page read says a review in one Region leaves
+  another untouched, so that isolation is likely rather than promised.
+- **Reputation is less isolated than with two accounts.** It is the same customer to AWS. A serious abuse finding could reach beyond
+  one Region. Staging volume stays low, and recipients stay known.
+- **Production access is requested per Region,** so staging's request does not carry over to production.
+- **IAM is global.** Roles and policies are scoped by resource prefix (`dimmi-staging-*`), tag (`Environment=staging`) and
+  `aws:RequestedRegion`. The default `cdk bootstrap` execution role is effectively administrator, so it is given a narrower policy.
+  A mistake made as an administrator can still reach production.
+- **Bill and alarms are shared.** Tags separate cost; budgets filter on the tag once it is activated for billing. Alarm names carry the environment.
+- **Quotas are shared** where they are per account rather than per Region.
 
-Each row is a recommendation; items needing the owner's answer are under "Decisions for you".
+The existing account is used. The root user gets MFA and no access keys, people sign in through IAM Identity Center or a named role.
 
-| # | Area | Decision | Why | Rough monthly |
-|---|---|---|---|---|
-| 1 | Accounts | AWS Organizations. Existing account becomes management, empty of workloads. New `dimmi-staging`, later `dimmi-production` | SES sandbox, quota, reputation and suppression are per account. Credentials cannot cross | $0 |
-| 2 | Safety | Root MFA, no root keys, IAM Identity Center for people, budgets at $100 and $150 with email, CloudTrail default | Bills and takeovers are the real risks of a new account | $0 |
-| 3 | Region | us-east-1 | Supports SES receiving. Specs and defaults assume it | |
-| 4 | DNS | Keep Vercel. Delegate `staging.trydimmi.com` to Route 53 by NS records | Production and apex untouched. CDK owns all staging records | $0.50 |
-| 5 | Compute | ECS Fargate on ARM. Web and worker as separate services | No hosts. Real rolling deploys, rollback, one-off tasks. Replaces EC2 in spec 12 | $23 |
-| 6 | Deploy | Rolling, 100% to 200%, circuit breaker with rollback, deregistration 30 s, ALB idle 60 s | Zero downtime. App idle 120 s must exceed ALB's | |
-| 7 | Migrations | One-off task as owner role before rollout. `migrations.auto=false` | Running tasks cannot change schema. Expand-only keeps old tasks working | |
-| 8 | Database | RDS PostgreSQL 18.x, `db.t4g.micro`, 20 GB gp3, single AZ, encrypted, 7-day backups, deletion protection | Real engine and version. `uuidv7()` core, `citext` listed | $14 |
-| 9 | DB roles | master, `dimmi_owner`, `dimmi_app` (`NOSUPERUSER NOBYPASSRLS`, owns nothing) | Row-level security applies only to non-owners | |
-| 10 | Valkey | Node-based `cache.t4g.micro`, TLS, AUTH, no snapshots | Serverless lacks `CLIENT TRACKING`, which the cache uses | $9.34 |
-| 11 | Storage | Two private buckets, SSE-S3, no SES message encryption | SES's option is client-side, which our driver cannot read | under $1 |
-| 12 | Secrets | Secrets Manager, injected as env at task start. App key in a secret, never on disk. KMS key as `encryption.kek` | Same shape as production. ECS handles it with no code | $3.40 |
-| 13 | Network | VPC two AZs. Public subnets for ALB and tasks, security group admits ALB only. Isolated subnets for data. S3 gateway endpoint. No NAT | NAT alone would be over $32 | $18.25 IPs |
-| 14 | Edge | ALB, ACM. No CloudFront, no WAF | Assets are same-origin from the binary. The gate does WAF's job here | $17.60 |
-| 15 | Observability | CloudWatch logs (JSON, 30 days), default metrics, under 10 alarms to email. No traces. Sentry optional | Enough for staging, inside free tiers | $1 |
-| 16 | Debugging | ECS Exec with `psql` in the image. Admin port stays loopback | No bastion, no open port, audited | $0 |
-| 17 | IaC | TypeScript CDK in `deploy/cdk` | pnpm, Biome and `tsc` are here. Go would still need Node | $0 |
-| 18 | CI/CD | GitHub Actions with OIDC, ARM runner, ECR, smoke tests | No long-lived keys. Free while the repo is public | under $1 |
+### One host
 
-### DNS names
+`staging.trydimmi.com` serves everything from one binary: dashboard, help center, marketing, changelog. There is no `app.staging`.
+`app.url`, cookies (`__Host-`) and the passkey relying party all use `staging.trydimmi.com`, so passkeys belong to staging only.
 
-| Name | Record | Purpose |
+Vercel stays registrar and DNS for `trydimmi.com`; four NS records delegate `staging.trydimmi.com` to a Route 53 zone.
+
+| Name | Records | Is it a website? |
 |---|---|---|
-| `staging.trydimmi.com` | NS at Vercel, zone in Route 53. Alias to ALB, redirect to app | Delegation; spec 09's demo uses this host |
-| `app.staging.trydimmi.com` | Alias to ALB | `app.url`, cookies, passkey relying party |
-| `inbound.staging.trydimmi.com` | MX 10 `inbound-smtp.us-east-1.amazonaws.com`, DKIM CNAMEs, `_dmarc` | Forwarding addresses, default sender for customer mail |
-| `bounce.inbound.staging.trydimmi.com` | MX 10 `feedback-smtp.us-east-1.amazonses.com`, SPF TXT | Return path of customer mail |
-| `mail.staging.trydimmi.com` | MX to SES inbound, DKIM CNAMEs, `_dmarc` | System mail, `no-reply@`. Replies stored, never bounced |
-| `bounce.mail.staging.trydimmi.com` | MX `feedback-smtp`, SPF TXT | Return path of system mail |
-| assets | none | Served from the app on its own origin |
+| `staging.trydimmi.com` | Points at the compute, once chosen | **Yes, the only one** |
+| `inbound.staging.trydimmi.com` | MX to SES receiving, DKIM CNAMEs, `_dmarc` | No, DNS only |
+| `bounce.inbound.staging.trydimmi.com` | MX to SES feedback, SPF TXT | No, DNS only |
+| `mail.staging.trydimmi.com` | MX to SES receiving, DKIM CNAMEs, `_dmarc` | No, DNS only |
+| `bounce.mail.staging.trydimmi.com` | MX to SES feedback, SPF TXT | No, DNS only |
 
-Production will mirror this one level up: `app.`, `inbound.`, `mail.`. DMARC starts at `p=quarantine`; each sending domain has
-its own record, since receivers look at the exact domain and then the organizational domain.
+Nothing in the code needs another host today:
 
-### Configuration
+- The help center, changelog and portal are built only in path mode, `/hc/{center}` (`routes/web.go`). `help_center.base_domain`
+  exists in spec 08 only, where empty means path mode. Staging leaves it empty, so **no wildcard record is needed**.
+- Assets (`/build/*`, `/widget/*`) come from the same origin. Marketing is not built; `/` redirects to `/d` (`routes/web.go:48`) and
+  will move to the marketing page on this same host.
+- One thing to know: spec 08 line 1178 keeps cloud help centers on a separate registrable domain so user content never shares
+  cookies with the dashboard. Staging's single host does not test that. If host mode is built and needs testing, it takes
+  `*.help.staging.trydimmi.com` pointing at the compute, with on-demand certificates. Decision 3 settles production.
 
-Set by CDK. `(s)` comes from Secrets Manager.
+### The binary terminates TLS
 
-| Setting | Value |
+The binary serves HTTPS on 443 and HTTP on 80 itself, through `framework/customdomain` (certmagic), with certificates in PostgreSQL.
+The same path runs on staging and production. An ALB is ruled out for production because it terminates TLS; `r.TLS` is also what the
+portal and help center read to build origins and set `Secure` (`help_center_controller.go:188`, `portal_controller.go:211`), which
+stays correct when the binary holds the connection.
+
+### Production edge: NLB with TCP passthrough (design only)
+
+Several replicas behind a Network Load Balancer, TCP on 443 and 80, so the binary still sees TLS and answers with certificates from the
+database. Checked against AWS docs, research section 13:
+
+| Question | Answer |
 |---|---|
-| `DIMMI_APP__ENV` | `production`; there is no staging environment and there should not be |
-| `DIMMI_TELEMETRY__ENVIRONMENT` | `staging` |
-| `DIMMI_APP__URL`, `DIMMI_APP__REGION` | `https://app.staging.trydimmi.com`, `us` |
-| `DIMMI_APP__ROLES` | `web`, or `worker,scheduler` |
-| `DIMMI_APP__KEY` (s) | generated once; never `key_auto_generate` |
-| `DIMMI_APP__DATA_DIR` | writable path in the image |
-| `DIMMI_MIGRATIONS__AUTO` | `false` |
-| `DIMMI_HTTP__TRUSTED_PROXIES` | CIDRs of the public subnets; without it all visitors share one address for rate limits |
-| `DIMMI_DATABASE__URL` (s) | `dimmi_app`, TLS verified against the RDS CA. Migrate task: `dimmi_owner` |
-| `DIMMI_DATABASE__MAX_CONNS`, `DIMMI_QUEUE__MAX_CONNS` | `5`, `5` |
-| `DIMMI_REDIS__URL` (s) | `rediss://` with AUTH token |
-| `DIMMI_FILESYSTEMS__DEFAULT` | `s3`, with `__DISKS__S3__*` and `__DISKS__SES_INBOUND__*` |
-| `DIMMI_ENCRYPTION__KEK` | `awskms`, with `__KEKS__AWSKMS__KEY_ARN` |
-| `DIMMI_MAIL__FROM__EMAIL` | `no-reply@mail.staging.trydimmi.com`; the default would use the app host |
-| `DIMMI_MAIL__MAILERS__SYSTEM__*` | `ses`, region, set `dimmi-staging-system` |
-| `DIMMI_MAIL__MAILERS__CUSTOMER__*` | `ses`, region, set `dimmi-staging-customer` |
-| `DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN` | `inbound.staging.trydimmi.com`; the cloud default is the production domain |
-| `DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS` | `ses` only |
-| `DIMMI_MAILBOX__SOURCES__SES__*` | `ses`, topic ARN, disk `ses_inbound` |
-| `DIMMI_AUTH__SIGNUP__MODE` | `open`, behind the gate |
-| `DIMMI_AUTH__OAUTH__*` (s) | staging's own GitHub and Google clients |
-| `DIMMI_AUTH__FACTORS__TOTP__ISSUER`, `__PASSKEY__NAME` | `dimmi staging` |
+| Client IP, instance targets | Preserved by default, so no `trusted_proxies` |
+| Client IP, IP targets (containers often register this way) | **Off by default for TCP**. Turn on `preserve_client_ip`, or use proxy protocol v2, which the app does not parse |
+| Hairpin | Not supported with preservation: a target calling its own NLB can fail, so the app calls its own URL only with care |
+| ACME TLS-ALPN and HTTP-01 | TCP passthrough carries both to whichever replica; certmagic solves across replicas through shared storage. AWS does not mention ACME; this follows from layer 4 |
+| WebSocket and SSE | A TCP connection stays on one target for life. AWS does not name them; no HTTP handling is in the path |
+| Idle timeout | 350 s by default, 60 to 6000 s. Realtime pings every 25 s |
+| Draining | Deregistration default 300 s, AWS advises at least 120 s. Open connections are not closed unless termination is enabled, so shutdown must tell clients to reconnect, which it does |
+| Health checks | HTTP, HTTPS or TCP are allowed on TCP target groups. Use HTTP `/ready` on port 80, which must not redirect |
+| Cost | $0.0225 per hour, about $16.43 per month, plus $0.006 per NLCU-hour |
 
-### Email
+An NLB is what lets staging skip a load balancer if the owner's compute choice allows one replica. That choice is open.
 
-- SES in the staging account: domain identities for `inbound.staging` and `mail.staging`, Easy DKIM through Route 53, custom MAIL
-  FROM with "reject on MX failure" so a mistake is loud.
-- Configuration sets `dimmi-staging-system` and `dimmi-staging-customer`, reputation metrics on, events `SEND`, `DELIVERY`, `BOUNCE`,
-  `COMPLAINT`, `DELIVERY_DELAY`, `REJECT` to one SNS topic, as spec 04 wants.
-- Receipt rule set: `inbound.staging` to S3 `raw/` with SNS, scan on, TLS optional per the spec; `mail.staging` to S3 `system/`.
-  CDK cannot activate a rule set, so a small custom resource does. Rule recipients are explicit.
-- SNS HTTPS subscriptions with a custom delivery policy of about one hour and an SQS dead-letter queue, since raw mail stays in S3
-  and can be replayed. The subscription follows the app stack, so the app is there to confirm it.
-- Tenants: none in staging until spec 04 M8 and M11 build them; the app creates them, not CDK.
-- Reputation: separate account and subdomains, low volume, known recipients, simulator for failures. Separate subdomains protect
-  account-level standing and make sharing unlikely to matter, but whether mailbox providers count subdomain signals against the
-  parent domain is not settled. See decision 8.
-- Scheduled round trip: a GitHub Actions cron every 6 hours calls the existing `POST /email-addresses/{id}/tests` on a test workspace
-  with an API token, and checks the arrival by polling. The test address's public address is the Gmail test mailbox, forwarding to
-  dimmi, so it proves SES send, real Gmail delivery, MX, receipt rule, S3, SNS, webhook and worker. On failure the workflow fails,
-  which emails the owner. Confirm when building that the API exposes the arrival for polling.
+### Data stores
 
-## Rollout plan
+Real RDS PostgreSQL 18 on `db.t4g.micro`, and real ElastiCache Valkey on `cache.t4g.micro` with TLS and AUTH, in isolated subnets with no NAT.
+The app connects as `dimmi_app`, which owns nothing and has neither superuser nor `BYPASSRLS`, because row-level security does not apply to
+table owners. Migrations run one-off as `dimmi_owner`, with `migrations.auto=false`. How the one-off runs waits for compute.
 
-Owner's manual steps are marked **Owner**. Everything else is built by agents; detail in [tasks.md](tasks.md).
+### Gate
 
-| Step | Who | What | Depends on |
-|---|---|---|---|
-| 0 | **Owner** | Approve this plan, answer "Decisions for you" | |
-| 1 | **Owner** | Root MFA, Organization, `dimmi-staging` account, Identity Center user, budgets | 0 |
-| 2 | Agents | Build track A: image, role provisioning, non-owner role run, boot guards | 0 |
-| 3 | Agents | Build track B: `deploy/cdk`, workflows, `docs/deploy` | 0 |
-| 4 | **Owner** | `cdk bootstrap` staging with Identity Center credentials; deploy `Dns` stack | 1, 3 |
-| 5 | **Owner** | Add 4 NS records at Vercel; `dig NS staging.trydimmi.com` shows Route 53 | 4 |
-| 6 | **Owner** | Deploy `Ci`, `Network`, `Data`, `Mail`. Paste OAuth secrets. Create GitHub environment `staging` and its variables | 5 |
-| 7 | **Owner** | Request SES production access once identities show verified; text in `docs/deploy` | 6 |
-| 8 | **Owner** | Create GitHub and Google OAuth clients, test mailboxes | 6 |
-| 9 | Agents and **Owner** | Push `main`: provision roles, migrate, deploy, smoke test. Owner watches the first run | 2, 3, 6 |
-| 10 | **Owner** | Walk the checklist for non-mail features and sign-up mail | 9 |
-| 11 | Agents | Build track C: SES inbound route, SES events, then scheduled round trip | 9 |
-| 12 | **Owner** | Walk the mail checklist with Gmail and Outlook | 11, 7 |
-| 13 | Agents | Staging Playwright subset, custom domains (spec 04 M8), limits (M11) | 11 |
+The host must be public, since SNS and Let's Encrypt have to reach it, and there is no load balancer rule to lean on. So the gate lives in
+the app: a small generic middleware, enabled by configuration, off by default.
 
-Staging can go live at step 9 without mail receiving. Sign-up, invites and replies go out through SES then.
+- `app.env` is `production` on staging, so the switch is its own setting, not the environment. A production smoke test asserts it is off.
+- Runs as global kernel middleware. A person enters a shared password once and gets a signed `__Host-` cookie.
+- CI passes with a key header, compared in constant time. Password and key are secrets.
+- Exempt: `/webhooks/ses/*` (SNS signature), `/widget/*` (loaded from other sites, and the widget test needs it), `/robots.txt`.
+- Already outside it: `/up`, `/ready`, `/connection/*` are mounted before the kernel (`framework/foundation/serve.go`) and realtime authenticates
+  itself; ACME challenges are answered first by the certificate handler.
+- Search engines: `/robots.txt` disallows all and an `X-Robots-Tag: noindex` header goes on every response. The app shell already sends `noindex`. Certificate
+  logs make the name public anyway, so the gate, not secrecy of the name, is the protection.
+- Sign-up stays open behind the gate, so that flow can be tested. Sending limits (spec 04 M11) must exist before the gate is ever removed.
 
-### `docs/deploy` outline
+## Email
 
-`README` (map, costs, who to call), then in order: `01-aws-accounts`, `02-dns-vercel-delegation`, `03-bootstrap-cdk`, `04-ses`
-(production access text, what each record does), `05-github`, `06-oauth-clients`, `07-first-deploy`, `08-operating` (deploy, rollback,
-migrate, ECS Exec, `psql`, rotate secrets, replay mail from S3), `09-testing-checklist`, `10-tear-down`.
+Region-independent except for the endpoints, which follow decision 1.
 
-What stays manual, and why: account and root setup (AWS requires it), NS records at Vercel (another provider, once), SES production
-access (a review, by AWS), OAuth clients and their secrets (other providers), test mailboxes, bootstrap (it precedes everything).
-
-### What must never be enabled on staging
-
-The `test` inbound driver and its secret, `key_auto_generate`, `app.env=local`, `session.insecure`, the `log` mailer, `frontend.hot_path`,
-`migrations.auto`, `http_client.allow_private_networks`, production OAuth clients or keys, real customer data. A smoke test checks the
-ones visible from outside, and `config:show` output can be reviewed through ECS Exec.
-
-### Keeping search engines and the public out
-
-ALB listener rules, in order: `/robots.txt` fixed response disallowing all; `/webhooks/ses/*` forwarded (SNS is signature-checked); up to
-5 source CIDRs per rule for people; a secret `X-Dimmi-Staging-Key` header for CI; everything else a fixed 403. The SPA already sends
-`noindex`. Health checks reach targets directly.
+- Domain identities for `inbound.staging` and `mail.staging`, Easy DKIM through Route 53, custom MAIL FROM with reject on MX failure so a mistake is loud.
+- Configuration sets `dimmi-staging-system` and `dimmi-staging-customer`, events to one SNS topic, as spec 04 wants.
+- Receipt rules: `inbound.staging` to S3 `raw/` with SNS, scanning on (the API default is off); `mail.staging` to S3 `system/`. CDK cannot activate a rule set, so a
+  small custom resource does. Leave SES message encryption off: it is client-side and our driver cannot read it. Use bucket encryption.
+- SNS to `https://staging.trydimmi.com/webhooks/ses/inbound` and `/events`, about one hour of retries (the default is 3 retries, 20 s apart) and a dead-letter queue. Raw mail stays in S3 and can be replayed.
+- The app must answer SNS within about 15 s, and SNS needs a certificate from a CA it trusts. AWS publishes no list on the page read; Let's Encrypt is proved at first subscription.
+- Scheduled round trip every 6 hours through `POST /email-addresses/{id}/tests`, with the Gmail test mailbox forwarding to dimmi, and a failing workflow alerts. Confirm the API exposes the arrival for polling.
+- Tenants: none until spec 04 M8 and M11; the app creates them.
+- Reputation: separate Region and subdomains, low volume, known recipients, simulator for failures. No one can promise staging never affects `trydimmi.com`; secondary sources disagree on subdomain signals.
 
 ## Testing staging end to end
 
-Built features only. Test mailboxes: one Gmail, one Outlook.com, and one on a custom domain the owner controls later for M8. Seed data:
-there is no seed command, and none is needed at first; real sign-up creates a real workspace. Add a Playwright script only if manual setup
-becomes tedious. Sandbox only: verify the test mailboxes as SES identities.
+Built features only. Test mailboxes: one Gmail, one Outlook.com. No seed command exists or is needed at first; real sign-up creates a real workspace.
 
 | Feature | Check |
 |---|---|
-| Sign-up mail | Sign up with Gmail: mail arrives, not spam; "Show original" passes SPF, DKIM, DMARC, aligned on `mail.staging` |
-| Verify, magic link, password reset | Each link works, once only, from another browser where expected |
+| TLS | First visit gets a Let's Encrypt certificate; survives a restart with no new order; port 80 redirects; ACME renewal path works on the staging CA first |
+| Gate | Blocked without password; SNS, widget and health pass; CI key passes; crawler sees disallow and `noindex` |
+| Sign-up mail | Arrives, not spam; SPF, DKIM, DMARC pass, aligned on `mail.staging` |
+| Verify, magic link, password reset | Each link works once |
 | Invites | Invite Outlook address, accept, role applied, withdrawn invite refused |
-| OAuth | GitHub and Google to `https://app.staging.trydimmi.com/auth/{provider}/callback` |
-| 2FA | TOTP enroll in a real app, shows issuer `dimmi staging`, recovery code works, workspace rule enforces it |
-| Passkeys | Register on real domain with Touch ID and a phone; `__Host-` cookies present; sign in; nothing logged in console |
-| Sessions | List, revoke another browser; revoked socket closes |
+| OAuth | GitHub and Google to `https://staging.trydimmi.com/auth/{provider}/callback`, staging's own clients |
+| 2FA | TOTP in a real app, recovery code, workspace rule |
+| Passkeys | Register on the real host with Touch ID and a phone |
+| Sessions | Revoke another browser; its socket closes |
 | Inbox | Create, reply, note, assign, close, search |
-| Realtime, two browsers | Reply shows without reload; typing shows; with `web x2`, connect sockets to different tasks, confirm by task logs; deploy during a session and see reconnect |
-| Email in | Gmail and Outlook to `<slug>@inbound.staging...`: conversation under 10 s, subject right, quote stripped |
-| Email out | Reply from inbox: arrives in the same Gmail thread; reply from Gmail lands in the same conversation |
-| Forwarding | Gmail forward to forwarding address; confirmation code shows; address test passes |
-| Bounces | Reply to `bounce@simulator.amazonses.com`: delivery failed in timeline, suppressed. `complaint@`, `suppressionlist@`, `ooto@` likewise. Needs SES events |
-| Spam verdicts | GTUBE from a real mailbox: spam verdict recorded, no notification; EICAR for virus |
-| Audit log | Actions above appear, right actor and IP (proves `trusted_proxies`) |
-| API tokens | Mint, call API, revoke, refused; role narrowing holds |
-| Workspace delete, restore | Grace, reminder mail, restore; purge job after grace in a test workspace |
-| Scheduler | Exactly one scheduled run per job across restarts; nightly prune in logs |
-| Portal | `/hc/...` renders over HTTPS with the CSP, no console errors |
+| Realtime | Two browsers: reply shows without reload, wss over HTTP/1.1 works beside HTTP/2 |
+| Email in | Gmail and Outlook to `<slug>@inbound.staging...`: under 10 s, quote stripped. Needs spec 04 M5 |
+| Email out | Same Gmail thread both ways |
+| Bounces | Simulator `bounce@`, `complaint@`, `suppressionlist@`, `ooto@`. Needs spec 04 M7 |
+| Spam verdicts | GTUBE recorded as spam; EICAR for virus |
+| Audit log | Right actor and real client address |
+| API tokens | Mint, call, revoke, refused |
+| Workspace delete and restore | Grace, reminder, restore |
+| Scheduler | One run per job across restarts |
+| Portal | `/hc/...` over HTTPS with CSP, no console errors |
 | Theme, phone | Light, dark, phone width |
-| Deploy | Push a trivial commit under load of a click-through: no errors; break a commit on purpose: rollback happens |
-| Failure | Stop the worker: mail queues, then drains. Valkey reboot: clients reconnect and refetch |
 
-Spec 04's demo script covers the same mail flows in more depth, and its steps 5, 8 and 9 wait on M8 and widget work.
+Never enabled on staging: the `test` inbound driver, `key_auto_generate`, `app.env=local`, `session.insecure`, the `log` mailer, `frontend.hot_path`, `migrations.auto`,
+`http_client.allow_private_networks`, production OAuth clients or keys, real customer data.
 
 ## Blockers
 
-Severity: **deploy** blocks a real deployment; **feature** blocks one feature's test; **nice** can wait. Size: S under a day, M 1 to 3 days,
-L more. Task boxes in specs are unreliable and `specs/BUILD-TRACKS.md` does not exist, so "Covered by" names a spec task, not an owner.
+Severity: **deploy**, **feature**, **nice**. Size: S under a day, M 1 to 3 days, L more. Packaging and pipeline items wait for the compute choice.
 
 | # | Blocker | Evidence | Severity | Size | Covered by |
 |---|---|---|---|---|---|
-| 1 | No container image | No Dockerfile or `deploy/` in tree | deploy | S | 11 tasks.md:49 specifies it, without the cloud tag. New: 19 |
-| 2 | No CI, no deploy workflow | No `.github/` | deploy | M | 00-foundation tasks.md:7 for CI. Deploy: 19 |
-| 3 | No CDK, no `docs/deploy` | Tree | deploy | L | 19 |
-| 4 | App never run as a non-owner of tables. Cross-tenant jobs would quietly do nothing, such as pruning | `tests/application_role.go`, used by 2 tests; `app/jobs/prune_audit_logs.go:101` | deploy | M to L | None. New: 19 |
-| 5 | No grants or default privileges in migrations; nothing creates the roles. Audit append-only rule covers only the migrating role | `database/migrations/20261101000013_create_audit_logs_table.sql:40`; no `GRANT` in migrations | deploy | S | None. New: 19 |
-| 6 | River under non-owner role unverified | `framework/queue/queue.go`; research section 5 | deploy | S | None. New: 19 |
-| 7 | RDS TLS needs the CA bundle in the image | `framework/database` takes URL; image absent | deploy | S | With 1 |
-| 8 | Effective-config output needs checking for connection-string credentials before real secrets are used | `framework/config/redact.go`, `framework/database/config.go:73`, `framework/redis/client.go:68` | deploy | S | None. New: 19 |
-| 9 | Defaults that fail quietly in the cloud: `local` disk, `log` mailer, no `trusted_proxies`, production inbound domain. A missed variable gives a staging that looks fine | `framework/foundation/load.go:84,87`; `config/channels.go:39`; `framework/foundation/config.go:107` | deploy, as boot guards | S | Partly 04 M6 ("boot refuses log"). New: 19 |
-| 10 | SES inbound route missing | `routes/webhooks.go:24`; `Mailbox` unused in `app/` | feature: email in | M | 04 M5 |
-| 11 | SES raw mail recorded under the configured disk, not the reference's | `app/actions/email/receive_inbound_email.go:195,244` | feature: email in | S | 04 M5, should name it |
-| 12 | SES event webhook, bounce and complaint handling, suppression | No `/webhooks/ses/events`; no suppression actions | feature: bounces, complaints | L | 04 M7 |
-| 13 | Unsubscribe flow | No route | feature | M | 04 M7 |
-| 14 | Custom sending domains: identities, records, API, checker | No `app/services/ses`, no `email-domains` routes | feature: own domain | L | 04 M8 |
-| 15 | Sending limits, reputation pause, tenants | `email_sending_profiles` table only; `TenantName` never set | feature; deploy before any open public staging or production | L | 04 M11 |
-| 16 | E2E suite assumes localhost, Mailpit, direct `psql`, test inbound | `playwright.config.ts:10`; `tests/e2e/support/mail.ts`, `database.ts`, `inbound.ts`; 5, 5 and 2 of 22 specs use them | feature: Playwright on staging | M | New: 19. Start with a subset |
-| 17 | Maintenance state is a local file, so a new task in maintenance serves traffic | `framework/foundation/boot_services.go:79`, `maintenance.go` | nice | S | None |
-| 18 | Worker has no health signal; no `healthcheck` command | `framework/foundation/serve.go:63` | nice | S | 11 tasks.md:49 |
-| 19 | No HSTS | `app/http/middleware/content_security_policy.go:48` | nice | S | None |
-| 20 | Release not stamped, so smoke tests cannot read the live commit | `bootstrap/app.go:45` | nice | S | 11 packaging ldflags |
-| 21 | Attachments: no download or upload route yet. S3 presigned URLs will need the CSP's `img-src` or a proxy | `routes/`, `content_security_policy.go:82,84` | nice now | S | 03 |
-| 22 | Malware scanner never called; inbound relies on SES verdicts | No use in `app/` | nice | M | 03, 04 |
-| 23 | Spec 12 infrastructure says EC2 and 300 s idle; config keys in spec 04 differ from code | `specs/12-cloud-billing/infrastructure.md`; `framework/mailbox/drivers/ses/ses.go:45` | nice | S | Update once approved |
+| 1 | **No HTTPS listener.** `TLSConfig()` exists but nothing serves it. Needs: 443 and 80 listeners, `HTTPHandler` on 80 for ACME, redirect to HTTPS except challenges and health, graceful stop of both, low-port binding by capability, a default driver config | `framework/customdomain/tls.go:169`; `framework/foundation/serve.go` `listen` serves plain TCP; no `ServeTLS` or `tls.NewListener` in `framework/`, `app/`, `bootstrap/` | deploy | M | New: 19. 08 assumes it |
+| 2 | **The `app.url` certificate would be refused.** No authorizer is set, so every hostname is refused. Needs an authorizer allowing the `app.url` host, and that certificate kept renewed, obtained after the listeners are up | `bootstrap/app.go` sets no `Domains`; `framework/foundation/boot_web.go:209` | deploy | S | New: 19. 08 adds custom domains later |
+| 3 | Staging gate middleware | None exists | deploy | S to M | New: 19 |
+| 4 | App never run as a non-owner role; cross-tenant jobs would quietly do nothing | `tests/application_role.go`, used by 2 tests; `app/jobs/prune_audit_logs.go:101` | deploy | M to L | New: 19 |
+| 5 | No grants or role provisioning; audit append-only rule covers only the migrating role | `database/migrations/20261101000013_create_audit_logs_table.sql:40` | deploy | S | New: 19 |
+| 6 | River under a non-owner role unverified | `framework/queue/queue.go` | deploy | S | New: 19 |
+| 7 | Effective-config output needs a redaction review before real secrets are used | `framework/config/redact.go` | deploy | S | New: 19 |
+| 8 | Quietly wrong defaults: `local` disk, `log` mailer, localhost `app.url`, production inbound domain. Boot guards | `framework/foundation/load.go:84,87`; `config/channels.go:39`; `framework/foundation/config.go:107` | deploy | S | Partly 04 M6 |
+| 9 | RDS CA bundle must be present where the binary runs | `framework/database` takes a URL | deploy | S | Follows packaging |
+| 10 | Packaging, pipeline, CDK, `docs/deploy` | No `.github/`, `deploy/` | deploy | L | Open: compute choice |
+| 11 | SES inbound route missing; raw mail recorded under the configured disk rather than the reference's | `routes/webhooks.go:24`; `app/actions/email/receive_inbound_email.go:195,244` | feature | M | 04 M5 |
+| 12 | SES events, bounces, suppression, unsubscribe | No `/webhooks/ses/events` | feature | L | 04 M7 |
+| 13 | Custom sending domains | No `email-domains` routes | feature | L | 04 M8 |
+| 14 | Sending limits, reputation pause, tenants; needed before the gate comes off | `TenantName` never set | feature | L | 04 M11 |
+| 15 | E2E suite tied to localhost, Mailpit, `psql`, test inbound | `playwright.config.ts:10`; `tests/e2e/support/` | feature | M | New: 19 |
+| 16 | Maintenance state is a local file, lost with a disposable replica | `framework/foundation/boot_services.go:79` | nice | S | None |
+| 17 | No HSTS. The binary is now the edge, so this is ours | `app/http/middleware/content_security_policy.go:48` | nice | S | None |
+| 18 | Release not stamped, so smoke tests cannot read the live commit | `bootstrap/app.go:45` | nice | S | 11 |
+| 19 | Attachments: S3 URLs will need CSP changes or a proxy | `content_security_policy.go:82,84` | nice | S | 03 |
+| 20 | Spec 12 still says EC2 without containers and CloudFormation; spec 04 config keys differ from code | `specs/12-cloud-billing/infrastructure.md`; `framework/mailbox/drivers/ses/ses.go:45` | nice | S | After the compute choice |
 
-Checked and fine: graceful shutdown on SIGTERM; realtime across replicas by design (unproved on AWS); `__Host-` cookies and CSRF behind TLS at the
-ALB; passkey relying party from `app.url`; JSON logs by default; `/ready` during maintenance; app key required rather than generated by default;
-task-role credentials through the SDK chain. Not blockers: billing, marketing site, widget API, notifications, webhooks, agent, none of which are
-built; custom help-center domains need more than an ALB when spec 08 arrives.
+Withdrawn as the design changed: `trusted_proxies` as a guard (the binary sees the client directly), ALB rules and idle timeout.
 
 ## Costs
 
-Monthly, us-east-1, read 2026-11-04. "Confirmed" means from an AWS page; `~` means third-party or from memory, see research section 12.
+The monthly total waits for the compute choice. Figures that hold regardless, read 2026-11-04; `~` is third-party or from memory.
 
-| Item | Detail | Monthly | Confirmed |
-|---|---|---|---|
-| Fargate web | 2 x 0.25 vCPU, 512 MiB, ARM | $14.42 | yes, derived |
-| Fargate worker | 1 x 0.25 vCPU, 1 GiB, ARM | $8.51 | yes, derived |
-| Public IPv4 | 3 tasks + 2 ALB | $18.25 | yes |
-| ALB | hours + about 0.2 LCU | $17.60 | yes |
-| RDS | `db.t4g.micro`, 20 GB gp3, backups in free allowance | ~$14 | no |
-| Valkey | `cache.t4g.micro` | ~$9.34 | no |
-| Route 53 | 1 zone | $0.50 | yes |
-| Secrets Manager | 6 secrets | $2.40 | yes |
-| KMS | 1 key | $1.00 | yes |
-| S3, ECR | under 5 GB | ~$0.50 | partly |
-| CloudWatch | inside free tier, some overflow | ~$1 | partly |
-| SES, SNS | hundreds of mails | under $1 | yes |
-| GitHub Actions | public repo | $0 | yes |
-| **Total** | | **about $89** | |
-
-- `web x1` saves $10.86: about **$78**.
-- Stop overnight and at weekends, on 60 hours a week: Fargate and its IPs to zero saves about $22; RDS stop saves about $7, but restarts itself after 7 days
-  (from memory). ALB and Valkey cannot stop. About **$60**. Mail notifications sent while stopped are lost after SNS gives up; raw mail stays in S3.
-- New account credits of up to $200 may apply; not confirmed for a member account.
-
-Production changes: Multi-AZ RDS on a larger class and `read_urls` later; Valkey with a replica; private task subnets with NAT per AZ; more and bigger tasks with
-autoscaling; WAF; longer logs; backups tested; tenants per workspace; limits on; its own account and SES review. `research/pricing.md` has about $1,450 per month as
-a baseline, not recomputed here.
-
-## Risks
-
-| Risk | Mitigation |
+| Item | Monthly |
 |---|---|
-| Non-owner run finds more than expected and delays the first deploy | Do it first; list failures before estimating. Do not ship as owner by default |
-| AWS refuses or delays SES production access (first reply within 96 hours) | Domains verified first. Start in sandbox with verified mailboxes and simulator; it blocks only sending to strangers |
-| Vercel refuses subdomain NS | Proved in step 5, before anything else depends on it. Fallback: move all DNS to Route 53 |
-| Staging mail hurts `trydimmi.com`'s standing | Separate account and subdomains, low volume, gate on. Certainty needs a separate domain: decision 8 |
-| Public repo leaks an account id or staging detail | No lookups, no `cdk.context.json`, ids in GitHub variables. Review `docs/deploy` on every change |
-| Deploy credentials abused from a workflow | OIDC bound to one environment on `main`, actions pinned by SHA, no deploy on `pull_request` |
-| Costs creep | Budget alerts at $100 and $150. Staging's account holds nothing else |
-| Open sign-up plus real SES becomes a spam relay | Gate stays until M11 limits exist |
-| 0.25 vCPU too small for hashing or inbound parse | CPU alarm; step to 0.5 vCPU, about $7 per task more |
-| Valkey behaviour differs from compose: restricted commands, client tracking | First boot proves it; `/ready` and realtime smoke test |
-| Burstable database runs out of credits | Alarm on CPU credit balance |
-| Migration that is not expand-only breaks rollback | Lint exists; CI runs `migrate:plan` and prints findings |
+| RDS `db.t4g.micro`, 20 GB gp3 | ~$14 |
+| Valkey `cache.t4g.micro` | ~$9.34 |
+| Route 53 zone | $0.50 |
+| Secrets Manager, about 6 | $2.40 |
+| KMS key | $1 |
+| S3, SES, SNS, logs | ~$2 |
+| Subtotal before compute | ~$29 |
+| Production's NLB, additional | about $16 plus usage |
+
+The owner accepted "real, about $38 a month" on a design with one small instance; a container choice may change that.
 
 ## Decisions for you
 
-1. **Region?** Recommended: us-east-1. eu-west-1 if you want staging near European users; specs and defaults assume us-east-1.
-2. **Existing AWS account?** Recommended: make it the management account if it holds nothing; if it runs anything, tell me and we create a fresh management account.
-3. **DNS?** Recommended: keep Vercel, delegate `staging.trydimmi.com`.
-4. **Fargate rather than spec 12's EC2 without containers?** Recommended: yes, Fargate, and update spec 12. EC2 saves about $11 but cannot prove two replicas and needs host care.
-5. **Two web tasks always, or one?** Recommended: two, $11 more, since multi-replica realtime and zero-downtime deploys are the point.
-6. **Must the app run as a non-owner before the first deploy?** Recommended: yes. The alternative, a first deploy as owner, is faster but tests something production must not be.
-7. **Gate?** Recommended: IP allowlist plus CI key at the ALB, sign-up open behind it. You would add a rule when your IP changes.
-8. **Staging mail on `trydimmi.com` subdomains, or on a separate domain?** Recommended: subdomains as you asked, knowing no one can promise zero effect on the parent. A separate domain would remove the doubt for about $12 a year.
-9. **SES production access now?** Recommended: yes, as soon as domains verify, so real recipients and the request itself get tested early. Sandbox works until then.
-10. **Run `make lint test` and e2e before each deploy?** Recommended: yes, all three, blocking. If it takes over about 20 minutes, e2e moves to run alongside, not blocking.
-11. **Always on?** Recommended: yes at first, about $89. Add the overnight stop later if the bill matters, about $60, accepting mail gaps at night.
-12. **First deploy before SES receiving exists?** Recommended: yes. Deploy at step 9 and test everything else, then add M5 and M7.
+1. **Region?** Recommended: everything for staging in us-east-2, and production later in us-east-1, where specs and defaults already point. Both receive mail through SES.
+2. **Compute and deployment?** The owner is deciding. This plan resumes after that.
+3. **Help center host in production?** Recommended: keep spec 08's separate domain for cookie isolation, while staging stays path mode. The alternative is one host in production too, which needs spec 08 changed.
+4. **Staging mail on `trydimmi.com` subdomains, or a separate domain?** Recommended: subdomains. Sharing an account makes this closer than before; a separate domain removes the doubt for about $12 a year.
+5. **SES production access for staging's Region now?** Recommended: yes, once domains verify.

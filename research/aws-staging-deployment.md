@@ -3,6 +3,8 @@
 Research date: 2026-11-04. Backs the plan in [`specs/19-cloud-staging/`](../specs/19-cloud-staging/README.md), which is
 the document to read for decisions. This file holds the options, the reasoning and the sources.
 
+**Updated after owner review: see section 13 first.** It supersedes the accounts, compute, edge, deploy and gate recommendations below.
+
 Method: repository code and specs were read; AWS, Vercel, GitHub and PostgreSQL documents were read on the web. No
 AWS, Vercel, GitHub or DNS account was read or changed, and nothing was deployed, so nothing here has been proved by
 running it on AWS. Web pages were treated as data. Prices are US East (N. Virginia), on-demand, in USD, as read on
@@ -375,3 +377,57 @@ baseline of about $1,450 per month; it was not recomputed here.
 - Anything about the owner's existing account, Vercel team or GitHub settings: not read, by instruction.
 - Whether a build track covers a blocker: `specs/BUILD-TRACKS.md` does not exist, and task boxes in spec 04 are all open though
   much is built, so "covered by" names spec tasks, not who is doing them.
+
+## 13. Owner review, 2026-11-04
+
+The owner changed the plan after review. These stand under any compute choice and replace the matching parts above. **Sections 2 (accounts), 4 (compute),
+6 (network and edge), 9 (deploy order) and 10 (gate) are superseded where they recommend Organizations, Fargate, an ALB, public-subnet tasks or ALB rules.** Compute and
+deployment are being chosen by the owner and are not recorded here as decided.
+
+### One account
+
+Sandbox status is per Region and production access must name each Region ([production access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html)). Quotas are
+separate for each Region ([limits](https://docs.aws.amazon.com/ses/latest/dg/manage-sending-quotas.html)). Identities, Easy DKIM, suppression list, feedback settings and receiving resources are per Region
+([SES regions](https://docs.aws.amazon.com/ses/latest/dg/regions.html)). `GetAccount` describes status for the current Region
+([API](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_GetAccount.html), via search), and pausing is per Region
+([pausing](https://docs.aws.amazon.com/ses/latest/dg/monitoring-sender-reputation-pausing-account.html)). No page read states that a review in one Region leaves another Region unaffected: likely, not confirmed.
+Bounce above 5% or complaints above 0.1% place an account under review, per that pausing page; another AWS page gives further pause thresholds, and they are not fully consistent
+([alarms](https://docs.aws.amazon.com/ses/latest/dg/reputationdashboard-cloudwatch-alarm.html)).
+
+### One host
+
+`staging.trydimmi.com` serves everything. Code check: `/hc/{center}` is the only help center mode built; `help_center.base_domain` is in spec 08 only, and empty means path mode
+(`specs/08-help-center/README.md:1018`). So no wildcard is needed. Spec 08 line 1178 wants a separate registrable domain on the cloud for cookie isolation, which single-host staging does not exercise.
+
+### TLS in the binary
+
+Confirmed: `TLSConfig()` is defined (`framework/customdomain/tls.go:169`, `drivers/certmagic/certmagic.go:167`) and no listener uses it. A search for `ServeTLS`, `tls.NewListener` and `tls.Listen` in `framework/`, `app/`
+and `bootstrap/` finds nothing, and `framework/foundation/serve.go` serves plain TCP. `foundation.Options.Domains` is never set, so the default authorizer refuses every hostname (`boot_web.go:209`), including `app.url`'s.
+The driver sets TLS 1.2 minimum, `h2`, `http/1.1` and the ACME protocol, and stores everything in PostgreSQL under a lock.
+
+certmagic: instances sharing storage act as one cluster, with "distributed solving of all challenges (works behind load balancers)"; HTTP challenge needs port 80, TLS-ALPN 443
+([certmagic](https://pkg.go.dev/github.com/caddyserver/certmagic)). Let's Encrypt: 5 certificates per exact set of names per 7 days, no overrides; 50 per registered domain per 7 days, which staging and production share since both are under `trydimmi.com`;
+use its staging environment for tests ([limits](https://letsencrypt.org/docs/rate-limits/)). SNS needs a certificate from a CA it trusts and times out in about 15 s; by default it makes up to 3 retries, 20 s apart
+([SNS HTTPS](https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)).
+
+### NLB with passthrough, production design only
+
+- Client IP: preserved by default for instance targets; for IP targets with TCP it is off by default and can be turned on. Hairpinning is not supported with preservation
+  ([attributes](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html)). Matters if containers register by IP.
+- Idle: 350 s default for TCP, 60 to 6000 s ([idle timeout](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/update-idle-timeout.html)).
+- A TCP connection is routed to a single target for its life ([overview](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html)).
+- Deregistration default 300 s, range 0 to 3600, at least 120 s advised; existing connections stay unless termination is enabled. TCP target groups accept HTTP, HTTPS or TCP health checks
+  ([target groups](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-target-groups.html)).
+- $0.0225 per hour and $0.006 per NLCU-hour; an NLCU is 800 new TCP connections per second, 100,000 active, or 1 GB per hour ([pricing](https://aws.amazon.com/elasticloadbalancing/pricing/)).
+- AWS does not mention ACME, WebSocket or SSE on those pages. That they work is an inference from the NLB being layer 4 with bytes passed through.
+
+### Gate in the app
+
+Public by necessity. Reasoning and rules are in the spec. Note: `/up`, `/ready` and `/connection/*` sit on the mux before the kernel (`framework/foundation/serve.go`), so kernel middleware does not cover them.
+
+### Not confirmed, added
+
+- SES review isolation between Regions in one account.
+- EC2 prices: AWS's table did not render, and third-party figures conflict. T4g surplus credits are $0.04 per vCPU-hour ([EC2 pricing](https://aws.amazon.com/ec2/pricing/on-demand/)).
+- Whether SNS trusts Let's Encrypt: no list on the page read; proved at first subscription.
+- HTTP/2 beside WebSocket on the new listener: to be proved by test.

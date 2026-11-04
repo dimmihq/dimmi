@@ -9,7 +9,7 @@ Same binary as self-host, no Docker. Managed backing services. Built to scale ou
 | Layer | Choice |
 |---|---|
 | App | release binary (`linux/arm64`, Graviton) on EC2, run by the same `dimmi.service` systemd unit `install.sh` ships. No container runtime |
-| Fleet | EC2 Auto Scaling groups behind ALB (idle timeout 300 s, health `/ready`, no sticky sessions). Optional split by `DIMMI_APP__ROLES`: `web` group (scales on WebSocket count + CPU), `worker,scheduler` group (scales on River queue depth) |
+| Fleet | EC2 Auto Scaling groups behind an NLB with TCP passthrough on 443 and 80, so the binary terminates TLS with certificates from the database (TCP idle timeout 350 s, health `/ready` over HTTP on port 80, no sticky sessions). Optional split by `DIMMI_APP__ROLES`: `web` group (scales on WebSocket count + CPU), `worker,scheduler` group (scales on River queue depth) |
 | Deploy | new binary version = new launch template version (user data pulls signed release archive, verifies checksum + cosign) then ASG instance refresh, rolling; migrations run once under advisory lock (11 operations.md) |
 | Postgres | RDS PostgreSQL 18 (pgvector), Multi-AZ, writer endpoint as `database.url`; reader endpoint as `database.read_urls` when replicas added; RDS Proxy optional (`database.pool_mode=transaction` + `database.direct_url`). Backups: RDS PITR (`backups.enabled=false`) |
 | Valkey | ElastiCache for Valkey 8, TLS + auth, cluster mode when one shard is not enough (`redis.mode=auto`) |
