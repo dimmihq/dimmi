@@ -43,6 +43,8 @@ Query is a search as the database matches it.
 TSQuery is the text predicate, empty when the search has no words.
 Number and ID are a jump to one row, when the search was only that.
 Statuses, Unread, Unassigned, Mine and Priority are the is: filters.
+PriorityLevel and PriorityMin are the level priority: asks for, exactly
+or at least, as typed.
 Words are the plain words typed, for matching names and addresses.
 */
 type Query struct {
@@ -55,6 +57,9 @@ type Query struct {
 	Mine       bool
 	Priority   bool
 	Words      []string
+
+	PriorityLevel string
+	PriorityMin   string
 }
 
 var (
@@ -199,6 +204,16 @@ operator applies the word when it is an is: filter, and reports whether
 it was one.
 */
 func (q *Query) operator(word string) bool {
+	if level, ok := strings.CutPrefix(strings.ToLower(word), "priority:"); ok && level != "" {
+		if least, ok := strings.CutPrefix(level, ">="); ok {
+			q.PriorityMin = least
+		} else {
+			q.PriorityLevel = level
+		}
+
+		return true
+	}
+
 	value, ok := strings.CutPrefix(strings.ToLower(word), "is:")
 	if !ok {
 		return false

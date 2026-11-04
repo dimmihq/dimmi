@@ -15,13 +15,15 @@ package events
 import "github.com/dimmihq/dimmi/framework/ids"
 
 /*
-ConversationPriorityChanged is dispatched when the priority flag flips.
+ConversationPriorityChanged is dispatched when the priority changes,
+from one level to another, each named as the API names it.
 */
 type ConversationPriorityChanged struct {
 	Base
 	ConversationRef
 
-	Priority bool
+	From string
+	To   string
 }
 
 /*
