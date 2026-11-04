@@ -115,8 +115,8 @@ export const meQuery = queryOptions({
   retry: false,
 });
 
-export function signIn(email: string, password: string): Promise<SignInResult> {
-  return request<SignInResult>("POST", "/sessions", { grant: "password", email, password });
+export function signIn(email: string, password: string, reauth?: boolean): Promise<SignInResult> {
+  return request<SignInResult>("POST", "/sessions", { grant: "password", email, password, reauth });
 }
 
 export function signInWithLink(token: string): Promise<SignInResult> {

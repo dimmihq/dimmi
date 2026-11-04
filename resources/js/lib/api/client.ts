@@ -6,6 +6,8 @@
  * the reader's language.
  */
 
+import { reportAccessRequirement } from "./access-required";
+
 const base = "/api/v1";
 
 /*
@@ -31,6 +33,24 @@ interface ErrorBody {
   code?: string;
   message?: string;
   errors?: Record<string, string[]>;
+  requirement?: string;
+  action_url?: string | null;
+  ip?: string;
+}
+
+/*
+ * reportRefusal hands a workspace's refusal over to the screen that
+ * explains it, whatever page the request came from.
+ */
+function reportRefusal(status: number, body: ErrorBody | null) {
+  if (status === 403 && body?.requirement) {
+    reportAccessRequirement({
+      requirement: body.requirement,
+      message: body.message ?? "This workspace needs something from you.",
+      actionUrl: body.action_url ?? null,
+      ip: body.ip,
+    });
+  }
 }
 
 /*
@@ -97,6 +117,7 @@ export async function request<T>(
 
   const json: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    reportRefusal(response.status, json as ErrorBody | null);
     throw toApiError(response.status, json as ErrorBody | null);
   }
 
@@ -125,6 +146,7 @@ export async function requestPage<T>(path: string, options: RequestOptions = {})
   const response = await fetch(base + path, { headers, credentials: "same-origin" });
   const json: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    reportRefusal(response.status, json as ErrorBody | null);
     throw toApiError(response.status, json as ErrorBody | null);
   }
 

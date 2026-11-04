@@ -88,3 +88,16 @@ export function addTeammate(ownerEmail: string, email: string, role: "admin" | "
 export function verifyEmail(email: string) {
   psql("UPDATE users SET email_verified_at = now() WHERE email = :'email'", { email });
 }
+
+/*
+ * ageSessions moves every session of the person with the email back by
+ * the minutes, as if they signed in and last worked that long ago.
+ */
+export function ageSessions(email: string, minutes: number) {
+  psql(
+    `UPDATE sessions SET authenticated_at = authenticated_at - make_interval(mins => :'minutes'::int),
+       data = data - 'worked_at'
+     WHERE user_id = (SELECT id FROM users WHERE email = :'email')`,
+    { email, minutes: String(minutes) },
+  );
+}
