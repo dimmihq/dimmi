@@ -113,18 +113,17 @@ type App struct {
 /*
 New returns the application before boot, with its configuration empty
 until the framework loads it, the full permission catalog, the login
-policy that allows every method, the access policy of every rule a
-workspace may set, no first-party app grants, no identity providers or
-workspace initializers yet, and no retention holds.
+policy that allows every method, no first-party app grants, no identity
+providers or workspace initializers yet, and no retention holds. The
+access policy is built at boot, when the clock exists.
 */
 func New(version string) *App {
 	return &App{
-		Version:      version,
-		Config:       &appconfig.Config{},
-		Permissions:  auth.NewCatalog(),
-		LoginPolicy:  auth.AllowAll{},
-		AccessPolicy: auth.DefaultAccessPolicy(),
-		AppGrants:    auth.NoAppGrants{},
+		Version:     version,
+		Config:      &appconfig.Config{},
+		Permissions: auth.NewCatalog(),
+		LoginPolicy: auth.AllowAll{},
+		AppGrants:   auth.NoAppGrants{},
 
 		IdentityProviders: providers.NewRegistry(),
 

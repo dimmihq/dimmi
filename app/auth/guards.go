@@ -71,6 +71,10 @@ func (g *SessionGuard) Authenticate(r *fhttp.Request) (fauth.Principal, error) {
 		SignIn:          SignInOf(s),
 		AuthenticatedAt: s.AuthenticatedAt(),
 		Confirmed:       s.ConfirmedAt(),
+		IP:              ClientAddr(r),
+		LastActivityAt:  WorkedAt(s.Record()),
+		SSOConnectionID: s.Record().ConnectionID,
+		AuthDomain:      s.Record().AuthDomain,
 	}, nil
 }
 
@@ -120,7 +124,7 @@ func (g *TokenGuard) Resolve(r *fhttp.Request, plain string) (fauth.Principal, e
 
 	return &Principal{
 		User: user, Kind: KindToken, CredentialID: tok.ID, WorkspaceID: member.WorkspaceID,
-		MemberID: member.ID, Granted: tok.Abilities, MintedAsRole: minted,
+		MemberID: member.ID, Granted: tok.Abilities, MintedAsRole: minted, IP: ClientAddr(r),
 	}, nil
 }
 

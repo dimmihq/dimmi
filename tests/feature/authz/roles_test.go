@@ -41,7 +41,7 @@ func adminRows() []string {
 		"ai_runs:read_payloads", "ai_agent:manage", "ai:keys", "ai_actions:manage", "help_centers:manage",
 		"knowledge:manage", "github:manage", "docs_sync:manage", "oauth_grants:manage_any", "agent_access:manage",
 		"feedback:delete", "feedback:manage", "engage:manage", "imports:read", "imports:manage", "imports:rollback",
-		"webhooks:read", "webhooks:write", "billing:read", "billing:write",
+		"webhooks:read", "webhooks:write", "billing:read", "billing:write", "security_policy:manage", "roles:manage",
 	}
 }
 
@@ -52,7 +52,7 @@ func ownerRows() []string {
 	return []string{
 		"workspace:delete", "members:manage_owners", "email:rotate_dkim", "email:resume_sending",
 		"email_suppressions:lift_complaint", "help_centers:delete", "billing:cap_unrestricted", "exports:read",
-		"exports:write",
+		"exports:write", "sso:manage", "scim:manage",
 	}
 }
 

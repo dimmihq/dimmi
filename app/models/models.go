@@ -611,6 +611,8 @@ type Session struct {
 	ExpiresAt       time.Time       `json:"expires_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	SsoConnectionID *ids.UUID       `json:"sso_connection_id"`
+	AuthDomain      *string         `json:"auth_domain"`
 }
 
 type Tag struct {

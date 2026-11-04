@@ -87,6 +87,7 @@ func API(a *app.App) {
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
+		identityRoutes(api, a)
 	})
 }
 

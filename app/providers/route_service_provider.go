@@ -72,7 +72,7 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 		return appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), nil
 	})
 	fa.Kernel.Alias("access.policy", func(...string) (fhttp.Middleware, error) {
-		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Errors), nil
+		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Clock, fa.Errors), nil
 	})
 
 	p.App.Vite = vite.New(vite.Options{

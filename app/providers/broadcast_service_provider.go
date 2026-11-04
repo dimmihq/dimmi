@@ -58,7 +58,7 @@ func (p BroadcastServiceProvider) Register(fa *foundation.Application) error {
 	}
 	broadcaster.Listen(fa.Events)
 
-	disconnects := &appbroadcasting.Disconnects{Server: fa.Broadcast}
+	disconnects := &appbroadcasting.Disconnects{Server: fa.Broadcast, DB: fa.DB}
 	disconnects.Listen(fa.Events)
 
 	return nil

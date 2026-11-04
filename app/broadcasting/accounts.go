@@ -25,8 +25,10 @@ import (
 	"fmt"
 
 	fbroadcasting "github.com/dimmihq/dimmi/framework/broadcasting"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -65,6 +67,7 @@ credentials that end.
 */
 type Disconnects struct {
 	Server Disconnector
+	DB     *database.DB
 }
 
 /*
@@ -83,6 +86,38 @@ func (d *Disconnects) Listen(dispatcher *events.Dispatcher) {
 	events.Listen(dispatcher, events.AfterCommit, func(ctx context.Context, e appevents.TokenRevoked) error {
 		return d.credential(ctx, e.UserID, appauth.KindToken, e.TokenID)
 	})
+	events.Listen(dispatcher, events.AfterCommit, d.members)
+}
+
+/*
+members closes the connections of everyone working in a workspace whose
+rules changed. They connect again at once and each channel asks the new
+rules, so a tightened rule bites straight away and a person it does not
+touch barely notices.
+*/
+func (d *Disconnects) members(ctx context.Context, e appevents.WorkspaceAccessPolicyChanged) error {
+	var userIDs []ids.UUID
+
+	scoped := tenancy.With(ctx, e.WorkspaceID.String())
+
+	err := d.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+
+		userIDs, err = models.New(tx).ListActiveMemberUserIDs(ctx, e.WorkspaceID)
+
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("list members to disconnect: %w", err)
+	}
+
+	for _, userID := range userIDs {
+		if err := d.user(ctx, userID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*
@@ -120,6 +155,11 @@ func (b *Broadcaster) listenAccounts(d *events.Dispatcher) {
 		}
 
 		return b.account(ctx, e.WorkspaceID, "workspace.updated", data)
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.WorkspaceAccessPolicyChanged) error {
+		data := changed{ID: models.PublicID(models.PrefixWorkspace, e.WorkspaceID), Object: "workspace"}
+
+		return b.account(ctx, e.WorkspaceID, "workspace.access_policy_changed", data)
 	})
 	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.MemberJoined) error {
 		return b.member(ctx, e.WorkspaceID, "member.joined", e.MemberID)

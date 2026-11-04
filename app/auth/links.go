@@ -87,6 +87,13 @@ func (l Links) Members() string {
 }
 
 /*
+WorkspaceSecurity is the page of a workspace's sign-in rules.
+*/
+func (l Links) WorkspaceSecurity() string {
+	return l.page("/d/settings/workspace-security")
+}
+
+/*
 Tokens is the page listing the user's personal access tokens.
 */
 func (l Links) Tokens() string {

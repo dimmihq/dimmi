@@ -238,7 +238,7 @@ func nodeWith(t *testing.T, tc *tests.TestCase, cfg broadcasting.Config) string 
 
 	authorize := &appbroadcasting.Authorizers{
 		DB: tc.App.DB, IDs: tc.App.IDs, Resolve: tc.App.Actions.ResolveWorkspace,
-		Scope: conversations.VisibleScope{},
+		Policy: tc.App.AccessPolicy, Live: tc.App.Realtime.Live, Scope: conversations.VisibleScope{},
 	}
 	channels := server.Channels()
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)

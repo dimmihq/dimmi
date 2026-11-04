@@ -125,5 +125,10 @@
     "intro": "Your API token \"{{.token}}\" in {{.workspace}} stops working on {{.date}}.",
     "advice": "Scripts that use it will stop too. Make a new token and switch them over before then.",
     "action": "Review your API tokens"
+  },
+  "access_policy_changed": {
+    "subject": "The sign-in rules of {{.workspace}} changed",
+    "intro": "An admin of {{.workspace}} changed who may sign in to the workspace and from where. If you did not expect this, check the rules now.",
+    "action": "See the rules"
   }
 }

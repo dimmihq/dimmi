@@ -39,6 +39,7 @@ as access tokens and invitations, and of teams.
 const (
 	EventWorkspaceCreated     = "workspace.created"
 	EventWorkspaceUpdated     = "workspace.updated"
+	EventAccessPolicyChanged  = "workspace.access_policy_changed"
 	EventMemberJoined         = "member.joined"
 	EventMemberRoleChanged    = "member.role_changed"
 	EventMemberDeactivated    = "member.deactivated"

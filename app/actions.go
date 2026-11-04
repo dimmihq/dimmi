@@ -12,6 +12,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
@@ -73,6 +74,9 @@ type Actions struct {
 	AcceptInvitation        *invitations.AcceptInvitation
 
 	CompleteTwoFactorChallenge *auth.CompleteTwoFactorChallenge
+	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
+	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
+	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy
 	ListAuthFactors            *factors.ListAuthFactors
 	AddAuthFactor              *factors.AddAuthFactor
 	ActivateAuthFactor         *factors.ActivateAuthFactor
