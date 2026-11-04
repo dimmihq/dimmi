@@ -153,7 +153,9 @@ workspace, so it also works for callers that hold no transaction.
 func (a *RecordAuditLog) Handle(ctx context.Context, e Entry) (models.AuditLog, error) {
 	var entry models.AuditLog
 
-	err := a.DB.Transaction(tenancy.With(ctx, e.WorkspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
+	scoped := tenancy.With(ctx, e.WorkspaceID.String())
+
+	err := a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 		entry, err = a.write(ctx, models.New(tx), e)
 
