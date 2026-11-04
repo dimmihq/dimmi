@@ -7,13 +7,15 @@
 | and for recovery codes how many are left. Secrets never leave the
 | server, except once, right after they are made: the setup of a new
 | authenticator and the codes of a new recovery set ride on the answer
-| that made them, which no cache may keep.
+| that made them, which no cache may keep. A new passkey's setup is the
+| options the browser creates it with.
 |
 */
 
 package resources
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/app/auth/factors"
@@ -23,9 +25,9 @@ import (
 /*
 AuthFactor is one of the user's factors. Remaining and Total are set on
 recovery codes only. Setup, Codes and RecoveryCodes are set only on the
-answer that made them: the authenticator's setup, a new recovery set's
-codes, and the recovery set made when an activation turned two-factor
-authentication on.
+answer that made them: the authenticator's or passkey's setup, a new
+recovery set's codes, and the recovery set made when an activation
+turned two-factor authentication on.
 */
 type AuthFactor struct {
 	ID            string      `json:"id"`
@@ -39,19 +41,22 @@ type AuthFactor struct {
 	ConfirmedAt   *time.Time  `json:"confirmed_at"`
 	LastUsedAt    *time.Time  `json:"last_used_at"`
 	CreatedAt     time.Time   `json:"created_at"`
-	Setup         *TOTPSetup  `json:"setup,omitempty"`
+	Setup         *Setup      `json:"setup,omitempty"`
 	Codes         []string    `json:"codes,omitempty"`
 	RecoveryCodes *AuthFactor `json:"recovery_codes,omitempty"`
 }
 
 /*
-TOTPSetup is what a user needs to add a new authenticator to their app:
-the secret to type in, the otpauth URL, and the URL as a QR code.
+Setup is what a user needs to finish a new factor. For an authenticator
+app: the secret to type in, the otpauth URL, and the URL as a QR code.
+For a passkey: the options the browser's credential API creates it
+with.
 */
-type TOTPSetup struct {
-	Secret     string `json:"secret"`
-	OTPAuthURL string `json:"otpauth_url"`
-	QRSVG      string `json:"qr_svg"`
+type Setup struct {
+	Secret     string          `json:"secret,omitempty"`
+	OTPAuthURL string          `json:"otpauth_url,omitempty"`
+	QRSVG      string          `json:"qr_svg,omitempty"`
+	Options    json.RawMessage `json:"options,omitempty"`
 }
 
 /*
@@ -98,8 +103,10 @@ func NewMadeAuthFactor(f models.UserAuthFactor, setup factors.Setup) AuthFactor 
 	out := NewAuthFactor(f)
 	out.Codes = setup.Codes
 
-	if setup.Secret != "" {
-		out.Setup = &TOTPSetup{Secret: setup.Secret, OTPAuthURL: setup.OTPAuthURL, QRSVG: setup.QRCodeSVG}
+	if setup.Secret != "" || setup.Options != nil {
+		out.Setup = &Setup{
+			Secret: setup.Secret, OTPAuthURL: setup.OTPAuthURL, QRSVG: setup.QRCodeSVG, Options: setup.Options,
+		}
 	}
 
 	return out

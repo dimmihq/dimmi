@@ -25,6 +25,7 @@
   "invalid_reset_token": "This password reset link is invalid or has expired.",
   "invalid_verification_token": "This verification link is invalid.",
   "invalid_code": "The code is invalid or has expired.",
+  "invalid_credential": "The passkey could not be verified. Try again.",
   "magic_link_expired": "This sign-in link was already used or has expired. Request a new one.",
   "verification_link_stale": "This verification link was sent to an address the account no longer uses.",
   "verification_link_expired": "This verification link has expired. Sign in and ask for a new one.",

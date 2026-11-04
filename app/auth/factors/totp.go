@@ -80,15 +80,15 @@ func (d *TOTP) Capabilities() Capabilities {
 Enroll makes a new seed for the factor and what the user needs to add
 it to their app.
 */
-func (d *TOTP) Enroll(ctx context.Context, user models.User, id ids.UUID) (Enrollment, error) {
-	codes := d.codes(id)
+func (d *TOTP) Enroll(ctx context.Context, in EnrollInput) (Enrollment, error) {
+	codes := d.codes(in.ID)
 
 	sealed, err := codes.NewSecret(ctx)
 	if err != nil {
 		return Enrollment{}, fmt.Errorf("make authenticator seed: %w", err)
 	}
 
-	secret, url, err := codes.Setup(ctx, sealed, user.Email)
+	secret, url, err := codes.Setup(ctx, sealed, in.User.Email)
 	if err != nil {
 		return Enrollment{}, fmt.Errorf("describe authenticator seed: %w", err)
 	}
@@ -110,13 +110,13 @@ func (d *TOTP) Enroll(ctx context.Context, user models.User, id ids.UUID) (Enrol
 Verify accepts a code for a step after the last one used, and records
 the step.
 */
-func (d *TOTP) Verify(ctx context.Context, factor *models.UserAuthFactor, input string) error {
+func (d *TOTP) Verify(ctx context.Context, factor *models.UserAuthFactor, answer Answer) error {
 	cred := twofactor.Credential{ID: factor.ID, Type: factor.Type, Secret: factor.SecretEncrypted}
 	if factor.LastCounter != nil {
 		cred.Counter = *factor.LastCounter
 	}
 
-	if err := d.codes(factor.ID).Verify(ctx, &cred, input); err != nil {
+	if err := d.codes(factor.ID).Verify(ctx, &cred, answer.Code); err != nil {
 		return err
 	}
 

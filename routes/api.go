@@ -132,9 +132,11 @@ func newControllers(a *app.App) controllers {
 	acts := a.Actions
 
 	return controllers{
-		authConfig: &v1.AuthConfigController{Auth: a.Config.Auth, Providers: a.Providers, Server: server},
-		users:      &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
-		me:         &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
+		authConfig: &v1.AuthConfigController{
+			Auth: a.Config.Auth, Factors: a.Factors.Types(), Providers: a.Providers, Server: server,
+		},
+		users: &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
+		me:    &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
 		sessions: &v1.SessionController{
 			AttemptLogin: acts.AttemptLogin, ConsumeMagicLink: acts.ConsumeMagicLink,
 			TwoFactor: acts.CompleteTwoFactorChallenge, ListSessions: acts.ListSessions,

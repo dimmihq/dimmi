@@ -35,7 +35,6 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	appauth "github.com/dimmihq/dimmi/app/auth"
-	"github.com/dimmihq/dimmi/app/auth/factors"
 	idp "github.com/dimmihq/dimmi/app/auth/providers"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/support/keysets"
@@ -87,11 +86,7 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 		return fmt.Errorf("data keys: %w", err)
 	}
 
-	a.Factors, err = factors.NewRegistry(a.Config.Auth.Factors.Enabled,
-		&factors.TOTP{Issuer: a.Config.Auth.Factors.TOTP.Issuer, Keys: a.Keys, Cache: fa.Cache, Clock: fa.Clock},
-		&factors.RecoveryCodes{Keys: a.Keys},
-	)
-	if err != nil {
+	if a.Factors, err = factorRegistry(fa, a); err != nil {
 		return err
 	}
 

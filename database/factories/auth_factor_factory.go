@@ -79,7 +79,7 @@ func activeFactor(ctx context.Context, a *app.App, u models.User, kind string) (
 	now := a.Clock.Now()
 	id := ids.NewV7At(now)
 
-	enrollment, err := driver.Enroll(ctx, u, id)
+	enrollment, err := driver.Enroll(ctx, factors.EnrollInput{User: u, ID: id})
 	if err != nil {
 		return madeFactor{}, fmt.Errorf("enroll %s: %w", kind, err)
 	}

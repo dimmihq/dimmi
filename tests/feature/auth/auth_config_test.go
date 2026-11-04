@@ -29,6 +29,16 @@ func TestAuthConfigShow(t *testing.T) {
 			AssertJSONPath("data.factors", []testkit.JSON{{"type": "recovery_code", "name": "Recovery codes"}})
 	})
 
+	t.Run("leaves out passkeys where the address cannot hold them", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv("DIMMI_APP__URL=http://127.0.0.1:8080"))
+
+		tc.Client().GetJSON("/api/v1/auth/config").AssertOK().
+			AssertJSONPath("data.factors.#.type", []string{"totp", "recovery_code"})
+		tc.ActingAsOwner().PostJSON("/api/v1/user/auth-factors", testkit.JSON{"type": "passkey"}).
+			AssertValidationError("type").AssertJSONPath("code", "factor_type_not_available")
+	})
+
 	t.Run("offers Google before GitHub", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv(

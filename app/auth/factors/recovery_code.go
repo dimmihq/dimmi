@@ -23,7 +23,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/auth/twofactor"
 	"github.com/dimmihq/dimmi/framework/encryption"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -81,8 +80,8 @@ func (d *RecoveryCodes) Capabilities() Capabilities {
 /*
 Enroll makes a new set of codes, active at once.
 */
-func (d *RecoveryCodes) Enroll(ctx context.Context, _ models.User, id ids.UUID) (Enrollment, error) {
-	codes, sealed, err := twofactor.NewRecoveryCodes(bind(d.Keys, id)).Generate(ctx, RecoveryCodeCount)
+func (d *RecoveryCodes) Enroll(ctx context.Context, in EnrollInput) (Enrollment, error) {
+	codes, sealed, err := twofactor.NewRecoveryCodes(bind(d.Keys, in.ID)).Generate(ctx, RecoveryCodeCount)
 	if err != nil {
 		return Enrollment{}, fmt.Errorf("make recovery codes: %w", err)
 	}
@@ -99,11 +98,11 @@ func (d *RecoveryCodes) Enroll(ctx context.Context, _ models.User, id ids.UUID) 
 Verify accepts a code still in the set and removes it, so it never
 works again.
 */
-func (d *RecoveryCodes) Verify(ctx context.Context, factor *models.UserAuthFactor, input string) error {
+func (d *RecoveryCodes) Verify(ctx context.Context, factor *models.UserAuthFactor, answer Answer) error {
 	codes := twofactor.NewRecoveryCodes(bind(d.Keys, factor.ID))
 	cred := twofactor.Credential{ID: factor.ID, Type: factor.Type, Secret: factor.SecretEncrypted}
 
-	if err := codes.Verify(ctx, &cred, input); err != nil {
+	if err := codes.Verify(ctx, &cred, answer.Code); err != nil {
 		return err
 	}
 

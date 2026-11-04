@@ -240,6 +240,28 @@ F=$B/user/auth-factors; P="{\"grant\":\"password\",\"email\":\"$ADA\",\"password
 | Lift it | Bob (with 2FA again): `{"require_two_factor":false}` | 200 `require_two_factor: false`, no mail |
 | Purge | start an enrollment and leave it; with the server running, wait past the hour | the `pending` factor gone, a `purge_expired_auth_records` job `completed` in `river_job` |
 
+### Passkeys
+
+A passkey needs a device to sign the server's challenge, so curl checks what the server hands out and what it
+refuses, and a browser runs the whole flow. In Chrome, DevTools > More tools > WebAuthn > "Enable virtual
+authenticator environment", then add an authenticator: protocol `ctap2`, transport `internal`, resident keys and user
+verification on. Within 15 minutes of Ada's last sign-in in `a.jar`, as above.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Offered | `curl -s $B/auth/config \| jq -c '[.data.factors[].type]'` | `["totp","passkey","recovery_code"]` |
+| Start a passkey | `r pk -b a.jar -X POST -H "$O" -H "$J" $F -d '{"type":"passkey","name":"Work laptop"}'; PK=$(jq -r .data.id body)` | 201, `no-store`, `type: passkey`, `status: pending`, `name: Work laptop`; `setup.options` with `rp.id` the host of `app.url` (`localhost`), `rp.name` `dimmi`, a `challenge`, `user.name` Ada's email, `authenticatorSelection` `userVerification` and `residentKey` `preferred`, `attestation: none`, and `excludeCredentials` naming every passkey Ada already holds; no `secret` |
+| Bad answer | `r pkbad -b a.jar -X PATCH -H "$O" -H "$J" $F/$PK -d '{"credential":{"id":"x"}}'`, then `-d '{"credential":"x"}'` | 422 `invalid_credential` on `credential`; then 422 on `credential` |
+| No passkeys on an IP address | restart with `DIMMI_APP__URL=http://127.0.0.1:18080`, then the start above | 422 `factor_type_not_available`; `/auth/config` lists `totp` and `recovery_code` only |
+| Add in a browser | `/d/settings/security`, "Add passkey", name it, "Continue" | on an account without 2FA the ten recovery codes show once; the passkey is listed by name with "Added …, never used", and "Turn off" appears |
+| Challenge | `POST $B/sessions` with `$P` into a fresh jar | 200 `two_factor_challenge`; the passkey's method has `options` with `rpId`, a `challenge` and `allowCredentials` naming each passkey, the same options on every passkey; codes have `options: null`; recovery codes listed last |
+| Sign in in a browser | sign out, sign in by password | `/login/two-factor` says "Use your passkey"; "Continue with passkey" lands on `/d`; the session's `auth.auth_methods` is `["password","passkey"]`; the list then says "last used …" and the row's `last_counter` moved |
+| Answer for another challenge | in the browser start two sign-ins in two tabs; answer the older tab's challenge, then the newer | the newer challenge's cookie holds, so the older answer is 422 `invalid_credential` and counts as a wrong attempt |
+| Two passkeys | add a second virtual authenticator and "Add passkey" again | both listed; either one finishes a sign-in; no new recovery codes |
+| Beside an authenticator | an account with an authenticator app adds a passkey | no new recovery codes; the challenge offers `totp`, `passkey`, `recovery_code` in that order, and either signs in |
+| Rename and remove | "Rename" a passkey, then "Remove" one of two | the new name sticks after a reload; 2FA stays on with the other |
+| Remove the last | "Remove" the only passkey | the dialog says it is the last second factor; 2FA turns off and the recovery codes go; with Acme requiring 2FA instead 409 `two_factor_required_by_workspace` and nothing removed |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.

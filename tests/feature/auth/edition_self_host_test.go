@@ -33,6 +33,7 @@ func TestSelfHostEdition(t *testing.T) {
 			AssertJSONPath("data.providers", []any{}).
 			AssertJSONPath("data.factors", []testkit.JSON{
 				{"type": "totp", "name": "Authenticator app"},
+				{"type": "passkey", "name": "Passkey"},
 				{"type": "recovery_code", "name": "Recovery codes"},
 			}).
 			AssertJSONPath("data.magic_link", true).

@@ -87,6 +87,14 @@ func (r *Registry) Enabled() []Factor {
 }
 
 /*
+Types returns the enabled types, in the order the configuration lists
+them.
+*/
+func (r *Registry) Types() []string {
+	return slices.Clone(r.enabled)
+}
+
+/*
 EnablesTwoFactor reports whether a factor of the type turns two-factor
 authentication on, enabled or not, so a disabled authenticator still
 keeps its user protected.

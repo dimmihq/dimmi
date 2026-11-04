@@ -4,13 +4,14 @@
 |--------------------------------------------------------------------------
 |
 | The second step of signing in: a code from a factor the challenge
-| offered. The challenge works once and for a few minutes; five wrong
-| codes burn it, and each wrong code also counts toward the sign-in
-| lockout, so the second step cannot be guessed at any faster than the
-| first. Naming a factor the challenge did not offer is not a guess and
-| counts as none.
+| offered, or a passkey's signature over the challenge the server handed
+| out with it. The challenge works once and for a few minutes; five
+| wrong answers burn it, and each wrong answer also counts toward the
+| sign-in lockout, so the second step cannot be guessed at any faster
+| than the first. Naming a factor the challenge did not offer is not a
+| guess and counts as none.
 |
-| The factor is locked while its code is checked, so two tabs sending
+| The factor is locked while its answer is checked, so two tabs sending
 | the same code, or a code racing new recovery codes, cannot both win.
 | A recovery code is used up and its owner told how many are left.
 |
@@ -41,25 +42,29 @@ import (
 
 /*
 CompleteTwoFactorChallengeInput is the challenge token the browser
-holds, the kind of factor answering, the code and the client.
+holds, the kind of factor answering, the code or the credential a
+device signed, and the client.
 */
 type CompleteTwoFactorChallengeInput struct {
-	Token  string
-	Method string
-	Code   string
-	Client appauth.Client
+	Token      string
+	Method     string
+	Code       string
+	Credential json.RawMessage
+	Client     appauth.Client
 }
 
 /*
 challengeData is what a challenge remembers of the first step: how the
-user signed in, the kinds and factors offered, and whether it was a
-fresh sign-in on an existing session.
+user signed in, the kinds and factors offered, the state each kind kept
+for its prompt, and whether it was a fresh sign-in on an existing
+session.
 */
 type challengeData struct {
-	PrimaryMethod string   `json:"primary_method"`
-	Methods       []string `json:"methods"`
-	FactorIDs     []string `json:"factor_ids"`
-	Reauth        bool     `json:"reauth"`
+	PrimaryMethod string                     `json:"primary_method"`
+	Methods       []string                   `json:"methods"`
+	FactorIDs     []string                   `json:"factor_ids"`
+	DriverState   map[string]json.RawMessage `json:"driver_state"`
+	Reauth        bool                       `json:"reauth"`
 }
 
 /*
@@ -146,7 +151,7 @@ func (a *CompleteTwoFactorChallenge) Handle(ctx context.Context, in CompleteTwoF
 	}
 
 	if !passed {
-		return SignedIn{}, a.miss(ctx, c, attempt)
+		return SignedIn{}, a.miss(ctx, c, attempt, wrongAnswer(in))
 	}
 
 	return a.signIn(ctx, c, in)
@@ -195,7 +200,9 @@ func (a *CompleteTwoFactorChallenge) verify(
 	passed := false
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		f, ok, err := a.match(ctx, c, driver, in.Code)
+		f, ok, err := a.match(ctx, c, driver, factors.Answer{
+			Code: in.Code, Credential: in.Credential, State: c.data.DriverState[driver.Type()],
+		})
 		if err != nil || !ok {
 			return err
 		}
@@ -227,10 +234,10 @@ func (a *CompleteTwoFactorChallenge) verify(
 
 /*
 match locks the user's factors and returns the offered one of the kind
-that accepts the code, and whether one did.
+that accepts the answer, and whether one did.
 */
 func (a *CompleteTwoFactorChallenge) match(
-	ctx context.Context, c challenged, driver factors.Factor, code string,
+	ctx context.Context, c challenged, driver factors.Factor, answer factors.Answer,
 ) (models.UserAuthFactor, bool, error) {
 	held, err := models.New(a.DB).LockUserAuthFactors(ctx, c.user.ID)
 	if err != nil {
@@ -244,7 +251,7 @@ func (a *CompleteTwoFactorChallenge) match(
 			continue
 		}
 
-		err := driver.Verify(ctx, &f, code)
+		err := driver.Verify(ctx, &f, answer)
 		if err == nil {
 			return f, true, nil
 		}
@@ -298,10 +305,12 @@ func (a *CompleteTwoFactorChallenge) recoveryCodeUsed(
 }
 
 /*
-miss counts a wrong code toward the lockout and the challenge, and
-returns why it failed: a wrong code, or a challenge it just burned.
+miss counts a wrong answer toward the lockout and the challenge, and
+returns why it failed: the wrong answer, or a challenge it just burned.
 */
-func (a *CompleteTwoFactorChallenge) miss(ctx context.Context, c challenged, attempt appauth.Attempt) error {
+func (a *CompleteTwoFactorChallenge) miss(
+	ctx context.Context, c challenged, attempt appauth.Attempt, wrong error,
+) error {
 	if _, err := a.Lockout.Failed(ctx, attempt); err != nil {
 		return err
 	}
@@ -313,6 +322,18 @@ func (a *CompleteTwoFactorChallenge) miss(ctx context.Context, c challenged, att
 
 	if attempts >= appauth.MaxSecretAttempts {
 		return exceptions.ErrTwoFactorChallengeExpired
+	}
+
+	return wrong
+}
+
+/*
+wrongAnswer is the failure of an answer that did not pass: a signed
+credential that did not verify, or a wrong code.
+*/
+func wrongAnswer(in CompleteTwoFactorChallengeInput) error {
+	if in.Credential != nil {
+		return exceptions.ErrInvalidCredential
 	}
 
 	return exceptions.ErrInvalidCode

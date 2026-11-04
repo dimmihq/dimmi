@@ -85,7 +85,8 @@ func (c *SessionController) signIn(ctx context.Context, in *requests.StoreSessio
 		r, _ := fhttp.RequestFrom(ctx)
 
 		return c.TwoFactor.Handle(ctx, auth.CompleteTwoFactorChallengeInput{
-			Token: c.Cookies.TwoFactorToken(r), Method: in.Body.Method, Code: in.Body.Code, Client: client,
+			Token: c.Cookies.TwoFactorToken(r), Method: in.Body.Method, Code: in.Body.Code,
+			Credential: in.Body.Credential, Client: client,
 		})
 	}
 }

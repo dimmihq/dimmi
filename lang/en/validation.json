@@ -5,5 +5,6 @@
   "prohibited": "The {{.field}} field is not allowed in this request.",
   "timezone": "The {{.field}} must be a valid time zone.",
   "locale": "The selected {{.field}} is not a supported language.",
-  "slug": "The {{.field}} may only contain lowercase letters, numbers and single dashes."
+  "slug": "The {{.field}} may only contain lowercase letters, numbers and single dashes.",
+  "credential": "The {{.field}} must be the answer of a passkey."
 }

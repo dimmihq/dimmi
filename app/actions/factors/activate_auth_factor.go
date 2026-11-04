@@ -4,9 +4,10 @@
 |--------------------------------------------------------------------------
 |
 | A pending factor counts once the user proves it works: the first code
-| from their authenticator. The code is the proof, so no fresh password
-| is needed; starting the enrollment already asked for one. Five wrong
-| codes throw the pending factor away and the user starts again.
+| from their authenticator, or the signed answer of their passkey. The
+| answer is the proof, so no fresh password is needed; starting the
+| enrollment already asked for one. Five wrong answers throw the pending
+| factor away and the user starts again.
 |
 | The first factor that protects the account turns two-factor
 | authentication on: the account is marked, a set of recovery codes is
@@ -19,6 +20,7 @@ package factors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -47,13 +49,14 @@ const maxActivationMisses = 5
 
 /*
 ActivateAuthFactorInput is the user, the pending factor, the code from
-it and the client.
+it or the credential a device signed for it, and the client.
 */
 type ActivateAuthFactorInput struct {
-	User     models.User
-	FactorID ids.UUID
-	Code     string
-	Client   appauth.Client
+	User       models.User
+	FactorID   ids.UUID
+	Code       string
+	Credential json.RawMessage
+	Client     appauth.Client
 }
 
 /*
@@ -66,22 +69,23 @@ type Activated struct {
 }
 
 /*
-ActivateAuthFactor turns a pending factor active with a code from it.
+ActivateAuthFactor turns a pending factor active with its first answer.
 
 Rules:
   - At most ten tries a minute per user.
   - Only the user's own pending factor of an enabled kind, started
     within the pending lifetime, is found; an active one cannot be
     activated again.
-  - A wrong code is counted, and the fifth deletes the pending factor.
+  - A wrong answer is counted, and the fifth deletes the pending
+    factor.
   - The factor becomes preferred when the user has no preferred one.
   - The first factor that turns two-factor authentication on marks the
     account, makes recovery codes, mails the owner and rotates the
     browser session.
 
 Errors: [exceptions.ErrNotFound], [exceptions.ErrFactorAlreadyActive],
-[exceptions.ErrInvalidCode], [exceptions.ErrTooManyAttempts], or a
-wrapped error.
+[exceptions.ErrInvalidCode], [exceptions.ErrInvalidCredential],
+[exceptions.ErrTooManyAttempts], or a wrapped error.
 */
 type ActivateAuthFactor struct {
 	DB          *database.DB
@@ -123,7 +127,7 @@ func (a *ActivateAuthFactor) Handle(ctx context.Context, in ActivateAuthFactorIn
 			return err
 		}
 
-		err = driver.Verify(ctx, &f, in.Code)
+		err = factors.Activate(ctx, driver, &f, factors.Answer{Code: in.Code, Credential: in.Credential})
 		if errors.Is(err, factors.ErrInvalidCode) || errors.Is(err, factors.ErrCodeReused) {
 			wrong = true
 
@@ -195,7 +199,8 @@ func (a *ActivateAuthFactor) activate(
 	}
 
 	f, err = q.ActivateAuthFactor(ctx, models.ActivateAuthFactorParams{
-		ID: f.ID, LastCounter: f.LastCounter, IsPreferred: !anyPreferred(held), Now: now,
+		ID: f.ID, Credential: f.Credential, LookupHash: f.LookupHash, LastCounter: f.LastCounter,
+		IsPreferred: !anyPreferred(held), Now: now,
 	})
 	if err != nil {
 		return Activated{}, fmt.Errorf("activate factor: %w", err)
@@ -306,12 +311,24 @@ func (a *ActivateAuthFactor) miss(ctx context.Context, in ActivateAuthFactorInpu
 	}
 
 	if within {
-		return exceptions.ErrInvalidCode
+		return wrongAnswer(in.Credential)
 	}
 
 	err = models.New(a.DB).DeleteAuthFactor(ctx, models.DeleteAuthFactorParams{ID: in.FactorID, UserID: in.User.ID})
 	if err != nil {
 		return fmt.Errorf("delete pending factor after wrong codes: %w", err)
+	}
+
+	return wrongAnswer(in.Credential)
+}
+
+/*
+wrongAnswer is the failure of an answer that did not pass: a signed
+credential that did not verify, or a wrong code.
+*/
+func wrongAnswer(credential json.RawMessage) error {
+	if credential != nil {
+		return exceptions.ErrInvalidCredential
 	}
 
 	return exceptions.ErrInvalidCode

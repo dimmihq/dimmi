@@ -28,7 +28,8 @@ import (
 
 /*
 NewAuthFactor is a factor just stored, with what the user sees of it
-once: the setup of an authenticator or the codes of a recovery set.
+once: the setup of an authenticator or a passkey, or the codes of a
+recovery set.
 */
 type NewAuthFactor struct {
 	Factor models.UserAuthFactor
@@ -36,11 +37,13 @@ type NewAuthFactor struct {
 }
 
 /*
-writer stores factors through the queries, at the time of the change.
+writer stores factors through the queries, at the time of the change,
+for a user holding the factors in held.
 */
 type writer struct {
-	q   *models.Queries
-	now time.Time
+	q    *models.Queries
+	now  time.Time
+	held []models.UserAuthFactor
 }
 
 /*
@@ -71,7 +74,7 @@ func (w writer) store(ctx context.Context, driver factors.Factor, user models.Us
 ) {
 	id := ids.NewV7At(w.now)
 
-	enrollment, err := driver.Enroll(ctx, user, id)
+	enrollment, err := driver.Enroll(ctx, factors.EnrollInput{User: user, ID: id, Held: w.held})
 	if err != nil {
 		return NewAuthFactor{}, err
 	}

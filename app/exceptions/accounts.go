@@ -123,7 +123,9 @@ A link or code that is unknown, wrong, or of another kind fails the
 same way as one that never existed, so a guess learns nothing.
 ErrInvalidResetToken answers every password reset that cannot be used.
 ErrInvalidVerificationToken answers an email verification that does
-not match. ErrInvalidCode answers a wrong or spent code.
+not match. ErrInvalidCode answers a wrong or spent code, and
+ErrInvalidCredential a passkey answer that did not verify, ran out or
+came from a copied key.
 ErrMagicLinkExpired answers a sign-in link that was used, ran out, or
 never existed. ErrVerificationLinkStale answers a verification sent to
 an address the account no longer has, and ErrVerificationLinkExpired
@@ -136,6 +138,8 @@ var (
 		"This verification link is invalid.").OnField("token")
 	ErrInvalidCode = fault.New(fault.Invalid, "invalid_code",
 		"The code is invalid or has expired.").OnField("code")
+	ErrInvalidCredential = fault.New(fault.Invalid, "invalid_credential",
+		"The passkey could not be verified. Try again.").OnField("credential")
 	ErrMagicLinkExpired = fault.New(fault.Gone, "magic_link_expired",
 		"This sign-in link was already used or has expired. Request a new one.")
 	ErrVerificationLinkStale = fault.New(fault.Gone, "verification_link_stale",
