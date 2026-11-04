@@ -116,14 +116,18 @@ type AppConfig struct {
 /*
 HTTPConfig configures the listeners.
 
-Addr is the public listener. AdminAddr is the admin listener for
-health and metrics, loopback by default; empty disables it.
+Addr is the public listener. TLSAddr, when set, is the HTTPS listener,
+served with the default custom domain driver's certificates; Addr then
+answers only health, certificate challenges and redirects to HTTPS.
+AdminAddr is the admin listener for health and metrics, loopback by
+default; empty disables it.
 TrustedProxies lists the addresses and ranges whose forwarded client
 address is believed. ShutdownTimeout bounds the whole graceful
 shutdown.
 */
 type HTTPConfig struct {
 	Addr              string        `default:":8080"          koanf:"addr"`
+	TLSAddr           string        `koanf:"tls_addr"`
 	AdminAddr         string        `default:"127.0.0.1:9090" koanf:"admin_addr"`
 	TrustedProxies    []string      `koanf:"trusted_proxies"`
 	ReadHeaderTimeout time.Duration `default:"10s"            koanf:"read_header_timeout"`
