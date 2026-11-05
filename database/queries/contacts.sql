@@ -34,3 +34,16 @@ WHERE c.workspace_id = @workspace_id AND i.type = @type AND i.value = @value;
 INSERT INTO contact_identities (workspace_id, contact_id, type, value, verified, created_at, updated_at)
 VALUES (@workspace_id, @contact_id, @type, @value, @verified, @now, @now)
 RETURNING *;
+
+-- name: ListContactIdentities :many
+-- ListContactIdentities returns how the contact appears on channels, in
+-- the order they were added.
+SELECT * FROM contact_identities
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id
+ORDER BY created_at, id;
+
+-- name: DeleteContactIdentity :execrows
+-- DeleteContactIdentity detaches an identity from the contact and reports
+-- whether it was theirs.
+DELETE FROM contact_identities
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND id = @id;

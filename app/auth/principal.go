@@ -19,6 +19,7 @@ package auth
 
 import (
 	"context"
+	"net/netip"
 	"slices"
 	"time"
 
@@ -51,7 +52,10 @@ credential's abilities, and MintedAsRole the role a token's member held
 when it was minted, the most the token may ever do, empty when there is
 no such ceiling. SignIn says how a session was earned, with
 AuthenticatedAt the last full sign-in and Confirmed the last time the
-user proved who they are; tokens carry neither.
+user proved who they are; tokens carry neither. IP is the address the
+request came from. LastActivityAt is the last time the caller worked in
+a workspace, SSOConnectionID the connection a session signed in through,
+ids.Nil() when none, and AuthDomain the domain that vouched for it.
 */
 type Principal struct {
 	User            models.User
@@ -64,6 +68,10 @@ type Principal struct {
 	SignIn          SignIn
 	AuthenticatedAt time.Time
 	Confirmed       time.Time
+	IP              netip.Addr
+	LastActivityAt  time.Time
+	SSOConnectionID ids.UUID
+	AuthDomain      string
 }
 
 var _ fauth.Principal = (*Principal)(nil)

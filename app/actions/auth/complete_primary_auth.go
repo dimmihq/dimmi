@@ -44,13 +44,15 @@ const challengeTTL = 5 * time.Minute
 /*
 CompletePrimaryAuthInput is the user who just proved who they are, the
 method they proved it with, and the client. Reauth marks a fresh
-sign-in on an existing session.
+sign-in on an existing session. Context says where the sign-in came from
+when an outside service vouched for it.
 */
 type CompletePrimaryAuthInput struct {
-	User   models.User
-	Method string
-	Client appauth.Client
-	Reauth bool
+	User    models.User
+	Method  string
+	Client  appauth.Client
+	Reauth  bool
+	Context SignInContext
 }
 
 /*
@@ -108,7 +110,7 @@ func (a *CompletePrimaryAuth) Handle(ctx context.Context, in CompletePrimaryAuth
 	}
 
 	started, err := a.StartSession.Handle(ctx, StartSessionInput{
-		User: in.User, Methods: []string{in.Method}, Client: in.Client, Reauth: in.Reauth,
+		User: in.User, Methods: []string{in.Method}, Client: in.Client, Reauth: in.Reauth, Context: in.Context,
 	})
 	if err != nil {
 		return SignedIn{}, err
@@ -157,7 +159,7 @@ func (a *CompletePrimaryAuth) challenge(ctx context.Context, in CompletePrimaryA
 		Purpose: enums.OneTimePurposeTwoFactorChallenge, UserID: &in.User.ID, Email: in.User.Email,
 		Data: map[string]any{
 			"primary_method": in.Method, "methods": kinds, "factor_ids": factorIDs, "reauth": in.Reauth,
-			"driver_state": states,
+			"driver_state": states, "auth_domain": in.Context.Domain,
 		},
 		Client: in.Client, TTL: challengeTTL, Live: appauth.MaxSecretAttempts,
 	})

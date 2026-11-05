@@ -40,9 +40,11 @@ point() {
 
 # roll forces every service onto the image the release tag points at and
 # waits. ECS pins the digest per deployment, so the circuit breaker's own
-# rollback returns to exactly the image that ran before.
+# rollback returns to exactly the image that ran before. A paused service
+# runs no task, so ECS leaves its deployment in progress with nothing to
+# roll back; that counts as rolled.
 roll() {
-  local cluster services service state
+  local cluster services service state desired
   cluster="$(output app ClusterName)"
   IFS=',' read -r -a services <<<"$(output app ServiceNames)"
 
@@ -54,9 +56,9 @@ roll() {
   aws ecs wait services-stable --cluster "$cluster" --services "${services[@]}"
 
   for service in "${services[@]}"; do
-    state="$(aws ecs describe-services --cluster "$cluster" --services "$service" \
-      --query 'services[0].deployments[?status==`PRIMARY`].rolloutState | [0]' --output text)"
-    if [ "$state" != "COMPLETED" ]; then
+    read -r state desired <<<"$(aws ecs describe-services --cluster "$cluster" --services "$service" \
+      --query 'services[0].[deployments[?status==`PRIMARY`].rolloutState | [0], desiredCount]' --output text)"
+    if [ "$state" != "COMPLETED" ] && [ "$desired" != "0" ]; then
       say "$service ended $state: the circuit breaker rolled it back"
       return 1
     fi

@@ -284,9 +284,14 @@ func (run *ingestRun) conversation(
 		return models.Conversation{}, false, fmt.Errorf("encode conversation source: %w", err)
 	}
 
+	subject := optional(run.msg.Subject)
+	if _, err := redactText(ctx, run.q, run.ws, subject); err != nil {
+		return models.Conversation{}, false, err
+	}
+
 	conv, err := run.q.CreateConversation(ctx, models.CreateConversationParams{
 		WorkspaceID: run.ws, Number: number, InboxID: conn.InboxID, ChannelConnectionID: conn.ID,
-		ContactID: contact.ID, Subject: optional(run.msg.Subject), Status: string(enums.ConversationStatusOpen),
+		ContactID: contact.ID, Subject: subject, Status: string(enums.ConversationStatusOpen),
 		ExternalThreadKey: optional(run.msg.ExternalThreadKey), Source: source, Now: run.r.Clock.Now(),
 	})
 	if err != nil {

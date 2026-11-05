@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/redaction"
 )
 
 /*
@@ -35,7 +36,9 @@ const excerptLength = 140
 /*
 TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
-DeletedBy names who deleted a deleted entry.
+DeletedBy names who deleted a deleted entry. Redactions names the
+redaction rules that changed it before it was stored and how often, and
+is left out when none did.
 */
 type TimelineEntry struct {
 	ID              string          `json:"id"`
@@ -55,6 +58,8 @@ type TimelineEntry struct {
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+
+	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
 
 /*
@@ -128,7 +133,25 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		out.Event = json.RawMessage(`null`)
 	}
 
+	out.Redactions = redactionsOf(m.Metadata)
+
 	return out
+}
+
+/*
+redactionsOf reads which rules changed the entry before it was stored,
+nil when none did.
+*/
+func redactionsOf(metadata json.RawMessage) []redaction.Hit {
+	var stamped struct {
+		Redactions []redaction.Hit `json:"redactions"`
+	}
+
+	if json.Unmarshal(metadata, &stamped) != nil {
+		return nil
+	}
+
+	return stamped.Redactions
 }
 
 /*

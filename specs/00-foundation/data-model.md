@@ -98,6 +98,7 @@ One prefix per addressable table (pivots, stats, singletons, keyed-by-parent tab
 | cmp_ | companies | conv_ | conversations |
 | msg_ | messages | att_ | attachments |
 | tag_ | tags | rpl_ | saved_replies |
+| cid_ | contact_identities | | |
 | exp_ | contact_exports | evt_ | events |
 | wgt_ | widget_settings | wss_ | widget_sessions |
 | sig_ | email_signatures | edm_ | email_domains |

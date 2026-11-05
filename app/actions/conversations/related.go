@@ -29,6 +29,7 @@ type relatedRows struct {
 	members     map[ids.UUID]Member
 	teams       map[ids.UUID]models.Team
 	last        map[ids.UUID]models.Message
+	tags        map[ids.UUID][]models.Tag
 	unread      map[ids.UUID]bool
 }
 
@@ -99,6 +100,10 @@ func related(
 		return r, err
 	}
 
+	if err := r.readTags(ctx, q, p); err != nil {
+		return r, err
+	}
+
 	for _, m := range r.last {
 		if m.AuthorType == string(enums.AuthorTypeMember) && m.AuthorID != nil {
 			p.members = append(p.members, *m.AuthorID)
@@ -160,12 +165,31 @@ func (r *relatedRows) readActivity(ctx context.Context, q *models.Queries, membe
 }
 
 /*
+readTags reads the tags on each conversation.
+*/
+func (r *relatedRows) readTags(ctx context.Context, q *models.Queries, p pageIDs) error {
+	rows, err := q.ListConversationTags(ctx, models.ListConversationTagsParams{
+		WorkspaceID: p.workspace, ConversationIds: p.conversations,
+	})
+	if err != nil {
+		return err
+	}
+
+	r.tags = map[ids.UUID][]models.Tag{}
+	for _, row := range rows {
+		r.tags[row.ConversationID] = append(r.tags[row.ConversationID], row.Tag)
+	}
+
+	return nil
+}
+
+/*
 loaded puts the conversation together with its rows.
 */
 func (r *relatedRows) loaded(c models.Conversation) Loaded {
 	l := Loaded{
 		Conversation: c, Contact: r.contacts[c.ContactID], Inbox: r.inboxes[c.InboxID],
-		Connection: r.connections[c.ChannelConnectionID], Unread: r.unread[c.ID],
+		Connection: r.connections[c.ChannelConnectionID], Unread: r.unread[c.ID], Tags: r.tags[c.ID],
 	}
 
 	if c.AssigneeMemberID != nil {

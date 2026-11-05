@@ -86,7 +86,7 @@ func (a *ResolveWorkspace) Handle(ctx context.Context, in ResolveWorkspaceInput)
 		return authz.Membership{}, err
 	}
 
-	m, err := a.load(ctx, in.Principal, workspaceID)
+	m, custom, err := a.load(ctx, in.Principal, workspaceID)
 	if err != nil {
 		return authz.Membership{}, err
 	}
@@ -97,7 +97,7 @@ func (a *ResolveWorkspace) Handle(ctx context.Context, in ResolveWorkspaceInput)
 
 	m.Principal = authz.Principal{
 		Role:        enums.Role(m.Member.Role),
-		Permissions: authz.PrincipalPermissions(a.Permissions, enums.Role(m.Member.Role), in.Principal),
+		Permissions: authz.PrincipalPermissions(a.Permissions, enums.Role(m.Member.Role), custom, in.Principal),
 	}
 
 	return m, nil
@@ -150,14 +150,18 @@ func (a *ResolveWorkspace) tokenWorkspace(in ResolveWorkspaceInput) (ids.UUID, e
 }
 
 /*
-load reads the workspace, the caller's membership inside it and the
-teams their conversation access names, permissions aside, and records
-the access of a member opening it.
+load reads the workspace, the caller's membership inside it, the teams
+their conversation access names and what their custom role lists, nil
+without one, permissions aside, and records the access of a member
+opening it.
 */
 func (a *ResolveWorkspace) load(
 	ctx context.Context, p *appauth.Principal, workspaceID ids.UUID,
-) (authz.Membership, error) {
-	var m authz.Membership
+) (authz.Membership, []string, error) {
+	var (
+		m      authz.Membership
+		custom []string
+	)
 
 	scoped := tenancy.With(ctx, workspaceID.String())
 
@@ -176,6 +180,10 @@ func (a *ResolveWorkspace) load(
 			return err
 		}
 
+		if custom, err = q.CustomPermissions(ctx, m.Member); err != nil {
+			return err
+		}
+
 		if m.AccessTeams, err = authz.LoadAccessTeams(ctx, q, m.Member); err != nil || !p.IsFirstParty() {
 			return err
 		}
@@ -187,7 +195,7 @@ func (a *ResolveWorkspace) load(
 		})
 	})
 
-	return m, checkAccess(m.Workspace, m.Member, err)
+	return m, custom, checkAccess(m.Workspace, m.Member, err)
 }
 
 /*

@@ -30,6 +30,10 @@ import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
+import { Route as DCustomersIndexRouteImport } from './routes/d/customers/index'
+import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
+import { Route as DCustomersBlockedRouteImport } from './routes/d/customers/blocked'
+import { Route as DCustomersErasuresRouteImport } from './routes/d/customers/erasures'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
@@ -38,6 +42,8 @@ import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$secti
 import { Route as DWorkflowsIndexRouteImport } from './routes/d/workflows/index'
 import { Route as DWorkflowsWorkflowRouteImport } from './routes/d/workflows/$workflow'
 import { Route as DWorkflowsNewRouteImport } from './routes/d/workflows/new'
+import { Route as DCustomersCompaniesIndexRouteImport } from './routes/d/customers/companies/index'
+import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
@@ -148,6 +154,26 @@ const AuthLoginTwoFactorRoute = AuthLoginTwoFactorRouteImport.update({
   path: '/login/two-factor',
   getParentRoute: () => AuthRoute,
 } as any)
+const DCustomersIndexRoute = DCustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DCustomersRoute,
+} as any)
+const DCustomersContactRoute = DCustomersContactRouteImport.update({
+  id: '/$contact',
+  path: '/$contact',
+  getParentRoute: () => DCustomersRoute,
+} as any)
+const DCustomersBlockedRoute = DCustomersBlockedRouteImport.update({
+  id: '/blocked',
+  path: '/blocked',
+  getParentRoute: () => DCustomersRoute,
+} as any)
+const DCustomersErasuresRoute = DCustomersErasuresRouteImport.update({
+  id: '/erasures',
+  path: '/erasures',
+  getParentRoute: () => DCustomersRoute,
+} as any)
 const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   id: '/inbox/$view',
   path: '/inbox/$view',
@@ -188,6 +214,18 @@ const DWorkflowsNewRoute = DWorkflowsNewRouteImport.update({
   path: '/workflows/new',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DCustomersCompaniesIndexRoute =
+  DCustomersCompaniesIndexRouteImport.update({
+    id: '/companies/',
+    path: '/companies/',
+    getParentRoute: () => DCustomersRoute,
+  } as any)
+const DCustomersCompaniesCompanyRoute =
+  DCustomersCompaniesCompanyRouteImport.update({
+    id: '/companies/$company',
+    path: '/companies/$company',
+    getParentRoute: () => DCustomersRoute,
+  } as any)
 const DInboxViewIndexRoute = DInboxViewIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -228,7 +266,7 @@ export interface FileRoutesByFullPath {
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
   '/d/changelog': typeof DChangelogRoute
-  '/d/customers': typeof DCustomersRoute
+  '/d/customers': typeof DCustomersRouteWithChildren
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
@@ -238,16 +276,22 @@ export interface FileRoutesByFullPath {
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
+  '/d/customers/$contact': typeof DCustomersContactRoute
+  '/d/customers/blocked': typeof DCustomersBlockedRoute
+  '/d/customers/erasures': typeof DCustomersErasuresRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
+  '/d/customers/': typeof DCustomersIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
+  '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
@@ -263,7 +307,6 @@ export interface FileRoutesByTo {
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
   '/d/changelog': typeof DChangelogRoute
-  '/d/customers': typeof DCustomersRoute
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
@@ -272,16 +315,22 @@ export interface FileRoutesByTo {
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
+  '/d/customers/$contact': typeof DCustomersContactRoute
+  '/d/customers/blocked': typeof DCustomersBlockedRoute
+  '/d/customers/erasures': typeof DCustomersErasuresRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
+  '/d/customers': typeof DCustomersIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
+  '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/customers/companies': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
@@ -299,7 +348,7 @@ export interface FileRoutesById {
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
   '/d/changelog': typeof DChangelogRoute
-  '/d/customers': typeof DCustomersRoute
+  '/d/customers': typeof DCustomersRouteWithChildren
   '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
@@ -309,16 +358,22 @@ export interface FileRoutesById {
   '/_auth/email/confirm': typeof AuthEmailConfirmRoute
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
+  '/d/customers/$contact': typeof DCustomersContactRoute
+  '/d/customers/blocked': typeof DCustomersBlockedRoute
+  '/d/customers/erasures': typeof DCustomersErasuresRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
+  '/d/customers/': typeof DCustomersIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
+  '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
@@ -347,16 +402,22 @@ export interface FileRouteTypes {
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
+    | '/d/customers/$contact'
+    | '/d/customers/blocked'
+    | '/d/customers/erasures'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
+    | '/d/customers/'
     | '/d/procedures/'
     | '/d/settings/'
     | '/d/workflows/'
+    | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/teams/$team'
+    | '/d/customers/companies/'
     | '/d/inbox/$view/'
     | '/d/settings/email/domains/$domain'
   fileRoutesByTo: FileRoutesByTo
@@ -372,7 +433,6 @@ export interface FileRouteTypes {
     | '/d/agent'
     | '/d/announcements'
     | '/d/changelog'
-    | '/d/customers'
     | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
@@ -381,16 +441,22 @@ export interface FileRouteTypes {
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
+    | '/d/customers/$contact'
+    | '/d/customers/blocked'
+    | '/d/customers/erasures'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
+    | '/d/customers'
     | '/d/procedures'
     | '/d/settings'
     | '/d/workflows'
+    | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/teams/$team'
+    | '/d/customers/companies'
     | '/d/inbox/$view'
     | '/d/settings/email/domains/$domain'
   id:
@@ -417,16 +483,22 @@ export interface FileRouteTypes {
     | '/_auth/email/confirm'
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
+    | '/d/customers/$contact'
+    | '/d/customers/blocked'
+    | '/d/customers/erasures'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
+    | '/d/customers/'
     | '/d/procedures/'
     | '/d/settings/'
     | '/d/workflows/'
+    | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/teams/$team'
+    | '/d/customers/companies/'
     | '/d/inbox/$view/'
     | '/d/settings/email/domains/$domain'
   fileRoutesById: FileRoutesById
@@ -585,6 +657,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginTwoFactorRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/d/customers/': {
+      id: '/d/customers/'
+      path: '/'
+      fullPath: '/d/customers/'
+      preLoaderRoute: typeof DCustomersIndexRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
+    '/d/customers/$contact': {
+      id: '/d/customers/$contact'
+      path: '/$contact'
+      fullPath: '/d/customers/$contact'
+      preLoaderRoute: typeof DCustomersContactRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
+    '/d/customers/blocked': {
+      id: '/d/customers/blocked'
+      path: '/blocked'
+      fullPath: '/d/customers/blocked'
+      preLoaderRoute: typeof DCustomersBlockedRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
+    '/d/customers/erasures': {
+      id: '/d/customers/erasures'
+      path: '/erasures'
+      fullPath: '/d/customers/erasures'
+      preLoaderRoute: typeof DCustomersErasuresRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
     '/d/inbox/$view': {
       id: '/d/inbox/$view'
       path: '/inbox/$view'
@@ -641,6 +741,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DWorkflowsNewRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/customers/companies/': {
+      id: '/d/customers/companies/'
+      path: '/companies'
+      fullPath: '/d/customers/companies/'
+      preLoaderRoute: typeof DCustomersCompaniesIndexRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
+    '/d/customers/companies/$company': {
+      id: '/d/customers/companies/$company'
+      path: '/companies/$company'
+      fullPath: '/d/customers/companies/$company'
+      preLoaderRoute: typeof DCustomersCompaniesCompanyRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
     '/d/inbox/$view/': {
       id: '/d/inbox/$view/'
       path: '/'
@@ -679,6 +793,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DCustomersRouteChildren {
+  DCustomersContactRoute: typeof DCustomersContactRoute
+  DCustomersBlockedRoute: typeof DCustomersBlockedRoute
+  DCustomersErasuresRoute: typeof DCustomersErasuresRoute
+  DCustomersIndexRoute: typeof DCustomersIndexRoute
+  DCustomersCompaniesCompanyRoute: typeof DCustomersCompaniesCompanyRoute
+  DCustomersCompaniesIndexRoute: typeof DCustomersCompaniesIndexRoute
+}
+
+const DCustomersRouteChildren: DCustomersRouteChildren = {
+  DCustomersContactRoute: DCustomersContactRoute,
+  DCustomersBlockedRoute: DCustomersBlockedRoute,
+  DCustomersErasuresRoute: DCustomersErasuresRoute,
+  DCustomersIndexRoute: DCustomersIndexRoute,
+  DCustomersCompaniesCompanyRoute: DCustomersCompaniesCompanyRoute,
+  DCustomersCompaniesIndexRoute: DCustomersCompaniesIndexRoute,
+}
+
+const DCustomersRouteWithChildren = DCustomersRoute._addFileChildren(
+  DCustomersRouteChildren,
+)
+
 interface DInboxViewRouteRouteChildren {
   DInboxViewConversationRoute: typeof DInboxViewConversationRoute
   DInboxViewIndexRoute: typeof DInboxViewIndexRoute
@@ -697,7 +833,7 @@ interface DRouteRouteChildren {
   DAgentRoute: typeof DAgentRoute
   DAnnouncementsRoute: typeof DAnnouncementsRoute
   DChangelogRoute: typeof DChangelogRoute
-  DCustomersRoute: typeof DCustomersRoute
+  DCustomersRoute: typeof DCustomersRouteWithChildren
   DDocsRoute: typeof DDocsRoute
   DFeedbackRoute: typeof DFeedbackRoute
   DNotificationsRoute: typeof DNotificationsRoute
@@ -720,7 +856,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DAgentRoute: DAgentRoute,
   DAnnouncementsRoute: DAnnouncementsRoute,
   DChangelogRoute: DChangelogRoute,
-  DCustomersRoute: DCustomersRoute,
+  DCustomersRoute: DCustomersRouteWithChildren,
   DDocsRoute: DDocsRoute,
   DFeedbackRoute: DFeedbackRoute,
   DNotificationsRoute: DNotificationsRoute,

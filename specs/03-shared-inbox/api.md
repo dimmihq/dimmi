@@ -559,7 +559,7 @@ Companies: `POST /companies?upsert=true`, action `IdentifyCompany`, match keys `
 
 ### Delete / erase
 `DELETE /contacts/{id}`: contact with zero conversations: soft delete, 204. Has conversations: 409 `contact_has_conversations` (use `?erase=true`).
-`DELETE /contacts/{id}?erase=true[&immediate=true]` (`contacts:erase` + `conversation_access = all`; immediate also needs `password.confirm`): 202 `{ "data": { "id": "ces_…", "object": "contact_erasure", "status": "pending", "scheduled_for": "…" } }`; contact immediately hidden, `erase_contact` job wipes after grace (default 7 days, safety.md). Cancel: `PATCH /contact-erasures/{ces} {status: "cancelled"}` inside grace. Audit logged. Job calls `RetentionGuard` first: held = status `pending_hold` (nothing wiped, contact stays hidden; resumes when hold released). Status values: `pending`, `pending_hold`, `completed`, `cancelled`.
+`DELETE /contacts/{id}?erase=true[&immediate=true]` (`contacts:erase` + `conversation_access = all`; immediate also needs `password.confirm`): 202 `{ "data": { "id": "ces_…", "object": "contact_erasure", "status": "pending", "scheduled_for": "…" } }`; contact immediately hidden, `erase_contact` job wipes after grace (default 7 days, safety.md). Cancel: `PATCH /contact-erasures/{ces} {status: "canceled"}` inside grace. Audit logged. Job calls `RetentionGuard` first: held = status `pending_hold` (nothing wiped, contact stays hidden; resumes when hold released). Status values: `pending`, `pending_hold`, `completed`, `canceled`.
 
 ## Added endpoints
 

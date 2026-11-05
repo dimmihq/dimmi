@@ -123,7 +123,17 @@ func (c *InvitationController) Store(
 			return nil, err
 		}
 
-		invitees = append(invitees, invitations.Invitee{Email: item.Email, Role: enums.Role(item.Role), TeamIDs: teams})
+		invitee := invitations.Invitee{Email: item.Email, Role: enums.Role(item.Role), TeamIDs: teams}
+		if item.CustomRoleID != nil {
+			id, err := roleID(c.IDs, *item.CustomRoleID)
+			if err != nil {
+				return nil, err
+			}
+
+			invitee.CustomRoleID = &id
+		}
+
+		invitees = append(invitees, invitee)
 	}
 
 	outcomes, err := c.Create.Handle(ctx, invitations.CreateInvitationsInput{

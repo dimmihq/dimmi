@@ -14,6 +14,7 @@ import (
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/tests"
 )
 
 /*
@@ -157,6 +158,7 @@ func TestAudienceBudget(t *testing.T) {
 
 	t.Run("decides for two hundred restricted members within five milliseconds", func(t *testing.T) {
 		t.Parallel()
+		tests.RequireTimingAccuracy(t)
 
 		team := ids.New()
 		members := make([]appbroadcasting.RestrictedMember, 200)
