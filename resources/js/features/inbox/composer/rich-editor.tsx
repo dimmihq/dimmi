@@ -5,7 +5,8 @@
  * kept as Markdown, the only thing the composer reads and saves. Pasted
  * pages keep only what the composer's document holds, so headings,
  * colours and underline fall away to plain text. A colon and two letters
- * suggest emoji by name.
+ * suggest emoji by name; in a note, an at sign suggests teammates and
+ * teams to mention.
  */
 import type { RemixiconComponentType } from "@remixicon/react";
 import {
@@ -28,6 +29,7 @@ import { cx } from "@/utils/cx";
 
 import { composerExtensions } from "./composer-markdown";
 import { type Emoji, findEmoji, loadEmoji } from "./emoji";
+import type { Mentionable } from "./mentionable";
 import { type Suggested, suggestionExtension } from "./suggestion-extension";
 import { SuggestionList } from "./suggestion-list";
 
@@ -52,6 +54,7 @@ export interface RichEditorProps {
   onSubmit: (then?: "close" | "snooze") => void;
   onBlur: () => void;
   onFiles: (files: FileList) => void;
+  findMentions?: (query: string) => Promise<Mentionable[]>;
 }
 
 /*
@@ -119,12 +122,14 @@ export default function RichEditor({
   onSubmit,
   onBlur,
   onFiles,
+  findMentions,
 }: RichEditorProps) {
-  const handlers = useRef({ onChange, onSubmit, onBlur, onFiles });
-  handlers.current = { onChange, onSubmit, onBlur, onFiles };
+  const handlers = useRef({ onChange, onSubmit, onBlur, onFiles, findMentions });
+  handlers.current = { onChange, onSubmit, onBlur, onFiles, findMentions };
   const linkRef = useRef<() => void>(() => undefined);
   const [linking, setLinking] = useState<string | null>(null);
   const [emoji, setEmoji] = useState<Suggested<Emoji> | null>(null);
+  const [mention, setMention] = useState<Suggested<Mentionable> | null>(null);
 
   const editor = useEditor({
     extensions: composerExtensions(
@@ -135,8 +140,19 @@ export default function RichEditor({
           char: ":",
           minLength: 2,
           find: async (query) => findEmoji(await loadEmoji(), query, 8),
-          text: (item) => item.unicode,
+          content: (item) => item.unicode,
           onChange: setEmoji,
+        }),
+        suggestionExtension<Mentionable>({
+          name: "mentionSuggestion",
+          char: "@",
+          minLength: 0,
+          find: (query) => handlers.current.findMentions?.(query) ?? [],
+          content: (item) => [
+            { type: "mentionToken", attrs: { id: item.id, label: item.name } },
+            { type: "text", text: " " },
+          ],
+          onChange: setMention,
         }),
       ],
     ),
@@ -190,6 +206,20 @@ export default function RichEditor({
         ) : null}
         <EditorContent editor={editor} />
       </div>
+      <SuggestionList
+        label="Mention"
+        suggested={mention}
+        keyOf={(item) => item.id}
+        render={(item) => (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">
+              @{item.name}
+              {item.detail ? <span className="ms-1.5 text-text-tertiary">{item.detail}</span> : null}
+            </span>
+            {item.warning ? <span className="text-body-2-regular text-text-error-primary">{item.warning}</span> : null}
+          </span>
+        )}
+      />
       <SuggestionList
         label="Emoji"
         suggested={emoji}

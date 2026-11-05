@@ -34,6 +34,7 @@ first entry. Metadata defaults to an empty object. A channel bringing a
 message in also gives its HTML, its own id for it and when it was sent.
 Automatic marks a message nobody wrote by hand, such as an auto-reply,
 which only moves the timeline and never counts as anyone's latest word.
+Mentioned are the members a note mentions.
 */
 type NewMessage struct {
 	Type             string
@@ -45,6 +46,7 @@ type NewMessage struct {
 	DedupeKey        *string
 	Metadata         json.RawMessage
 	Automatic        bool
+	Mentioned        []ids.UUID
 }
 
 /*
@@ -86,6 +88,7 @@ func (w *Writer) Append(
 		MessageRef: appevents.MessageRef{ConversationRef: ref(c), MessageID: msg.ID},
 		ContactID:  c.ContactID, ChannelConnectionID: &connection, Type: msg.Type,
 		AuthorType: msg.AuthorType, AuthorID: msg.AuthorID, Substantive: msg.Substantive,
+		MentionedMemberIDs: m.Mentioned,
 	}); err != nil {
 		return msg, c, err
 	}

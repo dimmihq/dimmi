@@ -32,6 +32,7 @@ describe("composer markdown", () => {
     ["ordered list", "1. one\n2. two"],
     ["quote", "> You said this"],
     ["inline image", "Look ![chart](https://example.com/chart.png) here"],
+    ["mention", "Ask <@mem_01abc> and <@team_02xyz> about it"],
   ])("keeps a %s as written", (_, markdown) => {
     expect(open(markdown).getMarkdown().trim()).toBe(markdown);
   });

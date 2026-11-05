@@ -502,6 +502,14 @@ type MessageMention struct {
 	CreatedAt         time.Time `json:"created_at"`
 }
 
+type MessageReaction struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MessageID   ids.UUID  `json:"message_id"`
+	MemberID    ids.UUID  `json:"member_id"`
+	Emoji       string    `json:"emoji"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type OauthAuthorizationCode struct {
 	ID            ids.UUID   `json:"id"`
 	CodeHash      []byte     `json:"code_hash"`

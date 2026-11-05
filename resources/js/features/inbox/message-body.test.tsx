@@ -21,6 +21,25 @@ describe("MessageBody", () => {
   });
 });
 
+describe("mentions", () => {
+  it("shows each mention as a chip naming who, and an unknown one as a teammate", () => {
+    render(
+      <MessageBody
+        text="Ask <@mem_abc> or <@team_xyz>, not <@mem_gone>"
+        mentions={[
+          { type: "member", id: "mem_abc", name: "Ada [admin]" },
+          { type: "team", id: "team_xyz", name: "Billing" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("@Ada admin")).toBeTruthy();
+    expect(screen.getByText("@Billing")).toBeTruthy();
+    expect(screen.getByText("@teammate")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+});
+
 describe("When", () => {
   it("reads as the customer's clock time and names the full date", () => {
     render(

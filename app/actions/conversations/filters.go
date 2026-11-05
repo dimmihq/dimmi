@@ -77,8 +77,8 @@ type Filters struct {
 
 /*
 listOf turns the filters into the list's query, and reports false for a
-list that is empty whatever the data: mentions, and a search for an id,
-which only the search endpoint jumps to.
+list that is empty whatever the data: a search for an id, which only the
+search endpoint jumps to.
 */
 func listOf(m authz.Membership, f Filters, s querybuilder.Sort) (querybuilder.Conversations, bool) {
 	l := querybuilder.Conversations{
@@ -88,10 +88,6 @@ func listOf(m authz.Membership, f Filters, s querybuilder.Sort) (querybuilder.Co
 		ChannelTypes: f.ChannelTypes, Priorities: f.Priorities, TagsAll: f.TagsAll, TagsAny: f.TagsAny,
 		CreatedAfter: f.CreatedAfter, CreatedBefore: f.CreatedBefore, Waiting: f.Waiting, Unread: f.Unread,
 		Access: access(m),
-	}
-
-	if f.View == ViewMentions {
-		return l, false
 	}
 
 	if f.AssignmentWaiting {
@@ -134,6 +130,8 @@ func applyView(l *querybuilder.Conversations, m authz.Membership, f Filters) {
 		l.Unassigned = true
 	case ViewMember:
 		l.AssigneeID = new(f.ViewMember)
+	case ViewMentions:
+		l.Mentioned = true
 	case ViewSpam:
 		l.Spam = true
 	case ViewDeleted:

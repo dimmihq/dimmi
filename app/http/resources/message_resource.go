@@ -37,7 +37,9 @@ TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
 DeletedBy names who deleted a deleted entry. ReadAt is when the customer
 saw a teammate's reply, known only on channels that report it, such as
-the messenger; email never does.
+the messenger; email never does. Mentions are the teammates and teams a
+note names, with their names, for showing its tokens. Reactions are a
+note's emoji reactions, each with who reacted.
 */
 type TimelineEntry struct {
 	ID              string          `json:"id"`
@@ -54,10 +56,76 @@ type TimelineEntry struct {
 	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
 	EditedAt        *time.Time      `json:"edited_at"`
 	ReadAt          *time.Time      `json:"read_at"`
+	Mentions        []Mention       `json:"mentions"`
+	Reactions       []Reaction      `json:"reactions"`
 	DeletedAt       *time.Time      `json:"deleted_at"`
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+/*
+Mention is a teammate or team a note names: its kind, member or team,
+its public id and its name when the note was written.
+*/
+type Mention struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+/*
+Reaction is one emoji on a note: how many teammates reacted with it and
+who, in the order they did.
+*/
+type Reaction struct {
+	Emoji     string   `json:"emoji"`
+	Count     int      `json:"count"`
+	MemberIDs []string `json:"member_ids"`
+}
+
+/*
+reactionsOf reads a note's reactions from the summary in its metadata.
+*/
+func reactionsOf(metadata json.RawMessage) []Reaction {
+	var read struct {
+		Reactions []struct {
+			Emoji     string     `json:"emoji"`
+			MemberIDs []ids.UUID `json:"member_ids"`
+		} `json:"reactions"`
+	}
+
+	out := []Reaction{}
+	if json.Unmarshal(metadata, &read) != nil {
+		return out
+	}
+
+	for _, r := range read.Reactions {
+		members := make([]string, 0, len(r.MemberIDs))
+		for _, id := range r.MemberIDs {
+			members = append(members, models.PublicID(models.PrefixMember, id))
+		}
+
+		out = append(out, Reaction{Emoji: r.Emoji, Count: len(members), MemberIDs: members})
+	}
+
+	return out
+}
+
+/*
+mentionsOf reads a note's mentions from its metadata, an empty list
+when it has none.
+*/
+func mentionsOf(metadata json.RawMessage) []Mention {
+	var read struct {
+		Mentions []Mention `json:"mentions"`
+	}
+
+	if json.Unmarshal(metadata, &read) != nil || read.Mentions == nil {
+		return []Mention{}
+	}
+
+	return read.Mentions
 }
 
 /*
@@ -124,6 +192,11 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 
 	if m.AuthorType == string(enums.AuthorTypeMember) || m.AuthorType == string(enums.AuthorTypeAgent) {
 		out.ReadAt = m.ReadAt
+	}
+
+	out.Mentions, out.Reactions = []Mention{}, []Reaction{}
+	if m.Type == string(enums.MessageTypeNote) {
+		out.Mentions, out.Reactions = mentionsOf(m.Metadata), reactionsOf(m.Metadata)
 	}
 
 	if m.DeletedAt != nil {

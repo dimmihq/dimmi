@@ -57,6 +57,7 @@ type EditNote struct {
 	DB     *database.DB
 	Events *events.Dispatcher
 	Clock  clock.Clock
+	IDs    *ids.Registry
 }
 
 /*
@@ -77,7 +78,7 @@ func (a *EditNote) Handle(ctx context.Context, in EditInput) (Written, error) {
 			return err
 		}
 
-		if err := s.edit(ctx, in.MessageID, in.Body); err != nil {
+		if err := s.edit(ctx, a.IDs, in.MessageID, in.Body); err != nil {
 			return err
 		}
 
@@ -90,9 +91,10 @@ func (a *EditNote) Handle(ctx context.Context, in EditInput) (Written, error) {
 }
 
 /*
-edit rewrites the caller's note and announces it.
+edit rewrites the caller's note, keeps its mentions in step and
+announces it with the teammates it newly mentions.
 */
-func (s *session) edit(ctx context.Context, id ids.UUID, body string) error {
+func (s *session) edit(ctx context.Context, reg *ids.Registry, id ids.UUID, body string) error {
 	msg, err := s.w.Q.LockMessage(ctx, models.LockMessageParams{
 		WorkspaceID: s.c.WorkspaceID, ConversationID: s.c.ID, ID: id,
 	})
@@ -109,7 +111,14 @@ func (s *session) edit(ctx context.Context, id ids.UUID, body string) error {
 		return exceptions.ErrMessageNotEditable
 	}
 
-	raw, err := json.Marshal(map[string]any{"edited_by": models.PublicID(models.PrefixMember, s.w.Actor.ID)})
+	m, err := s.resolve(ctx, reg, body)
+	if err != nil {
+		return err
+	}
+
+	raw, err := json.Marshal(map[string]any{
+		"edited_by": models.PublicID(models.PrefixMember, s.w.Actor.ID), "mentions": m.tokens,
+	})
 	if err != nil {
 		return fmt.Errorf("encode edit: %w", err)
 	}
@@ -120,7 +129,14 @@ func (s *session) edit(ctx context.Context, id ids.UUID, body string) error {
 		return fmt.Errorf("edit note: %w", err)
 	}
 
+	added, err := s.record(ctx, m)
+	if err != nil {
+		return err
+	}
+
 	r := appevents.MessageRef{ConversationRef: appevents.ConversationRef{ConversationID: s.c.ID}, MessageID: msg.ID}
 
-	return s.w.Dispatch(ctx, appevents.MessageUpdated{Base: s.w.Base(s.c.WorkspaceID), MessageRef: r})
+	return s.w.Dispatch(ctx, appevents.MessageUpdated{
+		Base: s.w.Base(s.c.WorkspaceID), MessageRef: r, AddedMentionedMemberIDs: added,
+	})
 }

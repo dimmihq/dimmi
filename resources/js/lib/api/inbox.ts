@@ -97,6 +97,25 @@ export interface TimelineEvent {
   changes?: Record<string, [unknown, unknown]>;
 }
 
+/*
+ * MentionRef is a teammate or team a note names, with the name it had
+ * when the note was written.
+ */
+export interface MentionRef {
+  type: "member" | "team";
+  id: string;
+  name: string;
+}
+
+/*
+ * Reaction is one emoji on a note and who reacted with it.
+ */
+export interface Reaction {
+  emoji: string;
+  count: number;
+  member_ids: string[];
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -108,6 +127,8 @@ export interface Message {
   event: TimelineEvent | null;
   edited_at?: string | null;
   read_at?: string | null;
+  mentions?: MentionRef[];
+  reactions?: Reaction[];
   deleted_at: string | null;
   deleted_by?: { id: string; name: string } | null;
   created_at: string;
@@ -184,22 +205,27 @@ export interface ConversationChanges {
 
 /*
  * ListParams is what one list asks for: the view as filter[view] reads
- * it, the status shown, the order and what the person searched.
+ * it, the status shown, the order, what the person searched and whether
+ * only unread conversations show.
  */
 export interface ListParams {
   view: string;
   status: StatusFilter;
   sort?: ConversationSort;
   search?: string;
+  unread?: boolean;
 }
 
 /*
  * conversationsPath is the list's address. Viewers come along with every
  * page, so rows show who has a conversation open.
  */
-export function conversationsPath({ view, status, sort, search = "" }: ListParams): string {
+export function conversationsPath({ view, status, sort, search = "", unread = false }: ListParams): string {
   const params = new URLSearchParams({ "filter[view]": view, "filter[status]": status, limit: "50" });
   params.set("include", "viewers");
+  if (unread) {
+    params.set("filter[unread]", "true");
+  }
   if (sort) {
     params.set("sort", sort);
   }
@@ -212,7 +238,14 @@ export function conversationsPath({ view, status, sort, search = "" }: ListParam
 
 export function conversationsQuery(workspace: string, list: ListParams) {
   return queryOptions({
-    queryKey: [...realtimeKeys.conversations(workspace), list.view, list.status, list.sort ?? "", list.search ?? ""],
+    queryKey: [
+      ...realtimeKeys.conversations(workspace),
+      list.view,
+      list.status,
+      list.sort ?? "",
+      list.search ?? "",
+      list.unread ?? false,
+    ],
     queryFn: () => request<Conversation[]>("GET", conversationsPath(list), undefined, { workspace }),
   });
 }
@@ -335,6 +368,35 @@ export function editNote(write: Write, id: string, message: string, body: string
     `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}`,
     { body },
     writeOptions(write),
+  );
+}
+
+/*
+ * react adds the caller's emoji to a note, or takes it off.
+ */
+export function react(write: Write, id: string, message: string, emoji: string, remove: boolean): Promise<Message> {
+  const path = `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}/reactions`;
+  if (remove) {
+    return request<Message>("DELETE", `${path}/${encodeURIComponent(emoji)}`, undefined, writeOptions(write));
+  }
+
+  return request<Message>("POST", path, { emoji }, writeOptions(write));
+}
+
+/*
+ * Mentionables are who a note on a conversation may mention.
+ */
+export interface Mentionables {
+  members: { id: string; name: string; avatar_url: string | null; availability: string; can_see: boolean }[];
+  teams: { id: string; name: string; member_count: number }[];
+}
+
+export function mentionables(workspace: string, conversation: string, query: string): Promise<Mentionables> {
+  return request<Mentionables>(
+    "GET",
+    `/conversations/${encodeURIComponent(conversation)}/mentionables?q=${encodeURIComponent(query)}`,
+    undefined,
+    { workspace },
   );
 }
 

@@ -1,11 +1,13 @@
 /*
- * Suggestions while typing, such as emoji after a colon. Typing the
+ * Suggestions while typing, such as emoji after a colon or teammates
+ * after an at sign. Typing the
  * trigger and a few letters finds matches; the arrow keys move through
  * them, Enter or Tab takes one and Escape lets them go. The editor
  * plugin finds the words typed; this file keeps which match is chosen
  * and tells the composer what to show.
  */
-import { Extension } from "@tiptap/react";
+import { PluginKey } from "@tiptap/pm/state";
+import { type Content, Extension } from "@tiptap/react";
 import Suggestion, { type SuggestionKeyDownProps, type SuggestionProps } from "@tiptap/suggestion";
 
 /*
@@ -24,7 +26,7 @@ export interface SuggestionSource<T> {
   char: string;
   minLength: number;
   find: (query: string) => Promise<T[]> | T[];
-  text: (item: T) => string;
+  content: (item: T) => Content;
   onChange: (suggested: Suggested<T> | null) => void;
 }
 
@@ -100,11 +102,12 @@ export function suggestionExtension<T>(source: SuggestionSource<T>) {
       return [
         Suggestion<T, T>({
           editor: this.editor,
+          pluginKey: new PluginKey(source.name),
           char: source.char,
           minQueryLength: source.minLength,
           items: ({ query }) => source.find(query),
           command: ({ editor, range, props }) => {
-            editor.chain().focus().insertContentAt(range, source.text(props)).run();
+            editor.chain().focus().insertContentAt(range, source.content(props)).run();
           },
           render: () => renderer(source),
         }),

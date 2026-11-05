@@ -15,6 +15,7 @@ import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
+import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Spinner } from "@/components/base/spinner/spinner";
 import { PageOutlet } from "@/features/layout/page-outlet";
 import { inboxViews, type Page } from "@/features/shell/navigation";
@@ -145,6 +146,8 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search);
   const settings = useListSettings(workspace, view);
+  const mentions = view === "mentions";
+  const [everyMention, setEveryMention] = useState(false);
   const {
     data: conversations,
     isPending,
@@ -155,6 +158,7 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
       status: settings.status,
       sort: settings.sort,
       search: query,
+      unread: mentions && !everyMention,
     }),
     enabled: workspace !== "",
   });
@@ -191,6 +195,7 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
         onStatusChange={settings.setStatus}
         onSortChange={settings.setSort}
       />
+      {mentions ? <MentionsFilter everything={everyMention} onChange={setEveryMention} /> : null}
       <ListBody
         view={view}
         me={caller?.member?.id}
@@ -202,6 +207,27 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
         drafted={draftedIn(drafts)}
       />
     </Panel>
+  );
+}
+
+const shown = { unread: "unread", all: "all" } as const;
+
+/*
+ * MentionsFilter shows only the mentions the person has not read yet, or
+ * all of them.
+ */
+function MentionsFilter({ everything, onChange }: { everything: boolean; onChange: (everything: boolean) => void }) {
+  return (
+    <div className="px-4 pb-2">
+      <SegmentedControl
+        aria-label="Mentions shown"
+        selectedKeys={[everything ? shown.all : shown.unread]}
+        onSelectionChange={(selected) => onChange(selected.has(shown.all))}
+      >
+        <SegmentedControlItem id={shown.unread}>Unread</SegmentedControlItem>
+        <SegmentedControlItem id={shown.all}>All</SegmentedControlItem>
+      </SegmentedControl>
+    </div>
   );
 }
 

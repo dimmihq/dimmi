@@ -57,6 +57,7 @@ type InboxActions struct {
 	ListSnoozeLists   *conversations.ListSnoozeLists
 	UpdateSnoozeList  *conversations.UpdateSnoozeList
 	ShowSnoozeOptions *conversations.ShowSnoozeOptions
+	ListMentionables  *conversations.ListMentionables
 
 	ListDrafts  *drafts.ListDrafts
 	SaveDraft   *drafts.SaveDraft
@@ -68,5 +69,6 @@ type InboxActions struct {
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
 	DeleteMessage     *messages.DeleteMessage
+	ReactToNote       *messages.ReactToNote
 	EditNote          *messages.EditNote
 }

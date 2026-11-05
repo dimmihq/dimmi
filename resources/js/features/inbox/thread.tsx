@@ -30,6 +30,7 @@ import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
 import { foldEvents, foldedText } from "./thread/fold-events";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
+import { ReactionChips } from "./thread/reactions";
 import { ThreadZone } from "./thread/thread-zone";
 import { useMessageMoves } from "./thread/use-message-moves";
 import { When } from "./thread/when";
@@ -168,6 +169,7 @@ function SaidEntry({ entry, customer, moves }: { entry: Said; customer: string; 
           onCopy={() => moves.link(entry.id)}
           onEdit={() => setEditing(true)}
           onDelete={() => moves.remove(entry.id)}
+          onReact={note ? (emoji) => void moves.react(entry.id, emoji, false) : undefined}
         />
       </div>
       <div className={bubbleClass(entry, editing)}>
@@ -181,10 +183,15 @@ function SaidEntry({ entry, customer, moves }: { entry: Said; customer: string; 
             }}
           />
         ) : (
-          <MessageBody text={entry.text} />
+          <MessageBody text={entry.text} mentions={entry.mentions} />
         )}
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
+      <ReactionChips
+        reactions={entry.reactions ?? []}
+        me={moves.me}
+        onToggle={(emoji, remove) => void moves.react(entry.id, emoji, remove)}
+      />
       <Tag entry={entry} />
       {note ? (
         <span aria-hidden className="text-body-2-regular text-text-tertiary">

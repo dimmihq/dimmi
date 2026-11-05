@@ -22,13 +22,14 @@ import { type DragEvent, useEffect, useRef, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
-import type { Message } from "@/lib/api/inbox";
+import { type Message, mentionables } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
 import { AttachmentStrip } from "./attachments";
 import { ComposerField } from "./composer/composer-field";
 import { preloadEditor } from "./composer/load-editor";
+import { toMentionables } from "./composer/mentionable";
 import { useGifs } from "./composer/use-gifs";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
@@ -259,6 +260,9 @@ function Panel({
             onSubmit={(then) => void send(then)}
             onBlur={() => onTyping(false)}
             onFiles={attachments.add}
+            findMentions={
+              note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined
+            }
           />
         </div>
         <div className="flex items-center gap-2">

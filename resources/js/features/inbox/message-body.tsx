@@ -6,16 +6,18 @@
  * dropped, never rendered, and links open in a new tab without handing
  * the thread to the page they open. Code blocks are highlighted once the
  * highlighter, loaded only for a message that has one, arrives; an image
- * opens large on a click.
+ * opens large on a click. A note's mentions read as @Name chips.
  */
 import { type ComponentProps, lazy, Suspense, useEffect, useState } from "react";
-import Markdown, { type Components, type Options } from "react-markdown";
+import Markdown, { type Components, defaultUrlTransform, type Options } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
+import type { MentionRef } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { CodeBlock } from "./thread/code-block";
+import { mentionScheme, withMentions } from "./thread/mention-text";
 
 const ImageViewer = lazy(() => import("./thread/image-viewer"));
 
@@ -24,6 +26,14 @@ type Plugins = NonNullable<Options["rehypePlugins"]>;
 const plugins = [remarkGfm, remarkBreaks];
 
 function Link({ href, children }: ComponentProps<"a">) {
+  if (href?.startsWith(mentionScheme)) {
+    return (
+      <span className="rounded-md bg-background-tertiary-default px-1 text-body-medium text-text-primary">
+        {children}
+      </span>
+    );
+  }
+
   return (
     <a
       href={href}
@@ -107,13 +117,31 @@ function useHighlighter(text: string): Plugins {
   return highlight;
 }
 
-export function MessageBody({ text, className }: { text: string; className?: string }) {
+function keepMentions(url: string): string {
+  return url.startsWith(mentionScheme) ? url : defaultUrlTransform(url);
+}
+
+export function MessageBody({
+  text,
+  className,
+  mentions = [],
+}: {
+  text: string;
+  className?: string;
+  mentions?: MentionRef[];
+}) {
   const highlight = useHighlighter(text);
 
   return (
     <div className={cx("flex flex-col gap-2 wrap-break-word", className)}>
-      <Markdown remarkPlugins={plugins} rehypePlugins={highlight} components={components} skipHtml>
-        {text}
+      <Markdown
+        remarkPlugins={plugins}
+        rehypePlugins={highlight}
+        components={components}
+        urlTransform={keepMentions}
+        skipHtml
+      >
+        {withMentions(text, mentions)}
       </Markdown>
     </div>
   );

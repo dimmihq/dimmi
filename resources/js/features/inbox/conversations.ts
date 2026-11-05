@@ -6,7 +6,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
-import type { ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
+import type { ContactSummary, Conversation, MentionRef, Message, Reaction, TimelineEvent } from "@/lib/api/inbox";
 import { formatRelative } from "@/lib/i18n/format";
 
 /*
@@ -76,6 +76,8 @@ export type ThreadEntry =
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
+      mentions?: MentionRef[];
+      reactions?: Reaction[];
     }
   | { kind: "event"; id: string; at: string; iso?: string; text: string };
 
@@ -127,6 +129,8 @@ export function toEntry(message: Message): ThreadEntry {
       text,
       authorId: message.author.id,
       edited: Boolean(message.edited_at),
+      mentions: message.mentions ?? [],
+      reactions: message.reactions ?? [],
     };
   }
   if (message.author.type === "contact") {

@@ -61,6 +61,7 @@ func (c *CurrentWorkspaceController) Update(
 		UndoSendSeconds:         in.Body.UndoSendSeconds,
 		SeenReceiptName:         in.Body.SeenReceiptName,
 		GIFPicker:               in.Body.GIFPicker,
+		TeamMentions:            in.Body.TeamMentions,
 	})
 	if err != nil {
 		return nil, err

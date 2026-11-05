@@ -28,7 +28,7 @@ when they see the workspace's own name. DeletedAt and PurgeAfter are set
 while it is in the trash: when it was deleted, and when it is purged for
 good unless restored. UndoSendSeconds is how long replies wait before
 they leave. GIFPicker says whether teammates may search GIFs from the
-composer.
+composer, and TeamMentions whether a note may mention a whole team.
 */
 type Workspace struct {
 	ID                 string     `json:"id"`
@@ -44,6 +44,7 @@ type Workspace struct {
 	CustomerFacingName *string    `json:"customer_facing_name"`
 	UndoSendSeconds    int        `json:"undo_send_seconds"`
 	GIFPicker          bool       `json:"gif_picker"`
+	TeamMentions       bool       `json:"team_mentions_enabled"`
 	DeletedAt          *time.Time `json:"deleted_at"`
 	PurgeAfter         *time.Time `json:"purge_after"`
 }
@@ -66,6 +67,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		CustomerFacingName: w.CustomerFacingNameSetting(),
 		UndoSendSeconds:    w.UndoSendSeconds(),
 		GIFPicker:          w.GIFPickerOn(),
+		TeamMentions:       w.TeamMentionsOn(),
 		DeletedAt:          w.DeletedAt,
 		PurgeAfter:         w.PurgeAfter,
 	}

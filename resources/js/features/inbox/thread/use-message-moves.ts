@@ -1,11 +1,12 @@
 /*
  * useMessageMoves gives the thread what it needs to act on messages:
  * who the reader is, whether they may moderate, and the calls that
- * delete a message or rewrite a note, reading the timeline again after.
+ * delete a message, rewrite a note or react to one, reading the timeline
+ * again after.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { deleteMessage, editNote } from "@/lib/api/inbox";
+import { deleteMessage, editNote, react } from "@/lib/api/inbox";
 import { callerQuery } from "@/lib/api/workspace";
 import { useMutationId } from "@/lib/realtime/context";
 
@@ -27,6 +28,10 @@ export function useMessageMoves(conversation: string) {
     },
     edit: async (message: string, body: string) => {
       await editNote({ workspace, mutation: mutationId() }, conversation, message, body);
+      await refresh();
+    },
+    react: async (message: string, emoji: string, remove: boolean) => {
+      await react({ workspace, mutation: mutationId() }, conversation, message, emoji, remove);
       await refresh();
     },
     link: (message: string) => {

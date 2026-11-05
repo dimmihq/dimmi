@@ -68,10 +68,10 @@ func bootInbox(a *app.App) error {
 		Reply: &messages.ReplyToConversation{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
 		},
-		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock, IDs: a.IDs},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		DeleteMessage:     &messages.DeleteMessage{DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue},
-		EditNote:          &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		EditNote:          &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock, IDs: a.IDs},
 	}
 
 	bootWorkbench(a)
@@ -106,6 +106,8 @@ func bootWorkbench(a *app.App) {
 	acts.ListSnoozeLists = &conversations.ListSnoozeLists{DB: a.DB}
 	acts.UpdateSnoozeList = &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ShowSnoozeOptions = &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock}
+	acts.ListMentionables = &conversations.ListMentionables{DB: a.DB}
+	acts.ReactToNote = &messages.ReactToNote{DB: a.DB, Events: a.Events, Clock: a.Clock}
 
 	drafter := drafts.Saver{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ListDrafts = &drafts.ListDrafts{DB: a.DB}

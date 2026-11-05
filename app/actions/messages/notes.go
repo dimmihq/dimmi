@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -62,6 +63,7 @@ type AddNote struct {
 	DB     *database.DB
 	Events *events.Dispatcher
 	Clock  clock.Clock
+	IDs    *ids.Registry
 }
 
 /*
@@ -87,7 +89,7 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 			return err
 		}
 
-		if err := s.note(ctx, in, key); err != nil {
+		if err := s.note(ctx, a.IDs, in, key); err != nil {
 			return err
 		}
 
@@ -103,12 +105,25 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 note writes the note, ends the caller's note draft and wakes a snoozed
 conversation someone else holds.
 */
-func (s *session) note(ctx context.Context, in NoteInput, key *string) error {
-	var err error
+func (s *session) note(ctx context.Context, reg *ids.Registry, in NoteInput, key *string) error {
+	m, err := s.resolve(ctx, reg, in.Body)
+	if err != nil {
+		return err
+	}
+
+	metadata, err := m.metadata()
+	if err != nil {
+		return err
+	}
 
 	if s.msg, s.c, err = s.w.Append(ctx, s.c, conversations.NewMessage{
-		Type: string(enums.MessageTypeNote), Body: in.Body, DedupeKey: key,
+		Type: string(enums.MessageTypeNote), Body: in.Body, DedupeKey: key, Metadata: metadata,
+		Mentioned: m.ids(),
 	}); err != nil {
+		return err
+	}
+
+	if _, err := s.record(ctx, m); err != nil {
 		return err
 	}
 
