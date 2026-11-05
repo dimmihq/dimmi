@@ -76,9 +76,10 @@ const fatal: Record<string, string> = {
  * followBottom keeps a thread at its latest message while the visitor
  * reads there: a picture that finishes loading would otherwise push the
  * newest messages out of view. Once the visitor scrolls up, the thread
- * stays where they are until they come back down.
+ * stays where they are until they come back down. Opening a conversation
+ * jumps straight to its end; a message arriving afterwards glides in.
  */
-function followBottom(thread: HTMLElement, pinned: boolean) {
+function followBottom(thread: HTMLElement, at: { pinned: boolean; jump: boolean }) {
   if (!thread.dataset.following) {
     thread.dataset.following = "true";
     thread.addEventListener("scroll", () => {
@@ -88,15 +89,37 @@ function followBottom(thread: HTMLElement, pinned: boolean) {
       "load",
       () => {
         if (thread.dataset.pinned !== "false") {
+          thread.style.scrollBehavior = "auto";
           thread.scrollTop = thread.scrollHeight;
+          thread.style.scrollBehavior = "";
         }
       },
       true,
     );
   }
-  if (pinned) {
-    thread.scrollTop = thread.scrollHeight;
+  if (!at.pinned) {
+    return;
   }
+  if (at.jump) {
+    thread.style.scrollBehavior = "auto";
+  }
+  thread.scrollTop = thread.scrollHeight;
+  thread.dataset.pinned = "true";
+  thread.style.scrollBehavior = "";
+}
+
+/*
+ * place puts the markup into the thread: messages already there stay put
+ * and only new ones animate, and the thread lands on its latest message,
+ * straight away until the conversation's messages first arrive.
+ */
+function place(at: { thread: HTMLElement; loaded: HTMLElement; open: string; shown: number }, markup: string) {
+  const same = at.loaded.dataset.conversation === at.open;
+  const settled = same && at.loaded.dataset.settled === "true";
+  at.loaded.dataset.conversation = at.open;
+  at.loaded.dataset.settled = String(at.shown > 0);
+  patch(at.loaded, markup, same);
+  followBottom(at.thread, { pinned: !settled || at.thread.dataset.pinned !== "false", jump: !settled });
 }
 
 export class Live {
@@ -482,11 +505,7 @@ export class Live {
       );
     }
 
-    const same = loaded.dataset.conversation === (open ?? "");
-    loaded.dataset.conversation = open ?? "";
-    const pinned = !same || thread.dataset.pinned !== "false";
-    patch(loaded, parts.join(""), same);
-    followBottom(thread, pinned);
+    place({ thread, loaded, open: open ?? "", shown: messages.length }, parts.join(""));
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
   }
 
