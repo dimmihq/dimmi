@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/console"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
@@ -115,7 +116,9 @@ func (c TokenCreateCommand) Handle(
 		return err
 	}
 
-	made, err := c.App.Actions.CreatePersonalAccessToken.Handle(ctx, tokens.CreatePersonalAccessTokenInput{
+	scoped := tenancy.With(ctx, membership.Workspace.ID.String())
+
+	made, err := c.App.Actions.CreatePersonalAccessToken.Handle(scoped, tokens.CreatePersonalAccessTokenInput{
 		User: user, Membership: membership, Name: in.String("name"), Abilities: abilities, ExpiresAt: expiresAt,
 		Client: appauth.Client{UserAgent: "cli"},
 	})
