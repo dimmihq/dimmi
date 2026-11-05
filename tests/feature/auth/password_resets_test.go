@@ -210,6 +210,7 @@ func TestPasswordResetUpdate(t *testing.T) {
 		for range appauth.MaxSecretAttempts {
 			redeem(tc.Client(), id, "wrong-token").AssertValidationError("token")
 		}
+		tc.Drain()
 
 		tc.Table("password_reset_tokens").AssertCount(0, testkit.Row{"user_id": tc.Owner.ID})
 		redeem(tc.Client(), id, token).AssertValidationError("token")

@@ -185,6 +185,7 @@ func TestReauthentication(t *testing.T) {
 			AssertJSONPath("code", "reauth_user_mismatch")
 
 		browser.GetJSON("/api/v1/me").AssertOK().AssertJSONPath("data.user.email", tc.Owner.Email)
+		tc.Drain()
 		tc.Table("security_events").AssertHas(testkit.Row{"user_id": other.ID, "type": "login.failed"})
 	})
 

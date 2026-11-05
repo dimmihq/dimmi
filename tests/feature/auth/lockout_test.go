@@ -137,6 +137,7 @@ func TestLockout(t *testing.T) {
 
 		fail(t, tc.Client(), tc.Owner.Email, 5)
 		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, factories.Password)).AssertStatus(429)
+		tc.Drain()
 
 		tc.Table("security_events").
 			AssertCount(1, testkit.Row{"user_id": tc.Owner.ID, "type": "login.failed"}).
