@@ -53,6 +53,7 @@ it.describe("tags", () => {
     await page.getByRole("textbox", { name: "Tag name" }).fill("VIP");
     await page.getByRole("button", { name: "Create tag" }).click();
     await expect(page.getByText("VIP")).toBeVisible();
+    await expect(page.getByRole("button", { name: "VIP colour" })).toBeVisible();
 
     await page.getByRole("button", { name: "Edit" }).first().click();
     await page.getByRole("textbox", { name: "Tag name" }).fill("Defect");
