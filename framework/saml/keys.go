@@ -14,6 +14,7 @@
 package saml
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -107,4 +108,40 @@ func ParseCertificate(text string) (*x509.Certificate, error) {
 	}
 
 	return certificate, nil
+}
+
+/*
+ParsePrivateKey reads the PEM private key a key pair holds.
+*/
+func ParsePrivateKey(text string) (crypto.Signer, error) {
+	block, _ := pem.Decode([]byte(text))
+	if block == nil {
+		return nil, ErrInvalidKey
+	}
+
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrInvalidKey, err)
+	}
+
+	return key, nil
+}
+
+/*
+ParseCertificates reads every certificate of the list, refusing the list
+when one does not read.
+*/
+func ParseCertificates(texts []string) ([]*x509.Certificate, error) {
+	certificates := make([]*x509.Certificate, 0, len(texts))
+
+	for _, text := range texts {
+		certificate, err := ParseCertificate(text)
+		if err != nil {
+			return nil, err
+		}
+
+		certificates = append(certificates, certificate)
+	}
+
+	return certificates, nil
 }

@@ -136,7 +136,7 @@ func (a *UpdateConnection) Handle(ctx context.Context, in UpdateConnectionInput)
 			return err
 		}
 
-		conn, err := decode(row)
+		conn, err := Decode(row)
 		if err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func (a *UpdateConnection) apply(ctx context.Context, e editing) (Connection, er
 		return Connection{}, err
 	}
 
-	return decode(updated)
+	return Decode(updated)
 }
 
 /*

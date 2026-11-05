@@ -65,3 +65,21 @@ var (
 	ErrDomainLimitReached = fault.New(fault.RateLimited, "entitlement_limit_reached",
 		"This organization has as many domains as it may have.")
 )
+
+/*
+Refusals of a sign-in through a connection.
+
+ErrSSOFailed answers any sign-in the identity provider's answer could not
+complete, without saying why: the reason goes to the owners only.
+ErrSSONoAccess refuses a person the connection may not admit.
+ErrSSOEmailDomainNotVerified refuses an address outside the company's
+verified domains routed to the connection.
+*/
+var (
+	ErrSSOFailed = fault.New(fault.Invalid, "sso_failed",
+		"Single sign-on did not complete. Try again or ask your administrator.")
+	ErrSSONoAccess = fault.New(fault.Forbidden, "sso_no_access",
+		"Your company's identity provider does not give you access to this workspace.")
+	ErrSSOEmailDomainNotVerified = fault.New(fault.Forbidden, "sso_email_domain_not_verified",
+		"Your address is not under a domain your company verified for single sign-on.")
+)

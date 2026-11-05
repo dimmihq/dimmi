@@ -45,7 +45,9 @@ const challengeTTL = 5 * time.Minute
 CompletePrimaryAuthInput is the user who just proved who they are, the
 method they proved it with, and the client. Reauth marks a fresh
 sign-in on an existing session. Context says where the sign-in came from
-when an outside service vouched for it.
+when an outside service vouched for it. SkipTwoFactor starts the session
+without a challenge, for a company's identity provider that already
+proved who the person is.
 */
 type CompletePrimaryAuthInput struct {
 	User    models.User
@@ -53,6 +55,8 @@ type CompletePrimaryAuthInput struct {
 	Client  appauth.Client
 	Reauth  bool
 	Context SignInContext
+
+	SkipTwoFactor bool
 }
 
 /*
@@ -103,7 +107,7 @@ Handle starts the session and describes the caller, or begins the
 challenge.
 */
 func (a *CompletePrimaryAuth) Handle(ctx context.Context, in CompletePrimaryAuthInput) (SignedIn, error) {
-	if in.User.TwoFactorEnabled() {
+	if in.User.TwoFactorEnabled() && !in.SkipTwoFactor {
 		challenge, err := a.challenge(ctx, in)
 
 		return SignedIn{Challenge: &challenge}, err

@@ -306,6 +306,54 @@ func (q *Queries) SetUserAvatarPath(ctx context.Context, arg SetUserAvatarPathPa
 	return result.RowsAffected(), nil
 }
 
+const setUserManagedBy = `-- name: SetUserManagedBy :one
+UPDATE users
+SET managed_by_organization_id = $1, name = COALESCE($2, name), updated_at = $3
+WHERE id = $4
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
+`
+
+type SetUserManagedByParams struct {
+	OrganizationID *ids.UUID `json:"organization_id"`
+	Name           *string   `json:"name"`
+	Now            time.Time `json:"now"`
+	ID             ids.UUID  `json:"id"`
+}
+
+// SetUserManagedBy hands the account to the organization whose identity
+// provider vouches for it, and takes the name it reports when it sent
+// one.
+func (q *Queries) SetUserManagedBy(ctx context.Context, arg SetUserManagedByParams) (User, error) {
+	row := q.db.QueryRow(ctx, setUserManagedBy,
+		arg.OrganizationID,
+		arg.Name,
+		arg.Now,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.TwoFactorConfirmedAt,
+		&i.AvatarPath,
+		&i.Locale,
+		&i.Timezone,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PasswordChangedAt,
+		&i.RiskFlags,
+		&i.CreatedVia,
+		&i.Preferences,
+		&i.ManagedByOrganizationID,
+	)
+	return i, err
+}
+
 const updateUserDeletedAt = `-- name: UpdateUserDeletedAt :exec
 UPDATE users SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz WHERE id = $2
 `

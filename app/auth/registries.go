@@ -113,7 +113,7 @@ any of the identity providers included.
 */
 func CreatedVia(providers []string) Registry {
 	return Registry{name: "created_via", values: slices.Concat([]string{
-		CreatedViaRegister, MethodMagicLink, MethodInvitation, MethodSetup, "cli",
+		CreatedViaRegister, MethodMagicLink, MethodInvitation, MethodSetup, "cli", MethodSSO,
 	}, providers)}
 }
 
@@ -121,7 +121,9 @@ func CreatedVia(providers []string) Registry {
 JoinedVia lists how a member can join a workspace.
 */
 func JoinedVia() Registry {
-	return Registry{name: "joined_via", values: []string{JoinedViaCreated, MethodInvitation, MethodSetup, "cli"}}
+	return Registry{name: "joined_via", values: []string{
+		JoinedViaCreated, MethodInvitation, MethodSetup, "cli", MethodSSO,
+	}}
 }
 
 /*

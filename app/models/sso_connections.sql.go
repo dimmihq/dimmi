@@ -154,6 +154,72 @@ func (q *Queries) DisableSSOConnections(ctx context.Context, arg DisableSSOConne
 	return items, nil
 }
 
+const findOrganizationWorkspace = `-- name: FindOrganizationWorkspace :one
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE organization_id = $1 AND deleted_at IS NULL
+ORDER BY created_at, id LIMIT 1
+`
+
+// FindOrganizationWorkspace returns the organization's oldest live
+// workspace, the one its sign-ins join.
+func (q *Queries) FindOrganizationWorkspace(ctx context.Context, organizationID ids.UUID) (Workspace, error) {
+	row := q.db.QueryRow(ctx, findOrganizationWorkspace, organizationID)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const findRoutedDomain = `-- name: FindRoutedDomain :one
+SELECT id, organization_id, domain, verification_token, status, verified_at, last_checked_at, verified_via, sso_connection_id, failed_since, created_at, updated_at FROM organization_domains
+WHERE organization_id = $1 AND domain = $2 AND status = 'verified'
+    AND sso_connection_id = $3
+`
+
+type FindRoutedDomainParams struct {
+	OrganizationID  ids.UUID  `json:"organization_id"`
+	Domain          string    `json:"domain"`
+	SsoConnectionID *ids.UUID `json:"sso_connection_id"`
+}
+
+// FindRoutedDomain returns the organization's verified domain when it
+// routes to the connection.
+func (q *Queries) FindRoutedDomain(ctx context.Context, arg FindRoutedDomainParams) (OrganizationDomain, error) {
+	row := q.db.QueryRow(ctx, findRoutedDomain, arg.OrganizationID, arg.Domain, arg.SsoConnectionID)
+	var i OrganizationDomain
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Domain,
+		&i.VerificationToken,
+		&i.Status,
+		&i.VerifiedAt,
+		&i.LastCheckedAt,
+		&i.VerifiedVia,
+		&i.SsoConnectionID,
+		&i.FailedSince,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const findSSOConnection = `-- name: FindSSOConnection :one
 SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE organization_id = $1 AND id = $2
 `
@@ -193,6 +259,63 @@ func (q *Queries) FindSSOConnection(ctx context.Context, arg FindSSOConnectionPa
 	return i, err
 }
 
+const findSSOConnectionByID = `-- name: FindSSOConnectionByID :one
+SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE id = $1
+`
+
+// FindSSOConnectionByID returns a connection by its id alone, for the
+// sign-in routes a guest reaches before any workspace is known.
+func (q *Queries) FindSSOConnectionByID(ctx context.Context, id ids.UUID) (SSOConnection, error) {
+	row := q.db.QueryRow(ctx, findSSOConnectionByID, id)
+	var i SSOConnection
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Protocol,
+		&i.Name,
+		&i.Status,
+		&i.Config,
+		&i.SecretEncrypted,
+		&i.JitEnabled,
+		&i.DefaultRole,
+		&i.DefaultTeamIds,
+		&i.GroupRoleMap,
+		&i.Enforced,
+		&i.TestedAt,
+		&i.LastLoginAt,
+		&i.MetadataRefreshedAt,
+		&i.MetadataError,
+		&i.LastError,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DefaultCustomRoleID,
+	)
+	return i, err
+}
+
+const findSSOPolicyForDomain = `-- name: FindSSOPolicyForDomain :one
+SELECT c.id, c.name, c.enforced
+FROM organization_domains d
+JOIN sso_connections c ON c.id = d.sso_connection_id AND c.status = 'active'
+WHERE d.domain = $1 AND d.status = 'verified'
+`
+
+type FindSSOPolicyForDomainRow struct {
+	ID       ids.UUID `json:"id"`
+	Name     string   `json:"name"`
+	Enforced bool     `json:"enforced"`
+}
+
+// FindSSOPolicyForDomain returns the active connection a verified domain
+// routes to and whether it is enforced.
+func (q *Queries) FindSSOPolicyForDomain(ctx context.Context, domain string) (FindSSOPolicyForDomainRow, error) {
+	row := q.db.QueryRow(ctx, findSSOPolicyForDomain, domain)
+	var i FindSSOPolicyForDomainRow
+	err := row.Scan(&i.ID, &i.Name, &i.Enforced)
+	return i, err
+}
+
 const listActiveSSOConnectionIDs = `-- name: ListActiveSSOConnectionIDs :many
 SELECT id, enforced FROM sso_connections WHERE organization_id = $1 AND status = 'active'
 ORDER BY created_at, id
@@ -216,6 +339,54 @@ func (q *Queries) ListActiveSSOConnectionIDs(ctx context.Context, organizationID
 	for rows.Next() {
 		var i ListActiveSSOConnectionIDsRow
 		if err := rows.Scan(&i.ID, &i.Enforced); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listActiveSSOConnections = `-- name: ListActiveSSOConnections :many
+SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE status IN ('active', 'tested') ORDER BY id
+`
+
+// ListActiveSSOConnections returns every active connection of the
+// install, for the jobs that keep them current.
+func (q *Queries) ListActiveSSOConnections(ctx context.Context) ([]SSOConnection, error) {
+	rows, err := q.db.Query(ctx, listActiveSSOConnections)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SSOConnection
+	for rows.Next() {
+		var i SSOConnection
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Protocol,
+			&i.Name,
+			&i.Status,
+			&i.Config,
+			&i.SecretEncrypted,
+			&i.JitEnabled,
+			&i.DefaultRole,
+			&i.DefaultTeamIds,
+			&i.GroupRoleMap,
+			&i.Enforced,
+			&i.TestedAt,
+			&i.LastLoginAt,
+			&i.MetadataRefreshedAt,
+			&i.MetadataError,
+			&i.LastError,
+			&i.CreatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DefaultCustomRoleID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -435,6 +606,67 @@ func (q *Queries) LockSSOConnection(ctx context.Context, arg LockSSOConnectionPa
 	return i, err
 }
 
+const markSSOConnectionTested = `-- name: MarkSSOConnectionTested :one
+UPDATE sso_connections
+SET tested_at = $1, status = CASE WHEN status = 'draft' THEN 'tested' ELSE status END, last_error = NULL,
+    updated_at = $1
+WHERE id = $2
+RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id
+`
+
+type MarkSSOConnectionTestedParams struct {
+	Now *time.Time `json:"now"`
+	ID  ids.UUID   `json:"id"`
+}
+
+// MarkSSOConnectionTested records a successful test sign-in, moving a
+// draft to tested and leaving any later status as it is.
+func (q *Queries) MarkSSOConnectionTested(ctx context.Context, arg MarkSSOConnectionTestedParams) (SSOConnection, error) {
+	row := q.db.QueryRow(ctx, markSSOConnectionTested, arg.Now, arg.ID)
+	var i SSOConnection
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Protocol,
+		&i.Name,
+		&i.Status,
+		&i.Config,
+		&i.SecretEncrypted,
+		&i.JitEnabled,
+		&i.DefaultRole,
+		&i.DefaultTeamIds,
+		&i.GroupRoleMap,
+		&i.Enforced,
+		&i.TestedAt,
+		&i.LastLoginAt,
+		&i.MetadataRefreshedAt,
+		&i.MetadataError,
+		&i.LastError,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DefaultCustomRoleID,
+	)
+	return i, err
+}
+
+const recordSSOConnectionError = `-- name: RecordSSOConnectionError :exec
+UPDATE sso_connections SET last_error = $1, updated_at = $2 WHERE id = $3
+`
+
+type RecordSSOConnectionErrorParams struct {
+	LastError json.RawMessage `json:"last_error"`
+	Now       time.Time       `json:"now"`
+	ID        ids.UUID        `json:"id"`
+}
+
+// RecordSSOConnectionError keeps the reason the last sign-in failed, for
+// the owners; never what the identity provider sent.
+func (q *Queries) RecordSSOConnectionError(ctx context.Context, arg RecordSSOConnectionErrorParams) error {
+	_, err := q.db.Exec(ctx, recordSSOConnectionError, arg.LastError, arg.Now, arg.ID)
+	return err
+}
+
 const setWorkspaceSettings = `-- name: SetWorkspaceSettings :exec
 UPDATE workspaces SET settings = $1, updated_at = $2 WHERE id = $3
 `
@@ -448,6 +680,24 @@ type SetWorkspaceSettingsParams struct {
 // SetWorkspaceSettings replaces the workspace's settings document.
 func (q *Queries) SetWorkspaceSettings(ctx context.Context, arg SetWorkspaceSettingsParams) error {
 	_, err := q.db.Exec(ctx, setWorkspaceSettings, arg.Settings, arg.Now, arg.ID)
+	return err
+}
+
+const touchSSOConnectionLogin = `-- name: TouchSSOConnectionLogin :exec
+UPDATE sso_connections SET last_login_at = $1::timestamptz
+WHERE id = $2 AND (last_login_at IS NULL OR last_login_at < $3::timestamptz)
+`
+
+type TouchSSOConnectionLoginParams struct {
+	Now   time.Time `json:"now"`
+	ID    ids.UUID  `json:"id"`
+	Since time.Time `json:"since"`
+}
+
+// TouchSSOConnectionLogin records a sign-in through the connection, at
+// most every five minutes.
+func (q *Queries) TouchSSOConnectionLogin(ctx context.Context, arg TouchSSOConnectionLoginParams) error {
+	_, err := q.db.Exec(ctx, touchSSOConnectionLogin, arg.Now, arg.ID, arg.Since)
 	return err
 }
 

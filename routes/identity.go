@@ -58,6 +58,7 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 		Update: acts.UpdateSSOConnection, Delete: acts.DeleteSSOConnection, IDs: a.IDs, Links: a.Links,
 	}
 	domains := &v1.OrganizationDomainController{Domains: acts.OrganizationDomains, IDs: a.IDs}
+	tests := &v1.SSOConnectionTestController{Start: acts.StartSSOTest, IDs: a.IDs, Cookies: a.Cookies}
 
 	api.Group("", func(owners *routing.Router) {
 		owners.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
@@ -67,6 +68,8 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 		routing.Get(owners, "/organization-domains", "organization-domains.index", domains.Index)
 		routing.Post(owners, "/organization-domains/{domain}/checks", "organization-domains.checks.store",
 			domains.Check).Status(fhttp.StatusCreated)
+		routing.Post(owners, "/sso-connections/{connection}/tests", "sso-connections.tests.store", tests.Store).
+			Status(fhttp.StatusCreated)
 	})
 
 	api.Group("", func(confirmed *routing.Router) {

@@ -67,3 +67,54 @@ ORDER BY c.created_at, c.id;
 UPDATE sso_connections SET status = 'disabled', enforced = false, updated_at = @now
 WHERE organization_id = @organization_id AND status = 'active'
 RETURNING *;
+
+-- name: FindSSOConnectionByID :one
+-- FindSSOConnectionByID returns a connection by its id alone, for the
+-- sign-in routes a guest reaches before any workspace is known.
+SELECT * FROM sso_connections WHERE id = @id;
+
+-- name: MarkSSOConnectionTested :one
+-- MarkSSOConnectionTested records a successful test sign-in, moving a
+-- draft to tested and leaving any later status as it is.
+UPDATE sso_connections
+SET tested_at = @now, status = CASE WHEN status = 'draft' THEN 'tested' ELSE status END, last_error = NULL,
+    updated_at = @now
+WHERE id = @id
+RETURNING *;
+
+-- name: RecordSSOConnectionError :exec
+-- RecordSSOConnectionError keeps the reason the last sign-in failed, for
+-- the owners; never what the identity provider sent.
+UPDATE sso_connections SET last_error = @last_error, updated_at = @now WHERE id = @id;
+
+-- name: TouchSSOConnectionLogin :exec
+-- TouchSSOConnectionLogin records a sign-in through the connection, at
+-- most every five minutes.
+UPDATE sso_connections SET last_login_at = sqlc.arg('now')::timestamptz
+WHERE id = sqlc.arg('id') AND (last_login_at IS NULL OR last_login_at < sqlc.arg('since')::timestamptz);
+
+-- name: FindSSOPolicyForDomain :one
+-- FindSSOPolicyForDomain returns the active connection a verified domain
+-- routes to and whether it is enforced.
+SELECT c.id, c.name, c.enforced
+FROM organization_domains d
+JOIN sso_connections c ON c.id = d.sso_connection_id AND c.status = 'active'
+WHERE d.domain = @domain AND d.status = 'verified';
+
+-- name: FindRoutedDomain :one
+-- FindRoutedDomain returns the organization's verified domain when it
+-- routes to the connection.
+SELECT * FROM organization_domains
+WHERE organization_id = @organization_id AND domain = @domain AND status = 'verified'
+    AND sso_connection_id = @sso_connection_id;
+
+-- name: FindOrganizationWorkspace :one
+-- FindOrganizationWorkspace returns the organization's oldest live
+-- workspace, the one its sign-ins join.
+SELECT * FROM workspaces WHERE organization_id = @organization_id AND deleted_at IS NULL
+ORDER BY created_at, id LIMIT 1;
+
+-- name: ListActiveSSOConnections :many
+-- ListActiveSSOConnections returns every active connection of the
+-- install, for the jobs that keep them current.
+SELECT * FROM sso_connections WHERE status IN ('active', 'tested') ORDER BY id;

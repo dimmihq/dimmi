@@ -75,6 +75,32 @@ func Web(a *app.App) {
 		browser.Handle(fhttp.MethodGet, "/auth/{provider}/callback", "oauth.callback",
 			fhttp.HandlerFunc(callback.Invoke))
 	})
+
+	ssoPages(a)
+}
+
+/*
+ssoPages declares the pages a company's identity provider sends people
+through. None takes the usual cross-site request check: the SAML answer
+arrives as a post from the identity provider's own site, and the
+attempt, its cookie and the request id the answer names stand in for it.
+*/
+func ssoPages(a *app.App) {
+	acts := a.Actions
+	c := &web.SSOController{
+		Start: acts.StartSSOSignIn, SAML: acts.ConsumeSAML, Shows: acts.SSOMetadata, IDs: a.IDs, Cookies: a.Cookies,
+		Errors: a.Errors,
+	}
+
+	a.Router.Group("", func(browser *routing.Router) {
+		browser.Middleware("csp", "session")
+
+		browser.Handle(fhttp.MethodGet, "/auth/sso/{connection}/redirect", "sso.redirect",
+			fhttp.HandlerFunc(c.Redirect))
+		browser.Handle(fhttp.MethodPost, "/auth/saml/{connection}/acs", "saml.acs", fhttp.HandlerFunc(c.ACS))
+		browser.Handle(fhttp.MethodGet, "/auth/saml/{connection}/metadata", "saml.metadata",
+			fhttp.HandlerFunc(c.Metadata))
+	})
 }
 
 /*

@@ -42,4 +42,19 @@ func TestKeyPair(t *testing.T) {
 		_, err = saml.ParseCertificate("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n")
 		require.ErrorIs(t, err, saml.ErrInvalidKey)
 	})
+
+	t.Run("reads back its own private key and refuses nonsense", func(t *testing.T) {
+		t.Parallel()
+		pair, err := saml.NewKeyPair("sp", time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+
+		key, err := saml.ParsePrivateKey(pair.PrivateKey)
+		require.NoError(t, err)
+		assert.NotNil(t, key.Public())
+
+		_, err = saml.ParsePrivateKey("nonsense")
+		require.ErrorIs(t, err, saml.ErrInvalidKey)
+		_, err = saml.ParsePrivateKey(pair.Certificate)
+		require.ErrorIs(t, err, saml.ErrInvalidKey)
+	})
 }

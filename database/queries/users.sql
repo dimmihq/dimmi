@@ -99,3 +99,12 @@ WHERE id = @id;
 -- in every workspace. It runs through a security definer function, since
 -- tokens of many workspaces are hidden until one is chosen.
 SELECT auth_count_user_tokens(@user_id, @now)::bigint AS remaining;
+
+-- name: SetUserManagedBy :one
+-- SetUserManagedBy hands the account to the organization whose identity
+-- provider vouches for it, and takes the name it reports when it sent
+-- one.
+UPDATE users
+SET managed_by_organization_id = @organization_id, name = COALESCE(sqlc.narg('name'), name), updated_at = @now
+WHERE id = @id
+RETURNING *;

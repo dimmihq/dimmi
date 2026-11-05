@@ -58,7 +58,7 @@ func (a *ListConnections) Handle(ctx context.Context, m authz.Membership) ([]Con
 	out := make([]Connection, 0, len(rows))
 
 	for _, row := range rows {
-		conn, err := decode(row)
+		conn, err := Decode(row)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (a *ShowConnection) Handle(ctx context.Context, m authz.Membership, id ids.
 		return Connection{}, fmt.Errorf("find connection: %w", err)
 	}
 
-	return decode(row)
+	return Decode(row)
 }
 
 /*

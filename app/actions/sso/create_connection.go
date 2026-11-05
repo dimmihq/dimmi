@@ -156,7 +156,7 @@ func (a *CreateConnection) complete(
 		return Connection{}, fmt.Errorf("complete connection: %w", err)
 	}
 
-	return decode(updated)
+	return Decode(updated)
 }
 
 /*
