@@ -23,6 +23,7 @@ export const realtimeKeys = {
  */
 export const channels = {
   workspace: (workspace: string) => `workspace:${workspace}`,
+  workspaceConversations: (workspace: string) => `workspace_conversations:${workspace}`,
   conversation: (conversation: string) => `conversation:${conversation}`,
   member: (member: string) => `member:${member}`,
 };

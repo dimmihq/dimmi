@@ -145,7 +145,7 @@ func (s searcher) jump(ctx context.Context, registry *ids.Registry, sq searchque
 		return nil, nil
 	}
 
-	c, err := Find(ctx, s.q, s.m.Workspace.ID, ref)
+	c, err := Find(ctx, s.q, s.m, ref)
 	if err != nil {
 		return nil, ignoreNotFound(err)
 	}
@@ -189,7 +189,7 @@ func (s searcher) conversations(ctx context.Context, sq searchquery.Query) ([]Hi
 
 	rows, err := selectConversations(ctx, s.tx, querybuilder.Conversations{
 		WorkspaceID: s.m.Workspace.ID, MemberID: s.m.Member.ID, TSQuery: &sq.TSQuery, Statuses: sq.Statuses,
-		Sort: querybuilder.SortLatest, Limit: s.limit,
+		Sort: querybuilder.SortLatest, Limit: s.limit, Access: access(s.m),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("search conversations: %w", err)

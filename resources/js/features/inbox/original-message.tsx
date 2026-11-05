@@ -105,7 +105,7 @@ export function OriginalMessage({
   const { data: original, error } = useQuery(messageOriginalQuery(workspace, conversation, message));
   const download = useMutation({
     mutationFn: () => downloadRawEmail(workspace, conversation, message),
-    onSuccess: (file) => save(file, `${message}.eml`),
+    onSuccess: (file) => save(file.blob, file.filename),
   });
 
   return (

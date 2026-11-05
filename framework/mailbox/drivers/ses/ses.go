@@ -33,8 +33,14 @@ import (
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/mailbox"
+	"github.com/dimmihq/dimmi/framework/mailbox/internal/webhook"
 	"github.com/dimmihq/dimmi/framework/manager"
 )
+
+/*
+maxNotificationBytes is the largest SNS post taken, with room to spare.
+*/
+const maxNotificationBytes = 1 << 20
 
 /*
 Options configure an ses source: the SNS topics whose notifications are
@@ -92,11 +98,24 @@ func (s *Source) Name() string {
 }
 
 /*
+MaxWebhookBytes returns the largest notification taken: SNS posts at
+most 256 KB, the raw message itself stays on the bucket.
+*/
+func (s *Source) MaxWebhookBytes() int64 {
+	return maxNotificationBytes
+}
+
+/*
 Receive reads one SNS post. A subscription confirmation is confirmed
 and yields no envelope; the end of the subscription is reported as
 mailbox.ErrUnsubscribed.
 */
-func (s *Source) Receive(ctx context.Context, body []byte) (*mailbox.Envelope, error) {
+func (s *Source) Receive(ctx context.Context, d mailbox.Delivery) (*mailbox.Envelope, error) {
+	body, err := webhook.Read(d, s.MaxWebhookBytes())
+	if err != nil {
+		return nil, err
+	}
+
 	msg, err := sns.Parse(body)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", mailbox.ErrRejected, err)

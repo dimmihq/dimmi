@@ -128,3 +128,22 @@ WHERE i.workspace_id = @workspace_id AND i.id = @id;
 -- ListExistingTeams returns which of the team ids name live teams of the
 -- workspace.
 SELECT id FROM teams WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]) AND deleted_at IS NULL;
+
+-- name: ListInvitationsToRemind :many
+-- ListInvitationsToRemind returns pending invitations, across workspaces,
+-- sent before the moment and never reminded about, whose sender is still
+-- an active member, oldest first, with what the reminder needs.
+SELECT
+    r.id::uuid AS id,
+    r.email::citext AS email,
+    r.sent_at::timestamptz AS sent_at,
+    r.workspace_name::text AS workspace_name,
+    r.inviter_name::text AS inviter_name,
+    r.inviter_email::citext AS inviter_email,
+    coalesce(r.inviter_locale, '')::text AS inviter_locale
+FROM auth_invitations_to_remind(@sent_before::timestamptz, @now::timestamptz, @max_rows::integer) AS r;
+
+-- name: MarkInvitationReminded :one
+-- MarkInvitationReminded records that the sender was reminded, and
+-- returns 1, or 0 when someone already did.
+SELECT auth_mark_invitation_reminded(@invitation_id::uuid, @now::timestamptz)::bigint;

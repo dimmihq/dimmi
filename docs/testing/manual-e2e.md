@@ -80,7 +80,7 @@ DAVE=dave.$RUN@example.com
 
 | Flow | Command | Expect |
 |---|---|---|
-| Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true` |
+| Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true`, `locales` `[{"code":"en","name":"English"}]` |
 | Common password | `r weak -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada\",\"email\":\"$ADA\",\"password\":\"password123\"}"` | 422, message "The password is too common. Choose another one." |
 | Sign up | `r signup -c a.jar -b a.jar -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada Lovelace\",\"email\":\"$ADA\",\"password\":\"analytical-engine-1843\",\"workspace_name\":\"Acme\"}"` | 201, `dimmi_session` and `dimmi_device` cookies, HttpOnly, SameSite=Lax, `email_verified: false` |
 | Email taken, any case | same body with the email in capitals | 422 `email_taken` |
@@ -199,6 +199,9 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Old slug held | Bob in his own workspace: `PATCH $B/workspace {"slug":"acme"}` | 422 `slug_reserved`; Ada taking `acme` back: 200 |
 | Bad values | `{"slug":"admin"}`, `{"slug":"Not A Slug"}`, `{"timezone":"America/Nowhere"}`, `{"test_mode":true}` | 422 `slug_reserved`, `validation_failed`, `validation_failed`, `test_mode_immutable` |
 | Members | `r mem -b a.jar -H "$O" -H "$H" "$B/members?sort=-created_at"` | 200, Eve then Bob first, each with `user.name`, `user.email`; `members/me` is Ada |
+| Review members | Ada: `r rv -b a.jar -H "$O" -H "$H" "$B/members?filter[two_factor]=false&sort=-last_active_at"`; the same as Bob while he is a member | 200 with `two_factor_enabled` and `last_active_at` on each; Bob: 403 `forbidden`, and his plain list has both fields `null` |
+| Export members | Ada: `curl -s -b a.jar -H "$O" -H "$H" -H "Accept: text/csv" "$B/members?filter[role]=member"` | `text/csv`, header `name,email,role,custom_role,status,teams,two_factor,last_active_at,joined_at`; a name starting with `=` comes out with a leading `'`; the audit log gains `members.exported` |
+| Import members | Ada: `curl -s -b a.jar -H "$O" -H "$H" -F file=@members.csv -F dry_run=true $B/member-imports` with a file `email,role` holding Bob as admin, a new address and `not-an-address`; then without `dry_run` | 200 `member_import`, `dry_run: true`, `updated: 1`, `created: 1`, `failed: 1` with `invalid_email`, nothing changed; the real run makes Bob admin and invites the new address; a sixth import within the hour 429 `too_many_imports`; Bob: 403 |
 | Promote | `r pr -b a.jar -X PATCH -H "$O" -H "$J" -H "$H" $B/members/$BOBM -d '{"role":"admin"}'` | 200 `role: admin`; again: 200, nothing changes |
 | Self-deactivate | Bob: `PATCH $B/members/me {"status":"deactivated"}` | 422 `invalid_transition`, `from: active`, `to: deactivated` |
 | Admin touches owner | Bob: `PATCH $B/members/<Ada's mem_> {"role":"admin"}` | 403 `forbidden` |
@@ -215,6 +218,9 @@ BOBM=$(curl -s -b a.jar -H "$H" "$B/members?q=$BOB" | jq -r '.data[0].id')
 | Restore | Bob: `r rs -b b.jar -X PATCH -H "$O" -H "$J" $B/workspaces/$WS -d '{"trashed":false}'` | 200 `deleted_at: null`; mail "Acme was restored"; Eve the same 404 `workspace_not_found`; `{"trashed":false,"name":"x"}` 422 `prohibited` on `name` |
 | In a browser | open `$W/d/settings/workspace`, rename and save, reload; open Members, use a member's menu | the name sticks; role, deactivate, reactivate, transfer ownership and leave each ask first and update the list |
 | Invite in a browser | as an owner open Members, Invite, enter an address and send; open the mailed link in a private window and sign up there; back in Members, resend and revoke another pending invitation | the invitee lands in the workspace's inbox and shows in Members; the pending list updates; the revoked link says it was withdrawn |
+| Hand over a link | invite with a team ticked, then "Copy a new link" in its menu and confirm; open the old mailed link, then the new one | the old link no longer works; the new one signs the invitee up straight into the team |
+| Import in a browser | Members, Import, pick a CSV | the dialog says what the file would do and lists rows with problems; Apply changes updates the list and the pending invitations |
+| Review in a browser | with a teammate lacking a second factor, open Workspace settings, follow "See who", then "Export CSV" | the count line names them, the list shows only them with "No two-factor", and the file downloads |
 | Delete in a browser | as an owner open Workspace, Danger zone, Delete workspace, type the address | the button stays off until the address matches; the workspace disappears and the app opens another one |
 
 ### Teams
@@ -235,6 +241,8 @@ ADAM=$(curl -s -b b.jar -H "$H" "$B/members?q=$ADA" | jq -r '.data[0].id')
 | Rename | `PATCH $B/teams/$TEAM {"name":"Customer care"}` | 200 `name: Customer care` |
 | Unknown team | `r ut -b b.jar -H "$O" -H "$H" $B/teams/team_01jc0000000000000000000000` | 404 `not_found` |
 | Remove member | `r rm -b b.jar -X DELETE -H "$O" -H "$H" $B/teams/$TEAM/members/$BOBM`, twice | 204, then 404 |
+| Count before delete | `r cc -b b.jar -H "$O" -H "$H" "$B/teams/$TEAM?include=conversation_counts"` | 200 with `conversation_counts` `{open, snoozed, closed}` |
+| Delete with conversations | with a conversation assigned to the team: `DELETE $B/teams/$TEAM?reassign_to_team_id=$TEAM`, then `?reassign_to_team_id=<other team>` | 422 `reassign_to_invalid` (a team cannot take its own), then 204 and the conversation sits with the other team; with no target the conversations lose their team |
 | Delete | `r del -b b.jar -X DELETE -H "$O" -H "$H" $B/teams/$TEAM`, then `GET $B/teams/$TEAM` | 204, then 404; `teams` lists nothing; the row stays with `deleted_at` set for the inbox to sweep |
 | Name free again | `POST $B/teams {"name":"Customer care"}` | 201 |
 | In a browser | open `$W/d/settings/teams`, create a team, add a member from the picker, rename it, remove the member, go back to all teams and delete it | the team page opens on create; the member count follows each change; delete asks first and returns to the list |
@@ -246,7 +254,7 @@ square brackets, so pass `-g` to stop curl from reading them as a glob.
 
 | Flow | Command | Expect |
 |---|---|---|
-| Whole log, oldest first | `r log -g -b b.jar -H "$O" -H "$H" "$B/audit-logs?sort=created_at&limit=100"; jq -r '.data[] \| [.event, .actor.via.kind, .subject.label] \| @tsv' body` | 200: `workspace.created`, `member.joined` (no `via`: signing up), `workspace.updated`, `member.role_changed`, `member.deactivated`, `member.reactivated`, `member.role_changed`, `ownership.transferred`, `member.role_changed` (Ada to admin), `member.left`; each with `actor.label` "Ada Lovelace <ada…>", `via.kind: session`, `ip`, `user_agent: curl/…`, `request_id`, `changes` such as `{"role":{"from":"member","to":"admin"}}` |
+| Whole log, oldest first | `r log -g -b b.jar -H "$O" -H "$H" "$B/audit-logs?sort=created_at&limit=100"; jq -r '.data[] \| [.event, .actor.via.kind, .subject.label] \| @tsv' body` | 200: `workspace.created`, `member.joined` (no `via`: signing up), `workspace.updated`, `member.role_changed`, `member.deactivated`, `member.reactivated`, `member.role_changed`, `ownership.transferred`, `member.role_changed` (Ada to admin), `member.left`; each with `actor.label` "Ada Lovelace <ada…>", `via.kind: session`, `ip`, `user_agent: curl/…`, `request_id`, `changes` such as `{"role":{"from":"member","to":"admin"}}`; between them `member.signed_in` for every sign-in of a member, actor the member with no `via` |
 | By event | `"$B/audit-logs?filter[event]=member.role_changed,ownership.transferred"` | 4 entries, newest first |
 | By actor, paged | `"$B/audit-logs?filter[actor]=$ADAM&limit=2"`, then again with `&cursor=` the `meta.next_cursor` | 2 entries and a cursor, then the next 2 older ones |
 | By time | `filter[created_after]=2026-01-01T00:00:00Z&filter[created_before]=2099-01-01T00:00:00Z`; then `filter[created_after]=yesterday` | every entry; then 400 `invalid_filter`, `parameter: created_after` |
@@ -254,8 +262,16 @@ square brackets, so pass `-g` to stop curl from reading them as a glob.
 | Members cannot read | before the promotion above, Bob (then a member): `GET $B/audit-logs` with `-H "$H"` | 403 `forbidden` |
 | Own security log | `r sev -b a.jar -H "$O" "$B/user/security-events?limit=2"` | 200, newest first: `login.succeeded` with `metadata.auth_methods`, `session_id`, no `device_id`; `meta.next_cursor` while more remain |
 | Tokens refused | `r sevt -H "Authorization: Bearer dmi_live_x" $B/user/security-events` | 401 `invalid_token` |
+| Colleague sign-ins | `r bad -X POST -H "$O" -H "$J" $B/sessions -d '{"grant":"password","email":"'$BOB'","password":"wrong"}'`, the same for `nobody@example.com`; a second later `GET $B/audit-logs?filter[event]=member.sign_in_failed` as Bob | 422 twice; one entry about Bob, actor `system` "Unknown", `changes` with `ip`, `device_label`, `method: password`, `reason: invalid_credentials`, nothing for the unknown address |
+| Second factor changes | Bob turns on an authenticator, then removes it; `GET $B/audit-logs?filter[subject]=$BOBM` | `member.two_factor_enabled`, `member.auth_factor_added`, `member.auth_factor_removed`, `member.two_factor_disabled`; `changes.factor_type: totp`, never a code |
+| CSV export | `r csv -g -b b.jar -H "$O" -H "$H" -H 'Accept: text/csv' "$B/audit-logs?filter[event]=member.role_changed"`; `cat body` | 200, `Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="dimmi-audit-acme-<30 days ago>-<today>.csv"`; header `id,created_at,event,actor_type,actor_id,actor_label,via_kind,via_id,subject_type,subject_id,subject_label,changes,ip,user_agent,request_id`, one row per role change, times in UTC, `changes` compact JSON |
+| Export with a range | `?format=csv&filter[created_after]=2026-01-01T00:00:00Z` and `filter[created_after]=2020-01-01T00:00:00Z` | 200 for the first; 422 `range_too_large`, `max_days: 366` for the second |
+| Export leaves an entry | `GET $B/audit-logs?filter[event]=audit_logs.exported` | one entry per export: `changes.filters` as asked plus `created_after`/`created_before`, `rows`, `completed: true` |
+| Export limit | eleven exports within the hour | the eleventh: 429 `too_many_exports` with `retry_after` |
+| Formula cells | rename a team to `=1+1`, export `filter[event]=team.updated` | the `subject_label` cell reads `'=1+1` |
 | Entries cannot change | as the application's database role (not a superuser): `update audit_logs set event = 'x.y'` | `permission denied for table audit_logs` |
 | In a browser | as Bob, open `$W/d/settings/audit-log`, pick "Changed a role" under events, then Ada under actors; open `$W/d/settings/security` | the table narrows to each filter, Older and Newer step through pages; "Recent security activity" lists the latest sign-ins with device and address |
+| Date range and export in a browser | as Bob, pick "Last 7 days" in the date picker, "Any sign-in event" under events, open a row, then "Export CSV" | the events list is grouped (Sign-in, Security settings, Members and teams, Tokens and apps, Data export); the row opens with its IP address, browser and changes; the file downloads as `dimmi-audit-acme-….csv` with only the rows on screen's filters |
 
 Retention: `audit.retention_days` (`DIMMI_AUDIT__RETENTION_DAYS`) keeps audit entries for ever on self-host
 unless set, a year on the cloud; `security_events.retention_days` is 365 on both. The prune jobs run nightly at
@@ -458,7 +474,7 @@ Sign up a new account first (a workspace created before the inbound domain was s
 
 | Flow | Command | Expect |
 |---|---|---|
-| Default address | `r ea -b a.jar -H "$O" $EA; FWD=$(jq -r '.data[0].forwarding_address' body); EMA=$(jq -r '.data[0].id' body)` | 200, one `email_address`, `forwarding_address` `<slug>@inbound.e2e.test`, `is_default: true`, `setup_guides` from `gmail`, `inbound_verified_at: null` |
+| Default address | `r ea -b a.jar -H "$O" $EA; FWD=$(jq -r '.data[0].forwarding_address' body); EMA=$(jq -r '.data[0].id' body)` | 200, one `email_address`, `forwarding_address` `<slug>@inbound.e2e.test`, `is_default: true`, twelve `setup_guides`, the first `recommended` (`generic` for the e2e domain, which has no MX), each with filled-in `steps`, `warnings` and a `deep_link`, `inbound_verified_at: null` |
 | Source closed without the secret | `r no -X POST $W/webhooks/test/inbound --data-binary 'Subject: x'` | 401 `unauthenticated` |
 | Mail arrives | `mailraw $FWD 'Refund for order 1042' first.$RUN@customer.test '' 'Charged twice.' \| r in -X POST -H "$IN" --data-binary @- "$W/webhooks/test/inbound?to=$FWD"` | 202 `workspaces: 1` |
 | Activity log | `r act -b a.jar -H "$O" $EA/$EMA/inbound-emails` | 200, `status: processed`, `classification: normal`, a `conversation` and `message` id; the address now has `inbound_verified_at` |
@@ -478,6 +494,23 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Reply not delivered | insert a `hard_bounce` row in `email_suppressions` for the customer, then reply to their email conversation in the browser | the reply shows "Not delivered: The recipient's address bounced or complained before." without a reload |
 | Send again | delete that row, then `r rt -b a.jar -X POST -H "$O" $B/conversations/<conv_>/messages/<msg_>/retry` (or "Send again") | 200 with `delivery_status: pending`, the mail reaches Mailpit; the same call again 409 `message_not_failed` |
 | Teammate answers by email | the owner replies to a customer's email from their own verified, SPF-passing mailbox | a note by the owner in the thread, no contact for the owner, the conversation not woken |
+| Load run | `go build -tags dev -o bin/dimmi-dev ./cmd/dimmi`, then with the same env `bin/dimmi-dev email:load --url $W --to $FWD --secret e2e-inbound-secret --rate 20 --duration 10s` | `sent 200 … 0 refused`, then `processed 200 of 200` with p50 and p95; the full bar is `--rate 50 --duration 10m` with p95 under 10 s, on a database nothing else uses |
+| Metrics | restart with `DIMMI_TELEMETRY__METRICS=prometheus`, send one mail, `curl -s http://127.0.0.1:19090/metrics \| grep dimmi_email_` | `dimmi_email_inbound_total` by source, status and classification, `dimmi_email_inbound_latency_seconds` and `dimmi_email_auth_total`; provider webhooks also add `dimmi_email_inbound_bytes`; no address, subject or body in any label |
+
+Provider webhooks. Restart with `DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=test,postmark,cloudflare`,
+`DIMMI_MAILBOX__SOURCES__POSTMARK__DRIVER=postmark`, `__USERNAME=hook`, `__PASSWORD=pm-secret`,
+`DIMMI_MAILBOX__SOURCES__CLOUDFLARE__DRIVER=cloudflare` and `__SECRET=cf-secret`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Missing secret | start once without `__PASSWORD` | `dimmi serve` exits: `mailbox.sources.postmark username and password: mailbox: required option missing` |
+| Source off | `r off -X POST $W/webhooks/mailgun/inbound/mime -d x` | 404 `inbound_driver_disabled` |
+| Postmark | `mailraw $FWD 'Postmark hello' pm.$RUN@customer.test '' 'Hi.' \| jq -Rs "{MessageID:\"pm-$RUN\",OriginalRecipient:\"$FWD\",RawEmail:.}" \| r pm -X POST -u hook:pm-secret -H "$J" --data-binary @- $W/webhooks/postmark/inbound` | 200; the activity log shows it `processed`; the same again 200 and adds nothing |
+| Postmark without raw | the same with `{MessageID:"pm-x",OriginalRecipient:"'$FWD'"}` | 503; `dimmi email:inbound-doctor` names "Include raw email content in JSON payload" until the next good post |
+| Postmark bad credentials | `-u hook:wrong` | 403 |
+| Cloudflare | `TS=$(date +%s); mailraw $FWD 'Cloudflare hello' cf.$RUN@customer.test '' 'Hi.' > cf.eml; SIG=$(printf '%s.%s' $TS $(shasum -a 256 cf.eml \| cut -d' ' -f1) \| openssl dgst -sha256 -hmac cf-secret -r \| cut -d' ' -f1); r cf -X POST -H 'Content-Type: message/rfc822' -H "X-Inbound-Timestamp: $TS" -H "X-Inbound-Signature: $SIG" -H "X-Inbound-Envelope-From: cf.$RUN@customer.test" -H "X-Inbound-Envelope-To: $FWD" --data-binary @cf.eml $W/webhooks/cloudflare/inbound` | 200 and a conversation; a wrong `SIG` or a `TS` ten minutes old 401 |
+| Worker | `dimmi email:cloudflare-worker` | prints `worker.js` and `wrangler.toml` with `$W/webhooks/cloudflare/inbound` filled in |
+| Doctor | `dimmi email:inbound-doctor` | one line per check (`email.inbound_mx`, `email.inbound_source.*`, `email.inbound_url`, `email.misconfigured.*`, `email.clock`, `email.inbound_recent`); `fail` on the e2e domain's missing MX, `warn` on the http `app.url`, exit 1 |
 
 ### Sending domains
 
@@ -515,6 +548,42 @@ Open a socket with a browser's cookie (`a.jar`) and one with a token, using the 
 | Taken back | magic link, reset or `claim: true` on an unverified account | every socket of the stranger closes |
 | Runs out or lost | delete the session row by hand or let a token expire | the socket closes with 3005 at its next subscribe, or within `DIMMI_BROADCASTING__RECHECK` (one minute) on its own |
 
+## Conversation access
+
+Restrict a teammate with `PATCH $B/members/{mem}`, then act as them in a browser and with their token.
+
+| Flow | Request or action | Expect |
+|---|---|---|
+| Restrict to teams | `PATCH $B/members/{mem}` `{"conversation_access":"teams","access_team_ids":["team_..."]}` | 200 with the fields; `member.access_changed` in the audit log; their sockets close with 4009 and reconnect |
+| Own change | same on `/members/me` | 403 `forbidden` |
+| Owner target | same on an owner | 422 `owner_access_unrestricted` |
+| Team list unusable | `{"conversation_access":"assigned","access_team_ids":["team_..."]}` | 422 `access_teams_not_used`; an unknown team 422 `team_not_found` |
+| Hidden conversation | `GET $B/conversations/{id}`, `/conversations/{number}`, `/messages`, `/neighbors`, `/read-state` as them | 404 `not_found` on each |
+| Lists and counts | `GET $B/conversations?filter[view]=all`, `GET $B/conversation-counts`, `GET $B/search?q=%23{number}` | hidden conversation absent, not counted, `jump` null |
+| Token | their token on the same requests | same answers as their browser |
+| List channel | subscribe `workspace_conversations:{ws}` as them | refused; copies arrive on `member:{mem}` for visible conversations only |
+| Reassigned away | owner moves a conversation they can see | `conversation.hidden` on `member:{mem}`, their `conversation:` subscription ends, open tab shows the no-access page |
+| Sidebar | sign in as them | no Unassigned, unless `conversation_access_unassigned` |
+
+## Availability and automatic assignment
+
+Make a team of two teammates the default team of an inbox, then follow conversations a customer starts.
+
+| Flow | Request or action | Expect |
+|---|---|---|
+| Go away | as a teammate `PATCH $B/members/me` `{"availability":"away"}` | 200 `availability: away`; `member.availability_changed` on `workspace:{ws}`; avatar dot turns away |
+| Reassign while online | `{"availability":"online","away_reassign":true}` | 422 `away_reassign_requires_away` |
+| Capacity by admin | owner `PATCH $B/members/{mem}` `{"conversation_capacity":2}`; same as a member on someone else | 200 with the limit and an audit entry; 403 `forbidden` |
+| Inbox settings | `PATCH $B/inboxes/{inbox}` `{"default_team_id":"team_...","settings":{"assignment":{"mode":"round_robin"}}}` | 200 with `default_team_id` and the merged settings; settings left out stay |
+| Bad settings | `{"settings":{"reopen_window_days":400}}`, `{"settings":{"assignment":{"overflow_team_id":"<the default team>"}}}` | 422 `invalid_inbox_setting`; 422 `overflow_team_is_default` |
+| Round robin | start four conversations through the API | turns alternate between the two teammates |
+| Nobody available | set both away, start one | unassigned, `assignment_wait.reason` `no_available_member`, one `conversation.assignment_waiting` timeline row |
+| Drain | one teammate comes back | the waiting conversation is assigned within a second |
+| Status | `GET $B/inboxes/{inbox}/assignment-status?channel_type=api` | each member with `open_count`, `eligible`, `why_not`; `waiting.count`; a member without `settings:read` 403 |
+| Waiting list | `GET $B/conversations?filter[view]=all&filter[assignment_waiting]=true` | only the waiting ones |
+| Delete inbox | `DELETE $B/inboxes/{inbox}` holding conversations; then `?move_to=inbox_...`; the default inbox | 422 `move_to_required`; 204 and its conversations show the target inbox; 422 `default_inbox` |
+| Seen receipt | widget conversation; subscribe `widget_contact:ctc_...`; `PATCH $B/conversations/{id}/read-state` `{}`; then `PATCH $B/workspace` `{"seen_receipt_shows_name":true}` and write again | `conversation.seen_by_team` with `conversation_id`, `seen_at`, no member id or name; after the switch, a second receipt after 5 s carries `seen_by.name` |
+
 ## 4. Check what was stored
 
 ```bash
@@ -548,7 +617,75 @@ pkill -TERM -f 'bin/dimmi serve'
 docker compose exec -T postgres psql -U postgres -c 'DROP DATABASE dimmi_e2e'
 ```
 
+## Own account
+
+A signed-in browser session in `a.jar`, `$O`, `$J`, `$B`, `r`, `link` and `frag` as above. A person's own account
+needs no workspace header.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Read profile | `r user -b a.jar $B/user` | 200 `user`, `avatar_url` null, `timezone` null |
+| Rename | `r rename -b a.jar -X PATCH -H "$O" -H "$J" $B/user -d '{"name":"Ada L"}'` | 200, `name` "Ada L"; `user.updated` on each workspace channel |
+| Time zone | same route with `{"timezone":"Asia/Tokyo"}`, `{"timezone":"Mars/Base"}`, `{"timezone":null}` | 200 set; 422 `errors.timezone`; 200 null |
+| Language | same route with `{"locale":"en"}`, `{"locale":"fr"}` (not in `app.locales`), `{"locale":null}` | 200 `locale` "en"; 422 `errors.locale`; 200 `locale` null |
+| Resolved language | `r me -b a.jar -H "Dimmi-Workspace: $WS" $B/me` after `{"locale":null}` | 200, `user.locale` null, `locale` the workspace's language |
+| Messages follow the person | start the server with `DIMMI_APP__LOCALES=en,en-XA` after `make pseudo-locale build`, `PATCH /user {"locale":"en-XA"}`, then `{"timezone":"Mars/Base"}` with `Accept-Language: en` | 422 with an accented `errors.timezone` message and `Content-Language: en-XA`; `/auth/config` lists `en-XA` second |
+| Upload picture | `r pic -b a.jar -X PUT -H "$O" -F avatar=@logo.png $B/user/avatar`, then `curl -I $HOST$(jq -r .data.avatar_url pic.json)` | 200 with `avatar_url` `/avatars/<uuid>.png`; 200 `image/png`, `immutable`, `nosniff` |
+| Refuse non-picture | same with a text file | 422 `invalid_avatar` |
+| Remove picture | `r nopic -b a.jar -X DELETE -H "$O" $B/user/avatar` | 204; the old address 404 once the worker ran |
+| Change password | `r pw -b a.jar -c a.jar -X PATCH -H "$O" -H "$J" $B/user/password -d '{"current_password":"...","password":"..."}'` | 200 `tokens_remaining`; new session cookie; another browser's `me` 401; tokens still work; mail "Your Dimmi password changed" |
+| Wrong password | same with a wrong `current_password` | 422 `invalid_password` on `current_password` |
+| Ask to move | `r mv -b a.jar -X POST -H "$O" -H "$J" $B/email-changes -d "{\"email\":\"moved.$RUN@example.com\"}"` | 201 `email_change` `pending`, masked; mails "Confirm your new" to the new address and "Someone asked" to the old |
+| Bad link | `L=$(link moved.$RUN@example.com Confirm); r mvbad -X PATCH -H "$O" -H "$J" $B/email-changes/$(frag $L id) -d '{"token":"nope"}'` | 422 `invalid_email_change_token` |
+| Confirm move | same with `$(frag $L token)`, then again | 200 `confirmed` with the full address, mail "email address changed" to the old; second 422 |
+| Preferences | `r pref -b a.jar -X PATCH -H "$O" -H "$J" $B/user -d '{"preferences":{"send_with_enter":true}}'`, then `{"preferences":{"send_with_enter":null}}` | 200 with `preferences.send_with_enter` true, then false; `me.user.preferences` the same |
+| Unknown preference | same with `{"preferences":{"autoplay":true}}` or `{"send_with_enter":"yes"}` | 422 on `preferences.autoplay`, `preferences.send_with_enter` |
+| Name customers see | `r cfn -b a.jar -X PATCH -H "$O" -H "$J" $B/workspace -d '{"customer_facing_name":"Acme Support"}'`, then `null` | 200 `customer_facing_name` "Acme Support", then null; `workspace.updated` in the audit log once |
+| Preview deletion | `r prev -b a.jar $B/user/deletion-preview` | 200 `blocking` with workspaces it alone owns with teammates, `will_be_deleted` with those it is alone in |
+| Blocked deletion | `r del -b a.jar -X DELETE -H "$O" -H "$J" $B/user -d "{\"confirm_email\":\"$ADA\"}"` with teammates present | 409 `sole_owner`, `workspaces` |
+| Delete account | same once nothing blocks | 204, cookie cleared; `me` 401; tokens 401; mail "account was deleted"; signing up with the address again works as a new user; old member rows show "Former teammate" |
+
+Browser: `/d/settings/profile`, `/d/settings/security`, `/d/settings/preferences`, `/d/settings/workspace` and
+`/email/confirm` from the mailed link, in light and dark. Every control on them does something; there is no
+Notifications page in settings yet. The Language rows on Preferences and on the workspace page show only when
+`app.locales` lists more than one language; picking one changes the page's text and `<html lang>` without a reload.
+
+## Sign-in methods and sign-in help
+
+Start the server with Google pointed at a local OpenID Connect provider, as `tests/e2e/server.ts` does:
+`DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID`, `..._CLIENT_SECRET`, `DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER` and
+`DIMMI_HTTP_CLIENT__ALLOW_HOSTS` set to the provider's host. `a.jar` is the owner, `$WS` its workspace id, `$M`
+a teammate's `mem_` id whose account has two-factor on, `t.jar` the teammate's browser.
+
+| Flow | Command | Expect |
+|---|---|---|
+| List sign-in methods | `r ids -b a.jar $B/user/identities`; `r cfg $B/auth/config` | 200 linked accounts; `providers` lists `google` |
+| Link a provider | open `$W/auth/google/redirect?intent=link` in the signed-in browser, approve at the provider | lands on `/d/settings/security?linked=google`; a toast says Google is linked; mail "linked" |
+| Unlink the last way in | `r un -b a.jar -X DELETE -H "$O" $B/user/identities/<idn_>` on an account with no password and mail sign-in off | 409 `last_login_method`; the page says "Set a password first" |
+| Start a reset | `r rst -b a.jar -X POST -H "$O" -H "$J" -H "Dimmi-Workspace: $WS" $B/members/$M/two-factor-resets` | 201 `two_factor_reset` `pending`; mail "Reset two-factor" to the teammate; audit `member.two_factor_reset_requested` |
+| Refused resets | same for an owner as an admin; for a teammate without two-factor; for one who also works in another organization's workspace; a fourth time in a day | 403; 409 `two_factor_not_enabled`; 409 `two_factor_reset_blocked`; 429 |
+| Finish a reset | `L=$(link <teammate> "Reset two-factor"); r fin -X PATCH -H "$O" -H "$J" $B/two-factor-resets/$(frag $L id) -d "{\"token\":\"$(frag $L token)\"}"`, then with `"password"` | 422 `password_required`; then 200 `completed`; `t.jar` `me` 401; mail "was reset"; audit `member.two_factor_reset_completed` |
+| Clear a sign-in lock | fail the teammate's password until 429, `r lock -b a.jar -H "$O" -H "Dimmi-Workspace: $WS" $B/members/$M`, then `-X DELETE $B/members/$M/sign-in-lock` | `sign_in_locked: true`; 204; signing in works again; audit `member.sign_in_lock_cleared` |
+
+Browser: the security page's "Sign-in methods" section, the member menu's "Help with two-factor" and "Clear
+sign-in lock", and `/two-factor-reset` from the mailed link, in light and dark.
+
 ## Reporting
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in
 the code or in this table; fix whichever is wrong and add an integration test for it when it is the code.
+
+## API rate limits
+
+Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_PER_MINUTE=4`,
+`..._USER_PER_MINUTE=1200` and `..._BAD_CREDENTIAL_PER_MINUTE=3`. `$T` is a token with `members:read`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Headers | `curl -i -H "Authorization: Bearer $T" $B/members` | 200 with `X-RateLimit-Limit: 12`, `X-RateLimit-Remaining`, `X-RateLimit-Scope: token` |
+| Burst | the same three times within ten seconds | third 429 `too_many_requests`, `X-RateLimit-Scope: burst`, `Retry-After`, `X-RateLimit-Reset` |
+| Workspace share | two tokens of one workspace, five calls between them in a minute | the fifth 429 with scope `workspace`; the dashboard in a browser keeps working |
+| Bad tokens | `curl -H "Authorization: Bearer dmi_live_nope" $B/members` four times | three 401, then 429 |
+| Limits shown | `r ent -b a.jar -H "$O" -H "Dimmi-Workspace: $WS" $B/workspace/entitlements` | 200 `api.token_per_minute` 12; the tokens page says "12 requests a minute per token, 4 for the workspace's tokens together." |
+| Metric | scrape `/metrics` on the admin address | `dimmi_api_throttled_total{scope="burst"}` counts the refusals |
+

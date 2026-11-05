@@ -25,19 +25,22 @@ import (
 
 /*
 ShowTeamInput is who asks, through their membership, the team they ask
-about, and whether its members come along.
+about, and whether its members and its conversation counts come along.
 */
 type ShowTeamInput struct {
-	Membership  authz.Membership
-	TeamID      ids.UUID
-	WithMembers bool
+	Membership             authz.Membership
+	TeamID                 ids.UUID
+	WithMembers            bool
+	WithConversationCounts bool
 }
 
 /*
 ShowTeam returns one live team of the caller's workspace.
 
 Rules:
-  - The caller needs members:read.
+  - The caller needs members:read, and members:write for conversation
+    counts, which count every conversation the team holds whoever may
+    read it, as deleting the team acts on all of them.
   - Deleted teams and teams of other workspaces are not found.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
@@ -51,7 +54,7 @@ type ShowTeam struct {
 Handle returns the team.
 */
 func (a *ShowTeam) Handle(ctx context.Context, in ShowTeamInput) (Team, error) {
-	if !in.Membership.Can(readPermission) {
+	if !in.Membership.Can(readPermission) || (in.WithConversationCounts && !in.Membership.Can(writePermission)) {
 		return Team{}, exceptions.ErrForbidden
 	}
 
@@ -63,8 +66,23 @@ func (a *ShowTeam) Handle(ctx context.Context, in ShowTeamInput) (Team, error) {
 		var err error
 
 		team[0], err = findTeam(ctx, q, in.Membership.Workspace.ID, in.TeamID)
-		if err != nil || !in.WithMembers {
+		if err != nil {
 			return err
+		}
+
+		if in.WithConversationCounts {
+			counts, err := q.CountTeamConversationsByStatus(ctx, models.CountTeamConversationsByStatusParams{
+				WorkspaceID: in.Membership.Workspace.ID, TeamID: in.TeamID,
+			})
+			if err != nil {
+				return fmt.Errorf("count team conversations: %w", err)
+			}
+
+			team[0].ConversationCounts = &counts
+		}
+
+		if !in.WithMembers {
+			return nil
 		}
 
 		return loadMembers(ctx, q, in.Membership.Workspace.ID, team)

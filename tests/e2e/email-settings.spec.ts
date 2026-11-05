@@ -24,7 +24,11 @@ it.describe("email settings", () => {
     await expect(forwarding).toHaveText(/@inbound\.trydimmi\.com$/);
     await expect(page.getByText("Waiting for first email")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Copy / })).toBeVisible();
-    await expect(page.getByText(/Choose Add a forwarding address and enter/)).toBeVisible();
+    await expect(page.getByText(/^Forward every message sent to .* to .*@inbound\.trydimmi\.com/)).toBeVisible();
+    await page.getByRole("button", { name: /Mail service/ }).click();
+    await page.getByRole("option", { name: "Gmail" }).click();
+    await expect(page.getByText(/choose Add a forwarding address\.$/)).toBeVisible();
+    await expect(page.getByText(/Sent folder unless you connect the mailbox/)).toBeVisible();
 
     const address = (await forwarding.textContent()) ?? "";
     await deliverEmail(

@@ -65,3 +65,33 @@ LIMIT @row_limit::bigint;
 -- name: FindMessageInboundEmail :one
 -- FindMessageInboundEmail returns the received email a message came from.
 SELECT * FROM inbound_emails WHERE workspace_id = @workspace_id AND message_id = @message_id LIMIT 1;
+
+-- name: LatestInboundEmails :many
+-- LatestInboundEmails returns when each source last delivered mail,
+-- across every workspace, for the operator's health check.
+SELECT source::text AS source, latest_at::timestamptz AS latest_at FROM email_inbound_latest();
+
+-- name: CountLiveEmailAddresses :one
+-- CountLiveEmailAddresses counts the live addresses across every
+-- workspace, for the operator's health check.
+SELECT email_live_address_count()::bigint;
+
+-- name: DatabaseNow :one
+-- DatabaseNow returns the database server's clock, which the operator's
+-- health check compares with this server's.
+SELECT now()::timestamptz AS now;
+
+-- name: InboundLatencyBySubject :one
+-- InboundLatencyBySubject summarizes how fast the workspace's mail whose
+-- subject starts with the prefix was processed, for a load run.
+SELECT
+    count(*)::bigint AS total,
+    count(*) FILTER (WHERE status IN ('processed', 'ignored', 'failed', 'quarantined'))::bigint AS settled,
+    coalesce(percentile_cont(0.5) WITHIN GROUP (
+        ORDER BY extract(epoch FROM processed_at - received_at)
+    ), 0)::float8 AS p50_seconds,
+    coalesce(percentile_cont(0.95) WITHIN GROUP (
+        ORDER BY extract(epoch FROM processed_at - received_at)
+    ), 0)::float8 AS p95_seconds
+FROM inbound_emails
+WHERE workspace_id = @workspace_id AND subject LIKE @prefix::text || '%';

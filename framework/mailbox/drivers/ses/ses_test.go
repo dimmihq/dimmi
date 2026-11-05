@@ -179,17 +179,17 @@ func newHarness(t *testing.T) drivertest.Harness {
 	return drivertest.Harness{
 		Source:   f.source,
 		MaxBytes: 4096,
-		Payload: func(t *testing.T, d drivertest.Delivery) []byte {
+		Payload: func(t *testing.T, d drivertest.Delivery) drivertest.Post {
 			t.Helper()
 			f.store(t, d)
 
-			return f.signer.notification(t, received(d))
+			return drivertest.Post{Body: f.signer.notification(t, received(d))}
 		},
-		Forged: func(t *testing.T, d drivertest.Delivery) []byte {
+		Forged: func(t *testing.T, d drivertest.Delivery) drivertest.Post {
 			t.Helper()
 			f.store(t, d)
 
-			return newSigner(t).notification(t, received(d))
+			return drivertest.Post{Body: newSigner(t).notification(t, received(d))}
 		},
 	}
 }
@@ -213,7 +213,7 @@ func TestVerdicts(t *testing.T) {
 		d := drivertest.NewDelivery()
 		f.store(t, d)
 
-		env, err := f.source.Receive(t.Context(), f.signer.notification(t, received(d)))
+		env, err := f.source.Receive(t.Context(), delivery(f.signer.notification(t, received(d))))
 		require.NoError(t, err)
 
 		assert.Equal(t, mailbox.Verdicts{
@@ -243,7 +243,7 @@ func TestSubscription(t *testing.T) {
 		f := newFixture(t)
 		f.fake.Stub("GET "+subscribe, httpclient.Response{Status: http.StatusOK})
 
-		env, err := f.source.Receive(t.Context(), confirmation(t, f, sns.TypeSubscriptionConfirmation))
+		env, err := f.source.Receive(t.Context(), delivery(confirmation(t, f, sns.TypeSubscriptionConfirmation)))
 
 		require.NoError(t, err)
 		assert.Nil(t, env)
@@ -255,7 +255,7 @@ func TestSubscription(t *testing.T) {
 		f := newFixture(t)
 		f.fake.Stub("GET "+subscribe, httpclient.Response{Status: http.StatusForbidden})
 
-		_, err := f.source.Receive(t.Context(), confirmation(t, f, sns.TypeSubscriptionConfirmation))
+		_, err := f.source.Receive(t.Context(), delivery(confirmation(t, f, sns.TypeSubscriptionConfirmation)))
 
 		require.Error(t, err)
 	})
@@ -264,7 +264,7 @@ func TestSubscription(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
 
-		_, err := f.source.Receive(t.Context(), confirmation(t, f, sns.TypeSubscriptionConfirmation))
+		_, err := f.source.Receive(t.Context(), delivery(confirmation(t, f, sns.TypeSubscriptionConfirmation)))
 
 		require.ErrorIs(t, err, httpclienttest.ErrStrayRequest)
 	})
@@ -273,8 +273,15 @@ func TestSubscription(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
 
-		_, err := f.source.Receive(t.Context(), confirmation(t, f, sns.TypeUnsubscribeConfirmation))
+		_, err := f.source.Receive(t.Context(), delivery(confirmation(t, f, sns.TypeUnsubscribeConfirmation)))
 
 		require.ErrorIs(t, err, mailbox.ErrUnsubscribed)
 	})
+}
+
+/*
+delivery hands a source an SNS post as its webhook would.
+*/
+func delivery(body []byte) mailbox.Delivery {
+	return drivertest.Post{Body: body}.Delivery()
 }

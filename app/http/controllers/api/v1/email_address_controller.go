@@ -59,8 +59,9 @@ type InboundEmailsOutput struct {
 
 /*
 EmailAddressController serves the workspace's email addresses. Provider
-is the install's customer-stream transport, shown on each address, and
-Senders works out what each address sends as.
+is the install's customer-stream transport, shown on each address,
+Senders works out what each address sends as, and Guides picks the setup
+guide each address opens on.
 */
 type EmailAddressController struct {
 	Create   *email.CreateEmailAddress
@@ -74,6 +75,7 @@ type EmailAddressController struct {
 	Cursors  *pagination.Cursors
 	Provider string
 	Senders  *email.Domains
+	Guides   *email.RecommendGuide
 }
 
 /*
@@ -94,7 +96,7 @@ func (c *EmailAddressController) Index(ctx context.Context, _ *requests.NoInput)
 		return nil, err
 	}
 
-	items, err := c.sending(ctx, resources.NewEmailAddresses(rows, c.Provider))
+	items, err := c.sending(ctx, c.guides(ctx, resources.NewEmailAddresses(rows, c.Provider)))
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +176,7 @@ func (c *EmailAddressController) Update(
 		return nil, err
 	}
 
-	items, err := c.sending(ctx, []resources.EmailAddress{c.shape(row)})
+	items, err := c.sending(ctx, c.guides(ctx, []resources.EmailAddress{c.shape(row)}))
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +204,18 @@ func (c *EmailAddressController) sending(
 	}
 
 	return items, nil
+}
+
+/*
+guides fills in each address's setup guides, the one that fits its
+domain first.
+*/
+func (c *EmailAddressController) guides(ctx context.Context, items []resources.EmailAddress) []resources.EmailAddress {
+	for i, item := range items {
+		items[i] = item.WithGuides(ctx, c.Guides.Handle(ctx, item.Address))
+	}
+
+	return items
 }
 
 /*
@@ -318,7 +332,7 @@ func (c *EmailAddressController) answer(ctx context.Context, id ids.UUID) (*Emai
 		return nil, err
 	}
 
-	items, err := c.sending(ctx, []resources.EmailAddress{c.shape(row)})
+	items, err := c.sending(ctx, c.guides(ctx, []resources.EmailAddress{c.shape(row)}))
 	if err != nil {
 		return nil, err
 	}

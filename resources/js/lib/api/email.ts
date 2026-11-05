@@ -9,9 +9,13 @@ import { queryOptions } from "@tanstack/react-query";
 import { request } from "./client";
 
 export interface SetupGuide {
+  key: string;
   provider: string;
   name: string;
+  recommended: boolean;
+  deep_link: string | null;
   steps: string[];
+  warnings: string[];
 }
 
 export interface ForwardingConfirmation {

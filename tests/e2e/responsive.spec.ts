@@ -8,7 +8,6 @@ const pages = [
   "/d/procedures",
   "/d/procedures/sign-in-code",
   "/d/settings/profile",
-  "/d/settings/notifications",
   "/d/settings/security",
   "/d/settings/connections",
   "/d/settings/messenger",

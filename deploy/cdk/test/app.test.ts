@@ -100,6 +100,14 @@ describe("app stack", () => {
     expect(variable(web, "DIMMI_GATE__ENABLED")).toBe("true");
   });
 
+  it("every service checks itself through the health command", () => {
+    for (const family of ["dimmi-production-web", "dimmi-production-worker"]) {
+      const container = containers(family, production)[0] as Container & { HealthCheck?: { Command: string[] } };
+
+      expect(container.HealthCheck?.Command).toEqual(["CMD", "/dimmi", "health"]);
+    }
+  });
+
   it("production runs web and worker roles in separate services with the gate off", () => {
     const web = containers("dimmi-production-web", production)[0];
     const worker = containers("dimmi-production-worker", production)[0];

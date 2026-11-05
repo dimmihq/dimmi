@@ -271,7 +271,7 @@ func TestAccountClaim(t *testing.T) {
 		withLink(tc.Client(), magicLink(t, tc, victim, nil), tc).AssertCreated()
 
 		var metadata map[string]any
-		err := tc.App.DB.QueryRow(t.Context(),
+		err := tc.Operator().QueryRow(t.Context(),
 			"SELECT metadata FROM security_events WHERE user_id = $1 AND type = 'sessions.revoked_others'",
 			s.user.ID).Scan(&metadata)
 		require.NoError(t, err)

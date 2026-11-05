@@ -77,7 +77,7 @@ teamMemberAdded records a member joining a team.
 */
 func (l *WriteAuditLog) teamMemberAdded(ctx context.Context, e appevents.TeamMemberAdded) error {
 	return l.teamMember(ctx, e.TeamID, e.MemberID, audit.Entry{
-		WorkspaceID: e.WorkspaceID, Event: audit.EventTeamMemberAdded, ActorID: e.AddedBy,
+		WorkspaceID: e.WorkspaceID, Event: audit.EventTeamMemberAdded, ActorID: e.AddedByMemberID,
 	})
 }
 

@@ -224,7 +224,7 @@ findOriginal finds the message in the conversation, which must be one
 in the caller's workspace, when it has an original to show.
 */
 func findOriginal(ctx context.Context, q *models.Queries, in OriginalInput) (models.Message, error) {
-	c, err := conversations.Find(ctx, q, in.Membership.Workspace.ID, in.Ref)
+	c, err := conversations.Find(ctx, q, in.Membership, in.Ref)
 	if err != nil {
 		return models.Message{}, err
 	}

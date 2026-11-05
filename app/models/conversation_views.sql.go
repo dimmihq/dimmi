@@ -38,8 +38,20 @@ SELECT assignee_member_id::uuid AS member_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = $1 AND deleted_at IS NULL AND NOT spam AND status = 'open'
   AND assignee_member_id IS NOT NULL
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, $2::text, $3::uuid,
+      $4::uuid[], $5::boolean
+  )
 GROUP BY assignee_member_id
 `
+
+type CountOpenConversationsByAssigneeParams struct {
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
+}
 
 type CountOpenConversationsByAssigneeRow struct {
 	MemberID ids.UUID `json:"member_id"`
@@ -47,9 +59,15 @@ type CountOpenConversationsByAssigneeRow struct {
 }
 
 // CountOpenConversationsByAssignee counts the open conversations each
-// member holds.
-func (q *Queries) CountOpenConversationsByAssignee(ctx context.Context, workspaceID ids.UUID) ([]CountOpenConversationsByAssigneeRow, error) {
-	rows, err := q.db.Query(ctx, countOpenConversationsByAssignee, workspaceID)
+// member holds, among those the reader may see.
+func (q *Queries) CountOpenConversationsByAssignee(ctx context.Context, arg CountOpenConversationsByAssigneeParams) ([]CountOpenConversationsByAssigneeRow, error) {
+	rows, err := q.db.Query(ctx, countOpenConversationsByAssignee,
+		arg.WorkspaceID,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +90,20 @@ const countOpenConversationsByTeam = `-- name: CountOpenConversationsByTeam :man
 SELECT assignee_team_id::uuid AS team_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = $1 AND deleted_at IS NULL AND NOT spam AND status = 'open' AND assignee_team_id IS NOT NULL
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, $2::text, $3::uuid,
+      $4::uuid[], $5::boolean
+  )
 GROUP BY assignee_team_id
 `
+
+type CountOpenConversationsByTeamParams struct {
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
+}
 
 type CountOpenConversationsByTeamRow struct {
 	TeamID ids.UUID `json:"team_id"`
@@ -81,9 +111,15 @@ type CountOpenConversationsByTeamRow struct {
 }
 
 // CountOpenConversationsByTeam counts the open conversations of each team
-// that holds any.
-func (q *Queries) CountOpenConversationsByTeam(ctx context.Context, workspaceID ids.UUID) ([]CountOpenConversationsByTeamRow, error) {
-	rows, err := q.db.Query(ctx, countOpenConversationsByTeam, workspaceID)
+// that holds any, among those the reader may see.
+func (q *Queries) CountOpenConversationsByTeam(ctx context.Context, arg CountOpenConversationsByTeamParams) ([]CountOpenConversationsByTeamRow, error) {
+	rows, err := q.db.Query(ctx, countOpenConversationsByTeam,
+		arg.WorkspaceID,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
+	)
 	if err != nil {
 		return nil, err
 	}

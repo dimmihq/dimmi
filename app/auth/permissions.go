@@ -148,7 +148,10 @@ func permissionGroups() map[string][]string {
 		"articles:read":  {"articles:read"},
 		"articles:write": {"articles:write"},
 		"members:read":   {"members:read"},
-		"members:write":  {"members:write", "members:manage_owners", "tokens:manage_any"},
+		"members:write": {
+			"members:write", "members:manage_owners", "tokens:manage_any", "members:reset_two_factor", "members:import",
+			"members:manage_access", "members:manage_availability",
+		},
 		"settings:read": {
 			"settings:read", "audit_logs:read", "widgets:read", "identity:read", "email:read", "email:read_raw",
 			"channels:inspect", "help_centers:read_settings", "github:read", "imports:read",

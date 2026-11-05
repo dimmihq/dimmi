@@ -73,11 +73,6 @@ WHERE m.workspace_id = @workspace_id AND m.user_id = @user_id;
 -- an audit entry made through it.
 SELECT name, hint FROM personal_access_tokens WHERE id = @id;
 
--- name: ListAuditLogWorkspacesBefore :many
--- ListAuditLogWorkspacesBefore returns the workspaces that have audit
--- entries written before the cutoff.
-SELECT DISTINCT workspace_id FROM audit_logs WHERE created_at < @cutoff;
-
 -- name: PruneAuditLogs :execrows
 -- PruneAuditLogs deletes up to a batch of audit entries of the
 -- workspaces, written before the cutoff, oldest first.

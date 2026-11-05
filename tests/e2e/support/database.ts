@@ -90,6 +90,45 @@ export function verifyEmail(email: string) {
 }
 
 /*
+ * markTwoFactorOn marks the person's account as protected by a second
+ * factor, as a person who then lost their phone would have it.
+ */
+export function markTwoFactorOn(email: string) {
+  psql("UPDATE users SET two_factor_confirmed_at = now() WHERE email = :'email'", { email });
+}
+
+/*
+ * handToTeam gives every conversation of the workspace the owner with
+ * ownerEmail created to the team with the name, as an assignment would.
+ */
+export function handToTeam(ownerEmail: string, team: string) {
+  psql(
+    `UPDATE conversations c SET assignee_team_id = t.id
+     FROM teams t, workspace_members m JOIN users o ON o.id = m.user_id
+     WHERE o.email = :'owner' AND m.role = 'owner'
+       AND t.workspace_id = m.workspace_id AND t.name = :'team' AND c.workspace_id = m.workspace_id`,
+    { owner: ownerEmail, team },
+  );
+}
+
+/*
+ * conversationTeams lists the team holding each conversation of the
+ * workspace the owner with ownerEmail created, an empty string for a
+ * conversation no team holds.
+ */
+export function conversationTeams(ownerEmail: string): string[] {
+  return psql(
+    `SELECT coalesce(t.name, '') FROM conversations c
+     JOIN workspace_members m ON m.workspace_id = c.workspace_id JOIN users o ON o.id = m.user_id
+     LEFT JOIN teams t ON t.id = c.assignee_team_id
+     WHERE o.email = :'owner' AND m.role = 'owner' ORDER BY c.number`,
+    { owner: ownerEmail },
+  )
+    .split("\n")
+    .slice(0, -1);
+}
+
+/*
  * stopMail stops all mail to the address in the workspace the owner with
  * ownerEmail created, as a hard bounce would.
  */

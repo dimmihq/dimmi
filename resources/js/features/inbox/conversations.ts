@@ -7,6 +7,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
 import type { ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
+import { formatRelative } from "@/lib/i18n/format";
 
 /*
  * useInbox returns the workspace the inbox works in and the person
@@ -27,15 +28,6 @@ export function subjectOf(conversation: Conversation): string {
   return conversation.subject ?? conversation.last_message?.excerpt ?? `Conversation #${conversation.number}`;
 }
 
-const units: [Intl.RelativeTimeFormatUnit, number][] = [
-  ["year", 31_536_000],
-  ["month", 2_592_000],
-  ["week", 604_800],
-  ["day", 86_400],
-  ["hour", 3600],
-  ["minute", 60],
-];
-
 /*
  * ago says how long ago a moment was, in the reader's language: "Just
  * now" under a minute, then minutes, hours and so on.
@@ -44,15 +36,11 @@ export function ago(iso: string | null, now = Date.now()): string {
   if (!iso) {
     return "";
   }
-  const seconds = Math.round((now - new Date(iso).getTime()) / 1000);
-  const format = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "short" });
-  for (const [unit, size] of units) {
-    if (seconds >= size) {
-      return format.format(-Math.floor(seconds / size), unit);
-    }
+  if (now - new Date(iso).getTime() < 60_000) {
+    return "Just now";
   }
 
-  return "Just now";
+  return formatRelative(iso, { now, style: "short" });
 }
 
 /*

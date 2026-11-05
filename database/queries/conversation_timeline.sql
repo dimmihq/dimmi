@@ -109,3 +109,12 @@ UPDATE messages SET delivery_status = 'pending', delivery_error = NULL, updated_
 WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id = @id
   AND type = 'message' AND delivery_status = 'failed' AND deleted_at IS NULL
 RETURNING *;
+
+-- name: LatestContactMessage :one
+-- LatestContactMessage returns the newest live message the customer
+-- wrote in the conversation, the one a seen receipt answers.
+SELECT * FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND author_type = 'contact' AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 1;

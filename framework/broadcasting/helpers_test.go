@@ -196,6 +196,9 @@ type push struct {
 	} `json:"join"`
 	Connect    *connected  `json:"connect"`
 	Disconnect *protoError `json:"disconnect"`
+	Unsub      *struct {
+		Code int `json:"code"`
+	} `json:"unsubscribe"`
 }
 
 /*
@@ -376,6 +379,20 @@ func (c *wsClient) join() string {
 	for {
 		if p := c.push(); p.Join != nil {
 			return p.Join.Info.User
+		}
+	}
+}
+
+/*
+unsubscribed returns the channel the server next took the client off,
+skipping other pushes.
+*/
+func (c *wsClient) unsubscribed() string {
+	c.t.Helper()
+
+	for {
+		if p := c.push(); p.Unsub != nil {
+			return p.Channel
 		}
 	}
 }

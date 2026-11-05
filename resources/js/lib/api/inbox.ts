@@ -10,7 +10,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { realtimeKeys } from "@/lib/realtime/keys";
 
-import { request, requestFile } from "./client";
+import { type DownloadedFile, request, requestFile } from "./client";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
 
@@ -281,8 +281,8 @@ export function messageOriginalQuery(workspace: string, conversation: string, me
   });
 }
 
-export function downloadRawEmail(workspace: string, conversation: string, message: string): Promise<Blob> {
-  return requestFile(`${messagePath(conversation, message)}/original/raw`, { workspace });
+export function downloadRawEmail(workspace: string, conversation: string, message: string): Promise<DownloadedFile> {
+  return requestFile(`${messagePath(conversation, message)}/original/raw`, "message/rfc822", { workspace });
 }
 
 export function countsQuery(workspace: string) {

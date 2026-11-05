@@ -5,6 +5,9 @@ app:
   env: local
   url: http://localhost:8080
   key_auto_generate: true
+  # en-XA is the pseudo locale `make dev` generates: accented, longer
+  # English that shows untranslated text and tight layouts at a glance.
+  locales: [en, en-XA]
 http:
   addr: 127.0.0.1:8080
   admin_addr: 127.0.0.1:9090

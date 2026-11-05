@@ -114,7 +114,7 @@ func TestMessageOriginal(t *testing.T) {
 		owner.GetJSON("/api/v1/conversations/" + second + "/messages/" +
 			models.PublicID(models.PrefixMessage, m.ID) + "/original").AssertNotFound()
 
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE messages SET deleted_at = now() WHERE id = $1", m.ID)
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE messages SET deleted_at = now() WHERE id = $1", m.ID)
 		require.NoError(t, err)
 
 		owner.GetJSON(originalPath(m)).AssertNotFound()
@@ -200,7 +200,7 @@ func TestMessageOriginal(t *testing.T) {
 		t.Parallel()
 		tc, _ := emailCase(t)
 		m := loneMessage(t, tc, "Hello")
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE inbound_emails SET raw_path = NULL, raw_deleted_at = now()")
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE inbound_emails SET raw_path = NULL, raw_deleted_at = now()")
 		require.NoError(t, err)
 		owner := tc.ActingAsOwner()
 
@@ -212,7 +212,7 @@ func TestMessageOriginal(t *testing.T) {
 		t.Parallel()
 		tc, _ := emailCase(t)
 		m := loneMessage(t, tc, "Hello")
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE inbound_emails SET raw_path = 'nowhere/gone.eml'")
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE inbound_emails SET raw_path = 'nowhere/gone.eml'")
 		require.NoError(t, err)
 
 		tc.ActingAsOwner().GetJSON(originalPath(m) + "/raw").AssertNotFound()

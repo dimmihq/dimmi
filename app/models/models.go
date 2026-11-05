@@ -157,6 +157,8 @@ type Conversation struct {
 	UpdatedAt              time.Time               `json:"updated_at"`
 	IsTest                 bool                    `json:"is_test"`
 	PreviousConversationID *ids.UUID               `json:"previous_conversation_id"`
+	AssignmentWaitReason   *string                 `json:"assignment_wait_reason"`
+	AssignmentWaitingSince *time.Time              `json:"assignment_waiting_since"`
 	WaitingSince           *time.Time              `json:"waiting_since"`
 	LastActivityAt         *time.Time              `json:"last_activity_at"`
 	LastMessageID          *ids.UUID               `json:"last_message_id"`
@@ -423,6 +425,21 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+	RemindedAt        *time.Time `json:"reminded_at"`
+}
+
+type Maintenance struct {
+	ID      bool       `json:"id"`
+	Enabled bool       `json:"enabled"`
+	Message string     `json:"message"`
+	Since   *time.Time `json:"since"`
+}
+
+type MemberAccessTeam struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    ids.UUID  `json:"member_id"`
+	TeamID      ids.UUID  `json:"team_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type MemberInboxPreference struct {
@@ -692,6 +709,15 @@ type Team struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+type TeamAssignmentCursor struct {
+	PoolKind       string     `json:"pool_kind"`
+	PoolID         ids.UUID   `json:"pool_id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	LastMemberID   *ids.UUID  `json:"last_member_id"`
+	LastAssignedAt *time.Time `json:"last_assigned_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
 type TeamMember struct {
 	TeamID            ids.UUID  `json:"team_id"`
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
@@ -700,22 +726,23 @@ type TeamMember struct {
 }
 
 type User struct {
-	ID                   ids.UUID   `json:"id"`
-	Name                 string     `json:"name"`
-	Email                string     `json:"email"`
-	EmailVerifiedAt      *time.Time `json:"email_verified_at"`
-	PasswordHash         *string    `json:"password_hash"`
-	TwoFactorConfirmedAt *time.Time `json:"two_factor_confirmed_at"`
-	AvatarPath           *string    `json:"avatar_path"`
-	Locale               *string    `json:"locale"`
-	Timezone             *string    `json:"timezone"`
-	LastSeenAt           *time.Time `json:"last_seen_at"`
-	CreatedAt            time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
-	DeletedAt            *time.Time `json:"deleted_at"`
-	PasswordChangedAt    *time.Time `json:"password_changed_at"`
-	RiskFlags            []string   `json:"risk_flags"`
-	CreatedVia           *string    `json:"created_via"`
+	ID                   ids.UUID        `json:"id"`
+	Name                 string          `json:"name"`
+	Email                string          `json:"email"`
+	EmailVerifiedAt      *time.Time      `json:"email_verified_at"`
+	PasswordHash         *string         `json:"password_hash"`
+	TwoFactorConfirmedAt *time.Time      `json:"two_factor_confirmed_at"`
+	AvatarPath           *string         `json:"avatar_path"`
+	Locale               *string         `json:"locale"`
+	Timezone             *string         `json:"timezone"`
+	LastSeenAt           *time.Time      `json:"last_seen_at"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	DeletedAt            *time.Time      `json:"deleted_at"`
+	PasswordChangedAt    *time.Time      `json:"password_changed_at"`
+	RiskFlags            []string        `json:"risk_flags"`
+	CreatedVia           *string         `json:"created_via"`
+	Preferences          json.RawMessage `json:"preferences"`
 }
 
 type UserAuthFactor struct {
@@ -818,16 +845,26 @@ type Workspace struct {
 }
 
 type WorkspaceMember struct {
-	ID                    ids.UUID   `json:"id"`
-	WorkspaceID           ids.UUID   `json:"workspace_id"`
-	UserID                ids.UUID   `json:"user_id"`
-	Role                  string     `json:"role"`
-	Availability          string     `json:"availability"`
-	Status                string     `json:"status"`
-	CreatedAt             time.Time  `json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
-	LastAccessedAt        *time.Time `json:"last_accessed_at"`
-	DeactivatedAt         *time.Time `json:"deactivated_at"`
-	DeactivatedByMemberID *ids.UUID  `json:"deactivated_by_member_id"`
-	JoinedVia             *string    `json:"joined_via"`
+	ID                           ids.UUID        `json:"id"`
+	WorkspaceID                  ids.UUID        `json:"workspace_id"`
+	UserID                       ids.UUID        `json:"user_id"`
+	Role                         string          `json:"role"`
+	Availability                 string          `json:"availability"`
+	Status                       string          `json:"status"`
+	CreatedAt                    time.Time       `json:"created_at"`
+	UpdatedAt                    time.Time       `json:"updated_at"`
+	LastAccessedAt               *time.Time      `json:"last_accessed_at"`
+	DeactivatedAt                *time.Time      `json:"deactivated_at"`
+	DeactivatedByMemberID        *ids.UUID       `json:"deactivated_by_member_id"`
+	JoinedVia                    *string         `json:"joined_via"`
+	ConversationAccess           string          `json:"conversation_access"`
+	ConversationAccessUnassigned bool            `json:"conversation_access_unassigned"`
+	AwayReassign                 bool            `json:"away_reassign"`
+	AwaySince                    *time.Time      `json:"away_since"`
+	AvailabilitySource           string          `json:"availability_source"`
+	AwayReasonID                 *ids.UUID       `json:"away_reason_id"`
+	AssignOnReply                string          `json:"assign_on_reply"`
+	ConversationCapacity         *int32          `json:"conversation_capacity"`
+	CapacityByChannel            json.RawMessage `json:"capacity_by_channel"`
+	LastAssignedAt               *time.Time      `json:"last_assigned_at"`
 }

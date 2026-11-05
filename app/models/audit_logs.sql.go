@@ -190,32 +190,6 @@ func (q *Queries) FindAuditToken(ctx context.Context, id ids.UUID) (FindAuditTok
 	return i, err
 }
 
-const listAuditLogWorkspacesBefore = `-- name: ListAuditLogWorkspacesBefore :many
-SELECT DISTINCT workspace_id FROM audit_logs WHERE created_at < $1
-`
-
-// ListAuditLogWorkspacesBefore returns the workspaces that have audit
-// entries written before the cutoff.
-func (q *Queries) ListAuditLogWorkspacesBefore(ctx context.Context, cutoff time.Time) ([]ids.UUID, error) {
-	rows, err := q.db.Query(ctx, listAuditLogWorkspacesBefore, cutoff)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ids.UUID
-	for rows.Next() {
-		var workspace_id ids.UUID
-		if err := rows.Scan(&workspace_id); err != nil {
-			return nil, err
-		}
-		items = append(items, workspace_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listAuditLogs = `-- name: ListAuditLogs :many
 SELECT id, workspace_id, event, actor_type, actor_id, via_kind, via_id, actor_label, subject_type, subject_id, subject_label, changes, ip, user_agent, request_id, created_at FROM audit_logs
 WHERE workspace_id = $1

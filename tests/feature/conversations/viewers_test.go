@@ -58,7 +58,8 @@ func TestConversationViewers(t *testing.T) {
 		bob, member := d.joinUser(t)
 		url := d.tc.RealtimeURL()
 		lists := d.tc.ListenAs(d.tc.Owner, url)
-		require.Nil(t, lists.Subscribe(appbroadcasting.WorkspaceChannel(d.tc.Workspace.Workspace.ID)).Error)
+		listChannel := appbroadcasting.WorkspaceConversationsChannel(d.tc.Workspace.Workspace.ID)
+		require.Nil(t, lists.Subscribe(listChannel).Error)
 
 		require.Nil(t, d.tc.ListenAs(bob, url).Subscribe("conversation:"+id).Error)
 

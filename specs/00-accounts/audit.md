@@ -10,12 +10,13 @@ API exists in spec; code lacks CSV. `GET /audit-logs` with `Accept: text/csv` (o
 - Streamed, `Content-Disposition: attachment; filename="dimmi-audit-<slug>-<from>-<to>.csv"`. Reads with cursor in batches 1,000, one short tx per batch; no long tx.
 - Columns: `id,created_at,event,actor_type,actor_id,actor_label,via_kind,via_id,subject_type,subject_id,subject_label,changes,ip,user_agent,request_id`. `changes` compact JSON. Times RFC 3339 UTC. Formula guard: `app/support/csvsafe` ([settings-pages.md](settings-pages.md)).
 - Export writes `audit_logs.exported` audit entry with filters and row count, after stream ends. Client disconnect: entry with `completed: false`.
-- Limit 10/hour per workspace.
+- Limit 10/hour per workspace: 429 `too_many_exports` with `retry_after`.
+- Range end missing: runs up to the moment of reading (filename date = today). Range check before limit, so refused range costs nothing.
 - Action `app/actions/audit/export_audit_logs.go`.
 
-Retention stays `config/retention.go`: cloud 365 days, self-host unlimited by default. UI date picker bounded by retention.
+Retention stays `config/retention.go`: cloud 365 days, self-host unlimited by default. UI date picker bounded by retention: `GET /me` `instance.audit_retention_days` (0 = for ever), no future days.
 
-UI `features/settings/pages/audit-log.tsx`: BoardUI `date-picker` range (presets 24 h, 7 d, 30 d, 90 d), IP shown in row detail, "Export CSV" `Button` downloads with current filters. Event filter gets grouped options. E2e extend `tests/e2e/audit-log.spec.ts`: "an admin filters by date and downloads what they see".
+UI `features/settings/pages/audit-log.tsx`: BoardUI `date-range-picker` (presets 24 h, 7 d, 30 d, 90 d; preset runs to now, picked days run whole days in reader's zone; range logic `features/settings/audit-range.ts`), row opens detail drawer (`audit-entry-detail.tsx`: IP, browser, request id, changes), "Export CSV" `Button` downloads with current filters. Event filter gets grouped options: per group "Any <group> event" (comma list) plus each event; empty groups hidden. E2e extend `tests/e2e/audit-log.spec.ts`: "an admin filters by date and downloads what they see".
 
 ## Wider scope (S-14)
 
@@ -41,7 +42,9 @@ Mechanism: listener `MirrorSecurityEventToAudit` on security event write. Queued
 | `sessions.revoked_others` | `member.sessions_revoked` | member | member |
 | `sso.signed_in`, `sso.bypass_used` (21) | `member.signed_in` with `method: sso`, `member.sso_bypassed` | member | member |
 
-`changes` carries `ip`, `device_label`, method, failure reason. Never codes, never passwords. Reader sees row IP and user agent as usual.
+Built: `app/listeners/mirror_security_event_to_audit.go`. `SecurityLog.Record` dispatches `SecurityEventRecorded` in its transaction; `ListenQueued` pushes job `mirror_security_event_to_audit` only for mapped types; job writes every workspace's row in one transaction (retry never duplicates). SSO rows wait for 21 (no `sso.*` security events registered yet). `login.locked` actor label "System". Change made at command line (`user:disable-2fa`): actor `system`, `via.kind: cli`. Membership that began after the event gets no copy. Row `created_at` = security event time.
+
+`changes` carries `ip`, `device_label`, `method` (failed, locked), `methods` (sign-in), `reason` (`invalid_credentials`, `too_many_attempts`), `factor_type`, `provider`, `sessions_ended`. Allow-list, nothing else copied. Never codes, never passwords. Reader sees row IP and user agent as usual.
 
 Privacy: admin of each workspace sees failures for its member, including from any place. Justified: same person's account reaches their workspace. `login.failed` for unknown addresses not logged, no enumeration path: reading requires `audit_logs:read`, and subject already a member. Old entries stay after member leaves. Member's own view unchanged (`/user/security-events`).
 
@@ -78,6 +81,10 @@ Name mismatch with owner spec: owner's name wins; label file follows.
 
 `log-labels.ts` exports groups: Sign-in, Security settings, Members and teams, Tokens and apps, Inbox, Email, Data export. Server filter stays `filter[event]` comma list.
 
+### Registered at M16 end
+
+Verified against code: `workspace.created/updated/deleted/restored`, `member.joined/role_changed/deactivated/reactivated/left`, `ownership.transferred`, `token.created/revoked`, `invitation.created/accepted/revoked`, `team.created/updated/deleted/member_added/member_removed`, `member.signed_in/sign_in_failed/sign_in_locked/sessions_revoked/two_factor_enabled/two_factor_disabled/auth_factor_added/auth_factor_removed/recovery_code_used/password_changed/password_reset/email_changed/identity_linked/identity_unlinked`, `audit_logs.exported`. Each labeled in `log-labels.ts`. Not yet registered (owner adds event + label in its milestone): `invitation.resent` (F71), `members.exported`, `member_import.completed`, `member.two_factor_reset_*`, `member.sign_in_lock_cleared`, `member.access_changed` (M17), roles (M19), 19 SSO/SCIM events and `member.sso_bypassed` (21), every row of "Events other specs must emit". Inbox and Email groups stay empty, hidden in the filter, until 03/04 emit.
+
 ## Tests
 
-`tests/feature/workspaces/audit_logs_test.go` adds: "an admin downloads a csv of a date range", "a range over a year is refused", "csv cells cannot start a formula", "exporting leaves its own entry", "a member cannot export", "a token with settings read can export", "a failed sign-in shows in each workspace of that person", "an unknown address leaves no entry", "a colleague's second factor removal shows to admins", "a code or password never lands in changes", "mirror writes after login returns", "a former member's entries stay".
+`tests/feature/workspaces/` (`audit_export_test.go`, `audit_sign_ins_test.go`; `audit_logs_test.go` was at its size limit) adds: "an admin downloads a csv of a date range", "a range over a year is refused", "csv cells cannot start a formula", "exporting leaves its own entry", "a member cannot export", "a token with settings read can export", "a failed sign-in shows in each workspace of that person", "an unknown address leaves no entry", "a colleague's second factor removal shows to admins", "a code or password never lands in changes", "mirror writes after login returns", "a former member's entries stay".

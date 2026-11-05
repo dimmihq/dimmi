@@ -5,7 +5,8 @@
 #
 # The certificate must verify, health must answer, plain HTTP must redirect to
 # HTTPS, and the gate must be on exactly where it is expected. GATE_KEY, when
-# set, is sent as the gate's CI key header.
+# set, is sent as the gate's CI key header. EXPECT_RELEASE, when set, must
+# be the release /up reports, so the check proves the new build answers.
 
 set -euo pipefail
 
@@ -21,6 +22,11 @@ for path in /up /ready; do
   code="$(status "$BASE$path")" || fail "$BASE$path did not answer over verified TLS"
   [ "$code" = "200" ] || fail "$BASE$path answered $code"
 done
+
+if [ -n "${EXPECT_RELEASE:-}" ]; then
+  up="$(curl --silent --max-time 15 "$BASE/up")"
+  case "$up" in *"\"release\":\"$EXPECT_RELEASE\""*) ;; *) fail "$BASE/up reports $up, expected release $EXPECT_RELEASE" ;; esac
+fi
 
 code="$(status "http://$HOST/")"
 case "$code" in 301 | 308) ;; *) fail "http://$HOST/ answered $code, expected a redirect to HTTPS" ;; esac

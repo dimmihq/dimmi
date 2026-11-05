@@ -115,7 +115,7 @@ Tracks free to start at once, no waiting: 01 M1 to M11; 02 A1 to A4; 03 W1 to W4
 
 - **Goal:** inbox that feels fast and complete on screen.
 - **Build:** 03 tasks W1 to W12; remaining parts of M1, M3 to M7, M10 to M12 (partly built: check code first). Specs: 03 views.md, workbench.md, collaboration.md "Mentions", "Reactions", search.md, api.md.
-- **Depends:** 02 A1 for new list queries (until then use existing `VisibleScope{}` entry point, no direct SQL). 05 mounts `sender-select`, `sender-flag`, `throttle-banner` from `resources/js/features/email`: 03 leaves named slots.
+- **Depends:** 02 A1 for new list queries (until then no direct SQL; afterwards `conversations.Find`, `Lock` with `Membership` and access args per 03 access.md). 05 mounts `sender-select`, `sender-flag`, `throttle-banner` from `resources/js/features/email`: 03 leaves named slots.
 - **Owns:** `resources/js/features/inbox/**` except `customer/`, `resources/js/features/command-menu/**`, `app/actions/messages/**`, `app/actions/conversations/**` not owned by 02 or 04, `app/actions/{conversation_views,drafts,bulk_operations,reactions}/**`, `routes/inbox_views.go`, `database/queries/{conversation_views,conversation_drafts,bulk_operations,snooze_lists,message_reactions,member_inbox_preferences}.sql`, `app/support/searchquery`, `tests/feature/conversations`, `tests/e2e/inbox*.spec.ts`.
 - **Touches additively:** `resources/js/features/shell/navigation.ts`, 01 widget payload never.
 - **Migrations:** `20261201030001`..`20261201039999`.

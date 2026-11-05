@@ -27,6 +27,7 @@ ADD --chmod=0444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.p
 
 FROM gcr.io/distroless/static-debian12:nonroot
 ARG REVISION=unknown
+ENV DIMMI_APP__RELEASE=$REVISION
 LABEL org.opencontainers.image.source="https://github.com/dimmihq/dimmi" \
       org.opencontainers.image.revision=$REVISION
 COPY --from=binary /out/rds-global-bundle.pem /etc/ssl/certs/rds-global-bundle.pem

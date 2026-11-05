@@ -1,11 +1,12 @@
 import { RiChatOffLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Spinner } from "@/components/base/spinner/spinner";
 import { ConversationView } from "@/features/inbox/conversation-view";
 import { useInbox } from "@/features/inbox/conversations";
 import { EmptyState, Panel } from "@/features/shell/page";
+import { ApiError } from "@/lib/api/client";
 import { conversationQuery } from "@/lib/api/inbox";
 
 export const Route = createFileRoute("/d/inbox/$view/$conversation")({
@@ -15,13 +16,19 @@ export const Route = createFileRoute("/d/inbox/$view/$conversation")({
 function ConversationRoute() {
   const { view, conversation: id } = Route.useParams();
   const { workspace } = useInbox();
-  const { data: conversation, isPending } = useQuery({
+  const {
+    data: conversation,
+    isPending,
+    error,
+  } = useQuery({
     ...conversationQuery(workspace, id),
     enabled: workspace !== "",
     retry: false,
   });
 
-  if (conversation) {
+  const gone = error instanceof ApiError && error.status === 404;
+
+  if (conversation && !gone) {
     return <ConversationView key={conversation.id} view={view} workspace={workspace} conversation={conversation} />;
   }
 
@@ -34,9 +41,13 @@ function ConversationRoute() {
       ) : (
         <EmptyState
           icon={RiChatOffLine}
-          title="Conversation not found"
-          description="It may have been deleted, or it belongs to another workspace."
-        />
+          title="You do not have access to this conversation"
+          description="It may have been deleted, or it may not be yours to see."
+        >
+          <Link to="/d/inbox/$view" params={{ view: "mine" }} className="text-body-medium text-text-primary underline">
+            Go to my inbox
+          </Link>
+        </EmptyState>
       )}
     </Panel>
   );

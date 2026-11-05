@@ -69,6 +69,25 @@ func (w Workspace) ShowsViewersOnList() bool {
 }
 
 /*
+SeenReceiptShowsName reports whether the customer's widget names the
+teammate who read their message. It does not unless the workspace
+turned it on: by default the customer only learns that the team saw it.
+*/
+func (w Workspace) SeenReceiptShowsName() bool {
+	var settings struct {
+		Inbox struct {
+			SeenReceiptShowsName bool `json:"seen_receipt_shows_name"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return false
+	}
+
+	return settings.Inbox.SeenReceiptShowsName
+}
+
+/*
 WithSetting returns the settings document with the key of the area set
 to the value, keeping every other key.
 */
@@ -100,6 +119,67 @@ func WithSetting(settings json.RawMessage, area, key string, value any) (json.Ra
 	}
 
 	values[area] = raw
+
+	return json.Marshal(values)
+}
+
+/*
+CustomerFacingName returns the name customers see in messages and mail
+from the workspace: the one set for them, or else the workspace's own
+name.
+*/
+func (w Workspace) CustomerFacingName() string {
+	if name := w.CustomerFacingNameSetting(); name != nil {
+		return *name
+	}
+
+	return w.Name
+}
+
+/*
+CustomerFacingNameSetting returns the name set for customers, nil when
+none is, so customers see the workspace's own name.
+*/
+func (w Workspace) CustomerFacingNameSetting() *string {
+	var settings struct {
+		CustomerFacingName *string `json:"customer_facing_name"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return nil
+	}
+
+	if settings.CustomerFacingName == nil || *settings.CustomerFacingName == "" {
+		return nil
+	}
+
+	return settings.CustomerFacingName
+}
+
+/*
+WithCustomerFacingName returns the settings document with the name
+customers see set, or removed when name is nil, keeping every other key.
+*/
+func WithCustomerFacingName(settings json.RawMessage, name *string) (json.RawMessage, error) {
+	values := map[string]json.RawMessage{}
+	if len(settings) > 0 {
+		if err := json.Unmarshal(settings, &values); err != nil {
+			return nil, fmt.Errorf("read workspace settings: %w", err)
+		}
+	}
+
+	if name == nil {
+		delete(values, "customer_facing_name")
+
+		return json.Marshal(values)
+	}
+
+	raw, err := json.Marshal(*name)
+	if err != nil {
+		return nil, fmt.Errorf("write customer facing name: %w", err)
+	}
+
+	values["customer_facing_name"] = raw
 
 	return json.Marshal(values)
 }

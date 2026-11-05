@@ -87,3 +87,33 @@ func (m InvitationAcceptedMail) Content(ctx context.Context) (mail.Content, erro
 
 	return contentAbout(ctx, "mail.invitation_accepted.subject", args, body), nil
 }
+
+/*
+InvitationPendingMail reminds Name, who invited Email to Workspace on
+SentOn, a date already written for them, that nobody answered yet, and
+links the workspace's members at MembersURL.
+*/
+type InvitationPendingMail struct {
+	Name       string `json:"name"`
+	Workspace  string `json:"workspace"`
+	Email      string `json:"email"`
+	SentOn     string `json:"sent_on"`
+	MembersURL string `json:"members_url"`
+}
+
+/*
+Envelope leaves the subject to the content, which translates it.
+*/
+func (InvitationPendingMail) Envelope() mail.Envelope {
+	return mail.Envelope{}
+}
+
+/*
+Content renders the mail.
+*/
+func (m InvitationPendingMail) Content(ctx context.Context) (mail.Content, error) {
+	body := accounts.InvitationPending(m.Name, m.Workspace, m.Email, m.SentOn, m.MembersURL)
+	args := i18n.Args{"workspace": m.Workspace, "email": m.Email}
+
+	return contentAbout(ctx, "mail.invitation_pending.subject", args, body), nil
+}

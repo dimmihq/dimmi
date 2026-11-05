@@ -13,6 +13,8 @@
 package v1
 
 import (
+	"context"
+
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
 	"github.com/dimmihq/dimmi/app/actions/auth"
@@ -31,11 +33,11 @@ type SignInOutput struct {
 }
 
 /*
-signInOutput shapes the answer to a sign-in, the caller under the
-status. A challenge sets its cookie; a session drops a challenge cookie
-the browser may still hold.
+signInOutput shapes the answer to a sign-in, the caller or a challenge,
+both under 200. A challenge sets its cookie; a session drops a
+challenge cookie the browser may still hold.
 */
-func signInOutput(cookies appauth.Cookies, server Server, signedIn auth.SignedIn, status int) *SignInOutput {
+func signInOutput(ctx context.Context, cookies appauth.Cookies, server Server, signedIn auth.SignedIn) *SignInOutput {
 	set := deviceCookies(cookies, signedIn.DeviceToken)
 
 	if c := signedIn.Challenge; c != nil {
@@ -47,8 +49,8 @@ func signInOutput(cookies appauth.Cookies, server Server, signedIn auth.SignedIn
 	}
 
 	return &SignInOutput{
-		Status:    status,
+		Status:    fhttp.StatusOK,
 		SetCookie: append(set, cookies.TwoFactorCookie("", 0)),
-		Body:      fhttp.NewResource(resources.NewMe(signedIn.Me, server.instance())),
+		Body:      fhttp.NewResource(resources.NewMe(ctx, signedIn.Me, server.instance())),
 	}
 }
