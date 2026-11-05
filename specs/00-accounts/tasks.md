@@ -114,11 +114,11 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 
 - [ ] Disposable list embed + modes (off/flag/block), velocity flags. Test.
 - [ ] Turnstile driver (siteverify via `a.HTTP`) on `POST /users` + `POST /magic-links` + post-spray `POST /sessions`. Test fail-closed/fail-open rules.
-- [ ] Member kick + session revoke via centrifuge: `DisconnectMemberSockets` (`node.Disconnect(userID)` over Redis broker on Valkey), `DisconnectSessionSockets` (connection meta `ses_`), dashboard connection `ExpireAt` 5 min + `OnRefresh` re-check. Test with testkit broadcaster (real in-memory centrifuge node): E57, E157, E185, E264, E265.
-- [ ] Prometheus metrics and log redaction review (grep tests: no `dmi_live_` or cookie values in captured logs).
+- [x] Member kick + session revoke via centrifuge: `DisconnectMemberSockets` (`node.Disconnect(userID)` over Redis broker on Valkey), `DisconnectSessionSockets` (connection meta `ses_`), dashboard connection `ExpireAt` 5 min + `OnRefresh` re-check. Test with testkit broadcaster (real in-memory centrifuge node): E57, E157, E185, E264, E265. Built as `broadcasting.Disconnects` (member deactivated, access changed, signed out everywhere, user deleted) and `DisconnectCredential` for revoked sessions and tokens; connections re-check every minute, stricter than five.
+- [x] Prometheus metrics and log redaction review (grep tests: no `dmi_live_` or cookie values in captured logs). `TestLogRedaction` signs in, mints and uses a token and signs out at debug level, then finds no token or session cookie in the logs. Metrics come from `framework/telemetry`; the API limiter counts refusals.
 - [ ] Security review checklist: OWASP ASVS L2 auth/session sections walkthrough, recorded in PR.
 - [ ] Event catalog rows added to `00-foundation/events-and-realtime.md` (via foundation owner PR).
-- [ ] Route lint: no path from rest.md old column in routes or OpenAPI (incl. every `/user/two-factor*` path); every route name equals noun path (`sessions.store`, `user.memberships.destroy`, `password-resets.update`, `user.auth-factors.destroy-many`). Test: OpenAPI snapshot.
+- [x] Route lint: no path from rest.md old column in routes or OpenAPI (incl. every `/user/two-factor*` path); every route name equals noun path (`sessions.store`, `user.memberships.destroy`, `password-resets.update`, `user.auth-factors.destroy-many`). Test: OpenAPI snapshot. `TestAPIRoutes` lints every `/api/v1` route name and refuses every old account route. No OpenAPI snapshot yet. `PATCH /conversation-views` (`conversation-views.reorder`) is exempt until its owner renames it.
 
 ## M13. Own profile, password, time zone (track 07 accounts-settings)
 
