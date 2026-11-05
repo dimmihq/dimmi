@@ -67,6 +67,8 @@ export function appSettings(config: EnvironmentConfig, data: DataStack, mail: Ma
     DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__DRIVER: "certmagic",
     DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__CA: config.acmeDirectory,
     DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__EMAIL: config.alarmEmail,
+    DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__HTTP_PORT: String(APP_PORTS.http),
+    DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__TLS_PORT: String(APP_PORTS.https),
     DIMMI_SOCIALITE__PROVIDERS__GITHUB__REDIRECT_URL: `${https}/auth/github/callback`,
     DIMMI_SOCIALITE__PROVIDERS__GOOGLE__REDIRECT_URL: `${https}/auth/google/callback`,
     DIMMI_GATE__ENABLED: String(config.gate),
