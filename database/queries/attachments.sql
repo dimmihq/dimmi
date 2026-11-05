@@ -59,3 +59,7 @@ WHERE a.workspace_id = @workspace_id AND a.message_id IS NULL AND a.created_at <
   AND NOT EXISTS (SELECT 1 FROM conversation_drafts d WHERE d.attachment_ids @> ARRAY[a.id])
 ORDER BY a.created_at, a.id
 LIMIT @row_limit;
+
+-- name: DeleteAttachment :exec
+-- DeleteAttachment removes an attachment's row once its file is gone.
+DELETE FROM attachments WHERE workspace_id = @workspace_id AND id = @id;

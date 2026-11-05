@@ -45,14 +45,6 @@ type ReplyRequest struct {
 }
 
 /*
-MessageRequest names one entry of a conversation's timeline.
-*/
-type MessageRequest struct {
-	Conversation string `path:"conversation"`
-	Message      string `path:"message"`
-}
-
-/*
 Validate refuses a snooze without a time or preset, or one sent without
 snoozing.
 */

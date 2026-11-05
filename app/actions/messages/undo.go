@@ -17,20 +17,15 @@ package messages
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
-	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -123,7 +118,8 @@ func (s *session) settle(ctx context.Context, before heldState) error {
 }
 
 /*
-UndoInput is who undoes which of their replies.
+UndoInput is who removes which message: undoing their reply still
+waiting, or deleting it.
 */
 type UndoInput struct {
 	Membership authz.Membership
@@ -133,83 +129,11 @@ type UndoInput struct {
 }
 
 /*
-Undone is a reply taken back: its text, for the composer to hold again,
-and the conversation as it now is.
+undo takes back the caller's reply, locked and still waiting, and
+returns its text.
 */
-type Undone struct {
-	Body         string
-	Conversation conversations.Loaded
-}
-
-/*
-UndoReply takes back a reply still waiting to leave.
-
-Rules:
-  - The caller needs conversations:write.
-  - Only the reply's writer may undo it; anyone else finds no reply.
-  - A reply no longer waiting has left, and is refused.
-  - Each field the reply changed goes back unless it changed since.
-
-Events: [appevents.MessageDeliveryUpdated] failed for good,
-[appevents.MessageDeleted] and [appevents.ConversationUpdated].
-
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
-[exceptions.ErrAlreadySent], or a wrapped database error.
-*/
-type UndoReply struct {
-	DB     *database.DB
-	Events *events.Dispatcher
-	Clock  clock.Clock
-}
-
-/*
-Handle undoes the reply.
-*/
-func (a *UndoReply) Handle(ctx context.Context, in UndoInput) (Undone, error) {
-	if err := conversations.CanWrite(in.Membership); err != nil {
-		return Undone{}, err
-	}
-
-	var out Undone
-
-	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		s, err := open(ctx, tx, conversations.Services{Events: a.Events, Clock: a.Clock}, target{
-			in.Membership, in.Ref, in.MutationID,
-		})
-		if err != nil {
-			return err
-		}
-
-		if out.Body, err = s.undo(ctx, in.MessageID); err != nil {
-			return err
-		}
-
-		out.Conversation, err = conversations.LoadOne(ctx, s.w.Q, in.Membership.Member.ID, s.c)
-
-		return err
-	})
-
-	return out, err
-}
-
-/*
-undo takes the caller's waiting reply back and returns its text.
-*/
-func (s *session) undo(ctx context.Context, id ids.UUID) (string, error) {
-	msg, err := s.w.Q.LockMessage(ctx, models.LockMessageParams{
-		WorkspaceID: s.c.WorkspaceID, ConversationID: s.c.ID, ID: id,
-	})
-	if errors.Is(err, database.ErrNotFound) || (err == nil && !s.wrote(msg)) {
-		return "", exceptions.ErrNotFound
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("find reply: %w", err)
-	}
-
-	if msg.ScheduledSendAt == nil || !msg.ScheduledSendAt.After(s.w.Now) {
-		return "", exceptions.ErrAlreadySent
-	}
+func (s *session) undo(ctx context.Context, msg models.Message) (string, error) {
+	var err error
 
 	if s.msg, err = s.w.Q.UndoMessage(ctx, models.UndoMessageParams{
 		Now: s.w.Now, WorkspaceID: s.c.WorkspaceID, ID: msg.ID,

@@ -96,3 +96,44 @@ SET status = @status::text,
     assignee_member_id = sqlc.narg('assignee_member_id')::uuid, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
+
+-- name: DeleteMessage :one
+-- DeleteMessage empties an entry for good, keeping who removed it in the
+-- metadata and dropping the copy of the raw email. A reply still waiting
+-- to leave never will.
+UPDATE messages
+SET deleted_at = @now::timestamptz, body = NULL, body_html = NULL, scheduled_send_at = NULL,
+    metadata = (metadata - 'email') || @metadata::jsonb,
+    delivery_status = CASE WHEN delivery_status = 'pending' THEN 'failed' ELSE delivery_status END,
+    updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: EditMessage :one
+-- EditMessage replaces a note's text, keeping who edited it.
+UPDATE messages
+SET body = @body, edited_at = @now::timestamptz, metadata = metadata || @metadata::jsonb,
+    updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: UncountDeletedMessage :one
+-- UncountDeletedMessage takes a deleted message out of the conversation's
+-- count, the latest live message becoming the last again.
+UPDATE conversations AS c
+SET message_count = greatest(c.message_count - 1, 0),
+    last_message_id = (
+        SELECT m.id FROM messages m
+        WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
+          AND m.undone_at IS NULL AND m.deleted_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ),
+    last_message_at = (
+        SELECT m.created_at FROM messages m
+        WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
+          AND m.undone_at IS NULL AND m.deleted_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ),
+    updated_at = @now::timestamptz
+WHERE c.workspace_id = @workspace_id AND c.id = @id
+RETURNING c.*;

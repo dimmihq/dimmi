@@ -61,7 +61,7 @@ func TestUndoSend(t *testing.T) {
 
 		require.Len(t, driver.Sent(), 2)
 		assert.Equal(t, "Held", driver.Sent()[1].BodyMarkdown)
-		d.owner.Send("DELETE", path+"/messages/"+id, nil).AssertStatus(409).AssertJSONPath("code", "already_sent")
+		d.owner.Send("DELETE", path+"/messages/"+id, nil).AssertOK().AssertJSONPath("data.undone", false)
 	})
 
 	t.Run("sends at once when not asked, from a token, or where replies show as written", func(t *testing.T) {
@@ -139,18 +139,18 @@ func TestUndoSend(t *testing.T) {
 			AssertJSONPath("meta.conversation.assignee.id", memberID(bob))
 	})
 
-	t.Run("lets only the writer undo, and only a reply still waiting", func(t *testing.T) {
+	t.Run("lets only the writer undo, and deletes a reply whose wait is over", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		_, path := fakeConversation(t, d)
-		admin, _ := d.join(t, enums.RoleAdmin)
+		member, _ := d.join(t, enums.RoleMember)
 		id := heldReply(t, d, path, testkit.JSON{"body": "Mine"})
 
-		admin.Send("DELETE", path+"/messages/"+id, nil).AssertNotFound()
+		member.Send("DELETE", path+"/messages/"+id, nil).AssertForbidden()
 		d.owner.Send("DELETE", path+"/messages/msg_nonsense", nil).AssertNotFound()
 		d.owner.Send("DELETE", "/api/v1/conversations/conv_nonsense/messages/"+id, nil).AssertNotFound()
 
 		d.tc.Clock.Travel(5 * time.Second)
-		d.owner.Send("DELETE", path+"/messages/"+id, nil).AssertStatus(409)
+		d.owner.Send("DELETE", path+"/messages/"+id, nil).AssertOK().AssertJSONPath("data.undone", false)
 	})
 }

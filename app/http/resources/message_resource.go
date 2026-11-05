@@ -35,6 +35,7 @@ const excerptLength = 140
 /*
 TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
+DeletedBy names who deleted a deleted entry.
 */
 type TimelineEntry struct {
 	ID              string          `json:"id"`
@@ -51,8 +52,33 @@ type TimelineEntry struct {
 	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
 	EditedAt        *time.Time      `json:"edited_at"`
 	DeletedAt       *time.Time      `json:"deleted_at"`
+	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+/*
+Remover is the teammate who deleted an entry.
+*/
+type Remover struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+/*
+removerOf reads who deleted an entry from its metadata, nil when it
+does not say.
+*/
+func removerOf(metadata json.RawMessage) *Remover {
+	var read struct {
+		DeletedBy *Remover `json:"deleted_by"`
+	}
+
+	if json.Unmarshal(metadata, &read) != nil {
+		return nil
+	}
+
+	return read.DeletedBy
 }
 
 /*
@@ -95,6 +121,7 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 
 	if m.DeletedAt != nil {
 		out.Body = nil
+		out.DeletedBy = removerOf(m.Metadata)
 	}
 
 	if len(out.Event) == 0 {

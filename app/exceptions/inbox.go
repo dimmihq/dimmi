@@ -190,6 +190,12 @@ var (
 )
 
 /*
-ErrAlreadySent refuses to undo a reply whose wait is over: it has left.
+Message change failures.
+
+ErrMessageNotDeletable refuses to delete a timeline event.
+ErrMessageNotEditable refuses to edit anything but one's own note.
 */
-var ErrAlreadySent = fault.New(fault.Conflict, "already_sent", "This reply has already been sent.")
+var (
+	ErrMessageNotDeletable = fault.New(fault.Invalid, "message_not_deletable", "Timeline events cannot be deleted.")
+	ErrMessageNotEditable  = fault.New(fault.Invalid, "message_not_editable", "Only your own notes can be edited.")
+)

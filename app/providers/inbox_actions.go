@@ -69,13 +69,15 @@ func bootInbox(a *app.App) error {
 		},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		UndoReply:         &messages.UndoReply{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		DeleteMessage:     &messages.DeleteMessage{DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue},
+		EditNote:          &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
 	bootWorkbench(a)
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels}),
+		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{
 			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.Inbox.Drafts.RetentionDays,
 		}),

@@ -89,6 +89,21 @@ func (q *Queries) CreateAttachment(ctx context.Context, arg CreateAttachmentPara
 	return i, err
 }
 
+const deleteAttachment = `-- name: DeleteAttachment :exec
+DELETE FROM attachments WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteAttachmentParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// DeleteAttachment removes an attachment's row once its file is gone.
+func (q *Queries) DeleteAttachment(ctx context.Context, arg DeleteAttachmentParams) error {
+	_, err := q.db.Exec(ctx, deleteAttachment, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const deleteUnattachedAttachment = `-- name: DeleteUnattachedAttachment :execrows
 DELETE FROM attachments WHERE workspace_id = $1 AND id = $2 AND message_id IS NULL
 `

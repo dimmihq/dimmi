@@ -57,7 +57,7 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
-			Undo: acts.UndoReply, IDs: a.IDs, Cursors: cursors,
+			Delete: acts.DeleteMessage, Edit: acts.EditNote, IDs: a.IDs, Cursors: cursors,
 		},
 		views: &v1.InboxViewController{
 			Counts: acts.CountConversations, ReadShow: acts.ShowReadState, ReadSave: acts.UpdateReadState,
@@ -120,4 +120,6 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Ability("conversations:write")
 	routing.Delete(r, conv+"/messages/{message}", "conversations.messages.destroy", c.messages.Destroy).
 		Ability("conversations:write").Status(fhttp.StatusOK)
+	routing.Patch(r, conv+"/messages/{message}", "conversations.messages.update", c.messages.Patch).
+		Ability("conversations:write")
 }

@@ -88,8 +88,12 @@ func TestWorkbenchRefusals(t *testing.T) {
 			"discard draft": func() error {
 				return acts.DeleteDraft.Handle(ctx, drafts.DeleteInput{Membership: m, ID: ids.New()})
 			},
-			"undo reply": func() error {
-				_, err := acts.UndoReply.Handle(ctx, messages.UndoInput{Membership: m, MessageID: ids.New()})
+			"delete message": func() error {
+				_, err := acts.DeleteMessage.Handle(ctx, messages.UndoInput{Membership: m, MessageID: ids.New()})
+				return err
+			},
+			"edit note": func() error {
+				_, err := acts.EditNote.Handle(ctx, messages.EditInput{Membership: m, MessageID: ids.New()})
 				return err
 			},
 			"list": func() error {

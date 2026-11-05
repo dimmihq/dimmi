@@ -47,6 +47,19 @@ type TimelineOutput struct {
 }
 
 /*
+EntryOutput is an entry a request changed, with the conversation as it
+now is.
+*/
+type EntryOutput struct {
+	Body struct {
+		Data resources.TimelineEntry `json:"data"`
+		Meta struct {
+			Conversation resources.Conversation `json:"conversation"`
+		} `json:"meta"`
+	}
+}
+
+/*
 WrittenOutput is an entry a request wrote and the conversation as it
 now is, under 201, or 200 for a replayed request.
 */
@@ -69,7 +82,8 @@ type ConversationMessageController struct {
 	Reply   *messages.ReplyToConversation
 	Note    *messages.AddNote
 	Relay   *messages.AddContactMessage
-	Undo    *messages.UndoReply
+	Delete  *messages.DeleteMessage
+	Edit    *messages.EditNote
 	IDs     *ids.Registry
 	Cursors *pagination.Cursors
 }
@@ -284,8 +298,8 @@ func writtenOutput(w messages.Written) *WrittenOutput {
 }
 
 /*
-UndoneOutput is a reply taken back: its text, so the composer holds it
-again.
+UndoneOutput is a message taken away: undone with its text, so the
+composer holds it again, or deleted.
 */
 type UndoneOutput struct {
 	Body struct {
@@ -301,7 +315,8 @@ type UndoneOutput struct {
 }
 
 /*
-Destroy takes back one of the caller's replies still waiting to leave.
+Destroy undoes the caller's reply still waiting to leave, or deletes the
+message.
 */
 func (c *ConversationMessageController) Destroy(
 	ctx context.Context, in *requests.MessageRequest,
@@ -316,7 +331,7 @@ func (c *ConversationMessageController) Destroy(
 		return nil, exceptions.ErrNotFound
 	}
 
-	undone, err := c.Undo.Handle(ctx, messages.UndoInput{
+	removed, err := c.Delete.Handle(ctx, messages.UndoInput{
 		Membership: membership(ctx), Ref: ref, MessageID: id, MutationID: mutationID(ctx),
 	})
 	if err != nil {
@@ -324,8 +339,8 @@ func (c *ConversationMessageController) Destroy(
 	}
 
 	out := &UndoneOutput{}
-	out.Body.Data.Object, out.Body.Data.Undone, out.Body.Data.Body = "message", true, undone.Body
-	out.Body.Meta.Conversation = resources.NewConversation(undone.Conversation)
+	out.Body.Data.Object, out.Body.Data.Undone, out.Body.Data.Body = "message", removed.Undone, removed.Body
+	out.Body.Meta.Conversation = resources.NewConversation(removed.Conversation)
 
 	return out, nil
 }
@@ -338,4 +353,32 @@ func bySession(ctx context.Context) bool {
 	p, ok := auth.CurrentPrincipal(ctx)
 
 	return ok && p.Kind == auth.KindSession
+}
+
+/*
+Patch rewrites one of the caller's notes.
+*/
+func (c *ConversationMessageController) Patch(
+	ctx context.Context, in *requests.EditMessageRequest,
+) (*EntryOutput, error) {
+	ref, err := conversationRef(c.IDs, in.Conversation)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := c.IDs.Decode(string(models.PrefixMessage), in.Message)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	written, err := c.Edit.Handle(ctx, messages.EditInput{
+		Membership: membership(ctx), Ref: ref, MessageID: id, Body: in.Body.Body, MutationID: mutationID(ctx),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := writtenOutput(written)
+
+	return &EntryOutput{Body: out.Body}, nil
 }

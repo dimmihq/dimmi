@@ -66,5 +66,6 @@ type InboxActions struct {
 	Reply             *messages.ReplyToConversation
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
-	UndoReply         *messages.UndoReply
+	DeleteMessage     *messages.DeleteMessage
+	EditNote          *messages.EditNote
 }

@@ -98,6 +98,120 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 	return i, err
 }
 
+const deleteMessage = `-- name: DeleteMessage :one
+UPDATE messages
+SET deleted_at = $1::timestamptz, body = NULL, body_html = NULL, scheduled_send_at = NULL,
+    metadata = (metadata - 'email') || $2::jsonb,
+    delivery_status = CASE WHEN delivery_status = 'pending' THEN 'failed' ELSE delivery_status END,
+    updated_at = $1::timestamptz
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+`
+
+type DeleteMessageParams struct {
+	Now         time.Time       `json:"now"`
+	Metadata    json.RawMessage `json:"metadata"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// DeleteMessage empties an entry for good, keeping who removed it in the
+// metadata and dropping the copy of the raw email. A reply still waiting
+// to leave never will.
+func (q *Queries) DeleteMessage(ctx context.Context, arg DeleteMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, deleteMessage,
+		arg.Now,
+		arg.Metadata,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
+	)
+	return i, err
+}
+
+const editMessage = `-- name: EditMessage :one
+UPDATE messages
+SET body = $1, edited_at = $2::timestamptz, metadata = metadata || $3::jsonb,
+    updated_at = $2::timestamptz
+WHERE workspace_id = $4 AND id = $5
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+`
+
+type EditMessageParams struct {
+	Body        *string         `json:"body"`
+	Now         time.Time       `json:"now"`
+	Metadata    json.RawMessage `json:"metadata"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// EditMessage replaces a note's text, keeping who edited it.
+func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, editMessage,
+		arg.Body,
+		arg.Now,
+		arg.Metadata,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
+	)
+	return i, err
+}
+
 const listMessages = `-- name: ListMessages :many
 SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1
@@ -410,6 +524,74 @@ func (q *Queries) UncountConversationMessage(ctx context.Context, arg UncountCon
 		arg.WorkspaceID,
 		arg.ID,
 	)
+	var i Conversation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Number,
+		&i.InboxID,
+		&i.ChannelConnectionID,
+		&i.ContactID,
+		&i.Subject,
+		&i.Status,
+		&i.Spam,
+		&i.AssigneeMemberID,
+		&i.AssigneeTeamID,
+		&i.AiState,
+		&i.SnoozedUntil,
+		&i.ExternalThreadKey,
+		&i.Source,
+		&i.FirstCustomerMessageAt,
+		&i.LastCustomerMessageAt,
+		&i.FirstReplyAt,
+		&i.LastReplyAt,
+		&i.LastMessageAt,
+		&i.ClosedAt,
+		&i.MessageCount,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsTest,
+		&i.PreviousConversationID,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
+	)
+	return i, err
+}
+
+const uncountDeletedMessage = `-- name: UncountDeletedMessage :one
+UPDATE conversations AS c
+SET message_count = greatest(c.message_count - 1, 0),
+    last_message_id = (
+        SELECT m.id FROM messages m
+        WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
+          AND m.undone_at IS NULL AND m.deleted_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ),
+    last_message_at = (
+        SELECT m.created_at FROM messages m
+        WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
+          AND m.undone_at IS NULL AND m.deleted_at IS NULL
+        ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+    ),
+    updated_at = $1::timestamptz
+WHERE c.workspace_id = $2 AND c.id = $3
+RETURNING c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.is_test, c.previous_conversation_id, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority
+`
+
+type UncountDeletedMessageParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// UncountDeletedMessage takes a deleted message out of the conversation's
+// count, the latest live message becoming the last again.
+func (q *Queries) UncountDeletedMessage(ctx context.Context, arg UncountDeletedMessageParams) (Conversation, error) {
+	row := q.db.QueryRow(ctx, uncountDeletedMessage, arg.Now, arg.WorkspaceID, arg.ID)
 	var i Conversation
 	err := row.Scan(
 		&i.ID,
