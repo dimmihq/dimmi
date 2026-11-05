@@ -196,6 +196,72 @@ func failures() map[string]failure {
 				return v.client().GetJSON("/widget/v1/updates?since=" + url.QueryEscape(cursor))
 			},
 		},
+		"reading the team's widgets while inboxes cannot be read": {
+			none, func(tc *tests.TestCase) { tc.BreakTable("inboxes") },
+			func(v *visitor, _ string) *testkit.Response { return owner(v.tc).GetJSON("/api/v1/widget-settings") },
+		},
+		"creating a widget while inboxes cannot be read": {
+			none, func(tc *tests.TestCase) { tc.BreakTable("inboxes") },
+			func(v *visitor, _ string) *testkit.Response {
+				return owner(v.tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Shop"})
+			},
+		},
+		"moving a widget to an inbox while channels cannot be written": {
+			func(t *testing.T, v *visitor) string {
+				t.Helper()
+
+				return owner(v.tc).PostJSON("/api/v1/inboxes", testkit.JSON{"name": "Sales"}).AssertCreated().
+					String("data.id")
+			},
+			func(tc *tests.TestCase) { tc.FailWrites("channel_connections", "UPDATE") },
+			func(v *visitor, inbox string) *testkit.Response {
+				return owner(v.tc).PatchJSON("/api/v1/widget-settings/"+appIDOf(v), testkit.JSON{"inbox_id": inbox})
+			},
+		},
+		"reading replies whose authors cannot be read": {
+			func(t *testing.T, v *visitor) string {
+				t.Helper()
+				id := v.startConversation(t, "hello")
+				reply(t, v.tc, id, "on it")
+
+				return id
+			},
+			func(tc *tests.TestCase) { tc.BreakTable("workspace_members") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().GetJSON("/widget/v1/conversations/" + id + "/messages")
+			},
+		},
+		"reading messages while messages cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("messages") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().GetJSON("/widget/v1/conversations/" + id + "/messages")
+			},
+		},
+		"sending files while uploads cannot be read": {
+			none, func(tc *tests.TestCase) { tc.BreakTable("attachments") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.client().PostJSON("/widget/v1/conversations", testkit.JSON{
+					"client_id": ids.New().String(), "body": "see",
+					"attachment_ids": []string{"att_01m6m7de33ffpazt4mjzygtdjz"},
+				})
+			},
+		},
+		"starting a conversation that cannot be marked": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("conversations", "UPDATE") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.client().PostJSON("/widget/v1/conversations", testkit.JSON{
+					"client_id": ids.New().String(), "body": "hello",
+				})
+			},
+		},
+		"starting a conversation whose message cannot be stamped": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("messages", "UPDATE") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.client().PostJSON("/widget/v1/conversations", testkit.JSON{
+					"client_id": ids.New().String(), "body": "hello",
+				})
+			},
+		},
 		"signing out while sessions cannot be written": {
 			none, func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "UPDATE") },
 			func(v *visitor, _ string) *testkit.Response { return v.client().Delete("/widget/v1/session") },
