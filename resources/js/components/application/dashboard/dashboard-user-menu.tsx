@@ -66,13 +66,13 @@ export function UserMenuItem({ initials, color, name, detail, isSelected, onSele
       )}
     >
       <Avatar size="xs" color={color} initials={initials} />
-      <span className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{name}</span>
+      <span className="min-w-0 truncate text-body-2-medium text-text-primary">{name}</span>
+      {isSelected ? <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" /> : null}
       {detail ? (
-        <span className="shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-px text-caption-1-medium text-text-tertiary">
+        <span className="ms-auto shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-px text-caption-1-medium text-text-tertiary">
           {detail}
         </span>
       ) : null}
-      {isSelected ? <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" /> : null}
     </AriaButton>
   ));
 }

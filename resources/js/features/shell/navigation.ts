@@ -210,10 +210,10 @@ export const settingsPages = {
   ),
   messenger: page(
     "settings-messenger",
-    "Messenger",
+    "Messengers",
     RiChatSmile3Line,
     "/d/settings/messenger",
-    "The widget on your site: its look, texts and install.",
+    "The chat on your site or in your app: its look, texts and install.",
   ),
   email: page(
     "settings-email",

@@ -1,5 +1,6 @@
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { deliverEmail, rawEmail } from "./support/inbound";
+import { openAddress } from "./support/inbox";
 
 /*
  * suffixOf is the unique part of the person's address, so workspaces
@@ -44,7 +45,7 @@ it.describe("a received email in the thread", () => {
   it("shows plain text as written and opens the full message", async ({ page, person, request }) => {
     await createAccount(request, person, `Original ${suffixOf(person)}`);
     await signIn(page, person);
-    await page.goto("/d/settings/email");
+    await openAddress(page);
     const address = (await page.getByTestId("forwarding-address").first().textContent()) ?? "";
     await deliverEmail(
       request,
@@ -79,7 +80,7 @@ it.describe("a received email in the thread", () => {
   it("shows an html email as it was formatted in a sandboxed frame", async ({ page, person, request }) => {
     await createAccount(request, person, `Styled ${suffixOf(person)}`);
     await signIn(page, person);
-    await page.goto("/d/settings/email");
+    await openAddress(page);
     const address = (await page.getByTestId("forwarding-address").first().textContent()) ?? "";
     await deliverEmail(request, htmlEmail(`ann.${suffixOf(person)}@customer.test`, address), address);
 

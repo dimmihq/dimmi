@@ -185,13 +185,13 @@ export function Item({
   children?: ReactNode;
 }) {
   return (
-    <div className={cx(rowLine, "justify-start gap-3")}>
+    <div className={cx(rowLine, "relative justify-start gap-3")}>
       <span className="flex shrink-0 items-center">{mark}</span>
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body-regular text-text-primary">{title}</span>
         {detail ? <span className="truncate text-body-2-regular text-text-secondary">{detail}</span> : null}
       </div>
-      {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+      {children ? <div className="relative z-10 flex shrink-0 items-center gap-2">{children}</div> : null}
     </div>
   );
 }

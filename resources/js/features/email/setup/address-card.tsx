@@ -6,7 +6,6 @@
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Choice, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
@@ -14,34 +13,11 @@ import { useAccount } from "@/features/settings/use-account";
 import { type EmailAddress, sendEmailAddressTest, updateEmailAddress } from "@/lib/api/email";
 
 import { Activity } from "./activity";
+import { AddressStatus } from "./address-status";
 import { CopyButton } from "./copy-button";
 import { Failure } from "./failure";
 import { ForwardingGuide } from "./forwarding-guide";
 import { TemplateSettings } from "./template-settings";
-
-/*
- * Status says whether mail reached the address yet.
- */
-function Status({ address }: { address: EmailAddress }) {
-  return (
-    <span className="flex items-center gap-2">
-      {address.is_default ? (
-        <Chip variant="caption" color="neutral">
-          Default
-        </Chip>
-      ) : null}
-      {address.inbound_verified_at ? (
-        <Chip variant="caption" color="lime">
-          Receiving
-        </Chip>
-      ) : (
-        <Chip variant="caption" color="neutral">
-          Waiting for first email
-        </Chip>
-      )}
-    </span>
-  );
-}
 
 const bulkLabels = { close: "Close", open: "Keep open", drop: "Drop" } as const;
 
@@ -52,10 +28,12 @@ export function AddressCard({
   address,
   manage,
   readRaw,
+  title = address.address,
 }: {
   address: EmailAddress;
   manage: boolean;
   readRaw: boolean;
+  title?: string;
 }) {
   const me = useAccount();
   const queryClient = useQueryClient();
@@ -71,7 +49,7 @@ export function AddressCard({
   const confirmation = address.forwarding_confirmation;
 
   return (
-    <Section title={address.address} description={`${address.inbox.name} inbox`} action={<Status address={address} />}>
+    <Section title={title} description={`${address.inbox.name} inbox`} action={<AddressStatus address={address} />}>
       <Row label="Forwarding address" description="Forward every email sent to your address here.">
         <span className="font-mono text-body-2-regular text-text-primary" data-testid="forwarding-address">
           {address.forwarding_address}

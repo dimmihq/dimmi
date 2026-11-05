@@ -52,7 +52,7 @@ function MovePick({
   );
 }
 
-function AddMessenger({ workspace, inbox }: { workspace: string; inbox: Inbox }) {
+export function AddMessenger({ workspace, inbox }: { workspace: string; inbox: Inbox }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");

@@ -1,6 +1,7 @@
 import { resumeMail, stopMail } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { deliverEmail, rawEmail } from "./support/inbound";
+import { openAddress } from "./support/inbox";
 
 /*
  * suffixOf is the unique part of the person's address, so workspaces
@@ -18,7 +19,7 @@ it.describe("a reply that was not delivered", () => {
   it("says why and sends it again", async ({ page, person, request }) => {
     await createAccount(request, person, `Delivery ${suffixOf(person)}`);
     await signIn(page, person);
-    await page.goto("/d/settings/email");
+    await openAddress(page);
     const address = (await page.getByTestId("forwarding-address").first().textContent()) ?? "";
     const customer = `bob.${suffixOf(person)}@customer.test`;
     await deliverEmail(request, rawEmail(customer, address, "Where is my refund", "Any news?"), address);

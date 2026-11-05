@@ -1,4 +1,5 @@
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
+import { openMessenger } from "./support/inbox";
 
 const pages = [
   "Profile",
@@ -8,7 +9,7 @@ const pages = [
   "Inboxes",
   "Tags",
   "Saved replies",
-  "Messenger",
+  "Messengers",
   "Email",
   "Connections",
   "Dimmi agent",
@@ -79,7 +80,7 @@ it.describe("settings", () => {
   });
 
   it("picks the messenger colour with the colour well", async ({ page }) => {
-    await page.goto("/d/settings/messenger");
+    await openMessenger(page);
     const appearance = page.getByRole("region", { name: "Appearance" });
     await expect(appearance.getByText("#10B981", { exact: false })).toBeVisible();
 

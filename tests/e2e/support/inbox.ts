@@ -83,3 +83,23 @@ export async function pickView(page: Page, name: string | RegExp): Promise<void>
   await page.locator("button[data-view-picker]").click();
   await page.getByRole("dialog", { name: "Views" }).getByRole("button", { name }).click();
 }
+
+/*
+ * openAddress opens the page of one of the workspace's email addresses,
+ * the first unless one is named.
+ */
+export async function openAddress(page: Page, name?: string): Promise<void> {
+  await page.goto("/d/settings/email");
+  const addresses = page.getByRole("region", { name: "Addresses" });
+  const link = name ? addresses.getByRole("link", { name }) : addresses.getByRole("link").first();
+  await link.click();
+  await expect(page.getByTestId("forwarding-address")).toBeVisible();
+}
+
+/*
+ * openMessenger opens the page of the workspace's first messenger.
+ */
+export async function openMessenger(page: Page): Promise<void> {
+  await page.goto("/d/settings/messenger");
+  await page.getByRole("region", { name: "Messengers" }).getByRole("link").first().click();
+}

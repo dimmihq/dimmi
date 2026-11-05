@@ -1,5 +1,6 @@
 /*
- * The places customers write from: the messenger on your site and
+ * The places customers write from: each messenger, on a page of its own
+ * reached from the list of messengers, and
  * connections to the chat apps they already use; email has its own page. Each
  * channel decides which inbox its conversations land in.
  */
@@ -7,14 +8,16 @@ import { RiSearchLine } from "@remixicon/react";
 import { useState } from "react";
 
 import { Input } from "@/components/base/input/input";
-
+import type { WidgetSummary } from "@/lib/api/widget-settings";
 import { chatApps } from "../chat-apps";
 import { Action, Choice, Colour, Danger, Field, Toggle } from "../controls";
 import { Empty, Item, Logo, Row, Section, SettingsPage } from "../layout";
+import { BackToMessengers } from "./messengers";
 
-export function MessengerSettings() {
+export function MessengerSettings({ widget }: { widget: WidgetSummary }) {
   return (
-    <SettingsPage title="Messenger" description="The chat widget on your website, for the Website install.">
+    <SettingsPage title={widget.name} description={`A messenger whose conversations land in ${widget.inbox.name}.`}>
+      <BackToMessengers />
       <Section title="Install" description="Not seen on a site yet.">
         <Row label="Framework" description="We show the snippet for what your site is built with.">
           <Choice label="Framework" options={["Next.js", "React", "Plain HTML", "Vue", "Other"]} />
@@ -25,7 +28,7 @@ export function MessengerSettings() {
       </Section>
       <Section title="General">
         <Row label="Name">
-          <Field label="Messenger name" value="Website" />
+          <Field label="Messenger name" value={widget.name} />
         </Row>
         <Row label="On" description="Turn off to hide the messenger everywhere at once.">
           <Toggle label="Messenger on" on />

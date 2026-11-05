@@ -1,4 +1,5 @@
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
+import { openAddress } from "./support/inbox";
 
 /*
  * suffixOf is the unique part of the person's address, so workspaces
@@ -16,7 +17,7 @@ it.describe("reply style and default address", () => {
   it("switches an address to the branded style and previews its footer", async ({ page, person, request }) => {
     await createAccount(request, person, `Style ${suffixOf(person)}`);
     await signIn(page, person);
-    await page.goto("/d/settings/email");
+    await openAddress(page);
 
     const card = page
       .getByRole("region")
@@ -53,13 +54,15 @@ it.describe("reply style and default address", () => {
     const added = `sales@acme-${suffixOf(person)}.test`;
     await page.getByRole("textbox", { name: "New email address" }).fill(added);
     await page.getByRole("button", { name: "Add address" }).click();
-    const card = page.getByRole("region", { name: added });
-    await expect(card).toBeVisible();
+    await expect(page.getByRole("region", { name: "Addresses" }).getByRole("link", { name: added })).toBeVisible();
+    await openAddress(page, added);
+    const card = page.getByRole("region", { name: "Setup" });
     await expect(card.getByText("Default", { exact: true })).toHaveCount(0);
 
     await card.getByRole("button", { name: "Make default" }).click();
     await expect(card.getByText("Default", { exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: "Make default" })).toHaveCount(0);
-    await expect(page.getByText("Default", { exact: true })).toHaveCount(1);
+    await page.goto("/d/settings/email");
+    await expect(page.getByRole("region", { name: "Addresses" }).getByText("Default", { exact: true })).toHaveCount(1);
   });
 });
