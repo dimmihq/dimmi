@@ -17,7 +17,7 @@ export function ProcedureList() {
       title="Procedures"
       description="Teach Dimmi how your team handles a request, step by step, in plain words."
       action={
-        <Button size="xs" leadingIcon={RiAddLine}>
+        <Button size="small" leadingIcon={RiAddLine}>
           New procedure
         </Button>
       }

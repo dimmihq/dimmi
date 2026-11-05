@@ -72,7 +72,7 @@ function Collapsible({ collapsed, children, className }: { collapsed: boolean; c
 
 /**
  * Row density. `regular` is the Figma 36px row (8px padding around a 20px
- * icon). `compact` is a 28px row with a 16px icon, Body 2 labels and
+ * icon). `compact` is a 32px row with an 18px icon and
  * tighter section spacing, for sidebars with many pages such as settings.
  */
 export type SidebarDensity = "regular" | "compact";
@@ -81,7 +81,7 @@ const DensityContext = createContext<SidebarDensity>("regular");
 
 const density = {
   regular: { row: "p-2", icon: "size-5", text: "text-body-medium", rail: "w-9", rows: "gap-1", heading: "h-7" },
-  compact: { row: "px-2 py-1", icon: "size-4", text: "text-body-2-medium", rail: "w-8", rows: "gap-0.5", heading: "h-6" },
+  compact: { row: "px-2 py-1.5", icon: "size-[18px]", text: "text-body-medium", rail: "w-8", rows: "gap-0.5", heading: "h-6" },
 } as const;
 
 function NavItem({
