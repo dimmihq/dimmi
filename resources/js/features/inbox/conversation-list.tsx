@@ -17,7 +17,7 @@ import { cx } from "@/utils/cx";
 
 import { ago, customerName, subjectOf } from "./conversations";
 import { PriorityChip } from "./priority/priority-menu";
-import { AssigneeAvatar, ChannelIcon, DraftMark, Viewers, Waiting } from "./row-extras";
+import { AssigneeAvatar, ChannelBadge, DraftMark, Viewers, Waiting } from "./row-extras";
 
 export function ConversationList({
   view,
@@ -45,15 +45,17 @@ export function ConversationList({
               params={{ view, conversation: conversation.id }}
               aria-current={open ? "page" : undefined}
               className={cx(
-                "flex items-center gap-2.5 rounded-xl px-2 py-1.5 outline-none transition-colors duration-150",
+                "flex items-center gap-3 rounded-xl px-2.5 py-2.5 outline-none transition-colors duration-150",
                 "focus-visible:ring-2 focus-visible:ring-border-focus-ring",
                 open ? "bg-background-tertiary-default" : "hover:bg-background-secondary-hover",
               )}
             >
-              <Avatar size="md" color={avatarColor(name)} initials={name.charAt(0).toUpperCase()} />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="relative shrink-0">
+                <Avatar size="lg" color={avatarColor(name)} initials={name.charAt(0).toUpperCase()} />
+                <ChannelBadge channel={conversation.channel} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="flex items-center gap-2">
-                  <ChannelIcon channel={conversation.channel} />
                   <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{name}</span>
                   <Viewers viewers={conversation.viewers} me={me} />
                   <span className="shrink-0 text-caption-1-medium text-text-tertiary">
