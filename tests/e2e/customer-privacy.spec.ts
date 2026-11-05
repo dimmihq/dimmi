@@ -23,7 +23,7 @@ it.describe("customer privacy", () => {
     await page.goto(`/d/customers/${contact}`);
     await page.getByRole("button", { name: "Erase" }).click();
     await page.getByRole("button", { name: "Erase customer" }).click();
-    await expect(page).toHaveURL(/\/d\/customers\/erasures$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/customers\/erasures$/);
     const erasures = page.getByRole("grid", { name: "Erasures" });
     await expect(erasures.getByText("Waiting")).toBeVisible();
     await expect.poll(async () => (await api<unknown[]>(page, "GET", "/contacts")).length).toBe(0);
@@ -36,7 +36,7 @@ it.describe("customer privacy", () => {
     await page.getByRole("button", { name: "Erase" }).click();
     await page.getByText("Wipe now instead of in 7 days").click();
     await page.getByRole("button", { name: "Erase customer" }).click();
-    await expect(page).toHaveURL(/\/d\/customers\/erasures$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/customers\/erasures$/);
     await expect
       .poll(async () => (await api<{ status: string }[]>(page, "GET", "/contact-erasures"))[0]?.status, {
         timeout: 15_000,

@@ -13,6 +13,7 @@
 package resources
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/app/models"
@@ -90,14 +91,24 @@ func NewWorkspace(w models.Workspace) Workspace {
 
 /*
 WorkspaceSummary is a workspace in a list to switch between, with the
-caller's role in it.
+caller's role in it and the slugs it gave up and still holds, so a link
+naming an old slug still finds it.
 */
 type WorkspaceSummary struct {
-	ID     string `json:"id"`
-	Object string `json:"object"`
-	Name   string `json:"name"`
-	Slug   string `json:"slug"`
-	Role   string `json:"role"`
+	ID            string         `json:"id"`
+	Object        string         `json:"object"`
+	Name          string         `json:"name"`
+	Slug          string         `json:"slug"`
+	Role          string         `json:"role"`
+	PreviousSlugs []PreviousSlug `json:"previous_slugs"`
+}
+
+/*
+PreviousSlug is a slug a workspace gave up, held for it until a time.
+*/
+type PreviousSlug struct {
+	Slug  string    `json:"slug"`
+	Until time.Time `json:"until"`
 }
 
 /*
@@ -111,9 +122,22 @@ func NewWorkspaceSummaries(rows []models.ListUserWorkspacesRow) []WorkspaceSumma
 			Object: "workspace",
 			Name:   row.WorkspaceName,
 			Slug:   row.WorkspaceSlug,
-			Role:   row.Role,
+			Role:   row.Role, PreviousSlugs: previousSlugs(row.PreviousSlugs),
 		})
 	}
 
 	return summaries
+}
+
+/*
+previousSlugs reads the slugs a workspace holds, none when they cannot
+be read.
+*/
+func previousSlugs(raw json.RawMessage) []PreviousSlug {
+	out := []PreviousSlug{}
+	if len(raw) == 0 || json.Unmarshal(raw, &out) != nil {
+		return []PreviousSlug{}
+	}
+
+	return out
 }

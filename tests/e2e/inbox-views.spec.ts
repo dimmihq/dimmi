@@ -52,7 +52,7 @@ it.describe("inbox views", () => {
     );
 
     await pickView(page, /Billing/);
-    await expect(page).toHaveURL(new RegExp(`/d/inbox/${team}`));
+    await expect(page).toHaveURL(new RegExp(`/d/[^/]+/inbox/${team}`));
     await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Emily Johnson/ })).toHaveCount(0);
   });
@@ -117,7 +117,7 @@ it.describe("inbox views", () => {
     await editor.getByRole("textbox", { name: "Value" }).fill("Invoice");
     await editor.getByRole("button", { name: "Save view" }).click();
 
-    await expect(page).toHaveURL(/\/d\/inbox\/cvw_/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/cvw_/);
     await expect(page.getByRole("heading", { name: "Invoices" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Emily Johnson/ })).toHaveCount(0);

@@ -82,7 +82,7 @@ export { expect };
  * inbox matches the address the app opens on: the workspace's
  * unassigned conversations.
  */
-export const inbox = /\/d\/inbox\/unassigned$/;
+export const inbox = /\/d\/[^/]+\/inbox\/unassigned$/;
 
 /*
  * createAccount signs the person up through the API, as a quick way to

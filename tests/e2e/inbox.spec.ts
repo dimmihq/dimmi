@@ -43,7 +43,7 @@ it.describe("the inbox", () => {
     await expect(page.getByText("1 open")).toBeVisible();
 
     await row.click();
-    await expect(page).toHaveURL(/\/d\/inbox\/unassigned\/conv_/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/unassigned\/conv_/);
     await expect(page.getByRole("heading", { name: "Can't log in" })).toBeVisible();
     await expect(page.getByRole("article", { name: "Message from Emily Johnson" })).toContainText("password manager");
     await expect(page.getByRole("region", { name: "Details" })).toContainText("emily@northwind.example");

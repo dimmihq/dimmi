@@ -134,7 +134,7 @@ it.describe("conversation access", () => {
     await expect(restricted.getByText("You do not have access to this conversation")).toBeVisible();
     await expect(restricted.getByText("Cannot log in")).toHaveCount(0);
     await restricted.getByRole("link", { name: "Go to my inbox" }).click();
-    await expect(restricted).toHaveURL(/\/d\/inbox\/mine/);
+    await expect(restricted).toHaveURL(/\/d\/[^/]+\/inbox\/mine/);
 
     await restricted.goto(`/d/inbox/all/${seen}`);
     await expect(restricted.getByRole("heading", { name: "Invoice is wrong" })).toBeVisible();

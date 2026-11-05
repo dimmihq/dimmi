@@ -37,9 +37,24 @@ it.describe("the app's frame", () => {
     await expect(page.getByRole("heading", { name: /Unassigned/ })).toBeVisible();
   });
 
+  it("puts the workspace in every dashboard address, and says when a link is for another one", async ({ page }) => {
+    await page.goto("/d/inbox/all");
+    await expect(page).toHaveURL(/\/d\/acme-[^/]+\/inbox\/all$/);
+    const shared = page.url();
+    await page.getByRole("link", { name: "Notifications" }).click();
+    await expect(page).toHaveURL(/\/d\/acme-[^/]+\/notifications$/);
+
+    await page.goto(shared);
+    await expect(page).toHaveURL(shared);
+    await page.goto("/d/nobody-here/inbox/all");
+    await expect(page.getByText("You are not in this workspace")).toBeVisible();
+    await page.getByRole("button", { name: "Go to your inbox" }).click();
+    await expect(page).toHaveURL(/\/d\/acme-[^/]+\/inbox\//);
+  });
+
   it("switches inbox views from the list's title and comes back to the last one", async ({ page }) => {
     await pickView(page, /My inbox/);
-    await expect(page).toHaveURL(/\/d\/inbox\/mine$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/mine$/);
     await page.keyboard.press("v");
     await page.getByRole("dialog", { name: "Views" }).getByRole("textbox", { name: "Search views" }).fill("ment");
     await expect(page.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /All/ })).toHaveCount(0);
@@ -47,11 +62,11 @@ it.describe("the app's frame", () => {
       .getByRole("dialog", { name: "Views" })
       .getByRole("button", { name: /Mentions/ })
       .click();
-    await expect(page).toHaveURL(/\/d\/inbox\/mentions$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/mentions$/);
 
     await page.getByRole("link", { name: "Notifications" }).click();
     await page.getByRole("link", { name: "Inbox", exact: true }).click();
-    await expect(page).toHaveURL(/\/d\/inbox\/mentions$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/mentions$/);
   });
 
   it("opens every page from the sidebar without reloading the app", async ({ page }) => {
@@ -61,7 +76,7 @@ it.describe("the app's frame", () => {
 
     for (const [label, path] of pages) {
       await page.getByRole("link", { name: label, exact: true }).click();
-      await expect(page).toHaveURL(new RegExp(`${path}$`));
+      await expect(page).toHaveURL(new RegExp(`${path.replace("/d/", "/d/[^/]+/")}$`));
       await expect(page.getByRole("link", { name: label, exact: true })).toHaveAttribute("aria-current", "page");
     }
 
@@ -70,11 +85,11 @@ it.describe("the app's frame", () => {
 
   it("swaps in the settings pages, and back", async ({ page }) => {
     await page.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(/\/d\/settings\/profile$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/profile$/);
     await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible();
 
     await page.getByRole("link", { name: "Members" }).click();
-    await expect(page).toHaveURL(/\/d\/settings\/members$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/members$/);
     await expect(page.getByRole("link", { name: "Agent", exact: true })).toBeHidden();
 
     await page.getByRole("link", { name: "Back to inbox" }).click();
@@ -86,7 +101,7 @@ it.describe("the app's frame", () => {
     await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
 
     await page.getByRole("link", { name: "Docs" }).click();
-    await expect(page).toHaveURL(/\/d\/docs$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/docs$/);
 
     await page.getByRole("button", { name: "Expand sidebar" }).click();
     await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
@@ -99,6 +114,6 @@ it.describe("the app's frame", () => {
     await page.getByRole("button", { name: "Open navigation" }).click();
     await page.getByRole("dialog", { name: "Navigation" }).getByRole("link", { name: "Docs" }).click();
 
-    await expect(page).toHaveURL(/\/d\/docs$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/docs$/);
   });
 });
