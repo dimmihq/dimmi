@@ -89,3 +89,42 @@ func TestWidgetLimits(t *testing.T) {
 		patch(t, tc, testkit.JSON{"inbox_id": inbox}).AssertJSONPath("data.inbox.id", inbox)
 	})
 }
+
+func TestWidgetBadReferences(t *testing.T) {
+	t.Parallel()
+
+	t.Run("names no visitor's conversation, message, file or page", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		c := v.client()
+
+		c.PatchJSON("/widget/v1/conversations/nope/read-state", testkit.JSON{"last_read_message_id": "msg_x"}).
+			AssertNotFound()
+		c.PatchJSON("/widget/v1/conversations/"+id+"/read-state", testkit.JSON{"last_read_message_id": "nope"}).
+			AssertStatus(fhttp.StatusUnprocessableEntity)
+		c.PostJSON("/widget/v1/conversations/nope/typing-indicators", testkit.JSON{"state": "started"}).AssertNotFound()
+		c.GetJSON("/widget/v1/conversations/nope").AssertNotFound()
+		c.PostJSON("/widget/v1/conversations/nope/messages", testkit.JSON{
+			"client_id": ids.New().String(), "body": "hi",
+		}).AssertNotFound()
+		c.PostJSON("/widget/v1/conversations/"+id+"/messages", testkit.JSON{
+			"client_id": ids.New().String(), "body": "hi", "attachment_ids": []string{"nope"},
+		}).AssertStatus(fhttp.StatusConflict)
+		c.Send(fhttp.MethodPut, "/widget/v1/attachments/nope/content", []byte("x")).AssertNotFound()
+		c.GetJSON("/widget/v1/conversations?cursor=forged").AssertStatus(fhttp.StatusBadRequest)
+	})
+
+	t.Run("a message sent twice to a conversation answers the first", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		body := testkit.JSON{"client_id": ids.New().String(), "body": "again"}
+
+		first := v.client().PostJSON("/widget/v1/conversations/"+id+"/messages", body).AssertCreated()
+		v.client().PostJSON("/widget/v1/conversations/"+id+"/messages", body).AssertOK().
+			AssertJSONPath("data.id", first.String("data.id"))
+	})
+}

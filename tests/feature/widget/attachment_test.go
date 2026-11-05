@@ -6,7 +6,9 @@ import (
 	"hash/crc32"
 	"image"
 	"image/png"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -278,5 +280,70 @@ func TestWidgetAttachmentsOnObjectStorage(t *testing.T) {
 
 		res := v.complete(id).AssertStatus(fhttp.StatusServiceUnavailable).AssertJSONPath("code", "storage_unavailable")
 		assert.Equal(t, "5", res.Header.Get("Retry-After"))
+	})
+}
+
+func TestWidgetUploadEdges(t *testing.T) {
+	t.Parallel()
+
+	t.Run("bytes cannot be sent again once an upload is finished", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.upload(t, "a.txt", "text/plain", []byte("hi"))
+		v.complete(id).AssertOK()
+
+		v.client().Send(fhttp.MethodPut, "/widget/v1/attachments/"+id+"/content", []byte("hi")).
+			AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("code", "invalid_transition")
+	})
+
+	t.Run("removes bytes that only pretend to be a picture", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		fake := slices.Concat(pngOf(t, 1, 1)[:16], bytes.Repeat([]byte{0xff}, 64))
+		id := v.upload(t, "x.png", "image/png", fake)
+
+		v.complete(id).AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("code", "attachment_type_blocked")
+	})
+
+	t.Run("a refused file whose row cannot be removed answers a server error", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.announce("a.txt", "text/plain", 10).AssertCreated().String("data.id")
+		v.client().Send(fhttp.MethodPut, "/widget/v1/attachments/"+id+"/content", []byte("short")).AssertNoContent()
+		tc.FailWrites("attachments", "DELETE")
+
+		v.complete(id).AssertStatus(fhttp.StatusInternalServerError)
+	})
+
+	t.Run("sending bytes while uploads cannot be read answers a server error", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.announce("a.txt", "text/plain", 2).AssertCreated().String("data.id")
+		tc.BreakTable("attachments")
+
+		v.client().Send(fhttp.MethodPut, "/widget/v1/attachments/"+id+"/content", []byte("hi")).
+			AssertStatus(fhttp.StatusInternalServerError)
+	})
+
+	t.Run("finishing at once from several tabs answers each the same", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.upload(t, "a.txt", "text/plain", []byte("hi"))
+
+		var wg sync.WaitGroup
+		statuses := make([]int, 6)
+		for i := range statuses {
+			wg.Go(func() { statuses[i] = v.complete(id).Status })
+		}
+		wg.Wait()
+
+		for _, status := range statuses {
+			assert.Equal(t, fhttp.StatusOK, status)
+		}
 	})
 }
