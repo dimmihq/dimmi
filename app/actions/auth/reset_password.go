@@ -211,34 +211,20 @@ func (a *ResetPassword) find(ctx context.Context, in ResetPasswordInput) (
 
 /*
 miss counts a wrong token against the reset, deleting it at the fifth,
-and returns the invalid answer. The count's commit does not wait for
-the disk, so a wrong token answers as fast as an unknown reset.
+and returns the invalid answer.
 */
 func (a *ResetPassword) miss(ctx context.Context, reset models.PasswordResetToken) error {
-	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		if err := tx.CommitWithoutFlush(ctx); err != nil {
-			return err
-		}
-
-		q := models.New(tx)
-
-		attempts, err := q.CountPasswordResetAttempt(ctx, reset.ID)
-		if err != nil {
-			return fmt.Errorf("count wrong reset token: %w", err)
-		}
-
-		if attempts < appauth.MaxSecretAttempts {
-			return nil
-		}
-
-		if _, err := q.DeletePasswordResetToken(ctx, reset.ID); err != nil {
-			return fmt.Errorf("burn password reset: %w", err)
-		}
-
-		return nil
-	})
+	attempts, err := models.New(a.DB).CountPasswordResetAttempt(ctx, reset.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("count wrong reset token: %w", err)
+	}
+
+	if attempts < appauth.MaxSecretAttempts {
+		return exceptions.ErrInvalidResetToken
+	}
+
+	if _, err := models.New(a.DB).DeletePasswordResetToken(ctx, reset.ID); err != nil {
+		return fmt.Errorf("burn password reset: %w", err)
 	}
 
 	return exceptions.ErrInvalidResetToken

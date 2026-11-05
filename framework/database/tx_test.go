@@ -16,27 +16,6 @@ var errStop = errors.New("stop")
 func TestTransaction(t *testing.T) {
 	t.Parallel()
 
-	t.Run("lets one transaction commit without waiting for the disk", func(t *testing.T) {
-		t.Parallel()
-		db := open(t)
-
-		var inside string
-
-		err := db.Transaction(t.Context(), func(ctx context.Context, tx *database.Tx) error {
-			if err := tx.CommitWithoutFlush(ctx); err != nil {
-				return err
-			}
-
-			return tx.QueryRow(ctx, "SHOW synchronous_commit").Scan(&inside)
-		})
-		require.NoError(t, err)
-
-		var after string
-		require.NoError(t, db.QueryRow(t.Context(), "SHOW synchronous_commit").Scan(&after))
-		assert.Equal(t, "off", inside)
-		assert.NotEqual(t, "off", after)
-	})
-
 	t.Run("commits when the function succeeds", func(t *testing.T) {
 		t.Parallel()
 		db := open(t)

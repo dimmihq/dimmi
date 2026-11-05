@@ -291,9 +291,7 @@ func (a *AttemptLogin) refuse(ctx context.Context, try signInTry, refusal error)
 log writes a failed or locked sign-in to the account's security log. A
 try at an email without an account has no log to write to, and a run
 of failures from one address writes one failure a minute, so guessing
-cannot flood the log. The entry's commit does not wait for the disk,
-so a failure at a real account answers as fast as one at an email
-without any.
+cannot flood the log.
 */
 func (a *AttemptLogin) log(ctx context.Context, try signInTry, event string) error {
 	if try.account == nil {
@@ -310,15 +308,9 @@ func (a *AttemptLogin) log(ctx context.Context, try signInTry, event string) err
 		}
 	}
 
-	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		if err := tx.CommitWithoutFlush(ctx); err != nil {
-			return err
-		}
-
-		return a.SecurityLog.Record(ctx, appauth.Entry{
-			UserID: try.account.ID, Type: event, Client: try.client,
-			Metadata: map[string]any{"method": appauth.MethodPassword},
-		})
+	return a.SecurityLog.Record(ctx, appauth.Entry{
+		UserID: try.account.ID, Type: event, Client: try.client,
+		Metadata: map[string]any{"method": appauth.MethodPassword},
 	})
 }
 
