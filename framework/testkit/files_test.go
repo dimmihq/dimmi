@@ -25,3 +25,23 @@ func TestTempFile(t *testing.T) {
 		assert.Equal(t, "http://localhost:5173", string(content))
 	})
 }
+
+func TestGolden(t *testing.T) {
+	t.Run("passes on the same output and writes it when asked", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "out", "doc.json")
+		t.Setenv("DIMMI_TEST_UPDATE", "1")
+		testkit.Golden(t, path, []byte("{}\n"))
+
+		t.Setenv("DIMMI_TEST_UPDATE", "")
+		testkit.Golden(t, path, []byte("{}"))
+	})
+
+	t.Run("fails on a different output", func(t *testing.T) {
+		path := testkit.TempFile(t, "doc.json", "{}")
+		probe := &testing.T{}
+
+		testkit.Golden(probe, path, []byte(`{"changed":true}`))
+
+		assert.True(t, probe.Failed())
+	})
+}
