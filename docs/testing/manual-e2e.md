@@ -531,6 +531,22 @@ for: an ownership TXT record and a signing key TXT record. Checks read real DNS 
 | Doctor | `bin/dimmi-cloud email:doctor acme-$RUN.test` in `$E2E` with its env | `[ok]` relay line, `[info]` no mail server of its own, `[fail]` no MX for `inbound.e2e.test` (exit 1), `[warn]` DMARC missing |
 | In a browser | open `$W/d/settings/email`, add a domain | the domain page with its records, Copy buttons, the host's steps, "Check now", and "Remove domain" |
 
+### Signatures
+
+`ES=$B/email-signatures`; `$EMA` is an address id from `GET $B/email-addresses`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Own | `r sig -b a.jar -X POST -H "$O" -H "$J" $ES -d '{"body":"Thanks,\n**{{member_name}}**"}'; SIG=$(jq -r .data.id body)` | 201 `email_signature`, `kind: personal`, `member_id` the caller, `email_address_id: null` |
+| Twice | the same again | 409 `signature_exists` |
+| Unknown placeholder | the same with `{"body":"{{nickname}}"}` | 422 `unknown_placeholder`, `placeholders: ["{{nickname}}"]`, `errors.body` |
+| Team's | `r team -b a.jar -X POST -H "$O" -H "$J" $ES -d '{"kind":"address","email_address_id":"'$EMA'","body":"The {{address_name}} team"}'`, then as a member | 201 `kind: address`, `member_id: null`; then 403 |
+| List | `curl -s -b a.jar -H "$O" "$ES?filter[member]=me"`, `?filter[kind]=address`, `?filter[kind]=other` | one each, then 400 `invalid_filter` |
+| Preview | `r prev -b a.jar -X POST -H "$O" -H "$J" $ES/renderings -d '{"body":"**{{member_name}}**\n{{member_title}}","email_address_id":"'$EMA'"}'` | 201 `email_signature_rendering`; `html` has the name in `<strong>`, the title line gone; `text` starts `-- ` |
+| Reply | reply to a conversation on `$EMA` in the inbox, open it in Mailpit | the text ends `-- ` and the signature, above the quote; with `{"email":{"signature":false}}` none |
+| Off and gone | `PATCH $ES/$SIG` `{"enabled":false}`, then `DELETE $ES/$SIG` | 200 `enabled: false`, then 204; the next reply carries the team's |
+| In a browser | open `$W/d/settings/profile`, then `$W/d/settings/email` | "Email signature" with a live preview; "Team signatures" with one editor per address, absent for a member |
+
 ## Realtime connections end with their credential
 
 Open a socket with a browser's cookie (`a.jar`) and one with a token, using the SDK or `websocat`, and follow a conversation on each.

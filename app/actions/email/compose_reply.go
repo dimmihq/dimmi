@@ -43,13 +43,15 @@ const maxQuoteLength = 2000
 
 /*
 sendOptions are the email options a reply request may carry: other
-recipients, and another address to send from.
+recipients, another address to send from, and false in Signature to
+send it unsigned.
 */
 type sendOptions struct {
 	To            []string `json:"to"`
 	Cc            []string `json:"cc"`
 	Bcc           []string `json:"bcc"`
 	FromAddressID string   `json:"from_address_id"`
+	Signature     *bool    `json:"signature"`
 }
 
 /*
@@ -99,6 +101,10 @@ func (a *SendEmailMessage) compose(
 		out.draft.ReplyTo = mail.Address{
 			Name: from.Name, Email: inbound.ReplyAddress(out.address.ForwardingAddress, thread.ReplyToken),
 		}
+	}
+
+	if out.draft.Signature, err = a.signature(ctx, q, out); err != nil {
+		return err
 	}
 
 	return a.quote(ctx, q, out)
