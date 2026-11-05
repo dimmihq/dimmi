@@ -69,8 +69,6 @@ export function appSettings(config: EnvironmentConfig, data: DataStack, mail: Ma
     DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__EMAIL: config.alarmEmail,
     DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__HTTP_PORT: String(APP_PORTS.http),
     DIMMI_CUSTOM_DOMAINS__TLS__CERTMAGIC__TLS_PORT: String(APP_PORTS.https),
-    DIMMI_SOCIALITE__PROVIDERS__GITHUB__REDIRECT_URL: `${https}/auth/github/callback`,
-    DIMMI_SOCIALITE__PROVIDERS__GOOGLE__REDIRECT_URL: `${https}/auth/google/callback`,
     DIMMI_GATE__ENABLED: String(config.gate),
   };
 
@@ -78,10 +76,10 @@ export function appSettings(config: EnvironmentConfig, data: DataStack, mail: Ma
     DIMMI_DATABASE__URL: fromKey(data.connections, "database_url"),
     DIMMI_REDIS__URL: fromKey(data.connections, "redis_url"),
     DIMMI_APP__KEY: fromKey(data.appSecret, "app_key"),
-    DIMMI_SOCIALITE__PROVIDERS__GITHUB__CLIENT_ID: fromKey(data.appSecret, "github_client_id"),
-    DIMMI_SOCIALITE__PROVIDERS__GITHUB__CLIENT_SECRET: fromKey(data.appSecret, "github_client_secret"),
-    DIMMI_SOCIALITE__PROVIDERS__GOOGLE__CLIENT_ID: fromKey(data.appSecret, "google_client_id"),
-    DIMMI_SOCIALITE__PROVIDERS__GOOGLE__CLIENT_SECRET: fromKey(data.appSecret, "google_client_secret"),
+    DIMMI_AUTH__OAUTH__GITHUB__CLIENT_ID: fromKey(data.appSecret, "github_client_id"),
+    DIMMI_AUTH__OAUTH__GITHUB__CLIENT_SECRET: fromKey(data.appSecret, "github_client_secret"),
+    DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID: fromKey(data.appSecret, "google_client_id"),
+    DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET: fromKey(data.appSecret, "google_client_secret"),
     ...(config.gate
       ? { DIMMI_GATE__PASSWORD: fromKey(data.gatePassword), DIMMI_GATE__CI_KEY: fromKey(data.gateCiKey) }
       : {}),
