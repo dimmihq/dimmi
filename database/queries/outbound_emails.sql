@@ -68,3 +68,15 @@ WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id AN
   AND m.author_type = 'contact' AND m.deleted_at IS NULL
 ORDER BY m.created_at DESC
 LIMIT 1;
+
+-- name: FindContactReplyTo :one
+-- FindContactReplyTo returns the address the customer's latest ordinary
+-- email in the conversation asked replies to go to, empty when it asked
+-- for none.
+SELECT coalesce(metadata -> 'email' ->> 'reply_to', '')::text AS reply_to
+FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND author_type = 'contact' AND author_id = @contact_id AND deleted_at IS NULL
+  AND metadata -> 'email' ->> 'classification' = 'normal'
+ORDER BY created_at DESC, id DESC
+LIMIT 1;

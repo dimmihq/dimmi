@@ -118,7 +118,8 @@ func (a *SendEmailMessage) sender(ctx context.Context, q *models.Queries, out *o
 
 /*
 recipients returns who the reply goes to and who is copied, without the
-workspace's own addresses or suppressed copies.
+workspace's own addresses or suppressed copies. Unless the reply names
+its recipients, it goes where the customer asked answers to go.
 */
 func (a *SendEmailMessage) recipients(
 	ctx context.Context, q *models.Queries, out *outbound,
@@ -128,9 +129,16 @@ func (a *SendEmailMessage) recipients(
 		return nil, nil, err
 	}
 
+	own, err := q.ListWorkspaceEmailIdentities(ctx, out.msg.WorkspaceID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list workspace addresses: %w", err)
+	}
+
 	to := slices.Clone(options.To)
-	if len(to) == 0 && out.msg.Recipient.IdentityValue != "" {
-		to = []string{out.msg.Recipient.IdentityValue}
+	if len(to) == 0 {
+		if to, err = askedRecipients(ctx, q, out, own); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	cc := slices.Clone(options.Cc)
@@ -138,11 +146,6 @@ func (a *SendEmailMessage) recipients(
 		for _, r := range out.msg.CC {
 			cc = append(cc, r.IdentityValue)
 		}
-	}
-
-	own, err := q.ListWorkspaceEmailIdentities(ctx, out.msg.WorkspaceID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("list workspace addresses: %w", err)
 	}
 
 	to, cc = clean(to, own, nil), clean(cc, own, to)

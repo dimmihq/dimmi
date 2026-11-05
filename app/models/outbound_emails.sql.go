@@ -93,6 +93,32 @@ func (q *Queries) CreateOutboundEmail(ctx context.Context, arg CreateOutboundEma
 	return i, err
 }
 
+const findContactReplyTo = `-- name: FindContactReplyTo :one
+SELECT coalesce(metadata -> 'email' ->> 'reply_to', '')::text AS reply_to
+FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
+  AND author_type = 'contact' AND author_id = $3 AND deleted_at IS NULL
+  AND metadata -> 'email' ->> 'classification' = 'normal'
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type FindContactReplyToParams struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	ContactID      *ids.UUID `json:"contact_id"`
+}
+
+// FindContactReplyTo returns the address the customer's latest ordinary
+// email in the conversation asked replies to go to, empty when it asked
+// for none.
+func (q *Queries) FindContactReplyTo(ctx context.Context, arg FindContactReplyToParams) (string, error) {
+	row := q.db.QueryRow(ctx, findContactReplyTo, arg.WorkspaceID, arg.ConversationID, arg.ContactID)
+	var reply_to string
+	err := row.Scan(&reply_to)
+	return reply_to, err
+}
+
 const findOutboundEmailByIdempotencyKey = `-- name: FindOutboundEmailByIdempotencyKey :one
 SELECT id, workspace_id, message_id, conversation_id, email_address_id, kind, from_address, to_addresses, cc_addresses, bcc_addresses, subject, message_id_header, transport, provider_message_id, status, recipient_statuses, size_bytes, attempts, last_error, metadata, sent_at, created_at, updated_at FROM outbound_emails WHERE workspace_id = $1 AND metadata ->> 'idempotency_key' = $2::text
 `
