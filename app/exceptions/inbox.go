@@ -89,7 +89,8 @@ var (
 Contact failures.
 
 ErrContactExists refuses a new contact with an external id another
-contact holds. ErrContactKeyRequired refuses to start a conversation
+contact holds. ErrContactEmailTaken refuses an address another contact
+receives mail at. ErrContactKeyRequired refuses to start a conversation
 without saying who the customer is. ErrInvalidAttributes refuses custom
 attributes with a key that is not a short snake_case name, a value that
 is not text, a number or a boolean, text over 1,024 characters, or more
@@ -101,6 +102,8 @@ var (
 		OnField("custom_attributes")
 	ErrContactExists = fault.New(fault.Conflict, "contact_exists",
 		"Another contact already has this external id.").OnField("external_id")
+	ErrContactEmailTaken = fault.New(fault.Conflict, "contact_email_exists",
+		"Another contact already receives mail at this address.").OnField("email")
 	ErrContactKeyRequired = fault.New(fault.Invalid, "contact_required",
 		"Name the customer by id, external id or email.").OnField("contact")
 )

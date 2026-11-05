@@ -47,3 +47,9 @@ ORDER BY created_at, id;
 -- whether it was theirs.
 DELETE FROM contact_identities
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND id = @id;
+
+-- name: DeleteContactIdentityByValue :execrows
+-- DeleteContactIdentityByValue detaches the identity of the type and
+-- value from the contact, when it holds one.
+DELETE FROM contact_identities
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND type = @type AND value = @value;

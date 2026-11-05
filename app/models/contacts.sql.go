@@ -143,6 +143,33 @@ func (q *Queries) DeleteContactIdentity(ctx context.Context, arg DeleteContactId
 	return result.RowsAffected(), nil
 }
 
+const deleteContactIdentityByValue = `-- name: DeleteContactIdentityByValue :execrows
+DELETE FROM contact_identities
+WHERE workspace_id = $1 AND contact_id = $2 AND type = $3 AND value = $4
+`
+
+type DeleteContactIdentityByValueParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+	Type        string   `json:"type"`
+	Value       string   `json:"value"`
+}
+
+// DeleteContactIdentityByValue detaches the identity of the type and
+// value from the contact, when it holds one.
+func (q *Queries) DeleteContactIdentityByValue(ctx context.Context, arg DeleteContactIdentityByValueParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteContactIdentityByValue,
+		arg.WorkspaceID,
+		arg.ContactID,
+		arg.Type,
+		arg.Value,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findContact = `-- name: FindContact :one
 SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = $2
 `
