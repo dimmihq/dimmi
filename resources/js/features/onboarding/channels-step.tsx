@@ -129,7 +129,7 @@ function EmailSetup({ workspace }: { workspace: string }) {
         isInvalid={Boolean(addressError)}
         errorMessage={addressError}
       />
-      <Button size="small" type="submit" variant="secondary" disabled={add.isPending || address.trim() === ""}>
+      <Button type="submit" variant="secondary" disabled={add.isPending || address.trim() === ""}>
         Add
       </Button>
     </form>
