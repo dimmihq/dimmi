@@ -51,6 +51,14 @@ export function teamSignaturesQuery(workspace: string) {
   });
 }
 
+export function personalSignaturesQuery(workspace: string) {
+  return queryOptions({
+    queryKey: [...signaturesKey(workspace), "personal"],
+    queryFn: () =>
+      request<EmailSignature[]>("GET", "/email-signatures?filter[kind]=personal", undefined, { workspace }),
+  });
+}
+
 export function createSignature(workspace: string, signature: NewSignature): Promise<EmailSignature> {
   return request<EmailSignature>("POST", "/email-signatures", signature, { workspace });
 }

@@ -42,7 +42,7 @@ it.describe("email signatures", () => {
     );
   });
 
-  it("lets only those who manage everyone's signatures write the team's", async ({
+  it("lets only those who manage everyone's signatures write the team's and see teammates'", async ({
     page,
     person,
     request,
@@ -69,7 +69,14 @@ it.describe("email signatures", () => {
     await expect(member.getByRole("heading", { level: 1, name: "Email" })).toBeVisible();
     await expect(member.getByRole("region", { name: "Team signatures" })).toHaveCount(0);
     await member.goto("/d/settings/profile");
-    await expect(member.getByRole("textbox", { name: "Your signature" })).toBeVisible();
+    await writeSignature(member, "Your signature", "Ada, {{company_name}}", "Ada");
+    await member.getByRole("button", { name: "Save signature" }).click();
+    await expect(member.getByRole("switch", { name: "Use your signature" })).toBeChecked();
     await other.close();
+
+    await page.reload();
+    const theirs = page.getByRole("textbox", { name: `Signature of ${teammate.name}` });
+    await expect(theirs).toHaveValue("Ada, {{company_name}}");
+    await expect(page.getByRole("textbox", { name: `Signature of ${person.name}` })).toHaveCount(0);
   });
 });

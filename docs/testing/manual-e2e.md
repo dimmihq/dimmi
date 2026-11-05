@@ -660,7 +660,7 @@ for: an ownership TXT record and a signing key TXT record. Checks read real DNS 
 | Preview | `r prev -b a.jar -X POST -H "$O" -H "$J" $ES/renderings -d '{"body":"**{{member_name}}**\n{{member_title}}","email_address_id":"'$EMA'"}'` | 201 `email_signature_rendering`; `html` has the name in `<strong>`, the title line gone; `text` starts `-- ` |
 | Reply | reply to a conversation on `$EMA` in the inbox, open it in Mailpit | the text ends `-- ` and the signature, above the quote; with `{"email":{"signature":false}}` none |
 | Off and gone | `PATCH $ES/$SIG` `{"enabled":false}`, then `DELETE $ES/$SIG` | 200 `enabled: false`, then 204; the next reply carries the team's |
-| In a browser | open `$W/d/settings/profile`, then `$W/d/settings/email` | "Email signature" with a live preview; "Team signatures" with one editor per address, absent for a member |
+| In a browser | open `$W/d/settings/profile`, then `$W/d/settings/email` | "Email signature" with a live preview; "Team signatures" with one editor per address and "Teammates' signatures" by name, both absent for a member |
 
 ### Reply style and default address
 
