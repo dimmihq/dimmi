@@ -90,7 +90,7 @@ func (a *ListMessages) Handle(ctx context.Context, in ListMessagesInput) (Timeli
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		c, err := conversations.Find(ctx, q, in.Membership.Workspace.ID, in.Ref)
+		c, err := conversations.Find(ctx, q, in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}

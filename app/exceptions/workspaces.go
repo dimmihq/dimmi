@@ -94,3 +94,23 @@ var (
 	ErrReassignTargetInvalid = fault.New(fault.Invalid, "reassign_target_invalid",
 		"Open work can only go to another active member of this workspace.").OnField("reassign_to_member_id")
 )
+
+/*
+Conversation access failures.
+
+ErrOwnerAccessUnrestricted refuses to limit what an owner sees: owners
+are the last people able to reach every conversation.
+ErrAccessTeamNotFound refuses a list naming a team the workspace does
+not have. ErrAccessTeamsNotUsed refuses a list for a mode that reads
+none, and ErrTooManyAccessTeams a list longer than the limit.
+*/
+var (
+	ErrOwnerAccessUnrestricted = fault.New(fault.Invalid, "owner_access_unrestricted",
+		"Owners always see every conversation.")
+	ErrAccessTeamNotFound = fault.New(fault.Invalid, "team_not_found",
+		"This team does not exist in this workspace.").OnField("access_team_ids")
+	ErrAccessTeamsNotUsed = fault.New(fault.Invalid, "access_teams_not_used",
+		"This access does not use a list of teams.").OnField("access_team_ids")
+	ErrTooManyAccessTeams = fault.New(fault.Invalid, "too_many_access_teams",
+		"A member's access can name at most 200 teams.").OnField("access_team_ids")
+)

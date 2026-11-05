@@ -68,7 +68,7 @@ func (a *ShowNeighbors) Handle(ctx context.Context, in NeighborsInput) (Neighbor
 	var out Neighbors
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		c, err := Find(ctx, models.New(tx), in.Membership.Workspace.ID, in.Ref)
+		c, err := Find(ctx, models.New(tx), in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}

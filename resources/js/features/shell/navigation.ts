@@ -361,14 +361,22 @@ export type SettingsSection = keyof typeof settingsPages;
  * appSections lists the workspace's pages in the sidebar, with the inbox
  * sections that come from the workspace's own teams, teammates and
  * inboxes after the fixed views. The trash shows only to those who may
- * delete conversations.
+ * delete conversations, and Unassigned only to those who can see
+ * conversations nobody holds.
  */
-export function appSections(inbox: DashboardNavSection[] = [], canDelete = false): DashboardNavSection[] {
+export function appSections(
+  inbox: DashboardNavSection[] = [],
+  canDelete = false,
+  unassigned = true,
+): DashboardNavSection[] {
   const more = canDelete ? [inboxViews.spam, inboxViews.deleted] : [inboxViews.spam];
+  const views = unassigned
+    ? [inboxViews.unassigned, inboxViews.all, inboxViews.mentions]
+    : [inboxViews.all, inboxViews.mentions];
 
   return [
     { key: "you", items: [workspacePages.notifications, inboxViews.mine, inboxViews.snoozed] },
-    { key: "inbox", label: "Inbox", items: [inboxViews.unassigned, inboxViews.all, inboxViews.mentions] },
+    { key: "inbox", label: "Inbox", items: views },
     ...inbox,
     { key: "inbox-more", label: "More", items: more },
     { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },

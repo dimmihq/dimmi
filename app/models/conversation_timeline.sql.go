@@ -125,6 +125,52 @@ func (q *Queries) FindMessageByDedupeKey(ctx context.Context, arg FindMessageByD
 	return i, err
 }
 
+const latestContactMessage = `-- name: LatestContactMessage :one
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
+  AND author_type = 'contact' AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 1
+`
+
+type LatestContactMessageParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+}
+
+// LatestContactMessage returns the newest live message the customer
+// wrote in the conversation, the one a seen receipt answers.
+func (q *Queries) LatestContactMessage(ctx context.Context, arg LatestContactMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, latestContactMessage, arg.WorkspaceID, arg.ConversationID)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConversationID,
+		&i.Type,
+		&i.AuthorType,
+		&i.AuthorID,
+		&i.Body,
+		&i.BodyHtml,
+		&i.Event,
+		&i.ChannelMessageID,
+		&i.DedupeKey,
+		&i.DeliveryStatus,
+		&i.DeliveryError,
+		&i.Substantive,
+		&i.Metadata,
+		&i.EditedAt,
+		&i.SentAt,
+		&i.ReadAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Search,
+		&i.ChannelConnectionID,
+	)
+	return i, err
+}
+
 const latestConversationMessage = `-- name: LatestConversationMessage :one
 SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event' AND deleted_at IS NULL

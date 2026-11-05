@@ -152,6 +152,10 @@ func bootChannels(ctx context.Context, a *app.App) error {
 		return err
 	}
 
+	if err := bootAssignment(a); err != nil {
+		return err
+	}
+
 	if err := bootEmail(a); err != nil {
 		return err
 	}
@@ -293,6 +297,7 @@ func bootWorkspaces(a *app.App) {
 	}
 	acts.ListMembers = &members.ListMembers{DB: a.DB}
 	acts.ShowMember = &members.ShowMember{DB: a.DB}
+	acts.ListAccessTeams = &members.ListAccessTeams{DB: a.DB}
 	acts.UpdateMember = &members.UpdateMember{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, ConfirmWindow: a.Config.Auth.PasswordConfirmation.TTL,
 	}

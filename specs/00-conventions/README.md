@@ -248,7 +248,7 @@ Framework ships `throttle`, `signed`, `idempotent`, CSRF, CORS, trusted proxies,
 
 - Policies call `authz.Can(principal, permission)` with permission strings `resource:action` (catalog `app/auth/permissions.go`). Check permissions, never role names. Role names appear only in `app/auth/roles.go` (role -> permission set) and role-change actions (owner transfer, last-owner checks).
 - Each permission belongs to exactly one token ability group (`00-foundation/api.md`); OAuth scopes = abilities = permission groups (one vocabulary). Clients gate UI on `GET /me` `member.permissions`, never on `role`.
-- Conversation visibility through one builder `conversations.VisibleScope(principal)` (lists, search, counts, exports, realtime authorizers).
+- Conversation visibility through one builder `conversations.VisibleScope(membership)` (lists, search, counts, exports, realtime authorizers).
 
 ## Database rules
 

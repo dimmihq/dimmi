@@ -19,7 +19,7 @@ import { Badge } from "@/components/base/badges/badge";
 import { CloseButton } from "@/components/base/buttons/close-button";
 import { Kbd } from "@/components/base/kbd/kbd";
 import { cx } from "@/utils/cx";
-import { DashboardTeamMenu, type MenuGroup } from "./dashboard-team-menu";
+import { DashboardTeamMenu, type MenuGroup, type PresenceStatus } from "./dashboard-team-menu";
 import { type AvatarColor, DashboardUserMenu } from "./dashboard-user-menu";
 
 /**
@@ -195,6 +195,7 @@ export interface DashboardAccount {
   groups: MenuGroup[];
   product: string;
   version?: string;
+  status?: PresenceStatus;
 }
 
 /**

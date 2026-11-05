@@ -27,6 +27,15 @@ import (
 )
 
 /*
+Inbox is an inbox and whether it is the workspace's default, where
+conversations land when nothing routes them elsewhere.
+*/
+type Inbox struct {
+	models.Inbox
+	Default bool
+}
+
+/*
 ListInboxes lists the workspace's live inboxes, oldest first.
 
 Rules:
@@ -41,19 +50,32 @@ type ListInboxes struct {
 /*
 Handle returns the inboxes.
 */
-func (a *ListInboxes) Handle(ctx context.Context, m authz.Membership) ([]models.Inbox, error) {
+func (a *ListInboxes) Handle(ctx context.Context, m authz.Membership) ([]Inbox, error) {
 	if !m.Can("conversations:read") {
 		return nil, exceptions.ErrForbidden
 	}
 
-	var out []models.Inbox
+	var out []Inbox
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
+		q := models.New(tx)
 
-		out, err = models.New(tx).ListInboxes(ctx, m.Workspace.ID)
+		rows, err := q.ListInboxes(ctx, m.Workspace.ID)
+		if err != nil {
+			return err
+		}
 
-		return err
+		def, err := defaultID(ctx, q, m.Workspace.ID)
+		if err != nil {
+			return err
+		}
+
+		out = make([]Inbox, len(rows))
+		for i, row := range rows {
+			out[i] = Inbox{Inbox: row, Default: row.ID == def}
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list inboxes: %w", err)
@@ -86,17 +108,22 @@ type ShowInbox struct {
 /*
 Handle returns the inbox.
 */
-func (a *ShowInbox) Handle(ctx context.Context, in ShowInboxInput) (models.Inbox, error) {
+func (a *ShowInbox) Handle(ctx context.Context, in ShowInboxInput) (Inbox, error) {
 	if !in.Membership.Can("conversations:read") {
-		return models.Inbox{}, exceptions.ErrForbidden
+		return Inbox{}, exceptions.ErrForbidden
 	}
 
-	var out models.Inbox
+	var out Inbox
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
+		q := models.New(tx)
 
-		out, err = find(ctx, models.New(tx), in.Membership.Workspace.ID, in.InboxID)
+		inbox, err := find(ctx, q, in.Membership.Workspace.ID, in.InboxID)
+		if err != nil {
+			return err
+		}
+
+		out, err = withDefault(ctx, q, inbox)
 
 		return err
 	})
@@ -118,4 +145,30 @@ func find(ctx context.Context, q *models.Queries, ws, id ids.UUID) (models.Inbox
 	}
 
 	return inbox, nil
+}
+
+/*
+defaultID returns the id of the workspace's default inbox, the nil id
+when it has none.
+*/
+func defaultID(ctx context.Context, q *models.Queries, ws ids.UUID) (ids.UUID, error) {
+	def, err := q.FindDefaultInbox(ctx, ws)
+	if errors.Is(err, database.ErrNotFound) {
+		return ids.Nil(), nil
+	}
+
+	if err != nil {
+		return ids.Nil(), fmt.Errorf("find default inbox: %w", err)
+	}
+
+	return def.ID, nil
+}
+
+/*
+withDefault returns the inbox with whether it is the default.
+*/
+func withDefault(ctx context.Context, q *models.Queries, inbox models.Inbox) (Inbox, error) {
+	def, err := defaultID(ctx, q, inbox.WorkspaceID)
+
+	return Inbox{Inbox: inbox, Default: inbox.ID == def}, err
 }

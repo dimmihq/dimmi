@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -76,9 +77,14 @@ func (w memberWriter) changeRole(
 		return member, fmt.Errorf("change member role: %w", err)
 	}
 
-	return member, w.events.Dispatch(ctx, w.tx, appevents.MemberRoleChanged{
+	err = w.events.Dispatch(ctx, w.tx, appevents.MemberRoleChanged{
 		WorkspaceID: m.WorkspaceID, MemberID: m.ID, UserID: m.UserID, From: m.Role, To: member.Role, ChangedBy: w.by,
 	})
+	if err != nil || !appauth.IsOwnerRole(role) {
+		return member, err
+	}
+
+	return member, w.liftAccess(ctx, member)
 }
 
 /*

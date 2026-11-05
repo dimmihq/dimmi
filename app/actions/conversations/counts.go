@@ -74,25 +74,32 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 		return Counts{}, err
 	}
 
-	ws, me := in.Membership.Workspace.ID, in.Membership.Member.ID
+	ws, me, access := in.Membership.Workspace.ID, in.Membership.Member.ID, VisibleScope(in.Membership).Params()
 	out := Counts{Inboxes: map[ids.UUID]int64{}, Teams: map[ids.UUID]int64{}, Members: map[ids.UUID]int64{}}
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		totals, err := q.CountConversations(ctx, models.CountConversationsParams{WorkspaceID: ws, MemberID: &me})
+		totals, err := q.CountConversations(ctx, models.CountConversationsParams{
+			WorkspaceID: ws, MemberID: &me, AccessMode: access.Mode, AccessViewer: access.Viewer,
+			AccessTeams: access.Teams, AccessUnassigned: access.Unassigned,
+		})
 		if err != nil {
 			return fmt.Errorf("count conversations: %w", err)
 		}
 
 		unread, err := q.CountUnreadConversations(ctx, models.CountUnreadConversationsParams{
-			WorkspaceID: ws, MemberID: me,
+			WorkspaceID: ws, MemberID: me, AccessMode: access.Mode, AccessViewer: access.Viewer,
+			AccessTeams: access.Teams, AccessUnassigned: access.Unassigned,
 		})
 		if err != nil {
 			return fmt.Errorf("count unread conversations: %w", err)
 		}
 
-		inboxes, err := q.CountOpenConversationsByInbox(ctx, ws)
+		inboxes, err := q.CountOpenConversationsByInbox(ctx, models.CountOpenConversationsByInboxParams{
+			WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+			AccessUnassigned: access.Unassigned,
+		})
 		if err != nil {
 			return fmt.Errorf("count conversations by inbox: %w", err)
 		}
@@ -107,22 +114,31 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 
 		out.Views = a.countViews(ctx, tx, in.Membership)
 
-		return countHolders(ctx, q, ws, out)
+		return countHolders(ctx, q, in.Membership, out)
 	})
 
 	return out, err
 }
 
 /*
-countHolders counts the open conversations of each team and member.
+countHolders counts the open conversations of each team and member,
+among those the member may see.
 */
-func countHolders(ctx context.Context, q *models.Queries, ws ids.UUID, out Counts) error {
-	teams, err := q.CountOpenConversationsByTeam(ctx, ws)
+func countHolders(ctx context.Context, q *models.Queries, m authz.Membership, out Counts) error {
+	ws, access := m.Workspace.ID, VisibleScope(m).Params()
+
+	teams, err := q.CountOpenConversationsByTeam(ctx, models.CountOpenConversationsByTeamParams{
+		WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+		AccessUnassigned: access.Unassigned,
+	})
 	if err != nil {
 		return fmt.Errorf("count conversations by team: %w", err)
 	}
 
-	members, err := q.CountOpenConversationsByAssignee(ctx, ws)
+	members, err := q.CountOpenConversationsByAssignee(ctx, models.CountOpenConversationsByAssigneeParams{
+		WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+		AccessUnassigned: access.Unassigned,
+	})
 	if err != nil {
 		return fmt.Errorf("count conversations by member: %w", err)
 	}

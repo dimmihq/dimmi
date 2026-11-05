@@ -34,6 +34,7 @@ adminRows is what admins may do beyond members, as the matrix lists it.
 func adminRows() []string {
 	return []string{
 		"settings:read", "settings:write", "audit_logs:read", "members:write", "tokens:manage_any", "widgets:manage",
+		"members:manage_access", "members:manage_availability",
 		"identity:manage", "conversations:delete", "conversations:moderate", "saved_replies:manage_shared",
 		"views:manage_shared", "contacts:erase", "contacts:manage_external_id", "companies:delete", "inboxes:manage",
 		"tags:manage",

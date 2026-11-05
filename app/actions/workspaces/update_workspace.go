@@ -74,6 +74,7 @@ type UpdateWorkspaceInput struct {
 	TestMode         *bool
 	RequireTwoFactor *bool
 	ShowViewers      *bool
+	SeenReceiptName  *bool
 
 	CustomerFacingName      *string
 	ClearCustomerFacingName bool
@@ -234,10 +235,20 @@ func (a *UpdateWorkspace) changes(
 }
 
 /*
+inboxFlag is an on or off inbox setting of the workspace: its key, the
+value asked for, nil to leave it, and the value it has.
+*/
+type inboxFlag struct {
+	key  string
+	want *bool
+	has  bool
+}
+
+/*
 settingsChange applies to params the changes kept in the settings
 document: the requirement of a second factor, whether inbox lists show
-viewers, and the name customers see, and returns the names of those
-that changed.
+viewers, whether seen receipts name the teammate, and the name
+customers see, and returns the names of those that changed.
 */
 func settingsChange(
 	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput,
@@ -254,14 +265,21 @@ func settingsChange(
 		changes = append(changes, fieldRequireTwoFactor)
 	}
 
-	if in.ShowViewers != nil && *in.ShowViewers != w.ShowsViewersOnList() {
-		settings, err := models.WithSetting(params.Settings, "inbox", "show_viewers_on_list", *in.ShowViewers)
+	for _, flag := range []inboxFlag{
+		{key: "show_viewers_on_list", want: in.ShowViewers, has: w.ShowsViewersOnList()},
+		{key: "seen_receipt_shows_name", want: in.SeenReceiptName, has: w.SeenReceiptShowsName()},
+	} {
+		if flag.want == nil || *flag.want == flag.has {
+			continue
+		}
+
+		settings, err := models.WithSetting(params.Settings, "inbox", flag.key, *flag.want)
 		if err != nil {
 			return nil, err
 		}
 
 		params.Settings = settings
-		changes = append(changes, "show_viewers_on_list")
+		changes = append(changes, flag.key)
 	}
 
 	settings, changed, err := customerFacingName(params.Settings, w, in)
