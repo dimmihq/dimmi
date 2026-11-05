@@ -126,39 +126,6 @@ func NewContactSummary(c models.Contact) ContactSummary {
 }
 
 /*
-Inbox is one inbox of the workspace.
-*/
-type Inbox struct {
-	ID        string    `json:"id"`
-	Object    string    `json:"object"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-/*
-NewInbox shapes the inbox.
-*/
-func NewInbox(i models.Inbox) Inbox {
-	return Inbox{
-		ID: models.PublicID(models.PrefixInbox, i.ID), Object: "inbox", Name: i.Name, CreatedAt: i.CreatedAt,
-		UpdatedAt: i.UpdatedAt,
-	}
-}
-
-/*
-NewInboxes shapes a list of inboxes, in the order given.
-*/
-func NewInboxes(rows []models.Inbox) []Inbox {
-	out := make([]Inbox, 0, len(rows))
-	for _, i := range rows {
-		out = append(out, NewInbox(i))
-	}
-
-	return out
-}
-
-/*
 Named is the short form of a row known by its name: an inbox, a team or
 a member.
 */

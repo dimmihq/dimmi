@@ -134,7 +134,7 @@ Decision (`research/build-vs-reuse.md` section 1): embed `github.com/centrifugal
   - Apps, CLI, integrations: bearer (`dmi_oat_`, `dmi_live_`) in connect `token` field (never URL). Abilities/permissions as REST.
   - Widget: 60-second single-purpose connect token from `POST /widget/v1/realtime-tokens` (01; auth `auth:widget`; returns `{token, expires_at, channels}`). Visitor session token never in a URL. `EventSource` cannot send headers, so connect token rides query param `cf_connect`; logs redact `cf_connect`. On `error`: close, mint fresh token, reopen with last `offset`/`epoch` (browser auto-retry would reuse expired URL).
 - Subscribe: `client.OnSubscribe` calls authorizers in `routes/channels.go` (Laravel `Broadcast::channel` shape: `broadcast.Channel("conversation:{conv}", fn)`). Widget gets server-side subscriptions in connect reply (`widget_contact:` only).
-- Authorizers check permissions (`authz.Can`), never role names (P2). Conversation channels go through same `conversations.VisibleScope(principal)` (03) as REST lists, search, counts, exports.
+- Authorizers check permissions (`authz.Can`), never role names (P2). Conversation channels go through same `conversations.VisibleScope(membership)` (03) as REST lists, search, counts, exports.
 - Client publish: off on every namespace (`OnPublish` rejects). Everything server-published, incl. typing (REST, below).
 - Member removed or deactivated, token or grant revoked, widget session revoked: `node.Disconnect(userID)` (cross-node via Controller) within 5 s.
 

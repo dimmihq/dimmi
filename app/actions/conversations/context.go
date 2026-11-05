@@ -92,7 +92,7 @@ func (a *ShowContext) Handle(ctx context.Context, in ContextInput) (Context, err
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		c, err := Find(ctx, q, in.Membership.Workspace.ID, in.Ref)
+		c, err := Find(ctx, q, in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}

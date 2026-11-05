@@ -208,7 +208,7 @@ func TestTwoFactorResetUpdate(t *testing.T) {
 		tc := tests.New(t)
 		teammate, member := protected(t, tc, enums.RoleMember)
 		id, token := mailReset(t, tc, in(tc, tc.Owner), member)
-		_, err := tc.App.DB.Exec(t.Context(), `UPDATE workspaces
+		_, err := tc.Operator().Exec(t.Context(), `UPDATE workspaces
 			SET settings = jsonb_set(settings, '{security}', '{"require_two_factor": true}') WHERE id = $1`,
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)

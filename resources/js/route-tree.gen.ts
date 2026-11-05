@@ -46,6 +46,7 @@ import { Route as DCustomersCompaniesIndexRouteImport } from './routes/d/custome
 import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
+import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
@@ -235,6 +236,11 @@ const DInboxViewConversationRoute = DInboxViewConversationRouteImport.update({
   path: '/$conversation',
   getParentRoute: () => DInboxViewRouteRoute,
 } as any)
+const DSettingsInboxesInboxRoute = DSettingsInboxesInboxRouteImport.update({
+  id: '/settings/inboxes/$inbox',
+  path: '/settings/inboxes/$inbox',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   id: '/settings/teams/$team',
   path: '/settings/teams/$team',
@@ -283,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
+  '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
@@ -321,6 +328,7 @@ export interface FileRoutesByTo {
   '/d/workflows': typeof DWorkflowsIndexRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
+  '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
@@ -363,6 +371,7 @@ export interface FileRoutesById {
   '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
+  '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/d/workflows/'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
+    | '/d/settings/inboxes/$inbox'
     | '/d/settings/teams/$team'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
@@ -444,6 +454,7 @@ export interface FileRouteTypes {
     | '/d/workflows'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
+    | '/d/settings/inboxes/$inbox'
     | '/d/settings/teams/$team'
     | '/d/customers/companies'
     | '/d/inbox/$view'
@@ -485,6 +496,7 @@ export interface FileRouteTypes {
     | '/d/workflows/'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
+    | '/d/settings/inboxes/$inbox'
     | '/d/settings/teams/$team'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
@@ -757,6 +769,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DInboxViewConversationRouteImport
       parentRoute: typeof DInboxViewRouteRoute
     }
+    '/d/settings/inboxes/$inbox': {
+      id: '/d/settings/inboxes/$inbox'
+      path: '/settings/inboxes/$inbox'
+      fullPath: '/d/settings/inboxes/$inbox'
+      preLoaderRoute: typeof DSettingsInboxesInboxRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/teams/$team': {
       id: '/d/settings/teams/$team'
       path: '/settings/teams/$team'
@@ -828,6 +847,7 @@ interface DRouteRouteChildren {
   DProceduresIndexRoute: typeof DProceduresIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
+  DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
 }
@@ -850,6 +870,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DProceduresIndexRoute: DProceduresIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
+  DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
 }

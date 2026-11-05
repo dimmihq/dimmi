@@ -1,7 +1,8 @@
 /*
  * The controls settings rows use, BoardUI's own at the compact sizes the
- * rows call for. Until settings are saved on the server they keep their
- * state on the page, so every page can be tried as it will work.
+ * rows call for. They keep their own state and tell onChange, so a page
+ * saves what it is told. A disabled control shows a setting the person
+ * may read but not change.
  */
 import { useState } from "react";
 import { type Color, parseColor } from "react-aria-components";
@@ -18,13 +19,15 @@ import { Switch } from "@/components/base/switch/switch";
 export function Toggle({
   label,
   on = false,
+  disabled = false,
   onChange,
 }: {
   label: string;
   on?: boolean;
+  disabled?: boolean;
   onChange?: (on: boolean) => void;
 }) {
-  return <Switch aria-label={label} size="sm" defaultSelected={on} onChange={onChange} />;
+  return <Switch aria-label={label} size="sm" defaultSelected={on} isDisabled={disabled} onChange={onChange} />;
 }
 
 /*
@@ -34,17 +37,20 @@ export function Choice({
   label,
   options,
   value,
+  disabled = false,
   onChange,
 }: {
   label: string;
   options: string[];
   value?: string;
+  disabled?: boolean;
   onChange?: (option: string) => void;
 }) {
   return (
     <Select
       aria-label={label}
       size="sm"
+      isDisabled={disabled}
       defaultSelectedKey={value ?? options[0]}
       onSelectionChange={(key) => onChange?.(String(key))}
       popoverClassName="w-56"
@@ -66,19 +72,41 @@ const brand = ["#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#ef4444", "#f59e0b",
 
 /*
  * Colour picks any colour with BoardUI's colour well, and shows the hex
- * value it holds beside it. The well is 20px, the size of the other marks
- * in a settings row, rather than BoardUI's 32px default.
+ * value it holds beside it, telling onChange each hex picked. The well
+ * is 20px, the size of the other marks in a settings row, rather than
+ * BoardUI's 32px default. Disabled, it shows the colour without the
+ * well.
  */
-export function Colour({ label, value }: { label: string; value: string }) {
+export function Colour({
+  label,
+  value,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange?: (hex: string) => void;
+}) {
   const [color, setColor] = useState<Color>(() => parseColor(value));
+  const hex = (
+    <span className="font-mono text-body-2-regular text-text-secondary uppercase">{color.toString("hex")}</span>
+  );
+
+  if (disabled) {
+    return hex;
+  }
 
   return (
     <span className="flex items-center gap-2">
-      <span className="font-mono text-body-2-regular text-text-secondary uppercase">{color.toString("hex")}</span>
+      {hex}
       <ColorWell
         aria-label={label}
         value={color}
-        onChange={setColor}
+        onChange={(picked) => {
+          setColor(picked);
+          onChange?.(picked.toString("hex").toLowerCase());
+        }}
         swatches={brand}
         placement="bottom end"
         wellClassName="size-5"
@@ -96,18 +124,21 @@ export function Field({
   value,
   placeholder,
   width = "w-56",
+  disabled = false,
   onChange,
 }: {
   label: string;
   value?: string;
   placeholder?: string;
   width?: string;
+  disabled?: boolean;
   onChange?: (value: string) => void;
 }) {
   return (
     <Input
       aria-label={label}
       size="small"
+      isDisabled={disabled}
       defaultValue={value}
       placeholder={placeholder}
       onChange={onChange}

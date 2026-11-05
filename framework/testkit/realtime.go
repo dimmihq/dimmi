@@ -218,6 +218,20 @@ func (c *Realtime) Join() string {
 }
 
 /*
+Unsubscribed returns the channel the server next took the connection
+off, skipping other pushes.
+*/
+func (c *Realtime) Unsubscribed() string {
+	c.tb.Helper()
+
+	for {
+		if p := c.push(); p.Unsub != nil {
+			return p.Channel
+		}
+	}
+}
+
+/*
 Closed reads until the server closes the connection and returns the
 close code.
 */

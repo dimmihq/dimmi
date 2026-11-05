@@ -37,12 +37,12 @@ func closed(t *testing.T, d tests.Desk, name string) string {
 
 /*
 age moves the closing and last activity of every closed conversation
-back by the days, as if they had sat untouched that long.
+back 40 days, as if they had sat untouched that long.
 */
-func age(t *testing.T, d tests.Desk, days int) {
+func age(t *testing.T, d tests.Desk) {
 	t.Helper()
 
-	back := d.TC.Clock.Now().Add(-time.Duration(days) * 24 * time.Hour)
+	back := d.TC.Clock.Now().Add(-40 * 24 * time.Hour)
 	_, err := d.TC.Operator().Exec(t.Context(),
 		`UPDATE conversations SET closed_at = $1, last_activity_at = $1 WHERE status = 'closed'`, back)
 	require.NoError(t, err)
@@ -82,8 +82,12 @@ func TestRetention(t *testing.T) {
 			AssertJSONPath("data.retention.closed_conversation_days", nil)
 
 		for _, body := range []testkit.JSON{
-			{"closed_conversation_days": 29}, {"closed_conversation_days": 3651}, {"spam_days": 6},
-			{"trash_days": 366}, {"raw_email_days": -1}, {"export_days": 31},
+			{"closed_conversation_days": 29},
+			{"closed_conversation_days": 3651},
+			{"spam_days": 6},
+			{"trash_days": 366},
+			{"raw_email_days": -1},
+			{"export_days": 31},
 		} {
 			retention(body).AssertStatus(422).AssertJSONPath("code", "invalid_retention")
 		}
@@ -97,7 +101,7 @@ func TestRetention(t *testing.T) {
 		closed(t, d, "ann")
 		closed(t, d, "bob")
 		d.Customer(t, "cy", "Still open")
-		age(t, d, 40)
+		age(t, d)
 
 		d.Owner.PostJSON("/api/v1/retention-previews", testkit.JSON{"closed_conversation_days": 30}).AssertOK().
 			AssertJSONPath("data.object", "retention_preview").
@@ -113,7 +117,7 @@ func TestRetention(t *testing.T) {
 		d := tests.NewDesk(t)
 		old := closed(t, d, "ann")
 		touched := closed(t, d, "bob")
-		age(t, d, 40)
+		age(t, d)
 		d.Owner.PostJSON(touched+"/notes", testkit.JSON{"body": "Still relevant"}).AssertCreated()
 		d.Owner.PatchJSON("/api/v1/workspace", testkit.JSON{"retention": testkit.JSON{"closed_conversation_days": 30}}).
 			AssertOK()
@@ -142,7 +146,7 @@ func TestRetention(t *testing.T) {
 		closed(t, d, "ann")
 		d.Owner.PatchJSON("/api/v1/workspace", testkit.JSON{"retention": testkit.JSON{"closed_conversation_days": 30}}).
 			AssertOK()
-		age(t, d, 40)
+		age(t, d)
 		tc.Clock.Travel(25 * time.Hour)
 
 		moved, err := tc.App.Actions.Inbox.ApplyRetention.Handle(t.Context())
@@ -192,9 +196,9 @@ func TestRetentionFailures(t *testing.T) {
 		} {
 			d := tests.NewDesk(t)
 			closed(t, d, "ann")
-			d.Owner.PatchJSON("/api/v1/workspace", testkit.JSON{"retention": testkit.JSON{"closed_conversation_days": 30}}).
-				AssertOK()
-			age(t, d, 40)
+			d.Owner.PatchJSON("/api/v1/workspace",
+				testkit.JSON{"retention": testkit.JSON{"closed_conversation_days": 30}}).AssertOK()
+			age(t, d)
 			d.TC.Clock.Travel(25 * time.Hour)
 			broken(d.TC)
 
@@ -216,7 +220,7 @@ func TestRetentionFailures(t *testing.T) {
 		closed(t, d, "ann")
 		d.Owner.PatchJSON("/api/v1/workspace", testkit.JSON{"retention": testkit.JSON{"closed_conversation_days": 30}}).
 			AssertOK()
-		age(t, d, 40)
+		age(t, d)
 		tc.Clock.Travel(25 * time.Hour)
 
 		_, err = tc.App.Actions.Inbox.ApplyRetention.Handle(t.Context())

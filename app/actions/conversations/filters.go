@@ -43,8 +43,9 @@ Filters narrow a list. View is one of the views, with ViewMember naming
 the member and ViewID the saved view. Statuses are the statuses shown,
 none meaning open, unless AnyStatus. Assignee narrows to one member's
 conversations, Unassigned to nobody's and AssigneeMe to the caller's.
-NoTeam narrows to those no team holds. The pointers and lists narrow
-only when set. Search is what the caller typed.
+NoTeam narrows to those no team holds. AssignmentWaiting narrows to
+those automatic assignment could not place yet. The pointers and lists
+narrow only when set. Search is what the caller typed.
 */
 type Filters struct {
 	View          string
@@ -70,6 +71,8 @@ type Filters struct {
 	Waiting       bool
 	Unread        bool
 	Search        string
+
+	AssignmentWaiting bool
 }
 
 /*
@@ -84,10 +87,15 @@ func listOf(m authz.Membership, f Filters, s querybuilder.Sort) (querybuilder.Co
 		InboxID: f.InboxID, ContactID: f.ContactID, CompanyID: f.CompanyID, ConnectionIDs: f.Connections,
 		ChannelTypes: f.ChannelTypes, Priorities: f.Priorities, TagsAll: f.TagsAll, TagsAny: f.TagsAny,
 		CreatedAfter: f.CreatedAfter, CreatedBefore: f.CreatedBefore, Waiting: f.Waiting, Unread: f.Unread,
+		Access: access(m),
 	}
 
 	if f.View == ViewMentions {
 		return l, false
+	}
+
+	if f.AssignmentWaiting {
+		l.Extra = append(l.Extra, assignmentWaiting)
 	}
 
 	applyView(&l, m, f)
@@ -185,4 +193,21 @@ func applySearch(l *querybuilder.Conversations, m authz.Membership, sq searchque
 	}
 
 	return true
+}
+
+/*
+access returns what the caller may see, as a list takes it.
+*/
+func access(m authz.Membership) querybuilder.Access {
+	p := VisibleScope(m).Params()
+
+	return querybuilder.Access{Mode: p.Mode, Viewer: p.Viewer, Teams: p.Teams, Unassigned: p.Unassigned}
+}
+
+/*
+assignmentWaiting narrows a list to the conversations waiting for
+automatic assignment.
+*/
+func assignmentWaiting(int) (string, []any) {
+	return "c.assignment_wait_reason IS NOT NULL", nil
 }

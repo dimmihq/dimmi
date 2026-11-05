@@ -8,7 +8,7 @@
 | socket was opened from the same origins cross-origin protection
 | trusts for the API. Domain events become broadcasts once they commit,
 | connections end with the access or credential behind them, and
-| teammates typing are relayed to the customer's side.
+| teammates typing and reading are relayed to the customer's side.
 |
 */
 
@@ -56,12 +56,16 @@ func (p BroadcastServiceProvider) Register(fa *foundation.Application) error {
 	p.App.Viewers = &appbroadcasting.Viewers{Presence: fa.Broadcast, DB: fa.DB, IDs: p.App.IDs}
 
 	broadcaster := &appbroadcasting.Broadcaster{
-		Server: fa.Broadcast, Payloads: resources.BroadcastPayloads{DB: fa.DB},
+		Server: fa.Broadcast, Payloads: resources.BroadcastPayloads{DB: fa.DB}, Unsubscribe: fa.Broadcast,
+		Fanout: &appbroadcasting.Fanout{DB: fa.DB, Cache: fa.Cache},
 	}
 	broadcaster.Listen(fa.Events)
 
 	disconnects := &appbroadcasting.Disconnects{Server: fa.Broadcast}
 	disconnects.Listen(fa.Events)
+
+	seen := &appbroadcasting.SeenReceipts{DB: fa.DB, Cache: fa.Cache, Server: fa.Broadcast}
+	seen.Listen(fa.Events)
 
 	return nil
 }
@@ -72,7 +76,7 @@ Boot builds the typing relay.
 func (p BroadcastServiceProvider) Boot(context.Context, *foundation.Application) error {
 	a := p.App
 	a.Actions.RecordTyping = &conversations.RecordTyping{
-		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Scope: conversations.VisibleScope{}, Publisher: a.Broadcast,
+		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Publisher: a.Broadcast,
 	}
 
 	return nil

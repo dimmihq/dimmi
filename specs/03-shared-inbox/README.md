@@ -216,7 +216,7 @@ Doc rules on core tables (`00-foundation/extensibility.md` sections 1 P1, 10):
 - `reopen_window_days` int 0 to 365. 0 = closed conversations never reopen; customer message always starts new conversation.
 - `assign_on_reply` bool default true.
 
-`workspaces.settings` keys owned by 03 (`models.WorkspaceSettings`): `default_inbox_id` (uuid), `seen_receipt_shows_name` (bool, default false; widget "Seen" shows replying member name + avatar, see `conversation.seen_by_team`).
+`workspaces.settings` keys owned by 03 (`models.WorkspaceSettings`): `default_inbox_id` (uuid), `inbox.seen_receipt_shows_name` (bool, default false, `PATCH /workspace`; widget "Seen" shows replying member name + avatar, see `conversation.seen_by_team`).
 
 `workspaces.settings` keys added this round (registry, delta): `inbox.merge_different_customers`, `inbox.undo_send_seconds`, `inbox.team_mentions_enabled`, `inbox.show_viewers_on_list`, `inbox.gif_picker`, `inbox.translation_enabled`, `snooze.wake_*`, `availability.*`, `attachments.customer_uploads`, `attachments.allowed_extra_extensions`, `redaction.card_numbers`, `redaction.us_ssn`, `link_safety.*`, `retention.*`. Meaning in owning file.
 
@@ -403,7 +403,7 @@ Laravel-style paths. Tests listed per milestone in tasks.md.
 - `add_conversation_participant.go`, `remove_conversation_participant.go`
 - `bulk_update_conversations.go` (ids or filter snapshot + `confirm_count` check; per-id tx via `ApplyConversationChanges`)
 - `mark_conversation_read.go`, `mark_conversation_unread.go`
-- `visible_scope.go` (`conversations.VisibleScope(principal)`; full rule and arch test: [access.md](access.md)): single visibility builder. Every conversation list, view, neighbor, count, search (conversation section + `#1042` jump), bulk filter snapshot, contact/company conversation list, export, MCP/CLI list, and realtime `conversation:{conv}` subscribe authorizer (incl. presence) goes through it; show endpoints use `VisibleScope(principal).Contains(conv)` (miss = 404). Member modes `all`, `assigned`, `teams`, `all_except_teams`; trash adds `conversations:delete`. Arch test fails raw conversation reads outside scope
+- `visible_scope.go` (`conversations.VisibleScope(membership)`; full rule and arch test: [access.md](access.md)): single visibility builder. Every conversation list, view, neighbor, count, search (conversation section + `#1042` jump), bulk filter snapshot, contact/company conversation list, export, MCP/CLI list, and realtime `conversation:{conv}` subscribe authorizer (incl. presence) goes through it; show endpoints use `conversations.Find(ctx, q, membership, ref)` (`VisibleScope(membership).Contains(conv)`) (miss = 404). Member modes `all`, `assigned`, `teams`, `all_except_teams`; trash adds `conversations:delete`. Arch test fails raw conversation reads outside scope
 - `list_conversations.go` (view + filters + sort to query builder, scoped by `VisibleScope`), `find_neighbor_conversations.go`, `count_conversations.go` (capped counts, cached), `build_conversation_context.go`
 - `record_typing.go` (`RecordTyping`: REST `typing-indicators`, only typing path for every client; throttle 1 per 2 s per member per conversation in Valkey; relay to widget / push channel only, see Collision)
 
@@ -458,7 +458,7 @@ Resources (`app/http/resources/`): `inbox_resource.go`, `conversation_resource.g
 
 Policies (`app/policies/`): `inbox_policy.go`, `conversation_policy.go` (`UpdateField(actor, conversation, field)` per PATCH field, rest.md rule 3), `message_policy.go`, `contact_policy.go`, `company_policy.go`, `tag_policy.go`, `saved_reply_policy.go`, `attachment_policy.go`. Every policy calls `authz.Can(principal, permission)` (Permissions matrix); no role names in 03 code (P2).
 
-Broadcasting (`app/broadcasting/`): `conversation_channel.go` (subscribe authorizer for `conversation:{conv}` (namespace with presence + join/leave on, history on, client publish off); checks `VisibleScope(principal).Contains(conv)`; returns `ClientInfo {user: "mem_...", info: {name, avatar_url}}`), `member_channel.go` (`member:{mem}`: own member only). Registered in `routes/channels.go`. No client-event hooks; no typing publications (typing is REST, relayed to customer side only).
+Broadcasting (`app/broadcasting/`): `conversation_channel.go` (subscribe authorizer for `conversation:{conv}` (namespace with presence + join/leave on, history on, client publish off); checks `VisibleScope(membership).Contains(conv)`; returns `ClientInfo {user: "mem_...", info: {name, avatar_url}}`), `member_channel.go` (`member:{mem}`: own member only). Registered in `routes/channels.go`. No client-event hooks; no typing publications (typing is REST, relayed to customer side only).
 
 ### Events (`app/events/`)
 Existing catalog structs implemented here: `conversation_created.go`, `conversation_assigned.go`, `conversation_closed.go`, `conversation_reopened.go`, `conversation_snoozed.go`, `conversation_unsnoozed.go`, `conversation_priority_changed.go`, `conversation_tagged.go`, `conversation_untagged.go`, `conversation_marked_spam.go`, `conversation_unmarked_spam.go`, `conversation_deleted.go`, `conversation_read.go`, `message_created.go`, `message_updated.go`, `message_deleted.go`, `message_delivery_updated.go`, `contact_created.go`, `contact_updated.go`, `contact_merged.go`, `contact_deleted.go`. New: see Events section.

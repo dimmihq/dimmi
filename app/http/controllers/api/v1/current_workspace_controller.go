@@ -59,6 +59,7 @@ func (c *CurrentWorkspaceController) Update(
 		RequireTwoFactor: in.Body.RequireTwoFactor, CustomerFacingName: in.Body.CustomerFacingName,
 		ClearCustomerFacingName: requests.Nulls(in.RawBody)["customer_facing_name"],
 		ShowViewers:             in.Body.ShowViewers,
+		SeenReceiptName:         in.Body.SeenReceiptName,
 		LinkSafety:              linkSafetyChange(in.Body.LinkSafety),
 		Retention:               retentionChange(in.Body.Retention, in.RawBody),
 	})

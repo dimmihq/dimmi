@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/i18n"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -52,6 +53,12 @@ type Member struct {
 	Status       string   `json:"status"`
 	Availability string   `json:"availability"`
 	Permissions  []string `json:"permissions"`
+
+	ConversationAccess           string   `json:"conversation_access"`
+	ConversationAccessUnassigned bool     `json:"conversation_access_unassigned"`
+	AccessTeamIDs                []string `json:"access_team_ids"`
+
+	MemberAvailability
 }
 
 /*
@@ -101,7 +108,7 @@ func NewMe(ctx context.Context, me auth.Me, instance Instance) Me {
 	if me.Workspace != nil {
 		workspace := NewWorkspace(*me.Workspace)
 		out.Workspace = &workspace
-		out.Member = newMember(*me.Member, me.Permissions)
+		out.Member = newMember(*me.Member, me.Permissions, me.AccessTeams)
 		workspaceLocale = &me.Workspace.Locale
 	}
 
@@ -116,7 +123,7 @@ func NewMe(ctx context.Context, me auth.Me, instance Instance) Me {
 	return out
 }
 
-func newMember(m models.WorkspaceMember, permissions []string) *Member {
+func newMember(m models.WorkspaceMember, permissions []string, accessTeams []ids.UUID) *Member {
 	return &Member{
 		ID:           models.PublicID(models.PrefixMember, m.ID),
 		Object:       "member",
@@ -124,6 +131,12 @@ func newMember(m models.WorkspaceMember, permissions []string) *Member {
 		Status:       m.Status,
 		Availability: m.Availability,
 		Permissions:  nonNil(permissions),
+
+		ConversationAccess:           m.ConversationAccess,
+		ConversationAccessUnassigned: m.ConversationAccessUnassigned,
+		AccessTeamIDs:                PublicTeamIDs(accessTeams),
+
+		MemberAvailability: NewMemberAvailability(m),
 	}
 }
 

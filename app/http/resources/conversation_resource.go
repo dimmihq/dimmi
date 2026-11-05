@@ -49,11 +49,21 @@ type Conversation struct {
 	Contact                ContactSummary                   `json:"contact"`
 	Assignee               *MemberSummary                   `json:"assignee"`
 	Team                   *Named                           `json:"team"`
+	AssignmentWait         *AssignmentWait                  `json:"assignment_wait"`
 	LastMessage            *MessageSummary                  `json:"last_message"`
 	Tags                   []Tag                            `json:"tags"`
 	Viewers                *[]appbroadcasting.ViewerPayload `json:"viewers,omitempty"`
 	CreatedAt              time.Time                        `json:"created_at"`
 	UpdatedAt              time.Time                        `json:"updated_at"`
+}
+
+/*
+AssignmentWait is why a conversation waits for an assignee, and since
+when: no_available_member or all_at_capacity.
+*/
+type AssignmentWait struct {
+	Reason string    `json:"reason"`
+	Since  time.Time `json:"since"`
 }
 
 /*
@@ -102,6 +112,10 @@ func NewConversation(l conversations.Loaded) Conversation {
 
 	if l.Team != nil {
 		out.Team = &Named{ID: models.PublicID(models.PrefixTeam, l.Team.ID), Object: "team", Name: l.Team.Name}
+	}
+
+	if c.AssignmentWaitReason != nil && c.AssignmentWaitingSince != nil {
+		out.AssignmentWait = &AssignmentWait{Reason: *c.AssignmentWaitReason, Since: *c.AssignmentWaitingSince}
 	}
 
 	if l.LastMessage != nil {

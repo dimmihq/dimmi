@@ -290,7 +290,7 @@ func (q *Queries) ListExportAttachments(ctx context.Context, arg ListExportAttac
 }
 
 const listExportConversations = `-- name: ListExportConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations
 WHERE workspace_id = $1 AND contact_id = $2
 ORDER BY created_at, id
 `
@@ -339,6 +339,8 @@ func (q *Queries) ListExportConversations(ctx context.Context, arg ListExportCon
 			&i.UpdatedAt,
 			&i.IsTest,
 			&i.PreviousConversationID,
+			&i.AssignmentWaitReason,
+			&i.AssignmentWaitingSince,
 			&i.WaitingSince,
 			&i.LastActivityAt,
 			&i.LastMessageID,

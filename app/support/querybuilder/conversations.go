@@ -29,8 +29,22 @@ next free placeholder number and returns the SQL and its values.
 type Fragment func(next int) (string, []any)
 
 /*
+Access is what the reader may see, as dimmi_conversation_visible takes
+it: the mode, the member whose own assignments always show, the teams
+the mode names and whether a narrow mode shows unheld conversations.
+The zero Access shows nothing.
+*/
+type Access struct {
+	Mode       string
+	Viewer     *ids.UUID
+	Teams      []ids.UUID
+	Unassigned bool
+}
+
+/*
 Conversations is one list: which rows, in which order, from where.
 Unread and Mentioned are judged for MemberID. Statuses empty means any.
+Access limits every list to what its reader may see.
 */
 type Conversations struct {
 	WorkspaceID   ids.UUID
@@ -63,6 +77,7 @@ type Conversations struct {
 	After         *Keyset
 	Reverse       bool
 	Limit         int
+	Access        Access
 }
 
 /*
@@ -123,7 +138,7 @@ func (c Conversations) where(b *builder) []string {
 		where = append(where, "c.deleted_at IS NULL", fmt.Sprintf("c.spam = %t", c.Spam))
 	}
 
-	where = append(where, notBeingErased)
+	where = append(where, c.visible(b), notBeingErased)
 	where = append(where, c.holders(b)...)
 	where = append(where, c.channels(b)...)
 	where = append(where, c.flags(b)...)
@@ -136,6 +151,21 @@ func (c Conversations) where(b *builder) []string {
 	}
 
 	return where
+}
+
+/*
+visible returns the predicate keeping the list to what its reader may
+see. A nil list of teams would hide everything, so none is sent as
+empty.
+*/
+func (c Conversations) visible(b *builder) string {
+	teams := c.Access.Teams
+	if teams == nil {
+		teams = []ids.UUID{}
+	}
+
+	return "dimmi_conversation_visible(c.assignee_member_id, c.assignee_team_id, " + b.add(c.Access.Mode) + "::text, " +
+		b.add(c.Access.Viewer) + "::uuid, " + b.add(teams) + "::uuid[], " + b.add(c.Access.Unassigned) + "::boolean)"
 }
 
 /*

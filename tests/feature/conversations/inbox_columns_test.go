@@ -242,7 +242,10 @@ func TestConversationListPlans(t *testing.T) {
 	_, err = db.Exec(t.Context(), `ANALYZE conversations`)
 	require.NoError(t, err)
 
-	base := querybuilder.Conversations{WorkspaceID: workspace, MemberID: me, Statuses: []string{"open"}, Limit: 25}
+	base := querybuilder.Conversations{
+		WorkspaceID: workspace, MemberID: me, Statuses: []string{"open"}, Limit: 25,
+		Access: querybuilder.Access{Mode: "all"},
+	}
 	assigned := base
 	assigned.AssigneeID = &me
 	waiting := base
@@ -255,7 +258,9 @@ func TestConversationListPlans(t *testing.T) {
 	spam.Statuses, spam.Spam = nil, true
 	urgent := base
 	urgent.Sort, urgent.PriorityMin = querybuilder.SortPriority, new(int16(1))
-	deleted := querybuilder.Conversations{WorkspaceID: workspace, MemberID: me, Deleted: true, Limit: 25}
+	deleted := querybuilder.Conversations{
+		WorkspaceID: workspace, MemberID: me, Deleted: true, Limit: 25, Access: querybuilder.Access{Mode: "all"},
+	}
 
 	for name, tc := range map[string]struct {
 		list  querybuilder.Conversations

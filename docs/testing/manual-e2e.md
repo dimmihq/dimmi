@@ -580,6 +580,42 @@ Open a socket with a browser's cookie (`a.jar`) and one with a token, using the 
 | Taken back | magic link, reset or `claim: true` on an unverified account | every socket of the stranger closes |
 | Runs out or lost | delete the session row by hand or let a token expire | the socket closes with 3005 at its next subscribe, or within `DIMMI_BROADCASTING__RECHECK` (one minute) on its own |
 
+## Conversation access
+
+Restrict a teammate with `PATCH $B/members/{mem}`, then act as them in a browser and with their token.
+
+| Flow | Request or action | Expect |
+|---|---|---|
+| Restrict to teams | `PATCH $B/members/{mem}` `{"conversation_access":"teams","access_team_ids":["team_..."]}` | 200 with the fields; `member.access_changed` in the audit log; their sockets close with 4009 and reconnect |
+| Own change | same on `/members/me` | 403 `forbidden` |
+| Owner target | same on an owner | 422 `owner_access_unrestricted` |
+| Team list unusable | `{"conversation_access":"assigned","access_team_ids":["team_..."]}` | 422 `access_teams_not_used`; an unknown team 422 `team_not_found` |
+| Hidden conversation | `GET $B/conversations/{id}`, `/conversations/{number}`, `/messages`, `/neighbors`, `/read-state` as them | 404 `not_found` on each |
+| Lists and counts | `GET $B/conversations?filter[view]=all`, `GET $B/conversation-counts`, `GET $B/search?q=%23{number}` | hidden conversation absent, not counted, `jump` null |
+| Token | their token on the same requests | same answers as their browser |
+| List channel | subscribe `workspace_conversations:{ws}` as them | refused; copies arrive on `member:{mem}` for visible conversations only |
+| Reassigned away | owner moves a conversation they can see | `conversation.hidden` on `member:{mem}`, their `conversation:` subscription ends, open tab shows the no-access page |
+| Sidebar | sign in as them | no Unassigned, unless `conversation_access_unassigned` |
+
+## Availability and automatic assignment
+
+Make a team of two teammates the default team of an inbox, then follow conversations a customer starts.
+
+| Flow | Request or action | Expect |
+|---|---|---|
+| Go away | as a teammate `PATCH $B/members/me` `{"availability":"away"}` | 200 `availability: away`; `member.availability_changed` on `workspace:{ws}`; avatar dot turns away |
+| Reassign while online | `{"availability":"online","away_reassign":true}` | 422 `away_reassign_requires_away` |
+| Capacity by admin | owner `PATCH $B/members/{mem}` `{"conversation_capacity":2}`; same as a member on someone else | 200 with the limit and an audit entry; 403 `forbidden` |
+| Inbox settings | `PATCH $B/inboxes/{inbox}` `{"default_team_id":"team_...","settings":{"assignment":{"mode":"round_robin"}}}` | 200 with `default_team_id` and the merged settings; settings left out stay |
+| Bad settings | `{"settings":{"reopen_window_days":400}}`, `{"settings":{"assignment":{"overflow_team_id":"<the default team>"}}}` | 422 `invalid_inbox_setting`; 422 `overflow_team_is_default` |
+| Round robin | start four conversations through the API | turns alternate between the two teammates |
+| Nobody available | set both away, start one | unassigned, `assignment_wait.reason` `no_available_member`, one `conversation.assignment_waiting` timeline row |
+| Drain | one teammate comes back | the waiting conversation is assigned within a second |
+| Status | `GET $B/inboxes/{inbox}/assignment-status?channel_type=api` | each member with `open_count`, `eligible`, `why_not`; `waiting.count`; a member without `settings:read` 403 |
+| Waiting list | `GET $B/conversations?filter[view]=all&filter[assignment_waiting]=true` | only the waiting ones |
+| Delete inbox | `DELETE $B/inboxes/{inbox}` holding conversations; then `?move_to=inbox_...`; the default inbox | 422 `move_to_required`; 204 and its conversations show the target inbox; 422 `default_inbox` |
+| Seen receipt | widget conversation; subscribe `widget_contact:ctc_...`; `PATCH $B/conversations/{id}/read-state` `{}`; then `PATCH $B/workspace` `{"seen_receipt_shows_name":true}` and write again | `conversation.seen_by_team` with `conversation_id`, `seen_at`, no member id or name; after the switch, a second receipt after 5 s carries `seen_by.name` |
+
 ## 4. Check what was stored
 
 ```bash

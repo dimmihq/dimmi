@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -60,9 +61,11 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.InTx, l.memberRoleChanged)
 	events.Listen(d, events.InTx, l.memberDeactivated)
 	events.Listen(d, events.InTx, l.memberReactivated)
+	events.Listen(d, events.InTx, l.memberAccessChanged)
 	l.listenTrash(d)
 	l.listenAccess(d)
 	l.listenTeams(d)
+	l.listenAvailability(d)
 	l.listenWidgets(d)
 	l.listenSignInHelp(d)
 	l.listenRedaction(d)
@@ -150,6 +153,32 @@ func (l *WriteAuditLog) memberRoleChanged(ctx context.Context, e appevents.Membe
 }
 
 /*
+memberAccessChanged records which conversations a member sees now and
+what they saw before.
+*/
+func (l *WriteAuditLog) memberAccessChanged(ctx context.Context, e appevents.MemberAccessChanged) error {
+	return l.member(ctx, e.WorkspaceID, e.MemberID, audit.Entry{
+		Event: audit.EventMemberAccessChanged, ActorID: e.ChangedBy,
+		Changes: map[string]any{"conversation_access": map[string]any{
+			"from": auditedAccess(e.From), "to": auditedAccess(e.To),
+		}},
+	})
+}
+
+/*
+auditedAccess is how the audit log writes one state of a member's
+conversation access.
+*/
+func auditedAccess(s appevents.ConversationAccessState) map[string]any {
+	teams := make([]string, len(s.TeamIDs))
+	for i, id := range s.TeamIDs {
+		teams[i] = models.PublicID(models.PrefixTeam, id)
+	}
+
+	return map[string]any{"mode": s.Mode, "unassigned": s.Unassigned, "team_ids": teams}
+}
+
+/*
 memberDeactivated records a member losing access: deactivated by
 someone else, or leaving on their own.
 */
@@ -184,11 +213,19 @@ func (l *WriteAuditLog) memberReactivated(ctx context.Context, e appevents.Membe
 }
 
 /*
-member records the entry about the member, labeled with their name.
+member records the entry about the member, labeled with their name,
+read inside the member's workspace.
 */
 func (l *WriteAuditLog) member(ctx context.Context, workspaceID, memberID ids.UUID, entry audit.Entry) error {
-	subject, err := models.New(l.DB).FindAuditActor(ctx, models.FindAuditActorParams{
-		WorkspaceID: workspaceID, ID: memberID,
+	var subject models.FindAuditActorRow
+
+	err := l.DB.Transaction(tenancy.With(ctx, workspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		subject, err = models.New(tx).FindAuditActor(ctx, models.FindAuditActorParams{
+			WorkspaceID: workspaceID, ID: memberID,
+		})
+
+		return err
 	})
 	if err != nil {
 		return fmt.Errorf("find audited member: %w", err)

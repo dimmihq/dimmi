@@ -56,6 +56,9 @@ type realtimePush struct {
 	Join    *struct {
 		Info realtimeClientInfo `json:"info"`
 	} `json:"join"`
+	Unsub *struct {
+		Code int `json:"code"`
+	} `json:"unsubscribe"`
 }
 
 type realtimeFrame struct {

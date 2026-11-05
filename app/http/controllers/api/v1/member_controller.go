@@ -65,6 +65,7 @@ type MemberController struct {
 	UpdateMember *members.UpdateMember
 	Export       *members.ExportMembers
 	MemberTeams  *teams.ListMemberTeams
+	AccessTeams  *members.ListAccessTeams
 	IDs          *ids.Registry
 	Cursors      *pagination.Cursors
 	Lockout      *appauth.Lockout
@@ -110,6 +111,9 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 	if err := c.includeTeams(ctx, query, out.Items, memberIDs(page.Members)); err != nil {
 		return nil, err
 	}
+	if err := c.includeAccessTeams(ctx, out.Items, memberRows(page.Members)); err != nil {
+		return nil, err
+	}
 	if err := c.markLocked(ctx, out.Items); err != nil {
 		return nil, err
 	}
@@ -145,6 +149,9 @@ func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequ
 
 	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
 	if err := c.includeTeams(ctx, query, out, []ids.UUID{row.WorkspaceMember.ID}); err != nil {
+		return nil, err
+	}
+	if err := c.includeAccessTeams(ctx, out, []models.WorkspaceMember{row.WorkspaceMember}); err != nil {
 		return nil, err
 	}
 
@@ -226,28 +233,62 @@ func memberIDs(rows []models.ListWorkspaceMembersRow) []ids.UUID {
 }
 
 /*
-Update changes a member's role or status and answers with the member as
-they now are.
+memberRows returns the membership of each listed member, in order.
+*/
+func memberRows(rows []models.ListWorkspaceMembersRow) []models.WorkspaceMember {
+	out := make([]models.WorkspaceMember, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, row.WorkspaceMember)
+	}
+
+	return out
+}
+
+/*
+Update changes a member's role, status or conversation access and
+answers with the member as they now are.
 */
 func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMemberRequest) (*MemberOutput, error) {
-	id, err := c.memberID(ctx, in.Member)
+	return c.applyUpdate(ctx, in.Member, in.Body, in.RawBody)
+}
+
+/*
+UpdateMe changes the caller's own membership, as Update does for
+"me", for a credential that may only write conversations.
+*/
+func (c *MemberController) UpdateMe(ctx context.Context, in *requests.UpdateOwnMemberRequest) (*MemberOutput, error) {
+	return c.applyUpdate(ctx, requests.CurrentMember, in.Body, in.RawBody)
+}
+
+/*
+applyUpdate applies the body to the member named and answers with the member
+as they now are.
+*/
+func (c *MemberController) applyUpdate(
+	ctx context.Context, named string, b requests.UpdateMemberBody, raw []byte,
+) (*MemberOutput, error) {
+	id, err := c.memberID(ctx, named)
 	if err != nil {
 		return nil, err
 	}
 
 	update := members.UpdateMemberInput{
 		Principal: caller(ctx), Membership: membership(ctx), MemberID: id,
-		AssignedRole: (*enums.Role)(in.Body.AssignedRole), Status: (*enums.MemberStatus)(in.Body.Status),
-		KeepOwner: in.Body.KeepOwner != nil && *in.Body.KeepOwner,
+		AssignedRole: (*enums.Role)(b.AssignedRole), Status: (*enums.MemberStatus)(b.Status),
+		KeepOwner: b.KeepOwner != nil && *b.KeepOwner, Availability: availabilityChange(b, raw),
 	}
 
-	if in.Body.ReassignToMemberID != nil {
-		reassign, err := c.IDs.Decode(string(models.PrefixMember), *in.Body.ReassignToMemberID)
+	if b.ReassignToMemberID != nil {
+		reassign, err := c.IDs.Decode(string(models.PrefixMember), *b.ReassignToMemberID)
 		if err != nil {
 			return nil, exceptions.ErrReassignTargetInvalid
 		}
 
 		update.ReassignTo = &reassign
+	}
+
+	if update.Access, err = c.accessChange(b); err != nil {
+		return nil, err
 	}
 
 	row, err := c.UpdateMember.Handle(ctx, update)
@@ -256,6 +297,9 @@ func (c *MemberController) Update(ctx context.Context, in *requests.UpdateMember
 	}
 
 	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
+	if err := c.includeAccessTeams(ctx, out, []models.WorkspaceMember{row.WorkspaceMember}); err != nil {
+		return nil, err
+	}
 	if err := c.markLocked(ctx, out); err != nil {
 		return nil, err
 	}

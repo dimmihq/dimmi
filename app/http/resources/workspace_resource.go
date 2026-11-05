@@ -20,14 +20,15 @@ import (
 
 /*
 Workspace is a workspace a member works in. RequireTwoFactor says
-whether every member must have a second factor to work in it, and
-ShowViewers whether inbox lists show who views each conversation.
-LinkSafety holds the checks the inbox runs on links customers send, and
-Retention how long conversations and their files are kept.
-CustomerFacingName is the name customers see, null when they see the
-workspace's own name. DeletedAt
-and PurgeAfter are set while it is in the trash: when it was deleted,
-and when it is purged for good unless restored.
+whether every member must have a second factor to work in it,
+ShowViewers whether inbox lists show who views each conversation, and
+SeenReceiptName whether the customer's widget names the teammate who
+read their message. CustomerFacingName is the name customers see, null
+when they see the workspace's own name. LinkSafety holds the checks the
+inbox runs on links customers send, and Retention how long
+conversations and their files are kept. DeletedAt and PurgeAfter are set
+while it is in the trash: when it was deleted, and when it is purged for
+good unless restored.
 */
 type Workspace struct {
 	ID                 string            `json:"id"`
@@ -39,6 +40,7 @@ type Workspace struct {
 	TestMode           bool              `json:"test_mode"`
 	RequireTwoFactor   bool              `json:"require_two_factor"`
 	ShowViewers        bool              `json:"show_viewers_on_list"`
+	SeenReceiptName    bool              `json:"seen_receipt_shows_name"`
 	CustomerFacingName *string           `json:"customer_facing_name"`
 	LinkSafety         models.LinkSafety `json:"link_safety"`
 	Retention          models.Retention  `json:"retention"`
@@ -60,6 +62,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		TestMode:           w.TestMode,
 		RequireTwoFactor:   w.RequiresTwoFactor(),
 		ShowViewers:        w.ShowsViewersOnList(),
+		SeenReceiptName:    w.SeenReceiptShowsName(),
 		CustomerFacingName: w.CustomerFacingNameSetting(),
 		LinkSafety:         w.LinkSafety(),
 		Retention:          w.Retention(),

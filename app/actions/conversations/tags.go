@@ -277,7 +277,7 @@ func changeTags(ctx context.Context, t tagChange) (Loaded, error) {
 
 		w.MutationID = t.mutationID
 
-		c, err := Lock(ctx, w.Q, t.m.Workspace.ID, t.ref)
+		c, err := Lock(ctx, w.Q, t.m, t.ref)
 		if err != nil {
 			return err
 		}

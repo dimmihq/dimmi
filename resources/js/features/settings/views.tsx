@@ -21,7 +21,8 @@ import {
 import { ConversationSafetySettings } from "./pages/conversation-safety";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
-import { InboxesSettings, SavedRepliesSettings } from "./pages/inbox";
+import { SavedRepliesSettings } from "./pages/inbox";
+import { InboxesSettings } from "./pages/inboxes";
 import { TagsSettings } from "./pages/tags";
 import { TeamsSettings } from "./pages/teams";
 import { TokensSettings } from "./pages/tokens";

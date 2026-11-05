@@ -86,18 +86,21 @@ func (a *ResolveWorkspace) Handle(ctx context.Context, in ResolveWorkspaceInput)
 		return authz.Membership{}, err
 	}
 
-	workspace, member, err := a.load(ctx, in.Principal, workspaceID)
+	m, err := a.load(ctx, in.Principal, workspaceID)
 	if err != nil {
 		return authz.Membership{}, err
 	}
 
-	if in.Writes && workspace.SuspendedAt != nil {
+	if in.Writes && m.Workspace.SuspendedAt != nil {
 		return authz.Membership{}, exceptions.ErrWorkspaceSuspended
 	}
 
-	permissions := authz.PrincipalPermissions(a.Permissions, enums.Role(member.Role), in.Principal)
+	m.Principal = authz.Principal{
+		Role:        enums.Role(m.Member.Role),
+		Permissions: authz.PrincipalPermissions(a.Permissions, enums.Role(m.Member.Role), in.Principal),
+	}
 
-	return authz.NewMembership(workspace, member, permissions), nil
+	return m, nil
 }
 
 /*
@@ -147,16 +150,14 @@ func (a *ResolveWorkspace) tokenWorkspace(in ResolveWorkspaceInput) (ids.UUID, e
 }
 
 /*
-load reads the workspace and the caller's membership inside it, and
-records the access of a member opening it.
+load reads the workspace, the caller's membership inside it and the
+teams their conversation access names, permissions aside, and records
+the access of a member opening it.
 */
 func (a *ResolveWorkspace) load(
 	ctx context.Context, p *appauth.Principal, workspaceID ids.UUID,
-) (models.Workspace, models.WorkspaceMember, error) {
-	var (
-		workspace models.Workspace
-		member    models.WorkspaceMember
-	)
+) (authz.Membership, error) {
+	var m authz.Membership
 
 	scoped := tenancy.With(ctx, workspaceID.String())
 
@@ -165,24 +166,28 @@ func (a *ResolveWorkspace) load(
 
 		q := models.New(tx)
 
-		workspace, err = q.FindWorkspace(ctx, workspaceID)
+		m.Workspace, err = q.FindWorkspace(ctx, workspaceID)
 		if err != nil {
 			return err
 		}
 
-		member, err = findCaller(ctx, q, p, workspaceID)
-		if err != nil || !p.IsFirstParty() {
+		m.Member, err = findCaller(ctx, q, p, workspaceID)
+		if err != nil {
+			return err
+		}
+
+		if m.AccessTeams, err = authz.LoadAccessTeams(ctx, q, m.Member); err != nil || !p.IsFirstParty() {
 			return err
 		}
 
 		now := a.Clock.Now()
 
 		return q.TouchWorkspaceMemberAccess(ctx, models.TouchWorkspaceMemberAccessParams{
-			Now: now, Since: now.Add(-accessInterval), WorkspaceID: workspaceID, ID: member.ID,
+			Now: now, Since: now.Add(-accessInterval), WorkspaceID: workspaceID, ID: m.Member.ID,
 		})
 	})
 
-	return workspace, member, checkAccess(workspace, member, err)
+	return m, checkAccess(m.Workspace, m.Member, err)
 }
 
 /*

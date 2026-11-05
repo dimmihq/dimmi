@@ -40,19 +40,6 @@ readConversations is the permission every inbox channel requires.
 const readConversations = "conversations:read"
 
 /*
-ConversationScope decides which conversations a member may see. The
-conversation lists, search and counts use the same rule, so a channel
-never shows what a list would hide.
-*/
-type ConversationScope interface {
-	/*
-		Contains reports whether the member may see the conversation,
-		which belongs to the membership's workspace.
-	*/
-	Contains(ctx context.Context, m authz.Membership, conversation models.Conversation) bool
-}
-
-/*
 WidgetSession is the subject of a messenger widget connection: the
 contact a visitor is, in their workspace.
 */
@@ -63,14 +50,12 @@ type WidgetSession struct {
 
 /*
 Authorizers guard the product's channels. Resolve decides a caller's
-membership of a workspace exactly as for API requests, and Scope which
-conversations a member sees.
+membership of a workspace exactly as for API requests.
 */
 type Authorizers struct {
 	DB      *database.DB
 	IDs     *ids.Registry
 	Resolve *workspaces.ResolveWorkspace
-	Scope   ConversationScope
 }
 
 /*
@@ -91,6 +76,27 @@ func (a *Authorizers) Workspace(
 	}
 
 	return m.Can(readConversations), nil
+}
+
+/*
+WorkspaceConversations admits active members who may read conversations
+and see every one of them. Everyone else is refused and hears about
+their conversations on their own channel.
+*/
+func (a *Authorizers) WorkspaceConversations(
+	ctx context.Context, p fbroadcasting.Principal, params map[string]string,
+) (bool, error) {
+	caller, ok := p.Subject.(*appauth.Principal)
+	if !ok {
+		return false, nil
+	}
+
+	m, ok, err := a.membership(ctx, caller, params["workspace"])
+	if err != nil || !ok {
+		return false, err
+	}
+
+	return m.Can(readConversations) && !m.ConversationScope().Restricted(), nil
 }
 
 /*
@@ -120,7 +126,9 @@ func (a *Authorizers) Conversation(
 		return false, err
 	}
 
-	return m.Can(readConversations) && a.Scope.Contains(ctx, m, conversation), nil
+	seen := conversation.DeletedAt == nil && m.ConversationScope().Contains(conversation)
+
+	return m.Can(readConversations) && seen, nil
 }
 
 /*
