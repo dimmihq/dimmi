@@ -95,14 +95,16 @@ func copiesOf(ctx context.Context, q *models.Queries, c models.Conversation) ([]
 
 /*
 outboundMessage shapes the reply for its driver, its body rendered from
-the Markdown it was written in.
+the Markdown it was written in: every line break the teammate typed is
+kept, and the plain version keeps links' addresses and list numbers, so
+the customer reads what the thread shows.
 */
 func outboundMessage(
 	c models.Conversation, msg models.Message, contact models.Contact,
 ) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
-	rendered, err := markdown.New(markdown.Options{GFM: true}).HTML([]byte(body))
+	rendered, err := markdown.New(markdown.Options{GFM: true, HardWraps: true}).HTML([]byte(body))
 	if err != nil {
 		return contracts.OutboundMessage{}, fmt.Errorf("render reply: %w", err)
 	}
@@ -110,7 +112,7 @@ func outboundMessage(
 	return contracts.OutboundMessage{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ConversationNumber: c.Number, MessageID: msg.ID,
 		IdempotencyKey: models.PublicID(models.PrefixMessage, msg.ID), ExternalThreadKey: deref(c.ExternalThreadKey),
-		Subject: deref(c.Subject), BodyMarkdown: body, BodyText: markdown.PlainText([]byte(body)),
+		Subject: deref(c.Subject), BodyMarkdown: body, BodyText: markdown.ReadableText([]byte(body)),
 		BodyHTML: rendered.HTML, Recipient: recipientOf(contact),
 	}, nil
 }
