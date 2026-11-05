@@ -78,25 +78,29 @@ Parsed is a received message.
 Header holds every top-level header field as received. Message ids are
 given without angle brackets. Date is zero when the header is missing
 or cannot be read, which includes a zone named without a defined
-offset. TextDerived is set when the message had no text of its own and
+offset. OriginalSender is the author a group or list names when it
+sends a message on under its own address, from X-Original-From or
+X-Original-Sender, and is empty when it names none. TextDerived is set
+when the message had no text of its own and
 Text was converted from its HTML. Truncated is set when the message
 exceeded MaxBytes and was only walked.
 */
 type Parsed struct {
-	Header      textproto.MIMEHeader
-	From        mail.Address
-	ReplyTo     []mail.Address
-	To, Cc      []mail.Address
-	Subject     string
-	Date        time.Time
-	MessageID   string
-	InReplyTo   []string
-	References  []string
-	Text, HTML  string
-	TextDerived bool
-	Attachments []Attachment
-	Warnings    []string
-	Truncated   bool
+	Header         textproto.MIMEHeader
+	From           mail.Address
+	ReplyTo        []mail.Address
+	OriginalSender mail.Address
+	To, Cc         []mail.Address
+	Subject        string
+	Date           time.Time
+	MessageID      string
+	InReplyTo      []string
+	References     []string
+	Text, HTML     string
+	TextDerived    bool
+	Attachments    []Attachment
+	Warnings       []string
+	Truncated      bool
 }
 
 /*
@@ -219,19 +223,36 @@ func (p *Parsed) wordless() bool {
 }
 
 /*
+originalSender returns the first address a group or list names as the
+message's author.
+*/
+func originalSender(top head) mail.Address {
+	for _, field := range []string{"X-Original-From", "X-Original-Sender"} {
+		for _, address := range readList(top.fields, field, top.message) {
+			if address.Email != "" {
+				return address
+			}
+		}
+	}
+
+	return mail.Address{}
+}
+
+/*
 fromHeader reads the top-level header fields, with encoded words and
 addresses decoded.
 */
 func fromHeader(top head) *Parsed {
 	parsed := &Parsed{
-		Header:     top.fields,
-		From:       readSender(top.fields, top.message),
-		ReplyTo:    readList(top.fields, "Reply-To", top.message),
-		To:         readList(top.fields, "To", top.message),
-		Cc:         readList(top.fields, "Cc", top.message),
-		Subject:    decodeWords(repairHeader(top.fields.Get("Subject"), top.message)),
-		InReplyTo:  messageIDs(top.fields.Get("In-Reply-To")),
-		References: messageIDs(top.fields.Get("References")),
+		Header:         top.fields,
+		From:           readSender(top.fields, top.message),
+		ReplyTo:        readList(top.fields, "Reply-To", top.message),
+		OriginalSender: originalSender(top),
+		To:             readList(top.fields, "To", top.message),
+		Cc:             readList(top.fields, "Cc", top.message),
+		Subject:        decodeWords(repairHeader(top.fields.Get("Subject"), top.message)),
+		InReplyTo:      messageIDs(top.fields.Get("In-Reply-To")),
+		References:     messageIDs(top.fields.Get("References")),
 	}
 
 	if ids := messageIDs(top.fields.Get("Message-Id")); len(ids) > 0 {

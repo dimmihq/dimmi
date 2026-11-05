@@ -86,7 +86,7 @@ func (a *ListDrafts) Handle(ctx context.Context, in ListInput) ([]models.Convers
 			WorkspaceID: ws, MemberID: in.Membership.Member.ID,
 			ConversationID: in.Conversation, Mode: in.Mode, RowLimit: maxListed,
 			AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
-			AccessUnassigned: access.Unassigned,
+			AccessUnassigned: access.Unassigned, AccessHiddenInboxes: access.HiddenInboxes,
 		})
 		if err != nil {
 			return fmt.Errorf("list drafts: %w", err)

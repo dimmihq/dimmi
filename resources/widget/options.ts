@@ -13,13 +13,15 @@
 export type Tab = "home" | "messages" | "changelog" | "help";
 
 export interface Launcher {
-  style: "bubble" | "hidden";
+  style: "bubble" | "tab" | "hidden";
   shape: "circle" | "squircle";
   label: string;
 }
 
 export interface Appearance {
   primary_color: string;
+  header_color?: string;
+  button_color?: string;
   theme: "light" | "dark" | "auto";
   position: "right" | "left";
   padding_x: number;
@@ -50,6 +52,12 @@ export interface Texts {
   messages: string;
   changelog: string;
   help: string;
+  seen: string;
+  status_with_team: string;
+  status_waiting_on_you: string;
+  status_closed: string;
+  email_prompt: string;
+  delay_notice: string;
 }
 
 export interface Options {
@@ -57,6 +65,7 @@ export interface Options {
   texts: Texts;
   tabs: Tab[];
   show_branding: boolean;
+  branding_url: string;
 }
 
 export type OptionsUpdate = {
@@ -64,6 +73,7 @@ export type OptionsUpdate = {
   texts?: Partial<Texts>;
   tabs?: Tab[];
   show_branding?: boolean;
+  branding_url?: string;
 };
 
 export const defaults: Options = {
@@ -98,9 +108,16 @@ export const defaults: Options = {
     messages: "Messages",
     changelog: "Changelog",
     help: "Help",
+    seen: "Seen",
+    status_with_team: "With the team",
+    status_waiting_on_you: "Waiting on you",
+    status_closed: "Closed",
+    email_prompt: "Where should we reply?",
+    delay_notice: "We're away right now. We'll reply as soon as we're back.",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,
+  branding_url: "https://trydimmi.com",
 };
 
 export function merge(options: Options, update: OptionsUpdate = {}): Options {
@@ -113,6 +130,7 @@ export function merge(options: Options, update: OptionsUpdate = {}): Options {
     texts: { ...options.texts, ...update.texts },
     tabs: update.tabs?.length ? update.tabs : options.tabs,
     show_branding: update.show_branding ?? options.show_branding,
+    branding_url: update.branding_url ?? options.branding_url,
   };
 }
 

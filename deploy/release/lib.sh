@@ -39,28 +39,47 @@ point() {
 }
 
 # roll forces every service onto the image the release tag points at and
-# waits. ECS pins the digest per deployment, so the circuit breaker's own
-# rollback returns to exactly the image that ran before.
+# follows each new deployment until ECS settles it. ECS pins the digest per
+# deployment, so the circuit breaker's own rollback returns to exactly the
+# image that ran before.
 roll() {
-  local cluster services service state
+  local cluster services service deployments=() i
   cluster="$(output app ClusterName)"
   IFS=',' read -r -a services <<<"$(output app ServiceNames)"
 
   for service in "${services[@]}"; do
-    aws ecs update-service --cluster "$cluster" --service "$service" --force-new-deployment >/dev/null
+    deployments+=("$(aws ecs update-service --cluster "$cluster" --service "$service" --force-new-deployment \
+      --query 'service.deployments[?status==`PRIMARY`].id | [0]' --output text)")
     say "rolling $service"
   done
 
-  aws ecs wait services-stable --cluster "$cluster" --services "${services[@]}"
-
-  for service in "${services[@]}"; do
-    state="$(aws ecs describe-services --cluster "$cluster" --services "$service" \
-      --query 'services[0].deployments[?status==`PRIMARY`].rolloutState | [0]' --output text)"
-    if [ "$state" != "COMPLETED" ]; then
-      say "$service ended $state: the circuit breaker rolled it back"
-      return 1
-    fi
+  for i in "${!services[@]}"; do
+    settle "$cluster" "${services[$i]}" "${deployments[$i]}" || return 1
   done
+}
+
+# settle waits up to half an hour for one deployment of a service to finish.
+# A deployment still draining the old tasks reports itself in progress, and
+# one the circuit breaker replaced leaves the list or reports failed. A
+# paused service runs no task, so its deployment never finishes and counts
+# as settled.
+settle() {
+  local cluster="$1" service="$2" deployment="$3" state desired attempt
+  for attempt in $(seq 1 120); do
+    read -r state desired <<<"$(aws ecs describe-services --cluster "$cluster" --services "$service" \
+      --query "services[0].[deployments[?id=='$deployment'].rolloutState | [0], desiredCount]" --output text)"
+    case "$state" in
+      COMPLETED) say "$service released"; return 0 ;;
+      FAILED | None) say "$service failed its rollout: the circuit breaker rolled it back"; return 1 ;;
+    esac
+    if [ "$desired" = "0" ]; then
+      say "$service is paused"
+      return 0
+    fi
+    sleep 15
+  done
+  say "$service was still rolling after $attempt checks"
+  return 1
 }
 
 # run_task NAME runs a one-off task definition to the end and fails when its

@@ -28,6 +28,7 @@ type WidgetActions struct {
 	Delete       *widget.DeleteWidget
 	Branding     *widget.ResolveBranding
 	ShowConfig   *widget.ShowWidgetConfig
+	Preview      *widget.PreviewWidgetConfig
 	Availability *widget.ComputeTeamAvailability
 	Install      *widgetinstall.Tracker
 
@@ -38,4 +39,11 @@ type WidgetActions struct {
 	UpdateContact *widget.UpdateWidgetContact
 	Conversations *widget.ListWidgetConversations
 	PostMessage   *widget.PostWidgetMessage
+	MarkRead      *widget.MarkWidgetConversationRead
+	Typing        *widget.BroadcastVisitorTyping
+	Ping          *widget.RecordWidgetPing
+	Realtime      *widget.Realtime
+	Updates       *widget.ListWidgetUpdates
+	Contacts      *widget.ContactSessions
+	Uploads       *widget.Uploads
 }

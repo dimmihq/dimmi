@@ -103,7 +103,7 @@ const updateInboxDetails = `-- name: UpdateInboxDetails :one
 UPDATE inboxes
 SET name = $1, default_team_id = $2, settings = $3, updated_at = $4
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access
 `
 
 type UpdateInboxDetailsParams struct {
@@ -136,6 +136,7 @@ func (q *Queries) UpdateInboxDetails(ctx context.Context, arg UpdateInboxDetails
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Access,
 	)
 	return i, err
 }

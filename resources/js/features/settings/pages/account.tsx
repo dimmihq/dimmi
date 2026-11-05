@@ -3,7 +3,9 @@
  * and how they sign in. Nothing here changes anything for teammates. Each
  * section lives in its own file, and every control on these pages works.
  */
+
 import { applyTheme, type ThemeMode, useThemeMode } from "@/components/application/theme/theme-toggle";
+import { PersonalSignature } from "@/features/email/signatures/personal-signature";
 
 import { Choice } from "../controls";
 import { Row, Section, SettingsPage } from "../layout";
@@ -31,6 +33,7 @@ export function ProfileSettings() {
         <NameRow name={me.name} />
         <EmailRow email={me.email} hasPassword={me.hasPassword} />
       </Section>
+      <PersonalSignature />
       <LeaveWorkspace id={me.workspace.id} name={me.workspace.name} />
       <DeleteAccount email={me.email} hasPassword={me.hasPassword} />
     </SettingsPage>

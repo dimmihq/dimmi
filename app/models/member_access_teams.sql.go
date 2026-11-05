@@ -124,13 +124,19 @@ func (q *Queries) ListMemberAccessTeamIDs(ctx context.Context, arg ListMemberAcc
 }
 
 const listRestrictedMembers = `-- name: ListRestrictedMembers :many
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, undo_send_seconds FROM workspace_members
-WHERE workspace_id = $1 AND status = 'active' AND conversation_access <> 'all'
-ORDER BY id
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, undo_send_seconds, custom_role_id FROM workspace_members AS m
+WHERE m.workspace_id = $1 AND m.status = 'active'
+  AND (m.conversation_access <> 'all' OR (EXISTS (
+      SELECT 1 FROM inboxes AS i
+      WHERE i.workspace_id = m.workspace_id AND i.access = 'restricted' AND i.deleted_at IS NULL
+  )))
+ORDER BY m.id
 `
 
-// ListRestrictedMembers returns the workspace's active members who do not
-// see every conversation, usually none.
+// ListRestrictedMembers returns the workspace's active members who may
+// not see every conversation, usually none: those whose access is narrow
+// and, while an inbox is restricted, everyone, since custom roles decide
+// who opens every inbox.
 func (q *Queries) ListRestrictedMembers(ctx context.Context, workspaceID ids.UUID) ([]WorkspaceMember, error) {
 	rows, err := q.db.Query(ctx, listRestrictedMembers, workspaceID)
 	if err != nil {
@@ -164,6 +170,7 @@ func (q *Queries) ListRestrictedMembers(ctx context.Context, workspaceID ids.UUI
 			&i.CapacityByChannel,
 			&i.LastAssignedAt,
 			&i.UndoSendSeconds,
+			&i.CustomRoleID,
 		); err != nil {
 			return nil, err
 		}
@@ -180,7 +187,7 @@ UPDATE workspace_members
 SET conversation_access = $1, conversation_access_unassigned = $2,
     updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, undo_send_seconds
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, undo_send_seconds, custom_role_id
 `
 
 type SetMemberConversationAccessParams struct {
@@ -225,6 +232,7 @@ func (q *Queries) SetMemberConversationAccess(ctx context.Context, arg SetMember
 		&i.CapacityByChannel,
 		&i.LastAssignedAt,
 		&i.UndoSendSeconds,
+		&i.CustomRoleID,
 	)
 	return i, err
 }

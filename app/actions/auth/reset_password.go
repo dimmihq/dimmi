@@ -42,12 +42,14 @@ import (
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mail"
+	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/jobs"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -105,6 +107,7 @@ type ResetPassword struct {
 	AppGrants           appauth.AppGrants
 	Lockout             *appauth.Lockout
 	SecurityLog         *appauth.SecurityLog
+	Queue               *queue.Queue
 	ClaimAccount        *ClaimAccount
 	CompletePrimaryAuth *CompletePrimaryAuth
 }
@@ -148,7 +151,7 @@ func (a *ResetPassword) Handle(ctx context.Context, in ResetPasswordInput) (Sign
 		return SignedIn{}, err
 	}
 
-	email := strings.ToLower(strings.TrimSpace(user.Email))
+	email := mail.CanonicalAddress(user.Email)
 	if err := a.Lockout.InboxProven(ctx, appauth.Attempt{IP: in.Client.IP, Email: email}); err != nil {
 		return SignedIn{}, err
 	}
@@ -166,8 +169,9 @@ func (a *ResetPassword) Handle(ctx context.Context, in ResetPasswordInput) (Sign
 /*
 find returns the reset and its account when the link is good.
 
-SECURITY: An unknown id is compared against a digest of nothing, so it
-takes the same work as a wrong token for a real reset.
+SECURITY: An unknown id is compared against a digest of nothing and
+counted as a miss like a wrong token, so it takes the same work as a
+wrong token for a real reset.
 */
 func (a *ResetPassword) find(ctx context.Context, in ResetPasswordInput) (
 	models.PasswordResetToken, models.User, error,
@@ -184,13 +188,8 @@ func (a *ResetPassword) find(ctx context.Context, in ResetPasswordInput) (
 		return models.PasswordResetToken{}, models.User{}, fmt.Errorf("find password reset: %w", err)
 	}
 
-	proves := hashing.Equal(appauth.Digest(in.Token), reset.TokenHash)
-	if !known {
-		return models.PasswordResetToken{}, models.User{}, exceptions.ErrInvalidResetToken
-	}
-
-	if !proves {
-		return models.PasswordResetToken{}, models.User{}, a.miss(ctx, reset)
+	if !hashing.Equal(appauth.Digest(in.Token), reset.TokenHash) || !known {
+		return models.PasswordResetToken{}, models.User{}, a.miss(ctx, reset.ID)
 	}
 
 	if !reset.ExpiresAt.After(a.Clock.Now()) {
@@ -210,21 +209,13 @@ func (a *ResetPassword) find(ctx context.Context, in ResetPasswordInput) (
 }
 
 /*
-miss counts a wrong token against the reset, deleting it at the fifth,
-and returns the invalid answer.
+miss queues the wrong guess to be counted against the reset it named,
+which deletes it at the fifth, and returns the invalid answer. An
+unknown reset queues the same job, which finds nothing to count.
 */
-func (a *ResetPassword) miss(ctx context.Context, reset models.PasswordResetToken) error {
-	attempts, err := models.New(a.DB).CountPasswordResetAttempt(ctx, reset.ID)
-	if err != nil {
-		return fmt.Errorf("count wrong reset token: %w", err)
-	}
-
-	if attempts < appauth.MaxSecretAttempts {
-		return exceptions.ErrInvalidResetToken
-	}
-
-	if _, err := models.New(a.DB).DeletePasswordResetToken(ctx, reset.ID); err != nil {
-		return fmt.Errorf("burn password reset: %w", err)
+func (a *ResetPassword) miss(ctx context.Context, id ids.UUID) error {
+	if err := a.Queue.Push(ctx, jobs.RecordFailedResetArgs{ResetID: id}); err != nil {
+		return fmt.Errorf("queue wrong reset token: %w", err)
 	}
 
 	return exceptions.ErrInvalidResetToken

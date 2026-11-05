@@ -273,3 +273,100 @@ func TestStripTags(t *testing.T) {
 		assert.Equal(t, "Keep", got)
 	})
 }
+
+func TestSelectionHelpers(t *testing.T) {
+	t.Parallel()
+
+	parse := func(t *testing.T, html string) *dom.Document {
+		t.Helper()
+
+		doc, err := dom.Parse(strings.NewReader(html))
+		require.NoError(t, err)
+
+		return doc
+	}
+
+	t.Run("matches a selector and finds ancestors", func(t *testing.T) {
+		t.Parallel()
+
+		doc := parse(t, `<blockquote><p id="inner">x</p></blockquote><p id="outer">y</p>`)
+
+		assert.True(t, doc.Find("#inner").Is("p"))
+		assert.False(t, doc.Find("#inner").Is("div"))
+		assert.True(t, doc.Find("#inner").Inside("blockquote"))
+		assert.False(t, doc.Find("#outer").Inside("blockquote"))
+	})
+
+	t.Run("reads the text after an element, bare text included", func(t *testing.T) {
+		t.Parallel()
+
+		doc := parse(t, `<div><b id="a">x</b> one <i>two</i><u>skip</u><p><u>held</u></p> three</div>`)
+
+		assert.Equal(t, " one two three", doc.Find("#a").TextAfter("u"))
+		assert.Equal(t, " one twoskipheld three", doc.Find("#a").TextAfter(""))
+		assert.Empty(t, doc.Find("#none").TextAfter(""))
+	})
+
+	t.Run("puts markup in place of an element", func(t *testing.T) {
+		t.Parallel()
+
+		doc := parse(t, `<table><tr><td>x</td></tr></table>`)
+		doc.Find("table").ReplaceWithHTML("<div>x</div>")
+
+		assert.Equal(t, 0, doc.Find("table").Len())
+		assert.Equal(t, "x", doc.Find("div").Text())
+	})
+
+	t.Run("puts plain text in place of an element", func(t *testing.T) {
+		t.Parallel()
+
+		doc := parse(t, `<p><img src="a"> end</p>`)
+		doc.Find("img").ReplaceWithText("<b>word</b>")
+
+		assert.Contains(t, doc.Find("p").HTML(), "&lt;b&gt;word&lt;/b&gt; end")
+	})
+}
+
+func TestTablesInMarkdown(t *testing.T) {
+	t.Parallel()
+
+	t.Run("keeps cells and rows of a data table apart", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := dom.ToMarkdown(`<table><tr><th>Item</th><th>Qty</th></tr><tr><td>Shoes</td><td>2</td></tr></table>`)
+
+		require.NoError(t, err)
+		assert.Equal(t, "| Item | Qty |\n|---|---|\n| Shoes | 2 |", got)
+	})
+
+	t.Run("gives a layout table's content without the table", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := dom.ToMarkdown(`<table role="presentation"><tr><td><p>Hello there</p></td></tr></table>`)
+
+		require.NoError(t, err)
+		assert.Equal(t, "Hello there", got)
+	})
+
+	t.Run("leaves no markup in a cell with a line break", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := dom.ToMarkdown(`<table><tr><td>multi<br>line</td><td>b</td></tr></table>`)
+
+		require.NoError(t, err)
+		assert.NotContains(t, got, "<br")
+	})
+}
+
+func TestListsInMarkdown(t *testing.T) {
+	t.Parallel()
+
+	t.Run("leaves no marker between two lists in a row", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := dom.ToMarkdown(`<ul><li>a</li></ul><ol><li>b</li></ol>`)
+
+		require.NoError(t, err)
+		assert.Equal(t, "- a\n\n1. b", got)
+	})
+}

@@ -27,6 +27,30 @@ func TestRead(t *testing.T) {
 		assert.Equal(t, "m1@example.com", got.MessageID())
 	})
 
+	t.Run("finds a report wrapped inside another multipart", func(t *testing.T) {
+		t.Parallel()
+		raw := "Content-Type: multipart/mixed; boundary=o\r\n\r\n" +
+			"--o\r\nContent-Type: text/plain\r\n\r\nYour mail failed.\r\n" +
+			"--o\r\nContent-Type: multipart/report; boundary=b\r\n\r\n" +
+			"--b\r\nContent-Type: message/x-status\r\n\r\nA: 1\r\n" +
+			"--b\r\nContent-Type: text/rfc822-headers\r\n\r\nMessage-ID: <m2@example.com>\r\n--b--\r\n--o--\r\n"
+
+		got, err := report.Read([]byte(raw), "message/x-status")
+		require.NoError(t, err)
+
+		assert.Equal(t, "1", got.Fields[0].Get("A"))
+		assert.Equal(t, "m2@example.com", got.MessageID())
+	})
+
+	t.Run("refuses a message with no report in it", func(t *testing.T) {
+		t.Parallel()
+		raw := "Content-Type: multipart/mixed; boundary=o\r\n\r\n--o\r\nContent-Type: text/plain\r\n\r\nhi\r\n--o--\r\n"
+
+		_, err := report.Read([]byte(raw), "message/x-status")
+
+		require.ErrorIs(t, err, report.ErrNotReport)
+	})
+
 	t.Run("reports no message id without the original", func(t *testing.T) {
 		t.Parallel()
 		raw := "Content-Type: multipart/report; boundary=b\r\n\r\n" +

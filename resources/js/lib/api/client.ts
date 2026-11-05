@@ -8,6 +8,8 @@
  */
 import { activeLocale, i18n } from "@/lib/i18n";
 
+import { reportAccessRequirement } from "./access-required";
+
 const base = "/api/v1";
 
 /*
@@ -42,7 +44,25 @@ interface ErrorBody {
   code?: string;
   message?: string;
   errors?: Record<string, string[]>;
+  requirement?: string;
+  action_url?: string | null;
+  ip?: string;
   [detail: string]: unknown;
+}
+
+/*
+ * reportRefusal hands a workspace's refusal over to the screen that
+ * explains it, whatever page the request came from.
+ */
+function reportRefusal(status: number, body: ErrorBody | null) {
+  if (status === 403 && body?.requirement) {
+    reportAccessRequirement({
+      requirement: body.requirement,
+      message: body.message ?? "This workspace needs something from you.",
+      actionUrl: body.action_url ?? null,
+      ip: body.ip,
+    });
+  }
 }
 
 /*
@@ -110,7 +130,8 @@ async function send(url: string, init: RequestInit): Promise<Response> {
 
 /*
  * request sends one API call and returns the data of the response, or
- * undefined for a response without a body.
+ * undefined for a response without a body. A form or a file is sent as it
+ * is; anything else as JSON.
  */
 export async function request<T>(
   method: string,
@@ -123,8 +144,8 @@ export async function request<T>(
     Accept: "application/json",
     "Accept-Language": activeLocale(),
   };
-  const isForm = body instanceof FormData;
-  if (body !== undefined && !isForm) {
+  const isRaw = body instanceof FormData || body instanceof Blob;
+  if (body !== undefined && !isRaw) {
     headers["Content-Type"] = "application/json";
   }
   if (options.workspace) {
@@ -135,7 +156,7 @@ export async function request<T>(
     method,
     headers,
     credentials: "same-origin",
-    body: isForm ? body : body === undefined ? undefined : JSON.stringify(body),
+    body: isRaw ? body : body === undefined ? undefined : JSON.stringify(body),
     keepalive: options.keepalive,
     signal: options.signal,
   });
@@ -146,6 +167,7 @@ export async function request<T>(
 
   const json: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    reportRefusal(response.status, json as ErrorBody | null);
     throw toApiError(response.status, json as ErrorBody | null);
   }
 
@@ -174,6 +196,7 @@ export async function requestPage<T>(path: string, options: RequestOptions = {})
   const response = await send(base + path, { headers, credentials: "same-origin" });
   const json: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    reportRefusal(response.status, json as ErrorBody | null);
     throw toApiError(response.status, json as ErrorBody | null);
   }
 

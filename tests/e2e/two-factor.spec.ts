@@ -24,7 +24,7 @@ it.describe("two-factor authentication", () => {
     person,
     request,
   }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
 
     const { secret, activatedAt, codes } = await turnOn(page);
@@ -52,7 +52,7 @@ it.describe("two-factor authentication", () => {
   });
 
   it("keeps the setup key behind a link and copies it and the recovery codes", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
     await page.goto("/d/settings/security");
     await page
@@ -92,7 +92,8 @@ it.describe("two-factor authentication", () => {
     const rule = page.getByRole("switch", { name: "Require two-factor authentication" });
 
     await page.goto("/d/settings/workspace");
-    await rule.click({ force: true });
+    await rule.focus();
+    await page.keyboard.press("Space");
     await expect(page.getByRole("alert")).toContainText("Turn on two-factor authentication for your own account");
     await expect(rule).not.toBeChecked();
 
@@ -101,7 +102,8 @@ it.describe("two-factor authentication", () => {
     const saved = page.waitForResponse(
       (response) => response.url().endsWith("/api/v1/workspace") && response.request().method() === "PATCH",
     );
-    await rule.click({ force: true });
+    await rule.focus();
+    await page.keyboard.press("Space");
     await expect(rule).toBeChecked();
     expect((await saved).status()).toBe(200);
 

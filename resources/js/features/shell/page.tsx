@@ -21,6 +21,11 @@ import { cx } from "@/utils/cx";
  * holds cards of controls sits on the ground surface, the way BoardUI's
  * settings modal does, and its cards are secondary. Every other pane is
  * a secondary card itself.
+ *
+ * A panel clips what overflows it rather than hiding it, since a hidden
+ * overflow can still be scrolled by the browser, as when focus lands on
+ * something outside it, and the whole pane then slides away from its
+ * frame.
  */
 export function Panel({
   label,
@@ -37,7 +42,7 @@ export function Panel({
     <section
       aria-label={label}
       className={cx(
-        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-3xl border border-border-button-white shadow-sidebar",
+        "flex min-h-0 min-w-0 flex-col overflow-clip rounded-3xl border border-border-button-white shadow-sidebar",
         ground ? "bg-background-full" : "bg-background-secondary-default",
         className,
       )}
@@ -50,7 +55,9 @@ export function Panel({
 /*
  * ScrollArea is the scrolling body of a panel, below its header. Its top
  * edge softens into the panel's surface once scrolled; ground says the
- * panel is on the ground surface.
+ * panel is on the ground surface. The scrolling body positions what is
+ * placed absolutely inside it, such as the hidden input of a switch, so
+ * those move with the content and focusing them scrolls only this body.
  */
 export function ScrollArea({
   ground = false,
@@ -65,7 +72,7 @@ export function ScrollArea({
 
   return (
     <div className="relative min-h-0 flex-1">
-      <div onScroll={fade.onScroll} className={cx("h-full overflow-y-auto [scrollbar-width:none]", className)}>
+      <div onScroll={fade.onScroll} className={cx("relative h-full overflow-y-auto [scrollbar-width:none]", className)}>
         {children}
       </div>
       <ScrollFade

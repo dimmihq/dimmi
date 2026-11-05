@@ -5,7 +5,7 @@
  */
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { deliverEmail, rawEmail } from "./support/inbound";
-import { openComposer } from "./support/inbox";
+import { openAddress, openComposer } from "./support/inbox";
 import { mailedTexts } from "./support/mail";
 
 function suffixOf(person: Person): string {
@@ -17,7 +17,7 @@ it.describe("undo send", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await createAccount(request, person, `Undo ${suffixOf(person)}`);
     await signIn(page, person);
-    await page.goto("/d/settings/email");
+    await openAddress(page);
     const address = (await page.getByTestId("forwarding-address").first().textContent()) ?? "";
     const customer = `bob.${suffixOf(person)}@customer.test`;
     await deliverEmail(request, rawEmail(customer, address, "Refund for order 1042", "Charged twice."), address);

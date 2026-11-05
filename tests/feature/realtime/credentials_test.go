@@ -293,4 +293,22 @@ func TestRealtimeCredentials(t *testing.T) {
 		changeConversation(tc, s)
 		assert.NotEmpty(t, browser.socket.Publication().Event)
 	})
+
+	t.Run("a workspace limit reached while listening drops that workspace but keeps the socket", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		other, err := factories.Workspace(t.Context(), tc.App, tc.Owner)
+		require.NoError(t, err)
+		c := tc.ListenAs(tc.Owner, impatientNode(t, tc))
+		strict := appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)
+		require.Nil(t, c.Subscribe(strict).Error)
+
+		_, err = tc.App.DB.Exec(t.Context(), `UPDATE workspaces SET settings =
+			settings || '{"security": {"session_max_age_minutes": 60}}' WHERE id = $1`, tc.Workspace.Workspace.ID)
+		require.NoError(t, err)
+		tc.Clock.Advance(2 * time.Hour)
+
+		require.NotNil(t, c.Subscribe(strict).Error)
+		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(other.Workspace.ID)).Error)
+	})
 }

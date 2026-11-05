@@ -41,7 +41,9 @@ the primary one first, such as password then totp. ConfirmedMethod is
 how the user last proved their identity. DeviceID stays the same across
 every session of one device, DeviceLabel names that device for people,
 and Country is the two-letter ISO 3166 code the session started from.
-Each is empty when unknown, and always for a visitor.
+Each is empty when unknown, and always for a visitor. ConnectionID is
+the single sign-on connection the login came through, ids.Nil() when
+none, and AuthDomain the domain that service stands for, "" when none.
 
 AuthenticatedAt is the last full login, ConfirmedAt the last time the
 user proved their identity, by logging in or confirming their password.
@@ -63,6 +65,8 @@ type Record struct {
 	DeviceID        string
 	DeviceLabel     string
 	Country         string
+	ConnectionID    ids.UUID
+	AuthDomain      string
 	AuthenticatedAt time.Time
 	ConfirmedAt     time.Time
 	LastActivityAt  time.Time

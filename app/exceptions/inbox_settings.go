@@ -25,6 +25,9 @@ team that is the inbox's own default team. ErrDefaultInboxUndeletable
 refuses deleting the default inbox. ErrMoveToRequired refuses deleting
 an inbox with conversations without saying where they go, and
 ErrMoveToInvalid a target that is the inbox itself or not a live inbox.
+ErrInboxAccessInvalid refuses an access other than everyone or
+restricted, and ErrInboxAccessMemberNotFound a teammate who is not an
+active member of the workspace.
 */
 var (
 	ErrInboxSettingInvalid = fault.New(fault.Invalid, "invalid_inbox_setting",
@@ -39,4 +42,8 @@ var (
 		"Choose an inbox for this inbox's conversations.").OnField("move_to")
 	ErrMoveToInvalid = fault.New(fault.Invalid, "move_to_invalid",
 		"Conversations can only move to another inbox of this workspace.").OnField("move_to")
+	ErrInboxAccessInvalid = fault.New(fault.Invalid, "invalid_inbox_access",
+		"Choose everyone or restricted.").OnField("access")
+	ErrInboxAccessMemberNotFound = fault.New(fault.Invalid, "member_not_found",
+		"This teammate is not an active member of this workspace.").OnField("members")
 )

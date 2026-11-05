@@ -78,3 +78,37 @@ func (c *ContactController) Patch(
 
 	return &ContactOutput{Body: fhttp.NewResource(resources.NewWidgetProfile(contact))}, nil
 }
+
+/*
+PingOutput accepts a ping with no body.
+*/
+type PingOutput struct {
+	Status int
+}
+
+/*
+PingController records where visitors are.
+*/
+type PingController struct {
+	Record *actions.RecordWidgetPing
+}
+
+/*
+Store records the visitor's page.
+*/
+func (c *PingController) Store(ctx context.Context, in *requests.StoreWidgetPingRequest) (*PingOutput, error) {
+	session, _ := actions.CurrentSession(ctx)
+
+	var page *actions.Page
+
+	if in.Body.Page != nil {
+		p := in.Body.Page.Page()
+		page = &p
+	}
+
+	if err := c.Record.Handle(ctx, session, page, in.Body.Context); err != nil {
+		return nil, err
+	}
+
+	return &PingOutput{Status: fhttp.StatusAccepted}, nil
+}

@@ -16,19 +16,21 @@ APP_PKGS := ./app/...
 # cloud build.
 CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: test-sweep e2e pseudo-locale tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-app-role test-cloud test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
 
 APP ?= dimmi
 
 services:
 	docker compose up -d --wait
 
-tools:
-	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+tools: lint-tools
 	GOBIN=$(CURDIR)/bin go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 	GOBIN=$(CURDIR)/bin go install github.com/air-verse/air@$(AIR_VERSION)
 	pnpm install
 	pnpm exec playwright install chromium
+
+lint-tools:
+	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 # Compiles database/queries into app/models (sqlc.yaml).
 sqlc:
@@ -46,12 +48,16 @@ fmt:
 
 # Dev-only commands (make:* generators, route:lint) sit behind the dev build
 # tag, so lint and tests run once without it and once with it.
-lint:
+lint: lint-go lint-web
+
+lint-go:
 	$(GOLANGCI_LINT) config verify
 	$(GOLANGCI_LINT) run ./...
 	$(GOLANGCI_LINT) run --build-tags dev ./...
 	$(GOLANGCI_LINT) run --build-tags cloud ./...
 	go vet -tags emailmatrix ./tests/emailmatrix/...
+
+lint-web:
 	pnpm lint
 	pnpm typecheck
 
@@ -60,11 +66,34 @@ lint:
 ENV_FILE ?= .env.testing
 WITH_ENV := set -a && . ./$(ENV_FILE) && set +a &&
 
-test:
-	$(WITH_ENV) go test -race -shuffle=on ./...
-	$(WITH_ENV) DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on ./tests/feature/...
-	$(WITH_ENV) go test -race -shuffle=on -tags cloud $(CLOUD_PKGS)
+test: test-go test-app-role test-cloud test-timing test-web test-dev
+
+# SHARD=2/4 runs only the second of four even parts of a pass's packages,
+# so CI can spread a pass across machines; without it the whole pass runs.
+SHARD ?=
+SHARD_PKGS = $(if $(SHARD),"$$(node scripts/test-shard.ts $(1) $(SHARD) $(2))",$(2))
+
+test-go:
+	pkgs=$(call SHARD_PKGS,,./...) && $(WITH_ENV) go test -race -shuffle=on $$pkgs
+
+# The feature tests again as the cloud's application role, where row level
+# security applies to every query.
+test-app-role:
+	pkgs=$(call SHARD_PKGS,,./tests/feature/...) && \
+		$(WITH_ENV) DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on $$pkgs
+
+test-cloud:
+	pkgs=$(call SHARD_PKGS,-tags cloud,$(CLOUD_PKGS)) && $(WITH_ENV) go test -race -shuffle=on -tags cloud $$pkgs
+
+# Timing comparisons skip themselves under the race detector, which distorts
+# them, so they get a pass of their own without it.
+test-timing:
+	$(WITH_ENV) go test -count=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate|TestAudienceBudget' ./tests/feature/auth/ ./tests/feature/access/
+
+test-web:
 	pnpm test
+
+test-dev:
 	$(WITH_ENV) go test -race -tags dev ./framework/foundation/...
 
 # Drops the databases and roles killed test runs left on the test server.
@@ -126,8 +155,9 @@ web-test:
 # End-to-end tests: builds both binaries, then drives Chromium in light
 # and dark against the release cloud binary, started fresh on :18090
 # with its own database (tests/e2e/server.ts). Needs `make services`.
+# E2E_ARGS passes options to Playwright, such as --shard=1/3.
 e2e: pseudo-locale build
-	pnpm e2e
+	pnpm e2e $(E2E_ARGS)
 
 # Checks the infrastructure code without reaching any account: credentials
 # are hidden from the toolchain, so a machine that holds some cannot use them

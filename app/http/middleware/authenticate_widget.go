@@ -40,6 +40,15 @@ func AuthenticateWidgetReviving(auth *widget.AuthenticateWidgetSession, errs fht
 }
 
 /*
+AuthenticateWidgetEnding is [AuthenticateWidget] that also admits a session
+that already ended, for the route that signs out, so signing out twice
+answers the same.
+*/
+func AuthenticateWidgetEnding(auth *widget.AuthenticateWidgetSession, errs fhttp.Errors) fhttp.Middleware {
+	return admitSessions(auth, widget.AuthenticateWidgetSessionInput{AdmitEnded: true}, errs)
+}
+
+/*
 admitSessions authenticates with the input given, its token filled in
 from the request.
 */

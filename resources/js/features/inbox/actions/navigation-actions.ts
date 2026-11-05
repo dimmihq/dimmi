@@ -1,11 +1,12 @@
 /*
- * The moves that go somewhere: the views by G and a letter, the command
- * menu, the shortcut sheet and the search box.
+ * The moves that go somewhere: the views by G and a letter, the view
+ * picker by V, the command menu, the shortcut sheet and the search box.
  */
 import {
   RiCommandLine,
   RiInbox2Line,
   RiKeyboardLine,
+  RiLayoutColumnLine,
   RiQuestionAnswerLine,
   RiSearchLine,
   RiSpam2Line,
@@ -29,7 +30,7 @@ function goTo(id: string, label: string, letter: string, path: string, icon: Inb
 
 export const navigationActions: InboxAction[] = [
   goTo("go.mine", "Go to my inbox", "m", "/d/inbox/mine", RiInbox2Line),
-  goTo("go.inbox", "Go to the inbox", "i", "/d/inbox/unassigned", RiQuestionAnswerLine),
+  goTo("go.inbox", "Go to the inbox", "i", "/d/inbox", RiQuestionAnswerLine),
   goTo("go.unassigned", "Go to unassigned", "u", "/d/inbox/unassigned", RiQuestionAnswerLine),
   goTo("go.all", "Go to all conversations", "a", "/d/inbox/all", RiStackLine),
   goTo("go.spam", "Go to spam", "s", "/d/inbox/spam", RiSpam2Line),
@@ -53,6 +54,16 @@ export const navigationActions: InboxAction[] = [
     keys: ["?"],
     when: () => true,
     run: (ctx) => ctx.open("shortcuts"),
+  },
+  {
+    id: "go.view",
+    label: "Switch view",
+    group: "Navigation",
+    icon: RiLayoutColumnLine,
+    shortcut: "v",
+    keys: ["V"],
+    when: () => true,
+    run: () => document.querySelector<HTMLButtonElement>("button[data-view-picker]")?.click(),
   },
   {
     id: "go.search",

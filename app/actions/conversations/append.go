@@ -38,6 +38,8 @@ which only moves the timeline and never counts as anyone's latest word.
 type NewMessage struct {
 	Type             string
 	Body             string
+	BodyFormat       *string
+	BodyFull         *string
 	BodyHTML         *string
 	ChannelMessageID *string
 	SentAt           *time.Time
@@ -48,15 +50,15 @@ type NewMessage struct {
 }
 
 /*
-Append writes the entry as the actor and returns it with the
-conversation as it now is.
+Append writes the entry as the actor, after the workspace's redaction
+rules, and returns it with the conversation as it now is.
 */
 func (w *Writer) Append(
 	ctx context.Context, c models.Conversation, m NewMessage,
 ) (models.Message, models.Conversation, error) {
-	metadata := m.Metadata
-	if metadata == nil {
-		metadata = json.RawMessage(`{}`)
+	hits, err := w.redactMessage(ctx, c.WorkspaceID, &m)
+	if err != nil {
+		return models.Message{}, c, err
 	}
 
 	substantive := m.Type == string(enums.MessageTypeMessage) && !m.Automatic
@@ -68,8 +70,9 @@ func (w *Writer) Append(
 
 	msg, err := w.Q.CreateMessage(ctx, models.CreateMessageParams{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, Type: m.Type, AuthorType: w.Actor.Type,
-		AuthorID: w.authorID(), Body: &m.Body, BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID,
-		DedupeKey: m.DedupeKey, DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: metadata,
+		AuthorID: w.authorID(), Body: &m.Body, BodyFormat: m.BodyFormat, BodyFull: m.BodyFull,
+		BodyHtml: m.BodyHTML, ChannelMessageID: m.ChannelMessageID, DedupeKey: m.DedupeKey,
+		DeliveryStatus: m.DeliveryStatus, Substantive: substantive, Metadata: m.Metadata,
 		SentAt: m.SentAt, ChannelConnectionID: via, Now: w.Now,
 	})
 	if err != nil {
@@ -77,6 +80,10 @@ func (w *Writer) Append(
 	}
 
 	if c, err = w.count(ctx, c, m, msg); err != nil {
+		return msg, c, err
+	}
+
+	if err := w.AnnounceRedaction(ctx, c, msg, hits); err != nil {
 		return msg, c, err
 	}
 
@@ -140,6 +147,28 @@ func (w *Writer) AddNote(ctx context.Context, c models.Conversation, body string
 	msg, _, err := w.Append(ctx, c, NewMessage{Type: string(enums.MessageTypeNote), Body: body})
 
 	return msg, err
+}
+
+/*
+AsSystem returns a writer acting as dimmi itself.
+*/
+func (w *Writer) AsSystem() *Writer {
+	clone := *w
+	clone.Actor = Actor{Type: string(enums.AuthorTypeSystem)}
+	clone.Timezone = nil
+
+	return &clone
+}
+
+/*
+AsMember returns a writer acting as the teammate.
+*/
+func (w *Writer) AsMember(id ids.UUID, name string) *Writer {
+	clone := *w
+	clone.Actor = Actor{Type: string(enums.AuthorTypeMember), ID: id, Name: name}
+	clone.Timezone = nil
+
+	return &clone
 }
 
 /*

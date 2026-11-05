@@ -131,6 +131,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootFactors(a)
 	bootTeams(a)
 	bootTokens(a)
+	bootIdentity(a)
 
 	if err := bootAccountAndAudit(a); err != nil {
 		return err
@@ -192,8 +193,7 @@ func bootSignIn(a *app.App, dummy string) {
 	}
 
 	acts.AttemptLogin = &auth.AttemptLogin{
-		DB: a.DB, Hash: a.Hash, Clock: a.Clock, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links,
-		LoginPolicy: a.LoginPolicy, Lockout: a.Lockout, SecurityLog: a.SecurityLog,
+		DB: a.DB, Hash: a.Hash, Clock: a.Clock, Queue: a.Queue, LoginPolicy: a.LoginPolicy, Lockout: a.Lockout,
 		CompletePrimaryAuth: acts.CompletePrimaryAuth, DummyHash: dummy,
 	}
 
@@ -236,7 +236,8 @@ func bootMailedSecrets(a *app.App) {
 	acts.ResetPassword = &auth.ResetPassword{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Hash: a.Hash, Mail: a.Mail, Limiter: a.Limiter, IDs: a.IDs,
 		Links: a.Links, LoginPolicy: a.LoginPolicy, Sessions: a.Session, AppGrants: a.AppGrants, Lockout: a.Lockout,
-		SecurityLog: a.SecurityLog, ClaimAccount: claim, CompletePrimaryAuth: acts.CompletePrimaryAuth,
+		SecurityLog: a.SecurityLog, Queue: a.Queue, ClaimAccount: claim,
+		CompletePrimaryAuth: acts.CompletePrimaryAuth,
 	}
 
 	acts.SendMagicLink = &auth.SendMagicLink{
@@ -291,6 +292,7 @@ func bootWorkspaces(a *app.App) {
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Mail: a.Mail, Links: a.Links,
 		ConfirmWindow: a.Config.Auth.PasswordConfirmation.TTL,
 	}
+	acts.UpdateOnboarding = &workspaces.UpdateOnboarding{DB: a.DB, Clock: a.Clock}
 	acts.ListMemberships = &workspaces.ListMemberships{DB: a.DB}
 	acts.RepairWorkspaces = &workspaces.RepairWorkspaces{
 		DB: a.DB, Clock: a.Clock, Initializers: a.WorkspaceInitializers,
@@ -314,8 +316,15 @@ func registerJobs(a *app.App) error {
 	}
 
 	return errors.Join(
+		queue.Register(a.Queue, &jobs.RecordFailedSignIn{
+			DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links, SecurityLog: a.SecurityLog,
+		}),
+		queue.Register(a.Queue, &jobs.RecordFailedReset{DB: a.DB}),
 		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
 		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
+		queue.Register(a.Queue, &jobs.RecheckOrganizationDomains{
+			DB: a.DB, Clock: a.Clock, DNS: a.DNS, Mail: a.Mail, Events: a.Events, Links: a.Links,
+		}),
 		queue.Register(a.Queue, &jobs.RemindInviters{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
 		queue.Register(a.Queue, &jobs.PurgeExpiredAuthRecords{
 			DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,

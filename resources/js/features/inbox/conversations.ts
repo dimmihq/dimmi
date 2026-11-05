@@ -6,7 +6,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
-import type { ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
+import type { Attachment, ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
 import { formatRelative } from "@/lib/i18n/format";
 
 /*
@@ -64,6 +64,13 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * customer, from a teammate, from dimmi (the agent that answers
  * customers), an internal note, or an event such as a handover.
  */
+/*
+ * ThreadEntry is one entry as the thread shows it. A said entry carries
+ * how its text is read, Markdown or plain words, and for received email
+ * whether more of it can be opened and whether its body was cut short.
+ * Failed holds why a reply never reached the customer, null otherwise.
+ * Files are what the message carries.
+ */
 export type ThreadEntry =
   | {
       kind: "customer" | "teammate" | "dimmi" | "note";
@@ -71,9 +78,15 @@ export type ThreadEntry =
       author: string;
       at: string;
       text: string;
+      format: Message["body_format"];
+      original: boolean;
+      truncated: boolean;
+      failed: string | null;
+      redacted?: number;
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
+      files: Attachment[];
     }
   | { kind: "event"; id: string; at: string; text: string };
 
@@ -100,7 +113,21 @@ export function eventText(event: TimelineEvent): string {
     return event.to === "none" ? `${actor} removed the priority` : `${actor} set the priority to ${event.to}`;
   }
 
+  if (event.name === "conversation.tagged") {
+    return `${actor} tagged the conversation ${(event.tags ?? []).join(", ")}`;
+  }
+  if (event.name === "conversation.untagged") {
+    return `${actor} removed the tag ${(event.tags ?? []).join(", ")}`;
+  }
+
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
+}
+
+/*
+ * filesOf returns the files the message carries.
+ */
+function filesOf(message: Message): Attachment[] {
+  return message.attachments ?? [];
 }
 
 export function toEntry(message: Message): ThreadEntry {
@@ -112,33 +139,29 @@ export function toEntry(message: Message): ThreadEntry {
     const by = message.deleted_by?.name;
     return { kind: "event", id: message.id, at, text: by ? `Message deleted by ${by}` : "Message deleted" };
   }
-  const text = message.body ?? "";
-  const author = message.author.name;
+  const said = {
+    id: message.id,
+    author: message.author.name,
+    at,
+    text: message.body ?? "",
+    format: message.body_format ?? "markdown",
+    original: message.has_original ?? false,
+    truncated: message.truncated ?? false,
+    failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
+    authorId: message.author.id,
+    files: filesOf(message),
+  } as const;
+  const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
+  const marked = redacted ? { ...said, redacted } : said;
   if (message.type === "note") {
-    return {
-      kind: "note",
-      id: message.id,
-      author,
-      at,
-      text,
-      authorId: message.author.id,
-      edited: Boolean(message.edited_at),
-    };
+    return { kind: "note", ...marked, edited: Boolean(message.edited_at) };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", id: message.id, author, at, text };
+    return { kind: "customer", ...marked };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", id: message.id, author, at, text };
+    return { kind: "dimmi", ...marked };
   }
 
-  return {
-    kind: "teammate",
-    id: message.id,
-    author,
-    at,
-    text,
-    held: Boolean(message.scheduled_send_at),
-    authorId: message.author.id,
-  };
+  return { kind: "teammate", ...marked, held: Boolean(message.scheduled_send_at) };
 }

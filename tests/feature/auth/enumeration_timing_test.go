@@ -23,6 +23,7 @@ func TestEnumerationTiming(t *testing.T) {
 
 	t.Run("takes as long for an unknown email as for a wrong password", func(t *testing.T) {
 		t.Parallel()
+		tests.RequireTimingAccuracy(t)
 		tc := tests.New(t, tests.WithEnv(
 			behindProxy, "DIMMI_AUTH__LOCKOUT__PER_EMAIL_SOFT_LOCK=1000",
 			"DIMMI_HASHING__HASHERS__ARGON2ID__MEMORY=4096", "DIMMI_HASHING__HASHERS__ARGON2ID__ITERATIONS=1",

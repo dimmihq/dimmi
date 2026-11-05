@@ -14,12 +14,18 @@ import { createRoot } from "react-dom/client";
 import { LocaleRoot } from "./features/shell/locale-root";
 import { syncTheme } from "./features/theme/theme-sync";
 import "./lib/i18n";
+import { workspaceAddress } from "./features/shell/workspace";
 import { routeTree } from "./route-tree.gen";
 
 syncTheme();
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
-const router = createRouter({ routeTree, context: { queryClient }, defaultPreload: "intent" });
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  defaultPreload: "intent",
+  rewrite: workspaceAddress,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

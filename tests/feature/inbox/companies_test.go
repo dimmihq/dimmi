@@ -58,7 +58,7 @@ func mustCompany(t *testing.T, tc *tests.TestCase, c company) models.Company {
 companyNames lists the workspace's live companies matching the search,
 the given number at a time, and returns their names in order.
 */
-func companyNames(t *testing.T, tc *tests.TestCase, search *string, size int32) []string {
+func companyNames(t *testing.T, tc *tests.TestCase, search *string, size int64) []string {
 	t.Helper()
 
 	workspace := tc.Workspace.Workspace.ID
@@ -105,7 +105,7 @@ func lead(t *testing.T, tc *tests.TestCase, name string) {
 companyContacts walks every page of the company's contacts, the given
 number at a time, and returns their names in order.
 */
-func companyContacts(t *testing.T, tc *tests.TestCase, company ids.UUID, size int32) []string {
+func companyContacts(t *testing.T, tc *tests.TestCase, company ids.UUID, size int64) []string {
 	t.Helper()
 
 	workspace := tc.Workspace.Workspace.ID

@@ -6,7 +6,8 @@
 | The settings an email address keeps as JSON, read with their defaults
 | so an address stored before a setting existed behaves as a new one:
 | replies quote the previous message, subjects carry no ticket tag, and
-| bulk mail that starts no thread opens a closed conversation.
+| bulk mail that starts no thread opens a closed conversation, and
+| replies keep the plain look.
 |
 */
 
@@ -18,18 +19,23 @@ import "encoding/json"
 EmailAddressSettings are an address's own settings. QuotePrevious puts
 the message answered below each reply. SubjectTag adds the conversation
 number to reply subjects. BulkMailHandling is close, open or drop.
+Template is the look of replies, plain or branded; a branded reply
+uses BrandColor and closes with FooterMarkdown.
 */
 type EmailAddressSettings struct {
 	QuotePrevious    bool   `json:"quote_previous"`
 	SubjectTag       bool   `json:"subject_tag"`
 	BulkMailHandling string `json:"bulk_mail_handling"`
+	Template         string `json:"template"`
+	BrandColor       string `json:"brand_color"`
+	FooterMarkdown   string `json:"footer_markdown"`
 }
 
 /*
 DefaultEmailAddressSettings returns the settings of a new address.
 */
 func DefaultEmailAddressSettings() EmailAddressSettings {
-	return EmailAddressSettings{QuotePrevious: true, BulkMailHandling: "close"}
+	return EmailAddressSettings{QuotePrevious: true, BulkMailHandling: "close", Template: "plain"}
 }
 
 /*

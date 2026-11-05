@@ -104,6 +104,14 @@ SET last_read_message_id = excluded.last_read_message_id, last_read_at = exclude
     updated_at = excluded.updated_at
 RETURNING *;
 
+-- name: RetryMessageDelivery :one
+-- RetryMessageDelivery puts a reply that failed back in line to be sent,
+-- forgetting why it failed.
+UPDATE messages SET delivery_status = 'pending', delivery_error = NULL, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id = @id
+  AND type = 'message' AND delivery_status = 'failed' AND deleted_at IS NULL
+RETURNING *;
+
 -- name: LatestContactMessage :one
 -- LatestContactMessage returns the newest live message the customer
 -- wrote in the conversation, the one a seen receipt answers.

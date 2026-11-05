@@ -14,6 +14,8 @@
 | random suffix. Slugs that would read as part of the product, such as
 | admin or login, are never handed out, and neither is anything shorter
 | than three characters or a slug another workspace gave up recently.
+| Workspaces created at the same moment choose their slugs one after the
+| other, so two people naming theirs alike both get one.
 |
 | Once the workspace and its owner exist, every registered initializer
 | adds its defaults in the same transaction, so any failure among them
@@ -98,6 +100,10 @@ func (a *CreateWorkspace) Handle(ctx context.Context, in CreateWorkspaceInput) (
 		})
 		if err != nil {
 			return fmt.Errorf("create organization: %w", err)
+		}
+
+		if err := tx.AdvisoryLock(ctx, "workspace-slugs"); err != nil {
+			return fmt.Errorf("wait for workspace slugs: %w", err)
 		}
 
 		slug, err := a.freeSlug(ctx, q, name, now)

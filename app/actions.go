@@ -14,6 +14,7 @@ package app
 import (
 	"github.com/dimmihq/dimmi/framework/mailbox"
 
+	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
 	"github.com/dimmihq/dimmi/app/actions/assignment"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
@@ -23,6 +24,8 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/roles"
+	"github.com/dimmihq/dimmi/app/actions/sso"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
@@ -68,6 +71,9 @@ type Actions struct {
 	UnlinkOAuthIdentity     *auth.UnlinkOAuthIdentity
 	ResolveWorkspace        *workspaces.ResolveWorkspace
 	UpdateWorkspace         *workspaces.UpdateWorkspace
+	UpdateOnboarding        *workspaces.UpdateOnboarding
+	UpdateLogo              *workspaces.UpdateLogo
+	DeleteLogo              *workspaces.DeleteLogo
 	ListMemberships         *workspaces.ListMemberships
 	RepairWorkspaces        *workspaces.RepairWorkspaces
 	ListMembers             *members.ListMembers
@@ -90,6 +96,24 @@ type Actions struct {
 	AcceptInvitation        *invitations.AcceptInvitation
 
 	CompleteTwoFactorChallenge *auth.CompleteTwoFactorChallenge
+	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
+	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
+	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy
+	ListRoles                  *roles.ListRoles
+	ShowRole                   *roles.ShowRole
+	CreateRole                 *roles.CreateRole
+	UpdateRole                 *roles.UpdateRole
+	DeleteRole                 *roles.DeleteRole
+	AssignRole                 *roles.AssignRole
+	RoleNames                  *roles.RoleNames
+	ListPermissions            *roles.ListPermissions
+	CreateSSOConnection        *sso.CreateConnection
+	UpdateSSOConnection        *sso.UpdateConnection
+	ListSSOConnections         *sso.ListConnections
+	ShowSSOConnection          *sso.ShowConnection
+	DeleteSSOConnection        *sso.DeleteConnection
+	OrganizationDomains        *sso.Domains
+	SSOOperator                *sso.Operator
 	ListAuthFactors            *factors.ListAuthFactors
 	AddAuthFactor              *factors.AddAuthFactor
 	ActivateAuthFactor         *factors.ActivateAuthFactor

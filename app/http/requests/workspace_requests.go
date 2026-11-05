@@ -16,6 +16,7 @@ package requests
 import (
 	"context"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/support/str"
 	"github.com/dimmihq/dimmi/framework/validation"
 )
@@ -37,9 +38,36 @@ type UpdateCurrentWorkspaceRequest struct {
 		UndoSendSeconds  *int    `json:"undo_send_seconds,omitempty"  validate:"omitempty,oneof=0 5 10 20 30"`
 		SeenReceiptName  *bool   `json:"seen_receipt_shows_name,omitempty"`
 
-		CustomerFacingName *string `json:"customer_facing_name,omitempty" validate:"omitempty,max=80"`
+		CustomerFacingName *string         `json:"customer_facing_name,omitempty" validate:"omitempty,max=80"`
+		LinkSafety         *LinkSafetyBody `json:"link_safety,omitempty"`
+		Retention          *RetentionBody  `json:"retention,omitempty"`
 	}
 	RawBody []byte
+}
+
+/*
+LinkSafetyBody is a change to the workspace's link checks; a field left
+out keeps its value, and a list sent replaces the list.
+*/
+type LinkSafetyBody struct {
+	Enabled                *bool    `json:"enabled,omitempty"`
+	AllowDomains           []string `json:"allow_domains,omitempty"             validate:"max=500,dive,max=253"`
+	BlockDomains           []string `json:"block_domains,omitempty"             validate:"max=500,dive,max=253"`
+	StripInboundEmailLinks *bool    `json:"strip_inbound_email_links,omitempty"`
+}
+
+/*
+RetentionBody is a change to the retention periods, in days; a field
+left out keeps its value, and closed_conversation_days set to null
+keeps closed conversations for ever. The ranges are checked by the
+action.
+*/
+type RetentionBody struct {
+	ClosedConversationDays *int `json:"closed_conversation_days,omitempty"`
+	SpamDays               *int `json:"spam_days,omitempty"`
+	TrashDays              *int `json:"trash_days,omitempty"`
+	RawEmailDays           *int `json:"raw_email_days,omitempty"`
+	ExportDays             *int `json:"export_days,omitempty"`
 }
 
 /*
@@ -64,4 +92,12 @@ DestroyMembershipRequest is the input of DELETE
 */
 type DestroyMembershipRequest struct {
 	Membership string `path:"membership"`
+}
+
+/*
+UpdateWorkspaceLogoRequest is the input of PUT /workspace/logo: a
+multipart form with the picture in the logo field.
+*/
+type UpdateWorkspaceLogoRequest struct {
+	RawBody fhttp.MultipartForm
 }

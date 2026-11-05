@@ -94,7 +94,7 @@ func (a *SendMagicLink) Handle(ctx context.Context, in SendMagicLinkInput) error
 		return exceptions.ErrNotFound
 	}
 
-	email := strings.ToLower(strings.TrimSpace(in.Email))
+	email := mail.CanonicalAddress(in.Email)
 
 	if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, email, appauth.MethodMagicLink); err != nil {
 		return err

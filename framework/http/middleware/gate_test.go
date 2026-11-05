@@ -116,3 +116,69 @@ func TestGate(t *testing.T) {
 		}
 	})
 }
+
+func TestGatePage(t *testing.T) {
+	t.Parallel()
+
+	gated := middleware.Gate(middleware.GateOptions{
+		Password: "correct horse",
+		Secret:   []byte("0123456789abcdef0123456789abcdef"),
+		Page:     true,
+	})(echo())
+
+	page := func(t *testing.T, method, path, accept string) *http.Request {
+		t.Helper()
+		r := request(t, method, path, "")
+		r.Header.Set("Accept", accept)
+
+		return r
+	}
+
+	t.Run("sends a browser asking for a page to the application's password page", func(t *testing.T) {
+		t.Parallel()
+		rec := serve(gated, page(t, http.MethodGet, "/d/settings?tab=1", "text/html,application/xhtml+xml"))
+
+		assert.Equal(t, http.StatusSeeOther, rec.Code)
+		assert.Equal(t, "/__gate?next=%2Fd%2Fsettings%3Ftab%3D1", rec.Header().Get("Location"))
+		assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+	})
+
+	t.Run("lets the password page itself reach the application", func(t *testing.T) {
+		t.Parallel()
+		rec := serve(gated, page(t, http.MethodGet, middleware.GatePath+"?next=%2Fd", "text/html"))
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "noindex, nofollow", rec.Header().Get("X-Robots-Tag"))
+	})
+
+	t.Run("still refuses calls that are not pages", func(t *testing.T) {
+		t.Parallel()
+
+		api := page(t, http.MethodGet, "/api/v1/me", "application/json")
+		form := page(t, http.MethodPost, "/d", "text/html")
+
+		assert.Equal(t, http.StatusUnauthorized, serve(gated, api).Code)
+		assert.Equal(t, http.StatusUnauthorized, serve(gated, form).Code)
+	})
+
+	t.Run("returns a wrong password to the page and lets the right one through", func(t *testing.T) {
+		t.Parallel()
+		post := func(password string) *http.Request {
+			body := url.Values{"password": {password}, "next": {"/d"}}.Encode()
+			r := request(t, http.MethodPost, middleware.GatePath, body)
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			return r
+		}
+
+		wrong := serve(gated, post("guess"))
+		assert.Equal(t, http.StatusSeeOther, wrong.Code)
+		assert.Equal(t, "/__gate?failed=1&next=%2Fd", wrong.Header().Get("Location"))
+		assert.Empty(t, wrong.Result().Cookies())
+
+		right := serve(gated, post("correct horse"))
+		assert.Equal(t, http.StatusSeeOther, right.Code)
+		assert.Equal(t, "/d", right.Header().Get("Location"))
+		require.Len(t, right.Result().Cookies(), 1)
+	})
+}

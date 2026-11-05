@@ -46,6 +46,18 @@ type WidgetSettingsBody struct {
 	IntercomShim            *bool          `json:"intercom_shim,omitempty"`
 	NativeAppsEnabled       *bool          `json:"native_apps_enabled,omitempty"`
 	ShowBranding            *bool          `json:"show_branding,omitempty"`
+	HomeLinks               []HomeLinkBody `json:"home_links,omitempty"`
+}
+
+/*
+HomeLinkBody is one link on a messenger's home screen as a request sends
+it: its title, its https or mailto address, and calendar, book or link as
+its icon.
+*/
+type HomeLinkBody struct {
+	Title string `json:"title"`
+	URL   string `json:"url"`
+	Icon  string `json:"icon,omitempty"`
 }
 
 /*
@@ -64,7 +76,20 @@ func (b WidgetSettingsBody) Change(raw []byte) widget.SettingsChange {
 		MaxAttachmentMB: b.MaxAttachmentMB, HelpCenterSent: sent["help_center_id"], HelpTabEnabled: b.HelpTabEnabled,
 		ChangelogTabEnabled: b.ChangelogTabEnabled, IntercomShim: b.IntercomShim,
 		NativeAppsEnabled: b.NativeAppsEnabled, ShowBranding: b.ShowBranding, ShowBrandingSent: sent["show_branding"],
+		HomeLinks: homeLinks(b.HomeLinks), HomeLinksSent: sent["home_links"],
 	}
+}
+
+/*
+homeLinks returns the links as the widget actions take them.
+*/
+func homeLinks(links []HomeLinkBody) []widget.ConfigHomeLink {
+	out := make([]widget.ConfigHomeLink, 0, len(links))
+	for _, link := range links {
+		out = append(out, widget.ConfigHomeLink{Title: link.Title, URL: link.URL, Icon: link.Icon})
+	}
+
+	return out
 }
 
 /*

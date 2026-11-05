@@ -1,0 +1,66 @@
+# Keeps Go's module and build caches between runs, so a job only compiles
+# what changed since the last run on main. Each kind of job names its own
+# build cache, since what one job compiles (race, cloud, lint) is useless
+# to another. Run it once with mode restore before Go runs and once with
+# mode save at the end of the job.
+#
+# Before saving, entries no Go command used in the last 90 minutes are
+# dropped, so the cache holds what the current code needs instead of
+# growing with every run. Go refreshes an entry's time when it uses one
+# older than an hour. Pull requests restore but never save.
+name: Go cache
+description: Restores or saves the Go module and build caches.
+inputs:
+  name:
+    description: The build cache's name, one per kind of job.
+    required: true
+  mode:
+    description: restore or save.
+    default: restore
+  save-modules:
+    description: Whether this job saves the module cache when it changed.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - if: inputs.mode == 'restore'
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/go/pkg/mod
+        key: go-mod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+        restore-keys: go-mod-${{ runner.os }}-
+    - if: inputs.mode == 'restore'
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/.cache/golangci-lint
+        key: go-build-${{ runner.os }}-${{ inputs.name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: go-build-${{ runner.os }}-${{ inputs.name }}-
+
+    - if: inputs.mode == 'save' && github.event_name != 'pull_request'
+      shell: bash
+      run: |
+        find ~/.cache/go-build ~/.cache/golangci-lint -type f -mmin +90 -delete 2>/dev/null || true
+        du -sh ~/.cache/go-build ~/.cache/golangci-lint 2>/dev/null || true
+    - if: inputs.mode == 'save' && github.event_name != 'pull_request'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/.cache/golangci-lint
+        key: go-build-${{ runner.os }}-${{ inputs.name }}-${{ github.run_id }}-${{ github.run_attempt }}
+    - if: inputs.mode == 'save' && inputs.save-modules == 'true' && github.event_name != 'pull_request'
+      id: modules
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/go/pkg/mod
+        key: go-mod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+        lookup-only: true
+    - if: >-
+        inputs.mode == 'save' && inputs.save-modules == 'true' && github.event_name != 'pull_request'
+        && steps.modules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/go/pkg/mod
+        key: go-mod-${{ runner.os }}-${{ hashFiles('go.sum') }}

@@ -39,11 +39,13 @@ const activityThrottle = time.Minute
 /*
 AuthenticateWidgetSessionInput is the bearer token a request sent, and
 whether an expired identified session is admitted, which only the route
-that revives it with a fresh identity token asks for.
+that revives it with a fresh identity token asks for. AdmitEnded admits a
+revoked or expired session too, for signing out, which is fine to repeat.
 */
 type AuthenticateWidgetSessionInput struct {
 	Token        string
 	AdmitExpired bool
+	AdmitEnded   bool
 }
 
 /*
@@ -138,6 +140,10 @@ func (a *AuthenticateWidgetSession) load(ctx context.Context, workspaceID, id id
 usable returns why the session cannot be used, nil when it can.
 */
 func (a *AuthenticateWidgetSession) usable(s models.WidgetSession, in AuthenticateWidgetSessionInput) error {
+	if in.AdmitEnded {
+		return nil
+	}
+
 	if s.RevokedAt != nil {
 		return exceptions.ErrSessionRevoked
 	}
@@ -151,15 +157,16 @@ func (a *AuthenticateWidgetSession) usable(s models.WidgetSession, in Authentica
 }
 
 /*
-slide moves an anonymous session's expiry on from now, writing it down at
-most once a minute. An identified session lives only as long as its last
+slide moves a live anonymous session's expiry on from now, writing it down
+at most once a minute. An identified session lives only as long as its last
 identity token allows, so it never slides.
 */
 func (a *AuthenticateWidgetSession) slide(
 	ctx context.Context, s models.WidgetSession,
 ) (models.WidgetSession, error) {
 	now := a.Clock.Now()
-	if s.Kind != string(enums.WidgetSessionAnonymous) || now.Sub(s.LastSeenAt) < activityThrottle {
+	ended := s.RevokedAt != nil || !now.Before(s.ExpiresAt)
+	if ended || s.Kind != string(enums.WidgetSessionAnonymous) || now.Sub(s.LastSeenAt) < activityThrottle {
 		return s, nil
 	}
 

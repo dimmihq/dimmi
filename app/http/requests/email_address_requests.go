@@ -47,9 +47,12 @@ type UpdateEmailAddressRequest struct {
 		DisplayName   *string `json:"display_name,omitempty"    validate:"omitempty,min=1,max=80"`
 		ReplyToMode   *string `json:"reply_to_mode,omitempty"   validate:"omitempty,oneof=token none"`
 		FromNameStyle *string `json:"from_name_style,omitempty" validate:"omitempty,oneof=member_and_name name_only"`
+		IsDefault     *bool   `json:"is_default,omitempty"`
+		InboxID       *string `json:"inbox_id,omitempty"`
 		Settings      *struct {
 			QuotePrevious    *bool   `json:"quote_previous,omitempty"`
 			BulkMailHandling *string `json:"bulk_mail_handling,omitempty" validate:"omitempty,oneof=close open drop"`
+			ReplyStyle
 		} `json:"settings,omitempty"`
 	}
 }

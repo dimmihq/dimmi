@@ -75,8 +75,8 @@ export function ConfirmPasswordDialog({
             <Button variant="secondary" onClick={onCancel}>
               Cancel
             </Button>
-            <Button type="submit" disabled={confirm.isPending || password === ""}>
-              {confirm.isPending ? "Confirming…" : "Confirm"}
+            <Button type="submit" loading={confirm.isPending} disabled={password === ""}>
+              Confirm
             </Button>
           </ModalFooter>
         </form>

@@ -31,10 +31,10 @@ type WidgetIdentity struct {
 }
 
 /*
-WidgetRealtime is where the messenger's stream connects and the channel it
+Realtime is where the messenger's stream connects and the channel it
 receives.
 */
-type WidgetRealtime struct {
+type Realtime struct {
 	URL      string `json:"url"`
 	Channel  string `json:"channel"`
 	TokenURL string `json:"token_url"`
@@ -54,7 +54,7 @@ type WidgetSession struct {
 	Identity            WidgetIdentity `json:"identity"`
 	UnreadCount         int64          `json:"unread_count"`
 	OpenConversationIDs []string       `json:"open_conversation_ids"`
-	Realtime            WidgetRealtime `json:"realtime"`
+	Realtime            Realtime       `json:"realtime"`
 	ConfigVersion       int64          `json:"config_version"`
 	ServerTime          time.Time      `json:"server_time"`
 }
@@ -86,7 +86,7 @@ func NewWidgetSession(v widget.SessionView, cfg models.WidgetSetting, a SessionA
 		Contact:     NewWidgetContact(v.Contact),
 		Identity:    WidgetIdentity{Status: status, Warnings: []string{}},
 		UnreadCount: v.UnreadCount, OpenConversationIDs: publicIDs(models.PrefixConversation, v.OpenConversationIDs),
-		Realtime: WidgetRealtime{
+		Realtime: Realtime{
 			URL: base + "/connection/uni_sse", Channel: appbroadcasting.WidgetContactChannel(v.Contact.ID),
 			TokenURL: base + "/widget/v1/realtime-tokens",
 		},

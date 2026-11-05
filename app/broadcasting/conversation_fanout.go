@@ -71,11 +71,12 @@ RestrictedMember is a member who does not see every conversation, with
 what they do see.
 */
 type RestrictedMember struct {
-	MemberID   ids.UUID   `json:"member_id"`
-	UserID     ids.UUID   `json:"user_id"`
-	Mode       string     `json:"mode"`
-	TeamIDs    []ids.UUID `json:"team_ids"`
-	Unassigned bool       `json:"unassigned"`
+	MemberID      ids.UUID   `json:"member_id"`
+	UserID        ids.UUID   `json:"user_id"`
+	Mode          string     `json:"mode"`
+	TeamIDs       []ids.UUID `json:"team_ids"`
+	Unassigned    bool       `json:"unassigned"`
+	HiddenInboxes []ids.UUID `json:"hidden_inboxes"`
 }
 
 /*
@@ -84,13 +85,16 @@ scope returns what the member sees.
 func (r RestrictedMember) scope() authz.ConversationScope {
 	return authz.ConversationScope{
 		Mode: enums.ConversationAccess(r.Mode), MemberID: &r.MemberID, TeamIDs: r.TeamIDs, Unassigned: r.Unassigned,
+		HiddenInboxes: r.HiddenInboxes,
 	}
 }
 
 /*
-Holding is who holds a conversation: a member, a team, both or nobody.
+Holding is where a conversation sits and who holds it: a member, a
+team, both or nobody.
 */
 type Holding struct {
+	Inbox  ids.UUID
 	Member *ids.UUID
 	Team   *ids.UUID
 }
@@ -115,9 +119,9 @@ func AudienceOf(members []RestrictedMember, before, after Holding) Audience {
 		scope := m.scope()
 
 		switch {
-		case scope.Sees(after.Member, after.Team):
+		case scope.Sees(after.Inbox, after.Member, after.Team):
 			out.Copies = append(out.Copies, m)
-		case scope.Sees(before.Member, before.Team):
+		case scope.Sees(before.Inbox, before.Member, before.Team):
 			out.Hidden = append(out.Hidden, m)
 		}
 	}
@@ -199,17 +203,19 @@ func (f *Fanout) load(ctx context.Context, workspaceID ids.UUID) ([]RestrictedMe
 			return err
 		}
 
-		byMember := map[ids.UUID][]ids.UUID{}
-		for _, row := range teams {
-			byMember[row.MemberID] = append(byMember[row.MemberID], row.TeamID)
+		hidden, err := q.ListHiddenInboxIDsOfMembers(ctx, models.ListHiddenInboxIDsOfMembersParams{
+			WorkspaceID: workspaceID, MemberIds: memberIDs,
+		})
+		if err != nil {
+			return err
 		}
 
-		for _, row := range rows {
-			out = append(out, RestrictedMember{
-				MemberID: row.ID, UserID: row.UserID, Mode: row.ConversationAccess, TeamIDs: byMember[row.ID],
-				Unassigned: row.ConversationAccessUnassigned,
-			})
+		every, err := openingEvery(ctx, q, rows)
+		if err != nil {
+			return err
 		}
+
+		out = restrictedOf(rows, teams, hidden, every)
 
 		return nil
 	})
@@ -241,7 +247,7 @@ func (f *Fanout) holding(ctx context.Context, workspaceID, id ids.UUID) (Holding
 
 	err := f.DB.Transaction(tenancy.With(ctx, workspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
 		c, err := models.New(tx).FindConversation(ctx, models.FindConversationParams{WorkspaceID: workspaceID, ID: id})
-		out = Holding{Member: c.AssigneeMemberID, Team: c.AssigneeTeamID}
+		out = Holding{Inbox: c.InboxID, Member: c.AssigneeMemberID, Team: c.AssigneeTeamID}
 
 		return err
 	})
@@ -268,6 +274,30 @@ func (b *Broadcaster) listenFanout(d *events.Dispatcher) {
 		return b.Fanout.forget(ctx, e.WorkspaceID)
 	})
 	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.MemberReactivated) error {
+		return b.Fanout.forget(ctx, e.WorkspaceID)
+	})
+	b.listenInboxAccess(d)
+}
+
+/*
+listenInboxAccess throws the cached list away whenever who may open an
+inbox can have changed: the inbox's list, a team on it, or a role that
+opens every inbox.
+*/
+func (b *Broadcaster) listenInboxAccess(d *events.Dispatcher) {
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.InboxAccessChanged) error {
+		return b.Fanout.forget(ctx, e.WorkspaceID)
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.InboxDeleted) error {
+		return b.Fanout.forget(ctx, e.WorkspaceID)
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.TeamMemberAdded) error {
+		return b.Fanout.forget(ctx, e.WorkspaceID)
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.TeamMemberRemoved) error {
+		return b.Fanout.forget(ctx, e.WorkspaceID)
+	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.MemberRoleChanged) error {
 		return b.Fanout.forget(ctx, e.WorkspaceID)
 	})
 }
@@ -313,12 +343,18 @@ func (b *Broadcaster) publishList(ctx context.Context, e appevents.ConversationE
 }
 
 /*
-beforeChange returns who held the conversation before the event: an
-assignment says, and nothing else moves it.
+beforeChange returns where the conversation sat and who held it before
+the event: an assignment says who, a move says which inbox, and nothing
+else changes either.
 */
 func beforeChange(e appevents.ConversationEvent, after Holding) Holding {
-	if assigned, ok := e.(appevents.ConversationAssigned); ok {
-		return Holding{Member: assigned.FromMemberID, Team: assigned.FromTeamID}
+	switch e := e.(type) {
+	case appevents.ConversationAssigned:
+		return Holding{Inbox: after.Inbox, Member: e.FromMemberID, Team: e.FromTeamID}
+	case appevents.ConversationUpdated:
+		if e.FromInboxID != nil {
+			return Holding{Inbox: *e.FromInboxID, Member: after.Member, Team: after.Team}
+		}
 	}
 
 	return after
@@ -347,4 +383,60 @@ func (b *Broadcaster) hide(ctx context.Context, conversation ids.UUID, members [
 	}
 
 	return nil
+}
+
+/*
+openingEvery returns the members who open every inbox, as those who may
+manage inboxes do.
+*/
+func openingEvery(ctx context.Context, q *models.Queries, rows []models.WorkspaceMember) (map[ids.UUID]bool, error) {
+	out := map[ids.UUID]bool{}
+
+	for _, row := range rows {
+		every, err := authz.OpensEveryInbox(ctx, q, row)
+		if err != nil {
+			return nil, err
+		}
+
+		out[row.ID] = every
+	}
+
+	return out, nil
+}
+
+/*
+restrictedOf puts each member together with the teams their access names
+and the inboxes they may not open, leaving out the inboxes of those who
+open every one, and anyone who in the end sees everything.
+*/
+func restrictedOf(
+	rows []models.WorkspaceMember, teams []models.ListAccessTeamIDsOfMembersRow,
+	hidden []models.ListHiddenInboxIDsOfMembersRow, every map[ids.UUID]bool,
+) []RestrictedMember {
+	teamsOf := map[ids.UUID][]ids.UUID{}
+	for _, row := range teams {
+		teamsOf[row.MemberID] = append(teamsOf[row.MemberID], row.TeamID)
+	}
+
+	hiddenOf := map[ids.UUID][]ids.UUID{}
+	for _, row := range hidden {
+		if !every[row.MemberID] {
+			hiddenOf[row.MemberID] = append(hiddenOf[row.MemberID], row.InboxID)
+		}
+	}
+
+	out := []RestrictedMember{}
+
+	for _, row := range rows {
+		if row.ConversationAccess == string(enums.ConversationAccessAll) && len(hiddenOf[row.ID]) == 0 {
+			continue
+		}
+
+		out = append(out, RestrictedMember{
+			MemberID: row.ID, UserID: row.UserID, Mode: row.ConversationAccess, TeamIDs: teamsOf[row.ID],
+			Unassigned: row.ConversationAccessUnassigned, HiddenInboxes: hiddenOf[row.ID],
+		})
+	}
+
+	return out
 }

@@ -53,6 +53,7 @@ type formats struct {
 	ID       string `json:"id"       validate:"uuid"`
 	Letters  string `json:"letters"  validate:"alpha"`
 	Handle   string `json:"handle"   validate:"alphanum"`
+	Color    string `json:"color"    validate:"omitempty,hexcolor"`
 	Optional string `json:"optional" validate:"omitempty,email"`
 }
 
@@ -81,19 +82,20 @@ func TestRules(t *testing.T) {
 		factory := newFactory(t)
 		valid := formats{
 			Email: "ana@example.com", Link: "https://example.com/a", ID: "123E4567-e89b-12d3-a456-426614174000",
-			Letters: "Ana", Handle: "ana42",
+			Letters: "Ana", Handle: "ana42", Color: "#F59e0b",
 		}
 
 		assert.Nil(t, broken(t, factory, valid))
 		assert.Nil(t, broken(t, factory, formats{
 			Email: "ana@example.com", Link: "mailto:ana@example.com", ID: valid.ID, Letters: "a", Handle: "1",
+			Color: "#abc",
 		}))
 		assert.Equal(t, map[string]string{
 			"email": "email", "link": "url", "id": "uuid", "letters": "alpha", "handle": "alphanum",
-			"optional": "email",
+			"optional": "email", "color": "hexcolor",
 		}, broken(t, factory, formats{
 			Email: "Ana <ana@example.com>", Link: "/relative", ID: "123e4567-e89b-12d3-a456-42661417400g",
-			Letters: "ana1", Handle: "ana_42", Optional: "nope",
+			Letters: "ana1", Handle: "ana_42", Optional: "nope", Color: "red",
 		}))
 		assert.Equal(t, "uuid", broken(t, factory, formats{
 			Email: valid.Email, Link: valid.Link, ID: "123e4567e89b-12d3-a456-4266141740000", Letters: "a", Handle: "a",
@@ -101,6 +103,9 @@ func TestRules(t *testing.T) {
 		assert.Equal(t, "uuid", broken(t, factory, formats{
 			Email: valid.Email, Link: valid.Link, ID: "short", Letters: "a", Handle: "a",
 		})["id"])
+		assert.Equal(t, "hexcolor", broken(t, factory, formats{
+			Email: valid.Email, Link: valid.Link, ID: valid.ID, Letters: "a", Handle: "a", Color: "#12345g",
+		})["color"])
 	})
 
 	t.Run("compares a time with the present of the clock", func(t *testing.T) {

@@ -113,7 +113,7 @@ func TestMailedSecretFailures(t *testing.T) {
 		id, token := resetLink(t, tc, tc.Owner.Email)
 		tc.FailWrites("password_reset_tokens", "UPDATE")
 
-		assertServerError(redeem(tc.Client(), id, "wrong-token"))
+		redeem(tc.Client(), id, "wrong-token").AssertValidationError("token")
 
 		tc.FailWrites("password_reset_tokens", "DELETE")
 		assertServerError(redeem(tc.Client(), id, token))
@@ -125,16 +125,20 @@ func TestMailedSecretFailures(t *testing.T) {
 		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, factories.Password)).AssertCreated()
 	})
 
-	t.Run("deletes no reset when burning it after wrong tokens fails", func(t *testing.T) {
+	t.Run("keeps the reset when burning it after wrong tokens fails", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.WithEnv(behindProxy))
 		id, _ := resetLink(t, tc, tc.Owner.Email)
 		for range 4 {
 			redeem(tc.Client(), id, "wrong-token").AssertValidationError("token")
 		}
+		tc.Drain()
 		tc.FailWrites("password_reset_tokens", "DELETE")
 
-		assertServerError(redeem(tc.Client(), id, "wrong-token"))
+		redeem(tc.Client(), id, "wrong-token").AssertValidationError("token")
+		tc.Drain()
+
+		tc.Table("password_reset_tokens").AssertCount(1, testkit.Row{"user_id": tc.Owner.ID})
 	})
 
 	t.Run("keeps the old password and every session when the account cannot be updated", func(t *testing.T) {

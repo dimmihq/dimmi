@@ -17,21 +17,24 @@ import (
 )
 
 /*
-holding is one way a conversation can be held, with the scope looking
-at it.
+holding is one way a conversation can sit and be held, with the scope
+looking at it.
 */
 type holding struct {
 	scope        conversations.Scope
+	inbox        ids.UUID
 	member, team *ids.UUID
 }
 
 /*
 holdings returns every access mode and shape of list against every way
-of holding a conversation.
+of holding a conversation, in an inbox the scope opens and one it may
+not.
 */
 func holdings() []holding {
 	me, other := ids.New(), ids.New()
 	listedTeam, otherTeam := ids.New(), ids.New()
+	open, hidden := ids.New(), ids.New()
 
 	var out []holding
 
@@ -42,11 +45,14 @@ func holdings() []holding {
 		for _, list := range [][]ids.UUID{nil, {listedTeam}} {
 			for _, member := range []*ids.UUID{nil, &me, &other} {
 				for _, team := range []*ids.UUID{nil, &listedTeam, &otherTeam} {
-					out = append(out,
-						holding{conversations.Scope{Mode: mode, MemberID: &me, TeamIDs: list}, member, team},
-						holding{conversations.Scope{
-							Mode: mode, MemberID: &me, TeamIDs: list, Unassigned: true,
-						}, member, team})
+					for _, inbox := range []ids.UUID{open, hidden} {
+						scope := conversations.Scope{
+							Mode: mode, MemberID: &me, TeamIDs: list, HiddenInboxes: []ids.UUID{hidden},
+						}
+						out = append(out, holding{scope, inbox, member, team})
+						scope.Unassigned = true
+						out = append(out, holding{scope, inbox, member, team})
+					}
 				}
 			}
 		}
@@ -65,13 +71,15 @@ func TestScopeEqualsSQLFunction(t *testing.T) {
 
 		var viaSQL *bool
 
-		err := tc.App.DB.QueryRow(t.Context(), "SELECT dimmi_conversation_visible($1, $2, $3, $4, $5, $6)",
-			h.member, h.team, params.Mode, params.Viewer, params.Teams, params.Unassigned).Scan(&viaSQL)
+		err := tc.App.DB.QueryRow(t.Context(), "SELECT dimmi_conversation_visible($1, $2, $3, $4, $5, $6, $7, $8)",
+			h.member, h.team, h.inbox, params.Mode, params.Viewer, params.Teams, params.Unassigned,
+			params.HiddenInboxes).Scan(&viaSQL)
 		require.NoError(t, err)
 
-		name := fmt.Sprintf("%s list=%d unassigned=%v member=%v team=%v",
-			h.scope.Mode, len(h.scope.TeamIDs), h.scope.Unassigned, h.member != nil, h.team != nil)
-		held := models.Conversation{AssigneeMemberID: h.member, AssigneeTeamID: h.team}
+		name := fmt.Sprintf("%s list=%d unassigned=%v member=%v team=%v hidden=%v",
+			h.scope.Mode, len(h.scope.TeamIDs), h.scope.Unassigned, h.member != nil, h.team != nil,
+			!h.scope.OpensInbox(h.inbox))
+		held := models.Conversation{InboxID: h.inbox, AssigneeMemberID: h.member, AssigneeTeamID: h.team}
 
 		assert.Equal(t, viaSQL != nil && *viaSQL, h.scope.Contains(held), name)
 	}
@@ -108,8 +116,8 @@ func TestScopeRules(t *testing.T) {
 		me := ids.New()
 		scope := conversations.Scope{Mode: "", MemberID: &me}
 
-		assert.True(t, scope.Sees(&me, nil))
-		assert.False(t, scope.Sees(nil, nil))
+		assert.True(t, scope.Sees(ids.New(), &me, nil))
+		assert.False(t, scope.Sees(ids.New(), nil, nil))
 	})
 }
 

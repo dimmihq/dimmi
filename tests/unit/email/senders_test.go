@@ -176,6 +176,10 @@ func TestThreadingInputs(t *testing.T) {
 	assert.NotEqual(t, email.DedupeKey(withID), email.DedupeKey(bare))
 	assert.True(t, strings.HasPrefix(email.SyntheticID(bare), "dimmi-synth-"))
 	assert.True(t, strings.HasPrefix(email.DedupeKey(bare), "email:"))
+	assert.NotEqual(t, email.DedupeKey(email.Identity{MessageID: "same@x.test", From: "ann@a.test"}),
+		email.DedupeKey(email.Identity{MessageID: "same@x.test", From: "bob@b.test"}))
+	assert.Equal(t, email.DedupeKey(email.Identity{MessageID: "same@x.test", From: "Ann@A.test"}),
+		email.DedupeKey(email.Identity{MessageID: "same@x.test", From: "ann@a.test"}))
 
 	assert.Equal(t, []string{"c", "a"}, email.ReferenceLookups([]string{"b"}, []string{"a", "b", "c"}))
 	assert.Equal(t, "root", email.ThreadRoot([]string{"root", "x"}, []string{"y"}, "own"))

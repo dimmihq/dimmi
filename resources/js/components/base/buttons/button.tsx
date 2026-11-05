@@ -5,6 +5,7 @@ import type {
   ReactNode,
   Ref,
 } from "react";
+import { SpinnerGlyph, type SpinnerSize } from "@/components/base/spinner/spinner";
 import { cx, sortCx } from "@/utils/cx";
 import { directionalIconClass } from "@/utils/directional-icon";
 
@@ -45,6 +46,11 @@ import { directionalIconClass } from "@/utils/directional-icon";
  * For icon-only buttons:
  *   <Button iconOnly leadingIcon={RiAddLine} aria-label="Add" />
  *
+ * While work it started is running, pass `loading`: the button disables
+ * itself, says it is busy, and shows a spinner in the leading icon's
+ * place (or before the label), keeping its label so its width holds.
+ *   <Button loading={save.isPending}>Save</Button>
+ *
  * The HTML `type` prop is preserved; Figma's "Type" enum is renamed to
  * `variant` to avoid the clash.
  */
@@ -62,6 +68,8 @@ export interface ButtonProps
   variant?: ButtonVariant;
   size?: ButtonSize;
   iconOnly?: boolean;
+  /** Work the button started is running: disabled, busy, spinner in place of the leading icon. */
+  loading?: boolean;
   leadingIcon?: IconComponent;
   trailingIcon?: IconComponent;
   children?: ReactNode;
@@ -155,15 +163,19 @@ const styles = sortCx({
   },
 });
 
+const spinnerSize: Record<ButtonSize, SpinnerSize> = { medium: "md", small: "sm", xs: "xs" };
+
 export function Button({
   variant = "primary",
   size = "medium",
   iconOnly = false,
+  loading = false,
   leadingIcon: Leading,
   trailingIcon: Trailing,
   children,
   className,
   type = "button",
+  disabled,
   ref,
   ...props
 }: ButtonProps) {
@@ -171,6 +183,8 @@ export function Button({
     <button
       ref={ref}
       type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cx(
         styles.base,
         styles.size[size],
@@ -180,7 +194,13 @@ export function Button({
       )}
       {...props}
     >
-      {Leading ? <Leading className={cx(styles.icon[size], directionalIconClass(Leading))} aria-hidden /> : null}
+      {loading ? (
+        <span className={cx(styles.icon[size], "inline-flex items-center justify-center")}>
+          <SpinnerGlyph size={spinnerSize[size]} track={false} className="text-current" />
+        </span>
+      ) : Leading ? (
+        <Leading className={cx(styles.icon[size], directionalIconClass(Leading))} aria-hidden />
+      ) : null}
       {!iconOnly && children !== undefined && children !== null && (
         <span className={styles.label[size]}>{children}</span>
       )}

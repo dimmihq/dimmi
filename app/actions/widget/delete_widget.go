@@ -42,9 +42,10 @@ SessionCloser ends the realtime streams of sessions that just ended.
 */
 type SessionCloser interface {
 	/*
-		CloseSessions disconnects every stream of the sessions.
+		CloseSessions tells every stream of the sessions they ended and
+		disconnects it.
 	*/
-	CloseSessions(ctx context.Context, sessionIDs []ids.UUID) error
+	CloseSessions(ctx context.Context, ended []EndedSession) error
 }
 
 /*
@@ -74,7 +75,7 @@ func (a *DeleteWidget) Handle(ctx context.Context, in DeleteWidgetInput) error {
 		return exceptions.ErrForbidden
 	}
 
-	var sessions []ids.UUID
+	var sessions []EndedSession
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
@@ -95,7 +96,7 @@ func (a *DeleteWidget) Handle(ctx context.Context, in DeleteWidgetInput) error {
 /*
 remove writes the deletion and returns the sessions it ended.
 */
-func (a *DeleteWidget) remove(ctx context.Context, tx *database.Tx, in DeleteWidgetInput) ([]ids.UUID, error) {
+func (a *DeleteWidget) remove(ctx context.Context, tx *database.Tx, in DeleteWidgetInput) ([]EndedSession, error) {
 	q, ws, now := models.New(tx), in.Membership.Workspace.ID, a.Clock.Now()
 
 	widget, err := q.FindWidgetSettings(ctx, models.FindWidgetSettingsParams{WorkspaceID: ws, ID: in.WidgetID})
@@ -121,11 +122,16 @@ func (a *DeleteWidget) remove(ctx context.Context, tx *database.Tx, in DeleteWid
 
 	reason := string(enums.WidgetRevokeWidgetDeleted)
 
-	sessions, err := q.RevokeWidgetSessionsForWidget(ctx, models.RevokeWidgetSessionsForWidgetParams{
+	rows, err := q.RevokeWidgetSessionsForWidget(ctx, models.RevokeWidgetSessionsForWidgetParams{
 		Now: now, Reason: reason, WorkspaceID: ws, WidgetSettingsID: widget.ID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("revoke widget sessions: %w", err)
+	}
+
+	sessions := make([]EndedSession, 0, len(rows))
+	for _, row := range rows {
+		sessions = append(sessions, EndedSession{ID: row.ID, ContactID: row.ContactID})
 	}
 
 	return sessions, a.Events.Dispatch(ctx, tx, appevents.WidgetDeleted{

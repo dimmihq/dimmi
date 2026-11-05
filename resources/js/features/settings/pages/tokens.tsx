@@ -30,7 +30,7 @@ import {
 } from "@/lib/api/tokens";
 import { entitlementsQuery } from "@/lib/api/workspace";
 import { Action, Choice } from "../controls";
-import { Empty, Glyph, Item, Section, SettingsPage } from "../layout";
+import { Empty, Glyph, Item, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { useRecentAuth } from "../recent-auth";
 import { abilityLabel, expiryChoices, expiryFor, isLive, rateLimitLine, tokenDetail } from "../token-format";
 import { useAccount } from "../use-account";
@@ -80,7 +80,7 @@ export function TokensSettings() {
           </div>
         ) : null}
         {inWorkspace ? null : <Empty>Tokens work inside a workspace. Join or create one first.</Empty>}
-        {inWorkspace && isPending ? <Empty>Loading…</Empty> : null}
+        {inWorkspace && isPending ? <RowsSkeleton rows={2} /> : null}
         {inWorkspace && !isPending && tokens.length === 0 ? <Empty>No tokens yet</Empty> : null}
         {tokens.map((token) => (
           <Item key={token.id} mark={<Glyph icon={RiKey2Line} />} title={token.name} detail={tokenDetail(token, now)}>

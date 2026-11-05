@@ -60,7 +60,8 @@ refuses all when nil. WebPushGone hears about push subscriptions the
 push service dropped. MaintenanceExcept lists paths that keep working
 during maintenance, such as inbound webhooks, and GateExcept the paths
 the shared password gate leaves open, such as signed webhooks and assets
-other sites load. RouteRules are the rules
+other sites load. GatePage says the application routes the gate's
+password page itself, at middleware.GatePath. RouteRules are the rules
 route:lint checks. Module is the application's module path, Stubs its
 own stubs and Root the project directory, "." when empty, all for the
 make generators. LogWriter receives log
@@ -89,6 +90,7 @@ type Options struct {
 	WebPushGone       webpush.GoneFunc
 	MaintenanceExcept []string
 	GateExcept        []string
+	GatePage          bool
 	RouteRules        routing.Rules
 	Module            string
 	Stubs             fs.FS

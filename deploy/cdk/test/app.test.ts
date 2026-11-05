@@ -136,7 +136,7 @@ describe("app stack", () => {
 
     expect(migrate.Command).toEqual(["migrate", "--force"]);
     expect(JSON.stringify(url?.ValueFrom)).toMatch(/owner_database_url/);
-    expect(String(variable(provision, "PROVISION_SQL"))).toMatch(/NOBYPASSRLS/);
+    expect(String(variable(provision, "PROVISION_SQL"))).toMatch(/rolbypassrls/);
     expect(provision.Secrets?.some((secret) => secret.Name === "PGPASSWORD")).toBeTruthy();
   });
 

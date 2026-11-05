@@ -27,14 +27,18 @@ import {
   DashboardSidebar,
   type DashboardSwitcher,
 } from "@/components/application/dashboard/dashboard-sidebar";
-import { MenuDivider, MenuRowList } from "@/components/application/dashboard/dashboard-user-menu";
+import {
+  MenuActionRow,
+  MenuDivider,
+  MenuHeader,
+  MenuRowList,
+} from "@/components/application/dashboard/dashboard-user-menu";
 import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
 import { ActionProvider } from "@/features/inbox/actions/action-provider";
-import { useSidebarViews } from "@/features/inbox/views/use-sidebar-views";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
-import { callerQuery } from "@/lib/api/workspace";
+import { countsQuery } from "@/lib/api/inbox";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 
 import { useAvailability } from "./availability";
@@ -61,6 +65,18 @@ function initialsOf(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?";
 }
 
+const roleNames: Record<string, string> = { owner: "Owner", admin: "Admin", member: "Member" };
+
+function roleOf(role: string): string {
+  return roleNames[role] ?? role;
+}
+
+/*
+ * useSwitcher is the workspace menu at the top of the sidebar: the
+ * workspace on screen, the others to switch to, and starting a new one.
+ * Switching goes back through the app's door, so a workspace still being
+ * set up opens its setup instead; a new workspace starts its own setup.
+ */
 function useSwitcher(me: Me): DashboardSwitcher {
   const router = useRouter();
   const { current, choose } = useCurrentWorkspace(me.workspaces);
@@ -71,7 +87,18 @@ function useSwitcher(me: Me): DashboardSwitcher {
     menuLabel: "Workspaces",
     menu: (close) => (
       <>
-        {me.workspaces.length > 0 ? (
+        {current && me.workspaces.length < 2 ? (
+          <MenuHeader
+            initials={initialsOf(current.name)}
+            color="neutral"
+            name={current.name}
+            detail={roleOf(current.role)}
+          />
+        ) : null}
+        {current ? null : (
+          <p className="px-2 py-1.5 text-body-2-regular text-text-secondary">You are not in a workspace yet.</p>
+        )}
+        {me.workspaces.length > 1 ? (
           <MenuRowList
             title="Workspaces"
             rows={me.workspaces.map((workspace) => ({
@@ -79,33 +106,37 @@ function useSwitcher(me: Me): DashboardSwitcher {
               initials: initialsOf(workspace.name),
               color: "neutral",
               name: workspace.name,
+              detail: roleOf(workspace.role),
               isSelected: workspace.id === current?.id,
             }))}
             onSelect={(id) => {
-              choose(id);
               close();
+              if (id === current?.id) {
+                return;
+              }
+              choose(id);
+              void router.navigate({ to: "/d" });
             }}
           />
-        ) : (
-          <p className="px-2 pt-1 text-body-regular text-text-secondary">You are not in a workspace yet.</p>
-        )}
+        ) : null}
         <MenuDivider />
-        <div className="flex w-full items-center gap-3 px-2 pb-2">
-          <Button variant="secondary" size="small" leadingIcon={RiAddLine} className="flex-1" disabled>
-            New workspace
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            leadingIcon={RiSettings4Line}
-            className="flex-1"
-            onClick={() => {
+        <div className="flex flex-col gap-0.5">
+          <MenuActionRow
+            icon={RiAddLine}
+            label="New workspace"
+            onSelect={() => {
+              close();
+              void router.navigate({ to: "/onboarding", search: { new: true } });
+            }}
+          />
+          <MenuActionRow
+            icon={RiSettings4Line}
+            label="Workspace settings"
+            onSelect={() => {
               close();
               router.history.push(settingsPages.workspace.href);
             }}
-          >
-            Settings
-          </Button>
+          />
         </div>
       </>
     ),
@@ -188,14 +219,10 @@ function SignedInShell({
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
-  const views = useSidebarViews(workspace?.id ?? "");
-  const { data: caller } = useQuery({ ...callerQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
-  const access = caller?.member;
-  const seesUnassigned =
-    !access || !["assigned", "teams"].includes(access.conversation_access) || access.conversation_access_unassigned;
+  const { data: counts } = useQuery({ ...countsQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
   const sections = inSettings
     ? settingsSections(me.instance?.edition === "cloud")
-    : appSections(views.sections, views.canDelete, seesUnassigned);
+    : appSections(counts?.views.mine.open);
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (

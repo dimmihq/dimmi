@@ -25,8 +25,9 @@ it.describe("own profile", () => {
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue("Ada Lovelace");
 
+    const chooser = page.waitForEvent("filechooser");
     await page.getByRole("button", { name: "Upload" }).click();
-    await page.getByRole("dialog").locator('input[type="file"]').setInputFiles({
+    await (await chooser).setFiles({
       name: "me.png",
       mimeType: "image/png",
       buffer: onePixel,

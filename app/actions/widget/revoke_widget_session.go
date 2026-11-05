@@ -18,7 +18,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -64,5 +63,5 @@ func (a *RevokeWidgetSession) Handle(ctx context.Context, in RevokeWidgetSession
 		return err
 	}
 
-	return a.Streams.CloseSessions(ctx, []ids.UUID{in.Session.ID})
+	return a.Streams.CloseSessions(ctx, []EndedSession{{ID: in.Session.ID, ContactID: in.Session.ContactID}})
 }

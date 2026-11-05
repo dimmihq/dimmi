@@ -143,7 +143,7 @@ it.describe("workspace and members", () => {
     await page.goto("/d/settings/workspace");
     await expect(page.getByText("1 member has no second factor yet.")).toBeVisible();
     await page.getByRole("link", { name: "See who" }).click();
-    await expect(page).toHaveURL(/\/d\/settings\/members\?two_factor=false$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/members\?two_factor=false$/);
 
     const members = page.getByRole("region", { name: "Members" });
     await expect(members.getByText(teammate.name)).toBeVisible();

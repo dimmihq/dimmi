@@ -71,8 +71,8 @@ function TwoFactorHelpDialog({
             <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
-            <Button onClick={() => member && send.mutate(member)} disabled={send.isPending}>
-              {send.isPending ? "Sending…" : "Send reset link"}
+            <Button onClick={() => member && send.mutate(member)} loading={send.isPending}>
+              Send reset link
             </Button>
           </ModalFooter>
         </>

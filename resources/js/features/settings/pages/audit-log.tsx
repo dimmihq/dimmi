@@ -15,10 +15,10 @@ import { Button } from "@/components/base/buttons/button";
 import { DateRangePicker, type DateRangeValue } from "@/components/base/date-picker/date-range-picker";
 import { Select, SelectItem, SelectSection } from "@/components/base/select/select";
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/base/table/table";
+import { TableSkeleton } from "@/features/shell/table-skeleton";
 import { type AuditEntry, type AuditFilters, auditLogsQuery, exportAuditLog } from "@/lib/api/audit";
 import { ApiError } from "@/lib/api/client";
 import { membersQuery } from "@/lib/api/workspace";
-
 import { AuditEntryDetail } from "../audit-entry-detail";
 import { oldestDay, presetRanges, rangeFilters } from "../audit-range";
 import { Empty, SettingsPage } from "../layout";
@@ -107,7 +107,17 @@ function EventFilter({
   );
 }
 
-function Entries({ entries, zone, onOpen }: { entries: AuditEntry[]; zone?: string; onOpen: (e: AuditEntry) => void }) {
+function Entries({
+  entries,
+  loading,
+  zone,
+  onOpen,
+}: {
+  entries: AuditEntry[];
+  loading: boolean;
+  zone?: string;
+  onOpen: (e: AuditEntry) => void;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl bg-background-secondary-default">
       <Table
@@ -129,7 +139,13 @@ function Entries({ entries, zone, onOpen }: { entries: AuditEntry[]; zone?: stri
         </TableHeader>
         <TableBody
           items={entries}
-          renderEmptyState={() => <p className="py-2 text-body-2-regular text-text-tertiary">No events match.</p>}
+          renderEmptyState={() =>
+            loading ? (
+              <TableSkeleton />
+            ) : (
+              <p className="py-2 text-body-2-regular text-text-tertiary">No events match.</p>
+            )
+          }
         >
           {(entry) => (
             <TableRow id={entry.id} className="cursor-pointer">
@@ -245,7 +261,7 @@ export function AuditLogSettings() {
             size="small"
             leadingIcon={RiDownloadLine}
             className="ms-auto"
-            disabled={download.isPending}
+            loading={download.isPending}
             onClick={() => download.mutate()}
           >
             Export CSV
@@ -257,7 +273,7 @@ export function AuditLogSettings() {
             {download.error.message}
           </p>
         ) : null}
-        <Entries zone={me.displayZone} entries={data?.items ?? []} onOpen={setOpen} />
+        <Entries zone={me.displayZone} entries={data?.items ?? []} loading={!(data || error)} onOpen={setOpen} />
         <div className="flex justify-end gap-2">
           <Button
             variant="secondary"

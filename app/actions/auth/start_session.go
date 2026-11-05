@@ -28,6 +28,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/session"
 
@@ -51,12 +52,24 @@ var errNoSession = errors.New("start session: no session in context")
 /*
 StartSessionInput is who signed in, with which methods in order, and
 from which client. Reauth marks a fresh sign-in on an existing session.
+Context says where the sign-in came from when an outside service vouched
+for it.
 */
 type StartSessionInput struct {
 	User    models.User
 	Methods []string
 	Client  appauth.Client
 	Reauth  bool
+	Context SignInContext
+}
+
+/*
+SignInContext is the part of a sign-in a workspace's rules read later:
+the connection it came through and the domain that vouched for it.
+*/
+type SignInContext struct {
+	ConnectionID ids.UUID
+	Domain       string
 }
 
 /*
@@ -115,6 +128,8 @@ func (a *StartSession) Handle(ctx context.Context, in StartSessionInput) (Starte
 
 	s.Login(in.User.ID, in.Methods...)
 	s.SetDevice(in.Client.DeviceID(), a.Devices.Label(in.Client.UserAgent))
+	s.SetSignInContext(in.Context.ConnectionID, in.Context.Domain)
+	appauth.MarkWorked(s, a.Clock.Now())
 	signIn := appauth.SignInOf(s)
 
 	if err := a.record(ctx, s, in); err != nil {
@@ -135,6 +150,8 @@ func (a *StartSession) Handle(ctx context.Context, in StartSessionInput) (Starte
 		Principal: &appauth.Principal{
 			User: in.User, Kind: appauth.KindSession, CredentialID: s.ID(), Granted: []string{appauth.AllAbilities},
 			SignIn: signIn, AuthenticatedAt: s.AuthenticatedAt(), Confirmed: s.ConfirmedAt(),
+			IP: in.Client.Addr(), LastActivityAt: a.Clock.Now(), SSOConnectionID: in.Context.ConnectionID,
+			AuthDomain: in.Context.Domain,
 		},
 		DeviceToken: fresh,
 	}, nil
