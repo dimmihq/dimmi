@@ -1,11 +1,12 @@
 /*
  * Creating an account with a name, an email and a password, or through
  * a provider. On a server that takes accounts by invitation only, the
- * page says so instead of offering a form that cannot work.
+ * page says so instead of offering a form that cannot work. A server with
+ * a captcha waits for its answer before the form can be sent.
  */
 import { RiMailLine } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
-import type { FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -13,6 +14,7 @@ import { ButtonLink, LinkButton } from "@/features/navigation/links";
 import { type AuthConfig, type Me, signUp } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader, AuthStatus } from "./auth-frame";
+import { CaptchaField } from "./captcha-field";
 import { field } from "./form-data";
 import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
@@ -24,12 +26,24 @@ export interface SignupFormProps {
 }
 
 export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
+  const [token, setToken] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
   const register = useMutation({
     mutationFn: (form: FormData) =>
-      signUp({ name: field(form, "name"), email: field(form, "email"), password: field(form, "password") }),
+      signUp({
+        name: field(form, "name"),
+        email: field(form, "email"),
+        password: field(form, "password"),
+        ...(token ? { captcha_token: token } : {}),
+      }),
     onSuccess: onSignedIn,
+    onError: () => {
+      setToken(null);
+      setRound((n) => n + 1);
+    },
   });
-  const fields = ["name", "email", "password"];
+  const waiting = Boolean(config.captcha) && token === null;
+  const fields = ["name", "email", "password", "captcha_token"];
   const errorFor = (name: string) => fieldError(register.error, name, fields, "email");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -100,7 +114,13 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
           isInvalid={Boolean(errorFor("password"))}
           errorMessage={errorFor("password")}
         />
-        <Button type="submit" className="w-full" disabled={register.isPending}>
+        {config.captcha ? <CaptchaField key={round} captcha={config.captcha} onToken={setToken} /> : null}
+        {errorFor("captcha_token") ? (
+          <p role="alert" className="text-body-2-regular text-text-error-primary">
+            {errorFor("captcha_token")}
+          </p>
+        ) : null}
+        <Button type="submit" className="w-full" disabled={register.isPending || waiting}>
           {register.isPending ? "Creating account…" : "Create account"}
         </Button>
         <p className="text-caption-1-regular text-text-tertiary">

@@ -24,6 +24,11 @@ import (
 )
 
 /*
+Origin is where the browser loads the challenge's script and frame from.
+*/
+const Origin = "https://challenges.cloudflare.com"
+
+/*
 Check failures.
 
 ErrRejected means the provider judged the answer wrong, used or missing.

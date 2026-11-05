@@ -15,6 +15,7 @@ import (
 	"fmt"
 
 	"github.com/dimmihq/dimmi/app"
+	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/support/turnstile"
 	appconfig "github.com/dimmihq/dimmi/config"
@@ -44,4 +45,18 @@ func signupRisk(a *app.App) (*appauth.SignupRisk, error) {
 	}
 
 	return &appauth.SignupRisk{Disposable: domains, Mode: a.Config.Auth.DisposableEmail, Limiter: a.Limiter}, nil
+}
+
+/*
+captchaSources returns the origins pages must trust for the configured
+captcha to show, none without one.
+*/
+func captchaSources(a *app.App) appmiddleware.Trusted {
+	if a.Config.Auth.Captcha.Driver != appconfig.CaptchaTurnstile {
+		return appmiddleware.Trusted{}
+	}
+
+	origins := []string{turnstile.Origin}
+
+	return appmiddleware.Trusted{Scripts: origins, Frames: origins}
 }

@@ -84,7 +84,7 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 		Build: p.App.Frontend, Base: "/build", HotFile: p.App.Config.Frontend.HotPath, React: true,
 	})
 	fa.Kernel.Alias("csp", func(...string) (fhttp.Middleware, error) {
-		return appmiddleware.ContentSecurityPolicy(p.App.Vite), nil
+		return appmiddleware.ContentSecurityPolicy(p.App.Vite, captchaSources(p.App)), nil
 	})
 
 	widget, err := widgetassets.New(p.App.Widget, p.App.Config.Widget.AssetsBaseURL)

@@ -111,6 +111,24 @@ func TestAppPage(t *testing.T) {
 		assert.Contains(t, policy, "connect-src 'self' http://localhost:5173 ws://localhost:5173")
 	})
 
+	t.Run("trusts the captcha provider only while a captcha is on", func(t *testing.T) {
+		t.Parallel()
+		strict := tests.New(t, withBuild())
+		captcha := tests.New(t, withBuild(), tests.WithEnv(
+			"DIMMI_AUTH__CAPTCHA__DRIVER=turnstile", "DIMMI_AUTH__CAPTCHA__SITE_KEY=site",
+			"DIMMI_AUTH__CAPTCHA__SECRET_KEY=secret",
+		))
+
+		policy := strict.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK().Header.Get("Content-Security-Policy")
+		assert.NotContains(t, policy, "cloudflare")
+		assert.Contains(t, policy, "frame-src 'self';")
+
+		policy = captcha.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK().Header.Get("Content-Security-Policy")
+		assert.Regexp(t, `script-src 'self' 'nonce-[^']+' https://challenges\.cloudflare\.com;`, policy)
+		assert.Contains(t, policy, "frame-src 'self' https://challenges.cloudflare.com;")
+		assert.Contains(t, policy, "connect-src 'self';")
+	})
+
 	t.Run("fails the page of a binary built without the app", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.Before(func(a *app.App) { a.Frontend = fstest.MapFS{} }))

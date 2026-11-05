@@ -31,6 +31,17 @@ export interface AuthConfig {
   password_min_length: number;
   providers: Provider[];
   locales: Locale[];
+  captcha?: Captcha | null;
+}
+
+/*
+ * Captcha is the challenge the server asks strangers to solve before
+ * signing up or mailing a sign-in link, with the key the browser shows
+ * it with.
+ */
+export interface Captcha {
+  provider: "turnstile";
+  site_key: string;
 }
 
 /*
@@ -159,12 +170,12 @@ export async function signInWithPasskey(options: RequestOptions): Promise<Me> {
   return request<Me>("POST", "/sessions", { grant: "two_factor", method: "passkey", credential });
 }
 
-export function signUp(input: { name: string; email: string; password: string }): Promise<Me> {
+export function signUp(input: { name: string; email: string; password: string; captcha_token?: string }): Promise<Me> {
   return request<Me>("POST", "/users", input);
 }
 
-export function sendMagicLink(email: string): Promise<Message> {
-  return request<Message>("POST", "/magic-links", { email });
+export function sendMagicLink(email: string, captchaToken?: string): Promise<Message> {
+  return request<Message>("POST", "/magic-links", { email, ...(captchaToken ? { captcha_token: captchaToken } : {}) });
 }
 
 export function requestPasswordReset(email: string): Promise<Message> {

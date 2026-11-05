@@ -42,4 +42,32 @@ describe("SignupForm", () => {
     expect(screen.getByText("Signing up is by invitation")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Create account" })).toBeNull();
   });
+
+  it("waits for the captcha's answer and sends it with the form", async () => {
+    let solve: (token: string) => void = () => undefined;
+    vi.stubGlobal("turnstile", {
+      render: (_element: HTMLElement, options: { callback: (token: string) => void }) => {
+        solve = options.callback;
+        return "widget";
+      },
+      remove: vi.fn(),
+    });
+    const fetch = answer([201, { data: { user: { name: "Grace" }, workspaces: [] } }]);
+    const captcha = { provider: "turnstile" as const, site_key: "site" };
+    renderWithQueries(<SignupForm config={{ ...config, captcha }} redirect="/d" onSignedIn={vi.fn()} />);
+
+    fill(/full name/i, "Grace Hopper");
+    fill(/email/i, "grace@example.com");
+    fill(/password/i, "analytical-engine-1843");
+    const create = screen.getByRole("button", { name: "Create account" }) as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+
+    await waitFor(() => expect(screen.getByRole("group", { name: "Check that you are not a robot" })).toBeTruthy());
+    await waitFor(() => solve("answer"));
+    await waitFor(() => expect(create.disabled).toBe(false));
+    fireEvent.click(create);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toMatchObject({ captcha_token: "answer" });
+  });
 });

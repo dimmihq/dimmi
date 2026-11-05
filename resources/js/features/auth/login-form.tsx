@@ -1,6 +1,7 @@
 /*
  * Signing in with a password, or by mail: the person asks for a link and
  * then either follows it or types the six-digit code it carries here.
+ * A server with a captcha asks for its answer before mailing a link.
  */
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
@@ -14,6 +15,7 @@ import { LinkButton } from "@/features/navigation/links";
 import { type AuthConfig, type SignInResult, sendMagicLink, signIn, signInWithCode } from "@/lib/api/auth";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
+import { CaptchaField } from "./captcha-field";
 import { field } from "./form-data";
 import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
@@ -29,7 +31,14 @@ export function LoginForm({ config, redirect, initialError, onSignedIn }: LoginF
   const [mailedTo, setMailedTo] = useState<string | null>(null);
 
   if (mailedTo) {
-    return <CodeStep email={mailedTo} onSignedIn={onSignedIn} onBack={() => setMailedTo(null)} />;
+    return (
+      <CodeStep
+        email={mailedTo}
+        onSignedIn={onSignedIn}
+        onBack={() => setMailedTo(null)}
+        resendFromForm={Boolean(config.captcha)}
+      />
+    );
   }
 
   return (
@@ -51,11 +60,21 @@ function PasswordStep({
   onMailed,
 }: LoginFormProps & { onMailed: (email: string) => void }) {
   const [email, setEmail] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
   const login = useMutation({
     mutationFn: (form: FormData) => signIn(field(form, "email"), field(form, "password")),
     onSuccess: onSignedIn,
   });
-  const link = useMutation({ mutationFn: sendMagicLink, onSuccess: () => onMailed(email) });
+  const link = useMutation({
+    mutationFn: (to: string) => sendMagicLink(to, token ?? undefined),
+    onSuccess: () => onMailed(email),
+    onError: () => {
+      setToken(null);
+      setRound((n) => n + 1);
+    },
+  });
+  const asksCaptcha = config.magic_link && config.captcha;
   const error = login.error ?? link.error;
   const fields = ["email", "password"];
   const emailError = fieldError(error, "email", fields, "email");
@@ -117,11 +136,12 @@ function PasswordStep({
         <Button type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}
         </Button>
+        {asksCaptcha ? <CaptchaField key={round} captcha={asksCaptcha} onToken={setToken} /> : null}
         {config.magic_link ? (
           <Button
             variant="secondary"
             className="w-full"
-            disabled={link.isPending || !email}
+            disabled={link.isPending || !email || (Boolean(asksCaptcha) && token === null)}
             onClick={() => link.mutate(email)}
           >
             {link.isPending ? "Sending…" : "Email me a sign-in link"}
@@ -141,10 +161,12 @@ export function CodeStep({
   email,
   onSignedIn,
   onBack,
+  resendFromForm = false,
 }: {
   email: string;
   onSignedIn: (result: SignInResult) => void;
   onBack: () => void;
+  resendFromForm?: boolean;
 }) {
   const [code, setCode] = useState("");
   const verify = useMutation({
@@ -204,7 +226,8 @@ export function CodeStep({
         </Button>
       </form>
       <AuthFooter>
-        Code not arriving? <LinkButton onClick={() => resend.mutate()}>Send a new one</LinkButton> or{" "}
+        Code not arriving?{" "}
+        <LinkButton onClick={() => (resendFromForm ? onBack() : resend.mutate())}>Send a new one</LinkButton> or{" "}
         <LinkButton onClick={onBack}>use a password</LinkButton>
       </AuthFooter>
     </AuthCard>
