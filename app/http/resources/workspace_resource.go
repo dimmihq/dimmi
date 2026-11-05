@@ -29,7 +29,8 @@ inbox runs on links customers send, and Retention how long
 conversations and their files are kept. DeletedAt and PurgeAfter are set
 while it is in the trash: when it was deleted, and when it is purged for
 good unless restored. UndoSendSeconds is how long replies wait before
-they leave.
+they leave. Onboarding is how far its setup has come: the step reached,
+and when it finished, null until then.
 */
 type Workspace struct {
 	ID                 string            `json:"id"`
@@ -46,8 +47,17 @@ type Workspace struct {
 	LinkSafety         models.LinkSafety `json:"link_safety"`
 	Retention          models.Retention  `json:"retention"`
 	UndoSendSeconds    int               `json:"undo_send_seconds"`
+	Onboarding         Onboarding        `json:"onboarding"`
 	DeletedAt          *time.Time        `json:"deleted_at"`
 	PurgeAfter         *time.Time        `json:"purge_after"`
+}
+
+/*
+Onboarding is how far a workspace's setup has come.
+*/
+type Onboarding struct {
+	Step        string     `json:"step"`
+	CompletedAt *time.Time `json:"completed_at"`
 }
 
 /*
@@ -69,6 +79,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		LinkSafety:         w.LinkSafety(),
 		Retention:          w.Retention(),
 		UndoSendSeconds:    w.UndoSendSeconds(),
+		Onboarding:         Onboarding{Step: w.OnboardingStep, CompletedAt: w.OnboardingCompletedAt},
 		DeletedAt:          w.DeletedAt,
 		PurgeAfter:         w.PurgeAfter,
 	}

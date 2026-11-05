@@ -71,6 +71,7 @@ type Actions struct {
 	UnlinkOAuthIdentity     *auth.UnlinkOAuthIdentity
 	ResolveWorkspace        *workspaces.ResolveWorkspace
 	UpdateWorkspace         *workspaces.UpdateWorkspace
+	UpdateOnboarding        *workspaces.UpdateOnboarding
 	ListMemberships         *workspaces.ListMemberships
 	RepairWorkspaces        *workspaces.RepairWorkspaces
 	ListMembers             *members.ListMembers

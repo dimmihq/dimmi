@@ -53,7 +53,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
 
   return (
     <AuthCard>
-      <AuthHeader title="Create your workspace" />
+      <AuthHeader title="Create your account" />
       <ProviderButtons
         providers={config.providers}
         redirect={redirect}

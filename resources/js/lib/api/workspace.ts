@@ -152,6 +152,14 @@ export function callerQuery(workspace: string) {
   });
 }
 
+/*
+ * createWorkspace makes a workspace the caller owns, such as their first
+ * one during onboarding.
+ */
+export function createWorkspace(name: string): Promise<Workspace> {
+  return request<Workspace>("POST", "/workspaces", { name });
+}
+
 export function updateWorkspace(workspace: string, changes: WorkspaceChanges): Promise<Workspace> {
   return request<Workspace>("PATCH", "/workspace", changes, { workspace });
 }

@@ -56,6 +56,7 @@ type InboxActions struct {
 	ListConversations       *conversations.ListConversations
 	ShowConversation        *conversations.ShowConversation
 	CreateConversation      *conversations.CreateConversation
+	CreateTestConversations *conversations.CreateTestConversations
 	ApplyChanges            *conversations.ApplyConversationChanges
 	ShowNeighbors           *conversations.ShowNeighbors
 	CountConversations      *conversations.CountConversations

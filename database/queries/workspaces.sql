@@ -110,3 +110,14 @@ RETURNING *;
 -- DeleteWorkspace removes the workspace row for good, and with it every
 -- row still pointing at it.
 DELETE FROM workspaces WHERE id = @id;
+
+-- name: UpdateWorkspaceOnboarding :one
+-- UpdateWorkspaceOnboarding records the onboarding step the workspace's
+-- owners reached and, once they finish, when. Finishing again keeps the
+-- first time.
+UPDATE workspaces
+SET onboarding_step = @step,
+    onboarding_completed_at = CASE WHEN @complete::boolean THEN coalesce(onboarding_completed_at, @now) ELSE onboarding_completed_at END,
+    updated_at = @now
+WHERE id = @id
+RETURNING *;

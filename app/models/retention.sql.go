@@ -31,7 +31,7 @@ func (q *Queries) CountStaleClosedConversations(ctx context.Context, arg CountSt
 }
 
 const listRetainingWorkspaces = `-- name: ListRetainingWorkspaces :many
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces
 WHERE deleted_at IS NULL AND settings -> 'retention' ->> 'closed_conversation_days' IS NOT NULL
 ORDER BY id
 `
@@ -65,6 +65,8 @@ func (q *Queries) ListRetainingWorkspaces(ctx context.Context) ([]Workspace, err
 			&i.DeletedByUserID,
 			&i.PurgeAfter,
 			&i.SuspendedReason,
+			&i.OnboardingStep,
+			&i.OnboardingCompletedAt,
 		); err != nil {
 			return nil, err
 		}

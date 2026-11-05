@@ -51,3 +51,9 @@ WHERE workspace_id = @workspace_id
   )
 ORDER BY created_at DESC, id DESC
 LIMIT @row_limit;
+
+-- name: MarkConversationAsTest :exec
+-- MarkConversationAsTest flags a conversation as a made-up one, such as
+-- the practice conversations a new workspace starts with: it is never
+-- billed and never reaches a real customer.
+UPDATE conversations SET is_test = true WHERE workspace_id = @workspace_id AND id = @id;

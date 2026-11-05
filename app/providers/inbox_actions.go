@@ -101,7 +101,8 @@ func bootDelivery(a *app.App, delivery conversations.Delivery) {
 
 /*
 bootWorkbench builds the actions of the inbox's workbench: preferences,
-saved views, snooze lists and drafts.
+saved views, snooze lists, drafts and a new workspace's practice
+conversations.
 */
 func bootWorkbench(a *app.App) {
 	acts := a.Actions.Inbox
@@ -124,4 +125,5 @@ func bootWorkbench(a *app.App) {
 	acts.SaveDraft = &drafts.SaveDraft{Saver: drafter}
 	acts.UpdateDraft = &drafts.UpdateDraft{Saver: drafter}
 	acts.DeleteDraft = &drafts.DeleteDraft{Saver: drafter}
+	acts.CreateTestConversations = &conversations.CreateTestConversations{DB: a.DB, Create: acts.CreateConversation}
 }

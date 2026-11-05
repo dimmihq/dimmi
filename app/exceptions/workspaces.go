@@ -43,7 +43,8 @@ Workspace settings failures.
 ErrSlugReserved refuses a slug that reads as part of the product or that
 another workspace gave up recently. ErrSlugTaken refuses one another
 workspace uses. ErrTestModeImmutable refuses to turn a live workspace
-into a test one, or back, after it was created.
+into a test one, or back, after it was created. ErrOnboardingStepUnknown
+refuses a setup step that does not exist.
 */
 var (
 	ErrSlugReserved = fault.New(fault.Invalid, "slug_reserved",
@@ -52,6 +53,8 @@ var (
 		"Another workspace already uses this address.").OnField("slug")
 	ErrTestModeImmutable = fault.New(fault.Invalid, "test_mode_immutable",
 		"Test mode is chosen when a workspace is created and cannot change.").OnField("test_mode")
+	ErrOnboardingStepUnknown = fault.New(fault.Invalid, "onboarding_step_unknown",
+		"There is no such setup step.").OnField("step")
 )
 
 /*

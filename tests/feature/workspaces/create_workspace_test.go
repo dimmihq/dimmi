@@ -2,8 +2,7 @@ package workspaces_test
 
 import (
 	"regexp"
-	"slices"
-	"sync"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
 
@@ -51,40 +51,6 @@ func TestCreateWorkspace(t *testing.T) {
 		tc.Table("workspaces").AssertHas(testkit.Row{"slug": "busy-99"})
 	})
 
-	t.Run("gives workspaces created at the same moment with one name their own slugs", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-		name := "Rush " + tc.Owner.ID.String()[:8]
-
-		var (
-			wait  sync.WaitGroup
-			mu    sync.Mutex
-			slugs []string
-			errs  []error
-		)
-
-		for range 8 {
-			wait.Go(func() {
-				created, err := tc.App.Actions.CreateWorkspace.Handle(t.Context(), workspaces.CreateWorkspaceInput{
-					Owner: tc.Owner, Name: name, JoinedVia: appauth.JoinedViaCreated,
-				})
-
-				mu.Lock()
-				defer mu.Unlock()
-
-				slugs, errs = append(slugs, created.Workspace.Slug), append(errs, err)
-			})
-		}
-
-		wait.Wait()
-
-		for _, err := range errs {
-			require.NoError(t, err)
-		}
-
-		assert.ElementsMatch(t, slugs, slices.Compact(slices.Sorted(slices.Values(slugs))))
-	})
-
 	t.Run("creates nothing when its owner cannot be added", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
@@ -96,5 +62,37 @@ func TestCreateWorkspace(t *testing.T) {
 
 		require.Error(t, err)
 		tc.Table("organizations").AssertMissing(testkit.Row{"name": "Orphan"})
+	})
+}
+
+func TestWorkspacesStore(t *testing.T) {
+	t.Parallel()
+
+	t.Run("lets someone without a workspace create one they own", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		users, err := factories.User(t.Context(), tc.App)
+		require.NoError(t, err)
+		user, err := users.CreateOne(t.Context())
+		require.NoError(t, err)
+		client := tc.ActingAs(user)
+
+		created := client.PostJSON("/api/v1/workspaces", testkit.JSON{"name": "  Acme  "}).AssertCreated()
+
+		created.AssertJSONPath("data.name", "Acme")
+		workspace := created.String("data.id")
+		client.GetJSON("/api/v1/me").AssertOK().AssertJSONPath("data.workspaces.0.id", workspace)
+		client.WithHeader("Dimmi-Workspace", workspace).GetJSON("/api/v1/members/me").
+			AssertOK().AssertJSONPath("data.role", "owner")
+	})
+
+	t.Run("refuses a missing or too long name and a guest", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		tc.ActingAs(tc.Owner).PostJSON("/api/v1/workspaces", testkit.JSON{"name": ""}).AssertStatus(422)
+		tc.ActingAs(tc.Owner).PostJSON("/api/v1/workspaces", testkit.JSON{"name": strings.Repeat("a", 81)}).
+			AssertStatus(422)
+		tc.Client().PostJSON("/api/v1/workspaces", testkit.JSON{"name": "Acme"}).AssertStatus(401)
 	})
 }

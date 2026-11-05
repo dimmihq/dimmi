@@ -292,6 +292,7 @@ func bootWorkspaces(a *app.App) {
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Mail: a.Mail, Links: a.Links,
 		ConfirmWindow: a.Config.Auth.PasswordConfirmation.TTL,
 	}
+	acts.UpdateOnboarding = &workspaces.UpdateOnboarding{DB: a.DB, Clock: a.Clock}
 	acts.ListMemberships = &workspaces.ListMemberships{DB: a.DB}
 	acts.RepairWorkspaces = &workspaces.RepairWorkspaces{
 		DB: a.DB, Clock: a.Clock, Initializers: a.WorkspaceInitializers,

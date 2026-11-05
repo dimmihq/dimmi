@@ -977,6 +977,8 @@ type Workspace struct {
 	DeletedByUserID        *ids.UUID       `json:"deleted_by_user_id"`
 	PurgeAfter             *time.Time      `json:"purge_after"`
 	SuspendedReason        *string         `json:"suspended_reason"`
+	OnboardingStep         string          `json:"onboarding_step"`
+	OnboardingCompletedAt  *time.Time      `json:"onboarding_completed_at"`
 }
 
 type WorkspaceMember struct {
