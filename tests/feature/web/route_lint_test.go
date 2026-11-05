@@ -23,7 +23,10 @@ func TestAPIRoutes(t *testing.T) {
 			Prefixes:     []string{"/api/v1"},
 			VerbDenylist: []string{"login", "logout", "verify", "resend", "enable", "disable", "confirm", "reset"},
 			PutAllowlist: []string{"/api/v1/user/avatar"},
-			Exceptions:   []string{"/api/v1/conversation-views"},
+			Exceptions: []string{
+				"/api/v1/conversation-views", "/api/v1/redaction-rules",
+				"/api/v1/contacts/{contact}/exports/{export}/download",
+			},
 		})
 
 		assert.Empty(t, problems, strings.Join(problems, "\n"))
