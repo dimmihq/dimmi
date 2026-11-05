@@ -18,9 +18,9 @@ function Row({ label, value }: { label: string; value: string | null }) {
   const Icon = value ? RiCheckboxCircleFill : RiSubtractLine;
 
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
+    <li className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-background-secondary-default px-3 py-2.5">
       <Icon aria-hidden className={value ? "size-4 text-accent-600" : "size-4 text-foreground-icon-quaternary"} />
-      <span className="w-36 shrink-0 text-body-2-medium text-text-primary">{label}</span>
+      <span className="w-44 shrink-0 text-body-2-medium text-text-primary">{label}</span>
       <span className="min-w-0 flex-1 truncate text-body-2-regular text-text-secondary">{value ?? "None yet"}</span>
     </li>
   );
@@ -59,7 +59,7 @@ export function SummaryStep({
       </div>
       <h1 className="mt-5 text-title-1-medium text-text-primary">{name} is ready</h1>
       <p className="mt-2 text-body-regular text-text-secondary">Everything below can be changed in settings.</p>
-      <ul className="mt-8 divide-y divide-separator-border overflow-hidden rounded-3xl border border-border-button-default bg-background-secondary-default">
+      <ul className="mt-8 flex flex-col gap-2">
         <Row label="Workspace" value={name} />
         <Row label="Logo" value={null} />
         <Row label="Tags" value={tagNames || null} />
