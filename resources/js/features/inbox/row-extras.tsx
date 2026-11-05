@@ -6,6 +6,7 @@
  */
 import {
   RiCodeSSlashLine,
+  RiDraftLine,
   RiGlobalLine,
   RiMailLine,
   RiMessage3Line,
@@ -61,6 +62,22 @@ export function Waiting({ conversation }: { conversation: Conversation }) {
     <span className="flex shrink-0 items-center gap-0.5 text-caption-1-medium text-text-tertiary">
       <RiTimeLine aria-hidden className="size-3" />
       <span>Waiting {waitedFor(conversation.waiting_since)}</span>
+    </span>
+  );
+}
+
+/*
+ * DraftMark says the reader left a reply or note unsent here.
+ */
+export function DraftMark({ drafted }: { drafted: boolean }) {
+  if (!drafted) {
+    return null;
+  }
+
+  return (
+    <span className="flex shrink-0 items-center gap-0.5 text-caption-1-medium text-text-secondary">
+      <RiDraftLine aria-hidden className="size-3" />
+      <span>Draft</span>
     </span>
   );
 }

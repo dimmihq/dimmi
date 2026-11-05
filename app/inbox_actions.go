@@ -16,6 +16,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/drafts"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 )
@@ -57,6 +58,11 @@ type InboxActions struct {
 	UpdateSnoozeList  *conversations.UpdateSnoozeList
 	ShowSnoozeOptions *conversations.ShowSnoozeOptions
 
+	ListDrafts  *drafts.ListDrafts
+	SaveDraft   *drafts.SaveDraft
+	UpdateDraft *drafts.UpdateDraft
+	DeleteDraft *drafts.DeleteDraft
+
 	ListMessages      *messages.ListMessages
 	ShowOriginal      *messages.ShowOriginal
 	DownloadOriginal  *messages.DownloadOriginal
@@ -64,4 +70,6 @@ type InboxActions struct {
 	RetryDelivery     *messages.RetryDelivery
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
+	DeleteMessage     *messages.DeleteMessage
+	EditNote          *messages.EditNote
 }

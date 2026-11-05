@@ -35,27 +35,55 @@ shows.
 const excerptLength = 140
 
 /*
-TimelineEntry is one entry of a conversation's timeline.
+TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
+is set while a reply waits to leave and its writer may still undo it.
+DeletedBy names who deleted a deleted entry.
 */
 type TimelineEntry struct {
-	ID             string          `json:"id"`
-	Object         string          `json:"object"`
-	ConversationID string          `json:"conversation_id"`
-	Type           string          `json:"type"`
-	Author         Author          `json:"author"`
-	Body           *string         `json:"body"`
-	BodyFormat     string          `json:"body_format"`
-	HasOriginal    bool            `json:"has_original"`
-	Truncated      bool            `json:"truncated"`
-	DeliveryStatus *string         `json:"delivery_status"`
-	DeliveryError  *string         `json:"delivery_error"`
-	Substantive    bool            `json:"substantive"`
-	Event          json.RawMessage `json:"event"`
-	SentAt         *time.Time      `json:"sent_at"`
-	EditedAt       *time.Time      `json:"edited_at"`
-	DeletedAt      *time.Time      `json:"deleted_at"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ID              string          `json:"id"`
+	Object          string          `json:"object"`
+	ConversationID  string          `json:"conversation_id"`
+	Type            string          `json:"type"`
+	Author          Author          `json:"author"`
+	Body            *string         `json:"body"`
+	BodyFormat      string          `json:"body_format"`
+	HasOriginal     bool            `json:"has_original"`
+	Truncated       bool            `json:"truncated"`
+	DeliveryStatus  *string         `json:"delivery_status"`
+	DeliveryError   *string         `json:"delivery_error"`
+	Substantive     bool            `json:"substantive"`
+	Event           json.RawMessage `json:"event"`
+	SentAt          *time.Time      `json:"sent_at"`
+	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
+	EditedAt        *time.Time      `json:"edited_at"`
+	DeletedAt       *time.Time      `json:"deleted_at"`
+	DeletedBy       *Remover        `json:"deleted_by"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+/*
+Remover is the teammate who deleted an entry.
+*/
+type Remover struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+/*
+removerOf reads who deleted an entry from its metadata, nil when it
+does not say.
+*/
+func removerOf(metadata json.RawMessage) *Remover {
+	var read struct {
+		DeletedBy *Remover `json:"deleted_by"`
+	}
+
+	if json.Unmarshal(metadata, &read) != nil {
+		return nil
+	}
+
+	return read.DeletedBy
 }
 
 /*
@@ -125,11 +153,13 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		Author: author(m, contact, by), Body: m.Body, BodyFormat: m.BodyFormat, HasOriginal: m.BodyFull != nil,
 		Truncated: models.ReadEmailMetadata(m.Metadata).Truncated, DeliveryStatus: m.DeliveryStatus,
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
-		EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
+		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
 	}
 
 	if m.DeletedAt != nil {
 		out.Body, out.HasOriginal, out.Truncated = nil, false, false
+		out.DeletedBy = removerOf(m.Metadata)
 	}
 
 	if len(out.Event) == 0 {

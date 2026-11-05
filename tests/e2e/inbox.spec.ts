@@ -1,5 +1,5 @@
 import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
-import { type Customer, startConversation } from "./support/inbox";
+import { type Customer, openComposer, startConversation } from "./support/inbox";
 
 const emily: Customer = {
   name: "Emily Johnson",
@@ -53,14 +53,14 @@ it.describe("the inbox", () => {
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);
 
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await openComposer(page, /Reply to Emily Johnson/);
     await page.getByRole("textbox", { name: "Reply to Emily Johnson" }).fill("Try a sign-in code instead.");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
     await expect(page.getByRole("article", { name: `Message from ${person.name}` })).toContainText(
       "Try a sign-in code instead.",
     );
-    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveValue("");
+    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveText("");
     await expect(page.getByRole("region", { name: "Details" }).getByRole("button", { name: /Assignee/ })).toContainText(
       person.name,
     );
@@ -88,6 +88,7 @@ it.describe("the inbox", () => {
     await expect(page.getByRole("button", { name: /Reply to Emily Johnson/ })).toBeVisible();
 
     await page.keyboard.press("n");
+    await expect(page.getByRole("toolbar", { name: "Formatting" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("textbox", { name: "Internal note" }).fill("Outlook previews may spend the link.");
     await page.getByRole("button", { name: "Add note" }).click();
 
@@ -139,20 +140,62 @@ it.describe("the inbox", () => {
     await expect(page.getByRole("link", { name: /Emily Johnson/ })).toBeHidden();
   });
 
-  it("shows a reply's markdown as formatted text", async ({ page }) => {
+  it("formats a reply by keyboard, keeps it as Markdown and shows it formatted", async ({ page }) => {
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
-    await page
-      .getByRole("textbox", { name: "Reply to Emily Johnson" })
-      .fill("Use **a sign-in code**\n\n- open the app\n- see [the guide](https://help.example/sign-in)");
+    await openComposer(page, /Reply to Emily Johnson/);
+    const field = page.getByRole("textbox", { name: "Reply to Emily Johnson" });
+    await field.click();
+    await page.keyboard.type("Use ");
+    await page.keyboard.press("ControlOrMeta+b");
+    await page.keyboard.type("a sign-in code");
+    await page.keyboard.press("ControlOrMeta+b");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("- open the app, see docs");
+    await field.evaluate((node) => {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+        const at = text.textContent?.indexOf("docs") ?? -1;
+        if (at >= 0) {
+          const range = document.createRange();
+          range.setStart(text, at);
+          range.setEnd(text, at + 4);
+          window.getSelection()?.removeAllRanges();
+          window.getSelection()?.addRange(range);
+        }
+      }
+    });
+    await page.keyboard.press("ControlOrMeta+Shift+u");
+    await page.getByRole("textbox", { name: "Link address" }).fill("https://help.example/sign-in");
+    await page.keyboard.press("Enter");
+    const sent = page.waitForRequest((r) => r.url().endsWith("/replies") && r.method() === "POST");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
+    expect((await sent).postDataJSON().body).toBe(
+      "Use **a sign-in code**\n\n- open the app, see [docs](https://help.example/sign-in)",
+    );
     const reply = page.getByRole("article", { name: /Message from/ }).last();
     await expect(reply.locator("strong")).toHaveText("a sign-in code");
-    await expect(reply.getByRole("listitem")).toHaveCount(2);
-    await expect(reply.getByRole("link", { name: "the guide" })).toHaveAttribute("target", "_blank");
+    await expect(reply.getByRole("listitem")).toHaveCount(1);
+    await expect(reply.getByRole("link", { name: "docs" })).toHaveAttribute("target", "_blank");
     await expect(reply).not.toContainText("**");
+  });
+
+  it("keeps only what Markdown can carry from pasted pages", async ({ page }) => {
+    const id = await startConversation(page, emily);
+    await page.goto(`/d/inbox/unassigned/${id}`);
+    await openComposer(page, /Reply to Emily Johnson/);
+    const field = page.getByRole("textbox", { name: "Reply to Emily Johnson" });
+    await field.click();
+    await field.evaluate((node) => {
+      const data = new DataTransfer();
+      data.setData("text/html", "<h1>Steps</h1><p><u>Open</u> <b>Settings</b> <span style='color:red'>now</span></p>");
+      node.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+    });
+    const sent = page.waitForRequest((r) => r.url().endsWith("/replies") && r.method() === "POST");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    expect((await sent).postDataJSON().body).toBe("Steps\n\nOpen **Settings** now");
   });
 
   it("talks the case over with Operator", async ({ page }) => {
@@ -189,15 +232,15 @@ it.describe("the inbox", () => {
     await page.goto(`/d/inbox/unassigned/${id}`);
     const reply = page.getByRole("textbox", { name: "Reply to Emily Johnson" });
 
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await openComposer(page, /Reply to Emily Johnson/);
     await expect(reply).toBeFocused();
     await expect(page.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
     await reply.fill("Hi Emily");
 
     await page.getByRole("radio", { name: "Note" }).click();
-    await expect(page.getByRole("textbox", { name: "Internal note" })).toHaveValue("");
+    await expect(page.getByRole("textbox", { name: "Internal note" })).toHaveText("");
     await page.getByRole("radio", { name: "Reply" }).click();
-    await expect(reply).toHaveValue("Hi Emily");
+    await expect(reply).toHaveText("Hi Emily");
 
     await expect(page.getByLabel("Attach files")).toHaveCount(0);
     await page.getByRole("button", { name: "Add to message" }).click();

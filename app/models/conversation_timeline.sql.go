@@ -42,7 +42,7 @@ func (q *Queries) FindConversationRead(ctx context.Context, arg FindConversation
 }
 
 const findMessage = `-- name: FindMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages WHERE workspace_id = $1 AND conversation_id = $2 AND id = $3
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages WHERE workspace_id = $1 AND conversation_id = $2 AND id = $3
 `
 
 type FindMessageParams struct {
@@ -81,12 +81,14 @@ func (q *Queries) FindMessage(ctx context.Context, arg FindMessageParams) (Messa
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const findMessageByDedupeKey = `-- name: FindMessageByDedupeKey :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages WHERE workspace_id = $1 AND dedupe_key = $2
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages WHERE workspace_id = $1 AND dedupe_key = $2
 `
 
 type FindMessageByDedupeKeyParams struct {
@@ -125,12 +127,14 @@ func (q *Queries) FindMessageByDedupeKey(ctx context.Context, arg FindMessageByD
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const latestContactMessage = `-- name: LatestContactMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
   AND author_type = 'contact' AND deleted_at IS NULL
 ORDER BY id DESC
@@ -173,13 +177,16 @@ func (q *Queries) LatestContactMessage(ctx context.Context, arg LatestContactMes
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const latestConversationMessage = `-- name: LatestConversationMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event' AND deleted_at IS NULL
+  AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1
 `
@@ -220,14 +227,16 @@ func (q *Queries) LatestConversationMessage(ctx context.Context, arg LatestConve
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const latestForeignMessage = `-- name: LatestForeignMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event'
-  AND deleted_at IS NULL AND NOT (author_type = 'member' AND author_id IS NOT DISTINCT FROM $3::uuid)
+  AND deleted_at IS NULL AND undone_at IS NULL AND NOT (author_type = 'member' AND author_id IS NOT DISTINCT FROM $3::uuid)
 ORDER BY id DESC
 LIMIT 1
 `
@@ -269,13 +278,15 @@ func (q *Queries) LatestForeignMessage(ctx context.Context, arg LatestForeignMes
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const latestTimelineEntry = `-- name: LatestTimelineEntry :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
-WHERE workspace_id = $1 AND conversation_id = $2
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1
 `
@@ -316,14 +327,17 @@ func (q *Queries) LatestTimelineEntry(ctx context.Context, arg LatestTimelineEnt
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const listTimeline = `-- name: ListTimeline :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1
   AND conversation_id = $2
+  AND undone_at IS NULL
   AND (coalesce(cardinality($3::text[]), 0) = 0 OR type = ANY ($3::text[]))
   AND (
       $4::uuid IS NULL
@@ -351,7 +365,7 @@ type ListTimelineParams struct {
 // ListTimeline returns a page of a conversation's timeline narrowed to
 // the entry types asked for, none meaning all. Descending pages walk
 // back from the newest entry, or from the cursor's entry; ascending pages
-// walk forward from the cursor's entry.
+// walk forward from the cursor's entry. Undone replies are left out.
 func (q *Queries) ListTimeline(ctx context.Context, arg ListTimelineParams) ([]Message, error) {
 	rows, err := q.db.Query(ctx, listTimeline,
 		arg.WorkspaceID,
@@ -395,6 +409,8 @@ func (q *Queries) ListTimeline(ctx context.Context, arg ListTimelineParams) ([]M
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -407,9 +423,9 @@ func (q *Queries) ListTimeline(ctx context.Context, arg ListTimelineParams) ([]M
 }
 
 const messagesAfter = `-- name: MessagesAfter :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event'
-  AND deleted_at IS NULL AND id > $3
+  AND deleted_at IS NULL AND undone_at IS NULL AND id > $3
 ORDER BY id
 LIMIT 20
 `
@@ -458,6 +474,8 @@ func (q *Queries) MessagesAfter(ctx context.Context, arg MessagesAfterParams) ([
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -473,7 +491,7 @@ const retryMessageDelivery = `-- name: RetryMessageDelivery :one
 UPDATE messages SET delivery_status = 'pending', delivery_error = NULL, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND conversation_id = $3 AND id = $4
   AND type = 'message' AND delivery_status = 'failed' AND deleted_at IS NULL
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type RetryMessageDeliveryParams struct {
@@ -519,6 +537,8 @@ func (q *Queries) RetryMessageDelivery(ctx context.Context, arg RetryMessageDeli
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
@@ -569,8 +589,8 @@ func (q *Queries) SaveConversationRead(ctx context.Context, arg SaveConversation
 }
 
 const timelineEntryBefore = `-- name: TimelineEntryBefore :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
-WHERE workspace_id = $1 AND conversation_id = $2 AND id < $3
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND id < $3 AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1
 `
@@ -612,6 +632,8 @@ func (q *Queries) TimelineEntryBefore(ctx context.Context, arg TimelineEntryBefo
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
@@ -623,7 +645,7 @@ SET delivery_status = $1, delivery_error = $2,
     sent_at = coalesce($4, sent_at), updated_at = $5,
     metadata = metadata || coalesce($6::jsonb, '{}'::jsonb)
 WHERE workspace_id = $7 AND id = $8
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type UpdateMessageDeliveryParams struct {
@@ -678,6 +700,8 @@ func (q *Queries) UpdateMessageDelivery(ctx context.Context, arg UpdateMessageDe
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }

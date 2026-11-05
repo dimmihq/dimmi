@@ -81,6 +81,9 @@ export type ThreadEntry =
       original: boolean;
       truncated: boolean;
       failed: string | null;
+      held?: boolean;
+      authorId?: string | null;
+      edited?: boolean;
     }
   | { kind: "event"; id: string; at: string; text: string };
 
@@ -115,18 +118,23 @@ export function toEntry(message: Message): ThreadEntry {
   if (message.type === "event" && message.event) {
     return { kind: "event", id: message.id, at, text: eventText(message.event) };
   }
+  if (message.deleted_at) {
+    const by = message.deleted_by?.name;
+    return { kind: "event", id: message.id, at, text: by ? `Message deleted by ${by}` : "Message deleted" };
+  }
   const said = {
     id: message.id,
     author: message.author.name,
     at,
-    text: message.body ?? "This message was deleted.",
-    format: message.body === null ? "plain" : (message.body_format ?? "markdown"),
+    text: message.body ?? "",
+    format: message.body_format ?? "markdown",
     original: message.has_original ?? false,
     truncated: message.truncated ?? false,
     failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
+    authorId: message.author.id,
   } as const;
   if (message.type === "note") {
-    return { kind: "note", ...said };
+    return { kind: "note", ...said, edited: Boolean(message.edited_at) };
   }
   if (message.author.type === "contact") {
     return { kind: "customer", ...said };
@@ -135,5 +143,5 @@ export function toEntry(message: Message): ThreadEntry {
     return { kind: "dimmi", ...said };
   }
 
-  return { kind: "teammate", ...said };
+  return { kind: "teammate", ...said, held: Boolean(message.scheduled_send_at) };
 }

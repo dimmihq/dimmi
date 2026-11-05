@@ -2,10 +2,11 @@
 -- ListTimeline returns a page of a conversation's timeline narrowed to
 -- the entry types asked for, none meaning all. Descending pages walk
 -- back from the newest entry, or from the cursor's entry; ascending pages
--- walk forward from the cursor's entry.
+-- walk forward from the cursor's entry. Undone replies are left out.
 SELECT * FROM messages
 WHERE workspace_id = @workspace_id
   AND conversation_id = @conversation_id
+  AND undone_at IS NULL
   AND (coalesce(cardinality(@types::text[]), 0) = 0 OR type = ANY (@types::text[]))
   AND (
       sqlc.narg(cursor_id)::uuid IS NULL
@@ -32,7 +33,7 @@ SELECT * FROM messages WHERE workspace_id = @workspace_id AND dedupe_key = @dedu
 -- LatestTimelineEntry returns the conversation's newest entry of any
 -- type, the furthest a reader can read to.
 SELECT * FROM messages
-WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1;
 
@@ -41,6 +42,7 @@ LIMIT 1;
 -- message or note, the entry a teammate must have seen before replying.
 SELECT * FROM messages
 WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type <> 'event' AND deleted_at IS NULL
+  AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1;
 
@@ -50,7 +52,7 @@ LIMIT 1;
 -- was typing.
 SELECT * FROM messages
 WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type <> 'event'
-  AND deleted_at IS NULL AND id > @after_id
+  AND deleted_at IS NULL AND undone_at IS NULL AND id > @after_id
 ORDER BY id
 LIMIT 20;
 
@@ -59,7 +61,7 @@ LIMIT 20;
 -- conversation that the member did not write.
 SELECT * FROM messages
 WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type <> 'event'
-  AND deleted_at IS NULL AND NOT (author_type = 'member' AND author_id IS NOT DISTINCT FROM @member_id::uuid)
+  AND deleted_at IS NULL AND undone_at IS NULL AND NOT (author_type = 'member' AND author_id IS NOT DISTINCT FROM @member_id::uuid)
 ORDER BY id DESC
 LIMIT 1;
 
@@ -67,7 +69,7 @@ LIMIT 1;
 -- TimelineEntryBefore returns the entry of any type just before the one
 -- with the id.
 SELECT * FROM messages
-WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id < @before_id
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id < @before_id AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT 1;
 

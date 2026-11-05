@@ -9,11 +9,12 @@
  * shown as written. An email whose quoted thread was cut, or whose long
  * body was cut short, offers its full message below it. A reply that
  * never reached the customer says so, with the reason, and can be sent
- * again. Below the thread
- * sits the composer; R and N open it for a reply or a note from
- * anywhere, and O opens or closes Operator.
+ * again. Hovering a message offers a link to it, editing one's own note
+ * and deleting; a deleted message stays as a line saying who deleted
+ * it. Below the thread sits the composer; R and N open it for a reply or
+ * a note from anywhere, and O opens or closes Operator.
  */
-import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line } from "@remixicon/react";
+import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -27,6 +28,8 @@ import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
 import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
+import { MessageActions, NoteEditor } from "./thread/message-actions";
+import { useMessageMoves } from "./thread/use-message-moves";
 import type { Report } from "./use-typing-report";
 
 type Said = Extract<ThreadEntry, { author: string }>;
@@ -65,6 +68,13 @@ function Tag({ entry }: { entry: Said }) {
         </Chip>
       ) : null}
       <span className="text-body-2-regular text-text-tertiary">{entry.at}</span>
+      {entry.edited ? <span className="text-body-2-regular text-text-tertiary">Edited</span> : null}
+      {entry.held ? (
+        <span className="flex items-center gap-0.5 text-body-2-regular text-text-tertiary">
+          <RiTimeLine aria-hidden className="size-3.5" />
+          Sending
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -83,7 +93,7 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
         </Chip>
         <span className="ms-auto text-body-2-regular text-text-tertiary">{entry.at}</span>
       </header>
-      <MessageBody text={entry.text} format={entry.format} className="text-body-regular text-text-primary" />
+      <MessageBody text={entry.text} className="text-body-regular text-text-primary" />
       <p className="flex items-center gap-1 text-body-2-regular text-text-tertiary">
         <RiLock2Line aria-hidden className="size-3.5" />
         Not visible to {customer}
@@ -91,6 +101,20 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
     </article>
   );
 }
+
+type Moves = ReturnType<typeof useMessageMoves>;
+
+/*
+ * Follow-ups are what a message offers below it: its full original, and
+ * sending it again when it was not delivered.
+ */
+interface FollowUps {
+  onOpenOriginal?: (id: string) => void;
+  onRetry?: (id: string) => void;
+}
+
+const linkButton =
+  "rounded-md text-body-2-medium text-text-secondary underline outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring";
 
 function More({ entry, onOpen }: { entry: Said; onOpen?: (id: string) => void }) {
   if (!onOpen || !(entry.original || entry.truncated)) {
@@ -100,11 +124,7 @@ function More({ entry, onOpen }: { entry: Said; onOpen?: (id: string) => void })
   return (
     <span className="flex items-center gap-1.5 text-body-2-regular text-text-tertiary">
       {entry.truncated ? "Shortened ·" : null}
-      <button
-        type="button"
-        onClick={() => onOpen(entry.id)}
-        className="rounded-md text-body-2-medium text-text-secondary underline outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-      >
+      <button type="button" onClick={() => onOpen(entry.id)} className={linkButton}>
         Show full message
       </button>
     </span>
@@ -124,11 +144,7 @@ function Undelivered({ entry, onRetry }: { entry: Said; onRetry?: (id: string) =
         {onRetry ? (
           <>
             {" "}
-            <button
-              type="button"
-              onClick={() => onRetry(entry.id)}
-              className="rounded-md text-body-2-medium text-text-secondary underline outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-            >
+            <button type="button" onClick={() => onRetry(entry.id)} className={linkButton}>
               Send again
             </button>
           </>
@@ -141,13 +157,13 @@ function Undelivered({ entry, onRetry }: { entry: Said; onRetry?: (id: string) =
 function Entry({
   entry,
   customer,
-  onOpenOriginal,
-  onRetry,
+  moves,
+  follow,
 }: {
   entry: ThreadEntry;
   customer: string;
-  onOpenOriginal?: (id: string) => void;
-  onRetry?: (id: string) => void;
+  moves: Moves;
+  follow: FollowUps;
 }) {
   if (entry.kind === "event") {
     return <Pill>{entry.text}</Pill>;
@@ -156,29 +172,78 @@ function Entry({
     return <OperatorCard entry={entry} customer={customer} />;
   }
 
+  return <SaidEntry entry={entry} customer={customer} moves={moves} follow={follow} />;
+}
+
+/*
+ * bubbleClass styles a message's bubble by who wrote it.
+ */
+function bubbleClass(entry: Said, editing: boolean): string {
   const ours = entry.kind !== "customer";
   const note = entry.kind === "note";
 
+  return cx(
+    bubble,
+    "text-body-regular text-text-primary",
+    !ours && "bg-background-tertiary-default",
+    ours && !note && "bg-background-primary-default shadow-card",
+    note && "border border-dashed border-border-button-hover",
+    editing && "w-full",
+  );
+}
+
+function SaidEntry({
+  entry,
+  customer,
+  moves,
+  follow,
+}: {
+  entry: Said;
+  customer: string;
+  moves: Moves;
+  follow: FollowUps;
+}) {
+  const [editing, setEditing] = useState(false);
+  const ours = entry.kind !== "customer";
+  const note = entry.kind === "note";
+  const mine = Boolean(entry.authorId) && entry.authorId === moves.me;
+  const kind = note ? "note" : ours ? "reply" : "customer";
+
   return (
     <article
+      id={entry.id}
       aria-label={note ? `Internal note from ${entry.author}` : `Message from ${entry.author}`}
-      className={cx("flex flex-col px-3", ours ? "items-end" : "items-start")}
+      className={cx("group relative flex flex-col px-3", ours ? "items-end" : "items-start")}
     >
-      <div
-        className={cx(
-          bubble,
-          "text-body-regular text-text-primary",
-          !ours && "bg-background-tertiary-default",
-          ours && !note && "bg-background-primary-default shadow-card",
-          note && "border border-dashed border-border-button-hover",
+      <div className={cx("absolute -top-3 z-10", ours ? "start-3" : "end-3")}>
+        <MessageActions
+          kind={kind}
+          customer={customer}
+          canEdit={note && mine && !editing}
+          canDelete={mine || moves.moderates}
+          onCopy={() => moves.link(entry.id)}
+          onEdit={() => setEditing(true)}
+          onDelete={() => moves.remove(entry.id)}
+        />
+      </div>
+      <div className={bubbleClass(entry, editing)}>
+        {editing ? (
+          <NoteEditor
+            text={entry.text}
+            onCancel={() => setEditing(false)}
+            onSave={async (body) => {
+              await moves.edit(entry.id, body);
+              setEditing(false);
+            }}
+          />
+        ) : (
+          <MessageBody text={entry.text} format={entry.format} />
         )}
-      >
-        <MessageBody text={entry.text} format={entry.format} />
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
       <Tag entry={entry} />
-      <More entry={entry} onOpen={onOpenOriginal} />
-      <Undelivered entry={entry} onRetry={onRetry} />
+      <More entry={entry} onOpen={follow.onOpenOriginal} />
+      <Undelivered entry={entry} onRetry={follow.onRetry} />
       {note ? (
         <span aria-hidden className="text-body-2-regular text-text-tertiary">
           Not visible to {customer}
@@ -211,6 +276,7 @@ function useComposerKeys(keys: Record<string, () => void>) {
 }
 
 export function Thread({
+  conversation,
   entries,
   customer,
   channel,
@@ -221,6 +287,7 @@ export function Thread({
   onRetry,
   status,
 }: {
+  conversation: string;
   entries: ThreadEntry[];
   customer: string;
   channel: string;
@@ -231,6 +298,7 @@ export function Thread({
   onRetry?: (id: string) => void;
   status?: ReactNode;
 }) {
+  const moves = useMessageMoves(conversation);
   const [mode, setMode] = useState<Mode | null>(null);
   const [focusKey, setFocusKey] = useState(0);
   const ask = useRef(onAskOperator);
@@ -253,7 +321,7 @@ export function Thread({
         <ol className="mx-auto flex max-w-3xl flex-col gap-3">
           {entries.map((entry) => (
             <li key={entry.id}>
-              <Entry entry={entry} customer={customer} onOpenOriginal={onOpenOriginal} onRetry={onRetry} />
+              <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
             </li>
           ))}
         </ol>
@@ -261,6 +329,7 @@ export function Thread({
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}
         <Composer
+          conversation={conversation}
           mode={mode}
           focusKey={focusKey}
           customer={customer}

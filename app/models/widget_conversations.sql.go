@@ -97,7 +97,7 @@ func (q *Queries) FindWidgetConversation(ctx context.Context, arg FindWidgetConv
 }
 
 const findWidgetMessage = `-- name: FindWidgetMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND id = $3 AND type = 'message'
 `
 
@@ -137,12 +137,14 @@ func (q *Queries) FindWidgetMessage(ctx context.Context, arg FindWidgetMessagePa
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const latestWidgetMessages = `-- name: LatestWidgetMessages :many
-SELECT DISTINCT ON (m.conversation_id) m.id, m.workspace_id, m.conversation_id, m.type, m.author_type, m.author_id, m.body, m.body_format, m.body_full, m.body_html, m.event, m.channel_message_id, m.dedupe_key, m.delivery_status, m.delivery_error, m.substantive, m.metadata, m.edited_at, m.sent_at, m.read_at, m.deleted_at, m.created_at, m.updated_at, m.search, m.channel_connection_id
+SELECT DISTINCT ON (m.conversation_id) m.id, m.workspace_id, m.conversation_id, m.type, m.author_type, m.author_id, m.body, m.body_format, m.body_full, m.body_html, m.event, m.channel_message_id, m.dedupe_key, m.delivery_status, m.delivery_error, m.substantive, m.metadata, m.edited_at, m.sent_at, m.read_at, m.deleted_at, m.created_at, m.updated_at, m.search, m.channel_connection_id, m.scheduled_send_at, m.undone_at
 FROM messages m
 WHERE m.workspace_id = $1 AND m.conversation_id = ANY($2::uuid[]) AND m.type = 'message'
 ORDER BY m.conversation_id, m.created_at DESC, m.id DESC
@@ -190,6 +192,8 @@ func (q *Queries) LatestWidgetMessages(ctx context.Context, arg LatestWidgetMess
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -355,7 +359,7 @@ func (q *Queries) ListWidgetMemberAuthors(ctx context.Context, arg ListWidgetMem
 }
 
 const listWidgetMessages = `-- name: ListWidgetMessages :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
   AND (
       $3::uuid IS NULL
@@ -429,6 +433,8 @@ func (q *Queries) ListWidgetMessages(ctx context.Context, arg ListWidgetMessages
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}

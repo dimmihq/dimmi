@@ -4,40 +4,58 @@
  * Reply or Note (or pressing R or N) unfolds it into the full panel, which
  * stays open until the person leaves the conversation. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
- * a field that grows with what is typed, and a toolbar with the add menu
- * (help articles, saved replies and more from the workspace, dropped into
- * the text) and a way to ask Operator. Replies cannot carry files yet, so
- * the composer offers none rather than show files that would never be
- * sent. Sending goes to the server; a sent draft empties, a refused one
- * stays with the reason under it. Each time Reply or Note is chosen the field
+ * a field that grows with what is typed with formatting kept as
+ * Markdown, and a toolbar with the add menu (help articles, saved replies
+ * and more from the workspace, dropped into the text) and a way to ask
+ * Operator. Replies cannot carry files yet, so the composer offers none
+ * rather than show files that would never be sent. Sending goes to the
+ * server; a sent draft empties, a refused one stays with the reason under
+ * it. Each draft, reply and note apart, is kept on the server and in the
+ * browser, so it survives leaving, reloading and another device. Each
+ * time Reply or Note is chosen the field
  * takes the focus, sized to the draft it holds. While a reply is being
  * written the composer says so through onTyping, and says it stopped
  * once the reply is sent or the field is left.
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import type { Message } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
+import { ComposerField } from "./composer/composer-field";
+import { preloadEditor } from "./composer/load-editor";
+import { useInbox } from "./conversations";
+import { DraftConflict } from "./drafts/draft-conflict";
+import { useDraft } from "./drafts/use-draft";
 import { type Mode, modes } from "./modes";
 import { SendMenu } from "./send-menu";
+import { UndoToast } from "./undo/undo-toast";
+import { useHeld } from "./undo/use-held";
 import type { Report } from "./use-typing-report";
 
 /*
  * Send sends what the composer holds as a reply or a note, and for a
  * reply what then happens to the conversation: close or snooze.
  */
-export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Promise<unknown>;
+export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Promise<Message | undefined>;
 
 const surface =
   "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
 const settle = [0.22, 1, 0.36, 1] as const;
 
+/*
+ * ignoreFiles drops files pasted into the field, since a reply cannot
+ * carry them yet.
+ */
+const ignoreFiles = () => undefined;
+
 export function Composer({
+  conversation,
   mode,
   focusKey,
   customer,
@@ -47,6 +65,7 @@ export function Composer({
   onAskOperator,
   onTyping,
 }: {
+  conversation: string;
   mode: Mode | null;
   focusKey: number;
   customer: string;
@@ -57,6 +76,7 @@ export function Composer({
   onTyping: Report;
 }) {
   const still = useReducedMotion();
+  useEffect(preloadEditor, []);
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -70,6 +90,7 @@ export function Composer({
             className="overflow-hidden"
           >
             <Panel
+              conversation={conversation}
               mode={mode}
               focusKey={focusKey}
               customer={customer}
@@ -119,16 +140,8 @@ function Bar({ customer, onOpen }: { customer: string; onOpen: (mode: Mode) => v
   );
 }
 
-/*
- * sizeToText sizes the field to its text, between its resting height and a cap
- * past which it scrolls.
- */
-function sizeToText(field: HTMLTextAreaElement) {
-  field.style.height = "auto";
-  field.style.height = `${Math.min(field.scrollHeight, 280)}px`;
-}
-
 function Panel({
+  conversation,
   mode,
   focusKey,
   customer,
@@ -138,6 +151,7 @@ function Panel({
   onAskOperator,
   onTyping,
 }: {
+  conversation: string;
   mode: Mode;
   focusKey: number;
   customer: string;
@@ -147,30 +161,19 @@ function Panel({
   onAskOperator: () => void;
   onTyping: Report;
 }) {
-  const [drafts, setDrafts] = useState<Record<Mode, string>>({ reply: "", note: "" });
+  const { workspace } = useInbox();
+  const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
+  const draft = drafts[mode];
   const [sending, setSending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const field = useRef<HTMLTextAreaElement | null>(null);
   const note = mode === "note";
-  const arrive = useCallback((element: HTMLTextAreaElement | null) => {
-    field.current = element;
-    if (element) {
-      sizeToText(element);
-      element.focus();
-    }
-  }, []);
+  const held = useHeld(workspace, conversation, (body) => {
+    drafts.reply.edit(body);
+    onModeChange("reply");
+  });
+  const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
 
-  const insert = (text: string) => {
-    setDrafts((before) => ({ ...before, [mode]: before[mode] ? `${before[mode]}\n\n${text}` : text }));
-    window.requestAnimationFrame(() => {
-      if (field.current) {
-        sizeToText(field.current);
-        field.current.focus();
-      }
-    });
-  };
-
-  const text = drafts[mode].trim();
+  const text = draft.body.trim();
   const send = async (then?: "close" | "snooze") => {
     if (!text || sending) {
       return;
@@ -178,10 +181,13 @@ function Panel({
     setSending(true);
     setFailure(null);
     onTyping(false);
+    draft.pause();
     try {
-      await onSend(mode, text, note ? undefined : then);
-      setDrafts((before) => ({ ...before, [mode]: "" }));
+      const sent = await onSend(mode, text, note ? undefined : then);
+      draft.sent();
+      held.hold(sent);
     } catch (error) {
+      draft.edit(draft.body);
       setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
     } finally {
       setSending(false);
@@ -198,6 +204,7 @@ function Panel({
           onSelectionChange={(selected) => {
             const next = [...selected][0];
             if (next === modes.reply || next === modes.note) {
+              draft.flush();
               onModeChange(next);
             }
           }}
@@ -213,32 +220,25 @@ function Panel({
       </div>
       <fieldset
         aria-label={note ? "Note composer" : "Reply composer"}
-        className={cx(surface, "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4")}
+        className={cx(surface, "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150")}
       >
         <div className="flex flex-col gap-3 px-1.5">
-          <textarea
-            key={`${mode}-${focusKey}`}
-            ref={arrive}
-            value={drafts[mode]}
-            onChange={(event) => {
-              const value = event.target.value;
-              setDrafts((before) => ({ ...before, [mode]: value }));
+          <UndoToast held={held} />
+          <DraftConflict draft={draft} />
+          <ComposerField
+            value={draft.body}
+            label={note ? "Internal note" : `Reply to ${customer}`}
+            placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
+            focusKey={`${mode}-${focusKey}`}
+            onChange={(value) => {
+              draft.edit(value);
               if (!note) {
                 onTyping(value.trim() !== "");
               }
             }}
+            onSubmit={(then) => void send(then)}
             onBlur={() => onTyping(false)}
-            onInput={(event) => sizeToText(event.currentTarget)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault();
-                void send(event.shiftKey ? "close" : event.altKey ? "snooze" : undefined);
-              }
-            }}
-            rows={4}
-            aria-label={note ? "Internal note" : `Reply to ${customer}`}
-            placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
-            className="block max-h-[280px] min-h-24 w-full resize-none bg-transparent p-0 text-body-regular text-text-primary caret-accent-500 outline-none placeholder:text-text-tertiary"
+            onFiles={ignoreFiles}
           />
         </div>
         <div className="flex items-center gap-2">
