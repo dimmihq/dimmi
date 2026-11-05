@@ -37,7 +37,7 @@ function ChannelCard({
   return (
     <section
       aria-label={title}
-      className="flex flex-col gap-4 rounded-3xl border border-border-button-default bg-background-primary-default p-5"
+      className="flex flex-col gap-4 rounded-3xl border border-border-button-default bg-background-secondary-default p-5"
     >
       <div className="flex items-start gap-3">
         <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-foreground-icon-secondary" />
@@ -69,7 +69,7 @@ function MessengerInstall({ workspace }: { workspace: string }) {
     <div className="flex flex-col gap-3">
       <code
         dir="ltr"
-        className="block break-all rounded-xl bg-background-secondary-default p-3 font-mono text-body-2-regular text-text-primary"
+        className="block break-all rounded-xl bg-background-primary-default p-3 font-mono text-body-2-regular text-text-primary"
       >
         {snippet}
       </code>
@@ -131,7 +131,7 @@ function EmailSetup({ workspace }: { workspace: string }) {
         isInvalid={Boolean(addressError)}
         errorMessage={addressError}
       />
-      <Button type="submit" variant="secondary" disabled={add.isPending || address.trim() === ""}>
+      <Button size="small" type="submit" variant="secondary" disabled={add.isPending || address.trim() === ""}>
         Add
       </Button>
     </form>

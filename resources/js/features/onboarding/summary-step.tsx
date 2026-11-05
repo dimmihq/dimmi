@@ -59,7 +59,7 @@ export function SummaryStep({
       </div>
       <h1 className="mt-5 text-title-1-medium text-text-primary">{name} is ready</h1>
       <p className="mt-2 text-body-regular text-text-secondary">Everything below can be changed in settings.</p>
-      <ul className="mt-8 divide-y divide-separator-border overflow-hidden rounded-3xl border border-border-button-default bg-background-primary-default">
+      <ul className="mt-8 divide-y divide-separator-border overflow-hidden rounded-3xl border border-border-button-default bg-background-secondary-default">
         <Row label="Workspace" value={name} />
         <Row label="Logo" value={null} />
         <Row label="Tags" value={tagNames || null} />
@@ -68,7 +68,12 @@ export function SummaryStep({
         <Row label="Test conversations" value={practiced ? "5 conversations" : null} />
       </ul>
       <div className="mt-8">
-        <Button trailingIcon={RiArrowRightLine} disabled={finish.isPending} onClick={() => finish.mutate()}>
+        <Button
+          size="small"
+          trailingIcon={RiArrowRightLine}
+          disabled={finish.isPending}
+          onClick={() => finish.mutate()}
+        >
           Go to your workspace
         </Button>
       </div>

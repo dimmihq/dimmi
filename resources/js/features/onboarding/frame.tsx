@@ -95,6 +95,7 @@ export function StepActions({
       <div className="flex flex-wrap items-center gap-4">
         {primary ? (
           <Button
+            size="small"
             type="submit"
             trailingIcon={RiArrowRightLine}
             disabled={isPending || isDisabled}
@@ -109,13 +110,13 @@ export function StepActions({
           </Button>
         ) : null}
         {onSkip && skipLabel ? (
-          <LinkButton variant="secondary" onClick={onSkip}>
+          <LinkButton variant="secondary" size="small" onClick={onSkip}>
             {skipLabel}
           </LinkButton>
         ) : null}
       </div>
       {onBack ? (
-        <LinkButton variant="secondary" leadingIcon={RiArrowLeftLine} onClick={onBack}>
+        <LinkButton variant="secondary" size="small" leadingIcon={RiArrowLeftLine} onClick={onBack}>
           Back
         </LinkButton>
       ) : null}

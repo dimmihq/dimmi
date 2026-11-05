@@ -51,7 +51,7 @@ export function KnowledgeStep({ label, onNext, onBack }: StepProps) {
           inputDir="ltr"
           isDisabled
         />
-        <Button variant="secondary" leadingIcon={RiAddLine} disabled>
+        <Button size="small" variant="secondary" leadingIcon={RiAddLine} disabled>
           Add
         </Button>
       </div>

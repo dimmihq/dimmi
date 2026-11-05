@@ -87,7 +87,7 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
             value={draft}
             onChange={setDraft}
           />
-          <Button type="submit" variant="secondary" leadingIcon={RiAddLine} disabled={draft.trim() === ""}>
+          <Button size="small" type="submit" variant="secondary" leadingIcon={RiAddLine} disabled={draft.trim() === ""}>
             Add
           </Button>
         </form>
