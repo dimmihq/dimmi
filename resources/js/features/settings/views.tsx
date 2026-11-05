@@ -6,7 +6,7 @@ import type { ComponentType } from "react";
 
 import type { SettingsSection } from "@/features/shell/navigation";
 
-import { NotificationsSettings, PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
+import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { AuditLogSettings } from "./pages/audit-log";
@@ -20,7 +20,8 @@ import {
 } from "./pages/content";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
-import { InboxesSettings, SavedRepliesSettings, TagsSettings } from "./pages/inbox";
+import { SavedRepliesSettings, TagsSettings } from "./pages/inbox";
+import { InboxesSettings } from "./pages/inboxes";
 import { RolesSettings } from "./pages/roles";
 import { SingleSignOnSettings } from "./pages/single-sign-on";
 import { TeamsSettings } from "./pages/teams";
@@ -30,7 +31,6 @@ import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 export const settingsViews: Record<SettingsSection, ComponentType> = {
   profile: ProfileSettings,
   preferences: PreferencesSettings,
-  notifications: NotificationsSettings,
   security: SecuritySettings,
   tokens: TokensSettings,
   inboxes: InboxesSettings,

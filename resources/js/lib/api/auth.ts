@@ -15,6 +15,14 @@ export interface Provider {
   redirect_url: string;
 }
 
+/*
+ * Locale is a language the server serves, named in that language.
+ */
+export interface Locale {
+  code: string;
+  name: string;
+}
+
 export interface AuthConfig {
   edition: string;
   signup_mode: "open" | "invite_only";
@@ -22,8 +30,13 @@ export interface AuthConfig {
   mail_configured: boolean;
   password_min_length: number;
   providers: Provider[];
+  locales: Locale[];
 }
 
+/*
+ * User is the person's own profile. Locale and timezone are what they
+ * picked, null while they follow their workspace.
+ */
 export interface User {
   id: string;
   name: string;
@@ -31,6 +44,9 @@ export interface User {
   email_verified: boolean;
   has_password: boolean;
   two_factor_enabled: boolean;
+  avatar_url: string | null;
+  locale: string | null;
+  timezone: string | null;
 }
 
 export interface WorkspaceSummary {
@@ -43,6 +59,7 @@ export interface WorkspaceSummary {
 export interface Instance {
   edition: string;
   version: string;
+  audit_retention_days?: number;
 }
 
 export interface Me {
@@ -50,6 +67,7 @@ export interface Me {
   user: User;
   workspaces: WorkspaceSummary[];
   instance: Instance;
+  locale: string;
 }
 
 /*

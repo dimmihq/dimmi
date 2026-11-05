@@ -74,9 +74,11 @@ UPDATE sso_connections SET enforced = false, updated_at = @now WHERE organizatio
 
 -- name: ListOrganizationOwners :many
 -- ListOrganizationOwners returns every active owner of the organization's
--- live workspaces, with the workspace they own.
-SELECT DISTINCT u.id, u.name, u.email, u.locale, w.id AS workspace_id
-FROM workspaces w
-JOIN workspace_members m ON m.workspace_id = w.id AND m.role = 'owner' AND m.status = 'active'
-JOIN users u ON u.id = m.user_id
-WHERE w.organization_id = @organization_id AND w.deleted_at IS NULL;
+-- live workspaces, with the workspace they own, across workspaces.
+SELECT
+    o.id::uuid AS id,
+    o.name::text AS name,
+    o.email::citext AS email,
+    coalesce(o.locale, '')::text AS locale,
+    o.workspace_id::uuid AS workspace_id
+FROM auth_organization_owners(@organization_id::uuid) AS o;

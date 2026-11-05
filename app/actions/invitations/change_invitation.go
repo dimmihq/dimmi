@@ -43,18 +43,21 @@ const (
 
 /*
 ChangeInvitationInput is who changes an invitation, through their
-membership and account, and which one.
+membership and account, and which one. LinkOnly sends it again without
+mail: the fresh link only comes back to pass on by hand.
 */
 type ChangeInvitationInput struct {
 	Membership   authz.Membership
 	Caller       models.User
 	InvitationID ids.UUID
+	LinkOnly     bool
 }
 
 /*
 ResendInvitation sends a pending or expired invitation again with a
-fresh link, valid for the invitation period from now; the old link
-stops working.
+fresh link, valid for the invitation period from now, by mail or, with
+LinkOnly, only back to the caller; the old link stops working either
+way.
 
 Rules:
   - The caller needs members:write.
@@ -103,7 +106,7 @@ func (a *ResendInvitation) Handle(ctx context.Context, in ChangeInvitationInput)
 			return fmt.Errorf("send invitation again: %w", err)
 		}
 
-		sent, err = a.Delivery.send(ctx, tx, outgoing{in.Membership.Workspace, again, in.Caller.Name, l})
+		sent, err = a.Delivery.send(ctx, tx, outgoing{in.Membership.Workspace, again, in.Caller.Name, l, in.LinkOnly})
 		if err != nil {
 			return err
 		}

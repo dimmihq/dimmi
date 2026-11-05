@@ -15,7 +15,10 @@
 |
 | The tenant in the context is set at the start of every transaction with
 | SET LOCAL semantics. It ends with the transaction, so a pooler can never
-| leak it to another client.
+| leak it to another client. A savepoint whose context names another
+| tenant, such as an action that creates a tenant inside a larger one,
+| runs scoped to that tenant and hands the transaction back to the outer
+| scope when it is released.
 |
 */
 
@@ -39,10 +42,12 @@ type Hook func(ctx context.Context)
 
 /*
 Tx is one transaction level: the outermost transaction or a savepoint.
+Every level of one transaction shares the tenant it is scoped to.
 */
 type Tx struct {
-	db *DB
-	tx pgx.Tx
+	db     *DB
+	tx     pgx.Tx
+	tenant *string
 
 	afterCommit   []Hook
 	afterRollback []Hook
@@ -71,8 +76,8 @@ func (db *DB) Transaction(ctx context.Context, fn func(ctx context.Context, tx *
 		return fmt.Errorf("begin transaction: %w", db.mapError(err))
 	}
 
-	tx := &Tx{db: db, tx: pgxTx}
-	if err := db.applyTenant(ctx, pgxTx); err != nil {
+	tx := &Tx{db: db, tx: pgxTx, tenant: new(string)}
+	if err := tx.enterTenant(ctx); err != nil {
 		tx.rollback(ctx)
 
 		return err
@@ -137,6 +142,8 @@ func (tx *Tx) SetTenant(ctx context.Context, tenant string) error {
 		return fmt.Errorf("set tenant: %w", tx.db.mapError(err))
 	}
 
+	*tx.tenant = tenant
+
 	return nil
 }
 
@@ -190,9 +197,11 @@ func (tx *Tx) Transaction(ctx context.Context, fn func(ctx context.Context, tx *
 }
 
 /*
-savepoint runs the function in a savepoint. Once released, the
-savepoint's hooks belong to the parent: its work now stands or falls
-with the parent's.
+savepoint runs the function in a savepoint, scoped to the tenant in the
+context when it names one. Once released, the savepoint's hooks belong
+to the parent: its work now stands or falls with the parent's, and the
+parent's tenant is set again. A savepoint that rolls back takes its
+tenant with it.
 */
 func (tx *Tx) savepoint(ctx context.Context, fn func(ctx context.Context, tx *Tx) error) error {
 	pgxTx, err := tx.tx.Begin(ctx)
@@ -200,13 +209,29 @@ func (tx *Tx) savepoint(ctx context.Context, fn func(ctx context.Context, tx *Tx
 		return fmt.Errorf("create savepoint: %w", tx.db.mapError(err))
 	}
 
-	child := &Tx{db: tx.db, tx: pgxTx}
+	outer := *tx.tenant
+	child := &Tx{db: tx.db, tx: pgxTx, tenant: tx.tenant}
+
+	if err := child.enterTenant(ctx); err != nil {
+		child.rollback(ctx)
+
+		return err
+	}
+
 	if err := child.run(ctx, fn); err != nil {
+		*tx.tenant = outer
+
 		return err
 	}
 
 	if err := pgxTx.Commit(ctx); err != nil {
 		return fmt.Errorf("release savepoint: %w", tx.db.mapError(err))
+	}
+
+	if *tx.tenant != outer {
+		if err := tx.SetTenant(ctx, outer); err != nil {
+			return err
+		}
 	}
 
 	tx.afterCommit = append(tx.afterCommit, child.afterCommit...)
@@ -240,8 +265,22 @@ func (db *DB) txFrom(ctx context.Context) (*Tx, bool) {
 }
 
 /*
-applyTenant scopes the transaction to the tenant in the context. Calling
-set_config with is_local true is SET LOCAL with a bind parameter.
+enterTenant scopes this level to the tenant in the context unless it is
+scoped to it already. Calling set_config with is_local true is SET
+LOCAL with a bind parameter.
+*/
+func (tx *Tx) enterTenant(ctx context.Context) error {
+	tenant, ok := tenancy.From(ctx)
+	if !ok || tenant == *tx.tenant {
+		return nil
+	}
+
+	return tx.SetTenant(ctx, tenant)
+}
+
+/*
+applyTenant scopes a transaction that is not a Tx, such as a read-only
+one, to the tenant in the context.
 */
 func (db *DB) applyTenant(ctx context.Context, tx pgx.Tx) error {
 	tenant, ok := tenancy.From(ctx)

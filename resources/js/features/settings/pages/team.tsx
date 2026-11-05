@@ -1,8 +1,8 @@
 /*
  * One team of the workspace: its name, who is in it, and deleting it.
  * Members are picked from the workspace's active members who are not in
- * the team yet. Deleting a team asks first, since its conversations lose
- * their team. People who may not change members only see the team.
+ * the team yet. Deleting a team asks where its conversations go first.
+ * People who may not change members only see the team.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,14 +11,22 @@ import { useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Button } from "@/components/base/buttons/button";
-import { AlertDialog } from "@/components/base/modal/modal";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { avatarColor } from "@/features/shell/avatar-color";
-import { addTeamMembers, deleteTeam, removeTeamMember, renameTeam, type Team, teamQuery } from "@/lib/api/teams";
+import {
+  addTeamMembers,
+  deleteTeam,
+  type ReassignTo,
+  removeTeamMember,
+  renameTeam,
+  type Team,
+  teamQuery,
+} from "@/lib/api/teams";
 import { type Member, membersQuery } from "@/lib/api/workspace";
 
 import { Action, Danger, Field } from "../controls";
 import { Empty, Item, Row, Section, SettingsPage } from "../layout";
+import { TeamDeleteDialog } from "../team-delete-dialog";
 import { failureText, memberCount, useCanManageMembers } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -70,7 +78,7 @@ function useTeamChanges(workspace: string, team: string) {
       mutationFn: (member: string) => removeTeamMember(workspace, team, member),
       onSuccess: refresh,
     }),
-    destroy: useMutation({ mutationFn: () => deleteTeam(workspace, team) }),
+    destroy: useMutation({ mutationFn: (to: ReassignTo) => deleteTeam(workspace, team, to) }),
   };
 }
 
@@ -142,7 +150,14 @@ function TeamPage({ team, canManage }: { team: Team; canManage: boolean }) {
         {members.map((member) => (
           <Item
             key={member.id}
-            mark={<Avatar size="md" color={avatarColor(member.user.name)} initials={member.user.name.charAt(0)} />}
+            mark={
+              <Avatar
+                size="md"
+                color={avatarColor(member.user.name)}
+                initials={member.user.name.charAt(0)}
+                src={member.user.avatar_url ?? undefined}
+              />
+            }
             title={member.user.name}
             detail={member.user.email}
           >
@@ -157,19 +172,18 @@ function TeamPage({ team, canManage }: { team: Team; canManage: boolean }) {
       <Problem error={error} />
       {canManage ? (
         <Section title="Danger zone">
-          <Row label="Delete team" description="Its conversations stay, without a team. Its members stay too.">
+          <Row label="Delete team" description="You choose where its conversations go. Its members stay.">
             <Danger onPress={() => setDeleting(true)}>Delete team</Danger>
           </Row>
         </Section>
       ) : null}
-      <AlertDialog
+      <TeamDeleteDialog
+        workspace={workspace}
+        team={team}
         isOpen={deleting}
         onOpenChange={setDeleting}
-        title={`Delete ${team.name}?`}
-        description="Conversations assigned to this team lose their team. This cannot be undone."
-        confirmLabel="Delete team"
-        onConfirm={async () => {
-          await changes.destroy.mutateAsync();
+        onDelete={async (to) => {
+          await changes.destroy.mutateAsync(to);
           await navigate({ to: "/d/settings/$section", params: { section: "teams" } });
           await queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "teams"] });
         }}

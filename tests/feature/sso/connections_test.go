@@ -94,7 +94,7 @@ func TestConnections(t *testing.T) {
 		owner.PatchJSON(connectionsPath+"/"+id, testkit.JSON{"status": "active"}).AssertOK().
 			AssertJSONPath("data.status", "active")
 
-		w, err := models.New(tc.App.DB).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
+		w, err := models.New(tc.Operator()).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 		assert.Len(t, w.Security().SSOConnectionIDs, 1)
 		in(tc, tc.Owner).GetJSON("/api/v1/workspace/access-policy").AssertOK().

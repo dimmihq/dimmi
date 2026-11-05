@@ -192,8 +192,8 @@ func (w *RecheckOrganizationDomains) tell(
 	ctx context.Context, tx *database.Tx, owner models.ListOrganizationOwnersRow, domain string,
 ) error {
 	pending := w.Mail.To(mail.Address{Name: owner.Name, Email: owner.Email})
-	if owner.Locale != nil && *owner.Locale != "" {
-		pending.Locale(*owner.Locale)
+	if owner.Locale != "" {
+		pending.Locale(owner.Locale)
 	}
 
 	err := pending.QueueTx(ctx, tx, appmail.DomainVerificationLostMail{

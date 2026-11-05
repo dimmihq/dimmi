@@ -2,6 +2,7 @@
  * What the list of the person's factors means for the security page.
  */
 import type { AuthFactor } from "@/lib/api/auth-factors";
+import { formatDate } from "@/lib/i18n/format";
 
 /*
  * twoFactorState reads what the list of factors means for the page: the
@@ -43,11 +44,12 @@ export function remainingLabel(remaining: number, total: number): string {
 }
 
 /*
- * usedLabel says when a factor was added and last used.
+ * usedLabel says when a factor was added and last used, writing each day
+ * with the date given, else in the reader's language.
  */
-export function usedLabel(factor: AuthFactor, dates: Intl.DateTimeFormat): string {
-  const added = `Added ${dates.format(new Date(factor.confirmed_at ?? factor.created_at))}`;
-  const used = factor.last_used_at ? `last used ${dates.format(new Date(factor.last_used_at))}` : "never used";
+export function usedLabel(factor: AuthFactor, date: (iso: string) => string = (iso) => formatDate(iso)): string {
+  const added = `Added ${date(factor.confirmed_at ?? factor.created_at)}`;
+  const used = factor.last_used_at ? `last used ${date(factor.last_used_at)}` : "never used";
 
   return `${added}, ${used}`;
 }

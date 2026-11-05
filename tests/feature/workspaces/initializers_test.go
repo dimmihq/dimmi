@@ -55,7 +55,7 @@ func TestWorkspaceInitializers(t *testing.T) {
 		tc := tests.New(t, withLabels())
 
 		var label string
-		require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+		require.NoError(t, tc.Operator().QueryRow(t.Context(),
 			"SELECT settings->>'label' FROM workspaces WHERE id = $1", tc.Workspace.Workspace.ID).Scan(&label))
 		assert.Equal(t, "default", label)
 	})
@@ -89,7 +89,7 @@ func TestWorkspaceRepair(t *testing.T) {
 		assert.Contains(t, out, w.Slug+": defaults checked, organization restored")
 		tc.Table("organizations").AssertHas(testkit.Row{"id": w.OrganizationID, "name": w.Name, "deleted_at": nil})
 		var label string
-		require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+		require.NoError(t, tc.Operator().QueryRow(t.Context(),
 			"SELECT settings->>'label' FROM workspaces WHERE id = $1", w.ID).Scan(&label))
 		assert.Equal(t, "default", label)
 

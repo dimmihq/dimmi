@@ -1,8 +1,9 @@
 /*
  * Opens the app's realtime connection once, for the whole signed-in
  * app, and keeps the query cache of the workspace on screen current:
- * the workspace's channel for its lists and teammates, and the
- * member's own channel for their counts and read state. When the
+ * the workspace's channel for its teammates, the list channel for those
+ * who see every conversation, and the member's own channel for their
+ * counts, read state and, when restricted, their lists. When the
  * server cannot replay what the app missed while offline, the app
  * refetches instead; when it closes the connection because the
  * person's access changed, everything is fetched again under the new
@@ -75,12 +76,14 @@ export function RealtimeProvider({ workspace, children }: { workspace: string | 
 }
 
 /*
- * WorkspaceChannels follows the workspace's channel and the member's
- * own, feeding both into the cache.
+ * WorkspaceChannels follows the workspace's channels and the member's
+ * own, feeding them into the cache. The list channel is asked for only
+ * by those it is open to, read from what the caller may see.
  */
 function WorkspaceChannels({ workspace, bridge }: { workspace: string; bridge: Bridge }) {
   const { data: caller } = useQuery(callerQuery(workspace));
   const member = caller?.member?.id ?? null;
+  const seesEverything = caller?.member?.conversation_access === "all";
   const handlers = {
     onEnvelope: (envelope: Parameters<Bridge["apply"]>[2], channel: string) =>
       bridge.apply(workspace, channel, envelope),
@@ -92,6 +95,7 @@ function WorkspaceChannels({ workspace, bridge }: { workspace: string; bridge: B
   };
 
   useChannel(channels.workspace(workspace), handlers);
+  useChannel(seesEverything ? channels.workspaceConversations(workspace) : null, handlers);
   useChannel(member ? channels.member(member) : null, handlers);
 
   return null;

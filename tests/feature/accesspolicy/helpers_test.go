@@ -71,7 +71,7 @@ func ruled(t *testing.T, tc *tests.TestCase, rules map[string]any) {
 	raw, err := json.Marshal(rules)
 	require.NoError(t, err)
 
-	_, err = tc.App.DB.Exec(t.Context(),
+	_, err = tc.Operator().Exec(t.Context(),
 		`UPDATE workspaces SET settings = settings ||
 			jsonb_build_object('security', COALESCE(settings->'security', '{}'::jsonb) || $2::jsonb)
 		 WHERE id = $1`, tc.Workspace.Workspace.ID, string(raw))

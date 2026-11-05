@@ -12,6 +12,36 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countTeamConversationsByStatus = `-- name: CountTeamConversationsByStatus :one
+SELECT
+    count(*) FILTER (WHERE status = 'open')::bigint AS open,
+    count(*) FILTER (WHERE status = 'snoozed')::bigint AS snoozed,
+    count(*) FILTER (WHERE status = 'closed')::bigint AS closed
+FROM conversations
+WHERE workspace_id = $1 AND assignee_team_id = $2::uuid AND deleted_at IS NULL
+`
+
+type CountTeamConversationsByStatusParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	TeamID      ids.UUID `json:"team_id"`
+}
+
+type CountTeamConversationsByStatusRow struct {
+	Open    int64 `json:"open"`
+	Snoozed int64 `json:"snoozed"`
+	Closed  int64 `json:"closed"`
+}
+
+// CountTeamConversationsByStatus counts the live conversations the team
+// holds, by status, whoever may read them: deleting the team acts on all
+// of them.
+func (q *Queries) CountTeamConversationsByStatus(ctx context.Context, arg CountTeamConversationsByStatusParams) (CountTeamConversationsByStatusRow, error) {
+	row := q.db.QueryRow(ctx, countTeamConversationsByStatus, arg.WorkspaceID, arg.TeamID)
+	var i CountTeamConversationsByStatusRow
+	err := row.Scan(&i.Open, &i.Snoozed, &i.Closed)
+	return i, err
+}
+
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (workspace_id, name, created_at, updated_at)
 VALUES ($1, $2, $3, $3)
@@ -176,6 +206,30 @@ func (q *Queries) LockTeam(ctx context.Context, arg LockTeamParams) (Team, error
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const moveInboxesDefaultTeam = `-- name: MoveInboxesDefaultTeam :exec
+UPDATE inboxes SET default_team_id = $1, updated_at = $2
+WHERE workspace_id = $3 AND default_team_id = $4::uuid
+`
+
+type MoveInboxesDefaultTeamParams struct {
+	ToTeamID    *ids.UUID `json:"to_team_id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	TeamID      ids.UUID  `json:"team_id"`
+}
+
+// MoveInboxesDefaultTeam points the inboxes that route to a team at
+// another team, or at none with a NULL target.
+func (q *Queries) MoveInboxesDefaultTeam(ctx context.Context, arg MoveInboxesDefaultTeamParams) error {
+	_, err := q.db.Exec(ctx, moveInboxesDefaultTeam,
+		arg.ToTeamID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.TeamID,
+	)
+	return err
 }
 
 const purgeTeam = `-- name: PurgeTeam :execrows

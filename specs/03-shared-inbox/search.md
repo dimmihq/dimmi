@@ -82,7 +82,7 @@ SELECT conversation_id, max(created_at) AS hit_at, (array_agg(message_id ORDER B
 FROM (SELECT * FROM msg_hits UNION ALL SELECT * FROM subj_hits) h
 GROUP BY conversation_id;
 ```
-Phase 2: join candidate conversation ids with conversations + `conversations.VisibleScope(principal)` + list filters (status, assignee, tag, ...) built by `querybuilder`, order by sort, keyset paginate. Visibility always applied in phase 2, never trusted from phase 1 (restricted members' invisible candidates drop here). Number/id jump and typo fallback go through same scope (outside scope = no result, never 403).
+Phase 2: join candidate conversation ids with conversations + `conversations.VisibleScope(membership)` + list filters (status, assignee, tag, ...) built by `querybuilder`, order by sort, keyset paginate. Visibility always applied in phase 2, never trusted from phase 1 (restricted members' invisible candidates drop here). Number/id jump and typo fallback go through same scope (outside scope = no result, never 403).
 
 Phase 3: highlight only page rows (max 25): `ts_headline('dimmi_search', body, tsquery, 'MaxFragments=2, MaxWords=18, MinWords=6, StartSel=<mark>, StopSel=</mark>')` on `best_message_id`. Output HTML-escaped first, then marks inserted (headline run on escaped text), so only `<mark>` tags survive.
 

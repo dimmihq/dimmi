@@ -94,3 +94,17 @@ templ AccessPolicyChanged(name, workspace, settingsURL string) {
 		@button(settingsURL, i18n.T(ctx, "mail.access_policy_changed.action", nil))
 	}
 }
+
+/*
+InvitationPending reminds whoever sent an invitation that it has waited
+days without an answer, so they can nudge the person or copy the link.
+*/
+
+templ InvitationPending(name, workspace, email, sentOn, membersURL string) {
+	@layout(i18n.T(ctx, "mail.invitation_pending.subject", i18n.Args{"workspace": workspace, "email": email})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.invitation_pending.intro", i18n.Args{"workspace": workspace, "email": email, "date": sentOn}) }</p>
+		<p>{ i18n.T(ctx, "mail.invitation_pending.advice", nil) }</p>
+		@button(membersURL, i18n.T(ctx, "mail.invitation_pending.action", nil))
+	}
+}

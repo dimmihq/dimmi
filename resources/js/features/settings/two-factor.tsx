@@ -33,8 +33,6 @@ import { useRecentAuth } from "./recent-auth";
 import { CodesDialog, NameDialog, SetupDialog } from "./two-factor-dialogs";
 import { isLastFactor, remainingLabel, twoFactorState, usedLabel } from "./two-factor-state";
 
-const dates = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
-
 type Dialog =
   | { kind: "setup"; factor: NewAuthenticator }
   | { kind: "codes"; codes: string[] }
@@ -158,23 +156,14 @@ function Methods({
   return (
     <>
       {authenticator ? (
-        <Item
-          mark={<Glyph icon={RiSmartphoneLine} />}
-          title={authenticator.name}
-          detail={usedLabel(authenticator, dates)}
-        >
+        <Item mark={<Glyph icon={RiSmartphoneLine} />} title={authenticator.name} detail={usedLabel(authenticator)}>
           <Action onPress={() => onOpen({ kind: "remove", factor: authenticator })}>Remove</Action>
         </Item>
       ) : (
         <Empty action={<Action onPress={onSetup}>Add authenticator</Action>}>No authenticator app added</Empty>
       )}
       {passkeys.map((passkey) => (
-        <Item
-          key={passkey.id}
-          mark={<Glyph icon={RiKey2Line} />}
-          title={passkey.name}
-          detail={usedLabel(passkey, dates)}
-        >
+        <Item key={passkey.id} mark={<Glyph icon={RiKey2Line} />} title={passkey.name} detail={usedLabel(passkey)}>
           <Action onPress={() => onOpen({ kind: "rename", factor: passkey })}>Rename</Action>
           <Action onPress={() => onOpen({ kind: "remove", factor: passkey })}>Remove</Action>
         </Item>

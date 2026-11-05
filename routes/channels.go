@@ -14,7 +14,6 @@ package routes
 
 import (
 	"github.com/dimmihq/dimmi/app"
-	"github.com/dimmihq/dimmi/app/actions/conversations"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 )
 
@@ -25,7 +24,6 @@ func Channels(a *app.App) {
 	channels := a.Broadcast.Channels()
 	authorize := &appbroadcasting.Authorizers{
 		DB: a.DB, IDs: a.IDs, Resolve: a.Actions.ResolveWorkspace, Policy: a.AccessPolicy, Live: a.Realtime.Live,
-		Scope: conversations.VisibleScope{},
 	}
 
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)
@@ -36,6 +34,8 @@ func Channels(a *app.App) {
 	conversation.ListenersChanged = viewers.Changed
 
 	channels.MustAuthorize(appbroadcasting.ConversationPattern, conversation, authorize.Conversation)
+	channels.MustAuthorize(appbroadcasting.WorkspaceConversationsPattern,
+		appbroadcasting.WorkspaceConversationsOptions(), authorize.WorkspaceConversations)
 	channels.MustAuthorize(appbroadcasting.MemberPattern, appbroadcasting.MemberOptions(), authorize.Member)
 	channels.MustAuthorize(appbroadcasting.WidgetContactPattern, appbroadcasting.WidgetContactOptions(),
 		authorize.WidgetContact)

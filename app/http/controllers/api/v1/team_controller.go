@@ -109,12 +109,20 @@ func (c *TeamController) Index(ctx context.Context, _ *requests.NoInput) (*Teams
 }
 
 /*
+teamShowIncludes are the relations one team can embed: its members, and
+for those who may delete it, how many conversations it holds.
+*/
+func teamShowIncludes() pagination.Allow {
+	return pagination.Allow{Includes: []string{"members", "conversation_counts"}}
+}
+
+/*
 Show answers with one team.
 */
 func (c *TeamController) Show(ctx context.Context, in *requests.ShowTeamRequest) (*TeamOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), teamIncludes())
+	query, err := pagination.Parse(r.URL.Query(), teamShowIncludes())
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +134,7 @@ func (c *TeamController) Show(ctx context.Context, in *requests.ShowTeamRequest)
 
 	team, err := c.ShowTeam.Handle(ctx, teams.ShowTeamInput{
 		Membership: membership(ctx), TeamID: id, WithMembers: slices.Contains(query.Includes, "members"),
+		WithConversationCounts: slices.Contains(query.Includes, "conversation_counts"),
 	})
 	if err != nil {
 		return nil, err
@@ -166,19 +175,50 @@ func (c *TeamController) Update(ctx context.Context, in *requests.UpdateTeamRequ
 }
 
 /*
-Destroy deletes a team.
+Destroy deletes a team, moving its conversations where the query says.
 */
-func (c *TeamController) Destroy(ctx context.Context, in *requests.ShowTeamRequest) (*EmptyOutput, error) {
+func (c *TeamController) Destroy(ctx context.Context, in *requests.DestroyTeamRequest) (*EmptyOutput, error) {
 	id, err := teamID(c.IDs, in.Team)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.DeleteTeam.Handle(ctx, teams.DeleteTeamInput{Membership: membership(ctx), TeamID: id}); err != nil {
+	toTeam, err := c.target(models.PrefixTeam, in.ReassignToTeam)
+	if err != nil {
+		return nil, err
+	}
+
+	toMember, err := c.target(models.PrefixMember, in.ReassignToMember)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.DeleteTeam.Handle(ctx, teams.DeleteTeamInput{
+		Membership: membership(ctx), TeamID: id, ToTeam: toTeam, ToMember: toMember,
+	})
+	if err != nil {
 		return nil, err
 	}
 
 	return &EmptyOutput{}, nil
+}
+
+/*
+target reads where a deleted team's conversations go: nil when the query
+names nothing, and an id that names nothing refused as an invalid
+target.
+*/
+func (c *TeamController) target(prefix models.Prefix, named string) (*ids.UUID, error) {
+	if named == "" {
+		return nil, nil
+	}
+
+	id, err := c.IDs.Decode(string(prefix), named)
+	if err != nil {
+		return nil, exceptions.ErrReassignToInvalid
+	}
+
+	return &id, nil
 }
 
 /*

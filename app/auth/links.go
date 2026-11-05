@@ -37,6 +37,21 @@ func (l Links) VerifyEmail(id ids.UUID, token string) string {
 }
 
 /*
+ConfirmEmailChange is the page that moves an account to a new address.
+*/
+func (l Links) ConfirmEmailChange(id ids.UUID, token string) string {
+	return l.page("/email/confirm") + "#id=" + models.PublicID(models.PrefixOneTimeToken, id) + "&token=" + token
+}
+
+/*
+TwoFactorReset is the page on which a teammate turns off the second
+factor they lost, with the link an admin had mailed them.
+*/
+func (l Links) TwoFactorReset(id ids.UUID, token string) string {
+	return l.page("/two-factor-reset") + "#id=" + models.PublicID(models.PrefixOneTimeToken, id) + "&token=" + token
+}
+
+/*
 MagicLink is the page that signs in with a mailed link.
 */
 func (l Links) MagicLink(token string) string {

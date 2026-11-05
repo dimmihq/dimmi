@@ -5,73 +5,120 @@
  * know yet shows its name as the server sent it.
  */
 import type { AuditEntry } from "@/lib/api/audit";
+import { i18n } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/i18n/format";
 
-export const auditEvents: Record<string, string> = {
-  "workspace.created": "Created the workspace",
-  "workspace.updated": "Changed workspace settings",
-  "member.joined": "Joined the workspace",
-  "member.role_changed": "Changed a role",
-  "ownership.transferred": "Handed over ownership",
-  "member.deactivated": "Deactivated a member",
-  "member.reactivated": "Reactivated a member",
-  "member.left": "Left the workspace",
-  "workspace.deleted": "Deleted the workspace",
-  "workspace.restored": "Restored the workspace",
-  "token.created": "Created an API token",
-  "token.revoked": "Revoked an API token",
-  "invitation.created": "Invited someone",
-  "invitation.accepted": "Accepted an invitation",
-  "invitation.revoked": "Withdrew an invitation",
-  "team.created": "Created a team",
-  "team.updated": "Renamed a team",
-  "team.deleted": "Deleted a team",
-  "team.member_added": "Added someone to a team",
-  "team.member_removed": "Removed someone from a team",
-  "workspace.access_policy_changed": "Changed the sign-in rules",
-  "role.created": "Created a custom role",
-  "role.updated": "Edited a custom role",
-  "role.deleted": "Deleted a custom role",
-  "member.custom_role_changed": "Changed someone's custom role",
-};
+/*
+ * AuditEventGroup is one kind of event in the audit log's filter, such
+ * as sign-ins, with the events in it, named in the reader's language. A
+ * group no feature writes to yet has no events and is left out of the
+ * filter.
+ */
+export interface AuditEventGroup {
+  id: string;
+  name: string;
+  events: Record<string, string>;
+}
 
-const securityEvents: Record<string, string> = {
-  "login.succeeded": "Signed in",
-  "login.failed": "Failed sign-in",
-  "login.locked": "Sign-in blocked after failed attempts",
-  "logout.succeeded": "Signed out",
-  "password.changed": "Changed the password",
-  "password.reset": "Reset the password",
-  "two_factor.enabled": "Turned on two-factor authentication",
-  "two_factor.disabled": "Turned off two-factor authentication",
-  "auth_factor.added": "Added an authenticator",
-  "auth_factor.removed": "Removed an authenticator",
-  "auth_factor.renamed": "Renamed an authenticator",
-  "auth_factor.recovery_code_used": "Used a recovery code",
-  "auth_factor.recovery_codes_regenerated": "Made new recovery codes",
-  "email.change_requested": "Asked to change the email",
-  "email.changed": "Changed the email",
-  "identity.linked": "Linked a sign-in provider",
-  "identity.unlinked": "Unlinked a sign-in provider",
-  "session.revoked": "Signed out a session",
-  "sessions.revoked_others": "Signed out every other session",
-  "magic_link.used": "Signed in with an email link",
-  "token.created": "Created an API token",
-};
+/*
+ * groups lists the audit events the browser app names, by kind, in the
+ * order the filter offers them.
+ */
+const groups: { id: string; events: string[] }[] = [
+  {
+    id: "sign_in",
+    events: ["member.signed_in", "member.sign_in_failed", "member.sign_in_locked", "member.sessions_revoked"],
+  },
+  {
+    id: "security",
+    events: [
+      "member.two_factor_enabled",
+      "member.two_factor_disabled",
+      "member.auth_factor_added",
+      "member.auth_factor_removed",
+      "member.recovery_code_used",
+      "member.password_changed",
+      "member.password_reset",
+      "member.email_changed",
+      "member.identity_linked",
+      "member.identity_unlinked",
+      "member.two_factor_reset_requested",
+      "member.two_factor_reset_completed",
+      "member.sign_in_lock_cleared",
+      "workspace.access_policy_changed",
+    ],
+  },
+  {
+    id: "members",
+    events: [
+      "workspace.created",
+      "workspace.updated",
+      "workspace.deleted",
+      "workspace.restored",
+      "member.joined",
+      "member.role_changed",
+      "ownership.transferred",
+      "member.deactivated",
+      "member.reactivated",
+      "member.left",
+      "invitation.created",
+      "invitation.accepted",
+      "invitation.revoked",
+      "team.created",
+      "team.updated",
+      "team.deleted",
+      "team.member_added",
+      "team.member_removed",
+      "role.created",
+      "role.updated",
+      "role.deleted",
+      "member.custom_role_changed",
+    ],
+  },
+  { id: "tokens", events: ["token.created", "token.revoked"] },
+  { id: "inbox", events: [] },
+  { id: "email", events: [] },
+  { id: "export", events: ["audit_logs.exported", "members.exported"] },
+];
 
-const channels: Record<string, string> = {
-  session: "Browser",
-  app: "App",
-  personal_token: "API token",
-  oauth_client: "Connected app",
-  cli: "Command line",
-};
+/*
+ * auditEvents are every audit event the browser app names.
+ */
+export const auditEvents = groups.flatMap((group) => group.events);
+
+/*
+ * auditEventGroups returns the groups with their names and event labels
+ * in the reader's current language.
+ */
+export function auditEventGroups(): AuditEventGroup[] {
+  return groups.map((group) => ({
+    id: group.id,
+    name: i18n.t(`settings:audit_groups.${group.id}`),
+    events: Object.fromEntries(group.events.map((event) => [event, auditEventLabel(event)])),
+  }));
+}
+
+/*
+ * groupFilter is the event filter that keeps every event of the group.
+ */
+export function groupFilter(group: AuditEventGroup): string {
+  return Object.keys(group.events).join(",");
+}
+
+/*
+ * named returns the message under the key, or the fallback when the
+ * key names no message.
+ */
+function named(key: string, fallback: string): string {
+  return i18n.exists(key) ? i18n.t(key) : fallback;
+}
 
 export function auditEventLabel(event: string): string {
-  return auditEvents[event] ?? event;
+  return named(`settings:audit.${event}`, event);
 }
 
 export function securityEventLabel(type: string): string {
-  return securityEvents[type] ?? type;
+  return named(`settings:security.${type}`, type);
 }
 
 /*
@@ -88,15 +135,16 @@ export function actorName(label: string): string {
  */
 export function actorDetail(entry: Pick<AuditEntry, "actor" | "ip">): string {
   const kind = entry.actor.via?.kind;
-  const channel = kind ? (channels[kind] ?? kind) : entry.actor.type === "system" ? "Automatic" : "";
+  const system = entry.actor.type === "system" ? i18n.t("settings:channels.automatic") : "";
+  const channel = kind ? named(`settings:channels.${kind}`, kind) : system;
 
   return [channel, entry.ip].filter(Boolean).join(" · ");
 }
 
 /*
  * formatTime writes a moment as a date and a time in the reader's
- * locale and time zone.
+ * language, in the time zone given, else the browser's.
  */
-export function formatTime(iso: string, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+export function formatTime(iso: string, timeZone?: string): string {
+  return formatDateTime(iso, { timeZone });
 }

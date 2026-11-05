@@ -12,6 +12,18 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countActiveMembers = `-- name: CountActiveMembers :one
+SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND status = 'active'
+`
+
+// CountActiveMembers counts the people who can still work in the workspace.
+func (q *Queries) CountActiveMembers(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveMembers, workspaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countActiveOwners = `-- name: CountActiveOwners :one
 SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND role = 'owner' AND status = 'active'
 `
@@ -25,10 +37,33 @@ func (q *Queries) CountActiveOwners(ctx context.Context, workspaceID ids.UUID) (
 	return count, err
 }
 
+const countUserMembershipsOutsideOrganization = `-- name: CountUserMembershipsOutsideOrganization :one
+SELECT count(*)
+FROM auth_list_user_memberships($1) AS m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.status = 'active' AND w.organization_id <> $2::uuid
+`
+
+type CountUserMembershipsOutsideOrganizationParams struct {
+	UserID         ids.UUID `json:"user_id"`
+	OrganizationID ids.UUID `json:"organization_id"`
+}
+
+// CountUserMembershipsOutsideOrganization counts the user's active
+// memberships in workspaces of other organizations, those in the trash
+// included, through a security definer function since they span
+// workspaces.
+func (q *Queries) CountUserMembershipsOutsideOrganization(ctx context.Context, arg CountUserMembershipsOutsideOrganizationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserMembershipsOutsideOrganization, arg.UserID, arg.OrganizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createWorkspaceMember = `-- name: CreateWorkspaceMember :one
 INSERT INTO workspace_members (workspace_id, user_id, role, joined_via, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id
 `
 
 type CreateWorkspaceMemberParams struct {
@@ -62,6 +97,16 @@ func (q *Queries) CreateWorkspaceMember(ctx context.Context, arg CreateWorkspace
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
@@ -72,7 +117,7 @@ UPDATE workspace_members
 SET status = 'deactivated', deactivated_at = $1::timestamptz, deactivated_by_member_id = $2::uuid,
     updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id
 `
 
 type DeactivateWorkspaceMemberParams struct {
@@ -105,13 +150,23 @@ func (q *Queries) DeactivateWorkspaceMember(ctx context.Context, arg DeactivateW
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
 }
 
 const findOldestActiveMember = `-- name: FindOldestActiveMember :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id FROM workspace_members
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id FROM workspace_members
 WHERE workspace_id = $1 AND role = $2 AND status = 'active'
 ORDER BY created_at, id
 LIMIT 1
@@ -140,6 +195,16 @@ func (q *Queries) FindOldestActiveMember(ctx context.Context, arg FindOldestActi
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
@@ -176,7 +241,7 @@ func (q *Queries) FindUserMembership(ctx context.Context, arg FindUserMembership
 }
 
 const findWorkspaceMember = `-- name: FindWorkspaceMember :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id FROM workspace_members WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id FROM workspace_members WHERE workspace_id = $1 AND id = $2
 `
 
 type FindWorkspaceMemberParams struct {
@@ -201,13 +266,23 @@ func (q *Queries) FindWorkspaceMember(ctx context.Context, arg FindWorkspaceMemb
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
 }
 
 const findWorkspaceMemberByEmail = `-- name: FindWorkspaceMemberByEmail :one
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.custom_role_id
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.custom_role_id
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND u.email = $2::citext
@@ -236,13 +311,23 @@ func (q *Queries) FindWorkspaceMemberByEmail(ctx context.Context, arg FindWorksp
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
 }
 
 const findWorkspaceMemberForUser = `-- name: FindWorkspaceMemberForUser :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
 `
 
 type FindWorkspaceMemberForUserParams struct {
@@ -268,13 +353,23 @@ func (q *Queries) FindWorkspaceMemberForUser(ctx context.Context, arg FindWorksp
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
 }
 
 const findWorkspaceMemberWithUser = `-- name: FindWorkspaceMemberWithUser :one
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.managed_by_organization_id
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = $2
@@ -308,6 +403,16 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 		&i.WorkspaceMember.DeactivatedAt,
 		&i.WorkspaceMember.DeactivatedByMemberID,
 		&i.WorkspaceMember.JoinedVia,
+		&i.WorkspaceMember.ConversationAccess,
+		&i.WorkspaceMember.ConversationAccessUnassigned,
+		&i.WorkspaceMember.AwayReassign,
+		&i.WorkspaceMember.AwaySince,
+		&i.WorkspaceMember.AvailabilitySource,
+		&i.WorkspaceMember.AwayReasonID,
+		&i.WorkspaceMember.AssignOnReply,
+		&i.WorkspaceMember.ConversationCapacity,
+		&i.WorkspaceMember.CapacityByChannel,
+		&i.WorkspaceMember.LastAssignedAt,
 		&i.WorkspaceMember.CustomRoleID,
 		&i.User.ID,
 		&i.User.Name,
@@ -325,13 +430,14 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 		&i.User.PasswordChangedAt,
 		&i.User.RiskFlags,
 		&i.User.CreatedVia,
+		&i.User.Preferences,
 		&i.User.ManagedByOrganizationID,
 	)
 	return i, err
 }
 
 const listActiveOwners = `-- name: ListActiveOwners :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.managed_by_organization_id
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.role = 'owner' AND m.status = 'active'
@@ -367,6 +473,16 @@ func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([
 			&i.WorkspaceMember.DeactivatedAt,
 			&i.WorkspaceMember.DeactivatedByMemberID,
 			&i.WorkspaceMember.JoinedVia,
+			&i.WorkspaceMember.ConversationAccess,
+			&i.WorkspaceMember.ConversationAccessUnassigned,
+			&i.WorkspaceMember.AwayReassign,
+			&i.WorkspaceMember.AwaySince,
+			&i.WorkspaceMember.AvailabilitySource,
+			&i.WorkspaceMember.AwayReasonID,
+			&i.WorkspaceMember.AssignOnReply,
+			&i.WorkspaceMember.ConversationCapacity,
+			&i.WorkspaceMember.CapacityByChannel,
+			&i.WorkspaceMember.LastAssignedAt,
 			&i.WorkspaceMember.CustomRoleID,
 			&i.User.ID,
 			&i.User.Name,
@@ -384,7 +500,59 @@ func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
 			&i.User.ManagedByOrganizationID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserActiveMemberships = `-- name: ListUserActiveMemberships :many
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.workspace_name::text AS workspace_name,
+    m.workspace_slug::citext AS workspace_slug,
+    m.role::text AS role,
+    (m.deleted_at IS NOT NULL)::boolean AS trashed
+FROM auth_user_memberships($1) AS m
+WHERE m.status = 'active'
+`
+
+type ListUserActiveMembershipsRow struct {
+	MemberID      ids.UUID `json:"member_id"`
+	WorkspaceID   ids.UUID `json:"workspace_id"`
+	WorkspaceName string   `json:"workspace_name"`
+	WorkspaceSlug string   `json:"workspace_slug"`
+	Role          string   `json:"role"`
+	Trashed       bool     `json:"trashed"`
+}
+
+// ListUserActiveMemberships returns every workspace the user is an active
+// member of, those in the trash included. It runs before any workspace is
+// chosen, through a security definer function.
+func (q *Queries) ListUserActiveMemberships(ctx context.Context, userID ids.UUID) ([]ListUserActiveMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listUserActiveMemberships, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserActiveMembershipsRow
+	for rows.Next() {
+		var i ListUserActiveMembershipsRow
+		if err := rows.Scan(
+			&i.MemberID,
+			&i.WorkspaceID,
+			&i.WorkspaceName,
+			&i.WorkspaceSlug,
+			&i.Role,
+			&i.Trashed,
 		); err != nil {
 			return nil, err
 		}
@@ -530,28 +698,37 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 }
 
 const listWorkspaceMembers = `-- name: ListWorkspaceMembers :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.managed_by_organization_id
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
   AND (coalesce(cardinality($2::text[]), 0) = 0 OR m.status = ANY ($2::text[]))
   AND (coalesce(cardinality($3::text[]), 0) = 0 OR m.role = ANY ($3::text[]))
-  AND ($4::text = '' OR u.name ILIKE '%' || $4::text || '%' OR u.email ILIKE '%' || $4::text || '%')
+  AND (coalesce(cardinality($4::uuid[]), 0) = 0 OR EXISTS (
+      SELECT 1 FROM team_members tm
+      WHERE tm.workspace_member_id = m.id AND tm.team_id = ANY ($4::uuid[])
+  ))
+  AND ($5::boolean IS NULL
+      OR (u.two_factor_confirmed_at IS NOT NULL) = $5::boolean)
+  AND ($6::text = '' OR u.name ILIKE '%' || $6::text || '%' OR u.email ILIKE '%' || $6::text || '%')
 ORDER BY
-    CASE WHEN $5::boolean THEN m.created_at END DESC,
-    CASE WHEN NOT $5::boolean THEN lower(u.name) END,
+    CASE WHEN $7::text = 'created_at' THEN m.created_at END DESC,
+    CASE WHEN $7::text = 'last_active_at' THEN m.last_accessed_at END DESC NULLS LAST,
+    lower(u.name),
     m.id
-LIMIT $7::bigint OFFSET $6::bigint
+LIMIT $9::bigint OFFSET $8::bigint
 `
 
 type ListWorkspaceMembersParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	Statuses    []string `json:"statuses"`
-	Roles       []string `json:"roles"`
-	Search      string   `json:"search"`
-	NewestFirst bool     `json:"newest_first"`
-	RowOffset   int64    `json:"row_offset"`
-	RowLimit    int64    `json:"row_limit"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Statuses    []string   `json:"statuses"`
+	Roles       []string   `json:"roles"`
+	TeamIds     []ids.UUID `json:"team_ids"`
+	TwoFactor   *bool      `json:"two_factor"`
+	Search      string     `json:"search"`
+	Sort        string     `json:"sort"`
+	RowOffset   int64      `json:"row_offset"`
+	RowLimit    int64      `json:"row_limit"`
 }
 
 type ListWorkspaceMembersRow struct {
@@ -561,15 +738,19 @@ type ListWorkspaceMembersRow struct {
 
 // ListWorkspaceMembers returns a page of the workspace's members with
 // their accounts, narrowed to the statuses and roles asked for (none
-// means all) and to names or emails containing the search, by name or
-// newest first.
+// means all), to members of any of the teams asked for, to accounts
+// with or without a second factor when asked, and to names or emails
+// containing the search. They come by name, newest first, or most
+// recently active first with those never active last.
 func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMembersParams) ([]ListWorkspaceMembersRow, error) {
 	rows, err := q.db.Query(ctx, listWorkspaceMembers,
 		arg.WorkspaceID,
 		arg.Statuses,
 		arg.Roles,
+		arg.TeamIds,
+		arg.TwoFactor,
 		arg.Search,
-		arg.NewestFirst,
+		arg.Sort,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -593,6 +774,16 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 			&i.WorkspaceMember.DeactivatedAt,
 			&i.WorkspaceMember.DeactivatedByMemberID,
 			&i.WorkspaceMember.JoinedVia,
+			&i.WorkspaceMember.ConversationAccess,
+			&i.WorkspaceMember.ConversationAccessUnassigned,
+			&i.WorkspaceMember.AwayReassign,
+			&i.WorkspaceMember.AwaySince,
+			&i.WorkspaceMember.AvailabilitySource,
+			&i.WorkspaceMember.AwayReasonID,
+			&i.WorkspaceMember.AssignOnReply,
+			&i.WorkspaceMember.ConversationCapacity,
+			&i.WorkspaceMember.CapacityByChannel,
+			&i.WorkspaceMember.LastAssignedAt,
 			&i.WorkspaceMember.CustomRoleID,
 			&i.User.ID,
 			&i.User.Name,
@@ -610,6 +801,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
 			&i.User.ManagedByOrganizationID,
 		); err != nil {
 			return nil, err
@@ -623,7 +815,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 }
 
 const lockWorkspaceMember = `-- name: LockWorkspaceMember :one
-SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id FROM workspace_members WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id FROM workspace_members WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockWorkspaceMemberParams struct {
@@ -649,6 +841,16 @@ func (q *Queries) LockWorkspaceMember(ctx context.Context, arg LockWorkspaceMemb
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
@@ -676,7 +878,7 @@ const reactivateWorkspaceMember = `-- name: ReactivateWorkspaceMember :one
 UPDATE workspace_members
 SET status = 'active', role = $1, deactivated_at = NULL, deactivated_by_member_id = NULL, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id
 `
 
 type ReactivateWorkspaceMemberParams struct {
@@ -709,6 +911,16 @@ func (q *Queries) ReactivateWorkspaceMember(ctx context.Context, arg ReactivateW
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err
@@ -742,7 +954,7 @@ func (q *Queries) TouchWorkspaceMemberAccess(ctx context.Context, arg TouchWorks
 const updateWorkspaceMemberRole = `-- name: UpdateWorkspaceMemberRole :one
 UPDATE workspace_members SET role = $1, custom_role_id = NULL, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, custom_role_id
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id
 `
 
 type UpdateWorkspaceMemberRoleParams struct {
@@ -775,6 +987,16 @@ func (q *Queries) UpdateWorkspaceMemberRole(ctx context.Context, arg UpdateWorks
 		&i.DeactivatedAt,
 		&i.DeactivatedByMemberID,
 		&i.JoinedVia,
+		&i.ConversationAccess,
+		&i.ConversationAccessUnassigned,
+		&i.AwayReassign,
+		&i.AwaySince,
+		&i.AvailabilitySource,
+		&i.AwayReasonID,
+		&i.AssignOnReply,
+		&i.ConversationCapacity,
+		&i.CapacityByChannel,
+		&i.LastAssignedAt,
 		&i.CustomRoleID,
 	)
 	return i, err

@@ -6,7 +6,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
-import { request } from "./client";
+import { request, requestFile } from "./client";
 
 export interface Workspace {
   id: string;
@@ -16,6 +16,8 @@ export interface Workspace {
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  seen_receipt_shows_name: boolean;
+  customer_facing_name: string | null;
   deleted_at: string | null;
   purge_after: string | null;
 }
@@ -25,7 +27,31 @@ export interface Member {
   role: "owner" | "admin" | "member";
   status: "active" | "deactivated";
   custom_role?: { id: string; name: string } | null;
-  user: { id: string; name: string; email: string; email_verified: boolean };
+  user: { id: string; name: string; email: string; email_verified: boolean; avatar_url: string | null };
+  sign_in_locked: boolean | null;
+  two_factor_enabled: boolean | null;
+  last_active_at: string | null;
+}
+
+/*
+ * MemberFilter narrows the member list: twoFactor keeps only members
+ * with, or without, a second factor. Only those who manage members may
+ * narrow by it.
+ */
+export interface MemberFilter {
+  twoFactor?: boolean;
+}
+
+/*
+ * memberParams writes the filter as the list's query string.
+ */
+function memberParams(filter: MemberFilter): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filter.twoFactor !== undefined) {
+    params.set("filter[two_factor]", String(filter.twoFactor));
+  }
+
+  return params;
 }
 
 /*
@@ -34,14 +60,26 @@ export interface Member {
  * never from the role.
  */
 export interface Caller {
-  member: { id: string; role: string; permissions: string[] } | null;
+  member: {
+    id: string;
+    role: string;
+    permissions: string[];
+    conversation_access: ConversationAccess;
+    conversation_access_unassigned: boolean;
+    access_team_ids: string[];
+    availability: "online" | "away";
+    away_reassign: boolean;
+  } | null;
 }
 
 export interface WorkspaceChanges {
   name?: string;
   slug?: string;
   timezone?: string;
+  locale?: string;
   require_two_factor?: boolean;
+  seen_receipt_shows_name?: boolean;
+  customer_facing_name?: string | null;
 }
 
 export interface MemberChanges {
@@ -57,12 +95,49 @@ export function workspaceQuery(workspace: string) {
   });
 }
 
-export function membersQuery(workspace: string) {
+/*
+ * APILimits are requests a minute per token, per signed-in person and
+ * per workspace's tokens together; zero means no limit.
+ */
+export interface APILimits {
+  token_per_minute: number;
+  user_per_minute: number;
+  workspace_per_minute: number;
+}
+
+export function entitlementsQuery(workspace: string) {
   return queryOptions({
-    queryKey: ["workspace", workspace, "members"],
-    queryFn: () => request<Member[]>("GET", "/members?limit=100", undefined, { workspace }),
+    queryKey: ["workspace", workspace, "entitlements"],
+    queryFn: () => request<{ api: APILimits }>("GET", "/workspace/entitlements", undefined, { workspace }),
   });
 }
+
+export function membersQuery(workspace: string, filter: MemberFilter = {}) {
+  const params = memberParams(filter);
+  params.set("limit", "100");
+
+  return queryOptions({
+    queryKey: ["workspace", workspace, "members", filter],
+    queryFn: () => request<Member[]>("GET", `/members?${params.toString()}`, undefined, { workspace }),
+  });
+}
+
+/*
+ * exportMembers fetches the member list, narrowed by the filter, as a
+ * CSV file.
+ */
+export function exportMembers(workspace: string, filter: MemberFilter) {
+  const params = memberParams(filter);
+  params.set("format", "csv");
+
+  return requestFile(`/members?${params.toString()}`, "text/csv", { workspace });
+}
+
+/*
+ * ConversationAccess is how much of the workspace's conversations a
+ * member sees.
+ */
+export type ConversationAccess = "all" | "assigned" | "teams" | "all_except_teams";
 
 export function callerQuery(workspace: string) {
   return queryOptions({
@@ -95,10 +170,57 @@ export function updateMember(workspace: string, member: string, changes: MemberC
   return request<Member>("PATCH", `/members/${encodeURIComponent(member)}`, changes, { workspace });
 }
 
+/*
+ * startTwoFactorReset mails the member a link that turns off the second
+ * factor they lost.
+ */
+export function startTwoFactorReset(workspace: string, member: string): Promise<unknown> {
+  return request<unknown>("POST", `/members/${encodeURIComponent(member)}/two-factor-resets`, {}, { workspace });
+}
+
+/*
+ * clearSignInLock lifts the lock failed guesses set on the member's
+ * account.
+ */
+export function clearSignInLock(workspace: string, member: string): Promise<void> {
+  return request<void>("DELETE", `/members/${encodeURIComponent(member)}/sign-in-lock`, undefined, { workspace });
+}
+
 export function leaveWorkspace(membership: string): Promise<void> {
   return request<void>("DELETE", `/user/memberships/${encodeURIComponent(membership)}`);
 }
 
 export function confirmPassword(password: string): Promise<unknown> {
   return request<unknown>("POST", "/user/confirmation", { method: "password", password });
+}
+
+/*
+ * MemberImport is the report of a member import: how many rows created,
+ * changed, left alone or failed, and each row's own outcome.
+ */
+export interface MemberImport {
+  dry_run: boolean;
+  created: number;
+  updated: number;
+  unchanged: number;
+  failed: number;
+  rows: {
+    row: number;
+    email: string;
+    result: "created" | "updated" | "unchanged" | "failed";
+    changes: string[];
+    error?: { code: string; message: string };
+  }[];
+}
+
+/*
+ * importMembers sends a member import file, or with dryRun only checks
+ * what it would do.
+ */
+export function importMembers(workspace: string, file: File, dryRun: boolean): Promise<MemberImport> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("dry_run", String(dryRun));
+
+  return request<MemberImport>("POST", "/member-imports", form, { workspace });
 }

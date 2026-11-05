@@ -21,6 +21,7 @@ package foundation
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -45,6 +46,7 @@ they stop with.
 */
 type webServers struct {
 	public string
+	secure string
 	admin  string
 	errs   chan error
 }
@@ -63,6 +65,28 @@ func (a *Application) Start(ctx context.Context) error {
 	if a.Roles.Has(RoleWeb) {
 		return a.startWeb(ctx)
 	}
+
+	return a.startAdmin(ctx)
+}
+
+/*
+startAdmin serves health and metrics on the admin listener for a process
+without the web role, so a worker can be checked like a web server.
+*/
+func (a *Application) startAdmin(ctx context.Context) error {
+	if a.Config.HTTP.AdminAddr == "" {
+		return nil
+	}
+
+	web := &webServers{errs: make(chan error, 1)}
+
+	addr, err := a.listen(ctx, endpoint{"admin", a.Config.HTTP.AdminAddr, a.adminHandler(), nil}, web.errs)
+	if err != nil {
+		return err
+	}
+
+	web.admin = addr
+	a.web.Store(web)
 
 	return nil
 }
@@ -91,6 +115,18 @@ it starts.
 func (a *Application) Addr() string {
 	if web := a.web.Load(); web != nil {
 		return web.public
+	}
+
+	return ""
+}
+
+/*
+TLSAddr returns the address the HTTPS listener is bound to, or "" when
+the application serves plain HTTP only or has not started.
+*/
+func (a *Application) TLSAddr() string {
+	if web := a.web.Load(); web != nil {
+		return web.secure
 	}
 
 	return ""
@@ -147,7 +183,11 @@ func (a *Application) startQueue(ctx context.Context) error {
 }
 
 /*
-startWeb binds the public and admin listeners and serves them.
+startWeb binds the public and admin listeners and serves them. With an
+HTTPS address the application terminates TLS itself and the plain
+listener only answers health, challenges and redirects. Realtime clients
+are told to reconnect before the listeners wait for requests to finish,
+so long-lived streams never hold shutdown up.
 */
 func (a *Application) startWeb(ctx context.Context) error {
 	public, err := a.publicHandler()
@@ -155,24 +195,53 @@ func (a *Application) startWeb(ctx context.Context) error {
 		return err
 	}
 
-	web := &webServers{errs: make(chan error, 2)}
-	a.onClose("broadcasting connections", a.stopBroadcasting())
+	web := &webServers{errs: make(chan error, 3)}
+	stopBroadcasting := a.stopBroadcasting()
+	a.onClose("broadcasting connections", stopBroadcasting)
 
-	web.public, err = a.listen(ctx, endpoint{"public", a.Config.HTTP.Addr, public}, web.errs)
-	if err != nil {
+	if err := a.listenPublic(ctx, web, public); err != nil {
 		return err
 	}
 
 	if a.Config.HTTP.AdminAddr != "" {
-		web.admin, err = a.listen(ctx, endpoint{"admin", a.Config.HTTP.AdminAddr, a.adminHandler()}, web.errs)
+		web.admin, err = a.listen(ctx, endpoint{"admin", a.Config.HTTP.AdminAddr, a.adminHandler(), nil}, web.errs)
 		if err != nil {
 			return err
 		}
 	}
 
+	a.onClose("realtime clients", stopBroadcasting)
 	a.web.Store(web)
 
 	return nil
+}
+
+/*
+listenPublic serves the application on the plain address, or on the
+HTTPS address with the plain one redirecting to it.
+*/
+func (a *Application) listenPublic(ctx context.Context, web *webServers, public http.Handler) error {
+	var err error
+
+	if a.Config.HTTP.TLSAddr == "" {
+		web.public, err = a.listen(ctx, endpoint{"public", a.Config.HTTP.Addr, public, nil}, web.errs)
+
+		return err
+	}
+
+	secure := a.Domains.TLSConfig()
+	if secure == nil {
+		return ErrNoTLSDriver
+	}
+
+	web.secure, err = a.listen(ctx, endpoint{"https", a.Config.HTTP.TLSAddr, strictTransport(public), secure}, web.errs)
+	if err != nil {
+		return err
+	}
+
+	web.public, err = a.listen(ctx, endpoint{"http", a.Config.HTTP.Addr, a.redirectHandler(), nil}, web.errs)
+
+	return err
 }
 
 /*
@@ -220,7 +289,7 @@ func (a *Application) adminHandler() http.Handler {
 
 func (a *Application) healthMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.Handle(PathUp, health.Up())
+	mux.Handle(PathUp, health.Up(a.Config.App.Release))
 	mux.Handle(PathReady, health.Ready(a.Health))
 
 	return mux
@@ -228,12 +297,13 @@ func (a *Application) healthMux() *http.ServeMux {
 
 /*
 endpoint is a listener to start: its name in messages, the address to
-bind and the handler to serve.
+bind, the handler to serve and, for HTTPS, its TLS configuration.
 */
 type endpoint struct {
 	name    string
 	addr    string
 	handler http.Handler
+	tls     *tls.Config
 }
 
 /*
@@ -248,15 +318,29 @@ func (a *Application) listen(ctx context.Context, e endpoint, errs chan<- error)
 	}
 
 	server := newServer(log.NewContext(context.WithoutCancel(ctx), a.Log), e.handler, a.Config.HTTP)
+	server.TLSConfig = e.tls
 	a.onClose(e.name+" listener", server.Shutdown)
 
 	go func() {
-		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := serve(server, listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errs <- fmt.Errorf("serve %s: %w", e.name, err)
 		}
 	}()
 
 	return listener.Addr().String(), nil
+}
+
+/*
+serve serves plain HTTP, or HTTPS when the server has a TLS
+configuration. ServeTLS is what turns HTTP/2 on; its certificates come
+from the configuration, so no files are named.
+*/
+func serve(server *http.Server, listener net.Listener) error {
+	if server.TLSConfig == nil {
+		return server.Serve(listener)
+	}
+
+	return server.ServeTLS(listener, "", "")
 }
 
 /*

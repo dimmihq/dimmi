@@ -91,7 +91,7 @@ func TestAccessPolicyEndpoint(t *testing.T) {
 		owner := in(tc, tc.Owner)
 		_, err := factories.WithTwoFactor(t.Context(), tc.App, tc.Owner)
 		require.NoError(t, err)
-		_, err = tc.App.DB.Exec(t.Context(),
+		_, err = tc.Operator().Exec(t.Context(),
 			`UPDATE workspaces SET settings = '{"keep": 1, "security": {"require_two_factor": true}}' WHERE id = $1`,
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestAccessPolicyEndpoint(t *testing.T) {
 		owner.PatchJSON(policyPath, testkit.JSON{"session_max_age_minutes": 120}).AssertOK().
 			AssertJSONPath("data.require_two_factor", true)
 
-		w, err := models.New(tc.App.DB).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
+		w, err := models.New(tc.Operator()).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 		assert.JSONEq(t,
 			`{"keep": 1, "security": {"require_two_factor": true, "session_max_age_minutes": 120}}`,
@@ -115,7 +115,7 @@ func TestAccessPolicyEndpoint(t *testing.T) {
 
 		owner.PatchJSON(policyPath, testkit.JSON{"session_max_age_minutes": 120}).AssertStatus(500)
 
-		w, err := models.New(tc.App.DB).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
+		w, err := models.New(tc.Operator()).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 		assert.Nil(t, w.Security().SessionMaxAge)
 	})

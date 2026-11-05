@@ -47,3 +47,20 @@ RETURNING *;
 -- name: PurgeTeam :execrows
 -- PurgeTeam removes a team that was deleted, with its memberships.
 DELETE FROM teams WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NOT NULL;
+
+-- name: CountTeamConversationsByStatus :one
+-- CountTeamConversationsByStatus counts the live conversations the team
+-- holds, by status, whoever may read them: deleting the team acts on all
+-- of them.
+SELECT
+    count(*) FILTER (WHERE status = 'open')::bigint AS open,
+    count(*) FILTER (WHERE status = 'snoozed')::bigint AS snoozed,
+    count(*) FILTER (WHERE status = 'closed')::bigint AS closed
+FROM conversations
+WHERE workspace_id = @workspace_id AND assignee_team_id = @team_id::uuid AND deleted_at IS NULL;
+
+-- name: MoveInboxesDefaultTeam :exec
+-- MoveInboxesDefaultTeam points the inboxes that route to a team at
+-- another team, or at none with a NULL target.
+UPDATE inboxes SET default_team_id = @to_team_id, updated_at = @now
+WHERE workspace_id = @workspace_id AND default_team_id = @team_id::uuid;

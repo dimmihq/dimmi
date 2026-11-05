@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net/url"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/propagation"
@@ -40,6 +41,11 @@ import (
 urlSigningPurpose derives the URL signing key from the app key.
 */
 const urlSigningPurpose = "url-signing"
+
+/*
+gatePurpose derives the key that signs the shared password gate's cookie.
+*/
+const gatePurpose = "gate-cookie"
 
 /*
 bootWeb builds identity, validation, the HTTP kernel, the router and
@@ -125,6 +131,10 @@ func (a *Application) bootKernel() error {
 		a.trustProxies = trust
 	}
 
+	if err := a.useGate(); err != nil {
+		return err
+	}
+
 	a.Kernel.Use(middleware.Maintenance(a.Maintenance, a.Config.Maintenance.RetryAfter, a.opts.MaintenanceExcept...))
 
 	a.Router = routing.New(routing.Options{Middleware: a.Kernel, Errors: a.Errors, Validator: a.Validator})
@@ -136,6 +146,31 @@ func (a *Application) bootKernel() error {
 
 	a.URL = routing.NewURL(a.Router, a.Config.App.URL, signing, a.Clock)
 	a.aliasMiddleware()
+
+	return nil
+}
+
+/*
+useGate puts the shared password gate in front of every route when it is
+enabled. Certificate challenges and health never reach the kernel, so
+they stay open without being listed.
+*/
+func (a *Application) useGate() error {
+	if !a.Config.Gate.Enabled {
+		return nil
+	}
+
+	secret, err := encryption.DeriveKey(a.appKey, gatePurpose)
+	if err != nil {
+		return fmt.Errorf("derive gate key: %w", err)
+	}
+
+	a.Kernel.Use(middleware.Gate(middleware.GateOptions{
+		Password: a.Config.Gate.Password,
+		Key:      a.Config.Gate.CIKey,
+		Secret:   secret,
+		Except:   a.opts.GateExcept,
+	}))
 
 	return nil
 }
@@ -204,15 +239,42 @@ func (a *Application) bootProviders(ctx context.Context) error {
 }
 
 /*
-domainAuthorizer returns the application's hostname authorizer, or one
-refusing every hostname.
+domainAuthorizer returns the hostname authorizer. The host of app.url
+always gets a certificate, since the application serves it; any other
+hostname is up to the application's authorizer, and refused without one.
 */
 func (a *Application) domainAuthorizer() customdomain.Authorizer {
-	if a.opts.Domains != nil {
-		return a.opts.Domains
+	own := appHost(a.Config.App.URL)
+
+	return func(ctx context.Context, host string) error {
+		if own != "" && host == own {
+			return nil
+		}
+
+		if a.opts.Domains != nil {
+			return a.opts.Domains(ctx, host)
+		}
+
+		return customdomain.ErrNotAuthorized
+	}
+}
+
+/*
+appHost returns the normalized host of the application's URL, or "" when
+it is not served over HTTPS and so needs no certificate.
+*/
+func appHost(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Scheme != "https" {
+		return ""
 	}
 
-	return func(context.Context, string) error { return customdomain.ErrNotAuthorized }
+	host, err := customdomain.Normalize(parsed.Hostname())
+	if err != nil {
+		return ""
+	}
+
+	return host
 }
 
 /*

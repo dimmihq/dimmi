@@ -94,7 +94,7 @@ func markTested(t *testing.T, tc *tests.TestCase, connection string) {
 
 	id, err := tc.App.IDs.Decode(string(models.PrefixSSOConnection), connection)
 	require.NoError(t, err)
-	_, err = tc.App.DB.Exec(t.Context(),
+	_, err = tc.Operator().Exec(t.Context(),
 		`UPDATE sso_connections SET status = 'tested', tested_at = $2 WHERE id = $1`, id, tc.Clock.Now())
 	require.NoError(t, err)
 }
@@ -108,7 +108,7 @@ func signedInThrough(t *testing.T, tc *tests.TestCase, user models.User, connect
 
 	id, err := tc.App.IDs.Decode(string(models.PrefixSSOConnection), connection)
 	require.NoError(t, err)
-	_, err = tc.App.DB.Exec(t.Context(),
+	_, err = tc.Operator().Exec(t.Context(),
 		`UPDATE sessions SET sso_connection_id = $2 WHERE user_id = $1`, user.ID, id)
 	require.NoError(t, err)
 }

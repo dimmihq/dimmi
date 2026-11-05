@@ -5,10 +5,10 @@
 |
 | Every inbox event that open screens care about becomes a broadcast,
 | once its transaction committed. Where it goes follows from what it is
-| about: a change to a conversation updates every list in the workspace
-| and the conversation itself, a message lands on its conversation's
-| timeline and moves its row in the lists, and an event for one member,
-| such as their read state, reaches only that member.
+| about: a change to a conversation updates the lists of those who may
+| see it and the conversation itself, a message lands on its
+| conversation's timeline and moves its row in those lists, and an event
+| for one member, such as their read state, reaches only that member.
 |
 | Each broadcast carries the event's id, so a client that receives it
 | twice keeps it once, and the client mutation id of the change, so the
@@ -47,11 +47,15 @@ type Publisher interface {
 }
 
 /*
-Broadcaster turns domain events into broadcasts.
+Broadcaster turns domain events into broadcasts. Fanout says who beyond
+the shared channel hears a list change, and Unsubscribe takes someone off
+a conversation they lost sight of.
 */
 type Broadcaster struct {
-	Server   Publisher
-	Payloads Payloads
+	Server      Publisher
+	Payloads    Payloads
+	Fanout      *Fanout
+	Unsubscribe Unsubscriber
 }
 
 /*
@@ -67,6 +71,8 @@ func (b *Broadcaster) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, b.snoozeListChanged)
 	b.listenAccounts(d)
 	b.listenRoles(d)
+	b.listenFanout(d)
+	b.listenAvailability(d)
 }
 
 /*
@@ -93,7 +99,7 @@ func (b *Broadcaster) messageEvent(ctx context.Context, e appevents.MessageEvent
 		return err
 	}
 
-	err = b.publishOrRefer(ctx, ConversationChannel(e.Conversation()), message(e, entry),
+	err = b.publishOrRefer(ctx, []string{ConversationChannel(e.Conversation())}, message(e, entry),
 		reference(models.PrefixMessage, "message", e.Message(), entry))
 	if err != nil {
 		return err
@@ -122,7 +128,7 @@ func (b *Broadcaster) conversationEvent(ctx context.Context, e appevents.Convers
 		return err
 	}
 
-	return b.publishOrRefer(ctx, ConversationChannel(e.Conversation()), message(e, full),
+	return b.publishOrRefer(ctx, []string{ConversationChannel(e.Conversation())}, message(e, full),
 		reference(models.PrefixConversation, "conversation", e.Conversation(), full))
 }
 
@@ -141,8 +147,8 @@ func (b *Broadcaster) contactTyping(ctx context.Context, e appevents.ContactTypi
 }
 
 /*
-publishRow publishes the conversation's list row on the workspace's
-channel, under the event's name.
+publishRow publishes the conversation's list row to those who may see
+it, under the event's name.
 */
 func (b *Broadcaster) publishRow(ctx context.Context, e appevents.ConversationEvent) error {
 	h := e.Header()
@@ -152,23 +158,24 @@ func (b *Broadcaster) publishRow(ctx context.Context, e appevents.ConversationEv
 		return err
 	}
 
-	return b.publishOrRefer(ctx, WorkspaceChannel(h.WorkspaceID), message(e, row),
-		reference(models.PrefixConversation, "conversation", e.Conversation(), row))
+	return b.publishList(ctx, e, row)
 }
 
 /*
 publishOrRefer publishes the message, or the reference in its place
 when the message is too large to broadcast.
 */
-func (b *Broadcaster) publishOrRefer(ctx context.Context, channel string, m fbroadcasting.Message, r Reference) error {
-	err := b.publish(ctx, []string{channel}, m)
+func (b *Broadcaster) publishOrRefer(
+	ctx context.Context, channels []string, m fbroadcasting.Message, r Reference,
+) error {
+	err := b.publish(ctx, channels, m)
 	if !errors.Is(err, fbroadcasting.ErrPayloadTooLarge) {
 		return err
 	}
 
 	m.Data = r
 
-	return b.publish(ctx, []string{channel}, m)
+	return b.publish(ctx, channels, m)
 }
 
 func (b *Broadcaster) publish(ctx context.Context, channels []string, m fbroadcasting.Message) error {

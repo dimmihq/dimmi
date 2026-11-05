@@ -303,23 +303,25 @@ func (q *Queries) ListOrganizationDomains(ctx context.Context, organizationID id
 }
 
 const listOrganizationOwners = `-- name: ListOrganizationOwners :many
-SELECT DISTINCT u.id, u.name, u.email, u.locale, w.id AS workspace_id
-FROM workspaces w
-JOIN workspace_members m ON m.workspace_id = w.id AND m.role = 'owner' AND m.status = 'active'
-JOIN users u ON u.id = m.user_id
-WHERE w.organization_id = $1 AND w.deleted_at IS NULL
+SELECT
+    o.id::uuid AS id,
+    o.name::text AS name,
+    o.email::citext AS email,
+    coalesce(o.locale, '')::text AS locale,
+    o.workspace_id::uuid AS workspace_id
+FROM auth_organization_owners($1::uuid) AS o
 `
 
 type ListOrganizationOwnersRow struct {
 	ID          ids.UUID `json:"id"`
 	Name        string   `json:"name"`
 	Email       string   `json:"email"`
-	Locale      *string  `json:"locale"`
+	Locale      string   `json:"locale"`
 	WorkspaceID ids.UUID `json:"workspace_id"`
 }
 
 // ListOrganizationOwners returns every active owner of the organization's
-// live workspaces, with the workspace they own.
+// live workspaces, with the workspace they own, across workspaces.
 func (q *Queries) ListOrganizationOwners(ctx context.Context, organizationID ids.UUID) ([]ListOrganizationOwnersRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationOwners, organizationID)
 	if err != nil {

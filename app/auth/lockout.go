@@ -21,6 +21,11 @@
 | the application's clock, which tests can move; Valkey only forgets
 | them later. Losing Valkey forgets every count, which is acceptable.
 |
+| An admin who knows the person is really them can lift what failures
+| set against their account. The counts of each address at the account
+| are kept under a generation of the account that the admin moves on,
+| so every address starts again at once without listing them.
+|
 */
 
 package auth
@@ -49,6 +54,7 @@ const (
 	streakWindow    = 24 * time.Hour
 	emailLock       = 15 * time.Minute
 	sprayBlock      = time.Hour
+	clearedFor      = streakWindow + time.Hour
 	streakStep      = 5
 	unlimitedStreak = 1 << 20
 )
@@ -79,7 +85,12 @@ when the attempt is locked out, and counts it otherwise. A locked
 attempt is not counted.
 */
 func (l *Lockout) Check(ctx context.Context, a Attempt) error {
-	locks := []string{l.sprayKey(a), l.streakKey(a)}
+	pair, err := l.pair(ctx, a)
+	if err != nil {
+		return Unavailable(ctx, err)
+	}
+
+	locks := []string{l.sprayKey(a), streakKey(pair)}
 	if !a.KnownDevice {
 		locks = append(locks, l.emailKey(a))
 	}
@@ -95,7 +106,7 @@ func (l *Lockout) Check(ctx context.Context, a Attempt) error {
 		}
 	}
 
-	res, err := l.Limiter.Attempt(ctx, "login:attempts:"+a.IP+":"+a.Email, l.Config.PerIPEmail, attemptWindow)
+	res, err := l.Limiter.Attempt(ctx, "login:attempts:"+pair, l.Config.PerIPEmail, attemptWindow)
 	if err != nil {
 		return Unavailable(ctx, err)
 	}
@@ -161,7 +172,12 @@ func (l *Lockout) Failed(ctx context.Context, a Attempt) (Locks, error) {
 countFailure counts the failure and locks what crossed its line.
 */
 func (l *Lockout) countFailure(ctx context.Context, a Attempt) (Locks, error) {
-	streak, streakErr := l.count(ctx, "login:streak:"+a.IP+":"+a.Email, unlimitedStreak, streakWindow)
+	pair, err := l.pair(ctx, a)
+	if err != nil {
+		return Locks{}, err
+	}
+
+	streak, streakErr := l.count(ctx, "login:streak:"+pair, unlimitedStreak, streakWindow)
 	byEmail, emailErr := l.count(ctx, "login:failures:email:"+a.Email, l.Config.PerEmailSoftLock, failureWindow)
 	byIP, ipErr := l.count(ctx, "login:failures:ip:"+a.IP, l.Config.PerIPSpray, failureWindow)
 
@@ -182,7 +198,7 @@ func (l *Lockout) countFailure(ctx context.Context, a Attempt) (Locks, error) {
 		key     string
 		wait    time.Duration
 	}{
-		{locks.Streak, l.streakKey(a), streakLock(streak)},
+		{locks.Streak, streakKey(pair), streakLock(streak)},
 		{locks.Account, l.emailKey(a), emailLock},
 		{locks.Spray, l.sprayKey(a), sprayBlock},
 	} {
@@ -199,7 +215,12 @@ Succeeded ends the run of failures of the address at the email. The
 hourly counts stay, so a success does not reset a spray in progress.
 */
 func (l *Lockout) Succeeded(ctx context.Context, a Attempt) error {
-	if err := l.Limiter.Clear(ctx, "login:streak:"+a.IP+":"+a.Email); err != nil {
+	pair, err := l.pair(ctx, a)
+	if err != nil {
+		return Unavailable(ctx, err)
+	}
+
+	if err := l.Limiter.Clear(ctx, "login:streak:"+pair); err != nil {
 		return Unavailable(ctx, err)
 	}
 
@@ -214,11 +235,16 @@ count. Locks on other addresses stay, and a stranger who keeps guessing
 starts counting again.
 */
 func (l *Lockout) InboxProven(ctx context.Context, a Attempt) error {
-	err := errors.Join(
-		l.Limiter.Clear(ctx, "login:attempts:"+a.IP+":"+a.Email),
-		l.Limiter.Clear(ctx, "login:streak:"+a.IP+":"+a.Email),
+	pair, err := l.pair(ctx, a)
+	if err != nil {
+		return Unavailable(ctx, err)
+	}
+
+	err = errors.Join(
+		l.Limiter.Clear(ctx, "login:attempts:"+pair),
+		l.Limiter.Clear(ctx, "login:streak:"+pair),
 		l.Limiter.Clear(ctx, "login:failures:email:"+a.Email),
-		l.Cache.Delete(ctx, l.streakKey(a)),
+		l.Cache.Delete(ctx, streakKey(pair)),
 		l.Cache.Delete(ctx, l.emailKey(a)),
 	)
 	if err != nil {
@@ -226,6 +252,51 @@ func (l *Lockout) InboxProven(ctx context.Context, a Attempt) error {
 	}
 
 	return nil
+}
+
+/*
+Clear lifts everything failed guesses set against the account with the
+email, for an admin who knows the person: the lock against strangers
+with its count, and every address's run of failures and lock at the
+account. Locks of addresses guessing at many accounts stay.
+*/
+func (l *Lockout) Clear(ctx context.Context, email string) error {
+	generation := []byte(strconv.FormatInt(l.Clock.Now().UnixNano(), 10))
+
+	err := errors.Join(
+		l.Cache.Set(ctx, clearedKey(email), generation, clearedFor),
+		l.Limiter.Clear(ctx, "login:failures:email:"+email),
+		l.Cache.Delete(ctx, l.emailKey(Attempt{Email: email})),
+	)
+	if err != nil {
+		return Unavailable(ctx, err)
+	}
+
+	return nil
+}
+
+/*
+Locked reports, for each email, whether the account is locked against
+strangers now.
+*/
+func (l *Lockout) Locked(ctx context.Context, emails []string) (map[string]bool, error) {
+	keys := make([]string, 0, len(emails))
+	for _, email := range emails {
+		keys = append(keys, l.emailKey(Attempt{Email: email}))
+	}
+
+	stored, err := l.Cache.Many(ctx, keys)
+	if err != nil {
+		return nil, Unavailable(ctx, err)
+	}
+
+	locked := make(map[string]bool, len(emails))
+	for i, email := range emails {
+		until, parseErr := strconv.ParseInt(string(stored[keys[i]]), 10, 64)
+		locked[email] = parseErr == nil && time.Unix(until, 0).After(l.Clock.Now())
+	}
+
+	return locked, nil
 }
 
 /*
@@ -285,8 +356,29 @@ func (l *Lockout) lockedFor(ctx context.Context, key string) (time.Duration, err
 	return max(time.Unix(until, 0).Sub(l.Clock.Now()), 0), nil
 }
 
-func (l *Lockout) streakKey(a Attempt) string {
-	return "login:lock:" + a.IP + ":" + a.Email
+/*
+pair names the address at the account in the counter keys, under the
+generation an admin last moved the account to, if any.
+*/
+func (l *Lockout) pair(ctx context.Context, a Attempt) (string, error) {
+	generation, err := l.Cache.Get(ctx, clearedKey(a.Email))
+	if errors.Is(err, cache.ErrMiss) {
+		return a.IP + ":" + a.Email, nil
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("read sign-in generation: %w", err)
+	}
+
+	return a.IP + ":" + a.Email + "@" + string(generation), nil
+}
+
+func streakKey(pair string) string {
+	return "login:lock:" + pair
+}
+
+func clearedKey(email string) string {
+	return "login:cleared:" + email
 }
 
 func (l *Lockout) emailKey(a Attempt) string {

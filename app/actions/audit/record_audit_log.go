@@ -19,14 +19,17 @@
 package audit
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/models"
@@ -37,33 +40,39 @@ The audit events of workspaces and their members, of the ways in, such
 as access tokens and invitations, of teams and of custom roles.
 */
 const (
-	EventWorkspaceCreated      = "workspace.created"
-	EventWorkspaceUpdated      = "workspace.updated"
-	EventAccessPolicyChanged   = "workspace.access_policy_changed"
-	EventMemberJoined          = "member.joined"
-	EventMemberRoleChanged     = "member.role_changed"
-	EventMemberDeactivated     = "member.deactivated"
-	EventMemberReactivated     = "member.reactivated"
-	EventMemberLeft            = "member.left"
-	EventOwnershipTransferred  = "ownership.transferred"
-	EventWorkspaceDeleted      = "workspace.deleted"
-	EventWorkspaceRestored     = "workspace.restored"
-	EventTokenCreated          = "token.created"
-	EventTokenRevoked          = "token.revoked"
-	EventInvitationCreated     = "invitation.created"
-	EventInvitationAccepted    = "invitation.accepted"
-	EventInvitationRevoked     = "invitation.revoked"
-	EventTeamCreated           = "team.created"
-	EventTeamUpdated           = "team.updated"
-	EventTeamDeleted           = "team.deleted"
-	EventTeamMemberAdded       = "team.member_added"
-	EventTeamMemberRemoved     = "team.member_removed"
-	EventRoleCreated           = "role.created"
-	EventRoleUpdated           = "role.updated"
-	EventRoleDeleted           = "role.deleted"
-	EventMemberCustomRole      = "member.custom_role_changed"
+	EventWorkspaceCreated     = "workspace.created"
+	EventWorkspaceUpdated     = "workspace.updated"
+	EventAccessPolicyChanged  = "workspace.access_policy_changed"
+	EventMemberJoined         = "member.joined"
+	EventMemberRoleChanged    = "member.role_changed"
+	EventMemberDeactivated    = "member.deactivated"
+	EventMemberReactivated    = "member.reactivated"
+	EventMemberAccessChanged  = "member.access_changed"
+	EventMemberAvailability   = "member.availability_changed"
+	EventMemberLeft           = "member.left"
+	EventOwnershipTransferred = "ownership.transferred"
+	EventWorkspaceDeleted     = "workspace.deleted"
+	EventWorkspaceRestored    = "workspace.restored"
+	EventTokenCreated         = "token.created"
+	EventTokenRevoked         = "token.revoked"
+	EventInvitationCreated    = "invitation.created"
+	EventInvitationAccepted   = "invitation.accepted"
+	EventInvitationRevoked    = "invitation.revoked"
+	EventTeamCreated          = "team.created"
+	EventTeamUpdated          = "team.updated"
+	EventTeamDeleted          = "team.deleted"
+	EventTeamMemberAdded      = "team.member_added"
+	EventTeamMemberRemoved    = "team.member_removed"
+	EventRoleCreated          = "role.created"
+	EventRoleUpdated          = "role.updated"
+	EventRoleDeleted          = "role.deleted"
+	EventMemberCustomRole     = "member.custom_role_changed"
+
 	EventWidgetSettingsUpdated = "widget.settings_updated"
 	EventWidgetDeleted         = "widget.deleted"
+	EventTwoFactorResetAsked   = "member.two_factor_reset_requested"
+	EventTwoFactorResetDone    = "member.two_factor_reset_completed"
+	EventSignInLockCleared     = "member.sign_in_lock_cleared"
 )
 
 /*
@@ -79,7 +88,8 @@ const (
 /*
 The kinds of actor and of the channel they acted through. A member acts
 through their browser session, their own app or an access token they
-minted; the system acts on its own.
+minted; the system acts on its own, or for an operator at the command
+line.
 */
 const (
 	ActorMember      = "member"
@@ -87,6 +97,7 @@ const (
 	ViaSession       = "session"
 	ViaApp           = "app"
 	ViaPersonalToken = "personal_token"
+	ViaCLI           = "cli"
 )
 
 /*
@@ -109,6 +120,12 @@ Entry is one change to record. ActorID is the member who made it, or
 ids.Nil() when the system did. Changes describes what changed, such as
 {"role": {"from": "member", "to": "admin"}}, and holds only values that
 encode as JSON.
+
+Work recorded after the fact, away from the request that caused it,
+says what the request would have: Client is where it came from, At
+when it happened, SystemLabel how the system is named as its actor
+and Via the channel the system acted through, such as cli. Left empty,
+they come from the request in the context and the clock.
 */
 type Entry struct {
 	WorkspaceID ids.UUID
@@ -116,6 +133,10 @@ type Entry struct {
 	ActorID     ids.UUID
 	Subject     Subject
 	Changes     map[string]any
+	Client      *appauth.Client
+	At          time.Time
+	SystemLabel string
+	Via         string
 }
 
 /*
@@ -143,11 +164,28 @@ type actor struct {
 
 /*
 Handle writes the entry, inside the transaction in the context when
-there is one, and returns it as stored.
+there is one, and returns it as stored. It runs scoped to the entry's
+workspace, so it also works for callers that hold no transaction.
 */
 func (a *RecordAuditLog) Handle(ctx context.Context, e Entry) (models.AuditLog, error) {
-	q := models.New(a.DB)
+	var entry models.AuditLog
 
+	scoped := tenancy.With(ctx, e.WorkspaceID.String())
+
+	err := a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		entry, err = a.write(ctx, models.New(tx), e)
+
+		return err
+	})
+
+	return entry, err
+}
+
+/*
+write stores the entry with the queries of the workspace's transaction.
+*/
+func (a *RecordAuditLog) write(ctx context.Context, q *models.Queries, e Entry) (models.AuditLog, error) {
 	who, err := a.actor(ctx, q, e)
 	if err != nil {
 		return models.AuditLog{}, err
@@ -160,10 +198,14 @@ func (a *RecordAuditLog) Handle(ctx context.Context, e Entry) (models.AuditLog, 
 
 	params := models.CreateAuditLogParams{
 		WorkspaceID: e.WorkspaceID, Event: e.Event, ActorType: who.kind, ActorID: who.id, ViaKind: who.viaKind,
-		ViaID: who.viaID, ActorLabel: who.label, Changes: changes, Now: a.Clock.Now(),
+		ViaID: who.viaID, ActorLabel: who.label, Changes: changes, Now: e.At,
 	}
+	if e.At.IsZero() {
+		params.Now = a.Clock.Now()
+	}
+
 	withSubject(&params, e.Subject)
-	withClient(ctx, &params)
+	withClient(ctx, &params, e.Client)
 
 	entry, err := q.CreateAuditLog(ctx, params)
 	if err != nil {
@@ -178,11 +220,15 @@ actor works out who the entry names: the system, or the member with
 their account as it is now and, for a token, the token's name.
 */
 func (a *RecordAuditLog) actor(ctx context.Context, q *models.Queries, e Entry) (actor, error) {
-	who := actor{kind: ActorSystem, label: systemLabel}
+	who := actor{kind: ActorSystem, label: cmp.Or(e.SystemLabel, systemLabel)}
 	principal, signedIn := appauth.CurrentPrincipal(ctx)
 
 	if signedIn {
 		who.viaKind, who.viaID = via(principal)
+	}
+
+	if e.Via != "" {
+		who.viaKind = &e.Via
 	}
 
 	if e.ActorID == ids.Nil() {
@@ -250,14 +296,18 @@ func withSubject(p *models.CreateAuditLogParams, s Subject) {
 
 /*
 withClient fills in the address, browser and request id of the request
-in the context, when there is one.
+in the context, when there is one, the client given taking its place.
 */
-func withClient(ctx context.Context, p *models.CreateAuditLogParams) {
+func withClient(ctx context.Context, p *models.CreateAuditLogParams, given *appauth.Client) {
 	if id := appauth.CurrentRequestID(ctx); id != "" {
 		p.RequestID = &id
 	}
 
 	client, ok := appauth.CurrentClient(ctx)
+	if given != nil {
+		client, ok = *given, true
+	}
+
 	if !ok {
 		return
 	}

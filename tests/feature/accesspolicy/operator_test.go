@@ -32,7 +32,7 @@ func TestClearAccessPolicyCommand(t *testing.T) {
 
 		owner.GetJSON("/api/v1/workspace").AssertOK()
 
-		w, err := models.New(tc.App.DB).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
+		w, err := models.New(tc.Operator()).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 		require.NotNil(t, w.Security().SessionMaxAge)
 
@@ -48,7 +48,7 @@ func TestClearAccessPolicyCommand(t *testing.T) {
 		code, out := tc.Command("workspace:clear-access-policy", tc.Workspace.Workspace.Slug)
 		require.Equal(t, 0, code, out)
 
-		w, err := models.New(tc.App.DB).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
+		w, err := models.New(tc.Operator()).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 		assert.Nil(t, w.Security().SessionMaxAge)
 		assert.Empty(t, w.Security().AllowedSignInMethods)

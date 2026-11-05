@@ -40,7 +40,7 @@ func TestRun(t *testing.T) {
 
 		require.Equal(t, console.ExitSuccess, code)
 		for _, name := range []string{
-			"serve", "migrate", "migrate:status", "migrate:plan", "migrate:rollback", "down", "up",
+			"serve", "migrate", "migrate:status", "migrate:plan", "migrate:rollback", "down", "up", "health",
 			"config:show", "route:list",
 		} {
 			assert.Contains(t, stdout, name)

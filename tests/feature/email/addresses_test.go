@@ -29,7 +29,7 @@ func TestEmailAddresses(t *testing.T) {
 		res.AssertJSONPath("data.0.inbox.name", "Support")
 		res.AssertJSONPath("data.0.channel_connection.status", "active")
 		res.AssertJSONPath("data.0.settings.quote_previous", true)
-		res.AssertJSONPath("data.0.setup_guides.0.provider", "gmail")
+		res.AssertJSONPath("data.0.setup_guides.0.recommended", true)
 		res.AssertJSONPath("data.0.sending_identity.uses_default_sender", true)
 		res.AssertJSONPath("data.0.inbound_verified_at", nil)
 		assert.Equal(t, slug+"+k7f3x9q2mz8b4c1d@"+inboundDomain, res.String("data.0.reply_to_preview"))

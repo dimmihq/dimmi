@@ -118,7 +118,7 @@ func TestUserIdentities(t *testing.T) {
 		tc.Table("oauth_identities").AssertCount(1)
 	})
 
-	t.Run("refuses to unlink the last way to sign in", func(t *testing.T) {
+	t.Run("unlinking the last way in is refused", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withProviders("DIMMI_AUTH__MAGIC_LINK__ENABLED=false"))
 		browser := signUpGrace(tc)
@@ -153,7 +153,7 @@ func TestUserIdentities(t *testing.T) {
 		tc := tests.New(t, withProviders("DIMMI_AUTH__MAGIC_LINK__ENABLED=false"))
 		browser := signUpGrace(tc)
 		user := userByEmail(t, tc, "grace@example.com")
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"INSERT INTO oauth_identities (user_id, provider, provider_user_id) VALUES ($1, 'gitlab', '7')", user.ID)
 		require.NoError(t, err)
 

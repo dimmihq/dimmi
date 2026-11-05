@@ -192,7 +192,7 @@ func TestThreading(t *testing.T) {
 		t.Parallel()
 		tc, _ := emailCase(t)
 		address := defaultAddress(tc)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE workspaces SET suspended_at = now() WHERE id = $1",
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE workspaces SET suspended_at = now() WHERE id = $1",
 			address.WorkspaceID)
 		require.NoError(t, err)
 

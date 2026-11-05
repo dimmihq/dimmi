@@ -3,7 +3,6 @@ import { createAccount, expect, test as it, type Person, signIn } from "./suppor
 const pages = [
   "Profile",
   "Preferences",
-  "Notifications",
   "Security & access",
   "API tokens",
   "Inboxes",
@@ -68,12 +67,15 @@ it.describe("settings", () => {
     await expect(page.getByText(`${person.name} (you)`)).toBeVisible();
   });
 
-  it("keeps a switched setting on the page", async ({ page }) => {
+  it("switches the theme from the preferences page", async ({ page }) => {
     await page.goto("/d/settings/preferences");
-    const enter = page.getByRole("switch", { name: "Send with Enter" });
-    await expect(enter).toBeChecked();
-    await enter.click({ force: true });
-    await expect(enter).not.toBeChecked();
+    const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+    const target = dark ? "Light" : "Dark";
+
+    await page.getByRole("button", { name: /Theme$/ }).click();
+    await page.getByRole("option", { name: target }).click();
+
+    await expect(page.locator("html")).toHaveClass(dark ? /^(?!.*\bdark\b)/ : /\bdark\b/);
   });
 
   it("picks the messenger colour with the colour well", async ({ page }) => {

@@ -111,7 +111,7 @@ Verdicts: mailbox host is receiving MTA. Top `Authentication-Results` header onl
 
 | Item | Decision |
 |---|---|
-| Change feed | Delta per folder: `/users/{mailbox}/mailFolders/inbox/messages/delta`, `.../sentitems/messages/delta`, `$select=id,internetMessageId,conversationId`; `deltaLink` in `cursor`; `Prefer: IdType="ImmutableId"` on every request. Raw: `GET /messages/{id}/$value` |
+| Change feed | Delta per folder: `/users/{mailbox}/mailFolders/inbox/messages/delta`, `.../sentitems/messages/delta`, `$select=id,internetMessageId` (thread id unused: Microsoft threads from MIME headers); `deltaLink` in `cursor`; `Prefer: IdType="ImmutableId"` on every request. Raw: `GET /messages/{id}/$value` |
 | Push vs poll | Push wakes, poll is truth. Basic notifications only (no resource data, no cert work). `changeType: created`. Poll every 5 min with subscription; 60 s when `app.url` not public or subscription failed |
 | Subscription | `POST /subscriptions`, resources inbox and sent, `notificationUrl` `/webhooks/microsoft/mailbox`, `lifecycleNotificationUrl` `/webhooks/microsoft/mailbox-lifecycle`, secret `clientState` per connection. Max lifetime 10,080 minutes (under 7 days). `RenewEmailMailboxWatches` daily: `PATCH expirationDateTime` to +6 days, also refreshes reauthorization. Duplicate 409 reuse |
 | Validation | `?validationToken=` on POST: answer 200 `text/plain` decoded token within 10 s, escaped. No DB touch |

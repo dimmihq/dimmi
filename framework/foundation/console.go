@@ -65,6 +65,7 @@ func (k *kernel) commands() []console.Command {
 		k.rollbackCommand(),
 		k.downCommand(),
 		k.upCommand(),
+		k.healthCommand(),
 		k.configShowCommand(),
 		k.routeListCommand(),
 	}

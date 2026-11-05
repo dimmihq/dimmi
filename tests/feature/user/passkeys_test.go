@@ -158,7 +158,7 @@ func factorRow(t *testing.T, tc *tests.TestCase, id string) storedPasskey {
 		encoded []byte
 	)
 
-	err = tc.App.DB.QueryRow(t.Context(), `SELECT credential, lookup_hash, last_counter, last_used_at
+	err = tc.Operator().QueryRow(t.Context(), `SELECT credential, lookup_hash, last_counter, last_used_at
 		FROM user_auth_factors WHERE id = $1`, uuid).Scan(&encoded, &out.lookupHash, &out.lastCounter, &out.lastUsedAt)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(encoded, &out.credential))
@@ -467,7 +467,7 @@ func TestPasskeyRemoval(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		laptop, res := addPasskey(t, tc, tc.ActingAsOwner(), "Laptop")
-		_, err := tc.App.DB.Exec(t.Context(), `UPDATE workspaces
+		_, err := tc.Operator().Exec(t.Context(), `UPDATE workspaces
 			SET settings = jsonb_set(settings, '{security}', '{"require_two_factor": true}') WHERE id = $1`,
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)

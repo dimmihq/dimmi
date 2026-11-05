@@ -43,6 +43,16 @@ func (q *Queries) CreateSecurityEvent(ctx context.Context, arg CreateSecurityEve
 	return err
 }
 
+const deleteUserSecurityEvents = `-- name: DeleteUserSecurityEvents :exec
+DELETE FROM security_events WHERE user_id = $1
+`
+
+// DeleteUserSecurityEvents removes the security log of a deleted account.
+func (q *Queries) DeleteUserSecurityEvents(ctx context.Context, userID ids.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserSecurityEvents, userID)
+	return err
+}
+
 const findSignInHistory = `-- name: FindSignInHistory :one
 SELECT
     EXISTS (SELECT 1 FROM security_events AS e WHERE e.user_id = $1 AND e.type = 'login.succeeded')::boolean

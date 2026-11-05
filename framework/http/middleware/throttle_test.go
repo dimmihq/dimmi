@@ -58,6 +58,41 @@ func TestThrottle(t *testing.T) {
 		assert.Equal(t, "too_many_requests", code(t, refused.Body))
 	})
 
+	t.Run("a limit worked out per request wins and names its scope", func(t *testing.T) {
+		t.Parallel()
+		h := middleware.Throttle(newLimiter(t, testkit.NewValkey(t)), middleware.ThrottleOptions{
+			Name: "api", MaxAttempts: 100, Decay: time.Minute, Scope: "token",
+			Limit: func(*http.Request) int { return 1 },
+		})(echo())
+
+		first := serve(h, request(t, http.MethodGet, "/", ""))
+		assert.Equal(t, "1", first.Header().Get("X-RateLimit-Limit"))
+		assert.Equal(t, "token", first.Header().Get(middleware.ScopeHeader))
+
+		refused := serve(h, request(t, http.MethodGet, "/", ""))
+		assert.Equal(t, http.StatusTooManyRequests, refused.Code)
+		assert.Equal(t, "token", refused.Header().Get(middleware.ScopeHeader))
+	})
+
+	t.Run("no limit, an empty key or a skip lets requests through uncounted", func(t *testing.T) {
+		t.Parallel()
+		limiter := newLimiter(t, testkit.NewValkey(t))
+		cases := []middleware.ThrottleOptions{
+			{Name: "zero", MaxAttempts: 1, Decay: time.Minute, Limit: func(*http.Request) int { return 0 }},
+			{Name: "keyless", MaxAttempts: 1, Decay: time.Minute, Key: func(*http.Request) string { return "" }},
+			{Name: "skipped", MaxAttempts: 1, Decay: time.Minute, Skip: func(*http.Request) bool { return true }},
+		}
+
+		for _, opts := range cases {
+			h := middleware.Throttle(limiter, opts)(echo())
+			for range 3 {
+				res := serve(h, request(t, http.MethodGet, "/", ""))
+				assert.Equal(t, http.StatusOK, res.Code, opts.Name)
+				assert.Empty(t, res.Header().Get("X-RateLimit-Limit"), opts.Name)
+			}
+		}
+	})
+
 	t.Run("counts per key", func(t *testing.T) {
 		t.Parallel()
 		h := middleware.Throttle(newLimiter(t, testkit.NewValkey(t)), middleware.ThrottleOptions{

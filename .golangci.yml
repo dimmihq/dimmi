@@ -157,6 +157,7 @@ linters:
             - blitiri.com.ar/go/spf
             - github.com/wneessen/go-mail
             - github.com/emersion/go-sasl
+            - github.com/emersion/go-imap/v2
             # http client
             - resty.dev/v3
             - code.dny.dev/ssrf

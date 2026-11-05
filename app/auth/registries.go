@@ -75,12 +75,17 @@ const (
 	EventLogout                = "logout.succeeded"
 	EventSessionRevoked        = "session.revoked"
 	EventSessionsRevokedOthers = "sessions.revoked_others"
+	EventPasswordChanged       = "password.changed"
 	EventPasswordReset         = "password.reset"
+	EventEmailChangeRequested  = "email.change_requested"
+	EventEmailChanged          = "email.changed"
 	EventMagicLinkUsed         = "magic_link.used"
 	EventIdentityLinked        = "identity.linked"
 	EventIdentityUnlinked      = "identity.unlinked"
 	EventTokenCreated          = "token.created"
 	EventTokenRevoked          = "token.revoked"
+	EventTwoFactorResetAsked   = "two_factor.reset_requested"
+	EventTwoFactorResetDone    = "two_factor.reset_completed"
 )
 
 /*
@@ -124,12 +129,12 @@ SecurityEvents lists the entries of a user's own security log.
 */
 func SecurityEvents() Registry {
 	return Registry{name: "security_events", values: []string{
-		EventLoginSucceeded, EventLoginFailed, EventLoginLocked, EventLogout, "password.changed", EventPasswordReset,
+		EventLoginSucceeded, EventLoginFailed, EventLoginLocked, EventLogout, EventPasswordChanged, EventPasswordReset,
 		"two_factor.enabled", "two_factor.disabled", "auth_factor.added", "auth_factor.removed",
 		"auth_factor.renamed", "auth_factor.recovery_code_used", "auth_factor.recovery_codes_regenerated",
-		"email.change_requested", "email.changed", EventIdentityLinked, EventIdentityUnlinked, EventSessionRevoked,
+		EventEmailChangeRequested, EventEmailChanged, EventIdentityLinked, EventIdentityUnlinked, EventSessionRevoked,
 		EventSessionsRevokedOthers, EventMagicLinkUsed, EventTokenCreated, EventTokenRevoked,
-		"account.deletion_requested",
+		"account.deletion_requested", EventTwoFactorResetAsked, EventTwoFactorResetDone,
 	}}
 }
 

@@ -1,18 +1,26 @@
 -- name: CountOpenConversationsByTeam :many
 -- CountOpenConversationsByTeam counts the open conversations of each team
--- that holds any.
+-- that holds any, among those the reader may see.
 SELECT assignee_team_id::uuid AS team_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND NOT spam AND status = 'open' AND assignee_team_id IS NOT NULL
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  )
 GROUP BY assignee_team_id;
 
 -- name: CountOpenConversationsByAssignee :many
 -- CountOpenConversationsByAssignee counts the open conversations each
--- member holds.
+-- member holds, among those the reader may see.
 SELECT assignee_member_id::uuid AS member_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND NOT spam AND status = 'open'
   AND assignee_member_id IS NOT NULL
+  AND dimmi_conversation_visible(
+      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  )
 GROUP BY assignee_member_id;
 
 -- name: ListConversationViews :many

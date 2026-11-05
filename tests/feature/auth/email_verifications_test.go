@@ -171,7 +171,7 @@ func TestEmailVerificationUpdate(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		_, id, token := verificationLink(t, tc)
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"UPDATE users SET email = 'hopper@example.com' WHERE email = 'grace@example.com'")
 		require.NoError(t, err)
 

@@ -9,7 +9,8 @@
  */
 import { RiMore2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useSearch } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
@@ -29,17 +30,45 @@ import {
   membersQuery,
   updateMember,
   updateWorkspace,
+  type WorkspaceChanges,
   workspaceQuery,
 } from "@/lib/api/workspace";
 
-import { Choice, Danger, Field } from "../controls";
+import { Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { MemberImportButton } from "../members/member-import-dialog";
+import { type FilterKey, filterFor, filterKeyFrom } from "../members/member-review";
+import { ExportMembersButton, LastActive, MemberFilterSelect, TwoFactorMark } from "../members/member-review-controls";
+import { type Help, type HelpPowers, helpLabel, helpOffers } from "../members/sign-in-help";
+import { SignInHelpDialogs } from "../members/two-factor-help-dialog";
+import { WorkspaceLanguageRow } from "../preferences/language-row";
+import { ZonePicker } from "../preferences/zone-picker";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
 
-const zones = ["UTC", "Europe/Lisbon", "Europe/London", "Europe/Berlin", "America/New_York", "Asia/Tokyo"];
+/*
+ * Draft is what the General section holds before it is saved. An empty
+ * name for customers saves as none, so they see the workspace's name.
+ */
+interface Draft {
+  name?: string;
+  slug?: string;
+  customerName?: string;
+}
+
+/*
+ * draftChanges turns the draft into the change the server takes.
+ */
+function draftChanges(draft: Draft): WorkspaceChanges {
+  const changes: WorkspaceChanges = { name: draft.name, slug: draft.slug };
+  if (draft.customerName !== undefined) {
+    changes.customer_facing_name = draft.customerName.trim() === "" ? null : draft.customerName;
+  }
+
+  return changes;
+}
 
 /*
  * Failure shows what went wrong with the last change, in the error
@@ -61,11 +90,11 @@ export function WorkspaceSettings() {
   const me = useAccount();
   const queryClient = useQueryClient();
   const { data: workspace } = useQuery(workspaceQuery(me.workspace.id));
-  const [draft, setDraft] = useState<{ name?: string; slug?: string }>({});
+  const [draft, setDraft] = useState<Draft>({});
+  const zones = useMemo(() => ["UTC", ...Intl.supportedValuesOf("timeZone")].map((id) => ({ id, label: id })), []);
 
   const save = useMutation({
-    mutationFn: (changes: { name?: string; slug?: string; timezone?: string }) =>
-      updateWorkspace(me.workspace.id, changes),
+    mutationFn: (changes: WorkspaceChanges) => updateWorkspace(me.workspace.id, changes),
     onSuccess: (saved) => {
       setDraft({});
       queryClient.setQueryData(workspaceQuery(me.workspace.id).queryKey, saved);
@@ -75,15 +104,18 @@ export function WorkspaceSettings() {
 
   const name = workspace?.name ?? me.workspace.name;
   const slug = workspace?.slug ?? me.workspace.slug;
+  const customerName = workspace?.customer_facing_name ?? "";
   const changed =
-    (draft.name !== undefined && draft.name !== name) || (draft.slug !== undefined && draft.slug !== slug);
+    (draft.name !== undefined && draft.name !== name) ||
+    (draft.slug !== undefined && draft.slug !== slug) ||
+    (draft.customerName !== undefined && draft.customerName.trim() !== customerName);
 
   return (
     <SettingsPage title="Workspace" description="Seen by everyone in the workspace.">
       <Section
         title="General"
         action={
-          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate(draft)}>
+          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate(draftChanges(draft))}>
             Save changes
           </Button>
         }
@@ -106,19 +138,28 @@ export function WorkspaceSettings() {
             onChange={(value) => setDraft((d) => ({ ...d, slug: value }))}
           />
         </Row>
+        {workspace ? (
+          <Row label="Name customers see" description="Shown in the messenger and in email. Empty uses the name above.">
+            <Field
+              key={`customer-${customerName}`}
+              label="Name customers see"
+              value={customerName}
+              placeholder={name}
+              onChange={(value) => setDraft((d) => ({ ...d, customerName: value }))}
+            />
+          </Row>
+        ) : null}
       </Section>
       <Failure error={save.error} />
       <Section title="Language and region" description="Members and customers fall back to these.">
-        <Row label="Language">
-          <Choice label="Workspace language" options={["English"]} />
-        </Row>
+        <WorkspaceLanguageRow workspace={me.workspace.id} />
         <Row label="Time zone">
           {workspace ? (
-            <Choice
+            <ZonePicker
               label="Workspace time zone"
-              options={zones.includes(workspace.timezone) ? zones : [workspace.timezone, ...zones]}
-              value={workspace.timezone}
-              onChange={(timezone) => save.mutate({ timezone })}
+              choices={zones}
+              selected={workspace.timezone}
+              onPick={(timezone) => save.mutate({ timezone })}
             />
           ) : null}
         </Row>
@@ -147,13 +188,10 @@ interface Pending {
 
 /*
  * Powers is what the caller may do to members: change members and
- * admins (write), change owners (owners), and give the custom roles
- * listed (roles, empty without roles:manage).
+ * admins (write), change owners (owners), help them back in (reset),
+ * and give the custom roles listed (roles, empty without roles:manage).
  */
-interface Powers {
-  self: string;
-  write: boolean;
-  owners: boolean;
+interface Powers extends HelpPowers {
   roles: Role[];
 }
 
@@ -278,9 +316,22 @@ function offers(member: Member, powers: Powers): Pending[] {
   return list;
 }
 
-function Person({ member, powers, onPick }: { member: Member; powers: Powers; onPick: (p: Pending) => void }) {
+function Person({
+  member,
+  powers,
+  timeZone,
+  onPick,
+  onHelp,
+}: {
+  member: Member;
+  powers: Powers;
+  timeZone?: string;
+  onPick: (p: Pending) => void;
+  onHelp: (help: Help) => void;
+}) {
   const name = member.user.name;
   const choices = offers(member, powers);
+  const helps = helpOffers(member, powers);
   const detail = member.status === "deactivated" ? `${member.user.email} · Deactivated` : member.user.email;
 
   return (
@@ -289,10 +340,12 @@ function Person({ member, powers, onPick }: { member: Member; powers: Powers; on
       title={member.id === powers.self ? `${name} (you)` : name}
       detail={detail}
     >
+      <LastActive member={member} timeZone={timeZone} />
+      <TwoFactorMark member={member} />
       <Chip variant="caption" color={member.role === "owner" ? "blue" : "neutral"}>
         {member.custom_role?.name ?? roleLabel(member.role)}
       </Chip>
-      {choices.length > 0 ? (
+      {choices.length + helps.length > 0 ? (
         <Dropdown>
           <DropdownTrigger
             aria-label={`Manage ${name}`}
@@ -304,6 +357,11 @@ function Person({ member, powers, onPick }: { member: Member; powers: Powers; on
             {choices.map((choice) => (
               <DropdownItem key={choice.title} onSelect={() => onPick(choice)}>
                 <span className="text-body-2-regular text-text-primary">{choice.confirm}</span>
+              </DropdownItem>
+            ))}
+            {helps.map((help) => (
+              <DropdownItem key={help.kind} onSelect={() => onHelp(help)}>
+                <span className="text-body-2-regular text-text-primary">{helpLabel(help)}</span>
               </DropdownItem>
             ))}
           </DropdownPopover>
@@ -367,12 +425,16 @@ export function MembersSettings() {
   const me = useAccount();
   const workspace = me.workspace.id;
   const queryClient = useQueryClient();
-  const { data: members = [] } = useQuery(membersQuery(workspace));
+  const [view, setView] = useState<FilterKey>(filterKeyFrom(useSearch({ strict: false })));
   const { data: caller } = useQuery(callerQuery(workspace));
   const { data: roles = [] } = useQuery(rolesQuery(workspace));
+  const manages = caller?.member?.permissions.includes("members:write") ?? false;
+  const filter = manages ? filterFor(view) : {};
+  const { data: members = [] } = useQuery({ ...membersQuery(workspace, filter), enabled: caller !== undefined });
   const [pending, setPending] = useState<Pending | null>(null);
   const [retry, setRetry] = useState<Pending | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [help, setHelp] = useState<Help | null>(null);
 
   const self = caller?.member?.id ?? "";
   const permissions = caller?.member?.permissions ?? [];
@@ -381,6 +443,7 @@ export function MembersSettings() {
     write: permissions.includes("members:write"),
     owners: permissions.includes("members:manage_owners"),
     roles: permissions.includes("roles:manage") ? roles.filter((role) => role.kind === "custom") : [],
+    reset: permissions.includes("members:reset_two_factor"),
   };
   const active = members.filter((member) => member.status === "active").length;
 
@@ -409,8 +472,24 @@ export function MembersSettings() {
         description={`${active} active`}
         action={powers.write ? <InviteButton workspace={workspace} /> : null}
       >
+        {powers.write ? (
+          <div className="flex flex-wrap items-center gap-2 py-2.5 pe-3">
+            <MemberFilterSelect value={view} onChange={setView} />
+            <ExportMembersButton workspace={workspace} filter={filter} />
+            {permissions.includes("members:import") ? (
+              <MemberImportButton workspace={workspace} hasPassword={me.hasPassword} />
+            ) : null}
+          </div>
+        ) : null}
         {members.map((member) => (
-          <Person key={member.id} member={member} powers={powers} onPick={setPending} />
+          <Person
+            key={member.id}
+            member={member}
+            powers={powers}
+            timeZone={me.displayZone ?? undefined}
+            onPick={setPending}
+            onHelp={setHelp}
+          />
         ))}
       </Section>
       {powers.write ? <PendingInvitations workspace={workspace} /> : null}
@@ -429,6 +508,7 @@ export function MembersSettings() {
         confirmLabel={pending?.confirm}
         onConfirm={() => (pending ? change.mutateAsync(pending).catch(() => undefined) : undefined)}
       />
+      <SignInHelpDialogs workspace={workspace} help={help} hasPassword={me.hasPassword} onClose={() => setHelp(null)} />
       <PasswordPrompt
         isOpen={retry !== null}
         onClose={() => setRetry(null)}

@@ -189,6 +189,23 @@ func (s *Server) Disconnect(ctx context.Context, userID string) error {
 }
 
 /*
+Unsubscribe takes every connection of the user off the channel, on every
+node, leaving their other subscriptions and the connections themselves
+alone. Use it when someone stops being allowed on one channel.
+*/
+func (s *Server) Unsubscribe(ctx context.Context, userID, channel string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("unsubscribe user %s from %s: %w", userID, channel, err)
+	}
+
+	if err := s.node.Unsubscribe(userID, channel); err != nil {
+		return fmt.Errorf("unsubscribe user %s from %s: %w", userID, channel, err)
+	}
+
+	return nil
+}
+
+/*
 credentialEnded is the notice that tells every node to close the
 connections a user opened with one credential.
 */

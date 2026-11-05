@@ -15,6 +15,11 @@
 | request names, resolved once the caller is known, and only for callers
 | who meet what that workspace requires, such as a second factor.
 |
+| A request picks its language before anyone is known, from the browser.
+| Once authentication, and then the workspace, tell who is calling, the
+| language is picked again, so the person's own choice and then their
+| workspace's win over the browser's on every authenticated route.
+|
 | The route files sit outside the application package, since routes
 | depend on the application and never the other way around, so the
 | function that declares them is handed in.
@@ -33,6 +38,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/foundation"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/middleware"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app"
@@ -68,9 +74,8 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	fa.Kernel.Alias("verified", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnsureEmailVerified(p.App.Config.Auth.Verification, fa.Errors), nil
 	})
-	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
-		return appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), nil
-	})
+	p.aliasCallers(fa)
+	p.aliasLimits(fa)
 	fa.Kernel.Alias("access.policy", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Clock, fa.Errors), nil
 	})
@@ -106,6 +111,61 @@ func (p RouteServiceProvider) Boot(context.Context, *foundation.Application) err
 	p.Routes(p.App)
 
 	return nil
+}
+
+/*
+aliasCallers names the middleware that learn who is calling: auth, and
+workspace for the workspace they work in. Each picks the request's
+language again once it knows more.
+*/
+func (p RouteServiceProvider) aliasCallers(fa *foundation.Application) {
+	locale := middleware.Locale(fa.Lang, appmiddleware.LocalePreference(fa.Lang))
+	slow := appmiddleware.SlowBadCredentials(appmiddleware.BadCredentialsOptions{
+		Limiter: fa.Limiter, PerMinute: p.App.Config.API.Limits.BadCredentialPerMinute,
+		Cookie: fa.Session.CookieName(), Clock: fa.Clock, Errors: fa.Errors,
+	})
+
+	fa.Kernel.Alias("auth", func(params ...string) (fhttp.Middleware, error) {
+		guard, err := fa.Guards.Middleware(params...)
+		if err != nil {
+			return nil, fmt.Errorf("auth middleware: %w", err)
+		}
+
+		return then(slow, then(guard, locale)), nil
+	})
+	fa.Kernel.Alias("workspace", func(...string) (fhttp.Middleware, error) {
+		return then(appmiddleware.ResolveWorkspace(p.App.Actions.ResolveWorkspace, fa.Errors), locale), nil
+	})
+}
+
+/*
+aliasLimits names api.throttle, the public API's fairness limits, which
+run after the caller and the workspace are known. Every refusal is
+counted by scope.
+*/
+func (p RouteServiceProvider) aliasLimits(fa *foundation.Application) {
+	throttled, err := fa.Telemetry.Counter("dimmi_api_throttled")
+
+	fa.Kernel.Alias("api.throttle", func(...string) (fhttp.Middleware, error) {
+		return appmiddleware.APIThrottle(appmiddleware.APIThrottleOptions{
+			Limiter: fa.Limiter, Entitlements: p.App.Entitlements, Limits: p.App.Config.API.Limits,
+			Clock: fa.Clock, Refused: func(ctx context.Context, scope string) {
+				if err == nil {
+					throttled.Add(ctx, 1, telemetry.String("scope", scope))
+				}
+			},
+		}), nil
+	})
+}
+
+/*
+then runs the second middleware inside the first, once the first let
+the request through.
+*/
+func then(first, second fhttp.Middleware) fhttp.Middleware {
+	return func(next fhttp.Handler) fhttp.Handler {
+		return fhttp.Chain(next, first, second)
+	}
 }
 
 /*

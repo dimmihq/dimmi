@@ -94,6 +94,28 @@ function TeamMenuItem({ icon: Icon, label, badge, isSelected, onSelect }: MenuRo
   ));
 }
 
+export type PresenceStatus = "online" | "away";
+
+/** Avatar with a dot at its corner saying whether the person takes conversations. */
+function StatusAvatar({ status, ...props }: Parameters<typeof Avatar>[0] & { status?: PresenceStatus }) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      <Avatar {...props} />
+      {status && (
+        <span
+          data-status={status}
+          aria-label={status === "online" ? "Active" : "Away"}
+          role="img"
+          className={cx(
+            "absolute -end-0.5 -bottom-0.5 size-2.5 rounded-full ring-2 ring-background-primary-default",
+            status === "online" ? "bg-notification-success-foreground" : "bg-foreground-icon-quaternary",
+          )}
+        />
+      )}
+    </span>
+  );
+}
+
 const mobileSnapshot = () => window.matchMedia("(max-width: 639px)").matches;
 const subscribeMobile = (listener: () => void) => {
   const query = window.matchMedia("(max-width: 639px)");
@@ -112,6 +134,7 @@ export function DashboardTeamMenu({
   groups,
   product,
   version,
+  status,
 }: {
   collapsed?: boolean;
   className?: string;
@@ -127,6 +150,8 @@ export function DashboardTeamMenu({
   /** Footer: the product's name and the version it runs. */
   product: string;
   version?: string;
+  /** Dot on the avatar: whether the person takes conversations. */
+  status?: PresenceStatus;
 }) {
   const localize = useTemplateCopy();
   const direction = useDirection();
@@ -153,7 +178,7 @@ export function DashboardTeamMenu({
         )}
       >
         <span className="flex min-w-0 items-center gap-2">
-          <Avatar size="md" color="blue" src={src} initials={initials} alt={name} />
+          <StatusAvatar size="md" color="blue" src={src} initials={initials} alt={name} status={status} />
           <Collapsible collapsed={collapsed}>
             <span className="flex min-w-0 flex-col items-start justify-center">
               <span className="max-w-40 truncate text-body-medium whitespace-nowrap text-text-primary">{name}</span>
@@ -184,7 +209,7 @@ export function DashboardTeamMenu({
         <AriaDialog aria-label={`${name} menu`} className="flex flex-col gap-[7px] outline-none">
           {/* Header */}
           <div className="flex w-full items-center gap-2 px-2 pt-1">
-            <Avatar size="md" color="blue" src={src} initials={initials} alt={name} />
+            <StatusAvatar size="md" color="blue" src={src} initials={initials} alt={name} status={status} />
             <div className="flex min-w-0 flex-col items-start justify-center">
               <span className="max-w-[200px] truncate text-body-medium whitespace-nowrap text-text-primary">{name}</span>
               <span className="max-w-[200px] truncate text-body-regular whitespace-nowrap text-text-secondary">{detail}</span>

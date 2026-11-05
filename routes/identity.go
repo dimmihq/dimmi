@@ -29,14 +29,16 @@ func identityRoutes(api *routing.Router, a *app.App) {
 	policy := &v1.AccessPolicyController{Show: a.Actions.ShowAccessPolicy, Update: a.Actions.UpdateAccessPolicy}
 
 	api.Group("", func(readers *routing.Router) {
-		readers.Middleware("csrf", "session", "auth", "workspace", "access.policy")
+		readers.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
 
 		routing.Get(readers, "/workspace/access-policy", "workspace.access-policy.show", policy.ShowPolicy).
 			Ability("settings:read")
 	})
 
 	api.Group("", func(writers *routing.Router) {
-		writers.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "password.confirm")
+		writers.Middleware(
+			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
+		)
 
 		routing.Patch(writers, "/workspace/access-policy", "workspace.access-policy.update", policy.UpdatePolicy)
 	})
@@ -58,7 +60,7 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 	domains := &v1.OrganizationDomainController{Domains: acts.OrganizationDomains, IDs: a.IDs}
 
 	api.Group("", func(owners *routing.Router) {
-		owners.Middleware("csrf", "session", "auth:user", "workspace", "access.policy")
+		owners.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
 
 		routing.Get(owners, "/sso-connections", "sso-connections.index", connections.Index)
 		routing.Get(owners, "/sso-connections/{connection}", "sso-connections.show", connections.ShowConnection)
@@ -68,7 +70,9 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 	})
 
 	api.Group("", func(confirmed *routing.Router) {
-		confirmed.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "password.confirm")
+		confirmed.Middleware(
+			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
+		)
 
 		routing.Post(confirmed, "/sso-connections", "sso-connections.store", connections.Store).
 			Status(fhttp.StatusCreated)

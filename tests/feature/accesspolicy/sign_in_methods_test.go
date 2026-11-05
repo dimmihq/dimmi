@@ -108,18 +108,19 @@ func TestSignInMethods(t *testing.T) {
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__MAGIC_LINK__ENABLED=true",
 			"DIMMI_AUTH__OAUTH__GITHUB__CLIENT_ID=id", "DIMMI_AUTH__OAUTH__GITHUB__CLIENT_SECRET=secret"))
 		admin := join(t, tc, enums.RoleAdmin)
-		_, err := tc.App.DB.Exec(t.Context(), `UPDATE users SET email_verified_at = NULL WHERE id = $1`, tc.Owner.ID)
+		operator := tc.Operator()
+		_, err := operator.Exec(t.Context(), `UPDATE users SET email_verified_at = NULL WHERE id = $1`, tc.Owner.ID)
 		require.NoError(t, err)
-		_, err = tc.App.DB.Exec(t.Context(), `UPDATE users SET email_verified_at = now() WHERE id = $1`, admin.ID)
+		_, err = tc.Operator().Exec(t.Context(), `UPDATE users SET email_verified_at = now() WHERE id = $1`, admin.ID)
 		require.NoError(t, err)
-		_, err = tc.App.DB.Exec(t.Context(), `UPDATE users SET password_hash = NULL WHERE id = $1`, tc.Owner.ID)
+		_, err = tc.Operator().Exec(t.Context(), `UPDATE users SET password_hash = NULL WHERE id = $1`, tc.Owner.ID)
 		require.NoError(t, err)
 		browser := in(tc, admin)
 
 		browser.PatchJSON(policyPath, testkit.JSON{"allowed_sign_in_methods": []string{"password", "magic_link"}}).
 			AssertStatus(422).AssertJSONPath("code", "no_owner_can_sign_in")
 
-		_, err = tc.App.DB.Exec(t.Context(), `INSERT INTO oauth_identities
+		_, err = tc.Operator().Exec(t.Context(), `INSERT INTO oauth_identities
 			(id, user_id, provider, provider_user_id, email, email_verified, created_at, updated_at)
 			VALUES (uuidv7(), $1, 'github', 'gh-1', $2, true, now(), now())`, tc.Owner.ID, tc.Owner.Email)
 		require.NoError(t, err)

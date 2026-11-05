@@ -32,7 +32,7 @@ func roleRoutes(api *routing.Router, a *app.App) {
 	}
 
 	api.Group("", func(readers *routing.Router) {
-		readers.Middleware("csrf", "session", "auth", "workspace", "access.policy")
+		readers.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
 
 		routing.Get(readers, "/roles", "roles.index", c.Index).Ability("members:read")
 		routing.Get(readers, "/roles/{role}", "roles.show", c.Show).Ability("members:read")
@@ -40,7 +40,9 @@ func roleRoutes(api *routing.Router, a *app.App) {
 	})
 
 	api.Group("", func(writers *routing.Router) {
-		writers.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "password.confirm")
+		writers.Middleware(
+			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
+		)
 
 		routing.Post(writers, "/roles", "roles.store", c.Store).Status(fhttp.StatusCreated)
 		routing.Patch(writers, "/roles/{role}", "roles.update", c.Update)

@@ -1,4 +1,4 @@
-import { addTeammate } from "./support/database";
+import { addTeammate, conversationTeams, handToTeam, startConversation } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 
 /*
@@ -59,7 +59,9 @@ it.describe("teams", () => {
 
     await teams.getByRole("button", { name: "Manage" }).click();
     await page.getByRole("button", { name: "Delete team" }).click();
-    await page.getByRole("alertdialog").getByRole("button", { name: "Delete team" }).click();
+    const confirm = page.getByRole("dialog");
+    await expect(confirm.getByText("It holds no conversations.")).toBeVisible();
+    await confirm.getByRole("button", { name: "Delete team" }).click();
     await expect(page).toHaveURL(/\/d\/settings\/teams$/);
     await expect(teams.getByText("No teams yet.")).toBeVisible();
   });
@@ -83,5 +85,39 @@ it.describe("teams", () => {
 
     await create("billing");
     await expect(dialog.getByText("Another team in this workspace already uses this name.")).toBeVisible();
+  });
+
+  it("moves a deleted team's conversations to the team the admin picks", async ({ page, person, request }) => {
+    await createAccount(request, person, workspaceOf(person, "Moves"));
+    await signIn(page, person);
+
+    const teams = page.getByRole("region", { name: "Teams" });
+    for (const name of ["Support", "Billing"]) {
+      await page.goto("/d/settings/teams");
+      await teams.getByRole("button", { name: "New team" }).click();
+      await page.getByRole("alertdialog").getByRole("textbox", { name: "Team name" }).fill(name);
+      await page.getByRole("alertdialog").getByRole("button", { name: "Create team" }).click();
+      await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+    }
+    startConversation(person.email);
+    startConversation(person.email);
+    handToTeam(person.email, "Billing");
+    await page.reload();
+
+    await page.getByRole("button", { name: "Delete team" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("It holds 2 open, 0 snoozed and 0 closed conversations.")).toBeVisible();
+    const remove = dialog.getByRole("button", { name: "Delete team" });
+    await expect(remove).toBeDisabled();
+
+    await dialog.getByRole("radio", { name: "Another team" }).click();
+    await expect(remove).toBeDisabled();
+    await dialog.getByRole("button", { name: /Team to move them to/ }).click();
+    await page.getByRole("option", { name: "Support" }).click();
+    await remove.click();
+
+    await expect(page).toHaveURL(/\/d\/settings\/teams$/);
+    await expect(teams.getByText("Billing")).toBeHidden();
+    expect(conversationTeams(person.email)).toEqual(["Support", "Support"]);
   });
 });

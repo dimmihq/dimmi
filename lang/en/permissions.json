@@ -263,6 +263,22 @@
     "label": "Manage owners",
     "description": "Make and remove owners of the workspace."
   },
+  "members:import": {
+    "label": "Import members",
+    "description": "Add and update members in bulk from a CSV file."
+  },
+  "members:manage_access": {
+    "label": "Manage conversation access",
+    "description": "Choose which conversations each member may see."
+  },
+  "members:manage_availability": {
+    "label": "Manage availability",
+    "description": "Set teammates away or online and how many conversations they take."
+  },
+  "members:reset_two_factor": {
+    "label": "Reset two-factor",
+    "description": "Send a teammate who lost their second factor a link to get back in."
+  },
   "members:read": {
     "label": "See members",
     "description": "See the people in the workspace and their teams."

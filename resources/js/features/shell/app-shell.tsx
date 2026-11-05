@@ -18,7 +18,7 @@ import {
   RiShieldUserLine,
   RiUserLine,
 } from "@remixicon/react";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 
@@ -34,8 +34,10 @@ import { ActionProvider } from "@/features/inbox/actions/action-provider";
 import { useSidebarViews } from "@/features/inbox/views/use-sidebar-views";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
+import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 
+import { useAvailability } from "./availability";
 import { GetStarted } from "./get-started";
 import { appSections, selectedKey, settingsLink, settingsPages, settingsSections } from "./navigation";
 import { useCurrentWorkspace } from "./workspace";
@@ -110,7 +112,8 @@ function useSwitcher(me: Me): DashboardSwitcher {
   };
 }
 
-function useAccount(me: Me): DashboardAccount {
+function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
+  const availability = useAvailability(workspace);
   const router = useRouter();
   const queryClient = useQueryClient();
   const leave = useMutation({
@@ -127,7 +130,9 @@ function useAccount(me: Me): DashboardAccount {
     initials: initialsOf(me.user.name),
     product: "Dimmi",
     version: me.instance?.version,
+    status: availability.status,
     groups: [
+      ...(availability.group ? [availability.group] : []),
       {
         id: "account",
         items: [
@@ -178,14 +183,19 @@ function SignedInShell({
   children: ReactNode;
 }) {
   const switcher = useSwitcher(me);
-  const account = useAccount(me);
+  const { current: onScreen } = useCurrentWorkspace(me.workspaces);
+  const account = useAccount(me, onScreen?.id);
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const views = useSidebarViews(workspace?.id ?? "");
+  const { data: caller } = useQuery({ ...callerQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
+  const access = caller?.member;
+  const seesUnassigned =
+    !access || !["assigned", "teams"].includes(access.conversation_access) || access.conversation_access_unassigned;
   const sections = inSettings
     ? settingsSections(me.instance?.edition === "cloud")
-    : appSections(views.sections, views.canDelete);
+    : appSections(views.sections, views.canDelete, seesUnassigned);
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (

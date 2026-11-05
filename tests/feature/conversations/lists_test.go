@@ -199,7 +199,7 @@ func TestConversationCounts(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		d.customer(t, "a", "Hi", "Hi")
-		_, err := d.tc.App.DB.Exec(t.Context(), `
+		_, err := d.tc.Operator().Exec(t.Context(), `
 			INSERT INTO conversations (workspace_id, number, inbox_id, channel_connection_id, contact_id)
 			SELECT workspace_id, number + n, inbox_id, channel_connection_id, contact_id
 			FROM conversations, generate_series(1, 1000) AS n`)

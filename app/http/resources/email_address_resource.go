@@ -120,7 +120,7 @@ func NewEmailAddress(row EmailAddressRow, provider string) EmailAddress {
 		IsDefault: a.IsDefault, Settings: models.ReadEmailAddressSettings(a.Settings),
 		ForwardingConfirmation: confirmation(a.ForwardingConfirmation), InboundVerifiedAt: a.InboundVerifiedAt,
 		LastInboundAt: a.LastInboundAt, LastOutboundAt: a.LastOutboundAt,
-		SetupGuides: setupGuides(a.Address, a.ForwardingAddress), CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
+		SetupGuides: []SetupGuide{}, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
 	}
 
 	if a.ReplyToMode == "token" {

@@ -10,5 +10,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vite.widget.config.ts", "scripts"]
+  "include": ["vite.config.ts", "vite.widget.config.ts", "i18next.config.ts", "scripts"]
 }
