@@ -20,8 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dimmihq/dimmi/framework/fault"
-
 	"github.com/dimmihq/dimmi/app/exceptions"
 )
 
@@ -184,7 +182,7 @@ func mergeAppearance(stored json.RawMessage, change map[string]any) (json.RawMes
 /*
 checkAppearance refuses unknown keys and values out of range.
 */
-func checkAppearance(a map[string]any) *fault.Error {
+func checkAppearance(a map[string]any) error {
 	checks := map[string]func(any) string{
 		"primary_color": requiredColor, "header_color": requiredColor, "button_color": requiredColor,
 		"theme": oneOf("light", "dark", "auto"), "position": oneOf("right", "left"),
@@ -217,14 +215,14 @@ func checkAppearance(a map[string]any) *fault.Error {
 	return nil
 }
 
-func failField(field, message string) *fault.Error {
+func failField(field, message string) error {
 	return exceptions.WidgetField(field, message)
 }
 
 /*
 checkLauncher checks the launcher's keys.
 */
-func checkLauncher(value any) *fault.Error {
+func checkLauncher(value any) error {
 	launcher, ok := value.(map[string]any)
 	if !ok {
 		return failField("appearance.launcher", "Use an object.")
@@ -241,7 +239,7 @@ func checkLauncher(value any) *fault.Error {
 /*
 checkBackground checks the background's keys.
 */
-func checkBackground(value any) *fault.Error {
+func checkBackground(value any) error {
 	background, ok := value.(map[string]any)
 	if !ok {
 		return failField("appearance.background", "Use an object.")
@@ -258,7 +256,7 @@ func checkBackground(value any) *fault.Error {
 /*
 checkKeys runs the checks on an object, refusing keys they do not list.
 */
-func checkKeys(prefix string, object map[string]any, checks map[string]func(any) string) *fault.Error {
+func checkKeys(prefix string, object map[string]any, checks map[string]func(any) string) error {
 	for key, value := range object {
 		check, known := checks[key]
 		if !known {
