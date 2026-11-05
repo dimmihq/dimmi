@@ -135,12 +135,12 @@ whose only permission is itself lists its own name.
 */
 func permissionGroups() map[string][]string {
 	return map[string][]string{
-		"conversations:read": {"conversations:read"},
+		"conversations:read": {"conversations:read", "conversations:export"},
 		"conversations:write": {
 			"conversations:write", "conversations:delete", "conversations:moderate", "saved_replies:manage_shared",
 			"views:manage_shared",
 		},
-		"contacts:read": {"contacts:read"},
+		"contacts:read": {"contacts:read", "contacts:export"},
 		"contacts:write": {
 			"contacts:write", "contacts:erase", "contacts:manage_external_id", "companies:delete",
 			"email_suppressions:manage", "email_suppressions:lift_complaint",

@@ -66,6 +66,23 @@ var (
 )
 
 /*
+Data export failures.
+
+ErrExportTooLarge refuses an export covering more rows than its format
+allows. ErrExportFormat refuses a format the kind of export does not
+come in. ErrInvalidSelection refuses a selection naming something that
+is not a row of the kind exported.
+*/
+var (
+	ErrInvalidSelection = fault.New(fault.Invalid, "invalid_selection",
+		"The selection names something that cannot be exported.").OnField("selection")
+	ErrExportTooLarge = fault.New(fault.Invalid, "export_too_large",
+		"This export covers too many rows. Narrow the selection or pick another format.")
+	ErrExportFormat = fault.New(fault.Invalid, "invalid_export_format",
+		"This export does not come in that format.").OnField("format")
+)
+
+/*
 ErrInvalidRetention refuses a retention period outside its range: closed
 conversations 30 to 3650 days, spam and trash 7 to 365, raw email 0 to
 365, data exports 1 to 30.

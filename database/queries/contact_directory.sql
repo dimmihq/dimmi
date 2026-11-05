@@ -40,6 +40,42 @@ ORDER BY
     c.id DESC
 LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
 
+-- name: CountContacts :one
+-- CountContacts counts the contacts ListContacts would list, up to the
+-- cap.
+SELECT count(*) FROM (
+SELECT 1 FROM contacts AS c
+WHERE c.workspace_id = @workspace_id
+  AND c.merged_into_id IS NULL
+  AND c.deleted_at IS NULL
+  AND (sqlc.narg(kind)::text IS NULL OR c.kind = sqlc.narg(kind)::text)
+  AND (sqlc.narg(email)::citext IS NULL OR c.email = sqlc.narg(email)::citext)
+  AND (sqlc.narg(external_id)::text IS NULL OR c.external_id = sqlc.narg(external_id)::text)
+  AND (sqlc.narg(blocked)::boolean IS NULL OR (c.blocked_at IS NOT NULL) = sqlc.narg(blocked)::boolean)
+  AND (sqlc.narg(company_id)::uuid IS NULL OR c.company_id = sqlc.narg(company_id)::uuid)
+  AND (sqlc.narg(last_seen_after)::timestamptz IS NULL OR c.last_seen_at >= sqlc.narg(last_seen_after)::timestamptz)
+  AND (sqlc.narg(last_seen_before)::timestamptz IS NULL OR c.last_seen_at < sqlc.narg(last_seen_before)::timestamptz)
+  AND (sqlc.narg(created_after)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_after)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(custom)::jsonb IS NULL OR c.custom_attributes @> sqlc.narg(custom)::jsonb)
+  AND (
+      coalesce(cardinality(@tag_ids::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.contact_id FROM contact_tag ct
+          WHERE ct.workspace_id = @workspace_id AND ct.tag_id = ANY (@tag_ids::uuid[])
+          GROUP BY ct.contact_id
+          HAVING count(*) = cardinality(@tag_ids::uuid[])
+      )
+  )
+  AND (
+      @search::text = ''
+      OR c.search @@ to_tsquery('simple', @terms::text)
+      OR c.name ILIKE '%' || @search::text || '%'
+      OR c.email ILIKE @search::text || '%'
+  )
+LIMIT @row_limit::bigint
+) AS counted;
+
 -- name: FindContactForEmail :one
 -- FindContactForEmail returns the contact a trusted email address
 -- belongs to: a live, unmerged user or verified contact with it, users

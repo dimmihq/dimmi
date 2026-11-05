@@ -78,6 +78,7 @@ const (
 	PrefixContactExport     Prefix = "exp"
 	PrefixConversationView  Prefix = "cvw"
 	PrefixDraft             Prefix = "drf"
+	PrefixDataExport        Prefix = "dex"
 )
 
 /*
@@ -181,6 +182,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixConversationView, "conversation_views"},
 		{PrefixDraft, "conversation_drafts"},
 		{PrefixContactExport, "contact_exports"},
+		{PrefixDataExport, "data_exports"},
 		{"evt", "events"},
 	}
 }

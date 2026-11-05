@@ -70,6 +70,7 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	l.listenSignInHelp(d)
 	l.listenRedaction(d)
 	l.listenErasures(d)
+	l.listenDataExports(d)
 }
 
 /*

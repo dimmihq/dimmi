@@ -16,6 +16,7 @@ import { Panel as Pane } from "react-resizable-panels";
 import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
 import { Spinner } from "@/components/base/spinner/spinner";
+import { ExportButton } from "@/features/exports/export-button";
 import { PageOutlet } from "@/features/layout/page-outlet";
 import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
@@ -170,6 +171,15 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
           workspace={workspace}
           view={view}
           start={{ sort: settings.sort, status: settings.params.status ? undefined : settings.status }}
+        />
+        <ExportButton
+          compact
+          workspace={workspace}
+          kind="conversations"
+          selection={{
+            filter: { view: settings.params.filter, status: settings.status },
+            q: query.trim() || undefined,
+          }}
         />
         <Chip variant="caption" color="neutral">
           {count === undefined ? "Open" : `${count} open`}

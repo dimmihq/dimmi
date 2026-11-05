@@ -87,6 +87,84 @@ func (q *Queries) CountContactConversations(ctx context.Context, arg CountContac
 	return count, err
 }
 
+const countContacts = `-- name: CountContacts :one
+SELECT count(*) FROM (
+SELECT 1 FROM contacts AS c
+WHERE c.workspace_id = $1
+  AND c.merged_into_id IS NULL
+  AND c.deleted_at IS NULL
+  AND ($2::text IS NULL OR c.kind = $2::text)
+  AND ($3::citext IS NULL OR c.email = $3::citext)
+  AND ($4::text IS NULL OR c.external_id = $4::text)
+  AND ($5::boolean IS NULL OR (c.blocked_at IS NOT NULL) = $5::boolean)
+  AND ($6::uuid IS NULL OR c.company_id = $6::uuid)
+  AND ($7::timestamptz IS NULL OR c.last_seen_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR c.last_seen_at < $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR c.created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR c.created_at < $10::timestamptz)
+  AND ($11::jsonb IS NULL OR c.custom_attributes @> $11::jsonb)
+  AND (
+      coalesce(cardinality($12::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.contact_id FROM contact_tag ct
+          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($12::uuid[])
+          GROUP BY ct.contact_id
+          HAVING count(*) = cardinality($12::uuid[])
+      )
+  )
+  AND (
+      $13::text = ''
+      OR c.search @@ to_tsquery('simple', $14::text)
+      OR c.name ILIKE '%' || $13::text || '%'
+      OR c.email ILIKE $13::text || '%'
+  )
+LIMIT $15::bigint
+) AS counted
+`
+
+type CountContactsParams struct {
+	WorkspaceID    ids.UUID        `json:"workspace_id"`
+	Kind           *string         `json:"kind"`
+	Email          *string         `json:"email"`
+	ExternalID     *string         `json:"external_id"`
+	Blocked        *bool           `json:"blocked"`
+	CompanyID      *ids.UUID       `json:"company_id"`
+	LastSeenAfter  *time.Time      `json:"last_seen_after"`
+	LastSeenBefore *time.Time      `json:"last_seen_before"`
+	CreatedAfter   *time.Time      `json:"created_after"`
+	CreatedBefore  *time.Time      `json:"created_before"`
+	Custom         json.RawMessage `json:"custom"`
+	TagIds         []ids.UUID      `json:"tag_ids"`
+	Search         string          `json:"search"`
+	Terms          string          `json:"terms"`
+	RowLimit       int64           `json:"row_limit"`
+}
+
+// CountContacts counts the contacts ListContacts would list, up to the
+// cap.
+func (q *Queries) CountContacts(ctx context.Context, arg CountContactsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countContacts,
+		arg.WorkspaceID,
+		arg.Kind,
+		arg.Email,
+		arg.ExternalID,
+		arg.Blocked,
+		arg.CompanyID,
+		arg.LastSeenAfter,
+		arg.LastSeenBefore,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Custom,
+		arg.TagIds,
+		arg.Search,
+		arg.Terms,
+		arg.RowLimit,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const findContactForEmail = `-- name: FindContactForEmail :one
 SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1

@@ -78,6 +78,10 @@ const (
 	EventContactErasureCanceled  = "contact_erasure.canceled"
 	EventContactErasureHeld      = "contact_erasure.held"
 	EventContactErasureCompleted = "contact_erasure.completed"
+
+	EventDataExportRequested = "data_export.requested"
+	EventDataExportReady     = "data_export.ready"
+	EventDataExportDeleted   = "data_export.deleted"
 )
 
 /*

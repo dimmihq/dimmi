@@ -276,6 +276,26 @@ type ConversationView struct {
 	DeletedAt         *time.Time      `json:"deleted_at"`
 }
 
+type DataExport struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	RequestedByMemberID *ids.UUID       `json:"requested_by_member_id"`
+	Kind                string          `json:"kind"`
+	Format              string          `json:"format"`
+	Selection           json.RawMessage `json:"selection"`
+	IncludeNotes        bool            `json:"include_notes"`
+	Status              string          `json:"status"`
+	RowCount            *int64          `json:"row_count"`
+	Warnings            json.RawMessage `json:"warnings"`
+	Disk                *string         `json:"disk"`
+	Path                *string         `json:"path"`
+	SizeBytes           *int64          `json:"size_bytes"`
+	ExpiresAt           *time.Time      `json:"expires_at"`
+	Error               *string         `json:"error"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
 type EmailAddress struct {
 	ID                     ids.UUID        `json:"id"`
 	WorkspaceID            ids.UUID        `json:"workspace_id"`
