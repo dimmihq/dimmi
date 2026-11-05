@@ -62,5 +62,7 @@ func TestOnboarding(t *testing.T) {
 		ws := tc.Workspace.Workspace.ID
 		tc.Table("conversations").AssertCount(5, testkit.Row{"workspace_id": ws, "is_test": true})
 		tc.Table("contacts").AssertHas(testkit.Row{"email": "emily.johnson@example.com"})
+		in(tc, tc.Owner).GetJSON("/api/v1/conversations?filter[view]=all&limit=10").AssertOK().
+			AssertJSONPath("data.#", float64(5)).AssertJSONPath("data.0.channel.type", "widget")
 	})
 }

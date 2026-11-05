@@ -65,5 +65,5 @@ func (c *OnboardingController) StoreTestConversations(
 		return nil, err
 	}
 
-	return &TestConversationsOutput{Body: fhttp.NewResource(resources.NewTestConversations(len(created)))}, nil
+	return &TestConversationsOutput{Body: fhttp.NewResource(resources.NewTestConversations(created))}, nil
 }

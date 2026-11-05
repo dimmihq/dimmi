@@ -14,6 +14,7 @@ package providers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/queue"
@@ -72,10 +73,10 @@ func bootInbox(a *app.App) error {
 	}
 
 	bootRecords(a)
-	bootWorkbench(a)
 	bootDelivery(a, delivery)
 
 	return errors.Join(
+		bootWorkbench(a),
 		bootErasures(a),
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
 			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels,
@@ -104,7 +105,12 @@ bootWorkbench builds the actions of the inbox's workbench: preferences,
 saved views, snooze lists, drafts and a new workspace's practice
 conversations.
 */
-func bootWorkbench(a *app.App) {
+func bootWorkbench(a *app.App) error {
+	disk, err := a.Storage.Default()
+	if err != nil {
+		return fmt.Errorf("practice conversations disk: %w", err)
+	}
+
 	acts := a.Actions.Inbox
 	saver := conversationviews.Saver{DB: a.DB, IDs: a.IDs, Events: a.Events, Clock: a.Clock}
 
@@ -125,5 +131,13 @@ func bootWorkbench(a *app.App) {
 	acts.SaveDraft = &drafts.SaveDraft{Saver: drafter}
 	acts.UpdateDraft = &drafts.UpdateDraft{Saver: drafter}
 	acts.DeleteDraft = &drafts.DeleteDraft{Saver: drafter}
-	acts.CreateTestConversations = &conversations.CreateTestConversations{DB: a.DB, Create: acts.CreateConversation}
+	acts.CreateTestConversations = &conversations.CreateTestConversations{
+		DB: a.DB, Clock: a.Clock, Create: acts.CreateConversation,
+		Receiver: &conversations.ReceiveInboundMessage{
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: a.Application.Config.Filesystems.Default,
+			ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,
+		},
+	}
+
+	return nil
 }

@@ -44,11 +44,40 @@ function SettingUp({ name }: { name: string }) {
   );
 }
 
+const practicedKey = (workspace: string) => `dimmi:onboarding:${workspace}:examples`;
+
+/*
+ * readPracticed and writePracticed remember, in this browser only, that
+ * the example conversations were added, so the summary still says so
+ * after a reload. Storage that refuses changes nothing but the summary.
+ */
+function readPracticed(workspace: string | null): boolean {
+  if (!workspace) {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(practicedKey(workspace)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writePracticed(workspace: string | null) {
+  if (!workspace) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(practicedKey(workspace), "1");
+  } catch {
+    return;
+  }
+}
+
 export function Onboarding({ me, workspace: initial, canSetUp, canLeave = false }: OnboardingProps) {
   const [workspace, setWorkspace] = useState<string | null>(initial?.id ?? null);
   const [name, setName] = useState(initial?.name ?? "");
   const [step, setStep] = useState<Step>(stepFrom(initial?.onboarding.step));
-  const [practiced, setPracticed] = useState(false);
+  const [practiced, setPracticed] = useState(() => readPracticed(initial?.id ?? null));
 
   if (initial && !canSetUp) {
     return (
@@ -86,7 +115,10 @@ export function Onboarding({ me, workspace: initial, canSetUp, canLeave = false 
           name={name}
           label={label}
           practiced={practiced}
-          onPracticed={() => setPracticed(true)}
+          onPracticed={() => {
+            writePracticed(workspace);
+            setPracticed(true);
+          }}
           go={go}
         />
       )}
