@@ -85,6 +85,24 @@ func TestWidgetEdges(t *testing.T) {
 		assert.Len(t, context["note"], 499)
 	})
 
+	t.Run("a ping from the page the session is on keeps one entry for it", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		res := tc.Client().PostJSON("/widget/v1/sessions", testkit.JSON{
+			"app_id": appID(t, tc), "pages": []testkit.JSON{{"url": "https://acme.com/a"}},
+		}).AssertCreated()
+		v := &visitor{tc: tc, token: res.String("data.token"), id: res.String("data.id")}
+
+		v.client().PostJSON("/widget/v1/pings", testkit.JSON{
+			"page": testkit.JSON{"url": "https://acme.com/a", "title": "A"},
+		}).AssertStatus(fhttp.StatusAccepted)
+
+		var recent []struct{ URL, Title string }
+		require.NoError(t, json.Unmarshal(v.session(t).RecentPages, &recent))
+		require.Len(t, recent, 1)
+		assert.Equal(t, "A", recent[0].Title)
+	})
+
 	t.Run("a profile change of nothing changes nothing and too many attributes are refused", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

@@ -262,6 +262,38 @@ func failures() map[string]failure {
 				})
 			},
 		},
+		"resuming a session whose profile cannot be read": {
+			none, func(tc *tests.TestCase) { tc.BreakTable("contacts") },
+			func(v *visitor, _ string) *testkit.Response { return v.client().GetJSON("/widget/v1/session") },
+		},
+		"marking read while conversations cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("conversations") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().PatchJSON("/widget/v1/conversations/"+id+"/read-state", testkit.JSON{
+					"last_read_message_id": "msg_01m6m7d1yjenvsa0zrhb0vv39z",
+				})
+			},
+		},
+		"marking read while messages cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("messages") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().PatchJSON("/widget/v1/conversations/"+id+"/read-state", testkit.JSON{
+					"last_read_message_id": "msg_01m6m7d1yjenvsa0zrhb0vv39z",
+				})
+			},
+		},
+		"showing a conversation that cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("conversations") },
+			func(v *visitor, id string) *testkit.Response {
+				return v.client().GetJSON("/widget/v1/conversations/" + id)
+			},
+		},
+		"starting a session whose visitor identity cannot be stored": {
+			none, func(tc *tests.TestCase) { tc.FailWrites("contact_identities", "INSERT") },
+			func(v *visitor, _ string) *testkit.Response {
+				return v.tc.Client().PostJSON("/widget/v1/sessions", testkit.JSON{"app_id": appIDOf(v)})
+			},
+		},
 		"signing out while sessions cannot be written": {
 			none, func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "UPDATE") },
 			func(v *visitor, _ string) *testkit.Response { return v.client().Delete("/widget/v1/session") },

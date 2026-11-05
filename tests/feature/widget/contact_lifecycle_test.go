@@ -75,4 +75,28 @@ func TestWidgetContactLifecycle(t *testing.T) {
 		assert.JSONEq(t, "[]", string(after.RecentPages))
 		assert.Nil(t, after.UserAgent)
 	})
+
+	t.Run("a merge or an erasure whose sessions cannot be written fails", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		from, into := startVisitor(t, tc), startVisitor(t, tc)
+		ws := tc.Workspace.Workspace.ID
+		in := widget.MergeInput{
+			WorkspaceID: ws, From: from.session(t).ContactID, Into: into.session(t).ContactID,
+		}
+		tc.FailWrites("widget_sessions", "UPDATE")
+		scoped := tenancy.With(t.Context(), ws.String())
+
+		for _, intoUser := range []bool{false, true} {
+			in.IntoUser = intoUser
+			err := tc.App.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+				_, err := tc.App.Actions.Widget.Contacts.Repoint(ctx, tx, in)
+
+				return err
+			})
+			require.Error(t, err)
+		}
+
+		require.Error(t, tc.App.Actions.Widget.Contacts.EraseContact(scoped, tc.App.DB, ws, in.From))
+	})
 }

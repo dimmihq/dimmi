@@ -18,45 +18,43 @@ own table can break without its sightings needing a write at shutdown.
 */
 type teamFailure struct {
 	breaks func(tc *tests.TestCase)
-	call   func(t *testing.T, tc *tests.TestCase) *testkit.Response
+	call   func(tc *tests.TestCase, w widgetRef) *testkit.Response
+}
+
+/*
+widgetRef names the workspace's first widget, read before anything breaks.
+*/
+type widgetRef struct {
+	path string
+	app  string
 }
 
 func TestWidgetTeamFailures(t *testing.T) {
 	t.Parallel()
 
-	widget := func(t *testing.T, tc *tests.TestCase) string {
-		t.Helper()
-
-		return settingsPath(t, tc)
-	}
-
 	for name, f := range map[string]teamFailure{
 		"listing widgets that cannot be read": {
 			func(tc *tests.TestCase) { tc.BreakTable("widget_settings") },
-			func(_ *testing.T, tc *tests.TestCase) *testkit.Response {
+			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
 				return owner(tc).GetJSON("/api/v1/widget-settings")
 			},
 		},
 		"listing widgets whose channels cannot be read": {
 			func(tc *tests.TestCase) { tc.BreakTable("channel_connections") },
-			func(_ *testing.T, tc *tests.TestCase) *testkit.Response {
+			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
 				return owner(tc).GetJSON("/api/v1/widget-settings")
 			},
 		},
 		"changing a widget that cannot be saved": {
 			func(tc *tests.TestCase) { tc.FailWrites("widget_settings", "UPDATE") },
-			func(t *testing.T, tc *tests.TestCase) *testkit.Response {
-				t.Helper()
-
-				return owner(tc).PatchJSON(widget(t, tc), testkit.JSON{"name": "Shop"})
+			func(tc *tests.TestCase, w widgetRef) *testkit.Response {
+				return owner(tc).PatchJSON(w.path, testkit.JSON{"name": "Shop"})
 			},
 		},
 		"moving a widget while inboxes cannot be read": {
 			func(tc *tests.TestCase) { tc.BreakTable("inboxes") },
-			func(t *testing.T, tc *tests.TestCase) *testkit.Response {
-				t.Helper()
-
-				return owner(tc).PatchJSON(widget(t, tc), testkit.JSON{"inbox_id": "inbox_01m6m7c2dtewjt56a9y6fgf322"})
+			func(tc *tests.TestCase, w widgetRef) *testkit.Response {
+				return owner(tc).PatchJSON(w.path, testkit.JSON{"inbox_id": "inbox_01m6m7c2dtewjt56a9y6fgf322"})
 			},
 		},
 		"deleting a widget that cannot be removed": {
@@ -69,13 +67,49 @@ func TestWidgetTeamFailures(t *testing.T) {
 		},
 		"creating a widget that cannot be counted": {
 			func(tc *tests.TestCase) { tc.BreakTable("widget_settings") },
-			func(_ *testing.T, tc *tests.TestCase) *testkit.Response {
+			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
 				return owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Shop"})
+			},
+		},
+		"signing up while widgets cannot be counted": {
+			func(tc *tests.TestCase) { tc.BreakTable("widget_settings") },
+			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
+				return tc.Client().PostJSON("/api/v1/users", testkit.JSON{
+					"name": "Grace", "email": "grace@example.com", "password": "analytical-engine-1843",
+					"workspace_name": "Shop",
+				})
+			},
+		},
+		"reading a widget that cannot be read": {
+			func(tc *tests.TestCase) { tc.BreakTable("widget_settings") },
+			func(tc *tests.TestCase, w widgetRef) *testkit.Response {
+				return owner(tc).GetJSON(w.path)
+			},
+		},
+		"changing a widget that cannot be read": {
+			func(tc *tests.TestCase) { tc.BreakTable("widget_settings") },
+			func(tc *tests.TestCase, w widgetRef) *testkit.Response {
+				return owner(tc).PatchJSON(w.path, testkit.JSON{"name": "Shop"})
+			},
+		},
+		"deleting a widget that cannot be read": {
+			func(tc *tests.TestCase) { tc.BreakTable("widget_settings") }, deleteWidget,
+		},
+		"a messenger's config while its workspace cannot be read": {
+			func(tc *tests.TestCase) { tc.BreakTable("workspaces") }, askConfig,
+		},
+		"a messenger's config while its channel cannot be read": {
+			func(tc *tests.TestCase) { tc.BreakTable("channel_connections") }, askConfig,
+		},
+		"the team's availability while members cannot be read": {
+			func(tc *tests.TestCase) { tc.BreakTable("workspace_members") },
+			func(tc *tests.TestCase, w widgetRef) *testkit.Response {
+				return tc.Client().GetJSON("/widget/v1/apps/" + w.app + "/availability")
 			},
 		},
 		"signing up while the first widget cannot be stored": {
 			func(tc *tests.TestCase) { tc.FailWrites("widget_settings", "INSERT") },
-			func(_ *testing.T, tc *tests.TestCase) *testkit.Response {
+			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
 				return tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 					"name": "Grace", "email": "grace@example.com", "password": "analytical-engine-1843",
 					"workspace_name": "Shop",
@@ -86,9 +120,10 @@ func TestWidgetTeamFailures(t *testing.T) {
 		t.Run("answers a server error "+name, func(t *testing.T) {
 			t.Parallel()
 			tc := tests.New(t)
+			w := widgetRef{path: settingsPath(t, tc), app: appID(t, tc)}
 			f.breaks(tc)
 
-			f.call(t, tc).AssertStatus(fhttp.StatusInternalServerError)
+			f.call(tc, w).AssertStatus(fhttp.StatusInternalServerError)
 		})
 	}
 }
@@ -134,8 +169,13 @@ func TestWidgetStreamRecheck(t *testing.T) {
 /*
 deleteWidget has the owner delete the workspace's first widget.
 */
-func deleteWidget(t *testing.T, tc *tests.TestCase) *testkit.Response {
-	t.Helper()
+func deleteWidget(tc *tests.TestCase, w widgetRef) *testkit.Response {
+	return owner(tc).Delete(w.path)
+}
 
-	return owner(tc).Delete(settingsPath(t, tc))
+/*
+askConfig asks for the widget's config as a visitor's browser does.
+*/
+func askConfig(tc *tests.TestCase, w widgetRef) *testkit.Response {
+	return tc.Client().GetJSON("/widget/v1/apps/" + w.app + "/config")
 }

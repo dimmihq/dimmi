@@ -350,4 +350,3 @@ func TestWidgetUploadEdges(t *testing.T) {
 		}
 	})
 }
-
