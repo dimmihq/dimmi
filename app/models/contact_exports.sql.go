@@ -358,8 +358,8 @@ func (q *Queries) ListExportConversations(ctx context.Context, arg ListExportCon
 }
 
 const listExportMessages = `-- name: ListExportMessages :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages
-WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event'
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND type <> 'event' AND undone_at IS NULL
   AND (type = 'message' OR $3::boolean)
 ORDER BY created_at, id
 `
@@ -371,7 +371,8 @@ type ListExportMessagesParams struct {
 }
 
 // ListExportMessages returns a conversation's messages and, when asked,
-// its notes, oldest first, events left out.
+// its notes, oldest first, events and replies taken back before they
+// left out.
 func (q *Queries) ListExportMessages(ctx context.Context, arg ListExportMessagesParams) ([]Message, error) {
 	rows, err := q.db.Query(ctx, listExportMessages, arg.WorkspaceID, arg.ConversationID, arg.IncludeNotes)
 	if err != nil {
@@ -405,6 +406,8 @@ func (q *Queries) ListExportMessages(ctx context.Context, arg ListExportMessages
 			&i.UpdatedAt,
 			&i.Search,
 			&i.ChannelConnectionID,
+			&i.ScheduledSendAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}

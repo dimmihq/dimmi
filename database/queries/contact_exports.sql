@@ -44,9 +44,10 @@ ORDER BY created_at, id;
 
 -- name: ListExportMessages :many
 -- ListExportMessages returns a conversation's messages and, when asked,
--- its notes, oldest first, events left out.
+-- its notes, oldest first, events and replies taken back before they
+-- left out.
 SELECT * FROM messages
-WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type <> 'event'
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type <> 'event' AND undone_at IS NULL
   AND (type = 'message' OR @include_notes::boolean)
 ORDER BY created_at, id;
 

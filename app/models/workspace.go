@@ -215,3 +215,27 @@ func (w Workspace) WakesSnoozeOn(reason string) bool {
 
 	return SnoozeWakeDefaults()[reason]
 }
+
+/*
+DefaultUndoSendSeconds is how long a reply waits before it leaves, so its
+writer can undo it, when the workspace sets nothing.
+*/
+const DefaultUndoSendSeconds = 5
+
+/*
+UndoSendSeconds returns how many seconds the workspace's replies wait
+before they leave on a channel that cannot take them back.
+*/
+func (w Workspace) UndoSendSeconds() int {
+	var settings struct {
+		Inbox struct {
+			UndoSendSeconds *int `json:"undo_send_seconds"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil || settings.Inbox.UndoSendSeconds == nil {
+		return DefaultUndoSendSeconds
+	}
+
+	return *settings.Inbox.UndoSendSeconds
+}

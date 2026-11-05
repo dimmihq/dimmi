@@ -72,9 +72,19 @@ func (w *Writer) redactMessage(
 }
 
 /*
-announceRedaction tells the application which rules changed the message.
+RedactEdit applies the workspace's rules to a rewritten text in place
+and returns the hits, so an edit is held to the same rules as the text
+it replaces.
 */
-func (w *Writer) announceRedaction(
+func (w *Writer) RedactEdit(ctx context.Context, workspaceID ids.UUID, text *string) ([]supportredaction.Hit, error) {
+	return redactText(ctx, w.Q, workspaceID, text)
+}
+
+/*
+AnnounceRedaction tells the application which rules changed the
+message, and stays quiet when none did.
+*/
+func (w *Writer) AnnounceRedaction(
 	ctx context.Context, c models.Conversation, msg models.Message, hits []supportredaction.Hit,
 ) error {
 	if len(hits) == 0 {

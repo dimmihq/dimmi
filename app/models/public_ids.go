@@ -77,6 +77,7 @@ const (
 	PrefixContactErasure    Prefix = "ces"
 	PrefixContactExport     Prefix = "exp"
 	PrefixConversationView  Prefix = "cvw"
+	PrefixDraft             Prefix = "drf"
 )
 
 /*
@@ -178,6 +179,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixRedactionRule, "redaction_rules"},
 		{PrefixContactErasure, "contact_erasures"},
 		{PrefixConversationView, "conversation_views"},
+		{PrefixDraft, "conversation_drafts"},
 		{PrefixContactExport, "contact_exports"},
 		{"evt", "events"},
 	}
@@ -347,7 +349,6 @@ yet, so no other table takes them in the meantime.
 func reservedPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixWorkspaceDomain, "reserved: workspace_domains"},
-		{"drf", "reserved: reply_drafts"},
 		{PrefixSSOConnection, "reserved: sso_connections"},
 		{PrefixOrganizationDomain, "reserved: organization_domains"},
 		{PrefixRole, "reserved: roles"},

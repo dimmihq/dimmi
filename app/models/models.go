@@ -217,6 +217,20 @@ type Conversation struct {
 	Priority               int16                   `json:"priority"`
 }
 
+type ConversationDraft struct {
+	ID              ids.UUID        `json:"id"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	MemberID        ids.UUID        `json:"member_id"`
+	ConversationID  *ids.UUID       `json:"conversation_id"`
+	Mode            string          `json:"mode"`
+	Body            string          `json:"body"`
+	AttachmentIds   []ids.UUID      `json:"attachment_ids"`
+	Recipients      json.RawMessage `json:"recipients"`
+	ClientUpdatedAt time.Time       `json:"client_updated_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
 type ConversationParticipant struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
 	ConversationID ids.UUID  `json:"conversation_id"`
@@ -527,6 +541,8 @@ type Message struct {
 	UpdatedAt           time.Time               `json:"updated_at"`
 	Search              database.SearchDocument `json:"search"`
 	ChannelConnectionID *ids.UUID               `json:"channel_connection_id"`
+	ScheduledSendAt     *time.Time              `json:"scheduled_send_at"`
+	UndoneAt            *time.Time              `json:"undone_at"`
 }
 
 type MessageMention struct {
@@ -929,4 +945,5 @@ type WorkspaceMember struct {
 	ConversationCapacity         *int32          `json:"conversation_capacity"`
 	CapacityByChannel            json.RawMessage `json:"capacity_by_channel"`
 	LastAssignedAt               *time.Time      `json:"last_assigned_at"`
+	UndoSendSeconds              *int16          `json:"undo_send_seconds"`
 }

@@ -21,6 +21,7 @@ import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
+import { type Draft, draftsQuery } from "@/lib/api/drafts";
 import { type ConversationSort, type Counts, conversationsQuery, countsQuery } from "@/lib/api/inbox";
 import { viewsQuery } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
@@ -159,6 +160,7 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
   });
   const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: workspace !== "" });
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
+  const { data: drafts } = useQuery({ ...draftsQuery(workspace), enabled: workspace !== "" });
   const count = openCount(counts, view);
 
   return (
@@ -197,9 +199,18 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
         search={query}
         state={isPending ? "loading" : isError ? "error" : "ready"}
         conversations={conversations ?? []}
+        drafted={draftedIn(drafts)}
       />
     </Panel>
   );
+}
+
+/*
+ * draftedIn is the conversations the reader left a reply or note
+ * draft in.
+ */
+function draftedIn(drafts: Draft[] | undefined): ReadonlySet<string> {
+  return new Set((drafts ?? []).flatMap((d) => (d.conversation_id && d.body.trim() ? [d.conversation_id] : [])));
 }
 
 function ListBody({
@@ -210,6 +221,7 @@ function ListBody({
   search,
   state,
   conversations,
+  drafted,
 }: {
   view: string;
   me: string | undefined;
@@ -218,6 +230,7 @@ function ListBody({
   search: string;
   state: "loading" | "error" | "ready";
   conversations: NonNullable<Parameters<typeof ConversationList>[0]["conversations"]>;
+  drafted: ReadonlySet<string>;
 }) {
   if (state === "loading") {
     return (
@@ -245,7 +258,7 @@ function ListBody({
 
   return (
     <ScrollArea>
-      <ConversationList view={view} conversations={conversations} openId={openId} me={me} />
+      <ConversationList view={view} conversations={conversations} openId={openId} me={me} drafted={drafted} />
     </ScrollArea>
   );
 }

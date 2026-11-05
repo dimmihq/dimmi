@@ -28,7 +28,8 @@ when they see the workspace's own name. LinkSafety holds the checks the
 inbox runs on links customers send, and Retention how long
 conversations and their files are kept. DeletedAt and PurgeAfter are set
 while it is in the trash: when it was deleted, and when it is purged for
-good unless restored.
+good unless restored. UndoSendSeconds is how long replies wait before
+they leave.
 */
 type Workspace struct {
 	ID                 string            `json:"id"`
@@ -44,6 +45,7 @@ type Workspace struct {
 	CustomerFacingName *string           `json:"customer_facing_name"`
 	LinkSafety         models.LinkSafety `json:"link_safety"`
 	Retention          models.Retention  `json:"retention"`
+	UndoSendSeconds    int               `json:"undo_send_seconds"`
 	DeletedAt          *time.Time        `json:"deleted_at"`
 	PurgeAfter         *time.Time        `json:"purge_after"`
 }
@@ -66,6 +68,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		CustomerFacingName: w.CustomerFacingNameSetting(),
 		LinkSafety:         w.LinkSafety(),
 		Retention:          w.Retention(),
+		UndoSendSeconds:    w.UndoSendSeconds(),
 		DeletedAt:          w.DeletedAt,
 		PurgeAfter:         w.PurgeAfter,
 	}

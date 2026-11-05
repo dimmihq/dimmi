@@ -304,7 +304,7 @@ func unreadEntry(b *builder, member ids.UUID) string {
 	id := b.add(member) + "::uuid"
 
 	return "SELECT 1 FROM messages m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id" +
-		" AND m.type <> 'event' AND m.deleted_at IS NULL" +
+		" AND m.type <> 'event' AND m.deleted_at IS NULL AND m.undone_at IS NULL" +
 		" AND NOT (m.author_type = 'member' AND m.author_id IS NOT DISTINCT FROM " + id + ")" +
 		" AND m.id > coalesce((SELECT r.last_read_message_id FROM conversation_reads r" +
 		" WHERE r.workspace_id = c.workspace_id AND r.conversation_id = c.id AND r.workspace_member_id = " + id + ")," +

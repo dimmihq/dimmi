@@ -6,10 +6,13 @@
  * the team's own agent never reads as part of the exchange with the
  * customer. Teammates' notes sit on the team's side with a dashed edge
  * and a lock. A message the workspace's redaction rules changed says how
- * many items they removed. Every message's Markdown is rendered. Below the thread sits the composer; R and N open it for a
+ * many items they removed. Every message's Markdown is rendered. Hovering
+ * a message offers a link to it, editing one's own note and deleting; a
+ * deleted message stays as a line saying who deleted it. Below the thread
+ * sits the composer; R and N open it for a
  * reply or a note from anywhere, and O opens or closes Operator.
  */
-import { RiLock2Line, RiSparkling2Line } from "@remixicon/react";
+import { RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -24,6 +27,8 @@ import type { ThreadEntry } from "./conversations";
 import { LinkPolicyProvider } from "./links/link-policy";
 import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
+import { MessageActions, NoteEditor } from "./thread/message-actions";
+import { useMessageMoves } from "./thread/use-message-moves";
 import type { Report } from "./use-typing-report";
 
 type Said = Extract<ThreadEntry, { author: string }>;
@@ -67,6 +72,13 @@ function Tag({ entry }: { entry: Said }) {
           · {entry.redacted === 1 ? "1 item redacted" : `${entry.redacted} items redacted`}
         </span>
       ) : null}
+      {entry.edited ? <span className="text-body-2-regular text-text-tertiary">Edited</span> : null}
+      {entry.held ? (
+        <span className="flex items-center gap-0.5 text-body-2-regular text-text-tertiary">
+          <RiTimeLine aria-hidden className="size-3.5" />
+          Sending
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -94,7 +106,9 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
   );
 }
 
-function Entry({ entry, customer }: { entry: ThreadEntry; customer: string }) {
+type Moves = ReturnType<typeof useMessageMoves>;
+
+function Entry({ entry, customer, moves }: { entry: ThreadEntry; customer: string; moves: Moves }) {
   if (entry.kind === "event") {
     return <Pill>{entry.text}</Pill>;
   }
@@ -102,24 +116,63 @@ function Entry({ entry, customer }: { entry: ThreadEntry; customer: string }) {
     return <OperatorCard entry={entry} customer={customer} />;
   }
 
+  return <SaidEntry entry={entry} customer={customer} moves={moves} />;
+}
+
+/*
+ * bubbleClass styles a message's bubble by who wrote it.
+ */
+function bubbleClass(entry: Said, editing: boolean): string {
   const ours = entry.kind !== "customer";
   const note = entry.kind === "note";
 
+  return cx(
+    bubble,
+    "text-body-regular text-text-primary",
+    !ours && "bg-background-tertiary-default",
+    ours && !note && "bg-background-primary-default shadow-card",
+    note && "border border-dashed border-border-button-hover",
+    editing && "w-full",
+  );
+}
+
+function SaidEntry({ entry, customer, moves }: { entry: Said; customer: string; moves: Moves }) {
+  const [editing, setEditing] = useState(false);
+  const ours = entry.kind !== "customer";
+  const note = entry.kind === "note";
+  const mine = Boolean(entry.authorId) && entry.authorId === moves.me;
+  const kind = note ? "note" : ours ? "reply" : "customer";
+
   return (
     <article
+      id={entry.id}
       aria-label={note ? `Internal note from ${entry.author}` : `Message from ${entry.author}`}
-      className={cx("flex flex-col px-3", ours ? "items-end" : "items-start")}
+      className={cx("group relative flex flex-col px-3", ours ? "items-end" : "items-start")}
     >
-      <div
-        className={cx(
-          bubble,
-          "text-body-regular text-text-primary",
-          !ours && "bg-background-tertiary-default",
-          ours && !note && "bg-background-primary-default shadow-card",
-          note && "border border-dashed border-border-button-hover",
+      <div className={cx("absolute -top-3 z-10", ours ? "start-3" : "end-3")}>
+        <MessageActions
+          kind={kind}
+          customer={customer}
+          canEdit={note && mine && !editing}
+          canDelete={mine || moves.moderates}
+          onCopy={() => moves.link(entry.id)}
+          onEdit={() => setEditing(true)}
+          onDelete={() => moves.remove(entry.id)}
+        />
+      </div>
+      <div className={bubbleClass(entry, editing)}>
+        {editing ? (
+          <NoteEditor
+            text={entry.text}
+            onCancel={() => setEditing(false)}
+            onSave={async (body) => {
+              await moves.edit(entry.id, body);
+              setEditing(false);
+            }}
+          />
+        ) : (
+          <MessageBody text={entry.text} fromCustomer={!ours} />
         )}
-      >
-        <MessageBody text={entry.text} fromCustomer={!ours} />
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
       <Tag entry={entry} />
@@ -155,6 +208,7 @@ function useComposerKeys(keys: Record<string, () => void>) {
 }
 
 export function Thread({
+  conversation,
   entries,
   customer,
   channel,
@@ -164,6 +218,7 @@ export function Thread({
   onTyping,
   status,
 }: {
+  conversation: string;
   entries: ThreadEntry[];
   customer: string;
   channel: string;
@@ -173,6 +228,7 @@ export function Thread({
   onTyping: Report;
   status?: ReactNode;
 }) {
+  const moves = useMessageMoves(conversation);
   const [mode, setMode] = useState<Mode | null>(null);
   const [focusKey, setFocusKey] = useState(0);
   const ask = useRef(onAskOperator);
@@ -196,7 +252,7 @@ export function Thread({
           <ol className="mx-auto flex max-w-3xl flex-col gap-3">
             {entries.map((entry) => (
               <li key={entry.id}>
-                <Entry entry={entry} customer={customer} />
+                <Entry entry={entry} customer={customer} moves={moves} />
               </li>
             ))}
           </ol>
@@ -205,6 +261,7 @@ export function Thread({
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}
         <Composer
+          conversation={conversation}
           mode={mode}
           focusKey={focusKey}
           customer={customer}

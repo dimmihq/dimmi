@@ -75,6 +75,24 @@ func TestRedactionOnWrite(t *testing.T) {
 			AssertJSONPath("data.2.body", "ACCT-• and 000-12-3456")
 	})
 
+	t.Run("holds an edited note to the rules and forgets hits the new text no longer has", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		redacted := tests.Record[appevents.MessageRedacted](d.TC)
+		path := start(t, d, "Hello", "Hi")
+		note := d.Owner.PostJSON(path+"/notes", testkit.JSON{"body": "Nothing yet"}).AssertCreated().String("data.id")
+
+		d.Owner.PatchJSON(path+"/messages/"+note, testkit.JSON{"body": "Card " + card}).AssertOK().
+			AssertJSONPath("data.body", "Card •••• •••• •••• 4242").
+			AssertJSONPath("data.redactions.0.rule", "card_numbers")
+		require.Len(t, redacted.All(), 1)
+		d.TC.Table("messages").AssertCount(0, testkit.Row{"body": "Card " + card})
+
+		d.Owner.PatchJSON(path+"/messages/"+note, testkit.JSON{"body": "Plain"}).AssertOK().
+			AssertJSONPath("data.body", "Plain").AssertJSONMissing("data.redactions")
+		assert.Len(t, redacted.All(), 1)
+	})
+
 	t.Run("leaves text alone when the rules are off and never rewrites what was stored", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)

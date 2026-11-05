@@ -265,7 +265,8 @@ func (o opening) insert(ctx context.Context, w *Writer) (models.Conversation, er
 
 /*
 firstMessage writes the opening message, by the customer or the
-caller, and says the conversation started.
+caller, ends the caller's new-conversation draft when they wrote it, and
+says the conversation started.
 */
 func (a *CreateConversation) firstMessage(
 	ctx context.Context, w *Writer, c models.Conversation, o opening,
@@ -285,6 +286,10 @@ func (a *CreateConversation) firstMessage(
 
 	created, c, err := author.Append(ctx, c, msg)
 	if err != nil {
+		return c, err
+	}
+
+	if err := ConsumeDraft(ctx, author, SentDraft{Workspace: c.WorkspaceID, Mode: DraftNew}); err != nil {
 		return c, err
 	}
 

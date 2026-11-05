@@ -80,7 +80,7 @@ func (w *Writer) Append(
 		return msg, c, err
 	}
 
-	if err := w.announceRedaction(ctx, c, msg, hits); err != nil {
+	if err := w.AnnounceRedaction(ctx, c, msg, hits); err != nil {
 		return msg, c, err
 	}
 

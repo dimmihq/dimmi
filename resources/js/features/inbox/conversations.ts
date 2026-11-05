@@ -72,6 +72,9 @@ export type ThreadEntry =
       at: string;
       text: string;
       redacted?: number;
+      held?: boolean;
+      authorId?: string | null;
+      edited?: boolean;
     }
   | { kind: "event"; id: string; at: string; text: string };
 
@@ -113,11 +116,15 @@ export function toEntry(message: Message): ThreadEntry {
   if (message.type === "event" && message.event) {
     return { kind: "event", id: message.id, at, text: eventText(message.event) };
   }
-  const said = { id: message.id, author: message.author.name, at, text: message.body ?? "This message was deleted." };
+  if (message.deleted_at) {
+    const by = message.deleted_by?.name;
+    return { kind: "event", id: message.id, at, text: by ? `Message deleted by ${by}` : "Message deleted" };
+  }
+  const said = { id: message.id, author: message.author.name, at, text: message.body ?? "" };
   const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
   const marked = redacted ? { ...said, redacted } : said;
   if (message.type === "note") {
-    return { kind: "note", ...marked };
+    return { kind: "note", ...marked, authorId: message.author.id, edited: Boolean(message.edited_at) };
   }
   if (message.author.type === "contact") {
     return { kind: "customer", ...marked };
@@ -126,5 +133,5 @@ export function toEntry(message: Message): ThreadEntry {
     return { kind: "dimmi", ...marked };
   }
 
-  return { kind: "teammate", ...marked };
+  return { kind: "teammate", ...marked, held: Boolean(message.scheduled_send_at), authorId: message.author.id };
 }
