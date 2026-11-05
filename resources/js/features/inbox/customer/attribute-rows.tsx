@@ -25,10 +25,17 @@ function usePins(workspace: string) {
   const toggle = (key: string) => {
     const next = pinned.includes(key) ? pinned.filter((pin) => pin !== key) : [...pinned, key];
     const cacheKey = realtimeKeys.preferences(workspace);
-    client.setQueryData<InboxPreferences>(cacheKey, (old) => (old ? { ...old, pinned_attributes: next } : old));
-    void updatePreferences({ workspace, mutation: mutation() }, { pinned_attributes: next }).catch(() =>
-      client.invalidateQueries({ queryKey: cacheKey }),
-    );
+    void client.cancelQueries({ queryKey: cacheKey });
+    client.setQueryData<InboxPreferences>(cacheKey, (old) => ({
+      sidebar: {},
+      views: {},
+      updated_at: null,
+      ...old,
+      pinned_attributes: next,
+    }));
+    void updatePreferences({ workspace, mutation: mutation() }, { pinned_attributes: next })
+      .then((saved) => client.setQueryData(cacheKey, saved))
+      .catch(() => client.invalidateQueries({ queryKey: cacheKey }));
   };
 
   return { pinned, toggle };
