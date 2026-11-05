@@ -1,6 +1,6 @@
 /*
- * One messenger's settings, with the preview messenger floating on the
- * page as it will float on a site. Every change shows on it at once,
+ * One messenger's settings, with the preview messenger in a column beside
+ * them on screens wide enough for both. Every change shows on it at once,
  * before anything is saved: changes collect in a draft, a bar at the
  * foot says they are unsaved, Discard puts the page back as saved and
  * Save sends them in one update. Leaving with unsaved changes asks first.
@@ -19,7 +19,7 @@ import { PageSkeleton, SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 import { changed, withChange, withDraft } from "./draft";
-import { useFloatingPreview } from "./floating-preview";
+import { PreviewPane } from "./preview-pane";
 import {
   AppearanceSection,
   DangerSection,
@@ -111,7 +111,6 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
   const locked = !usePermission(workspace, "settings:write");
   const preview = usePreviewConfig(workspace, saved.id, edit.draft);
   const locales = (preview.data?.locales as string[] | undefined) ?? ["en"];
-  useFloatingPreview(preview.data);
   useBlocker({
     shouldBlockFn: () => edit.dirty && !window.confirm("Leave without saving your changes?"),
     enableBeforeUnload: () => edit.dirty,
@@ -119,27 +118,30 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
   const props = { value: edit.shown, set: edit.set, locked };
 
   return (
-    <SettingsPage
-      title={saved.name}
-      description={`Conversations land in ${saved.inbox.name}.`}
-      footer={<SaveBar edit={edit} />}
-    >
-      <BackToMessengers />
-      <div key={edit.generation} className="contents">
-        <InstallSection value={edit.shown} />
-        <GeneralSection {...props} locales={locales} />
-        <AppearanceSection {...props} />
-        <TextsSection {...props} />
-        <VisitorsSection {...props} />
-        <TabsSection {...props} />
-        {locked ? null : <DangerSection workspace={workspace} value={edit.shown} />}
-      </div>
-      {preview.error ? (
-        <p role="alert" className="text-body-2-regular text-text-error-primary">
-          {failureText(preview.error)}
-        </p>
-      ) : null}
-    </SettingsPage>
+    <div className="flex h-full min-w-0 flex-1 gap-3">
+      <SettingsPage
+        title={saved.name}
+        description={`Conversations land in ${saved.inbox.name}.`}
+        footer={<SaveBar edit={edit} />}
+      >
+        <BackToMessengers />
+        <div key={edit.generation} className="contents">
+          <InstallSection value={edit.shown} />
+          <GeneralSection {...props} locales={locales} />
+          <AppearanceSection {...props} />
+          <TextsSection {...props} />
+          <VisitorsSection {...props} />
+          <TabsSection {...props} />
+          {locked ? null : <DangerSection workspace={workspace} value={edit.shown} />}
+        </div>
+        {preview.error ? (
+          <p role="alert" className="text-body-2-regular text-text-error-primary">
+            {failureText(preview.error)}
+          </p>
+        ) : null}
+      </SettingsPage>
+      <PreviewPane config={preview.data} />
+    </div>
   );
 }
 

@@ -93,8 +93,8 @@ it.describe("settings", () => {
 
   it("previews messenger changes live and keeps them only once saved", async ({ page }) => {
     await openMessenger(page);
-    const messenger = page.locator("#dimmi-messenger");
-    await messenger.getByRole("button", { name: "Open messages" }).click();
+    const messenger = page.frameLocator('iframe[title="Messenger preview"]').locator("#dimmi-messenger");
+    await expect(messenger.getByRole("button", { name: "Close messages" }).first()).toBeVisible();
     const greeting = page.getByRole("textbox", { name: "Greeting" });
 
     await greeting.fill("Hello from the preview");
