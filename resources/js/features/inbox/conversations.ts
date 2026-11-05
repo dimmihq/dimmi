@@ -81,6 +81,7 @@ export type ThreadEntry =
       original: boolean;
       truncated: boolean;
       failed: string | null;
+      redacted?: number;
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
@@ -110,6 +111,13 @@ export function eventText(event: TimelineEvent): string {
     return event.to === "none" ? `${actor} removed the priority` : `${actor} set the priority to ${event.to}`;
   }
 
+  if (event.name === "conversation.tagged") {
+    return `${actor} tagged the conversation ${(event.tags ?? []).join(", ")}`;
+  }
+  if (event.name === "conversation.untagged") {
+    return `${actor} removed the tag ${(event.tags ?? []).join(", ")}`;
+  }
+
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
 }
 
@@ -133,15 +141,17 @@ export function toEntry(message: Message): ThreadEntry {
     failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
     authorId: message.author.id,
   } as const;
+  const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
+  const marked = redacted ? { ...said, redacted } : said;
   if (message.type === "note") {
-    return { kind: "note", ...said, edited: Boolean(message.edited_at) };
+    return { kind: "note", ...marked, edited: Boolean(message.edited_at) };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", ...said };
+    return { kind: "customer", ...marked };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", ...said };
+    return { kind: "dimmi", ...marked };
   }
 
-  return { kind: "teammate", ...said, held: Boolean(message.scheduled_send_at) };
+  return { kind: "teammate", ...marked, held: Boolean(message.scheduled_send_at) };
 }

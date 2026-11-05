@@ -94,6 +94,28 @@ func TestSignInRecord(t *testing.T) {
 		assert.Empty(t, record.Country)
 	})
 
+	t.Run("keeps the connection and domain a sign-in came through until the next login", func(t *testing.T) {
+		t.Parallel()
+		a := newApp(t, db, session.Config{})
+		connection := ids.New()
+		s, err := a.manager.Start(newRequest(t))
+		require.NoError(t, err)
+
+		s.Login(ids.New(), "sso")
+		s.SetSignInContext(connection, "acme.example")
+		record := s.Record()
+		require.NoError(t, a.store.Save(t.Context(), record))
+
+		stored, err := a.store.Find(t.Context(), record.TokenHash)
+		require.NoError(t, err)
+		assert.Equal(t, connection, stored.ConnectionID)
+		assert.Equal(t, "acme.example", stored.AuthDomain)
+
+		s.Login(ids.New(), "password")
+		assert.Equal(t, ids.Nil(), s.Record().ConnectionID)
+		assert.Empty(t, s.Record().AuthDomain)
+	})
+
 	t.Run("is copied out by record", func(t *testing.T) {
 		t.Parallel()
 		a := newApp(t, db, session.Config{})

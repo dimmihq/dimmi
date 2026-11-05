@@ -40,6 +40,9 @@ const (
 	subjectToken      = "token"
 	subjectInvitation = "invitation"
 	subjectTeam       = "team"
+	subjectRole       = "role"
+	subjectConnection = "sso_connection"
+	subjectDomain     = "organization_domain"
 )
 
 /*
@@ -57,6 +60,7 @@ dispatching transaction.
 func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.InTx, l.workspaceCreated)
 	events.Listen(d, events.InTx, l.workspaceUpdated)
+	events.Listen(d, events.InTx, l.accessPolicyChanged)
 	events.Listen(d, events.InTx, l.memberJoined)
 	events.Listen(d, events.InTx, l.memberRoleChanged)
 	events.Listen(d, events.InTx, l.memberDeactivated)
@@ -65,9 +69,13 @@ func (l *WriteAuditLog) Listen(d *events.Dispatcher) {
 	l.listenTrash(d)
 	l.listenAccess(d)
 	l.listenTeams(d)
+	l.listenRoles(d)
+	l.listenSSO(d)
 	l.listenAvailability(d)
 	l.listenWidgets(d)
 	l.listenSignInHelp(d)
+	l.listenRedaction(d)
+	l.listenErasures(d)
 }
 
 /*
@@ -114,6 +122,23 @@ func (l *WriteAuditLog) workspaceUpdated(ctx context.Context, e appevents.Worksp
 	return l.record(ctx, audit.Entry{
 		WorkspaceID: w.ID, Event: audit.EventWorkspaceUpdated, ActorID: e.UpdatedBy,
 		Subject: audit.Subject{Type: subjectWorkspace, ID: w.ID, Label: w.Name}, Changes: changes,
+	})
+}
+
+/*
+accessPolicyChanged records a change to a workspace's rules with the
+values it changed from and to, by the member who made it or, when an
+operator did at the server, by the system.
+*/
+func (l *WriteAuditLog) accessPolicyChanged(ctx context.Context, e appevents.WorkspaceAccessPolicyChanged) error {
+	w, err := models.New(l.DB).FindWorkspace(ctx, e.WorkspaceID)
+	if err != nil {
+		return fmt.Errorf("find audited workspace: %w", err)
+	}
+
+	return l.record(ctx, audit.Entry{
+		WorkspaceID: w.ID, Event: audit.EventAccessPolicyChanged, ActorID: e.ChangedBy,
+		Subject: audit.Subject{Type: subjectWorkspace, ID: w.ID, Label: w.Name}, Changes: e.Changes,
 	})
 }
 

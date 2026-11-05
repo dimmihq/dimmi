@@ -64,9 +64,12 @@ DELETE FROM tags WHERE workspace_id = @workspace_id AND id = @id;
 -- TagConversation puts the workspace's tags with the ids on the
 -- conversation and returns the ids of those it added. A tag already on
 -- it is skipped, and an id of another workspace's tag is ignored, so the
--- result is exactly what changed.
-INSERT INTO conversation_tag (workspace_id, conversation_id, tag_id, created_by_type, created_by_id, created_at)
-SELECT @workspace_id, @conversation_id, t.id, @created_by_type, @created_by_id, @now FROM tags AS t
+-- result is exactly what changed. The message, when given, is the one
+-- that prompted the tag.
+INSERT INTO conversation_tag (
+    workspace_id, conversation_id, tag_id, created_by_type, created_by_id, message_id, created_at
+)
+SELECT @workspace_id, @conversation_id, t.id, @created_by_type, @created_by_id, sqlc.narg(message_id), @now FROM tags AS t
 WHERE t.workspace_id = @workspace_id AND t.id = ANY (@tag_ids::uuid[])
 ON CONFLICT (conversation_id, tag_id) DO NOTHING
 RETURNING tag_id;
@@ -90,3 +93,28 @@ SELECT ct.conversation_id, sqlc.embed(t) FROM conversation_tag AS ct
 JOIN tags AS t ON t.id = ct.tag_id AND t.workspace_id = ct.workspace_id
 WHERE ct.workspace_id = @workspace_id AND ct.conversation_id = ANY (@conversation_ids::uuid[])
 ORDER BY ct.conversation_id, t.name, t.id;
+
+-- name: TagsByNames :many
+-- TagsByNames returns the workspace's tags with the names, without regard
+-- to case.
+SELECT * FROM tags
+WHERE workspace_id = @workspace_id AND name = ANY (@names::citext[])
+ORDER BY name;
+
+-- name: TagsByIDs :many
+-- TagsByIDs returns the workspace's tags with the ids, by name.
+SELECT * FROM tags
+WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[])
+ORDER BY name, id;
+
+-- name: CountWorkspaceTags :one
+-- CountWorkspaceTags returns how many tags the workspace has, for the
+-- limit on its vocabulary.
+SELECT count(*) FROM tags WHERE workspace_id = @workspace_id;
+
+-- name: UntagConversationMany :many
+-- UntagConversationMany takes the tags off the conversation and returns
+-- the ids of those it took off.
+DELETE FROM conversation_tag
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND tag_id = ANY (@tag_ids::uuid[])
+RETURNING tag_id;

@@ -319,6 +319,45 @@ C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@exam
 | Other workspace | Carol: `GET $B/conversations/$C` with her own workspace | 404 `not_found` |
 | In a browser | open `$W/d/inbox/unassigned`, open the conversation, reply, add a note, assign to me, mark as done, search | each change shows in the thread as a message or an event line; the list and counts follow |
 
+### Customer records
+
+Same session as the shared inbox above, `C` the conversation Ann started:
+
+| Flow | Command | Expect |
+|---|---|---|
+| Tag a conversation | `r tg -b a.jar -X POST -H "$O" -H "$J" -H "$H" $B/conversations/$C/tags -d '{"tags":["Billing","billing"]}'` | 200, one tag `Billing` in `data.tags`; the timeline gains a `conversation.tagged` event |
+| Tag vocabulary | `GET "$B/tags?q=bil&include=counts"` | 200, `Billing` with `counts.conversations: 1`; Bob `PATCH $B/tags/{id}` 403, `POST $B/tags {"name":"VIP"}` 201 |
+| Duplicate name | `POST $B/tags {"name":"BILLING"}` | 409 `tag_exists`; `{"name":"x","color":"red"}` 422 on `color` |
+| Filter by tag | `GET "$B/conversations?filter[view]=all&filter[tag]={id}"`, `…&filter[tag_any]={id},{other}` | Ann's conversation; `filter[tag]=bogus` 400 `invalid_filter` |
+| Delete a tag | `DELETE $B/tags/{id}` | 204; the conversation's `tags` is empty; again 404 |
+| Contact tags and notes | `PATCH $B/contacts/{ann} {"add_tags":["vip"],"notes":"Prefers email"}` | 200 with the tag and notes; `GET "$B/contacts?filter[tag]={vip}"` lists Ann only |
+| Upsert a user | `POST "$B/contacts?upsert=true" {"external_id":"user_42","email":"Bob@Acme.dev"}`, then again with `"name":"Robert"` | 201 `meta.upserted: created`, `kind: user`, email lower-cased; then 200 `updated`, same id |
+| Duplicates | `GET $B/contacts/{ann}/duplicates` after adding a contact with Ann's phone | the other contact with `reasons: ["same_phone"]` |
+| Companies | `POST $B/companies {"name":"Acme","domain":"acme.dev"}`, link Ann with `PATCH $B/contacts/{ann} {"company_id":…}` | 201; `GET $B/companies/{id}/contacts` and `/conversations` list Ann and her conversation |
+| Customer context | `r ctx -b a.jar -H "$O" -H "$H" $B/conversations/$C/context` | 200 `object: conversation_context`, Ann with notes and tags, `identities[0].type: email`, `past_conversations.total_estimate`, `duplicates_count` |
+| Delete a company | Bob `DELETE $B/companies/{id}` 403; Ada again | 204; Ann's `company` is `null` |
+| Customer pages | open `$W/d/customers`, search, open Ann, edit her phone; open a conversation and edit her name in the details panel | the list narrows; the profile saves; the panel shows the new name and her other conversations |
+| People filters | on `$W/d/customers` pick a company, "Seen this week" and Attribute `plan` is `pro`; on Ann's page set attribute `plan` to `pro` | the list narrows to Ann; her Attributes card shows `plan` with a remove button |
+| People columns | on `$W/d/customers` open Columns, tick Phone, untick Email, reload | the table keeps Phone and drops Email; `GET $B/inbox-preferences` has `views.people.columns` |
+| Pinned attributes | in a conversation's details panel, star an attribute | it moves above Email for every customer; `pinned_attributes` lists it |
+| Redaction defaults | `GET $B/redaction-rules` | 200 `object: redaction`, `built_ins.card_numbers: true`, `built_ins.us_ssn: false`, `rules: []`; Bob 403 |
+| Redaction rule | `POST $B/redaction-rules {"name":"Accounts","pattern":"ACCT-\\d+"}`, then `{"name":"x","pattern":"("}` | 201 `object: redaction_rule`, `replacement: [redacted]`; then 422 `invalid_pattern`; an eleventh rule 422 `redaction_rule_limit_reached` |
+| Redaction on write | `POST $B/conversations` as a contact with body `Card 4242 4242 4242 4242 ACCT-7` | the message body reads `Card •••• •••• •••• 4242 [redacted]`, `redactions` lists `card_numbers` and the rule's id; the database holds no original |
+| Redaction switches | `PATCH $B/redaction-rules {"us_ssn":true,"order":[…]}`, then a note `SSN 123-45-6789` | 200 with the new order; the note reads `SSN •••-••-••••`; the audit log has `redaction_settings.updated` |
+| Try redaction | `POST $B/redaction-tests {"text":"4242424242424242"}` | 200 `object: redaction_test`, `text: •••• •••• •••• 4242`, one `redactions` entry; nothing stored |
+| Link safety settings | `PATCH $B/workspace {"link_safety":{"block_domains":["Evil.example"],"strip_inbound_email_links":true}}`, then `{"link_safety":{"block_domains":["co.uk"]}}` | 200, `link_safety.block_domains: ["evil.example"]`; then 422 `invalid_link_domains`; Bob 403 |
+| Links in a thread | a customer sends `[Sign in](https://login.evil.example)` and `https://bit.ly/x`; open the conversation | the first link is struck through and cannot be opened; the second asks "Opens bit.ly. Continue?" |
+| Erase a customer | `DELETE "$B/contacts/{ann}?erase=true"` | 202 `object: contact_erasure`, `status: pending`, `scheduled_for` 7 days out; Ann is gone from `GET $B/contacts` and her conversations from the lists; a reply to her is 422 `contact_unreachable_on_channel` |
+| Cancel an erasure | `PATCH $B/contact-erasures/{ces} {"status":"canceled"}` | 200 `status: canceled`; Ann and her address are back; again 409 `erasure_closed` |
+| Erase at once | `DELETE "$B/contacts/{ann}?erase=true&immediate=true"` more than 15 minutes after signing in, then after `POST $B/user/confirmation` | 423 `password_confirmation_required`, then 202; soon `GET $B/contact-erasures/{ces}` is `completed`, her conversation shows "Deleted contact" with empty messages |
+| Export a customer | `POST $B/contacts/{ann}/exports {"include_notes":false}`, then `GET $B/contacts/{ann}/exports/{exp}` until ready, then its `url` | 202 `status: pending`, a second POST 409 `export_in_progress`; then `status: ready` with `url`; the zip holds `contact.json`, `conversations/1.json`, `conversations/1.txt` and her files, without the team's notes |
+| Export from the profile | on Ann's page press Export data, then Download export | the button waits while it builds, then saves `exp_….zip` |
+| Erasures page | open `$W/d/customers/erasures` as Ada, then as Bob | Ada sees the requests with Cancel on pending ones; Bob has no Erasures tab |
+| Retention settings | `PATCH $B/workspace {"retention":{"closed_conversation_days":365,"export_days":14}}`, then `{"retention":{"spam_days":6}}` | 200 with `retention` showing both; then 422 `invalid_retention`; `{"closed_conversation_days":null}` keeps closed conversations again |
+| Retention preview | `POST $B/retention-previews {"closed_conversation_days":30}` | 200 `object: retention_preview` with how many closed conversations have sat untouched past 30 days |
+| Retention round | set a period, wait a day (the round skips a period changed in the last 24 hours), then run `apply_conversation_retention` | closed conversations untouched past the period are in the Deleted view; one with a newer note stays |
+| Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
+
 ### Two-factor authentication
 
 Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an
@@ -442,6 +481,82 @@ listen(){ websocat -H "Cookie: dimmi_session=$SES" -H "$O" "$@" $WSS; }
 | Typing relay | `r typ -b a.jar -X POST -H "$O" -H "$J" -H "Dimmi-Workspace: $WS" $B/conversations/conv_…/typing-indicators -d '{}'` (a conversation started by a customer) | 202 `{"data":{"object":"typing_indicator","state":"start","expires_at":"…"}}`; an unknown `conv_` 404; `{"state":"dancing"}` 422 |
 | Node SDK | `pnpm exec playwright test tests/e2e/realtime.spec.ts` | centrifuge-js connects with the cookie, follows the workspace and a conversation, lists presence, recovers after a disconnect |
 
+### Workspace access policy
+
+Ada (`a.jar`) owns Acme. Changing the rules needs a recent confirmation, like minting a token. The server must run
+with `DIMMI_HTTP__TRUSTED_PROXIES=127.0.0.1/32` so `X-Forwarded-For` stands in for other addresses. `P` is the
+policy path:
+
+```bash
+P=$B/workspace/access-policy; WH="Dimmi-Workspace: $WS"
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Read | `r ap -b a.jar -H "$O" -H "$WH" $P` | 200 `object: access_policy`, empty lists, null limits, `your_ip: 127.0.0.1`, `available_sign_in_methods` starting `password`, `tokens_outside: 0`; no `sso_connection_ids` |
+| Session limit | `r ml -b a.jar -X PATCH -H "$O" -H "$J" -H "$WH" $P -d '{"session_max_age_minutes":60}'` | 200 with `session_max_age_minutes: 60`; mail "The sign-in rules of Acme changed" to the other owners only; audit `workspace.access_policy_changed` |
+| Limit out of range | same with `59`, then `43201` | 422 on `session_max_age_minutes` each time |
+| Clear a limit | same with `{"session_max_age_minutes":null}` | 200, the limit null, other keys kept |
+| Old session refused | `UPDATE sessions SET authenticated_at = now() - interval '2 hours'` for Ada, then `GET $B/workspace` | 403 `reauthentication_required`, `requirement: reauthentication_required`, `action_url: /login?reauth=1`, `reason: max_age`; `GET $B/me` still 200 |
+| Sign in again | `POST $B/sessions` with `$P` and `"reauth":true` into `a.jar`, then `GET $B/workspace` | 201, then 200 |
+| Own method kept | `-d '{"allowed_sign_in_methods":["magic_link"]}'` from a password session | 422 `sign_in_method_excludes_caller` |
+| Method refused | set `["password"]`, sign in by mailed code in `c.jar`, `GET $B/workspace` | 403 `sign_in_method_required`, `allowed_methods: ["password"]` |
+| Dashboard list keeps you | `-H 'X-Forwarded-For: 198.51.100.7' -d '{"dashboard_ip_allowlist":[{"cidr":"203.0.113.0/24","label":"Office"}]}'` | 422 `ip_allowlist_excludes_caller`, `ip: 198.51.100.7` |
+| Address refused | save `127.0.0.1` and `203.0.113.0/24`, then `GET $B/workspace` with `X-Forwarded-For: 198.51.100.7` | 403 `ip_not_allowed`, `action_url: null`, `ip: 198.51.100.7`; `GET $B/me` and `GET $B/sessions` still 200 |
+| API list | save `api_ip_allowlist` `203.0.113.0/24`, then a token on `$B/members` with `X-Forwarded-For: 198.51.100.7` | PATCH answers `tokens_outside` counting live tokens last used elsewhere; the token gets 403 `ip_not_allowed` naming the address and "allowlist" |
+| Tokens never change rules | `PATCH $P` with a token holding `settings:write` | 403 `first_party_only` |
+| Sockets close on change | keep a `listen` socket on `workspace:$WS`, then any PATCH that changes a value | the socket closes; reconnecting checks the new rules, and subscribing from outside the list is error 103 |
+| Operator clears the list | `bin/dimmi workspace:clear-access-policy acme --only ip_allowlist` | prints the cleared keys; the address works again; audit actor `system`; a second run prints "Nothing to clear" |
+| In a browser | `$W/d/settings/workspace-security`: untick a method, pick "Sign in again after: 1 hour", add an address | each change saves at once and survives a reload; a refused change shows its reason under the section; a refused workspace page shows "Sign in again to continue" with a button back to the same page |
+
+### Custom roles
+
+Ada (`a.jar`) owns Acme; Carol is a member. Shaping roles needs a recent confirmation. `R` is the roles path:
+
+```bash
+R=$B/roles
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Catalog | `r perms -b a.jar -H "$O" -H "$WH" $B/permissions` | 200, one entry per permission with `label`, `description`, `group`, `assignable` (false for owner-only and `system:*`) and `base_roles` |
+| Built-in roles | `r roles -b a.jar -H "$O" -H "$WH" $R` | 200, Owner, Admin and Member first with `kind: built_in` and `id: null`, then custom roles by name |
+| Create | `r mk -b a.jar -X POST -H "$O" -H "$J" -H "$WH" $R -d '{"name":"Read only","base_role":"member","permissions":["members:read","conversations:read"]}'; ROL=$(jq -r .data.id body)` | 201 `rol_…`, `kind: custom`, `member_count: 0`; audit `role.created` |
+| Above its base | same with `"permissions":["members:read","settings:write"]` | 422 `permission_above_base_role` naming `settings:write` |
+| Owner-only | same with `"base_role":"admin","permissions":["members:read","workspace:delete"]` | 422 `permission_not_assignable` |
+| Without members read | same with `"permissions":["conversations:read"]` | 422 `permission_required` |
+| Assign | `r as -b a.jar -X PATCH -H "$O" -H "$J" -H "$WH" $B/members/<Carol's mem_> -d '{"custom_role_id":"'$ROL'"}'` | 200, `role: member`, `custom_role` with the id and name; Carol's `/me` lists only `members:read` and `conversations:read` |
+| Narrowed | Carol replies to a conversation | 403 `forbidden`; her tokens narrow the same way |
+| Edit applies next request | `PATCH $R/$ROL` with `conversations:write` added | 200; Carol's next reply works; audit `role.updated` with `permissions.added` |
+| In use | `DELETE $R/$ROL` | 409 `role_in_use`, `member_count: 1` |
+| Move everyone | `PATCH $B/members -d '{"ids":["<Carol's mem_>"],"changes":{"custom_role_id":null}}'` | 200 `meta.updated: 1`; then the delete answers 204 |
+| Owners and self | assign a role to an owner or to yourself | 422 `invalid_transition` |
+| In a browser | `$W/d/settings/roles`, "New role" > "Read only", "Create role"; then `/d/settings/members`, the member's menu > "Make Read only" | the role is listed with "Based on member · 1 member"; the member's chip shows "Read only"; their reply shows "This action is unauthorized." |
+
+### Single sign-on connections and domains
+
+Ada (`a.jar`) owns Acme. Changes need a recent confirmation. `C` and `D` are the connection and domain paths:
+
+```bash
+C=$B/sso-connections; D=$B/organization-domains
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Create SAML | `r sc -b a.jar -X POST -H "$O" -H "$J" -H "$WH" $C -d '{"protocol":"saml","name":"Okta"}'; SSO=$(jq -r .data.id body)` | 201 `ssoc_…`, `status: draft`, `sp.acs_url` ends in `/auth/saml/$SSO/acs`, `config.sp_certificate` set, no secret in the body; audit `sso_connection.created` |
+| Bad certificate | same with `"config":{"idp_certificates":["nope"]}` | 422 `invalid_saml_metadata` |
+| OpenID without secret | `-d '{"protocol":"oidc","name":"Entra","config":{"issuer":"https://login.example.com","client_id":"x"}}'` | 422 `invalid_saml_metadata` |
+| Activate untested | `PATCH $C/$SSO -d '{"status":"active"}'` | 422 `invalid_transition` |
+| Add domain | `r da -b a.jar -X POST -H "$O" -H "$J" -H "$WH" $D -d '{"domain":"acme.com"}'; DOM=$(jq -r .data.id body)` | 201 `odom_…`, `status: pending`, `record_name: _dimmi-verify.acme.com`, `record_value: dimmi-domain-verification=…` |
+| Free mail | same with `gmail.com` | 422 `domain_not_claimable` |
+| Check without record | `POST $D/$DOM/checks` | 201, `status: pending`, `found_records: []` |
+| Operator proof | `./bin/dimmi sso:verify-domain acme.com` | prints "Verified acme.com"; the domain shows `verified_via: cli`; audit `organization_domain.verified` by the system |
+| Route | `PATCH $D/$DOM -d '{"sso_connection_id":"'$SSO'"}'` | 200 with the connection id |
+| Same domain elsewhere | another organization adds and proves `acme.com` | 409 `domain_taken` on proof |
+| Members cannot see it | a member's `GET $C` | 403 `forbidden` |
+| Operator off switch | `./bin/dimmi sso:disable <slug>` | every connection of the workspace's organization is `disabled` and unenforced |
+| In a browser | `$W/d/settings/single-sign-on`, "New connection", then "Add domain" and the operator command | the connection is listed as "Draft" with its reply URL under "Details"; after a reload the domain shows "Verified by the operator" with a connection picker |
+
 ### Browser pages
 
 Run `make build` first so the binary embeds the browser app.
@@ -540,6 +655,37 @@ for: an ownership TXT record and a signing key TXT record. Checks read real DNS 
 | Remove | `r del -b a.jar -X DELETE -H "$O" $ED/$EDM` | 204; `GET` then 404 |
 | Doctor | `bin/dimmi-cloud email:doctor acme-$RUN.test` in `$E2E` with its env | `[ok]` relay line, `[info]` no mail server of its own, `[fail]` no MX for `inbound.e2e.test` (exit 1), `[warn]` DMARC missing |
 | In a browser | open `$W/d/settings/email`, add a domain | the domain page with its records, Copy buttons, the host's steps, "Check now", and "Remove domain" |
+
+### Signatures
+
+`ES=$B/email-signatures`; `$EMA` is an address id from `GET $B/email-addresses`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Own | `r sig -b a.jar -X POST -H "$O" -H "$J" $ES -d '{"body":"Thanks,\n**{{member_name}}**"}'; SIG=$(jq -r .data.id body)` | 201 `email_signature`, `kind: personal`, `member_id` the caller, `email_address_id: null` |
+| Twice | the same again | 409 `signature_exists` |
+| Unknown placeholder | the same with `{"body":"{{nickname}}"}` | 422 `unknown_placeholder`, `placeholders: ["{{nickname}}"]`, `errors.body` |
+| Team's | `r team -b a.jar -X POST -H "$O" -H "$J" $ES -d '{"kind":"address","email_address_id":"'$EMA'","body":"The {{address_name}} team"}'`, then as a member | 201 `kind: address`, `member_id: null`; then 403 |
+| List | `curl -s -b a.jar -H "$O" "$ES?filter[member]=me"`, `?filter[kind]=address`, `?filter[kind]=other` | one each, then 400 `invalid_filter` |
+| Preview | `r prev -b a.jar -X POST -H "$O" -H "$J" $ES/renderings -d '{"body":"**{{member_name}}**\n{{member_title}}","email_address_id":"'$EMA'"}'` | 201 `email_signature_rendering`; `html` has the name in `<strong>`, the title line gone; `text` starts `-- ` |
+| Reply | reply to a conversation on `$EMA` in the inbox, open it in Mailpit | the text ends `-- ` and the signature, above the quote; with `{"email":{"signature":false}}` none |
+| Off and gone | `PATCH $ES/$SIG` `{"enabled":false}`, then `DELETE $ES/$SIG` | 200 `enabled: false`, then 204; the next reply carries the team's |
+| In a browser | open `$W/d/settings/profile`, then `$W/d/settings/email` | "Email signature" with a live preview; "Team signatures" with one editor per address and "Teammates' signatures" by name, both absent for a member |
+
+### Reply style and default address
+
+`EA=$B/email-addresses/$EMA`; `$EMB` is a second address id.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Preview | `r tpl -b a.jar -X POST -H "$O" -H "$J" $EA/template-renderings -d '{"template":"branded","brand_color":"#ff5500","footer_markdown":"**Acme**"}'` | 201 `email_template_rendering`; `html` has a table, `border-top:2px solid #ff5500`, `<strong>Acme</strong>`, no `<img` |
+| Bad color | the same with `{"brand_color":"red"}` | 422 |
+| Member | the preview as a member | 403 |
+| Branded | `PATCH $EA` `{"settings":{"template":"branded","brand_color":"#FF5500","footer_markdown":"**Acme**"}}`, reply in the inbox, open it in Mailpit | 200, `brand_color: "#ff5500"`; the mail has the colored rule and footer, its text ends with the footer |
+| Plain again | `PATCH $EA` `{"settings":{"template":"plain"}}`, reply | the plain look, no table |
+| Default | `PATCH $B/email-addresses/$EMB` `{"is_default":true}`, then `GET $EA` | 200 `is_default: true`; `$EMA` no longer the default and listed second |
+| Default off | `PATCH $B/email-addresses/$EMB` `{"is_default":false}` | 422 `default_address_required` |
+| In a browser | open `$W/d/settings/email` as the owner | each card has "Reply style" with a preview; "Make default" on all but the default, which shows a "Default" chip |
 
 ## Realtime connections end with their credential
 

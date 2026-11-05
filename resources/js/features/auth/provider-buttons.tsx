@@ -21,14 +21,19 @@ export interface ProviderButtonsProps {
   emailLabel: string;
   /** The token of the invitation the person is answering, carried through the provider's round trip. */
   invitation?: string;
+  /** Signs in again on the session the browser already has. */
+  reauth?: boolean;
 }
 
 /*
  * startAddress is the server's redirect for the provider, with where to
  * land afterwards and the invitation being answered, if any.
  */
-function startAddress(provider: Provider, redirect: string, invitation?: string): string {
+function startAddress(provider: Provider, redirect: string, invitation?: string, reauth?: boolean): string {
   const query = new URLSearchParams({ redirect });
+  if (reauth) {
+    query.set("intent", "reauth");
+  }
   if (invitation) {
     query.set("invitation", invitation);
   }
@@ -36,7 +41,7 @@ function startAddress(provider: Provider, redirect: string, invitation?: string)
   return `${provider.redirect_url}?${query.toString()}`;
 }
 
-export function ProviderButtons({ providers, redirect, action, emailLabel, invitation }: ProviderButtonsProps) {
+export function ProviderButtons({ providers, redirect, action, emailLabel, invitation, reauth }: ProviderButtonsProps) {
   const known = providers.filter((provider) => brands[provider.key]);
   if (known.length === 0) {
     return null;
@@ -50,7 +55,7 @@ export function ProviderButtons({ providers, redirect, action, emailLabel, invit
           brand={brands[provider.key] as SocialProvider}
           appearance="colorful"
           fullWidth
-          href={startAddress(provider, redirect, invitation)}
+          href={startAddress(provider, redirect, invitation, reauth)}
         >
           {`${action} ${provider.name}`}
         </SocialButton>

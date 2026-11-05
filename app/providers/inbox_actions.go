@@ -71,10 +71,12 @@ func bootInbox(a *app.App) error {
 		EditNote:          &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
+	bootRecords(a)
 	bootWorkbench(a)
 	bootDelivery(a, delivery)
 
 	return errors.Join(
+		bootErasures(a),
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
 			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels,
 		}),

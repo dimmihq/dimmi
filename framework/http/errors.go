@@ -321,11 +321,12 @@ are bad requests rather than invalid input.
 */
 func queryCodeStatuses() map[string]int {
 	return map[string]int{
-		"invalid_cursor":  http.StatusBadRequest,
-		"invalid_filter":  http.StatusBadRequest,
-		"invalid_sort":    http.StatusBadRequest,
-		"invalid_include": http.StatusBadRequest,
-		"invalid_limit":   http.StatusBadRequest,
+		"invalid_cursor":    http.StatusBadRequest,
+		"invalid_filter":    http.StatusBadRequest,
+		"invalid_sort":      http.StatusBadRequest,
+		"invalid_include":   http.StatusBadRequest,
+		"invalid_limit":     http.StatusBadRequest,
+		"invalid_parameter": http.StatusBadRequest,
 	}
 }
 

@@ -1,0 +1,382 @@
+{
+  "agent_access:manage": {
+    "label": "Manage agent access",
+    "description": "Decide which outside agents may act in the workspace."
+  },
+  "ai:keys": {
+    "label": "Manage AI keys",
+    "description": "Add and replace the keys the AI features use."
+  },
+  "ai:read": {
+    "label": "See AI activity",
+    "description": "See what the AI features did."
+  },
+  "ai:write": {
+    "label": "Use AI features",
+    "description": "Ask the AI to draft, summarize and answer."
+  },
+  "ai_action_calls:approve": {
+    "label": "Approve AI actions",
+    "description": "Approve an action the AI asks to run."
+  },
+  "ai_actions:manage": {
+    "label": "Manage AI actions",
+    "description": "Create and change the actions the AI may run."
+  },
+  "ai_actions:read": {
+    "label": "See AI actions",
+    "description": "See the actions the AI may run."
+  },
+  "ai_agent:manage": {
+    "label": "Manage the AI agent",
+    "description": "Set up how the AI agent answers customers."
+  },
+  "ai_runs:read_payloads": {
+    "label": "Read AI run details",
+    "description": "Read what was sent to and returned by the AI."
+  },
+  "articles:read": {
+    "label": "Read articles",
+    "description": "Read help center articles, drafts included."
+  },
+  "articles:write": {
+    "label": "Write articles",
+    "description": "Create, edit and publish articles."
+  },
+  "audit_logs:read": {
+    "label": "Read the audit log",
+    "description": "See who changed what in the workspace."
+  },
+  "billing:cap_unrestricted": {
+    "label": "Lift spending caps",
+    "description": "Remove the workspace's spending limits."
+  },
+  "billing:read": {
+    "label": "See billing",
+    "description": "See plans, usage and invoices."
+  },
+  "billing:write": {
+    "label": "Manage billing",
+    "description": "Change the plan and payment details."
+  },
+  "changelog:read": {
+    "label": "Read the changelog",
+    "description": "Read changelog entries, drafts included."
+  },
+  "changelog:write": {
+    "label": "Write the changelog",
+    "description": "Create and publish changelog entries."
+  },
+  "channels:inspect": {
+    "label": "Inspect channels",
+    "description": "See connection details and delivery logs of channels."
+  },
+  "channels:manage": {
+    "label": "Manage channels",
+    "description": "Connect, change and remove channels."
+  },
+  "companies:delete": {
+    "label": "Delete companies",
+    "description": "Delete company records."
+  },
+  "contacts:erase": {
+    "label": "Erase contacts",
+    "description": "Erase a contact and their data for good."
+  },
+  "contacts:export": {
+    "label": "Export contacts",
+    "description": "Download contacts as a file."
+  },
+  "contacts:manage_external_id": {
+    "label": "Change contact ids",
+    "description": "Change the id your own systems know a contact by."
+  },
+  "contacts:read": {
+    "label": "Read contacts",
+    "description": "See contacts and companies."
+  },
+  "contacts:write": {
+    "label": "Edit contacts",
+    "description": "Create and change contacts and companies."
+  },
+  "conversations:assign": {
+    "label": "Assign conversations",
+    "description": "Assign conversations to people and teams."
+  },
+  "conversations:delete": {
+    "label": "Delete conversations",
+    "description": "Delete conversations and their messages."
+  },
+  "conversations:export": {
+    "label": "Export conversations",
+    "description": "Download transcripts and conversation lists."
+  },
+  "conversations:manage_notes": {
+    "label": "Manage others' notes",
+    "description": "Delete notes written by someone else."
+  },
+  "conversations:merge": {
+    "label": "Merge conversations",
+    "description": "Merge two conversations into one."
+  },
+  "conversations:moderate": {
+    "label": "Moderate conversations",
+    "description": "Hide messages and block senders."
+  },
+  "conversations:read": {
+    "label": "Read conversations",
+    "description": "See conversations and their messages."
+  },
+  "conversations:write": {
+    "label": "Reply to conversations",
+    "description": "Reply, add notes, close and reopen conversations."
+  },
+  "docs_sync:manage": {
+    "label": "Manage docs sync",
+    "description": "Set up syncing articles from a docs repository."
+  },
+  "email:manage": {
+    "label": "Manage email",
+    "description": "Add email addresses and domains and change how mail is sent."
+  },
+  "email:read": {
+    "label": "See email settings",
+    "description": "See the workspace's email addresses and domains."
+  },
+  "email:read_raw": {
+    "label": "Read raw email",
+    "description": "Download the original source of an email."
+  },
+  "email:resume_sending": {
+    "label": "Resume sending",
+    "description": "Restart email sending after it was paused."
+  },
+  "email:rotate_dkim": {
+    "label": "Rotate signing keys",
+    "description": "Replace the keys that sign outgoing email."
+  },
+  "email_signatures:manage_any": {
+    "label": "Manage all signatures",
+    "description": "Change anyone's email signature."
+  },
+  "email_signatures:manage_own": {
+    "label": "Manage own signature",
+    "description": "Change your own email signature."
+  },
+  "email_suppressions:lift_complaint": {
+    "label": "Lift complaint blocks",
+    "description": "Email someone again after they marked mail as spam."
+  },
+  "email_suppressions:manage": {
+    "label": "Manage blocked addresses",
+    "description": "Block and unblock addresses mail is never sent to."
+  },
+  "engage:manage": {
+    "label": "Manage outbound",
+    "description": "Set up outbound messages and their rules."
+  },
+  "engage:read": {
+    "label": "See outbound",
+    "description": "See outbound messages and their results."
+  },
+  "engage:write": {
+    "label": "Write outbound",
+    "description": "Create and send outbound messages."
+  },
+  "exports:read": {
+    "label": "Download exports",
+    "description": "Download workspace data exports."
+  },
+  "exports:write": {
+    "label": "Start exports",
+    "description": "Start an export of the workspace's data."
+  },
+  "feedback:delete": {
+    "label": "Delete feedback",
+    "description": "Delete feedback posts."
+  },
+  "feedback:manage": {
+    "label": "Manage feedback boards",
+    "description": "Set up feedback boards and their rules."
+  },
+  "feedback:read": {
+    "label": "Read feedback",
+    "description": "See feedback posts and votes."
+  },
+  "feedback:write": {
+    "label": "Answer feedback",
+    "description": "Reply to and update feedback posts."
+  },
+  "github:manage": {
+    "label": "Manage GitHub",
+    "description": "Connect and change the GitHub integration."
+  },
+  "github:read": {
+    "label": "See GitHub",
+    "description": "See linked GitHub issues."
+  },
+  "help_centers:delete": {
+    "label": "Delete help centers",
+    "description": "Delete a help center and its articles."
+  },
+  "help_centers:manage": {
+    "label": "Manage help centers",
+    "description": "Change help center settings and design."
+  },
+  "help_centers:read_settings": {
+    "label": "See help center settings",
+    "description": "See how help centers are set up."
+  },
+  "identity:manage": {
+    "label": "Manage identity verification",
+    "description": "Change how signed-in customers are verified."
+  },
+  "identity:read": {
+    "label": "See identity verification",
+    "description": "See how signed-in customers are verified."
+  },
+  "imports:manage": {
+    "label": "Run imports",
+    "description": "Import data from other tools."
+  },
+  "imports:read": {
+    "label": "See imports",
+    "description": "See past imports and their results."
+  },
+  "imports:rollback": {
+    "label": "Undo imports",
+    "description": "Roll back an import."
+  },
+  "inboxes:manage": {
+    "label": "Manage inboxes",
+    "description": "Create and change inboxes."
+  },
+  "knowledge:manage": {
+    "label": "Manage knowledge",
+    "description": "Change the sources the AI answers from."
+  },
+  "knowledge:sync": {
+    "label": "Sync knowledge",
+    "description": "Refresh the sources the AI answers from."
+  },
+  "members:manage_owners": {
+    "label": "Manage owners",
+    "description": "Make and remove owners of the workspace."
+  },
+  "members:import": {
+    "label": "Import members",
+    "description": "Add and update members in bulk from a CSV file."
+  },
+  "members:manage_access": {
+    "label": "Manage conversation access",
+    "description": "Choose which conversations each member may see."
+  },
+  "members:manage_availability": {
+    "label": "Manage availability",
+    "description": "Set teammates away or online and how many conversations they take."
+  },
+  "members:reset_two_factor": {
+    "label": "Reset two-factor",
+    "description": "Send a teammate who lost their second factor a link to get back in."
+  },
+  "members:read": {
+    "label": "See members",
+    "description": "See the people in the workspace and their teams."
+  },
+  "members:write": {
+    "label": "Manage members",
+    "description": "Invite people, change roles and teams, and deactivate members."
+  },
+  "notification_alerts:receive": {
+    "label": "Receive alerts",
+    "description": "Get alerts about the workspace's health."
+  },
+  "notification_destinations:manage": {
+    "label": "Manage alert destinations",
+    "description": "Choose where workspace alerts are sent."
+  },
+  "notifications:read": {
+    "label": "Read notifications",
+    "description": "See your notifications."
+  },
+  "notifications:write": {
+    "label": "Manage notifications",
+    "description": "Change your notification settings."
+  },
+  "oauth_grants:manage_any": {
+    "label": "Manage app access",
+    "description": "Revoke apps anyone in the workspace authorized."
+  },
+  "redaction:manage": {
+    "label": "Manage redaction",
+    "description": "Choose what is masked in messages before it is stored."
+  },
+  "roles:manage": {
+    "label": "Manage roles",
+    "description": "Create custom roles and assign them."
+  },
+  "saved_replies:manage_shared": {
+    "label": "Manage shared replies",
+    "description": "Create and change saved replies everyone uses."
+  },
+  "scim:manage": {
+    "label": "Manage directory sync",
+    "description": "Create directory tokens and map groups."
+  },
+  "security_policy:manage": {
+    "label": "Manage security rules",
+    "description": "Change sign-in rules, session length and address allowlists."
+  },
+  "settings:read": {
+    "label": "See settings",
+    "description": "See the workspace's settings."
+  },
+  "settings:write": {
+    "label": "Change settings",
+    "description": "Change the workspace's name and settings."
+  },
+  "sso:manage": {
+    "label": "Manage single sign-on",
+    "description": "Verify domains and connect identity providers."
+  },
+  "system:read": {
+    "label": "Read the system",
+    "description": "See the whole install's state."
+  },
+  "system:write": {
+    "label": "Run the system",
+    "description": "Change the whole install."
+  },
+  "tags:manage": {
+    "label": "Manage tags",
+    "description": "Create, rename and delete tags."
+  },
+  "tokens:manage_any": {
+    "label": "Manage all tokens",
+    "description": "See and revoke anyone's API tokens."
+  },
+  "views:manage_shared": {
+    "label": "Manage shared views",
+    "description": "Create and change views everyone sees."
+  },
+  "webhooks:read": {
+    "label": "See webhooks",
+    "description": "See webhooks and their deliveries."
+  },
+  "webhooks:write": {
+    "label": "Manage webhooks",
+    "description": "Create and change webhooks."
+  },
+  "widgets:manage": {
+    "label": "Manage the messenger",
+    "description": "Change how the messenger looks and behaves."
+  },
+  "widgets:read": {
+    "label": "See the messenger",
+    "description": "See how the messenger is set up."
+  },
+  "workspace:delete": {
+    "label": "Delete the workspace",
+    "description": "Delete the workspace and everything in it."
+  }
+}

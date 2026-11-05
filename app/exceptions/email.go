@@ -24,6 +24,8 @@ already connected, and ErrInvalidEmailAddress one that is not a plain
 address or sits on the inbound domain itself. ErrNoSenderAvailable
 refuses mail the workspace has no address to send from, and
 ErrMailUnavailable reports mail the provider would not take.
+ErrDefaultAddressRequired refuses to leave the workspace without a
+default address: another one is made the default instead.
 */
 var (
 	ErrInvalidEmailAddress = fault.New(fault.Invalid, "invalid_address",
@@ -36,6 +38,8 @@ var (
 		"There is no address to send this email from.")
 	ErrMailUnavailable = fault.New(fault.Unavailable, "mail_unavailable",
 		"The email could not be sent. Try again in a moment.")
+	ErrDefaultAddressRequired = fault.New(fault.Invalid, "default_address_required",
+		"Make another address the default instead.").OnField("is_default")
 )
 
 /*

@@ -61,6 +61,7 @@ session.
 */
 type challengeData struct {
 	PrimaryMethod string                     `json:"primary_method"`
+	AuthDomain    string                     `json:"auth_domain"`
 	Methods       []string                   `json:"methods"`
 	FactorIDs     []string                   `json:"factor_ids"`
 	DriverState   map[string]json.RawMessage `json:"driver_state"`
@@ -347,6 +348,7 @@ func (a *CompleteTwoFactorChallenge) signIn(ctx context.Context, c challenged, i
 ) {
 	started, err := a.StartSession.Handle(ctx, StartSessionInput{
 		User: c.user, Methods: []string{c.data.PrimaryMethod, in.Method}, Client: in.Client, Reauth: c.data.Reauth,
+		Context: SignInContext{Domain: c.data.AuthDomain},
 	})
 	if err != nil {
 		return SignedIn{}, err

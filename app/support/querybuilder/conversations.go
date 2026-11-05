@@ -120,6 +120,13 @@ func (c Conversations) Count(limit int) (string, []any) {
 }
 
 /*
+notBeingErased leaves out the conversations of a customer someone asked
+to erase, from the request until the wipe.
+*/
+const notBeingErased = "NOT EXISTS (SELECT 1 FROM contact_erasures e WHERE e.workspace_id = c.workspace_id" +
+	" AND e.contact_id = c.contact_id AND e.status IN ('pending', 'pending_hold'))"
+
+/*
 where returns the list's predicates.
 */
 func (c Conversations) where(b *builder) []string {
@@ -131,7 +138,7 @@ func (c Conversations) where(b *builder) []string {
 		where = append(where, "c.deleted_at IS NULL", fmt.Sprintf("c.spam = %t", c.Spam))
 	}
 
-	where = append(where, c.visible(b))
+	where = append(where, c.visible(b), notBeingErased)
 	where = append(where, c.holders(b)...)
 	where = append(where, c.channels(b)...)
 	where = append(where, c.flags(b)...)

@@ -53,6 +53,7 @@ const (
 	MethodTOTP          = "totp"
 	MethodRecoveryCode  = "recovery_code"
 	MethodPasskey       = "passkey"
+	MethodSSO           = "sso"
 )
 
 /*
@@ -94,6 +95,7 @@ the keys of the identity providers included.
 func PrimaryMethods(providers []string) Registry {
 	return Registry{name: "auth_methods", values: slices.Concat([]string{
 		MethodPassword, MethodMagicLink, MethodEmailCode, MethodPasswordReset, MethodSetup, MethodInvitation,
+		MethodSSO,
 	}, providers)}
 }
 

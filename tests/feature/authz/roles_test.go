@@ -24,7 +24,8 @@ func memberRows() []string {
 		"articles:write", "members:read", "notifications:read", "notifications:write", "widgets:read",
 		"identity:read", "email:read", "email_signatures:manage_own", "help_centers:read_settings", "knowledge:sync",
 		"github:read", "ai:read", "ai:write", "ai_actions:read", "ai_action_calls:approve", "changelog:read",
-		"changelog:write", "feedback:read", "feedback:write", "engage:read", "engage:write",
+		"changelog:write", "feedback:read", "feedback:write", "engage:read", "engage:write", "conversations:assign",
+		"conversations:merge",
 	}
 }
 
@@ -44,7 +45,8 @@ func adminRows() []string {
 		"knowledge:manage", "github:manage", "docs_sync:manage", "oauth_grants:manage_any", "agent_access:manage",
 		"feedback:delete", "feedback:manage", "engage:manage", "imports:read", "imports:manage", "imports:rollback",
 		"webhooks:read", "webhooks:write", "billing:read", "billing:write", "members:reset_two_factor",
-		"members:import",
+		"members:import", "security_policy:manage", "roles:manage", "redaction:manage",
+		"conversations:export", "conversations:manage_notes", "contacts:export",
 	}
 }
 
@@ -55,7 +57,7 @@ func ownerRows() []string {
 	return []string{
 		"workspace:delete", "members:manage_owners", "email:rotate_dkim", "email:resume_sending",
 		"email_suppressions:lift_complaint", "help_centers:delete", "billing:cap_unrestricted", "exports:read",
-		"exports:write",
+		"exports:write", "sso:manage", "scim:manage",
 	}
 }
 
@@ -93,14 +95,14 @@ func TestRoles(t *testing.T) {
 		t.Parallel()
 		catalog := tc.App.Permissions
 
-		narrowed := authz.EffectivePermissions(catalog, enums.RoleAdmin, []string{"settings:read"})
-		everything := authz.EffectivePermissions(catalog, enums.RoleAdmin, []string{"*"})
+		narrowed := authz.EffectivePermissions(catalog, enums.RoleAdmin, nil, []string{"settings:read"})
+		everything := authz.EffectivePermissions(catalog, enums.RoleAdmin, nil, []string{"*"})
 
 		assert.Contains(t, narrowed, "audit_logs:read")
 		assert.NotContains(t, narrowed, "settings:write")
 		assert.Equal(t, appauth.RolePermissions(enums.RoleAdmin), everything)
 		assert.Contains(t, authz.EffectiveAbilities(catalog, everything), "ai:actions")
-		assert.Empty(t, authz.EffectivePermissions(catalog, enums.RoleMember, []string{"not:a-group"}))
+		assert.Empty(t, authz.EffectivePermissions(catalog, enums.RoleMember, nil, []string{"not:a-group"}))
 	})
 
 	t.Run("answers whether a principal holds a permission, never one nobody registered", func(t *testing.T) {

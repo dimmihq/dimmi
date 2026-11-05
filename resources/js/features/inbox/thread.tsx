@@ -5,12 +5,13 @@
  * pills. What Operator adds is a full-width card across the thread, so
  * the team's own agent never reads as part of the exchange with the
  * customer. Teammates' notes sit on the team's side with a dashed edge
- * and a lock. Markdown is rendered and a customer's plain text mail is
- * shown as written. An email whose quoted thread was cut, or whose long
- * body was cut short, offers its full message below it. A reply that
- * never reached the customer says so, with the reason, and can be sent
- * again. Hovering a message offers a link to it, editing one's own note
- * and deleting; a deleted message stays as a line saying who deleted
+ * and a lock. A message the workspace's redaction rules changed says how
+ * many items they removed. Markdown is rendered and a customer's plain
+ * text mail is shown as written. An email whose quoted thread was cut, or
+ * whose long body was cut short, offers its full message below it. A reply
+ * that never reached the customer says so, with the reason, and can be
+ * sent again. Hovering a message offers a link to it, editing one's own
+ * note and deleting; a deleted message stays as a line saying who deleted
  * it. Below the thread sits the composer; R and N open it for a reply or
  * a note from anywhere, and O opens or closes Operator.
  */
@@ -26,6 +27,7 @@ import { cx } from "@/utils/cx";
 
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
+import { LinkPolicyProvider } from "./links/link-policy";
 import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
@@ -68,6 +70,11 @@ function Tag({ entry }: { entry: Said }) {
         </Chip>
       ) : null}
       <span className="text-body-2-regular text-text-tertiary">{entry.at}</span>
+      {entry.redacted ? (
+        <span className="text-body-2-regular text-text-tertiary">
+          · {entry.redacted === 1 ? "1 item redacted" : `${entry.redacted} items redacted`}
+        </span>
+      ) : null}
       {entry.edited ? <span className="text-body-2-regular text-text-tertiary">Edited</span> : null}
       {entry.held ? (
         <span className="flex items-center gap-0.5 text-body-2-regular text-text-tertiary">
@@ -237,7 +244,7 @@ function SaidEntry({
             }}
           />
         ) : (
-          <MessageBody text={entry.text} format={entry.format} />
+          <MessageBody text={entry.text} format={entry.format} fromCustomer={!ours} />
         )}
         {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
       </div>
@@ -280,6 +287,7 @@ export function Thread({
   entries,
   customer,
   channel,
+  channelType,
   onSend,
   onAskOperator,
   onTyping,
@@ -291,6 +299,7 @@ export function Thread({
   entries: ThreadEntry[];
   customer: string;
   channel: string;
+  channelType?: string;
   onSend: Send;
   onAskOperator: () => void;
   onTyping: Report;
@@ -318,13 +327,15 @@ export function Thread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="pt-2 pb-4">
-        <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
-            </li>
-          ))}
-        </ol>
+        <LinkPolicyProvider channelType={channelType}>
+          <ol className="mx-auto flex max-w-3xl flex-col gap-3">
+            {entries.map((entry) => (
+              <li key={entry.id}>
+                <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
+              </li>
+            ))}
+          </ol>
+        </LinkPolicyProvider>
       </ScrollArea>
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}

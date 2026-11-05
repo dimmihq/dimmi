@@ -5,11 +5,11 @@
 |
 | GET /members lists the people of the workspace in play a page at a
 | time, GET /members/{member} shows one, and PATCH /members/{member}
-| changes their role or status, handing ownership over included. "me"
-| names the caller's own membership. Ids of other workspaces' members
-| are simply not found. include=teams adds the teams each member is in.
-| Callers who may change members also see whose account failed guesses
-| locked, so they can lift the lock.
+| changes their role or status, handing ownership over included, or
+| gives them a custom role. "me" names the caller's own membership. Ids
+| of other workspaces' members are simply not found. include=teams adds
+| the teams each member is in. Callers who may change members also see
+| whose account failed guesses locked, so they can lift the lock.
 |
 */
 
@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -63,6 +64,8 @@ type MemberController struct {
 	ListMembers  *members.ListMembers
 	ShowMember   *members.ShowMember
 	UpdateMember *members.UpdateMember
+	AssignRole   *roles.AssignRole
+	RoleNames    *roles.RoleNames
 	Export       *members.ExportMembers
 	MemberTeams  *teams.ListMemberTeams
 	AccessTeams  *members.ListAccessTeams
@@ -109,6 +112,9 @@ func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*Mem
 		Items: resources.NewWorkspaceMembers(page.Members), Limit: in.Limit,
 	}
 	if err := c.includeTeams(ctx, query, out.Items, memberIDs(page.Members)); err != nil {
+		return nil, err
+	}
+	if err := c.nameRoles(ctx, out.Items); err != nil {
 		return nil, err
 	}
 	if err := c.includeAccessTeams(ctx, out.Items, memberRows(page.Members)); err != nil {
@@ -159,7 +165,43 @@ func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequ
 		return nil, err
 	}
 
+	if err := c.nameRoles(ctx, out); err != nil {
+		return nil, err
+	}
+
 	return &MemberOutput{Body: fhttp.NewResource(out[0])}, nil
+}
+
+/*
+nameRoles fills in the name of the custom role each shaped member holds.
+*/
+func (c *MemberController) nameRoles(ctx context.Context, out []resources.WorkspaceMember) error {
+	var held []ids.UUID
+
+	for _, member := range out {
+		if member.CustomRole == nil {
+			continue
+		}
+
+		id, err := c.IDs.Decode(string(models.PrefixRole), member.CustomRole.ID)
+		if err == nil {
+			held = append(held, id)
+		}
+	}
+
+	names, err := c.RoleNames.Handle(ctx, membership(ctx).Workspace.ID, held)
+	if err != nil {
+		return err
+	}
+
+	public := map[string]string{}
+	for id, name := range names {
+		public[models.PublicID(models.PrefixRole, id)] = name
+	}
+
+	resources.NameRoles(out, public)
+
+	return nil
 }
 
 /*
@@ -272,6 +314,10 @@ func (c *MemberController) applyUpdate(
 		return nil, err
 	}
 
+	if requests.Sent(raw)["custom_role_id"] {
+		return c.assign(ctx, id, b.CustomRoleID)
+	}
+
 	update := members.UpdateMemberInput{
 		Principal: caller(ctx), Membership: membership(ctx), MemberID: id,
 		AssignedRole: (*enums.Role)(b.AssignedRole), Status: (*enums.MemberStatus)(b.Status),
@@ -296,7 +342,43 @@ func (c *MemberController) applyUpdate(
 		return nil, err
 	}
 
+	return c.shaped(ctx, row)
+}
+
+/*
+assign gives the member the custom role named, or takes theirs away
+when none is, and answers with the member as they now are.
+*/
+func (c *MemberController) assign(ctx context.Context, memberID ids.UUID, named *string) (*MemberOutput, error) {
+	in := roles.AssignRoleInput{Membership: membership(ctx), MemberID: memberID}
+
+	if named != nil {
+		roleID, err := roleID(c.IDs, *named)
+		if err != nil {
+			return nil, err
+		}
+
+		in.CustomRole = &roleID
+	}
+
+	row, err := c.AssignRole.Handle(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.shaped(ctx, row)
+}
+
+/*
+shaped answers with the member and the name of their custom role.
+*/
+func (c *MemberController) shaped(
+	ctx context.Context, row models.FindWorkspaceMemberWithUserRow,
+) (*MemberOutput, error) {
 	out := []resources.WorkspaceMember{resources.NewWorkspaceMember(row.WorkspaceMember, row.User)}
+	if err := c.nameRoles(ctx, out); err != nil {
+		return nil, err
+	}
 	if err := c.includeAccessTeams(ctx, out, []models.WorkspaceMember{row.WorkspaceMember}); err != nil {
 		return nil, err
 	}

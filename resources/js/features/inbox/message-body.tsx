@@ -6,7 +6,8 @@
  * never rendered, and links open in a new tab without handing the thread
  * to the page they open. A customer's plain text email is not Markdown,
  * so it is shown exactly as written: a "*" stays a star and a "<div>"
- * stays those five characters.
+ * stays those five characters. A customer's links pass the workspace's
+ * link checks first.
  */
 import type { ComponentProps } from "react";
 import Markdown, { type Components } from "react-markdown";
@@ -14,6 +15,8 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
 import { cx } from "@/utils/cx";
+
+import { SafeLink } from "./links/safe-link";
 
 interface MarkdownNode {
   type: string;
@@ -77,14 +80,22 @@ const components: Components = {
   h3: ({ children }) => <p className="text-body-medium">{children}</p>,
 };
 
+const customerComponents: Components = { ...components, a: SafeLink };
+
+/*
+ * MessageBody renders the text. A customer's links go through the
+ * workspace's link checks; the team's own links open as written.
+ */
 export function MessageBody({
   text,
   format = "markdown",
   className,
+  fromCustomer = false,
 }: {
   text: string;
   format?: "markdown" | "plain";
   className?: string;
+  fromCustomer?: boolean;
 }) {
   if (format === "plain") {
     return <p className={cx("whitespace-pre-wrap wrap-break-word", className)}>{text}</p>;
@@ -92,7 +103,7 @@ export function MessageBody({
 
   return (
     <div className={cx("flex flex-col gap-2 wrap-break-word", className)}>
-      <Markdown remarkPlugins={plugins} components={components}>
+      <Markdown remarkPlugins={plugins} components={fromCustomer ? customerComponents : components} skipHtml>
         {text}
       </Markdown>
     </div>

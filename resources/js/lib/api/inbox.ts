@@ -11,6 +11,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { realtimeKeys } from "@/lib/realtime/keys";
 
 import { type DownloadedFile, request, requestFile } from "./client";
+import type { Tag } from "./tags";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
 
@@ -77,6 +78,7 @@ export interface Conversation {
   assignee: Named | null;
   team: Named | null;
   last_message: MessageSummary | null;
+  tags: Tag[];
   viewers?: Viewer[];
   created_at: string;
   updated_at: string;
@@ -91,6 +93,7 @@ export interface TimelineEvent {
   actor: { type: string; id: string; name: string };
   reason?: string;
   until?: string;
+  tags?: string[];
   from?: string;
   to?: { member: Named | null; team: Named | null } | string;
   changes?: Record<string, [unknown, unknown]>;
@@ -113,6 +116,7 @@ export interface Message {
   deleted_at: string | null;
   deleted_by?: { id: string; name: string } | null;
   created_at: string;
+  redactions?: { rule: string; count: number }[];
 }
 
 export interface Counts {
@@ -182,6 +186,8 @@ export interface ConversationChanges {
   priority?: ConversationPriority;
   team_id?: string | null;
   unread?: boolean;
+  add_tags?: string[];
+  remove_tags?: string[];
 }
 
 /*

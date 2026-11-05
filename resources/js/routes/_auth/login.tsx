@@ -11,15 +11,17 @@ import { currentUser } from "@/lib/session";
 interface LoginSearch {
   redirect?: string;
   error?: string;
+  reauth?: boolean;
 }
 
 export const Route = createFileRoute("/_auth/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     error: typeof search.error === "string" ? search.error : undefined,
+    reauth: search.reauth === 1 || search.reauth === "1" || search.reauth === true ? true : undefined,
   }),
   beforeLoad: async ({ context, search }) => {
-    if (await currentUser(context.queryClient)) {
+    if (!search.reauth && (await currentUser(context.queryClient))) {
       throw redirect({ href: safeRedirect(search.redirect) });
     }
   },
@@ -36,6 +38,7 @@ function LoginPage() {
       config={config}
       redirect={target}
       initialError={oauthError(search.error)}
+      reauth={search.reauth}
       onSignedIn={useSignedIn(target)}
     />
   );

@@ -10,6 +10,10 @@
 | address is never handed out again, and mail still forwarded to it is
 | recorded so an admin can see the forward was not removed.
 |
+| The workspace always has one default address, which new mail leaves
+| from when nothing else decides. Making another address the default
+| moves it; the default is never just turned off.
+|
 */
 
 package email
@@ -18,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -106,7 +111,8 @@ func (a *ShowEmailAddress) Handle(
 
 /*
 UpdateEmailAddressInput is who asks, the address, and what changes; a
-nil field stays as it is.
+nil field stays as it is. Style holds the look of replies, its brand
+color and footer.
 */
 type UpdateEmailAddressInput struct {
 	Membership       authz.Membership
@@ -116,6 +122,8 @@ type UpdateEmailAddressInput struct {
 	FromNameStyle    *enums.FromNameStyle
 	QuotePrevious    *bool
 	BulkMailHandling *enums.BulkMailHandling
+	IsDefault        *bool
+	Style            ReplyStyleInput
 }
 
 /*
@@ -123,9 +131,11 @@ UpdateEmailAddress changes how an address signs and handles mail.
 
 Rules:
   - The caller needs email:manage.
+  - Making the address the default leaves the previous one an
+    ordinary address; the default itself cannot be turned off.
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
-wrapped database error.
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
+[exceptions.ErrDefaultAddressRequired], or a wrapped database error.
 */
 type UpdateEmailAddress struct {
 	DB    *database.DB
@@ -160,6 +170,10 @@ func (a *UpdateEmailAddress) Handle(
 			return fmt.Errorf("update email address: %w", err)
 		}
 
+		if err := a.makeDefault(ctx, q, current.EmailAddress, in.IsDefault); err != nil {
+			return err
+		}
+
 		row, err = findAddress(ctx, q, ws.ID, in.ID)
 
 		return err
@@ -181,6 +195,10 @@ func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) model
 		settings.BulkMailHandling = string(*in.BulkMailHandling)
 	}
 
+	settings.Template = pick(in.Style.Template, settings.Template)
+	settings.BrandColor = strings.ToLower(pick(in.Style.BrandColor, settings.BrandColor))
+	settings.FooterMarkdown = strings.TrimSpace(pick(in.Style.FooterMarkdown, settings.FooterMarkdown))
+
 	params := models.UpdateEmailAddressParams{
 		DisplayName: current.DisplayName, ReplyToMode: current.ReplyToMode, FromNameStyle: current.FromNameStyle,
 		Settings: jsonOf(settings), WorkspaceID: current.WorkspaceID, ID: current.ID,
@@ -199,6 +217,49 @@ func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) model
 	}
 
 	return params
+}
+
+/*
+makeDefault makes the address the workspace's default when asked to,
+and refuses to leave the workspace without one.
+*/
+func (a *UpdateEmailAddress) makeDefault(
+	ctx context.Context, q *models.Queries, current models.EmailAddress, makeIt *bool,
+) error {
+	if makeIt == nil || *makeIt == current.IsDefault {
+		return nil
+	}
+
+	if !*makeIt {
+		return exceptions.ErrDefaultAddressRequired
+	}
+
+	now := a.Clock.Now()
+	if err := q.ClearDefaultEmailAddress(ctx, models.ClearDefaultEmailAddressParams{
+		WorkspaceID: current.WorkspaceID, Now: now,
+	}); err != nil {
+		return fmt.Errorf("clear default email address: %w", err)
+	}
+
+	err := q.SetDefaultEmailAddress(ctx, models.SetDefaultEmailAddressParams{
+		WorkspaceID: current.WorkspaceID, ID: current.ID, Now: now,
+	})
+	if err != nil {
+		return fmt.Errorf("set default email address: %w", err)
+	}
+
+	return nil
+}
+
+/*
+pick returns the change when there is one, else the current value.
+*/
+func pick(change *string, current string) string {
+	if change == nil {
+		return current
+	}
+
+	return *change
 }
 
 /*

@@ -50,13 +50,19 @@ var ErrEmailRequired = errors.New("certmagic: email is required")
 /*
 Options configure the driver. Email is the address of the ACME account
 and is required. CA is the directory URL of the authority, Let's
-Encrypt by default. Logger, set in code, receives the library's log
-lines; without it they are dropped.
+Encrypt by default. HTTPPort and TLSPort are the ports the server's own
+HTTP and HTTPS listeners use, when they are not 80 and 443. The library
+then finds them taken and answers challenges through the server's
+handlers instead of opening listeners of its own, which an unprivileged
+process may not do on the low ports. Logger, set in code, receives the
+library's log lines; without it they are dropped.
 */
 type Options struct {
-	Email  string      `koanf:"email"`
-	CA     string      `default:"https://acme-v02.api.letsencrypt.org/directory" koanf:"ca"`
-	Logger *zap.Logger `koanf:"-"`
+	Email    string      `koanf:"email"`
+	CA       string      `default:"https://acme-v02.api.letsencrypt.org/directory" koanf:"ca"`
+	HTTPPort int         `koanf:"http_port"`
+	TLSPort  int         `koanf:"tls_port"`
+	Logger   *zap.Logger `koanf:"-"`
 }
 
 /*
@@ -99,6 +105,7 @@ func New(db *database.DB, authorize customdomain.Authorizer, opts Options) (*Dri
 	})
 	d.issuer = certmagic.NewACMEIssuer(d.magic, certmagic.ACMEIssuer{
 		CA: opts.CA, Email: opts.Email, Agreed: true, Logger: logger,
+		AltHTTPPort: opts.HTTPPort, AltTLSALPNPort: opts.TLSPort,
 	})
 	d.magic.Issuers = []certmagic.Issuer{d.issuer}
 

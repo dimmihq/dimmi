@@ -15,10 +15,12 @@
 package auth
 
 import (
+	"net/netip"
 	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/hashing"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/useragent"
 	"github.com/dimmihq/dimmi/framework/support/str"
 )
@@ -95,4 +97,30 @@ func (d *Devices) Label(userAgent string) string {
 	known := slices.DeleteFunc([]string{agent.Browser, agent.OS}, func(part string) bool { return part == "" })
 
 	return strings.Join(known, " on ")
+}
+
+/*
+ClientAddr returns the address a request came from, as the framework's
+proxy trust settings read it, unmapped so an IPv4 caller compares as
+IPv4. An address that does not parse is invalid and matches no allowlist.
+*/
+func ClientAddr(r *fhttp.Request) netip.Addr {
+	addr, err := netip.ParseAddr(fhttp.ClientIP(r))
+	if err != nil {
+		return netip.Addr{}
+	}
+
+	return addr.Unmap().WithZone("")
+}
+
+/*
+Addr returns the client's address, invalid when it does not parse.
+*/
+func (c Client) Addr() netip.Addr {
+	addr, err := netip.ParseAddr(c.IP)
+	if err != nil {
+		return netip.Addr{}
+	}
+
+	return addr.Unmap().WithZone("")
 }

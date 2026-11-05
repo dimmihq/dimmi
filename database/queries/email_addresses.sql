@@ -67,6 +67,17 @@ SET display_name = @display_name, reply_to_mode = @reply_to_mode, from_name_styl
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 
+-- name: ClearDefaultEmailAddress :exec
+-- ClearDefaultEmailAddress leaves the workspace's default address no
+-- longer the default, so another can become it.
+UPDATE email_addresses SET is_default = false, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND is_default AND deleted_at IS NULL;
+
+-- name: SetDefaultEmailAddress :exec
+-- SetDefaultEmailAddress makes the address the workspace's default.
+UPDATE email_addresses SET is_default = true, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
+
 -- name: DeleteEmailAddress :exec
 -- DeleteEmailAddress disconnects the address and its connection. The
 -- rows stay, so mail still forwarded to it can be explained, and the

@@ -27,7 +27,8 @@ import (
 
 /*
 WorkspaceMember is one member of a workspace, with their account. Teams
-is present only when the request included the member's teams.
+is present only when the request included the member's teams, and
+CustomRole names the custom role they hold, null for none.
 SignInLocked says whether failed guesses locked the member's account,
 TwoFactorEnabled whether the account has a second factor, and
 LastActiveAt when the member last used the workspace; all three are
@@ -49,6 +50,7 @@ type WorkspaceMember struct {
 
 	User          Teammate       `json:"user"`
 	Teams         *[]TeamSummary `json:"teams,omitempty"`
+	CustomRole    *RoleSummary   `json:"custom_role"`
 	DeactivatedAt *time.Time     `json:"deactivated_at"`
 	CreatedAt     time.Time      `json:"created_at"`
 	SignInLocked  *bool          `json:"sign_in_locked"`
@@ -95,6 +97,7 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 			EmailVerified: u.IsVerified(),
 			AvatarURL:     u.AvatarURL(),
 		},
+		CustomRole:       newRoleSummary(m.CustomRoleID),
 		DeactivatedAt:    m.DeactivatedAt,
 		CreatedAt:        m.CreatedAt,
 		TwoFactorEnabled: new(u.TwoFactorConfirmedAt != nil),

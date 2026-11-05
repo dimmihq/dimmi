@@ -29,10 +29,10 @@ it.describe("message moves", () => {
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);
     await openComposer(page, /^Note/);
-    await page.getByRole("textbox", { name: "Internal note" }).fill("Card 4242 4242 4242 4242");
+    await page.getByRole("textbox", { name: "Internal note" }).fill("Refund approved for order 7731");
     await page.getByRole("button", { name: "Add note" }).click();
     const note = page.getByRole("article", { name: `Internal note from ${person.name}` });
-    await expect(note).toContainText("Card 4242");
+    await expect(note).toContainText("Refund approved for order 7731");
 
     await note.hover();
     await note.getByRole("button", { name: "Edit note" }).click();

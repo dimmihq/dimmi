@@ -27,30 +27,39 @@ LIMIT 1;
 
 -- name: ListCompanies :many
 -- ListCompanies returns a page of the workspace's live companies, newest
--- first, narrowed to those whose name or domain contains the search
--- when one is given. A page after the first passes the created_at and id
--- of the last company it saw.
-SELECT * FROM companies
-WHERE workspace_id = @workspace_id
-  AND deleted_at IS NULL
+-- first, narrowed to those carrying every tag given and whose name or
+-- domain contains the search when one is given. A page after the first
+-- passes the created_at and id of the last company it saw.
+SELECT c.* FROM companies AS c
+WHERE c.workspace_id = @workspace_id
+  AND c.deleted_at IS NULL
   AND (
       sqlc.narg(search)::text IS NULL
-      OR strpos(lower(name), lower(sqlc.narg(search)::text)) > 0
-      OR strpos(lower(coalesce(domain::text, '')), lower(sqlc.narg(search)::text)) > 0
+      OR strpos(lower(c.name), lower(sqlc.narg(search)::text)) > 0
+      OR strpos(lower(coalesce(c.domain::text, '')), lower(sqlc.narg(search)::text)) > 0
+  )
+  AND (
+      coalesce(cardinality(@tag_ids::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.company_id FROM company_tag AS ct
+          WHERE ct.workspace_id = @workspace_id AND ct.tag_id = ANY (@tag_ids::uuid[])
+          GROUP BY ct.company_id
+          HAVING count(*) = cardinality(@tag_ids::uuid[])
+      )
   )
   AND (
       sqlc.narg(before_id)::uuid IS NULL
-      OR (created_at, id) < (sqlc.narg(before_created_at)::timestamptz, sqlc.narg(before_id)::uuid)
+      OR (c.created_at, c.id) < (sqlc.narg(before_created_at)::timestamptz, sqlc.narg(before_id)::uuid)
   )
-ORDER BY created_at DESC, id DESC
-LIMIT @row_limit;
+ORDER BY c.created_at DESC, c.id DESC
+LIMIT @row_limit::bigint;
 
 -- name: UpdateCompany :one
 -- UpdateCompany replaces a live company's attributes. A deleted company
 -- is not found.
 UPDATE companies
 SET external_id = @external_id, name = @name, domain = @domain, custom_attributes = @custom_attributes,
-    updated_at = @now
+    notes = sqlc.narg(notes), updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 
@@ -80,4 +89,16 @@ WHERE workspace_id = @workspace_id
       OR (created_at, id) < (sqlc.narg(before_created_at)::timestamptz, sqlc.narg(before_id)::uuid)
   )
 ORDER BY created_at DESC, id DESC
-LIMIT @row_limit;
+LIMIT @row_limit::bigint;
+
+-- name: CompaniesByIDs :many
+-- CompaniesByIDs returns the live companies of the workspace with the ids.
+SELECT * FROM companies
+WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]) AND deleted_at IS NULL;
+
+-- name: LockCompany :one
+-- LockCompany returns the live company and holds its row until the
+-- transaction ends.
+SELECT * FROM companies
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
+FOR UPDATE;
