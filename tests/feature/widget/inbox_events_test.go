@@ -79,13 +79,17 @@ func TestWidgetInboxEvents(t *testing.T) {
 		assert.Contains(t, string(data), "on it")
 	})
 
-	t.Run("a deleted reply reaches the visitor without its text", func(t *testing.T) {
+	t.Run("a reply the team deletes reaches the visitor without its text", func(t *testing.T) {
 		t.Parallel()
-		tc, s, base, ref := setup(t)
-		_, err := tc.Operator().Exec(t.Context(), "UPDATE messages SET deleted_at = now() WHERE id = $1", ref.MessageID)
-		require.NoError(t, err)
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		_, msg := inboxReply(t, tc, id)
+		s := v.openStream(t, streamURL(t, tc), nil)
+		require.NotNil(t, s.next().Connect)
 
-		dispatch(t, tc, appevents.MessageDeleted{Base: base, MessageRef: ref})
+		owner(tc).Delete("/api/v1/conversations/" + id + "/messages/" + models.PublicID(models.PrefixMessage, msg)).
+			AssertOK()
 
 		_, data := s.eventOf("message.deleted")
 		assert.NotContains(t, string(data), "on it")

@@ -149,7 +149,7 @@ func (q *Queries) FailEmailMessageDelivery(ctx context.Context, arg FailEmailMes
 }
 
 const findEmailMessage = `-- name: FindEmailMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id FROM messages WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages WHERE workspace_id = $1 AND id = $2
 `
 
 type FindEmailMessageParams struct {
@@ -185,6 +185,8 @@ func (q *Queries) FindEmailMessage(ctx context.Context, arg FindEmailMessagePara
 		&i.UpdatedAt,
 		&i.Search,
 		&i.ChannelConnectionID,
+		&i.ScheduledSendAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }

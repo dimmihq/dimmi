@@ -1,7 +1,8 @@
 /*
  * The list of an inbox view: one row per conversation with the channel,
  * the customer, who is viewing it, the subject, how long the customer
- * has waited, its priority and who holds it, in the view's order. Rows
+ * has waited, whether the reader left a draft there, its priority and
+ * who holds it, in the view's order. Rows
  * follow BoardUI's chat list: the open conversation sits on the tertiary
  * surface, the rest light up on hover. A conversation with something the
  * reader has not seen carries a dot and reads in the stronger weight.
@@ -16,18 +17,20 @@ import { cx } from "@/utils/cx";
 
 import { ago, customerName, subjectOf } from "./conversations";
 import { PriorityChip } from "./priority/priority-menu";
-import { AssigneeAvatar, ChannelIcon, Viewers, Waiting } from "./row-extras";
+import { AssigneeAvatar, ChannelIcon, DraftMark, Viewers, Waiting } from "./row-extras";
 
 export function ConversationList({
   view,
   conversations,
   openId,
   me,
+  drafted,
 }: {
   view: string;
   conversations: Conversation[];
   openId?: string;
   me?: string;
+  drafted?: ReadonlySet<string>;
 }) {
   return (
     <ul className="flex flex-col gap-1 px-[7px] pb-[7px]">
@@ -66,6 +69,7 @@ export function ConversationList({
                   >
                     {subjectOf(conversation)}
                   </span>
+                  <DraftMark drafted={drafted?.has(conversation.id) ?? false} />
                   <Waiting conversation={conversation} />
                   <PriorityChip priority={conversation.priority} />
                   <AssigneeAvatar assignee={conversation.assignee} />
