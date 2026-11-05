@@ -40,7 +40,7 @@ func TestSignupRisk(t *testing.T) {
 		tc.Client().PostJSON("/api/v1/users", registration(throwaway)).AssertCreated()
 
 		var flags []string
-		require.NoError(t, tc.App.DB.QueryRow(t.Context(),
+		require.NoError(t, tc.Operator().QueryRow(t.Context(),
 			"SELECT risk_flags FROM users WHERE email = $1", throwaway).Scan(&flags))
 		assert.Equal(t, []string{appauth.RiskDisposableEmail}, flags)
 	})

@@ -24,7 +24,7 @@ case made is deleted, so nobody counts as a user yet.
 func emptyInstall(t *testing.T, tc *tests.TestCase) {
 	t.Helper()
 
-	_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET deleted_at = now()")
+	_, err := tc.Operator().Exec(t.Context(), "UPDATE users SET deleted_at = now()")
 	require.NoError(t, err)
 }
 
