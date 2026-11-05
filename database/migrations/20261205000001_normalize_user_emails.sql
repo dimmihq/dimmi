@@ -11,12 +11,5 @@ UPDATE users AS u SET email = lower(normalize(u.email::text, NFKC))
 WHERE u.email::text <> lower(normalize(u.email::text, NFKC))
   AND NOT EXISTS (SELECT 1 FROM users AS o WHERE o.id <> u.id AND o.email = lower(normalize(u.email::text, NFKC)));
 
-UPDATE invitations AS i SET email = lower(normalize(i.email::text, NFKC))
-WHERE i.email::text <> lower(normalize(i.email::text, NFKC))
-  AND NOT EXISTS (
-      SELECT 1 FROM invitations AS o
-      WHERE o.id <> i.id AND o.workspace_id = i.workspace_id AND o.email = lower(normalize(i.email::text, NFKC))
-  );
-
 -- +goose Down
 SELECT 1;

@@ -133,5 +133,7 @@ func normalizeEmail(raw string) (string, bool) {
 		return email, false
 	}
 
-	return fmail.CanonicalAddress(email), true
+	at := strings.LastIndex(email, "@")
+
+	return email[:at] + strings.ToLower(email[at:]), true
 }
