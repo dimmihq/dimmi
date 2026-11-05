@@ -3,13 +3,13 @@
 | Update Contact
 |--------------------------------------------------------------------------
 |
-| Teammates correct a customer's details, add custom attributes and
-| block or unblock them. Only sent fields change; a custom attribute set
-| to null is removed. Attributes a teammate writes come from a trusted
-| source, so their keys join the contact's trusted keys, and a removed
-| key leaves them. The external id ties the contact to the host app's
-| account, so changing or clearing it takes its own permission. A
-| contact that gets an external id becomes a user.
+| Teammates correct a customer's details, add custom attributes, keep
+| notes, tag and block or unblock them. Only sent fields change; a custom
+| attribute set to null is removed. Attributes a teammate writes come
+| from a trusted source, so their keys join the contact's trusted keys,
+| and a removed key leaves them. The external id ties the contact to the
+| host app's account, so changing or clearing it takes its own
+| permission. A contact that gets an external id becomes a user.
 |
 */
 
@@ -17,6 +17,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -26,17 +27,21 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/tags"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/attributes"
 )
 
 /*
 UpdateContactInput is who changes which contact and how. Fields holds
 the details sent; ClearExternalID and ClearEmail and friends say a
-field was sent as null. Blocked blocks or unblocks.
+field was sent as null. Blocked blocks or unblocks. AddTags and
+RemoveTags change the tags following the contact. CompanySet says the
+company was sent, CompanyID nil meaning none.
 */
 type UpdateContactInput struct {
 	Membership      authz.Membership
@@ -46,6 +51,12 @@ type UpdateContactInput struct {
 	ClearEmail      bool
 	ClearName       bool
 	ClearPhone      bool
+	Notes           *string
+	ClearNotes      bool
+	CompanySet      bool
+	CompanyID       *ids.UUID
+	AddTags         tags.Refs
+	RemoveTags      []ids.UUID
 	Blocked         *bool
 }
 
@@ -56,12 +67,14 @@ Rules:
   - The caller needs contacts:write, and contacts:manage_external_id to
     change or clear the external id.
   - An external id another contact holds is refused.
+  - A contact holds at most 50 tags.
   - Values equal to the current ones change nothing.
 
 Events: [appevents.ContactUpdated] when anything changed.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
-[exceptions.ErrContactExists], [exceptions.ErrInvalidAttributes], or a
+[exceptions.ErrContactExists], [exceptions.ErrInvalidAttributes],
+[exceptions.ErrTagLimitReached], [exceptions.ErrCompanyNotFound], or a
 wrapped database error.
 */
 type UpdateContact struct {
@@ -73,12 +86,12 @@ type UpdateContact struct {
 /*
 Handle applies the change and returns the contact as it now is.
 */
-func (a *UpdateContact) Handle(ctx context.Context, in UpdateContactInput) (models.Contact, error) {
+func (a *UpdateContact) Handle(ctx context.Context, in UpdateContactInput) (Detail, error) {
 	if !in.Membership.Can("contacts:write") {
-		return models.Contact{}, exceptions.ErrForbidden
+		return Detail{}, exceptions.ErrForbidden
 	}
 
-	var out models.Contact
+	var out Detail
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
@@ -94,11 +107,18 @@ func (a *UpdateContact) Handle(ctx context.Context, in UpdateContactInput) (mode
 		}
 
 		u := update{in: in, now: a.Clock.Now(), before: current}
-		if out, err = u.write(ctx, q); err != nil || len(u.event.Changes) == 0 {
+
+		contact, err := u.write(ctx, q)
+		if err != nil {
 			return err
 		}
 
-		u.event.WorkspaceID, u.event.ContactID, u.event.ActorID = out.WorkspaceID, out.ID, in.Membership.Member.ID
+		if out, err = LoadDetail(ctx, q, contact); err != nil || len(u.event.Changes) == 0 {
+			return err
+		}
+
+		u.event.WorkspaceID, u.event.ContactID = contact.WorkspaceID, contact.ID
+		u.event.ActorID = in.Membership.Member.ID
 
 		return a.Events.Dispatch(ctx, tx, u.event)
 	})
@@ -119,16 +139,25 @@ type update struct {
 }
 
 /*
+paramsOf returns the contact's stored values as the parameters of an
+update, so a change names only what differs.
+*/
+func paramsOf(c models.Contact, now time.Time) models.UpdateContactParams {
+	return models.UpdateContactParams{
+		Kind: c.Kind, ExternalID: c.ExternalID, Email: c.Email, Name: c.Name, Phone: c.Phone,
+		CustomAttributes: c.CustomAttributes, TrustedAttributeKeys: c.TrustedAttributeKeys, BlockedAt: c.BlockedAt,
+		Notes: c.Notes, CompanyID: c.CompanyID, EmailVerified: c.EmailVerified, Now: now,
+		WorkspaceID: c.WorkspaceID, ID: c.ID,
+	}
+}
+
+/*
 write applies each field to the contact's current values and writes
 them when something changed.
 */
 func (u *update) write(ctx context.Context, q *models.Queries) (models.Contact, error) {
 	b, f := u.before, u.in.Fields
-	u.params = models.UpdateContactParams{
-		Kind: b.Kind, ExternalID: b.ExternalID, Email: b.Email, Name: b.Name, Phone: b.Phone,
-		CustomAttributes: b.CustomAttributes, TrustedAttributeKeys: b.TrustedAttributeKeys, BlockedAt: b.BlockedAt,
-		Now: u.now, WorkspaceID: b.WorkspaceID, ID: b.ID,
-	}
+	u.params = paramsOf(b, u.now)
 
 	if err := u.externalID(ctx, q); err != nil {
 		return b, err
@@ -137,8 +166,17 @@ func (u *update) write(ctx context.Context, q *models.Queries) (models.Contact, 
 	u.text("email", &u.params.Email, sent(NormalizeEmail(f.Email), u.in.ClearEmail))
 	u.text("name", &u.params.Name, sent(f.Name, u.in.ClearName))
 	u.text("phone", &u.params.Phone, sent(NormalizePhone(f.Phone), u.in.ClearPhone))
+	u.text("notes", &u.params.Notes, sent(u.in.Notes, u.in.ClearNotes))
+
+	if err := u.company(ctx, q); err != nil {
+		return b, err
+	}
 
 	if err := u.attributes(); err != nil {
+		return b, err
+	}
+
+	if err := u.tags(ctx, q); err != nil {
 		return b, err
 	}
 
@@ -227,6 +265,31 @@ func (u *update) externalID(ctx context.Context, q *models.Queries) error {
 }
 
 /*
+company applies the company, which must be a live one of the workspace.
+*/
+func (u *update) company(ctx context.Context, q *models.Queries) error {
+	if !u.in.CompanySet || sameID(u.params.CompanyID, u.in.CompanyID) {
+		return nil
+	}
+
+	if u.in.CompanyID != nil {
+		c, err := q.FindCompany(ctx, models.FindCompanyParams{WorkspaceID: u.before.WorkspaceID, ID: *u.in.CompanyID})
+		if errors.Is(err, database.ErrNotFound) || (err == nil && c.DeletedAt != nil) {
+			return exceptions.ErrCompanyNotFound
+		}
+
+		if err != nil {
+			return fmt.Errorf("find company: %w", err)
+		}
+	}
+
+	u.params.CompanyID = u.in.CompanyID
+	u.event.Changes = append(u.event.Changes, "company_id")
+
+	return nil
+}
+
+/*
 attributes merges the custom attributes sent and keeps the trusted keys
 in step with them.
 */
@@ -235,7 +298,7 @@ func (u *update) attributes() error {
 		return nil
 	}
 
-	merged, changed, err := MergeAttributes(u.before.CustomAttributes, u.in.Fields.CustomAttributes)
+	merged, changed, err := attributes.Merge(u.before.CustomAttributes, u.in.Fields.CustomAttributes)
 	if err != nil || len(changed) == 0 {
 		return err
 	}
@@ -253,6 +316,54 @@ func (u *update) attributes() error {
 	u.params.CustomAttributes, u.params.TrustedAttributeKeys = merged, trusted
 	u.event.Changes = append(u.event.Changes, "custom_attributes")
 	u.event.ChangedAttributeKeys = changed
+
+	return nil
+}
+
+/*
+tags adds and removes the tags named, up to the limit on a contact.
+*/
+func (u *update) tags(ctx context.Context, q *models.Queries) error {
+	in, ws := u.in, u.before.WorkspaceID
+
+	var added []ids.UUID
+
+	if !in.AddTags.Empty() {
+		tagIDs, err := tags.Resolve(ctx, q, tags.Scope{WorkspaceID: ws, Now: u.now}, in.AddTags)
+		if err != nil {
+			return err
+		}
+
+		added, err = q.TagContact(ctx, models.TagContactParams{
+			WorkspaceID: ws, ContactID: u.before.ID, TagIds: tagIDs, CreatedByType: "member",
+			CreatedByID: &in.Membership.Member.ID, Now: u.now,
+		})
+		if err != nil {
+			return fmt.Errorf("tag contact: %w", err)
+		}
+	}
+
+	removed, err := q.UntagContact(ctx, models.UntagContactParams{
+		WorkspaceID: ws, ContactID: u.before.ID, TagIds: in.RemoveTags,
+	})
+	if err != nil {
+		return fmt.Errorf("untag contact: %w", err)
+	}
+
+	if len(added) == 0 && len(removed) == 0 {
+		return nil
+	}
+
+	count, err := q.CountContactTags(ctx, models.CountContactTagsParams{WorkspaceID: ws, ContactID: u.before.ID})
+	if err != nil {
+		return fmt.Errorf("count contact tags: %w", err)
+	}
+
+	if count > tags.MaxOnRecord {
+		return exceptions.ErrTagLimitReached
+	}
+
+	u.event.Changes = append(u.event.Changes, "tags")
 
 	return nil
 }
@@ -279,6 +390,17 @@ func (u *update) blocked() {
 sameText reports whether two optional texts are equal.
 */
 func sameText(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+
+	return *a == *b
+}
+
+/*
+sameID reports whether two optional ids are equal.
+*/
+func sameID(a, b *ids.UUID) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}

@@ -93,7 +93,7 @@ func (q *Queries) CountUserLiveTokens(ctx context.Context, arg CountUserLiveToke
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email, password_hash, email_verified_at, locale, timezone, created_via, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
 `
 
 type CreateUserParams struct {
@@ -140,12 +140,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }
 
 const findUser = `-- name: FindUser :one
-SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences FROM users WHERE id = $1
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id FROM users WHERE id = $1
 `
 
 // FindUser returns the account with the id, deleted or not.
@@ -170,12 +171,13 @@ func (q *Queries) FindUser(ctx context.Context, id ids.UUID) (User, error) {
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }
 
 const findUserByEmail = `-- name: FindUserByEmail :one
-SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences FROM users WHERE email = $1 AND deleted_at IS NULL
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id FROM users WHERE email = $1 AND deleted_at IS NULL
 `
 
 // FindUserByEmail returns the live account with the address. A deleted
@@ -201,6 +203,7 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (User, erro
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }
@@ -263,7 +266,7 @@ func (q *Queries) ListLiveUsers(ctx context.Context) ([]ListLiveUsersRow, error)
 }
 
 const lockUser = `-- name: LockUser :one
-SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences FROM users WHERE id = $1 FOR UPDATE
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id FROM users WHERE id = $1 FOR UPDATE
 `
 
 // LockUser returns the account and holds it until the transaction ends,
@@ -290,6 +293,7 @@ func (q *Queries) LockUser(ctx context.Context, id ids.UUID) (User, error) {
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }
@@ -313,7 +317,7 @@ func (q *Queries) MarkUserEmailVerified(ctx context.Context, arg MarkUserEmailVe
 }
 
 const replaceUserAvatarPath = `-- name: ReplaceUserAvatarPath :one
-UPDATE users SET avatar_path = $1, updated_at = $2::timestamptz WHERE id = $3 RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences
+UPDATE users SET avatar_path = $1, updated_at = $2::timestamptz WHERE id = $3 RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
 `
 
 type ReplaceUserAvatarPathParams struct {
@@ -345,6 +349,7 @@ func (q *Queries) ReplaceUserAvatarPath(ctx context.Context, arg ReplaceUserAvat
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }
@@ -409,7 +414,7 @@ const updateUserEmail = `-- name: UpdateUserEmail :one
 UPDATE users
 SET email = $1, email_verified_at = $2::timestamptz, updated_at = $2::timestamptz
 WHERE id = $3
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
 `
 
 type UpdateUserEmailParams struct {
@@ -441,6 +446,7 @@ func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }
@@ -486,7 +492,7 @@ UPDATE users
 SET name = $1, locale = $2, timezone = $3, preferences = $4,
     updated_at = $5::timestamptz
 WHERE id = $6
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
 `
 
 type UpdateUserProfileParams struct {
@@ -528,6 +534,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.RiskFlags,
 		&i.CreatedVia,
 		&i.Preferences,
+		&i.ManagedByOrganizationID,
 	)
 	return i, err
 }

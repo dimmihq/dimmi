@@ -74,9 +74,11 @@ func bootInbox(a *app.App) error {
 		EditNote:          &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
+	bootRecords(a)
 	bootWorkbench(a)
 
 	return errors.Join(
+		bootErasures(a),
 		queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels}),
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{

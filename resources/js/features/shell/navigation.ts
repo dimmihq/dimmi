@@ -32,6 +32,7 @@ import {
   RiKey2Line,
   RiLightbulbLine,
   RiListOrdered2,
+  RiLoginBoxLine,
   RiMailLine,
   RiMegaphoneLine,
   RiNotification3Line,
@@ -200,6 +201,13 @@ export const settingsPages = {
     "/d/settings/saved-replies",
     "Answers your team sends often, with variables.",
   ),
+  "conversation-safety": page(
+    "settings-conversation-safety",
+    "Conversation safety",
+    RiShieldCheckLine,
+    "/d/settings/conversation-safety",
+    "Keep card numbers and other sensitive text out of conversations.",
+  ),
   messenger: page(
     "settings-messenger",
     "Messenger",
@@ -326,12 +334,26 @@ export const settingsPages = {
     "/d/settings/teams",
     "Groups of teammates conversations can be assigned to.",
   ),
+  roles: page(
+    "settings-roles",
+    "Roles",
+    RiShieldUserLine,
+    "/d/settings/roles",
+    "What each person in the workspace may do.",
+  ),
   "workspace-security": page(
     "settings-workspace-security",
     "Security",
     RiShieldCheckLine,
     "/d/settings/workspace-security",
     "Rules every member signs in under.",
+  ),
+  "single-sign-on": page(
+    "settings-single-sign-on",
+    "Single sign-on",
+    RiLoginBoxLine,
+    "/d/settings/single-sign-on",
+    "Sign in through your company's identity provider.",
   ),
   "audit-log": page(
     "settings-audit-log",
@@ -407,7 +429,9 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     pages.workspace,
     pages.members,
     pages.teams,
+    pages.roles,
     pages["workspace-security"],
+    pages["single-sign-on"],
     pages["audit-log"],
     pages.import,
   ];
@@ -419,7 +443,11 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
       label: "Account",
       items: [pages.profile, pages.preferences, pages.security, pages.tokens],
     },
-    { key: "inbox", label: "Inbox", items: [pages.inboxes, pages.tags, pages["saved-replies"]] },
+    {
+      key: "inbox",
+      label: "Inbox",
+      items: [pages.inboxes, pages.tags, pages["saved-replies"], pages["conversation-safety"]],
+    },
     { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
     { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
     {

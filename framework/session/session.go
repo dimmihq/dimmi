@@ -158,6 +158,17 @@ func (s *Session) SetCountry(country string) {
 }
 
 /*
+SetSignInContext records where the sign-in came from when an outside
+service vouched for it: the connection it came through and the domain
+that service stands for. Login clears both, so a later sign-in by
+another way never keeps them.
+*/
+func (s *Session) SetSignInContext(connectionID ids.UUID, domain string) {
+	s.record.ConnectionID, s.record.AuthDomain = connectionID, domain
+	s.dirty = true
+}
+
+/*
 Record returns a copy of the session as it will be stored.
 */
 func (s *Session) Record() Record {
@@ -231,6 +242,7 @@ func (s *Session) Login(userID ids.UUID, methods ...string) {
 		s.record.AuthMethod, s.record.ConfirmedMethod = methods[0], methods[len(methods)-1]
 	}
 
+	s.record.ConnectionID, s.record.AuthDomain = ids.Nil(), ""
 	s.record.AuthenticatedAt = s.now
 	s.record.ConfirmedAt = s.now
 	s.record.ExpiresAt = s.now.Add(s.lifetime)

@@ -27,7 +27,8 @@
       "identity_unlinked": "Unlinked a sign-in provider",
       "two_factor_reset_requested": "Sent a two-factor reset link",
       "two_factor_reset_completed": "Turned off two-factor with a reset link",
-      "sign_in_lock_cleared": "Cleared a sign-in lock"
+      "sign_in_lock_cleared": "Cleared a sign-in lock",
+      "custom_role_changed": "Changed someone's custom role"
     },
     "ownership": {
       "transferred": "Handed over ownership"
@@ -49,13 +50,33 @@
       "restored": "Restored the workspace",
       "suspended": "Suspended the workspace",
       "unsuspended": "Lifted the workspace's suspension",
-      "updated": "Changed workspace settings"
+      "updated": "Changed workspace settings",
+      "access_policy_changed": "Changed the sign-in rules"
     },
     "audit_logs": {
       "exported": "Exported the audit log"
     },
     "members": {
       "exported": "Exported the member list"
+    },
+    "role": {
+      "created": "Created a custom role",
+      "updated": "Edited a custom role",
+      "deleted": "Deleted a custom role"
+    },
+    "redaction_rule": {
+      "created": "Added a redaction rule",
+      "updated": "Changed a redaction rule",
+      "deleted": "Deleted a redaction rule"
+    },
+    "redaction_settings": {
+      "updated": "Changed the built-in redaction rules"
+    },
+    "contact_erasure": {
+      "requested": "Asked to erase a customer",
+      "canceled": "Canceled a customer's erasure",
+      "held": "Held an erasure for retention",
+      "completed": "Erased a customer"
     }
   },
   "channels": {

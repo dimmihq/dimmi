@@ -24,26 +24,30 @@ whether every member must have a second factor to work in it,
 ShowViewers whether inbox lists show who views each conversation, and
 SeenReceiptName whether the customer's widget names the teammate who
 read their message. CustomerFacingName is the name customers see, null
-when they see the workspace's own name. DeletedAt and PurgeAfter are set
+when they see the workspace's own name. LinkSafety holds the checks the
+inbox runs on links customers send, and Retention how long
+conversations and their files are kept. DeletedAt and PurgeAfter are set
 while it is in the trash: when it was deleted, and when it is purged for
 good unless restored. UndoSendSeconds is how long replies wait before
 they leave.
 */
 type Workspace struct {
-	ID                 string     `json:"id"`
-	Object             string     `json:"object"`
-	Name               string     `json:"name"`
-	Slug               string     `json:"slug"`
-	Timezone           string     `json:"timezone"`
-	Locale             string     `json:"locale"`
-	TestMode           bool       `json:"test_mode"`
-	RequireTwoFactor   bool       `json:"require_two_factor"`
-	ShowViewers        bool       `json:"show_viewers_on_list"`
-	SeenReceiptName    bool       `json:"seen_receipt_shows_name"`
-	CustomerFacingName *string    `json:"customer_facing_name"`
-	UndoSendSeconds    int        `json:"undo_send_seconds"`
-	DeletedAt          *time.Time `json:"deleted_at"`
-	PurgeAfter         *time.Time `json:"purge_after"`
+	ID                 string            `json:"id"`
+	Object             string            `json:"object"`
+	Name               string            `json:"name"`
+	Slug               string            `json:"slug"`
+	Timezone           string            `json:"timezone"`
+	Locale             string            `json:"locale"`
+	TestMode           bool              `json:"test_mode"`
+	RequireTwoFactor   bool              `json:"require_two_factor"`
+	ShowViewers        bool              `json:"show_viewers_on_list"`
+	SeenReceiptName    bool              `json:"seen_receipt_shows_name"`
+	CustomerFacingName *string           `json:"customer_facing_name"`
+	LinkSafety         models.LinkSafety `json:"link_safety"`
+	Retention          models.Retention  `json:"retention"`
+	UndoSendSeconds    int               `json:"undo_send_seconds"`
+	DeletedAt          *time.Time        `json:"deleted_at"`
+	PurgeAfter         *time.Time        `json:"purge_after"`
 }
 
 /*
@@ -62,6 +66,8 @@ func NewWorkspace(w models.Workspace) Workspace {
 		ShowViewers:        w.ShowsViewersOnList(),
 		SeenReceiptName:    w.SeenReceiptShowsName(),
 		CustomerFacingName: w.CustomerFacingNameSetting(),
+		LinkSafety:         w.LinkSafety(),
+		Retention:          w.Retention(),
 		UndoSendSeconds:    w.UndoSendSeconds(),
 		DeletedAt:          w.DeletedAt,
 		PurgeAfter:         w.PurgeAfter,

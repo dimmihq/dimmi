@@ -1,43 +1,11 @@
 /*
- * How conversations are organised: the tags teammates put on them and
- * the replies the team saves for reuse.
+ * The replies the team saves for reuse. Tags and inboxes have pages of
+ * their own.
  */
 import { RiChatQuoteLine } from "@remixicon/react";
 
-import { Chip } from "@/components/base/badges/chip";
-
 import { Action } from "../controls";
-import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
-
-const tags: [string, "blue" | "rose" | "lime" | "yellow" | "purple", number][] = [
-  ["Bug", "rose", 42],
-  ["Billing", "yellow", 18],
-  ["Sign-in", "blue", 11],
-  ["Feature request", "purple", 7],
-  ["VIP", "lime", 3],
-];
-
-export function TagsSettings() {
-  return (
-    <SettingsPage title="Tags" description="Any teammate can create tags; admins rename, recolour and delete them.">
-      <Section title="Tags" action={<Action>New tag</Action>}>
-        {tags.map(([name, color, count]) => (
-          <Row
-            key={name}
-            label={
-              <Chip variant="caption" color={color}>
-                {name}
-              </Chip>
-            }
-          >
-            <span className="text-body-2-regular text-text-tertiary">{count} conversations</span>
-            <Action>Edit</Action>
-          </Row>
-        ))}
-      </Section>
-    </SettingsPage>
-  );
-}
+import { Glyph, Item, Section, SettingsPage } from "../layout";
 
 const replies = [
   ["Send a sign-in code", "/code"],

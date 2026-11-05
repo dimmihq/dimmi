@@ -14,7 +14,7 @@ import (
 )
 
 const contactsByIDs = `-- name: ContactsByIDs :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type ContactsByIDsParams struct {
@@ -56,6 +56,8 @@ func (q *Queries) ContactsByIDs(ctx context.Context, arg ContactsByIDsParams) ([
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Notes,
+			&i.Placeholder,
 		); err != nil {
 			return nil, err
 		}
@@ -67,8 +69,26 @@ func (q *Queries) ContactsByIDs(ctx context.Context, arg ContactsByIDsParams) ([
 	return items, nil
 }
 
+const countContactConversations = `-- name: CountContactConversations :one
+SELECT count(*) FROM conversations WHERE workspace_id = $1 AND contact_id = $2
+`
+
+type CountContactConversationsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// CountContactConversations returns how many conversations, trashed ones
+// included, the contact has.
+func (q *Queries) CountContactConversations(ctx context.Context, arg CountContactConversationsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countContactConversations, arg.WorkspaceID, arg.ContactID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const findContactForEmail = `-- name: FindContactForEmail :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1
   AND email = $2
   AND merged_into_id IS NULL
@@ -114,50 +134,241 @@ func (q *Queries) FindContactForEmail(ctx context.Context, arg FindContactForEma
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
+	)
+	return i, err
+}
+
+const findDuplicateContacts = `-- name: FindDuplicateContacts :many
+SELECT
+    c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder,
+    COALESCE(c.email = $1::citext, false)::boolean AS same_email,
+    COALESCE(c.phone = $2::text, false)::boolean AS same_phone,
+    COALESCE($2::text IS NOT NULL AND EXISTS (
+        SELECT 1 FROM contact_identities AS i
+        WHERE i.workspace_id = c.workspace_id AND i.contact_id = c.id AND i.type = 'whatsapp'
+          AND i.value = ltrim($2::text, '+')
+    ), false)::boolean AS same_whatsapp,
+    COALESCE(c.name = $3::text AND c.company_id = $4::uuid, false)::boolean
+        AS same_name_company
+FROM contacts AS c
+WHERE c.workspace_id = $5
+  AND c.id <> $6
+  AND c.merged_into_id IS NULL
+  AND c.deleted_at IS NULL
+  AND (
+      ($1::citext IS NOT NULL AND c.email = $1::citext)
+      OR ($2::text IS NOT NULL AND c.phone = $2::text)
+      OR ($2::text IS NOT NULL AND EXISTS (
+          SELECT 1 FROM contact_identities AS i
+          WHERE i.workspace_id = c.workspace_id AND i.contact_id = c.id AND i.type = 'whatsapp'
+            AND i.value = ltrim($2::text, '+')
+      ))
+      OR ($3::text IS NOT NULL AND $4::uuid IS NOT NULL
+          AND c.name = $3::text AND c.company_id = $4::uuid)
+  )
+ORDER BY same_email DESC, same_phone DESC, same_whatsapp DESC, c.id DESC
+LIMIT $7::bigint
+`
+
+type FindDuplicateContactsParams struct {
+	Email       *string   `json:"email"`
+	Phone       *string   `json:"phone"`
+	Name        *string   `json:"name"`
+	CompanyID   *ids.UUID `json:"company_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+	RowLimit    int64     `json:"row_limit"`
+}
+
+type FindDuplicateContactsRow struct {
+	Contact         Contact `json:"contact"`
+	SameEmail       bool    `json:"same_email"`
+	SamePhone       bool    `json:"same_phone"`
+	SameWhatsapp    bool    `json:"same_whatsapp"`
+	SameNameCompany bool    `json:"same_name_company"`
+}
+
+// FindDuplicateContacts returns live contacts that look like the same
+// person: the same address without regard to case, the same phone number,
+// a messaging identity on that number, or the same name at the same
+// company, the weakest signal, which sorts last.
+func (q *Queries) FindDuplicateContacts(ctx context.Context, arg FindDuplicateContactsParams) ([]FindDuplicateContactsRow, error) {
+	rows, err := q.db.Query(ctx, findDuplicateContacts,
+		arg.Email,
+		arg.Phone,
+		arg.Name,
+		arg.CompanyID,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindDuplicateContactsRow
+	for rows.Next() {
+		var i FindDuplicateContactsRow
+		if err := rows.Scan(
+			&i.Contact.ID,
+			&i.Contact.WorkspaceID,
+			&i.Contact.Kind,
+			&i.Contact.ExternalID,
+			&i.Contact.Email,
+			&i.Contact.EmailVerified,
+			&i.Contact.Name,
+			&i.Contact.Phone,
+			&i.Contact.AvatarUrl,
+			&i.Contact.CompanyID,
+			&i.Contact.CustomAttributes,
+			&i.Contact.TrustedAttributeKeys,
+			&i.Contact.Locale,
+			&i.Contact.Timezone,
+			&i.Contact.Location,
+			&i.Contact.FirstSeenAt,
+			&i.Contact.LastSeenAt,
+			&i.Contact.BlockedAt,
+			&i.Contact.MergedIntoID,
+			&i.Contact.Search,
+			&i.Contact.DeletedAt,
+			&i.Contact.CreatedAt,
+			&i.Contact.UpdatedAt,
+			&i.Contact.Notes,
+			&i.Contact.Placeholder,
+			&i.SameEmail,
+			&i.SamePhone,
+			&i.SameWhatsapp,
+			&i.SameNameCompany,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findUpsertCandidateByEmail = `-- name: FindUpsertCandidateByEmail :one
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
+WHERE workspace_id = $1
+  AND email = $2
+  AND external_id IS NULL
+  AND merged_into_id IS NULL
+  AND deleted_at IS NULL
+  AND (kind = 'user' OR email_verified)
+ORDER BY (kind = 'user') DESC, last_seen_at DESC NULLS LAST, id DESC
+LIMIT 1
+`
+
+type FindUpsertCandidateByEmailParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Email       *string  `json:"email"`
+}
+
+// FindUpsertCandidateByEmail returns the contact a trusted upsert may
+// attach an external id to: live, unmerged, without an external id, and a
+// user or a contact whose address was proven, users first, then the one
+// seen most recently.
+func (q *Queries) FindUpsertCandidateByEmail(ctx context.Context, arg FindUpsertCandidateByEmailParams) (Contact, error) {
+	row := q.db.QueryRow(ctx, findUpsertCandidateByEmail, arg.WorkspaceID, arg.Email)
+	var i Contact
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Kind,
+		&i.ExternalID,
+		&i.Email,
+		&i.EmailVerified,
+		&i.Name,
+		&i.Phone,
+		&i.AvatarUrl,
+		&i.CompanyID,
+		&i.CustomAttributes,
+		&i.TrustedAttributeKeys,
+		&i.Locale,
+		&i.Timezone,
+		&i.Location,
+		&i.FirstSeenAt,
+		&i.LastSeenAt,
+		&i.BlockedAt,
+		&i.MergedIntoID,
+		&i.Search,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const listContacts = `-- name: ListContacts :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts
-WHERE workspace_id = $1
-  AND merged_into_id IS NULL
-  AND deleted_at IS NULL
-  AND ($2::text IS NULL OR kind = $2::text)
-  AND ($3::citext IS NULL OR email = $3::citext)
-  AND ($4::text IS NULL OR external_id = $4::text)
-  AND ($5::boolean IS NULL OR (blocked_at IS NOT NULL) = $5::boolean)
+SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder FROM contacts AS c
+WHERE c.workspace_id = $1
+  AND c.merged_into_id IS NULL
+  AND c.deleted_at IS NULL
+  AND ($2::text IS NULL OR c.kind = $2::text)
+  AND ($3::citext IS NULL OR c.email = $3::citext)
+  AND ($4::text IS NULL OR c.external_id = $4::text)
+  AND ($5::boolean IS NULL OR (c.blocked_at IS NOT NULL) = $5::boolean)
+  AND ($6::uuid IS NULL OR c.company_id = $6::uuid)
+  AND ($7::timestamptz IS NULL OR c.last_seen_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR c.last_seen_at < $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR c.created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR c.created_at < $10::timestamptz)
+  AND ($11::jsonb IS NULL OR c.custom_attributes @> $11::jsonb)
   AND (
-      $6::text = ''
-      OR search @@ to_tsquery('simple', $7::text)
-      OR name ILIKE '%' || $6::text || '%'
-      OR email ILIKE $6::text || '%'
+      coalesce(cardinality($12::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.contact_id FROM contact_tag ct
+          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($12::uuid[])
+          GROUP BY ct.contact_id
+          HAVING count(*) = cardinality($12::uuid[])
+      )
+  )
+  AND (
+      $13::text = ''
+      OR c.search @@ to_tsquery('simple', $14::text)
+      OR c.name ILIKE '%' || $13::text || '%'
+      OR c.email ILIKE $13::text || '%'
   )
 ORDER BY
-    CASE WHEN $8::text = 'name' THEN lower(name) END,
-    CASE WHEN $8::text = 'created_at' THEN created_at END DESC,
-    CASE WHEN $8::text = 'last_seen_at' THEN coalesce(last_seen_at, created_at) END DESC,
-    id DESC
-LIMIT $10::bigint OFFSET $9::bigint
+    CASE WHEN $15::text = 'name' THEN lower(c.name) END,
+    CASE WHEN $15::text = 'created_at' THEN c.created_at END DESC,
+    CASE WHEN $15::text = 'last_seen_at' THEN coalesce(c.last_seen_at, c.created_at) END DESC,
+    c.id DESC
+LIMIT $17::bigint OFFSET $16::bigint
 `
 
 type ListContactsParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	Kind        *string  `json:"kind"`
-	Email       *string  `json:"email"`
-	ExternalID  *string  `json:"external_id"`
-	Blocked     *bool    `json:"blocked"`
-	Search      string   `json:"search"`
-	Terms       string   `json:"terms"`
-	Sort        string   `json:"sort"`
-	RowOffset   int64    `json:"row_offset"`
-	RowLimit    int64    `json:"row_limit"`
+	WorkspaceID    ids.UUID        `json:"workspace_id"`
+	Kind           *string         `json:"kind"`
+	Email          *string         `json:"email"`
+	ExternalID     *string         `json:"external_id"`
+	Blocked        *bool           `json:"blocked"`
+	CompanyID      *ids.UUID       `json:"company_id"`
+	LastSeenAfter  *time.Time      `json:"last_seen_after"`
+	LastSeenBefore *time.Time      `json:"last_seen_before"`
+	CreatedAfter   *time.Time      `json:"created_after"`
+	CreatedBefore  *time.Time      `json:"created_before"`
+	Custom         json.RawMessage `json:"custom"`
+	TagIds         []ids.UUID      `json:"tag_ids"`
+	Search         string          `json:"search"`
+	Terms          string          `json:"terms"`
+	Sort           string          `json:"sort"`
+	RowOffset      int64           `json:"row_offset"`
+	RowLimit       int64           `json:"row_limit"`
 }
 
 // ListContacts returns a page of the workspace's live contacts that were
-// not merged away, narrowed by kind, email, external id, blocked state
-// and a search of names, emails, phones and external ids, most recently
-// seen first, newest first or by name.
+// not merged away, narrowed by kind, email, external id, blocked state,
+// company, tags, when they were last seen or added, custom attributes and
+// a search of names, emails, phones and external ids, most recently seen
+// first, newest first or by name.
 func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]Contact, error) {
 	rows, err := q.db.Query(ctx, listContacts,
 		arg.WorkspaceID,
@@ -165,6 +376,13 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]C
 		arg.Email,
 		arg.ExternalID,
 		arg.Blocked,
+		arg.CompanyID,
+		arg.LastSeenAfter,
+		arg.LastSeenBefore,
+		arg.CreatedAfter,
+		arg.CreatedBefore,
+		arg.Custom,
+		arg.TagIds,
 		arg.Search,
 		arg.Terms,
 		arg.Sort,
@@ -202,6 +420,75 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]C
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Notes,
+			&i.Placeholder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUnverifiedEmailLeads = `-- name: ListUnverifiedEmailLeads :many
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
+WHERE workspace_id = $1
+  AND email = $2
+  AND id <> $3
+  AND kind = 'lead'
+  AND NOT email_verified
+  AND merged_into_id IS NULL
+  AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 20
+`
+
+type ListUnverifiedEmailLeadsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Email       *string  `json:"email"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ListUnverifiedEmailLeads returns live leads who only typed the address,
+// never chosen by an upsert and offered for a manual merge instead.
+func (q *Queries) ListUnverifiedEmailLeads(ctx context.Context, arg ListUnverifiedEmailLeadsParams) ([]Contact, error) {
+	rows, err := q.db.Query(ctx, listUnverifiedEmailLeads, arg.WorkspaceID, arg.Email, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Contact
+	for rows.Next() {
+		var i Contact
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Kind,
+			&i.ExternalID,
+			&i.Email,
+			&i.EmailVerified,
+			&i.Name,
+			&i.Phone,
+			&i.AvatarUrl,
+			&i.CompanyID,
+			&i.CustomAttributes,
+			&i.TrustedAttributeKeys,
+			&i.Locale,
+			&i.Timezone,
+			&i.Location,
+			&i.FirstSeenAt,
+			&i.LastSeenAt,
+			&i.BlockedAt,
+			&i.MergedIntoID,
+			&i.Search,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Notes,
+			&i.Placeholder,
 		); err != nil {
 			return nil, err
 		}
@@ -214,7 +501,7 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]C
 }
 
 const lockContact = `-- name: LockContact :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockContactParams struct {
@@ -251,17 +538,37 @@ func (q *Queries) LockContact(ctx context.Context, arg LockContactParams) (Conta
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
+}
+
+const softDeleteContact = `-- name: SoftDeleteContact :exec
+UPDATE contacts SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3
+`
+
+type SoftDeleteContactParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// SoftDeleteContact hides a contact.
+func (q *Queries) SoftDeleteContact(ctx context.Context, arg SoftDeleteContactParams) error {
+	_, err := q.db.Exec(ctx, softDeleteContact, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const updateContact = `-- name: UpdateContact :one
 UPDATE contacts
 SET kind = $1, external_id = $2, email = $3, name = $4,
     phone = $5, custom_attributes = $6,
-    trusted_attribute_keys = $7, blocked_at = $8, updated_at = $9
-WHERE workspace_id = $10 AND id = $11
-RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at
+    trusted_attribute_keys = $7, blocked_at = $8,
+    notes = $9, company_id = $10, email_verified = $11, updated_at = $12
+WHERE workspace_id = $13 AND id = $14
+RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder
 `
 
 type UpdateContactParams struct {
@@ -273,6 +580,9 @@ type UpdateContactParams struct {
 	CustomAttributes     json.RawMessage `json:"custom_attributes"`
 	TrustedAttributeKeys []string        `json:"trusted_attribute_keys"`
 	BlockedAt            *time.Time      `json:"blocked_at"`
+	Notes                *string         `json:"notes"`
+	CompanyID            *ids.UUID       `json:"company_id"`
+	EmailVerified        bool            `json:"email_verified"`
 	Now                  time.Time       `json:"now"`
 	WorkspaceID          ids.UUID        `json:"workspace_id"`
 	ID                   ids.UUID        `json:"id"`
@@ -289,6 +599,9 @@ func (q *Queries) UpdateContact(ctx context.Context, arg UpdateContactParams) (C
 		arg.CustomAttributes,
 		arg.TrustedAttributeKeys,
 		arg.BlockedAt,
+		arg.Notes,
+		arg.CompanyID,
+		arg.EmailVerified,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -318,6 +631,8 @@ func (q *Queries) UpdateContact(ctx context.Context, arg UpdateContactParams) (C
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }

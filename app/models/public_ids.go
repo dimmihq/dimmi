@@ -72,6 +72,10 @@ const (
 	PrefixAttachment        Prefix = "att"
 	PrefixTag               Prefix = "tag"
 	PrefixSavedReply        Prefix = "rpl"
+	PrefixContactIdentity   Prefix = "cid"
+	PrefixRedactionRule     Prefix = "rxr"
+	PrefixContactErasure    Prefix = "ces"
+	PrefixContactExport     Prefix = "exp"
 	PrefixConversationView  Prefix = "cvw"
 	PrefixDraft             Prefix = "drf"
 )
@@ -140,6 +144,9 @@ func accountPublicIDs() []PublicIDEntry {
 		{PrefixOrganization, "organizations"},
 		{PrefixMember, "workspace_members"},
 		{PrefixTeam, "teams"},
+		{PrefixRole, "roles"},
+		{PrefixSSOConnection, "sso_connections"},
+		{PrefixOrganizationDomain, "organization_domains"},
 		{PrefixInvitation, "invitations"},
 		{PrefixSession, "sessions"},
 		{PrefixPersonalToken, "personal_access_tokens"},
@@ -171,9 +178,12 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixAttachment, "attachments"},
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
+		{PrefixContactIdentity, "contact_identities"},
+		{PrefixRedactionRule, "redaction_rules"},
+		{PrefixContactErasure, "contact_erasures"},
 		{PrefixConversationView, "conversation_views"},
 		{PrefixDraft, "conversation_drafts"},
-		{"exp", "contact_exports"},
+		{PrefixContactExport, "contact_exports"},
 		{"evt", "events"},
 	}
 }
@@ -342,9 +352,6 @@ yet, so no other table takes them in the meantime.
 func reservedPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixWorkspaceDomain, "reserved: workspace_domains"},
-		{PrefixSSOConnection, "reserved: sso_connections"},
-		{PrefixOrganizationDomain, "reserved: organization_domains"},
-		{PrefixRole, "reserved: roles"},
 		{"brd", "reserved: brands"},
 		{"lgh", "reserved: legal_holds"},
 		{"ains", "reserved: app_installations"},

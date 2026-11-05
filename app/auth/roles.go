@@ -54,6 +54,7 @@ func memberPermissions() []string {
 		"identity:read", "email:read", "email_signatures:manage_own", "help_centers:read_settings",
 		"knowledge:sync", "github:read", "ai:read", "ai:write", "ai_actions:read", "ai_action_calls:approve",
 		"changelog:read", "changelog:write", "feedback:read", "feedback:write", "engage:read", "engage:write",
+		"conversations:assign", "conversations:merge",
 	}
 }
 
@@ -74,7 +75,10 @@ func adminPermissions() []string {
 		"help_centers:manage", "knowledge:manage", "github:manage", "docs_sync:manage", "oauth_grants:manage_any",
 		"agent_access:manage", "feedback:delete", "feedback:manage", "engage:manage", "imports:read",
 		"imports:manage", "imports:rollback", "webhooks:read", "webhooks:write", "billing:read", "billing:write",
+		"security_policy:manage", "roles:manage",
+		"conversations:export", "conversations:manage_notes", "contacts:export",
 		"members:reset_two_factor", "members:import",
+		"redaction:manage",
 	}
 }
 
@@ -86,7 +90,7 @@ func ownerPermissions() []string {
 	return []string{
 		"workspace:delete", "members:manage_owners", "email:rotate_dkim", "email:resume_sending",
 		"email_suppressions:lift_complaint", "help_centers:delete", "billing:cap_unrestricted", "exports:read",
-		"exports:write",
+		"exports:write", "sso:manage", "scim:manage",
 	}
 }
 
@@ -134,4 +138,13 @@ over, and the role a deactivated owner comes back with.
 */
 func ManagerRole() enums.Role {
 	return enums.RoleAdmin
+}
+
+/*
+RoleChanged reports whether a member's built-in role differs before and
+after a change, so the change can be announced. It decides nothing about
+what either role may do.
+*/
+func RoleChanged(from, to string) bool {
+	return from != to
 }

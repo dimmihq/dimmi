@@ -98,6 +98,10 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 		Errors:      fa.Errors,
 	})
 
+	if p.App.AccessPolicy == nil {
+		p.App.AccessPolicy = appauth.DefaultAccessPolicy(fa.Clock)
+	}
+
 	p.registerGuards(fa)
 
 	return nil

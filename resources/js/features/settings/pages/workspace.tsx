@@ -20,6 +20,7 @@ import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { ApiError } from "@/lib/api/client";
+import { type Role, rolesQuery } from "@/lib/api/roles";
 import {
   callerQuery,
   confirmPassword,
@@ -188,9 +189,13 @@ interface Pending {
 
 /*
  * Powers is what the caller may do to members: change members and
- * admins (write), change owners (owners), and help them back in (reset).
+ * admins (write), change owners (owners), help them back in (reset),
+ * and give the custom roles listed (roles, empty without roles:manage).
  */
-type Powers = HelpPowers & { access: boolean };
+interface Powers extends HelpPowers {
+  roles: Role[];
+  access: boolean;
+}
 
 /*
  * canSetAccess reports whether the caller may choose which conversations
@@ -254,6 +259,39 @@ function roleOffers(member: Member, powers: Powers): Pending[] {
 }
 
 /*
+ * customRoleOffers lists the custom roles the caller may give a member
+ * who is not an owner nor the caller, and taking theirs away.
+ */
+function customRoleOffers(member: Member, powers: Powers): Pending[] {
+  if (member.role === "owner" || member.id === powers.self) {
+    return [];
+  }
+
+  const name = member.user.name;
+  const list: Pending[] = powers.roles
+    .filter((role) => role.id !== null && role.id !== member.custom_role?.id)
+    .map((role) => ({
+      title: `Give ${name} the ${role.name} role`,
+      description: `${name} can do exactly what ${role.name} allows.`,
+      confirm: `Make ${role.name}`,
+      member,
+      changes: { custom_role_id: role.id },
+    }));
+
+  if (member.custom_role && powers.roles.length > 0) {
+    list.push({
+      title: `Take ${member.custom_role.name} from ${name}`,
+      description: `${name} keeps everything their ${member.role} role allows.`,
+      confirm: `Remove ${member.custom_role.name}`,
+      member,
+      changes: { custom_role_id: null },
+    });
+  }
+
+  return list;
+}
+
+/*
  * offers lists what the caller may do to a member, as menu entries,
  * from the permissions they hold.
  */
@@ -274,7 +312,7 @@ function offers(member: Member, powers: Powers): Pending[] {
       : [];
   }
 
-  const list = roleOffers(member, powers);
+  const list = [...roleOffers(member, powers), ...customRoleOffers(member, powers)];
   if (member.id !== powers.self && canManage(member, powers)) {
     list.push({
       title: `Deactivate ${name}`,
@@ -318,7 +356,7 @@ function Person({
       <LastActive member={member} timeZone={timeZone} />
       <TwoFactorMark member={member} />
       <Chip variant="caption" color={member.role === "owner" ? "blue" : "neutral"}>
-        {roleLabel(member.role)}
+        {member.custom_role?.name ?? roleLabel(member.role)}
       </Chip>
       {choices.length + helps.length > 0 || access ? (
         <Dropdown>
@@ -407,6 +445,7 @@ export function MembersSettings() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<FilterKey>(filterKeyFrom(useSearch({ strict: false })));
   const { data: caller } = useQuery(callerQuery(workspace));
+  const { data: roles = [] } = useQuery(rolesQuery(workspace));
   const manages = caller?.member?.permissions.includes("members:write") ?? false;
   const filter = manages ? filterFor(view) : {};
   const { data: members = [] } = useQuery({ ...membersQuery(workspace, filter), enabled: caller !== undefined });
@@ -422,6 +461,7 @@ export function MembersSettings() {
     self,
     write: permissions.includes("members:write"),
     owners: permissions.includes("members:manage_owners"),
+    roles: permissions.includes("roles:manage") ? roles.filter((role) => role.kind === "custom") : [],
     reset: permissions.includes("members:reset_two_factor"),
     access: permissions.includes("members:manage_access"),
   };

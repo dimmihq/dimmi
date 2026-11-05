@@ -21,9 +21,24 @@ permissions:
   contents: read
 
 jobs:
+  # Each check is its own job, so they run side by side and each shows its
+  # own result.
   check:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: lint and types, target: lint, tools: true }
+          - { name: go tests, target: test-go, services: true }
+          - { name: go tests as the application role, target: test-app-role, services: true }
+          - { name: go tests in the cloud edition, target: test-cloud, services: true }
+          - { name: timing, target: test-timing, services: true }
+          - { name: browser unit tests, target: test-web }
+          - { name: dev build tests, target: test-dev, services: true }
+          - { name: infrastructure, target: infra-check }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
@@ -35,11 +50,11 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: make tools
-      - run: make services
-      - run: make lint
-      - run: make test
-      - run: make infra-check
+      - if: matrix.tools
+        run: make tools
+      - if: matrix.services
+        run: make services
+      - run: make ${{ matrix.target }}
 
   e2e:
     runs-on: ubuntu-24.04

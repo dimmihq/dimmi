@@ -89,7 +89,10 @@ func API(a *app.App) {
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
+		identityRoutes(api, a)
+		roleRoutes(api, a)
 		accountRoutes(api, a)
+		api.Group("", func(records *routing.Router) { recordRoutes(records, a) })
 		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 		signInHelpRoutes(api, a)
 	})
@@ -157,6 +160,7 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
 	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).Ability("conversations:write")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
+	routing.Patch(workspace, "/members", "members.update-many", c.members.UpdateMany).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read").
 		Use(c.auditLogs.ServeCSV)
 	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
@@ -305,7 +309,7 @@ func workspaceControllers(a *app.App, c *controllers, cursors *pagination.Cursor
 	c.entitlements = &v1.WorkspaceEntitlementController{Entitlements: a.Entitlements, Limits: a.Config.API.Limits}
 	c.members = &v1.MemberController{
 		ListMembers: acts.ListMembers, ShowMember: acts.ShowMember, UpdateMember: acts.UpdateMember, IDs: a.IDs,
-		AccessTeams: acts.ListAccessTeams,
+		AccessTeams: acts.ListAccessTeams, AssignRole: acts.AssignRole, RoleNames: acts.RoleNames,
 		MemberTeams: acts.ListMemberTeams, Cursors: cursors, Lockout: a.Lockout, Export: acts.ExportMembers,
 		Errors: a.Errors,
 	}

@@ -33,13 +33,6 @@ type ContactBody struct {
 }
 
 /*
-StoreContactRequest is the input of POST /contacts.
-*/
-type StoreContactRequest struct {
-	Body ContactBody
-}
-
-/*
 UpdateContactRequest is the input of PATCH /contacts/{contact}.
 */
 type UpdateContactRequest struct {
@@ -47,7 +40,11 @@ type UpdateContactRequest struct {
 	Body    struct {
 		ContactBody
 
-		Blocked *bool `json:"blocked,omitempty"`
+		Blocked    *bool    `json:"blocked,omitempty"`
+		Notes      *string  `json:"notes,omitempty"       validate:"omitempty,max=10000"`
+		CompanyID  *string  `json:"company_id,omitempty"`
+		AddTags    []string `json:"add_tags,omitempty"    validate:"omitempty,max=50,dive,min=1,max=100"`
+		RemoveTags []string `json:"remove_tags,omitempty" validate:"omitempty,max=50"`
 	}
 	RawBody []byte
 }

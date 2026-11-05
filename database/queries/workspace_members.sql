@@ -80,8 +80,9 @@ SELECT * FROM workspace_members WHERE workspace_id = @workspace_id AND id = @id 
 SELECT count(*) FROM workspace_members WHERE workspace_id = @workspace_id AND role = 'owner' AND status = 'active';
 
 -- name: UpdateWorkspaceMemberRole :one
--- UpdateWorkspaceMemberRole gives the member a new role.
-UPDATE workspace_members SET role = @role, updated_at = @now
+-- UpdateWorkspaceMemberRole gives the member a new built-in role, which
+-- takes the place of any custom role they held.
+UPDATE workspace_members SET role = @role, custom_role_id = NULL, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

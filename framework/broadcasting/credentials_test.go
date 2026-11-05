@@ -139,4 +139,27 @@ func TestCredentialChecks(t *testing.T) {
 		assert.Nil(t, c.subscribe("room:1", "", 0).Error)
 		assert.Contains(t, n.logs.String(), "check realtime credential")
 	})
+
+	t.Run("drops a channel that stops letting the connection listen and keeps the connection", func(t *testing.T) {
+		t.Parallel()
+		state := &atomic.Int32{}
+		allowed := &atomic.Bool{}
+		allowed.Store(true)
+		n := nodeWith(t, testkit.NewValkey(t), broadcasting.Config{
+			Resolve: credentialResolver(state), Recheck: time.Second,
+		})
+		n.server.Channels().MustAuthorize("gated:{id}", broadcasting.ChannelOptions{},
+			func(context.Context, broadcasting.Principal, map[string]string) (bool, error) {
+				return allowed.Load(), nil
+			})
+		c := connect(t, n, "u1/laptop")
+		require.Nil(t, c.subscribe("gated:1", "", 0).Error)
+
+		allowed.Store(false)
+
+		dropped := c.push()
+		assert.Equal(t, "gated:1", dropped.Channel)
+		assert.NotNil(t, dropped.Unsub)
+		assert.Nil(t, c.subscribe("room:2", "", 0).Error)
+	})
 }

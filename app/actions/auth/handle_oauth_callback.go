@@ -156,6 +156,7 @@ func (a *HandleOAuthCallback) Handle(ctx context.Context, in OAuthCallbackInput)
 
 	signedIn, err := a.CompletePrimaryAuth.Handle(ctx, CompletePrimaryAuthInput{
 		User: user, Method: in.Identity.Provider, Client: in.Client, Reauth: reauth,
+		Context: SignInContext{Domain: in.Identity.HostedDomain},
 	})
 	if err != nil {
 		return OAuthCallbackResult{}, err

@@ -220,6 +220,7 @@ export function ConversationView({
         entries={timeline.entries}
         customer={customer}
         channel={conversation.channel.name}
+        channelType={conversation.channel.type}
         onSend={async (mode, text, then) => {
           const sent = await timeline.send(mode, text, then);
           if (then) {

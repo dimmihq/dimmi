@@ -4,11 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | A caller's power in a workspace is computed on every request, never
-| stored: the permissions of their role, and for a token only those
-| whose ability group the token holds and that the role it was minted
-| under held. Demoting a member therefore shrinks every token they
-| minted at once, a token can never do more than its member, and a
-| promotion never widens a token minted before it.
+| stored: the permissions of their role, narrowed to what their custom
+| role lists when they hold one, and for a token only those whose
+| ability group the token holds and that the role it was minted under
+| held. Demoting a member or editing their custom role therefore shrinks
+| every token they minted at once, a token can never do more than its
+| member, and a promotion never widens a token minted before it.
 |
 */
 
@@ -39,14 +40,39 @@ func Can(p Principal, permission string) bool {
 }
 
 /*
-EffectivePermissions returns what a member of the role may do through a
-credential with the abilities, sorted. Sessions and the user's own apps
-carry every ability, so they get the role's permissions as they are.
+alwaysHeld is the permission every member keeps, whatever their custom
+role says: the app cannot even list the people it works with without it.
 */
-func EffectivePermissions(catalog *auth.Catalog, role enums.Role, abilities []string) []string {
+const alwaysHeld = "members:read"
+
+/*
+HeldPermissions returns what a member of the role holds before any
+credential narrows it, sorted. Custom is what the member's custom role
+lists, nil when they hold none; it only ever narrows the role, so a key
+the role does not hold, such as one left over from an older catalog, is
+ignored.
+*/
+func HeldPermissions(role enums.Role, custom []string) []string {
+	held := auth.RolePermissions(role)
+	if custom == nil {
+		return held
+	}
+
+	return slices.DeleteFunc(held, func(permission string) bool {
+		return permission != alwaysHeld && !slices.Contains(custom, permission)
+	})
+}
+
+/*
+EffectivePermissions returns what a member of the role, narrowed to the
+custom set when there is one, may do through a credential with the
+abilities, sorted. Sessions and the user's own apps carry every ability,
+so they get the member's permissions as they are.
+*/
+func EffectivePermissions(catalog *auth.Catalog, role enums.Role, custom, abilities []string) []string {
 	groups := auth.ExpandAbilities(abilities)
 
-	return slices.DeleteFunc(auth.RolePermissions(role), func(permission string) bool {
+	return slices.DeleteFunc(HeldPermissions(role, custom), func(permission string) bool {
 		group, ok := catalog.Group(permission)
 
 		return !ok || !slices.Contains(groups, group)
@@ -55,11 +81,12 @@ func EffectivePermissions(catalog *auth.Catalog, role enums.Role, abilities []st
 
 /*
 PrincipalPermissions returns what the caller may do as a member of the
-role: [EffectivePermissions] for their credential, and for a token only
-what the role it was minted under held as well.
+role, narrowed to the custom set when there is one: [EffectivePermissions]
+for their credential, and for a token only what the role it was minted
+under held as well.
 */
-func PrincipalPermissions(catalog *auth.Catalog, role enums.Role, p *auth.Principal) []string {
-	held := EffectivePermissions(catalog, role, p.Granted)
+func PrincipalPermissions(catalog *auth.Catalog, role enums.Role, custom []string, p *auth.Principal) []string {
+	held := EffectivePermissions(catalog, role, custom, p.Granted)
 	if p.MintedAsRole == "" {
 		return held
 	}

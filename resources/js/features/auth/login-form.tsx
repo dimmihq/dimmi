@@ -24,10 +24,11 @@ export interface LoginFormProps {
   config: AuthConfig;
   redirect: string;
   initialError?: string | null;
+  reauth?: boolean;
   onSignedIn: (result: SignInResult) => void;
 }
 
-export function LoginForm({ config, redirect, initialError, onSignedIn }: LoginFormProps) {
+export function LoginForm({ config, redirect, initialError, reauth, onSignedIn }: LoginFormProps) {
   const [mailedTo, setMailedTo] = useState<string | null>(null);
 
   if (mailedTo) {
@@ -46,6 +47,7 @@ export function LoginForm({ config, redirect, initialError, onSignedIn }: LoginF
       config={config}
       redirect={redirect}
       initialError={initialError}
+      reauth={reauth}
       onSignedIn={onSignedIn}
       onMailed={setMailedTo}
     />
@@ -56,6 +58,7 @@ function PasswordStep({
   config,
   redirect,
   initialError,
+  reauth,
   onSignedIn,
   onMailed,
 }: LoginFormProps & { onMailed: (email: string) => void }) {
@@ -63,7 +66,7 @@ function PasswordStep({
   const [token, setToken] = useState<string | null>(null);
   const [round, setRound] = useState(0);
   const login = useMutation({
-    mutationFn: (form: FormData) => signIn(field(form, "email"), field(form, "password")),
+    mutationFn: (form: FormData) => signIn(field(form, "email"), field(form, "password"), reauth),
     onSuccess: onSignedIn,
   });
   const link = useMutation({
@@ -87,7 +90,7 @@ function PasswordStep({
 
   return (
     <AuthCard>
-      <AuthHeader title="Log in to dimmi" />
+      <AuthHeader title={reauth ? "Sign in again" : "Log in to dimmi"} />
       {initialError ? (
         <Notification status="error" title={initialError} dismissible={false} role="alert" className="mt-6 w-full" />
       ) : null}
@@ -96,6 +99,7 @@ function PasswordStep({
         redirect={redirect}
         action="Continue with"
         emailLabel="or sign in with email"
+        reauth={reauth}
       />
       <form
         onSubmit={submit}

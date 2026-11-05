@@ -90,6 +90,19 @@ export function verifyEmail(email: string) {
 }
 
 /*
+ * ageSessions moves every session of the person with the email back by
+ * the minutes, as if they signed in and last worked that long ago.
+ */
+export function ageSessions(email: string, minutes: number) {
+  psql(
+    `UPDATE sessions SET authenticated_at = authenticated_at - make_interval(mins => :'minutes'::int),
+       data = data - 'worked_at'
+     WHERE user_id = (SELECT id FROM users WHERE email = :'email')`,
+    { email, minutes: String(minutes) },
+  );
+}
+
+/*
  * markTwoFactorOn marks the person's account as protected by a second
  * factor, as a person who then lost their phone would have it.
  */

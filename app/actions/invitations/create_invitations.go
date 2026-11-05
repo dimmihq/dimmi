@@ -63,12 +63,14 @@ const (
 
 /*
 Invitee is one address to invite, with the role and the teams to join
-on accepting.
+on accepting. CustomRoleID names the custom role they start with, nil
+for none; its base role then takes the place of Role.
 */
 type Invitee struct {
-	Email   string
-	Role    enums.Role
-	TeamIDs []ids.UUID
+	Email        string
+	Role         enums.Role
+	TeamIDs      []ids.UUID
+	CustomRoleID *ids.UUID
 }
 
 /*
@@ -106,6 +108,8 @@ Rules:
   - A pending invitation to the address is sent again with a fresh link,
     the role and the teams given.
   - Only teams that exist are kept.
+  - A custom role takes roles:manage, must exist, and may hold only what
+    the caller holds; the invitee then starts in its base role.
 
 Events: [appevents.InvitationCreated] for each new invitation.
 
@@ -210,9 +214,20 @@ func (a *CreateInvitations) invite(
 
 	invitee.Email, invitee.TeamIDs = email, teams
 
+	if invitee.Role, err = offeredRole(ctx, q, in.Membership, invitee); err != nil {
+		return Outcome{}, err
+	}
+
 	sent, resent, err := a.store(ctx, tx, in, invitee)
 	if err != nil {
 		return Outcome{}, err
+	}
+
+	err = q.SetInvitationCustomRole(ctx, models.SetInvitationCustomRoleParams{
+		WorkspaceID: workspace.ID, ID: sent.Invitation.ID, CustomRoleID: invitee.CustomRoleID,
+	})
+	if err != nil {
+		return Outcome{}, fmt.Errorf("offer custom role: %w", err)
 	}
 
 	if resent {

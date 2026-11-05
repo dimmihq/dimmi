@@ -89,5 +89,6 @@
   "alphanum": "The {{.field}} field must only contain letters and numbers.",
   "email": "The {{.field}} field must be a valid email address.",
   "url": "The {{.field}} field must be a valid URL.",
-  "uuid": "The {{.field}} field must be a valid UUID."
+  "uuid": "The {{.field}} field must be a valid UUID.",
+  "hexcolor": "The {{.field}} field must be a color like #f59e0b."
 }
