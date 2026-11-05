@@ -22,7 +22,11 @@ func Icons() []string {
 		"price-tag-3", "bug", "bank-card", "chat-smile-2", "question", "user", "sparkling", "lightbulb",
 		"error-warning", "rocket", "shield-check", "settings-3", "truck", "shopping-cart", "refund-2", "lock",
 		"mail", "phone", "global", "code-s-slash", "book-open", "heart", "star", "fire", "flag", "time",
-		"calendar", "gift", "tools", "palette",
+		"calendar", "gift", "tools", "palette", "alarm-warning", "thumb-up", "thumb-down", "emotion-unhappy",
+		"emotion-happy", "customer-service-2", "team", "building", "briefcase", "money-dollar-circle", "coupon",
+		"file-text", "attachment", "image", "video", "smartphone", "computer", "database", "cloud", "key",
+		"download", "upload", "refresh", "search", "notification-3", "megaphone", "trophy", "plane", "map-pin",
+		"home", "graduation-cap", "flask", "hammer", "leaf", "cake-2", "handbag",
 	}
 }
 

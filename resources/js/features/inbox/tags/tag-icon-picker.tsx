@@ -2,8 +2,9 @@
  * Picks a tag's icon from the ones the server accepts, as one radio group:
  * arrows move between icons and the chosen one fills with the accent.
  */
-import { Label, Radio, RadioGroup } from "react-aria-components";
+import { Radio, RadioGroup } from "react-aria-components";
 
+import { Label } from "@/components/base/input/label";
 import { cx } from "@/utils/cx";
 import { tagIcons } from "./tag-icons";
 
@@ -14,7 +15,7 @@ function iconLabel(name: string): string {
 export function TagIconPicker({ value, onChange }: { value: string; onChange: (icon: string) => void }) {
   return (
     <RadioGroup value={value} onChange={onChange} orientation="horizontal" className="flex flex-col gap-1.5">
-      <Label className="text-body-2-medium text-text-primary">Icon</Label>
+      <Label>Icon</Label>
       <div className="flex flex-wrap gap-1">
         {Object.entries(tagIcons).map(([name, Icon]) => (
           <Radio

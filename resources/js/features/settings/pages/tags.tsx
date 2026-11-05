@@ -15,6 +15,8 @@ import { ColorWell } from "@/components/base/color-picker/color-picker";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
+import { TagColorPicker } from "@/features/inbox/tags/tag-color-picker";
+import { tagPalette } from "@/features/inbox/tags/tag-colors";
 import { TagIconPicker } from "@/features/inbox/tags/tag-icon-picker";
 import { createTag, deleteTag, type ListedTag, tagsQuery, updateTag } from "@/lib/api/tags";
 import { callerQuery } from "@/lib/api/workspace";
@@ -24,20 +26,7 @@ import { SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
-const swatches = [
-  "#2563eb",
-  "#16a34a",
-  "#dc2626",
-  "#9333ea",
-  "#ea580c",
-  "#0891b2",
-  "#db2777",
-  "#ca8a04",
-  "#4f46e5",
-  "#0d9488",
-  "#65a30d",
-  "#c026d3",
-];
+const swatches = tagPalette;
 
 function useTagWrites(workspace: string) {
   const queryClient = useQueryClient();
@@ -51,14 +40,58 @@ function countOf(tag: ListedTag): string {
   return count === 1 ? "1 conversation" : `${count} conversations`;
 }
 
-function NewTagDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+/*
+ * TagFields are what a tag is made of: its name, colour and icon, above a
+ * preview of the chip they make.
+ */
+function TagFields({
+  name,
+  color,
+  icon,
+  error,
+  onName,
+  onColor,
+  onIcon,
+}: {
+  name: string;
+  color: string;
+  icon: string;
+  error: Error | null;
+  onName: (name: string) => void;
+  onColor: (color: string) => void;
+  onIcon: (icon: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <Input
+        label="Tag name"
+        value={name}
+        onChange={onName}
+        isInvalid={error !== null}
+        errorMessage={failureText(error)}
+      />
+      <TagColorPicker value={color} onChange={onColor} />
+      <TagIconPicker value={icon} onChange={onIcon} />
+      <div className="flex items-center gap-2 text-body-2-regular text-text-tertiary">
+        Preview
+        <TagChip tag={{ id: "preview", object: "tag", name: name.trim() || "Tag", color, icon }} />
+      </div>
+    </div>
+  );
+}
+
+function NewTagDialog({ isOpen, onClose, suggested }: { isOpen: boolean; onClose: () => void; suggested: string }) {
   const workspace = useAccount().workspace.id;
   const refresh = useTagWrites(workspace);
   const [name, setName] = useState("");
+  const [color, setColor] = useState<string | null>(null);
+  const [icon, setIcon] = useState("price-tag-3");
   const create = useMutation({
-    mutationFn: () => createTag(workspace, name),
+    mutationFn: () => createTag(workspace, name, { color: color ?? suggested, icon }),
     onSuccess: async () => {
       setName("");
+      setColor(null);
+      setIcon("price-tag-3");
       await refresh();
     },
   });
@@ -80,12 +113,14 @@ function NewTagDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
       isConfirmDisabled={name.trim() === ""}
       onConfirm={() => create.mutateAsync()}
     >
-      <Input
-        label="Tag name"
-        value={name}
-        onChange={setName}
-        isInvalid={create.error !== null}
-        errorMessage={failureText(create.error)}
+      <TagFields
+        name={name}
+        color={color ?? suggested}
+        icon={icon}
+        error={create.error}
+        onName={setName}
+        onColor={setColor}
+        onIcon={setIcon}
       />
     </AlertDialog>
   );
@@ -95,10 +130,10 @@ function EditTagDialog({ tag, onClose }: { tag: ListedTag; onClose: () => void }
   const workspace = useAccount().workspace.id;
   const refresh = useTagWrites(workspace);
   const [name, setName] = useState(tag.name);
-  const [color, setColor] = useState(parseColor(tag.color ?? "#737373"));
+  const [color, setColor] = useState(tag.color ?? tagPalette[0]);
   const [icon, setIcon] = useState(tag.icon ?? "price-tag-3");
   const save = useMutation({
-    mutationFn: () => updateTag(workspace, tag.id, { name, icon, color: color.toString("hex").toLowerCase() }),
+    mutationFn: () => updateTag(workspace, tag.id, { name, icon, color }),
     onSuccess: refresh,
   });
 
@@ -117,27 +152,15 @@ function EditTagDialog({ tag, onClose }: { tag: ListedTag; onClose: () => void }
       isConfirmDisabled={name.trim() === ""}
       onConfirm={() => save.mutateAsync()}
     >
-      <div className="flex items-start gap-3">
-        <Input
-          label="Tag name"
-          className="min-w-0 flex-1"
-          value={name}
-          onChange={setName}
-          isInvalid={save.error !== null}
-          errorMessage={failureText(save.error)}
-        />
-        <div className="pt-7">
-          <ColorWell
-            aria-label="Tag colour"
-            value={color}
-            onChange={setColor}
-            swatches={swatches}
-            placement="bottom end"
-            wellClassName="size-5"
-          />
-        </div>
-      </div>
-      <TagIconPicker value={icon} onChange={setIcon} />
+      <TagFields
+        name={name}
+        color={color}
+        icon={icon}
+        error={save.error}
+        onName={setName}
+        onColor={setColor}
+        onIcon={setIcon}
+      />
     </AlertDialog>
   );
 }
@@ -276,7 +299,11 @@ export function TagsSettings() {
           ))}
         </ul>
       </section>
-      <NewTagDialog isOpen={creating} onClose={() => setCreating(false)} />
+      <NewTagDialog
+        isOpen={creating}
+        onClose={() => setCreating(false)}
+        suggested={tagPalette[(tags?.length ?? 0) % tagPalette.length] ?? "#2563eb"}
+      />
       {editing ? <EditTagDialog key={editing.id} tag={editing} onClose={() => setEditing(null)} /> : null}
       {deleting ? <DeleteTagDialog tag={deleting} onClose={() => setDeleting(null)} /> : null}
     </SettingsPage>

@@ -131,4 +131,23 @@ const tinted = [
 ].join(" ");
 const neutral = "bg-background-tertiary-default text-text-primary ring-1 ring-border-button-default ring-inset";
 
+/*
+ * tagPalette is the set of colours offered first, the same the server
+ * hands out to a tag created without one.
+ */
+export const tagPalette = [
+  "#2563eb",
+  "#16a34a",
+  "#dc2626",
+  "#9333ea",
+  "#ea580c",
+  "#0891b2",
+  "#db2777",
+  "#ca8a04",
+  "#4f46e5",
+  "#0d9488",
+  "#65a30d",
+  "#c026d3",
+];
+
 export const testing = { parse, mix, darkSurface, lightSurface };
