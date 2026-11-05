@@ -15,8 +15,8 @@ import (
 	"fmt"
 
 	"github.com/dimmihq/dimmi/app"
-	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	"github.com/dimmihq/dimmi/app/support/turnstile"
 	appconfig "github.com/dimmihq/dimmi/config"
 	"github.com/dimmihq/dimmi/resources/data"
