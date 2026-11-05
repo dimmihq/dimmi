@@ -111,6 +111,22 @@ it.describe("settings", () => {
     await expect(page.getByRole("textbox", { name: "Greeting" })).toHaveValue("Saved for real");
   });
 
+  it("keeps the page in its panel when a switch far down is toggled", async ({ page }) => {
+    await openMessenger(page);
+
+    await page.getByRole("switch", { name: "Feedback tab" }).scrollIntoViewIfNeeded();
+    await page
+      .locator("label")
+      .filter({ has: page.getByRole("switch", { name: "Anonymous visitors" }) })
+      .click();
+
+    await expect(page.getByRole("status").filter({ hasText: "Unsaved changes" })).toBeVisible();
+    const shifted = await page.evaluate(() =>
+      [...document.querySelectorAll("section[aria-label]")].some((panel) => panel.scrollTop > 0),
+    );
+    expect(shifted).toBe(false);
+  });
+
   it("narrows the connections by search", async ({ page }) => {
     await page.goto("/d/settings/connections");
     const apps = page.getByRole("region", { name: "Chat apps" });
