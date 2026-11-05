@@ -95,7 +95,7 @@ export function ErasuresPage() {
                       <Button
                         variant="secondary"
                         size="small"
-                        disabled={cancel.isPending}
+                        loading={cancel.isPending}
                         onClick={() => cancel.mutate(erasure.id)}
                       >
                         Cancel erasure

@@ -103,7 +103,7 @@ function Details({ contact }: { contact: Contact }) {
           isInvalid={"phone" in fields}
           errorMessage={fields.phone}
         />
-        <Button type="submit" size="small" className="self-start" disabled={!changed || write.isPending}>
+        <Button type="submit" size="small" className="self-start" loading={write.isPending} disabled={!changed}>
           Save
         </Button>
       </form>
@@ -157,7 +157,7 @@ function NewAttribute({ contact }: { contact: Contact }) {
           onChange={setKey}
         />
         <Input aria-label="Attribute value" size="small" placeholder="pro" value={value} onChange={setValue} />
-        <Button type="submit" variant="secondary" size="small" disabled={key.trim() === "" || write.isPending}>
+        <Button type="submit" variant="secondary" size="small" loading={write.isPending} disabled={key.trim() === ""}>
           Set
         </Button>
       </div>

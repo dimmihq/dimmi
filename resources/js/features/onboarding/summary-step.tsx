@@ -3,7 +3,7 @@
  * settings, and the way into the app. Finishing is saved before the app
  * opens, so the workspace never asks again.
  */
-import { RiArrowRightLine, RiCheckboxCircleFill, RiSubtractLine } from "@remixicon/react";
+import { RiArrowRightLine, RiCheckboxCircleFill, RiCheckboxCircleLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -15,7 +15,7 @@ import { updateOnboarding, workspaceQuery } from "@/lib/api/workspace";
 import { StepActions } from "./frame";
 
 function Row({ label, value }: { label: string; value: string | null }) {
-  const Icon = value ? RiCheckboxCircleFill : RiSubtractLine;
+  const Icon = value ? RiCheckboxCircleFill : RiCheckboxCircleLine;
 
   return (
     <li className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-background-secondary-default px-3 py-2.5">
@@ -69,12 +69,7 @@ export function SummaryStep({
         <Row label="Example conversations" value={practiced ? "5 conversations" : null} />
       </ul>
       <div className="mt-8">
-        <Button
-          size="small"
-          trailingIcon={RiArrowRightLine}
-          disabled={finish.isPending}
-          onClick={() => finish.mutate()}
-        >
+        <Button size="small" trailingIcon={RiArrowRightLine} loading={finish.isPending} onClick={() => finish.mutate()}>
           Go to your workspace
         </Button>
       </div>

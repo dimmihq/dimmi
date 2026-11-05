@@ -217,7 +217,7 @@ export function ViewEditor({
         ) : (
           <span />
         )}
-        <Button onClick={() => save.mutate()} disabled={name.trim() === "" || save.isPending}>
+        <Button onClick={() => save.mutate()} loading={save.isPending} disabled={name.trim() === ""}>
           Save view
         </Button>
       </DrawerFooter>

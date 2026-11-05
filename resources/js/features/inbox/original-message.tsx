@@ -128,7 +128,7 @@ export function OriginalMessage({
           <Button
             variant="secondary"
             leadingIcon={RiDownloadLine}
-            disabled={download.isPending}
+            loading={download.isPending}
             onClick={() => download.mutate()}
           >
             Download original

@@ -41,9 +41,13 @@ export function AvatarRow({ name, avatarUrl }: { name: string; avatarUrl: string
           upload.mutate(file);
         }}
       >
-        {upload.isPending ? "Uploading…" : "Upload"}
+        Upload
       </PicturePicker>
-      {avatarUrl ? <Action onPress={() => remove.mutate()}>Remove</Action> : null}
+      {avatarUrl ? (
+        <Action loading={remove.isPending} onPress={() => remove.mutate()}>
+          Remove
+        </Action>
+      ) : null}
     </Row>
   );
 }

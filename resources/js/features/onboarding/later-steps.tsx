@@ -40,10 +40,15 @@ export function LogoStep({ workspace, label, onNext, onBack }: StepProps) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <PicturePicker isPending={logo.upload.isPending} onPick={logo.pick} onTooLarge={logo.refuse}>
-              {logo.upload.isPending ? "Uploading…" : url ? "Replace logo" : "Upload logo"}
+              {url ? "Replace logo" : "Upload logo"}
             </PicturePicker>
             {url ? (
-              <Button variant="secondary" size="small" onClick={() => logo.remove.mutate()}>
+              <Button
+                variant="secondary"
+                size="small"
+                loading={logo.remove.isPending}
+                onClick={() => logo.remove.mutate()}
+              >
                 Remove
               </Button>
             ) : null}

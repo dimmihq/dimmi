@@ -165,7 +165,7 @@ export function RoleEditor({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={save.isPending || draft.name.trim() === ""}>
+          <Button type="submit" loading={save.isPending} disabled={draft.name.trim() === ""}>
             {role ? "Save role" : "Create role"}
           </Button>
         </ModalFooter>

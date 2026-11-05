@@ -118,17 +118,18 @@ function PasswordStep({
         <div className="flex justify-end">
           <LinkButton to="/forgot-password">Forgot password?</LinkButton>
         </div>
-        <Button type="submit" className="w-full" disabled={login.isPending}>
-          {login.isPending ? "Signing in…" : "Sign in"}
+        <Button type="submit" className="w-full" loading={login.isPending}>
+          Sign in
         </Button>
         {config.magic_link ? (
           <Button
             variant="secondary"
             className="w-full"
-            disabled={link.isPending || !email}
+            loading={link.isPending}
+            disabled={!email}
             onClick={() => link.mutate(email)}
           >
-            {link.isPending ? "Sending…" : "Email me a sign-in link"}
+            Email me a sign-in link
           </Button>
         ) : null}
       </form>
@@ -203,8 +204,8 @@ export function CodeStep({
             </HintText>
           ) : null}
         </div>
-        <Button type="submit" className="w-full" disabled={verify.isPending || code.length < 6}>
-          {verify.isPending ? "Signing in…" : "Sign in"}
+        <Button type="submit" className="w-full" loading={verify.isPending} disabled={code.length < 6}>
+          Sign in
         </Button>
       </form>
       <AuthFooter>

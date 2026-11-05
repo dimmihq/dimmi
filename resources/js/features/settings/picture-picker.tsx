@@ -44,7 +44,7 @@ export function PicturePicker({
           onPick(file);
         }}
       />
-      <Button variant="secondary" size="small" disabled={isPending} onClick={() => input.current?.click()}>
+      <Button variant="secondary" size="small" loading={isPending} onClick={() => input.current?.click()}>
         {children}
       </Button>
     </>

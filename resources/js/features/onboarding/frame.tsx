@@ -88,8 +88,6 @@ export function StepActions({
   onSkip?: () => void;
   onBack?: () => void;
 }) {
-  const buttonLabel = isPending ? "Saving…" : primaryLabel;
-
   return (
     <div className="mt-8 flex flex-col items-start gap-6">
       <div className="flex flex-wrap items-center gap-4">
@@ -98,7 +96,8 @@ export function StepActions({
             size="small"
             type="submit"
             trailingIcon={RiArrowRightLine}
-            disabled={isPending || isDisabled}
+            loading={isPending}
+            disabled={isDisabled}
             onClick={(event) => {
               if (event.currentTarget.form) {
                 return;
@@ -106,7 +105,7 @@ export function StepActions({
               primary();
             }}
           >
-            {buttonLabel}
+            {primaryLabel}
           </Button>
         ) : null}
         {onSkip && skipLabel ? (

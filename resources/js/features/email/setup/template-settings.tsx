@@ -103,7 +103,7 @@ export function TemplateSettings({ workspace, address }: { workspace: string; ad
               <Button
                 variant="secondary"
                 size="small"
-                disabled={save.isPending}
+                loading={save.isPending}
                 onClick={() => save.mutate({ footer_markdown: style.footer_markdown })}
               >
                 Save footer

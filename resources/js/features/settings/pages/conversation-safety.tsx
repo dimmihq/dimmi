@@ -295,7 +295,8 @@ function TryRules() {
           size="small"
           variant="secondary"
           className="self-start"
-          disabled={text.trim() === "" || attempt.isPending}
+          loading={attempt.isPending}
+          disabled={text.trim() === ""}
           onClick={() => attempt.mutate()}
         >
           Try

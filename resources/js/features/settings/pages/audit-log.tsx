@@ -245,7 +245,7 @@ export function AuditLogSettings() {
             size="small"
             leadingIcon={RiDownloadLine}
             className="ms-auto"
-            disabled={download.isPending}
+            loading={download.isPending}
             onClick={() => download.mutate()}
           >
             Export CSV

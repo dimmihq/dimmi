@@ -45,7 +45,7 @@ function AddDomain() {
           onChange={setDomain}
           className="w-56"
         />
-        <Button size="small" disabled={!domain.trim() || add.isPending} onClick={() => add.mutate()}>
+        <Button size="small" loading={add.isPending} disabled={!domain.trim()} onClick={() => add.mutate()}>
           Add domain
         </Button>
       </Row>

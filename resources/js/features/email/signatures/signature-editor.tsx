@@ -96,11 +96,11 @@ export function SignatureEditor({
         ) : null}
         <Failure error={preview.error ?? save.error ?? toggle.error ?? remove.error} />
         <div className="flex gap-2">
-          <Button size="small" disabled={save.isPending || body.trim() === ""} onClick={() => save.mutate()}>
+          <Button size="small" loading={save.isPending} disabled={body.trim() === ""} onClick={() => save.mutate()}>
             Save signature
           </Button>
           {signature ? (
-            <Button variant="secondary" size="small" disabled={remove.isPending} onClick={() => remove.mutate()}>
+            <Button variant="secondary" size="small" loading={remove.isPending} onClick={() => remove.mutate()}>
               Remove
             </Button>
           ) : null}

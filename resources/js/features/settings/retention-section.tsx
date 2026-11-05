@@ -85,7 +85,7 @@ function RetentionForm({ current, canManage }: { current: Retention; canManage: 
       ))}
       {save.error ? <p className="text-body-2-regular text-text-error-primary">{failureText(save.error)}</p> : null}
       {canManage ? (
-        <Button size="small" variant="secondary" className="self-start" disabled={save.isPending} onClick={submit}>
+        <Button size="small" variant="secondary" className="self-start" loading={save.isPending} onClick={submit}>
           Save retention
         </Button>
       ) : null}

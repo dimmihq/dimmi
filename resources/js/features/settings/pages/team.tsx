@@ -130,7 +130,8 @@ function TeamPage({ team, canManage }: { team: Team; canManage: boolean }) {
           action={
             <Button
               size="small"
-              disabled={name.trim() === "" || name === team.name || changes.rename.isPending}
+              loading={changes.rename.isPending}
+              disabled={name.trim() === "" || name === team.name}
               onClick={() => changes.rename.mutate(name)}
             >
               Save changes

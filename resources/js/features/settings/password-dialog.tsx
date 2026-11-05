@@ -146,9 +146,10 @@ function PasswordDialog({
             </Button>
             <Button
               type="submit"
-              disabled={password === "" || password !== again || (hasPassword && current === "") || save.isPending}
+              loading={save.isPending}
+              disabled={password === "" || password !== again || (hasPassword && current === "")}
             >
-              {save.isPending ? "Saving…" : "Save password"}
+              Save password
             </Button>
           </ModalFooter>
         </form>

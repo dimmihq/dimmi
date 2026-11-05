@@ -109,7 +109,7 @@ export function AddressCard({
               <Button
                 variant="secondary"
                 size="small"
-                disabled={change.isPending}
+                loading={change.isPending}
                 onClick={() => change.mutate({ is_default: true })}
               >
                 Make default
@@ -124,7 +124,7 @@ export function AddressCard({
                 : "Send a test email to your address to check the forward."
             }
           >
-            <Button variant="secondary" size="small" disabled={test.isPending} onClick={() => test.mutate()}>
+            <Button variant="secondary" size="small" loading={test.isPending} onClick={() => test.mutate()}>
               Send test email
             </Button>
           </Row>

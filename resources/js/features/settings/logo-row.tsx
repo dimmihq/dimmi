@@ -41,9 +41,13 @@ export function LogoRow({ workspace, url }: { workspace: string; url: string | n
     >
       <LogoMark url={url} />
       <PicturePicker isPending={logo.upload.isPending} onPick={logo.pick} onTooLarge={logo.refuse}>
-        {logo.upload.isPending ? "Uploading…" : "Upload"}
+        Upload
       </PicturePicker>
-      {url ? <Action onPress={() => logo.remove.mutate()}>Remove</Action> : null}
+      {url ? (
+        <Action loading={logo.remove.isPending} onPress={() => logo.remove.mutate()}>
+          Remove
+        </Action>
+      ) : null}
     </Row>
   );
 }

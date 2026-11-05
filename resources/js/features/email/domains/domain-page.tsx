@@ -137,7 +137,7 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
         title="Status"
         action={
           manage ? (
-            <Button size="small" disabled={changes.check.isPending} onClick={() => changes.check.mutate()}>
+            <Button size="small" loading={changes.check.isPending} onClick={() => changes.check.mutate()}>
               Check now
             </Button>
           ) : null
@@ -161,7 +161,7 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
               <Button
                 variant="secondary"
                 size="small"
-                disabled={changes.rotate.isPending}
+                loading={changes.rotate.isPending}
                 onClick={() => changes.rotate.mutate()}
               >
                 Rotate key

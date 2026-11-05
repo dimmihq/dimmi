@@ -361,7 +361,7 @@ function InboxPage({ inbox, canManage }: { inbox: Inbox; canManage: boolean }) {
               {failureText(save.error)}
             </p>
           ) : null}
-          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate()}>
+          <Button size="small" loading={save.isPending} disabled={!changed} onClick={() => save.mutate()}>
             Save changes
           </Button>
         </div>

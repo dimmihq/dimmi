@@ -27,6 +27,12 @@ it.describe("setting up a new workspace", () => {
 
     await expect(page.getByRole("heading", { name: "Connect a channel" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Messenger" })).toContainText("data-app-id=");
+    const email = page.getByRole("region", { name: "Email" });
+    await email.getByRole("textbox", { name: "Your support address" }).fill(`help@${person.email.split("@")[0]}.test`);
+    await email.getByRole("button", { name: "Add" }).click();
+    await expect(email.getByText(/\.help@inbound\.trydimmi\.com$/)).toBeVisible();
+    await expect(email.getByText("Waiting for the first email")).toBeVisible();
+    await expect(email.getByRole("button", { name: /^Copy / })).toBeVisible();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
 
     await page.getByRole("button", { name: "Billing" }).click();

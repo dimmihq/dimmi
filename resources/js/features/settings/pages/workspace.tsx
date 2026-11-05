@@ -116,7 +116,12 @@ export function WorkspaceSettings() {
       <Section
         title="General"
         action={
-          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate(draftChanges(draft))}>
+          <Button
+            size="small"
+            loading={save.isPending}
+            disabled={!changed}
+            onClick={() => save.mutate(draftChanges(draft))}
+          >
             Save changes
           </Button>
         }

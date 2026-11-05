@@ -67,7 +67,7 @@ function DomainLists({ settings, canManage }: { settings: LinkSafety; canManage:
           size="small"
           variant="secondary"
           className="self-start"
-          disabled={save.isPending}
+          loading={save.isPending}
           onClick={() => save.mutate({ allow_domains: lines(allow), block_domains: lines(block) })}
         >
           Save domains

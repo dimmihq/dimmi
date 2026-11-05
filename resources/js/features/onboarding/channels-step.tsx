@@ -2,11 +2,12 @@
  * The channels step: where customers reach the team. The messenger comes
  * first and is recommended, since a snippet on the team's site is the
  * quickest way to get a first conversation. Email takes the support
- * address and answers with the address to forward it to. Chat apps are
+ * address, then walks the team through forwarding it to the workspace's
+ * receiving address until the first email arrives. Chat apps are
  * listed as they are in settings, ready to connect.
  */
 import { RiCheckLine, RiFileCopyLine } from "@remixicon/react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -17,9 +18,10 @@ import { chatApps } from "@/features/settings/chat-apps";
 import { Action } from "@/features/settings/controls";
 import { Item, Logo } from "@/features/settings/layout";
 import { useCopy } from "@/features/settings/use-copy";
-import { createEmailAddress } from "@/lib/api/email";
+import { createEmailAddress, emailAddressesQuery } from "@/lib/api/email";
 import { installSnippet, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
+import { EmailForwarding } from "./email-forwarding";
 import { StepActions, StepHeader } from "./frame";
 import type { StepProps } from "./step-props";
 
@@ -90,8 +92,13 @@ function MessengerInstall({ workspace }: { workspace: string }) {
 }
 
 function EmailSetup({ workspace }: { workspace: string }) {
+  const queryClient = useQueryClient();
+  const { data: addresses } = useQuery(emailAddressesQuery(workspace));
   const [address, setAddress] = useState("");
-  const add = useMutation({ mutationFn: () => createEmailAddress(workspace, address) });
+  const add = useMutation({
+    mutationFn: () => createEmailAddress(workspace, address),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: emailAddressesQuery(workspace).queryKey }),
+  });
   const addressError = fieldError(add.error, "address", ["address"], "address");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -99,16 +106,9 @@ function EmailSetup({ workspace }: { workspace: string }) {
     add.mutate();
   };
 
-  if (add.data) {
-    return (
-      <p className="text-body-2-regular text-text-secondary">
-        Forward mail sent to <bdi dir="ltr">{add.data.address}</bdi> to{" "}
-        <bdi dir="ltr" className="font-mono text-text-primary">
-          {add.data.forwarding_address}
-        </bdi>
-        . Settings walk you through it for your mail provider.
-      </p>
-    );
+  const added = add.data ?? addresses?.find((a) => a.address !== a.forwarding_address);
+  if (added) {
+    return <EmailForwarding workspace={workspace} address={added} />;
   }
 
   return (
@@ -128,7 +128,7 @@ function EmailSetup({ workspace }: { workspace: string }) {
         isInvalid={Boolean(addressError)}
         errorMessage={addressError}
       />
-      <Button type="submit" variant="secondary" disabled={add.isPending || address.trim() === ""}>
+      <Button type="submit" variant="secondary" loading={add.isPending} disabled={address.trim() === ""}>
         Add
       </Button>
     </form>
