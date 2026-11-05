@@ -223,33 +223,41 @@ function SaidEntry({
       aria-label={note ? `Internal note from ${entry.author}` : `Message from ${entry.author}`}
       className={cx("group relative flex flex-col px-3", ours ? "items-end" : "items-start")}
     >
-      <div className={cx("absolute -top-3 z-10", ours ? "start-3" : "end-3")}>
-        <MessageActions
-          kind={kind}
-          customer={customer}
-          canEdit={note && mine && !editing}
-          canDelete={mine || moves.moderates}
-          onCopy={() => moves.link(entry.id)}
-          onEdit={() => setEditing(true)}
-          onDelete={() => moves.remove(entry.id)}
-        />
-      </div>
-      <div className={cx(bubbleClass(entry, editing), !editing && entry.text === "" && "hidden")}>
-        {editing ? (
-          <NoteEditor
-            text={entry.text}
-            onCancel={() => setEditing(false)}
-            onSave={async (body) => {
-              await moves.edit(entry.id, body);
-              setEditing(false);
-            }}
-          />
-        ) : (
-          <MessageBody text={entry.text} format={entry.format} fromCustomer={!ours} />
+      <div
+        className={cx(
+          "relative flex max-w-[min(520px,calc(100%-24px))] flex-col",
+          ours ? "items-end" : "items-start",
+          editing && "w-full",
         )}
-        {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
+      >
+        <div className={cx("absolute top-1/2 z-10 w-max -translate-y-1/2", ours ? "end-full me-2" : "start-full ms-2")}>
+          <MessageActions
+            kind={kind}
+            customer={customer}
+            canEdit={note && mine && !editing}
+            canDelete={mine || moves.moderates}
+            onCopy={() => moves.link(entry.id)}
+            onEdit={() => setEditing(true)}
+            onDelete={() => moves.remove(entry.id)}
+          />
+        </div>
+        <div className={cx(bubbleClass(entry, editing), "max-w-full", !editing && entry.text === "" && "hidden")}>
+          {editing ? (
+            <NoteEditor
+              text={entry.text}
+              onCancel={() => setEditing(false)}
+              onSave={async (body) => {
+                await moves.edit(entry.id, body);
+                setEditing(false);
+              }}
+            />
+          ) : (
+            <MessageBody text={entry.text} format={entry.format} fromCustomer={!ours} />
+          )}
+          {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
+        </div>
+        <MessageFiles files={entry.files} ours={ours} />
       </div>
-      <MessageFiles files={entry.files} ours={ours} />
       <Tag entry={entry} />
       <More entry={entry} onOpen={follow.onOpenOriginal} />
       <Undelivered entry={entry} onRetry={follow.onRetry} />
