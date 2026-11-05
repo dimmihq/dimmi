@@ -4,7 +4,7 @@
  * session does it load their conversations and open the stream; a first
  * visit costs the config and nothing else until the visitor writes.
  *
- * The views ask through events: "dimmi:open" to show a conversation, or a
+ * The views ask through events: "dimmi:converse" to show a conversation, or a
  * new one when none is named, and "dimmi:send" to send what the composer
  * holds. Answers land in the store, and only the parts of the panel that
  * changed are drawn again, so a half-written message, the scroll position

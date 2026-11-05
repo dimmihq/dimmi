@@ -179,7 +179,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
 
   const listen = () => {
     root.addEventListener("dimmi:connect", () => app.connect(root));
-    root.addEventListener("dimmi:open", (event) => {
+    root.addEventListener("dimmi:converse", (event) => {
       void live?.openConversation((event as CustomEvent<{ conversation?: string }>).detail?.conversation);
     });
     root.addEventListener("dimmi:send", (event) => {

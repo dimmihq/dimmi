@@ -143,7 +143,7 @@ describe("a connected messenger", () => {
     await settle();
     const root = shadow() as ShadowRoot;
 
-    root.dispatchEvent(new CustomEvent("dimmi:open", { detail: {} }));
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: {} }));
     root.dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Export fails", files: [] } }));
     expect(root.querySelector(".thread")?.textContent).toContain("Export fails");
 
@@ -153,6 +153,10 @@ describe("a connected messenger", () => {
 
     expect(sent).toHaveLength(1);
     expect(localStorage.getItem("dimmi:wgt_1:token")).toBe("dmi_ws_1");
+    expect(widget?.live?.open).toBe("conv_1");
+    const launcher = root.querySelector<HTMLButtonElement>(".launcher");
+    launcher?.click();
+    launcher?.click();
     expect(widget?.live?.open).toBe("conv_1");
     expect(widget?.live?.store.conversations.map((c) => c.id)).toEqual(["conv_1"]);
     expect(root.querySelector('.view[data-view="messages"] .loaded .list')?.textContent).toContain("#1");
@@ -196,7 +200,7 @@ describe("a connected messenger", () => {
     await settle();
     await settle();
     const root = shadow() as ShadowRoot;
-    root.dispatchEvent(new CustomEvent("dimmi:open", { detail: {} }));
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: {} }));
     root.dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Hello?", files: [] } }));
     for (let i = 0; i < 5; i++) {
       await settle();

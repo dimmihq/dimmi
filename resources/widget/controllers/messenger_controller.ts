@@ -20,7 +20,7 @@
  * draws its content as answers come, so it waits for none; a preview waits
  * the latency on the messenger's data-latency attribute, zero meaning at
  * once. Opening a conversation tells the connection which one, through a
- * "dimmi:open" event naming it, or none for a new one.
+ * "dimmi:converse" event naming it, or none for a new one.
  *
  * A message from the team lands in its thread straight away. Unless the
  * visitor is reading that conversation, it counts as unread: a badge on
@@ -135,7 +135,7 @@ export class MessengerController extends Controller {
     this.#unread(0);
     this.ignore();
     this.#push("conversation");
-    this.dispatch("open", { conversation: id?.startsWith("conv_") ? id : undefined });
+    this.dispatch("converse", { conversation: id?.startsWith("conv_") ? id : undefined });
     this.#latest();
   }
 
