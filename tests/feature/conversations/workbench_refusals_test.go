@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
@@ -24,7 +25,7 @@ func TestWorkbenchRefusals(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		acts := d.tc.App.Actions.Inbox
-		ctx := t.Context()
+		ctx := tenancy.With(t.Context(), d.tc.Workspace.Workspace.ID.String())
 		m := authz.NewMembership(d.tc.Workspace.Workspace, d.tc.Workspace.Owner, nil)
 		view := conversationviews.Fields{Name: new("View"), Definition: json.RawMessage(`{}`)}
 		saved := decode(t, d, models.PrefixConversationView,

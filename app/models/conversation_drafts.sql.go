@@ -317,19 +317,22 @@ func (q *Queries) MoveConversationDrafts(ctx context.Context, arg MoveConversati
 const purgeStaleDrafts = `-- name: PurgeStaleDrafts :execrows
 DELETE FROM conversation_drafts
 WHERE id IN (
-    SELECT d.id FROM conversation_drafts AS d WHERE d.updated_at < $1 ORDER BY d.updated_at LIMIT $2::bigint
+    SELECT d.id FROM conversation_drafts AS d
+    WHERE d.workspace_id = $1 AND d.updated_at < $2
+    ORDER BY d.updated_at LIMIT $3::bigint
 )
 `
 
 type PurgeStaleDraftsParams struct {
-	Cutoff time.Time `json:"cutoff"`
-	Batch  int64     `json:"batch"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Cutoff      time.Time `json:"cutoff"`
+	Batch       int64     `json:"batch"`
 }
 
-// PurgeStaleDrafts deletes up to a batch of drafts, of every workspace,
+// PurgeStaleDrafts deletes up to a batch of the workspace's drafts
 // untouched since the cutoff, oldest first.
 func (q *Queries) PurgeStaleDrafts(ctx context.Context, arg PurgeStaleDraftsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, purgeStaleDrafts, arg.Cutoff, arg.Batch)
+	result, err := q.db.Exec(ctx, purgeStaleDrafts, arg.WorkspaceID, arg.Cutoff, arg.Batch)
 	if err != nil {
 		return 0, err
 	}

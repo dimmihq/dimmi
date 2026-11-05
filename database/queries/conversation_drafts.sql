@@ -68,9 +68,11 @@ WHERE d.workspace_id = @workspace_id AND d.conversation_id = @source_id::uuid
 RETURNING d.*;
 
 -- name: PurgeStaleDrafts :execrows
--- PurgeStaleDrafts deletes up to a batch of drafts, of every workspace,
+-- PurgeStaleDrafts deletes up to a batch of the workspace's drafts
 -- untouched since the cutoff, oldest first.
 DELETE FROM conversation_drafts
 WHERE id IN (
-    SELECT d.id FROM conversation_drafts AS d WHERE d.updated_at < @cutoff ORDER BY d.updated_at LIMIT @batch::bigint
+    SELECT d.id FROM conversation_drafts AS d
+    WHERE d.workspace_id = @workspace_id AND d.updated_at < @cutoff
+    ORDER BY d.updated_at LIMIT @batch::bigint
 );
