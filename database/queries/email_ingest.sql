@@ -70,3 +70,11 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- name: FindEmailMessage :one
 -- FindEmailMessage returns the message with the id, deleted or not.
 SELECT * FROM messages WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: FindLatestContactConversationSpam :one
+-- FindLatestContactConversationSpam reports whether the contact's newest
+-- live conversation is set aside as spam.
+SELECT spam FROM conversations
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1;

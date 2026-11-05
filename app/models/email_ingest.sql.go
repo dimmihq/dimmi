@@ -220,6 +220,27 @@ func (q *Queries) FindEmailSenderMember(ctx context.Context, arg FindEmailSender
 	return i, err
 }
 
+const findLatestContactConversationSpam = `-- name: FindLatestContactConversationSpam :one
+SELECT spam FROM conversations
+WHERE workspace_id = $1 AND contact_id = $2 AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type FindLatestContactConversationSpamParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// FindLatestContactConversationSpam reports whether the contact's newest
+// live conversation is set aside as spam.
+func (q *Queries) FindLatestContactConversationSpam(ctx context.Context, arg FindLatestContactConversationSpamParams) (bool, error) {
+	row := q.db.QueryRow(ctx, findLatestContactConversationSpam, arg.WorkspaceID, arg.ContactID)
+	var spam bool
+	err := row.Scan(&spam)
+	return spam, err
+}
+
 const findLatestThreadConversation = `-- name: FindLatestThreadConversation :one
 SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority FROM conversations
 WHERE workspace_id = $1 AND channel_connection_id = $2
