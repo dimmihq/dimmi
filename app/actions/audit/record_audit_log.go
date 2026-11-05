@@ -73,6 +73,16 @@ const (
 	EventTwoFactorResetAsked   = "member.two_factor_reset_requested"
 	EventTwoFactorResetDone    = "member.two_factor_reset_completed"
 	EventSignInLockCleared     = "member.sign_in_lock_cleared"
+
+	EventRedactionRuleCreated     = "redaction_rule.created"
+	EventRedactionRuleUpdated     = "redaction_rule.updated"
+	EventRedactionRuleDeleted     = "redaction_rule.deleted"
+	EventRedactionSettingsUpdated = "redaction_settings.updated"
+
+	EventContactErasureRequested = "contact_erasure.requested"
+	EventContactErasureCanceled  = "contact_erasure.canceled"
+	EventContactErasureHeld      = "contact_erasure.held"
+	EventContactErasureCompleted = "contact_erasure.completed"
 )
 
 /*

@@ -201,6 +201,13 @@ export const settingsPages = {
     "/d/settings/saved-replies",
     "Answers your team sends often, with variables.",
   ),
+  "conversation-safety": page(
+    "settings-conversation-safety",
+    "Conversation safety",
+    RiShieldCheckLine,
+    "/d/settings/conversation-safety",
+    "Keep card numbers and other sensitive text out of conversations.",
+  ),
   messenger: page(
     "settings-messenger",
     "Messenger",
@@ -436,7 +443,11 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
       label: "Account",
       items: [pages.profile, pages.preferences, pages.security, pages.tokens],
     },
-    { key: "inbox", label: "Inbox", items: [pages.inboxes, pages.tags, pages["saved-replies"]] },
+    {
+      key: "inbox",
+      label: "Inbox",
+      items: [pages.inboxes, pages.tags, pages["saved-replies"], pages["conversation-safety"]],
+    },
     { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
     { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
     {

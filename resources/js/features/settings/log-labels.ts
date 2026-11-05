@@ -76,7 +76,19 @@ const groups: { id: string; events: string[] }[] = [
     ],
   },
   { id: "tokens", events: ["token.created", "token.revoked"] },
-  { id: "inbox", events: [] },
+  {
+    id: "inbox",
+    events: [
+      "redaction_rule.created",
+      "redaction_rule.updated",
+      "redaction_rule.deleted",
+      "redaction_settings.updated",
+      "contact_erasure.requested",
+      "contact_erasure.canceled",
+      "contact_erasure.held",
+      "contact_erasure.completed",
+    ],
+  },
   { id: "email", events: [] },
   { id: "export", events: ["audit_logs.exported", "members.exported"] },
 ];

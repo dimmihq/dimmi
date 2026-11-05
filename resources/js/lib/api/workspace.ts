@@ -6,6 +6,8 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
+import type { LinkSafety } from "@/features/inbox/links/link-checks";
+
 import { request, requestFile } from "./client";
 
 export interface Workspace {
@@ -16,6 +18,8 @@ export interface Workspace {
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  link_safety?: LinkSafety;
+  retention?: Retention;
   seen_receipt_shows_name: boolean;
   customer_facing_name: string | null;
   deleted_at: string | null;
@@ -78,6 +82,8 @@ export interface WorkspaceChanges {
   timezone?: string;
   locale?: string;
   require_two_factor?: boolean;
+  link_safety?: Partial<LinkSafety>;
+  retention?: Partial<Retention>;
   seen_receipt_shows_name?: boolean;
   customer_facing_name?: string | null;
 }
@@ -223,4 +229,16 @@ export function importMembers(workspace: string, file: File, dryRun: boolean): P
   form.append("dry_run", String(dryRun));
 
   return request<MemberImport>("POST", "/member-imports", form, { workspace });
+}
+
+export interface Retention {
+  closed_conversation_days: number | null;
+  spam_days: number;
+  trash_days: number;
+  raw_email_days: number;
+  export_days: number;
+}
+
+export function previewRetention(workspace: string, days: number): Promise<{ count: number }> {
+  return request<{ count: number }>("POST", "/retention-previews", { closed_conversation_days: days }, { workspace });
 }

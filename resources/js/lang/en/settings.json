@@ -61,6 +61,20 @@
       "created": "Created a custom role",
       "updated": "Edited a custom role",
       "deleted": "Deleted a custom role"
+    },
+    "redaction_rule": {
+      "created": "Added a redaction rule",
+      "updated": "Changed a redaction rule",
+      "deleted": "Deleted a redaction rule"
+    },
+    "redaction_settings": {
+      "updated": "Changed the built-in redaction rules"
+    },
+    "contact_erasure": {
+      "requested": "Asked to erase a customer",
+      "canceled": "Canceled a customer's erasure",
+      "held": "Held an erasure for retention",
+      "completed": "Erased a customer"
     }
   },
   "channels": {

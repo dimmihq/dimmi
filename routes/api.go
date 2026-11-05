@@ -92,6 +92,7 @@ func API(a *app.App) {
 		identityRoutes(api, a)
 		roleRoutes(api, a)
 		accountRoutes(api, a)
+		api.Group("", func(records *routing.Router) { recordRoutes(records, a) })
 		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 		signInHelpRoutes(api, a)
 	})

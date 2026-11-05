@@ -318,6 +318,45 @@ C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@exam
 | Other workspace | Carol: `GET $B/conversations/$C` with her own workspace | 404 `not_found` |
 | In a browser | open `$W/d/inbox/unassigned`, open the conversation, reply, add a note, assign to me, mark as done, search | each change shows in the thread as a message or an event line; the list and counts follow |
 
+### Customer records
+
+Same session as the shared inbox above, `C` the conversation Ann started:
+
+| Flow | Command | Expect |
+|---|---|---|
+| Tag a conversation | `r tg -b a.jar -X POST -H "$O" -H "$J" -H "$H" $B/conversations/$C/tags -d '{"tags":["Billing","billing"]}'` | 200, one tag `Billing` in `data.tags`; the timeline gains a `conversation.tagged` event |
+| Tag vocabulary | `GET "$B/tags?q=bil&include=counts"` | 200, `Billing` with `counts.conversations: 1`; Bob `PATCH $B/tags/{id}` 403, `POST $B/tags {"name":"VIP"}` 201 |
+| Duplicate name | `POST $B/tags {"name":"BILLING"}` | 409 `tag_exists`; `{"name":"x","color":"red"}` 422 on `color` |
+| Filter by tag | `GET "$B/conversations?filter[view]=all&filter[tag]={id}"`, `…&filter[tag_any]={id},{other}` | Ann's conversation; `filter[tag]=bogus` 400 `invalid_filter` |
+| Delete a tag | `DELETE $B/tags/{id}` | 204; the conversation's `tags` is empty; again 404 |
+| Contact tags and notes | `PATCH $B/contacts/{ann} {"add_tags":["vip"],"notes":"Prefers email"}` | 200 with the tag and notes; `GET "$B/contacts?filter[tag]={vip}"` lists Ann only |
+| Upsert a user | `POST "$B/contacts?upsert=true" {"external_id":"user_42","email":"Bob@Acme.dev"}`, then again with `"name":"Robert"` | 201 `meta.upserted: created`, `kind: user`, email lower-cased; then 200 `updated`, same id |
+| Duplicates | `GET $B/contacts/{ann}/duplicates` after adding a contact with Ann's phone | the other contact with `reasons: ["same_phone"]` |
+| Companies | `POST $B/companies {"name":"Acme","domain":"acme.dev"}`, link Ann with `PATCH $B/contacts/{ann} {"company_id":…}` | 201; `GET $B/companies/{id}/contacts` and `/conversations` list Ann and her conversation |
+| Customer context | `r ctx -b a.jar -H "$O" -H "$H" $B/conversations/$C/context` | 200 `object: conversation_context`, Ann with notes and tags, `identities[0].type: email`, `past_conversations.total_estimate`, `duplicates_count` |
+| Delete a company | Bob `DELETE $B/companies/{id}` 403; Ada again | 204; Ann's `company` is `null` |
+| Customer pages | open `$W/d/customers`, search, open Ann, edit her phone; open a conversation and edit her name in the details panel | the list narrows; the profile saves; the panel shows the new name and her other conversations |
+| People filters | on `$W/d/customers` pick a company, "Seen this week" and Attribute `plan` is `pro`; on Ann's page set attribute `plan` to `pro` | the list narrows to Ann; her Attributes card shows `plan` with a remove button |
+| People columns | on `$W/d/customers` open Columns, tick Phone, untick Email, reload | the table keeps Phone and drops Email; `GET $B/inbox-preferences` has `views.people.columns` |
+| Pinned attributes | in a conversation's details panel, star an attribute | it moves above Email for every customer; `pinned_attributes` lists it |
+| Redaction defaults | `GET $B/redaction-rules` | 200 `object: redaction`, `built_ins.card_numbers: true`, `built_ins.us_ssn: false`, `rules: []`; Bob 403 |
+| Redaction rule | `POST $B/redaction-rules {"name":"Accounts","pattern":"ACCT-\\d+"}`, then `{"name":"x","pattern":"("}` | 201 `object: redaction_rule`, `replacement: [redacted]`; then 422 `invalid_pattern`; an eleventh rule 422 `redaction_rule_limit_reached` |
+| Redaction on write | `POST $B/conversations` as a contact with body `Card 4242 4242 4242 4242 ACCT-7` | the message body reads `Card •••• •••• •••• 4242 [redacted]`, `redactions` lists `card_numbers` and the rule's id; the database holds no original |
+| Redaction switches | `PATCH $B/redaction-rules {"us_ssn":true,"order":[…]}`, then a note `SSN 123-45-6789` | 200 with the new order; the note reads `SSN •••-••-••••`; the audit log has `redaction_settings.updated` |
+| Try redaction | `POST $B/redaction-tests {"text":"4242424242424242"}` | 200 `object: redaction_test`, `text: •••• •••• •••• 4242`, one `redactions` entry; nothing stored |
+| Link safety settings | `PATCH $B/workspace {"link_safety":{"block_domains":["Evil.example"],"strip_inbound_email_links":true}}`, then `{"link_safety":{"block_domains":["co.uk"]}}` | 200, `link_safety.block_domains: ["evil.example"]`; then 422 `invalid_link_domains`; Bob 403 |
+| Links in a thread | a customer sends `[Sign in](https://login.evil.example)` and `https://bit.ly/x`; open the conversation | the first link is struck through and cannot be opened; the second asks "Opens bit.ly. Continue?" |
+| Erase a customer | `DELETE "$B/contacts/{ann}?erase=true"` | 202 `object: contact_erasure`, `status: pending`, `scheduled_for` 7 days out; Ann is gone from `GET $B/contacts` and her conversations from the lists; a reply to her is 422 `contact_unreachable_on_channel` |
+| Cancel an erasure | `PATCH $B/contact-erasures/{ces} {"status":"canceled"}` | 200 `status: canceled`; Ann and her address are back; again 409 `erasure_closed` |
+| Erase at once | `DELETE "$B/contacts/{ann}?erase=true&immediate=true"` more than 15 minutes after signing in, then after `POST $B/user/confirmation` | 423 `password_confirmation_required`, then 202; soon `GET $B/contact-erasures/{ces}` is `completed`, her conversation shows "Deleted contact" with empty messages |
+| Export a customer | `POST $B/contacts/{ann}/exports {"include_notes":false}`, then `GET $B/contacts/{ann}/exports/{exp}` until ready, then its `url` | 202 `status: pending`, a second POST 409 `export_in_progress`; then `status: ready` with `url`; the zip holds `contact.json`, `conversations/1.json`, `conversations/1.txt` and her files, without the team's notes |
+| Export from the profile | on Ann's page press Export data, then Download export | the button waits while it builds, then saves `exp_….zip` |
+| Erasures page | open `$W/d/customers/erasures` as Ada, then as Bob | Ada sees the requests with Cancel on pending ones; Bob has no Erasures tab |
+| Retention settings | `PATCH $B/workspace {"retention":{"closed_conversation_days":365,"export_days":14}}`, then `{"retention":{"spam_days":6}}` | 200 with `retention` showing both; then 422 `invalid_retention`; `{"closed_conversation_days":null}` keeps closed conversations again |
+| Retention preview | `POST $B/retention-previews {"closed_conversation_days":30}` | 200 `object: retention_preview` with how many closed conversations have sat untouched past 30 days |
+| Retention round | set a period, wait a day (the round skips a period changed in the last 24 hours), then run `apply_conversation_retention` | closed conversations untouched past the period are in the Deleted view; one with a newer note stays |
+| Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
+
 ### Two-factor authentication
 
 Ada turns on an authenticator, signs in with its code and with a recovery code, and turns it off again; then an

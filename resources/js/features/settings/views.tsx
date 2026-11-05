@@ -18,12 +18,14 @@ import {
   HelpCentersSettings,
   KnowledgeSettings,
 } from "./pages/content";
+import { ConversationSafetySettings } from "./pages/conversation-safety";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
-import { SavedRepliesSettings, TagsSettings } from "./pages/inbox";
+import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
 import { RolesSettings } from "./pages/roles";
 import { SingleSignOnSettings } from "./pages/single-sign-on";
+import { TagsSettings } from "./pages/tags";
 import { TeamsSettings } from "./pages/teams";
 import { TokensSettings } from "./pages/tokens";
 import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
@@ -36,6 +38,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   inboxes: InboxesSettings,
   tags: TagsSettings,
   "saved-replies": SavedRepliesSettings,
+  "conversation-safety": ConversationSafetySettings,
   messenger: MessengerSettings,
   email: EmailSettings,
   connections: ConnectionsSettings,

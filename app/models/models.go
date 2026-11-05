@@ -90,6 +90,16 @@ type Company struct {
 	DeletedAt        *time.Time      `json:"deleted_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
+	Notes            *string         `json:"notes"`
+}
+
+type CompanyTag struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	CompanyID     ids.UUID  `json:"company_id"`
+	TagID         ids.UUID  `json:"tag_id"`
+	CreatedByType string    `json:"created_by_type"`
+	CreatedByID   *ids.UUID `json:"created_by_id"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Contact struct {
@@ -116,6 +126,38 @@ type Contact struct {
 	DeletedAt            *time.Time              `json:"deleted_at"`
 	CreatedAt            time.Time               `json:"created_at"`
 	UpdatedAt            time.Time               `json:"updated_at"`
+	Notes                *string                 `json:"notes"`
+	Placeholder          bool                    `json:"placeholder"`
+}
+
+type ContactErasure struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ContactID           ids.UUID        `json:"contact_id"`
+	Status              string          `json:"status"`
+	RequestedByMemberID *ids.UUID       `json:"requested_by_member_id"`
+	ScheduledFor        time.Time       `json:"scheduled_for"`
+	CompletedAt         *time.Time      `json:"completed_at"`
+	Counts              json.RawMessage `json:"counts"`
+	IdentitiesStash     []byte          `json:"identities_stash"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type ContactExport struct {
+	ID                  ids.UUID   `json:"id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	ContactID           ids.UUID   `json:"contact_id"`
+	RequestedByMemberID *ids.UUID  `json:"requested_by_member_id"`
+	Status              string     `json:"status"`
+	IncludeNotes        bool       `json:"include_notes"`
+	Disk                *string    `json:"disk"`
+	Path                *string    `json:"path"`
+	SizeBytes           *int64     `json:"size_bytes"`
+	Error               *string    `json:"error"`
+	ExpiresAt           *time.Time `json:"expires_at"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 type ContactIdentity struct {
@@ -127,6 +169,15 @@ type ContactIdentity struct {
 	Verified    bool      `json:"verified"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type ContactTag struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	ContactID     ids.UUID  `json:"contact_id"`
+	TagID         ids.UUID  `json:"tag_id"`
+	CreatedByType string    `json:"created_by_type"`
+	CreatedByID   *ids.UUID `json:"created_by_id"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Conversation struct {
@@ -205,6 +256,7 @@ type ConversationTag struct {
 	CreatedByType  string    `json:"created_by_type"`
 	CreatedByID    *ids.UUID `json:"created_by_id"`
 	CreatedAt      time.Time `json:"created_at"`
+	MessageID      *ids.UUID `json:"message_id"`
 }
 
 type ConversationView struct {
@@ -667,6 +719,18 @@ type PersonalAccessToken struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	MintedAsRole      *string    `json:"minted_as_role"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type RedactionRule struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Name        string    `json:"name"`
+	Pattern     string    `json:"pattern"`
+	Replacement string    `json:"replacement"`
+	Enabled     bool      `json:"enabled"`
+	Position    int32     `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Role struct {
