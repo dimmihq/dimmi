@@ -76,7 +76,7 @@ test-cloud:
 # Timing comparisons skip themselves under the race detector, which distorts
 # them, so they get a pass of their own without it.
 test-timing:
-	$(WITH_ENV) go test -count=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate' ./tests/feature/auth/
+	$(WITH_ENV) go test -count=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate|TestAudienceBudget' ./tests/feature/auth/ ./tests/feature/access/
 
 test-web:
 	pnpm test

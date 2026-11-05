@@ -27,6 +27,8 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    env:
+      GOFLAGS: -p=2
     strategy:
       fail-fast: false
       matrix:
