@@ -58,7 +58,7 @@ function Suggestion({ tag, isChosen, onToggle }: { tag: Tag; isChosen: boolean; 
         "transition-[filter,box-shadow] duration-150 ease-out hover:brightness-95",
         "focus-visible:ring-2 focus-visible:ring-border-focus-ring",
         tint.className,
-        isChosen && "ring-1 ring-current/40 ring-inset",
+        isChosen && "ring-current/70",
       )}
     >
       <Icon aria-hidden className="size-4 shrink-0" />

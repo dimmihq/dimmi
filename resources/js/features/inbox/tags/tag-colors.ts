@@ -125,8 +125,10 @@ export function tagTint(color: string | null): { style?: CSSProperties; classNam
   return { style: tintStyle(color), className: color ? tinted : neutral };
 }
 
-const tinted =
-  "bg-(--tag-light-background) text-(--tag-light-text) dark:bg-(--tag-dark-background) dark:text-(--tag-dark-text)";
-const neutral = "bg-background-tertiary-default text-text-primary";
+const tinted = [
+  "bg-(--tag-light-background) text-(--tag-light-text) dark:bg-(--tag-dark-background) dark:text-(--tag-dark-text)",
+  "ring-1 ring-current/30 ring-inset",
+].join(" ");
+const neutral = "bg-background-tertiary-default text-text-primary ring-1 ring-border-button-default ring-inset";
 
 export const testing = { parse, mix, darkSurface, lightSurface };
