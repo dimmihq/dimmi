@@ -89,7 +89,8 @@ func (a *CompleteSSOLogin) join(ctx context.Context, j joining) (models.Workspac
 	}
 
 	if conn.DefaultCustomRoleID != nil {
-		if member, err = a.setRole(ctx, q, member, sso.GroupRole{Role: conn.DefaultRole, CustomRoleID: conn.DefaultCustomRoleID}); err != nil {
+		start := sso.GroupRole{Role: conn.DefaultRole, CustomRoleID: conn.DefaultCustomRoleID}
+		if member, err = a.setRole(ctx, q, member, start); err != nil {
 			return member, err
 		}
 	}
@@ -147,7 +148,8 @@ func (a *CompleteSSOLogin) setRole(
 	ctx context.Context, q *models.Queries, member models.WorkspaceMember, target sso.GroupRole,
 ) (models.WorkspaceMember, error) {
 	updated, err := q.SetMemberCustomRole(ctx, models.SetMemberCustomRoleParams{
-		Role: target.Role, CustomRoleID: target.CustomRoleID, Now: a.Clock.Now(), WorkspaceID: member.WorkspaceID, ID: member.ID,
+		Role: target.Role, CustomRoleID: target.CustomRoleID, Now: a.Clock.Now(), WorkspaceID: member.WorkspaceID,
+		ID: member.ID,
 	})
 	if err != nil {
 		return member, fmt.Errorf("set member role through sso: %w", err)

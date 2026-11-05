@@ -145,3 +145,10 @@ func ParseCertificates(texts []string) ([]*x509.Certificate, error) {
 
 	return certificates, nil
 }
+
+/*
+EncodeCertificate writes the certificate PEM encoded.
+*/
+func EncodeCertificate(certificate *x509.Certificate) string {
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate.Raw}))
+}

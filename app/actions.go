@@ -117,6 +117,7 @@ type Actions struct {
 	CompleteSSOLogin           *ssologin.CompleteSSOLogin
 	SSOMetadata                *ssologin.Metadata
 	StartSSOTest               *ssologin.StartTest
+	LookupSSO                  *ssologin.Lookup
 	ListAuthFactors            *factors.ListAuthFactors
 	AddAuthFactor              *factors.AddAuthFactor
 	ActivateAuthFactor         *factors.ActivateAuthFactor

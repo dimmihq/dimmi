@@ -106,7 +106,8 @@ func TestSAMLSignIn(t *testing.T) {
 		})
 
 		assert.Equal(t, "/login?error=sso_failed", landing(c.post(a, answer)))
-		in(c.tc).GetJSON(connectionsPath+"/"+c.id).AssertOK().AssertJSONPath("data.last_error.code", "invalid_signature")
+		in(c.tc).GetJSON(connectionsPath+"/"+c.id).AssertOK().
+			AssertJSONPath("data.last_error.code", "invalid_signature")
 	})
 
 	t.Run("a deactivated member stays out", func(t *testing.T) {

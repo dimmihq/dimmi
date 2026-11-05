@@ -57,7 +57,7 @@ type CompleteTwoFactorChallengeInput struct {
 challengeData is what a challenge remembers of the first step: how the
 user signed in, the kinds and factors offered, the state each kind kept
 for its prompt, and whether it was a fresh sign-in on an existing
-session.
+session, and whether an owner signed in around their identity provider.
 */
 type challengeData struct {
 	PrimaryMethod string                     `json:"primary_method"`
@@ -66,6 +66,7 @@ type challengeData struct {
 	FactorIDs     []string                   `json:"factor_ids"`
 	DriverState   map[string]json.RawMessage `json:"driver_state"`
 	Reauth        bool                       `json:"reauth"`
+	SSOBypass     bool                       `json:"sso_bypass"`
 }
 
 /*
@@ -347,7 +348,9 @@ func (a *CompleteTwoFactorChallenge) signIn(ctx context.Context, c challenged, i
 	SignedIn, error,
 ) {
 	started, err := a.StartSession.Handle(ctx, StartSessionInput{
-		User: c.user, Methods: []string{c.data.PrimaryMethod, in.Method}, Client: in.Client, Reauth: c.data.Reauth,
+		User:    c.user,
+		Methods: signInMethods{[]string{c.data.PrimaryMethod, in.Method}, c.data.SSOBypass}.list(),
+		Client:  in.Client, Reauth: c.data.Reauth,
 		Context: SignInContext{Domain: c.data.AuthDomain},
 	})
 	if err != nil {

@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 )
 
@@ -255,6 +256,7 @@ func newControllers(a *app.App) controllers {
 	c := controllers{
 		authConfig: &v1.AuthConfigController{
 			Auth: a.Config.Auth, Factors: a.Factors.Types(), Providers: a.Providers, Server: server,
+			SSO: appauth.OrganizationLoginPolicy{DB: a.DB},
 		},
 		users: &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
 		me:    &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},

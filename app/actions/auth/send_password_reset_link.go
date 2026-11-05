@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -59,6 +60,8 @@ Rules:
     address; more are dropped silently.
   - A new request replaces the user's earlier reset and its id.
   - The link works for 60 minutes.
+  - An address whose company requires its identity provider gets the
+    same answer and no mail: its password cannot sign in.
 
 Errors: [exceptions.ErrTooManyAttempts], [exceptions.ErrAuthBusy], or a
 wrapped error.
@@ -70,6 +73,7 @@ type SendPasswordResetLink struct {
 	Limiter *ratelimit.Limiter
 	Lockout *appauth.Lockout
 	Links   appauth.Links
+	Policy  appauth.LoginPolicyResolver
 }
 
 /*
@@ -89,6 +93,17 @@ func (a *SendPasswordResetLink) Handle(ctx context.Context, in SendPasswordReset
 	)
 	if err != nil || !allowed {
 		return err
+	}
+
+	if a.Policy != nil {
+		err := appauth.CheckLoginPolicy(ctx, a.Policy, email, appauth.MethodPasswordReset)
+		if errors.Is(err, exceptions.ErrSSORequired) {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
 	}
 
 	user, err := models.New(a.DB).FindUserByEmail(ctx, email)

@@ -45,6 +45,7 @@ type AuthConfig struct {
 	Providers         []Provider         `json:"providers"`
 	Factors           []Factor           `json:"factors"`
 	Capabilities      []string           `json:"capabilities"`
+	SSOAvailable      bool               `json:"sso_available"`
 	MinClientVersions map[string]*string `json:"min_client_versions"`
 	Locales           []Locale           `json:"locales"`
 }

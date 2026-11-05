@@ -55,3 +55,12 @@ type UpdateSSOConnectionRequest struct {
 	}
 	RawBody []byte
 }
+
+/*
+StoreSSOLookupRequest is the input of POST /sso-lookups.
+*/
+type StoreSSOLookupRequest struct {
+	Body struct {
+		Email string `json:"email" validate:"required,email,max=254"`
+	}
+}

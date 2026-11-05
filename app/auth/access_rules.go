@@ -97,12 +97,20 @@ func SignInAllowed(method string, allowed []string) bool {
 
 /*
 Bypassed reports whether an owner signed in around the identity
-provider. Only an owner's sign-in counts; the record on anyone else's
-exempts them from nothing.
+provider within the last hour. Only an owner's sign-in counts; the
+record on anyone else's exempts them from nothing, and after the hour
+the owner signs in again.
 */
 func (a AccessCheck) Bypassed() bool {
-	return IsOwnerRole(a.Role) && slices.Contains(a.Principal.SignIn.Methods, MethodSSOBypass)
+	return IsOwnerRole(a.Role) && slices.Contains(a.Principal.SignIn.Methods, MethodSSOBypass) &&
+		a.Now.Sub(a.Principal.AuthenticatedAt) < BypassLifetime
 }
+
+/*
+BypassLifetime is how long an owner's sign-in around the identity
+provider lasts.
+*/
+const BypassLifetime = time.Hour
 
 /*
 AddressRule refuses a caller connecting from outside the list that binds

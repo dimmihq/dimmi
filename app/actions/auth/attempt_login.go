@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/session"
@@ -53,10 +54,11 @@ AttemptLoginInput is what the person typed and where they typed it.
 Reauth asks for a fresh sign-in of the session's own user.
 */
 type AttemptLoginInput struct {
-	Email    string
-	Password string
-	Reauth   bool
-	Client   appauth.Client
+	Email     string
+	Password  string
+	Reauth    bool
+	SSOBypass bool
+	Client    appauth.Client
 }
 
 /*
@@ -104,12 +106,17 @@ type AttemptLogin struct {
 
 /*
 signInTry is one sign-in under way: the lockout's view of it, the
-account the email names, nil when none does, and the client.
+account the email names, nil when none does, and the client. The
+bypass field marks an owner signing in around their company's identity
+provider, and organization names that company.
 */
 type signInTry struct {
 	attempt appauth.Attempt
 	account *models.User
 	client  appauth.Client
+
+	bypass       bool
+	organization ids.UUID
 }
 
 /*
@@ -118,13 +125,20 @@ Handle checks the credentials and starts a session.
 func (a *AttemptLogin) Handle(ctx context.Context, in AttemptLoginInput) (SignedIn, error) {
 	email := strings.ToLower(strings.TrimSpace(in.Email))
 
-	if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, email, appauth.MethodPassword); err != nil {
+	bypass, err := a.bypassing(appauth.CheckLoginPolicy(ctx, a.LoginPolicy, email, appauth.MethodPassword), in)
+	if err != nil {
 		return SignedIn{}, err
 	}
 
 	try, err := a.begin(ctx, email, in.Client)
 	if err != nil {
 		return SignedIn{}, err
+	}
+
+	if bypass {
+		if try, err = a.ownersOnly(ctx, try); err != nil {
+			return SignedIn{}, err
+		}
 	}
 
 	if err := a.Lockout.Check(ctx, try.attempt); err != nil {
@@ -330,9 +344,14 @@ func (a *AttemptLogin) succeed(ctx context.Context, try signInTry, in AttemptLog
 		return SignedIn{}, err
 	}
 
-	return a.CompletePrimaryAuth.Handle(ctx, CompletePrimaryAuthInput{
-		User: user, Method: appauth.MethodPassword, Client: in.Client, Reauth: in.Reauth,
+	signedIn, err := a.CompletePrimaryAuth.Handle(ctx, CompletePrimaryAuthInput{
+		User: user, Method: appauth.MethodPassword, Client: in.Client, Reauth: in.Reauth, SSOBypass: try.bypass,
 	})
+	if err != nil || !try.bypass {
+		return signedIn, err
+	}
+
+	return signedIn, a.announceBypass(ctx, try)
 }
 
 /*

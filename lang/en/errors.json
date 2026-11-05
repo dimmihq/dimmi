@@ -79,5 +79,8 @@
   "duplicate_email": "An earlier row already names this address.",
   "owner_not_changed": "An owner's role and status cannot change through an import.",
   "custom_role_unavailable": "Custom roles are not available yet; leave the column empty.",
-  "unknown_member": "Only a member of the workspace can be deactivated."
+  "unknown_member": "Only a member of the workspace can be deactivated.",
+  "sso_failed": "Single sign-on did not complete. Try again or ask your administrator.",
+  "sso_no_access": "Your company's identity provider does not give you access to this workspace.",
+  "sso_email_domain_not_verified": "Your address is not under a domain your company verified for single sign-on."
 }

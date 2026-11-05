@@ -91,6 +91,7 @@ func bootSSOLogin(a *app.App) {
 		ClaimAccount: acts.ConsumeMagicLink.ClaimAccount, CompletePrimaryAuth: acts.CompletePrimaryAuth,
 	}
 	acts.SSOMetadata = &ssologin.Metadata{DB: a.DB, SAML: providers}
+	acts.LookupSSO = &ssologin.Lookup{Policy: appauth.OrganizationLoginPolicy{DB: a.DB}, Limiter: a.Limiter}
 	acts.StartSSOTest = &ssologin.StartTest{DB: a.DB, Start: acts.StartSSOSignIn}
 	acts.ConsumeSAML = &ssologin.ConsumeSAML{
 		DB: a.DB, Clock: a.Clock, Attempts: attempts, SAML: providers, Complete: acts.CompleteSSOLogin,

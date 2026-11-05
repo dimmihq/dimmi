@@ -44,7 +44,7 @@ func Register(m *mail.Manager) {
 	mail.Register[RecoveryCodeUsedMail](m, "recovery_code_used")
 	mail.Register[TwoFactorRequiredMail](m, "two_factor_required")
 	mail.Register[AccessPolicyChangedMail](m, "access_policy_changed")
-	mail.Register[DomainVerificationLostMail](m, "domain_verification_lost")
+	registerSSO(m)
 	mail.Register[WorkspaceDeletionScheduledMail](m, "workspace_deletion_scheduled")
 	mail.Register[WorkspaceDeletionReminderMail](m, "workspace_deletion_reminder")
 	mail.Register[WorkspaceRestoredMail](m, "workspace_restored")
@@ -60,6 +60,15 @@ func Register(m *mail.Manager) {
 	mail.Register[InvitationPendingMail](m, "invitation_pending")
 	mail.Register[TwoFactorResetMail](m, "two_factor_reset")
 	mail.Register[TwoFactorResetCompletedMail](m, "two_factor_reset_completed")
+}
+
+/*
+registerSSO lets the mail about a company's single sign-on be queued.
+*/
+func registerSSO(m *mail.Manager) {
+	mail.Register[DomainVerificationLostMail](m, "domain_verification_lost")
+	mail.Register[SSOBypassUsedMail](m, "sso_bypass_used")
+	mail.Register[SSOCertificateExpiringMail](m, "sso_certificate_expiring")
 }
 
 /*

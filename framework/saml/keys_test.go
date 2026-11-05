@@ -25,6 +25,13 @@ func TestKeyPair(t *testing.T) {
 		assert.Equal(t, "https://sp.example/metadata", certificate.Subject.CommonName)
 		assert.True(t, certificate.NotAfter.After(now.AddDate(9, 11, 0)))
 		assert.Contains(t, pair.PrivateKey, "RSA PRIVATE KEY")
+		assert.Equal(t, pair.Certificate, saml.EncodeCertificate(certificate))
+
+		both, err := saml.ParseCertificates([]string{pair.Certificate, pair.Certificate})
+		require.NoError(t, err)
+		assert.Len(t, both, 2)
+		_, err = saml.ParseCertificates([]string{pair.Certificate, "nonsense"})
+		require.ErrorIs(t, err, saml.ErrInvalidKey)
 	})
 
 	t.Run("reads a certificate without its pem armor and refuses nonsense", func(t *testing.T) {

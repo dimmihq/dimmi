@@ -14,6 +14,19 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const anySSOConnectionActive = `-- name: AnySSOConnectionActive :one
+SELECT EXISTS (SELECT 1 FROM sso_connections WHERE status = 'active')
+`
+
+// AnySSOConnectionActive reports whether any company on the install
+// signs in through an active connection.
+func (q *Queries) AnySSOConnectionActive(ctx context.Context) (bool, error) {
+	row := q.db.QueryRow(ctx, anySSOConnectionActive)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const countSSOConnections = `-- name: CountSSOConnections :one
 SELECT count(*) FROM sso_connections WHERE organization_id = $1
 `
@@ -295,16 +308,17 @@ func (q *Queries) FindSSOConnectionByID(ctx context.Context, id ids.UUID) (SSOCo
 }
 
 const findSSOPolicyForDomain = `-- name: FindSSOPolicyForDomain :one
-SELECT c.id, c.name, c.enforced
+SELECT c.id, c.name, c.enforced, c.organization_id
 FROM organization_domains d
 JOIN sso_connections c ON c.id = d.sso_connection_id AND c.status = 'active'
 WHERE d.domain = $1 AND d.status = 'verified'
 `
 
 type FindSSOPolicyForDomainRow struct {
-	ID       ids.UUID `json:"id"`
-	Name     string   `json:"name"`
-	Enforced bool     `json:"enforced"`
+	ID             ids.UUID `json:"id"`
+	Name           string   `json:"name"`
+	Enforced       bool     `json:"enforced"`
+	OrganizationID ids.UUID `json:"organization_id"`
 }
 
 // FindSSOPolicyForDomain returns the active connection a verified domain
@@ -312,7 +326,12 @@ type FindSSOPolicyForDomainRow struct {
 func (q *Queries) FindSSOPolicyForDomain(ctx context.Context, domain string) (FindSSOPolicyForDomainRow, error) {
 	row := q.db.QueryRow(ctx, findSSOPolicyForDomain, domain)
 	var i FindSSOPolicyForDomainRow
-	err := row.Scan(&i.ID, &i.Name, &i.Enforced)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Enforced,
+		&i.OrganizationID,
+	)
 	return i, err
 }
 
@@ -350,11 +369,11 @@ func (q *Queries) ListActiveSSOConnectionIDs(ctx context.Context, organizationID
 }
 
 const listActiveSSOConnections = `-- name: ListActiveSSOConnections :many
-SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE status IN ('active', 'tested') ORDER BY id
+SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE status <> 'disabled' ORDER BY id
 `
 
-// ListActiveSSOConnections returns every active connection of the
-// install, for the jobs that keep them current.
+// ListActiveSSOConnections returns every connection of the install not
+// turned off, for the jobs that keep them current.
 func (q *Queries) ListActiveSSOConnections(ctx context.Context) ([]SSOConnection, error) {
 	rows, err := q.db.Query(ctx, listActiveSSOConnections)
 	if err != nil {
@@ -771,4 +790,32 @@ func (q *Queries) UpdateSSOConnection(ctx context.Context, arg UpdateSSOConnecti
 		&i.DefaultCustomRoleID,
 	)
 	return i, err
+}
+
+const updateSSOConnectionMetadata = `-- name: UpdateSSOConnectionMetadata :exec
+UPDATE sso_connections
+SET config = $1, metadata_refreshed_at = $2, metadata_error = $3,
+    updated_at = $4
+WHERE id = $5
+`
+
+type UpdateSSOConnectionMetadataParams struct {
+	Config        json.RawMessage `json:"config"`
+	RefreshedAt   *time.Time      `json:"refreshed_at"`
+	MetadataError *string         `json:"metadata_error"`
+	Now           time.Time       `json:"now"`
+	ID            ids.UUID        `json:"id"`
+}
+
+// UpdateSSOConnectionMetadata stores what a refresh of the identity
+// provider's metadata found, or why it failed, keeping the old settings.
+func (q *Queries) UpdateSSOConnectionMetadata(ctx context.Context, arg UpdateSSOConnectionMetadataParams) error {
+	_, err := q.db.Exec(ctx, updateSSOConnectionMetadata,
+		arg.Config,
+		arg.RefreshedAt,
+		arg.MetadataError,
+		arg.Now,
+		arg.ID,
+	)
+	return err
 }

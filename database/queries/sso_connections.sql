@@ -96,7 +96,7 @@ WHERE id = sqlc.arg('id') AND (last_login_at IS NULL OR last_login_at < sqlc.arg
 -- name: FindSSOPolicyForDomain :one
 -- FindSSOPolicyForDomain returns the active connection a verified domain
 -- routes to and whether it is enforced.
-SELECT c.id, c.name, c.enforced
+SELECT c.id, c.name, c.enforced, c.organization_id
 FROM organization_domains d
 JOIN sso_connections c ON c.id = d.sso_connection_id AND c.status = 'active'
 WHERE d.domain = @domain AND d.status = 'verified';
@@ -115,6 +115,19 @@ SELECT * FROM workspaces WHERE organization_id = @organization_id AND deleted_at
 ORDER BY created_at, id LIMIT 1;
 
 -- name: ListActiveSSOConnections :many
--- ListActiveSSOConnections returns every active connection of the
--- install, for the jobs that keep them current.
-SELECT * FROM sso_connections WHERE status IN ('active', 'tested') ORDER BY id;
+-- ListActiveSSOConnections returns every connection of the install not
+-- turned off, for the jobs that keep them current.
+SELECT * FROM sso_connections WHERE status <> 'disabled' ORDER BY id;
+
+-- name: UpdateSSOConnectionMetadata :exec
+-- UpdateSSOConnectionMetadata stores what a refresh of the identity
+-- provider's metadata found, or why it failed, keeping the old settings.
+UPDATE sso_connections
+SET config = @config, metadata_refreshed_at = sqlc.narg('refreshed_at'), metadata_error = sqlc.narg('metadata_error'),
+    updated_at = @now
+WHERE id = @id;
+
+-- name: AnySSOConnectionActive :one
+-- AnySSOConnectionActive reports whether any company on the install
+-- signs in through an active connection.
+SELECT EXISTS (SELECT 1 FROM sso_connections WHERE status = 'active');

@@ -60,6 +60,14 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 	domains := &v1.OrganizationDomainController{Domains: acts.OrganizationDomains, IDs: a.IDs}
 	tests := &v1.SSOConnectionTestController{Start: acts.StartSSOTest, IDs: a.IDs, Cookies: a.Cookies}
 
+	lookups := &v1.SSOLookupController{Lookup: acts.LookupSSO, Cookies: a.Cookies}
+
+	api.Group("", func(guest *routing.Router) {
+		guest.Middleware("csrf", "session")
+
+		routing.Post(guest, "/sso-lookups", "sso-lookups.store", lookups.Store).Status(fhttp.StatusOK)
+	})
+
 	api.Group("", func(owners *routing.Router) {
 		owners.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
 
