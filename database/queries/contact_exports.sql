@@ -26,9 +26,10 @@ UPDATE contact_exports SET status = 'failed', error = @error, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
 
 -- name: ListExpiredContactExports :many
--- ListExpiredContactExports returns ready exports past their expiry, across
--- workspaces, oldest first.
-SELECT * FROM contact_exports WHERE status = 'ready' AND expires_at <= @now ORDER BY expires_at LIMIT @row_limit;
+-- ListExpiredContactExports returns which ready exports are past their
+-- expiry, across workspaces, oldest first.
+SELECT e.workspace_id::uuid AS workspace_id, e.id::uuid AS id
+FROM contact_exports_expired(@now::timestamptz, @row_limit::integer) AS e;
 
 -- name: ExpireContactExport :exec
 UPDATE contact_exports SET status = 'expired', disk = NULL, path = NULL, updated_at = @now

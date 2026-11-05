@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/filesystem"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -66,7 +67,17 @@ it, and says where the request stands. A request closed or gone is
 done; one whose grace period has not ended waits.
 */
 func (a *EraseContact) Handle(ctx context.Context, args EraseArgs) (Outcome, error) {
-	row, err := find(ctx, models.New(a.DB), args.WorkspaceID, args.ErasureID)
+	ctx = tenancy.With(ctx, args.WorkspaceID.String())
+
+	var row models.ContactErasure
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+
+		row, err = find(ctx, models.New(tx), args.WorkspaceID, args.ErasureID)
+
+		return err
+	})
 	if errors.Is(err, exceptions.ErrNotFound) || (err == nil && !open(row)) {
 		return Done, nil
 	}
@@ -130,21 +141,25 @@ wipe deletes the files of the customer's conversations and exports and
 empties their messages, returning how many of each it removed.
 */
 func (a *EraseContact) wipe(ctx context.Context, row models.ContactErasure) (map[string]int64, error) {
-	q := models.New(a.DB)
 	scope := models.ListErasedMessageFilesParams{WorkspaceID: row.WorkspaceID, ContactID: row.ContactID}
 
-	files, err := q.ListErasedMessageFiles(ctx, scope)
-	if err != nil {
-		return nil, fmt.Errorf("list files: %w", err)
-	}
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
 
-	for _, file := range files {
-		if err := a.deleteFile(ctx, file.Disk, file.Path); err != nil {
-			return nil, err
+		files, err := q.ListErasedMessageFiles(ctx, scope)
+		if err != nil {
+			return fmt.Errorf("list files: %w", err)
 		}
-	}
 
-	if err := a.deleteExports(ctx, q, row); err != nil {
+		for _, file := range files {
+			if err := a.deleteFile(ctx, file.Disk, file.Path); err != nil {
+				return err
+			}
+		}
+
+		return a.deleteExports(ctx, q, row)
+	})
+	if err != nil {
 		return nil, err
 	}
 

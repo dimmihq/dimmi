@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
@@ -47,14 +48,23 @@ type BuildContactExport struct {
 }
 
 /*
-Handle builds the export, records a failure before returning it so
-the member sees it, and leaves an export already built or gone alone.
+Handle builds the export inside the export's workspace, records a
+failure before returning it so the member sees it, and leaves an export
+already built or gone alone.
 */
 func (a *BuildContactExport) Handle(ctx context.Context, args BuildExportArgs) error {
-	q := models.New(a.DB)
+	ctx = tenancy.With(ctx, args.WorkspaceID.String())
 
-	row, err := q.StartContactExport(ctx, models.StartContactExportParams{
-		Now: a.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ExportID,
+	var row models.ContactExport
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+
+		row, err = models.New(tx).StartContactExport(ctx, models.StartContactExportParams{
+			Now: a.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ExportID,
+		})
+
+		return err
 	})
 	if errors.Is(err, database.ErrNotFound) {
 		return nil
@@ -65,14 +75,21 @@ func (a *BuildContactExport) Handle(ctx context.Context, args BuildExportArgs) e
 	}
 
 	if err := a.build(ctx, row); err != nil {
-		failed := q.FailContactExport(ctx, models.FailContactExportParams{
-			Error: new(err.Error()), Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
-		})
-
-		return fmt.Errorf("build export: %w", errors.Join(err, failed))
+		return fmt.Errorf("build export: %w", errors.Join(err, a.fail(ctx, row, err)))
 	}
 
 	return nil
+}
+
+/*
+fail records why the build failed, so the member sees it.
+*/
+func (a *BuildContactExport) fail(ctx context.Context, row models.ContactExport, cause error) error {
+	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		return models.New(tx).FailContactExport(ctx, models.FailContactExportParams{
+			Error: new(cause.Error()), Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+		})
+	})
 }
 
 /*
@@ -82,7 +99,9 @@ func (a *BuildContactExport) build(ctx context.Context, row models.ContactExport
 	var buf bytes.Buffer
 
 	w := zip.NewWriter(&buf)
-	if err := a.write(ctx, w, row); err != nil {
+	if err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		return a.write(ctx, models.New(tx), w, row)
+	}); err != nil {
 		return err
 	}
 
@@ -133,10 +152,12 @@ func (a *BuildContactExport) ready(ctx context.Context, row models.ContactExport
 }
 
 /*
-write adds every section to the zip.
+write adds every section to the zip, reading inside the transaction.
 */
-func (a *BuildContactExport) write(ctx context.Context, w *zip.Writer, row models.ContactExport) error {
-	run := exportRun{q: models.New(a.DB), storage: a.Storage, w: w, row: row}
+func (a *BuildContactExport) write(
+	ctx context.Context, q *models.Queries, w *zip.Writer, row models.ContactExport,
+) error {
+	run := exportRun{q: q, storage: a.Storage, w: w, row: row}
 
 	if err := run.writeContact(ctx); err != nil {
 		return err

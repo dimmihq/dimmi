@@ -199,40 +199,32 @@ func (q *Queries) FinishContactExport(ctx context.Context, arg FinishContactExpo
 }
 
 const listExpiredContactExports = `-- name: ListExpiredContactExports :many
-SELECT id, workspace_id, contact_id, requested_by_member_id, status, include_notes, disk, path, size_bytes, error, expires_at, created_at, updated_at FROM contact_exports WHERE status = 'ready' AND expires_at <= $1 ORDER BY expires_at LIMIT $2
+SELECT e.workspace_id::uuid AS workspace_id, e.id::uuid AS id
+FROM contact_exports_expired($1::timestamptz, $2::integer) AS e
 `
 
 type ListExpiredContactExportsParams struct {
-	Now      *time.Time `json:"now"`
-	RowLimit int32      `json:"row_limit"`
+	Now      time.Time `json:"now"`
+	RowLimit int32     `json:"row_limit"`
 }
 
-// ListExpiredContactExports returns ready exports past their expiry, across
-// workspaces, oldest first.
-func (q *Queries) ListExpiredContactExports(ctx context.Context, arg ListExpiredContactExportsParams) ([]ContactExport, error) {
+type ListExpiredContactExportsRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ListExpiredContactExports returns which ready exports are past their
+// expiry, across workspaces, oldest first.
+func (q *Queries) ListExpiredContactExports(ctx context.Context, arg ListExpiredContactExportsParams) ([]ListExpiredContactExportsRow, error) {
 	rows, err := q.db.Query(ctx, listExpiredContactExports, arg.Now, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ContactExport
+	var items []ListExpiredContactExportsRow
 	for rows.Next() {
-		var i ContactExport
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.ContactID,
-			&i.RequestedByMemberID,
-			&i.Status,
-			&i.IncludeNotes,
-			&i.Disk,
-			&i.Path,
-			&i.SizeBytes,
-			&i.Error,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
+		var i ListExpiredContactExportsRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

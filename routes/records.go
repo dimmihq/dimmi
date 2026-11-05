@@ -29,7 +29,7 @@ import (
 recordRoutes declares the customer record routes.
 */
 func recordRoutes(r *routing.Router, a *app.App) {
-	r.Middleware("csrf", "session", "auth", "workspace")
+	r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
 
 	tagRoutes(r, a)
 	contextRoutes(r, a)
