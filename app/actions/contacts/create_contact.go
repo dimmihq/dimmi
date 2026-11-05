@@ -65,11 +65,13 @@ CreateContact adds a contact to the workspace.
 Rules:
   - The caller needs contacts:write.
   - An external id another contact holds is refused.
+  - An address another contact receives mail at is refused.
 
 Events: [appevents.ContactCreated].
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrContactExists],
-[exceptions.ErrInvalidAttributes], or a wrapped database error.
+[exceptions.ErrContactEmailTaken], [exceptions.ErrInvalidAttributes],
+or a wrapped database error.
 */
 type CreateContact struct {
 	DB     *database.DB
@@ -91,6 +93,11 @@ func (a *CreateContact) Handle(ctx context.Context, in CreateContactInput) (mode
 		var err error
 
 		n := NewContact{WorkspaceID: in.Membership.Workspace.ID, Fields: in.Fields}
+
+		self := models.Contact{WorkspaceID: n.WorkspaceID}
+		if err := emailFree(ctx, models.New(tx), self, NormalizeEmail(in.Fields.Email)); err != nil {
+			return err
+		}
 
 		out, err = Create(ctx, tx, a.Clock.Now(), n)
 		if err != nil {
