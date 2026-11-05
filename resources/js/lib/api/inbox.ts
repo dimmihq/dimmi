@@ -105,7 +105,9 @@ export interface Message {
   delivery_status: string | null;
   scheduled_send_at?: string | null;
   event: TimelineEvent | null;
+  edited_at?: string | null;
   deleted_at: string | null;
+  deleted_by?: { id: string; name: string } | null;
   created_at: string;
 }
 
@@ -305,6 +307,31 @@ export function reply(write: Write, id: string, body: string, then?: Then): Prom
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
     { body, client_message_id: crypto.randomUUID(), delay: true, ...after },
+    writeOptions(write),
+  );
+}
+
+/*
+ * deleteMessage deletes a message, or undoes the caller's reply still
+ * waiting to leave.
+ */
+export function deleteMessage(write: Write, id: string, message: string): Promise<unknown> {
+  return request<unknown>(
+    "DELETE",
+    `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}`,
+    undefined,
+    writeOptions(write),
+  );
+}
+
+/*
+ * editNote rewrites one of the caller's notes.
+ */
+export function editNote(write: Write, id: string, message: string, body: string): Promise<Message> {
+  return request<Message>(
+    "PATCH",
+    `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}`,
+    { body },
     writeOptions(write),
   );
 }
