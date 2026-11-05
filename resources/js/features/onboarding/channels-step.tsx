@@ -5,7 +5,7 @@
  * address and answers with the address to forward it to. Chat apps are
  * listed as they are in settings, ready to connect.
  */
-import { RiFileCopyLine } from "@remixicon/react";
+import { RiCheckLine, RiFileCopyLine } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 
@@ -16,6 +16,7 @@ import { fieldError } from "@/features/auth/form-errors";
 import { chatApps } from "@/features/settings/chat-apps";
 import { Action } from "@/features/settings/controls";
 import { Item, Logo } from "@/features/settings/layout";
+import { useCopy } from "@/features/settings/use-copy";
 import { createEmailAddress } from "@/lib/api/email";
 import { installSnippet, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
@@ -54,7 +55,7 @@ function ChannelSection({
 
 function MessengerInstall({ workspace }: { workspace: string }) {
   const { data: widgets } = useQuery(widgetSettingsQuery(workspace));
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopy();
   const widget = widgets?.[0];
 
   if (!widget) {
@@ -75,12 +76,10 @@ function MessengerInstall({ workspace }: { workspace: string }) {
         <Button
           variant="secondary"
           size="small"
-          leadingIcon={RiFileCopyLine}
-          onClick={() => {
-            void navigator.clipboard.writeText(snippet).then(() => setCopied(true));
-          }}
+          leadingIcon={copied ? RiCheckLine : RiFileCopyLine}
+          onClick={() => void copy(snippet)}
         >
-          {copied ? "Copied" : "Copy snippet"}
+          Copy snippet
         </Button>
         <span className="text-body-2-regular text-text-tertiary">
           Paste it before the closing body tag of your site.
@@ -148,7 +147,7 @@ export function ChannelsStep({ workspace, label, onNext, onBack }: StepProps) {
         <ChannelSection
           title="Messenger"
           badge={
-            <Chip color="lime" variant="subtle">
+            <Chip color="lime" variant="caption">
               Recommended
             </Chip>
           }
