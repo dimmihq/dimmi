@@ -13,6 +13,9 @@ function member(changes: Partial<Member>): Member {
     sign_in_locked: false,
     two_factor_enabled: true,
     last_active_at: null,
+    conversation_access: "all",
+    conversation_access_unassigned: false,
+    access_team_ids: [],
     ...changes,
   };
 }

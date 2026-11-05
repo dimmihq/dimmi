@@ -37,6 +37,7 @@ import { Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { MemberAccessDialog } from "../members/member-access-dialog";
 import { MemberImportButton } from "../members/member-import-dialog";
 import { type FilterKey, filterFor, filterKeyFrom } from "../members/member-review";
 import { ExportMembersButton, LastActive, MemberFilterSelect, TwoFactorMark } from "../members/member-review-controls";
@@ -189,7 +190,15 @@ interface Pending {
  * Powers is what the caller may do to members: change members and
  * admins (write), change owners (owners), and help them back in (reset).
  */
-type Powers = HelpPowers;
+type Powers = HelpPowers & { access: boolean };
+
+/*
+ * canSetAccess reports whether the caller may choose which conversations
+ * the member sees: never their own, and never an owner's.
+ */
+function canSetAccess(member: Member, powers: Powers): boolean {
+  return powers.access && member.id !== powers.self && member.role !== "owner" && member.status === "active";
+}
 
 /*
  * canManage reports whether the caller may change the member's status.
@@ -285,16 +294,19 @@ function Person({
   timeZone,
   onPick,
   onHelp,
+  onAccess,
 }: {
   member: Member;
   powers: Powers;
   timeZone?: string;
   onPick: (p: Pending) => void;
   onHelp: (help: Help) => void;
+  onAccess: (member: Member) => void;
 }) {
   const name = member.user.name;
   const choices = offers(member, powers);
   const helps = helpOffers(member, powers);
+  const access = canSetAccess(member, powers);
   const detail = member.status === "deactivated" ? `${member.user.email} · Deactivated` : member.user.email;
 
   return (
@@ -308,7 +320,7 @@ function Person({
       <Chip variant="caption" color={member.role === "owner" ? "blue" : "neutral"}>
         {roleLabel(member.role)}
       </Chip>
-      {choices.length + helps.length > 0 ? (
+      {choices.length + helps.length > 0 || access ? (
         <Dropdown>
           <DropdownTrigger
             aria-label={`Manage ${name}`}
@@ -327,6 +339,11 @@ function Person({
                 <span className="text-body-2-regular text-text-primary">{helpLabel(help)}</span>
               </DropdownItem>
             ))}
+            {access ? (
+              <DropdownItem onSelect={() => onAccess(member)}>
+                <span className="text-body-2-regular text-text-primary">Conversation access</span>
+              </DropdownItem>
+            ) : null}
           </DropdownPopover>
         </Dropdown>
       ) : null}
@@ -397,6 +414,7 @@ export function MembersSettings() {
   const [retry, setRetry] = useState<Pending | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [help, setHelp] = useState<Help | null>(null);
+  const [accessing, setAccessing] = useState<Member | null>(null);
 
   const self = caller?.member?.id ?? "";
   const permissions = caller?.member?.permissions ?? [];
@@ -405,6 +423,7 @@ export function MembersSettings() {
     write: permissions.includes("members:write"),
     owners: permissions.includes("members:manage_owners"),
     reset: permissions.includes("members:reset_two_factor"),
+    access: permissions.includes("members:manage_access"),
   };
   const active = members.filter((member) => member.status === "active").length;
 
@@ -450,6 +469,7 @@ export function MembersSettings() {
             timeZone={me.displayZone ?? undefined}
             onPick={setPending}
             onHelp={setHelp}
+            onAccess={setAccessing}
           />
         ))}
       </Section>
@@ -470,6 +490,7 @@ export function MembersSettings() {
         onConfirm={() => (pending ? change.mutateAsync(pending).catch(() => undefined) : undefined)}
       />
       <SignInHelpDialogs workspace={workspace} help={help} hasPassword={me.hasPassword} onClose={() => setHelp(null)} />
+      <MemberAccessDialog workspace={workspace} member={accessing} onClose={() => setAccessing(null)} />
       <PasswordPrompt
         isOpen={retry !== null}
         onClose={() => setRetry(null)}

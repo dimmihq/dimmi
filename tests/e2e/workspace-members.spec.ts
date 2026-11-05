@@ -159,4 +159,39 @@ it.describe("workspace and members", () => {
     await members.getByRole("button", { name: "Export CSV" }).click();
     expect((await download).suggestedFilename()).toBe(`dimmi-members-review-${suffixOf(person)}.csv`);
   });
+
+  it("limits which conversations a teammate sees", async ({ page, person, request }) => {
+    const teammate = teammateOf(person);
+    await createAccount(request, person, `Access ${suffixOf(person)}`);
+    await createAccount(request, teammate);
+    addTeammate(person.email, teammate.email, "member");
+    await signIn(page, person);
+
+    await page.goto("/d/settings/teams");
+    await page.getByRole("region", { name: "Teams" }).getByRole("button", { name: "New team" }).click();
+    await page.getByRole("alertdialog").getByRole("textbox", { name: "Team name" }).fill("Billing");
+    await page.getByRole("alertdialog").getByRole("button", { name: "Create team" }).click();
+    await expect(page.getByRole("heading", { name: "Billing", level: 1 })).toBeVisible();
+
+    await page.goto("/d/settings/members");
+    const members = page.getByRole("region", { name: "Members" });
+    await members.getByRole("button", { name: `Manage ${teammate.name}` }).click();
+    await page.getByRole("button", { name: "Conversation access", exact: true }).click();
+
+    const dialog = page.getByRole("dialog", { name: `Conversation access for ${teammate.name}` });
+    await expect(dialog.getByText("They see every conversation in the workspace.")).toBeVisible();
+    await dialog.getByRole("button", { name: /Sees/ }).click();
+    await page.getByRole("option", { name: "Only some teams" }).click();
+    const save = dialog.getByRole("button", { name: "Save access" });
+    await expect(save).toBeDisabled();
+    await dialog.getByText("Billing").click();
+    await save.click();
+    await expect(dialog).toBeHidden();
+
+    await page.reload();
+    await members.getByRole("button", { name: `Manage ${teammate.name}` }).click();
+    await page.getByRole("button", { name: "Conversation access", exact: true }).click();
+    await expect(dialog.getByText("They see the conversations of the teams you pick")).toBeVisible();
+    await expect(dialog.getByRole("checkbox", { name: "Billing" })).toBeChecked();
+  });
 });

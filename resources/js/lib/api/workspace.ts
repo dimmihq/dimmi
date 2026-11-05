@@ -30,6 +30,9 @@ export interface Member {
   sign_in_locked: boolean | null;
   two_factor_enabled: boolean | null;
   last_active_at: string | null;
+  conversation_access: ConversationAccess;
+  conversation_access_unassigned: boolean;
+  access_team_ids: string[];
 }
 
 /*
@@ -84,6 +87,9 @@ export interface WorkspaceChanges {
 export interface MemberChanges {
   role?: Member["role"];
   status?: Member["status"];
+  conversation_access?: ConversationAccess;
+  conversation_access_unassigned?: boolean;
+  access_team_ids?: string[];
 }
 
 export function workspaceQuery(workspace: string) {
