@@ -52,7 +52,7 @@ func TestRedactionRefusals(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		path := start(t, d, "Hi", "Hello")
-		_, err := d.TC.App.DB.Exec(t.Context(), `UPDATE messages SET metadata = '{"redactions": "x"}'`)
+		_, err := d.TC.Operator().Exec(t.Context(), `UPDATE messages SET metadata = '{"redactions": "x"}'`)
 		require.NoError(t, err)
 
 		d.Owner.GetJSON(path + "/messages").AssertOK().AssertJSONMissing("data.0.redactions")
@@ -97,7 +97,7 @@ func TestRedactionFailures(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		path := start(t, d, "Hi", "Hello")
-		db := d.TC.App.DB
+		db := d.TC.Operator()
 
 		bad := `INSERT INTO redaction_rules (workspace_id, name, pattern) VALUES ($1, 'Bad', '(')`
 		_, err := db.Exec(t.Context(), bad, d.TC.Workspace.Workspace.ID)

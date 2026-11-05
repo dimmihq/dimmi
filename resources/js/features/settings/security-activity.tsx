@@ -11,8 +11,10 @@ import { securityEventsQuery } from "@/lib/api/audit";
 
 import { Empty, Glyph, Item, Section } from "./layout";
 import { formatTime, securityEventLabel } from "./log-labels";
+import { useAccount } from "./use-account";
 
 export function RecentSecurityActivity() {
+  const me = useAccount();
   const { data, error, isPending } = useQuery(securityEventsQuery());
   const events = data?.items ?? [];
 
@@ -25,7 +27,9 @@ export function RecentSecurityActivity() {
           key={event.id}
           mark={<Glyph icon={RiShieldKeyholeLine} />}
           title={securityEventLabel(event.type)}
-          detail={[formatTime(event.created_at), event.device_label, event.ip].filter(Boolean).join(" · ")}
+          detail={[formatTime(event.created_at, me.displayZone), event.device_label, event.ip]
+            .filter(Boolean)
+            .join(" · ")}
         />
       ))}
     </Section>

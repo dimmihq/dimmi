@@ -6,7 +6,7 @@ import type { ComponentType } from "react";
 
 import type { SettingsSection } from "@/features/shell/navigation";
 
-import { NotificationsSettings, PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
+import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { AuditLogSettings } from "./pages/audit-log";
@@ -30,7 +30,6 @@ import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 export const settingsViews: Record<SettingsSection, ComponentType> = {
   profile: ProfileSettings,
   preferences: PreferencesSettings,
-  notifications: NotificationsSettings,
   security: SecuritySettings,
   tokens: TokensSettings,
   inboxes: InboxesSettings,

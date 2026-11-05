@@ -173,7 +173,7 @@ func TestContactErasure(t *testing.T) {
 		d.TC.Drain()
 
 		var zipPath string
-		require.NoError(t, d.TC.App.DB.QueryRow(t.Context(), `SELECT path FROM contact_exports`).Scan(&zipPath))
+		require.NoError(t, d.TC.Operator().QueryRow(t.Context(), `SELECT path FROM contact_exports`).Scan(&zipPath))
 		erasure := d.Owner.Delete("/api/v1/contacts/" + contact + "?erase=true").AssertStatus(202).String("data.id")
 
 		assert.Equal(t, erasures.Waiting, erase(t, d.TC, erasure))
@@ -292,7 +292,7 @@ func storeAttachment(t *testing.T, tc *tests.TestCase, path string) storedFile {
 	conversation, err := tc.App.IDs.Decode(string(models.PrefixConversation), path[len("/api/v1/conversations/"):])
 	require.NoError(t, err)
 
-	_, err = tc.App.DB.Exec(t.Context(), `
+	_, err = tc.Operator().Exec(t.Context(), `
 		INSERT INTO attachments
 			(workspace_id, message_id, uploaded_by_type, disk, path, filename, content_type, size_bytes)
 		SELECT workspace_id, id, 'contact', $2, $3, 'receipt.txt', 'text/plain', 7 FROM messages

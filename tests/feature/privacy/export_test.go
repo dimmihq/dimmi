@@ -128,7 +128,7 @@ func TestContactExport(t *testing.T) {
 		d := tests.NewDesk(t)
 		path, contact := customer(t, d)
 		storeAttachment(t, d.TC, path)
-		_, err := d.TC.App.DB.Exec(t.Context(), `UPDATE attachments SET scan_status = 'infected'`)
+		_, err := d.TC.Operator().Exec(t.Context(), `UPDATE attachments SET scan_status = 'infected'`)
 		require.NoError(t, err)
 		d.Owner.PostJSON(path+"/notes", testkit.JSON{"body": "VIP, be gentle"}).AssertCreated()
 		d.Owner.PatchJSON("/api/v1/contacts/"+contact, testkit.JSON{"notes": "Prefers email"}).AssertOK()

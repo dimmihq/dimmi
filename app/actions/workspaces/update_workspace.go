@@ -53,9 +53,16 @@ the fields an update changed.
 const fieldRequireTwoFactor = "require_two_factor"
 
 /*
+fieldCustomerFacingName names the name customers see among the fields
+an update changed.
+*/
+const fieldCustomerFacingName = "customer_facing_name"
+
+/*
 UpdateWorkspaceInput is who changes the workspace, as the caller and
 through their membership of it, and the fields to change; nil leaves a
-field as it is.
+field as it is. CustomerFacingName sets the name customers see, and
+ClearCustomerFacingName removes it so they see the workspace's name.
 */
 type UpdateWorkspaceInput struct {
 	Principal        *appauth.Principal
@@ -67,7 +74,10 @@ type UpdateWorkspaceInput struct {
 	TestMode         *bool
 	RequireTwoFactor *bool
 	ShowViewers      *bool
-	LinkSafety       *LinkSafetyChange
+
+	CustomerFacingName      *string
+	ClearCustomerFacingName bool
+	LinkSafety              *LinkSafetyChange
 }
 
 /*
@@ -83,6 +93,8 @@ Rules:
     by one that gave it up within thirty days; the old slug is held for
     this workspace.
   - A rename renames the organization while it has no other workspace.
+  - The name customers see is set or removed in the settings; removed,
+    customers see the workspace's name.
   - Values equal to the current ones change nothing.
   - Turning the requirement on mails every active member without a
     second factor.
@@ -210,22 +222,25 @@ func (a *UpdateWorkspace) changes(
 		changes = append(changes, "slug")
 	}
 
-	settings, err := settingChanges(&params, w, in)
+	settingChanges, err := settingsChange(&params, w, in)
 	if err != nil {
 		return params, nil, err
 	}
 
-	changes = append(changes, settings...)
+	changes = append(changes, settingChanges...)
+
 	slices.Sort(changes)
 
 	return params, changes, nil
 }
 
 /*
-settingChanges writes the settings the input changes into the params,
-returning their names.
+settingsChange applies to params the changes kept in the settings
+document: the requirement of a second factor, whether inbox lists show
+viewers, the name customers see and the link checks, and returns the
+names of those that changed.
 */
-func settingChanges(
+func settingsChange(
 	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput,
 ) ([]string, error) {
 	var changes []string
@@ -250,6 +265,16 @@ func settingChanges(
 		changes = append(changes, "show_viewers_on_list")
 	}
 
+	settings, changed, err := customerFacingName(params.Settings, w, in)
+	if err != nil {
+		return nil, err
+	}
+
+	if changed {
+		params.Settings = settings
+		changes = append(changes, fieldCustomerFacingName)
+	}
+
 	if changed, err := applyLinkSafety(params, w, in.LinkSafety); err != nil || changed {
 		changes = append(changes, "link_safety")
 
@@ -257,6 +282,39 @@ func settingChanges(
 	}
 
 	return changes, nil
+}
+
+/*
+customerFacingName returns the settings with the name customers see as
+asked, and whether it changed.
+*/
+func customerFacingName(
+	settings json.RawMessage, w models.Workspace, in UpdateWorkspaceInput,
+) (json.RawMessage, bool, error) {
+	next := cleaned(in.CustomerFacingName)
+	if next == nil && !in.ClearCustomerFacingName {
+		return settings, false, nil
+	}
+
+	if current := w.CustomerFacingNameSetting(); ptrEqual(current, next) {
+		return settings, false, nil
+	}
+
+	out, err := models.WithCustomerFacingName(settings, next)
+
+	return out, err == nil, err
+}
+
+/*
+ptrEqual reports whether two optional names are the same, both absent
+counting as the same.
+*/
+func ptrEqual(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return *a == *b
 }
 
 /*

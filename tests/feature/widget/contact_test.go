@@ -52,7 +52,7 @@ func TestWidgetContact(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		v := startVisitor(t, tc)
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"UPDATE contacts SET trusted_attribute_keys = '{plan,stripe_customer_id}' WHERE workspace_id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestWidgetContact(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		v := startVisitor(t, tc)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE contacts SET kind = 'user' WHERE workspace_id = $1",
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE contacts SET kind = 'user' WHERE workspace_id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 

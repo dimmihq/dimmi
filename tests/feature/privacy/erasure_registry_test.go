@@ -34,7 +34,7 @@ func TestErasureRegistry(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
-		rows, err := tc.App.DB.Query(t.Context(), `
+		rows, err := tc.Operator().Query(t.Context(), `
 			SELECT table_name FROM information_schema.columns
 			WHERE table_schema = current_schema() AND column_name = 'contact_id'
 			ORDER BY table_name`)

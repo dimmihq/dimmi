@@ -6,6 +6,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
+import { displayZone } from "@/lib/location";
 
 export function useAccount() {
   const { data: me } = useSuspenseQuery(meQuery);
@@ -15,6 +16,10 @@ export function useAccount() {
     name: me?.user.name ?? "",
     email: me?.user.email ?? "",
     hasPassword: me?.user.has_password ?? false,
+    avatarUrl: me?.user.avatar_url ?? null,
+    locale: me?.user.locale ?? null,
+    timezone: me?.user.timezone ?? null,
+    displayZone: displayZone(me),
     workspace: {
       id: current?.id ?? "",
       name: current?.name ?? "Workspace",
@@ -22,5 +27,6 @@ export function useAccount() {
       role: current?.role ?? "",
     },
     cloud: me?.instance?.edition === "cloud",
+    auditRetentionDays: me?.instance?.audit_retention_days ?? 0,
   };
 }

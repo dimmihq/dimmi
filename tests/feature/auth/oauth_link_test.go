@@ -26,7 +26,7 @@ func TestOAuthLinking(t *testing.T) {
 		attempt := tc.StartOAuth(browser, "/auth/google/redirect?intent=link")
 		res := tc.FinishOAuth(browser, attempt, person("110169", "someone-else@example.com"))
 
-		assertLands(t, res, "/d/settings/security")
+		assertLands(t, res, "/d/settings/security?linked=google")
 		tc.Table("oauth_identities").AssertHas(testkit.Row{
 			"user_id": tc.Owner.ID, "provider": "google", "email": "someone-else@example.com", "last_login_at": nil,
 		})
@@ -70,7 +70,7 @@ func TestOAuthLinking(t *testing.T) {
 		tc.Social()
 		browser := tc.ActingAsOwner()
 		attempt := tc.StartOAuth(browser, "/auth/github/redirect?intent=link")
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET deleted_at = now() WHERE id = $1", tc.Owner.ID)
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE users SET deleted_at = now() WHERE id = $1", tc.Owner.ID)
 		require.NoError(t, err)
 
 		assertLands(t, tc.FinishOAuth(browser, attempt, person("583231", "grace@example.com")),

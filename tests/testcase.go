@@ -24,6 +24,7 @@ import (
 	"cmp"
 	"context"
 	"io"
+	"io/fs"
 	"sync"
 	"testing"
 	"time"
@@ -64,21 +65,23 @@ TestCase is one test's running application with a workspace and its
 owner. Database is the test's own database the application runs on.
 */
 type TestCase struct {
-	T         testing.TB
-	App       *app.App
-	Clock     *clock.Fake
-	Owner     models.User
-	Workspace workspaces.CreatedWorkspace
-	Database  testkit.Database
-	handler   fhttp.Handler
-	mail      *mail.Fake
-	mailOnce  sync.Once
-	social    *socialite.Fake
-	oauthOnce sync.Once
-	role      *database.DB
-	roleOnce  sync.Once
-	environ   []string
-	before    []func(a *app.App)
+	T            testing.TB
+	App          *app.App
+	Clock        *clock.Fake
+	Owner        models.User
+	Workspace    workspaces.CreatedWorkspace
+	Database     testkit.Database
+	handler      fhttp.Handler
+	mail         *mail.Fake
+	mailOnce     sync.Once
+	social       *socialite.Fake
+	oauthOnce    sync.Once
+	role         *database.DB
+	roleOnce     sync.Once
+	operator     *database.DB
+	operatorOnce sync.Once
+	environ      []string
+	before       []func(a *app.App)
 }
 
 /*
@@ -88,10 +91,11 @@ or one of its fields.
 type Option func(o *options)
 
 type options struct {
-	env    []string
-	before []func(a *app.App)
-	routes []func(r *routing.Router)
-	logs   io.Writer
+	env      []string
+	before   []func(a *app.App)
+	routes   []func(r *routing.Router)
+	logs     io.Writer
+	language fs.FS
 }
 
 /*
@@ -117,6 +121,14 @@ own routes are.
 */
 func WithRoutes(fn func(r *routing.Router)) Option {
 	return func(o *options) { o.routes = append(o.routes, fn) }
+}
+
+/*
+WithLanguage loads more message files over the product's own, one
+directory per locale, such as a test-only language.
+*/
+func WithLanguage(files fs.FS) Option {
+	return func(o *options) { o.language = files }
 }
 
 /*
@@ -203,9 +215,18 @@ func start(tb testing.TB, o *options) (booted, error) {
 
 	fake := clock.NewFake(Epoch())
 	db := MigratedDatabase(tb)
-	foundationOptions.Environ = append(environment(tb, db.URL), o.env...)
+	foundationOptions.Environ = append(environment(tb, applicationURL(tb, db)), o.env...)
 	foundationOptions.LogWriter = cmp.Or[io.Writer](o.logs, io.Discard)
 	foundationOptions.Clock = fake
+
+	if o.language != nil {
+		merged, err := mergeLanguage(foundationOptions.Language, o.language)
+		if err != nil {
+			return booted{}, err
+		}
+
+		foundationOptions.Language = merged
+	}
 
 	fa, err := foundation.New(tb.Context(), foundationOptions)
 	if err != nil {
@@ -252,7 +273,7 @@ Table returns assertions on a table, read outside any workspace, as an
 operator would.
 */
 func (tc *TestCase) Table(table string) *testkit.TableAssertions {
-	return testkit.Table(tc.T, tc.App.DB, table)
+	return testkit.Table(tc.T, tc.Operator(), table)
 }
 
 /*

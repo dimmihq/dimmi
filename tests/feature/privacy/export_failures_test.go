@@ -108,7 +108,7 @@ func TestContactExportFailures(t *testing.T) {
 			d := tests.NewDesk(t)
 			path, contact := customer(t, d)
 			storeAttachment(t, d.TC, path)
-			_, err := d.TC.App.DB.Exec(t.Context(), change)
+			_, err := d.TC.Operator().Exec(t.Context(), change)
 			require.NoError(t, err)
 			export := startExport(d, contact)
 
@@ -143,7 +143,7 @@ func TestContactExportFailures(t *testing.T) {
 		for _, change := range []string{
 			`UPDATE contact_exports SET disk = 'nowhere'`, `UPDATE contact_exports SET path = '../outside.zip'`,
 		} {
-			_, err := d.TC.App.DB.Exec(t.Context(), change)
+			_, err := d.TC.Operator().Exec(t.Context(), change)
 			require.NoError(t, err)
 			d.Owner.GetJSON(show + "/download").AssertStatus(500)
 			_, err = expire.Handle(t.Context())
@@ -169,12 +169,12 @@ func TestContactExportFailures(t *testing.T) {
 		path, contact := customer(t, d)
 		conversation, err := d.TC.App.IDs.Decode("conv", path[len("/api/v1/conversations/"):])
 		require.NoError(t, err)
-		_, err = d.TC.App.DB.Exec(t.Context(), `
+		_, err = d.TC.Operator().Exec(t.Context(), `
 			INSERT INTO messages (workspace_id, conversation_id, type, author_type, body)
 			VALUES ($1, $2, 'message', 'agent', 'Automatic hello')`, d.TC.Workspace.Workspace.ID, conversation)
 		require.NoError(t, err)
 		export := startExport(d, contact)
-		_, err = d.TC.App.DB.Exec(t.Context(), `UPDATE contact_exports SET requested_by_member_id = NULL`)
+		_, err = d.TC.Operator().Exec(t.Context(), `UPDATE contact_exports SET requested_by_member_id = NULL`)
 		require.NoError(t, err)
 
 		require.NoError(t, build(t, d, export))

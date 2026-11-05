@@ -169,14 +169,7 @@ export const settingsPages = {
     "Preferences",
     RiEqualizerLine,
     "/d/settings/preferences",
-    "Language, time zone, theme and how the inbox behaves for you.",
-  ),
-  notifications: page(
-    "settings-notifications",
-    "Notifications",
-    RiNotification3Line,
-    "/d/settings/notifications",
-    "What reaches you in the app, by push, by mail and in Slack.",
+    "Time zone and theme: how dimmi looks for you.",
   ),
   security: page(
     "settings-security",
@@ -423,7 +416,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "account",
       label: "Account",
-      items: [pages.profile, pages.preferences, pages.notifications, pages.security, pages.tokens],
+      items: [pages.profile, pages.preferences, pages.security, pages.tokens],
     },
     {
       key: "inbox",

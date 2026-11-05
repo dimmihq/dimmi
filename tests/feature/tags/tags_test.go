@@ -144,7 +144,7 @@ func TestTagVocabulary(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		ws := d.TC.Workspace.Workspace.ID
-		_, err := d.TC.App.DB.Exec(t.Context(), `
+		_, err := d.TC.Operator().Exec(t.Context(), `
 			INSERT INTO tags (workspace_id, name) SELECT $1, 'tag-' || g FROM generate_series(1, 10000) AS g`, ws)
 		require.NoError(t, err)
 
@@ -197,7 +197,8 @@ func TestConversationTags(t *testing.T) {
 
 		var stored *string
 
-		err := d.TC.App.DB.QueryRow(t.Context(), `SELECT message_id::text FROM conversation_tag LIMIT 1`).Scan(&stored)
+		err := d.TC.Operator().QueryRow(t.Context(), `SELECT message_id::text FROM conversation_tag LIMIT 1`).
+			Scan(&stored)
 		require.NoError(t, err)
 		require.NotNil(t, stored)
 

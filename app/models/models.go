@@ -475,6 +475,14 @@ type Invitation struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+	RemindedAt        *time.Time `json:"reminded_at"`
+}
+
+type Maintenance struct {
+	ID      bool       `json:"id"`
+	Enabled bool       `json:"enabled"`
+	Message string     `json:"message"`
+	Since   *time.Time `json:"since"`
 }
 
 type MemberInboxPreference struct {
@@ -762,22 +770,23 @@ type TeamMember struct {
 }
 
 type User struct {
-	ID                   ids.UUID   `json:"id"`
-	Name                 string     `json:"name"`
-	Email                string     `json:"email"`
-	EmailVerifiedAt      *time.Time `json:"email_verified_at"`
-	PasswordHash         *string    `json:"password_hash"`
-	TwoFactorConfirmedAt *time.Time `json:"two_factor_confirmed_at"`
-	AvatarPath           *string    `json:"avatar_path"`
-	Locale               *string    `json:"locale"`
-	Timezone             *string    `json:"timezone"`
-	LastSeenAt           *time.Time `json:"last_seen_at"`
-	CreatedAt            time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
-	DeletedAt            *time.Time `json:"deleted_at"`
-	PasswordChangedAt    *time.Time `json:"password_changed_at"`
-	RiskFlags            []string   `json:"risk_flags"`
-	CreatedVia           *string    `json:"created_via"`
+	ID                   ids.UUID        `json:"id"`
+	Name                 string          `json:"name"`
+	Email                string          `json:"email"`
+	EmailVerifiedAt      *time.Time      `json:"email_verified_at"`
+	PasswordHash         *string         `json:"password_hash"`
+	TwoFactorConfirmedAt *time.Time      `json:"two_factor_confirmed_at"`
+	AvatarPath           *string         `json:"avatar_path"`
+	Locale               *string         `json:"locale"`
+	Timezone             *string         `json:"timezone"`
+	LastSeenAt           *time.Time      `json:"last_seen_at"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	DeletedAt            *time.Time      `json:"deleted_at"`
+	PasswordChangedAt    *time.Time      `json:"password_changed_at"`
+	RiskFlags            []string        `json:"risk_flags"`
+	CreatedVia           *string         `json:"created_via"`
+	Preferences          json.RawMessage `json:"preferences"`
 }
 
 type UserAuthFactor struct {

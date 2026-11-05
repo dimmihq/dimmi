@@ -4,7 +4,6 @@
  * of the address for whoever may manage it.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -16,6 +15,7 @@ import { type EmailAddress, sendEmailAddressTest, updateEmailAddress } from "@/l
 import { Activity } from "./activity";
 import { CopyButton } from "./copy-button";
 import { Failure } from "./failure";
+import { ForwardingGuide } from "./forwarding-guide";
 
 /*
  * Status says whether mail reached the address yet.
@@ -48,8 +48,6 @@ export function AddressCard({
 }) {
   const me = useAccount();
   const queryClient = useQueryClient();
-  const [guide, setGuide] = useState(address.setup_guides[0]?.name ?? "");
-  const steps = address.setup_guides.find((g) => g.name === guide)?.steps ?? [];
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", me.workspace.id, "email-addresses"] });
 
   const test = useMutation({ mutationFn: () => sendEmailAddressTest(me.workspace.id, address.id) });
@@ -69,19 +67,7 @@ export function AddressCard({
         </span>
         <CopyButton value={address.forwarding_address} label={`Copy ${address.forwarding_address}`} />
       </Row>
-      <Row label="Set up forwarding" description="Steps for the mail service your address lives in.">
-        <Choice
-          label="Mail service"
-          options={address.setup_guides.map((g) => g.name)}
-          value={guide}
-          onChange={setGuide}
-        />
-      </Row>
-      <ol className="flex list-decimal flex-col gap-1 border-b border-separator-border py-3 ps-5 pe-3 text-body-2-regular text-text-secondary">
-        {steps.map((step) => (
-          <li key={step}>{step}</li>
-        ))}
-      </ol>
+      <ForwardingGuide guides={address.setup_guides} />
       {confirmation ? (
         <Row label="Gmail confirmation code" description="Enter it in Gmail to finish turning on forwarding.">
           <span className="font-mono text-body-medium text-text-primary">{confirmation.code}</span>

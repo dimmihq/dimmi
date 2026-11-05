@@ -24,3 +24,5 @@ coverage-app.filtered.out
 /deploy/cdk/node_modules/
 /deploy/dns/node_modules/
 /deploy/dns/outputs/
+/lang/en-XA/
+/resources/js/lang/en-XA/

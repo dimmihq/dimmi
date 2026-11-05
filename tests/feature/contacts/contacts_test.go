@@ -245,7 +245,7 @@ func TestUpsertContact(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		ws := d.TC.Workspace.Workspace.ID
-		_, err := d.TC.App.DB.Exec(t.Context(), `
+		_, err := d.TC.Operator().Exec(t.Context(), `
 			INSERT INTO contacts (workspace_id, kind, email, email_verified, name)
 			VALUES ($1, 'lead', 'typed@acme.dev', false, 'Typist')`, ws)
 		require.NoError(t, err)
@@ -340,16 +340,16 @@ func TestContactDuplicates(t *testing.T) {
 
 		var chat string
 
-		err := d.TC.App.DB.QueryRow(t.Context(), `
+		err := d.TC.Operator().QueryRow(t.Context(), `
 			INSERT INTO contacts (workspace_id, kind, name) VALUES ($1, 'lead', 'Chat') RETURNING id::text`, ws).
 			Scan(&chat)
 		require.NoError(t, err)
-		_, err = d.TC.App.DB.Exec(t.Context(), `
+		_, err = d.TC.Operator().Exec(t.Context(), `
 			INSERT INTO contact_identities (workspace_id, contact_id, type, value, verified)
 			VALUES ($1, $2::uuid, 'whatsapp', '14155550100', true)`, ws, chat)
 		require.NoError(t, err)
 
-		_, err = d.TC.App.DB.Exec(t.Context(), `
+		_, err = d.TC.Operator().Exec(t.Context(), `
 			INSERT INTO contacts (workspace_id, kind, email, name) VALUES ($1, 'lead', 'BOB@acme.dev', 'Typed')`, ws)
 		require.NoError(t, err)
 

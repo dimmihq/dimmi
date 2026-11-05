@@ -65,7 +65,7 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 	a.Tokens = tokens
 	a.Devices = appauth.NewDevices()
 	a.Cookies = appauth.Cookies{Device: a.Config.Auth.Sessions.DeviceCookie, Secure: a.SecureCookies()}
-	a.SecurityLog = &appauth.SecurityLog{DB: fa.DB, Clock: fa.Clock, Devices: a.Devices}
+	a.SecurityLog = &appauth.SecurityLog{DB: fa.DB, Clock: fa.Clock, Devices: a.Devices, Events: fa.Events}
 	a.Lockout = &appauth.Lockout{Limiter: fa.Limiter, Cache: fa.Cache, Clock: fa.Clock, Config: a.Config.Auth.Lockout}
 	a.Secrets = &appauth.OneTimeTokens{
 		DB: fa.DB, Clock: fa.Clock, Codes: appauth.Codes{Key: fa.DerivedKey(appauth.CodeKeyPurpose)},

@@ -19,10 +19,12 @@
 package audit
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -60,6 +62,9 @@ const (
 
 	EventWidgetSettingsUpdated = "widget.settings_updated"
 	EventWidgetDeleted         = "widget.deleted"
+	EventTwoFactorResetAsked   = "member.two_factor_reset_requested"
+	EventTwoFactorResetDone    = "member.two_factor_reset_completed"
+	EventSignInLockCleared     = "member.sign_in_lock_cleared"
 
 	EventRedactionRuleCreated     = "redaction_rule.created"
 	EventRedactionRuleUpdated     = "redaction_rule.updated"
@@ -75,7 +80,8 @@ const (
 /*
 The kinds of actor and of the channel they acted through. A member acts
 through their browser session, their own app or an access token they
-minted; the system acts on its own.
+minted; the system acts on its own, or for an operator at the command
+line.
 */
 const (
 	ActorMember      = "member"
@@ -83,6 +89,7 @@ const (
 	ViaSession       = "session"
 	ViaApp           = "app"
 	ViaPersonalToken = "personal_token"
+	ViaCLI           = "cli"
 )
 
 /*
@@ -105,6 +112,12 @@ Entry is one change to record. ActorID is the member who made it, or
 ids.Nil() when the system did. Changes describes what changed, such as
 {"role": {"from": "member", "to": "admin"}}, and holds only values that
 encode as JSON.
+
+Work recorded after the fact, away from the request that caused it,
+says what the request would have: Client is where it came from, At
+when it happened, SystemLabel how the system is named as its actor
+and Via the channel the system acted through, such as cli. Left empty,
+they come from the request in the context and the clock.
 */
 type Entry struct {
 	WorkspaceID ids.UUID
@@ -112,6 +125,10 @@ type Entry struct {
 	ActorID     ids.UUID
 	Subject     Subject
 	Changes     map[string]any
+	Client      *appauth.Client
+	At          time.Time
+	SystemLabel string
+	Via         string
 }
 
 /*
@@ -156,10 +173,14 @@ func (a *RecordAuditLog) Handle(ctx context.Context, e Entry) (models.AuditLog, 
 
 	params := models.CreateAuditLogParams{
 		WorkspaceID: e.WorkspaceID, Event: e.Event, ActorType: who.kind, ActorID: who.id, ViaKind: who.viaKind,
-		ViaID: who.viaID, ActorLabel: who.label, Changes: changes, Now: a.Clock.Now(),
+		ViaID: who.viaID, ActorLabel: who.label, Changes: changes, Now: e.At,
 	}
+	if e.At.IsZero() {
+		params.Now = a.Clock.Now()
+	}
+
 	withSubject(&params, e.Subject)
-	withClient(ctx, &params)
+	withClient(ctx, &params, e.Client)
 
 	entry, err := q.CreateAuditLog(ctx, params)
 	if err != nil {
@@ -174,11 +195,15 @@ actor works out who the entry names: the system, or the member with
 their account as it is now and, for a token, the token's name.
 */
 func (a *RecordAuditLog) actor(ctx context.Context, q *models.Queries, e Entry) (actor, error) {
-	who := actor{kind: ActorSystem, label: systemLabel}
+	who := actor{kind: ActorSystem, label: cmp.Or(e.SystemLabel, systemLabel)}
 	principal, signedIn := appauth.CurrentPrincipal(ctx)
 
 	if signedIn {
 		who.viaKind, who.viaID = via(principal)
+	}
+
+	if e.Via != "" {
+		who.viaKind = &e.Via
 	}
 
 	if e.ActorID == ids.Nil() {
@@ -246,14 +271,18 @@ func withSubject(p *models.CreateAuditLogParams, s Subject) {
 
 /*
 withClient fills in the address, browser and request id of the request
-in the context, when there is one.
+in the context, when there is one, the client given taking its place.
 */
-func withClient(ctx context.Context, p *models.CreateAuditLogParams) {
+func withClient(ctx context.Context, p *models.CreateAuditLogParams, given *appauth.Client) {
 	if id := appauth.CurrentRequestID(ctx); id != "" {
 		p.RequestID = &id
 	}
 
 	client, ok := appauth.CurrentClient(ctx)
+	if given != nil {
+		client, ok = *given, true
+	}
+
 	if !ok {
 		return
 	}

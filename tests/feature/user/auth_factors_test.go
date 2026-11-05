@@ -98,7 +98,7 @@ func TestAuthFactorStore(t *testing.T) {
 		assert.Contains(t, res.String("data.setup.otpauth_url"), "issuer=dimmi")
 		assert.True(t, strings.HasPrefix(res.String("data.setup.qr_svg"), "<svg "))
 		var sealed []byte
-		err := tc.App.DB.QueryRow(t.Context(), "SELECT secret_encrypted FROM user_auth_factors").Scan(&sealed)
+		err := tc.Operator().QueryRow(t.Context(), "SELECT secret_encrypted FROM user_auth_factors").Scan(&sealed)
 		require.NoError(t, err)
 		assert.NotContains(t, string(sealed), secret)
 		tc.ActingAsOwner().GetJSON(factorsPath).AssertOK().AssertJSONMissing("data.0.setup")

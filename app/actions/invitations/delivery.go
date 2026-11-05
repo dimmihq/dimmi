@@ -40,7 +40,8 @@ const maxEmailLength = 254
 
 /*
 Sent is an invitation as it went out: the row, the name of who sent it,
-and the link to accept it when the server cannot mail it, "" otherwise.
+and the link to accept it, so whoever sent it can also pass it on by
+hand.
 */
 type Sent struct {
 	Invitation  models.Invitation
@@ -50,14 +51,13 @@ type Sent struct {
 
 /*
 Delivery issues invitation links and mails them. TTL is how long a link
-works, and MailConfigured whether mail leaves the server.
+works.
 */
 type Delivery struct {
-	Clock          clock.Clock
-	Mail           *fmail.Manager
-	Links          appauth.Links
-	TTL            time.Duration
-	MailConfigured bool
+	Clock clock.Clock
+	Mail  *fmail.Manager
+	Links appauth.Links
+	TTL   time.Duration
 }
 
 /*
@@ -80,23 +80,31 @@ func (d Delivery) issue() link {
 }
 
 /*
-outgoing is an invitation about to be mailed: its workspace, the row as
-stored with the link, the name of who sends it, and the link.
+outgoing is an invitation about to go out: its workspace, the row as
+stored with the link, the name of who sends it, the link, and whether
+the link is only handed back to pass on by hand, with no mail.
 */
 type outgoing struct {
 	workspace  models.Workspace
 	invitation models.Invitation
 	inviter    string
 	link       link
+	linkOnly   bool
 }
 
 /*
 send queues the invitation mail with the link, in the transaction that
-issued it, and returns the invitation as it went out.
+issued it, unless the link is only handed back, and returns the
+invitation as it went out.
 */
 func (d Delivery) send(ctx context.Context, tx *database.Tx, out outgoing) (Sent, error) {
 	url := d.Links.Invitation(out.link.token)
 	inv := out.invitation
+	sent := Sent{Invitation: inv, InviterName: out.inviter, AcceptURL: url}
+
+	if out.linkOnly {
+		return sent, nil
+	}
 
 	pending := d.Mail.To(fmail.Address{Email: inv.Email}).Locale(out.workspace.Locale)
 
@@ -105,11 +113,6 @@ func (d Delivery) send(ctx context.Context, tx *database.Tx, out outgoing) (Sent
 	})
 	if err != nil {
 		return Sent{}, fmt.Errorf("mail invitation: %w", err)
-	}
-
-	sent := Sent{Invitation: inv, InviterName: out.inviter}
-	if !d.MailConfigured {
-		sent.AcceptURL = url
 	}
 
 	return sent, nil

@@ -118,6 +118,8 @@ export class Bridge {
       this.refetch(realtimeKeys.me());
     } else if (envelope.event.startsWith("member.")) {
       this.refetch(realtimeKeys.members(workspace), realtimeKeys.caller(workspace));
+    } else if (envelope.event === "user.updated") {
+      this.refetch(realtimeKeys.members(workspace), realtimeKeys.caller(workspace), realtimeKeys.me());
     } else if (namespace === "member") {
       this.refetch(realtimeKeys.counts(workspace));
     } else if (isObjectRecord(envelope.data)) {

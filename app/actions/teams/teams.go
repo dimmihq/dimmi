@@ -42,12 +42,14 @@ const nameConstraint = "teams_workspace_id_name_key"
 /*
 Team is a live team with how many members it has. Members lists them
 with their accounts, by name, when they were asked for, and is nil
-otherwise.
+otherwise. ConversationCounts counts the conversations it holds by
+status, when asked for.
 */
 type Team struct {
-	Team        models.Team
-	MemberCount int64
-	Members     []models.ListTeamMembersRow
+	Team               models.Team
+	MemberCount        int64
+	Members            []models.ListTeamMembersRow
+	ConversationCounts *models.CountTeamConversationsByStatusRow
 }
 
 /*

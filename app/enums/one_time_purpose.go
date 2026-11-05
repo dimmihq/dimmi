@@ -25,6 +25,7 @@ const (
 	OneTimePurposeEmailVerification  OneTimePurpose = "email_verification"
 	OneTimePurposeEmailChange        OneTimePurpose = "email_change"
 	OneTimePurposeConfirmCode        OneTimePurpose = "confirm_code"
+	OneTimePurposeTwoFactorReset     OneTimePurpose = "two_factor_reset"
 )
 
 /*
@@ -34,7 +35,7 @@ check.
 func OneTimePurposes() []OneTimePurpose {
 	return []OneTimePurpose{
 		OneTimePurposeMagicLink, OneTimePurposeTwoFactorChallenge, OneTimePurposeEmailVerification,
-		OneTimePurposeEmailChange, OneTimePurposeConfirmCode,
+		OneTimePurposeEmailChange, OneTimePurposeConfirmCode, OneTimePurposeTwoFactorReset,
 	}
 }
 
@@ -44,7 +45,7 @@ Valid reports whether the purpose is one of the purposes.
 func (p OneTimePurpose) Valid() bool {
 	switch p {
 	case OneTimePurposeMagicLink, OneTimePurposeTwoFactorChallenge, OneTimePurposeEmailVerification,
-		OneTimePurposeEmailChange, OneTimePurposeConfirmCode:
+		OneTimePurposeEmailChange, OneTimePurposeConfirmCode, OneTimePurposeTwoFactorReset:
 		return true
 	}
 

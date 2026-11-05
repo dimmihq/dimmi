@@ -6,7 +6,9 @@
 | What an app learns before anyone signs in: how people may sign in on
 | this server, which version of the API it speaks, and what it can do.
 | An app built for a newer server hides what this one lacks instead of
-| calling endpoints that are not there.
+| calling endpoints that are not there. It also lists the languages the
+| server is served in, each by its own name, so a picker reads well to
+| someone who does not know the current one.
 |
 */
 
@@ -15,6 +17,8 @@ package resources
 import (
 	"context"
 
+	"github.com/dimmihq/dimmi/framework/i18n"
+
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/providers"
 )
@@ -22,7 +26,8 @@ import (
 /*
 AuthConfig is the sign-in options and capabilities of the server.
 MinClientVersions maps each app platform to the oldest version this
-server accepts, null when any version is.
+server accepts, null when any version is. Locales lists the languages
+people may pick, the default first.
 */
 type AuthConfig struct {
 	Object            string             `json:"object"`
@@ -41,6 +46,31 @@ type AuthConfig struct {
 	Factors           []Factor           `json:"factors"`
 	Capabilities      []string           `json:"capabilities"`
 	MinClientVersions map[string]*string `json:"min_client_versions"`
+	Locales           []Locale           `json:"locales"`
+}
+
+/*
+Locale is a language people may pick: its BCP 47 code and its name
+written in that language, such as "Deutsch" for de.
+*/
+type Locale struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+/*
+NewLocales lists the languages the translator serves, each named in its
+own language.
+*/
+func NewLocales(ctx context.Context, t *i18n.Translator) []Locale {
+	codes := t.Locales()
+	out := make([]Locale, 0, len(codes))
+
+	for _, code := range codes {
+		out = append(out, Locale{Code: code, Name: t.T(i18n.WithLocale(ctx, code), "meta.name", nil)})
+	}
+
+	return out
 }
 
 /*

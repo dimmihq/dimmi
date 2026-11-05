@@ -22,23 +22,26 @@ import (
 Workspace is a workspace a member works in. RequireTwoFactor says
 whether every member must have a second factor to work in it, and
 ShowViewers whether inbox lists show who views each conversation.
-LinkSafety holds the checks the inbox runs on links customers send. DeletedAt
+LinkSafety holds the checks the inbox runs on links customers send.
+CustomerFacingName is the name customers see, null when they see the
+workspace's own name. DeletedAt
 and PurgeAfter are set while it is in the trash: when it was deleted,
 and when it is purged for good unless restored.
 */
 type Workspace struct {
-	ID               string            `json:"id"`
-	Object           string            `json:"object"`
-	Name             string            `json:"name"`
-	Slug             string            `json:"slug"`
-	Timezone         string            `json:"timezone"`
-	Locale           string            `json:"locale"`
-	TestMode         bool              `json:"test_mode"`
-	RequireTwoFactor bool              `json:"require_two_factor"`
-	ShowViewers      bool              `json:"show_viewers_on_list"`
-	LinkSafety       models.LinkSafety `json:"link_safety"`
-	DeletedAt        *time.Time        `json:"deleted_at"`
-	PurgeAfter       *time.Time        `json:"purge_after"`
+	ID                 string            `json:"id"`
+	Object             string            `json:"object"`
+	Name               string            `json:"name"`
+	Slug               string            `json:"slug"`
+	Timezone           string            `json:"timezone"`
+	Locale             string            `json:"locale"`
+	TestMode           bool              `json:"test_mode"`
+	RequireTwoFactor   bool              `json:"require_two_factor"`
+	ShowViewers        bool              `json:"show_viewers_on_list"`
+	CustomerFacingName *string           `json:"customer_facing_name"`
+	LinkSafety         models.LinkSafety `json:"link_safety"`
+	DeletedAt          *time.Time        `json:"deleted_at"`
+	PurgeAfter         *time.Time        `json:"purge_after"`
 }
 
 /*
@@ -46,18 +49,19 @@ NewWorkspace shapes the workspace.
 */
 func NewWorkspace(w models.Workspace) Workspace {
 	return Workspace{
-		ID:               models.PublicID(models.PrefixWorkspace, w.ID),
-		Object:           "workspace",
-		Name:             w.Name,
-		Slug:             w.Slug,
-		Timezone:         w.Timezone,
-		Locale:           w.Locale,
-		TestMode:         w.TestMode,
-		RequireTwoFactor: w.RequiresTwoFactor(),
-		ShowViewers:      w.ShowsViewersOnList(),
-		LinkSafety:       w.LinkSafety(),
-		DeletedAt:        w.DeletedAt,
-		PurgeAfter:       w.PurgeAfter,
+		ID:                 models.PublicID(models.PrefixWorkspace, w.ID),
+		Object:             "workspace",
+		Name:               w.Name,
+		Slug:               w.Slug,
+		Timezone:           w.Timezone,
+		Locale:             w.Locale,
+		TestMode:           w.TestMode,
+		RequireTwoFactor:   w.RequiresTwoFactor(),
+		ShowViewers:        w.ShowsViewersOnList(),
+		CustomerFacingName: w.CustomerFacingNameSetting(),
+		LinkSafety:         w.LinkSafety(),
+		DeletedAt:          w.DeletedAt,
+		PurgeAfter:         w.PurgeAfter,
 	}
 }
 

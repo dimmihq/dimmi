@@ -58,7 +58,9 @@ a principal may do; without them every connection is refused and no
 permission is held. Domains authorizes hostnames for certificates and
 refuses all when nil. WebPushGone hears about push subscriptions the
 push service dropped. MaintenanceExcept lists paths that keep working
-during maintenance, such as inbound webhooks. RouteRules are the rules
+during maintenance, such as inbound webhooks, and GateExcept the paths
+the shared password gate leaves open, such as signed webhooks and assets
+other sites load. RouteRules are the rules
 route:lint checks. Module is the application's module path, Stubs its
 own stubs and Root the project directory, "." when empty, all for the
 make generators. LogWriter receives log
@@ -86,6 +88,7 @@ type Options struct {
 	Domains           customdomain.Authorizer
 	WebPushGone       webpush.GoneFunc
 	MaintenanceExcept []string
+	GateExcept        []string
 	RouteRules        routing.Rules
 	Module            string
 	Stubs             fs.FS

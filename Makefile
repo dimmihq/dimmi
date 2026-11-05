@@ -16,7 +16,7 @@ APP_PKGS := ./app/...
 # cloud build.
 CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: test-sweep e2e tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -62,6 +62,7 @@ WITH_ENV := set -a && . ./$(ENV_FILE) && set +a &&
 
 test:
 	$(WITH_ENV) go test -race -shuffle=on ./...
+	$(WITH_ENV) DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on ./tests/feature/...
 	$(WITH_ENV) go test -race -shuffle=on -tags cloud $(CLOUD_PKGS)
 	pnpm test
 	$(WITH_ENV) go test -race -tags dev ./framework/foundation/...
@@ -93,7 +94,7 @@ cover-app:
 # app. Open http://localhost:8080/d. Settings come from dimmi.yaml, copied
 # from dimmi.example.yaml on first run. `make dev TAGS=cloud` runs the
 # cloud edition.
-dev: dev-db
+dev: dev-db pseudo-locale
 	@test -f dimmi.yaml || cp dimmi.example.yaml dimmi.yaml
 	$(MAKE) -j2 dev-server dev-web
 
@@ -125,7 +126,7 @@ web-test:
 # End-to-end tests: builds both binaries, then drives Chromium in light
 # and dark against the release cloud binary, started fresh on :18090
 # with its own database (tests/e2e/server.ts). Needs `make services`.
-e2e: build
+e2e: pseudo-locale build
 	pnpm e2e
 
 # Checks the infrastructure code without reaching any account: credentials
@@ -154,3 +155,8 @@ infra-check:
 email-matrix:
 	EMAIL_MATRIX_ARGS="$(ARGS)" EMAIL_MATRIX_ROOT="$(CURDIR)" \
 		go test -tags emailmatrix -count=1 -timeout 3h -v -run '^TestEmailMatrix$$' ./tests/emailmatrix/
+# The pseudo locale en-XA, generated from the English messages for
+# development and the end-to-end tests; never checked in or served by a
+# release, whose app.locales leaves it out.
+pseudo-locale:
+	node scripts/pseudo-locale.ts

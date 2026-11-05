@@ -162,7 +162,7 @@ func TestInboxDeliveryFailures(t *testing.T) {
 		conv := d.customer(t, "ann", "Billing", "Hi")
 		sms, err := factories.Connection(t.Context(), d.tc.App, d.inbox.Inbox, "sms")
 		require.NoError(t, err)
-		_, err = d.tc.App.DB.Exec(t.Context(), "UPDATE conversations SET channel_connection_id = $1", sms.ID)
+		_, err = d.tc.Operator().Exec(t.Context(), "UPDATE conversations SET channel_connection_id = $1", sms.ID)
 		require.NoError(t, err)
 
 		d.owner.PostJSON("/api/v1/conversations/"+conv+"/replies", testkit.JSON{"body": "x"}).
@@ -175,7 +175,7 @@ func TestInboxDeliveryFailures(t *testing.T) {
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Hi")
 		seen := d.owner.GetJSON(path + "/messages").String("data.0.id")
 		d.owner.PostJSON(path+"/messages", testkit.JSON{"body": "later"}).AssertCreated()
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE messages SET body = NULL WHERE body = 'later'")
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE messages SET body = NULL WHERE body = 'later'")
 		require.NoError(t, err)
 
 		d.owner.PostJSON(path+"/replies", testkit.JSON{"body": "x", "expected_last_message_id": seen}).
@@ -185,7 +185,7 @@ func TestInboxDeliveryFailures(t *testing.T) {
 	t.Run("falls back to the workspace's time zone for an unknown one", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		_, err := d.tc.App.DB.Exec(t.Context(), "UPDATE users SET timezone = 'Mars/Olympus'")
+		_, err := d.tc.Operator().Exec(t.Context(), "UPDATE users SET timezone = 'Mars/Olympus'")
 		require.NoError(t, err)
 		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Hi")
 

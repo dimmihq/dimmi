@@ -114,6 +114,9 @@ package cache
   migrated database and Valkey prefix, a fake clock (`tc.Clock`), a workspace and its owner. Act through the real
   guards with `tc.ActingAs(user)` (a real sign-in) or `tc.ActingAsToken(member, abilities...)`; create data with
   `database/factories`.
+- `make test` runs the feature tests a second time with `DIMMI_TEST_APPLICATION_ROLE=1`: the application connects as
+  a role that owns nothing, as in the cloud, so row-level security applies. Raw SQL that seeds or inspects rows runs
+  through `tc.Operator()`; setup that calls services directly runs in `tc.InWorkspace`.
 - Coverage gates: 90% of statements per framework package (`make cover`), 95% per app package (`make cover-app`).
 - Never run tests that call paid third-party APIs (LLMs above all) without explicit approval for that run.
 - After a milestone that adds or changes endpoints, run the release binary end to end as described in

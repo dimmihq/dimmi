@@ -314,7 +314,7 @@ func TestTeamsDestroy(t *testing.T) {
 func TestTeamMembersStore(t *testing.T) {
 	t.Parallel()
 
-	t.Run("adds members one result each, skipping the inactive and unknown", func(t *testing.T) {
+	t.Run("adds members one result each with who added them, skipping the inactive and unknown", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		_, first := join(t, tc, enums.RoleMember)
@@ -343,6 +343,7 @@ func TestTeamMembersStore(t *testing.T) {
 
 		require.Len(t, added.all(), 1)
 		assert.Equal(t, first.ID, added.all()[0].MemberID)
+		assert.Equal(t, tc.Workspace.Owner.ID, added.all()[0].AddedByMemberID)
 		tc.Table("team_members").
 			AssertHas(testkit.Row{
 				"team_id": support.ID, "workspace_member_id": first.ID, "workspace_id": tc.Workspace.Workspace.ID,

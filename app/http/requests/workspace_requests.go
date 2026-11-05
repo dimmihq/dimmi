@@ -21,19 +21,24 @@ import (
 )
 
 /*
-UpdateCurrentWorkspaceRequest is the input of PATCH /workspace.
+UpdateCurrentWorkspaceRequest is the input of PATCH /workspace. RawBody
+tells a name for customers sent as null, which removes it, from one not
+sent.
 */
 type UpdateCurrentWorkspaceRequest struct {
 	Body struct {
-		Name             *string         `json:"name,omitempty"               validate:"omitempty,max=80"`
-		Slug             *string         `json:"slug,omitempty"               validate:"omitempty,min=3,max=40,slug"`
-		Timezone         *string         `json:"timezone,omitempty"           validate:"omitempty,timezone"`
-		Locale           *string         `json:"locale,omitempty"             validate:"omitempty,locale"`
-		TestMode         *bool           `json:"test_mode,omitempty"`
-		RequireTwoFactor *bool           `json:"require_two_factor,omitempty"`
-		ShowViewers      *bool           `json:"show_viewers_on_list,omitempty"`
-		LinkSafety       *LinkSafetyBody `json:"link_safety,omitempty"`
+		Name             *string `json:"name,omitempty"               validate:"omitempty,max=80"`
+		Slug             *string `json:"slug,omitempty"               validate:"omitempty,min=3,max=40,slug"`
+		Timezone         *string `json:"timezone,omitempty"           validate:"omitempty,timezone"`
+		Locale           *string `json:"locale,omitempty"             validate:"omitempty,locale"`
+		TestMode         *bool   `json:"test_mode,omitempty"`
+		RequireTwoFactor *bool   `json:"require_two_factor,omitempty"`
+		ShowViewers      *bool   `json:"show_viewers_on_list,omitempty"`
+
+		CustomerFacingName *string         `json:"customer_facing_name,omitempty" validate:"omitempty,max=80"`
+		LinkSafety         *LinkSafetyBody `json:"link_safety,omitempty"`
 	}
+	RawBody []byte
 }
 
 /*
@@ -48,12 +53,16 @@ type LinkSafetyBody struct {
 }
 
 /*
-Validate refuses a name made only of invisible characters, which would
-be empty once cleaned.
+Validate refuses a name, or a name for customers, made only of invisible
+characters, which would be empty once cleaned.
 */
 func (r *UpdateCurrentWorkspaceRequest) Validate(ctx context.Context, _ *validation.Factory) error {
 	if r.Body.Name != nil && str.Clean(*r.Body.Name) == "" {
 		return violation(ctx, "name", "required", "validation.required")
+	}
+
+	if r.Body.CustomerFacingName != nil && str.Clean(*r.Body.CustomerFacingName) == "" {
+		return violation(ctx, "customer_facing_name", "required", "validation.required")
 	}
 
 	return nil

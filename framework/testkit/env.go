@@ -37,6 +37,14 @@ func Env(tb testing.TB, name string) string {
 }
 
 /*
+Switch reports whether the environment variable is set to 1, for runs
+that change how every test behaves, such as connecting as another role.
+*/
+func Switch(name string) bool {
+	return os.Getenv(name) == "1"
+}
+
+/*
 UniqueName returns the prefix followed by ten random lowercase letters
 and digits, safe as a database, role, bucket or key-prefix name.
 */

@@ -12,6 +12,18 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countActiveMembers = `-- name: CountActiveMembers :one
+SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND status = 'active'
+`
+
+// CountActiveMembers counts the people who can still work in the workspace.
+func (q *Queries) CountActiveMembers(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveMembers, workspaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countActiveOwners = `-- name: CountActiveOwners :one
 SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND role = 'owner' AND status = 'active'
 `
@@ -20,6 +32,29 @@ SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND role = 'owner
 // can still run it.
 func (q *Queries) CountActiveOwners(ctx context.Context, workspaceID ids.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countActiveOwners, workspaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserMembershipsOutsideOrganization = `-- name: CountUserMembershipsOutsideOrganization :one
+SELECT count(*)
+FROM auth_list_user_memberships($1) AS m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.status = 'active' AND w.organization_id <> $2::uuid
+`
+
+type CountUserMembershipsOutsideOrganizationParams struct {
+	UserID         ids.UUID `json:"user_id"`
+	OrganizationID ids.UUID `json:"organization_id"`
+}
+
+// CountUserMembershipsOutsideOrganization counts the user's active
+// memberships in workspaces of other organizations, those in the trash
+// included, through a security definer function since they span
+// workspaces.
+func (q *Queries) CountUserMembershipsOutsideOrganization(ctx context.Context, arg CountUserMembershipsOutsideOrganizationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserMembershipsOutsideOrganization, arg.UserID, arg.OrganizationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -268,7 +303,7 @@ func (q *Queries) FindWorkspaceMemberForUser(ctx context.Context, arg FindWorksp
 }
 
 const findWorkspaceMemberWithUser = `-- name: FindWorkspaceMemberWithUser :one
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = $2
@@ -318,12 +353,13 @@ func (q *Queries) FindWorkspaceMemberWithUser(ctx context.Context, arg FindWorks
 		&i.User.PasswordChangedAt,
 		&i.User.RiskFlags,
 		&i.User.CreatedVia,
+		&i.User.Preferences,
 	)
 	return i, err
 }
 
 const listActiveOwners = `-- name: ListActiveOwners :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.role = 'owner' AND m.status = 'active'
@@ -375,6 +411,58 @@ func (q *Queries) ListActiveOwners(ctx context.Context, workspaceID ids.UUID) ([
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserActiveMemberships = `-- name: ListUserActiveMemberships :many
+SELECT
+    m.member_id::uuid AS member_id,
+    m.workspace_id::uuid AS workspace_id,
+    m.workspace_name::text AS workspace_name,
+    m.workspace_slug::citext AS workspace_slug,
+    m.role::text AS role,
+    (m.deleted_at IS NOT NULL)::boolean AS trashed
+FROM auth_user_memberships($1) AS m
+WHERE m.status = 'active'
+`
+
+type ListUserActiveMembershipsRow struct {
+	MemberID      ids.UUID `json:"member_id"`
+	WorkspaceID   ids.UUID `json:"workspace_id"`
+	WorkspaceName string   `json:"workspace_name"`
+	WorkspaceSlug string   `json:"workspace_slug"`
+	Role          string   `json:"role"`
+	Trashed       bool     `json:"trashed"`
+}
+
+// ListUserActiveMemberships returns every workspace the user is an active
+// member of, those in the trash included. It runs before any workspace is
+// chosen, through a security definer function.
+func (q *Queries) ListUserActiveMemberships(ctx context.Context, userID ids.UUID) ([]ListUserActiveMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listUserActiveMemberships, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserActiveMembershipsRow
+	for rows.Next() {
+		var i ListUserActiveMembershipsRow
+		if err := rows.Scan(
+			&i.MemberID,
+			&i.WorkspaceID,
+			&i.WorkspaceName,
+			&i.WorkspaceSlug,
+			&i.Role,
+			&i.Trashed,
 		); err != nil {
 			return nil, err
 		}
@@ -520,28 +608,37 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 }
 
 const listWorkspaceMembers = `-- name: ListWorkspaceMembers :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
   AND (coalesce(cardinality($2::text[]), 0) = 0 OR m.status = ANY ($2::text[]))
   AND (coalesce(cardinality($3::text[]), 0) = 0 OR m.role = ANY ($3::text[]))
-  AND ($4::text = '' OR u.name ILIKE '%' || $4::text || '%' OR u.email ILIKE '%' || $4::text || '%')
+  AND (coalesce(cardinality($4::uuid[]), 0) = 0 OR EXISTS (
+      SELECT 1 FROM team_members tm
+      WHERE tm.workspace_member_id = m.id AND tm.team_id = ANY ($4::uuid[])
+  ))
+  AND ($5::boolean IS NULL
+      OR (u.two_factor_confirmed_at IS NOT NULL) = $5::boolean)
+  AND ($6::text = '' OR u.name ILIKE '%' || $6::text || '%' OR u.email ILIKE '%' || $6::text || '%')
 ORDER BY
-    CASE WHEN $5::boolean THEN m.created_at END DESC,
-    CASE WHEN NOT $5::boolean THEN lower(u.name) END,
+    CASE WHEN $7::text = 'created_at' THEN m.created_at END DESC,
+    CASE WHEN $7::text = 'last_active_at' THEN m.last_accessed_at END DESC NULLS LAST,
+    lower(u.name),
     m.id
-LIMIT $7::bigint OFFSET $6::bigint
+LIMIT $9::bigint OFFSET $8::bigint
 `
 
 type ListWorkspaceMembersParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	Statuses    []string `json:"statuses"`
-	Roles       []string `json:"roles"`
-	Search      string   `json:"search"`
-	NewestFirst bool     `json:"newest_first"`
-	RowOffset   int64    `json:"row_offset"`
-	RowLimit    int64    `json:"row_limit"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Statuses    []string   `json:"statuses"`
+	Roles       []string   `json:"roles"`
+	TeamIds     []ids.UUID `json:"team_ids"`
+	TwoFactor   *bool      `json:"two_factor"`
+	Search      string     `json:"search"`
+	Sort        string     `json:"sort"`
+	RowOffset   int64      `json:"row_offset"`
+	RowLimit    int64      `json:"row_limit"`
 }
 
 type ListWorkspaceMembersRow struct {
@@ -551,15 +648,19 @@ type ListWorkspaceMembersRow struct {
 
 // ListWorkspaceMembers returns a page of the workspace's members with
 // their accounts, narrowed to the statuses and roles asked for (none
-// means all) and to names or emails containing the search, by name or
-// newest first.
+// means all), to members of any of the teams asked for, to accounts
+// with or without a second factor when asked, and to names or emails
+// containing the search. They come by name, newest first, or most
+// recently active first with those never active last.
 func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMembersParams) ([]ListWorkspaceMembersRow, error) {
 	rows, err := q.db.Query(ctx, listWorkspaceMembers,
 		arg.WorkspaceID,
 		arg.Statuses,
 		arg.Roles,
+		arg.TeamIds,
+		arg.TwoFactor,
 		arg.Search,
-		arg.NewestFirst,
+		arg.Sort,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -599,6 +700,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, arg ListWorkspaceMem
 			&i.User.PasswordChangedAt,
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
+			&i.User.Preferences,
 		); err != nil {
 			return nil, err
 		}
