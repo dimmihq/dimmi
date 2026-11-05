@@ -41,9 +41,21 @@ export function fromConfig(config: Config, texts: Texts): OptionsUpdate {
   const a = config.appearance;
   if (a) {
     update.appearance = {
-      ...pick(a, ["primary_color", "theme", "position", "padding_x", "padding_y", "font", "sound"]),
+      ...pick(a, [
+        "primary_color",
+        "header_color",
+        "button_color",
+        "theme",
+        "position",
+        "padding_x",
+        "padding_y",
+        "font",
+        "sound",
+      ]),
       launcher: {
-        ...(a.launcher?.style === "bubble" || a.launcher?.style === "hidden" ? { style: a.launcher.style } : {}),
+        ...(a.launcher?.style === "bubble" || a.launcher?.style === "tab" || a.launcher?.style === "hidden"
+          ? { style: a.launcher.style }
+          : {}),
         ...(a.launcher?.shape === "circle" || a.launcher?.shape === "squircle" ? { shape: a.launcher.shape } : {}),
         ...(config.texts?.launcher_label ? { label: config.texts.launcher_label } : {}),
       },
@@ -65,6 +77,9 @@ export function fromConfig(config: Config, texts: Texts): OptionsUpdate {
   }
   if (config.branding?.show !== undefined) {
     update.show_branding = config.branding.show;
+  }
+  if (config.branding?.url) {
+    update.branding_url = config.branding.url;
   }
 
   return update;

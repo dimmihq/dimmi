@@ -70,9 +70,9 @@ export function Home({ options, content }: { options: Options; content: Content 
             </Section>
           )}
           {options.show_branding ? (
-            <a className="credit" href="https://trydimmi.com" target="_blank" rel="noopener">
+            <a className="credit" href={options.branding_url} target="_blank" rel="noopener">
               <Mark />
-              Powered by Dimmi
+              Powered by dimmi
             </a>
           ) : null}
         </Loadable>
