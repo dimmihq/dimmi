@@ -157,4 +157,61 @@ describe("a connected messenger", () => {
     expect(widget?.live?.store.conversations.map((c) => c.id)).toEqual(["conv_1"]);
     expect(root.querySelector('.view[data-view="messages"] .loaded .list')?.textContent).toContain("#1");
   });
+
+  it("asks for an email when the team is away and sends the message once it has one", async () => {
+    let email = "";
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "POST /sessions": () => ({ status: 201, body: session }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
+      "PATCH /contact": (body) => {
+        email = (body as { email: string }).email;
+        return { status: 200, body: { data: {} } };
+      },
+      "POST /conversations": (body) =>
+        email
+          ? {
+              status: 201,
+              body: {
+                data: conversation,
+                meta: {
+                  message: {
+                    id: "msg_1",
+                    conversation_id: "conv_1",
+                    client_id: (body as { client_id: string }).client_id,
+                    author: { type: "contact", name: null, avatar_url: null },
+                    body: "Hello?",
+                    attachments: [],
+                    created_at: "2026-01-01T00:00:01Z",
+                  },
+                },
+              },
+            }
+          : { status: 422, body: { code: "email_required", message: "Leave an email." } },
+    });
+
+    boot(win, document);
+    await settle();
+    await settle();
+    const root = shadow() as ShadowRoot;
+    root.dispatchEvent(new CustomEvent("dimmi:open", { detail: {} }));
+    root.dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Hello?", files: [] } }));
+    for (let i = 0; i < 5; i++) {
+      await settle();
+    }
+
+    const form = root.querySelector<HTMLFormElement>("form[data-capture]");
+    expect(form).not.toBeNull();
+    (form?.querySelector("input") as HTMLInputElement).value = "grace@shop.example";
+    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    for (let i = 0; i < 6; i++) {
+      await settle();
+    }
+
+    expect(email).toBe("grace@shop.example");
+    expect(calls.filter((c) => c === "POST /conversations")).toHaveLength(2);
+    expect(root.querySelector("form[data-capture]")).toBeNull();
+  });
 });

@@ -21,6 +21,8 @@ export interface Config {
   features?: { attachments?: boolean; max_attachment_mb?: number };
   realtime?: { url?: string; token_url?: string; polling_interval_ms?: number };
   honeypot_field?: string;
+  customer_status?: boolean;
+  delay_notice?: boolean;
 }
 
 export interface Availability {

@@ -180,6 +180,14 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       void live?.send(body, files);
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
+    root.addEventListener("submit", (event) => {
+      const form =
+        event.target instanceof HTMLFormElement && event.target.matches("[data-capture]") ? event.target : null;
+      if (form) {
+        event.preventDefault();
+        void live?.capture(String(new FormData(form).get("email") ?? ""));
+      }
+    });
     doc.addEventListener("click", (event) => {
       const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-dimmi]") : null;
       if (trigger?.dataset.dimmi) {

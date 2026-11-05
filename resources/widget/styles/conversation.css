@@ -508,3 +508,36 @@ textarea::placeholder {
     scale: 1 0.4;
   }
 }
+
+/*
+ * Lines the connection adds to a thread: where the conversation stands,
+ * that the team is away, and the field that asks for an email to reply to.
+ */
+.status,
+.delay {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.capture {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+}
+
+.capture p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.capture .row {
+  display: flex;
+  gap: 8px;
+}

@@ -378,8 +378,10 @@ export class Live {
   }
 
   /*
-   * drawThread redraws the open conversation's messages, who is typing
-   * and whether the team saw the latest.
+   * drawThread redraws the open conversation: where it stands, its
+   * messages, who is typing, Seen once the team read the latest, that the
+   * team is away, and a field for an email when the team needs one to
+   * reply.
    */
   private drawThread() {
     const thread = this.host.root.querySelector<HTMLElement>(".thread");
@@ -387,15 +389,75 @@ export class Live {
     if (!thread || !loaded) {
       return;
     }
+
+    const texts = this.host.options().texts;
     const open = this.open;
     const messages = this.content().thread;
     const typing = open ? this.store.typingIn(open) : undefined;
     const seen = open ? this.store.seen.get(open) : undefined;
-    const lastTeam = [...messages].reverse().findIndex((m) => m.from === "visitor");
-    const seenLine = seen && lastTeam === 0 ? `<p class="seen">${this.host.options().texts.seen ?? "Seen"}</p>` : "";
+    const last = messages.at(-1);
+    const parts = [this.statusLine(), String(Thread({ messages }))];
 
-    loaded.innerHTML = String(Thread({ messages })) + (typing ? String(Typing()) : "") + seenLine;
+    if (typing) {
+      parts.push(String(Typing()));
+    }
+    if (seen && last?.from === "visitor" && !last.state) {
+      parts.push(`<p class="seen">${escapeHtml(texts.seen)}</p>`);
+    }
+    if (last?.from === "visitor" && this.config.delay_notice !== false && this.availability?.online === false) {
+      parts.push(`<p class="delay">${escapeHtml(texts.delay_notice)}</p>`);
+    }
+    if (open && (this.store.messages.get(open) ?? []).some((m) => m.failed === "email_required")) {
+      parts.push(
+        `<form class="capture" data-capture><p>${escapeHtml(texts.email_prompt)}</p><span class="row">` +
+          '<label class="field"><input type="email" name="email" required autocomplete="email"></label>' +
+          `<button class="button primary" type="submit">${escapeHtml(texts.send_message)}</button></span></form>`,
+      );
+    }
+
+    loaded.innerHTML = parts.join("");
     thread.scrollTop = thread.scrollHeight;
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
   }
+
+  /*
+   * statusLine says where the open conversation stands, when the widget
+   * shows it.
+   */
+  private statusLine(): string {
+    const found = this.store.conversations.find((c) => c.id === this.open);
+    if (!found || this.config.customer_status === false) {
+      return "";
+    }
+    const texts = this.host.options().texts as unknown as Record<string, string>;
+    const label = texts[`status_${found.customer_status}`];
+
+    return label ? `<p class="status">${escapeHtml(label)}</p>` : "";
+  }
+
+  /*
+   * capture keeps the email the visitor gave and sends again what waited
+   * for it.
+   */
+  async capture(email: string) {
+    try {
+      await this.http.patch("/contact", { email });
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "network";
+      report("warn", code, "the email could not be saved.");
+      return;
+    }
+
+    const waiting = this.store.dropFailed(this.open ?? draftId, "email_required");
+    for (const message of waiting) {
+      void this.send(message.body ?? "", []);
+    }
+  }
+}
+
+/*
+ * escape makes text safe to place in markup.
+ */
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }

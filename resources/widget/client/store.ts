@@ -132,6 +132,22 @@ export class Store {
     this.emit("messages", to);
   }
 
+  /*
+   * dropFailed removes the visitor's messages refused for the reason and
+   * returns them, so they can be sent again.
+   */
+  dropFailed(conversation: string, reason: string): Message[] {
+    const list = this.messages.get(conversation) ?? [];
+    const dropped = list.filter((m) => m.failed === reason);
+    this.messages.set(
+      conversation,
+      list.filter((m) => m.failed !== reason),
+    );
+    this.emit("messages", conversation);
+
+    return dropped;
+  }
+
   failLocal(conversation: string, clientId: string, reason: string) {
     const list = this.messages.get(conversation) ?? [];
     this.messages.set(

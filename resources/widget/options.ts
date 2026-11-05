@@ -51,6 +51,11 @@ export interface Texts {
   changelog: string;
   help: string;
   seen: string;
+  status_with_team: string;
+  status_waiting_on_you: string;
+  status_closed: string;
+  email_prompt: string;
+  delay_notice: string;
 }
 
 export interface Options {
@@ -100,6 +105,11 @@ export const defaults: Options = {
     changelog: "Changelog",
     help: "Help",
     seen: "Seen",
+    status_with_team: "With the team",
+    status_waiting_on_you: "Waiting on you",
+    status_closed: "Closed",
+    email_prompt: "Where should we reply?",
+    delay_notice: "We're away right now. We'll reply as soon as we're back.",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,
