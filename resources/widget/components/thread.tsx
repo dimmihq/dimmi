@@ -30,13 +30,35 @@ function VoiceBubble({ attachment }: { attachment: Attachment }) {
   );
 }
 
+/*
+ * ImageBubble shows the picture itself once it has an address, sized from
+ * its stored dimensions so the thread does not jump when it loads, and
+ * opens it full size in a new tab. Until then, and in a preview, it shows
+ * the placeholder.
+ */
 function ImageBubble({ attachment }: { attachment: Attachment }) {
+  if (!attachment.url) {
+    return (
+      <figure className="bubble photo">
+        <span className="shot">
+          <ImageIcon />
+        </span>
+        <figcaption>{attachment.name}</figcaption>
+      </figure>
+    );
+  }
+
   return (
     <figure className="bubble photo">
-      <span className="shot">
-        <ImageIcon />
-      </span>
-      <figcaption>{attachment.name}</figcaption>
+      <a className="shot picture" href={attachment.url} target="_blank" rel="noopener noreferrer">
+        <img
+          src={attachment.url}
+          alt={attachment.name}
+          loading="lazy"
+          width={attachment.width}
+          height={attachment.height}
+        />
+      </a>
     </figure>
   );
 }
@@ -51,9 +73,18 @@ function FileBubble({ attachment }: { attachment: Attachment }) {
         <strong>{attachment.name}</strong>
         <small>{attachment.size}</small>
       </span>
-      <button className="icon-button" type="button" aria-label={`Download ${attachment.name}`}>
-        <DownloadIcon />
-      </button>
+      {attachment.url ? (
+        <a
+          className="icon-button"
+          href={attachment.url}
+          download={attachment.name}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Download ${attachment.name}`}
+        >
+          <DownloadIcon />
+        </a>
+      ) : null}
     </div>
   );
 }

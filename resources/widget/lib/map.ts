@@ -157,7 +157,16 @@ function toAttachment(file: api.Attachment): Attachment {
       ? "voice"
       : "file";
 
-  return { kind, name: file.filename, size: size(file.size_bytes), url: file.url ?? undefined };
+  const out: Attachment = { kind, name: file.filename, size: size(file.size_bytes) };
+  if (file.url) {
+    out.url = file.url;
+  }
+  if (file.width && file.height) {
+    out.width = file.width;
+    out.height = file.height;
+  }
+
+  return out;
 }
 
 export function size(bytes: number): string {

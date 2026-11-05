@@ -69,6 +69,8 @@ export interface Attachment {
   size?: string;
   duration?: string;
   url?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface Source {

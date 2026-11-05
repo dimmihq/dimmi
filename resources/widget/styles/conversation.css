@@ -257,6 +257,23 @@
   color: var(--on-brand);
 }
 
+.shot.picture {
+  display: block;
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: 240px;
+  overflow: hidden;
+  background: var(--bg-full);
+}
+
+.shot.picture img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 320px;
+  object-fit: cover;
+}
+
 .shot > svg {
   inline-size: 28px;
   block-size: 28px;
