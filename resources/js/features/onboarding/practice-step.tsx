@@ -1,8 +1,8 @@
 /*
- * The last step offers five made-up customers to practice on: each
- * writes in with a different kind of request, marked as a test, so the
- * team tries replying, tagging and closing before a real customer
- * writes.
+ * The last step offers five example conversations from made-up
+ * customers, each with a different kind of request, so the team tries
+ * replying, tagging and closing before a real customer writes. They are
+ * listed one row each, the way the channels step lists chat apps.
  */
 import { useMutation } from "@tanstack/react-query";
 
@@ -34,27 +34,30 @@ export function PracticeStep({ workspace, label, onNext, onBack, onCreated }: St
     <div>
       <StepHeader
         label={label}
-        title="Try dimmi with test conversations"
+        title="Try dimmi with example conversations"
         description="Five made-up customers write in, each with a different kind of request, so you can practice replying, tagging and closing before your first real conversation."
       />
-      <ul className="mt-8 divide-y divide-separator-border overflow-hidden rounded-3xl border border-border-button-default bg-background-secondary-default">
+      <ul className="mt-8 flex flex-col gap-2">
         {customers.map((customer) => (
-          <li key={customer.name} className="flex items-center gap-3 px-4 py-3">
+          <li
+            key={customer.name}
+            className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-background-secondary-default px-3 py-2.5"
+          >
             <Avatar size="xs" color={customer.color} initials={customer.name.charAt(0)} />
             <span className="w-32 shrink-0 truncate text-body-2-medium text-text-primary">{customer.name}</span>
-            <Chip color="yellow" variant="subtle">
-              Test
+            <Chip color="yellow" variant="caption">
+              Example
             </Chip>
             <span className="min-w-0 flex-1 truncate text-body-2-regular text-text-secondary">{customer.subject}</span>
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-body-2-regular text-text-tertiary">Test conversations never reach a real customer.</p>
+      <p className="mt-3 text-body-2-regular text-text-tertiary">Example conversations never reach a real customer.</p>
       <StepActions
         primary={() => create.mutate()}
-        primaryLabel="Add 5 test conversations"
+        primaryLabel="Add 5 example conversations"
         isPending={create.isPending}
-        skipLabel="Continue without test conversations"
+        skipLabel="Continue without example conversations"
         onSkip={onNext}
         onBack={onBack}
       />

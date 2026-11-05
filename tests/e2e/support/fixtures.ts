@@ -116,7 +116,7 @@ export async function finishOnboarding(page: Page, workspace: string) {
     "Continue without tags",
     "Continue without inviting",
     "Continue without knowledge",
-    "Continue without test conversations",
+    "Continue without example conversations",
   ]) {
     await page.getByRole("button", { name: skip, exact: true }).click();
   }

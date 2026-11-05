@@ -65,7 +65,7 @@ export function SummaryStep({
         <Row label="Tags" value={tagNames || null} />
         <Row label="Team" value={invited > 0 ? `${invited} invited` : null} />
         <Row label="Knowledge" value={null} />
-        <Row label="Test conversations" value={practiced ? "5 conversations" : null} />
+        <Row label="Example conversations" value={practiced ? "5 conversations" : null} />
       </ul>
       <div className="mt-8">
         <Button

@@ -1,7 +1,7 @@
 import { expect, inbox, test as it } from "./support/fixtures";
 
 it.describe("setting up a new workspace", () => {
-  it("walks the steps, saves tags and test conversations, and opens the app", async ({ page, person }) => {
+  it("walks the steps, saves tags and example conversations, and opens the app", async ({ page, person }) => {
     await page.goto("/signup");
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
@@ -26,7 +26,7 @@ it.describe("setting up a new workspace", () => {
 
     await page.getByRole("button", { name: "Continue without inviting" }).click();
     await page.getByRole("button", { name: "Continue without knowledge" }).click();
-    await page.getByRole("button", { name: "Add 5 test conversations" }).click();
+    await page.getByRole("button", { name: "Add 5 example conversations" }).click();
 
     await expect(page.getByRole("heading", { name: "Acme is ready" })).toBeVisible();
     await expect(page.getByText("Billing, Bug")).toBeVisible();
