@@ -144,10 +144,7 @@ export const tagPalette = [
   "#0891b2",
   "#db2777",
   "#ca8a04",
-  "#4f46e5",
   "#0d9488",
-  "#65a30d",
-  "#c026d3",
 ];
 
 export const testing = { parse, mix, darkSurface, lightSurface };

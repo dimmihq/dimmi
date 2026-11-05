@@ -35,7 +35,7 @@ export function TagColorPicker({ value, onChange }: { value: string; onChange: (
             aria-label={hex}
             className={({ isSelected, isFocusVisible }) =>
               cx(
-                "size-6 cursor-pointer rounded-full outline-none ring-offset-2 ring-offset-background-primary-default transition-[scale] duration-150 ease-out hover:scale-110",
+                "size-6 shrink-0 cursor-pointer rounded-full outline-none ring-offset-2 ring-offset-background-primary-default transition-[scale,box-shadow] duration-150 ease-out hover:scale-110 active:scale-95",
                 (isSelected || isFocusVisible) && "ring-2 ring-border-focus-ring",
               )
             }
@@ -44,7 +44,7 @@ export function TagColorPicker({ value, onChange }: { value: string; onChange: (
         ))}
         <span
           className={cx(
-            "relative rounded-full",
+            "relative size-6 shrink-0 rounded-full transition-[box-shadow] duration-150 ease-out",
             custom && "ring-2 ring-border-focus-ring ring-offset-2 ring-offset-background-primary-default",
           )}
         >

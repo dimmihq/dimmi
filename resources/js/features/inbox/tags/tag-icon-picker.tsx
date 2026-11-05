@@ -1,6 +1,7 @@
 /*
  * Picks a tag's icon from the ones the server accepts, as one radio group:
- * arrows move between icons and the chosen one fills with the accent.
+ * arrows move between icons, a press dips the icon the way BoardUI's
+ * buttons do, and the chosen one eases into the accent fill.
  */
 import { Radio, RadioGroup } from "react-aria-components";
 
@@ -24,7 +25,7 @@ export function TagIconPicker({ value, onChange }: { value: string; onChange: (i
             aria-label={iconLabel(name)}
             className={({ isSelected, isFocusVisible, isHovered }) =>
               cx(
-                "flex h-9 w-full cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none",
+                "button-press-motion flex h-9 w-full cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none",
                 isHovered && !isSelected && "bg-background-secondary-hover",
                 isSelected && "bg-accent-500 text-white",
                 isFocusVisible && "ring-2 ring-border-focus-ring",

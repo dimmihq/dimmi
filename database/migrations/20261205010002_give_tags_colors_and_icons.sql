@@ -14,11 +14,11 @@ LANGUAGE sql STABLE AS $$
     SELECT palette.color
     FROM unnest(ARRAY[
         '#2563eb', '#16a34a', '#dc2626', '#9333ea', '#ea580c', '#0891b2',
-        '#db2777', '#ca8a04', '#4f46e5', '#0d9488', '#65a30d', '#c026d3'
+        '#db2777', '#ca8a04', '#0d9488'
     ]) WITH ORDINALITY AS palette(color, position)
     LEFT JOIN tags AS t ON t.workspace_id = workspace AND lower(t.color) = palette.color
     GROUP BY palette.color, palette.position
-    ORDER BY count(t.id), (palette.position + abs(hashtext(tag_name))) % 12
+    ORDER BY count(t.id), (palette.position + abs(hashtext(tag_name))) % 9
     LIMIT 1
 $$;
 -- +goose StatementEnd
@@ -27,8 +27,8 @@ UPDATE tags AS t SET color = ordered.color
 FROM (
     SELECT id, (ARRAY[
         '#2563eb', '#16a34a', '#dc2626', '#9333ea', '#ea580c', '#0891b2',
-        '#db2777', '#ca8a04', '#4f46e5', '#0d9488', '#65a30d', '#c026d3'
-    ])[1 + (row_number() OVER (PARTITION BY workspace_id ORDER BY created_at, id) - 1) % 12] AS color
+        '#db2777', '#ca8a04', '#0d9488'
+    ])[1 + (row_number() OVER (PARTITION BY workspace_id ORDER BY created_at, id) - 1) % 9] AS color
     FROM tags WHERE color IS NULL
 ) AS ordered
 WHERE t.id = ordered.id;
