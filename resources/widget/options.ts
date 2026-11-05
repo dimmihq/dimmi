@@ -50,6 +50,7 @@ export interface Texts {
   messages: string;
   changelog: string;
   help: string;
+  seen: string;
 }
 
 export interface Options {
@@ -98,6 +99,7 @@ export const defaults: Options = {
     messages: "Messages",
     changelog: "Changelog",
     help: "Help",
+    seen: "Seen",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,

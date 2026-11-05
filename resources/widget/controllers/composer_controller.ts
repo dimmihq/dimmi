@@ -6,9 +6,12 @@
  * The microphone switches the composer to a recording bar with a running
  * timer; finishing sends a voice note, the bin throws it away.
  *
- * Nothing reaches a server yet: sent messages land in the thread, and a
- * typing indicator followed by a placeholder reply shows how the other
- * side will answer once the backend is wired.
+ * In a connected messenger, sending hands the text and files to the
+ * connection through a "dimmi:send" event, which shows the message at once
+ * and sends it, and typing tells it at most every few seconds through
+ * "dimmi:typing". A preview has no server: sent messages land in the
+ * thread, and a typing indicator followed by a placeholder reply shows how
+ * the other side answers.
  */
 
 import { Chip } from "../components/composer";
@@ -17,6 +20,11 @@ import type { Message } from "../content";
 import { Controller } from "../lib/controller";
 
 const reply = "Thanks for the details. A teammate will pick this up here in a moment.";
+
+/*
+ * typingEvery is the shortest time between two typing notices.
+ */
+const typingEvery = 2000;
 
 function size(bytes: number): string {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -33,6 +41,7 @@ function now(): string {
 export class ComposerController extends Controller {
   #files: File[] = [];
   #seconds = 0;
+  #typedAt = 0;
   #timer: ReturnType<typeof setInterval> | undefined;
 
   connect(): void {
@@ -58,6 +67,14 @@ export class ComposerController extends Controller {
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     this.#ready();
+    if (this.#live && input.value.trim() && Date.now() - this.#typedAt > typingEvery) {
+      this.#typedAt = Date.now();
+      this.dispatch("typing", { started: true });
+    }
+  }
+
+  get #live(): boolean {
+    return this.element.closest<HTMLElement>(".messenger")?.dataset.live === "true";
   }
 
   enter(event: KeyboardEvent): void {
@@ -83,6 +100,18 @@ export class ComposerController extends Controller {
   send(event: SubmitEvent): void {
     event.preventDefault();
     const body = this.#input.value.trim();
+    if (this.#live) {
+      if (!body && !this.#files.length) {
+        return;
+      }
+      this.dispatch("send", { body, files: this.#files });
+      this.#typedAt = 0;
+      this.#input.value = "";
+      this.#files = [];
+      this.#chips();
+      this.resize();
+      return;
+    }
     const messages: Message[] = this.#files.map((file) => ({
       from: "visitor",
       attachment: { kind: file.type.startsWith("image/") ? "image" : "file", name: file.name, size: size(file.size) },

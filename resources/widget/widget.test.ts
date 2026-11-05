@@ -41,7 +41,7 @@ describe("loader", () => {
       appId: "wgt_1",
       apiBase: "https://app.example.com/support",
       identityUrl: "/api/dimmi/token",
-      demo: true,
+      preview: false,
     });
     const core = document.head.querySelector("script") as HTMLScriptElement;
     expect(core.type).toBe("module");
@@ -95,7 +95,7 @@ describe("loader", () => {
 
 describe("core", () => {
   beforeEach(() => {
-    win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com" };
+    win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", preview: true };
   });
 
   const launcher = () => shadow().querySelector(".launcher") as HTMLButtonElement;
@@ -245,7 +245,7 @@ describe("core", () => {
 
     beforeEach(() => {
       vi.useFakeTimers();
-      win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", latency: 800 };
+      win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", latency: 800, preview: true };
     });
 
     afterEach(() => {

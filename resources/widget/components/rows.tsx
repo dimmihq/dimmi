@@ -26,8 +26,8 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
       className="row"
       type="button"
       data-action="click->converse"
-      data-conversation={conversation.number}
-      data-unread="false"
+      data-conversation={conversation.id ?? conversation.number}
+      data-unread={String((conversation.unread ?? 0) > 0)}
     >
       <span className="orb" />
       <span className="text">

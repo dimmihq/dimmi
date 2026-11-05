@@ -11,10 +11,13 @@ export interface Member {
 }
 
 export interface Conversation {
+  id?: string;
   number: number;
   title: string;
   preview: string;
   ago: string;
+  unread?: number;
+  status?: string;
 }
 
 /*
@@ -22,7 +25,7 @@ export interface Conversation {
  * with the conversation it belongs to.
  */
 export interface Incoming extends Message {
-  conversation: number;
+  conversation: number | string;
 }
 
 export interface Link {
@@ -66,6 +69,7 @@ export interface Attachment {
   name: string;
   size?: string;
   duration?: string;
+  url?: string;
 }
 
 export interface Source {
@@ -73,6 +77,8 @@ export interface Source {
 }
 
 export interface Message {
+  id?: string;
+  state?: "sending" | "failed";
   from: "visitor" | "team" | "agent";
   author?: string;
   body?: string;
