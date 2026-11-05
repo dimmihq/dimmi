@@ -73,7 +73,8 @@ func (a *ListDrafts) Handle(ctx context.Context, in ListInput) ([]models.Convers
 		ws := in.Membership.Workspace.ID
 
 		if in.Conversation != nil {
-			if _, err := conversations.Find(ctx, q, in.Membership, conversations.Ref{ID: *in.Conversation}); err != nil {
+			ref := conversations.Ref{ID: *in.Conversation}
+			if _, err := conversations.Find(ctx, q, in.Membership, ref); err != nil {
 				return err
 			}
 		}
