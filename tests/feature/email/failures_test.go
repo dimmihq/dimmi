@@ -236,7 +236,7 @@ func TestOutboundStorageFailures(t *testing.T) {
 	t.Parallel()
 
 	for _, b := range []breakage{
-		{"outbound_emails", []string{"INSERT"}},
+		{"email_address_tests", []string{"INSERT"}},
 		{"outbound_emails", []string{"UPDATE"}},
 		{"outbound_emails", nil},
 		{"email_threads", []string{"INSERT"}},
@@ -273,7 +273,7 @@ func TestAddressStorageFailures(t *testing.T) {
 			{"email_addresses", []string{"INSERT", "UPDATE"}},
 			{"channel_connections", []string{"INSERT", "UPDATE"}},
 			{"inbound_emails", nil},
-			{"outbound_emails", []string{"INSERT"}},
+			{"email_address_tests", []string{"INSERT"}},
 			{"inboxes", nil},
 		} {
 			t.Run(b.name(), func(t *testing.T) {

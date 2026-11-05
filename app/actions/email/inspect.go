@@ -40,8 +40,9 @@ Member is the teammate who sent it, authenticated, when one did.
 Forward is the message a teammate forwarded. Relay names the form
 service that sent it for a visitor. Confirmation is a provider's
 forwarding confirmation, ForwardingTest a forwarding test of the
-address. Throttled means the sender wrote too often to be answered
-automatically. Own lists the workspace's own addresses.
+address and TestToken that test's token; an older test carries only
+the address's stamp. Throttled means the sender wrote too often to be
+answered automatically. Own lists the workspace's own addresses.
 */
 type inspection struct {
 	class          enums.EmailClassification
@@ -52,6 +53,7 @@ type inspection struct {
 	relay          string
 	confirmation   *inbound.Confirmation
 	forwardingTest bool
+	testToken      string
 	throttled      bool
 	own            []string
 }
@@ -91,7 +93,7 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 		insp.confirmation = &confirmation
 	}
 
-	insp.forwardingTest = a.Stamps.ValidTest(mail.parsed.Header.Get(inbound.TestHeader), mail.address.ID.String())
+	insp.testToken, insp.forwardingTest = a.forwardingTest(mail)
 
 	throttled, quarantined := a.rate(ctx, mail)
 	insp.throttled = throttled
@@ -109,6 +111,24 @@ func (a *ProcessInboundEmail) inspect(ctx context.Context, mail *received) (insp
 	})
 
 	return insp, nil
+}
+
+/*
+forwardingTest returns the token of the forwarding test the email is,
+and whether it is one: a valid token in the test header or on the last
+line of the body or in the subject of a test sent by hand, or the
+address's older test stamp.
+*/
+func (a *ProcessInboundEmail) forwardingTest(mail *received) (string, bool) {
+	header := mail.parsed.Header.Get(inbound.TestHeader)
+	addressID := mail.address.ID.String()
+
+	token := inbound.FindTestToken(header, mail.parsed.Subject, mail.parsed.Text)
+	if token != "" && a.Stamps.ValidTestToken(token, addressID) {
+		return token, true
+	}
+
+	return "", a.Stamps.ValidTest(header, addressID)
 }
 
 /*

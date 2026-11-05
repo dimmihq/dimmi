@@ -86,6 +86,7 @@ const (
 	PrefixOutboundEmail    Prefix = "obm"
 	PrefixEmailSuppression Prefix = "sup"
 	PrefixEmailSignature   Prefix = "sig"
+	PrefixEmailAddressTest Prefix = "eat"
 )
 
 /*
@@ -193,6 +194,7 @@ func channelPublicIDs() []PublicIDEntry {
 		{PrefixInboundEmail, "inbound_emails"},
 		{PrefixOutboundEmail, "outbound_emails"},
 		{PrefixEmailSuppression, "email_suppressions"},
+		{PrefixEmailAddressTest, "email_address_tests"},
 		{"chr", "channel_rooms"},
 		{"cml", "channel_member_links"},
 		{"cie", "channel_inbound_events"},

@@ -95,8 +95,40 @@ export function deleteEmailAddress(workspace: string, address: string): Promise<
   return request<void>("DELETE", `/email-addresses/${encodeURIComponent(address)}`, undefined, { workspace });
 }
 
-export function sendEmailAddressTest(workspace: string, address: string): Promise<{ sent_to: string }> {
-  return request<{ sent_to: string }>("POST", `/email-addresses/${encodeURIComponent(address)}/tests`, undefined, {
+export interface TestFinding {
+  code: string;
+  severity: "error" | "warn" | "info";
+  message: string;
+}
+
+export interface EmailAddressTest {
+  id: string;
+  email_address: string;
+  status: "sending" | "waiting" | "received" | "failed" | "timed_out";
+  sent_to: string;
+  message_id: string;
+  findings: TestFinding[];
+  latency_ms: number | null;
+  expires_at: string;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export function sendEmailAddressTest(workspace: string, address: string): Promise<EmailAddressTest> {
+  return request<EmailAddressTest>("POST", `/email-addresses/${encodeURIComponent(address)}/tests`, undefined, {
     workspace,
+  });
+}
+
+export function emailAddressTestQuery(workspace: string, address: string, test: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "email-addresses", address, "tests", test],
+    queryFn: () =>
+      request<EmailAddressTest>(
+        "GET",
+        `/email-addresses/${encodeURIComponent(address)}/tests/${encodeURIComponent(test)}`,
+        undefined,
+        { workspace },
+      ),
   });
 }

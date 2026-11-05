@@ -56,6 +56,14 @@ export async function mailedCode(to: string, subject: string): Promise<string> {
 }
 
 /*
+ * mailedText returns the text of the newest mail to the address whose
+ * subject has the words.
+ */
+export async function mailedText(to: string, subject: string): Promise<string> {
+  return newest(to, subject);
+}
+
+/*
  * mailedTexts returns the text of every mail to the address, newest
  * first, as it stands now.
  */

@@ -6,16 +6,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Chip } from "@/components/base/badges/chip";
-import { Button } from "@/components/base/buttons/button";
 import { Choice, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
-import { type EmailAddress, sendEmailAddressTest, updateEmailAddress } from "@/lib/api/email";
+import { type EmailAddress, updateEmailAddress } from "@/lib/api/email";
 
 import { Activity } from "./activity";
 import { CopyButton } from "./copy-button";
 import { Failure } from "./failure";
 import { ForwardingGuide } from "./forwarding-guide";
+import { ForwardingTest } from "./forwarding-test";
 
 /*
  * Status says whether mail reached the address yet.
@@ -50,7 +50,6 @@ export function AddressCard({
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", me.workspace.id, "email-addresses"] });
 
-  const test = useMutation({ mutationFn: () => sendEmailAddressTest(me.workspace.id, address.id) });
   const change = useMutation({
     mutationFn: (changes: Parameters<typeof updateEmailAddress>[2]) =>
       updateEmailAddress(me.workspace.id, address.id, changes),
@@ -93,18 +92,7 @@ export function AddressCard({
       </Row>
       {manage ? (
         <>
-          <Row
-            label="Forwarding test"
-            description={
-              test.data
-                ? `Sent to ${test.data.sent_to}. It shows as receiving once it comes back.`
-                : "Send a test email to your address to check the forward."
-            }
-          >
-            <Button variant="secondary" size="small" disabled={test.isPending} onClick={() => test.mutate()}>
-              Send test email
-            </Button>
-          </Row>
+          <ForwardingTest address={address} />
           <Row label="Quote the previous message">
             <Toggle
               label="Quote the previous message"
@@ -130,7 +118,7 @@ export function AddressCard({
         </>
       ) : null}
       {readRaw ? <Activity address={address} /> : null}
-      <Failure error={test.error ?? change.error} />
+      <Failure error={change.error} />
     </Section>
   );
 }

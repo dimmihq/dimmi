@@ -138,6 +138,7 @@ type Actions struct {
 	UpdateEmailAddress   *email.UpdateEmailAddress
 	DeleteEmailAddress   *email.DeleteEmailAddress
 	SendEmailAddressTest *email.SendEmailAddressTest
+	ShowEmailAddressTest *email.ShowEmailAddressTest
 	ListInboundEmails    *email.ListInboundEmails
 	ReceiveInboundEmail  *email.ReceiveInboundEmail
 	InboundHealth        *email.InboundHealth

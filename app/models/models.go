@@ -245,6 +245,23 @@ type EmailAddress struct {
 	UpdatedAt              time.Time       `json:"updated_at"`
 }
 
+type EmailAddressTest struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	EmailAddressID    ids.UUID        `json:"email_address_id"`
+	Status            string          `json:"status"`
+	Token             string          `json:"token"`
+	OutboundEmailID   *ids.UUID       `json:"outbound_email_id"`
+	InboundEmailID    *ids.UUID       `json:"inbound_email_id"`
+	Findings          json.RawMessage `json:"findings"`
+	LatencyMs         *int32          `json:"latency_ms"`
+	ExpiresAt         time.Time       `json:"expires_at"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	CompletedAt       *time.Time      `json:"completed_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
 type EmailDomain struct {
 	ID                          ids.UUID          `json:"id"`
 	WorkspaceID                 ids.UUID          `json:"workspace_id"`

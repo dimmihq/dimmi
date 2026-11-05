@@ -18,6 +18,7 @@ package providers
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 
 	fconfig "github.com/dimmihq/dimmi/framework/config"
@@ -28,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"
+	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	inbound "github.com/dimmihq/dimmi/app/integrations/email"
 	"github.com/dimmihq/dimmi/app/jobs"
 	appconfig "github.com/dimmihq/dimmi/config"
@@ -77,9 +79,6 @@ func bootEmail(a *app.App) error {
 	acts.UpdateEmailAddress = &email.UpdateEmailAddress{DB: a.DB, Clock: a.Clock}
 	acts.DeleteEmailAddress = &email.DeleteEmailAddress{DB: a.DB, Clock: a.Clock}
 	acts.ListInboundEmails = &email.ListInboundEmails{DB: a.DB}
-	acts.SendEmailAddressTest = &email.SendEmailAddressTest{
-		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Config: cfg, Stamps: stamps, Transport: transport,
-	}
 	acts.ReceiveInboundEmail = &email.ReceiveInboundEmail{
 		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Disk: disk, DiskName: diskName, Config: cfg,
 	}
@@ -89,7 +88,7 @@ func bootEmail(a *app.App) error {
 
 	acts.ProcessInboundEmail = &email.ProcessInboundEmail{
 		DB: a.DB, Clock: a.Clock, Storage: a.Storage, DNS: a.DNS, Limiter: a.Limiter, Config: cfg, Stamps: stamps,
-		Receiver: &conversations.ReceiveInboundMessage{
+		Events: a.Events, Receiver: &conversations.ReceiveInboundMessage{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,
 			ReopenWindow: cfg.Inbound.ReopenWindow,
 		},
@@ -102,9 +101,37 @@ func bootEmail(a *app.App) error {
 		return err
 	}
 
-	return queue.Register(a.Queue, &jobs.ProcessInboundEmail{Processor: &email.MeteredInboundProcessor{
-		Processor: acts.ProcessInboundEmail, DB: a.DB, Metrics: acts.InboundMetrics,
-	}})
+	return errors.Join(
+		queue.Register(a.Queue, &jobs.ProcessInboundEmail{Processor: &email.MeteredInboundProcessor{
+			Processor: acts.ProcessInboundEmail, DB: a.DB, Metrics: acts.InboundMetrics,
+		}}),
+		bootEmailTests(a, stamps, transport),
+	)
+}
+
+/*
+bootEmailTests builds the forwarding test's actions and registers its
+jobs, and makes the settings page follow each test live.
+*/
+func bootEmailTests(a *app.App, stamps inbound.Stamps, transport string) error {
+	acts := a.Actions
+
+	acts.SendEmailAddressTest = &email.SendEmailAddressTest{
+		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Queue: a.Queue, Events: a.Events, Limiter: a.Limiter,
+		Config: a.Config.Channels.Email, Stamps: stamps, Transport: transport,
+	}
+	acts.ShowEmailAddressTest = &email.ShowEmailAddressTest{DB: a.DB}
+
+	(&appbroadcasting.EmailSetup{Server: a.Broadcast}).Listen(a.Events)
+
+	return errors.Join(
+		queue.Register(a.Queue, &jobs.CheckEmailAddressTest{Checker: &email.CheckEmailAddressTest{
+			DB: a.DB, Clock: a.Clock, Events: a.Events, Guides: acts.RecommendGuide,
+		}}),
+		queue.Register(a.Queue, &jobs.PruneEmailAddressTests{
+			Pruner: &email.PruneEmailAddressTests{DB: a.DB, Clock: a.Clock},
+		}),
+	)
 }
 
 /*
