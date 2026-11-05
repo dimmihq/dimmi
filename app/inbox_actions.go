@@ -91,7 +91,10 @@ type InboxActions struct {
 	DeleteDraft *drafts.DeleteDraft
 
 	ListMessages      *messages.ListMessages
+	ShowOriginal      *messages.ShowOriginal
+	DownloadOriginal  *messages.DownloadOriginal
 	Reply             *messages.ReplyToConversation
+	RetryDelivery     *messages.RetryDelivery
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
 	DeleteMessage     *messages.DeleteMessage

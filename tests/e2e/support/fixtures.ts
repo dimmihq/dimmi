@@ -4,7 +4,11 @@
  * script error, console error or blocked content, such as a content
  * security policy violation. Browsers also log every API call the server
  * refuses; those are the answers tests provoke on purpose, such as a
- * wrong password, so only refusals from the API are let through.
+ * wrong password, so only refusals from the API are let through. The
+ * trace recorder also tries to run its snapshot script in every frame,
+ * and a frame sandboxed to run no script, such as the one showing an
+ * email, refuses it; that refusal is the sandbox working, so it is let
+ * through too.
  */
 import { type APIRequestContext, test as base, expect, type Page } from "@playwright/test";
 
@@ -15,6 +19,8 @@ export interface Person {
 }
 
 const refusedByApi = /Failed to load resource: the server responded with a status of 4\d\d/;
+const refusedBySandbox =
+  /^Blocked script execution in 'about:srcdoc' because the document's frame is sandboxed and the 'allow-scripts' permission is not set\.$/;
 
 /*
  * listen collects every script error, console error and blocked content
@@ -25,7 +31,7 @@ function listen(page: Page): string[] {
   page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
   page.on("console", (message) => {
     const apiRefusal = refusedByApi.test(message.text()) && message.location().url.includes("/api/v1/");
-    if (message.type() === "error" && !apiRefusal) {
+    if (message.type() === "error" && !apiRefusal && !refusedBySandbox.test(message.text())) {
       problems.push(`console error: ${message.text()}`);
     }
   });

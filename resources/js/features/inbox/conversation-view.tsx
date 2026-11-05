@@ -33,6 +33,7 @@ import {
   markRead,
   messagesQuery,
   reply,
+  retryDelivery,
   snoozeChoicesQuery,
   type Then,
 } from "@/lib/api/inbox";
@@ -45,6 +46,7 @@ import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
+import { OriginalMessage } from "./original-message";
 import { PriorityMenu } from "./priority/priority-menu";
 import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
@@ -65,8 +67,9 @@ const notConnected =
 
 /*
  * useTimeline reads the conversation's timeline, marks it read once it
- * has loaded, and sends replies and notes, reading everything the inbox
- * shows again once the server has them.
+ * has loaded, and sends replies and notes, and replies that failed once
+ * more, reading everything the inbox shows again once the server has
+ * them.
  */
 function useTimeline(workspace: string, conversation: Conversation) {
   const queryClient = useQueryClient();
@@ -105,7 +108,12 @@ function useTimeline(workspace: string, conversation: Conversation) {
     return first ? { kind: "snooze", option: first.key } : undefined;
   };
 
-  return { entries: messages.map(toEntry), send };
+  const retry = useMutation({
+    mutationFn: (message: string) => retryDelivery({ workspace, mutation: mutationId() }, conversation.id, message),
+    onSettled: refresh,
+  });
+
+  return { entries: messages.map(toEntry), send, retry: retry.mutate };
 }
 
 export function ConversationView({
@@ -146,6 +154,7 @@ export function ConversationView({
   const [operatorOpen, setOperatorOpen] = useState(operatorDefault);
   const [drawer, setDrawer] = useState(false);
   const [easing, ease] = useEasing();
+  const [original, setOriginal] = useState<string | null>(null);
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
   toggleRef.current = () => toggle(pane.details);
@@ -230,8 +239,18 @@ export function ConversationView({
         }}
         onAskOperator={toggleOperator}
         onTyping={typing}
+        onOpenOriginal={setOriginal}
+        onRetry={timeline.retry}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
       />
+      {original ? (
+        <OriginalMessage
+          workspace={workspace}
+          conversation={conversation.id}
+          message={original}
+          onClose={() => setOriginal(null)}
+        />
+      ) : null}
     </Panel>
   );
 

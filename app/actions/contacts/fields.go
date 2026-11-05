@@ -15,6 +15,8 @@ package contacts
 import (
 	"strings"
 	"unicode"
+
+	"github.com/dimmihq/dimmi/framework/mail"
 )
 
 /*
@@ -26,7 +28,7 @@ func NormalizeEmail(email *string) *string {
 		return nil
 	}
 
-	e := strings.ToLower(strings.TrimSpace(*email))
+	e := mail.CanonicalAddress(*email)
 	if e == "" {
 		return nil
 	}

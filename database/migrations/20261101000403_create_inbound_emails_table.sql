@@ -48,6 +48,8 @@ CREATE INDEX inbound_emails_workspace_id_status_received_at_index
     ON inbound_emails (workspace_id, status, received_at);
 CREATE UNIQUE INDEX inbound_emails_workspace_id_source_provider_message_id_key
     ON inbound_emails (workspace_id, source, provider_message_id) WHERE provider_message_id IS NOT NULL;
+CREATE INDEX inbound_emails_workspace_id_message_id_index ON inbound_emails (workspace_id, message_id)
+    WHERE message_id IS NOT NULL;
 CREATE INDEX inbound_emails_raw_deleted_at_index ON inbound_emails (raw_deleted_at) WHERE raw_path IS NOT NULL;
 
 -- +goose Down

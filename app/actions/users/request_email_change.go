@@ -91,7 +91,7 @@ type RequestEmailChange struct {
 Handle starts the change and returns it, with the new address masked.
 */
 func (a *RequestEmailChange) Handle(ctx context.Context, in RequestEmailChangeInput) (EmailChange, error) {
-	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
+	in.Email = mail.CanonicalAddress(in.Email)
 	if strings.EqualFold(in.Email, in.User.Email) {
 		return EmailChange{}, exceptions.ErrEmailUnchanged
 	}

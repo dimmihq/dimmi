@@ -53,12 +53,6 @@ const items: LibraryItem[] = [
 ];
 
 /*
- * LinkedItem is a library item that attaches as a tile: anything but a
- * saved reply.
- */
-export type LinkedItem = LibraryItem & { kind: Exclude<SourceKind, "reply"> };
-
-/*
  * search returns the library items of a kind whose title or detail holds
  * the query, ignoring case.
  */

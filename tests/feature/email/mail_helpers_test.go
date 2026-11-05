@@ -101,11 +101,31 @@ newest first.
 func received(t *testing.T, recipient string) [][]byte {
 	t.Helper()
 
+	return mailpitSearch(t, `to:"`+recipient+`"`)
+}
+
+/*
+copied returns the raw messages Mailpit holds that copied the address,
+newest first.
+*/
+func copied(t *testing.T, recipient string) [][]byte {
+	t.Helper()
+
+	return mailpitSearch(t, `cc:"`+recipient+`"`)
+}
+
+/*
+mailpitSearch returns the raw messages matching the Mailpit search,
+newest first.
+*/
+func mailpitSearch(t *testing.T, query string) [][]byte {
+	t.Helper()
+
 	client, err := httpclient.New(httpclient.Config{AllowPrivateNetworks: true})
 	require.NoError(t, err)
 
 	api := testkit.Env(t, "MAILPIT_API_URL")
-	search := url.Values{"query": {`to:"` + recipient + `"`}}
+	search := url.Values{"query": {query}}
 
 	resp, err := client.New().Get(t.Context(), api+"/api/v1/search?"+search.Encode())
 	require.NoError(t, err)

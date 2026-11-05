@@ -4,21 +4,22 @@
  * Reply or Note (or pressing R or N) unfolds it into the full panel, which
  * stays open until the person leaves the conversation. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
- * attachments as tiles above the text, a field that grows with what is
- * typed with formatting kept as Markdown, and a toolbar with the add menu (files, help articles, saved
- * replies and more from the workspace) and a way to ask Operator. Files can
- * also be dropped on the panel or pasted. Sending goes to the server; a
- * sent draft empties, a refused one stays with the reason under it.
- * Each draft, reply and note apart, is kept on the server and in the
- * browser, so it survives leaving, reloading and another device.
- * Files are not sent yet. Each time Reply or Note is chosen the field
+ * a field that grows with what is typed with formatting kept as
+ * Markdown, and a toolbar with the add menu (help articles, saved replies
+ * and more from the workspace, dropped into the text) and a way to ask
+ * Operator. Replies cannot carry files yet, so the composer offers none
+ * rather than show files that would never be sent. Sending goes to the
+ * server; a sent draft empties, a refused one stays with the reason under
+ * it. Each draft, reply and note apart, is kept on the server and in the
+ * browser, so it survives leaving, reloading and another device. Each
+ * time Reply or Note is chosen the field
  * takes the focus, sized to the draft it holds. While a reply is being
  * written the composer says so through onTyping, and says it stopped
  * once the reply is sent or the field is left.
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type DragEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -26,7 +27,6 @@ import type { Message } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
-import { AttachmentStrip } from "./attachments";
 import { ComposerField } from "./composer/composer-field";
 import { preloadEditor } from "./composer/load-editor";
 import { useInbox } from "./conversations";
@@ -36,7 +36,6 @@ import { type Mode, modes } from "./modes";
 import { SendMenu } from "./send-menu";
 import { UndoToast } from "./undo/undo-toast";
 import { useHeld } from "./undo/use-held";
-import { useAttachments } from "./use-attachments";
 import type { Report } from "./use-typing-report";
 
 /*
@@ -48,6 +47,12 @@ export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Prom
 const surface =
   "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
 const settle = [0.22, 1, 0.36, 1] as const;
+
+/*
+ * ignoreFiles drops files pasted into the field, since a reply cannot
+ * carry them yet.
+ */
+const ignoreFiles = () => undefined;
 
 export function Composer({
   conversation,
@@ -161,9 +166,6 @@ function Panel({
   const draft = drafts[mode];
   const [sending, setSending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const attachments = useAttachments();
-  const [dragging, setDragging] = useState(false);
-  const picker = useRef<HTMLInputElement>(null);
   const note = mode === "note";
   const held = useHeld(workspace, conversation, (body) => {
     drafts.reply.edit(body);
@@ -183,7 +185,6 @@ function Panel({
     try {
       const sent = await onSend(mode, text, note ? undefined : then);
       draft.sent();
-      attachments.clear();
       held.hold(sent);
     } catch (error) {
       draft.edit(draft.body);
@@ -191,12 +192,6 @@ function Panel({
     } finally {
       setSending(false);
     }
-  };
-
-  const drop = (event: DragEvent) => {
-    event.preventDefault();
-    setDragging(false);
-    attachments.add(event.dataTransfer.files);
   };
 
   return (
@@ -225,22 +220,11 @@ function Panel({
       </div>
       <fieldset
         aria-label={note ? "Note composer" : "Reply composer"}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={drop}
-        className={cx(
-          surface,
-          "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150",
-          dragging && "ring-2 ring-accent-500 ring-inset",
-        )}
+        className={cx(surface, "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150")}
       >
         <div className="flex flex-col gap-3 px-1.5">
           <UndoToast held={held} />
           <DraftConflict draft={draft} />
-          <AttachmentStrip files={attachments.files} onRemove={attachments.remove} />
           <ComposerField
             value={draft.body}
             label={note ? "Internal note" : `Reply to ${customer}`}
@@ -254,23 +238,11 @@ function Panel({
             }}
             onSubmit={(then) => void send(then)}
             onBlur={() => onTyping(false)}
-            onFiles={attachments.add}
+            onFiles={ignoreFiles}
           />
         </div>
         <div className="flex items-center gap-2">
-          <AddMenu onFiles={() => picker.current?.click()} onAttach={attachments.link} onInsert={insert} />
-          <input
-            ref={picker}
-            type="file"
-            multiple
-            tabIndex={-1}
-            aria-label="Attach files"
-            className="sr-only"
-            onChange={(event) => {
-              attachments.add(event.target.files ?? []);
-              event.target.value = "";
-            }}
-          />
+          <AddMenu onInsert={insert} />
           <button
             type="button"
             onClick={onAskOperator}

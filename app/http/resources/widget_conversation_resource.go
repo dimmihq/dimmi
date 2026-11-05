@@ -113,7 +113,7 @@ func NewWidgetConversation(v widget.VisibleConversation) WidgetConversation {
 	if v.Last != nil {
 		short := ""
 		if v.Last.Message.DeletedAt == nil {
-			short = excerpt(v.Last.Message.Body)
+			short = excerpt(&v.Last.Message)
 		}
 
 		out.LastMessage = &WidgetLastMessage{

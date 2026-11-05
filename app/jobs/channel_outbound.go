@@ -6,7 +6,8 @@
 | What a channel driver is handed for a reply: the conversation and its
 | thread, the body as written in Markdown and also as plain text and
 | safe HTML for channels that render one of those, the customer by the
-| address the channel reaches them at, and the teammate who wrote it by
+| address the channel reaches them at, everyone else on the thread as a
+| copy, the way a reply to all would, and the teammate who wrote it by
 | name. The driver never reads the database to learn any of it.
 |
 */
@@ -61,20 +62,49 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 
 	message, err := outboundMessage(c, msg, contact)
 	message.Author = author
+	if err != nil {
+		return outbound{}, err
+	}
+
+	message.CC, err = copiesOf(ctx, q, c)
 
 	return outbound{conn: conn, driver: driver, message: message}, err
 }
 
 /*
+copiesOf returns everyone on the conversation besides its customer, by
+email, to copy on the reply.
+*/
+func copiesOf(ctx context.Context, q *models.Queries, c models.Conversation) ([]contracts.Recipient, error) {
+	rows, err := q.ListConversationCopies(ctx, models.ListConversationCopiesParams{
+		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ContactID: c.ContactID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list conversation copies: %w", err)
+	}
+
+	out := make([]contracts.Recipient, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, contracts.Recipient{
+			ContactID: row.ID, Name: deref(row.Name), IdentityType: enums.IdentityTypeEmail, IdentityValue: row.Email,
+		})
+	}
+
+	return out, nil
+}
+
+/*
 outboundMessage shapes the reply for its driver, its body rendered from
-the Markdown it was written in.
+the Markdown it was written in: every line break the teammate typed is
+kept, and the plain version keeps links' addresses and list numbers, so
+the customer reads what the thread shows.
 */
 func outboundMessage(
 	c models.Conversation, msg models.Message, contact models.Contact,
 ) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
-	rendered, err := markdown.New(markdown.Options{GFM: true}).HTML([]byte(body))
+	rendered, err := markdown.New(markdown.Options{GFM: true, HardWraps: true}).HTML([]byte(body))
 	if err != nil {
 		return contracts.OutboundMessage{}, fmt.Errorf("render reply: %w", err)
 	}
@@ -82,7 +112,7 @@ func outboundMessage(
 	return contracts.OutboundMessage{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ConversationNumber: c.Number, MessageID: msg.ID,
 		IdempotencyKey: models.PublicID(models.PrefixMessage, msg.ID), ExternalThreadKey: deref(c.ExternalThreadKey),
-		Subject: deref(c.Subject), BodyMarkdown: body, BodyText: markdown.PlainText([]byte(body)),
+		Subject: deref(c.Subject), BodyMarkdown: body, BodyText: markdown.ReadableText([]byte(body)),
 		BodyHTML: rendered.HTML, Recipient: recipientOf(contact),
 	}, nil
 }

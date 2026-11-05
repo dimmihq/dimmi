@@ -59,7 +59,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
-			Delete: acts.DeleteMessage, Edit: acts.EditNote, IDs: a.IDs, Cursors: cursors,
+			Delete: acts.DeleteMessage, Edit: acts.EditNote, Original: acts.ShowOriginal, Raw: acts.DownloadOriginal,
+			Resend: acts.RetryDelivery, IDs: a.IDs, Cursors: cursors,
 		},
 		views: &v1.InboxViewController{
 			Counts: acts.CountConversations, ReadShow: acts.ShowReadState, ReadSave: acts.UpdateReadState,
@@ -117,9 +118,15 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Ability("conversations:read")
 	routing.Get(r, conv+"/messages", "conversations.messages.index", c.messages.Index).
 		Ability("conversations:read")
+	routing.Get(r, conv+"/messages/{message}/original", "conversations.messages.original.show",
+		c.messages.ShowOriginal).Ability("conversations:read")
+	routing.Get(r, conv+"/messages/{message}/original/raw", "conversations.messages.original.raw",
+		c.messages.DownloadRaw).Ability("conversations:read")
 	routing.Post(r, conv+"/messages", "conversations.messages.store", c.messages.Store).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/replies", "conversations.replies.store", c.messages.StoreReply).
+		Ability("conversations:write")
+	routing.Post(r, conv+"/messages/{message}/retry", "conversations.messages.retry", c.messages.Retry).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/notes", "conversations.notes.store", c.messages.StoreNote).
 		Ability("conversations:write")

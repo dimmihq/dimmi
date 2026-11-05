@@ -83,6 +83,7 @@ DAVE=dave.$RUN@example.com
 | Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true`, `locales` `[{"code":"en","name":"English"}]` |
 | Common password | `r weak -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada\",\"email\":\"$ADA\",\"password\":\"password123\"}"` | 422, message "The password is too common. Choose another one." |
 | Sign up | `r signup -c a.jar -b a.jar -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada Lovelace\",\"email\":\"$ADA\",\"password\":\"analytical-engine-1843\",\"workspace_name\":\"Acme\"}"` | 201, `dimmi_session` and `dimmi_device` cookies, HttpOnly, SameSite=Lax, `email_verified: false` |
+| Another spelling | sign up again with `$ADA` in fullwidth letters or its domain in Unicode or punycode | 422 `email_taken`; an address with a zero-width space 422 on `email` |
 | Email taken, any case | same body with the email in capitals | 422 `email_taken` |
 | Who am I | `r me -b a.jar -H "$O" $B/me` | 200, user, `auth.auth_methods` `["password"]` |
 | Name a workspace | add `-H 'Dimmi-Workspace: ws_…'` (id from sign-up) | 200, `effective_abilities` filled |
@@ -599,6 +600,9 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Activity log | `r act -b a.jar -H "$O" $EA/$EMA/inbound-emails` | 200, `status: processed`, `classification: normal`, a `conversation` and `message` id; the address now has `inbound_verified_at` |
 | Redelivery | the same command with `&id=p1` twice | 202 twice; the activity log holds it once (a different `id` with the same Message-ID is stored `ignored`, `duplicate`) |
 | Reply threads | `mailraw $FWD 'Re: Refund for order 1042' reply.$RUN@customer.test "In-Reply-To: <first.$RUN@customer.test>" 'Thanks!' \| r re …` | 202; `select count(*) from conversations` unchanged, the message joins the first conversation |
+| Plain text kept | `mailraw $FWD 'Broken page' plain.$RUN@customer.test '' $'The <div> tag and 2*3*4.\r\n\r\nOn Mon, Nov 2, 2026 at 9:00 AM Ann <ann@example.com> wrote:\r\n> Which page?' \| r pl …`, then `r tl -b a.jar -H "$O" $B/conversations/<its conv_>/messages` | the message has `body` "The <div> tag and 2*3*4.", `body_format: plain`, `has_original: true` |
+| Full message | `r og -b a.jar -H "$O" $B/conversations/<conv_>/messages/<msg_>/original` | 200 `message_original`, `text` with the quoted lines, `html: null`, `raw_available: true` for an owner |
+| Raw email | `r raw -b a.jar -H "$O" $B/conversations/<conv_>/messages/<msg_>/original/raw` | 200 `application/octet-stream`, `Content-Disposition: attachment; filename="msg_….eml"`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`; a member without `email:read_raw` gets 403 and `raw_available: false` |
 | Out of office | `mailraw $FWD 'Automatic reply: away' ooo.$RUN@customer.test 'Auto-Submitted: auto-replied' 'Away.' \| r ooo …` | 202; activity `ignore_reason: auto_reply_no_thread`, no new conversation |
 | Unknown address | the first mail to `ghost@inbound.e2e.test` | 202 `workspaces: 0`, nothing stored |
 | Add an address | `r add -b a.jar -X POST -H "$O" -H "$J" $EA -d '{"address":"sales@acme.test"}'` | 201, `forwarding_address` `<slug>.sales@inbound.e2e.test`; the same again 409 `address_in_use`; `x@inbound.e2e.test` 422 `invalid_address` |
@@ -606,6 +610,12 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Forwarding test | `r t -b a.jar -X POST -H "$O" $EA/$EMA/tests` | 201 `email_address_test` `sent_to` the public address; Mailpit holds it with an `X-Dimmi-Test` header; feeding that raw mail back through the source shows `ignore_reason: forwarding_test` |
 | Disconnect | `r del -b a.jar -X DELETE -H "$O" $EA/<the sales ema_>` | 204; mail to its forwarding address is stored `ignored` with `address_deleted` |
 | In a browser | open `$W/d/settings/email` | the forwarding address with a Copy button, the Gmail steps, "Receiving" once mail arrived, the last emails, "Send test email" and "Add address" |
+| Full message in a browser | open the "Broken page" conversation, then "Show full message" | the thread shows the text with its `<div>` and stars as typed; the dialog shows the quoted thread and offers "Download original" |
+| Reply not delivered | insert a `hard_bounce` row in `email_suppressions` for the customer, then reply to their email conversation in the browser | the reply shows "Not delivered: The recipient's address bounced or complained before." without a reload |
+| Send again | delete that row, then `r rt -b a.jar -X POST -H "$O" $B/conversations/<conv_>/messages/<msg_>/retry` (or "Send again") | 200 with `delivery_status: pending`, the mail reaches Mailpit; the same call again 409 `message_not_failed` |
+| Teammate answers by email | the owner replies to a customer's email from their own verified, SPF-passing mailbox | a note by the owner in the thread, no contact for the owner, the conversation not woken |
+| Reply-To | send `mailraw` with a `Reply-To: home.$RUN@customer.test` header, then reply in the browser | Mailpit shows the reply to the Reply-To address only; the contact keeps the From address |
+| Reply lines and links | reply "Hi,⏎Thanks,⏎Ana⏎⏎[guide](https://example.com/a)⏎⏎3. Open settings" | in Mailpit the HTML shows three lines; the text part reads `guide (https://example.com/a)` and `3. Open settings` |
 | Load run | `go build -tags dev -o bin/dimmi-dev ./cmd/dimmi`, then with the same env `bin/dimmi-dev email:load --url $W --to $FWD --secret e2e-inbound-secret --rate 20 --duration 10s` | `sent 200 … 0 refused`, then `processed 200 of 200` with p50 and p95; the full bar is `--rate 50 --duration 10m` with p95 under 10 s, on a database nothing else uses |
 | Metrics | restart with `DIMMI_TELEMETRY__METRICS=prometheus`, send one mail, `curl -s http://127.0.0.1:19090/metrics \| grep dimmi_email_` | `dimmi_email_inbound_total` by source, status and classification, `dimmi_email_inbound_latency_seconds` and `dimmi_email_auth_total`; provider webhooks also add `dimmi_email_inbound_bytes`; no address, subject or body in any label |
 

@@ -78,14 +78,17 @@ type WrittenOutput struct {
 ConversationMessageController serves conversations' timelines.
 */
 type ConversationMessageController struct {
-	List    *messages.ListMessages
-	Reply   *messages.ReplyToConversation
-	Note    *messages.AddNote
-	Relay   *messages.AddContactMessage
-	Delete  *messages.DeleteMessage
-	Edit    *messages.EditNote
-	IDs     *ids.Registry
-	Cursors *pagination.Cursors
+	List     *messages.ListMessages
+	Reply    *messages.ReplyToConversation
+	Note     *messages.AddNote
+	Relay    *messages.AddContactMessage
+	Delete   *messages.DeleteMessage
+	Edit     *messages.EditNote
+	Original *messages.ShowOriginal
+	Raw      *messages.DownloadOriginal
+	Resend   *messages.RetryDelivery
+	IDs      *ids.Registry
+	Cursors  *pagination.Cursors
 }
 
 /*
