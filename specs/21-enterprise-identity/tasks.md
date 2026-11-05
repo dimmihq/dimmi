@@ -32,10 +32,10 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 
 - [x] First: add gosaml2 + goxmldsig v1.6.1 floor, one `framework/saml` call; `tests/arch` and binary size check pass. Fails: stop, report.
 - [x] `framework/saml` wrapper + `samltest`. Tests list in saml.md. 90% coverage. `doc.go`, no product words.
-- [ ] Web routes redirect, ACS (CSRF off for this route only), metadata. Attempt store on Valkey, `__Host-dimmi_sso` cookie, replay guard, IdP-initiated restart.
-- [ ] `CompleteSSOLogin`, `ResolveSSOUser`, `ApplyGroupRoles`, JIT. `OrganizationLoginPolicy` replaces `AllowAll` in provider; `CheckLoginPolicy` path for password, magic link, email code, reset, register, OAuth.
-- [ ] `POST /sso-lookups`. Login page "Continue with SSO". `POST /sessions {sso_bypass}` + `SSOBypassUsedMail`.
-- [ ] Metadata refresh + certificate warning jobs. `connection-dialog`, test flow polling `tested_at`, `attribute-map`, `group-roles`, `enforce-dialog`.
+- [x] Web routes redirect, ACS (CSRF off for this route only), metadata. Attempt store on Valkey, `__Host-dimmi_sso` cookie, replay guard, IdP-initiated restart.
+- [x] `CompleteSSOLogin`, `ResolveSSOUser`, `ApplyGroupRoles`, JIT. `OrganizationLoginPolicy` replaces `AllowAll` in provider; `CheckLoginPolicy` path for password, magic link, email code, reset, register, OAuth.
+- [x] `POST /sso-lookups`. Login page "Continue with SSO". `POST /sessions {sso_bypass}` + `SSOBypassUsedMail`.
+- [x] Metadata refresh + certificate warning jobs. `connection-dialog`, test flow polling `tested_at`, `attribute-map`, `group-roles`, `enforce-dialog`.
 - [ ] Tests `tests/feature/identity/saml_test.go`; e2e `single-sign-on.spec.ts`: "an owner connects a saml idp, tests it and signs in through it", "enforcing sends a password sign-in to the idp", "the owner bypass signs in and warns the other owners". Local IdP started from `tests/e2e/server.ts`.
 
 ## M5. Enterprise OIDC (track 08 enterprise-identity)

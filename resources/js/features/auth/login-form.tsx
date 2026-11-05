@@ -1,6 +1,8 @@
 /*
  * Signing in with a password, or by mail: the person asks for a link and
- * then either follows it or types the six-digit code it carries here.
+ * then either follows it or types the six-digit code it carries here. A
+ * company that requires its identity provider sends its people there,
+ * and lets its owners around it when it is down.
  */
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
@@ -11,12 +13,22 @@ import { Input } from "@/components/base/input/input";
 import { InputOtp } from "@/components/base/input-otp/input-otp";
 import { Notification } from "@/components/base/notification/notification";
 import { LinkButton } from "@/features/navigation/links";
-import { type AuthConfig, type SignInResult, sendMagicLink, signIn, signInWithCode } from "@/lib/api/auth";
+import {
+  type AuthConfig,
+  lookupSSO,
+  type SignInResult,
+  type SSOLookup,
+  sendMagicLink,
+  signIn,
+  signInWithCode,
+} from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 
 import { AuthCard, AuthFooter, AuthHeader } from "./auth-frame";
 import { field } from "./form-data";
 import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
+import { SSOButton, SSORequired } from "./sso-sign-in";
 
 export interface LoginFormProps {
   config: AuthConfig;
@@ -54,12 +66,20 @@ function PasswordStep({
   onMailed,
 }: LoginFormProps & { onMailed: (email: string) => void }) {
   const [email, setEmail] = useState("");
+  const [required, setRequired] = useState<SSOLookup | null>(null);
+  const [bypassing, setBypassing] = useState(false);
   const login = useMutation({
-    mutationFn: (form: FormData) => signIn(field(form, "email"), field(form, "password"), reauth),
+    mutationFn: (form: FormData) => signIn(field(form, "email"), field(form, "password"), reauth, bypassing),
     onSuccess: onSignedIn,
+    onError: async (failure) => {
+      if (failure instanceof ApiError && failure.code === "sso_required") {
+        setRequired(await lookupSSO(email));
+      }
+    },
   });
   const link = useMutation({ mutationFn: sendMagicLink, onSuccess: () => onMailed(email) });
-  const error = login.error ?? link.error;
+  const ssoRequired = login.error instanceof ApiError && login.error.code === "sso_required";
+  const error = ssoRequired ? link.error : (login.error ?? link.error);
   const fields = ["email", "password"];
   const emailError = fieldError(error, "email", fields, "email");
   const passwordError = fieldError(error, "password", fields, "email");
@@ -74,6 +94,9 @@ function PasswordStep({
       <AuthHeader title={reauth ? "Sign in again" : "Log in to dimmi"} />
       {initialError ? (
         <Notification status="error" title={initialError} dismissible={false} role="alert" className="mt-6 w-full" />
+      ) : null}
+      {required ? (
+        <SSORequired lookup={required} redirect={redirect} bypassing={bypassing} onBypass={() => setBypassing(true)} />
       ) : null}
       <ProviderButtons
         providers={config.providers}
@@ -121,6 +144,7 @@ function PasswordStep({
         <Button type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}
         </Button>
+        {config.sso_available && !reauth ? <SSOButton email={email} redirect={redirect} /> : null}
         {config.magic_link ? (
           <Button
             variant="secondary"

@@ -17,6 +17,7 @@ import {
   connectionsQuery,
   deleteConnection,
   type SSOConnection,
+  testConnection,
   updateConnection,
 } from "@/lib/api/sso";
 
@@ -90,15 +91,16 @@ function ConnectionItem({
   canManage: boolean;
   onShow: () => void;
   onConfirm: (pending: Pending) => void;
-  change: (status: { status?: ConnectionStatus; enforced?: boolean }) => void;
+  change: (status: { status?: ConnectionStatus; enforced?: boolean; jit_enabled?: boolean }) => void;
 }) {
   const { status, enforced } = connection;
+  const failure = failureLabel(connection);
 
   return (
     <Item
       mark={<Glyph icon={RiLoginBoxLine} />}
       title={connection.name}
-      detail={[protocolLabels[connection.protocol], enforced ? "Required" : null].filter(Boolean).join(" · ")}
+      detail={[protocolLabels[connection.protocol], enforced ? "Required" : null, failure].filter(Boolean).join(" · ")}
     >
       <Chip variant="caption" color={status === "active" ? "lime" : "neutral"}>
         {statusLabels[status]}
@@ -106,28 +108,87 @@ function ConnectionItem({
       <Action size="xs" onPress={onShow}>
         Details
       </Action>
-      {canManage && (status === "tested" || status === "disabled") ? (
+      {canManage ? <ManageActions connection={connection} onConfirm={onConfirm} change={change} /> : null}
+    </Item>
+  );
+}
+
+/*
+ * ManageActions are what an owner may do to a connection in its status.
+ */
+function ManageActions({
+  connection,
+  onConfirm,
+  change,
+}: {
+  connection: SSOConnection;
+  onConfirm: (pending: Pending) => void;
+  change: (status: { status?: ConnectionStatus; enforced?: boolean; jit_enabled?: boolean }) => void;
+}) {
+  const { status, enforced } = connection;
+
+  return (
+    <>
+      {status !== "disabled" ? <TestAction connection={connection} /> : null}
+      <Action size="xs" onPress={() => change({ jit_enabled: !connection.jit_enabled })}>
+        {connection.jit_enabled ? "Stop adding people" : "Add new people"}
+      </Action>
+      {status === "tested" || status === "disabled" ? (
         <Action size="xs" onPress={() => change({ status: "active" })}>
           Turn on
         </Action>
       ) : null}
-      {canManage && status === "active" && !enforced ? (
+      {status === "active" && !enforced ? (
         <Action size="xs" onPress={() => onConfirm({ kind: "enforce", connection })}>
           Require
         </Action>
       ) : null}
-      {canManage && enforced ? (
+      {enforced ? (
         <Action size="xs" onPress={() => change({ enforced: false })}>
           Stop requiring
         </Action>
       ) : null}
-      {canManage && status === "active" ? (
+      {status === "active" ? (
         <Action size="xs" onPress={() => change({ status: "disabled" })}>
           Turn off
         </Action>
       ) : null}
-      {canManage ? <Danger onPress={() => onConfirm({ kind: "delete", connection })}>Delete</Danger> : null}
-    </Item>
+      <Danger onPress={() => onConfirm({ kind: "delete", connection })}>Delete</Danger>
+    </>
+  );
+}
+
+/*
+ * failureLabel says why the last sign-in through the connection failed,
+ * or its metadata could not be read, for the owners.
+ */
+function failureLabel(connection: SSOConnection): string | null {
+  if (connection.metadata_error) {
+    return connection.metadata_error;
+  }
+
+  return connection.last_error ? `Last sign-in failed: ${connection.last_error.code.replaceAll("_", " ")}` : null;
+}
+
+/*
+ * TestAction opens the identity provider in a new tab for an owner's
+ * test sign-in; the connection shows tested once it comes back.
+ */
+function TestAction({ connection }: { connection: SSOConnection }) {
+  const { send } = useSSOChange();
+
+  return (
+    <Action
+      size="xs"
+      onPress={() =>
+        void send(async (workspace) => {
+          const started = await testConnection(workspace, connection.id);
+          window.open(started.url, "_blank", "noopener");
+        })
+      }
+    >
+      Test
+    </Action>
   );
 }
 

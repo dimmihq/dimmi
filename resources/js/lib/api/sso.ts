@@ -17,6 +17,7 @@ export interface ConnectionConfig {
   sp_certificate?: string;
   issuer?: string;
   client_id?: string;
+  attribute_map?: AttributeMap;
 }
 
 export interface SSOConnection {
@@ -29,6 +30,9 @@ export interface SSOConnection {
   enforced: boolean;
   tested_at: string | null;
   last_login_at: string | null;
+  jit_enabled: boolean;
+  last_error: { code: string; at: string } | null;
+  metadata_error: string | null;
   sp: { entity_id?: string; acs_url?: string; metadata_url?: string; redirect_uri?: string };
 }
 
@@ -39,10 +43,17 @@ export interface ConnectionDraft {
   client_secret?: string;
 }
 
+export interface AttributeMap {
+  email?: string;
+  display_name?: string;
+  groups?: string;
+}
+
 export interface ConnectionChange {
   status?: ConnectionStatus;
   enforced?: boolean;
   confirm_owners_can_sign_in?: boolean;
+  jit_enabled?: boolean;
 }
 
 export interface OrganizationDomain {
@@ -82,6 +93,16 @@ export function createConnection(workspace: string, draft: ConnectionDraft): Pro
 
 export function updateConnection(workspace: string, id: string, change: ConnectionChange): Promise<SSOConnection> {
   return request<SSOConnection>("PATCH", `/sso-connections/${encodeURIComponent(id)}`, change, { workspace });
+}
+
+/*
+ * testConnection starts an owner's test sign-in and returns the address
+ * to open in a new tab.
+ */
+export function testConnection(workspace: string, id: string): Promise<{ url: string }> {
+  return request<{ url: string }>("POST", `/sso-connections/${encodeURIComponent(id)}/tests`, undefined, {
+    workspace,
+  });
 }
 
 export function deleteConnection(workspace: string, id: string): Promise<void> {
