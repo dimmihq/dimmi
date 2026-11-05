@@ -110,7 +110,7 @@ export function RetentionSection({ canManage }: { canManage: boolean }) {
   const { data } = useQuery(workspaceQuery(workspace));
   const current = data?.retention;
   if (!current) {
-    return null;
+    return <Section title="Retention" loading rows={3} />;
   }
 
   return (

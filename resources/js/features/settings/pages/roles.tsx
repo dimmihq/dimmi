@@ -113,6 +113,8 @@ export function RolesSettings() {
         title="Custom roles"
         description="A custom role keeps part of what its base role allows."
         action={canManage ? <NewRoleMenu onPick={(start) => setEditing({ role: null, start })} /> : undefined}
+        loading={!roles}
+        rows={2}
       >
         {custom.length === 0 ? <Empty>No custom roles yet.</Empty> : null}
         {custom.map((role) => (

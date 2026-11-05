@@ -201,7 +201,7 @@ export function DomainPage({ domain }: { domain: string }) {
     return (
       <SettingsPage title="Sending domain">
         <BackToEmail />
-        <Failure error={error} />
+        {error ? <Failure error={error} /> : <Section title="" loading rows={4} />}
       </SettingsPage>
     );
   }

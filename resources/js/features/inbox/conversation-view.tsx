@@ -76,7 +76,7 @@ const notConnected =
 function useTimeline(workspace: string, conversation: Conversation) {
   const queryClient = useQueryClient();
   const mutationId = useMutationId();
-  const { data: messages = [] } = useQuery(messagesQuery(workspace, conversation.id));
+  const { data: messages = [], isPending: loading } = useQuery(messagesQuery(workspace, conversation.id));
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
   const read = useMutation({
     mutationFn: () => markRead({ workspace, mutation: mutationId() }, conversation.id),
@@ -120,7 +120,7 @@ function useTimeline(workspace: string, conversation: Conversation) {
     onSettled: refresh,
   });
 
-  return { entries: messages.map(toEntry), send, retry: retry.mutate };
+  return { entries: messages.map(toEntry), loading, send, retry: retry.mutate };
 }
 
 export function ConversationView({
@@ -246,6 +246,7 @@ export function ConversationView({
       <Thread
         conversation={conversation.id}
         entries={timeline.entries}
+        loading={timeline.loading}
         customer={customer}
         channel={conversation.channel.name}
         channelType={conversation.channel.type}

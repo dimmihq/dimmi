@@ -13,6 +13,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
+import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { fieldError } from "@/features/auth/form-errors";
 import { chatApps } from "@/features/settings/chat-apps";
 import { Action } from "@/features/settings/controls";
@@ -20,7 +21,6 @@ import { Item, Logo } from "@/features/settings/layout";
 import { useCopy } from "@/features/settings/use-copy";
 import { createEmailAddress, emailAddressesQuery } from "@/lib/api/email";
 import { installSnippet, widgetSettingsQuery } from "@/lib/api/widget-settings";
-
 import { EmailForwarding } from "./email-forwarding";
 import { StepActions, StepHeader } from "./frame";
 import type { StepProps } from "./step-props";
@@ -61,7 +61,7 @@ function MessengerInstall({ workspace }: { workspace: string }) {
   const widget = widgets?.[0];
 
   if (!widget) {
-    return null;
+    return widgets ? null : <Skeleton className="h-24 w-full rounded-2xl" />;
   }
 
   const snippet = installSnippet(window.location.origin, widget.id);
@@ -107,6 +107,9 @@ function EmailSetup({ workspace }: { workspace: string }) {
   };
 
   const added = add.data ?? addresses?.find((a) => a.address !== a.forwarding_address);
+  if (!addresses) {
+    return <Skeleton className="h-10 w-full rounded-xl" />;
+  }
   if (added) {
     return <EmailForwarding workspace={workspace} address={added} />;
   }

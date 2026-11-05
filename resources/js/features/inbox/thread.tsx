@@ -31,6 +31,7 @@ import { LinkPolicyProvider } from "./links/link-policy";
 import { MessageBody } from "./message-body";
 import { MessageFiles } from "./message-files";
 import type { Mode } from "./modes";
+import { ThreadSkeleton } from "./skeletons";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
 import { useMessageMoves } from "./thread/use-message-moves";
 import type { Report } from "./use-typing-report";
@@ -301,6 +302,7 @@ function useComposerKeys(keys: Record<string, () => void>) {
 export function Thread({
   conversation,
   entries,
+  loading = false,
   customer,
   channel,
   channelType,
@@ -313,6 +315,7 @@ export function Thread({
 }: {
   conversation: string;
   entries: ThreadEntry[];
+  loading?: boolean;
   customer: string;
   channel: string;
   channelType?: string;
@@ -343,15 +346,19 @@ export function Thread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="pt-2 pb-4">
-        <LinkPolicyProvider channelType={channelType}>
-          <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-            {entries.map((entry) => (
-              <li key={entry.id}>
-                <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
-              </li>
-            ))}
-          </ol>
-        </LinkPolicyProvider>
+        {loading ? (
+          <ThreadSkeleton />
+        ) : (
+          <LinkPolicyProvider channelType={channelType}>
+            <ol className="mx-auto flex max-w-3xl flex-col gap-3">
+              {entries.map((entry) => (
+                <li key={entry.id}>
+                  <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
+                </li>
+              ))}
+            </ol>
+          </LinkPolicyProvider>
+        )}
       </ScrollArea>
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}

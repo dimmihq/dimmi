@@ -1,7 +1,7 @@
 import { RiMailLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Empty, Glyph, Item } from "@/features/settings/layout";
+import { Empty, Glyph, Item, RowsSkeleton } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
 import { type EmailAddress, inboundEmailsQuery } from "@/lib/api/email";
 
@@ -12,7 +12,11 @@ export function Activity({ address }: { address: EmailAddress }) {
   const me = useAccount();
   const { data } = useQuery(inboundEmailsQuery(me.workspace.id, address.id));
 
-  if (!data || data.length === 0) {
+  if (!data) {
+    return <RowsSkeleton rows={1} />;
+  }
+
+  if (data.length === 0) {
     return <Empty>No email has arrived yet.</Empty>;
   }
 

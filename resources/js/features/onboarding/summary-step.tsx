@@ -8,20 +8,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/base/buttons/button";
+import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { invitationsQuery } from "@/lib/api/invitations";
 import { tagsQuery } from "@/lib/api/tags";
 import { updateOnboarding, workspaceQuery } from "@/lib/api/workspace";
-
 import { StepActions } from "./frame";
 
-function Row({ label, value }: { label: string; value: string | null }) {
+function Row({ label, value, loading = false }: { label: string; value: string | null; loading?: boolean }) {
   const Icon = value ? RiCheckboxCircleFill : RiCheckboxCircleLine;
 
   return (
-    <li className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-background-secondary-default px-3 py-2.5">
-      <Icon aria-hidden className={value ? "size-4 text-accent-600" : "size-4 text-foreground-icon-quaternary"} />
+    <li
+      aria-busy={loading || undefined}
+      className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-background-secondary-default px-3 py-2.5"
+    >
+      {loading ? (
+        <Skeleton shape="circle" className="size-4 shrink-0" />
+      ) : (
+        <Icon aria-hidden className={value ? "size-4 text-accent-600" : "size-4 text-foreground-icon-quaternary"} />
+      )}
       <span className="w-44 shrink-0 text-body-2-medium text-text-primary">{label}</span>
-      <span className="min-w-0 flex-1 truncate text-body-2-regular text-text-secondary">{value ?? "None yet"}</span>
+      {loading ? (
+        <Skeleton shape="text" className="h-3 w-32" />
+      ) : (
+        <span className="min-w-0 flex-1 truncate text-body-2-regular text-text-secondary">{value ?? "None yet"}</span>
+      )}
     </li>
   );
 }
@@ -62,9 +73,9 @@ export function SummaryStep({
       <p className="mt-2 text-body-regular text-text-secondary">Everything below can be changed in settings.</p>
       <ul className="mt-8 flex flex-col gap-2">
         <Row label="Workspace" value={name} />
-        <Row label="Logo" value={current?.logo_url ? "Added" : null} />
-        <Row label="Tags" value={tagNames || null} />
-        <Row label="Team" value={invited > 0 ? `${invited} invited` : null} />
+        <Row label="Logo" value={current?.logo_url ? "Added" : null} loading={!current} />
+        <Row label="Tags" value={tagNames || null} loading={!tags} />
+        <Row label="Team" value={invited > 0 ? `${invited} invited` : null} loading={!invitations} />
         <Row label="Knowledge" value={null} />
         <Row label="Example conversations" value={practiced ? "5 conversations" : null} />
       </ul>

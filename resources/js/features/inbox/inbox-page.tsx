@@ -14,7 +14,6 @@ import { useDeferredValue, useEffect, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Input } from "@/components/base/input/input";
-import { Spinner } from "@/components/base/spinner/spinner";
 import { PageOutlet } from "@/features/layout/page-outlet";
 import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
@@ -26,6 +25,7 @@ import { viewsQuery } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
 import { ConversationList } from "./conversation-list";
 import { useInbox } from "./conversations";
+import { ConversationRowsSkeleton } from "./skeletons";
 import { rememberView } from "./views/last-view";
 import { ListControls } from "./views/list-controls";
 import { useViewPreferences } from "./views/use-view-preferences";
@@ -208,11 +208,7 @@ function ListBody({
   drafted: ReadonlySet<string>;
 }) {
   if (state === "loading") {
-    return (
-      <div className="flex flex-1 items-center justify-center py-12">
-        <Spinner aria-label="Loading conversations" />
-      </div>
-    );
+    return <ConversationRowsSkeleton />;
   }
   if (state === "error") {
     return (

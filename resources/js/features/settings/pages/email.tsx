@@ -28,6 +28,7 @@ export function EmailSettings() {
 
   return (
     <SettingsPage title="Email" description="Forward your support address to dimmi and reply from it.">
+      {addresses ? null : <Section title="Addresses" loading rows={2} />}
       {addresses && addresses.length === 0 ? (
         <Section title="Addresses">
           <Empty>No address is connected yet.</Empty>

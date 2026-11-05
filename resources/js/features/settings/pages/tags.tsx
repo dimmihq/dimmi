@@ -14,15 +14,16 @@ import { Button } from "@/components/base/buttons/button";
 import { ColorWell } from "@/components/base/color-picker/color-picker";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
+import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { TagColorPicker } from "@/features/inbox/tags/tag-color-picker";
 import { tagPalette } from "@/features/inbox/tags/tag-colors";
 import { TagIconPicker } from "@/features/inbox/tags/tag-icon-picker";
 import { createTag, deleteTag, type ListedTag, tagsQuery, updateTag } from "@/lib/api/tags";
 import { callerQuery } from "@/lib/api/workspace";
-
 import { Action } from "../controls";
 import { SettingsPage } from "../layout";
+import { placeholders } from "../placeholders";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -261,6 +262,23 @@ function TagRow({
   );
 }
 
+/*
+ * TagRowsSkeleton stands in for the tags while they load, each as tall as
+ * a tag's row.
+ */
+function TagRowsSkeleton() {
+  return placeholders(4).map((id) => (
+    <li
+      key={id}
+      aria-hidden
+      className="flex h-[52px] items-center gap-3 rounded-2xl bg-background-secondary-default px-3"
+    >
+      <Skeleton className="h-6 w-24 rounded-full" />
+      <Skeleton shape="text" className="ms-auto h-3 w-16" />
+    </li>
+  ));
+}
+
 export function TagsSettings() {
   const workspace = useAccount().workspace.id;
   const { data: tags } = useQuery(tagsQuery(workspace, true));
@@ -286,7 +304,8 @@ export function TagsSettings() {
             No tags yet.
           </p>
         ) : null}
-        <ul className="flex flex-col gap-2">
+        <ul aria-busy={!tags || undefined} className="flex flex-col gap-2">
+          {tags ? null : <TagRowsSkeleton />}
           {tags?.map((tag) => (
             <TagRow
               key={tag.id}

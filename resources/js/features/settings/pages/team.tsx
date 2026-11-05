@@ -25,7 +25,7 @@ import {
 import { type Member, membersQuery } from "@/lib/api/workspace";
 
 import { Action, Danger, Field } from "../controls";
-import { Empty, Item, Row, Section, SettingsPage } from "../layout";
+import { Empty, Item, PageSkeleton, Row, Section, SettingsPage } from "../layout";
 import { TeamDeleteDialog } from "../team-delete-dialog";
 import { failureText, memberCount, useCanManageMembers } from "../teams";
 import { useAccount } from "../use-account";
@@ -207,7 +207,7 @@ export function TeamSettings({ team }: { team: string }) {
   }
 
   if (!data) {
-    return null;
+    return <PageSkeleton />;
   }
 
   return <TeamPage key={data.id} team={data} canManage={canManage} />;

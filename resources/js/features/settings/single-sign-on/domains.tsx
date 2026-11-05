@@ -26,7 +26,7 @@ import {
 } from "@/lib/api/sso";
 
 import { Action, Danger } from "../controls";
-import { Empty, Glyph, Item, Section } from "../layout";
+import { Empty, Glyph, Item, RowsSkeleton, Section } from "../layout";
 import { CopyField } from "./copy-field";
 import { useSSOChange } from "./use-sso";
 
@@ -163,6 +163,7 @@ export function DomainsSection({ canManage }: { canManage: boolean }) {
       description="Prove the company owns a domain, then choose the connection its people sign in through."
       action={canManage ? <Action onPress={() => setAdding(true)}>Add domain</Action> : undefined}
     >
+      {domains ? null : <RowsSkeleton rows={1} />}
       {domains?.length === 0 ? <Empty>No domains yet.</Empty> : null}
       {domains?.map((domain) => (
         <Item
