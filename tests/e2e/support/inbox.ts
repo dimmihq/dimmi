@@ -74,3 +74,12 @@ export async function openComposer(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).click();
   await expect(page.getByRole("toolbar", { name: "Formatting" })).toBeVisible({ timeout: 15_000 });
 }
+
+/*
+ * pickView opens the view picker in the list's title and goes to the
+ * named view.
+ */
+export async function pickView(page: Page, name: string | RegExp): Promise<void> {
+  await page.locator("button[data-view-picker]").click();
+  await page.getByRole("dialog", { name: "Views" }).getByRole("button", { name }).click();
+}

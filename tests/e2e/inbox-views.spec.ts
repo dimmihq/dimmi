@@ -6,7 +6,7 @@
  */
 import { addTeammate } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
-import { type Customer, startConversation } from "./support/inbox";
+import { type Customer, pickView, startConversation } from "./support/inbox";
 
 const emily: Customer = {
   name: "Emily Johnson",
@@ -51,10 +51,8 @@ it.describe("inbox views", () => {
       "Billing",
     );
 
-    await page
-      .getByRole("navigation")
-      .getByRole("link", { name: /Billing/ })
-      .click();
+    await page.getByRole("link", { name: "Back to the list" }).click();
+    await pickView(page, /Billing/);
     await expect(page).toHaveURL(new RegExp(`/d/inbox/${team}`));
     await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Emily Johnson/ })).toHaveCount(0);
@@ -106,13 +104,13 @@ it.describe("inbox views", () => {
     await expect(page.getByRole("img", { name: "Viewing: Ada Lovelace" })).toHaveCount(0);
   });
 
-  it("saves a view from the sidebar, lists what matches and counts it once pinned", async ({ page, person }) => {
+  it("saves a view from the view picker, lists what matches and counts it once pinned", async ({ page, person }) => {
     await signIn(page, person);
     await startConversation(page, omar);
     await startConversation(page, emily);
     await page.reload();
 
-    await page.getByRole("button", { name: "New view" }).click();
+    await pickView(page, "New view");
     const editor = page.getByRole("dialog", { name: "New view" });
     await editor.getByLabel("Name").fill("Invoices");
     await editor.getByRole("button", { name: /Field/ }).click();
@@ -126,7 +124,11 @@ it.describe("inbox views", () => {
     await expect(page.getByRole("link", { name: /Emily Johnson/ })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Pin view" }).click();
-    await expect(page.getByRole("navigation").getByRole("link", { name: /Invoices/ })).toContainText("1");
+    await page.locator("button[data-view-picker]").click();
+    await expect(page.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /Invoices/ })).toContainText(
+      "1",
+    );
+    await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "Edit view" }).click();
     await page.getByRole("dialog", { name: "Edit view" }).getByLabel("Name").fill("Billing questions");

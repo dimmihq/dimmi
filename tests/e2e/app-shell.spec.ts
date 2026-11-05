@@ -1,10 +1,8 @@
 import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
+import { pickView } from "./support/inbox";
 
 const pages = [
   ["Notifications", "/d/notifications"],
-  ["My inbox", "/d/inbox/mine"],
-  ["All", "/d/inbox/all"],
-  ["Mentions", "/d/inbox/mentions"],
   ["Workflows", "/d/workflows"],
   ["Procedures", "/d/procedures"],
   ["Agent", "/d/agent"],
@@ -13,7 +11,7 @@ const pages = [
   ["Changelog", "/d/changelog"],
   ["Announcements", "/d/announcements"],
   ["Customers", "/d/customers"],
-  ["Unassigned", "/d/inbox/unassigned"],
+  ["Inbox", "/d/inbox/unassigned"],
 ] as const;
 
 /*
@@ -35,7 +33,25 @@ it.describe("the app's frame", () => {
     await expect(page).toHaveURL(inbox);
     await expect(page.getByRole("button", { name: workspaceOf(person) })).toBeVisible();
     await expect(page.getByRole("button", { name: person.name, exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Unassigned" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("link", { name: "Inbox", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("heading", { name: /Unassigned/ })).toBeVisible();
+  });
+
+  it("switches inbox views from the list's title and comes back to the last one", async ({ page }) => {
+    await pickView(page, /My inbox/);
+    await expect(page).toHaveURL(/\/d\/inbox\/mine$/);
+    await page.keyboard.press("v");
+    await page.getByRole("dialog", { name: "Views" }).getByRole("textbox", { name: "Search views" }).fill("ment");
+    await expect(page.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /All/ })).toHaveCount(0);
+    await page
+      .getByRole("dialog", { name: "Views" })
+      .getByRole("button", { name: /Mentions/ })
+      .click();
+    await expect(page).toHaveURL(/\/d\/inbox\/mentions$/);
+
+    await page.getByRole("link", { name: "Notifications" }).click();
+    await page.getByRole("link", { name: "Inbox", exact: true }).click();
+    await expect(page).toHaveURL(/\/d\/inbox\/mentions$/);
   });
 
   it("opens every page from the sidebar without reloading the app", async ({ page }) => {

@@ -101,7 +101,11 @@ it.describe("conversation access", () => {
     await signIn(restricted, teammate);
     await expect(restricted.locator('[data-realtime="connected"]')).toBeAttached();
 
-    await expect(restricted.getByRole("link", { name: "Unassigned" })).toHaveCount(0);
+    await restricted.locator("button[data-view-picker]").click();
+    await expect(
+      restricted.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /Unassigned/ }),
+    ).toHaveCount(0);
+    await restricted.keyboard.press("Escape");
 
     await restricted.goto("/d/inbox/all");
     await expect(restricted.getByRole("link", { name: /Bea Billing/ })).toBeVisible();
@@ -122,7 +126,11 @@ it.describe("conversation access", () => {
 
     await admin.patch(`members/${member}`, { conversation_access: "all" });
     await restricted.goto("/d/inbox/all");
-    await expect(restricted.getByRole("link", { name: "Unassigned" })).toBeVisible();
+    await restricted.locator("button[data-view-picker]").click();
+    await expect(
+      restricted.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /Unassigned/ }),
+    ).toBeVisible();
+    await restricted.keyboard.press("Escape");
     await expect(restricted.getByRole("link", { name: /Sam Support/ })).toBeVisible();
 
     expect(problems).toEqual([]);
