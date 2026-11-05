@@ -163,6 +163,36 @@ it.describe("messenger on a customer's page", () => {
     await expect(page.locator(".messenger")).toHaveAttribute("data-expanded", "false");
   });
 
+  it("sends a voice note the team can play", async ({ page, person, request }) => {
+    const desk = await openDesk(request, person);
+    const headers = { "Dimmi-Workspace": desk.workspace };
+    await page.context().grantPermissions(["microphone"]);
+    await customerSite(page, desk.app);
+
+    await page.locator(".launcher").click();
+    await page.getByText("Chat with us").click();
+    await page.getByRole("button", { name: "Record a voice note" }).click();
+    await expect(page.locator('[data-view="conversation"] .composer')).toHaveAttribute("data-recording", "true");
+    await page.waitForTimeout(1500);
+    await page.getByRole("button", { name: "Send voice note" }).click();
+    const note = page.locator(".thread audio");
+    await expect(note).toHaveCount(1, { timeout: 20_000 });
+
+    const list = await request.get("/api/v1/conversations?filter[view]=all", { headers });
+    const id: string = (await list.json()).data[0].id;
+    const timeline = await (await request.get(`/api/v1/conversations/${id}/messages`, { headers })).json();
+    const file = timeline.data[0].attachments[0];
+    expect(file.content_type).toMatch(/^audio\//);
+    expect(file.size_bytes).toBeGreaterThan(0);
+
+    const desk2 = await page.context().newPage();
+    await signIn(desk2, person);
+    await desk2.goto(`/d/inbox/all/${id}`);
+    const player = desk2.locator("audio[controls]");
+    await expect(player).toHaveCount(1);
+    await expect.poll(() => player.evaluate((audio: HTMLAudioElement) => audio.readyState)).toBeGreaterThan(0);
+  });
+
   it("hears the team by polling when the stream is blocked", async ({ page, person, request }) => {
     const desk = await openDesk(request, person);
     await page.route(`${base}/connection/uni_sse**`, (route) =>

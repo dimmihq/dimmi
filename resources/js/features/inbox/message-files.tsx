@@ -1,7 +1,8 @@
 /*
  * The files on a message in the thread. Pictures show themselves at
- * their stored proportions and open full size; other files are a row
- * with their name and size that downloads them. A file the malware scan
+ * their stored proportions and open full size; voice notes and other
+ * audio play in place; other files are a row with their name and size
+ * that downloads them. A file the malware scan
  * refused says so and never links; one still being checked waits
  * without a link.
  */
@@ -44,6 +45,30 @@ function Picture({ file }: { file: Attachment & { url: string } }) {
   );
 }
 
+/*
+ * Voice is an audio file the team can play in place, with a link to save
+ * it beside the player.
+ */
+function Voice({ file }: { file: Attachment & { url: string } }) {
+  return (
+    <div className="flex w-72 max-w-full flex-col gap-1.5 rounded-xl bg-background-secondary-default p-2">
+      <audio controls preload="metadata" src={file.url} aria-label={file.filename} className="h-9 w-full">
+        <track kind="captions" />
+      </audio>
+      <a
+        href={file.url}
+        download={file.filename}
+        className="flex items-center gap-1.5 px-1 text-caption-1-regular text-text-tertiary outline-none hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiDownloadLine aria-hidden className="size-3.5 shrink-0" />
+        <span className="truncate">
+          {file.filename} · {sizeOf(file.size_bytes)}
+        </span>
+      </a>
+    </div>
+  );
+}
+
 function FileRow({ file }: { file: Attachment }) {
   const waiting = !file.url && !file.blocked;
   const Icon = file.blocked ? RiShieldCrossLine : waiting ? RiTimeLine : RiFileLine;
@@ -81,6 +106,24 @@ function FileRow({ file }: { file: Attachment }) {
   );
 }
 
+/*
+ * FileView shows a file the way that suits it: a picture, a player for
+ * audio, or a row to download.
+ */
+function FileView({ file }: { file: Attachment }) {
+  if (!file.url || file.blocked) {
+    return <FileRow file={file} />;
+  }
+  if (file.content_type.startsWith("image/")) {
+    return <Picture file={{ ...file, url: file.url }} />;
+  }
+  if (file.content_type.startsWith("audio/")) {
+    return <Voice file={{ ...file, url: file.url }} />;
+  }
+
+  return <FileRow file={file} />;
+}
+
 export function MessageFiles({ files, ours }: { files: Attachment[]; ours: boolean }) {
   if (files.length === 0) {
     return null;
@@ -90,11 +133,7 @@ export function MessageFiles({ files, ours }: { files: Attachment[]; ours: boole
     <ul aria-label="Files" className={cx("mt-1.5 flex flex-col gap-1.5", ours ? "items-end" : "items-start")}>
       {files.map((file) => (
         <li key={file.id} className="max-w-full">
-          {file.url && file.content_type.startsWith("image/") && !file.blocked ? (
-            <Picture file={{ ...file, url: file.url }} />
-          ) : (
-            <FileRow file={file} />
-          )}
+          <FileView file={file} />
         </li>
       ))}
     </ul>

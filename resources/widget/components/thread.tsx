@@ -17,6 +17,10 @@ export function Waveform({ className = "wave" }: { className?: string }) {
   return <span className={className}>{raw(levels.map((level) => `<i data-height="${level}"></i>`).join(""))}</span>;
 }
 
+/*
+ * VoiceBubble is a voice note's player, playing the recording once it has
+ * an address. A click on the waveform jumps to that point.
+ */
 function VoiceBubble({ attachment }: { attachment: Attachment }) {
   return (
     <div className="bubble voice" data-controller="voice" data-length={attachment.duration ?? "0:05"}>
@@ -24,8 +28,15 @@ function VoiceBubble({ attachment }: { attachment: Attachment }) {
         <PlayIcon />
         <PauseIcon />
       </button>
-      <Waveform />
-      <time>{attachment.duration}</time>
+      <span className="wave-hit" data-action="click->seek">
+        <Waveform />
+      </span>
+      <time>{attachment.duration ?? "0:00"}</time>
+      {attachment.url ? (
+        <audio src={attachment.url} preload="metadata">
+          <track kind="captions" />
+        </audio>
+      ) : null}
     </div>
   );
 }

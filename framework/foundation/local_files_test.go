@@ -127,4 +127,20 @@ func TestLocalFileLinks(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "png", string(stored))
 	})
+
+	t.Run("answers a request for part of a file", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t)))
+		require.NoError(t, app.Start(t.Context()))
+		link := linkOn(t, app, stored{"a/voice.webm", "audio/webm", "0123456789"})
+
+		client, err := httpclient.New(httpclient.Config{AllowPrivateNetworks: true, Timeout: 5 * time.Second})
+		require.NoError(t, err)
+		resp, err := client.New().WithHeader("Range", "bytes=2-4").Get(t.Context(), link)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusPartialContent, resp.Status)
+		assert.Equal(t, "234", string(resp.Body))
+		assert.Equal(t, "audio/webm", resp.Header.Get("Content-Type"))
+	})
 }

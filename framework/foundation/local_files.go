@@ -159,7 +159,8 @@ func storeLocalFile(w http.ResponseWriter, r *http.Request, disk filesystem.File
 /*
 streamLocalFile writes the file with headers that keep it a file: its
 own type, never sniffed, downloaded unless it is a picture, and readable
-from any site since the signature already decides who may read it.
+from any site since the signature already decides who may read it. A
+request for part of the file gets that part, so a player can seek.
 */
 func (a *Application) streamLocalFile(w http.ResponseWriter, r *http.Request, disk filesystem.Filesystem, path string) {
 	attrs, err := disk.Stat(r.Context(), path)
@@ -188,10 +189,6 @@ func (a *Application) streamLocalFile(w http.ResponseWriter, r *http.Request, di
 		header.Set("Content-Disposition", "attachment")
 	}
 
-	if r.Method == http.MethodHead {
-		return
-	}
-
 	file, err := disk.Open(r.Context(), path)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -201,7 +198,16 @@ func (a *Application) streamLocalFile(w http.ResponseWriter, r *http.Request, di
 
 	defer func() { _ = file.Close() }()
 
-	_, _ = io.Copy(w, file)
+	if seeker, ok := file.(io.ReadSeeker); ok {
+		header.Del("Content-Length")
+		http.ServeContent(w, r, "", attrs.LastModified, seeker)
+
+		return
+	}
+
+	if r.Method != http.MethodHead {
+		_, _ = io.Copy(w, file)
+	}
 }
 
 /*

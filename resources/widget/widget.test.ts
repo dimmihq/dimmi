@@ -402,6 +402,123 @@ describe("core", () => {
     });
   });
 
+  describe("voice notes", () => {
+    const composer = () => shadow().querySelector(".composer") as HTMLFormElement;
+    const record = () => composer().querySelector("[data-action='click->record']") as HTMLButtonElement;
+    const finish = () => composer().querySelector("[data-action='click->finish']") as HTMLButtonElement;
+    const note = () => composer().querySelector("[data-target='note']") as HTMLElement;
+    const tracks: { stop: ReturnType<typeof vi.fn> }[] = [];
+
+    /*
+     * FakeRecorder stands in for the browser's MediaRecorder: it hands back
+     * one chunk of audio when stopped.
+     */
+    class FakeRecorder extends EventTarget {
+      static isTypeSupported = (type: string) => type.startsWith("audio/webm");
+      mimeType = "audio/webm;codecs=opus";
+      state = "inactive";
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.dispatchEvent(
+          Object.assign(new Event("dataavailable"), { data: new Blob(["voice"], { type: "audio/webm" }) }),
+        );
+        this.dispatchEvent(new Event("stop"));
+      }
+    }
+
+    /*
+     * liveComposer boots the messenger, marks it connected, opens a new
+     * conversation and returns what it sends.
+     */
+    async function liveComposer(): Promise<{ body: string; files: File[]; voice?: string }[]> {
+      await started();
+      (shadow().querySelector(".messenger") as HTMLElement).dataset.live = "true";
+      const sent: { body: string; files: File[]; voice?: string }[] = [];
+      shadow().addEventListener("dimmi:send", (event) => sent.push((event as CustomEvent).detail));
+      return sent;
+    }
+
+    beforeEach(() => {
+      tracks.length = 0;
+      vi.stubGlobal("MediaRecorder", FakeRecorder);
+      vi.stubGlobal(
+        "AudioContext",
+        class {
+          createAnalyser() {
+            return { fftSize: 512, getByteTimeDomainData: (samples: Uint8Array) => samples.fill(128) };
+          }
+          createMediaStreamSource() {
+            return { connect: () => undefined };
+          }
+          close() {
+            return Promise.resolve();
+          }
+        },
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      Object.defineProperty(navigator, "mediaDevices", { value: undefined, configurable: true });
+    });
+
+    it("records from the microphone and sends the note as an audio file, letting the microphone go", async () => {
+      const track = { stop: vi.fn() };
+      tracks.push(track);
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) },
+        configurable: true,
+      });
+      const sent = await liveComposer();
+
+      record().click();
+      await vi.waitFor(() => expect(composer().dataset.recording).toBe("true"));
+      finish().click();
+
+      await vi.waitFor(() => expect(sent).toHaveLength(1));
+      const [file] = sent[0]?.files ?? [];
+      expect(file?.type).toBe("audio/webm");
+      expect(file?.name).toBe("Voice note.webm");
+      expect(track.stop).toHaveBeenCalled();
+      expect(composer().dataset.recording).toBeUndefined();
+    });
+
+    it("says so when the microphone is refused, and records nothing", async () => {
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia: vi.fn().mockRejectedValue(new Error("NotAllowedError")) },
+        configurable: true,
+      });
+      const sent = await liveComposer();
+
+      record().click();
+
+      await vi.waitFor(() => expect(note().hidden).toBe(false));
+      expect(note().textContent).toContain("Allow the microphone");
+      expect(composer().dataset.recording).toBeUndefined();
+      expect(sent).toHaveLength(0);
+    });
+
+    it("throws a note away without sending it", async () => {
+      const track = { stop: vi.fn() };
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) },
+        configurable: true,
+      });
+      const sent = await liveComposer();
+
+      record().click();
+      await vi.waitFor(() => expect(composer().dataset.recording).toBe("true"));
+      (composer().querySelector("[data-action='click->discard']") as HTMLButtonElement).click();
+
+      expect(composer().dataset.recording).toBeUndefined();
+      expect(track.stop).toHaveBeenCalled();
+      expect(sent).toHaveLength(0);
+    });
+  });
+
   describe("composer", () => {
     const composer = () => shadow().querySelector(".composer") as HTMLFormElement;
     const textarea = () => composer().querySelector("textarea") as HTMLTextAreaElement;

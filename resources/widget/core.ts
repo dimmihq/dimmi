@@ -186,7 +186,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string }>).detail;
       if (preview) {
         preview.answer(root, sent);
-      } else if (!sent.voice) {
+      } else {
         void live?.send(sent.body, sent.files);
       }
     });

@@ -10,7 +10,8 @@ visitor's sign-in; the page sits beside them. Turbo Drive swaps pages
 in place with a fade, fetching a link while the pointer rests on it;
 without scripts every link and form still works. The theme check in the
 head follows the visitor's light or dark setting before anything
-paints.
+paints. The tab shows the company's logo, and with none the page names
+an empty icon so browsers do not ask the server for one.
 */
 
 templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) {
@@ -30,6 +31,11 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			<meta property="og:title" content={ m.Title }/>
 			<meta property="og:site_name" content={ c.Name }/>
 			<meta name="theme-color" content={ c.Brand }/>
+			if c.LogoLight != "" {
+				<link rel="icon" href={ Path(c, c.LogoLight) }/>
+			} else {
+				<link rel="icon" href="data:,"/>
+			}
 			if m.NoIndex {
 				<meta name="robots" content="noindex"/>
 			}

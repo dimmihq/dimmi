@@ -347,6 +347,13 @@
   opacity: 1;
 }
 
+.wave-hit {
+  display: flex;
+  flex: 1;
+  min-inline-size: 0;
+  cursor: pointer;
+}
+
 .voice time {
   color: inherit;
   opacity: 0.75;
@@ -534,8 +541,26 @@ textarea::placeholder {
   animation-delay: 300ms;
 }
 
+[data-listening="true"] .live i {
+  opacity: 0.8;
+  animation: none;
+  transition: height 80ms linear;
+}
+
 .recorder .round {
   margin-inline-start: auto;
+}
+
+.composer-note {
+  margin: 0;
+  padding: 0 4px 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.composer-note[hidden] {
+  display: none;
 }
 
 @keyframes pulse {
