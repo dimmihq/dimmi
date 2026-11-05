@@ -39,6 +39,11 @@ func unscopedQueries() map[string]string {
 		"FindWidgetConversation":         "a widget visitor's own conversations: the customer asks, not a member",
 		"CountWaitingConversations":      "inbox-wide queue totals for inbox settings: names no conversation",
 		"CountInboxConversations":        "whether an inbox being deleted is empty: names no conversation",
+		"CountContactConversations":      "whether a contact may be deleted without history: names no conversation",
+		"ListStaleClosedConversations":   "the retention round: the system moves them, no member is asking",
+		"CountStaleClosedConversations":  "a retention preview for settings: numbers only, names no conversation",
+		"ListErasedMessageFiles":         "the erase job wipes a customer everywhere: no member is asking",
+		"ListExportConversations":        "a privacy export covers all of a customer's data, for contacts:erase",
 	}
 }
 
