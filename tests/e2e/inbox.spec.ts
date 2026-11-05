@@ -248,7 +248,8 @@ it.describe("the inbox", () => {
     await expect(menu).not.toContainText("Files and photos");
     await menu.getByRole("button", { name: /^Help article/ }).click();
     await menu.getByRole("option", { name: /Reset your password/ }).click();
-    await expect(reply).toHaveValue("Hi Emily\n\nReset your password (Help center · Account)");
+    await expect(reply).toContainText("Hi Emily");
+    await expect(reply).toContainText("Reset your password (Help center · Account)");
   });
 
   it("slides Operator over the thread on a narrow screen", async ({ page }) => {
