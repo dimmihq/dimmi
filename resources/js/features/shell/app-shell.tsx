@@ -87,39 +87,37 @@ function useSwitcher(me: Me): DashboardSwitcher {
     menuLabel: "Workspaces",
     menu: (close) => (
       <>
-        {current ? (
+        {current && me.workspaces.length < 2 ? (
           <MenuHeader
             initials={initialsOf(current.name)}
             color="neutral"
             name={current.name}
             detail={roleOf(current.role)}
           />
-        ) : (
-          <p className="px-2 pt-1 text-body-regular text-text-secondary">You are not in a workspace yet.</p>
+        ) : null}
+        {current ? null : (
+          <p className="px-2 py-1.5 text-body-2-regular text-text-secondary">You are not in a workspace yet.</p>
         )}
         {me.workspaces.length > 1 ? (
-          <>
-            <MenuDivider />
-            <MenuRowList
-              title="Switch workspace"
-              rows={me.workspaces.map((workspace) => ({
-                key: workspace.id,
-                initials: initialsOf(workspace.name),
-                color: "neutral",
-                name: workspace.name,
-                detail: roleOf(workspace.role),
-                isSelected: workspace.id === current?.id,
-              }))}
-              onSelect={(id) => {
-                close();
-                if (id === current?.id) {
-                  return;
-                }
-                choose(id);
-                void router.navigate({ to: "/d" });
-              }}
-            />
-          </>
+          <MenuRowList
+            title="Workspaces"
+            rows={me.workspaces.map((workspace) => ({
+              key: workspace.id,
+              initials: initialsOf(workspace.name),
+              color: "neutral",
+              name: workspace.name,
+              detail: roleOf(workspace.role),
+              isSelected: workspace.id === current?.id,
+            }))}
+            onSelect={(id) => {
+              close();
+              if (id === current?.id) {
+                return;
+              }
+              choose(id);
+              void router.navigate({ to: "/d" });
+            }}
+          />
         ) : null}
         <MenuDivider />
         <div className="flex flex-col gap-0.5">
