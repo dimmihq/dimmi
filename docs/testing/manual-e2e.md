@@ -83,6 +83,7 @@ DAVE=dave.$RUN@example.com
 | Server facts | `r config $B/auth/config` | 200, `signup_mode`, `password_min_length`, factors, `mail_configured: true`, `locales` `[{"code":"en","name":"English"}]` |
 | Common password | `r weak -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada\",\"email\":\"$ADA\",\"password\":\"password123\"}"` | 422, message "The password is too common. Choose another one." |
 | Sign up | `r signup -c a.jar -b a.jar -X POST -H "$O" -H "$J" $B/users -d "{\"name\":\"Ada Lovelace\",\"email\":\"$ADA\",\"password\":\"analytical-engine-1843\",\"workspace_name\":\"Acme\"}"` | 201, `dimmi_session` and `dimmi_device` cookies, HttpOnly, SameSite=Lax, `email_verified: false` |
+| Another spelling | sign up again with `$ADA` in fullwidth letters or its domain in Unicode or punycode | 422 `email_taken`; an address with a zero-width space 422 on `email` |
 | Email taken, any case | same body with the email in capitals | 422 `email_taken` |
 | Who am I | `r me -b a.jar -H "$O" $B/me` | 200, user, `auth.auth_methods` `["password"]` |
 | Name a workspace | add `-H 'Dimmi-Workspace: ws_…'` (id from sign-up) | 200, `effective_abilities` filled |
@@ -494,6 +495,8 @@ Sign up a new account first (a workspace created before the inbound domain was s
 | Reply not delivered | insert a `hard_bounce` row in `email_suppressions` for the customer, then reply to their email conversation in the browser | the reply shows "Not delivered: The recipient's address bounced or complained before." without a reload |
 | Send again | delete that row, then `r rt -b a.jar -X POST -H "$O" $B/conversations/<conv_>/messages/<msg_>/retry` (or "Send again") | 200 with `delivery_status: pending`, the mail reaches Mailpit; the same call again 409 `message_not_failed` |
 | Teammate answers by email | the owner replies to a customer's email from their own verified, SPF-passing mailbox | a note by the owner in the thread, no contact for the owner, the conversation not woken |
+| Reply-To | send `mailraw` with a `Reply-To: home.$RUN@customer.test` header, then reply in the browser | Mailpit shows the reply to the Reply-To address only; the contact keeps the From address |
+| Reply lines and links | reply "Hi,⏎Thanks,⏎Ana⏎⏎[guide](https://example.com/a)⏎⏎3. Open settings" | in Mailpit the HTML shows three lines; the text part reads `guide (https://example.com/a)` and `3. Open settings` |
 | Load run | `go build -tags dev -o bin/dimmi-dev ./cmd/dimmi`, then with the same env `bin/dimmi-dev email:load --url $W --to $FWD --secret e2e-inbound-secret --rate 20 --duration 10s` | `sent 200 … 0 refused`, then `processed 200 of 200` with p50 and p95; the full bar is `--rate 50 --duration 10m` with p95 under 10 s, on a database nothing else uses |
 | Metrics | restart with `DIMMI_TELEMETRY__METRICS=prometheus`, send one mail, `curl -s http://127.0.0.1:19090/metrics \| grep dimmi_email_` | `dimmi_email_inbound_total` by source, status and classification, `dimmi_email_inbound_latency_seconds` and `dimmi_email_auth_total`; provider webhooks also add `dimmi_email_inbound_bytes`; no address, subject or body in any label |
 

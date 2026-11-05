@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -116,7 +115,7 @@ type signInTry struct {
 Handle checks the credentials and starts a session.
 */
 func (a *AttemptLogin) Handle(ctx context.Context, in AttemptLoginInput) (SignedIn, error) {
-	email := strings.ToLower(strings.TrimSpace(in.Email))
+	email := mail.CanonicalAddress(in.Email)
 
 	if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, email, appauth.MethodPassword); err != nil {
 		return SignedIn{}, err

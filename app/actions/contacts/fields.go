@@ -23,6 +23,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/dimmihq/dimmi/framework/mail"
+
 	"github.com/dimmihq/dimmi/app/exceptions"
 )
 
@@ -45,7 +47,7 @@ func NormalizeEmail(email *string) *string {
 		return nil
 	}
 
-	e := strings.ToLower(strings.TrimSpace(*email))
+	e := mail.CanonicalAddress(*email)
 	if e == "" {
 		return nil
 	}

@@ -148,7 +148,7 @@ func (a *ResetPassword) Handle(ctx context.Context, in ResetPasswordInput) (Sign
 		return SignedIn{}, err
 	}
 
-	email := strings.ToLower(strings.TrimSpace(user.Email))
+	email := mail.CanonicalAddress(user.Email)
 	if err := a.Lockout.InboxProven(ctx, appauth.Attempt{IP: in.Client.IP, Email: email}); err != nil {
 		return SignedIn{}, err
 	}
