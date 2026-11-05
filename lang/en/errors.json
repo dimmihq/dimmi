@@ -73,5 +73,7 @@
   "duplicate_email": "An earlier row already names this address.",
   "owner_not_changed": "An owner's role and status cannot change through an import.",
   "custom_role_unavailable": "Custom roles are not available yet; leave the column empty.",
-  "unknown_member": "Only a member of the workspace can be deactivated."
+  "unknown_member": "Only a member of the workspace can be deactivated.",
+  "setup_completed": "This server is already set up.",
+  "password_too_short": "The password is shorter than this server allows."
 }

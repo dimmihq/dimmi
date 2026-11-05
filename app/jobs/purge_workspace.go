@@ -124,6 +124,31 @@ func (w *PurgeWorkspace) Handle(ctx context.Context, job *queue.Job[PurgeWorkspa
 }
 
 /*
+Purge purges the workspace in one go, for an operator who waits for it
+at the command line, and reports whether it is gone. A workspace that
+is not due, or that the retention guard holds, is left as it is.
+*/
+func (w *PurgeWorkspace) Purge(ctx context.Context, id ids.UUID) (bool, error) {
+	ctx = tenancy.With(ctx, id.String())
+
+	due, err := w.begin(ctx, id)
+	if err != nil || !due {
+		return false, err
+	}
+
+	for _, step := range []func(context.Context, ids.UUID, time.Time) (bool, error){w.deleteFiles, w.deleteRows} {
+		for done := false; !done; {
+			done, err = step(ctx, id, w.Clock.Now().Add(purgeRunBudget))
+			if err != nil {
+				return false, err
+			}
+		}
+	}
+
+	return true, w.finish(ctx, id)
+}
+
+/*
 begin reports whether the workspace is due for purging and may be
 destroyed, and marks its purge as started so it can no longer be
 restored. A workspace gone already, restored, or not yet due is left

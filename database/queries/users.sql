@@ -99,3 +99,20 @@ WHERE id = @id;
 -- in every workspace. It runs through a security definer function, since
 -- tokens of many workspaces are hidden until one is chosen.
 SELECT auth_count_user_tokens(@user_id, @now)::bigint AS remaining;
+
+-- name: CountLiveUsers :one
+-- CountLiveUsers counts the accounts that were not deleted, which tells a
+-- fresh install from one that already has people.
+SELECT count(*) FROM users WHERE deleted_at IS NULL;
+
+-- name: ListLiveUsers :many
+-- ListLiveUsers returns the accounts that were not deleted, oldest first,
+-- each with the kinds of its active second factors, for the operator.
+SELECT sqlc.embed(u),
+    coalesce((
+        SELECT array_agg(DISTINCT f.type ORDER BY f.type) FROM user_auth_factors f
+        WHERE f.user_id = u.id AND f.status = 'active' AND f.type <> 'recovery_code'
+    ), '{}')::text[] AS factor_types
+FROM users u
+WHERE u.deleted_at IS NULL
+ORDER BY u.created_at, u.id;

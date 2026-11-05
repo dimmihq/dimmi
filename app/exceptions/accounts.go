@@ -45,6 +45,9 @@ ErrSignupClosed means the install does not take new accounts and the
 person holds no invitation. ErrEmailTaken means an account already uses
 the address; registration says so openly, and is throttled instead.
 ErrTooManySignups caps the accounts one address creates per hour.
+ErrSetupCompleted means the install already has its first user.
+ErrPasswordTooShort refuses a password set by the operator that is
+shorter than the install allows.
 */
 var (
 	ErrSignupClosed = fault.New(fault.Forbidden, "signup_closed", "Signing up is closed on this server.")
@@ -52,6 +55,9 @@ var (
 		"The email has already been taken.").OnField("email")
 	ErrTooManySignups = fault.New(fault.RateLimited, "too_many_attempts",
 		"Too many accounts were created from your address. Try again later.")
+	ErrSetupCompleted   = fault.New(fault.Gone, "setup_completed", "This server is already set up.")
+	ErrPasswordTooShort = fault.New(fault.Invalid, "password_too_short",
+		"The password is shorter than this server allows.").OnField("password")
 )
 
 /*

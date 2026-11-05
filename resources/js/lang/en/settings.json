@@ -47,6 +47,8 @@
       "created": "Created the workspace",
       "deleted": "Deleted the workspace",
       "restored": "Restored the workspace",
+      "suspended": "Suspended the workspace",
+      "unsuspended": "Lifted the workspace's suspension",
       "updated": "Changed workspace settings"
     },
     "audit_logs": {

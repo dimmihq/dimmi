@@ -29,6 +29,7 @@ const (
 	RevokedForPreHijackDefense = "pre_hijack_defense"
 	RevokedForPasswordChanged  = "password_changed"
 	RevokedForUserDeleted      = "user_deleted"
+	RevokedByOperator          = "admin"
 )
 
 /*

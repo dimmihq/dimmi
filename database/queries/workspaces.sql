@@ -110,3 +110,36 @@ RETURNING *;
 -- DeleteWorkspace removes the workspace row for good, and with it every
 -- row still pointing at it.
 DELETE FROM workspaces WHERE id = @id;
+
+-- name: CountLiveWorkspaces :one
+-- CountLiveWorkspaces counts the workspaces not in the trash.
+SELECT count(*) FROM workspaces WHERE deleted_at IS NULL;
+
+-- name: ListAllWorkspaces :many
+-- ListAllWorkspaces returns every workspace, those in the trash
+-- included, oldest first.
+SELECT * FROM workspaces ORDER BY created_at, id;
+
+-- name: SuspendWorkspace :one
+-- SuspendWorkspace stops every change to the workspace, recording why.
+-- A workspace already suspended keeps the time it was first suspended.
+UPDATE workspaces
+SET suspended_at = coalesce(suspended_at, @now::timestamptz), suspended_reason = @reason::text,
+    updated_at = @now::timestamptz
+WHERE id = @id
+RETURNING *;
+
+-- name: UnsuspendWorkspace :one
+-- UnsuspendWorkspace lets the workspace be changed again.
+UPDATE workspaces
+SET suspended_at = NULL, suspended_reason = NULL, updated_at = @now
+WHERE id = @id
+RETURNING *;
+
+-- name: EndWorkspaceGrace :one
+-- EndWorkspaceGrace brings the purge of a workspace in the trash forward
+-- to now. It returns nothing for a workspace not in the trash.
+UPDATE workspaces
+SET purge_after = least(purge_after, @now::timestamptz)
+WHERE id = @id AND deleted_at IS NOT NULL
+RETURNING *;

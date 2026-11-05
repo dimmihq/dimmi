@@ -37,7 +37,7 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 - [ ] `POST /password-resets` + `PATCH /password-resets/{prs} {token, password}`. Test: always 202, upsert invalidates old id, wrong token and unknown id same 422 and timing, sessions revoked, 2FA still required (200 `two_factor_challenge`).
 - [ ] `POST /magic-links` + `POST /sessions` grants `magic_link` (token) and `email_code` (email+code), signup via magic link, pre-hijack defense. Test: scanner-safe (GET never consumes), attempts burn, max 3 active, signup closed sends nothing, disabled = `grant_not_allowed`.
 - [ ] `GET/POST /user/confirmation` (`method` password, email_code, or factor type with `Confirmation`; writes `confirmed_at`, `confirmed_method`) + `POST /user/confirmation-codes` + `password.confirm` middleware 423 (session `confirmed_at`; app `principal.AuthTime`, grant confirmation once 09 adds it). Test: TTL expiry with frozen clock, 404 when none, app path via `AuthTime` and via grant `ConfirmedAt` after app `POST /user/confirmation` (09 `ConfirmGrant`, E266), recovery code rejected as confirmation method, `authenticated_at` unchanged.
-- [ ] Mailables for M2-M3 (Verify, MagicLink, Reset, ConfirmCode, PasswordChanged, NewSignIn, SuspiciousSignInAttempts) templ + text. Test: `tc.Mail.Fake()` + `mail.AssertSent[M]` asserts recipients and locale (`.Locale(...)` from user, fallback workspace), links use fragment tokens, no token in subject.
+- [x] Mailables for M2-M3 (Verify, MagicLink, Reset, ConfirmCode, PasswordChanged, NewSignIn, SuspiciousSignInAttempts) templ + text. Test: `tc.Mail.Fake()` + `mail.AssertSent[M]` asserts recipients and locale (`.Locale(...)` from user, fallback workspace), links use fragment tokens, no token in subject. Text bodies are derived from the HTML; the locale follows the person, then the install.
 - [ ] Mail `log` fallback behavior (WARN line with `mail_fallback=true`, only self-host). Test: log capture.
 
 ## M4. OAuth
@@ -99,10 +99,10 @@ Style: caveman. Scope trim 2026-11-02: domain join removed (later: `domain-join`
 
 ## M11. Self-host first run and CLI
 
-- [ ] `CreateFirstUser` action for 11 `CompleteSetup` and `user:create` (token, endpoints, banner owned by 11). Test: concurrent setup + `user:create` one wins under shared advisory lock; initializers run once.
-- [ ] CLI `user:create`, `user:list`, `user:reset-password`, `user:disable-2fa`, `user:verify-email`, `user:logout`. Test via command harness.
-- [ ] CLI `workspace:list/suspend/unsuspend/restore/purge`, `token:create`. Test.
-- [ ] Signup mode `invite_only` default after first user. Test.
+- [x] `CreateFirstUser` action for 11 `CompleteSetup` and `user:create` (token, endpoints, banner owned by 11). Test: concurrent setup + `user:create` one wins under shared advisory lock; initializers run once. Built in `users.CreateFirstUser` under one advisory lock; `user:create` uses it. The setup token and endpoint still belong to 11.
+- [x] CLI `user:create`, `user:list`, `user:reset-password`, `user:disable-2fa`, `user:verify-email`, `user:logout`. Test via command harness. The console has no hidden prompt or stdin, so `user:create` takes `--password` or `--generate-password`; `--instance-admin` waits for 11.
+- [x] CLI `workspace:list/suspend/unsuspend/restore/purge`, `token:create`. Test. Purge runs while the operator waits rather than through the queue.
+- [x] Signup mode `invite_only` default after first user. Test. A self-hosted server starts closed (`invite_only`); its first user comes from `user:create` or, later, setup. Covered by "starts closed to strangers".
 
 ## M11b. First-party app sessions (with 09)
 

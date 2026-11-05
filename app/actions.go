@@ -35,6 +35,8 @@ Actions holds the business actions.
 type Actions struct {
 	Widget                  *WidgetActions
 	CreateUser              *users.CreateUser
+	CreateFirstUser         *users.CreateFirstUser
+	OperatorAccounts        *users.OperatorAccounts
 	UpdateProfile           *users.UpdateProfile
 	UpdatePassword          *users.UpdatePassword
 	UpdateAvatar            *users.UpdateAvatar

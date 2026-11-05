@@ -13,6 +13,18 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countLiveWorkspaces = `-- name: CountLiveWorkspaces :one
+SELECT count(*) FROM workspaces WHERE deleted_at IS NULL
+`
+
+// CountLiveWorkspaces counts the workspaces not in the trash.
+func (q *Queries) CountLiveWorkspaces(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveWorkspaces)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countWorkspacesWithSlug = `-- name: CountWorkspacesWithSlug :one
 SELECT count(*)
 FROM workspaces w
@@ -115,6 +127,45 @@ func (q *Queries) DeleteWorkspace(ctx context.Context, id ids.UUID) error {
 	return err
 }
 
+const endWorkspaceGrace = `-- name: EndWorkspaceGrace :one
+UPDATE workspaces
+SET purge_after = least(purge_after, $1::timestamptz)
+WHERE id = $2 AND deleted_at IS NOT NULL
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type EndWorkspaceGraceParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// EndWorkspaceGrace brings the purge of a workspace in the trash forward
+// to now. It returns nothing for a workspace not in the trash.
+func (q *Queries) EndWorkspaceGrace(ctx context.Context, arg EndWorkspaceGraceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, endWorkspaceGrace, arg.Now, arg.ID)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
 const findWorkspace = `-- name: FindWorkspace :one
 SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces WHERE id = $1
 `
@@ -174,6 +225,50 @@ func (q *Queries) FindWorkspaceBySlug(ctx context.Context, slug string) (Workspa
 		&i.SuspendedReason,
 	)
 	return i, err
+}
+
+const listAllWorkspaces = `-- name: ListAllWorkspaces :many
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason FROM workspaces ORDER BY created_at, id
+`
+
+// ListAllWorkspaces returns every workspace, those in the trash
+// included, oldest first.
+func (q *Queries) ListAllWorkspaces(ctx context.Context) ([]Workspace, error) {
+	rows, err := q.db.Query(ctx, listAllWorkspaces)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Workspace
+	for rows.Next() {
+		var i Workspace
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.Slug,
+			&i.Timezone,
+			&i.Locale,
+			&i.Settings,
+			&i.TestMode,
+			&i.NextConversationNumber,
+			&i.SuspendedAt,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByUserID,
+			&i.DeletedByUserID,
+			&i.PurgeAfter,
+			&i.SuspendedReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listWorkspaces = `-- name: ListWorkspaces :many
@@ -431,6 +526,47 @@ func (q *Queries) RestoreWorkspace(ctx context.Context, arg RestoreWorkspacePara
 	return i, err
 }
 
+const suspendWorkspace = `-- name: SuspendWorkspace :one
+UPDATE workspaces
+SET suspended_at = coalesce(suspended_at, $1::timestamptz), suspended_reason = $2::text,
+    updated_at = $1::timestamptz
+WHERE id = $3
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type SuspendWorkspaceParams struct {
+	Now    time.Time `json:"now"`
+	Reason string    `json:"reason"`
+	ID     ids.UUID  `json:"id"`
+}
+
+// SuspendWorkspace stops every change to the workspace, recording why.
+// A workspace already suspended keeps the time it was first suspended.
+func (q *Queries) SuspendWorkspace(ctx context.Context, arg SuspendWorkspaceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, suspendWorkspace, arg.Now, arg.Reason, arg.ID)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
 const trashWorkspace = `-- name: TrashWorkspace :one
 UPDATE workspaces
 SET deleted_at = $1::timestamptz, purge_after = $2::timestamptz, deleted_by_user_id = $3,
@@ -456,6 +592,44 @@ func (q *Queries) TrashWorkspace(ctx context.Context, arg TrashWorkspaceParams) 
 		arg.DeletedBy,
 		arg.ID,
 	)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+	)
+	return i, err
+}
+
+const unsuspendWorkspace = `-- name: UnsuspendWorkspace :one
+UPDATE workspaces
+SET suspended_at = NULL, suspended_reason = NULL, updated_at = $1
+WHERE id = $2
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason
+`
+
+type UnsuspendWorkspaceParams struct {
+	Now time.Time `json:"now"`
+	ID  ids.UUID  `json:"id"`
+}
+
+// UnsuspendWorkspace lets the workspace be changed again.
+func (q *Queries) UnsuspendWorkspace(ctx context.Context, arg UnsuspendWorkspaceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, unsuspendWorkspace, arg.Now, arg.ID)
 	var i Workspace
 	err := row.Scan(
 		&i.ID,

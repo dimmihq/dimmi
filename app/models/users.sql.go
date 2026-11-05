@@ -40,6 +40,19 @@ func (q *Queries) AnonymizeUser(ctx context.Context, arg AnonymizeUserParams) er
 	return err
 }
 
+const countLiveUsers = `-- name: CountLiveUsers :one
+SELECT count(*) FROM users WHERE deleted_at IS NULL
+`
+
+// CountLiveUsers counts the accounts that were not deleted, which tells a
+// fresh install from one that already has people.
+func (q *Queries) CountLiveUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUserLiveTokens = `-- name: CountUserLiveTokens :one
 SELECT auth_count_user_tokens($1, $2)::bigint AS remaining
 `
@@ -172,6 +185,63 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (User, erro
 		&i.Preferences,
 	)
 	return i, err
+}
+
+const listLiveUsers = `-- name: ListLiveUsers :many
+SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences,
+    coalesce((
+        SELECT array_agg(DISTINCT f.type ORDER BY f.type) FROM user_auth_factors f
+        WHERE f.user_id = u.id AND f.status = 'active' AND f.type <> 'recovery_code'
+    ), '{}')::text[] AS factor_types
+FROM users u
+WHERE u.deleted_at IS NULL
+ORDER BY u.created_at, u.id
+`
+
+type ListLiveUsersRow struct {
+	User        User     `json:"user"`
+	FactorTypes []string `json:"factor_types"`
+}
+
+// ListLiveUsers returns the accounts that were not deleted, oldest first,
+// each with the kinds of its active second factors, for the operator.
+func (q *Queries) ListLiveUsers(ctx context.Context) ([]ListLiveUsersRow, error) {
+	rows, err := q.db.Query(ctx, listLiveUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLiveUsersRow
+	for rows.Next() {
+		var i ListLiveUsersRow
+		if err := rows.Scan(
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.EmailVerifiedAt,
+			&i.User.PasswordHash,
+			&i.User.TwoFactorConfirmedAt,
+			&i.User.AvatarPath,
+			&i.User.Locale,
+			&i.User.Timezone,
+			&i.User.LastSeenAt,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.DeletedAt,
+			&i.User.PasswordChangedAt,
+			&i.User.RiskFlags,
+			&i.User.CreatedVia,
+			&i.User.Preferences,
+			&i.FactorTypes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const lockUser = `-- name: LockUser :one

@@ -382,6 +382,21 @@ verification on. Within 15 minutes of Ada's last sign-in in `a.jar`, as above.
 | Rename and remove | "Rename" a passkey, then "Remove" one of two | the new name sticks after a reload; 2FA stays on with the other |
 | Remove the last | "Remove" the only passkey | the dialog says it is the last second factor; 2FA turns off and the recovery codes go; with Acme requiring 2FA instead 409 `two_factor_required_by_workspace` and nothing removed |
 
+### Operator commands
+
+Run against a fresh database with the server stopped or running.
+
+| Flow | Steps | Expect |
+|---|---|---|
+| First user | `dimmi user:create --email ada@acme.com --name Ada --generate-password --workspace Acme` on an empty install | "owner of Acme", a printed password that signs in; a second run for another email with no `--workspace-slug` creates a lone account |
+| Join a workspace | `dimmi user:create --email bob@acme.com --name Bob --generate-password --workspace-slug acme --role admin`, again | "is now admin of /w/acme", then exit 1 "already" |
+| List users | `dimmi user:list`, `dimmi user:list --json` | a table, then JSON with `two_factor` and `workspaces` per user |
+| Reset without mail | `dimmi user:reset-password bob@acme.com`, then with `--password "a long new secret"` | a `/reset-password#id=prs_…` link; then Bob's browser session answers 401 and the new password signs in |
+| Verify and sign out | `dimmi user:verify-email bob@acme.com`, `dimmi user:logout bob@acme.com` | verified; Bob's sessions end, his tokens keep working |
+| Suspend | `dimmi workspace:suspend acme --reason "unpaid"`, a `PATCH /workspace`, then `dimmi workspace:unsuspend acme` | the change answers 403 `workspace_suspended` while reads work; audit `workspace.suspended` then `workspace.unsuspended` |
+| Restore and purge | `DELETE /workspace`, `dimmi workspace:restore acme`; delete again, `dimmi workspace:purge acme`, then with `--force` | restored and owners mailed; purge refuses without `--force`, then removes the workspace |
+| Token for scripts | `dimmi token:create --email ada@acme.com --workspace-slug acme --name ci --abilities conversations:read --expires 90d` | a `dmi_live_…` secret printed once that answers `GET /api/v1/me` |
+
 ### Personal access tokens
 
 Bob (`b.jar`) owns Acme after the transfer above. Minting needs a recent confirmation, like adding a factor: confirm
