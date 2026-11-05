@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as Char91__gateChar93RouteImport } from './routes/[__gate]'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DRouteRouteImport } from './routes/d/route'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
@@ -50,6 +51,11 @@ import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/i
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
+const Char91__gateChar93Route = Char91__gateChar93RouteImport.update({
+  id: '/__gate',
+  path: '/__gate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -255,6 +261,7 @@ const DSettingsEmailDomainsDomainRoute =
 
 export interface FileRoutesByFullPath {
   '/d': typeof DRouteRouteWithChildren
+  '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesByTo {
+  '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
@@ -337,6 +345,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/d': typeof DRouteRouteWithChildren
+  '/__gate': typeof Char91__gateChar93Route
   '/_auth': typeof AuthRouteWithChildren
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/invitation': typeof AuthInvitationRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/d'
+    | '/__gate'
     | '/'
     | '/forgot-password'
     | '/invitation'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/d/settings/email/domains/$domain'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/__gate'
     | '/'
     | '/forgot-password'
     | '/invitation'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/d'
+    | '/__gate'
     | '/_auth'
     | '/_auth/forgot-password'
     | '/_auth/invitation'
@@ -505,11 +517,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   DRouteRoute: typeof DRouteRouteWithChildren
+  Char91__gateChar93Route: typeof Char91__gateChar93Route
   AuthRoute: typeof AuthRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/__gate': {
+      id: '/__gate'
+      path: '/__gate'
+      fullPath: '/__gate'
+      preLoaderRoute: typeof Char91__gateChar93RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -908,6 +928,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   DRouteRoute: DRouteRouteWithChildren,
+  Char91__gateChar93Route: Char91__gateChar93Route,
   AuthRoute: AuthRouteWithChildren,
 }
 export const routeTree = rootRouteImport

@@ -77,14 +77,16 @@ func Application() (*app.App, foundation.Options) {
 		Commands:   commands.All(application),
 		Module:     Module,
 		GateExcept: gateExcept(),
+		GatePage:   true,
 	}
 }
 
 /*
 gateExcept lists what stays open behind the shared password gate:
-webhooks, which prove themselves with signatures, and the messenger
-widget's files, which customers' own sites load.
+webhooks, which prove themselves with signatures, the messenger widget's
+files, which customers' own sites load, and the browser app's built
+files, which the gate's own password page needs.
 */
 func gateExcept() []string {
-	return []string{"/webhooks/*", "/widget/*"}
+	return []string{"/webhooks/*", "/widget/*", "/build/*"}
 }

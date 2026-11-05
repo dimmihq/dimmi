@@ -170,6 +170,7 @@ func (a *Application) useGate() error {
 		Key:      a.Config.Gate.CIKey,
 		Secret:   secret,
 		Except:   a.opts.GateExcept,
+		Page:     a.opts.GatePage,
 	}))
 
 	return nil

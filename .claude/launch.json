@@ -19,6 +19,16 @@
       ],
       "port": 8095,
       "autoPort": false
+    },
+    {
+      "name": "dimmi-gate-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "set -a; . ./.env.testing; set +a; go build -o tmp/dimmi-gate ./cmd/dimmi && DIMMI_DATABASE__URL=\"${DATABASE_URL%/postgres*}/dimmi_demo?sslmode=disable\" DIMMI_REDIS__URL=\"$REDIS_URL\" DIMMI_APP__KEY=\"base64:$(openssl rand -base64 32)\" DIMMI_GATE__ENABLED=true DIMMI_GATE__PASSWORD=preview DIMMI_HTTP__ADDR=127.0.0.1:8096 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__ROLES=web DIMMI_APP__URL=http://localhost:8096 tmp/dimmi-gate serve"
+      ],
+      "port": 8096,
+      "autoPort": false
     }
   ]
 }
