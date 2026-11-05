@@ -6,7 +6,6 @@
  * receiving address until the first email arrives. Chat apps are
  * listed as they are in settings, ready to connect.
  */
-import { RiCheckLine, RiFileCopyLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 
@@ -18,7 +17,7 @@ import { fieldError } from "@/features/auth/form-errors";
 import { chatApps } from "@/features/settings/chat-apps";
 import { Action } from "@/features/settings/controls";
 import { Item, Logo } from "@/features/settings/layout";
-import { useCopy } from "@/features/settings/use-copy";
+import { Snippet } from "@/features/settings/snippet";
 import { createEmailAddress, emailAddressesQuery } from "@/lib/api/email";
 import { installSnippet, widgetSettingsQuery } from "@/lib/api/widget-settings";
 import { EmailForwarding } from "./email-forwarding";
@@ -57,37 +56,18 @@ function ChannelSection({
 
 function MessengerInstall({ workspace }: { workspace: string }) {
   const { data: widgets } = useQuery(widgetSettingsQuery(workspace));
-  const { copied, copy } = useCopy();
   const widget = widgets?.[0];
 
   if (!widget) {
     return widgets ? null : <Skeleton className="h-24 w-full rounded-2xl" />;
   }
 
-  const snippet = installSnippet(window.location.origin, widget.id);
-
   return (
-    <div className="flex flex-col gap-3">
-      <code
-        dir="ltr"
-        className="block break-all rounded-xl bg-background-secondary-default p-3 font-mono text-body-2-regular text-text-primary"
-      >
-        {snippet}
-      </code>
-      <div className="flex items-center gap-3">
-        <Button
-          variant="secondary"
-          size="small"
-          leadingIcon={copied ? RiCheckLine : RiFileCopyLine}
-          onClick={() => void copy(snippet)}
-        >
-          Copy snippet
-        </Button>
-        <span className="text-body-2-regular text-text-tertiary">
-          Paste it before the closing body tag of your site.
-        </span>
-      </div>
-    </div>
+    <Snippet
+      code={installSnippet(window.location.origin, widget.id)}
+      hint="Paste it before the closing body tag of your site."
+      className="bg-background-secondary-default"
+    />
   );
 }
 

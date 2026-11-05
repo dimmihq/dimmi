@@ -111,6 +111,23 @@ it.describe("settings", () => {
     await expect(page.getByRole("textbox", { name: "Greeting" })).toHaveValue("Saved for real");
   });
 
+  it("shows and copies the install snippet for the framework picked", async ({ page }) => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await openMessenger(page);
+    const install = page.getByRole("region", { name: "Install" });
+    await expect(install.getByText('import Script from "next/script";')).toBeVisible();
+    await expect(install.getByText(/in app\/layout\.tsx/)).toBeVisible();
+
+    await install.getByRole("button", { name: /Framework$/ }).click();
+    await page.getByRole("option", { name: "Plain HTML" }).click();
+
+    const code = install.locator("code");
+    await expect(code).toHaveText(/^<script async src=".*\/widget\/v1\/loader\.js" data-app-id="wgt_\w+"><\/script>$/);
+    await install.getByRole("button", { name: "Copy snippet" }).click();
+    await expect(install.getByRole("button", { name: "Copied" })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(await code.textContent());
+  });
+
   it("keeps the page in its panel when a switch far down is toggled", async ({ page }) => {
     await openMessenger(page);
 

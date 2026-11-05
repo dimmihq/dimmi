@@ -9,11 +9,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { AlertDialog } from "@/components/base/modal/modal";
-import { CopyButton } from "@/features/email/setup/copy-button";
-import { deleteWidget, installSnippet } from "@/lib/api/widget-settings";
+import { deleteWidget } from "@/lib/api/widget-settings";
 
 import { Choice, Colour, Danger, Field, Toggle } from "../controls";
 import { Row, Section } from "../layout";
+import { Snippet } from "../snippet";
+import { frameworks, snippetFor } from "./install";
 import { labelled, type TabProps } from "./parts";
 
 const themes = labelled({ auto: "Auto", light: "Light", dark: "Dark" });
@@ -23,16 +24,18 @@ const emails = labelled({ offline: "When offline", always: "Always", never: "Nev
 const automatic = "Auto";
 
 export function InstallSection({ value }: Pick<TabProps, "value">) {
+  const [framework, setFramework] = useState(frameworks[0] ?? "");
   const seen = value.last_boot_origin ? `Seen on ${value.last_boot_origin}.` : "Not seen on a site yet.";
+  const snippet = snippetFor(framework, window.location.origin, value.id);
 
   return (
     <Section title="Install" description={seen}>
       <Row label="Framework" description="We show the snippet for what your site is built with.">
-        <Choice label="Framework" options={["Next.js", "React", "Plain HTML", "Vue", "Other"]} />
+        <Choice label="Framework" options={frameworks} value={framework} onChange={setFramework} />
       </Row>
-      <Row label="Install snippet" description="Paste it before the closing body tag, or run npx dimmi init.">
-        <CopyButton value={installSnippet(window.location.origin, value.id)} label="Copy snippet" />
-      </Row>
+      <div className="py-3 pe-3">
+        <Snippet code={snippet.code} hint={snippet.hint} className="bg-background-tertiary-default" />
+      </div>
     </Section>
   );
 }
