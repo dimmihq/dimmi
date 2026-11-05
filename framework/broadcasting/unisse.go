@@ -16,6 +16,11 @@
 | disconnect push, which EventSource can read where a status code is
 | invisible to it.
 |
+| A client with a token may listen from any site, since the token alone
+| proves who it is: the answer allows the asking origin, but never with
+| credentials, so a browser sends no cookie along. A client without one
+| authenticates by its cookie and stays on the install's own site.
+|
 */
 
 package broadcasting
@@ -67,8 +72,13 @@ func (s *Server) serveUniSSE(w http.ResponseWriter, r *http.Request) {
 
 	header := w.Header()
 	header.Set("Content-Type", "text/event-stream")
-	header.Set("Cache-Control", "no-cache")
+	header.Set("Cache-Control", "no-store")
 	header.Set("X-Accel-Buffering", "no")
+	header.Add("Vary", "Origin")
+
+	if origin := r.Header.Get("Origin"); origin != "" && req.Token != "" {
+		header.Set("Access-Control-Allow-Origin", origin)
+	}
 	w.WriteHeader(http.StatusOK)
 
 	rc := http.NewResponseController(w)
