@@ -134,7 +134,7 @@ export function CompaniesPage() {
                 <TableCell>
                   <span className="flex flex-wrap gap-1">
                     {company.tags.map((tag) => (
-                      <TagChip key={tag.id} tag={tag} />
+                      <TagChip key={tag.id} tag={tag} size="small" />
                     ))}
                   </span>
                 </TableCell>

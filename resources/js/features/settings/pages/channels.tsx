@@ -3,11 +3,12 @@
  * connections to the chat apps they already use; email has its own page. Each
  * channel decides which inbox its conversations land in.
  */
-import { RiDiscordFill, RiSearchLine, RiSlackFill, RiTelegramFill, RiWhatsappFill } from "@remixicon/react";
+import { RiSearchLine } from "@remixicon/react";
 import { useState } from "react";
 
 import { Input } from "@/components/base/input/input";
 
+import { chatApps } from "../chat-apps";
 import { Action, Choice, Colour, Danger, Field, Toggle } from "../controls";
 import { Empty, Item, Logo, Row, Section, SettingsPage } from "../layout";
 
@@ -86,21 +87,10 @@ export function MessengerSettings() {
   );
 }
 
-/*
- * The services a workspace can connect, each with its brand colour. The
- * list grows as Dimmi adds connections, so the page can be searched.
- */
-const services = [
-  { name: "Slack", icon: RiSlackFill, brand: "#4A154B", detail: "Shared channels and Slack Connect" },
-  { name: "Discord", icon: RiDiscordFill, brand: "#5865F2", detail: "A support channel in your server" },
-  { name: "Telegram", icon: RiTelegramFill, brand: "#26A5E4", detail: "Your bot's direct messages" },
-  { name: "WhatsApp", icon: RiWhatsappFill, brand: "#25D366", detail: "Your business number" },
-];
-
 export function ConnectionsSettings() {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLocaleLowerCase();
-  const shown = services.filter((service) => `${service.name} ${service.detail}`.toLocaleLowerCase().includes(needle));
+  const shown = chatApps.filter((service) => `${service.name} ${service.detail}`.toLocaleLowerCase().includes(needle));
 
   return (
     <SettingsPage

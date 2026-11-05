@@ -10,8 +10,10 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
+import { tagTint } from "@/features/inbox/tags/tag-colors";
 import { tagIcon } from "@/features/inbox/tags/tag-icons";
 import { createTag, type Tag } from "@/lib/api/tags";
+import { cx } from "@/utils/cx";
 
 import { StepActions, StepHeader } from "./frame";
 import type { StepProps } from "./step-props";
@@ -34,6 +36,36 @@ function preview(name: string): Tag {
   const suggested = suggestions[name];
 
   return { id: name, object: "tag", name, color: suggested?.color ?? null, icon: suggested?.icon ?? null };
+}
+
+/*
+ * Suggestion is a suggested tag in its own color and icon, so the team
+ * sees the tag it will get; pressing it adds or drops the tag.
+ */
+function Suggestion({ tag, isChosen, onToggle }: { tag: Tag; isChosen: boolean; onToggle: () => void }) {
+  const Icon = tagIcon(tag.icon);
+  const Mark = isChosen ? RiCheckLine : RiAddLine;
+  const tint = tagTint(tag.color);
+
+  return (
+    <button
+      type="button"
+      aria-pressed={isChosen}
+      onClick={onToggle}
+      style={tint.style}
+      className={cx(
+        "inline-flex h-7 cursor-pointer items-center gap-1 rounded-lg px-2 text-body-medium outline-none",
+        "transition-[filter,box-shadow] duration-150 ease-out hover:brightness-95",
+        "focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+        tint.className,
+        isChosen && "ring-1 ring-current/40 ring-inset",
+      )}
+    >
+      <Icon aria-hidden className="size-4 shrink-0" />
+      {tag.name}
+      <Mark aria-hidden className="size-4 shrink-0 opacity-70" />
+    </button>
+  );
 }
 
 export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
@@ -74,22 +106,10 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
       <div className="mt-8 flex flex-col gap-3">
         <h2 className="text-body-semibold text-text-primary">Suggestions</h2>
         <div className="flex flex-wrap gap-2">
-          {Object.entries(suggestions).map(([name, appearance]) => {
+          {Object.keys(suggestions).map((name) => {
             const isChosen = chosen.includes(name);
 
-            return (
-              <Button
-                key={name}
-                variant="secondary"
-                size="small"
-                leadingIcon={tagIcon(appearance.icon)}
-                trailingIcon={isChosen ? RiCheckLine : RiAddLine}
-                aria-pressed={isChosen}
-                onClick={() => toggle(name)}
-              >
-                {name}
-              </Button>
-            );
+            return <Suggestion key={name} tag={preview(name)} isChosen={isChosen} onToggle={() => toggle(name)} />;
           })}
         </div>
       </div>

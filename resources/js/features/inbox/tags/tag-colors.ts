@@ -6,6 +6,8 @@
  * it reads against its tint, and every tag stays legible.
  */
 
+import type { CSSProperties } from "react";
+
 type Rgb = [number, number, number];
 
 const white: Rgb = [255, 255, 255];
@@ -99,5 +101,32 @@ export function tagColors(hex: string | null): TagColors | null {
     },
   };
 }
+
+function tintStyle(color: string | null): CSSProperties | undefined {
+  const colors = tagColors(color);
+  if (!colors) {
+    return undefined;
+  }
+
+  return {
+    "--tag-light-background": colors.light.background,
+    "--tag-light-text": colors.light.text,
+    "--tag-dark-background": colors.dark.background,
+    "--tag-dark-text": colors.dark.text,
+  } as CSSProperties;
+}
+
+/*
+ * tagTint is the style and classes that paint an element in a tag's
+ * color, for anything shaped like a tag: the chip, its icon and the
+ * suggestions that become tags.
+ */
+export function tagTint(color: string | null): { style?: CSSProperties; className: string } {
+  return { style: tintStyle(color), className: color ? tinted : neutral };
+}
+
+const tinted =
+  "bg-(--tag-light-background) text-(--tag-light-text) dark:bg-(--tag-dark-background) dark:text-(--tag-dark-text)";
+const neutral = "bg-background-tertiary-default text-text-primary";
 
 export const testing = { parse, mix, darkSurface, lightSurface };

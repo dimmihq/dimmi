@@ -6,32 +6,13 @@
  * chip.
  */
 import { RiCloseLine } from "@remixicon/react";
-import type { CSSProperties } from "react";
 
 import type { Tag } from "@/lib/api/tags";
 import { cx } from "@/utils/cx";
-import { tagColors } from "./tag-colors";
+import { tagTint } from "./tag-colors";
 import { tagIcon } from "./tag-icons";
 
 type Tinted = Pick<Tag, "color" | "icon">;
-
-function tintStyle(color: string | null): CSSProperties | undefined {
-  const colors = tagColors(color);
-  if (!colors) {
-    return undefined;
-  }
-
-  return {
-    "--tag-light-background": colors.light.background,
-    "--tag-light-text": colors.light.text,
-    "--tag-dark-background": colors.dark.background,
-    "--tag-dark-text": colors.dark.text,
-  } as CSSProperties;
-}
-
-const tinted =
-  "bg-(--tag-light-background) text-(--tag-light-text) dark:bg-(--tag-dark-background) dark:text-(--tag-dark-text)";
-const neutral = "bg-background-tertiary-default text-text-primary";
 
 /*
  * TagIcon is the tag's icon in its readable color, for places that list
@@ -43,10 +24,10 @@ export function TagIcon({ tag, className }: { tag: Tinted; className?: string })
   return (
     <span
       aria-hidden
-      style={tintStyle(tag.color)}
+      style={tagTint(tag.color).style}
       className={cx(
         "flex size-5 shrink-0 items-center justify-center rounded-md",
-        tag.color ? tinted : neutral,
+        tagTint(tag.color).className,
         className,
       )}
     >
@@ -55,28 +36,52 @@ export function TagIcon({ tag, className }: { tag: Tinted; className?: string })
   );
 }
 
-export function TagChip({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
+export type TagChipSize = "medium" | "small";
+
+const chipSizes = {
+  medium: { chip: "h-7 px-2 text-body-medium", removable: "pe-1", icon: "size-4", remove: "size-5", x: "size-3.5" },
+  small: {
+    chip: "h-6 px-1.5 text-caption-1-medium",
+    removable: "pe-0.5",
+    icon: "size-3.5",
+    remove: "size-4",
+    x: "size-3",
+  },
+};
+
+/*
+ * TagChip shows a tag at BoardUI's regular tag size, or small in dense
+ * lists such as table rows.
+ */
+export function TagChip({ tag, onRemove, size = "medium" }: { tag: Tag; onRemove?: () => void; size?: TagChipSize }) {
   const Icon = tagIcon(tag.icon);
+  const sized = chipSizes[size];
+  const tint = tagTint(tag.color);
 
   return (
     <span
-      style={tintStyle(tag.color)}
+      style={tint.style}
       className={cx(
-        "inline-flex h-6 max-w-full items-center gap-1 rounded-lg px-1.5 text-caption-1-medium",
-        tag.color ? tinted : neutral,
-        onRemove && "pe-0.5",
+        "inline-flex max-w-full items-center gap-1 rounded-lg",
+        sized.chip,
+        tint.className,
+        onRemove && sized.removable,
       )}
     >
-      <Icon aria-hidden className="size-3.5 shrink-0" />
+      <Icon aria-hidden className={cx("shrink-0", sized.icon)} />
       <span className="truncate">{tag.name}</span>
       {onRemove ? (
         <button
           type="button"
           aria-label={`Remove ${tag.name}`}
           onClick={onRemove}
-          className="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-md opacity-60 outline-none hover:bg-current/15 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+          className={cx(
+            "flex shrink-0 cursor-pointer items-center justify-center rounded-md opacity-60 outline-none",
+            "hover:bg-current/15 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+            sized.remove,
+          )}
         >
-          <RiCloseLine aria-hidden className="size-3" />
+          <RiCloseLine aria-hidden className={sized.x} />
         </button>
       ) : null}
     </span>

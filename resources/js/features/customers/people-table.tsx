@@ -57,7 +57,7 @@ function cell(column: ColumnKey, person: Contact): ReactNode {
     tags: () => (
       <span className="flex flex-wrap gap-1">
         {person.tags.map((tag) => (
-          <TagChip key={tag.id} tag={tag} />
+          <TagChip key={tag.id} tag={tag} size="small" />
         ))}
       </span>
     ),
