@@ -7,7 +7,7 @@
  */
 
 import type * as api from "../client/store";
-import type { Attachment, Content, Conversation, Member, Message } from "../content";
+import type { Attachment, Content, Conversation, Link, Member, Message } from "../content";
 import type { Appearance, OptionsUpdate, Tab, Texts } from "../options";
 
 export interface Config {
@@ -23,6 +23,7 @@ export interface Config {
   honeypot_field?: string;
   customer_status?: boolean;
   delay_notice?: boolean;
+  home_links?: Link[];
 }
 
 export interface Availability {
@@ -89,6 +90,17 @@ export function fromConfig(config: Config, texts: Texts): OptionsUpdate {
  * content builds what the views draw from the store and what the server
  * said about the team.
  */
+/*
+ * links are the customer's links for the home screen, each titled in the
+ * visitor's language when the customer translated it.
+ */
+export function links(config: Config): Link[] {
+  return (config.home_links ?? []).map((link, i) => ({
+    ...link,
+    title: config.texts?.[`home_link_${i}`] || link.title,
+  }));
+}
+
 export function content(
   base: Content,
   config: Config,
@@ -101,6 +113,7 @@ export function content(
     ...base,
     company: config.company?.name ?? base.company,
     logo: config.company?.logo_url ?? null,
+    links: links(config),
     reply_time: availability?.reply_time_text ?? base.reply_time,
     team: availability ? availability.team.map((member): Member => ({ name: member.name })) : base.team,
     conversations: store.conversations.map((c) => toConversation(c, now)),

@@ -113,6 +113,7 @@ func withParams(w models.WidgetSetting, p models.SaveWidgetSettingsParams) model
 	w.MaxAttachmentMb, w.HelpCenterID, w.HelpTabEnabled = p.MaxAttachmentMb, p.HelpCenterID, p.HelpTabEnabled
 	w.ChangelogTabEnabled, w.IntercomShim = p.ChangelogTabEnabled, p.IntercomShim
 	w.NativeAppsEnabled, w.ShowBranding = p.NativeAppsEnabled, p.ShowBranding
+	w.HomeLinks = p.HomeLinks
 
 	return w
 }

@@ -49,7 +49,7 @@ func (q *Queries) CountWidgetSettings(ctx context.Context, workspaceID ids.UUID)
 const createWidgetSettings = `-- name: CreateWidgetSettings :one
 INSERT INTO widget_settings (workspace_id, channel_connection_id, name, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $4)
-RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled
+RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links
 `
 
 type CreateWidgetSettingsParams struct {
@@ -98,6 +98,7 @@ func (q *Queries) CreateWidgetSettings(ctx context.Context, arg CreateWidgetSett
 		&i.ChangelogTabEnabled,
 		&i.IntercomShim,
 		&i.NativeAppsEnabled,
+		&i.HomeLinks,
 	)
 	return i, err
 }
@@ -123,7 +124,7 @@ func (q *Queries) DeleteWidgetSettings(ctx context.Context, arg DeleteWidgetSett
 }
 
 const findWidgetSettings = `-- name: FindWidgetSettings :one
-SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled FROM widget_settings WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links FROM widget_settings WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindWidgetSettingsParams struct {
@@ -165,12 +166,13 @@ func (q *Queries) FindWidgetSettings(ctx context.Context, arg FindWidgetSettings
 		&i.ChangelogTabEnabled,
 		&i.IntercomShim,
 		&i.NativeAppsEnabled,
+		&i.HomeLinks,
 	)
 	return i, err
 }
 
 const findWidgetSettingsByConnection = `-- name: FindWidgetSettingsByConnection :one
-SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled FROM widget_settings WHERE workspace_id = $1 AND channel_connection_id = $2
+SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links FROM widget_settings WHERE workspace_id = $1 AND channel_connection_id = $2
 `
 
 type FindWidgetSettingsByConnectionParams struct {
@@ -213,12 +215,13 @@ func (q *Queries) FindWidgetSettingsByConnection(ctx context.Context, arg FindWi
 		&i.ChangelogTabEnabled,
 		&i.IntercomShim,
 		&i.NativeAppsEnabled,
+		&i.HomeLinks,
 	)
 	return i, err
 }
 
 const listWidgetSettings = `-- name: ListWidgetSettings :many
-SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled FROM widget_settings WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at, id
+SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links FROM widget_settings WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at, id
 `
 
 // ListWidgetSettings returns the workspace's live widgets, oldest first.
@@ -261,6 +264,7 @@ func (q *Queries) ListWidgetSettings(ctx context.Context, workspaceID ids.UUID) 
 			&i.ChangelogTabEnabled,
 			&i.IntercomShim,
 			&i.NativeAppsEnabled,
+			&i.HomeLinks,
 		); err != nil {
 			return nil, err
 		}
@@ -381,10 +385,10 @@ UPDATE widget_settings SET
     require_email_when_offline = $12, attachments_enabled = $13,
     max_attachment_mb = $14, help_center_id = $15, help_tab_enabled = $16,
     changelog_tab_enabled = $17, intercom_shim = $18,
-    native_apps_enabled = $19, show_branding = $20,
-    config_version = config_version + 1, updated_at = $21
-WHERE workspace_id = $22 AND id = $23 AND deleted_at IS NULL
-RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled
+    native_apps_enabled = $19, show_branding = $20, home_links = $21,
+    config_version = config_version + 1, updated_at = $22
+WHERE workspace_id = $23 AND id = $24 AND deleted_at IS NULL
+RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links
 `
 
 type SaveWidgetSettingsParams struct {
@@ -408,6 +412,7 @@ type SaveWidgetSettingsParams struct {
 	IntercomShim            bool            `json:"intercom_shim"`
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
 	ShowBranding            *bool           `json:"show_branding"`
+	HomeLinks               json.RawMessage `json:"home_links"`
 	Now                     time.Time       `json:"now"`
 	WorkspaceID             ids.UUID        `json:"workspace_id"`
 	ID                      ids.UUID        `json:"id"`
@@ -437,6 +442,7 @@ func (q *Queries) SaveWidgetSettings(ctx context.Context, arg SaveWidgetSettings
 		arg.IntercomShim,
 		arg.NativeAppsEnabled,
 		arg.ShowBranding,
+		arg.HomeLinks,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -472,6 +478,7 @@ func (q *Queries) SaveWidgetSettings(ctx context.Context, arg SaveWidgetSettings
 		&i.ChangelogTabEnabled,
 		&i.IntercomShim,
 		&i.NativeAppsEnabled,
+		&i.HomeLinks,
 	)
 	return i, err
 }

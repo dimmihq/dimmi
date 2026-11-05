@@ -759,7 +759,11 @@ describe("core", () => {
     win.Dimmi?.("configure", {
       company: { name: "Parakeet", logo_url: null },
       appearance: { primary_color: "#5b5bd6", position: "left", launcher: { style: "bubble", shape: "squircle" } },
-      texts: { greeting_intro: "Hi from Parakeet.", greeting: "", nope: "x" },
+      texts: { greeting_intro: "Hi from Parakeet.", greeting: "", nope: "x", home_link_1: "Écrivez-nous" },
+      home_links: [
+        { title: "Book a call", url: "https://cal.example.com", icon: "calendar" },
+        { title: "Write to us", url: "mailto:help@example.com", icon: "link" },
+      ],
     });
 
     const host = document.getElementById("dimmi-messenger") as HTMLElement;
@@ -768,6 +772,11 @@ describe("core", () => {
     expect(shadow().querySelector(".messenger")?.getAttribute("data-side")).toBe("left");
     expect(shadow().querySelector("h1")?.textContent).toContain("Hi from Parakeet.");
     expect(shadow().textContent).toContain("Parakeet");
+    const rows = [...shadow().querySelectorAll<HTMLAnchorElement>('.view[data-view="home"] a.row')];
+    expect(rows.map((row) => [row.textContent, row.getAttribute("href")])).toEqual([
+      ["Book a call", "https://cal.example.com"],
+      ["Écrivez-nous", "mailto:help@example.com"],
+    ]);
   });
 
   it("hides the launcher when the customer opens the messenger from their own buttons", async () => {

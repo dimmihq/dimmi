@@ -29,7 +29,7 @@ export interface Incoming extends Message {
 
 export interface Link {
   title: string;
-  icon: "calendar" | "book";
+  icon: "link" | "calendar" | "book" | "mail" | "phone" | "chat" | "video" | "help";
   url: string;
 }
 

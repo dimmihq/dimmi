@@ -967,6 +967,7 @@ type WidgetSetting struct {
 	ChangelogTabEnabled     bool            `json:"changelog_tab_enabled"`
 	IntercomShim            bool            `json:"intercom_shim"`
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
+	HomeLinks               json.RawMessage `json:"home_links"`
 }
 
 type Workspace struct {

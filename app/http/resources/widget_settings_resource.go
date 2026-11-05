@@ -33,37 +33,38 @@ type WidgetSettingsLinks struct {
 WidgetSettings is one widget as its settings page shows it.
 */
 type WidgetSettings struct {
-	ID                      string              `json:"id"`
-	Object                  string              `json:"object"`
-	Name                    string              `json:"name"`
-	Enabled                 bool                `json:"enabled"`
-	Inbox                   Named               `json:"inbox"`
-	ChannelConnectionID     string              `json:"channel_connection_id"`
-	Appearance              widget.Appearance   `json:"appearance"`
-	Texts                   map[string]any      `json:"texts"`
-	Locale                  string              `json:"locale"`
-	ReplyTime               string              `json:"reply_time"`
-	ShowTeamAvatars         bool                `json:"show_team_avatars"`
-	ShowAvailability        bool                `json:"show_availability"`
-	AllowedOrigins          []string            `json:"allowed_origins"`
-	AllowAnonymous          bool                `json:"allow_anonymous"`
-	CollectEmail            string              `json:"collect_email"`
-	RequireEmailWhenOffline bool                `json:"require_email_when_offline"`
-	AttachmentsEnabled      bool                `json:"attachments_enabled"`
-	MaxAttachmentMB         int32               `json:"max_attachment_mb"`
-	NativeAppsEnabled       bool                `json:"native_apps_enabled"`
-	HelpCenterID            *string             `json:"help_center_id"`
-	HelpTabEnabled          bool                `json:"help_tab_enabled"`
-	ChangelogTabEnabled     bool                `json:"changelog_tab_enabled"`
-	IntercomShim            bool                `json:"intercom_shim"`
-	ShowBranding            *bool               `json:"show_branding"`
-	Branding                widget.Branding     `json:"branding"`
-	ConfigVersion           int64               `json:"config_version"`
-	LastBootAt              *time.Time          `json:"last_boot_at"`
-	LastBootOrigin          *string             `json:"last_boot_origin"`
-	CreatedAt               time.Time           `json:"created_at"`
-	UpdatedAt               time.Time           `json:"updated_at"`
-	Links                   WidgetSettingsLinks `json:"links"`
+	ID                      string                  `json:"id"`
+	Object                  string                  `json:"object"`
+	Name                    string                  `json:"name"`
+	Enabled                 bool                    `json:"enabled"`
+	Inbox                   Named                   `json:"inbox"`
+	ChannelConnectionID     string                  `json:"channel_connection_id"`
+	Appearance              widget.Appearance       `json:"appearance"`
+	Texts                   map[string]any          `json:"texts"`
+	Locale                  string                  `json:"locale"`
+	ReplyTime               string                  `json:"reply_time"`
+	ShowTeamAvatars         bool                    `json:"show_team_avatars"`
+	ShowAvailability        bool                    `json:"show_availability"`
+	AllowedOrigins          []string                `json:"allowed_origins"`
+	AllowAnonymous          bool                    `json:"allow_anonymous"`
+	CollectEmail            string                  `json:"collect_email"`
+	RequireEmailWhenOffline bool                    `json:"require_email_when_offline"`
+	AttachmentsEnabled      bool                    `json:"attachments_enabled"`
+	MaxAttachmentMB         int32                   `json:"max_attachment_mb"`
+	NativeAppsEnabled       bool                    `json:"native_apps_enabled"`
+	HelpCenterID            *string                 `json:"help_center_id"`
+	HelpTabEnabled          bool                    `json:"help_tab_enabled"`
+	ChangelogTabEnabled     bool                    `json:"changelog_tab_enabled"`
+	IntercomShim            bool                    `json:"intercom_shim"`
+	ShowBranding            *bool                   `json:"show_branding"`
+	HomeLinks               []widget.ConfigHomeLink `json:"home_links"`
+	Branding                widget.Branding         `json:"branding"`
+	ConfigVersion           int64                   `json:"config_version"`
+	LastBootAt              *time.Time              `json:"last_boot_at"`
+	LastBootOrigin          *string                 `json:"last_boot_origin"`
+	CreatedAt               time.Time               `json:"created_at"`
+	UpdatedAt               time.Time               `json:"updated_at"`
+	Links                   WidgetSettingsLinks     `json:"links"`
 }
 
 /*
@@ -86,7 +87,8 @@ func NewWidgetSettings(row widget.SettingsRow, base string) WidgetSettings {
 		MaxAttachmentMB: w.MaxAttachmentMb, NativeAppsEnabled: w.NativeAppsEnabled,
 		HelpCenterID:   helpCenterID(w.HelpCenterID),
 		HelpTabEnabled: w.HelpTabEnabled, ChangelogTabEnabled: w.ChangelogTabEnabled, IntercomShim: w.IntercomShim,
-		ShowBranding: w.ShowBranding, Branding: row.Branding, ConfigVersion: w.ConfigVersion, LastBootAt: w.LastBootAt,
+		ShowBranding: w.ShowBranding, HomeLinks: widget.HomeLinks(w), Branding: row.Branding,
+		ConfigVersion: w.ConfigVersion, LastBootAt: w.LastBootAt,
 		LastBootOrigin: w.LastBootOrigin, CreatedAt: w.CreatedAt, UpdatedAt: w.UpdatedAt,
 		Links: WidgetSettingsLinks{
 			Self:    base + "/api/v1/widget-settings/" + public,

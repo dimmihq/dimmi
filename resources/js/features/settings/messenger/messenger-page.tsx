@@ -19,6 +19,8 @@ import { PageSkeleton, SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 import { changed, withChange, withDraft } from "./draft";
+import { forPreview, linkProblems } from "./links";
+import { LinksSection } from "./links-section";
 import { PreviewPane } from "./preview-pane";
 import {
   AppearanceSection,
@@ -109,13 +111,15 @@ function SaveBar({ edit }: { edit: ReturnType<typeof useMessengerDraft> }) {
 function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings }) {
   const edit = useMessengerDraft(workspace, saved);
   const locked = !usePermission(workspace, "settings:write");
-  const preview = usePreviewConfig(workspace, saved.id, edit.draft);
+  const sent = forPreview(edit.draft);
+  const preview = usePreviewConfig(workspace, saved.id, sent.change);
   const locales = (preview.data?.locales as string[] | undefined) ?? ["en"];
   useBlocker({
     shouldBlockFn: () => edit.dirty && !window.confirm("Leave without saving your changes?"),
     enableBeforeUnload: () => edit.dirty,
   });
   const props = { value: edit.shown, set: edit.set, locked };
+  const problems = { ...linkProblems(preview.error, sent.rows), ...linkProblems(edit.save.error) };
 
   return (
     <div className="flex h-full min-w-0 flex-1 gap-3">
@@ -131,10 +135,11 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
           <AppearanceSection {...props} />
           <TextsSection {...props} />
           <VisitorsSection {...props} />
+          <LinksSection {...props} problems={problems} />
           <TabsSection {...props} />
           {locked ? null : <DangerSection workspace={workspace} value={edit.shown} />}
         </div>
-        {preview.error ? (
+        {preview.error && Object.keys(linkProblems(preview.error)).length === 0 ? (
           <p role="alert" className="text-body-2-regular text-text-error-primary">
             {failureText(preview.error)}
           </p>

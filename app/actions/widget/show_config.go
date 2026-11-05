@@ -141,7 +141,7 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 		Appearance: configAppearance(appearance), Texts: texts, Locale: locale, Dir: widgetstrings.Direction(locale),
 		Locales: a.Strings.Locales(), Tabs: configTabs(widget), OpenTo: "home",
 		ShowTeamAvatars: widget.ShowTeamAvatars, ShowAvailability: widget.ShowAvailability, CustomerStatus: true,
-		DelayNotice: true, HomeLinks: []ConfigHomeLink{}, Features: configFeatures(widget), Branding: branding,
+		DelayNotice: true, HomeLinks: HomeLinks(widget), Features: configFeatures(widget), Branding: branding,
 		Realtime: ConfigRealtime{
 			URL: in.BaseURL + "/connection/uni_sse", TokenURL: in.BaseURL + "/widget/v1/realtime-tokens",
 			PollingIntervalMS: a.PollingInterval,

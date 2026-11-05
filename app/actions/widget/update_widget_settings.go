@@ -39,6 +39,7 @@ import (
 SettingsChange is what a caller sends; a nil field stays as it is. Show
 branding has a meaning for null, so ShowBrandingSent tells null from
 absent, and AllowedOrigins from nil likewise by AllowedOriginsSent.
+HomeLinks replaces the whole list when HomeLinksSent says it was sent.
 */
 type SettingsChange struct {
 	Name                    *string
@@ -65,6 +66,8 @@ type SettingsChange struct {
 	NativeAppsEnabled       *bool
 	ShowBranding            *bool
 	ShowBrandingSent        bool
+	HomeLinks               []ConfigHomeLink
+	HomeLinksSent           bool
 }
 
 /*
@@ -255,7 +258,7 @@ func changedParams(w models.WidgetSetting, c SettingsChange) (models.SaveWidgetS
 		RequireEmailWhenOffline: w.RequireEmailWhenOffline, AttachmentsEnabled: w.AttachmentsEnabled,
 		MaxAttachmentMb: w.MaxAttachmentMb, HelpCenterID: w.HelpCenterID, HelpTabEnabled: w.HelpTabEnabled,
 		ChangelogTabEnabled: w.ChangelogTabEnabled, IntercomShim: w.IntercomShim,
-		NativeAppsEnabled: w.NativeAppsEnabled, ShowBranding: w.ShowBranding,
+		NativeAppsEnabled: w.NativeAppsEnabled, ShowBranding: w.ShowBranding, HomeLinks: w.HomeLinks,
 	}
 
 	applySwitches(&p, c)
@@ -296,7 +299,7 @@ applyChecked copies the fields with rules of their own.
 */
 func applyChecked(p *models.SaveWidgetSettingsParams, c SettingsChange) error {
 	return errors.Join(
-		applyName(p, c.Name), applyOptions(p, c), applyOrigins(p, c), applyStored(p, c),
+		applyName(p, c.Name), applyOptions(p, c), applyOrigins(p, c), applyStored(p, c), applyLinks(p, c),
 	)
 }
 
@@ -464,6 +467,7 @@ func changedFields(before models.WidgetSetting, p models.SaveWidgetSettingsParam
 	after.HelpCenterID, after.HelpTabEnabled = p.HelpCenterID, p.HelpTabEnabled
 	after.ChangelogTabEnabled, after.IntercomShim = p.ChangelogTabEnabled, p.IntercomShim
 	after.NativeAppsEnabled, after.ShowBranding = p.NativeAppsEnabled, p.ShowBranding
+	after.HomeLinks = p.HomeLinks
 
 	left, right := asFields(before), asFields(after)
 	changes := []string{}

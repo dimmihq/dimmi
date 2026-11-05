@@ -6,7 +6,18 @@
 import type { Child } from "widget-jsx/jsx-runtime";
 
 import type { Article, Conversation, Link } from "../content";
-import { BookIcon, CalendarIcon, ChevronRightIcon, ExternalIcon } from "./icons";
+import {
+  BookIcon,
+  CalendarIcon,
+  ChatIcon,
+  ChevronRightIcon,
+  ExternalIcon,
+  LinkIcon,
+  MailIcon,
+  PhoneIcon,
+  QuestionIcon,
+  VideoIcon,
+} from "./icons";
 
 export function Section({ title, more, children }: { title: string; more?: Child; children: Child }) {
   return (
@@ -57,10 +68,30 @@ export function ArticleRow({ article }: { article: Article }) {
   );
 }
 
+/*
+ * linkIcons draws each icon a customer's link may show; an icon this
+ * messenger does not know draws as a plain link.
+ */
+const linkIcons: Record<string, typeof LinkIcon> = {
+  calendar: CalendarIcon,
+  book: BookIcon,
+  mail: MailIcon,
+  phone: PhoneIcon,
+  chat: ChatIcon,
+  video: VideoIcon,
+  help: QuestionIcon,
+};
+
+function linkIcon(link: Link) {
+  const Draw = linkIcons[link.icon] ?? LinkIcon;
+
+  return <Draw />;
+}
+
 export function LinkRow({ link }: { link: Link }) {
   return (
     <a className="row" href={link.url} target="_blank" rel="noopener">
-      <span className="row-icon">{link.icon === "calendar" ? <CalendarIcon /> : <BookIcon />}</span>
+      <span className="row-icon">{linkIcon(link)}</span>
       <span className="text">{link.title}</span>
       <ExternalIcon />
     </a>

@@ -41,7 +41,7 @@ UPDATE widget_settings SET
     require_email_when_offline = @require_email_when_offline, attachments_enabled = @attachments_enabled,
     max_attachment_mb = @max_attachment_mb, help_center_id = @help_center_id, help_tab_enabled = @help_tab_enabled,
     changelog_tab_enabled = @changelog_tab_enabled, intercom_shim = @intercom_shim,
-    native_apps_enabled = @native_apps_enabled, show_branding = @show_branding,
+    native_apps_enabled = @native_apps_enabled, show_branding = @show_branding, home_links = @home_links,
     config_version = config_version + 1, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;

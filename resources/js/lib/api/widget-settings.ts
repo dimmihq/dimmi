@@ -70,6 +70,15 @@ export interface WidgetAppearance {
 }
 
 /*
+ * HomeLink is one link a messenger lists on its home screen.
+ */
+export interface HomeLink {
+  title: string;
+  url: string;
+  icon: "link" | "calendar" | "book" | "mail" | "phone" | "chat" | "video" | "help";
+}
+
+/*
  * WidgetSettings is one messenger as its settings page edits it. Texts
  * holds only the words someone changed from the defaults.
  */
@@ -91,6 +100,7 @@ export interface WidgetSettings extends WidgetSummary {
   changelog_tab_enabled: boolean;
   intercom_shim: boolean;
   show_branding: boolean | null;
+  home_links: HomeLink[];
   last_boot_at: string | null;
   last_boot_origin: string | null;
 }

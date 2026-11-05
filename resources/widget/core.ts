@@ -31,7 +31,7 @@ import { SearchController } from "./controllers/search_controller";
 import { VoiceController } from "./controllers/voice_controller";
 import { Application } from "./lib/controller";
 import { Live } from "./lib/live";
-import { type Config, fromConfig } from "./lib/map";
+import { type Config, fromConfig, links } from "./lib/map";
 import { report } from "./lib/report";
 import { defaults, merge, type Options, type OptionsUpdate } from "./options";
 import { render, style } from "./render";
@@ -174,7 +174,12 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       report("warn", "configure_live", 'Dimmi("configure") works only in a preview.');
       return;
     }
-    sample = { ...sample, company: config.company?.name || sample.company, logo: config.company?.logo_url ?? null };
+    sample = {
+      ...sample,
+      company: config.company?.name || sample.company,
+      logo: config.company?.logo_url ?? null,
+      links: config.home_links ? links(config) : sample.links,
+    };
     widget.update(fromConfig(config, options.texts));
   };
 

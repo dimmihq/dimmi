@@ -128,6 +128,32 @@ it.describe("settings", () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(await code.textContent());
   });
 
+  it("adds a home screen link with an icon and the preview lists it", async ({ page }) => {
+    await openMessenger(page);
+    const links = page.getByRole("region", { name: "Links" });
+    const messenger = page.frameLocator('iframe[title="Messenger preview"]').locator("#dimmi-messenger");
+
+    await links.getByRole("button", { name: "Add link" }).click();
+    await links.getByRole("button", { name: "Icon of link 1: Link" }).click();
+    await page.getByRole("dialog", { name: "Icon of link 1" }).getByRole("button", { name: "Calendar" }).click();
+    await links.getByRole("textbox", { name: "Title of link 1" }).fill("Book a call");
+    await expect(links.getByRole("alert")).toHaveCount(0);
+    await links.getByRole("textbox", { name: "Address of link 1" }).fill("http://cal.example.com");
+    await expect(links.getByRole("alert")).toHaveText("Use an https:// address or a mailto: address.");
+
+    await links.getByRole("textbox", { name: "Address of link 1" }).fill("https://cal.example.com");
+    await expect(messenger.getByRole("link", { name: "Book a call" })).toHaveAttribute(
+      "href",
+      "https://cal.example.com",
+    );
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Discard" })).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Icon of link 1: Calendar" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Title of link 1" })).toHaveValue("Book a call");
+  });
+
   it("keeps the page in its panel when a switch far down is toggled", async ({ page }) => {
     await openMessenger(page);
 
