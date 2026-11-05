@@ -87,18 +87,20 @@ SELECT
 FROM conversations
 WHERE workspace_id = $2 AND deleted_at IS NULL
   AND dimmi_conversation_visible(
-      assignee_member_id, assignee_team_id, $3::text, $4::uuid,
-      $5::uuid[], $6::boolean
+      assignee_member_id, assignee_team_id, inbox_id, $3::text,
+      $4::uuid, $5::uuid[], $6::boolean,
+      $7::uuid[]
   )
 `
 
 type CountConversationsParams struct {
-	MemberID         *ids.UUID  `json:"member_id"`
-	WorkspaceID      ids.UUID   `json:"workspace_id"`
-	AccessMode       string     `json:"access_mode"`
-	AccessViewer     *ids.UUID  `json:"access_viewer"`
-	AccessTeams      []ids.UUID `json:"access_teams"`
-	AccessUnassigned bool       `json:"access_unassigned"`
+	MemberID            *ids.UUID  `json:"member_id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	AccessMode          string     `json:"access_mode"`
+	AccessViewer        *ids.UUID  `json:"access_viewer"`
+	AccessTeams         []ids.UUID `json:"access_teams"`
+	AccessUnassigned    bool       `json:"access_unassigned"`
+	AccessHiddenInboxes []ids.UUID `json:"access_hidden_inboxes"`
 }
 
 type CountConversationsRow struct {
@@ -120,6 +122,7 @@ func (q *Queries) CountConversations(ctx context.Context, arg CountConversations
 		arg.AccessViewer,
 		arg.AccessTeams,
 		arg.AccessUnassigned,
+		arg.AccessHiddenInboxes,
 	)
 	var i CountConversationsRow
 	err := row.Scan(
@@ -137,18 +140,20 @@ SELECT inbox_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = $1 AND deleted_at IS NULL AND NOT spam AND status = 'open'
   AND dimmi_conversation_visible(
-      assignee_member_id, assignee_team_id, $2::text, $3::uuid,
-      $4::uuid[], $5::boolean
+      assignee_member_id, assignee_team_id, inbox_id, $2::text,
+      $3::uuid, $4::uuid[], $5::boolean,
+      $6::uuid[]
   )
 GROUP BY inbox_id
 `
 
 type CountOpenConversationsByInboxParams struct {
-	WorkspaceID      ids.UUID   `json:"workspace_id"`
-	AccessMode       string     `json:"access_mode"`
-	AccessViewer     *ids.UUID  `json:"access_viewer"`
-	AccessTeams      []ids.UUID `json:"access_teams"`
-	AccessUnassigned bool       `json:"access_unassigned"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	AccessMode          string     `json:"access_mode"`
+	AccessViewer        *ids.UUID  `json:"access_viewer"`
+	AccessTeams         []ids.UUID `json:"access_teams"`
+	AccessUnassigned    bool       `json:"access_unassigned"`
+	AccessHiddenInboxes []ids.UUID `json:"access_hidden_inboxes"`
 }
 
 type CountOpenConversationsByInboxRow struct {
@@ -165,6 +170,7 @@ func (q *Queries) CountOpenConversationsByInbox(ctx context.Context, arg CountOp
 		arg.AccessViewer,
 		arg.AccessTeams,
 		arg.AccessUnassigned,
+		arg.AccessHiddenInboxes,
 	)
 	if err != nil {
 		return nil, err
@@ -195,8 +201,9 @@ WHERE c.workspace_id = $2
   AND c.status = 'open'
   AND (c.assignee_member_id IS NULL OR c.assignee_member_id = $1::uuid)
   AND dimmi_conversation_visible(
-      c.assignee_member_id, c.assignee_team_id, $3::text, $4::uuid,
-      $5::uuid[], $6::boolean
+      c.assignee_member_id, c.assignee_team_id, c.inbox_id, $3::text,
+      $4::uuid, $5::uuid[], $6::boolean,
+      $7::uuid[]
   )
   AND EXISTS (
       SELECT 1 FROM messages m
@@ -214,12 +221,13 @@ WHERE c.workspace_id = $2
 `
 
 type CountUnreadConversationsParams struct {
-	MemberID         ids.UUID   `json:"member_id"`
-	WorkspaceID      ids.UUID   `json:"workspace_id"`
-	AccessMode       string     `json:"access_mode"`
-	AccessViewer     *ids.UUID  `json:"access_viewer"`
-	AccessTeams      []ids.UUID `json:"access_teams"`
-	AccessUnassigned bool       `json:"access_unassigned"`
+	MemberID            ids.UUID   `json:"member_id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	AccessMode          string     `json:"access_mode"`
+	AccessViewer        *ids.UUID  `json:"access_viewer"`
+	AccessTeams         []ids.UUID `json:"access_teams"`
+	AccessUnassigned    bool       `json:"access_unassigned"`
+	AccessHiddenInboxes []ids.UUID `json:"access_hidden_inboxes"`
 }
 
 type CountUnreadConversationsRow struct {
@@ -238,6 +246,7 @@ func (q *Queries) CountUnreadConversations(ctx context.Context, arg CountUnreadC
 		arg.AccessViewer,
 		arg.AccessTeams,
 		arg.AccessUnassigned,
+		arg.AccessHiddenInboxes,
 	)
 	var i CountUnreadConversationsRow
 	err := row.Scan(&i.Mine, &i.Unassigned)

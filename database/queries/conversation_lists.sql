@@ -47,8 +47,9 @@ SELECT
 FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL
   AND dimmi_conversation_visible(
-      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
-      @access_teams::uuid[], @access_unassigned::boolean
+      assignee_member_id, assignee_team_id, inbox_id, @access_mode::text,
+      sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
+      @access_hidden_inboxes::uuid[]
   );
 
 -- name: CountUnreadConversations :one
@@ -65,8 +66,9 @@ WHERE c.workspace_id = @workspace_id
   AND c.status = 'open'
   AND (c.assignee_member_id IS NULL OR c.assignee_member_id = @member_id::uuid)
   AND dimmi_conversation_visible(
-      c.assignee_member_id, c.assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
-      @access_teams::uuid[], @access_unassigned::boolean
+      c.assignee_member_id, c.assignee_team_id, c.inbox_id, @access_mode::text,
+      sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
+      @access_hidden_inboxes::uuid[]
   )
   AND EXISTS (
       SELECT 1 FROM messages m
@@ -89,8 +91,9 @@ SELECT inbox_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND NOT spam AND status = 'open'
   AND dimmi_conversation_visible(
-      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
-      @access_teams::uuid[], @access_unassigned::boolean
+      assignee_member_id, assignee_team_id, inbox_id, @access_mode::text,
+      sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
+      @access_hidden_inboxes::uuid[]
   )
 GROUP BY inbox_id;
 

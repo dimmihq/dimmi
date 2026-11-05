@@ -67,6 +67,7 @@ export interface ReplyStyle {
 export interface EmailAddressChanges {
   display_name?: string;
   is_default?: boolean;
+  inbox_id?: string;
   reply_to_mode?: EmailAddress["reply_to_mode"];
   from_name_style?: EmailAddress["from_name_style"];
   settings?: Partial<EmailAddress["settings"]>;

@@ -1,6 +1,7 @@
 package widget_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -335,5 +336,44 @@ func TestWidgetAvailability(t *testing.T) {
 
 		tc.Client().GetJSON(path(t, tc)).AssertOK().Decode(&got)
 		assert.LessOrEqual(t, len(got.Data.Team), 3)
+	})
+
+	t.Run("a restricted inbox shows only the faces of those on its list", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		widgetPath := path(t, tc)
+
+		var listed ids.UUID
+
+		for i := range 2 {
+			user := tc.CreateUser()
+			member, err := factories.Member(t.Context(), tc.App, factories.Membership{
+				Workspace: tc.Workspace.Workspace, User: user, Role: "member",
+			})
+			require.NoError(t, err)
+
+			_, err = tc.Operator().Exec(t.Context(),
+				"UPDATE users SET avatar_path = 'avatars/x.png', name = $2 WHERE id = $1",
+				user.ID, fmt.Sprint("Face ", i))
+			require.NoError(t, err)
+
+			listed = member.ID
+		}
+
+		_, err := tc.Operator().Exec(t.Context(), `
+			WITH restricted AS (UPDATE inboxes SET access = 'restricted' WHERE workspace_id = $1 RETURNING id)
+			INSERT INTO inbox_access (workspace_id, inbox_id, member_id) SELECT $1, id, $2 FROM restricted`,
+			tc.Workspace.Workspace.ID, listed)
+		require.NoError(t, err)
+
+		var got struct {
+			Data struct {
+				Team []widget.TeamFace `json:"team"`
+			} `json:"data"`
+		}
+
+		tc.Client().GetJSON(widgetPath).AssertOK().Decode(&got)
+		require.Len(t, got.Data.Team, 1)
+		assert.Equal(t, "Face 1", got.Data.Team[0].Name)
 	})
 }

@@ -293,6 +293,8 @@ C=$(new 'Card declined' 'I want a refund for the duplicate charge' ann.$RUN@exam
 | Flow | Command | Expect |
 |---|---|---|
 | Inboxes | `r ib -b a.jar -H "$O" -H "$H" $B/inboxes` | 200, Support; Bob `POST $B/inboxes` 403 `forbidden` |
+| Inbox access | `POST $B/inboxes {"name":"IT"}` as `IT`, a conversation in it; `PUT $B/inboxes/$IT/access {"mode":"restricted","member_ids":[]}`; as Bob `GET $B/inboxes`, `GET $B/conversations/{its id}`, `PATCH $B/conversations/$C {"inbox_id":"$IT"}`; then `PUT … {"mode":"restricted","member_ids":["$BOBM"]}` | 200 with `access.mode: restricted`; Bob lists only Support, the IT conversation 404, the move 422 `inbox_not_found`; once listed Bob sees both; Bob `PUT …/access` 403; the audit log has `inbox.access_changed` |
+| Channels of an inbox | `POST $B/widget-settings {"name":"IT helpdesk","inbox_id":"$IT"}`; `PATCH $B/email-addresses/{address} {"inbox_id":"$IT"}`; open `$W/d/settings/inboxes/$IT` | both list under Channels with the API channel; the messenger's availability shows only the faces of those on IT's list |
 | Customer starts | `r show -b a.jar -H "$O" -H "$H" $B/conversations/1` | 200 `number: 1`, `status: open`, `assignee: null`, `channel.type: api`, `unread: true`, `last_message.author.name: Ann` |
 | Views | `GET $B/conversations?filter[view]=unassigned`, `…=mine`, `…=all&sort=created_at` | Ann's conversation in unassigned and all, none in mine |
 | Counts | `r cnt -b a.jar -H "$O" -H "$H" $B/conversation-counts` | `views.unassigned.open: 1`, `views.unassigned.unread: 1`, `views.mine.open: 0` |

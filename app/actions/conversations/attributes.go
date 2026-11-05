@@ -100,9 +100,13 @@ func (w *Writer) attributeEvents(
 ) error {
 	if len(changes) > 0 {
 		data := map[string]any{"changes": changes}
-		if err := w.emit(ctx, after, entry{"conversation.updated", data}, appevents.ConversationUpdated{
+		updated := appevents.ConversationUpdated{
 			Base: w.Base(after.WorkspaceID), ConversationRef: ref(after), Changes: changes,
-		}); err != nil {
+		}
+		if before.InboxID != after.InboxID {
+			updated.FromInboxID = &before.InboxID
+		}
+		if err := w.emit(ctx, after, entry{"conversation.updated", data}, updated); err != nil {
 			return err
 		}
 	}

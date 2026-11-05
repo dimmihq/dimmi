@@ -124,18 +124,23 @@ type UpdateEmailAddressInput struct {
 	BulkMailHandling *enums.BulkMailHandling
 	IsDefault        *bool
 	Style            ReplyStyleInput
+	InboxID          *ids.UUID
 }
 
 /*
-UpdateEmailAddress changes how an address signs and handles mail.
+UpdateEmailAddress changes how an address signs and handles mail, and
+which inbox its new conversations land in.
 
 Rules:
   - The caller needs email:manage.
   - Making the address the default leaves the previous one an
     ordinary address; the default itself cannot be turned off.
+  - Moving it to another live inbox leaves its earlier conversations
+    where they are.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
-[exceptions.ErrDefaultAddressRequired], or a wrapped database error.
+[exceptions.ErrInboxNotFound], [exceptions.ErrDefaultAddressRequired],
+or a wrapped database error.
 */
 type UpdateEmailAddress struct {
 	DB    *database.DB
@@ -174,12 +179,46 @@ func (a *UpdateEmailAddress) Handle(
 			return err
 		}
 
+		if err := a.move(ctx, q, current.EmailAddress, in.InboxID); err != nil {
+			return err
+		}
+
 		row, err = findAddress(ctx, q, ws.ID, in.ID)
 
 		return err
 	})
 
 	return row, err
+}
+
+/*
+move sends the address's new conversations to the inbox named, when one
+is.
+*/
+func (a *UpdateEmailAddress) move(
+	ctx context.Context, q *models.Queries, current models.EmailAddress, to *ids.UUID,
+) error {
+	if to == nil {
+		return nil
+	}
+
+	inbox, err := q.FindInbox(ctx, models.FindInboxParams{WorkspaceID: current.WorkspaceID, ID: *to})
+	if errors.Is(err, database.ErrNotFound) || (err == nil && inbox.DeletedAt != nil) {
+		return exceptions.ErrInboxNotFound
+	}
+
+	if err != nil {
+		return fmt.Errorf("find inbox: %w", err)
+	}
+
+	err = q.MoveChannelConnectionToInbox(ctx, models.MoveChannelConnectionToInboxParams{
+		InboxID: inbox.ID, Now: a.Clock.Now(), WorkspaceID: current.WorkspaceID, ID: current.ChannelConnectionID,
+	})
+	if err != nil {
+		return fmt.Errorf("move email channel: %w", err)
+	}
+
+	return nil
 }
 
 /*

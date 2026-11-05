@@ -50,7 +50,7 @@ func newInboxControllers(a *app.App) inboxControllers {
 	return inboxControllers{
 		inboxes: &v1.InboxController{
 			List: acts.ListInboxes, Show: acts.ShowInbox, Create: acts.CreateInbox, Change: acts.UpdateInbox,
-			Remove: acts.DeleteInbox,
+			Remove: acts.DeleteInbox, Access: acts.SetInboxAccess,
 			Status: a.Actions.AssignmentStatus, IDs: a.IDs,
 		},
 		contacts: &v1.ContactController{
@@ -88,6 +88,8 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/inboxes/{inbox}", "inboxes.show", c.inboxes.Get).Ability("conversations:read")
 	routing.Patch(r, "/inboxes/{inbox}", "inboxes.update", c.inboxes.Update).Ability("settings:write")
 	routing.Delete(r, "/inboxes/{inbox}", "inboxes.destroy", c.inboxes.Destroy).Ability("settings:write")
+	routing.Put(r, "/inboxes/{inbox}/access", "inboxes.access.update", c.inboxes.UpdateAccess).
+		Ability("settings:write")
 	routing.Get(r, "/inboxes/{inbox}/assignment-status", "inboxes.assignment-status.show",
 		c.inboxes.AssignmentStatus).Ability("settings:read")
 

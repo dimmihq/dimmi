@@ -44,3 +44,17 @@ type InboxDeleted struct {
 	MovedTo     *ids.UUID
 	Moved       int64
 }
+
+/*
+InboxAccessChanged says the member changed who may open an inbox: Access
+is everyone or restricted, and Teams and Members are the inbox's list.
+*/
+type InboxAccessChanged struct {
+	WorkspaceID ids.UUID
+	InboxID     ids.UUID
+	ActorID     ids.UUID
+	Name        string
+	Access      string
+	Teams       []ids.UUID
+	Members     []ids.UUID
+}

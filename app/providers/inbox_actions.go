@@ -44,15 +44,15 @@ func bootInbox(a *app.App) error {
 
 	delivery := conversations.Delivery{Channels: a.Channels, Queue: a.Queue}
 	a.Actions.Inbox = &app.InboxActions{
-		ListInboxes:   &inboxes.ListInboxes{DB: a.DB},
-		ShowInbox:     &inboxes.ShowInbox{DB: a.DB},
-		CreateInbox:   &inboxes.CreateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		UpdateInbox:   &inboxes.UpdateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		DeleteInbox:   &inboxes.DeleteInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		ListContacts:  &contacts.ListContacts{DB: a.DB},
-		ShowContact:   &contacts.ShowContact{DB: a.DB},
-		CreateContact: &contacts.CreateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		UpdateContact: &contacts.UpdateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		ListInboxes: &inboxes.ListInboxes{DB: a.DB}, ShowInbox: &inboxes.ShowInbox{DB: a.DB},
+		CreateInbox:    &inboxes.CreateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		UpdateInbox:    &inboxes.UpdateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		SetInboxAccess: &inboxes.SetInboxAccess{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		DeleteInbox:    &inboxes.DeleteInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		ListContacts:   &contacts.ListContacts{DB: a.DB},
+		ShowContact:    &contacts.ShowContact{DB: a.DB},
+		CreateContact:  &contacts.CreateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		UpdateContact:  &contacts.UpdateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
 
 		ListConversations: &conversations.ListConversations{DB: a.DB, IDs: a.IDs, Clock: a.Clock},
 		ShowConversation:  &conversations.ShowConversation{DB: a.DB},

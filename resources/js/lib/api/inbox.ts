@@ -200,6 +200,7 @@ export interface InboxPreferences {
 export interface InboxSummary {
   id: string;
   name: string;
+  settings?: { color: string };
 }
 
 /*

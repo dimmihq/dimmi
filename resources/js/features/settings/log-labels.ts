@@ -79,6 +79,7 @@ const groups: { id: string; events: string[] }[] = [
   {
     id: "inbox",
     events: [
+      "inbox.access_changed",
       "redaction_rule.created",
       "redaction_rule.updated",
       "redaction_rule.deleted",

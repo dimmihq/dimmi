@@ -2,22 +2,24 @@
  * The list of an inbox view: one row per conversation with the channel,
  * the customer, who is viewing it, the subject, how long the customer
  * has waited, whether the reader left a draft there, its priority and
- * who holds it, in the view's order. Rows
+ * who holds it, and the inbox when the reader sees several, in the
+ * view's order. Rows
  * follow BoardUI's chat list: the open conversation sits on the tertiary
  * surface, the rest light up on hover. A conversation with something the
  * reader has not seen carries a dot and reads in the stronger weight.
  */
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { avatarColor } from "@/features/shell/avatar-color";
-import type { Conversation } from "@/lib/api/inbox";
+import { type Conversation, inboxesQuery } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
-import { ago, customerName, subjectOf } from "./conversations";
+import { ago, customerName, subjectOf, useInbox } from "./conversations";
 import { PriorityChip } from "./priority/priority-menu";
-import { AssigneeAvatar, ChannelBadge, DraftMark, Viewers, Waiting } from "./row-extras";
+import { AssigneeAvatar, ChannelBadge, DraftMark, InboxLabel, Viewers, Waiting } from "./row-extras";
 
 export function ConversationList({
   view,
@@ -32,6 +34,9 @@ export function ConversationList({
   me?: string;
   drafted?: ReadonlySet<string>;
 }) {
+  const { workspace } = useInbox();
+  const { data: inboxes = [] } = useQuery({ ...inboxesQuery(workspace), enabled: workspace !== "" });
+
   return (
     <ul className="flex flex-col gap-1 px-[7px] pb-[7px]">
       {conversations.map((conversation) => {
@@ -82,6 +87,7 @@ export function ConversationList({
                     </>
                   ) : null}
                 </span>
+                <InboxLabel inbox={conversation.inbox} inboxes={inboxes} />
               </span>
             </Link>
           </li>

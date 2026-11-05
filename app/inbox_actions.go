@@ -35,6 +35,7 @@ type InboxActions struct {
 	ShowInbox      *inboxes.ShowInbox
 	CreateInbox    *inboxes.CreateInbox
 	UpdateInbox    *inboxes.UpdateInbox
+	SetInboxAccess *inboxes.SetInboxAccess
 	DeleteInbox    *inboxes.DeleteInbox
 	ListContacts   *contacts.ListContacts
 	ShowContact    *contacts.ShowContact

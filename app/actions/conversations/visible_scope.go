@@ -64,7 +64,11 @@ func Find(ctx context.Context, q *models.Queries, m authz.Membership, ref Ref) (
 		c, err = q.FindConversation(ctx, models.FindConversationParams{WorkspaceID: m.Workspace.ID, ID: ref.ID})
 	}
 
-	return visible(m, c, err)
+	if err != nil {
+		return c, missing(err)
+	}
+
+	return visible(ctx, q, m, c)
 }
 
 /*
@@ -78,24 +82,43 @@ func Lock(ctx context.Context, q *models.Queries, m authz.Membership, ref Ref) (
 	}
 
 	locked, err := q.LockConversation(ctx, models.LockConversationParams{WorkspaceID: m.Workspace.ID, ID: found.ID})
+	if err != nil {
+		return locked, missing(err)
+	}
 
-	return visible(m, locked, err)
+	return visible(ctx, q, m, locked)
 }
 
 /*
-visible turns a missing, deleted or hidden conversation into
+missing turns a conversation that is not there into
 exceptions.ErrNotFound.
 */
-func visible(m authz.Membership, c models.Conversation, err error) (models.Conversation, error) {
+func missing(err error) error {
 	if errors.Is(err, database.ErrNotFound) {
+		return exceptions.ErrNotFound
+	}
+
+	return fmt.Errorf("find conversation: %w", err)
+}
+
+/*
+visible turns a deleted or hidden conversation into
+exceptions.ErrNotFound. One outside the caller's scope stays readable
+when a note in it mentions them.
+*/
+func visible(
+	ctx context.Context, q *models.Queries, m authz.Membership, c models.Conversation,
+) (models.Conversation, error) {
+	if c.DeletedAt != nil {
 		return c, exceptions.ErrNotFound
 	}
 
+	reads, err := authz.Reads(ctx, q, VisibleScope(m), c)
 	if err != nil {
-		return c, fmt.Errorf("find conversation: %w", err)
+		return c, err
 	}
 
-	if c.DeletedAt != nil || !VisibleScope(m).Contains(c) {
+	if !reads {
 		return c, exceptions.ErrNotFound
 	}
 

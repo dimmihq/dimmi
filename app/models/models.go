@@ -472,6 +472,15 @@ type Inbox struct {
 	DeletedAt     *time.Time      `json:"deleted_at"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
+	Access        string          `json:"access"`
+}
+
+type InboxAccess struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	InboxID     ids.UUID  `json:"inbox_id"`
+	TeamID      *ids.UUID `json:"team_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Invitation struct {

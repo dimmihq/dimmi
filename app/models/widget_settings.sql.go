@@ -276,10 +276,24 @@ const listWidgetTeam = `-- name: ListWidgetTeam :many
 SELECT m.user_id, m.availability, u.name, u.avatar_path
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
-WHERE m.workspace_id = $1 AND m.status = 'active'
+JOIN inboxes i ON i.workspace_id = m.workspace_id AND i.id = $1
+WHERE m.workspace_id = $2 AND m.status = 'active'
+  AND (i.access = 'everyone' OR EXISTS (
+      SELECT 1 FROM inbox_access a
+      WHERE a.workspace_id = i.workspace_id AND a.inbox_id = i.id
+        AND (a.member_id = m.id OR a.team_id IN (
+            SELECT tm.team_id FROM team_members tm
+            WHERE tm.workspace_id = m.workspace_id AND tm.workspace_member_id = m.id
+        ))
+  ))
 ORDER BY m.updated_at DESC, m.id
 LIMIT 200
 `
+
+type ListWidgetTeamParams struct {
+	InboxID     ids.UUID `json:"inbox_id"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+}
 
 type ListWidgetTeamRow struct {
 	UserID       ids.UUID `json:"user_id"`
@@ -288,10 +302,12 @@ type ListWidgetTeamRow struct {
 	AvatarPath   *string  `json:"avatar_path"`
 }
 
-// ListWidgetTeam returns the workspace's active members as a visitor may see
-// them, those who changed something latest first.
-func (q *Queries) ListWidgetTeam(ctx context.Context, workspaceID ids.UUID) ([]ListWidgetTeamRow, error) {
-	rows, err := q.db.Query(ctx, listWidgetTeam, workspaceID)
+// ListWidgetTeam returns the active members who answer the inbox as a
+// visitor may see them, those who changed something latest first. An
+// inbox open to everyone is answered by everyone; a restricted one by
+// the teammates and teams on its list.
+func (q *Queries) ListWidgetTeam(ctx context.Context, arg ListWidgetTeamParams) ([]ListWidgetTeamRow, error) {
+	rows, err := q.db.Query(ctx, listWidgetTeam, arg.InboxID, arg.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}

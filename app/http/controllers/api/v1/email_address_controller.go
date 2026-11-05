@@ -174,6 +174,15 @@ func (c *EmailAddressController) Update(
 
 	update.IsDefault = b.IsDefault
 
+	if b.InboxID != nil {
+		inbox, err := c.IDs.Decode(string(models.PrefixInbox), *b.InboxID)
+		if err != nil {
+			return nil, exceptions.ErrInboxNotFound
+		}
+
+		update.InboxID = &inbox
+	}
+
 	row, err := c.Change.Handle(ctx, update)
 	if err != nil {
 		return nil, err

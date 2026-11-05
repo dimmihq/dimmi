@@ -60,12 +60,23 @@ UPDATE widget_settings SET last_boot_at = @seen_at::timestamptz, last_boot_origi
 WHERE workspace_id = @workspace_id AND id = @id AND (last_boot_at IS NULL OR last_boot_at < @seen_at::timestamptz);
 
 -- name: ListWidgetTeam :many
--- ListWidgetTeam returns the workspace's active members as a visitor may see
--- them, those who changed something latest first.
+-- ListWidgetTeam returns the active members who answer the inbox as a
+-- visitor may see them, those who changed something latest first. An
+-- inbox open to everyone is answered by everyone; a restricted one by
+-- the teammates and teams on its list.
 SELECT m.user_id, m.availability, u.name, u.avatar_path
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
+JOIN inboxes i ON i.workspace_id = m.workspace_id AND i.id = @inbox_id
 WHERE m.workspace_id = @workspace_id AND m.status = 'active'
+  AND (i.access = 'everyone' OR EXISTS (
+      SELECT 1 FROM inbox_access a
+      WHERE a.workspace_id = i.workspace_id AND a.inbox_id = i.id
+        AND (a.member_id = m.id OR a.team_id IN (
+            SELECT tm.team_id FROM team_members tm
+            WHERE tm.workspace_id = m.workspace_id AND tm.workspace_member_id = m.id
+        ))
+  ))
 ORDER BY m.updated_at DESC, m.id
 LIMIT 200;
 

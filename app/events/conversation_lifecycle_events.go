@@ -33,13 +33,16 @@ func (ConversationCreated) EventName() string { return "conversation.created" }
 
 /*
 ConversationUpdated is dispatched when the subject or inbox changes.
-Changes maps each changed field to its old and new value.
+Changes maps each changed field to its old and new value. FromInboxID
+is the inbox it left, when it moved, for those who could see it only
+there.
 */
 type ConversationUpdated struct {
 	Base
 	ConversationRef
 
-	Changes map[string][2]any
+	Changes     map[string][2]any
+	FromInboxID *ids.UUID `json:"-"`
 }
 
 /*

@@ -1,8 +1,9 @@
 /*
  * What a list row shows beside the customer and subject: a badge on the
  * avatar for the channel the conversation came through, who holds it, how long the customer has
- * waited for an answer, and which teammates have it open right now, up
- * to three faces and then a count. The reader never sees themselves.
+ * waited for an answer, which teammates have it open right now, up
+ * to three faces and then a count, and, for a reader who sees more than
+ * one inbox, the inbox it sits in. The reader never sees themselves.
  */
 import {
   RiChat3Line,
@@ -19,7 +20,7 @@ import { Focusable } from "react-aria-components";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { avatarColor } from "@/features/shell/avatar-color";
-import type { Conversation, Viewer } from "@/lib/api/inbox";
+import type { Conversation, InboxSummary, Viewer } from "@/lib/api/inbox";
 
 import { waitedFor } from "./conversations";
 
@@ -126,6 +127,30 @@ export function Viewers({ viewers, me }: { viewers: Viewer[] | undefined; me: st
       {others.length > 3 ? (
         <span className="ps-1.5 text-caption-1-medium text-text-tertiary">+{others.length - 3}</span>
       ) : null}
+    </span>
+  );
+}
+
+/*
+ * InboxLabel names the inbox a conversation sits in, with the inbox's
+ * own colour, once the reader sees more than one inbox, so a mixed list
+ * still says where each conversation came in.
+ */
+export function InboxLabel({ inbox, inboxes }: { inbox: Conversation["inbox"]; inboxes: InboxSummary[] }) {
+  if (inboxes.length < 2) {
+    return null;
+  }
+
+  const color = inboxes.find((i) => i.id === inbox.id)?.settings?.color || undefined;
+
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 text-caption-1-medium text-text-tertiary">
+      <span
+        aria-hidden
+        className="size-2 shrink-0 rounded-full bg-foreground-icon-quaternary"
+        style={color ? { backgroundColor: color } : undefined}
+      />
+      <span className="truncate">{inbox.name}</span>
     </span>
   );
 }

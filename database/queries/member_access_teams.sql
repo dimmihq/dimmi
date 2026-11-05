@@ -13,11 +13,17 @@ WHERE workspace_id = @workspace_id AND member_id = ANY (@member_ids::uuid[])
 ORDER BY member_id, team_id;
 
 -- name: ListRestrictedMembers :many
--- ListRestrictedMembers returns the workspace's active members who do not
--- see every conversation, usually none.
-SELECT * FROM workspace_members
-WHERE workspace_id = @workspace_id AND status = 'active' AND conversation_access <> 'all'
-ORDER BY id;
+-- ListRestrictedMembers returns the workspace's active members who may
+-- not see every conversation, usually none: those whose access is narrow
+-- and, while an inbox is restricted, everyone, since custom roles decide
+-- who opens every inbox.
+SELECT * FROM workspace_members AS m
+WHERE m.workspace_id = @workspace_id AND m.status = 'active'
+  AND (m.conversation_access <> 'all' OR (EXISTS (
+      SELECT 1 FROM inboxes AS i
+      WHERE i.workspace_id = m.workspace_id AND i.access = 'restricted' AND i.deleted_at IS NULL
+  )))
+ORDER BY m.id;
 
 -- name: ClearMemberAccessTeams :exec
 -- ClearMemberAccessTeams empties the list of teams of the member's
