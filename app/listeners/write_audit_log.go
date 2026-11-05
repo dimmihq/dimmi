@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -182,11 +183,19 @@ func (l *WriteAuditLog) memberReactivated(ctx context.Context, e appevents.Membe
 }
 
 /*
-member records the entry about the member, labeled with their name.
+member records the entry about the member, labeled with their name,
+read inside the member's workspace.
 */
 func (l *WriteAuditLog) member(ctx context.Context, workspaceID, memberID ids.UUID, entry audit.Entry) error {
-	subject, err := models.New(l.DB).FindAuditActor(ctx, models.FindAuditActorParams{
-		WorkspaceID: workspaceID, ID: memberID,
+	var subject models.FindAuditActorRow
+
+	err := l.DB.Transaction(tenancy.With(ctx, workspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		subject, err = models.New(tx).FindAuditActor(ctx, models.FindAuditActorParams{
+			WorkspaceID: workspaceID, ID: memberID,
+		})
+
+		return err
 	})
 	if err != nil {
 		return fmt.Errorf("find audited member: %w", err)

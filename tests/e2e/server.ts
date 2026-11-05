@@ -9,7 +9,9 @@
  * Google sign-in points at a local provider started here on a free port,
  * which the binary is allowed to reach and nothing else is. It serves
  * the pseudo locale en-XA beside English, so the language tests can
- * switch to a language whose every word looks different.
+ * switch to a language whose every word looks different. It runs in the
+ * local environment: production would refuse its local disk and plain
+ * http address, and testing would swap real services for fakes.
  *
  * Generate the pseudo locale and build the binary first, with
  * `make pseudo-locale build`; `make e2e` does both.
@@ -61,6 +63,7 @@ const provider = await startIdentityProvider();
 const env = {
   PATH: process.env.PATH ?? "",
   HOME: process.env.HOME ?? "",
+  DIMMI_APP__ENV: "local",
   DIMMI_APP__URL: `http://localhost:${port}`,
   DIMMI_APP__KEY_AUTO_GENERATE: "true",
   DIMMI_APP__DATA_DIR: join(home, "storage"),

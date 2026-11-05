@@ -24,7 +24,6 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
-	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -64,7 +63,7 @@ func (a *ClearSignInLock) Handle(ctx context.Context, in ClearSignInLockInput) e
 		return exceptions.ErrForbidden
 	}
 
-	target, err := findWithUser(ctx, models.New(a.DB), in.Membership.Workspace.ID, in.MemberID)
+	target, err := findWithUserIn(ctx, a.DB, in.Membership.Workspace.ID, in.MemberID)
 	if err != nil {
 		return err
 	}

@@ -124,7 +124,7 @@ func TestAPIRateLimits(t *testing.T) {
 			Workspace: tc.Workspace.Workspace, User: user, Role: enums.RoleAdmin,
 		})
 		require.NoError(t, err)
-		_, err = tc.App.DB.Exec(t.Context(),
+		_, err = tc.Operator().Exec(t.Context(),
 			`UPDATE workspaces SET settings = jsonb_set(settings, '{security}', '{"require_two_factor": true}')
 			 WHERE id = $1`, tc.Workspace.Workspace.ID)
 		require.NoError(t, err)

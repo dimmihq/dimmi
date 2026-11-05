@@ -21,6 +21,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -172,4 +173,24 @@ func findWithUser(
 	}
 
 	return row, nil
+}
+
+/*
+findWithUserIn returns the member with their account, read inside the
+workspace's transaction, for callers that hold none.
+*/
+func findWithUserIn(
+	ctx context.Context, db *database.DB, workspaceID, id ids.UUID,
+) (models.FindWorkspaceMemberWithUserRow, error) {
+	var row models.FindWorkspaceMemberWithUserRow
+
+	err := db.Transaction(tenancy.With(ctx, workspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
+		var err error
+
+		row, err = findWithUser(ctx, models.New(tx), workspaceID, id)
+
+		return err
+	})
+
+	return row, err
 }
