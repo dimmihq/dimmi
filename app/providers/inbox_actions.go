@@ -64,15 +64,7 @@ func bootInbox(a *app.App) error {
 		UpdateReadState:    &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
 
-		ListMessages:     &messages.ListMessages{DB: a.DB},
-		ShowOriginal:     &messages.ShowOriginal{DB: a.DB},
-		DownloadOriginal: &messages.DownloadOriginal{DB: a.DB, Storage: a.Storage},
-		Reply: &messages.ReplyToConversation{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
-		},
-		RetryDelivery: &messages.RetryDelivery{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
-		},
+		ListMessages:      &messages.ListMessages{DB: a.DB},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		DeleteMessage:     &messages.DeleteMessage{DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue},
@@ -80,6 +72,7 @@ func bootInbox(a *app.App) error {
 	}
 
 	bootWorkbench(a)
+	bootDelivery(a, delivery)
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
@@ -90,6 +83,18 @@ func bootInbox(a *app.App) error {
 			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.Inbox.Drafts.RetentionDays,
 		}),
 	)
+}
+
+/*
+bootDelivery builds the actions around a message's delivery: replying,
+reading a received email whole and sending a failed reply again.
+*/
+func bootDelivery(a *app.App, delivery conversations.Delivery) {
+	acts := a.Actions.Inbox
+	acts.Reply = &messages.ReplyToConversation{DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery}
+	acts.ShowOriginal = &messages.ShowOriginal{DB: a.DB}
+	acts.DownloadOriginal = &messages.DownloadOriginal{DB: a.DB, Storage: a.Storage}
+	acts.RetryDelivery = &messages.RetryDelivery{DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery}
 }
 
 /*
