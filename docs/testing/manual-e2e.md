@@ -662,6 +662,21 @@ for: an ownership TXT record and a signing key TXT record. Checks read real DNS 
 | Off and gone | `PATCH $ES/$SIG` `{"enabled":false}`, then `DELETE $ES/$SIG` | 200 `enabled: false`, then 204; the next reply carries the team's |
 | In a browser | open `$W/d/settings/profile`, then `$W/d/settings/email` | "Email signature" with a live preview; "Team signatures" with one editor per address, absent for a member |
 
+### Reply style and default address
+
+`EA=$B/email-addresses/$EMA`; `$EMB` is a second address id.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Preview | `r tpl -b a.jar -X POST -H "$O" -H "$J" $EA/template-renderings -d '{"template":"branded","brand_color":"#ff5500","footer_markdown":"**Acme**"}'` | 201 `email_template_rendering`; `html` has a table, `border-top:2px solid #ff5500`, `<strong>Acme</strong>`, no `<img` |
+| Bad color | the same with `{"brand_color":"red"}` | 422 |
+| Member | the preview as a member | 403 |
+| Branded | `PATCH $EA` `{"settings":{"template":"branded","brand_color":"#FF5500","footer_markdown":"**Acme**"}}`, reply in the inbox, open it in Mailpit | 200, `brand_color: "#ff5500"`; the mail has the colored rule and footer, its text ends with the footer |
+| Plain again | `PATCH $EA` `{"settings":{"template":"plain"}}`, reply | the plain look, no table |
+| Default | `PATCH $B/email-addresses/$EMB` `{"is_default":true}`, then `GET $EA` | 200 `is_default: true`; `$EMA` no longer the default and listed second |
+| Default off | `PATCH $B/email-addresses/$EMB` `{"is_default":false}` | 422 `default_address_required` |
+| In a browser | open `$W/d/settings/email` as the owner | each card has "Reply style" with a preview; "Make default" on all but the default, which shows a "Default" chip |
+
 ## Realtime connections end with their credential
 
 Open a socket with a browser's cookie (`a.jar`) and one with a token, using the SDK or `websocat`, and follow a conversation on each.

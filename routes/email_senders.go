@@ -3,8 +3,8 @@
 | Email Sender Routes
 |--------------------------------------------------------------------------
 |
-| How the workspace's mail leaves: its sending domains and the signatures
-| replies close with. Reading domains takes email:read, changing them
+| How the workspace's mail leaves: its sending domains, the signatures
+| replies close with, and previews of the style replies are framed in. Reading domains takes email:read, changing them
 | email:manage, and a new signing key email:rotate_dkim; signatures take
 | email_signatures:manage_own or manage_any. Each action checks its own
 | permission, the routes the token abilities. Checks are queued and
@@ -28,6 +28,11 @@ emailSenderRoutes declares the workspace's sending domains.
 */
 func emailSenderRoutes(workspace *routing.Router, a *app.App) {
 	emailSignatureRoutes(workspace, a)
+
+	t := &v1.EmailTemplateController{Render: &email.RenderEmailTemplate{DB: a.DB}, IDs: a.IDs}
+	routing.Post(workspace, "/email-addresses/{address}/template-renderings",
+		"email-addresses.template-renderings.store", t.StoreRendering).
+		Ability("settings:read").Status(fhttp.StatusCreated)
 
 	c := emailDomainController(a)
 

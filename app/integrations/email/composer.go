@@ -44,8 +44,9 @@ MessageID, InReplyTo and References are given without angle brackets.
 Automated marks mail no person wrote, such as an agent's reply.
 LoopStamp and TestStamp are the stamps to carry, when set. Quote is the
 previous message to show below the reply, when set, and Signature
-closes the reply above it when it has any text. Signing is the key
-a relay signs the reply with, for a domain we sign for.
+closes the reply above it when it has any text. Style frames the
+reply, plain when zero. Signing is the key a relay signs the reply
+with, for a domain we sign for.
 */
 type Draft struct {
 	From, ReplyTo mail.Address
@@ -60,6 +61,7 @@ type Draft struct {
 	TestStamp     string
 	Quote         *Quote
 	Signature     Signature
+	Style         Style
 	Attachments   []mail.Attachment
 	Signing       *mail.SigningKey
 }
@@ -114,9 +116,13 @@ func Compose(d Draft) mail.Message {
 		body += quoteHTML(*d.Quote)
 	}
 
+	if d.Style.FooterText != "" {
+		text += "\n\n" + d.Style.FooterText
+	}
+
 	return mail.Message{
 		From: d.From, ReplyTo: d.ReplyTo, To: d.To, Cc: d.Cc, Subject: d.Subject, Headers: headers,
-		Text: text, HTML: wrapHTML(body), Attachments: d.Attachments, Signing: d.Signing,
+		Text: text, HTML: frame(body, d.Style), Attachments: d.Attachments, Signing: d.Signing,
 	}
 }
 

@@ -103,11 +103,7 @@ func (a *SendEmailMessage) compose(
 		}
 	}
 
-	if out.draft.Signature, err = a.signature(ctx, q, out); err != nil {
-		return err
-	}
-
-	return a.quote(ctx, q, out)
+	return a.dress(ctx, q, out)
 }
 
 /*

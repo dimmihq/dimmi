@@ -169,7 +169,10 @@ func (c *EmailAddressController) Update(
 	if b.Settings != nil {
 		update.QuotePrevious = b.Settings.QuotePrevious
 		update.BulkMailHandling = (*enums.BulkMailHandling)(b.Settings.BulkMailHandling)
+		update.Style = replyStyle(b.Settings.ReplyStyle)
 	}
+
+	update.IsDefault = b.IsDefault
 
 	row, err := c.Change.Handle(ctx, update)
 	if err != nil {
