@@ -291,6 +291,7 @@ function browserOf(win: Window) {
     uuid: () => win.crypto.randomUUID(),
     setTimeout: (fn: () => void, ms: number) => win.setTimeout(fn, ms),
     clearTimeout: (handle: unknown) => win.clearTimeout(handle as number),
+    setInterval: (fn: () => void, ms: number) => win.setInterval(fn, ms),
     page: () => ({ url: win.location.href, title: win.document.title, referrer: win.document.referrer }),
   };
 }

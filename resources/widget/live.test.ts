@@ -214,4 +214,30 @@ describe("a connected messenger", () => {
     expect(calls.filter((c) => c === "POST /conversations")).toHaveLength(2);
     expect(root.querySelector("form[data-capture]")).toBeNull();
   });
+
+  it("tells the server when a single-page app moves to another route", async () => {
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    const pings: unknown[] = [];
+    serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [] } }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
+      "POST /pings": (body) => {
+        pings.push(body);
+        return { status: 202 };
+      },
+    });
+
+    boot(win, document);
+    await settle();
+    await settle();
+    history.pushState({}, "", "/pricing?plan=pro");
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+
+    expect(pings).toHaveLength(1);
+    expect(JSON.stringify(pings[0])).toContain("/pricing?plan=pro");
+  });
 });

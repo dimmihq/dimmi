@@ -44,7 +44,14 @@ export interface Browser {
   setTimeout: (fn: () => void, ms: number) => unknown;
   clearTimeout: (handle: unknown) => void;
   page: () => { url: string; title?: string; referrer?: string };
+  setInterval: (fn: () => void, ms: number) => unknown;
 }
+
+/*
+ * routeCheck is how often the page's address is compared with the last
+ * one, to notice a single-page app moving to another route.
+ */
+const routeCheck = 1000;
 
 /*
  * draftId names the conversation a visitor writes before the server gave
@@ -136,8 +143,27 @@ export class Live {
     if (this.outbox.pending.length > 0) {
       void this.outbox.flush();
     }
+    this.watchRoutes();
 
     return true;
+  }
+
+  /*
+   * watchRoutes tells the server where the visitor is once a page that
+   * never reloads, such as a single-page app, moves to another address.
+   */
+  private watchRoutes() {
+    let last = this.browser.page().url;
+    this.browser.setInterval(() => {
+      const page = this.browser.page();
+      if (page.url === last) {
+        return;
+      }
+      last = page.url;
+      if (this.session.current) {
+        void this.http.post("/pings", { page }).catch(() => undefined);
+      }
+    }, routeCheck);
   }
 
   /*
