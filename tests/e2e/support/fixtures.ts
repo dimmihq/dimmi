@@ -107,7 +107,7 @@ export async function createAccount(request: APIRequestContext, person: Person, 
  * up and skips every other setup step, which lands them in the inbox.
  */
 export async function finishOnboarding(page: Page, workspace: string) {
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page).toHaveURL(/\/onboarding(\?new=true)?$/);
   await page.getByLabel("Workspace name").fill(workspace);
   await page.getByRole("button", { name: "Save and continue" }).click();
   for (const skip of [

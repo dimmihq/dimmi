@@ -5,6 +5,7 @@
  */
 import { RiBuildingLine } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 
 import { Input } from "@/components/base/input/input";
@@ -21,10 +22,19 @@ export interface WorkspaceStepProps {
   label: string;
   onSaved: (workspace: string) => void;
   onNamed: (name: string) => void;
+  canLeave?: boolean;
 }
 
-export function WorkspaceStep({ workspace, name: initial, label, onSaved, onNamed }: WorkspaceStepProps) {
+export function WorkspaceStep({
+  workspace,
+  name: initial,
+  label,
+  onSaved,
+  onNamed,
+  canLeave = false,
+}: WorkspaceStepProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [name, setName] = useState(initial);
   const save = useMutation({
     mutationFn: async () => (workspace ? updateWorkspace(workspace, { name }) : createWorkspace(name)),
@@ -67,7 +77,13 @@ export function WorkspaceStep({ workspace, name: initial, label, onSaved, onName
         isInvalid={Boolean(nameError)}
         errorMessage={nameError}
       />
-      <StepActions primary={() => save.mutate()} isPending={save.isPending} isDisabled={name.trim() === ""} />
+      <StepActions
+        primary={() => save.mutate()}
+        isPending={save.isPending}
+        isDisabled={name.trim() === ""}
+        skipLabel={canLeave ? "Cancel" : undefined}
+        onSkip={canLeave ? () => void navigate({ to: "/d" }) : undefined}
+      />
     </form>
   );
 }

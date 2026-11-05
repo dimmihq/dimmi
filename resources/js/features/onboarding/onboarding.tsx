@@ -25,6 +25,11 @@ export interface OnboardingProps {
   me: Me;
   workspace: Workspace | null;
   canSetUp: boolean;
+  /*
+   * canLeave offers a way back to the app before a new workspace exists,
+   * for someone who started one from the workspace menu.
+   */
+  canLeave?: boolean;
 }
 
 function SettingUp({ name }: { name: string }) {
@@ -39,7 +44,7 @@ function SettingUp({ name }: { name: string }) {
   );
 }
 
-export function Onboarding({ me, workspace: initial, canSetUp }: OnboardingProps) {
+export function Onboarding({ me, workspace: initial, canSetUp, canLeave = false }: OnboardingProps) {
   const [workspace, setWorkspace] = useState<string | null>(initial?.id ?? null);
   const [name, setName] = useState(initial?.name ?? "");
   const [step, setStep] = useState<Step>(stepFrom(initial?.onboarding.step));
@@ -72,6 +77,7 @@ export function Onboarding({ me, workspace: initial, canSetUp }: OnboardingProps
             go(nextStep("workspace"), id);
           }}
           onNamed={setName}
+          canLeave={canLeave && workspace === null}
         />
       ) : (
         <CurrentStep
