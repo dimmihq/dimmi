@@ -186,7 +186,7 @@ checkAppearance refuses unknown keys and values out of range.
 */
 func checkAppearance(a map[string]any) *fault.Error {
 	checks := map[string]func(any) string{
-		"primary_color": requiredColor, "header_color": optionalColor, "button_color": optionalColor,
+		"primary_color": requiredColor, "header_color": requiredColor, "button_color": requiredColor,
 		"theme": oneOf("light", "dark", "auto"), "position": oneOf("right", "left"),
 		"padding_x": between(0, maxPadding), "padding_y": between(0, maxPadding), "font": oneOf("system", "inherit"),
 		"sound": isBool, "logo_asset_id": isAssetID,
@@ -292,7 +292,8 @@ func gradientCheck(value any) string {
 }
 
 /*
-requiredColor checks a color that must be set.
+requiredColor checks a color written #RRGGBB. Null never reaches it, since
+a null removes the key before any check runs.
 */
 func requiredColor(value any) string {
 	text, ok := value.(string)
@@ -301,17 +302,6 @@ func requiredColor(value any) string {
 	}
 
 	return ""
-}
-
-/*
-optionalColor checks a color that may be null where it follows another.
-*/
-func optionalColor(value any) string {
-	if value == nil {
-		return ""
-	}
-
-	return requiredColor(value)
 }
 
 /*
@@ -368,13 +358,10 @@ func isBool(value any) string {
 }
 
 /*
-isAssetID checks an uploaded asset's id, which may be null to remove it.
+isAssetID checks an uploaded asset's id. Null never reaches it, since a
+null removes the key before any check runs.
 */
 func isAssetID(value any) string {
-	if value == nil {
-		return ""
-	}
-
 	if _, ok := value.(string); !ok {
 		return "Use an uploaded image's id."
 	}
