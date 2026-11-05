@@ -18,7 +18,10 @@ it.describe("reply style and default address", () => {
     await signIn(page, person);
     await page.goto("/d/settings/email");
 
-    const card = page.getByRole("region").filter({ has: page.getByTestId("forwarding-address") }).first();
+    const card = page
+      .getByRole("region")
+      .filter({ has: page.getByTestId("forwarding-address") })
+      .first();
     const preview = card.getByTitle(/^Reply preview for /);
     await expect(preview).toHaveAttribute("srcdoc", /Thanks for getting in touch/);
     await expect(preview).not.toHaveAttribute("srcdoc", /<table/);
