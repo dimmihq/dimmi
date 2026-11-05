@@ -158,3 +158,14 @@ export function useViewName(workspace: string, view: string): string | undefined
     inboxes?.find((i) => i.id === view)?.name
   );
 }
+
+/*
+ * useViewTitle returns what a view is called: a fixed view's label, or
+ * the name of the team, teammate, inbox or saved view it shows.
+ */
+export function useViewTitle(workspace: string, view: string): string {
+  const fixed = inboxViews[view as keyof typeof inboxViews] as Page | undefined;
+  const name = useViewName(workspace, view);
+
+  return fixed?.label ?? name ?? "Conversations";
+}

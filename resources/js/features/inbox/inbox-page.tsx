@@ -30,7 +30,7 @@ import { rememberView } from "./views/last-view";
 import { ListControls } from "./views/list-controls";
 import { useViewPreferences } from "./views/use-view-preferences";
 import { ViewActions } from "./views/view-actions";
-import { openCount, useViewName } from "./views/view-groups";
+import { openCount, useViewTitle } from "./views/view-groups";
 import { ViewPicker } from "./views/view-picker";
 import { listStatus, type StatusChoice, sortsFor, viewParams } from "./views/view-route";
 
@@ -118,8 +118,7 @@ function useListSettings(workspace: string, view: string) {
 function ListPanel({ view, openId }: { view: string; openId: string | undefined }) {
   const fixed = inboxViews[view as keyof typeof inboxViews] as Page | undefined;
   const { workspace } = useInbox();
-  const name = useViewName(workspace, view);
-  const title = fixed?.label ?? name ?? "Conversations";
+  const title = useViewTitle(workspace, view);
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search);
   const settings = useListSettings(workspace, view);

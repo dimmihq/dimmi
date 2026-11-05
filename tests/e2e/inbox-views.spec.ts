@@ -51,7 +51,6 @@ it.describe("inbox views", () => {
       "Billing",
     );
 
-    await page.getByRole("link", { name: "Back to the list" }).click();
     await pickView(page, /Billing/);
     await expect(page).toHaveURL(new RegExp(`/d/inbox/${team}`));
     await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();

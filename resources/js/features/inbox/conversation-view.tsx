@@ -53,6 +53,8 @@ import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
 import { useWalk } from "./use-walk";
+import { useViewTitle } from "./views/view-groups";
+import { ViewPicker } from "./views/view-picker";
 
 const visible = { overflow: "visible" } as const;
 
@@ -149,6 +151,8 @@ export function ConversationView({
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);
+  const listHidden = !useWide(1536);
+  const viewTitle = useViewTitle(workspace, view);
   const operatorDefault = useWide(1280);
   const sides = useSidePanes(
     pane.thread,
@@ -178,7 +182,17 @@ export function ConversationView({
           >
             <RiArrowLeftSLine aria-hidden className="size-5" />
           </Link>
-          <h1 className="min-w-0 truncate ps-1.5 text-body-medium text-text-primary">{subjectOf(conversation)}</h1>
+          {listHidden ? (
+            <>
+              <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
+              <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary">
+                /
+              </span>
+            </>
+          ) : null}
+          <h1 className={cx("min-w-0 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
+            {subjectOf(conversation)}
+          </h1>
           <Chip variant="caption" color="neutral">
             #{conversation.number} · {statusLabel[conversation.status]}
           </Chip>

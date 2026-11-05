@@ -4,7 +4,8 @@
  * sidebar stays short. It sits inside the list's heading, so the heading
  * reads as the view and how many wait in it. Typing narrows the views by
  * name, V opens it from the keyboard, and a new saved view starts from
- * the view on screen.
+ * the view on screen. While a conversation fills the screen, a smaller
+ * crumb version sits in its header, so views switch without going back.
  */
 import { RiAddLine, RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
 import { useNavigate } from "@tanstack/react-router";
@@ -44,11 +45,13 @@ export function ViewPicker({
   view,
   title,
   count,
+  crumb = false,
 }: {
   workspace: string;
   view: string;
   title: string;
-  count: number | undefined;
+  count?: number;
+  crumb?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -70,10 +73,19 @@ export function ViewPicker({
         data-view-picker
         className="flex h-8 min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 transition-colors duration-150 hover:bg-background-secondary-hover aria-expanded:bg-background-secondary-hover"
       >
-        <span className="min-w-0 truncate text-body-medium text-text-primary">{title}</span>
-        <span className="shrink-0 text-body-2-regular text-text-tertiary">
-          {count === undefined ? "Open" : `${count} open`}
+        <span
+          className={cx(
+            "min-w-0 truncate",
+            crumb ? "text-body-2-medium text-text-secondary" : "text-body-medium text-text-primary",
+          )}
+        >
+          {title}
         </span>
+        {crumb ? null : (
+          <span className="shrink-0 text-body-2-regular text-text-tertiary">
+            {count === undefined ? "Open" : `${count} open`}
+          </span>
+        )}
         <RiArrowDownSLine
           aria-hidden
           className={cx(
