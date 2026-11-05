@@ -13,6 +13,24 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const addUserRiskFlags = `-- name: AddUserRiskFlags :exec
+UPDATE users
+SET risk_flags = ARRAY(SELECT DISTINCT unnest(risk_flags || $1::text[]) ORDER BY 1), updated_at = $2
+WHERE id = $3
+`
+
+type AddUserRiskFlagsParams struct {
+	Flags []string  `json:"flags"`
+	Now   time.Time `json:"now"`
+	ID    ids.UUID  `json:"id"`
+}
+
+// AddUserRiskFlags marks the account with the flags, keeping each once.
+func (q *Queries) AddUserRiskFlags(ctx context.Context, arg AddUserRiskFlagsParams) error {
+	_, err := q.db.Exec(ctx, addUserRiskFlags, arg.Flags, arg.Now, arg.ID)
+	return err
+}
+
 const anonymizeUser = `-- name: AnonymizeUser :exec
 UPDATE users
 SET name = $1, email = $2, password_hash = NULL, two_factor_confirmed_at = NULL, avatar_path = NULL,

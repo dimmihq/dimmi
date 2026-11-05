@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/hashing"
@@ -101,6 +102,8 @@ type RegisterUser struct {
 	Preview          *invitations.PreviewInvitation
 	Accept           *invitations.AcceptInvitation
 	Captcha          appauth.Captcha
+	Risk             *appauth.SignupRisk
+	Clock            clock.Clock
 }
 
 /*
@@ -116,6 +119,11 @@ func (a *RegisterUser) Handle(ctx context.Context, in RegisterUserInput) (Signed
 		return SignedIn{}, err
 	}
 
+	marks, err := a.marks(ctx, in, invited)
+	if err != nil {
+		return SignedIn{}, err
+	}
+
 	hash, err := a.Hash.Make(ctx, in.Password)
 	if errors.Is(err, hashing.ErrBusy) {
 		return SignedIn{}, exceptions.ErrAuthBusy
@@ -125,7 +133,7 @@ func (a *RegisterUser) Handle(ctx context.Context, in RegisterUserInput) (Signed
 		return SignedIn{}, fmt.Errorf("hash password: %w", err)
 	}
 
-	user, workspaceID, err := a.create(ctx, in, hash, invited)
+	user, workspaceID, err := a.create(ctx, signup{in: in, hash: hash, invited: invited, marks: marks})
 	if err != nil {
 		return SignedIn{}, err
 	}
@@ -202,9 +210,9 @@ invited to or creates its first workspace, in one transaction. It
 returns the workspace id, or ids.Nil() for none. An invited account's
 transaction works in the invitation's workspace.
 */
-func (a *RegisterUser) create(
-	ctx context.Context, in RegisterUserInput, hash string, invited *invitations.Preview,
-) (models.User, ids.UUID, error) {
+func (a *RegisterUser) create(ctx context.Context, s signup) (models.User, ids.UUID, error) {
+	in, hash, invited := s.in, s.hash, s.invited
+
 	var (
 		user        models.User
 		workspaceID = ids.Nil()
@@ -225,6 +233,10 @@ func (a *RegisterUser) create(
 			return err
 		}
 
+		if err := a.mark(ctx, tx, user, s.marks); err != nil {
+			return err
+		}
+
 		workspaceID, err = a.join(ctx, in, user)
 		if err != nil {
 			return err
@@ -234,6 +246,49 @@ func (a *RegisterUser) create(
 	})
 
 	return user, workspaceID, err
+}
+
+/*
+signup is a checked signup: the request, the password's hash, the
+invitation it answers, nil for none, and the marks it earned.
+*/
+type signup struct {
+	in      RegisterUserInput
+	hash    string
+	invited *invitations.Preview
+	marks   []string
+}
+
+/*
+marks judges the signup's risk. An invited person is never judged: the
+member who invited them vouched for the address.
+*/
+func (a *RegisterUser) marks(
+	ctx context.Context, in RegisterUserInput, invited *invitations.Preview,
+) ([]string, error) {
+	if invited != nil {
+		return nil, nil
+	}
+
+	return a.Risk.Assess(ctx, in.Email, in.Client.IP)
+}
+
+/*
+mark records the marks the signup earned on the new account.
+*/
+func (a *RegisterUser) mark(ctx context.Context, tx *database.Tx, user models.User, marks []string) error {
+	if len(marks) == 0 {
+		return nil
+	}
+
+	err := models.New(tx).AddUserRiskFlags(ctx, models.AddUserRiskFlagsParams{
+		ID: user.ID, Flags: marks, Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("mark signup: %w", err)
+	}
+
+	return nil
 }
 
 /*

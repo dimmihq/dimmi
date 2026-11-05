@@ -48,6 +48,7 @@ ErrTooManySignups caps the accounts one address creates per hour.
 ErrSetupCompleted means the install already has its first user.
 ErrCaptchaFailed refuses a wrong or missing captcha answer, and
 ErrCaptchaUnavailable a step the captcha provider could not check.
+ErrDisposableEmail refuses an address at a throwaway mailbox.
 ErrPasswordTooShort refuses a password set by the operator that is
 shorter than the install allows.
 */
@@ -62,6 +63,8 @@ var (
 		"Prove you are not a robot, then try again.").OnField("captcha_token")
 	ErrCaptchaUnavailable = fault.New(fault.Unavailable, "captcha_unavailable",
 		"We cannot check you are not a robot right now. Try again in a minute.")
+	ErrDisposableEmail = fault.New(fault.Invalid, "disposable_email",
+		"Use an address you keep; throwaway mailboxes cannot sign up.").OnField("email")
 	ErrPasswordTooShort = fault.New(fault.Invalid, "password_too_short",
 		"The password is shorter than this server allows.").OnField("password")
 )

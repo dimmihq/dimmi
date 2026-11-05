@@ -19,5 +19,5 @@ import (
 )
 
 func devCommands(a *app.App) []foundation.Command {
-	return []foundation.Command{EmailLoadCommand{App: a}}
+	return []foundation.Command{EmailLoadCommand{App: a}, DisposableDomainsCommand{App: a}}
 }

@@ -12,7 +12,10 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 /*
 The signup modes. In open mode anyone may create an account; in
@@ -25,7 +28,18 @@ const (
 )
 
 /*
-AuthConfig groups the authentication settings.
+The ways to treat a signup from a throwaway mailbox: let it through,
+let it through marked, or refuse it.
+*/
+const (
+	DisposableOff   = "off"
+	DisposableFlag  = "flag"
+	DisposableBlock = "block"
+)
+
+/*
+AuthConfig groups the authentication settings. DisposableEmail is off,
+flag or block: how a signup from a throwaway mailbox is treated.
 */
 type AuthConfig struct {
 	Signup               SignupConfig                   `koanf:"signup"`
@@ -38,6 +52,7 @@ type AuthConfig struct {
 	Factors              FactorsConfig                  `koanf:"factors"`
 	OAuth                map[string]OAuthProviderConfig `koanf:"oauth"`
 	Captcha              CaptchaConfig                  `koanf:"captcha"`
+	DisposableEmail      string                         `koanf:"disposable_email"`
 }
 
 /*
@@ -72,6 +87,10 @@ func (c *AuthConfig) settle(edition Edition) {
 		c.Signup.MaxPerHourPerIP = map[bool]int{true: 5, false: 20}[cloud]
 	}
 
+	if c.DisposableEmail == "" {
+		c.DisposableEmail = map[bool]string{true: DisposableBlock, false: DisposableOff}[cloud]
+	}
+
 	if c.Verification.Required == nil {
 		c.Verification.Required = &cloud
 	}
@@ -87,6 +106,10 @@ func (c *AuthConfig) check() error {
 	}{
 		{c.Signup.Mode != SignupOpen && c.Signup.Mode != SignupInviteOnly, "auth.signup.mode"},
 		{c.Signup.MaxPerHourPerIP < 0, "auth.signup.max_per_hour_per_ip"},
+		{
+			!slices.Contains([]string{DisposableOff, DisposableFlag, DisposableBlock}, c.DisposableEmail),
+			"auth.disposable_email",
+		},
 		{c.Passwords.MinLength < 8, "auth.passwords.min_length"},
 		{c.Sessions.IdleLifetime <= 0, "auth.sessions.idle_lifetime"},
 		{c.Sessions.AbsoluteLifetime < c.Sessions.IdleLifetime, "auth.sessions.absolute_lifetime"},

@@ -116,3 +116,9 @@ SELECT sqlc.embed(u),
 FROM users u
 WHERE u.deleted_at IS NULL
 ORDER BY u.created_at, u.id;
+
+-- name: AddUserRiskFlags :exec
+-- AddUserRiskFlags marks the account with the flags, keeping each once.
+UPDATE users
+SET risk_flags = ARRAY(SELECT DISTINCT unnest(risk_flags || @flags::text[]) ORDER BY 1), updated_at = @now
+WHERE id = @id;

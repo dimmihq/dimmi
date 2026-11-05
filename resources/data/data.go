@@ -11,6 +11,11 @@
 | application allows, since shorter ones are refused by length alone.
 | The list is stored compressed to keep the binary small.
 |
+| The disposable email domains are addresses anyone can take for a few
+| minutes, from https://github.com/disposable-email-domains/disposable-email-domains
+| (disposable_email_blocklist.conf), dedicated to the public domain
+| under CC0 1.0. The dev command data:disposable-domains refreshes it.
+|
 */
 
 package data
@@ -27,17 +32,36 @@ import (
 //go:embed common_passwords.txt.gz
 var commonPasswords []byte
 
+//go:embed disposable_email_domains.txt.gz
+var disposableDomains []byte
+
 /*
 CommonPasswords returns the passwords too widely used to accept, in
 lower case, as a set.
 */
 func CommonPasswords() (map[string]struct{}, error) {
-	reader, err := gzip.NewReader(bytes.NewReader(commonPasswords))
+	return readSet(commonPasswords, "common passwords", 50_000)
+}
+
+/*
+DisposableDomains returns the domains of throwaway mailboxes, in lower
+case, as a set.
+*/
+func DisposableDomains() (map[string]struct{}, error) {
+	return readSet(disposableDomains, "disposable domains", 12_000)
+}
+
+/*
+readSet reads a compressed list, one entry per line, into a set of its
+entries in lower case, skipping blank lines.
+*/
+func readSet(compressed []byte, name string, size int) (map[string]struct{}, error) {
+	reader, err := gzip.NewReader(bytes.NewReader(compressed))
 	if err != nil {
-		return nil, fmt.Errorf("open common passwords: %w", err)
+		return nil, fmt.Errorf("open %s: %w", name, err)
 	}
 
-	set := make(map[string]struct{}, 50_000)
+	set := make(map[string]struct{}, size)
 
 	lines := bufio.NewScanner(reader)
 	for lines.Scan() {
@@ -47,7 +71,7 @@ func CommonPasswords() (map[string]struct{}, error) {
 	}
 
 	if err := lines.Err(); err != nil {
-		return nil, fmt.Errorf("read common passwords: %w", err)
+		return nil, fmt.Errorf("read %s: %w", name, err)
 	}
 
 	return set, nil

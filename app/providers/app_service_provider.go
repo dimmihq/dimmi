@@ -108,6 +108,11 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return fmt.Errorf("hash the dummy password: %w", err)
 	}
 
+	risk, err := signupRisk(a)
+	if err != nil {
+		return err
+	}
+
 	a.Actions = &app.Actions{
 		CreateUser: &users.CreateUser{DB: a.DB, Clock: a.Clock},
 		CreateWorkspace: &workspaces.CreateWorkspace{
@@ -123,7 +128,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	}
 
 	bootInvitations(a)
-	bootSignIn(a, dummy)
+	bootSignIn(a, dummy, risk)
 	bootWorkspaceLifecycle(a)
 	bootMailedSecrets(a)
 	bootIdentities(a)
@@ -183,7 +188,7 @@ func bootAccountAndAudit(a *app.App) error {
 /*
 bootSignIn builds the actions that sign people up and in.
 */
-func bootSignIn(a *app.App, dummy string) {
+func bootSignIn(a *app.App, dummy string, risk *appauth.SignupRisk) {
 	acts := a.Actions
 	acts.CompletePrimaryAuth = &auth.CompletePrimaryAuth{
 		DB: a.DB, Tokens: a.Secrets, Factors: a.Factors, StartSession: acts.StartSession, LoadMe: acts.LoadMe,
@@ -203,6 +208,7 @@ func bootSignIn(a *app.App, dummy string) {
 		LoginPolicy: a.LoginPolicy, CreateUser: acts.CreateUser, CreateWorkspace: acts.CreateWorkspace,
 		SendVerification: acts.SendEmailVerification, StartSession: acts.StartSession, LoadMe: acts.LoadMe,
 		Preview: acts.PreviewInvitation, Accept: acts.AcceptInvitation, Captcha: captchaFor(a),
+		Risk: risk, Clock: a.Clock,
 	}
 
 	acts.ConfirmUser = &auth.ConfirmUser{
