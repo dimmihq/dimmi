@@ -105,3 +105,40 @@ func TestWidgetInboxEvents(t *testing.T) {
 		assert.Contains(t, string(data), models.PublicID(models.PrefixMessage, ref.MessageID))
 	})
 }
+
+func TestWidgetInboxEventsWithoutPayload(t *testing.T) {
+	t.Parallel()
+
+	event := func(tc *tests.TestCase, conversation, message ids.UUID) (appevents.Base, appevents.MessageRef) {
+		base := appevents.Base{ID: ids.New(), WorkspaceID: tc.Workspace.Workspace.ID, OccurredAt: tc.Clock.Now()}
+
+		return base, appevents.MessageRef{
+			ConversationRef: appevents.ConversationRef{ConversationID: conversation}, MessageID: message,
+		}
+	}
+
+	t.Run("events about rows that are gone publish nothing", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		base, ref := event(tc, ids.New(), ids.New())
+
+		dispatch(t, tc, appevents.MessageDeliveryUpdated{Base: base, MessageRef: ref, Status: "read"})
+		dispatch(t, tc, appevents.ConversationClosed{Base: base, ConversationRef: ref.ConversationRef})
+		dispatch(t, tc, appevents.MessageUpdated{Base: base, MessageRef: ref})
+	})
+
+	for name, table := range map[string]string{
+		"conversations": "conversations", "channels": "channel_connections",
+	} {
+		t.Run("a change whose "+name+" cannot be read is logged and lets the change stand", func(t *testing.T) {
+			t.Parallel()
+			tc := tests.New(t)
+			v := startVisitor(t, tc)
+			conv, msg := inboxReply(t, tc, v.startConversation(t, "hello"))
+			base, ref := event(tc, conv, msg)
+			tc.BreakTable(table)
+
+			dispatch(t, tc, appevents.MessageUpdated{Base: base, MessageRef: ref})
+		})
+	}
+}

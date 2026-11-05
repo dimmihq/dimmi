@@ -280,6 +280,9 @@ func TestWidgetAttachmentsOnObjectStorage(t *testing.T) {
 
 		res := v.complete(id).AssertStatus(fhttp.StatusServiceUnavailable).AssertJSONPath("code", "storage_unavailable")
 		assert.Equal(t, "5", res.Header.Get("Retry-After"))
+
+		v.client().Send(fhttp.MethodPut, "/widget/v1/attachments/"+id+"/content", []byte("hello")).
+			AssertStatus(fhttp.StatusServiceUnavailable).AssertJSONPath("code", "storage_unavailable")
 	})
 }
 
@@ -347,3 +350,4 @@ func TestWidgetUploadEdges(t *testing.T) {
 		}
 	})
 }
+
