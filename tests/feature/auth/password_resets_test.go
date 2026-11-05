@@ -304,6 +304,7 @@ func TestPasswordResetUpdate(t *testing.T) {
 
 	t.Run("takes as long for an unknown id as for a wrong token", func(t *testing.T) {
 		t.Parallel()
+		tests.RequireTimingAccuracy(t)
 		tc := tests.New(t, tests.WithEnv(behindProxy))
 
 		unknown, wrong := resetTimings(t, tc)

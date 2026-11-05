@@ -16,7 +16,7 @@ APP_PKGS := ./app/...
 # cloud build.
 CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: test-sweep e2e pseudo-locale tools fmt lint test cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools fmt lint test test-go test-app-role test-cloud test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -60,11 +60,28 @@ lint:
 ENV_FILE ?= .env.testing
 WITH_ENV := set -a && . ./$(ENV_FILE) && set +a &&
 
-test:
+test: test-go test-app-role test-cloud test-timing test-web test-dev
+
+test-go:
 	$(WITH_ENV) go test -race -shuffle=on ./...
+
+# The feature tests again as the cloud's application role, where row level
+# security applies to every query.
+test-app-role:
 	$(WITH_ENV) DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on ./tests/feature/...
+
+test-cloud:
 	$(WITH_ENV) go test -race -shuffle=on -tags cloud $(CLOUD_PKGS)
+
+# Timing comparisons skip themselves under the race detector, which distorts
+# them, so they get a pass of their own without it.
+test-timing:
+	$(WITH_ENV) go test -count=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate' ./tests/feature/auth/
+
+test-web:
 	pnpm test
+
+test-dev:
 	$(WITH_ENV) go test -race -tags dev ./framework/foundation/...
 
 # Drops the databases and roles killed test runs left on the test server.
