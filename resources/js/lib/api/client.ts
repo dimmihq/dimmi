@@ -81,11 +81,14 @@ function toApiError(status: number, body: ErrorBody | null): ApiError {
  * RequestOptions changes one call: workspace names the workspace a
  * workspace route works in, sent in the Dimmi-Workspace header, and
  * headers adds any other header the call needs, such as a token that
- * must never sit in an address.
+ * must never sit in an address. keepalive lets the call finish after
+ * the page goes away, and signal cancels it.
  */
 export interface RequestOptions {
   workspace?: string;
   headers?: Record<string, string>;
+  keepalive?: boolean;
+  signal?: AbortSignal;
 }
 
 /*
@@ -141,6 +144,8 @@ export async function request<T>(
     headers,
     credentials: "same-origin",
     body: isForm ? body : body === undefined ? undefined : JSON.stringify(body),
+    keepalive: options.keepalive,
+    signal: options.signal,
   });
 
   if (response.status === 204) {

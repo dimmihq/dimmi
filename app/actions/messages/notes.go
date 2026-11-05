@@ -87,16 +87,8 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 			return err
 		}
 
-		if s.msg, s.c, err = s.w.Append(ctx, s.c, conversations.NewMessage{
-			Type: string(enums.MessageTypeNote), Body: in.Body, DedupeKey: key,
-		}); err != nil {
+		if err := s.note(ctx, in, key); err != nil {
 			return err
-		}
-
-		if s.c.AssigneeMemberID == nil || *s.c.AssigneeMemberID != in.Membership.Member.ID {
-			if s.c, err = s.w.WakeIf(ctx, in.Membership.Workspace, s.c, conversations.ReasonOthersNote); err != nil {
-				return err
-			}
 		}
 
 		out, err = s.written(ctx)
@@ -105,6 +97,32 @@ func (a *AddNote) Handle(ctx context.Context, in NoteInput) (Written, error) {
 	})
 
 	return out, err
+}
+
+/*
+note writes the note, ends the caller's note draft and wakes a snoozed
+conversation someone else holds.
+*/
+func (s *session) note(ctx context.Context, in NoteInput, key *string) error {
+	var err error
+
+	if s.msg, s.c, err = s.w.Append(ctx, s.c, conversations.NewMessage{
+		Type: string(enums.MessageTypeNote), Body: in.Body, DedupeKey: key,
+	}); err != nil {
+		return err
+	}
+
+	if err := s.consume(ctx, conversations.DraftNote); err != nil {
+		return err
+	}
+
+	if s.c.AssigneeMemberID != nil && *s.c.AssigneeMemberID == in.Membership.Member.ID {
+		return nil
+	}
+
+	s.c, err = s.w.WakeIf(ctx, in.Membership.Workspace, s.c, conversations.ReasonOthersNote)
+
+	return err
 }
 
 /*

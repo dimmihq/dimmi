@@ -167,3 +167,35 @@ var (
 	ErrSnoozeOptionUnknown = fault.New(fault.Invalid, "snooze_option_unknown",
 		"This snooze option is no longer offered.").OnField("snooze_option")
 )
+
+/*
+Draft failures.
+
+ErrDraftTarget refuses a reply or note draft without its conversation,
+and a new conversation draft with one. ErrDraftTooLarge refuses a draft
+body over 64 KB. ErrDraftAttachments
+refuses more than ten files, or a file the workspace does not have.
+ErrDraftExists refuses a second draft of the same conversation and mode
+when the client did not ask to update the one there.
+*/
+var (
+	ErrDraftTarget = fault.New(fault.Invalid, "invalid_draft_target",
+		"A reply or note draft names its conversation; a new one names none.").OnField("conversation_id")
+	ErrDraftTooLarge = fault.New(fault.Invalid, "draft_too_large",
+		"A draft can be 64 KB at most.").OnField("body")
+	ErrDraftAttachments = fault.New(fault.Invalid, "invalid_draft_attachments",
+		"A draft holds up to ten files of this workspace.").OnField("attachment_ids")
+	ErrDraftExists = fault.New(fault.Conflict, "draft_exists",
+		"There is already a draft of this conversation. Update it instead.")
+)
+
+/*
+Message change failures.
+
+ErrMessageNotDeletable refuses to delete a timeline event.
+ErrMessageNotEditable refuses to edit anything but one's own note.
+*/
+var (
+	ErrMessageNotDeletable = fault.New(fault.Invalid, "message_not_deletable", "Timeline events cannot be deleted.")
+	ErrMessageNotEditable  = fault.New(fault.Invalid, "message_not_editable", "Only your own notes can be edited.")
+)

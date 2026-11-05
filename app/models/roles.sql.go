@@ -306,7 +306,7 @@ const setMemberCustomRole = `-- name: SetMemberCustomRole :one
 UPDATE workspace_members
 SET role = $1, custom_role_id = $2, updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, undo_send_seconds, custom_role_id
 `
 
 type SetMemberCustomRoleParams struct {
@@ -351,6 +351,7 @@ func (q *Queries) SetMemberCustomRole(ctx context.Context, arg SetMemberCustomRo
 		&i.ConversationCapacity,
 		&i.CapacityByChannel,
 		&i.LastAssignedAt,
+		&i.UndoSendSeconds,
 		&i.CustomRoleID,
 	)
 	return i, err

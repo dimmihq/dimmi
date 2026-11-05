@@ -40,6 +40,7 @@ import (
 	"github.com/dimmihq/dimmi/app/channels"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/integrations/email"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/app/support/retention"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
@@ -61,7 +62,8 @@ secrets with Keys, the install's data keys. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
-Channels holds the channel drivers replies go out through.
+Channels holds the channel drivers replies go out through, and
+MessageErasers what erases the copies of a deleted message.
 WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults.
 Retention is asked before any purge destroys data. Entitlements answers
@@ -100,6 +102,8 @@ type App struct {
 	Actions     *Actions
 	Channels    *channels.Manager
 
+	MessageErasers *jobs.MessageErasers
+
 	WorkspaceInitializers *workspaces.Initializers
 	Retention             contracts.RetentionGuard
 	Entitlements          contracts.Entitlements
@@ -137,6 +141,7 @@ func New(version string) *App {
 
 		WorkspaceInitializers: workspaces.NewInitializers(),
 		Retention:             retention.NoHolds{},
+		MessageErasers:        &jobs.MessageErasers{},
 	}
 }
 

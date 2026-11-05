@@ -73,6 +73,7 @@ const (
 	PrefixTag               Prefix = "tag"
 	PrefixSavedReply        Prefix = "rpl"
 	PrefixConversationView  Prefix = "cvw"
+	PrefixDraft             Prefix = "drf"
 )
 
 /*
@@ -174,6 +175,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
 		{PrefixConversationView, "conversation_views"},
+		{PrefixDraft, "conversation_drafts"},
 		{"exp", "contact_exports"},
 		{"evt", "events"},
 	}
@@ -343,7 +345,6 @@ yet, so no other table takes them in the meantime.
 func reservedPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixWorkspaceDomain, "reserved: workspace_domains"},
-		{"drf", "reserved: reply_drafts"},
 		{"brd", "reserved: brands"},
 		{"lgh", "reserved: legal_holds"},
 		{"ains", "reserved: app_installations"},

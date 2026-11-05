@@ -20,7 +20,7 @@ SET availability = $1, away_reassign = $2, away_since = $3,
     conversation_capacity = $6, capacity_by_channel = $7,
     updated_at = $8
 WHERE workspace_id = $9 AND id = $10
-RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, custom_role_id
+RETURNING id, workspace_id, user_id, role, availability, status, created_at, updated_at, last_accessed_at, deactivated_at, deactivated_by_member_id, joined_via, conversation_access, conversation_access_unassigned, away_reassign, away_since, availability_source, away_reason_id, assign_on_reply, conversation_capacity, capacity_by_channel, last_assigned_at, undo_send_seconds, custom_role_id
 `
 
 type SetMemberAvailabilityParams struct {
@@ -75,6 +75,7 @@ func (q *Queries) SetMemberAvailability(ctx context.Context, arg SetMemberAvaila
 		&i.ConversationCapacity,
 		&i.CapacityByChannel,
 		&i.LastAssignedAt,
+		&i.UndoSendSeconds,
 		&i.CustomRoleID,
 	)
 	return i, err

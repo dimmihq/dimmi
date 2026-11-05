@@ -30,6 +30,7 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.ScheduleWorkspacePurgesArgs{}).DailyAt("03:00")
 	a.Schedule.Job(jobs.PruneAuditLogsArgs{}).DailyAt("03:10")
 	a.Schedule.Job(jobs.PruneSecurityEventsArgs{}).DailyAt("03:20")
+	a.Schedule.Job(jobs.PurgeStaleDraftsArgs{}).DailyAt("03:30")
 	a.Schedule.Job(jobs.CheckWorkspaceOwnersArgs{}).DailyAt("04:00")
 	a.Schedule.Job(jobs.SendWorkspaceDeletionRemindersArgs{}).DailyAt("09:00")
 	a.Schedule.Job(jobs.NotifyExpiringTokensArgs{}).DailyAt("09:05")

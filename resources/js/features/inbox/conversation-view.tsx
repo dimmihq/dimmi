@@ -29,6 +29,7 @@ import { useWide } from "@/features/shell/use-wide";
 import {
   addNote,
   type Conversation,
+  type Message,
   markRead,
   messagesQuery,
   reply,
@@ -84,14 +85,16 @@ function useTimeline(workspace: string, conversation: Conversation) {
     }
   }, [unread, mark]);
 
-  const send = async (mode: Mode, text: string, then?: "close" | "snooze") => {
+  const send = async (mode: Mode, text: string, then?: "close" | "snooze"): Promise<Message | undefined> => {
     const write = { workspace, mutation: mutationId() };
     if (mode === "note") {
       await addNote(write, conversation.id, text);
-    } else {
-      await reply(write, conversation.id, text, await afterReply(then));
+      await refresh();
+      return undefined;
     }
+    const sent = await reply(write, conversation.id, text, await afterReply(then));
     await refresh();
+    return sent;
   };
   const afterReply = async (then?: "close" | "snooze"): Promise<Then | undefined> => {
     if (then !== "snooze") {
@@ -213,14 +216,16 @@ export function ConversationView({
         </div>
       </header>
       <Thread
+        conversation={conversation.id}
         entries={timeline.entries}
         customer={customer}
         channel={conversation.channel.name}
         onSend={async (mode, text, then) => {
-          await timeline.send(mode, text, then);
+          const sent = await timeline.send(mode, text, then);
           if (then) {
             walk.advance();
           }
+          return sent;
         }}
         onAskOperator={toggleOperator}
         onTyping={typing}
