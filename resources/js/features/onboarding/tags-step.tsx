@@ -5,10 +5,12 @@
  */
 import { RiAddLine, RiCheckLine } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence } from "motion/react";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
+import { Pop } from "@/features/inbox/motion";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { tagTint } from "@/features/inbox/tags/tag-colors";
 import { tagIcon } from "@/features/inbox/tags/tag-icons";
@@ -131,15 +133,15 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
             Add
           </Button>
         </form>
-        {chosen.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
+        <ul className="flex flex-wrap gap-2 empty:hidden">
+          <AnimatePresence initial={false} mode="popLayout">
             {chosen.map((name) => (
-              <li key={name}>
+              <Pop key={name}>
                 <TagChip tag={preview(name)} onRemove={() => toggle(name)} />
-              </li>
+              </Pop>
             ))}
-          </ul>
-        ) : null}
+          </AnimatePresence>
+        </ul>
       </div>
       <StepActions
         primary={() => save.mutate()}
