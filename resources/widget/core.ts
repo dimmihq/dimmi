@@ -13,14 +13,15 @@
  * not serve here, such as a wrong app id or a site not allowed, shows
  * nothing and says why in the console.
  *
- * A preview, marked data-preview on the snippet, has no server: it shows
- * sample content after a simulated latency, 700 ms unless data-latency
+ * A preview, marked data-preview on the snippet, has no server: it loads
+ * sample content as a chunk of its own, never fetched on a customer's
+ * page, and shows it after a simulated latency, 700 ms unless data-latency
  * says otherwise, so the design can be judged. Dimmi("simulate", ...)
  * changes the latency or delivers a message from the team there.
  * Dimmi("update", { ... }) merges changes over the options and re-renders
  * either way, keeping the panel open on the same tab.
  */
-import { type Content, sample } from "./content";
+import type { Content } from "./content";
 import { ComposerController } from "./controllers/composer_controller";
 import { MessengerController } from "./controllers/messenger_controller";
 import { ScrollController } from "./controllers/scroll_controller";
@@ -38,6 +39,7 @@ export interface Widget {
   readonly messenger: MessengerController | undefined;
   readonly options: Options;
   readonly live: Live | undefined;
+  readonly ready: Promise<void>;
   update(changes: OptionsUpdate): void;
 }
 
@@ -52,7 +54,6 @@ interface Simulation {
  * blank is what a connected messenger draws before the server answers.
  */
 const blank: Content = {
-  ...sample,
   company: "",
   reply_time: "",
   team: [],
@@ -91,6 +92,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   let options = defaults;
   let latency = settings.preview ? (settings.latency ?? 700) : 0;
   let live: Live | undefined;
+  let preview: typeof import("./preview") | undefined;
+  let sample: Content = blank;
+  let ready: Promise<void> = Promise.resolve();
 
   const draw = () => {
     const before = find();
@@ -127,6 +131,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     get live() {
       return live;
     },
+    get ready() {
+      return ready;
+    },
     update(changes) {
       options = merge(options, changes);
       draw();
@@ -151,7 +158,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     }
     if (message) {
       const conversation = sample.conversations[0]?.number ?? 0;
-      find()?.receive({ conversation, from: "team", author: "Maya Kerr", body: message, at: "now" });
+      find()?.receive({ conversation, from: "team", author: preview?.teammate ?? "", body: message, at: "now" });
     }
   };
 
@@ -176,8 +183,12 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       void live?.openConversation((event as CustomEvent<{ conversation?: string }>).detail?.conversation);
     });
     root.addEventListener("dimmi:send", (event) => {
-      const { body, files } = (event as CustomEvent<{ body: string; files: File[] }>).detail;
-      void live?.send(body, files);
+      const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string }>).detail;
+      if (preview) {
+        preview.answer(root, sent);
+      } else if (!sent.voice) {
+        void live?.send(sent.body, sent.files);
+      }
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
     root.addEventListener("submit", (event) => {
@@ -208,7 +219,11 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   if (settings.preview) {
-    mount();
+    ready = import("./preview").then((loaded) => {
+      preview = loaded;
+      sample = loaded.sample;
+      mount();
+    });
     return widget;
   }
 
@@ -231,7 +246,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     blank,
   );
 
-  void live.start().then((shown) => {
+  ready = live.start().then((shown) => {
     if (shown) {
       mount();
     }

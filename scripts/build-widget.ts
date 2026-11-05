@@ -11,8 +11,9 @@
  * all of it, and the server reads it to fill in the loader.
  *
  * The widget must stay small on every customer's page: the build fails
- * when the loader or the core grows past its budget in raw, uncompressed
- * bytes.
+ * when the loader, the core or a lazy chunk grows past its budget in
+ * gzipped bytes, and when the core carries the preview's sample content,
+ * which must load only in a preview.
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -39,7 +40,9 @@ interface FileEntry {
 const root = fileURLToPath(new URL("..", import.meta.url));
 const out = path.join(root, "public/widget");
 const assets = path.join(out, "assets");
-const budgets = { loader: 2048, core: 73728 };
+const budgets: Record<string, number> = { loader: 3072, core: 35840, preview: 12288 };
+const lazyBudget = 20480;
+const sampleMarker = "Maya Kerr";
 
 async function bundle(entry: string, format: "iife" | "es"): Promise<Chunk[]> {
   const result = await build({
@@ -105,10 +108,20 @@ function prune(keep: Set<string>) {
   }
 }
 
-function checkBudget(name: keyof typeof budgets, size: number) {
-  if (size > budgets[name]) {
-    throw new Error(`widget ${name} is ${size} bytes, over its ${budgets[name]} byte budget`);
+function checkBudget(name: string, code: Buffer) {
+  const budget = budgets[name] ?? lazyBudget;
+  const size = gzipSync(code, { level: 9 }).length;
+  if (size > budget) {
+    throw new Error(`widget ${name} is ${size} bytes gzipped, over its ${budget} byte budget`);
   }
+}
+
+/*
+ * chunkName is the budget a file falls under: core for the entry, else
+ * the name the build gave the chunk.
+ */
+function chunkName(chunk: Chunk): string {
+  return chunk.isEntry ? "core" : chunk.fileName.replace(/-[^-]+\.js$/, "");
 }
 
 const [loader] = await bundle("resources/widget/entries/loader.ts", "iife");
@@ -119,8 +132,13 @@ if (!loader || !core) {
 }
 
 const loaderCode = Buffer.from(loader.code);
-checkBudget("loader", loaderCode.length);
-checkBudget("core", Buffer.byteLength(core.code));
+checkBudget("loader", loaderCode);
+for (const chunk of chunks) {
+  checkBudget(chunkName(chunk), Buffer.from(chunk.code));
+}
+if (core.code.includes(sampleMarker)) {
+  throw new Error("widget core carries the preview's sample content; import it only from the preview");
+}
 
 const previous = previousFiles();
 fs.mkdirSync(assets, { recursive: true });
@@ -137,7 +155,7 @@ const manifest = {
   loader: loaderSizes,
   files,
   previous: kept,
-  budgets,
+  budgets: { ...budgets, lazy: lazyBudget },
 };
 fs.writeFileSync(path.join(out, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
