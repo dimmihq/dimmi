@@ -97,9 +97,15 @@ export async function openAddress(page: Page, name?: string): Promise<void> {
 }
 
 /*
- * openMessenger opens the page of the workspace's first messenger.
+ * openMessenger opens the page of the workspace's first messenger and
+ * waits for it to finish arriving. The page rises into place as it
+ * arrives, and a click aimed while it moves misses, so Playwright
+ * scrolls to try again, and that late scroll closes any popover the
+ * click opened.
  */
 export async function openMessenger(page: Page): Promise<void> {
   await page.goto("/d/settings/messenger");
   await page.getByRole("region", { name: "Messengers" }).getByRole("link").first().click();
+  await expect(page.getByRole("region", { name: "Appearance" })).toBeVisible();
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
 }
