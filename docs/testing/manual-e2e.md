@@ -464,7 +464,7 @@ session token from `POST /sessions` is the visitor's bearer (`V=dmi_ws_…`). On
 has `url: null` until downloads go through the server; on an S3 disk it is a signed link.
 
 ```bash
-M=http://127.0.0.1:18080/widget/v1; SITE='Origin: https://shop.example'
+M=http://127.0.0.1:18080/widget/v1; B_ROOT=http://127.0.0.1:18080; SITE='Origin: https://shop.example'
 vis(){ r "$@" -H "$SITE" -H "Authorization: Bearer $V"; }
 ```
 
@@ -498,6 +498,8 @@ vis(){ r "$@" -H "$SITE" -H "Authorization: Bearer $V"; }
 | Polling | `vis up $M/updates`, reply, then `vis up "$M/updates?since=<meta.cursor>"` | 200, the reply as `message.created` in `data`, `meta.has_more: false`; a forged `since` 400 |
 | Sign out | keep a stream open, `vis bye -X DELETE $M/session` | 204; the stream gets `widget.session_revoked` (usually before the close) and `disconnect` 4009; `vis me $M/session` gives 401 `session_revoked` |
 | Token as API bearer | `r bad -H "Authorization: Bearer <realtime token>" $M/session` | 401 |
+| Messenger in a browser | serve a page with `<script src="$B_ROOT/widget/v1/loader.js" data-app-id="$APP" async></script>` from another local port (`python3 -m http.server 18102`), open it, click the launcher, "Chat with us", write; reply from the inbox | launcher shows with the widget's colors; the reply appears without a reload; after a reload the Messages tab lists the conversation; a wrong `data-app-id` shows no launcher and one console error `app_not_found` |
+| Messenger preview | the same page with `data-preview` on the snippet | sample conversations and articles, no request to the server beyond the loader, the core and the preview chunk |
 
 ### Email channel
 
