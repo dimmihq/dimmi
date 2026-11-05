@@ -7,7 +7,8 @@
 | thread, the body as written in Markdown and also as plain text and
 | safe HTML for channels that render one of those, the customer by the
 | address the channel reaches them at, and the teammate who wrote it by
-| name. The driver never reads the database to learn any of it.
+| name. The driver never reads the database to learn any of it. Remote
+| pictures leave only when they are GIFs from GIPHY and GIF search is on.
 |
 */
 
@@ -24,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/gifs"
 )
 
 /*
@@ -59,22 +61,34 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 		return outbound{}, err
 	}
 
-	message, err := outboundMessage(c, msg, contact)
+	message, err := outboundMessage(c, msg, contact, w.remoteImages())
 	message.Author = author
 
 	return outbound{conn: conn, driver: driver, message: message}, err
 }
 
 /*
+remoteImages says which remote pictures a reply may carry: GIFs from
+GIPHY while GIF search is on, none otherwise.
+*/
+func (w *SendChannelMessage) remoteImages() func(string) bool {
+	if w.GIFs {
+		return gifs.Hosted
+	}
+
+	return gifs.Never
+}
+
+/*
 outboundMessage shapes the reply for its driver, its body rendered from
-the Markdown it was written in.
+the Markdown it was written in, keeping the remote pictures keep allows.
 */
 func outboundMessage(
-	c models.Conversation, msg models.Message, contact models.Contact,
+	c models.Conversation, msg models.Message, contact models.Contact, keep func(string) bool,
 ) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
-	rendered, err := markdown.New(markdown.Options{GFM: true}).HTML([]byte(body))
+	rendered, err := markdown.New(markdown.Options{GFM: true, RewriteLink: gifs.Images(keep)}).HTML([]byte(body))
 	if err != nil {
 		return contracts.OutboundMessage{}, fmt.Errorf("render reply: %w", err)
 	}

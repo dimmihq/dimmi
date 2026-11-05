@@ -55,6 +55,9 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Ability("settings:write")
 	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read")
 
+	gifs := &v1.GIFSearchController{APIKey: a.Config.Inbox.GIF.GiphyAPIKey}
+	routing.Get(r, "/gif-search", "gif-search.show", gifs.Show).Ability("conversations:write")
+
 	drafts := &v1.DraftController{
 		List: acts.ListDrafts, Save: acts.SaveDraft, Update: acts.UpdateDraft, Delete: acts.DeleteDraft, IDs: a.IDs,
 	}

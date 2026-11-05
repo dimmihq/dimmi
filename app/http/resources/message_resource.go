@@ -35,7 +35,9 @@ const excerptLength = 140
 /*
 TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
-DeletedBy names who deleted a deleted entry.
+DeletedBy names who deleted a deleted entry. ReadAt is when the customer
+saw a teammate's reply, known only on channels that report it, such as
+the messenger; email never does.
 */
 type TimelineEntry struct {
 	ID              string          `json:"id"`
@@ -51,6 +53,7 @@ type TimelineEntry struct {
 	SentAt          *time.Time      `json:"sent_at"`
 	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
 	EditedAt        *time.Time      `json:"edited_at"`
+	ReadAt          *time.Time      `json:"read_at"`
 	DeletedAt       *time.Time      `json:"deleted_at"`
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
@@ -117,6 +120,10 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
 		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
 		UpdatedAt: m.UpdatedAt,
+	}
+
+	if m.AuthorType == string(enums.AuthorTypeMember) || m.AuthorType == string(enums.AuthorTypeAgent) {
+		out.ReadAt = m.ReadAt
 	}
 
 	if m.DeletedAt != nil {

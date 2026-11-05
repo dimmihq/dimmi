@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 
 	fauth "github.com/dimmihq/dimmi/framework/auth"
 	"github.com/dimmihq/dimmi/framework/foundation"
@@ -83,8 +84,8 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	p.App.Vite = vite.New(vite.Options{
 		Build: p.App.Frontend, Base: "/build", HotFile: p.App.Config.Frontend.HotPath, React: true,
 	})
-	fa.Kernel.Alias("csp", func(...string) (fhttp.Middleware, error) {
-		return appmiddleware.ContentSecurityPolicy(p.App.Vite), nil
+	fa.Kernel.Alias("csp", func(params ...string) (fhttp.Middleware, error) {
+		return appmiddleware.ContentSecurityPolicy(p.App.Vite, p.pageSources(params)), nil
 	})
 
 	widget, err := widgetassets.New(p.App.Widget, p.App.Config.Widget.AssetsBaseURL)
@@ -177,4 +178,17 @@ func origin(appURL string) string {
 	u, _ := url.Parse(appURL)
 
 	return u.Scheme + "://" + u.Host
+}
+
+/*
+pageSources returns the extra sources of the pages a csp middleware
+covers: the dashboard reaches GIPHY when the instance has a GIF search
+key, and no other page reaches anything more.
+*/
+func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
+	if !slices.Contains(params, "dashboard") || p.App.Config.Inbox.GIF.GiphyAPIKey == "" {
+		return appmiddleware.Sources{}
+	}
+
+	return appmiddleware.Sources{Connect: []string{"https://api.giphy.com"}, Images: []string{"https://*.giphy.com"}}
 }

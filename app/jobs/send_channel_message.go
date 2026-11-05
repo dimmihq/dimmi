@@ -69,12 +69,14 @@ func (SendChannelMessageArgs) Options() queue.Options {
 }
 
 /*
-SendChannelMessage sends a pending reply through its channel.
+SendChannelMessage sends a pending reply through its channel. GIFs says
+whether GIF search is on, so GIPHY pictures in a reply leave with it.
 */
 type SendChannelMessage struct {
 	DB       *database.DB
 	Clock    clock.Clock
 	Channels *channels.Manager
+	GIFs     bool
 }
 
 /*

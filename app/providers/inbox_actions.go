@@ -77,7 +77,9 @@ func bootInbox(a *app.App) error {
 	bootWorkbench(a)
 
 	return errors.Join(
-		queue.Register(a.Queue, &jobs.SendChannelMessage{DB: a.DB, Clock: a.Clock, Channels: a.Channels}),
+		queue.Register(a.Queue, &jobs.SendChannelMessage{
+			DB: a.DB, Clock: a.Clock, Channels: a.Channels, GIFs: a.Config.Inbox.GIF.GiphyAPIKey != "",
+		}),
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{
 			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.Inbox.Drafts.RetentionDays,

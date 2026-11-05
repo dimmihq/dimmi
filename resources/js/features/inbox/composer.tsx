@@ -6,7 +6,7 @@
  * BoardUI tab strip behind its top edge saying who will see the message,
  * attachments as tiles above the text, a field that grows with what is
  * typed with formatting kept as Markdown, and a toolbar with the add menu (files, help articles, saved
- * replies and more from the workspace) and a way to ask Operator. Files can
+ * replies, emoji, GIFs and more from the workspace) and a way to ask Operator. Files can
  * also be dropped on the panel or pasted. Sending goes to the server; a
  * sent draft empties, a refused one stays with the reason under it.
  * Each draft, reply and note apart, is kept on the server and in the
@@ -29,6 +29,7 @@ import { AddMenu } from "./add-menu";
 import { AttachmentStrip } from "./attachments";
 import { ComposerField } from "./composer/composer-field";
 import { preloadEditor } from "./composer/load-editor";
+import { useGifs } from "./composer/use-gifs";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
@@ -156,7 +157,7 @@ function Panel({
   onAskOperator: () => void;
   onTyping: Report;
 }) {
-  const { workspace } = useInbox();
+  const { workspace, userId } = useInbox();
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
   const draft = drafts[mode];
   const [sending, setSending] = useState(false);
@@ -170,6 +171,8 @@ function Panel({
     onModeChange("reply");
   });
   const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
+  const addEmoji = (emoji: string) => draft.edit(`${draft.body}${emoji}`);
+  const gifs = useGifs(workspace, userId, insert);
 
   const text = draft.body.trim();
   const send = async (then?: "close" | "snooze") => {
@@ -182,6 +185,7 @@ function Panel({
     draft.pause();
     try {
       const sent = await onSend(mode, text, note ? undefined : then);
+      gifs.sent(text);
       draft.sent();
       attachments.clear();
       held.hold(sent);
@@ -258,7 +262,13 @@ function Panel({
           />
         </div>
         <div className="flex items-center gap-2">
-          <AddMenu onFiles={() => picker.current?.click()} onAttach={attachments.link} onInsert={insert} />
+          <AddMenu
+            onFiles={() => picker.current?.click()}
+            onAttach={attachments.link}
+            onInsert={insert}
+            onEmoji={addEmoji}
+            gifs={gifs.gifs}
+          />
           <input
             ref={picker}
             type="file"

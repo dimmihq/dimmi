@@ -47,7 +47,7 @@ export function useWalk(
   workspace: string,
   conversation: Conversation,
   caze: CaseControls,
-  panels: { openSnooze: () => void; openAssign: () => void; toggleDetails: () => void },
+  panels: { openSnooze: () => void; openAssign: () => void; toggleDetails: () => void; toggleEvents: () => void },
 ) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -82,6 +82,7 @@ export function useWalk(
       snooze: panels.openSnooze,
       assign: panels.openAssign,
       toggleDetails: panels.toggleDetails,
+      toggleEvents: panels.toggleEvents,
       assignToMe: caze.assignToMe,
       next: () => open(next),
       previous: () => open(previous),

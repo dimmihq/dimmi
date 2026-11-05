@@ -60,6 +60,7 @@ func (c *CurrentWorkspaceController) Update(
 		ShowViewers:             in.Body.ShowViewers,
 		UndoSendSeconds:         in.Body.UndoSendSeconds,
 		SeenReceiptName:         in.Body.SeenReceiptName,
+		GIFPicker:               in.Body.GIFPicker,
 	})
 	if err != nil {
 		return nil, err

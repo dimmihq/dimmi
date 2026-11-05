@@ -44,6 +44,7 @@ type UpdateWorkspaceRequest struct {
 		RequireTwoFactor any   `json:"require_two_factor,omitempty"`
 		ShowViewers      any   `json:"show_viewers_on_list,omitempty"`
 		UndoSendSeconds  any   `json:"undo_send_seconds,omitempty"`
+		GIFPicker        any   `json:"gif_picker,omitempty"`
 	}
 }
 
@@ -65,6 +66,7 @@ func (r *UpdateWorkspaceRequest) Validate(ctx context.Context, _ *validation.Fac
 		{"require_two_factor", b.RequireTwoFactor},
 		{"show_viewers_on_list", b.ShowViewers},
 		{"undo_send_seconds", b.UndoSendSeconds},
+		{"gif_picker", b.GIFPicker},
 	}
 	for _, field := range others {
 		if field.value != nil {

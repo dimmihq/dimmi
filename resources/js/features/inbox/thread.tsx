@@ -7,8 +7,12 @@
  * customer. Teammates' notes sit on the team's side with a dashed edge
  * and a lock. Every message's Markdown is rendered. Hovering a message
  * offers a link to it, editing one's own note and deleting; a deleted
- * message stays as a line saying who deleted it. Below the thread sits the composer; R and N open it for a
- * reply or a note from anywhere, and O opens or closes Operator.
+ * message stays as a line saying who deleted it. A reply the customer has
+ * seen says when. Every time shows its full date on hover, and reads in
+ * the customer's zone when the person chooses; with events hidden, each
+ * run of them folds into one line. Below the thread sits the composer; R
+ * and N open it for a reply or a note from anywhere, and O opens or
+ * closes Operator.
  */
 import { RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -24,8 +28,11 @@ import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
 import { MessageBody } from "./message-body";
 import type { Mode } from "./modes";
+import { foldEvents, foldedText } from "./thread/fold-events";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
+import { ThreadZone } from "./thread/thread-zone";
 import { useMessageMoves } from "./thread/use-message-moves";
+import { When } from "./thread/when";
 import type { Report } from "./use-typing-report";
 
 type Said = Extract<ThreadEntry, { author: string }>;
@@ -53,6 +60,12 @@ function Mark({ entry }: { entry: Said }) {
   return <Avatar size="xs" color={avatarColor(entry.author)} initials={entry.author.charAt(0)} />;
 }
 
+function At({ entry }: { entry: Said }) {
+  const style = "text-body-2-regular text-text-tertiary";
+
+  return entry.iso ? <When iso={entry.iso} className={style} /> : <span className={style}>{entry.at}</span>;
+}
+
 function Tag({ entry }: { entry: Said }) {
   return (
     <span className="my-1 flex items-center gap-1.5 text-body-2-medium text-text-secondary">
@@ -63,13 +76,16 @@ function Tag({ entry }: { entry: Said }) {
           AI agent
         </Chip>
       ) : null}
-      <span className="text-body-2-regular text-text-tertiary">{entry.at}</span>
+      <At entry={entry} />
       {entry.edited ? <span className="text-body-2-regular text-text-tertiary">Edited</span> : null}
       {entry.held ? (
         <span className="flex items-center gap-0.5 text-body-2-regular text-text-tertiary">
           <RiTimeLine aria-hidden className="size-3.5" />
           Sending
         </span>
+      ) : null}
+      {entry.seenAt ? (
+        <When iso={entry.seenAt} prefix="Seen " className="text-body-2-regular text-text-tertiary" />
       ) : null}
     </span>
   );
@@ -87,7 +103,9 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
         <Chip variant="caption" color="soft" className="py-0">
           Internal
         </Chip>
-        <span className="ms-auto text-body-2-regular text-text-tertiary">{entry.at}</span>
+        <span className="ms-auto">
+          <At entry={entry} />
+        </span>
       </header>
       <MessageBody text={entry.text} className="text-body-regular text-text-primary" />
       <p className="flex items-center gap-1 text-body-2-regular text-text-tertiary">
@@ -208,6 +226,8 @@ export function Thread({
   onAskOperator,
   onTyping,
   status,
+  zone = null,
+  hideEvents = false,
 }: {
   conversation: string;
   entries: ThreadEntry[];
@@ -217,6 +237,8 @@ export function Thread({
   onAskOperator: () => void;
   onTyping: Report;
   status?: ReactNode;
+  zone?: string | null;
+  hideEvents?: boolean;
 }) {
   const moves = useMessageMoves(conversation);
   const [mode, setMode] = useState<Mode | null>(null);
@@ -238,13 +260,19 @@ export function Thread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="pt-2 pb-4">
-        <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Entry entry={entry} customer={customer} moves={moves} />
-            </li>
-          ))}
-        </ol>
+        <ThreadZone.Provider value={zone}>
+          <ol className="mx-auto flex max-w-3xl flex-col gap-3">
+            {foldEvents(entries, hideEvents).map((entry) => (
+              <li key={entry.id}>
+                {entry.kind === "folded" ? (
+                  <Pill>{foldedText(entry.count)}</Pill>
+                ) : (
+                  <Entry entry={entry} customer={customer} moves={moves} />
+                )}
+              </li>
+            ))}
+          </ol>
+        </ThreadZone.Provider>
       </ScrollArea>
       <div className="shrink-0 px-3 pb-3">
         {status ? <div className="mx-auto w-full max-w-3xl px-4 pb-1.5">{status}</div> : null}

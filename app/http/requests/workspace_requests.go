@@ -36,6 +36,7 @@ type UpdateCurrentWorkspaceRequest struct {
 		ShowViewers      *bool   `json:"show_viewers_on_list,omitempty"`
 		UndoSendSeconds  *int    `json:"undo_send_seconds,omitempty"  validate:"omitempty,oneof=0 5 10 20 30"`
 		SeenReceiptName  *bool   `json:"seen_receipt_shows_name,omitempty"`
+		GIFPicker        *bool   `json:"gif_picker,omitempty"`
 
 		CustomerFacingName *string `json:"customer_facing_name,omitempty" validate:"omitempty,max=80"`
 	}

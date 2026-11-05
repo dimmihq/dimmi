@@ -36,6 +36,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/gifs"
 )
 
 /*
@@ -178,6 +179,7 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 
 	if s.msg, s.c, err = s.w.Append(ctx, s.c, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: in.Body, DeliveryStatus: &route.Status, DedupeKey: key,
+		Metadata: gifs.Metadata(in.Body),
 	}); err != nil {
 		return err
 	}

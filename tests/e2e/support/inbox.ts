@@ -16,7 +16,7 @@ export interface Customer {
 /*
  * workspaceOf returns the id of the signed-in person's workspace.
  */
-async function workspaceOf(page: Page): Promise<string> {
+export async function workspaceOf(page: Page): Promise<string> {
   const response = await page.request.get("/api/v1/me");
   expect(response.status(), await response.text()).toBe(200);
   const me = (await response.json()) as { data: { workspaces: { id: string }[] } };
@@ -73,4 +73,24 @@ export async function startConversation(page: Page, customer: Customer): Promise
 export async function openComposer(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).click();
   await expect(page.getByRole("toolbar", { name: "Formatting" })).toBeVisible({ timeout: 15_000 });
+}
+
+/*
+ * callAPI sends a request in the signed-in person's workspace and checks
+ * it got the status expected.
+ */
+export async function callAPI(
+  page: Page,
+  method: "POST" | "PATCH",
+  path: string,
+  data: Record<string, unknown>,
+  status: number,
+): Promise<void> {
+  const workspace = await workspaceOf(page);
+  const response = await page.request.fetch(`/api/v1${path}`, {
+    method,
+    headers: { "Dimmi-Workspace": workspace },
+    data,
+  });
+  expect(response.status(), await response.text()).toBe(status);
 }

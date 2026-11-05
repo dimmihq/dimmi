@@ -10,9 +10,11 @@
  * unread; a reply or note is added to the thread once the server has it.
  * While it is open the conversation follows its realtime channel, so a
  * teammate's reply shows without a reload; the header shows who else has
- * it open, and the thread says when the customer is typing.
+ * it open, and the thread says when the customer is typing. When the
+ * customer's time zone is known, a header control reads the thread's
+ * times in it.
  */
-import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
+import { RiArrowLeftSLine, RiGlobalLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -48,6 +50,7 @@ import { OperatorPanel } from "./operator-panel";
 import { PriorityMenu } from "./priority/priority-menu";
 import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
+import { useThreadSettings } from "./thread/thread-settings";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
 import { useWalk } from "./use-walk";
@@ -108,6 +111,35 @@ function useTimeline(workspace: string, conversation: Conversation) {
   return { entries: messages.map(toEntry), send };
 }
 
+/*
+ * CustomerClock switches the thread's times to the customer's zone, shown
+ * only when that zone is known.
+ */
+function CustomerClock({
+  zone,
+  customer,
+  settings,
+}: {
+  zone: string | null;
+  customer: string;
+  settings: ReturnType<typeof useThreadSettings>;
+}) {
+  if (!zone) {
+    return null;
+  }
+
+  return (
+    <IconButton
+      size="small"
+      icon={RiGlobalLine}
+      className={cx(settings.customerTime && pressed)}
+      aria-label={`${customer}'s local time`}
+      aria-pressed={settings.customerTime}
+      onClick={settings.toggleCustomerTime}
+    />
+  );
+}
+
 export function ConversationView({
   view,
   workspace,
@@ -124,17 +156,21 @@ export function ConversationView({
   const [snoozing, setSnoozing] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const toggleRef = useRef<() => void>(() => undefined);
+  const settings = useThreadSettings(workspace);
+  const { toggleEvents } = settings;
   const panels = useMemo(
     () => ({
       openSnooze: () => setSnoozing(true),
       openAssign: () => setAssigning(true),
       toggleDetails: () => toggleRef.current(),
+      toggleEvents,
     }),
-    [],
+    [toggleEvents],
   );
   const walk = useWalk(view, workspace, conversation, caze, panels);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
+  const contactZone = conversation.contact.timezone ?? null;
   const sideBySide = useWide(1024);
   const operatorDefault = useWide(1280);
   const sides = useSidePanes(
@@ -195,6 +231,7 @@ export function ConversationView({
             }}
           />
           <PriorityMenu priority={conversation.priority} onChange={caze.setPriority} />
+          <CustomerClock zone={contactZone} customer={customer} settings={settings} />
           {sideBySide ? (
             <IconButton
               size="small"
@@ -230,6 +267,8 @@ export function ConversationView({
         onAskOperator={toggleOperator}
         onTyping={typing}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
+        zone={settings.customerTime ? contactZone : null}
+        hideEvents={settings.hideEvents}
       />
     </Panel>
   );

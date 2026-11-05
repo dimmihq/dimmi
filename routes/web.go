@@ -42,6 +42,13 @@ func Web(a *app.App) {
 		Callback: a.Actions.HandleOAuthCallback, Clock: a.Clock, Errors: a.Errors,
 	}
 
+	a.Router.Group("", func(dashboard *routing.Router) {
+		dashboard.Middleware("csp:dashboard")
+
+		dashboard.Handle(fhttp.MethodGet, "/d", "app.show", fhttp.HandlerFunc(spa.Show))
+		dashboard.Handle(fhttp.MethodGet, "/d/*", "app.page", fhttp.HandlerFunc(spa.Show))
+	})
+
 	a.Router.Group("", func(pages *routing.Router) {
 		pages.Middleware("csp")
 
@@ -49,8 +56,6 @@ func Web(a *app.App) {
 			w.Header().Set("Location", "/d")
 			w.WriteHeader(fhttp.StatusFound)
 		}))
-		pages.Handle(fhttp.MethodGet, "/d", "app.show", fhttp.HandlerFunc(spa.Show))
-		pages.Handle(fhttp.MethodGet, "/d/*", "app.page", fhttp.HandlerFunc(spa.Show))
 
 		for name, path := range authPages() {
 			pages.Handle(fhttp.MethodGet, path, name, fhttp.HandlerFunc(spa.ShowAuth))

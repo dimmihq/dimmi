@@ -32,6 +32,7 @@ export interface ConversationMoves {
   assignToMe: () => void;
   assign: () => void;
   toggleDetails: () => void;
+  toggleEvents: () => void;
   next: () => void;
   previous: () => void;
   advance: () => void;

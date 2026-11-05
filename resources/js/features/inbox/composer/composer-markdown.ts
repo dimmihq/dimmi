@@ -8,7 +8,7 @@
 
 import Image from "@tiptap/extension-image";
 import { Markdown } from "@tiptap/markdown";
-import { Extension } from "@tiptap/react";
+import { type AnyExtension, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 /*
@@ -31,9 +31,10 @@ function composerKeys(onLink: () => void) {
 }
 
 /*
- * composerExtensions is the composer's schema with Markdown in and out.
+ * composerExtensions is the composer's schema with Markdown in and out,
+ * plus any helpers, such as suggestions while typing.
  */
-export function composerExtensions(onLink: () => void = () => undefined) {
+export function composerExtensions(onLink: () => void = () => undefined, helpers: AnyExtension[] = []) {
   return [
     StarterKit.configure({
       heading: false,
@@ -44,5 +45,6 @@ export function composerExtensions(onLink: () => void = () => undefined) {
     Image.configure({ inline: true, allowBase64: false }),
     Markdown,
     composerKeys(onLink),
+    ...helpers,
   ];
 }

@@ -33,6 +33,7 @@ export interface ContactSummary {
   name: string | null;
   email: string | null;
   avatar_url: string | null;
+  timezone?: string | null;
 }
 
 export interface Author {
@@ -106,6 +107,7 @@ export interface Message {
   scheduled_send_at?: string | null;
   event: TimelineEvent | null;
   edited_at?: string | null;
+  read_at?: string | null;
   deleted_at: string | null;
   deleted_by?: { id: string; name: string } | null;
   created_at: string;
@@ -420,5 +422,23 @@ export function snoozeChoicesQuery(workspace: string, conversation: string) {
       request<SnoozeChoice[]>("GET", `/snooze-options?conversation=${encodeURIComponent(conversation)}`, undefined, {
         workspace,
       }),
+  });
+}
+
+/*
+ * GifSearch says whether the composer may search GIFs, and with which
+ * key; the browser calls GIPHY itself.
+ */
+export interface GifSearch {
+  enabled: boolean;
+  provider: "giphy" | null;
+  api_key: string | null;
+}
+
+export function gifSearchQuery(workspace: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "gif-search"],
+    queryFn: () => request<GifSearch>("GET", "/gif-search", undefined, { workspace }),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }

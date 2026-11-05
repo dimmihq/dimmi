@@ -70,12 +70,14 @@ export type ThreadEntry =
       id: string;
       author: string;
       at: string;
+      iso?: string;
+      seenAt?: string | null;
       text: string;
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
     }
-  | { kind: "event"; id: string; at: string; text: string };
+  | { kind: "event"; id: string; at: string; iso?: string; text: string };
 
 const statusWords: Record<string, string> = {
   "conversation.closed": "closed the conversation",
@@ -105,12 +107,13 @@ export function eventText(event: TimelineEvent): string {
 
 export function toEntry(message: Message): ThreadEntry {
   const at = ago(message.created_at);
+  const iso = message.created_at;
   if (message.type === "event" && message.event) {
-    return { kind: "event", id: message.id, at, text: eventText(message.event) };
+    return { kind: "event", id: message.id, at, iso, text: eventText(message.event) };
   }
   if (message.deleted_at) {
     const by = message.deleted_by?.name;
-    return { kind: "event", id: message.id, at, text: by ? `Message deleted by ${by}` : "Message deleted" };
+    return { kind: "event", id: message.id, at, iso, text: by ? `Message deleted by ${by}` : "Message deleted" };
   }
   const text = message.body ?? "";
   const author = message.author.name;
@@ -120,16 +123,17 @@ export function toEntry(message: Message): ThreadEntry {
       id: message.id,
       author,
       at,
+      iso,
       text,
       authorId: message.author.id,
       edited: Boolean(message.edited_at),
     };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", id: message.id, author, at, text };
+    return { kind: "customer", id: message.id, author, at, iso, text };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", id: message.id, author, at, text };
+    return { kind: "dimmi", id: message.id, author, at, iso, text, seenAt: message.read_at ?? null };
   }
 
   return {
@@ -137,6 +141,8 @@ export function toEntry(message: Message): ThreadEntry {
     id: message.id,
     author,
     at,
+    iso,
+    seenAt: message.read_at ?? null,
     text,
     held: Boolean(message.scheduled_send_at),
     authorId: message.author.id,

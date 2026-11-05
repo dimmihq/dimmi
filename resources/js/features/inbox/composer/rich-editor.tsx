@@ -4,7 +4,8 @@
  * type, or Cmd+B, Cmd+I, Cmd+Shift+X and Cmd+Shift+U; what they see is
  * kept as Markdown, the only thing the composer reads and saves. Pasted
  * pages keep only what the composer's document holds, so headings,
- * colours and underline fall away to plain text.
+ * colours and underline fall away to plain text. A colon and two letters
+ * suggest emoji by name.
  */
 import type { RemixiconComponentType } from "@remixicon/react";
 import {
@@ -26,6 +27,9 @@ import { Input } from "@/components/base/input/input";
 import { cx } from "@/utils/cx";
 
 import { composerExtensions } from "./composer-markdown";
+import { type Emoji, findEmoji, loadEmoji } from "./emoji";
+import { type Suggested, suggestionExtension } from "./suggestion-extension";
+import { SuggestionList } from "./suggestion-list";
 
 /*
  * richClass styles the editable document like a sent message reads.
@@ -120,9 +124,22 @@ export default function RichEditor({
   handlers.current = { onChange, onSubmit, onBlur, onFiles };
   const linkRef = useRef<() => void>(() => undefined);
   const [linking, setLinking] = useState<string | null>(null);
+  const [emoji, setEmoji] = useState<Suggested<Emoji> | null>(null);
 
   const editor = useEditor({
-    extensions: composerExtensions(() => linkRef.current()),
+    extensions: composerExtensions(
+      () => linkRef.current(),
+      [
+        suggestionExtension<Emoji>({
+          name: "emojiSuggestion",
+          char: ":",
+          minLength: 2,
+          find: async (query) => findEmoji(await loadEmoji(), query, 8),
+          text: (item) => item.unicode,
+          onChange: setEmoji,
+        }),
+      ],
+    ),
     content: value,
     contentType: "markdown",
     autofocus: "end",
@@ -173,6 +190,17 @@ export default function RichEditor({
         ) : null}
         <EditorContent editor={editor} />
       </div>
+      <SuggestionList
+        label="Emoji"
+        suggested={emoji}
+        keyOf={(item) => item.unicode}
+        render={(item) => (
+          <>
+            <span aria-hidden>{item.unicode}</span>
+            <span className="truncate">{item.label}</span>
+          </>
+        )}
+      />
       {editor ? <Toolbar editor={editor} onLink={() => linkRef.current()} /> : null}
       {editor && linking !== null ? (
         <LinkRow
