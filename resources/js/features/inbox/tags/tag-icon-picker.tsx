@@ -16,7 +16,7 @@ export function TagIconPicker({ value, onChange }: { value: string; onChange: (i
   return (
     <RadioGroup value={value} onChange={onChange} orientation="horizontal" className="flex flex-col gap-1.5">
       <Label>Icon</Label>
-      <div className="flex flex-wrap gap-1">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(2.25rem,1fr))] gap-1">
         {Object.entries(tagIcons).map(([name, Icon]) => (
           <Radio
             key={name}
@@ -24,7 +24,7 @@ export function TagIconPicker({ value, onChange }: { value: string; onChange: (i
             aria-label={iconLabel(name)}
             className={({ isSelected, isFocusVisible, isHovered }) =>
               cx(
-                "flex size-8 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none",
+                "flex h-9 w-full cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none",
                 isHovered && !isSelected && "bg-background-secondary-hover",
                 isSelected && "bg-accent-500 text-white",
                 isFocusVisible && "ring-2 ring-border-focus-ring",

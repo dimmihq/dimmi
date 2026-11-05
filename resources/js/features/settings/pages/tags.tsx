@@ -41,8 +41,8 @@ function countOf(tag: ListedTag): string {
 }
 
 /*
- * TagFields are what a tag is made of: its name, colour and icon, above a
- * preview of the chip they make.
+ * TagFields are what a tag is made of: its name, colour and icon, above
+ * the chip they make.
  */
 function TagFields({
   name,
@@ -72,8 +72,7 @@ function TagFields({
       />
       <TagColorPicker value={color} onChange={onColor} />
       <TagIconPicker value={icon} onChange={onIcon} />
-      <div className="flex items-center gap-2 text-body-2-regular text-text-tertiary">
-        Preview
+      <div className="flex">
         <TagChip tag={{ id: "preview", object: "tag", name: name.trim() || "Tag", color, icon }} />
       </div>
     </div>
