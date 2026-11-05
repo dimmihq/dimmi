@@ -10,7 +10,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/base/buttons/button";
 import { invitationsQuery } from "@/lib/api/invitations";
 import { tagsQuery } from "@/lib/api/tags";
-import { updateOnboarding } from "@/lib/api/workspace";
+import { updateOnboarding, workspaceQuery } from "@/lib/api/workspace";
 
 import { StepActions } from "./frame";
 
@@ -41,6 +41,7 @@ export function SummaryStep({
   const queryClient = useQueryClient();
   const { data: tags } = useQuery(tagsQuery(workspace));
   const { data: invitations } = useQuery(invitationsQuery(workspace));
+  const { data: current } = useQuery(workspaceQuery(workspace));
   const finish = useMutation({
     mutationFn: () => updateOnboarding(workspace, "done", true),
     onSuccess: async () => {
@@ -61,7 +62,7 @@ export function SummaryStep({
       <p className="mt-2 text-body-regular text-text-secondary">Everything below can be changed in settings.</p>
       <ul className="mt-8 flex flex-col gap-2">
         <Row label="Workspace" value={name} />
-        <Row label="Logo" value={null} />
+        <Row label="Logo" value={current?.logo_url ? "Added" : null} />
         <Row label="Tags" value={tagNames || null} />
         <Row label="Team" value={invited > 0 ? `${invited} invited` : null} />
         <Row label="Knowledge" value={null} />

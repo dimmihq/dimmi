@@ -1,18 +1,26 @@
 /*
- * Steps for features still on their way: a logo for the messenger and
- * mail, and the pages the AI agent will answer from. They show what is
- * coming so the setup reads whole, and let the team move on; nothing on
- * them is saved yet.
+ * The logo step, whose upload opens the file picker straight away and
+ * saves at once, and the knowledge step, for the pages the AI agent will
+ * answer from, which is still on its way and saves nothing yet.
  */
-import { RiAddLine, RiImageLine, RiLinkM } from "@remixicon/react";
+import { RiAddLine, RiLinkM } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
+import { LogoMark } from "@/features/settings/logo-row";
+import { PicturePicker } from "@/features/settings/picture-picker";
+import { useLogo } from "@/features/settings/use-logo";
+import { workspaceQuery } from "@/lib/api/workspace";
 
 import { StepActions, StepHeader } from "./frame";
 import type { StepProps } from "./step-props";
 
-export function LogoStep({ label, onNext, onBack }: StepProps) {
+export function LogoStep({ workspace, label, onNext, onBack }: StepProps) {
+  const { data } = useQuery(workspaceQuery(workspace));
+  const logo = useLogo(workspace);
+  const url = data?.logo_url ?? null;
+
   return (
     <div>
       <StepHeader
@@ -20,16 +28,42 @@ export function LogoStep({ label, onNext, onBack }: StepProps) {
         title="Add your logo"
         description="Your logo appears in the messenger and in emails to your customers."
       />
-      <p className="mt-8 text-body-2-regular text-text-tertiary">
-        Recommended size: 240×240 px. PNG or JPEG, up to 10 MB.
-      </p>
-      <div className="mt-3 flex items-center gap-3">
-        <Button variant="secondary" size="small" leadingIcon={RiImageLine} disabled>
-          Upload logo
-        </Button>
-        <span className="text-body-2-regular text-text-tertiary">Coming soon. You can add one later in settings.</span>
+      <div className="mt-8 flex items-center gap-4">
+        <LogoMark
+          url={url}
+          className={
+            url
+              ? "size-16 rounded-2xl object-cover"
+              : "flex size-16 items-center justify-center rounded-2xl bg-background-secondary-default text-foreground-icon-tertiary"
+          }
+        />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <PicturePicker isPending={logo.upload.isPending} onPick={logo.pick} onTooLarge={logo.refuse}>
+              {logo.upload.isPending ? "Uploading…" : url ? "Replace logo" : "Upload logo"}
+            </PicturePicker>
+            {url ? (
+              <Button variant="secondary" size="small" onClick={() => logo.remove.mutate()}>
+                Remove
+              </Button>
+            ) : null}
+          </div>
+          <p
+            className={
+              logo.failure ? "text-body-2-regular text-text-error-primary" : "text-body-2-regular text-text-tertiary"
+            }
+          >
+            {logo.failure ?? "A square works best. PNG, JPEG, WebP or GIF, up to 2 MB."}
+          </p>
+        </div>
       </div>
-      <StepActions skipLabel="Continue without a logo" onSkip={onNext} onBack={onBack} />
+      <StepActions
+        primary={url ? onNext : undefined}
+        primaryLabel="Continue"
+        skipLabel={url ? undefined : "Continue without a logo"}
+        onSkip={url ? undefined : onNext}
+        onBack={onBack}
+      />
     </div>
   );
 }

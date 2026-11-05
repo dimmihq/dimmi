@@ -980,6 +980,7 @@ type Workspace struct {
 	SuspendedReason        *string         `json:"suspended_reason"`
 	OnboardingStep         string          `json:"onboarding_step"`
 	OnboardingCompletedAt  *time.Time      `json:"onboarding_completed_at"`
+	LogoPath               *string         `json:"logo_path"`
 }
 
 type WorkspaceMember struct {

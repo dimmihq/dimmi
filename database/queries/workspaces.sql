@@ -121,3 +121,10 @@ SET onboarding_step = @step,
     updated_at = @now
 WHERE id = @id
 RETURNING *;
+
+-- name: ReplaceWorkspaceLogoPath :one
+-- ReplaceWorkspaceLogoPath gives the workspace the logo stored at the
+-- path, or none.
+UPDATE workspaces SET logo_path = sqlc.narg(logo_path), updated_at = @now
+WHERE id = @id
+RETURNING *;

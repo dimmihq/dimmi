@@ -29,6 +29,7 @@ const workspace: Workspace = {
   id: "ws_1",
   name: "Acme",
   slug: "acme",
+  logo_url: null,
   timezone: "UTC",
   locale: "en",
   test_mode: false,

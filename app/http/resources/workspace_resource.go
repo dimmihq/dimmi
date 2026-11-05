@@ -30,13 +30,15 @@ conversations and their files are kept. DeletedAt and PurgeAfter are set
 while it is in the trash: when it was deleted, and when it is purged for
 good unless restored. UndoSendSeconds is how long replies wait before
 they leave. Onboarding is how far its setup has come: the step reached,
-and when it finished, null until then.
+and when it finished, null until then. LogoURL is the address of its
+logo on this server, null without one.
 */
 type Workspace struct {
 	ID                 string            `json:"id"`
 	Object             string            `json:"object"`
 	Name               string            `json:"name"`
 	Slug               string            `json:"slug"`
+	LogoURL            *string           `json:"logo_url"`
 	Timezone           string            `json:"timezone"`
 	Locale             string            `json:"locale"`
 	TestMode           bool              `json:"test_mode"`
@@ -69,6 +71,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		Object:             "workspace",
 		Name:               w.Name,
 		Slug:               w.Slug,
+		LogoURL:            w.LogoURL(),
 		Timezone:           w.Timezone,
 		Locale:             w.Locale,
 		TestMode:           w.TestMode,

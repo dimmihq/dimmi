@@ -72,6 +72,8 @@ type Actions struct {
 	ResolveWorkspace        *workspaces.ResolveWorkspace
 	UpdateWorkspace         *workspaces.UpdateWorkspace
 	UpdateOnboarding        *workspaces.UpdateOnboarding
+	UpdateLogo              *workspaces.UpdateLogo
+	DeleteLogo              *workspaces.DeleteLogo
 	ListMemberships         *workspaces.ListMemberships
 	RepairWorkspaces        *workspaces.RepairWorkspaces
 	ListMembers             *members.ListMembers

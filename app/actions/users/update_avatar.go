@@ -3,11 +3,10 @@
 | Update Avatar
 |--------------------------------------------------------------------------
 |
-| A person's picture is shown to everyone they work with, so it is never
-| stored as it arrived: it must decode as a picture of an accepted kind
-| within the limits, and only a small square redrawn from its pixels is
-| kept, under a new name each time. The old file goes after the change
-| commits, by a job that can try again, and a storage hiccup never shows.
+| A person's picture is shown to everyone they work with. It is kept the
+| way every picture is: a small square redrawn from the upload, under a
+| new name each time. The old file goes after the change commits, by a
+| job that can try again, and a storage hiccup never shows.
 |
 */
 
@@ -24,23 +23,18 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/dimmihq/dimmi/framework/image"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	appevents "github.com/dimmihq/dimmi/app/events"
-	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/pictures"
 )
 
 /*
-The largest upload accepted and the size a picture is kept at.
+AvatarMaxBytes is the largest upload accepted.
 */
-const (
-	AvatarMaxBytes  = 2 << 20
-	avatarSize      = 256
-	avatarMaxPixels = 4096 * 4096
-)
+const AvatarMaxBytes = pictures.MaxBytes
 
 /*
 UpdateAvatar replaces the caller's own picture.
@@ -62,16 +56,9 @@ type UpdateAvatar struct {
 Handle stores the picture and returns the user as they now are.
 */
 func (a *UpdateAvatar) Handle(ctx context.Context, userID ids.UUID, upload io.Reader) (models.User, error) {
-	picture, err := avatarFrom(upload)
+	path, err := pictures.Store(ctx, a.Disk, upload)
 	if err != nil {
 		return models.User{}, err
-	}
-
-	path := "avatars/" + ids.New().String() + ".png"
-
-	err = a.Disk.Put(ctx, path, picture, filesystem.PutOptions{ContentType: image.PNG.ContentType()})
-	if err != nil {
-		return models.User{}, fmt.Errorf("store avatar: %w", err)
 	}
 
 	writer := avatarWriter{DB: a.DB, Clock: a.Clock, Events: a.Events, Queue: a.Queue}
@@ -82,28 +69,6 @@ func (a *UpdateAvatar) Handle(ctx context.Context, userID ids.UUID, upload io.Re
 	}
 
 	return user, nil
-}
-
-/*
-avatarFrom reads the upload and returns the picture to keep.
-*/
-func avatarFrom(upload io.Reader) ([]byte, error) {
-	limits := image.Limits{MaxBytes: AvatarMaxBytes, MaxPixels: avatarMaxPixels}
-
-	picture, cfg, err := image.Thumbnail(upload, avatarSize, limits)
-	if errors.Is(err, image.ErrTooLarge) {
-		return nil, exceptions.ErrAvatarTooLarge
-	}
-
-	if err != nil {
-		return nil, exceptions.ErrInvalidAvatar
-	}
-
-	if cfg.Format == image.ICO {
-		return nil, exceptions.ErrInvalidAvatar
-	}
-
-	return picture, nil
 }
 
 /*

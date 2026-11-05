@@ -50,7 +50,7 @@ INSERT INTO workspaces (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $9
 )
-RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
 `
 
 type CreateWorkspaceParams struct {
@@ -102,6 +102,7 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
@@ -118,7 +119,7 @@ func (q *Queries) DeleteWorkspace(ctx context.Context, id ids.UUID) error {
 }
 
 const findWorkspace = `-- name: FindWorkspace :one
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces WHERE id = $1
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path FROM workspaces WHERE id = $1
 `
 
 // FindWorkspace returns the workspace with the id, deleted or not.
@@ -145,12 +146,13 @@ func (q *Queries) FindWorkspace(ctx context.Context, id ids.UUID) (Workspace, er
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
 
 const findWorkspaceBySlug = `-- name: FindWorkspaceBySlug :one
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces WHERE slug = $1
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path FROM workspaces WHERE slug = $1
 `
 
 // FindWorkspaceBySlug returns the workspace with the slug, deleted or
@@ -178,12 +180,13 @@ func (q *Queries) FindWorkspaceBySlug(ctx context.Context, slug string) (Workspa
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
 
 const listWorkspaces = `-- name: ListWorkspaces :many
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces WHERE deleted_at IS NULL ORDER BY created_at, id
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path FROM workspaces WHERE deleted_at IS NULL ORDER BY created_at, id
 `
 
 // ListWorkspaces returns every workspace not in the trash, oldest first.
@@ -216,6 +219,7 @@ func (q *Queries) ListWorkspaces(ctx context.Context) ([]Workspace, error) {
 			&i.SuspendedReason,
 			&i.OnboardingStep,
 			&i.OnboardingCompletedAt,
+			&i.LogoPath,
 		); err != nil {
 			return nil, err
 		}
@@ -256,7 +260,7 @@ func (q *Queries) ListWorkspacesDueForPurge(ctx context.Context, now time.Time) 
 }
 
 const listWorkspacesDueForReminder = `-- name: ListWorkspacesDueForReminder :many
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path FROM workspaces
 WHERE deleted_at IS NOT NULL AND purge_after > $1::timestamptz AND purge_after <= $2::timestamptz
   AND NOT settings ? 'deletion_reminded_at'
 ORDER BY purge_after, id
@@ -299,6 +303,7 @@ func (q *Queries) ListWorkspacesDueForReminder(ctx context.Context, arg ListWork
 			&i.SuspendedReason,
 			&i.OnboardingStep,
 			&i.OnboardingCompletedAt,
+			&i.LogoPath,
 		); err != nil {
 			return nil, err
 		}
@@ -311,7 +316,7 @@ func (q *Queries) ListWorkspacesDueForReminder(ctx context.Context, arg ListWork
 }
 
 const lockWorkspace = `-- name: LockWorkspace :one
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces WHERE id = $1 FOR UPDATE
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path FROM workspaces WHERE id = $1 FOR UPDATE
 `
 
 // LockWorkspace returns the workspace and holds it until the transaction
@@ -339,6 +344,7 @@ func (q *Queries) LockWorkspace(ctx context.Context, id ids.UUID) (Workspace, er
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
@@ -350,7 +356,7 @@ SET settings = CASE
         ELSE jsonb_set(settings, '{purge_started_at}', to_jsonb($1::timestamptz))
     END
 WHERE id = $2 AND deleted_at IS NOT NULL
-RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
 `
 
 type MarkWorkspacePurgeStartedParams struct {
@@ -384,6 +390,7 @@ func (q *Queries) MarkWorkspacePurgeStarted(ctx context.Context, arg MarkWorkspa
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
@@ -406,12 +413,54 @@ func (q *Queries) MarkWorkspaceReminded(ctx context.Context, arg MarkWorkspaceRe
 	return err
 }
 
+const replaceWorkspaceLogoPath = `-- name: ReplaceWorkspaceLogoPath :one
+UPDATE workspaces SET logo_path = $1, updated_at = $2
+WHERE id = $3
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
+`
+
+type ReplaceWorkspaceLogoPathParams struct {
+	LogoPath *string   `json:"logo_path"`
+	Now      time.Time `json:"now"`
+	ID       ids.UUID  `json:"id"`
+}
+
+// ReplaceWorkspaceLogoPath gives the workspace the logo stored at the
+// path, or none.
+func (q *Queries) ReplaceWorkspaceLogoPath(ctx context.Context, arg ReplaceWorkspaceLogoPathParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, replaceWorkspaceLogoPath, arg.LogoPath, arg.Now, arg.ID)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Slug,
+		&i.Timezone,
+		&i.Locale,
+		&i.Settings,
+		&i.TestMode,
+		&i.NextConversationNumber,
+		&i.SuspendedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CreatedByUserID,
+		&i.DeletedByUserID,
+		&i.PurgeAfter,
+		&i.SuspendedReason,
+		&i.OnboardingStep,
+		&i.OnboardingCompletedAt,
+		&i.LogoPath,
+	)
+	return i, err
+}
+
 const restoreWorkspace = `-- name: RestoreWorkspace :one
 UPDATE workspaces
 SET deleted_at = NULL, purge_after = NULL, deleted_by_user_id = NULL,
     settings = settings - 'deletion_reminded_at', updated_at = $1
 WHERE id = $2
-RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
 `
 
 type RestoreWorkspaceParams struct {
@@ -443,6 +492,7 @@ func (q *Queries) RestoreWorkspace(ctx context.Context, arg RestoreWorkspacePara
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
@@ -452,7 +502,7 @@ UPDATE workspaces
 SET deleted_at = $1::timestamptz, purge_after = $2::timestamptz, deleted_by_user_id = $3,
     settings = settings - 'deletion_reminded_at', updated_at = $1::timestamptz
 WHERE id = $4
-RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
 `
 
 type TrashWorkspaceParams struct {
@@ -493,6 +543,7 @@ func (q *Queries) TrashWorkspace(ctx context.Context, arg TrashWorkspaceParams) 
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
@@ -501,7 +552,7 @@ const updateWorkspace = `-- name: UpdateWorkspace :one
 UPDATE workspaces
 SET name = $1, slug = $2, timezone = $3, locale = $4, settings = $5, updated_at = $6
 WHERE id = $7
-RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
 `
 
 type UpdateWorkspaceParams struct {
@@ -547,6 +598,7 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }
@@ -557,7 +609,7 @@ SET onboarding_step = $1,
     onboarding_completed_at = CASE WHEN $2::boolean THEN coalesce(onboarding_completed_at, $3) ELSE onboarding_completed_at END,
     updated_at = $3
 WHERE id = $4
-RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at
+RETURNING id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path
 `
 
 type UpdateWorkspaceOnboardingParams struct {
@@ -598,6 +650,7 @@ func (q *Queries) UpdateWorkspaceOnboarding(ctx context.Context, arg UpdateWorks
 		&i.SuspendedReason,
 		&i.OnboardingStep,
 		&i.OnboardingCompletedAt,
+		&i.LogoPath,
 	)
 	return i, err
 }

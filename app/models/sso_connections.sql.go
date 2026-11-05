@@ -300,7 +300,7 @@ func (q *Queries) ListOrganizationSSOConnectionsBySlug(ctx context.Context, slug
 }
 
 const listOrganizationWorkspaces = `-- name: ListOrganizationWorkspaces :many
-SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at FROM workspaces WHERE organization_id = $1 AND deleted_at IS NULL ORDER BY id FOR UPDATE
+SELECT id, organization_id, name, slug, timezone, locale, settings, test_mode, next_conversation_number, suspended_at, deleted_at, created_at, updated_at, created_by_user_id, deleted_by_user_id, purge_after, suspended_reason, onboarding_step, onboarding_completed_at, logo_path FROM workspaces WHERE organization_id = $1 AND deleted_at IS NULL ORDER BY id FOR UPDATE
 `
 
 // ListOrganizationWorkspaces returns the organization's live workspaces,
@@ -334,6 +334,7 @@ func (q *Queries) ListOrganizationWorkspaces(ctx context.Context, organizationID
 			&i.SuspendedReason,
 			&i.OnboardingStep,
 			&i.OnboardingCompletedAt,
+			&i.LogoPath,
 		); err != nil {
 			return nil, err
 		}

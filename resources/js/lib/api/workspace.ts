@@ -14,6 +14,7 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  logo_url: string | null;
   timezone: string;
   locale: string;
   test_mode: boolean;
@@ -188,6 +189,21 @@ export function createTestConversations(workspace: string): Promise<{ count: num
 
 export function updateWorkspace(workspace: string, changes: WorkspaceChanges): Promise<Workspace> {
   return request<Workspace>("PATCH", "/workspace", changes, { workspace });
+}
+
+/*
+ * uploadLogo replaces the workspace's logo; the server keeps a small
+ * square redrawn from the file.
+ */
+export function uploadLogo(workspace: string, file: File): Promise<Workspace> {
+  const form = new FormData();
+  form.append("logo", file);
+
+  return request<Workspace>("PUT", "/workspace/logo", form, { workspace });
+}
+
+export function removeLogo(workspace: string): Promise<void> {
+  return request<void>("DELETE", "/workspace/logo", undefined, { workspace });
 }
 
 /*

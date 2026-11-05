@@ -786,6 +786,8 @@ needs no workspace header.
 | Upload picture | `r pic -b a.jar -X PUT -H "$O" -F avatar=@logo.png $B/user/avatar`, then `curl -I $HOST$(jq -r .data.avatar_url pic.json)` | 200 with `avatar_url` `/avatars/<uuid>.png`; 200 `image/png`, `immutable`, `nosniff` |
 | Refuse non-picture | same with a text file | 422 `invalid_avatar` |
 | Remove picture | `r nopic -b a.jar -X DELETE -H "$O" $B/user/avatar` | 204; the old address 404 once the worker ran |
+| Upload workspace logo | `r logo -b a.jar -X PUT -H "$O" -H "Dimmi-Workspace: $WS" -F logo=@logo.png $B/workspace/logo`, then `curl -I $HOST$(jq -r .data.logo_url logo.json)` | 200 workspace with `logo_url` `/avatars/<uuid>.png`; 200 `image/png` |
+| Remove workspace logo | `r nologo -b a.jar -X DELETE -H "$O" -H "Dimmi-Workspace: $WS" $B/workspace/logo` | 204; `GET $B/workspace` shows `logo_url` null; a member gets 403 |
 | Change password | `r pw -b a.jar -c a.jar -X PATCH -H "$O" -H "$J" $B/user/password -d '{"current_password":"...","password":"..."}'` | 200 `tokens_remaining`; new session cookie; another browser's `me` 401; tokens still work; mail "Your Dimmi password changed" |
 | Wrong password | same with a wrong `current_password` | 422 `invalid_password` on `current_password` |
 | Ask to move | `r mv -b a.jar -X POST -H "$O" -H "$J" $B/email-changes -d "{\"email\":\"moved.$RUN@example.com\"}"` | 201 `email_change` `pending`, masked; mails "Confirm your new" to the new address and "Someone asked" to the old |

@@ -224,3 +224,17 @@ func (w Workspace) UndoSendSeconds() int {
 
 	return *settings.Inbox.UndoSendSeconds
 }
+
+/*
+LogoURL returns the address of the workspace's logo on this server, or
+nil when it has none.
+*/
+func (w Workspace) LogoURL() *string {
+	if w.LogoPath == nil {
+		return nil
+	}
+
+	url := "/" + *w.LogoPath
+
+	return &url
+}

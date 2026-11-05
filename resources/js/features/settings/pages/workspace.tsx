@@ -38,6 +38,7 @@ import { Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, Section, SettingsPage } from "../layout";
+import { LogoRow } from "../logo-row";
 import { MemberImportButton } from "../members/member-import-dialog";
 import { type FilterKey, filterFor, filterKeyFrom } from "../members/member-review";
 import { ExportMembersButton, LastActive, MemberFilterSelect, TwoFactorMark } from "../members/member-review-controls";
@@ -120,6 +121,7 @@ export function WorkspaceSettings() {
           </Button>
         }
       >
+        <LogoRow workspace={me.workspace.id} url={workspace?.logo_url ?? null} />
         <Row label="Name">
           <Field
             key={`name-${name}`}
