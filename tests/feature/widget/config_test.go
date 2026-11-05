@@ -78,6 +78,20 @@ func TestWidgetConfig(t *testing.T) {
 		res.AssertJSONPath("data.appearance.primary_color", "#000000")
 	})
 
+	t.Run("a new workspace logo shows in the config under a new entity tag", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		tag := tc.Client().GetJSON(configPath(t, tc)).AssertOK().AssertJSONPath("data.company.logo_url", nil).
+			Header.Get("ETag")
+
+		owner(tc).PutFile("/api/v1/workspace/logo", "logo", "logo.png", pngOf(t, 10, 10)).AssertOK()
+
+		res := tc.Client().WithHeader("If-None-Match", tag).GetJSON(configPath(t, tc)).AssertOK()
+		assert.Regexp(t, `^http.*/avatars/[0-9a-f-]+\.png$`, res.String("data.company.logo_url"))
+		assert.NotEqual(t, tag, res.Header.Get("ETag"))
+	})
+
 	t.Run("a change on one replica reaches another", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

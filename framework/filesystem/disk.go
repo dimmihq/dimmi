@@ -342,7 +342,7 @@ func sniff(r io.Reader, opts PutOptions) (io.Reader, PutOptions, error) {
 		return nil, opts, err
 	}
 
-	opts.ContentType = http.DetectContentType(head[:n])
+	opts.ContentType = DetectContentType(head[:n])
 
 	return io.MultiReader(bytes.NewReader(head[:n]), r), opts, nil
 }
@@ -366,4 +366,12 @@ func normalize(opts PutOptions) PutOptions {
 	opts.Metadata = metadata
 
 	return opts
+}
+
+/*
+DetectContentType names the type of content from its first 512 bytes, the
+way browsers sniff it, falling back to application/octet-stream.
+*/
+func DetectContentType(head []byte) string {
+	return http.DetectContentType(head)
 }

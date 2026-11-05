@@ -14,6 +14,7 @@ package widget
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
@@ -63,7 +64,7 @@ func (c *ShowWidgetConfigController) Invoke(
 	}
 
 	out := &ConfigOutput{
-		Status: fhttp.StatusOK, Etag: fmt.Sprintf(`"%s:%d:%s"`, config.AppID, config.ConfigVersion, config.Locale),
+		Status: fhttp.StatusOK, Etag: etagOf(config),
 		CacheControl: configCacheControl,
 	}
 
@@ -77,4 +78,19 @@ func (c *ShowWidgetConfigController) Invoke(
 	out.Body = &body
 
 	return out, nil
+}
+
+/*
+etagOf names a config version for browsers. The workspace's name and
+logo are part of it, since changing them does not move the widget's
+config version.
+*/
+func etagOf(config actions.Config) string {
+	company := fnv.New32a()
+	_, _ = company.Write([]byte(config.Company.Name))
+	if config.Company.LogoURL != nil {
+		_, _ = company.Write([]byte(*config.Company.LogoURL))
+	}
+
+	return fmt.Sprintf(`"%s:%d:%s:%x"`, config.AppID, config.ConfigVersion, config.Locale, company.Sum32())
 }

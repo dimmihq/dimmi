@@ -129,3 +129,32 @@ WHERE workspace_id = @workspace_id AND id = @id;
 SELECT * FROM attachments
 WHERE workspace_id = @workspace_id AND id = ANY(@ids::uuid[]) AND uploaded_by_type = 'widget_session'
   AND uploaded_by_id = @session_id AND message_id IS NULL AND uploaded_at IS NOT NULL;
+
+-- name: ListWidgetMessageChanges :many
+-- ListWidgetMessageChanges returns the visitor's messages on the widget that
+-- changed after the cursor, oldest change first: new, edited or deleted.
+SELECT m.* FROM messages m
+JOIN conversations c ON c.id = m.conversation_id AND c.workspace_id = m.workspace_id
+JOIN channel_connections cc ON cc.id = c.channel_connection_id AND cc.workspace_id = c.workspace_id
+WHERE m.workspace_id = @workspace_id AND c.contact_id = @contact_id AND c.deleted_at IS NULL AND m.type = 'message'
+  AND (
+      c.source->>'widget_id' = @widget_id::text
+      OR (cc.type IN ('email', 'api') AND c.inbox_id = @inbox_id::uuid)
+  )
+  AND (m.updated_at, m.id) > (@since_at::timestamptz, @since_id::uuid)
+ORDER BY m.updated_at, m.id
+LIMIT @row_limit::bigint;
+
+-- name: ListWidgetConversationChanges :many
+-- ListWidgetConversationChanges returns the visitor's conversations on the
+-- widget that changed after the time, oldest change first.
+SELECT c.* FROM conversations c
+JOIN channel_connections cc ON cc.id = c.channel_connection_id AND cc.workspace_id = c.workspace_id
+WHERE c.workspace_id = @workspace_id AND c.contact_id = @contact_id AND c.deleted_at IS NULL
+  AND (
+      c.source->>'widget_id' = @widget_id::text
+      OR (cc.type IN ('email', 'api') AND c.inbox_id = @inbox_id::uuid)
+  )
+  AND c.updated_at > @since_at::timestamptz AND c.updated_at <= @until_at::timestamptz
+ORDER BY c.updated_at, c.id
+LIMIT @row_limit::bigint;

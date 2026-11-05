@@ -45,6 +45,8 @@ func unscopedQueries() map[string]string {
 		"ListErasedMessageFiles":            "the erase job wipes a customer everywhere: no member is asking",
 		"ListExportConversations":           "a privacy export covers all of a customer's data, for contacts:erase",
 		"FindLatestContactConversationSpam": "inbound mail checks the sender's last verdict: no member is asking",
+		"ListWidgetConversationChanges":     "a widget visitor's own conversations: the customer asks, not a member",
+		"ListWidgetMessageChanges":          "a widget visitor's own messages: the customer asks, not a member",
 	}
 }
 

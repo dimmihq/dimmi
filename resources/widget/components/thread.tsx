@@ -66,13 +66,22 @@ function AttachmentBubble({ attachment }: { attachment: Attachment }) {
   return attachment.kind === "image" ? <ImageBubble attachment={attachment} /> : <FileBubble attachment={attachment} />;
 }
 
+/*
+ * keyOf names a message for the patch that keeps unchanged messages in
+ * place.
+ */
+function keyOf(message: Message): string {
+  return message.key ?? message.id ?? `${message.at}-${message.body ?? message.attachment?.name ?? ""}`;
+}
+
 function Bubble({ message }: { message: Message }) {
   const sources = message.sources ?? [];
+  const key = keyOf(message);
 
   return (
     <>
       {message.body ? (
-        <div className="bubble">
+        <div className="bubble" data-key={`${key}:body`} data-state={message.state}>
           {message.body}
           {sources.length > 0 && (
             <span className="sources">
@@ -86,7 +95,11 @@ function Bubble({ message }: { message: Message }) {
           )}
         </div>
       ) : null}
-      {message.attachment ? <AttachmentBubble attachment={message.attachment} /> : null}
+      {message.attachment ? (
+        <div className="bubble-wrap" data-key={`${key}:file`}>
+          <AttachmentBubble attachment={message.attachment} />
+        </div>
+      ) : null}
     </>
   );
 }
@@ -111,7 +124,7 @@ export function Said({ messages }: { messages: Message[] }) {
   }
 
   return (
-    <div className="said" data-from={first.from}>
+    <div className="said" data-from={first.from} data-key={`said:${keyOf(first)}`}>
       {first.from !== "visitor" && <Who message={first} />}
       <div className="bubbles">
         {messages.map((message) => (
@@ -153,7 +166,7 @@ export function Thread({ messages }: { messages: Message[] }) {
 
 export function Typing() {
   return (
-    <div className="said" data-from="team" data-typing>
+    <div className="said" data-from="team" data-typing data-key="typing">
       <div className="bubbles">
         <div className="bubble dots" role="status" aria-label="Typing">
           <i />

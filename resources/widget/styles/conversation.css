@@ -39,6 +39,24 @@
   background: #22c55e;
 }
 
+.company-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 10px;
+  background: oklch(from var(--brand) 0.84 0.08 calc(h + 40));
+  color: #0a0a0a;
+  font-size: 12px;
+  font-weight: 600;
+  object-fit: cover;
+}
+
+.whoami .faces.small {
+  padding-inline-start: 10px;
+}
+
 .faces.small > span {
   inline-size: 32px;
   block-size: 32px;
@@ -128,6 +146,12 @@
   display: grid;
   justify-items: inherit;
   gap: 4px;
+}
+
+.bubble-wrap {
+  display: grid;
+  justify-items: inherit;
+  max-inline-size: 100%;
 }
 
 .bubble {
@@ -506,5 +530,62 @@ textarea::placeholder {
 @keyframes level {
   to {
     scale: 1 0.4;
+  }
+}
+
+/*
+ * Lines the connection adds to a thread: where the conversation stands,
+ * that the team is away, and the field that asks for an email to reply to.
+ */
+.status,
+.delay {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.capture {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+}
+
+.capture p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.capture .row {
+  display: flex;
+  gap: 8px;
+}
+
+/* A message that just arrived settles into place the way BoardUI's lists
+ * do: up a few pixels, out of a slight blur, on its ease-out. */
+.enter {
+  animation: dimmi-arrive 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.said[data-from="visitor"] .enter {
+  transform-origin: right bottom;
+}
+
+@keyframes dimmi-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: none;
   }
 }

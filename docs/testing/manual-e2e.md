@@ -572,6 +572,51 @@ Run `make build` first so the binary embeds the browser app.
 | Require 2FA in a browser | open `/d/settings/workspace` and switch "Require two-factor authentication" before and after adding an authenticator | refused with a note to turn it on for your own account first, then on and still on after a reload |
 | Sessions in a browser | sign in from a second browser, open `/d/settings/security` | both sessions listed, this one marked "This session"; "Revoke" and "Sign out others" sign the other browser out |
 
+### Messenger widget
+
+Every workspace starts with one widget. Its `id` from `GET $B/widget-settings` is also the app id the snippet
+sends (`APP=wgt_…`). A visitor's browser sends the page's `Origin`; an empty allowlist accepts any. The
+session token from `POST /sessions` is the visitor's bearer (`V=dmi_ws_…`). On the local disk a finished file
+has `url: null` until downloads go through the server; on an S3 disk it is a signed link.
+
+```bash
+M=http://127.0.0.1:18080/widget/v1; B_ROOT=http://127.0.0.1:18080; SITE='Origin: https://shop.example'
+vis(){ r "$@" -H "$SITE" -H "Authorization: Bearer $V"; }
+```
+
+| Flow | Command | Expect |
+|---|---|---|
+| Widgets of a workspace | `r ws -b a.jar -H "$O" -H "Dimmi-Workspace: $WS" $B/widget-settings` | 200, one widget with `app_id`, `allowed_origins: []`, `allow_anonymous: true` |
+| Eleventh widget refused | create widgets with `POST $B/widget-settings` `{"name":"Site N"}` until it stops | 201 up to ten, then 422 `entitlement_limit_reached` |
+| Path in an allowed site | `PATCH $B/widget-settings/wgt_…` `{"allowed_origins":["https://shop.example/app"]}` | 422 on `allowed_origins.0` |
+| Config | `r cfg -H "$SITE" $M/apps/$APP/config`, then again with `-H "If-None-Match: <etag>"` | 200 with `company`, `appearance`, `texts`, `realtime`; then 304 |
+| Unknown app | `r no -H "$SITE" $M/apps/app_nope/config` | 404 `app_not_found` |
+| Site not allowed | allow only `https://shop.example`, then config with `-H 'Origin: https://evil.example'` | 403 `origin_not_allowed` |
+| Preflight | `curl -s -D - -o /dev/null -X OPTIONS -H "$SITE" -H 'Access-Control-Request-Method: PUT' $M/attachments` | 204, `Access-Control-Allow-Origin: https://shop.example`, methods include `PUT` |
+| Team availability | `r av -H "$SITE" $M/apps/$APP/availability` | 200, at most three avatars, no emails |
+| Start a session | `r ses -X POST -H "$SITE" -H "$J" $M/sessions -d "{\"app_id\":\"$APP\"}"` | 201, `token` `dmi_ws_…`, a lead `contact` |
+| Honeypot | same with `"website":"x"` | 201, looks the same; its row in `widget_sessions` has `bot_score` 100 |
+| Resume | `vis me $M/session` | 200, no `token`, `expires_at` moved on |
+| Profile | `vis pr -X PATCH -H "$J" $M/contact -d '{"name":"Grace","email":"grace@shop.example"}'` | 200 with the name and email |
+| Start a conversation | `vis cv -X POST -H "$J" $M/conversations -d '{"client_id":"<uuid>","body":"Export fails"}'` | 201, `conv_…`, `meta.message`; the same `client_id` again gives the same message |
+| Teammate reply | reply from the inbox (`POST $B/conversations/conv_…/replies`), then `vis ms $M/conversations/conv_…/messages` | the reply with `author.type: member`, no member email, no notes |
+| Read state | `vis rd -X PATCH -H "$J" $M/conversations/conv_…/read-state -d '{"last_read_message_id":"msg_…"}'` | 200 `unread_count: 0`; an older id leaves it |
+| Typing | `vis ty -X POST -H "$J" $M/conversations/conv_…/typing-indicators -d '{"state":"started"}'` | 202 |
+| Ping | `vis pg -X POST -H "$J" $M/pings -d '{"page":{"url":"https://shop.example/a?token=abc&page=2"}}'` | 202; the session keeps `?page=2` only |
+| Upload a file | `vis up -X POST -H "$J" $M/attachments -d '{"filename":"shot.png","content_type":"image/png","size_bytes":<bytes>}'` | 201 `attachment_upload`, `upload.url` ending `/content` on the local disk, a signed S3 address on the S3 disk |
+| Send the bytes | `vis put -X PUT -H 'Content-Type: image/png' --data-binary @shot.png $M/attachments/att_…/content` | 204; more bytes than announced: 413 `attachment_too_large` |
+| Finish the upload | `vis done -X PATCH -H "$J" $M/attachments/att_… -d '{"status":"uploaded"}'`, twice | 200 `attachment` with `width` and `height`, the same both times |
+| Program renamed | upload `/bin/ls` as `cat.png` and finish | 422 `attachment_type_blocked`, the row is gone |
+| Send with the file | `POST $M/conversations/conv_…/messages` with `"attachment_ids":["att_…"]` | 201, the file under `attachments`; a pending upload: 409 `attachment_not_uploaded` |
+| Stream token | `vis rt -X POST $M/realtime-tokens` | 201, `token`, `url` ending `/connection/uni_sse`, `channel` `widget_contact:ctc_…` |
+| Live stream | `curl -N "http://127.0.0.1:18080/connection/uni_sse?cf_connect=$(jq -rn --arg t <token> '{token:$t}\|tojson\|@uri')"`, then reply from the inbox | a `connect` push, then `message.created` with `widget_id` |
+| Stream past the cap | open eleven streams with fresh tokens | the first ends with `disconnect` code 4004 |
+| Polling | `vis up $M/updates`, reply, then `vis up "$M/updates?since=<meta.cursor>"` | 200, the reply as `message.created` in `data`, `meta.has_more: false`; a forged `since` 400 |
+| Sign out | keep a stream open, `vis bye -X DELETE $M/session` | 204; the stream gets `widget.session_revoked` (usually before the close) and `disconnect` 4009; `vis me $M/session` gives 401 `session_revoked` |
+| Token as API bearer | `r bad -H "Authorization: Bearer <realtime token>" $M/session` | 401 |
+| Messenger in a browser | serve a page with `<script src="$B_ROOT/widget/v1/loader.js" data-app-id="$APP" async></script>` from another local port (`python3 -m http.server 18102`), open it, click the launcher, "Chat with us", write; reply from the inbox | launcher shows with the widget's colors; the reply appears without a reload; after a reload the Messages tab lists the conversation; a wrong `data-app-id` shows no launcher and one console error `app_not_found` |
+| Messenger preview | the same page with `data-preview` on the snippet | sample conversations and articles, no request to the server beyond the loader, the core and the preview chunk |
+
 ### Email channel
 
 The install receives mail only with an inbound domain. Add these lines to `$E2E/env` before migrating, so every new

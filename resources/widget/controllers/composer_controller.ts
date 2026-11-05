@@ -6,33 +6,28 @@
  * The microphone switches the composer to a recording bar with a running
  * timer; finishing sends a voice note, the bin throws it away.
  *
- * Nothing reaches a server yet: sent messages land in the thread, and a
- * typing indicator followed by a placeholder reply shows how the other
- * side will answer once the backend is wired.
+ * Sending hands the text, files or voice note on through a "dimmi:send"
+ * event: a connected messenger shows the message at once and sends it, a
+ * preview shows it and answers with a placeholder reply. Typing tells a
+ * connected messenger at most every few seconds through "dimmi:typing".
  */
 
 import { Chip } from "../components/composer";
-import { Said, Typing } from "../components/thread";
-import type { Message } from "../content";
 import { Controller } from "../lib/controller";
 
-const reply = "Thanks for the details. A teammate will pick this up here in a moment.";
-
-function size(bytes: number): string {
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
+/*
+ * typingEvery is the shortest time between two typing notices.
+ */
+const typingEvery = 2000;
 
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-function now(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
 export class ComposerController extends Controller {
   #files: File[] = [];
   #seconds = 0;
+  #typedAt = 0;
   #timer: ReturnType<typeof setInterval> | undefined;
 
   connect(): void {
@@ -58,6 +53,14 @@ export class ComposerController extends Controller {
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     this.#ready();
+    if (this.#live && input.value.trim() && Date.now() - this.#typedAt > typingEvery) {
+      this.#typedAt = Date.now();
+      this.dispatch("typing", { started: true });
+    }
+  }
+
+  get #live(): boolean {
+    return this.element.closest<HTMLElement>(".messenger")?.dataset.live === "true";
   }
 
   enter(event: KeyboardEvent): void {
@@ -83,23 +86,16 @@ export class ComposerController extends Controller {
   send(event: SubmitEvent): void {
     event.preventDefault();
     const body = this.#input.value.trim();
-    const messages: Message[] = this.#files.map((file) => ({
-      from: "visitor",
-      attachment: { kind: file.type.startsWith("image/") ? "image" : "file", name: file.name, size: size(file.size) },
-      at: now(),
-    }));
-    if (body) {
-      messages.unshift({ from: "visitor", body, at: now() });
-    }
-    if (!messages.length) {
+    if (!body && !this.#files.length) {
       return;
     }
 
+    this.dispatch("send", { body, files: this.#files });
+    this.#typedAt = 0;
     this.#input.value = "";
     this.#files = [];
     this.#chips();
     this.resize();
-    this.#post(messages);
   }
 
   record(): void {
@@ -120,7 +116,7 @@ export class ComposerController extends Controller {
   finish(): void {
     const duration = clock(Math.max(this.#seconds, 1));
     this.discard();
-    this.#post([{ from: "visitor", attachment: { kind: "voice", name: "Voice note", duration }, at: now() }]);
+    this.dispatch("send", { body: "", files: [], voice: duration });
   }
 
   #tick(): void {
@@ -140,33 +136,5 @@ export class ComposerController extends Controller {
       chips.innerHTML = this.#files.map((file, index) => String(Chip({ name: file.name, index }))).join("");
     }
     this.#ready();
-  }
-
-  /*
-   * post adds the visitor's messages to the thread, then shows the other
-   * side typing and their placeholder reply.
-   */
-  #post(messages: Message[]): void {
-    const thread = this.element.parentElement?.querySelector<HTMLElement>(".thread");
-    const list = thread?.querySelector<HTMLElement>(".loaded") ?? thread;
-    if (!thread || !list) {
-      return;
-    }
-
-    list.querySelector(".seen")?.remove();
-    list.insertAdjacentHTML("beforeend", String(Said({ messages })) + String(Typing()));
-    this.#scroll(thread);
-    setTimeout(() => {
-      list.querySelector("[data-typing]")?.remove();
-      const answer: Message = { from: "team", author: "Maya Kerr", body: reply, at: now() };
-      list.insertAdjacentHTML("beforeend", String(Said({ messages: [answer] })));
-      this.dispatch("connect", thread);
-      this.#scroll(thread);
-    }, 1600);
-    this.dispatch("connect", thread);
-  }
-
-  #scroll(thread: HTMLElement): void {
-    thread.scrollTop = thread.scrollHeight;
   }
 }

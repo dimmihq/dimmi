@@ -41,6 +41,13 @@ func TestDisk(t *testing.T) {
 		assert.Equal(t, "a%20b/c%3Fd.png", filesystem.EscapePath("a b/c?d.png"))
 	})
 
+	t.Run("names content by its first bytes", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, "text/html; charset=utf-8", filesystem.DetectContentType([]byte("<!doctype html><p>hi")))
+		assert.Equal(t, "application/octet-stream", filesystem.DetectContentType([]byte{0, 1, 2}))
+	})
+
 	t.Run("lowercases metadata keys and drops empty metadata", func(t *testing.T) {
 		t.Parallel()
 		disk := newDisk(t)

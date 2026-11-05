@@ -99,15 +99,6 @@ func (a *ComputeTeamAvailability) Handle(ctx context.Context, r Resolved) (Avail
 }
 
 /*
-TeamOnline reports whether someone answers a workspace's visitors right now.
-*/
-func (a *ComputeTeamAvailability) TeamOnline(ctx context.Context, ws ids.UUID) (bool, error) {
-	_, online, err := a.team(ctx, ws)
-
-	return online, err
-}
-
-/*
 team reads the workspace's active members and whether one is there.
 */
 func (a *ComputeTeamAvailability) team(ctx context.Context, ws ids.UUID) ([]models.ListWidgetTeamRow, bool, error) {

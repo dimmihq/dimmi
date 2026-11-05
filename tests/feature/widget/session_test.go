@@ -1,6 +1,8 @@
 package widget_test
 
 import (
+	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +28,36 @@ func TestWidgetSessionStart(t *testing.T) {
 
 		tc.Table("contacts").AssertCount(0, testkit.Row{})
 		tc.Table("widget_sessions").AssertCount(0, testkit.Row{})
+	})
+
+	t.Run("keeps only what fits of the pages and context a browser sends", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		pages := []testkit.JSON{{"url": "https://acme.com/" + strings.Repeat("a", 2100)}}
+		for i := range 9 {
+			pages = append(pages, testkit.JSON{"url": "https://acme.com/p" + strconv.Itoa(i/2)})
+		}
+
+		res := tc.Client().PostJSON("/widget/v1/sessions", testkit.JSON{
+			"app_id": appID(t, tc), "pages": pages,
+			"context": testkit.JSON{
+				"": "x", "plan": "pro", "seats": 3, "beta": true, "nested": testkit.JSON{"a": 1}, "gone": nil,
+				"note": strings.Repeat("é", 300),
+			},
+		}).AssertCreated()
+
+		var session struct {
+			RecentPages []struct{ URL string } `json:"recent_pages"`
+			Context     map[string]any         `json:"context"`
+		}
+		row := (&visitor{tc: tc, id: res.String("data.id")}).session(t)
+		require.NoError(t, json.Unmarshal(row.RecentPages, &session.RecentPages))
+		require.NoError(t, json.Unmarshal(row.Context, &session.Context))
+
+		assert.Len(t, session.RecentPages, 5)
+		assert.Equal(t, "https://acme.com/p0", session.RecentPages[0].URL)
+		assert.Equal(t, map[string]any{"plan": "pro", "seats": 3.0, "beta": true, "note": strings.Repeat("é", 250)},
+			session.Context)
 	})
 
 	t.Run("a first interaction makes a lead named by its session", func(t *testing.T) {
@@ -163,7 +195,9 @@ func TestWidgetSessionResume(t *testing.T) {
 		require.NotNil(t, row.RevokeReason)
 		assert.Equal(t, "logout", *row.RevokeReason)
 		v.client().GetJSON("/widget/v1/session").AssertUnauthorized().AssertJSONPath("code", "session_revoked")
-		v.client().Delete("/widget/v1/session").AssertUnauthorized()
+		v.client().Delete("/widget/v1/session").AssertNoContent()
+		tc.Client().WithHeader("Authorization", "Bearer dmi_ws_unknown").Delete("/widget/v1/session").
+			AssertUnauthorized()
 	})
 
 	t.Run("a session on a widget refusing its site is refused", func(t *testing.T) {

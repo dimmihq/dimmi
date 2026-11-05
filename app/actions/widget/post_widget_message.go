@@ -39,13 +39,12 @@ import (
 )
 
 /*
-Limits on what a visitor sends in one message.
+Limits on what a visitor sends in one message. The request itself allows
+at most ten files.
 */
 const (
-	maxMessageBytes     = 64 << 10
-	maxAttachmentsSent  = 10
-	botBlockScore       = 70
-	uploaderTypeSession = "widget_session"
+	maxMessageBytes = 64 << 10
+	botBlockScore   = 70
 )
 
 /*
@@ -374,10 +373,6 @@ checkMessage returns the message's text cleaned, or why it is refused.
 func checkMessage(in MessageInput) (string, error) {
 	if _, err := ids.Parse(in.ClientID); err != nil {
 		return "", messageField("client_id", "Use a UUID.")
-	}
-
-	if len(in.AttachmentIDs) > maxAttachmentsSent {
-		return "", messageField("attachment_ids", "Attach at most 10 files.")
 	}
 
 	body := str.CleanText(in.Body)

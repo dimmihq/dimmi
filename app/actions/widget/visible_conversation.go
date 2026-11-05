@@ -11,7 +11,13 @@
 
 package widget
 
-import "github.com/dimmihq/dimmi/app/models"
+import (
+	"context"
+
+	"github.com/dimmihq/dimmi/framework/filesystem"
+
+	"github.com/dimmihq/dimmi/app/models"
+)
 
 /*
 Author is who wrote a message, as a visitor sees them.
@@ -23,8 +29,9 @@ type Author struct {
 }
 
 /*
-VisibleAttachment is a file on a message, with a short-lived link when the
-scan cleared it.
+VisibleAttachment is a file on a message. URL is a short-lived link, there
+once a scan cleared the file and the disk can sign one; Blocked says the
+scan refused it.
 */
 type VisibleAttachment struct {
 	Row     models.Attachment
@@ -51,4 +58,22 @@ type VisibleConversation struct {
 	ChannelType  string
 	UnreadCount  int64
 	Last         *VisibleMessage
+}
+
+/*
+presentAttachment links a file the scan cleared, when its disk signs links,
+and marks one the scan refused.
+*/
+func presentAttachment(ctx context.Context, disk filesystem.Filesystem, row models.Attachment) VisibleAttachment {
+	file := VisibleAttachment{Row: row, Blocked: row.ScanStatus == "infected"}
+
+	if row.ScanStatus != "clean" && row.ScanStatus != "skipped" {
+		return file
+	}
+
+	if url, err := disk.TemporaryURL(ctx, row.Path, attachmentLinkTTL); err == nil {
+		file.URL = &url
+	}
+
+	return file
 }

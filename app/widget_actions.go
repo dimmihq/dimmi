@@ -38,4 +38,11 @@ type WidgetActions struct {
 	UpdateContact *widget.UpdateWidgetContact
 	Conversations *widget.ListWidgetConversations
 	PostMessage   *widget.PostWidgetMessage
+	MarkRead      *widget.MarkWidgetConversationRead
+	Typing        *widget.BroadcastVisitorTyping
+	Ping          *widget.RecordWidgetPing
+	Realtime      *widget.Realtime
+	Updates       *widget.ListWidgetUpdates
+	Contacts      *widget.ContactSessions
+	Uploads       *widget.Uploads
 }
