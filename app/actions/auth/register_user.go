@@ -58,6 +58,7 @@ type RegisterUserInput struct {
 	Password        string
 	WorkspaceName   string
 	InvitationToken string
+	CaptchaToken    string
 	Client          appauth.Client
 }
 
@@ -65,7 +66,8 @@ type RegisterUserInput struct {
 RegisterUser creates an account and signs it in.
 
 Rules:
-  - The login policy for the address is asked first.
+  - The login policy for the address is asked first, then the captcha,
+    when the server asks one.
   - Only an open install takes new accounts, unless the person holds a
     pending invitation to the address they sign up with.
   - One address creates a limited number of accounts per hour.
@@ -78,7 +80,8 @@ Rules:
 Events: [appevents.UserRegistered], and those of
 [workspaces.CreateWorkspace] or [invitations.AcceptInvitation].
 
-Errors: [exceptions.ErrSignupClosed], [exceptions.ErrTooManySignups],
+Errors: [exceptions.ErrCaptchaFailed], [exceptions.ErrCaptchaUnavailable],
+[exceptions.ErrSignupClosed], [exceptions.ErrTooManySignups],
 [exceptions.ErrEmailTaken], [exceptions.ErrSSORequired],
 [exceptions.ErrAuthBusy], [exceptions.ErrInvitationEmailMismatch], the
 errors of [invitations.AcceptInvitation], or a wrapped error.
@@ -97,6 +100,7 @@ type RegisterUser struct {
 	LoadMe           *LoadMe
 	Preview          *invitations.PreviewInvitation
 	Accept           *invitations.AcceptInvitation
+	Captcha          appauth.Captcha
 }
 
 /*
@@ -147,6 +151,10 @@ it answers, nil for none, lets it through where signup is closed.
 */
 func (a *RegisterUser) admit(ctx context.Context, in RegisterUserInput, invited *invitations.Preview) error {
 	if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, in.Email, appauth.MethodPassword); err != nil {
+		return err
+	}
+
+	if err := appauth.CheckCaptcha(ctx, a.Captcha, in.CaptchaToken, in.Client.IP); err != nil {
 		return err
 	}
 

@@ -55,7 +55,7 @@ Store mails a sign-in link when the address may sign in.
 */
 func (c *MagicLinkController) Store(ctx context.Context, in *requests.StoreMagicLinkRequest) (*MessageOutput, error) {
 	err := c.SendMagicLink.Handle(ctx, auth.SendMagicLinkInput{
-		Email: in.Body.Email, Name: in.Body.Name, Client: clientOf(ctx, c.Cookies),
+		Email: in.Body.Email, Name: in.Body.Name, CaptchaToken: in.Body.CaptchaToken, Client: clientOf(ctx, c.Cookies),
 	})
 	if err != nil {
 		return nil, err

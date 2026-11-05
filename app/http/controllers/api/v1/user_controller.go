@@ -40,6 +40,7 @@ func (c *UserController) Store(ctx context.Context, in *requests.StoreUserReques
 		Password:        in.Body.Password,
 		WorkspaceName:   in.Body.WorkspaceName,
 		InvitationToken: in.Body.InvitationToken,
+		CaptchaToken:    in.Body.CaptchaToken,
 		Client:          clientOf(ctx, c.Cookies),
 	})
 	if err != nil {

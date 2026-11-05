@@ -46,6 +46,8 @@ person holds no invitation. ErrEmailTaken means an account already uses
 the address; registration says so openly, and is throttled instead.
 ErrTooManySignups caps the accounts one address creates per hour.
 ErrSetupCompleted means the install already has its first user.
+ErrCaptchaFailed refuses a wrong or missing captcha answer, and
+ErrCaptchaUnavailable a step the captcha provider could not check.
 ErrPasswordTooShort refuses a password set by the operator that is
 shorter than the install allows.
 */
@@ -55,7 +57,11 @@ var (
 		"The email has already been taken.").OnField("email")
 	ErrTooManySignups = fault.New(fault.RateLimited, "too_many_attempts",
 		"Too many accounts were created from your address. Try again later.")
-	ErrSetupCompleted   = fault.New(fault.Gone, "setup_completed", "This server is already set up.")
+	ErrSetupCompleted = fault.New(fault.Gone, "setup_completed", "This server is already set up.")
+	ErrCaptchaFailed  = fault.New(fault.Invalid, "captcha_failed",
+		"Prove you are not a robot, then try again.").OnField("captcha_token")
+	ErrCaptchaUnavailable = fault.New(fault.Unavailable, "captcha_unavailable",
+		"We cannot check you are not a robot right now. Try again in a minute.")
 	ErrPasswordTooShort = fault.New(fault.Invalid, "password_too_short",
 		"The password is shorter than this server allows.").OnField("password")
 )

@@ -31,6 +31,7 @@ type StoreUserRequest struct {
 		Password        string `json:"password,omitempty"         validate:"required,max=256,password_length,password"`
 		WorkspaceName   string `json:"workspace_name,omitempty"   validate:"omitempty,max=80"`
 		InvitationToken string `json:"invitation_token,omitempty" validate:"omitempty,max=200"`
+		CaptchaToken    string `json:"captcha_token,omitempty"    validate:"omitempty,max=4096"`
 	}
 }
 

@@ -75,5 +75,7 @@
   "custom_role_unavailable": "Custom roles are not available yet; leave the column empty.",
   "unknown_member": "Only a member of the workspace can be deactivated.",
   "setup_completed": "This server is already set up.",
-  "password_too_short": "The password is shorter than this server allows."
+  "password_too_short": "The password is shorter than this server allows.",
+  "captcha_failed": "Prove you are not a robot, then try again.",
+  "captcha_unavailable": "We cannot check you are not a robot right now. Try again in a minute."
 }

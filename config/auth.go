@@ -37,6 +37,7 @@ type AuthConfig struct {
 	PasswordConfirmation PasswordConfirmationConfig     `koanf:"password_confirmation"`
 	Factors              FactorsConfig                  `koanf:"factors"`
 	OAuth                map[string]OAuthProviderConfig `koanf:"oauth"`
+	Captcha              CaptchaConfig                  `koanf:"captcha"`
 }
 
 /*
@@ -101,5 +102,5 @@ func (c *AuthConfig) check() error {
 		}
 	}
 
-	return nil
+	return c.Captcha.check()
 }

@@ -49,9 +49,10 @@ SendMagicLinkInput is the email typed, the name to give a new account,
 and the client asking.
 */
 type SendMagicLinkInput struct {
-	Email  string
-	Name   string
-	Client appauth.Client
+	Email        string
+	Name         string
+	CaptchaToken string
+	Client       appauth.Client
 }
 
 /*
@@ -60,7 +61,8 @@ SendMagicLink mails a sign-in link and code.
 Rules:
   - Turned off by configuration: not found.
   - The login policy for the address is asked first; an address blocked
-    for guessing passwords across accounts is refused.
+    for guessing passwords across accounts is refused, and so is a
+    wrong captcha answer when the server asks one.
   - Three requests per ten minutes per email, twenty an hour per
     address; more are dropped silently.
   - An existing account gets a link; an unknown address gets one only
@@ -69,6 +71,7 @@ Rules:
   - At most three links work at once per address.
 
 Errors: [exceptions.ErrNotFound], [exceptions.ErrSSORequired],
+[exceptions.ErrCaptchaFailed], [exceptions.ErrCaptchaUnavailable],
 [exceptions.ErrTooManyAttempts], [exceptions.ErrAuthBusy], or a wrapped
 error.
 */
@@ -84,6 +87,7 @@ type SendMagicLink struct {
 	Lockout     *appauth.Lockout
 	MagicLink   config.MagicLinkConfig
 	Signup      config.SignupConfig
+	Captcha     appauth.Captcha
 }
 
 /*
@@ -101,6 +105,10 @@ func (a *SendMagicLink) Handle(ctx context.Context, in SendMagicLinkInput) error
 	}
 
 	if err := a.Lockout.CheckAddress(ctx, in.Client.IP); err != nil {
+		return err
+	}
+
+	if err := appauth.CheckCaptcha(ctx, a.Captcha, in.CaptchaToken, in.Client.IP); err != nil {
 		return err
 	}
 

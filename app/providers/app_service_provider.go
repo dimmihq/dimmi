@@ -202,7 +202,7 @@ func bootSignIn(a *app.App, dummy string) {
 		DB: a.DB, Hash: a.Hash, Events: a.Events, Limiter: a.Limiter, Signup: a.Config.Auth.Signup,
 		LoginPolicy: a.LoginPolicy, CreateUser: acts.CreateUser, CreateWorkspace: acts.CreateWorkspace,
 		SendVerification: acts.SendEmailVerification, StartSession: acts.StartSession, LoadMe: acts.LoadMe,
-		Preview: acts.PreviewInvitation, Accept: acts.AcceptInvitation,
+		Preview: acts.PreviewInvitation, Accept: acts.AcceptInvitation, Captcha: captchaFor(a),
 	}
 
 	acts.ConfirmUser = &auth.ConfirmUser{
@@ -243,7 +243,7 @@ func bootMailedSecrets(a *app.App) {
 	acts.SendMagicLink = &auth.SendMagicLink{
 		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links, Devices: a.Devices,
 		Tokens: a.Secrets, LoginPolicy: a.LoginPolicy, Lockout: a.Lockout, MagicLink: a.Config.Auth.MagicLink,
-		Signup: a.Config.Auth.Signup,
+		Signup: a.Config.Auth.Signup, Captcha: captchaFor(a),
 	}
 
 	acts.ConsumeMagicLink = &auth.ConsumeMagicLink{

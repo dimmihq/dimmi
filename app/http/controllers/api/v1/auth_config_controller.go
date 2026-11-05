@@ -54,6 +54,7 @@ func (c *AuthConfigController) Show(ctx context.Context, _ *requests.NoInput) (*
 		SignupMode:        c.Auth.Signup.Mode,
 		PasswordLogin:     true,
 		MagicLink:         c.Auth.MagicLink.Enabled,
+		Captcha:           resources.NewCaptcha(c.Auth.Captcha),
 		MailConfigured:    c.Server.MailConfigured,
 		PasswordMinLength: c.Auth.Passwords.MinLength,
 		Providers:         resources.NewProviders(ctx, c.Providers),

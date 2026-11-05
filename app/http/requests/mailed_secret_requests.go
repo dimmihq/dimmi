@@ -18,8 +18,9 @@ account when the address has none yet.
 */
 type StoreMagicLinkRequest struct {
 	Body struct {
-		Email string `json:"email,omitempty" validate:"required,email,max=254"`
-		Name  string `json:"name,omitempty" validate:"omitempty,max=80"`
+		Email        string `json:"email,omitempty" validate:"required,email,max=254"`
+		Name         string `json:"name,omitempty"          validate:"omitempty,max=80"`
+		CaptchaToken string `json:"captcha_token,omitempty" validate:"omitempty,max=4096"`
 	}
 }
 

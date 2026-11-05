@@ -21,12 +21,14 @@ import (
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/providers"
+	"github.com/dimmihq/dimmi/config"
 )
 
 /*
 AuthConfig is the sign-in options and capabilities of the server.
 MinClientVersions maps each app platform to the oldest version this
-server accepts, null when any version is. Locales lists the languages
+server accepts, null when any version is. Captcha is null when nothing
+is asked. Locales lists the languages
 people may pick, the default first.
 */
 type AuthConfig struct {
@@ -39,7 +41,7 @@ type AuthConfig struct {
 	SignupMode        string             `json:"signup_mode"`
 	PasswordLogin     bool               `json:"password_login"`
 	MagicLink         bool               `json:"magic_link"`
-	Captcha           *string            `json:"captcha"`
+	Captcha           *Captcha           `json:"captcha"`
 	MailConfigured    bool               `json:"mail_configured"`
 	PasswordMinLength int                `json:"password_min_length"`
 	Providers         []Provider         `json:"providers"`
@@ -47,6 +49,26 @@ type AuthConfig struct {
 	Capabilities      []string           `json:"capabilities"`
 	MinClientVersions map[string]*string `json:"min_client_versions"`
 	Locales           []Locale           `json:"locales"`
+}
+
+/*
+Captcha is the challenge signing up and mailing sign-in links ask for:
+its provider and the site key the browser shows it with.
+*/
+type Captcha struct {
+	Provider string `json:"provider"`
+	SiteKey  string `json:"site_key"`
+}
+
+/*
+NewCaptcha shapes the configured captcha, nil when none is asked.
+*/
+func NewCaptcha(c config.CaptchaConfig) *Captcha {
+	if c.Driver != config.CaptchaTurnstile {
+		return nil
+	}
+
+	return &Captcha{Provider: c.Driver, SiteKey: c.SiteKey}
 }
 
 /*
