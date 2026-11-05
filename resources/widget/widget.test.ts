@@ -185,6 +185,74 @@ describe("core", () => {
     expect(widget?.messenger?.tab).toBe("messages");
   });
 
+  describe("picture viewer", () => {
+    const messenger = () => shadow().querySelector(".messenger") as HTMLElement;
+    const viewer = () => shadow().querySelector(".viewer") as HTMLElement;
+
+    /*
+     * picture puts a picture with a link into the thread, the way a sent
+     * one shows, and returns its link.
+     */
+    function picture(): HTMLAnchorElement {
+      const thread = shadow().querySelector(".thread") as HTMLElement;
+      thread.insertAdjacentHTML(
+        "beforeend",
+        '<a class="shot picture" href="https://files.example.com/shot.png" data-action="click->view"><img alt="shot.png"></a>',
+      );
+      return thread.lastElementChild as HTMLAnchorElement;
+    }
+
+    it("opens a clicked picture across the expanded messenger", async () => {
+      await started();
+      launcher().click();
+      const link = picture();
+
+      const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+      (link.querySelector("img") as HTMLImageElement).dispatchEvent(click);
+
+      expect(click.defaultPrevented).toBe(true);
+      expect(viewer().hidden).toBe(false);
+      expect(messenger().dataset.expanded).toBe("true");
+      expect((viewer().querySelector("img") as HTMLImageElement).src).toBe("https://files.example.com/shot.png");
+    });
+
+    it("closes on Escape from its own buttons and shrinks the messenger back", async () => {
+      await started();
+      launcher().click();
+      (picture().querySelector("img") as HTMLImageElement).click();
+
+      const close = viewer().querySelector("button[aria-label='Close picture']") as HTMLButtonElement;
+      close.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+      expect(viewer().hidden).toBe(true);
+      expect(messenger().dataset.expanded).toBe("false");
+      expect(messenger().dataset.open).toBe("true");
+    });
+
+    it("closes on a click around the picture but not on the picture", async () => {
+      await started();
+      launcher().click();
+      (picture().querySelector("img") as HTMLImageElement).click();
+
+      (viewer().querySelector(".viewer-stage img") as HTMLImageElement).click();
+      expect(viewer().hidden).toBe(false);
+
+      (viewer().querySelector(".viewer-stage") as HTMLElement).click();
+      expect(viewer().hidden).toBe(true);
+    });
+
+    it("keeps a messenger the visitor expanded expanded", async () => {
+      await started();
+      launcher().click();
+      (shadow().querySelector("[data-action='click->expand']") as HTMLButtonElement).click();
+      (picture().querySelector("img") as HTMLImageElement).click();
+
+      (viewer().querySelector("button[aria-label='Close picture']") as HTMLButtonElement).click();
+
+      expect(messenger().dataset.expanded).toBe("true");
+    });
+  });
+
   describe("unread messages", () => {
     const notice = () => shadow().querySelector(".notice") as HTMLElement;
     const badge = () => shadow().querySelector('.launcher [data-target="count"]') as HTMLElement;

@@ -38,6 +38,7 @@ import { pop } from "../lib/sound";
 export class MessengerController extends Controller {
   #stack: string[] = [];
   #autoExpanded = false;
+  #viewerExpanded = false;
   #alerted: string | undefined;
 
   get isOpen(): boolean {
@@ -166,7 +167,66 @@ export class MessengerController extends Controller {
     this.#expand(!this.expanded);
   }
 
+  /*
+   * view opens a clicked picture across the messenger, expanding the panel
+   * first so it has room, and remembers whether it did so it can shrink
+   * the panel again on the way out.
+   */
+  view(event: Event): void {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>("a[href]");
+    const viewer = this.target("viewer");
+    const image = this.target<HTMLImageElement>("viewer-image");
+    if (!link || !viewer || !image) {
+      return;
+    }
+    event.preventDefault();
+    this.#viewerExpanded = !this.expanded;
+    if (this.#viewerExpanded) {
+      this.#expand(true);
+    }
+    image.src = link.href;
+    image.alt = link.querySelector("img")?.alt ?? "";
+    viewer.hidden = false;
+    requestAnimationFrame(() => {
+      viewer.dataset.shown = "true";
+    });
+    viewer.querySelector<HTMLElement>('[data-action="click->unview"]')?.focus();
+  }
+
+  /*
+   * original opens the picture being viewed in a tab of its own.
+   */
+  original(): void {
+    const image = this.target<HTMLImageElement>("viewer-image");
+    if (image?.src) {
+      window.open(image.src, "_blank", "noopener");
+    }
+  }
+
+  /*
+   * unview closes the picture and gives the panel back its size.
+   */
+  unview(event?: Event): void {
+    const viewer = this.target("viewer");
+    if (!viewer || viewer.hidden) {
+      return;
+    }
+    if (event && event.target !== event.currentTarget && (event.target as Element).closest("img")) {
+      return;
+    }
+    viewer.dataset.shown = "false";
+    viewer.hidden = true;
+    if (this.#viewerExpanded) {
+      this.#expand(false);
+      this.#viewerExpanded = false;
+    }
+  }
+
   dismiss(event: KeyboardEvent): void {
+    if (event.key === "Escape" && this.target("viewer")?.hidden === false) {
+      this.unview();
+      return;
+    }
     if (event.key === "Escape" && this.isOpen) {
       this.close();
       this.target("launcher")?.focus();

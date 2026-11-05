@@ -153,6 +153,14 @@ it.describe("messenger on a customer's page", () => {
     const theirs = page.locator('.thread img[alt="answer.png"]');
     await expect(theirs).toBeVisible({ timeout: 20_000 });
     await expect(page.locator(".thread").getByRole("link", { name: "Download notes.txt" })).toBeVisible();
+
+    await theirs.click();
+    const viewer = page.getByRole("dialog", { name: "Picture" });
+    await expect(viewer.getByRole("img", { name: "answer.png" })).toBeVisible();
+    await expect(page.locator(".messenger")).toHaveAttribute("data-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(page.locator(".messenger")).toHaveAttribute("data-expanded", "false");
   });
 
   it("hears the team by polling when the stream is blocked", async ({ page, person, request }) => {

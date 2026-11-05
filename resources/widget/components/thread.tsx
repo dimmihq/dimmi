@@ -33,7 +33,7 @@ function VoiceBubble({ attachment }: { attachment: Attachment }) {
 /*
  * ImageBubble shows the picture itself once it has an address, sized from
  * its stored dimensions so the thread does not jump when it loads, and
- * opens it full size in a new tab. Until then, and in a preview, it shows
+ * opens it across the messenger when clicked. Until then, and in a preview, it shows
  * the placeholder.
  */
 function ImageBubble({ attachment }: { attachment: Attachment }) {
@@ -50,7 +50,13 @@ function ImageBubble({ attachment }: { attachment: Attachment }) {
 
   return (
     <figure className="bubble photo">
-      <a className="shot picture" href={attachment.url} target="_blank" rel="noopener noreferrer">
+      <a
+        className="shot picture"
+        href={attachment.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-action="click->view"
+      >
         <img
           src={attachment.url}
           alt={attachment.name}
