@@ -116,6 +116,27 @@ func TestWidgetBadReferences(t *testing.T) {
 		c.GetJSON("/widget/v1/conversations?cursor=forged").AssertStatus(fhttp.StatusBadRequest)
 	})
 
+	t.Run("another visitor's conversation cannot be marked read", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v, other := startVisitor(t, tc), startVisitor(t, tc)
+		theirs := other.startConversation(t, "theirs")
+		msg := other.client().GetJSON("/widget/v1/conversations/" + theirs + "/messages").AssertOK().String("data.0.id")
+
+		v.client().PatchJSON("/widget/v1/conversations/"+theirs+"/read-state", testkit.JSON{
+			"last_read_message_id": msg,
+		}).AssertNotFound()
+	})
+
+	t.Run("an email whose domain is not one refuses the profile change", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+
+		v.client().PatchJSON("/widget/v1/contact", testkit.JSON{"email": "grace@exa_mple"}).
+			AssertStatus(fhttp.StatusUnprocessableEntity).AssertValidationError("email")
+	})
+
 	t.Run("a message sent twice to a conversation answers the first", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
