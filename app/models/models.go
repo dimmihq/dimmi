@@ -374,12 +374,13 @@ type EmailSendingStat struct {
 type EmailSignature struct {
 	ID                ids.UUID  `json:"id"`
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
-	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	WorkspaceMemberID *ids.UUID `json:"workspace_member_id"`
 	EmailAddressID    *ids.UUID `json:"email_address_id"`
 	Body              string    `json:"body"`
 	Enabled           bool      `json:"enabled"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	LogoAttachmentID  *ids.UUID `json:"logo_attachment_id"`
 }
 
 type EmailSuppression struct {

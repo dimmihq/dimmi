@@ -1,7 +1,8 @@
 /*
  * One address with its forwarding setup: where to forward, the steps for
  * the mail service it lives in, whether mail arrived, and the settings
- * of the address for whoever may manage it.
+ * of the address for whoever may manage it, among them the default that
+ * new mail leaves from and how replies look.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -16,19 +17,29 @@ import { Activity } from "./activity";
 import { CopyButton } from "./copy-button";
 import { Failure } from "./failure";
 import { ForwardingGuide } from "./forwarding-guide";
+import { TemplateSettings } from "./template-settings";
 
 /*
  * Status says whether mail reached the address yet.
  */
 function Status({ address }: { address: EmailAddress }) {
-  return address.inbound_verified_at ? (
-    <Chip variant="caption" color="lime">
-      Receiving
-    </Chip>
-  ) : (
-    <Chip variant="caption" color="neutral">
-      Waiting for first email
-    </Chip>
+  return (
+    <span className="flex items-center gap-2">
+      {address.is_default ? (
+        <Chip variant="caption" color="neutral">
+          Default
+        </Chip>
+      ) : null}
+      {address.inbound_verified_at ? (
+        <Chip variant="caption" color="lime">
+          Receiving
+        </Chip>
+      ) : (
+        <Chip variant="caption" color="neutral">
+          Waiting for first email
+        </Chip>
+      )}
+    </span>
   );
 }
 
@@ -93,6 +104,18 @@ export function AddressCard({
       </Row>
       {manage ? (
         <>
+          {address.is_default ? null : (
+            <Row label="Default address" description="New conversations started here leave from the default.">
+              <Button
+                variant="secondary"
+                size="small"
+                disabled={change.isPending}
+                onClick={() => change.mutate({ is_default: true })}
+              >
+                Make default
+              </Button>
+            </Row>
+          )}
           <Row
             label="Forwarding test"
             description={
@@ -127,6 +150,7 @@ export function AddressCard({
               }}
             />
           </Row>
+          <TemplateSettings workspace={me.workspace.id} address={address} />
         </>
       ) : null}
       {readRaw ? <Activity address={address} /> : null}
