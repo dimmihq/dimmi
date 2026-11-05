@@ -9,8 +9,9 @@
 | its own site, so the request checks other forms rely on are replaced
 | by the attempt, its cookie and the request id the answer must name.
 | GET /auth/saml/{connection}/metadata describes this side for the
-| identity provider. A failure never shows why: the owners read that on
-| the connection.
+| identity provider. GET /auth/sso/{connection}/callback takes an OpenID
+| Connect issuer's code. A failure never shows why: the owners read that
+| on the connection.
 |
 */
 
@@ -47,6 +48,7 @@ SSOController serves the single sign-on pages.
 type SSOController struct {
 	Start   *ssologin.StartSignIn
 	SAML    *ssologin.ConsumeSAML
+	OIDC    *ssologin.ConsumeOIDC
 	Shows   *ssologin.Metadata
 	IDs     *ids.Registry
 	Cookies appauth.Cookies
@@ -116,6 +118,40 @@ func (c *SSOController) ACS(w fhttp.ResponseWriter, r *fhttp.Request) {
 	})
 	if err != nil {
 		seeOther(w, withError("/login", cmp.Or(fault.CodeOf(err), "sso_failed")))
+
+		return
+	}
+
+	c.land(w, r, result)
+}
+
+/*
+Callback takes the browser an OpenID Connect issuer sends back with its
+code.
+*/
+func (c *SSOController) Callback(w fhttp.ResponseWriter, r *fhttp.Request) {
+	id, ok := c.connection(r)
+	if !ok {
+		redirect(w, withError("/login", "sso_failed"))
+
+		return
+	}
+
+	browser := ""
+	if cookie, err := r.Cookie(c.Cookies.SSOName()); err == nil {
+		browser = cookie.Value
+	}
+
+	setCookie(w, c.Cookies.SSOCookie("", 0))
+
+	query := r.URL.Query()
+
+	result, err := c.OIDC.Handle(r.Context(), ssologin.ConsumeOIDCInput{
+		ConnectionID: id, Code: query.Get("code"), State: query.Get("state"), Denied: query.Get("error") != "",
+		Browser: browser, Client: clientOf(r, c.Cookies),
+	})
+	if err != nil {
+		redirect(w, withError("/login", cmp.Or(fault.CodeOf(err), "sso_failed")))
 
 		return
 	}

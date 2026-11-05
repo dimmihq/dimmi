@@ -16,9 +16,7 @@ package ssologin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -31,7 +29,6 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/sso"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/exceptions"
-	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -89,7 +86,7 @@ func (a *ConsumeSAML) Handle(ctx context.Context, in ConsumeSAMLInput) (Result, 
 
 	provider, err := a.SAML.For(ctx, conn)
 	if err != nil {
-		return Result{}, a.fail(ctx, conn, "connection_unreadable")
+		return Result{}, a.settle().fail(ctx, conn, "connection_unreadable")
 	}
 
 	attempt, found, err := a.Attempts.Claim(ctx, in.RelayState, in.Browser)
@@ -102,12 +99,12 @@ func (a *ConsumeSAML) Handle(ctx context.Context, in ConsumeSAMLInput) (Result, 
 	}
 
 	if attempt.ConnectionID != conn.Connection.ID {
-		return Result{}, a.fail(ctx, conn, "wrong_connection")
+		return Result{}, a.settle().fail(ctx, conn, "wrong_connection")
 	}
 
 	assertion, err := provider.Consume(in.Response, attempt.RequestID)
 	if err != nil {
-		return Result{}, a.fail(ctx, conn, reason(err))
+		return Result{}, a.settle().fail(ctx, conn, reason(err))
 	}
 
 	first, err := a.Attempts.FirstUse(ctx, conn.Connection.ID, assertion.AssertionID,
@@ -117,52 +114,22 @@ func (a *ConsumeSAML) Handle(ctx context.Context, in ConsumeSAMLInput) (Result, 
 	}
 
 	if !first {
-		return Result{}, a.fail(ctx, conn, "replayed")
+		return Result{}, a.settle().fail(ctx, conn, "replayed")
 	}
 
 	identity := identityOf(conn.Config, assertion)
 	if identity.Email == "" {
-		return Result{}, a.fail(ctx, conn, "missing_email")
+		return Result{}, a.settle().fail(ctx, conn, "missing_email")
 	}
 
-	return a.finish(ctx, answered{conn: conn, attempt: attempt, identity: identity, client: in.Client})
+	return a.settle().finish(ctx, answered{conn: conn, attempt: attempt, identity: identity, client: in.Client})
 }
 
 /*
-answered is an answer that passed every check: the connection, the
-attempt it answered, the person it vouches for, and their client.
+settle returns what finishes an answer of this action.
 */
-type answered struct {
-	conn     sso.Connection
-	attempt  appauth.SSOAttempt
-	identity Identity
-	client   appauth.Client
-}
-
-/*
-finish records a test, or signs the person in.
-*/
-func (a *ConsumeSAML) finish(ctx context.Context, ans answered) (Result, error) {
-	conn := ans.conn
-	if ans.attempt.Intent == appauth.SSOIntentTest {
-		now := a.Clock.Now()
-		if _, err := models.New(a.DB).MarkSSOConnectionTested(ctx, models.MarkSSOConnectionTestedParams{
-			Now: &now, ID: conn.Connection.ID,
-		}); err != nil {
-			return Result{}, fmt.Errorf("record connection test: %w", err)
-		}
-
-		return Result{Tested: true}, nil
-	}
-
-	signedIn, err := a.Complete.Handle(ctx, CompleteSSOLoginInput{
-		Connection: conn, Identity: ans.identity, Client: ans.client,
-	})
-	if err != nil {
-		return Result{}, err
-	}
-
-	return Result{SignedIn: signedIn, ReturnTo: ans.attempt.ReturnTo}, nil
+func (a *ConsumeSAML) settle() settling {
+	return settling{DB: a.DB, Clock: a.Clock, Complete: a.Complete}
 }
 
 /*
@@ -181,26 +148,7 @@ func (a *ConsumeSAML) unsolicited(
 		err = saml.ErrUnsolicited
 	}
 
-	return Result{}, a.fail(ctx, conn, reason(err))
-}
-
-/*
-fail keeps the reason on the connection for its owners and returns the
-answer every failure gets.
-*/
-func (a *ConsumeSAML) fail(ctx context.Context, conn sso.Connection, code string) error {
-	raw, err := json.Marshal(map[string]any{"code": code, "at": a.Clock.Now()})
-	if err != nil {
-		return fmt.Errorf("encode sso failure: %w", err)
-	}
-
-	if err := models.New(a.DB).RecordSSOConnectionError(ctx, models.RecordSSOConnectionErrorParams{
-		LastError: raw, Now: a.Clock.Now(), ID: conn.Connection.ID,
-	}); err != nil {
-		return fmt.Errorf("record sso failure: %w", err)
-	}
-
-	return exceptions.ErrSSOFailed
+	return Result{}, a.settle().fail(ctx, conn, reason(err))
 }
 
 /*

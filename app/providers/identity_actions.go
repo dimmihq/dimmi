@@ -84,8 +84,9 @@ func bootSSOLogin(a *app.App) {
 	acts := a.Actions
 	attempts := appauth.SSOAttempts{Cache: a.Cache}
 	providers := sso.SAMLProviders{Keys: a.Keys, Links: a.Links, Clock: a.Clock}
+	issuers := ssologin.OIDCProviders{Keys: a.Keys, Links: a.Links, HTTP: a.HTTP, Clock: a.Clock}
 
-	acts.StartSSOSignIn = &ssologin.StartSignIn{DB: a.DB, Attempts: attempts, SAML: providers}
+	acts.StartSSOSignIn = &ssologin.StartSignIn{DB: a.DB, Attempts: attempts, SAML: providers, OIDC: issuers}
 	acts.CompleteSSOLogin = &ssologin.CompleteSSOLogin{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, CreateUser: acts.CreateUser,
 		ClaimAccount: acts.ConsumeMagicLink.ClaimAccount, CompletePrimaryAuth: acts.CompletePrimaryAuth,
@@ -93,6 +94,9 @@ func bootSSOLogin(a *app.App) {
 	acts.SSOMetadata = &ssologin.Metadata{DB: a.DB, SAML: providers}
 	acts.LookupSSO = &ssologin.Lookup{Policy: appauth.OrganizationLoginPolicy{DB: a.DB}, Limiter: a.Limiter}
 	acts.StartSSOTest = &ssologin.StartTest{DB: a.DB, Start: acts.StartSSOSignIn}
+	acts.ConsumeOIDC = &ssologin.ConsumeOIDC{
+		DB: a.DB, Clock: a.Clock, Attempts: attempts, OIDC: issuers, Complete: acts.CompleteSSOLogin,
+	}
 	acts.ConsumeSAML = &ssologin.ConsumeSAML{
 		DB: a.DB, Clock: a.Clock, Attempts: attempts, SAML: providers, Complete: acts.CompleteSSOLogin,
 	}

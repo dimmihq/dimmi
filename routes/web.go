@@ -88,8 +88,8 @@ attempt, its cookie and the request id the answer names stand in for it.
 func ssoPages(a *app.App) {
 	acts := a.Actions
 	c := &web.SSOController{
-		Start: acts.StartSSOSignIn, SAML: acts.ConsumeSAML, Shows: acts.SSOMetadata, IDs: a.IDs, Cookies: a.Cookies,
-		Errors: a.Errors,
+		Start: acts.StartSSOSignIn, SAML: acts.ConsumeSAML, OIDC: acts.ConsumeOIDC, Shows: acts.SSOMetadata, IDs: a.IDs,
+		Cookies: a.Cookies, Errors: a.Errors,
 	}
 
 	a.Router.Group("", func(browser *routing.Router) {
@@ -97,6 +97,8 @@ func ssoPages(a *app.App) {
 
 		browser.Handle(fhttp.MethodGet, "/auth/sso/{connection}/redirect", "sso.redirect",
 			fhttp.HandlerFunc(c.Redirect))
+		browser.Handle(fhttp.MethodGet, "/auth/sso/{connection}/callback", "sso.callback",
+			fhttp.HandlerFunc(c.Callback))
 		browser.Handle(fhttp.MethodPost, "/auth/saml/{connection}/acs", "saml.acs", fhttp.HandlerFunc(c.ACS))
 		browser.Handle(fhttp.MethodGet, "/auth/saml/{connection}/metadata", "saml.metadata",
 			fhttp.HandlerFunc(c.Metadata))

@@ -40,8 +40,8 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 
 ## M5. Enterprise OIDC (track 08 enterprise-identity)
 
-- [ ] `oidc_provider.go` per-connection `oidc.New`, cache by id + `updated_at`. Callback route. Client secret write-only.
-- [ ] Shared core tests re-run for OIDC via table. Dialog protocol step offers OIDC. E2e: "an owner connects an openid provider".
+- [x] `oidc_provider.go` per-connection `oidc.New`, cache by id + `updated_at`. Callback route. Client secret write-only.
+- [x] Shared core tests re-run for OIDC via table. Dialog protocol step offers OIDC. E2e: "an owner connects an openid provider".
 
 ## M6. SCIM (track 08 enterprise-identity)
 

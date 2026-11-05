@@ -523,6 +523,7 @@ C=$B/sso-connections; D=$B/organization-domains
 | Enforced | `PATCH $C/$SSO -d '{"enforced":true,"confirm_owners_can_sign_in":true}'`, then password sign-in for an address under the domain | 409 `sso_required` with `redirect_url`; magic links answer the same; reset requests send no mail |
 | Owner bypass | `POST /sessions {"grant":"password","sso_bypass":true,...}` as an owner at the domain | 201; the session works for one hour, then `sso_required`; every owner gets "An owner signed in without single sign-on". A non-owner gets `invalid_credentials` |
 | Metadata refresh | set `config.idp_metadata_url`, run the daily `refresh_sso_metadata` job | certificates follow the published metadata; a failing address sets `metadata_error` and keeps the old settings |
+| OpenID Connect | create `{"protocol":"oidc","name":"Entra","client_secret":"…","config":{"issuer":"https://login.microsoftonline.com/<tenant>/v2.0","client_id":"…"}}`, register `sp.redirect_uri` at the issuer, then test and sign in | the secret never comes back (`has_secret: true`); the callback signs in like SAML; a callback without the attempt cookie lands on `/login?error=sso_failed` |
 | In a browser | `$W/d/settings/single-sign-on`, "New connection", then "Add domain" and the operator command | the connection is listed as "Draft" with its reply URL under "Details"; after a reload the domain shows "Verified by the operator" with a connection picker |
 
 ### Browser pages

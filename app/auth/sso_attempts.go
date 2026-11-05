@@ -54,7 +54,8 @@ var ErrSSOStoreDown = errors.New("sso: attempt store unavailable")
 /*
 SSOAttempt is one sign-in waiting on its identity provider: the
 connection, the id of the request sent, why it was started, who started
-it when someone was signed in, and where to land after.
+it when someone was signed in, and where to land after. An OpenID
+Connect attempt also keeps its PKCE verifier and nonce.
 */
 type SSOAttempt struct {
 	ConnectionID ids.UUID `json:"connection_id"`
@@ -63,6 +64,8 @@ type SSOAttempt struct {
 	UserID       ids.UUID `json:"user_id"`
 	ReturnTo     string   `json:"return_to"`
 	Browser      string   `json:"browser"`
+	Verifier     string   `json:"verifier,omitempty"`
+	Nonce        string   `json:"nonce,omitempty"`
 }
 
 /*

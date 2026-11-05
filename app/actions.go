@@ -114,6 +114,7 @@ type Actions struct {
 	SSOOperator                *sso.Operator
 	StartSSOSignIn             *ssologin.StartSignIn
 	ConsumeSAML                *ssologin.ConsumeSAML
+	ConsumeOIDC                *ssologin.ConsumeOIDC
 	CompleteSSOLogin           *ssologin.CompleteSSOLogin
 	SSOMetadata                *ssologin.Metadata
 	StartSSOTest               *ssologin.StartTest
