@@ -83,6 +83,18 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * The messenger's box spans the closed panel's room too, so the box
+ * itself lets clicks through to the page; only its parts take them.
+ */
+.messenger {
+  pointer-events: none;
+}
+
+.messenger > * {
+  pointer-events: auto;
+}
+
 .messenger[data-font="inherit"] {
   font-family: inherit;
 }
