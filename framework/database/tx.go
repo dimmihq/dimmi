@@ -108,6 +108,21 @@ func (tx *Tx) Exec(ctx context.Context, sql string, args ...any) (pgconn.Command
 }
 
 /*
+CommitWithoutFlush lets this transaction's commit return before its
+writes reach the disk. A crash in the next moment may lose them, so it
+is only for writes that can be lost, where an answer must not take
+longer for having written something, such as counting a failed try.
+*/
+func (tx *Tx) CommitWithoutFlush(ctx context.Context) error {
+	_, err := tx.Exec(ctx, "SET LOCAL synchronous_commit = off")
+	if err != nil {
+		return fmt.Errorf("commit without flush: %w", err)
+	}
+
+	return nil
+}
+
+/*
 Query runs a statement in this transaction.
 */
 func (tx *Tx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
