@@ -10,8 +10,8 @@
 | that changed. A retried request carrying the same client message id
 | finds the reply it already wrote instead of sending twice.
 |
-| Replying takes the conversation: one nobody holds becomes the
-| replier's. Afterwards the conversation stays where it is, or opens,
+| Replying takes a conversation nobody holds, when the inbox and the
+| replier's own rule say so. Afterwards the conversation stays where it is, or opens,
 | closes or sleeps, as the reply asks; a closed conversation cannot go
 | straight to sleep, and then nothing of the reply is kept. A
 | conversation marked as spam takes no replies.
@@ -98,7 +98,8 @@ Rules:
   - Conversations marked as spam take no replies.
   - The newest message must be the one the replier saw, when they say.
   - The same client message id returns the reply already written.
-  - A conversation nobody holds becomes the replier's.
+  - A conversation nobody holds becomes the replier's, as
+    conversations.AssignOnReply decides.
 
 Events: [appevents.MessageCreated], [appevents.ConversationAssigned]
 and the status event the reply asked for.
@@ -195,12 +196,8 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 		return err
 	}
 
-	if s.c.AssigneeMemberID == nil {
-		if s.c, _, err = s.w.Assign(ctx, s.c, conversations.Assignment{
-			Member: &s.w.Actor.ID, Team: s.c.AssigneeTeamID,
-		}); err != nil {
-			return err
-		}
+	if s.c, err = s.w.TakeOnReply(ctx, s.c, s.m.Member); err != nil {
+		return err
 	}
 
 	if err := s.then(ctx, in); err != nil || window == 0 {

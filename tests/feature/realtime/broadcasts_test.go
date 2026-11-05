@@ -49,7 +49,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		tc := tests.New(t)
 		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
 		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
-		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
+		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID)).Error)
 		require.Nil(t, c.Subscribe(appbroadcasting.ConversationChannel(s.conversation.ID)).Error)
 		exec(t, tc, "UPDATE conversations SET assignee_member_id = $1 WHERE id = $2",
 			tc.Workspace.Owner.ID, s.conversation.ID)
@@ -61,7 +61,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		dispatch(t, tc, event)
 
 		list, open := c.Publication(), c.Publication()
-		assert.Equal(t, appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID), list.Channel)
+		assert.Equal(t, appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID), list.Channel)
 		assert.Equal(t, appbroadcasting.ConversationChannel(s.conversation.ID), open.Channel)
 
 		for _, p := range []testkit.RealtimePublication{list, open} {
@@ -85,7 +85,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		m := addMessage(t, tc, s.conversation, "Tried twice, still declined")
 		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
 		require.Nil(t, c.Subscribe(appbroadcasting.ConversationChannel(s.conversation.ID)).Error)
-		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
+		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID)).Error)
 
 		dispatch(t, tc, appevents.MessageCreated{
 			Base:       base(tc, "m-2"),
@@ -105,7 +105,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		assert.Equal(t, public(models.PrefixContact, s.contact.ID), *entry.Author.ID)
 
 		list := c.Publication()
-		assert.Equal(t, appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID), list.Channel)
+		assert.Equal(t, appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID), list.Channel)
 		assert.Equal(t, "message.created", list.Event)
 		assert.Equal(t, "conversation", decodeRow(t, list).Object)
 
@@ -202,7 +202,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		tc := tests.New(t)
 		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
 		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
-		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
+		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID)).Error)
 
 		for _, e := range conversationEvents(tc, s.conversation.ID) {
 			dispatch(t, tc, e)
@@ -218,7 +218,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		tc := tests.New(t)
 		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
 		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
-		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceChannel(tc.Workspace.Workspace.ID)).Error)
+		require.Nil(t, c.Subscribe(appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID)).Error)
 		gone := appevents.ConversationRef{ConversationID: ids.New()}
 
 		dispatch(t, tc, appevents.ConversationClosed{Base: base(tc, ""), ConversationRef: gone})

@@ -46,6 +46,7 @@ func bootInbox(a *app.App) error {
 		ShowInbox:     &inboxes.ShowInbox{DB: a.DB},
 		CreateInbox:   &inboxes.CreateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		UpdateInbox:   &inboxes.UpdateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		DeleteInbox:   &inboxes.DeleteInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		ListContacts:  &contacts.ListContacts{DB: a.DB},
 		ShowContact:   &contacts.ShowContact{DB: a.DB},
 		CreateContact: &contacts.CreateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},

@@ -278,7 +278,7 @@ func (a *ViewerAnnouncer) publish(ctx context.Context, caller *appauth.Principal
 		},
 	}
 
-	channels := []string{WorkspaceChannel(workspace), ConversationChannel(id)}
+	channels := []string{WorkspaceConversationsChannel(workspace), ConversationChannel(id)}
 	if err := a.Server.Publish(ctx, channels, m); err != nil {
 		return fmt.Errorf("broadcast conversation viewers: %w", err)
 	}

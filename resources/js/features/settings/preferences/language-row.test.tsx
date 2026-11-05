@@ -33,6 +33,7 @@ const workspace: Workspace = {
   locale: "en",
   test_mode: false,
   require_two_factor: false,
+  seen_receipt_shows_name: false,
   customer_facing_name: null,
   deleted_at: null,
   purge_after: null,

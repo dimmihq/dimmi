@@ -16,6 +16,7 @@ export interface Workspace {
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  seen_receipt_shows_name: boolean;
   customer_facing_name: string | null;
   deleted_at: string | null;
   purge_after: string | null;
@@ -58,7 +59,16 @@ function memberParams(filter: MemberFilter): URLSearchParams {
  * never from the role.
  */
 export interface Caller {
-  member: { id: string; role: string; permissions: string[] } | null;
+  member: {
+    id: string;
+    role: string;
+    permissions: string[];
+    conversation_access: ConversationAccess;
+    conversation_access_unassigned: boolean;
+    access_team_ids: string[];
+    availability: "online" | "away";
+    away_reassign: boolean;
+  } | null;
 }
 
 export interface WorkspaceChanges {
@@ -67,6 +77,7 @@ export interface WorkspaceChanges {
   timezone?: string;
   locale?: string;
   require_two_factor?: boolean;
+  seen_receipt_shows_name?: boolean;
   customer_facing_name?: string | null;
 }
 
@@ -119,6 +130,12 @@ export function exportMembers(workspace: string, filter: MemberFilter) {
 
   return requestFile(`/members?${params.toString()}`, "text/csv", { workspace });
 }
+
+/*
+ * ConversationAccess is how much of the workspace's conversations a
+ * member sees.
+ */
+export type ConversationAccess = "all" | "assigned" | "teams" | "all_except_teams";
 
 export function callerQuery(workspace: string) {
   return queryOptions({

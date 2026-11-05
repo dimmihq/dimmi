@@ -66,7 +66,7 @@ func open(ctx context.Context, tx *database.Tx, s conversations.Services, t targ
 
 	w.MutationID = t.mutation
 
-	c, err := conversations.Lock(ctx, w.Q, t.m.Workspace.ID, t.ref)
+	c, err := conversations.Lock(ctx, w.Q, t.m, t.ref)
 	if err != nil {
 		return nil, err
 	}

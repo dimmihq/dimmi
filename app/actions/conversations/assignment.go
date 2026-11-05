@@ -41,6 +41,16 @@ Assign hands the conversation to the assignment, and reports false when
 it already held it.
 */
 func (w *Writer) Assign(ctx context.Context, c models.Conversation, to Assignment) (models.Conversation, bool, error) {
+	return w.AssignFor(ctx, c, to, "")
+}
+
+/*
+AssignFor hands the conversation to the assignment as Assign does,
+recording why the system moved it.
+*/
+func (w *Writer) AssignFor(
+	ctx context.Context, c models.Conversation, to Assignment, reason string,
+) (models.Conversation, bool, error) {
 	if sameID(c.AssigneeMemberID, to.Member) && sameID(c.AssigneeTeamID, to.Team) {
 		return c, false, nil
 	}
@@ -55,7 +65,7 @@ func (w *Writer) Assign(ctx context.Context, c models.Conversation, to Assignmen
 		return c, false, err
 	}
 
-	updated, err := w.writeAssignment(ctx, c, to, assignees{members: members, teams: teams})
+	updated, err := w.writeAssignment(ctx, c, to, assignees{members: members, teams: teams, reason: reason})
 
 	return updated, err == nil, err
 }
@@ -84,11 +94,13 @@ func (w *Writer) DropTeam(ctx context.Context, c models.Conversation) (models.Co
 }
 
 /*
-assignees are the members and teams an assignment names, loaded.
+assignees are the members and teams an assignment names, loaded, and
+why the system made it, empty for a person.
 */
 type assignees struct {
 	members map[ids.UUID]Member
 	teams   teamPair
+	reason  string
 }
 
 /*
@@ -111,11 +123,14 @@ func (w *Writer) writeAssignment(
 		"from": map[string]any{"member": memberRef(c.AssigneeMemberID, members), "team": teamRef(teams.from)},
 		"to":   map[string]any{"member": memberRef(to.Member, members), "team": teamRef(teams.to)},
 	}
+	if a.reason != "" {
+		data["reason"] = a.reason
+	}
 
 	return updated, w.emit(ctx, updated, entry{"conversation.assigned", data}, appevents.ConversationAssigned{
 		Base: w.Base(c.WorkspaceID), ConversationRef: ref(c),
 		FromMemberID: c.AssigneeMemberID, ToMemberID: to.Member,
-		FromTeamID: c.AssigneeTeamID, ToTeamID: to.Team,
+		FromTeamID: c.AssigneeTeamID, ToTeamID: to.Team, Reason: a.reason,
 	})
 }
 

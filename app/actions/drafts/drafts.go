@@ -73,7 +73,7 @@ func (a *ListDrafts) Handle(ctx context.Context, in ListInput) ([]models.Convers
 		ws := in.Membership.Workspace.ID
 
 		if in.Conversation != nil {
-			if _, err := conversations.Find(ctx, q, ws, conversations.Ref{ID: *in.Conversation}); err != nil {
+			if _, err := conversations.Find(ctx, q, in.Membership, conversations.Ref{ID: *in.Conversation}); err != nil {
 				return err
 			}
 		}
@@ -122,7 +122,7 @@ func reachable(ctx context.Context, q *models.Queries, m authz.Membership, conve
 		return nil
 	}
 
-	_, err := conversations.Find(ctx, q, m.Workspace.ID, conversations.Ref{ID: *conversation})
+	_, err := conversations.Find(ctx, q, m, conversations.Ref{ID: *conversation})
 
 	return err
 }

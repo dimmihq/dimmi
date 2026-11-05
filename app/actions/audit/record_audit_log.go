@@ -46,6 +46,8 @@ const (
 	EventMemberRoleChanged    = "member.role_changed"
 	EventMemberDeactivated    = "member.deactivated"
 	EventMemberReactivated    = "member.reactivated"
+	EventMemberAccessChanged  = "member.access_changed"
+	EventMemberAvailability   = "member.availability_changed"
 	EventMemberLeft           = "member.left"
 	EventOwnershipTransferred = "ownership.transferred"
 	EventWorkspaceDeleted     = "workspace.deleted"

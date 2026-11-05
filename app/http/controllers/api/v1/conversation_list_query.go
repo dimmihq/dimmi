@@ -10,10 +10,10 @@
 | (team_... or none), filter[contact], filter[company], filter[channel],
 | filter[channel_connection], filter[priority] (a comma list of levels),
 | filter[tag], filter[tag_any], filter[created_after],
-| filter[created_before], filter[waiting], filter[unread], q and sort. A
-| cursor carries a hash of the filters and sort it was made for, so a
-| cursor taken to another list is refused rather than silently skipping
-| rows.
+| filter[created_before], filter[waiting], filter[unread],
+| filter[assignment_waiting], q and sort. A cursor carries a hash of
+| the filters and sort it was made for, so a cursor taken to another
+| list is refused rather than silently skipping rows.
 |
 */
 
@@ -52,6 +52,7 @@ func conversationAllow() pagination.Allow {
 		Filters: []string{
 			"view", "status", "inbox", "assignee", "team", "contact", "company", "channel", "channel_connection",
 			"priority", "tag", "tag_any", "created_after", "created_before", "waiting", "unread",
+			"assignment_waiting",
 		},
 		Sorts:    []string{"last_message_at", "created_at", "waiting_since", "priority", "snoozed_until"},
 		Includes: []string{"viewers"},
@@ -322,8 +323,14 @@ func (p filterParser) narrowing(f *conversations.Filters) error {
 		return err
 	}
 
+	held, err := p.flag("assignment_waiting")
+	if err != nil {
+		return err
+	}
+
 	f.Waiting = waiting != nil && *waiting
 	f.Unread = unread != nil && *unread
+	f.AssignmentWaiting = held != nil && *held
 
 	return nil
 }

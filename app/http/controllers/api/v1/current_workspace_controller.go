@@ -59,6 +59,7 @@ func (c *CurrentWorkspaceController) Update(
 		ClearCustomerFacingName: requests.Nulls(in.RawBody)["customer_facing_name"],
 		ShowViewers:             in.Body.ShowViewers,
 		UndoSendSeconds:         in.Body.UndoSendSeconds,
+		SeenReceiptName:         in.Body.SeenReceiptName,
 	})
 	if err != nil {
 		return nil, err
