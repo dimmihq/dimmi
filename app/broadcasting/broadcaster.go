@@ -71,6 +71,7 @@ func (b *Broadcaster) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, b.snoozeListChanged)
 	events.Listen(d, events.AfterCommit, b.draftChanged)
 	b.listenAccounts(d)
+	b.listenRoles(d)
 	b.listenFanout(d)
 	b.listenAvailability(d)
 }

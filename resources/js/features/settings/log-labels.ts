@@ -45,6 +45,7 @@ const groups: { id: string; events: string[] }[] = [
       "member.two_factor_reset_requested",
       "member.two_factor_reset_completed",
       "member.sign_in_lock_cleared",
+      "workspace.access_policy_changed",
     ],
   },
   {
@@ -68,6 +69,10 @@ const groups: { id: string; events: string[] }[] = [
       "team.deleted",
       "team.member_added",
       "team.member_removed",
+      "role.created",
+      "role.updated",
+      "role.deleted",
+      "member.custom_role_changed",
     ],
   },
   { id: "tokens", events: ["token.created", "token.revoked"] },

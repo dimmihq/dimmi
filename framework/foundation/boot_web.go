@@ -128,6 +128,7 @@ func (a *Application) bootKernel() error {
 		}
 
 		a.Kernel.Use(trust)
+		a.trustProxies = trust
 	}
 
 	if err := a.useGate(); err != nil {

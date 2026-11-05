@@ -128,12 +128,14 @@ func (a *LoadMe) workspaceOf(in LoadMeInput) (ids.UUID, error) {
 
 /*
 loadMembership reads the workspace and the caller's membership of it,
-scoped to that workspace, and works out the caller's permissions.
+scoped to that workspace, and works out the caller's permissions, as
+narrowed by their custom role.
 */
 func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUID) error {
 	var (
 		workspace models.Workspace
 		member    models.WorkspaceMember
+		custom    []string
 	)
 
 	err := a.DB.Transaction(tenancy.With(ctx, workspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
@@ -146,9 +148,7 @@ func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUI
 			return err
 		}
 
-		member, err = q.FindWorkspaceMemberForUser(ctx, models.FindWorkspaceMemberForUserParams{
-			WorkspaceID: workspaceID, UserID: me.Principal.User.ID,
-		})
+		member, custom, err = findMember(ctx, q, workspaceID, me.Principal.User.ID)
 		if err != nil {
 			return err
 		}
@@ -172,10 +172,29 @@ func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUI
 	}
 
 	me.Workspace, me.Member = &workspace, &member
-	me.Permissions = authz.PrincipalPermissions(a.Permissions, enums.Role(member.Role), me.Principal)
+	me.Permissions = authz.PrincipalPermissions(a.Permissions, enums.Role(member.Role), custom, me.Principal)
 	me.Abilities = authz.EffectiveAbilities(a.Permissions, me.Permissions)
 
 	return nil
+}
+
+/*
+findMember returns the user's membership of the workspace and what their
+custom role lists, nil without one.
+*/
+func findMember(
+	ctx context.Context, q *models.Queries, workspaceID, userID ids.UUID,
+) (models.WorkspaceMember, []string, error) {
+	member, err := q.FindWorkspaceMemberForUser(ctx, models.FindWorkspaceMemberForUserParams{
+		WorkspaceID: workspaceID, UserID: userID,
+	})
+	if err != nil {
+		return member, nil, err
+	}
+
+	custom, err := q.CustomPermissions(ctx, member)
+
+	return member, custom, err
 }
 
 /*

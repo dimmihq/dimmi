@@ -23,6 +23,8 @@ import (
 	"maps"
 	"regexp"
 	"slices"
+
+	"github.com/dimmihq/dimmi/app/enums"
 )
 
 /*
@@ -135,12 +137,12 @@ whose only permission is itself lists its own name.
 */
 func permissionGroups() map[string][]string {
 	return map[string][]string{
-		"conversations:read": {"conversations:read"},
+		"conversations:read": {"conversations:read", "conversations:export"},
 		"conversations:write": {
 			"conversations:write", "conversations:delete", "conversations:moderate", "saved_replies:manage_shared",
-			"views:manage_shared",
+			"conversations:assign", "conversations:merge", "conversations:manage_notes", "views:manage_shared",
 		},
-		"contacts:read": {"contacts:read"},
+		"contacts:read": {"contacts:read", "contacts:export"},
 		"contacts:write": {
 			"contacts:write", "contacts:erase", "contacts:manage_external_id", "companies:delete",
 			"email_suppressions:manage", "email_suppressions:lift_complaint",
@@ -150,7 +152,7 @@ func permissionGroups() map[string][]string {
 		"members:read":   {"members:read"},
 		"members:write": {
 			"members:write", "members:manage_owners", "tokens:manage_any", "members:reset_two_factor", "members:import",
-			"members:manage_access", "members:manage_availability",
+			"members:manage_access", "members:manage_availability", "roles:manage",
 		},
 		"settings:read": {
 			"settings:read", "audit_logs:read", "widgets:read", "identity:read", "email:read", "email:read_raw",
@@ -192,5 +194,38 @@ func settingsWritePermissions() []string {
 		"email_signatures:manage_any", "channels:manage", "notification_destinations:manage", "help_centers:manage",
 		"help_centers:delete", "knowledge:manage", "knowledge:sync", "github:manage", "docs_sync:manage",
 		"oauth_grants:manage_any", "agent_access:manage", "feedback:manage", "imports:manage", "imports:rollback",
+		"security_policy:manage", "sso:manage", "scim:manage",
 	}
+}
+
+/*
+Assignable reports whether a custom role may list the permission. What
+only owners may do, and what no workspace role holds, stays out of reach:
+a custom role narrows an admin or a member and never reaches past them.
+*/
+func Assignable(permission string) bool {
+	return slices.Contains(RolePermissions(enums.RoleAdmin), permission)
+}
+
+/*
+BaseRoles returns the built-in roles a custom role may narrow that hold
+the permission, member first.
+*/
+func BaseRoles(permission string) []enums.Role {
+	var roles []enums.Role
+
+	for _, role := range CustomBaseRoles() {
+		if slices.Contains(RolePermissions(role), permission) {
+			roles = append(roles, role)
+		}
+	}
+
+	return roles
+}
+
+/*
+CustomBaseRoles returns the built-in roles a custom role may narrow.
+*/
+func CustomBaseRoles() []enums.Role {
+	return []enums.Role{enums.RoleMember, enums.RoleAdmin}
 }
