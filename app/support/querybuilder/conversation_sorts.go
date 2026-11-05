@@ -170,21 +170,20 @@ func (b *builder) keyset(keys []sortKey, after Keyset) string {
 }
 
 /*
-rowCompare writes the row comparison of the keys, and reports false when
-it cannot express them.
+rowCompare writes the row comparison of the keys, and reports false,
+having added nothing, when it cannot express them.
 */
 func (b *builder) rowCompare(keys []sortKey, after Keyset) (string, bool) {
+	for _, key := range keys {
+		if key.desc != keys[0].desc || after.value(key.column) == nil {
+			return "", false
+		}
+	}
+
 	var columns, values, nullable []string
 
 	for _, key := range keys {
-		if key.desc != keys[0].desc {
-			return "", false
-		}
-
 		value := after.value(key.column)
-		if value == nil {
-			return "", false
-		}
 
 		if key.nullable {
 			nullable = append(nullable, key.column)

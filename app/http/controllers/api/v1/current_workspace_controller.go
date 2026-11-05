@@ -58,6 +58,7 @@ func (c *CurrentWorkspaceController) Update(
 		RequireTwoFactor: in.Body.RequireTwoFactor, CustomerFacingName: in.Body.CustomerFacingName,
 		ClearCustomerFacingName: requests.Nulls(in.RawBody)["customer_facing_name"],
 		ShowViewers:             in.Body.ShowViewers,
+		UndoSendSeconds:         in.Body.UndoSendSeconds,
 		SeenReceiptName:         in.Body.SeenReceiptName,
 	})
 	if err != nil {

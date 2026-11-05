@@ -6,7 +6,8 @@
 | A change to a saved view reaches whoever sees the view: the whole
 | workspace for a shared view, only its owner for a personal one. The
 | broadcast names the view, and screens read the views again. A change
-| to the snooze choices reaches the whole workspace.
+| to the snooze choices reaches the whole workspace, and a change to a
+| draft only its writer.
 |
 */
 
@@ -44,4 +45,21 @@ func (b *Broadcaster) snoozeListChanged(ctx context.Context, e appevents.SnoozeL
 	}
 
 	return b.publish(ctx, []string{WorkspaceChannel(e.WorkspaceID)}, message(e, data))
+}
+
+/*
+draftChanged tells the member's own screens their draft changed or went
+away.
+*/
+func (b *Broadcaster) draftChanged(ctx context.Context, e appevents.DraftUpdated) error {
+	data := map[string]any{"conversation_id": nil, "mode": e.Mode, "id": nil}
+	if e.ConversationID != nil {
+		data["conversation_id"] = models.PublicID(models.PrefixConversation, *e.ConversationID)
+	}
+
+	if e.DraftID != nil {
+		data["id"] = models.PublicID(models.PrefixDraft, *e.DraftID)
+	}
+
+	return b.publish(ctx, []string{MemberChannel(e.MemberID)}, message(e, data))
 }

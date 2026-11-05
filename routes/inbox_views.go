@@ -5,9 +5,10 @@
 |
 | How each teammate arranges their inbox: their own preferences for the
 | sidebar and every view, and the saved views the team shares or each
-| member keeps. A preference is the caller's own, never data others
-| read, so reading and saving it takes conversations:read; saving views
-| takes conversations:write.
+| member keeps, the snooze choices, and each member's drafts. A
+| preference is the caller's own, never data others read, so reading and
+| saving it takes conversations:read; saving views and drafts takes
+| conversations:write.
 |
 */
 
@@ -53,4 +54,14 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/snooze-lists", "snooze-lists.index", snooze.Index).Ability("conversations:read")
 	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Ability("settings:write")
 	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read")
+
+	drafts := &v1.DraftController{
+		List: acts.ListDrafts, Save: acts.SaveDraft, Update: acts.UpdateDraft, Delete: acts.DeleteDraft, IDs: a.IDs,
+	}
+
+	routing.Get(r, "/drafts", "drafts.index", drafts.Index).Ability("conversations:read")
+	routing.Post(r, "/drafts", "drafts.store", drafts.Store).Ability("conversations:write")
+	routing.Patch(r, "/drafts/{draft}", "drafts.update", drafts.Patch).Ability("conversations:write")
+	routing.Delete(r, "/drafts/{draft}", "drafts.destroy", drafts.Destroy).Ability("conversations:write").
+		Status(fhttp.StatusNoContent)
 }

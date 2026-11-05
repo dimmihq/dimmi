@@ -12,7 +12,7 @@ import { Centrifuge, type PublicationContext, type SubscribedContext } from "cen
 
 import { addTeammate, startConversation } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
-import { startConversation as relayConversation } from "./support/inbox";
+import { openComposer, startConversation as relayConversation } from "./support/inbox";
 
 const base = `http://localhost:${process.env.E2E_PORT ?? 18090}`;
 
@@ -120,7 +120,7 @@ it.describe("realtime", () => {
 
     await page.goto(`/d/inbox/all/${id}`);
     await expect(page.getByRole("status", { name: /Ada Lovelace/ })).toBeVisible();
-    await page.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await openComposer(page, /Reply to Emily Johnson/);
     await page.getByRole("textbox", { name: "Reply to Emily Johnson" }).fill("Try a sign-in code instead.");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 

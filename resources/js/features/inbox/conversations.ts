@@ -65,7 +65,16 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * customers), an internal note, or an event such as a handover.
  */
 export type ThreadEntry =
-  | { kind: "customer" | "teammate" | "dimmi" | "note"; id: string; author: string; at: string; text: string }
+  | {
+      kind: "customer" | "teammate" | "dimmi" | "note";
+      id: string;
+      author: string;
+      at: string;
+      text: string;
+      held?: boolean;
+      authorId?: string | null;
+      edited?: boolean;
+    }
   | { kind: "event"; id: string; at: string; text: string };
 
 const statusWords: Record<string, string> = {
@@ -99,10 +108,22 @@ export function toEntry(message: Message): ThreadEntry {
   if (message.type === "event" && message.event) {
     return { kind: "event", id: message.id, at, text: eventText(message.event) };
   }
-  const text = message.body ?? "This message was deleted.";
+  if (message.deleted_at) {
+    const by = message.deleted_by?.name;
+    return { kind: "event", id: message.id, at, text: by ? `Message deleted by ${by}` : "Message deleted" };
+  }
+  const text = message.body ?? "";
   const author = message.author.name;
   if (message.type === "note") {
-    return { kind: "note", id: message.id, author, at, text };
+    return {
+      kind: "note",
+      id: message.id,
+      author,
+      at,
+      text,
+      authorId: message.author.id,
+      edited: Boolean(message.edited_at),
+    };
   }
   if (message.author.type === "contact") {
     return { kind: "customer", id: message.id, author, at, text };
@@ -111,5 +132,13 @@ export function toEntry(message: Message): ThreadEntry {
     return { kind: "dimmi", id: message.id, author, at, text };
   }
 
-  return { kind: "teammate", id: message.id, author, at, text };
+  return {
+    kind: "teammate",
+    id: message.id,
+    author,
+    at,
+    text,
+    held: Boolean(message.scheduled_send_at),
+    authorId: message.author.id,
+  };
 }

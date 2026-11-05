@@ -74,6 +74,7 @@ type UpdateWorkspaceInput struct {
 	TestMode         *bool
 	RequireTwoFactor *bool
 	ShowViewers      *bool
+	UndoSendSeconds  *int
 	SeenReceiptName  *bool
 
 	CustomerFacingName      *string
@@ -265,6 +266,20 @@ func settingsChange(
 		changes = append(changes, fieldRequireTwoFactor)
 	}
 
+	inbox, err := inboxSettingChanges(params, w, in)
+
+	return append(changes, inbox...), err
+}
+
+/*
+inboxSettingChanges writes the inbox settings the input changes into the
+params, returning their names.
+*/
+func inboxSettingChanges(
+	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput,
+) ([]string, error) {
+	var changes []string
+
 	for _, flag := range []inboxFlag{
 		{key: "show_viewers_on_list", want: in.ShowViewers, has: w.ShowsViewersOnList()},
 		{key: "seen_receipt_shows_name", want: in.SeenReceiptName, has: w.SeenReceiptShowsName()},
@@ -280,6 +295,16 @@ func settingsChange(
 
 		params.Settings = settings
 		changes = append(changes, flag.key)
+	}
+
+	if in.UndoSendSeconds != nil && *in.UndoSendSeconds != w.UndoSendSeconds() {
+		settings, err := models.WithSetting(params.Settings, "inbox", "undo_send_seconds", *in.UndoSendSeconds)
+		if err != nil {
+			return nil, err
+		}
+
+		params.Settings = settings
+		changes = append(changes, "undo_send_seconds")
 	}
 
 	settings, changed, err := customerFacingName(params.Settings, w, in)

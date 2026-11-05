@@ -147,7 +147,9 @@ func permanent(err error) bool {
 
 /*
 prepare reads the message, its conversation, customer and connection,
-and reports false when the message is no longer waiting to be sent.
+and reports false when the message is no longer waiting to be sent. A
+reply held for undo waits until its window ends, then is released under
+its lock, so from here on it can no longer be undone.
 */
 func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessageArgs) (outbound, bool, error) {
 	var (
@@ -158,7 +160,7 @@ func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessag
 	err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		msg, err := q.FindMessage(ctx, models.FindMessageParams{
+		msg, err := q.LockMessage(ctx, models.LockMessageParams{
 			WorkspaceID: args.WorkspaceID, ConversationID: args.ConversationID, ID: args.MessageID,
 		})
 		if errors.Is(err, database.ErrNotFound) {
@@ -170,8 +172,12 @@ func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessag
 		}
 
 		pending := msg.DeliveryStatus != nil && *msg.DeliveryStatus == string(enums.DeliveryStatusPending)
-		if msg.DeletedAt != nil || !pending {
+		if msg.DeletedAt != nil || msg.UndoneAt != nil || !pending {
 			return nil
+		}
+
+		if err := w.release(ctx, q, msg); err != nil {
+			return err
 		}
 
 		out, err = w.outbound(ctx, q, msg)
@@ -181,6 +187,29 @@ func (w *SendChannelMessage) prepare(ctx context.Context, args SendChannelMessag
 	})
 
 	return out, ok, err
+}
+
+/*
+release ends the wait of a reply held for undo once its window is over,
+and postpones the try until then otherwise.
+*/
+func (w *SendChannelMessage) release(ctx context.Context, q *models.Queries, msg models.Message) error {
+	if msg.ScheduledSendAt == nil {
+		return nil
+	}
+
+	if wait := msg.ScheduledSendAt.Sub(w.Clock.Now()); wait > 0 {
+		return queue.Postpone(wait)
+	}
+
+	err := q.ReleaseScheduledMessage(ctx, models.ReleaseScheduledMessageParams{
+		Now: w.Clock.Now(), WorkspaceID: msg.WorkspaceID, ID: msg.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("release reply: %w", err)
+	}
+
+	return nil
 }
 
 /*

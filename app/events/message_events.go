@@ -79,13 +79,16 @@ func (MessageDeleted) EventName() string { return "message.deleted" }
 
 /*
 MessageDeliveryUpdated is dispatched when a channel reports a message
-sent, delivered, read or failed.
+sent, delivered, read or failed. Final says no further try follows, and
+Reason why it failed, such as canceled for a reply its writer undid.
 */
 type MessageDeliveryUpdated struct {
 	Base
 	MessageRef
 
 	Status string
+	Final  bool
+	Reason string
 }
 
 /*

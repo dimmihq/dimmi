@@ -64,3 +64,13 @@ export async function startConversation(page: Page, customer: Customer): Promise
 
   return ((await response.json()) as { data: { id: string } }).data.id;
 }
+
+/*
+ * openComposer opens the reply or note composer from its resting bar and
+ * waits for the formatting editor, so typing never lands in the plain
+ * field it replaces.
+ */
+export async function openComposer(page: Page, name: RegExp): Promise<void> {
+  await page.getByRole("button", { name }).click();
+  await expect(page.getByRole("toolbar", { name: "Formatting" })).toBeVisible({ timeout: 15_000 });
+}

@@ -54,3 +54,21 @@ export async function mailedCode(to: string, subject: string): Promise<string> {
 
   return `${code[1]}${code[2]}`;
 }
+
+/*
+ * mailedTexts returns the text of every mail to the address, newest
+ * first, as it stands now.
+ */
+export async function mailedTexts(to: string): Promise<string[]> {
+  const query = encodeURIComponent(`to:${to}`);
+  const found = (await (await fetch(`${api}/api/v1/search?query=${query}&limit=50`)).json()) as {
+    messages: Message[];
+  };
+  const texts: string[] = [];
+  for (const message of found.messages) {
+    const full = (await (await fetch(`${api}/api/v1/message/${message.ID}`)).json()) as { Text: string };
+    texts.push(full.Text);
+  }
+
+  return texts;
+}
