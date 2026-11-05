@@ -6,7 +6,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
-import type { ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
+import type { Attachment, ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
 import { formatRelative } from "@/lib/i18n/format";
 
 /*
@@ -69,6 +69,7 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * how its text is read, Markdown or plain words, and for received email
  * whether more of it can be opened and whether its body was cut short.
  * Failed holds why a reply never reached the customer, null otherwise.
+ * Files are what the message carries.
  */
 export type ThreadEntry =
   | {
@@ -85,6 +86,7 @@ export type ThreadEntry =
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
+      files: Attachment[];
     }
   | { kind: "event"; id: string; at: string; text: string };
 
@@ -121,6 +123,13 @@ export function eventText(event: TimelineEvent): string {
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
 }
 
+/*
+ * filesOf returns the files the message carries.
+ */
+function filesOf(message: Message): Attachment[] {
+  return message.attachments ?? [];
+}
+
 export function toEntry(message: Message): ThreadEntry {
   const at = ago(message.created_at);
   if (message.type === "event" && message.event) {
@@ -140,6 +149,7 @@ export function toEntry(message: Message): ThreadEntry {
     truncated: message.truncated ?? false,
     failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
     authorId: message.author.id,
+    files: filesOf(message),
   } as const;
   const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
   const marked = redacted ? { ...said, redacted } : said;

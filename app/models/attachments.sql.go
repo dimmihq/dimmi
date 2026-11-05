@@ -242,6 +242,66 @@ func (q *Queries) ListAttachmentsByID(ctx context.Context, arg ListAttachmentsBy
 	return items, nil
 }
 
+const listFinishedUploads = `-- name: ListFinishedUploads :many
+SELECT id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, path, filename, content_type, size_bytes, sha256, width, height, inline, content_id, scan_status, created_at, updated_at, uploaded_at FROM attachments
+WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND uploaded_by_type = $3
+  AND uploaded_by_id = $4 AND message_id IS NULL AND uploaded_at IS NOT NULL
+`
+
+type ListFinishedUploadsParams struct {
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	Ids            []ids.UUID `json:"ids"`
+	UploadedByType string     `json:"uploaded_by_type"`
+	UploadedByID   *ids.UUID  `json:"uploaded_by_id"`
+}
+
+// ListFinishedUploads returns the uploader's finished uploads with the
+// ids that no message took yet, so a message can be sent with them.
+func (q *Queries) ListFinishedUploads(ctx context.Context, arg ListFinishedUploadsParams) ([]Attachment, error) {
+	rows, err := q.db.Query(ctx, listFinishedUploads,
+		arg.WorkspaceID,
+		arg.Ids,
+		arg.UploadedByType,
+		arg.UploadedByID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Attachment
+	for rows.Next() {
+		var i Attachment
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.MessageID,
+			&i.UploadedByType,
+			&i.UploadedByID,
+			&i.Disk,
+			&i.Path,
+			&i.Filename,
+			&i.ContentType,
+			&i.SizeBytes,
+			&i.Sha256,
+			&i.Width,
+			&i.Height,
+			&i.Inline,
+			&i.ContentID,
+			&i.ScanStatus,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UploadedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMessageAttachments = `-- name: ListMessageAttachments :many
 SELECT id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, path, filename, content_type, size_bytes, sha256, width, height, inline, content_id, scan_status, created_at, updated_at, uploaded_at FROM attachments
 WHERE workspace_id = $1 AND message_id = ANY ($2::uuid[])

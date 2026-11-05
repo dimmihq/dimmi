@@ -6,6 +6,7 @@ import (
 	"hash/crc32"
 	"image"
 	"image/png"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -93,9 +94,12 @@ func TestWidgetAttachments(t *testing.T) {
 		res.AssertJSONPath("data.upload.headers.Content-Type", "image/png")
 		id := res.String("data.id")
 		assert.True(t, strings.HasPrefix(id, "att_"))
-		assert.True(t, strings.HasSuffix(res.String("data.upload.url"), "/widget/v1/attachments/"+id+"/content"))
+		target, err := url.Parse(res.String("data.upload.url"))
+		require.NoError(t, err)
+		assert.True(t, strings.HasPrefix(target.Path, "/files/"), target.Path)
 
-		v.client().Send(fhttp.MethodPut, "/widget/v1/attachments/"+id+"/content", picture).AssertNoContent()
+		tc.Client().WithHeader("Content-Type", "image/png").
+			Send(fhttp.MethodPut, target.RequestURI(), picture).AssertOK()
 
 		done := v.complete(id).AssertOK()
 		done.AssertJSONMissing("data.blocked")

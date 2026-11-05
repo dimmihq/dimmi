@@ -1,7 +1,8 @@
 /*
  * The messenger on a customer's page, end to end against the release
  * binary: the snippet on a plain page shows the launcher, a visitor writes
- * and a teammate's reply arrives without a reload, the conversation is
+ * and a teammate's reply arrives without a reload, pictures and files go
+ * both ways, the conversation is
  * still there after a reload, replies still arrive by polling when the
  * stream is blocked, and a page with a strict content security policy or
  * a phone-sized window works the same. A wrong app id shows nothing and
@@ -11,9 +12,15 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { APIRequestContext, Page } from "@playwright/test";
 
-import { createAccount, expect, test as it, type Person } from "./support/fixtures";
+import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
+import { openComposer } from "./support/inbox";
 
 const base = `http://localhost:${process.env.E2E_PORT ?? 18090}`;
+
+const onePixel = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 interface Desk {
   workspace: string;
@@ -98,6 +105,54 @@ it.describe("messenger on a customer's page", () => {
     await page.locator(".launcher").click();
     await page.getByRole("tab", { name: "Messages" }).click();
     await expect(page.locator('[data-view="messages"] .loaded .list')).toContainText("#1");
+  });
+
+  it("trades pictures and files with the team", async ({ page, person, request }) => {
+    const desk = await openDesk(request, person);
+    const headers = { "Dimmi-Workspace": desk.workspace };
+    await customerSite(page, desk.app);
+
+    await page.locator(".launcher").click();
+    await page.getByText("Chat with us").click();
+    await page.locator('[data-view="conversation"] input[type="file"]').setInputFiles({
+      name: "screen.png",
+      mimeType: "image/png",
+      buffer: onePixel,
+    });
+    const box = page.locator('[data-view="conversation"] textarea');
+    await box.fill("Here is what I see");
+    await box.press("Enter");
+    const mine = page.locator('.thread img[alt="screen.png"]');
+    await expect(mine).toBeVisible({ timeout: 20_000 });
+    await expect.poll(() => mine.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+
+    const list = await request.get("/api/v1/conversations?filter[view]=all", { headers });
+    const id: string = (await list.json()).data[0].id;
+    const timeline = await (await request.get(`/api/v1/conversations/${id}/messages`, { headers })).json();
+    const sent = timeline.data.find((m: { body: string }) => m.body === "Here is what I see");
+    expect(sent.attachments[0].filename).toBe("screen.png");
+
+    const desk2 = await page.context().newPage();
+    await signIn(desk2, person);
+    await desk2.goto(`/d/inbox/all/${id}`);
+    await expect(desk2.getByRole("img", { name: "screen.png" })).toBeVisible();
+    await openComposer(desk2, /^Reply to /);
+    const chooser = desk2.waitForEvent("filechooser");
+    await desk2.getByRole("button", { name: "Attach files" }).click();
+    await (await chooser).setFiles([
+      { name: "answer.png", mimeType: "image/png", buffer: onePixel },
+      { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("steps to fix") },
+    ]);
+    const files = desk2.getByRole("list", { name: "Files to send" });
+    await expect(files.getByRole("button", { name: "Remove answer.png" })).toBeVisible();
+    await desk2.getByRole("textbox", { name: /Reply to/ }).fill("Try this");
+    await expect(desk2.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
+    await desk2.getByRole("button", { name: "Send", exact: true }).click();
+    await expect(desk2.getByRole("img", { name: "answer.png" })).toBeVisible({ timeout: 20_000 });
+
+    const theirs = page.locator('.thread img[alt="answer.png"]');
+    await expect(theirs).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(".thread").getByRole("link", { name: "Download notes.txt" })).toBeVisible();
   });
 
   it("hears the team by polling when the stream is blocked", async ({ page, person, request }) => {

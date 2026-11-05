@@ -35,8 +35,9 @@ ReplyRequest is the input of POST /conversations/{conversation}/replies.
 type ReplyRequest struct {
 	Conversation string `path:"conversation"`
 	Body         struct {
-		Body                  string      `json:"body"                               validate:"required,max=65536"`
+		Body                  string      `json:"body"                               validate:"max=65536"`
 		ClientMessageID       *string     `json:"client_message_id,omitempty"        validate:"omitempty,min=1,max=64"`
+		AttachmentIDs         []string    `json:"attachment_ids,omitempty"           maxItems:"10"`
 		ExpectedLastMessageID *string     `json:"expected_last_message_id,omitempty"`
 		Then                  *string     `json:"then,omitempty"`
 		Snooze                *SnoozeBody `json:"snooze,omitempty"`

@@ -117,6 +117,35 @@ export interface Message {
   deleted_by?: { id: string; name: string } | null;
   created_at: string;
   redactions?: { rule: string; count: number }[];
+  attachments?: Attachment[];
+}
+
+/*
+ * Attachment is a file on a message. Its url reads it for a few minutes
+ * and is null until the malware scan lets it through; blocked marks a
+ * file the scan refused.
+ */
+export interface Attachment {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  url: string | null;
+  blocked: boolean;
+}
+
+/*
+ * uploadAttachment sends a file the teammate is about to reply with and
+ * returns it, ready to be named by the reply.
+ */
+export function uploadAttachment(workspace: string, file: File, signal?: AbortSignal): Promise<Attachment> {
+  return request<Attachment>("POST", `/attachments?filename=${encodeURIComponent(file.name)}`, file, {
+    workspace,
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    signal,
+  });
 }
 
 export interface Counts {
@@ -341,13 +370,14 @@ function afterFields(then: Then | undefined): Record<string, unknown> {
   return then.kind === "snooze" ? { ...fields, snooze: { option: then.option } } : fields;
 }
 
-export function reply(write: Write, id: string, body: string, then?: Then): Promise<Message> {
+export function reply(write: Write, id: string, body: string, then?: Then, files?: string[]): Promise<Message> {
   const after = afterFields(then);
+  const attached = files && files.length > 0 ? { attachment_ids: files } : {};
 
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
-    { body, client_message_id: crypto.randomUUID(), delay: true, ...after },
+    { body, client_message_id: crypto.randomUUID(), delay: true, ...after, ...attached },
     writeOptions(write),
   );
 }

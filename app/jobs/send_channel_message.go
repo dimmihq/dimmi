@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -79,6 +80,17 @@ type SendChannelMessage struct {
 	Clock    clock.Clock
 	Events   *events.Dispatcher
 	Channels *channels.Manager
+	Disks    FileDisks
+}
+
+/*
+FileDisks finds the disk a stored file lives on by its name.
+*/
+type FileDisks interface {
+	/*
+		Disk returns the disk with the name.
+	*/
+	Disk(name string) (filesystem.Filesystem, error)
 }
 
 /*

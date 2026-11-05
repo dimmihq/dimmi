@@ -70,6 +70,8 @@ func (a *Application) bootWeb(context.Context) error {
 		return err
 	}
 
+	a.serveLocalFiles()
+
 	a.Health = health.NewRegistry(health.DefaultTimeout, a.Clock)
 	a.Health.Add(health.Database(a.DB), health.Valkey(a.Redis), health.Func("maintenance", a.maintenanceCheck))
 

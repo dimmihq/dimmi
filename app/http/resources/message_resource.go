@@ -63,6 +63,7 @@ type TimelineEntry struct {
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	Attachments     []Attachment    `json:"attachments"`
 
 	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
@@ -159,7 +160,7 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		Truncated: models.ReadEmailMetadata(m.Metadata).Truncated, DeliveryStatus: m.DeliveryStatus,
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
 		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
+		UpdatedAt: m.UpdatedAt, Attachments: []Attachment{},
 	}
 
 	if m.DeletedAt != nil {
@@ -193,15 +194,53 @@ func redactionsOf(metadata json.RawMessage) []redaction.Hit {
 }
 
 /*
-NewTimelineEntries shapes a page of entries, in the order given.
+NewTimelineEntries shapes a page of entries, in the order given, each
+with its files.
 */
-func NewTimelineEntries(rows []models.Message, contact models.Contact, members Authors) []TimelineEntry {
+func NewTimelineEntries(
+	rows []models.Message, contact models.Contact, members Authors, files map[ids.UUID][]messages.File,
+) []TimelineEntry {
 	out := make([]TimelineEntry, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, NewTimelineEntry(m, contact, members))
+		entry := NewTimelineEntry(m, contact, members)
+		if m.DeletedAt == nil {
+			for _, f := range files[m.ID] {
+				entry.Attachments = append(entry.Attachments, NewAttachment(f))
+			}
+		}
+
+		out = append(out, entry)
 	}
 
 	return out
+}
+
+/*
+Attachment is a file on a message as a teammate sees it. URL reads it
+for a few minutes and is null until the malware scan lets it through;
+Blocked marks a file the scan refused.
+*/
+type Attachment struct {
+	ID          string  `json:"id"`
+	Object      string  `json:"object"`
+	Filename    string  `json:"filename"`
+	ContentType string  `json:"content_type"`
+	SizeBytes   int64   `json:"size_bytes"`
+	Width       *int32  `json:"width"`
+	Height      *int32  `json:"height"`
+	URL         *string `json:"url"`
+	Blocked     bool    `json:"blocked"`
+}
+
+/*
+NewAttachment shapes a file of a message.
+*/
+func NewAttachment(f messages.File) Attachment {
+	return Attachment{
+		ID: models.PublicID(models.PrefixAttachment, f.Row.ID), Object: "attachment", Filename: f.Row.Filename,
+		ContentType: f.Row.ContentType, SizeBytes: f.Row.SizeBytes, Width: f.Row.Width, Height: f.Row.Height,
+		URL: f.URL, Blocked: f.Blocked,
+	}
 }
 
 /*

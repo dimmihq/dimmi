@@ -88,5 +88,5 @@ files, which customers' own sites load, and the browser app's built
 files, which the gate's own password page needs.
 */
 func gateExcept() []string {
-	return []string{"/webhooks/*", "/widget/*", "/build/*"}
+	return []string{"/webhooks/*", "/widget/*", "/build/*", "/files/*"}
 }

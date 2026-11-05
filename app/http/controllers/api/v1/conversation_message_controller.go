@@ -17,6 +17,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
@@ -152,7 +153,7 @@ page shapes a timeline page with the cursors to either side.
 */
 func (c *ConversationMessageController) page(t messages.Timeline, limit int) (*TimelineOutput, error) {
 	out := pagination.Page[resources.TimelineEntry]{
-		Items: resources.NewTimelineEntries(t.Messages, t.Contact, t.Members), Limit: limit,
+		Items: resources.NewTimelineEntries(t.Messages, t.Contact, t.Members, t.Files), Limit: limit,
 	}
 
 	if len(t.Messages) == 0 {
@@ -206,6 +207,10 @@ func (c *ConversationMessageController) StoreReply(
 	reply := messages.ReplyInput{
 		Membership: membership(ctx), Ref: ref, Body: b.Body, ClientMessageID: b.ClientMessageID,
 		Then: messages.ThenKeep, Delay: b.Delay && bySession(ctx), MutationID: mutationID(ctx),
+	}
+
+	if reply.Files, err = c.files(b.AttachmentIDs); err != nil {
+		return nil, err
 	}
 
 	if b.Then != nil {
@@ -384,4 +389,22 @@ func (c *ConversationMessageController) Patch(
 	out := writtenOutput(written)
 
 	return &EntryOutput{Body: out.Body}, nil
+}
+
+/*
+files decodes the attachment ids a reply names; one that is not an
+attachment id is simply not found.
+*/
+func (c *ConversationMessageController) files(named []string) ([]ids.UUID, error) {
+	out := make([]ids.UUID, 0, len(named))
+	for _, public := range named {
+		id, err := c.IDs.Decode(string(models.PrefixAttachment), strings.TrimSpace(public))
+		if err != nil {
+			return nil, exceptions.ErrAttachmentNotFound
+		}
+
+		out = append(out, id)
+	}
+
+	return out, nil
 }

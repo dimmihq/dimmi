@@ -104,7 +104,7 @@ export function content(
     reply_time: availability?.reply_time_text ?? base.reply_time,
     team: availability ? availability.team.map((member): Member => ({ name: member.name })) : base.team,
     conversations: store.conversations.map((c) => toConversation(c, now)),
-    thread: open ? (store.messages.get(open) ?? []).map((m) => toMessage(m, now)) : [],
+    thread: open ? (store.messages.get(open) ?? []).flatMap((m) => toMessages(m, now)) : [],
     incoming: undefined,
   };
 }
@@ -121,6 +121,26 @@ export function toConversation(c: api.Conversation, now: number): Conversation {
     unread: c.unread_count,
     status: c.customer_status,
   };
+}
+
+/*
+ * toMessages shows a message with several files as one bubble per file
+ * after its text, each keyed apart, so every file is seen and a new one
+ * arrives on its own.
+ */
+export function toMessages(m: api.Message, now: number): Message[] {
+  const first = toMessage(m, now);
+  const rest = m.attachments.slice(1).map((file, index): Message => {
+    const out: Message = { from: first.from, at: first.at, id: m.id, key: `${first.key}:file-${index + 1}` };
+    if (first.author) {
+      out.author = first.author;
+    }
+    out.attachment = toAttachment(file);
+
+    return out;
+  });
+
+  return [first, ...rest];
 }
 
 export function toMessage(m: api.Message, now: number): Message {

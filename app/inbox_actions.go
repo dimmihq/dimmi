@@ -13,6 +13,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/actions/attachments"
 	"github.com/dimmihq/dimmi/app/actions/companies"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
@@ -57,6 +58,7 @@ type InboxActions struct {
 	ShowConversation        *conversations.ShowConversation
 	CreateConversation      *conversations.CreateConversation
 	CreateTestConversations *conversations.CreateTestConversations
+	UploadFile              *attachments.UploadFile
 	ApplyChanges            *conversations.ApplyConversationChanges
 	ShowNeighbors           *conversations.ShowNeighbors
 	CountConversations      *conversations.CountConversations

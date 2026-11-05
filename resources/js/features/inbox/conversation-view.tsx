@@ -88,14 +88,19 @@ function useTimeline(workspace: string, conversation: Conversation) {
     }
   }, [unread, mark]);
 
-  const send = async (mode: Mode, text: string, then?: "close" | "snooze"): Promise<Message | undefined> => {
+  const send = async (
+    mode: Mode,
+    text: string,
+    then?: "close" | "snooze",
+    files?: string[],
+  ): Promise<Message | undefined> => {
     const write = { workspace, mutation: mutationId() };
     if (mode === "note") {
       await addNote(write, conversation.id, text);
       await refresh();
       return undefined;
     }
-    const sent = await reply(write, conversation.id, text, await afterReply(then));
+    const sent = await reply(write, conversation.id, text, await afterReply(then), files);
     await refresh();
     return sent;
   };
@@ -230,8 +235,8 @@ export function ConversationView({
         customer={customer}
         channel={conversation.channel.name}
         channelType={conversation.channel.type}
-        onSend={async (mode, text, then) => {
-          const sent = await timeline.send(mode, text, then);
+        onSend={async (mode, text, then, files) => {
+          const sent = await timeline.send(mode, text, then, files);
           if (then) {
             walk.advance();
           }

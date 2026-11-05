@@ -20,6 +20,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/attachments"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
@@ -65,7 +66,7 @@ func bootInbox(a *app.App) error {
 		UpdateReadState:    &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
 
-		ListMessages:      &messages.ListMessages{DB: a.DB},
+		ListMessages:      &messages.ListMessages{DB: a.DB, Disks: a.Storage},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		DeleteMessage:     &messages.DeleteMessage{DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue},
@@ -79,7 +80,7 @@ func bootInbox(a *app.App) error {
 		bootWorkbench(a),
 		bootErasures(a),
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
-			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels,
+			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels, Disks: a.Storage,
 		}),
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{
@@ -131,10 +132,16 @@ func bootWorkbench(a *app.App) error {
 	acts.SaveDraft = &drafts.SaveDraft{Saver: drafter}
 	acts.UpdateDraft = &drafts.UpdateDraft{Saver: drafter}
 	acts.DeleteDraft = &drafts.DeleteDraft{Saver: drafter}
+	diskName := a.Application.Config.Filesystems.Default
+	acts.UploadFile = &attachments.UploadFile{
+		Create:   &attachments.CreatePendingUpload{DB: a.DB, Clock: a.Clock, Disk: disk, DiskName: diskName},
+		Put:      &attachments.PutUploadContent{DB: a.DB, Disk: disk},
+		Complete: &attachments.CompleteUpload{DB: a.DB, Clock: a.Clock, Disk: disk},
+	}
 	acts.CreateTestConversations = &conversations.CreateTestConversations{
 		DB: a.DB, Clock: a.Clock, Create: acts.CreateConversation,
 		Receiver: &conversations.ReceiveInboundMessage{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: a.Application.Config.Filesystems.Default,
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,
 			ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,
 		},
 	}

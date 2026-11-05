@@ -16,12 +16,18 @@ package routes
 
 import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 )
+
+/*
+uploadOverhead is room past a file's limit for the request around it.
+*/
+const uploadOverhead = 16 << 10
 
 /*
 inboxControllers are the inbox's controllers, built once with the
@@ -87,6 +93,9 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 
 	routing.Get(r, "/contacts", "contacts.index", c.contacts.Index).Ability("contacts:read")
 	routing.Post(r, "/contacts", "contacts.store", c.contacts.Store).Ability("contacts:write")
+	files := &v1.AttachmentController{Upload: a.Actions.Inbox.UploadFile, Disks: a.Storage, Errors: a.Errors}
+	r.Handle(fhttp.MethodPost, "/attachments", "attachments.store", fhttp.HandlerFunc(files.Store)).
+		Ability("conversations:write").Use(middleware.BodyLimit(v1.MaxMemberUploadBytes + uploadOverhead))
 	routing.Get(r, "/contacts/{contact}", "contacts.show", c.contacts.Get).Ability("contacts:read")
 	routing.Patch(r, "/contacts/{contact}", "contacts.update", c.contacts.Update).Ability("contacts:write")
 

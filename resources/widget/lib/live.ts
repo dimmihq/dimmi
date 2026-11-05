@@ -72,6 +72,33 @@ const fatal: Record<string, string> = {
   workspace_suspended: "this workspace is suspended.",
 };
 
+/*
+ * followBottom keeps a thread at its latest message while the visitor
+ * reads there: a picture that finishes loading would otherwise push the
+ * newest messages out of view. Once the visitor scrolls up, the thread
+ * stays where they are until they come back down.
+ */
+function followBottom(thread: HTMLElement, pinned: boolean) {
+  if (!thread.dataset.following) {
+    thread.dataset.following = "true";
+    thread.addEventListener("scroll", () => {
+      thread.dataset.pinned = String(thread.scrollHeight - thread.scrollTop - thread.clientHeight < 48);
+    });
+    thread.addEventListener(
+      "load",
+      () => {
+        if (thread.dataset.pinned !== "false") {
+          thread.scrollTop = thread.scrollHeight;
+        }
+      },
+      true,
+    );
+  }
+  if (pinned) {
+    thread.scrollTop = thread.scrollHeight;
+  }
+}
+
 export class Live {
   readonly store: Store;
   readonly http: Http;
@@ -457,8 +484,9 @@ export class Live {
 
     const same = loaded.dataset.conversation === (open ?? "");
     loaded.dataset.conversation = open ?? "";
+    const pinned = !same || thread.dataset.pinned !== "false";
     patch(loaded, parts.join(""), same);
-    thread.scrollTop = thread.scrollHeight;
+    followBottom(thread, pinned);
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
   }
 
