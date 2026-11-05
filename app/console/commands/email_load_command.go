@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/console"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -207,13 +208,10 @@ and prints how long processing took.
 func (c EmailLoadCommand) report(
 	ctx context.Context, route models.RouteEmailAddressRow, run *loadRun, out *console.Output,
 ) error {
-	q := models.New(c.App.DB)
 	give := c.App.Clock.After(settleWait)
 
 	for {
-		row, err := q.InboundLatencyBySubject(ctx, models.InboundLatencyBySubjectParams{
-			WorkspaceID: route.WorkspaceID, Prefix: run.prefix,
-		})
+		row, err := c.latency(ctx, route, run)
 		if err != nil {
 			return fmt.Errorf("read load run: %w", err)
 		}
@@ -241,4 +239,25 @@ func percentile(values []time.Duration, p float64) time.Duration {
 	slices.Sort(sorted)
 
 	return sorted[int(float64(len(sorted)-1)*p)].Round(time.Millisecond)
+}
+
+/*
+latency reads the run's figures inside a workspace transaction, where
+row security lets its emails be seen.
+*/
+func (c EmailLoadCommand) latency(
+	ctx context.Context, route models.RouteEmailAddressRow, run *loadRun,
+) (models.InboundLatencyBySubjectRow, error) {
+	var row models.InboundLatencyBySubjectRow
+
+	err := c.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		row, err = models.New(tx).InboundLatencyBySubject(ctx, models.InboundLatencyBySubjectParams{
+			WorkspaceID: route.WorkspaceID, Prefix: run.prefix,
+		})
+
+		return err
+	})
+
+	return row, err
 }

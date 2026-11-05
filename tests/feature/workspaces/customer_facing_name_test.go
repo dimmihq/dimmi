@@ -82,7 +82,7 @@ workspace reads the test's workspace as it is now stored.
 func workspace(t *testing.T, tc *tests.TestCase) models.Workspace {
 	t.Helper()
 
-	w, err := models.New(tc.App.DB).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
+	w, err := models.New(tc.Operator()).FindWorkspace(t.Context(), tc.Workspace.Workspace.ID)
 	require.NoError(t, err)
 
 	return w
