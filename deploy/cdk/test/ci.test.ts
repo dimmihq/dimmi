@@ -10,7 +10,9 @@ describe("ci stack", () => {
     const trust = JSON.stringify(role.Properties.AssumeRolePolicyDocument);
 
     expect(trust).toMatch(/sts:AssumeRoleWithWebIdentity/);
-    expect(trust).toMatch(/"token.actions.githubusercontent.com:sub":"repo:dimmihq@352342433\/dimmi@1445376064:environment:staging"/);
+    expect(trust).toMatch(
+      /"token.actions.githubusercontent.com:sub":"repo:dimmihq@352342433\/dimmi@1445376064:environment:staging"/,
+    );
     expect(trust).toMatch(/"token.actions.githubusercontent.com:aud":"sts.amazonaws.com"/);
   });
 
