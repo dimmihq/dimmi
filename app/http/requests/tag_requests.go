@@ -25,6 +25,7 @@ type StoreTagRequest struct {
 	Body struct {
 		Name  string  `json:"name"            validate:"required,min=1,max=100"`
 		Color *string `json:"color,omitempty" validate:"omitempty,hexcolor"`
+		Icon  *string `json:"icon,omitempty"  validate:"omitempty,max=40"`
 	}
 }
 
@@ -36,6 +37,7 @@ type UpdateTagRequest struct {
 	Body struct {
 		Name  *string `json:"name,omitempty"  validate:"omitempty,min=1,max=100"`
 		Color *string `json:"color,omitempty" validate:"omitempty,hexcolor"`
+		Icon  *string `json:"icon,omitempty"  validate:"omitempty,max=40"`
 	}
 	RawBody []byte
 }

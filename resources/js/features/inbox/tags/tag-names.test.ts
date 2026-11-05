@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isNewName, matching } from "./tag-names";
 
-const tag = (name: string) => ({ id: name, object: "tag", name, color: null });
+const tag = (name: string) => ({ id: name, object: "tag", name, color: null, icon: null });
 
 describe("matching", () => {
   it("narrows by any part of the name, without regard to case", () => {

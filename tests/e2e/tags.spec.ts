@@ -56,6 +56,8 @@ it.describe("tags", () => {
 
     await page.getByRole("button", { name: "Edit" }).first().click();
     await page.getByRole("textbox", { name: "Tag name" }).fill("Defect");
+    await page.locator("label", { has: page.getByRole("radio", { name: "fire" }) }).click();
+    await expect(page.getByRole("radio", { name: "fire" })).toBeChecked();
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Defect")).toBeVisible();
 

@@ -3,18 +3,38 @@
  * common ones are suggested; the team picks some, adds its own, and saves
  * them all at once.
  */
-import { RiAddLine, RiCheckLine, RiCloseLine, RiPriceTag3Line } from "@remixicon/react";
+import { RiAddLine, RiCheckLine } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
-import { createTag } from "@/lib/api/tags";
+import { TagChip } from "@/features/inbox/tags/tag-chip";
+import { tagIcon } from "@/features/inbox/tags/tag-icons";
+import { createTag, type Tag } from "@/lib/api/tags";
 
 import { StepActions, StepHeader } from "./frame";
 import type { StepProps } from "./step-props";
 
-const suggestions = ["Billing", "Bug", "Feedback", "Question", "Account", "Feature request"];
+const suggestions: Record<string, { color: string; icon: string }> = {
+  Billing: { color: "#16a34a", icon: "bank-card" },
+  Bug: { color: "#dc2626", icon: "bug" },
+  Feedback: { color: "#9333ea", icon: "chat-smile-2" },
+  Question: { color: "#2563eb", icon: "question" },
+  Account: { color: "#ea580c", icon: "user" },
+  "Feature request": { color: "#0891b2", icon: "sparkling" },
+};
+
+/*
+ * preview is the chip a chosen name will become. A name the team typed
+ * itself gets its color and icon from the server once saved, so it shows
+ * neutral until then.
+ */
+function preview(name: string): Tag {
+  const suggested = suggestions[name];
+
+  return { id: name, object: "tag", name, color: suggested?.color ?? null, icon: suggested?.icon ?? null };
+}
 
 export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
   const queryClient = useQueryClient();
@@ -23,7 +43,7 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
   const save = useMutation({
     mutationFn: async () => {
       for (const name of chosen) {
-        await createTag(workspace, name);
+        await createTag(workspace, name, suggestions[name] ?? {});
       }
     },
     onSuccess: async () => {
@@ -54,7 +74,7 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
       <div className="mt-8 flex flex-col gap-3">
         <h2 className="text-body-semibold text-text-primary">Suggestions</h2>
         <div className="flex flex-wrap gap-2">
-          {suggestions.map((name) => {
+          {Object.entries(suggestions).map(([name, appearance]) => {
             const isChosen = chosen.includes(name);
 
             return (
@@ -62,7 +82,7 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
                 key={name}
                 variant="secondary"
                 size="small"
-                leadingIcon={RiPriceTag3Line}
+                leadingIcon={tagIcon(appearance.icon)}
                 trailingIcon={isChosen ? RiCheckLine : RiAddLine}
                 aria-pressed={isChosen}
                 onClick={() => toggle(name)}
@@ -95,9 +115,7 @@ export function TagsStep({ workspace, label, onNext, onBack }: StepProps) {
           <ul className="flex flex-wrap gap-2">
             {chosen.map((name) => (
               <li key={name}>
-                <Button variant="secondary" size="xs" trailingIcon={RiCloseLine} onClick={() => toggle(name)}>
-                  {name}
-                </Button>
+                <TagChip tag={preview(name)} onRemove={() => toggle(name)} />
               </li>
             ))}
           </ul>

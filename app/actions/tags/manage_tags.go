@@ -49,6 +49,7 @@ type CreateTagInput struct {
 	Membership authz.Membership
 	Name       string
 	Color      *string
+	Icon       *string
 }
 
 /*
@@ -62,8 +63,8 @@ Rules:
 Events: [appevents.TagCreated].
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrTagExists],
-[exceptions.ErrTagNameRequired], [exceptions.ErrTagLimitReached], or a
-wrapped database error.
+[exceptions.ErrTagNameRequired], [exceptions.ErrTagIconUnknown],
+[exceptions.ErrTagLimitReached], or a wrapped database error.
 */
 type CreateTag struct {
 	DB      *database.DB
@@ -85,6 +86,10 @@ func (a *CreateTag) Handle(ctx context.Context, in CreateTagInput) (models.Tag, 
 		return models.Tag{}, exceptions.ErrTagNameRequired
 	}
 
+	if !knownIcon(in.Icon) {
+		return models.Tag{}, exceptions.ErrTagIconUnknown
+	}
+
 	var out models.Tag
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -99,7 +104,9 @@ func (a *CreateTag) Handle(ctx context.Context, in CreateTagInput) (models.Tag, 
 			return exceptions.ErrTagLimitReached
 		}
 
-		out, err = q.CreateTag(ctx, models.CreateTagParams{WorkspaceID: ws, Name: name, Color: in.Color, Now: now})
+		out, err = q.CreateTag(ctx, models.CreateTagParams{
+			WorkspaceID: ws, Name: name, Color: in.Color, Icon: in.Icon, Now: now,
+		})
 		if database.IsUniqueViolation(err, nameConstraint) {
 			return exceptions.ErrTagExists
 		}
@@ -118,7 +125,8 @@ func (a *CreateTag) Handle(ctx context.Context, in CreateTagInput) (models.Tag, 
 
 /*
 UpdateTagInput is who changes which tag and how: Name nil keeps the
-name, Color nil keeps the color unless ClearColor.
+name, Color nil keeps the color unless ClearColor, and Icon nil keeps
+the icon unless ClearIcon.
 */
 type UpdateTagInput struct {
 	Membership authz.Membership
@@ -126,10 +134,12 @@ type UpdateTagInput struct {
 	Name       *string
 	Color      *string
 	ClearColor bool
+	Icon       *string
+	ClearIcon  bool
 }
 
 /*
-UpdateTag renames or recolors a tag.
+UpdateTag renames a tag or changes its color or icon.
 
 Rules:
   - The caller needs tags:manage.
@@ -138,8 +148,8 @@ Rules:
 Events: [appevents.TagUpdated] when anything changed.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
-[exceptions.ErrTagExists], [exceptions.ErrTagNameRequired], or a wrapped
-database error.
+[exceptions.ErrTagExists], [exceptions.ErrTagNameRequired],
+[exceptions.ErrTagIconUnknown], or a wrapped database error.
 */
 type UpdateTag struct {
 	DB      *database.DB
@@ -200,7 +210,7 @@ nextValues works out what the tag becomes and the fields that change.
 */
 func nextValues(current models.Tag, in UpdateTagInput) (models.UpdateTagParams, []string, error) {
 	params := models.UpdateTagParams{
-		Name: current.Name, Color: current.Color, WorkspaceID: current.WorkspaceID, ID: current.ID,
+		Name: current.Name, Color: current.Color, Icon: current.Icon, WorkspaceID: current.WorkspaceID, ID: current.ID,
 	}
 
 	var changes []string
@@ -229,7 +239,35 @@ func nextValues(current models.Tag, in UpdateTagInput) (models.UpdateTagParams, 
 		params.Color, changes = next, append(changes, "color")
 	}
 
+	icon, err := nextIcon(current.Icon, in)
+	if err != nil {
+		return params, nil, err
+	}
+
+	if !sameColor(current.Icon, icon) {
+		params.Icon, changes = icon, append(changes, "icon")
+	}
+
 	return params, changes, nil
+}
+
+/*
+nextIcon is the icon the tag carries after the update.
+*/
+func nextIcon(current *string, in UpdateTagInput) (*string, error) {
+	if in.ClearIcon {
+		return nil, nil
+	}
+
+	if in.Icon == nil {
+		return current, nil
+	}
+
+	if !knownIcon(in.Icon) {
+		return nil, exceptions.ErrTagIconUnknown
+	}
+
+	return in.Icon, nil
 }
 
 /*

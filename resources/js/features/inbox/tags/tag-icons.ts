@@ -1,0 +1,75 @@
+/*
+ * The icons a tag can wear, by the names the server accepts. A tag
+ * without an icon, or with one this build does not know, shows the price
+ * tag so every chip keeps the same shape.
+ */
+import {
+  type RemixiconComponentType,
+  RiBankCardLine,
+  RiBookOpenLine,
+  RiBugLine,
+  RiCalendarLine,
+  RiChatSmile2Line,
+  RiCodeSSlashLine,
+  RiErrorWarningLine,
+  RiFireLine,
+  RiFlagLine,
+  RiGiftLine,
+  RiGlobalLine,
+  RiHeartLine,
+  RiLightbulbLine,
+  RiLockLine,
+  RiMailLine,
+  RiPaletteLine,
+  RiPhoneLine,
+  RiPriceTag3Line,
+  RiQuestionLine,
+  RiRefund2Line,
+  RiRocketLine,
+  RiSettings3Line,
+  RiShieldCheckLine,
+  RiShoppingCartLine,
+  RiSparklingLine,
+  RiStarLine,
+  RiTimeLine,
+  RiToolsLine,
+  RiTruckLine,
+  RiUserLine,
+} from "@remixicon/react";
+
+export const tagIcons: Record<string, RemixiconComponentType> = {
+  "price-tag-3": RiPriceTag3Line,
+  bug: RiBugLine,
+  "bank-card": RiBankCardLine,
+  "chat-smile-2": RiChatSmile2Line,
+  question: RiQuestionLine,
+  user: RiUserLine,
+  sparkling: RiSparklingLine,
+  lightbulb: RiLightbulbLine,
+  "error-warning": RiErrorWarningLine,
+  rocket: RiRocketLine,
+  "shield-check": RiShieldCheckLine,
+  "settings-3": RiSettings3Line,
+  truck: RiTruckLine,
+  "shopping-cart": RiShoppingCartLine,
+  "refund-2": RiRefund2Line,
+  lock: RiLockLine,
+  mail: RiMailLine,
+  phone: RiPhoneLine,
+  global: RiGlobalLine,
+  "code-s-slash": RiCodeSSlashLine,
+  "book-open": RiBookOpenLine,
+  heart: RiHeartLine,
+  star: RiStarLine,
+  fire: RiFireLine,
+  flag: RiFlagLine,
+  time: RiTimeLine,
+  calendar: RiCalendarLine,
+  gift: RiGiftLine,
+  tools: RiToolsLine,
+  palette: RiPaletteLine,
+};
+
+export function tagIcon(name: string | null | undefined): RemixiconComponentType {
+  return (name && tagIcons[name]) || RiPriceTag3Line;
+}

@@ -1,13 +1,17 @@
 -- name: CreateTag :one
--- CreateTag stores a tag in the workspace. A name another tag holds, in
+-- CreateTag stores a tag in the workspace, with the icon given, in the
+-- color given or else the palette color the workspace uses least. A name another tag holds, in
 -- any case, fails on tags_workspace_id_name_key.
-INSERT INTO tags (workspace_id, name, color, created_at, updated_at)
-VALUES (@workspace_id, @name, @color, @now, @now)
+INSERT INTO tags (workspace_id, name, color, icon, created_at, updated_at)
+VALUES (
+    @workspace_id, @name::text, coalesce(sqlc.narg(color), dimmi_next_tag_color(@workspace_id, @name::text)), sqlc.narg(icon),
+    @now, @now
+)
 RETURNING *;
 
 -- name: EnsureTags :many
 -- EnsureTags returns the workspace's tags with the names, creating those
--- that do not exist yet, by name. Names are matched without regard to
+-- that do not exist yet, by name, each in a palette color. Names are matched without regard to
 -- case, so Billing finds billing and a name given twice is one tag. A
 -- tag another transaction creates at the same moment is left out, so a
 -- caller that needs every name compares the count and asks again.
@@ -15,8 +19,8 @@ WITH wanted AS (
     SELECT DISTINCT unnest(@names::text[])::citext AS name
 ),
 created AS (
-    INSERT INTO tags (workspace_id, name, created_at, updated_at)
-    SELECT @workspace_id, name, @now, @now FROM wanted
+    INSERT INTO tags (workspace_id, name, color, created_at, updated_at)
+    SELECT @workspace_id, name, dimmi_next_tag_color(@workspace_id, name::text), @now, @now FROM wanted
     ON CONFLICT (workspace_id, name) DO NOTHING
     RETURNING *
 )
@@ -49,9 +53,9 @@ GROUP BY ct.tag_id
 ORDER BY ct.tag_id;
 
 -- name: UpdateTag :one
--- UpdateTag renames or recolors a tag. A name another tag holds fails on
--- tags_workspace_id_name_key.
-UPDATE tags SET name = @name, color = @color, updated_at = @now
+-- UpdateTag renames a tag or changes its color or icon. A name another
+-- tag holds fails on tags_workspace_id_name_key.
+UPDATE tags SET name = @name, color = @color, icon = @icon, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

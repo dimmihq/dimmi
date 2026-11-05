@@ -11,7 +11,8 @@ import { parseColor } from "react-aria-components";
 import { ColorWell } from "@/components/base/color-picker/color-picker";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
-import { TagDot } from "@/features/inbox/tags/tag-chip";
+import { TagChip } from "@/features/inbox/tags/tag-chip";
+import { TagIconPicker } from "@/features/inbox/tags/tag-icon-picker";
 import { createTag, deleteTag, type ListedTag, tagsQuery, updateTag } from "@/lib/api/tags";
 import { callerQuery } from "@/lib/api/workspace";
 
@@ -20,7 +21,20 @@ import { Empty, Row, Section, SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
-const swatches = ["#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#ef4444", "#f59e0b", "#737373"];
+const swatches = [
+  "#2563eb",
+  "#16a34a",
+  "#dc2626",
+  "#9333ea",
+  "#ea580c",
+  "#0891b2",
+  "#db2777",
+  "#ca8a04",
+  "#4f46e5",
+  "#0d9488",
+  "#65a30d",
+  "#c026d3",
+];
 
 function useTagWrites(workspace: string) {
   const queryClient = useQueryClient();
@@ -79,8 +93,9 @@ function EditTagDialog({ tag, onClose }: { tag: ListedTag; onClose: () => void }
   const refresh = useTagWrites(workspace);
   const [name, setName] = useState(tag.name);
   const [color, setColor] = useState(parseColor(tag.color ?? "#737373"));
+  const [icon, setIcon] = useState(tag.icon ?? "price-tag-3");
   const save = useMutation({
-    mutationFn: () => updateTag(workspace, tag.id, { name, color: color.toString("hex").toLowerCase() }),
+    mutationFn: () => updateTag(workspace, tag.id, { name, icon, color: color.toString("hex").toLowerCase() }),
     onSuccess: refresh,
   });
 
@@ -119,6 +134,7 @@ function EditTagDialog({ tag, onClose }: { tag: ListedTag; onClose: () => void }
           />
         </div>
       </div>
+      <TagIconPicker value={icon} onChange={setIcon} />
     </AlertDialog>
   );
 }
@@ -159,15 +175,7 @@ export function TagsSettings() {
       <Section title="Tags" action={<Action onPress={() => setCreating(true)}>New tag</Action>}>
         {tags?.length === 0 ? <Empty>No tags yet.</Empty> : null}
         {tags?.map((tag) => (
-          <Row
-            key={tag.id}
-            label={
-              <span className="flex items-center gap-2">
-                <TagDot color={tag.color} />
-                {tag.name}
-              </span>
-            }
-          >
+          <Row key={tag.id} label={<TagChip tag={tag} />}>
             <span className="text-body-2-regular text-text-tertiary">{countOf(tag)}</span>
             {canManage ? (
               <>

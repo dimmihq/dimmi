@@ -66,7 +66,7 @@ func (q *Queries) CountTaggedContacts(ctx context.Context, workspaceID ids.UUID)
 }
 
 const listContactTags = `-- name: ListContactTags :many
-SELECT ct.contact_id, t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at FROM contact_tag AS ct
+SELECT ct.contact_id, t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at, t.icon FROM contact_tag AS ct
 JOIN tags AS t ON t.id = ct.tag_id AND t.workspace_id = ct.workspace_id
 WHERE ct.workspace_id = $1 AND ct.contact_id = ANY ($2::uuid[])
 ORDER BY ct.contact_id, t.name, t.id
@@ -101,6 +101,7 @@ func (q *Queries) ListContactTags(ctx context.Context, arg ListContactTagsParams
 			&i.Tag.Color,
 			&i.Tag.CreatedAt,
 			&i.Tag.UpdatedAt,
+			&i.Tag.Icon,
 		); err != nil {
 			return nil, err
 		}
