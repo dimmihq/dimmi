@@ -69,7 +69,7 @@ it.describe("message moves", () => {
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(reply).toContainText("Try a sign-in code instead.");
 
-    await openComposer(page, /^Note/);
+    await page.getByRole("radio", { name: "Note" }).click();
     await page.getByRole("textbox", { name: "Internal note" }).fill("Watch this one");
     await page.getByRole("button", { name: "Add note" }).click();
     const note = page.getByRole("article", { name: `Internal note from ${person.name}` });

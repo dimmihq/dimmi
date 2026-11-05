@@ -78,6 +78,34 @@ function submitKey(event: KeyboardEvent): "send" | "close" | "snooze" | null {
   return event.altKey ? "snooze" : "send";
 }
 
+/*
+ * whenReady runs the step on the editor once it is set up, at once when
+ * it already is, and returns what stops waiting.
+ */
+function whenReady(editor: Editor | null, step: (ready: Editor) => unknown): () => void {
+  if (!editor || editor.isDestroyed) {
+    return () => undefined;
+  }
+  if (editor.isInitialized) {
+    step(editor);
+    return () => undefined;
+  }
+  const run = () => step(editor);
+  editor.on("create", run);
+
+  return () => editor.off("create", run);
+}
+
+/*
+ * syncContent puts Markdown that changed outside the editor, such as a
+ * draft from another device, into it without counting as typing.
+ */
+function syncContent(editor: Editor, value: string) {
+  if (editor.getMarkdown() !== value) {
+    editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
+  }
+}
+
 export default function RichEditor({
   value,
   label,
@@ -129,17 +157,8 @@ export default function RichEditor({
 
   linkRef.current = () => setLinking((editor?.getAttributes("link").href as string | undefined) ?? "https://");
 
-  useEffect(() => {
-    if (editor && !editor.isDestroyed && editor.isInitialized && editor.getMarkdown() !== value) {
-      editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
-    }
-  }, [editor, value]);
-
-  useEffect(() => {
-    if (focusKey && editor && !editor.isDestroyed && editor.isInitialized) {
-      editor.commands.focus("end");
-    }
-  }, [editor, focusKey]);
+  useEffect(() => whenReady(editor, (ready) => syncContent(ready, value)), [editor, value]);
+  useEffect(() => whenReady(editor, (ready) => focusKey && ready.commands.focus("end")), [editor, focusKey]);
 
   return (
     <div className="flex flex-col gap-2">
