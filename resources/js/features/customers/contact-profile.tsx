@@ -1,8 +1,10 @@
 /*
  * One customer's page: their details, which the team edits, what the
- * product told dimmi about them and the attributes the team sets, the channels they reach the team on,
- * their tags, the team's notes, the people who look like them, and their
- * conversations as far as the reader may see them.
+ * product told dimmi about them and the attributes the team sets, the
+ * channels they reach the team on, their tags, the team's notes, the
+ * people who look like them, and their conversations as far as the
+ * reader may see them. Those who may answer privacy requests export or
+ * erase the customer from here.
  */
 import { RiCloseLine, RiLinkUnlinkM, RiUserUnfollowLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +36,7 @@ import {
 import { callerQuery } from "@/lib/api/workspace";
 
 import { EraseCustomer } from "./erase-customer";
+import { ExportCustomer } from "./export-customer";
 import { CustomersFrame } from "./frame";
 import { personName, useWorkspace } from "./names";
 import { RecordConversations } from "./record-conversations";
@@ -343,7 +346,14 @@ export function ContactProfile({ id }: { id: string }) {
   return (
     <CustomersFrame
       tabs={false}
-      actions={canErase ? <EraseCustomer contact={contact} /> : null}
+      actions={
+        canErase ? (
+          <div className="flex items-center gap-2">
+            <ExportCustomer contact={contact} />
+            <EraseCustomer contact={contact} />
+          </div>
+        ) : null
+      }
       title={
         <span className="flex items-center gap-2">
           <Avatar size="xs" color={avatarColor(name)} initials={name.charAt(0).toUpperCase()} />

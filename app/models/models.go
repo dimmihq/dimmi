@@ -144,6 +144,22 @@ type ContactErasure struct {
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
+type ContactExport struct {
+	ID                  ids.UUID   `json:"id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	ContactID           ids.UUID   `json:"contact_id"`
+	RequestedByMemberID *ids.UUID  `json:"requested_by_member_id"`
+	Status              string     `json:"status"`
+	IncludeNotes        bool       `json:"include_notes"`
+	Disk                *string    `json:"disk"`
+	Path                *string    `json:"path"`
+	SizeBytes           *int64     `json:"size_bytes"`
+	Error               *string    `json:"error"`
+	ExpiresAt           *time.Time `json:"expires_at"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+}
+
 type ContactIdentity struct {
 	ID          ids.UUID  `json:"id"`
 	WorkspaceID ids.UUID  `json:"workspace_id"`

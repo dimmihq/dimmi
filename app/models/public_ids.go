@@ -75,6 +75,7 @@ const (
 	PrefixContactIdentity   Prefix = "cid"
 	PrefixRedactionRule     Prefix = "rxr"
 	PrefixContactErasure    Prefix = "ces"
+	PrefixContactExport     Prefix = "exp"
 	PrefixConversationView  Prefix = "cvw"
 )
 
@@ -177,7 +178,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixRedactionRule, "redaction_rules"},
 		{PrefixContactErasure, "contact_erasures"},
 		{PrefixConversationView, "conversation_views"},
-		{"exp", "contact_exports"},
+		{PrefixContactExport, "contact_exports"},
 		{"evt", "events"},
 	}
 }

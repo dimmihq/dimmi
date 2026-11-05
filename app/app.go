@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
+	"github.com/dimmihq/dimmi/app/actions/contacts"
 	emailactions "github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
@@ -65,7 +66,8 @@ services providers build at boot, and Actions every business action.
 Channels holds the channel drivers replies go out through.
 WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults, and
-ContactErasers what each part removes when a customer is erased.
+ContactErasers what each part removes when a customer is erased, and
+ContactExporters what each adds to a customer's export.
 Retention is asked before any purge destroys data. Entitlements answers
 what a workspace may have and BillingStatus whether it ever paid.
 EmailChannel is the email channel driver, which also receives inbound
@@ -104,6 +106,7 @@ type App struct {
 
 	WorkspaceInitializers *workspaces.Initializers
 	ContactErasers        *erasures.Erasers
+	ContactExporters      *contacts.Exporters
 	Retention             contracts.RetentionGuard
 	Entitlements          contracts.Entitlements
 	BillingStatus         contracts.BillingStatus
@@ -141,6 +144,7 @@ func New(version string) *App {
 
 		WorkspaceInitializers: workspaces.NewInitializers(),
 		ContactErasers:        erasures.NewErasers(),
+		ContactExporters:      contacts.NewExporters(),
 		Retention:             retention.NoHolds{},
 	}
 }

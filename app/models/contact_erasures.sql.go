@@ -368,6 +368,43 @@ func (q *Queries) ListContactErasures(ctx context.Context, arg ListContactErasur
 	return items, nil
 }
 
+const listErasedExportFiles = `-- name: ListErasedExportFiles :many
+SELECT id, disk, path FROM contact_exports
+WHERE workspace_id = $1 AND contact_id = $2 AND disk IS NOT NULL AND path IS NOT NULL
+`
+
+type ListErasedExportFilesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+type ListErasedExportFilesRow struct {
+	ID   ids.UUID `json:"id"`
+	Disk *string  `json:"disk"`
+	Path *string  `json:"path"`
+}
+
+// ListErasedExportFiles returns the zips of the contact's exports.
+func (q *Queries) ListErasedExportFiles(ctx context.Context, arg ListErasedExportFilesParams) ([]ListErasedExportFilesRow, error) {
+	rows, err := q.db.Query(ctx, listErasedExportFiles, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListErasedExportFilesRow
+	for rows.Next() {
+		var i ListErasedExportFilesRow
+		if err := rows.Scan(&i.ID, &i.Disk, &i.Path); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listErasedMessageFiles = `-- name: ListErasedMessageFiles :many
 SELECT a.id, a.disk, a.path FROM attachments a
 JOIN messages m ON m.id = a.message_id AND m.workspace_id = a.workspace_id

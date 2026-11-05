@@ -56,3 +56,36 @@ func NewContactErasures(rows []models.ContactErasure) []ContactErasure {
 
 	return out
 }
+
+/*
+ContactExport is a customer's export and where it stands. URL is where
+a ready export downloads from.
+*/
+type ContactExport struct {
+	ID           string     `json:"id"`
+	Object       string     `json:"object"`
+	ContactID    string     `json:"contact_id"`
+	Status       string     `json:"status"`
+	IncludeNotes bool       `json:"include_notes"`
+	SizeBytes    *int64     `json:"size_bytes"`
+	ExpiresAt    *time.Time `json:"expires_at"`
+	URL          *string    `json:"url"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
+/*
+NewContactExport shapes the export.
+*/
+func NewContactExport(e models.ContactExport) ContactExport {
+	out := ContactExport{
+		ID: models.PublicID(models.PrefixContactExport, e.ID), Object: "contact_export",
+		ContactID: models.PublicID(models.PrefixContact, e.ContactID), Status: e.Status, IncludeNotes: e.IncludeNotes,
+		SizeBytes: e.SizeBytes, ExpiresAt: e.ExpiresAt, CreatedAt: e.CreatedAt,
+	}
+
+	if e.Status == "ready" {
+		out.URL = new("/api/v1/contacts/" + out.ContactID + "/exports/" + out.ID + "/download")
+	}
+
+	return out
+}

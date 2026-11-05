@@ -81,3 +81,25 @@ type ContactErased struct {
 EventName names the event.
 */
 func (ContactErased) EventName() string { return "contact.deleted" }
+
+/*
+ContactExportReady is dispatched when a customer's export can be
+downloaded. Only the member who asked for it hears about it.
+*/
+type ContactExportReady struct {
+	Base
+
+	ExportID    ids.UUID
+	ContactID   ids.UUID
+	RequestedBy ids.UUID
+}
+
+/*
+EventName names the event.
+*/
+func (ContactExportReady) EventName() string { return "contact.export_ready" }
+
+/*
+Member returns the member who asked for the export.
+*/
+func (e ContactExportReady) Member() ids.UUID { return e.RequestedBy }

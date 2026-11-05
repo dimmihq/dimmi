@@ -47,4 +47,21 @@ it.describe("customer privacy", () => {
     await expect(page.getByText("Deleted contact").first()).toBeVisible();
     await expect(page.getByText("Please remove everything about me.")).toHaveCount(0);
   });
+
+  it("exports a customer's data as a zip", async ({ page }) => {
+    const id = await startConversation(page, {
+      name: "Bo Chen",
+      email: "bo@chen.example",
+      subject: "My data",
+      body: "Send me a copy of my data.",
+    });
+    const conversation = await api<{ contact: { id: string } }>(page, "GET", `/conversations/${id}`);
+
+    await page.goto(`/d/customers/${conversation.contact.id}`);
+    await page.getByRole("button", { name: "Export data" }).click();
+    const download = page.getByRole("button", { name: "Download export" });
+    await expect(download).toBeVisible({ timeout: 15_000 });
+    const [file] = await Promise.all([page.waitForEvent("download"), download.click()]);
+    expect(file.suggestedFilename()).toMatch(/^exp_.*\.zip$/);
+  });
 });

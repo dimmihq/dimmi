@@ -99,4 +99,10 @@ type InboxActions struct {
 	ListErasures   *erasures.ListErasures
 	ShowErasure    *erasures.ShowErasure
 	EraseContact   *erasures.EraseContact
+
+	RequestContactExport  *contacts.RequestContactExport
+	ShowContactExport     *contacts.ShowContactExport
+	DownloadContactExport *contacts.DownloadContactExport
+	BuildContactExport    *contacts.BuildContactExport
+	ExpireContactExports  *contacts.ExpireContactExports
 }

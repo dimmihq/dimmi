@@ -329,6 +329,8 @@ Same session as the shared inbox above, `C` the conversation Ann started:
 | Erase a customer | `DELETE "$B/contacts/{ann}?erase=true"` | 202 `object: contact_erasure`, `status: pending`, `scheduled_for` 7 days out; Ann is gone from `GET $B/contacts` and her conversations from the lists; a reply to her is 422 `contact_unreachable_on_channel` |
 | Cancel an erasure | `PATCH $B/contact-erasures/{ces} {"status":"canceled"}` | 200 `status: canceled`; Ann and her address are back; again 409 `erasure_closed` |
 | Erase at once | `DELETE "$B/contacts/{ann}?erase=true&immediate=true"` more than 15 minutes after signing in, then after `POST $B/user/confirmation` | 423 `password_confirmation_required`, then 202; soon `GET $B/contact-erasures/{ces}` is `completed`, her conversation shows "Deleted contact" with empty messages |
+| Export a customer | `POST $B/contacts/{ann}/exports {"include_notes":false}`, then `GET $B/contacts/{ann}/exports/{exp}` until ready, then its `url` | 202 `status: pending`, a second POST 409 `export_in_progress`; then `status: ready` with `url`; the zip holds `contact.json`, `conversations/1.json`, `conversations/1.txt` and her files, without the team's notes |
+| Export from the profile | on Ann's page press Export data, then Download export | the button waits while it builds, then saves `exp_….zip` |
 | Erasures page | open `$W/d/customers/erasures` as Ada, then as Bob | Ada sees the requests with Cancel on pending ones; Bob has no Erasures tab |
 | Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
 

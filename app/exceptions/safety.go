@@ -50,3 +50,17 @@ var (
 	ErrErasureClosed = fault.New(fault.Conflict, "erasure_closed",
 		"This erasure has already completed or been canceled.")
 )
+
+/*
+Export failures.
+
+ErrExportInProgress refuses a second export of a customer while one is
+being built. ErrExportNotReady refuses to download an export that is not
+built yet, failed, or expired.
+*/
+var (
+	ErrExportInProgress = fault.New(fault.Conflict, "export_in_progress",
+		"An export of this customer is already being prepared.")
+	ErrExportNotReady = fault.New(fault.Conflict, "export_not_ready",
+		"This export is not ready to download.")
+)

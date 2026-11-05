@@ -90,3 +90,8 @@ WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
 
 -- name: DeleteErasedContact :execrows
 DELETE FROM contacts WHERE workspace_id = @workspace_id AND id = @id AND NOT placeholder;
+
+-- name: ListErasedExportFiles :many
+-- ListErasedExportFiles returns the zips of the contact's exports.
+SELECT id, disk, path FROM contact_exports
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND disk IS NOT NULL AND path IS NOT NULL;

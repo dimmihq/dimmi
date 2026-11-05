@@ -171,6 +171,7 @@ func TestErasureFailures(t *testing.T) {
 
 	for name, write := range map[string][2]string{
 		"reading the files":          {"attachments", "SELECT"},
+		"reading the exports":        {"contact_exports", "SELECT"},
 		"deleting the files":         {"attachments", "DELETE"},
 		"emptying the messages":      {"messages", "UPDATE"},
 		"making the placeholder":     {"contacts", "INSERT"},
@@ -204,6 +205,20 @@ func TestErasureFailures(t *testing.T) {
 		d.TC.Clock.Travel(8 * 24 * time.Hour)
 
 		require.ErrorContains(t, runErase(t, d.TC, erasure), "open disk nowhere")
+	})
+
+	t.Run("retries the erasure when the disk refuses to delete an export", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		_, contact := customer(t, d)
+		d.Owner.PostJSON("/api/v1/contacts/"+contact+"/exports", nil).AssertStatus(202)
+		d.TC.Drain()
+		_, err := d.TC.App.DB.Exec(t.Context(), `UPDATE contact_exports SET path = '../outside.zip'`)
+		require.NoError(t, err)
+		erasure := d.Owner.Delete("/api/v1/contacts/" + contact + "?erase=true").AssertStatus(202).String("data.id")
+		d.TC.Clock.Travel(8 * 24 * time.Hour)
+
+		require.ErrorContains(t, runErase(t, d.TC, erasure), "delete file")
 	})
 
 	t.Run("retries the erasure when the disk refuses to delete a file", func(t *testing.T) {

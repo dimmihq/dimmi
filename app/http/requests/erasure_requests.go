@@ -39,3 +39,24 @@ type UpdateContactErasureRequest struct {
 		Status string `json:"status" validate:"required,oneof=canceled"`
 	}
 }
+
+/*
+ContactExportRequest is the input of the endpoints on one export of a
+contact.
+*/
+type ContactExportRequest struct {
+	Contact string `path:"contact"`
+	Export  string `path:"export"`
+}
+
+/*
+StoreContactExportRequest is the input of POST
+/contacts/{contact}/exports: whether the team's notes go in too. The
+body may be left out.
+*/
+type StoreContactExportRequest struct {
+	Contact string `path:"contact"`
+	Body    *struct {
+		IncludeNotes bool `json:"include_notes,omitempty"`
+	}
+}

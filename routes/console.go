@@ -34,4 +34,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.SendWorkspaceDeletionRemindersArgs{}).DailyAt("09:00")
 	a.Schedule.Job(jobs.NotifyExpiringTokensArgs{}).DailyAt("09:05")
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()
 }

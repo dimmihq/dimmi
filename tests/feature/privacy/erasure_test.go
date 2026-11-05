@@ -169,6 +169,11 @@ func TestContactErasure(t *testing.T) {
 		erased := tests.Record[appevents.ContactErased](d.TC)
 		path, contact := customer(t, d)
 		file := storeAttachment(t, d.TC, path)
+		d.Owner.PostJSON("/api/v1/contacts/"+contact+"/exports", nil).AssertStatus(202)
+		d.TC.Drain()
+
+		var zipPath string
+		require.NoError(t, d.TC.App.DB.QueryRow(t.Context(), `SELECT path FROM contact_exports`).Scan(&zipPath))
 		erasure := d.Owner.Delete("/api/v1/contacts/" + contact + "?erase=true").AssertStatus(202).String("data.id")
 
 		assert.Equal(t, erasures.Waiting, erase(t, d.TC, erasure))
@@ -201,6 +206,10 @@ func TestContactErasure(t *testing.T) {
 		exists, err := file.disk.Exists(t.Context(), file.path)
 		require.NoError(t, err)
 		assert.False(t, exists)
+		d.TC.Table("contact_exports").AssertCount(0)
+		zips, err := file.disk.Exists(t.Context(), zipPath)
+		require.NoError(t, err)
+		assert.False(t, zips)
 
 		assert.Equal(t, erasures.Done, erase(t, d.TC, erasure))
 		d.Owner.GetJSON("/api/v1/conversations?filter[view]=all").AssertOK().AssertJSONPath("data.#", 1)

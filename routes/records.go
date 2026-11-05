@@ -88,6 +88,15 @@ func contactDetailRoutes(r *routing.Router, a *app.App) {
 	path := "/contacts/{contact}"
 
 	routing.Delete(r, path, "contacts.destroy", removal.Destroy).Ability("contacts:write")
+	exports := &v1.ContactExportController{
+		Request: acts.RequestContactExport, Show: acts.ShowContactExport, Download: acts.DownloadContactExport,
+		IDs: a.IDs,
+	}
+	routing.Post(r, path+"/exports", "contacts.exports.store", exports.Store).Ability("contacts:write").
+		Status(http.StatusAccepted)
+	routing.Get(r, path+"/exports/{export}", "contacts.exports.show", exports.Get).Ability("contacts:write")
+	routing.Get(r, path+"/exports/{export}/download", "contacts.exports.download", exports.Zip).
+		Ability("contacts:write")
 	routing.Get(r, "/contact-erasures", "contact-erasures.index", removal.Index).Ability("contacts:write")
 	routing.Get(r, "/contact-erasures/{contact_erasure}", "contact-erasures.show", removal.Get).
 		Ability("contacts:write")

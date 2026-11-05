@@ -126,8 +126,8 @@ func (a *EraseContact) hold(ctx context.Context, row models.ContactErasure) erro
 }
 
 /*
-wipe deletes the files of the customer's conversations and empties
-their messages, returning how many of each it removed.
+wipe deletes the files of the customer's conversations and exports and
+empties their messages, returning how many of each it removed.
 */
 func (a *EraseContact) wipe(ctx context.Context, row models.ContactErasure) (map[string]int64, error) {
 	q := models.New(a.DB)
@@ -142,6 +142,10 @@ func (a *EraseContact) wipe(ctx context.Context, row models.ContactErasure) (map
 		if err := a.deleteFile(ctx, file.Disk, file.Path); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := a.deleteExports(ctx, q, row); err != nil {
+		return nil, err
 	}
 
 	counts := map[string]int64{}
@@ -167,6 +171,27 @@ func (a *EraseContact) wipe(ctx context.Context, row models.ContactErasure) (map
 	})
 
 	return counts, err
+}
+
+/*
+deleteExports removes the zips of the customer's exports, whose rows go
+with the contact.
+*/
+func (a *EraseContact) deleteExports(ctx context.Context, q *models.Queries, row models.ContactErasure) error {
+	zips, err := q.ListErasedExportFiles(ctx, models.ListErasedExportFilesParams{
+		WorkspaceID: row.WorkspaceID, ContactID: row.ContactID,
+	})
+	if err != nil {
+		return fmt.Errorf("list exports: %w", err)
+	}
+
+	for _, zip := range zips {
+		if err := a.deleteFile(ctx, *zip.Disk, *zip.Path); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*

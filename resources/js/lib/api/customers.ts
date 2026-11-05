@@ -352,3 +352,48 @@ export function cancelErasure(workspace: string, id: string): Promise<ContactEra
     },
   );
 }
+
+export interface ContactExport {
+  id: string;
+  object: "contact_export";
+  contact_id: string;
+  status: "pending" | "running" | "ready" | "failed" | "expired";
+  include_notes: boolean;
+  size_bytes: number | null;
+  expires_at: string | null;
+  url: string | null;
+  created_at: string;
+}
+
+export function exportQuery(workspace: string, contact: string, id: string) {
+  return queryOptions({
+    queryKey: [...customerKeys.contact(workspace, contact), "exports", id] as const,
+    queryFn: () =>
+      request<ContactExport>(
+        "GET",
+        `/contacts/${encodeURIComponent(contact)}/exports/${encodeURIComponent(id)}`,
+        undefined,
+        { workspace },
+      ),
+  });
+}
+
+export function requestExport(workspace: string, contact: string): Promise<ContactExport> {
+  return request<ContactExport>("POST", `/contacts/${encodeURIComponent(contact)}/exports`, {}, { workspace });
+}
+
+/*
+ * downloadExport fetches a ready export's zip, which the workspace header
+ * lets the server find.
+ */
+export async function downloadExport(workspace: string, url: string): Promise<Blob> {
+  const response = await fetch(url, {
+    headers: { Accept: "application/zip", "Dimmi-Workspace": workspace },
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    throw new Error("The export could not be downloaded.");
+  }
+
+  return response.blob();
+}
