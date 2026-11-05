@@ -70,6 +70,8 @@ func (a *Application) bootWeb(context.Context) error {
 		return err
 	}
 
+	a.serveLocalFiles()
+
 	a.Health = health.NewRegistry(health.DefaultTimeout, a.Clock)
 	a.Health.Add(health.Database(a.DB), health.Valkey(a.Redis), health.Func("maintenance", a.maintenanceCheck))
 
@@ -170,6 +172,7 @@ func (a *Application) useGate() error {
 		Key:      a.Config.Gate.CIKey,
 		Secret:   secret,
 		Except:   a.opts.GateExcept,
+		Page:     a.opts.GatePage,
 	}))
 
 	return nil

@@ -28,7 +28,7 @@ it.describe("sign-in methods", () => {
     await methods.getByRole("button", { name: "Link" }).click();
     await approve(page, providerEmail);
 
-    await expect(page).toHaveURL(/\/d\/settings\/security$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/security$/);
     await expect(page.getByText("Google linked. You can sign in with it now.")).toBeVisible();
     await expect(methods.getByText(providerEmail)).toBeVisible();
 

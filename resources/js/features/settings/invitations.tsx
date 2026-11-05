@@ -209,8 +209,8 @@ function InviteDialog({ workspace, isOpen, onClose }: { workspace: string; isOpe
             <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
-            <Button type="submit" disabled={send.isPending || emails.length === 0 || tooMany}>
-              {send.isPending ? "Sending…" : "Send invitations"}
+            <Button type="submit" loading={send.isPending} disabled={emails.length === 0 || tooMany}>
+              Send invitations
             </Button>
           </ModalFooter>
         </form>

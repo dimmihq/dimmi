@@ -50,7 +50,7 @@ it.describe("customer panel", () => {
       .toBe("Prefers email");
 
     await details.getByRole("link", { name: /Older question/ }).click();
-    await expect(page).toHaveURL(new RegExp(`/d/inbox/unassigned/${older}$`));
+    await expect(page).toHaveURL(new RegExp(`/d/[^/]+/inbox/unassigned/${older}$`));
   });
 
   it("warns of a possible duplicate and opens the customer's page", async ({ page }) => {

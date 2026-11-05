@@ -22,6 +22,7 @@ import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { TagPicker } from "@/features/inbox/tags/tag-picker";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { EmptyState } from "@/features/shell/page";
+import { ProfileSkeleton } from "@/features/shell/table-skeleton";
 import { ApiError } from "@/lib/api/client";
 import {
   type Contact,
@@ -34,7 +35,6 @@ import {
   updateContact,
 } from "@/lib/api/customers";
 import { callerQuery } from "@/lib/api/workspace";
-
 import { EraseCustomer } from "./erase-customer";
 import { ExportCustomer } from "./export-customer";
 import { CustomersFrame } from "./frame";
@@ -103,7 +103,7 @@ function Details({ contact }: { contact: Contact }) {
           isInvalid={"phone" in fields}
           errorMessage={fields.phone}
         />
-        <Button type="submit" size="small" className="self-start" disabled={!changed || write.isPending}>
+        <Button type="submit" size="small" className="self-start" loading={write.isPending} disabled={!changed}>
           Save
         </Button>
       </form>
@@ -157,7 +157,7 @@ function NewAttribute({ contact }: { contact: Contact }) {
           onChange={setKey}
         />
         <Input aria-label="Attribute value" size="small" placeholder="pro" value={value} onChange={setValue} />
-        <Button type="submit" variant="secondary" size="small" disabled={key.trim() === "" || write.isPending}>
+        <Button type="submit" variant="secondary" size="small" loading={write.isPending} disabled={key.trim() === ""}>
           Set
         </Button>
       </div>
@@ -329,7 +329,9 @@ export function ContactProfile({ id }: { id: string }) {
   if (!contact) {
     return (
       <CustomersFrame tabs={false}>
-        {isPending ? null : (
+        {isPending ? (
+          <ProfileSkeleton />
+        ) : (
           <EmptyState
             icon={RiUserUnfollowLine}
             title="Customer not found"

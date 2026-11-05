@@ -16,9 +16,11 @@
  *
  * A view whose content comes from the server loads the first time it is
  * seen with the panel open: it shows its skeleton and announces that it is
- * busy until the content arrives, then reveals it. The server is not wired
- * yet, so arrival is simulated after the latency on the messenger's
- * data-latency attribute, zero meaning at once.
+ * busy until the content arrives, then reveals it. A connected messenger
+ * draws its content as answers come, so it waits for none; a preview waits
+ * the latency on the messenger's data-latency attribute, zero meaning at
+ * once. Opening a conversation tells the connection which one, through a
+ * "dimmi:converse" event naming it, or none for a new one.
  *
  * A message from the team lands in its thread straight away. Unless the
  * visitor is reading that conversation, it counts as unread: a badge on
@@ -36,6 +38,8 @@ import { pop } from "../lib/sound";
 export class MessengerController extends Controller {
   #stack: string[] = [];
   #autoExpanded = false;
+  #viewerExpanded = false;
+  #alerted: string | undefined;
 
   get isOpen(): boolean {
     return this.element.dataset.open === "true";
@@ -85,6 +89,16 @@ export class MessengerController extends Controller {
       return;
     }
 
+    this.alert(message);
+  }
+
+  /*
+   * alert counts a message from the team as unread, shows its preview card
+   * while the messenger is closed and plays the sound, without touching a
+   * thread the connection draws itself.
+   */
+  alert(message: Incoming): void {
+    this.#alerted = String(message.conversation);
     this.#unread(this.#count + 1);
     const notice = this.target("notice");
     if (notice && !this.isOpen) {
@@ -98,7 +112,7 @@ export class MessengerController extends Controller {
 
   read(): void {
     this.#toggle(true);
-    this.converse();
+    this.#converse(this.#alerted);
   }
 
   ignore(): void {
@@ -108,10 +122,20 @@ export class MessengerController extends Controller {
     }
   }
 
-  converse(): void {
+  converse(event?: Event): void {
+    const row = event?.target instanceof Element ? event.target.closest<HTMLElement>("[data-conversation]") : null;
+    this.#converse(row?.dataset.conversation);
+  }
+
+  /*
+   * converse opens the conversation, a new one when the id names none the
+   * server knows.
+   */
+  #converse(id: string | undefined): void {
     this.#unread(0);
     this.ignore();
     this.#push("conversation");
+    this.dispatch("converse", { conversation: id?.startsWith("conv_") ? id : undefined });
     this.#latest();
   }
 
@@ -143,7 +167,66 @@ export class MessengerController extends Controller {
     this.#expand(!this.expanded);
   }
 
+  /*
+   * view opens a clicked picture across the messenger, expanding the panel
+   * first so it has room, and remembers whether it did so it can shrink
+   * the panel again on the way out.
+   */
+  view(event: Event): void {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>("a[href]");
+    const viewer = this.target("viewer");
+    const image = this.target<HTMLImageElement>("viewer-image");
+    if (!link || !viewer || !image) {
+      return;
+    }
+    event.preventDefault();
+    this.#viewerExpanded = !this.expanded;
+    if (this.#viewerExpanded) {
+      this.#expand(true);
+    }
+    image.src = link.href;
+    image.alt = link.querySelector("img")?.alt ?? "";
+    viewer.hidden = false;
+    requestAnimationFrame(() => {
+      viewer.dataset.shown = "true";
+    });
+    viewer.querySelector<HTMLElement>('[data-action="click->unview"]')?.focus();
+  }
+
+  /*
+   * original opens the picture being viewed in a tab of its own.
+   */
+  original(): void {
+    const image = this.target<HTMLImageElement>("viewer-image");
+    if (image?.src) {
+      window.open(image.src, "_blank", "noopener");
+    }
+  }
+
+  /*
+   * unview closes the picture and gives the panel back its size.
+   */
+  unview(event?: Event): void {
+    const viewer = this.target("viewer");
+    if (!viewer || viewer.hidden) {
+      return;
+    }
+    if (event && event.target !== event.currentTarget && (event.target as Element).closest("img")) {
+      return;
+    }
+    viewer.dataset.shown = "false";
+    viewer.hidden = true;
+    if (this.#viewerExpanded) {
+      this.#expand(false);
+      this.#viewerExpanded = false;
+    }
+  }
+
   dismiss(event: KeyboardEvent): void {
+    if (event.key === "Escape" && this.target("viewer")?.hidden === false) {
+      this.unview();
+      return;
+    }
     if (event.key === "Escape" && this.isOpen) {
       this.close();
       this.target("launcher")?.focus();

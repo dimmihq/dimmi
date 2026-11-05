@@ -91,7 +91,8 @@ func TestSignInFailures(t *testing.T) {
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL=100"))
 		tc.BreakTable("security_events")
 
-		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, "wrong")).AssertStatus(500)
+		tc.Client().PostJSON("/api/v1/sessions", login(tc.Owner.Email, "wrong")).AssertValidationError("email")
+		tc.Drain()
 	})
 
 	t.Run("answers a plain 500 when the new session's workspaces cannot be read", func(t *testing.T) {

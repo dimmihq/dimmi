@@ -1,11 +1,11 @@
 /*
  * One address with its forwarding setup: where to forward, the steps for
  * the mail service it lives in, whether mail arrived, and the settings
- * of the address for whoever may manage it.
+ * of the address for whoever may manage it, among them the default that
+ * new mail leaves from and how replies look.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Choice, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
@@ -13,24 +13,11 @@ import { useAccount } from "@/features/settings/use-account";
 import { type EmailAddress, sendEmailAddressTest, updateEmailAddress } from "@/lib/api/email";
 
 import { Activity } from "./activity";
+import { AddressStatus } from "./address-status";
 import { CopyButton } from "./copy-button";
 import { Failure } from "./failure";
 import { ForwardingGuide } from "./forwarding-guide";
-
-/*
- * Status says whether mail reached the address yet.
- */
-function Status({ address }: { address: EmailAddress }) {
-  return address.inbound_verified_at ? (
-    <Chip variant="caption" color="lime">
-      Receiving
-    </Chip>
-  ) : (
-    <Chip variant="caption" color="neutral">
-      Waiting for first email
-    </Chip>
-  );
-}
+import { TemplateSettings } from "./template-settings";
 
 const bulkLabels = { close: "Close", open: "Keep open", drop: "Drop" } as const;
 
@@ -41,10 +28,12 @@ export function AddressCard({
   address,
   manage,
   readRaw,
+  title = address.address,
 }: {
   address: EmailAddress;
   manage: boolean;
   readRaw: boolean;
+  title?: string;
 }) {
   const me = useAccount();
   const queryClient = useQueryClient();
@@ -60,7 +49,7 @@ export function AddressCard({
   const confirmation = address.forwarding_confirmation;
 
   return (
-    <Section title={address.address} description={`${address.inbox.name} inbox`} action={<Status address={address} />}>
+    <Section title={title} description={`${address.inbox.name} inbox`} action={<AddressStatus address={address} />}>
       <Row label="Forwarding address" description="Forward every email sent to your address here.">
         <span className="font-mono text-body-2-regular text-text-primary" data-testid="forwarding-address">
           {address.forwarding_address}
@@ -93,6 +82,18 @@ export function AddressCard({
       </Row>
       {manage ? (
         <>
+          {address.is_default ? null : (
+            <Row label="Default address" description="New conversations started here leave from the default.">
+              <Button
+                variant="secondary"
+                size="small"
+                loading={change.isPending}
+                onClick={() => change.mutate({ is_default: true })}
+              >
+                Make default
+              </Button>
+            </Row>
+          )}
           <Row
             label="Forwarding test"
             description={
@@ -101,7 +102,7 @@ export function AddressCard({
                 : "Send a test email to your address to check the forward."
             }
           >
-            <Button variant="secondary" size="small" disabled={test.isPending} onClick={() => test.mutate()}>
+            <Button variant="secondary" size="small" loading={test.isPending} onClick={() => test.mutate()}>
               Send test email
             </Button>
           </Row>
@@ -127,6 +128,7 @@ export function AddressCard({
               }}
             />
           </Row>
+          <TemplateSettings workspace={me.workspace.id} address={address} />
         </>
       ) : null}
       {readRaw ? <Activity address={address} /> : null}

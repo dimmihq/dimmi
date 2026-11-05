@@ -15,6 +15,15 @@ function script(attributes: Record<string, string>) {
   return tag;
 }
 
+/*
+ * started boots a preview and waits for its sample content.
+ */
+async function started() {
+  const widget = boot(win, document);
+  await widget?.ready;
+  return widget;
+}
+
 function shadow() {
   return document.getElementById("dimmi-messenger")?.shadowRoot as ShadowRoot;
 }
@@ -41,7 +50,7 @@ describe("loader", () => {
       appId: "wgt_1",
       apiBase: "https://app.example.com/support",
       identityUrl: "/api/dimmi/token",
-      demo: true,
+      preview: false,
     });
     const core = document.head.querySelector("script") as HTMLScriptElement;
     expect(core.type).toBe("module");
@@ -95,17 +104,17 @@ describe("loader", () => {
 
 describe("core", () => {
   beforeEach(() => {
-    win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com" };
+    win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", preview: true };
   });
 
   const launcher = () => shadow().querySelector(".launcher") as HTMLButtonElement;
   const panel = () => shadow().querySelector(".panel") as HTMLElement;
   const tab = (name: string) => shadow().querySelector(`[role=tab][data-tab=${name}]`) as HTMLButtonElement;
 
-  it("mounts in a shadow root and runs the calls queued before it", () => {
+  it("mounts in a shadow root and runs the calls queued before it", async () => {
     win.Dimmi = Object.assign(() => undefined, { q: [["open"]] as [string][] });
 
-    const widget = boot(win, document);
+    const widget = await started();
 
     expect(widget?.messenger?.isOpen).toBe(true);
     expect(panel().hasAttribute("inert")).toBe(false);
@@ -113,8 +122,8 @@ describe("core", () => {
     expect(launcher().getAttribute("aria-label")).toBe("Close messages");
   });
 
-  it("answers the global function, the launcher, its close buttons and page elements marked data-dimmi", () => {
-    const widget = boot(win, document);
+  it("answers the global function, the launcher, its close buttons and page elements marked data-dimmi", async () => {
+    const widget = await started();
     const toggle = document.createElement("a");
     toggle.dataset.dimmi = "toggle";
     document.body.append(toggle);
@@ -130,8 +139,8 @@ describe("core", () => {
     expect(widget?.messenger?.isOpen).toBe(false);
   });
 
-  it("closes on Escape and hands focus back to the launcher", () => {
-    const widget = boot(win, document);
+  it("closes on Escape and hands focus back to the launcher", async () => {
+    const widget = await started();
     win.Dimmi?.("open");
 
     panel().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -140,8 +149,8 @@ describe("core", () => {
     expect(shadow().activeElement).toBe(launcher());
   });
 
-  it("switches views from the tab bar and from the cards on the home view", () => {
-    const widget = boot(win, document);
+  it("switches views from the tab bar and from the cards on the home view", async () => {
+    const widget = await started();
 
     tab("help").click();
     expect(widget?.messenger?.tab).toBe("help");
@@ -153,8 +162,8 @@ describe("core", () => {
     expect(widget?.messenger?.tab).toBe("conversation");
   });
 
-  it("grows the panel toward the full window and back", () => {
-    boot(win, document);
+  it("grows the panel toward the full window and back", async () => {
+    await started();
     const expand = shadow().querySelector('[data-action="click->expand"]') as HTMLButtonElement;
 
     expand.click();
@@ -164,8 +173,8 @@ describe("core", () => {
     expect(shadow().querySelector(".messenger")?.getAttribute("data-expanded")).toBe("false");
   });
 
-  it("opens a conversation over the tabs and goes back to the tab it came from", () => {
-    const widget = boot(win, document);
+  it("opens a conversation over the tabs and goes back to the tab it came from", async () => {
+    const widget = await started();
     tab("messages").click();
 
     (shadow().querySelector('[data-view="messages"] .loaded .row') as HTMLButtonElement).click();
@@ -176,14 +185,82 @@ describe("core", () => {
     expect(widget?.messenger?.tab).toBe("messages");
   });
 
+  describe("picture viewer", () => {
+    const messenger = () => shadow().querySelector(".messenger") as HTMLElement;
+    const viewer = () => shadow().querySelector(".viewer") as HTMLElement;
+
+    /*
+     * picture puts a picture with a link into the thread, the way a sent
+     * one shows, and returns its link.
+     */
+    function picture(): HTMLAnchorElement {
+      const thread = shadow().querySelector(".thread") as HTMLElement;
+      thread.insertAdjacentHTML(
+        "beforeend",
+        '<a class="shot picture" href="https://files.example.com/shot.png" data-action="click->view"><img alt="shot.png"></a>',
+      );
+      return thread.lastElementChild as HTMLAnchorElement;
+    }
+
+    it("opens a clicked picture across the expanded messenger", async () => {
+      await started();
+      launcher().click();
+      const link = picture();
+
+      const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+      (link.querySelector("img") as HTMLImageElement).dispatchEvent(click);
+
+      expect(click.defaultPrevented).toBe(true);
+      expect(viewer().hidden).toBe(false);
+      expect(messenger().dataset.expanded).toBe("true");
+      expect((viewer().querySelector("img") as HTMLImageElement).src).toBe("https://files.example.com/shot.png");
+    });
+
+    it("closes on Escape from its own buttons and shrinks the messenger back", async () => {
+      await started();
+      launcher().click();
+      (picture().querySelector("img") as HTMLImageElement).click();
+
+      const close = viewer().querySelector("button[aria-label='Close picture']") as HTMLButtonElement;
+      close.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+      expect(viewer().hidden).toBe(true);
+      expect(messenger().dataset.expanded).toBe("false");
+      expect(messenger().dataset.open).toBe("true");
+    });
+
+    it("closes on a click around the picture but not on the picture", async () => {
+      await started();
+      launcher().click();
+      (picture().querySelector("img") as HTMLImageElement).click();
+
+      (viewer().querySelector(".viewer-stage img") as HTMLImageElement).click();
+      expect(viewer().hidden).toBe(false);
+
+      (viewer().querySelector(".viewer-stage") as HTMLElement).click();
+      expect(viewer().hidden).toBe(true);
+    });
+
+    it("keeps a messenger the visitor expanded expanded", async () => {
+      await started();
+      launcher().click();
+      (shadow().querySelector("[data-action='click->expand']") as HTMLButtonElement).click();
+      (picture().querySelector("img") as HTMLImageElement).click();
+
+      (viewer().querySelector("button[aria-label='Close picture']") as HTMLButtonElement).click();
+
+      expect(messenger().dataset.expanded).toBe("true");
+    });
+  });
+
   describe("unread messages", () => {
     const notice = () => shadow().querySelector(".notice") as HTMLElement;
     const badge = () => shadow().querySelector('.launcher [data-target="count"]') as HTMLElement;
     const tabBadge = () => shadow().querySelector('[data-target="tab-count"]') as HTMLElement;
     const rows = () => [...shadow().querySelectorAll<HTMLElement>('[data-conversation="44308"]')];
 
-    it("previews a new message above the closed launcher and counts it as unread", () => {
-      boot(win, document);
+    it("previews a new message above the closed launcher and counts it as unread", async () => {
+      await started();
 
       win.Dimmi?.("simulate", { message: "The sync finished." });
 
@@ -201,8 +278,8 @@ describe("core", () => {
       expect(badge().textContent).toBe("2");
     });
 
-    it("opens the conversation from the preview and reads everything", () => {
-      const widget = boot(win, document);
+    it("opens the conversation from the preview and reads everything", async () => {
+      const widget = await started();
       win.Dimmi?.("simulate", { message: "The sync finished." });
 
       (notice().querySelector(".notice-card") as HTMLButtonElement).click();
@@ -215,8 +292,8 @@ describe("core", () => {
       expect(rows().some((row) => row.dataset.unread === "true")).toBe(false);
     });
 
-    it("dismisses the preview but keeps the message unread", () => {
-      boot(win, document);
+    it("dismisses the preview but keeps the message unread", async () => {
+      await started();
       win.Dimmi?.("simulate", { message: "The sync finished." });
 
       (notice().querySelector(".notice-close") as HTMLButtonElement).click();
@@ -227,8 +304,8 @@ describe("core", () => {
       expect(launcher().getAttribute("aria-label")).toBe("Open messages, 1 unread");
     });
 
-    it("counts nothing for a message the visitor is already reading", () => {
-      const widget = boot(win, document);
+    it("counts nothing for a message the visitor is already reading", async () => {
+      const widget = await started();
       win.Dimmi?.("open");
       (shadow().querySelector(".chat") as HTMLElement).click();
 
@@ -245,15 +322,15 @@ describe("core", () => {
 
     beforeEach(() => {
       vi.useFakeTimers();
-      win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", latency: 800 };
+      win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", latency: 800, preview: true };
     });
 
     afterEach(() => {
       vi.useRealTimers();
     });
 
-    it("loads the first view when the panel opens, busy until the content arrives", () => {
-      boot(win, document);
+    it("loads the first view when the panel opens, busy until the content arrives", async () => {
+      await started();
       expect(view("home").dataset.state).toBeUndefined();
 
       win.Dimmi?.("open");
@@ -265,8 +342,8 @@ describe("core", () => {
       expect(view("home").hasAttribute("aria-busy")).toBe(false);
     });
 
-    it("loads every other view the first time it is shown, and only then", () => {
-      boot(win, document);
+    it("loads every other view the first time it is shown, and only then", async () => {
+      await started();
       win.Dimmi?.("open");
       vi.advanceTimersByTime(800);
 
@@ -282,8 +359,8 @@ describe("core", () => {
       expect(view("help").dataset.state).toBe("ready");
     });
 
-    it("keeps loaded views loaded when the options change", () => {
-      boot(win, document);
+    it("keeps loaded views loaded when the options change", async () => {
+      await started();
       win.Dimmi?.("open");
       vi.advanceTimersByTime(800);
 
@@ -292,8 +369,8 @@ describe("core", () => {
       expect(view("home").dataset.state).toBe("ready");
     });
 
-    it("loads again with a new latency to preview loading states", () => {
-      boot(win, document);
+    it("loads again with a new latency to preview loading states", async () => {
+      await started();
       win.Dimmi?.("open");
       vi.advanceTimersByTime(800);
 
@@ -308,8 +385,8 @@ describe("core", () => {
       expect(view("home").dataset.state).toBe("ready");
     });
 
-    it("posts new messages into the loaded thread", () => {
-      boot(win, document);
+    it("posts new messages into the loaded thread", async () => {
+      await started();
       win.Dimmi?.("open");
       (shadow().querySelector(".chat") as HTMLElement).click();
       vi.advanceTimersByTime(800);
@@ -322,6 +399,123 @@ describe("core", () => {
       const sent = [...shadow().querySelectorAll('.thread > .loaded > [data-from="visitor"]')].at(-1);
       expect(sent?.textContent).toContain("Hello");
       expect(shadow().querySelector(".thread > .loaded > [data-typing]")).not.toBeNull();
+    });
+  });
+
+  describe("voice notes", () => {
+    const composer = () => shadow().querySelector(".composer") as HTMLFormElement;
+    const record = () => composer().querySelector("[data-action='click->record']") as HTMLButtonElement;
+    const finish = () => composer().querySelector("[data-action='click->finish']") as HTMLButtonElement;
+    const note = () => composer().querySelector("[data-target='note']") as HTMLElement;
+    const tracks: { stop: ReturnType<typeof vi.fn> }[] = [];
+
+    /*
+     * FakeRecorder stands in for the browser's MediaRecorder: it hands back
+     * one chunk of audio when stopped.
+     */
+    class FakeRecorder extends EventTarget {
+      static isTypeSupported = (type: string) => type.startsWith("audio/webm");
+      mimeType = "audio/webm;codecs=opus";
+      state = "inactive";
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.dispatchEvent(
+          Object.assign(new Event("dataavailable"), { data: new Blob(["voice"], { type: "audio/webm" }) }),
+        );
+        this.dispatchEvent(new Event("stop"));
+      }
+    }
+
+    /*
+     * liveComposer boots the messenger, marks it connected, opens a new
+     * conversation and returns what it sends.
+     */
+    async function liveComposer(): Promise<{ body: string; files: File[]; voice?: string }[]> {
+      await started();
+      (shadow().querySelector(".messenger") as HTMLElement).dataset.live = "true";
+      const sent: { body: string; files: File[]; voice?: string }[] = [];
+      shadow().addEventListener("dimmi:send", (event) => sent.push((event as CustomEvent).detail));
+      return sent;
+    }
+
+    beforeEach(() => {
+      tracks.length = 0;
+      vi.stubGlobal("MediaRecorder", FakeRecorder);
+      vi.stubGlobal(
+        "AudioContext",
+        class {
+          createAnalyser() {
+            return { fftSize: 512, getByteTimeDomainData: (samples: Uint8Array) => samples.fill(128) };
+          }
+          createMediaStreamSource() {
+            return { connect: () => undefined };
+          }
+          close() {
+            return Promise.resolve();
+          }
+        },
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      Object.defineProperty(navigator, "mediaDevices", { value: undefined, configurable: true });
+    });
+
+    it("records from the microphone and sends the note as an audio file, letting the microphone go", async () => {
+      const track = { stop: vi.fn() };
+      tracks.push(track);
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) },
+        configurable: true,
+      });
+      const sent = await liveComposer();
+
+      record().click();
+      await vi.waitFor(() => expect(composer().dataset.recording).toBe("true"));
+      finish().click();
+
+      await vi.waitFor(() => expect(sent).toHaveLength(1));
+      const [file] = sent[0]?.files ?? [];
+      expect(file?.type).toBe("audio/webm");
+      expect(file?.name).toBe("Voice note.webm");
+      expect(track.stop).toHaveBeenCalled();
+      expect(composer().dataset.recording).toBeUndefined();
+    });
+
+    it("says so when the microphone is refused, and records nothing", async () => {
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia: vi.fn().mockRejectedValue(new Error("NotAllowedError")) },
+        configurable: true,
+      });
+      const sent = await liveComposer();
+
+      record().click();
+
+      await vi.waitFor(() => expect(note().hidden).toBe(false));
+      expect(note().textContent).toContain("Allow the microphone");
+      expect(composer().dataset.recording).toBeUndefined();
+      expect(sent).toHaveLength(0);
+    });
+
+    it("throws a note away without sending it", async () => {
+      const track = { stop: vi.fn() };
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) },
+        configurable: true,
+      });
+      const sent = await liveComposer();
+
+      record().click();
+      await vi.waitFor(() => expect(composer().dataset.recording).toBe("true"));
+      (composer().querySelector("[data-action='click->discard']") as HTMLButtonElement).click();
+
+      expect(composer().dataset.recording).toBeUndefined();
+      expect(track.stop).toHaveBeenCalled();
+      expect(sent).toHaveLength(0);
     });
   });
 
@@ -342,8 +536,8 @@ describe("core", () => {
       vi.useRealTimers();
     });
 
-    it("sends on Enter, shows the other side typing, then their reply", () => {
-      boot(win, document);
+    it("sends on Enter, shows the other side typing, then their reply", async () => {
+      await started();
       expect(sendButton().disabled).toBe(true);
 
       type("Is there an API?");
@@ -362,8 +556,8 @@ describe("core", () => {
       );
     });
 
-    it("keeps Shift+Enter for a new line", () => {
-      boot(win, document);
+    it("keeps Shift+Enter for a new line", async () => {
+      await started();
       type("first line");
 
       const event = new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true });
@@ -373,8 +567,8 @@ describe("core", () => {
       expect(textarea().value).toBe("first line");
     });
 
-    it("holds attached files as chips and sends them as file bubbles", () => {
-      boot(win, document);
+    it("holds attached files as chips and sends them as file bubbles", async () => {
+      await started();
       const picker = composer().querySelector('input[type="file"]') as HTMLInputElement;
       const files = [
         new File(["log"], "error.log", { type: "text/plain" }),
@@ -397,8 +591,8 @@ describe("core", () => {
       expect([...shadow().querySelectorAll('[data-from="visitor"] figcaption')].at(-1)?.textContent).toBe("shot.png");
     });
 
-    it("records a voice note with a running timer, and discards or sends it", () => {
-      boot(win, document);
+    it("records a voice note with a running timer, and discards or sends it", async () => {
+      await started();
       const press = (action: string) =>
         (composer().querySelector(`[data-action="click->${action}"]`) as HTMLButtonElement).click();
 
@@ -418,8 +612,8 @@ describe("core", () => {
       expect([...shadow().querySelectorAll('[data-from="visitor"] .voice time')].at(-1)?.textContent).toBe("0:05");
     });
 
-    it("plays a voice note across its length and rewinds", () => {
-      boot(win, document);
+    it("plays a voice note across its length and rewinds", async () => {
+      await started();
       const note = shadow().querySelector(".voice") as HTMLElement;
       const played = () => note.querySelectorAll("[data-played]").length;
 
@@ -434,8 +628,8 @@ describe("core", () => {
     });
   });
 
-  it("walks from a help collection to an article, growing the panel, and back again", () => {
-    const widget = boot(win, document);
+  it("walks from a help collection to an article, growing the panel, and back again", async () => {
+    const widget = await started();
     const messenger = () => shadow().querySelector(".messenger") as HTMLElement;
     const press = (selector: string) => (shadow().querySelector(selector) as HTMLElement).click();
     tab("help").click();
@@ -459,8 +653,8 @@ describe("core", () => {
     expect(messenger().dataset.page).toBe("false");
   });
 
-  it("opens a changelog entry full size and keeps a hand-picked size when leaving", () => {
-    const widget = boot(win, document);
+  it("opens a changelog entry full size and keeps a hand-picked size when leaving", async () => {
+    const widget = await started();
     tab("changelog").click();
 
     (shadow().querySelector('[data-current] [data-open="entry:0"]') as HTMLElement).click();
@@ -477,8 +671,8 @@ describe("core", () => {
     expect(widget?.messenger?.expanded).toBe(true);
   });
 
-  it("opens popular articles straight from the help tab", () => {
-    const widget = boot(win, document);
+  it("opens popular articles straight from the help tab", async () => {
+    const widget = await started();
     tab("help").click();
 
     (shadow().querySelector('[data-current] .section [data-open="article:install-the-widget"]') as HTMLElement).click();
@@ -487,8 +681,8 @@ describe("core", () => {
     expect(shadow().querySelector("[data-current] pre code")?.textContent).toContain("loader.js");
   });
 
-  it("keeps the home view's top row pinned, filling it once the view scrolls", () => {
-    boot(win, document);
+  it("keeps the home view's top row pinned, filling it once the view scrolls", async () => {
+    await started();
     const home = shadow().querySelector('.view[data-view="home"]') as HTMLElement;
 
     const top = home.querySelector(".top") as HTMLElement;
@@ -502,8 +696,8 @@ describe("core", () => {
     expect(home.hasAttribute("data-scrolled")).toBe(false);
   });
 
-  it("narrows the help collections as the visitor types", () => {
-    boot(win, document);
+  it("narrows the help collections as the visitor types", async () => {
+    await started();
     const input = shadow().querySelector("[data-view=help] input") as HTMLInputElement;
     const shown = () =>
       [...shadow().querySelectorAll<HTMLElement>("[data-target=row]")].filter((row) => !row.hidden).length;
@@ -518,8 +712,8 @@ describe("core", () => {
     expect(shadow().querySelector("[data-target=none]")?.hasAttribute("hidden")).toBe(false);
   });
 
-  it("draws only the tabs the customer kept, in their order, and drops the bar for one", () => {
-    const widget = boot(win, document);
+  it("draws only the tabs the customer kept, in their order, and drops the bar for one", async () => {
+    const widget = await started();
     tab("changelog").click();
 
     win.Dimmi?.("update", { tabs: ["help", "home"] });
@@ -534,8 +728,8 @@ describe("core", () => {
     expect(shadow().querySelector(".tabs")).toBeNull();
   });
 
-  it("follows the brand color and keeps the panel open on the same tab when options change", () => {
-    const widget = boot(win, document);
+  it("follows the brand color and keeps the panel open on the same tab when options change", async () => {
+    const widget = await started();
     win.Dimmi?.("open");
     tab("changelog").click();
 
@@ -558,23 +752,50 @@ describe("core", () => {
     expect(widget?.options.appearance.launcher.style).toBe("bubble");
   });
 
-  it("hides the launcher when the customer opens the messenger from their own buttons", () => {
-    boot(win, document);
+  it("takes a server config in a preview, the way a live messenger reads it", async () => {
+    await started();
+    win.Dimmi?.("open");
+
+    win.Dimmi?.("configure", {
+      company: { name: "Parakeet", logo_url: null },
+      appearance: { primary_color: "#5b5bd6", position: "left", launcher: { style: "bubble", shape: "squircle" } },
+      texts: { greeting_intro: "Hi from Parakeet.", greeting: "", nope: "x", home_link_1: "Écrivez-nous" },
+      home_links: [
+        { title: "Book a call", url: "https://cal.example.com", icon: "calendar" },
+        { title: "Write to us", url: "mailto:help@example.com", icon: "link" },
+      ],
+    });
+
+    const host = document.getElementById("dimmi-messenger") as HTMLElement;
+    expect(host.style.getPropertyValue("--brand")).toBe("#5b5bd6");
+    expect(launcher().dataset.shape).toBe("squircle");
+    expect(shadow().querySelector(".messenger")?.getAttribute("data-side")).toBe("left");
+    expect(shadow().querySelector("h1")?.textContent).toContain("Hi from Parakeet.");
+    expect(shadow().textContent).toContain("Parakeet");
+    const rows = [...shadow().querySelectorAll<HTMLAnchorElement>('.view[data-view="home"] a.row')];
+    expect(rows.map((row) => [row.textContent, row.getAttribute("href")])).toEqual([
+      ["Book a call", "https://cal.example.com"],
+      ["Écrivez-nous", "mailto:help@example.com"],
+    ]);
+  });
+
+  it("hides the launcher when the customer opens the messenger from their own buttons", async () => {
+    await started();
 
     win.Dimmi?.("update", { appearance: { launcher: { style: "hidden" } } });
 
     expect(launcher().hidden).toBe(true);
   });
 
-  it("shows a label beside the mark when the launcher has one", () => {
-    boot(win, document);
+  it("shows a label beside the mark when the launcher has one", async () => {
+    await started();
 
     win.Dimmi?.("update", { appearance: { launcher: { label: "Help" } } });
 
     expect(launcher().querySelector(".label")?.textContent).toBe("Help");
   });
 
-  it("pops on open when sound is on, and never on a silent re-render", () => {
+  it("pops on open when sound is on, and never on a silent re-render", async () => {
     const notes = vi.fn();
     const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
     vi.stubGlobal(
@@ -594,7 +815,7 @@ describe("core", () => {
         }
       },
     );
-    boot(win, document);
+    await started();
 
     win.Dimmi?.("open");
     expect(notes).toHaveBeenCalledTimes(2);
@@ -606,16 +827,16 @@ describe("core", () => {
     expect(notes).toHaveBeenCalledTimes(2);
   });
 
-  it("warns about commands it does not know", () => {
+  it("warns about commands it does not know", async () => {
     const warn = vi.spyOn(console, "warn").mockReturnValue(undefined);
-    boot(win, document);
+    await started();
 
     win.Dimmi?.("track", "signup");
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('[dimmi] unknown_command: Dimmi("track")'));
   });
 
-  it("refuses to start without the loader", () => {
+  it("refuses to start without the loader", async () => {
     const error = vi.spyOn(console, "error").mockReturnValue(undefined);
     delete win.__dimmi;
 

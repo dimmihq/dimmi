@@ -4,21 +4,22 @@
  * Reply or Note (or pressing R or N) unfolds it into the full panel, which
  * stays open until the person leaves the conversation. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
- * attachments as tiles above the text, a field that grows with what is
- * typed with formatting kept as Markdown, and a toolbar with the add menu (files, help articles, saved
- * replies and more from the workspace) and a way to ask Operator. Files can
- * also be dropped on the panel or pasted. Sending goes to the server; a
- * sent draft empties, a refused one stays with the reason under it.
- * Each draft, reply and note apart, is kept on the server and in the
- * browser, so it survives leaving, reloading and another device.
- * Files are not sent yet. Each time Reply or Note is chosen the field
+ * a field that grows with what is typed with formatting kept as
+ * Markdown, and a toolbar with the add menu (help articles, saved replies
+ * and more from the workspace, dropped into the text) and a way to ask
+ * Operator. Replies cannot carry files yet, so the composer offers none
+ * rather than show files that would never be sent. Sending goes to the
+ * server; a sent draft empties, a refused one stays with the reason under
+ * it. Each draft, reply and note apart, is kept on the server and in the
+ * browser, so it survives leaving, reloading and another device. Each
+ * time Reply or Note is chosen the field
  * takes the focus, sized to the draft it holds. While a reply is being
  * written the composer says so through onTyping, and says it stopped
  * once the reply is sent or the field is left.
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type DragEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -26,24 +27,29 @@ import type { Message } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
-import { AttachmentStrip } from "./attachments";
 import { ComposerField } from "./composer/composer-field";
 import { preloadEditor } from "./composer/load-editor";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
 import { type Mode, modes } from "./modes";
+import { AttachButton, ReplyFileChips } from "./reply-files";
 import { SendMenu } from "./send-menu";
 import { UndoToast } from "./undo/undo-toast";
 import { useHeld } from "./undo/use-held";
-import { useAttachments } from "./use-attachments";
+import { type ReplyFiles, useReplyFiles } from "./use-reply-files";
 import type { Report } from "./use-typing-report";
 
 /*
  * Send sends what the composer holds as a reply or a note, and for a
  * reply what then happens to the conversation: close or snooze.
  */
-export type Send = (mode: Mode, text: string, then?: "close" | "snooze") => Promise<Message | undefined>;
+export type Send = (
+  mode: Mode,
+  text: string,
+  then?: "close" | "snooze",
+  files?: string[],
+) => Promise<Message | undefined>;
 
 const surface =
   "rounded-3xl bg-background-primary-default shadow-[0_1px_0.5px_rgba(0,0,0,0.02),0_4px_2px_rgba(0,0,0,0.02)]";
@@ -55,6 +61,7 @@ export function Composer({
   focusKey,
   customer,
   channel,
+  canAttach = false,
   onSend,
   onOpen,
   onAskOperator,
@@ -65,6 +72,7 @@ export function Composer({
   focusKey: number;
   customer: string;
   channel: string;
+  canAttach?: boolean;
   onSend: Send;
   onOpen: (mode: Mode) => void;
   onAskOperator: () => void;
@@ -90,6 +98,7 @@ export function Composer({
               focusKey={focusKey}
               customer={customer}
               channel={channel}
+              canAttach={canAttach}
               onSend={onSend}
               onModeChange={onOpen}
               onAskOperator={onAskOperator}
@@ -135,12 +144,64 @@ function Bar({ customer, onOpen }: { customer: string; onOpen: (mode: Mode) => v
   );
 }
 
+/*
+ * useSend sends what the composer holds: the text and, for a reply, its
+ * uploaded files. It waits for every file to finish uploading, and keeps
+ * the text when sending fails so nothing typed is lost.
+ */
+function useSend({
+  mode,
+  draft,
+  files,
+  held,
+  onSend,
+  onTyping,
+}: {
+  mode: Mode;
+  draft: ReturnType<typeof useDraft>;
+  files: ReplyFiles;
+  held: ReturnType<typeof useHeld>;
+  onSend: Send;
+  onTyping: Report;
+}) {
+  const [sending, setSending] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const note = mode === "note";
+  const attaching = !note && files.files.length > 0;
+  const text = draft.body.trim();
+  const ready = (text !== "" || (attaching && files.ids.length > 0)) && !(attaching && files.uploading);
+
+  const send = async (then?: "close" | "snooze") => {
+    if (!ready || sending) {
+      return;
+    }
+    setSending(true);
+    setFailure(null);
+    onTyping(false);
+    draft.pause();
+    try {
+      const sent = await onSend(mode, text, note ? undefined : then, attaching ? files.ids : undefined);
+      draft.sent();
+      files.clear();
+      held.hold(sent);
+    } catch (error) {
+      draft.edit(draft.body);
+      setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return { send, sending, failure, ready };
+}
+
 function Panel({
   conversation,
   mode,
   focusKey,
   customer,
   channel,
+  canAttach = false,
   onSend,
   onModeChange,
   onAskOperator,
@@ -151,6 +212,7 @@ function Panel({
   focusKey: number;
   customer: string;
   channel: string;
+  canAttach?: boolean;
   onSend: Send;
   onModeChange: (mode: Mode) => void;
   onAskOperator: () => void;
@@ -159,45 +221,15 @@ function Panel({
   const { workspace } = useInbox();
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
   const draft = drafts[mode];
-  const [sending, setSending] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
-  const attachments = useAttachments();
-  const [dragging, setDragging] = useState(false);
-  const picker = useRef<HTMLInputElement>(null);
   const note = mode === "note";
   const held = useHeld(workspace, conversation, (body) => {
     drafts.reply.edit(body);
     onModeChange("reply");
   });
   const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
-
-  const text = draft.body.trim();
-  const send = async (then?: "close" | "snooze") => {
-    if (!text || sending) {
-      return;
-    }
-    setSending(true);
-    setFailure(null);
-    onTyping(false);
-    draft.pause();
-    try {
-      const sent = await onSend(mode, text, note ? undefined : then);
-      draft.sent();
-      attachments.clear();
-      held.hold(sent);
-    } catch (error) {
-      draft.edit(draft.body);
-      setFailure(error instanceof Error ? error.message : "Sending failed. Try again.");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const drop = (event: DragEvent) => {
-    event.preventDefault();
-    setDragging(false);
-    attachments.add(event.dataTransfer.files);
-  };
+  const files = useReplyFiles(workspace);
+  const attachable = !note && canAttach;
+  const { send, sending, failure, ready } = useSend({ mode, draft, files, held, onSend, onTyping });
 
   return (
     <div>
@@ -225,22 +257,11 @@ function Panel({
       </div>
       <fieldset
         aria-label={note ? "Note composer" : "Reply composer"}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={drop}
-        className={cx(
-          surface,
-          "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150",
-          dragging && "ring-2 ring-accent-500 ring-inset",
-        )}
+        className={cx(surface, "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150")}
       >
         <div className="flex flex-col gap-3 px-1.5">
           <UndoToast held={held} />
           <DraftConflict draft={draft} />
-          <AttachmentStrip files={attachments.files} onRemove={attachments.remove} />
           <ComposerField
             value={draft.body}
             label={note ? "Internal note" : `Reply to ${customer}`}
@@ -254,23 +275,13 @@ function Panel({
             }}
             onSubmit={(then) => void send(then)}
             onBlur={() => onTyping(false)}
-            onFiles={attachments.add}
+            onFiles={(picked) => files.add(picked, attachable)}
           />
         </div>
+        <ReplyFileChips files={files} shown={attachable} />
         <div className="flex items-center gap-2">
-          <AddMenu onFiles={() => picker.current?.click()} onAttach={attachments.link} onInsert={insert} />
-          <input
-            ref={picker}
-            type="file"
-            multiple
-            tabIndex={-1}
-            aria-label="Attach files"
-            className="sr-only"
-            onChange={(event) => {
-              attachments.add(event.target.files ?? []);
-              event.target.value = "";
-            }}
-          />
+          <AddMenu onInsert={insert} />
+          <AttachButton onPick={files.add} shown={attachable} />
           <button
             type="button"
             onClick={onAskOperator}
@@ -290,14 +301,14 @@ function Panel({
           </span>
           <button
             type="button"
-            disabled={!text || sending}
+            disabled={!ready || sending}
             onClick={() => void send()}
             aria-label={note ? "Add note" : "Send"}
             className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-button-primary p-2 text-text-white outline-none transition-opacity duration-200 ease focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
             <RiArrowUpLine aria-hidden className="size-5" />
           </button>
-          {note ? null : <SendMenu disabled={!text || sending} onSend={(then) => void send(then)} />}
+          {note ? null : <SendMenu disabled={!ready || sending} onSend={(then) => void send(then)} />}
         </div>
       </fieldset>
     </div>

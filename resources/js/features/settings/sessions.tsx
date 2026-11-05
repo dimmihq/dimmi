@@ -12,7 +12,7 @@ import { AlertDialog } from "@/components/base/modal/modal";
 import { endOtherSessions, endSession, type Session, sessionsQuery } from "@/lib/api/sessions";
 
 import { Action } from "./controls";
-import { Empty, Glyph, Item, Row, Section } from "./layout";
+import { Glyph, Item, Row, RowsSkeleton, Section } from "./layout";
 import { useRecentAuth } from "./recent-auth";
 import { sessionDetail } from "./session-detail";
 
@@ -39,7 +39,7 @@ export function SessionsSection({ hasPassword }: { hasPassword: boolean }) {
 
   return (
     <Section title="Sessions" description="Browsers and apps signed in to your account.">
-      {isPending ? <Empty>Loading…</Empty> : null}
+      {isPending ? <RowsSkeleton rows={2} /> : null}
       {sessions.map((session) => (
         <Item
           key={session.id}

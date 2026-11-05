@@ -67,7 +67,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
 
   return (
     <AuthCard>
-      <AuthHeader title="Create your workspace" />
+      <AuthHeader title="Create your account" />
       <ProviderButtons
         providers={config.providers}
         redirect={redirect}
@@ -120,8 +120,8 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
             {errorFor("captcha_token")}
           </p>
         ) : null}
-        <Button type="submit" className="w-full" disabled={register.isPending || waiting}>
-          {register.isPending ? "Creating account…" : "Create account"}
+        <Button type="submit" className="w-full" loading={register.isPending} disabled={waiting}>
+          Create account
         </Button>
         <p className="text-caption-1-regular text-text-tertiary">
           By creating an account you agree to our Terms of Service and Privacy Policy.

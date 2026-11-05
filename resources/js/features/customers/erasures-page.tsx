@@ -11,8 +11,8 @@ import { useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/base/table/table";
 import { EmptyState } from "@/features/shell/page";
+import { TableSkeleton } from "@/features/shell/table-skeleton";
 import { type ContactErasure, cancelErasure, erasuresQuery } from "@/lib/api/customers";
-
 import { CustomersFrame } from "./frame";
 import { useWorkspace } from "./names";
 
@@ -68,9 +68,13 @@ export function ErasuresPage() {
             </TableHeader>
             <TableBody
               items={erasures ?? []}
-              renderEmptyState={() => (
-                <p className="py-2 text-body-2-regular text-text-tertiary">No one has been erased.</p>
-              )}
+              renderEmptyState={() =>
+                erasures ? (
+                  <p className="py-2 text-body-2-regular text-text-tertiary">No one has been erased.</p>
+                ) : (
+                  <TableSkeleton rows={3} />
+                )
+              }
             >
               {(erasure) => (
                 <TableRow id={erasure.id}>
@@ -95,7 +99,7 @@ export function ErasuresPage() {
                       <Button
                         variant="secondary"
                         size="small"
-                        disabled={cancel.isPending}
+                        loading={cancel.isPending}
                         onClick={() => cancel.mutate(erasure.id)}
                       >
                         Cancel erasure

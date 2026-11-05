@@ -77,6 +77,9 @@
       "canceled": "Canceled a customer's erasure",
       "held": "Held an erasure for retention",
       "completed": "Erased a customer"
+    },
+    "inbox": {
+      "access_changed": "Changed who can open an inbox"
     }
   },
   "channels": {

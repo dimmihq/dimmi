@@ -69,6 +69,7 @@ const (
 	EventMemberCustomRole     = "member.custom_role_changed"
 
 	EventWidgetSettingsUpdated = "widget.settings_updated"
+	EventInboxAccessChanged    = "inbox.access_changed"
 	EventWidgetDeleted         = "widget.deleted"
 	EventTwoFactorResetAsked   = "member.two_factor_reset_requested"
 	EventTwoFactorResetDone    = "member.two_factor_reset_completed"

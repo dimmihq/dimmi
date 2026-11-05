@@ -16,7 +16,7 @@ import { type Identity, identitiesQuery, linkAddress, recentlyConfirmed, unlinkI
 
 import { ConfirmPasswordDialog } from "./confirm-password-dialog";
 import { Action } from "./controls";
-import { Empty, Row, Section } from "./layout";
+import { Empty, Row, RowsSkeleton, Section } from "./layout";
 import { useRecentAuth } from "./recent-auth";
 
 /*
@@ -136,7 +136,7 @@ function unlinkFailure(error: unknown): string | null {
 export function SignInMethodsSection({ hasPassword }: { hasPassword: boolean }) {
   const queryClient = useQueryClient();
   const { data: config } = useSuspenseQuery(authConfigQuery);
-  const { data: identities = [] } = useQuery(identitiesQuery);
+  const { data: identities = [], isPending } = useQuery(identitiesQuery);
   const providers = config.providers;
   const [outcome, setOutcome] = useState<Outcome | null>(() => readOutcome(providers));
   useEffect(() => {
@@ -164,7 +164,8 @@ export function SignInMethodsSection({ hasPassword }: { hasPassword: boolean }) 
         description={hasPassword ? "You can sign in with your password." : "Not set. Set one under Password."}
       />
       {providers.length === 0 ? <Empty>This server offers no other way to sign in.</Empty> : null}
-      {providers.map((provider) => (
+      {isPending && providers.length > 0 ? <RowsSkeleton rows={providers.length} /> : null}
+      {(isPending ? [] : providers).map((provider) => (
         <ProviderRow
           key={provider.key}
           provider={provider}

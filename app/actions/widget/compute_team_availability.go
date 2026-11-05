@@ -7,7 +7,9 @@
 | they usually answer and a few faces. Someone counts as there only while
 | they chose to be available and have a live connection, read from realtime
 | presence, so a teammate who closed the laptop never promises a quick
-| answer. A visitor only ever learns a name and an avatar, never an email.
+| answer. The team is whoever answers the widget's inbox: everyone, or only
+| those on a restricted inbox's list. A visitor only ever learns a name and
+| an avatar, never an email.
 |
 */
 
@@ -87,7 +89,7 @@ Handle returns the widget's availability.
 func (a *ComputeTeamAvailability) Handle(ctx context.Context, r Resolved) (Availability, error) {
 	out := Availability{WithinHours: true, Team: []TeamFace{}}
 
-	rows, online, err := a.team(ctx, r.Workspace.ID)
+	rows, online, err := a.team(ctx, r.Workspace.ID, r.InboxID)
 	if err != nil {
 		return out, err
 	}
@@ -99,23 +101,17 @@ func (a *ComputeTeamAvailability) Handle(ctx context.Context, r Resolved) (Avail
 }
 
 /*
-TeamOnline reports whether someone answers a workspace's visitors right now.
+team reads the active members who answer the widget's inbox and whether
+one is there.
 */
-func (a *ComputeTeamAvailability) TeamOnline(ctx context.Context, ws ids.UUID) (bool, error) {
-	_, online, err := a.team(ctx, ws)
-
-	return online, err
-}
-
-/*
-team reads the workspace's active members and whether one is there.
-*/
-func (a *ComputeTeamAvailability) team(ctx context.Context, ws ids.UUID) ([]models.ListWidgetTeamRow, bool, error) {
+func (a *ComputeTeamAvailability) team(
+	ctx context.Context, ws, inbox ids.UUID,
+) ([]models.ListWidgetTeamRow, bool, error) {
 	var rows []models.ListWidgetTeamRow
 
 	err := a.DB.Transaction(tenancy.With(ctx, ws.String()), func(ctx context.Context, tx *database.Tx) error {
 		var err error
-		rows, err = models.New(tx).ListWidgetTeam(ctx, ws)
+		rows, err = models.New(tx).ListWidgetTeam(ctx, models.ListWidgetTeamParams{WorkspaceID: ws, InboxID: inbox})
 
 		return err
 	})
@@ -188,7 +184,7 @@ func (a *ComputeTeamAvailability) faces(ctx context.Context, rows []models.ListW
 Online reports whether someone on the widget's team is there now.
 */
 func (a *ComputeTeamAvailability) Online(ctx context.Context, r Resolved) (bool, error) {
-	_, online, err := a.team(ctx, r.Workspace.ID)
+	_, online, err := a.team(ctx, r.Workspace.ID, r.InboxID)
 
 	return online, err
 }

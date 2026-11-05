@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -580,7 +581,7 @@ SELECT
     coalesce(m.joined_via, '')::text AS joined_via,
     (m.last_accessed_at IS NOT NULL)::boolean AS accessed,
     coalesce(m.last_accessed_at, m.created_at)::timestamptz AS last_accessed_at,
-    w.id, w.organization_id, w.name, w.slug, w.timezone, w.locale, w.settings, w.test_mode, w.next_conversation_number, w.suspended_at, w.deleted_at, w.created_at, w.updated_at, w.created_by_user_id, w.deleted_by_user_id, w.purge_after, w.suspended_reason
+    w.id, w.organization_id, w.name, w.slug, w.timezone, w.locale, w.settings, w.test_mode, w.next_conversation_number, w.suspended_at, w.deleted_at, w.created_at, w.updated_at, w.created_by_user_id, w.deleted_by_user_id, w.purge_after, w.suspended_reason, w.onboarding_step, w.onboarding_completed_at, w.logo_path
 FROM auth_list_user_memberships($1) AS m
 JOIN workspaces w ON w.id = m.workspace_id::uuid
 WHERE m.status = 'active'
@@ -646,6 +647,9 @@ func (q *Queries) ListUserMemberships(ctx context.Context, arg ListUserMembershi
 			&i.Workspace.DeletedByUserID,
 			&i.Workspace.PurgeAfter,
 			&i.Workspace.SuspendedReason,
+			&i.Workspace.OnboardingStep,
+			&i.Workspace.OnboardingCompletedAt,
+			&i.Workspace.LogoPath,
 		); err != nil {
 			return nil, err
 		}
@@ -663,22 +667,26 @@ SELECT
     m.workspace_id::uuid AS workspace_id,
     m.workspace_name::text AS workspace_name,
     m.workspace_slug::citext AS workspace_slug,
-    m.role::text AS role
+    m.role::text AS role,
+    coalesce(p.previous_slugs, '[]'::jsonb)::jsonb AS previous_slugs
 FROM auth_user_memberships($1) AS m
+LEFT JOIN auth_user_previous_slugs($1) AS p ON p.workspace_id = m.workspace_id
 WHERE m.status = 'active' AND m.deleted_at IS NULL
 `
 
 type ListUserWorkspacesRow struct {
-	MemberID      ids.UUID `json:"member_id"`
-	WorkspaceID   ids.UUID `json:"workspace_id"`
-	WorkspaceName string   `json:"workspace_name"`
-	WorkspaceSlug string   `json:"workspace_slug"`
-	Role          string   `json:"role"`
+	MemberID      ids.UUID        `json:"member_id"`
+	WorkspaceID   ids.UUID        `json:"workspace_id"`
+	WorkspaceName string          `json:"workspace_name"`
+	WorkspaceSlug string          `json:"workspace_slug"`
+	Role          string          `json:"role"`
+	PreviousSlugs json.RawMessage `json:"previous_slugs"`
 }
 
 // ListUserWorkspaces returns the live workspaces the user is an active
-// member of, the one used most recently first. It runs before any
-// workspace is chosen, through a security definer function.
+// member of, the one used most recently first, with the slugs each gave
+// up and still holds. It runs before any workspace is chosen, through
+// security definer functions.
 func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]ListUserWorkspacesRow, error) {
 	rows, err := q.db.Query(ctx, listUserWorkspaces, userID)
 	if err != nil {
@@ -694,6 +702,7 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 			&i.WorkspaceName,
 			&i.WorkspaceSlug,
 			&i.Role,
+			&i.PreviousSlugs,
 		); err != nil {
 			return nil, err
 		}

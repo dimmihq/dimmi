@@ -6,11 +6,15 @@
  * with its control on the right; BoardUI's controls are drawn for exactly
  * this card. Lists (members, sessions, tokens) use the same card with an
  * item per row. The page sits in a centred column in its own panel.
+ * While a page or a list loads, its rows stand in as skeletons of the
+ * same height, so nothing jumps when the data arrives.
  */
 import type { ComponentType, ReactNode } from "react";
 
+import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { cx } from "@/utils/cx";
+import { placeholders } from "./placeholders";
 
 /*
  * rowLine is BoardUI's settings row: at least 52px tall, padded on the
@@ -27,26 +31,48 @@ const rowLine =
 const stackLine =
   "flex min-h-[52px] flex-col items-start gap-2 border-b border-separator-border py-2.5 pe-2.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
+/*
+ * SettingsPage is the panel and centred column of a settings page. footer
+ * floats over the bottom of the panel, outside the scrolling column, such
+ * as a bar to save changes; the column keeps room for it at its end, so
+ * it never covers the last row or changes the page's height when it shows.
+ */
 export function SettingsPage({
   title,
   description,
+  footer,
   children,
 }: {
-  title: string;
+  title: string | null;
   description?: string;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <Panel label={title} ground className="h-full flex-1">
+    <Panel label={title ?? "Loading"} ground className="relative h-full flex-1">
       <ScrollArea ground>
-        <div className="mx-auto flex w-full max-w-[680px] flex-col gap-8 px-4 pt-6 pb-16 sm:gap-10 sm:px-6 sm:pt-10">
+        <div
+          className={cx(
+            "mx-auto flex w-full max-w-[680px] flex-col gap-8 px-4 pt-6 pb-16 sm:gap-10 sm:px-6 sm:pt-10",
+            footer !== undefined && "pb-28",
+          )}
+        >
           <header className="flex flex-col gap-1">
-            <h1 className="text-title-2-medium text-text-primary">{title}</h1>
+            {title === null ? (
+              <Skeleton shape="text" className="my-1 h-6 w-48" />
+            ) : (
+              <h1 className="text-title-2-medium text-text-primary">{title}</h1>
+            )}
             {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
           </header>
           {children}
         </div>
       </ScrollArea>
+      {footer ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4 sm:px-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-[632px]">{footer}</div>
+        </div>
+      ) : null}
     </Panel>
   );
 }
@@ -59,24 +85,78 @@ export function Section({
   title,
   description,
   action,
+  loading = false,
+  rows = 3,
   children,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
-  children: ReactNode;
+  loading?: boolean;
+  rows?: number;
+  children?: ReactNode;
 }) {
   return (
-    <section aria-label={title} className="flex flex-col gap-2">
+    <section aria-label={title || undefined} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 px-3">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 className="text-body-2-medium text-text-secondary">{title}</h2>
+          {title ? (
+            <h2 className="text-body-2-medium text-text-secondary">{title}</h2>
+          ) : (
+            <Skeleton shape="text" className="my-0.5 h-3.5 w-28" />
+          )}
           {description ? <p className="text-body-2-regular text-text-tertiary">{description}</p> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
-      <div className="flex flex-col rounded-2xl bg-background-secondary-default ps-3">{children}</div>
+      <div aria-busy={loading || undefined} className="flex flex-col rounded-2xl bg-background-secondary-default ps-3">
+        <SectionBody loading={loading} rows={rows}>
+          {children}
+        </SectionBody>
+      </div>
     </section>
+  );
+}
+
+/*
+ * SectionBody is a card's rows, or their skeletons while they load.
+ */
+function SectionBody({ loading, rows, children }: { loading: boolean; rows: number; children?: ReactNode }) {
+  if (loading) {
+    return <RowsSkeleton rows={rows} />;
+  }
+
+  return children;
+}
+
+/*
+ * RowsSkeleton stands in for a card's rows while they load: a mark, a
+ * title and a line of detail, and a control, each row as tall as a real
+ * one.
+ */
+export function RowsSkeleton({ rows = 3 }: { rows?: number }) {
+  return placeholders(rows).map((id) => (
+    <div key={id} aria-hidden className={cx(rowLine, "justify-start gap-3")}>
+      <Skeleton className="size-8 shrink-0 rounded-lg" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Skeleton shape="text" className="h-3.5 w-40 max-w-full" />
+        <Skeleton shape="text" className="h-3 w-56 max-w-full" />
+      </div>
+      <Skeleton className="h-8 w-20 shrink-0 rounded-lg" />
+    </div>
+  ));
+}
+
+/*
+ * PageSkeleton is a whole settings page on its way: two cards of rows
+ * under a title still loading.
+ */
+export function PageSkeleton() {
+  return (
+    <SettingsPage title={null}>
+      <Section title="" loading rows={3} />
+      <Section title="" loading rows={4} />
+    </SettingsPage>
   );
 }
 
@@ -123,13 +203,13 @@ export function Item({
   children?: ReactNode;
 }) {
   return (
-    <div className={cx(rowLine, "justify-start gap-3")}>
+    <div className={cx(rowLine, "relative justify-start gap-3")}>
       <span className="flex shrink-0 items-center">{mark}</span>
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body-regular text-text-primary">{title}</span>
         {detail ? <span className="truncate text-body-2-regular text-text-secondary">{detail}</span> : null}
       </div>
-      {children ? <div className="flex shrink-0 items-center gap-2">{children}</div> : null}
+      {children ? <div className="relative z-10 flex shrink-0 items-center gap-2">{children}</div> : null}
     </div>
   );
 }

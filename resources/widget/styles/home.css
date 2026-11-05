@@ -6,9 +6,9 @@
     radial-gradient(120% 90% at 100% 0%, rgb(255 255 255 / 0.14), transparent 55%) 0 0 / 100% 240px no-repeat local,
     linear-gradient(
       180deg,
-      var(--brand) 0%,
-      var(--brand) 42%,
-      color-mix(in oklab, var(--brand) 55%, var(--bg-full)) 74%,
+      var(--header, var(--brand)) 0%,
+      var(--header, var(--brand)) 42%,
+      color-mix(in oklab, var(--header, var(--brand)) 55%, var(--bg-full)) 74%,
       var(--bg-full) 100%
     )
     0 0 / 100% 240px no-repeat local,

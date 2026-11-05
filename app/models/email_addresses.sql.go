@@ -13,6 +13,23 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const clearDefaultEmailAddress = `-- name: ClearDefaultEmailAddress :exec
+UPDATE email_addresses SET is_default = false, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND is_default AND deleted_at IS NULL
+`
+
+type ClearDefaultEmailAddressParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// ClearDefaultEmailAddress leaves the workspace's default address no
+// longer the default, so another can become it.
+func (q *Queries) ClearDefaultEmailAddress(ctx context.Context, arg ClearDefaultEmailAddressParams) error {
+	_, err := q.db.Exec(ctx, clearDefaultEmailAddress, arg.Now, arg.WorkspaceID)
+	return err
+}
+
 const createEmailAddress = `-- name: CreateEmailAddress :one
 INSERT INTO email_addresses (
     workspace_id, channel_connection_id, address, display_name, forwarding_address, is_default, settings,
@@ -422,6 +439,23 @@ func (q *Queries) RouteEmailAddress(ctx context.Context, arg RouteEmailAddressPa
 		&i.Suspended,
 	)
 	return i, err
+}
+
+const setDefaultEmailAddress = `-- name: SetDefaultEmailAddress :exec
+UPDATE email_addresses SET is_default = true, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
+`
+
+type SetDefaultEmailAddressParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// SetDefaultEmailAddress makes the address the workspace's default.
+func (q *Queries) SetDefaultEmailAddress(ctx context.Context, arg SetDefaultEmailAddressParams) error {
+	_, err := q.db.Exec(ctx, setDefaultEmailAddress, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const storeForwardingConfirmation = `-- name: StoreForwardingConfirmation :exec

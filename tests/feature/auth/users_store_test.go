@@ -65,6 +65,30 @@ func TestUserStore(t *testing.T) {
 			AssertJSONPath("code", "email_taken")
 	})
 
+	t.Run("refuses another spelling of an email already taken", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		tc.Client().PostJSON("/api/v1/users", registration("jos\u00e9@b\u00fccher.test")).AssertCreated()
+
+		for _, spelling := range []string{
+			"jose\u0301@b\u00fccher.test", "jos\u00e9@xn--bcher-kva.test", "\uff4aos\u00e9@B\u00fccher.test",
+		} {
+			tc.Client().PostJSON("/api/v1/users", registration(spelling)).
+				AssertValidationError("email").
+				AssertJSONPath("code", "email_taken")
+		}
+
+		tc.Table("users").AssertCount(1, testkit.Row{"email": "jos\u00e9@xn--bcher-kva.test"})
+	})
+
+	t.Run("refuses an email with invisible characters", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		tc.Client().PostJSON("/api/v1/users", registration("x\u200b@example.com")).AssertValidationError("email")
+		tc.Table("users").AssertCount(0, testkit.Row{"email": "x@example.com"})
+	})
+
 	t.Run("leaves exactly one account when two sign-ups race for one email", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

@@ -295,7 +295,8 @@ function TryRules() {
           size="small"
           variant="secondary"
           className="self-start"
-          disabled={text.trim() === "" || attempt.isPending}
+          loading={attempt.isPending}
+          disabled={text.trim() === ""}
           onClick={() => attempt.mutate()}
         >
           Try
@@ -332,7 +333,12 @@ export function ConversationSafetySettings() {
           <OwnRules rules={redaction.rules} canManage={canManage} />
           {canManage ? <TryRules /> : null}
         </>
-      ) : null}
+      ) : (
+        <>
+          <Section title="Built-in rules" loading rows={3} />
+          <Section title="Your rules" loading rows={2} />
+        </>
+      )}
       <LinkSafetySection canManage={permissions.includes("settings:write")} />
       <RetentionSection canManage={permissions.includes("settings:write")} />
     </SettingsPage>

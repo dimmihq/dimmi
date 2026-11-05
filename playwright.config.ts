@@ -40,6 +40,8 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     extraHTTPHeaders: gateKey ? { "X-Gate-Key": gateKey } : undefined,
+    channel: "chromium",
+    launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
   },
   projects: [
     { name: "light", use: { ...devices["Desktop Chrome"], colorScheme: "light" } },

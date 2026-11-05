@@ -45,13 +45,18 @@ what automated checks send; either may be empty to disable that way in.
 Secret signs the cookie, so changing it or the password signs everyone
 out. The cookie is a Secure __Host- cookie, which browsers also keep on
 http://localhost. Except lists paths that stay open; one ending in "*"
-covers every path starting with the rest.
+covers every path starting with the rest. Page, when true, leaves the
+password page to the application: a person asking for a page is sent to
+GatePath, a GET of GatePath reaches the application's own route, and a
+wrong password returns there with failed=1. Without it the gate answers
+with its own minimal form.
 */
 type GateOptions struct {
 	Password string
 	Key      string
 	Secret   []byte
 	Except   []string
+	Page     bool
 }
 
 /*
@@ -83,9 +88,35 @@ func (g gate) serve(next http.Handler, w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
 	case r.URL.Path == GatePath && r.Method == http.MethodPost:
 		g.signIn(w, r)
+	case g.opts.Page && r.URL.Path == GatePath && readsPage(r):
+		next.ServeHTTP(w, r)
+	case g.opts.Page && readsPage(r) && strings.Contains(r.Header.Get("Accept"), "text/html"):
+		redirect(w, GatePath+"?"+gateQuery(r.URL.RequestURI()).Encode())
 	default:
 		g.form(w, r, http.StatusUnauthorized, "")
 	}
+}
+
+/*
+readsPage reports whether the request only reads, as a browser loading a
+page does.
+*/
+func readsPage(r *http.Request) bool {
+	return r.Method == http.MethodGet || r.Method == http.MethodHead
+}
+
+/*
+gateQuery carries where the person was going to the application's
+password page.
+*/
+func gateQuery(next string) url.Values {
+	return url.Values{"next": {localPath(next)}}
+}
+
+func redirect(w http.ResponseWriter, location string) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Location", location)
+	w.WriteHeader(http.StatusSeeOther)
 }
 
 /*
@@ -112,7 +143,7 @@ back to where they were going, on this host only.
 func (g gate) signIn(w http.ResponseWriter, r *http.Request) {
 	password := r.PostFormValue("password")
 	if g.opts.Password == "" || subtle.ConstantTimeCompare([]byte(password), []byte(g.opts.Password)) != 1 {
-		g.form(w, r, http.StatusUnauthorized, "That password is not right.")
+		g.refuse(w, r)
 
 		return
 	}
@@ -127,8 +158,23 @@ func (g gate) signIn(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   30 * 24 * 60 * 60,
 	})
 
-	w.Header().Set("Location", localPath(r.PostFormValue("next")))
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, localPath(r.PostFormValue("next")))
+}
+
+/*
+refuse answers a wrong password: back to the application's page when it
+has one, and the gate's own form otherwise.
+*/
+func (g gate) refuse(w http.ResponseWriter, r *http.Request) {
+	if g.opts.Page {
+		query := gateQuery(r.PostFormValue("next"))
+		query.Set("failed", "1")
+		redirect(w, GatePath+"?"+query.Encode())
+
+		return
+	}
+
+	g.form(w, r, http.StatusUnauthorized, "That password is not right.")
 }
 
 /*

@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/i18n"
+	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/support/str"
 	"github.com/dimmihq/dimmi/framework/validation"
 )
@@ -37,12 +38,16 @@ type StoreUserRequest struct {
 
 /*
 Validate refuses a name made only of invisible characters, which would
-be empty once cleaned, and a password that is the person's own email or
-name.
+be empty once cleaned, an email address with characters no address can
+have, and a password that is the person's own email or name.
 */
 func (r *StoreUserRequest) Validate(ctx context.Context, _ *validation.Factory) error {
 	if str.Clean(r.Body.Name) == "" {
 		return violation(ctx, "name", "required", "validation.required")
+	}
+
+	if _, err := mail.NormalizeAddress(r.Body.Email); err != nil {
+		return violation(ctx, "email", "email", "validation.email")
 	}
 
 	if strings.EqualFold(r.Body.Password, r.Body.Email) || strings.EqualFold(r.Body.Password, r.Body.Name) {

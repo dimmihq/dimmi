@@ -35,7 +35,7 @@ it.describe("customers", () => {
       .getByRole("region", { name: "Conversations" })
       .getByRole("link", { name: /Invoice VAT/ })
       .click();
-    await expect(page).toHaveURL(/\/d\/inbox\/all\/conv_/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/all\/conv_/);
   });
 
   it("adds a contact and a company, and keeps blocked people apart", async ({ page }) => {

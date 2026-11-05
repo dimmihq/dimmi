@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -127,7 +128,7 @@ func (a *SendEmailMessage) prepare(ctx context.Context, conn models.ChannelConne
 		previous, err := q.FindOutboundEmailByIdempotencyKey(ctx, models.FindOutboundEmailByIdempotencyKeyParams{
 			WorkspaceID: out.msg.WorkspaceID, IdempotencyKey: out.msg.IdempotencyKey,
 		})
-		if err == nil && previous.Status != string(enums.OutboundEmailStatusQueued) {
+		if err == nil && !resendable(previous.Status) {
 			out.row, sent = previous, true
 
 			return nil
@@ -342,4 +343,16 @@ func sentTime(row models.OutboundEmail) time.Time {
 	}
 
 	return *row.SentAt
+}
+
+/*
+resendable reports whether an email recorded before may be handed to
+the provider again: one never accepted, refused for good, or bounced,
+which a teammate chose to send again.
+*/
+func resendable(status string) bool {
+	return slices.Contains([]string{
+		string(enums.OutboundEmailStatusQueued), string(enums.OutboundEmailStatusFailed),
+		string(enums.OutboundEmailStatusBounced),
+	}, status)
 }

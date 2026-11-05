@@ -209,7 +209,7 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (User, erro
 }
 
 const listLiveUsers = `-- name: ListLiveUsers :many
-SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences,
+SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id,
     coalesce((
         SELECT array_agg(DISTINCT f.type ORDER BY f.type) FROM user_auth_factors f
         WHERE f.user_id = u.id AND f.status = 'active' AND f.type <> 'recovery_code'
@@ -253,6 +253,7 @@ func (q *Queries) ListLiveUsers(ctx context.Context) ([]ListLiveUsersRow, error)
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
 			&i.User.Preferences,
+			&i.User.ManagedByOrganizationID,
 			&i.FactorTypes,
 		); err != nil {
 			return nil, err

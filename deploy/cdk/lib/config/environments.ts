@@ -1,7 +1,13 @@
 import type { EnvironmentConfig } from "./environment.ts";
 import { validate } from "./environment.ts";
 
-const REPOSITORY = "dimmihq/dimmi";
+/**
+ * The repository as GitHub names it in its identity tokens. The repository
+ * uses immutable subjects, which carry the owner's and the repository's
+ * numeric ids, so a renamed or recreated repository of the same name can
+ * never deploy.
+ */
+const REPOSITORY = "dimmihq@352342433/dimmi@1445376064";
 const LETS_ENCRYPT = "https://acme-v02.api.letsencrypt.org/directory";
 
 /**

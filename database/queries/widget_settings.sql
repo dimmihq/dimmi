@@ -41,7 +41,7 @@ UPDATE widget_settings SET
     require_email_when_offline = @require_email_when_offline, attachments_enabled = @attachments_enabled,
     max_attachment_mb = @max_attachment_mb, help_center_id = @help_center_id, help_tab_enabled = @help_tab_enabled,
     changelog_tab_enabled = @changelog_tab_enabled, intercom_shim = @intercom_shim,
-    native_apps_enabled = @native_apps_enabled, show_branding = @show_branding,
+    native_apps_enabled = @native_apps_enabled, show_branding = @show_branding, home_links = @home_links,
     config_version = config_version + 1, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
@@ -60,12 +60,23 @@ UPDATE widget_settings SET last_boot_at = @seen_at::timestamptz, last_boot_origi
 WHERE workspace_id = @workspace_id AND id = @id AND (last_boot_at IS NULL OR last_boot_at < @seen_at::timestamptz);
 
 -- name: ListWidgetTeam :many
--- ListWidgetTeam returns the workspace's active members as a visitor may see
--- them, those who changed something latest first.
+-- ListWidgetTeam returns the active members who answer the inbox as a
+-- visitor may see them, those who changed something latest first. An
+-- inbox open to everyone is answered by everyone; a restricted one by
+-- the teammates and teams on its list.
 SELECT m.user_id, m.availability, u.name, u.avatar_path
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
+JOIN inboxes i ON i.workspace_id = m.workspace_id AND i.id = @inbox_id
 WHERE m.workspace_id = @workspace_id AND m.status = 'active'
+  AND (i.access = 'everyone' OR EXISTS (
+      SELECT 1 FROM inbox_access a
+      WHERE a.workspace_id = i.workspace_id AND a.inbox_id = i.id
+        AND (a.member_id = m.id OR a.team_id IN (
+            SELECT tm.team_id FROM team_members tm
+            WHERE tm.workspace_id = m.workspace_id AND tm.workspace_member_id = m.id
+        ))
+  ))
 ORDER BY m.updated_at DESC, m.id
 LIMIT 200;
 

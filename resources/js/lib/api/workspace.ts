@@ -14,6 +14,7 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  logo_url: string | null;
   timezone: string;
   locale: string;
   test_mode: boolean;
@@ -22,8 +23,18 @@ export interface Workspace {
   retention?: Retention;
   seen_receipt_shows_name: boolean;
   customer_facing_name: string | null;
+  onboarding: WorkspaceOnboarding;
   deleted_at: string | null;
   purge_after: string | null;
+}
+
+/*
+ * WorkspaceOnboarding is how far a workspace's setup has come: the step
+ * its owners reached, and when they finished, null until then.
+ */
+export interface WorkspaceOnboarding {
+  step: string;
+  completed_at: string | null;
 }
 
 export interface Member {
@@ -158,8 +169,47 @@ export function callerQuery(workspace: string) {
   });
 }
 
+/*
+ * createWorkspace makes a workspace the caller owns, such as their first
+ * one during onboarding.
+ */
+export function createWorkspace(name: string): Promise<Workspace> {
+  return request<Workspace>("POST", "/workspaces", { name });
+}
+
+/*
+ * updateOnboarding records the setup step the workspace reached, and
+ * finishes setup when completed is set.
+ */
+export function updateOnboarding(workspace: string, step: string, completed = false): Promise<Workspace> {
+  return request<Workspace>("PATCH", "/workspace/onboarding", { step, completed }, { workspace });
+}
+
+/*
+ * createTestConversations starts the five made-up conversations a new
+ * workspace practices on.
+ */
+export function createTestConversations(workspace: string): Promise<{ count: number }> {
+  return request<{ count: number }>("POST", "/workspace/onboarding/test-conversations", undefined, { workspace });
+}
+
 export function updateWorkspace(workspace: string, changes: WorkspaceChanges): Promise<Workspace> {
   return request<Workspace>("PATCH", "/workspace", changes, { workspace });
+}
+
+/*
+ * uploadLogo replaces the workspace's logo; the server keeps a small
+ * square redrawn from the file.
+ */
+export function uploadLogo(workspace: string, file: File): Promise<Workspace> {
+  const form = new FormData();
+  form.append("logo", file);
+
+  return request<Workspace>("PUT", "/workspace/logo", form, { workspace });
+}
+
+export function removeLogo(workspace: string): Promise<void> {
+  return request<void>("DELETE", "/workspace/logo", undefined, { workspace });
 }
 
 /*

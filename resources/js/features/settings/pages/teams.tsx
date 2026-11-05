@@ -75,7 +75,7 @@ export function TeamsSettings() {
 
   return (
     <SettingsPage title="Teams" description="Assign conversations to a team, and let an inbox route to one.">
-      <Section title="Teams" action={newTeam}>
+      <Section title="Teams" action={newTeam} loading={!teams}>
         {teams?.length === 0 ? <Empty>No teams yet.</Empty> : null}
         {teams?.map((team) => (
           <Item

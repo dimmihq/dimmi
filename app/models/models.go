@@ -374,12 +374,13 @@ type EmailSendingStat struct {
 type EmailSignature struct {
 	ID                ids.UUID  `json:"id"`
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
-	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	WorkspaceMemberID *ids.UUID `json:"workspace_member_id"`
 	EmailAddressID    *ids.UUID `json:"email_address_id"`
 	Body              string    `json:"body"`
 	Enabled           bool      `json:"enabled"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	LogoAttachmentID  *ids.UUID `json:"logo_attachment_id"`
 }
 
 type EmailSuppression struct {
@@ -471,6 +472,15 @@ type Inbox struct {
 	DeletedAt     *time.Time      `json:"deleted_at"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
+	Access        string          `json:"access"`
+}
+
+type InboxAccess struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	InboxID     ids.UUID  `json:"inbox_id"`
+	TeamID      *ids.UUID `json:"team_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Invitation struct {
@@ -526,6 +536,8 @@ type Message struct {
 	AuthorType          string                  `json:"author_type"`
 	AuthorID            *ids.UUID               `json:"author_id"`
 	Body                *string                 `json:"body"`
+	BodyFormat          string                  `json:"body_format"`
+	BodyFull            *string                 `json:"body_full"`
 	BodyHtml            *string                 `json:"body_html"`
 	Event               json.RawMessage         `json:"event"`
 	ChannelMessageID    *string                 `json:"channel_message_id"`
@@ -829,6 +841,7 @@ type Tag struct {
 	Color       *string   `json:"color"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	Icon        *string   `json:"icon"`
 }
 
 type Team struct {
@@ -954,6 +967,7 @@ type WidgetSetting struct {
 	ChangelogTabEnabled     bool            `json:"changelog_tab_enabled"`
 	IntercomShim            bool            `json:"intercom_shim"`
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
+	HomeLinks               json.RawMessage `json:"home_links"`
 }
 
 type Workspace struct {
@@ -974,6 +988,9 @@ type Workspace struct {
 	DeletedByUserID        *ids.UUID       `json:"deleted_by_user_id"`
 	PurgeAfter             *time.Time      `json:"purge_after"`
 	SuspendedReason        *string         `json:"suspended_reason"`
+	OnboardingStep         string          `json:"onboarding_step"`
+	OnboardingCompletedAt  *time.Time      `json:"onboarding_completed_at"`
+	LogoPath               *string         `json:"logo_path"`
 }
 
 type WorkspaceMember struct {

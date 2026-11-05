@@ -66,7 +66,7 @@ func (q *Queries) CountTaggedCompanies(ctx context.Context, workspaceID ids.UUID
 }
 
 const listCompanyTags = `-- name: ListCompanyTags :many
-SELECT ct.company_id, t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at FROM company_tag AS ct
+SELECT ct.company_id, t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at, t.icon FROM company_tag AS ct
 JOIN tags AS t ON t.id = ct.tag_id AND t.workspace_id = ct.workspace_id
 WHERE ct.workspace_id = $1 AND ct.company_id = ANY ($2::uuid[])
 ORDER BY ct.company_id, t.name, t.id
@@ -101,6 +101,7 @@ func (q *Queries) ListCompanyTags(ctx context.Context, arg ListCompanyTagsParams
 			&i.Tag.Color,
 			&i.Tag.CreatedAt,
 			&i.Tag.UpdatedAt,
+			&i.Tag.Icon,
 		); err != nil {
 			return nil, err
 		}

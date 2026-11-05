@@ -31,14 +31,17 @@ type Fragment func(next int) (string, []any)
 /*
 Access is what the reader may see, as dimmi_conversation_visible takes
 it: the mode, the member whose own assignments always show, the teams
-the mode names and whether a narrow mode shows unheld conversations.
+the mode names, whether a narrow mode shows unheld conversations and the
+inboxes the reader may not open. A conversation whose note mentions the
+reader shows too, so being asked in always lets someone read along.
 The zero Access shows nothing.
 */
 type Access struct {
-	Mode       string
-	Viewer     *ids.UUID
-	Teams      []ids.UUID
-	Unassigned bool
+	Mode          string
+	Viewer        *ids.UUID
+	Teams         []ids.UUID
+	Unassigned    bool
+	HiddenInboxes []ids.UUID
 }
 
 /*
@@ -155,17 +158,32 @@ func (c Conversations) where(b *builder) []string {
 
 /*
 visible returns the predicate keeping the list to what its reader may
-see. A nil list of teams would hide everything, so none is sent as
-empty.
+see. A nil list would hide everything, so none is sent as empty. Only a
+reader who may not see everything needs the mention check, so it is left
+out for everyone else and their lists cost what they always did.
 */
 func (c Conversations) visible(b *builder) string {
-	teams := c.Access.Teams
-	if teams == nil {
-		teams = []ids.UUID{}
+	viewer := b.add(c.Access.Viewer)
+	rule := "dimmi_conversation_visible(c.assignee_member_id, c.assignee_team_id, c.inbox_id, " +
+		b.add(c.Access.Mode) + "::text, " + viewer + "::uuid, " + b.add(orEmpty(c.Access.Teams)) + "::uuid[], " +
+		b.add(c.Access.Unassigned) + "::boolean, " + b.add(orEmpty(c.Access.HiddenInboxes)) + "::uuid[])"
+	if c.Access.Mode == "all" && len(c.Access.HiddenInboxes) == 0 {
+		return rule
 	}
 
-	return "dimmi_conversation_visible(c.assignee_member_id, c.assignee_team_id, " + b.add(c.Access.Mode) + "::text, " +
-		b.add(c.Access.Viewer) + "::uuid, " + b.add(teams) + "::uuid[], " + b.add(c.Access.Unassigned) + "::boolean)"
+	return "(" + rule + " OR EXISTS (SELECT 1 FROM message_mentions mm WHERE mm.workspace_id = c.workspace_id" +
+		" AND mm.conversation_id = c.id AND mm.workspace_member_id = " + viewer + "::uuid))"
+}
+
+/*
+orEmpty sends no list as an empty one.
+*/
+func orEmpty(list []ids.UUID) []ids.UUID {
+	if list == nil {
+		return []ids.UUID{}
+	}
+
+	return list
 }
 
 /*

@@ -144,8 +144,8 @@ export function SetupDialog({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={activate.isPending || code.length < 6}>
-            {activate.isPending ? "Checking…" : "Turn on"}
+          <Button type="submit" loading={activate.isPending} disabled={code.length < 6}>
+            Turn on
           </Button>
         </ModalFooter>
       </form>

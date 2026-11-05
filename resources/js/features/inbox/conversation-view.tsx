@@ -33,6 +33,7 @@ import {
   markRead,
   messagesQuery,
   reply,
+  retryDelivery,
   snoozeChoicesQuery,
   type Then,
 } from "@/lib/api/inbox";
@@ -45,12 +46,15 @@ import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
+import { OriginalMessage } from "./original-message";
 import { PriorityMenu } from "./priority/priority-menu";
 import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
 import { useWalk } from "./use-walk";
+import { useViewTitle } from "./views/view-groups";
+import { ViewPicker } from "./views/view-picker";
 
 const visible = { overflow: "visible" } as const;
 
@@ -65,13 +69,14 @@ const notConnected =
 
 /*
  * useTimeline reads the conversation's timeline, marks it read once it
- * has loaded, and sends replies and notes, reading everything the inbox
- * shows again once the server has them.
+ * has loaded, and sends replies and notes, and replies that failed once
+ * more, reading everything the inbox shows again once the server has
+ * them.
  */
 function useTimeline(workspace: string, conversation: Conversation) {
   const queryClient = useQueryClient();
   const mutationId = useMutationId();
-  const { data: messages = [] } = useQuery(messagesQuery(workspace, conversation.id));
+  const { data: messages = [], isPending: loading } = useQuery(messagesQuery(workspace, conversation.id));
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
   const read = useMutation({
     mutationFn: () => markRead({ workspace, mutation: mutationId() }, conversation.id),
@@ -85,14 +90,19 @@ function useTimeline(workspace: string, conversation: Conversation) {
     }
   }, [unread, mark]);
 
-  const send = async (mode: Mode, text: string, then?: "close" | "snooze"): Promise<Message | undefined> => {
+  const send = async (
+    mode: Mode,
+    text: string,
+    then?: "close" | "snooze",
+    files?: string[],
+  ): Promise<Message | undefined> => {
     const write = { workspace, mutation: mutationId() };
     if (mode === "note") {
       await addNote(write, conversation.id, text);
       await refresh();
       return undefined;
     }
-    const sent = await reply(write, conversation.id, text, await afterReply(then));
+    const sent = await reply(write, conversation.id, text, await afterReply(then), files);
     await refresh();
     return sent;
   };
@@ -105,7 +115,12 @@ function useTimeline(workspace: string, conversation: Conversation) {
     return first ? { kind: "snooze", option: first.key } : undefined;
   };
 
-  return { entries: messages.map(toEntry), send };
+  const retry = useMutation({
+    mutationFn: (message: string) => retryDelivery({ workspace, mutation: mutationId() }, conversation.id, message),
+    onSettled: refresh,
+  });
+
+  return { entries: messages.map(toEntry), loading, send, retry: retry.mutate };
 }
 
 export function ConversationView({
@@ -136,6 +151,8 @@ export function ConversationView({
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const sideBySide = useWide(1024);
+  const listHidden = !useWide(1536);
+  const viewTitle = useViewTitle(workspace, view);
   const operatorDefault = useWide(1280);
   const sides = useSidePanes(
     pane.thread,
@@ -146,6 +163,7 @@ export function ConversationView({
   const [operatorOpen, setOperatorOpen] = useState(operatorDefault);
   const [drawer, setDrawer] = useState(false);
   const [easing, ease] = useEasing();
+  const [original, setOriginal] = useState<string | null>(null);
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
   toggleRef.current = () => toggle(pane.details);
@@ -164,7 +182,17 @@ export function ConversationView({
           >
             <RiArrowLeftSLine aria-hidden className="size-5" />
           </Link>
-          <h1 className="min-w-0 truncate ps-1.5 text-body-medium text-text-primary">{subjectOf(conversation)}</h1>
+          {listHidden ? (
+            <>
+              <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
+              <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary">
+                /
+              </span>
+            </>
+          ) : null}
+          <h1 className={cx("min-w-0 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
+            {subjectOf(conversation)}
+          </h1>
           <Chip variant="caption" color="neutral">
             #{conversation.number} · {statusLabel[conversation.status]}
           </Chip>
@@ -218,11 +246,12 @@ export function ConversationView({
       <Thread
         conversation={conversation.id}
         entries={timeline.entries}
+        loading={timeline.loading}
         customer={customer}
         channel={conversation.channel.name}
         channelType={conversation.channel.type}
-        onSend={async (mode, text, then) => {
-          const sent = await timeline.send(mode, text, then);
+        onSend={async (mode, text, then, files) => {
+          const sent = await timeline.send(mode, text, then, files);
           if (then) {
             walk.advance();
           }
@@ -230,8 +259,18 @@ export function ConversationView({
         }}
         onAskOperator={toggleOperator}
         onTyping={typing}
+        onOpenOriginal={setOriginal}
+        onRetry={timeline.retry}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
       />
+      {original ? (
+        <OriginalMessage
+          workspace={workspace}
+          conversation={conversation.id}
+          message={original}
+          onClose={() => setOriginal(null)}
+        />
+      ) : null}
     </Panel>
   );
 

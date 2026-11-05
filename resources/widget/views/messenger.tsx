@@ -6,7 +6,7 @@
  */
 import { type Html, raw } from "widget-jsx/jsx-runtime";
 
-import { ChangelogIcon, HelpIcon, HomeIcon, MessagesIcon } from "../components/icons";
+import { ChangelogIcon, CloseIcon, ExternalIcon, HelpIcon, HomeIcon, MessagesIcon } from "../components/icons";
 import { Launcher } from "../components/launcher";
 import type { Content } from "../content";
 import type { Options, Tab } from "../options";
@@ -58,6 +58,28 @@ function TabBar({ options, content }: { options: Options; content: Content }) {
   );
 }
 
+/*
+ * Viewer shows one picture across the whole panel, over everything else,
+ * with a way to open the original and a way back.
+ */
+function Viewer() {
+  return (
+    <div className="viewer" data-target="viewer" role="dialog" aria-label="Picture" hidden>
+      <div className="viewer-bar">
+        <button className="icon-button" type="button" data-action="click->original" aria-label="Open the original">
+          <ExternalIcon />
+        </button>
+        <button className="icon-button" type="button" data-action="click->unview" aria-label="Close picture">
+          <CloseIcon />
+        </button>
+      </div>
+      <div className="viewer-stage" data-action="click->unview">
+        <img data-target="viewer-image" alt="" />
+      </div>
+    </div>
+  );
+}
+
 export function Messenger({ options, content }: { options: Options; content: Content }) {
   const { appearance } = options;
   const first = options.tabs[0] ?? "home";
@@ -97,6 +119,7 @@ export function Messenger({ options, content }: { options: Options; content: Con
           <Pages options={options} content={content} />
         </div>
         <TabBar options={options} content={content} />
+        <Viewer />
       </section>
       <div className="notice" data-target="notice" role="status" aria-live="polite" hidden />
       <Launcher launcher={appearance.launcher} />

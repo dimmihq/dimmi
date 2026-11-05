@@ -5,8 +5,9 @@ SELECT assignee_team_id::uuid AS team_id, count(*) AS open
 FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND NOT spam AND status = 'open' AND assignee_team_id IS NOT NULL
   AND dimmi_conversation_visible(
-      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
-      @access_teams::uuid[], @access_unassigned::boolean
+      assignee_member_id, assignee_team_id, inbox_id, @access_mode::text,
+      sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
+      @access_hidden_inboxes::uuid[]
   )
 GROUP BY assignee_team_id;
 
@@ -18,8 +19,9 @@ FROM conversations
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND NOT spam AND status = 'open'
   AND assignee_member_id IS NOT NULL
   AND dimmi_conversation_visible(
-      assignee_member_id, assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
-      @access_teams::uuid[], @access_unassigned::boolean
+      assignee_member_id, assignee_team_id, inbox_id, @access_mode::text,
+      sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
+      @access_hidden_inboxes::uuid[]
   )
 GROUP BY assignee_member_id;
 

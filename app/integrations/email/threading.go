@@ -51,11 +51,14 @@ type Identity struct {
 
 /*
 DedupeKey returns the key that recognizes the message when it arrives
-again: from its Message-ID, or from what it says when it has none.
+again: from its Message-ID and sender, or from what it says when it has
+no Message-ID. The sender counts because careless scripts reuse one id
+for every mail they send, and a second person's mail under the same id
+is a different message.
 */
 func DedupeKey(id Identity) string {
-	source := id.MessageID
-	if source == "" {
+	source := id.MessageID + "\x00" + strings.ToLower(id.From)
+	if id.MessageID == "" {
 		source = SyntheticID(id)
 	}
 

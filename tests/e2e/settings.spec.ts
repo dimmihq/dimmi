@@ -1,4 +1,5 @@
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
+import { openMessenger } from "./support/inbox";
 
 const pages = [
   "Profile",
@@ -8,7 +9,7 @@ const pages = [
   "Inboxes",
   "Tags",
   "Saved replies",
-  "Messenger",
+  "Messengers",
   "Email",
   "Connections",
   "Dimmi agent",
@@ -79,15 +80,94 @@ it.describe("settings", () => {
   });
 
   it("picks the messenger colour with the colour well", async ({ page }) => {
-    await page.goto("/d/settings/messenger");
+    await openMessenger(page);
     const appearance = page.getByRole("region", { name: "Appearance" });
-    await expect(appearance.getByText("#10B981", { exact: false })).toBeVisible();
+    await expect(appearance.getByText("#1F2328", { exact: false })).toBeVisible();
 
     await appearance.getByRole("button", { name: "Messenger colour" }).click();
     const editor = page.getByRole("dialog", { name: "Messenger colour" });
     await editor.getByRole("textbox").fill("#3b82f6");
     await editor.getByRole("textbox").press("Enter");
     await expect(appearance.getByText("#3B82F6", { exact: false })).toBeVisible();
+  });
+
+  it("previews messenger changes live and keeps them only once saved", async ({ page }) => {
+    await openMessenger(page);
+    const messenger = page.frameLocator('iframe[title="Messenger preview"]').locator("#dimmi-messenger");
+    await expect(messenger.getByRole("button", { name: "Close messages" }).first()).toBeVisible();
+    const greeting = page.getByRole("textbox", { name: "Greeting" });
+
+    await greeting.fill("Hello from the preview");
+    await expect(messenger.getByRole("heading", { name: /Hello from the preview/ })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unsaved changes" })).toBeVisible();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(greeting).toHaveValue("");
+    await expect(messenger.getByRole("heading", { name: /Hello from the preview/ })).toHaveCount(0);
+
+    await greeting.fill("Saved for real");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Discard" })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Greeting" })).toHaveValue("Saved for real");
+  });
+
+  it("shows and copies the install snippet for the framework picked", async ({ page }) => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await openMessenger(page);
+    const install = page.getByRole("region", { name: "Install" });
+    await expect(install.getByText('import Script from "next/script";')).toBeVisible();
+    await expect(install.getByText(/in app\/layout\.tsx/)).toBeVisible();
+
+    await install.getByRole("button", { name: /Framework$/ }).click();
+    await page.getByRole("option", { name: "Plain HTML" }).click();
+
+    const code = install.locator("code");
+    await expect(code).toHaveText(/^<script async src=".*\/widget\/v1\/loader\.js" data-app-id="wgt_\w+"><\/script>$/);
+    await install.getByRole("button", { name: "Copy snippet" }).click();
+    await expect(install.getByRole("button", { name: "Copied" })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(await code.textContent());
+  });
+
+  it("adds a home screen link with an icon and the preview lists it", async ({ page }) => {
+    await openMessenger(page);
+    const links = page.getByRole("region", { name: "Links" });
+    const messenger = page.frameLocator('iframe[title="Messenger preview"]').locator("#dimmi-messenger");
+
+    await links.getByRole("button", { name: "Add link" }).click();
+    await links.getByRole("button", { name: "Icon of link 1: Link" }).click();
+    await page.getByRole("dialog", { name: "Icon of link 1" }).getByRole("button", { name: "Calendar" }).click();
+    await links.getByRole("textbox", { name: "Title of link 1" }).fill("Book a call");
+    await expect(links.getByRole("alert")).toHaveCount(0);
+    await links.getByRole("textbox", { name: "Address of link 1" }).fill("http://cal.example.com");
+    await expect(links.getByRole("alert")).toHaveText("Use an https:// address or a mailto: address.");
+
+    await links.getByRole("textbox", { name: "Address of link 1" }).fill("https://cal.example.com");
+    await expect(messenger.getByRole("link", { name: "Book a call" })).toHaveAttribute(
+      "href",
+      "https://cal.example.com",
+    );
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Discard" })).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Icon of link 1: Calendar" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Title of link 1" })).toHaveValue("Book a call");
+  });
+
+  it("keeps the page in its panel when a switch far down is toggled", async ({ page }) => {
+    await openMessenger(page);
+
+    await page.getByRole("switch", { name: "Feedback tab" }).scrollIntoViewIfNeeded();
+    await page
+      .locator("label")
+      .filter({ has: page.getByRole("switch", { name: "Anonymous visitors" }) })
+      .click();
+
+    await expect(page.getByRole("status").filter({ hasText: "Unsaved changes" })).toBeVisible();
+    const shifted = await page.evaluate(() =>
+      [...document.querySelectorAll("section[aria-label]")].some((panel) => panel.scrollTop > 0),
+    );
+    expect(shifted).toBe(false);
   });
 
   it("narrows the connections by search", async ({ page }) => {

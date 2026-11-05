@@ -14,7 +14,7 @@ import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { type Tag, tagsQuery } from "@/lib/api/tags";
 import { cx } from "@/utils/cx";
 
-import { TagDot } from "./tag-chip";
+import { TagIcon } from "./tag-chip";
 import { isNewName, matching } from "./tag-names";
 
 function useOpenKey(open: () => void) {
@@ -45,7 +45,7 @@ function Option({ tag, selected, onToggle }: { tag: Tag; selected: boolean; onTo
         "outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
       )}
     >
-      <TagDot color={tag.color} />
+      <TagIcon tag={tag} />
       <span className="min-w-0 flex-1 truncate">{tag.name}</span>
       {selected ? <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" /> : null}
     </button>

@@ -130,12 +130,12 @@ export function TwoFactorForm({ methods, onSignedIn, onExpired }: TwoFactorFormP
           onComplete={check}
         />
         {method === "passkey" ? (
-          <Button type="submit" className="w-full" leadingIcon={RiKey2Line} disabled={verify.isPending}>
+          <Button type="submit" className="w-full" leadingIcon={RiKey2Line} loading={verify.isPending}>
             {verify.isPending ? "Waiting for your passkey…" : "Continue with passkey"}
           </Button>
         ) : (
-          <Button type="submit" className="w-full" disabled={verify.isPending || !ready(method, code)}>
-            {verify.isPending ? "Verifying…" : "Verify"}
+          <Button type="submit" className="w-full" loading={verify.isPending} disabled={!ready(method, code)}>
+            Verify
           </Button>
         )}
       </form>

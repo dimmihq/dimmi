@@ -24,13 +24,14 @@ type Tag struct {
 	Object string  `json:"object"`
 	Name   string  `json:"name"`
 	Color  *string `json:"color"`
+	Icon   *string `json:"icon"`
 }
 
 /*
 NewTag shapes the tag.
 */
 func NewTag(t models.Tag) Tag {
-	return Tag{ID: models.PublicID(models.PrefixTag, t.ID), Object: "tag", Name: t.Name, Color: t.Color}
+	return Tag{ID: models.PublicID(models.PrefixTag, t.ID), Object: "tag", Name: t.Name, Color: t.Color, Icon: t.Icon}
 }
 
 /*

@@ -46,7 +46,7 @@ func TestStripText(t *testing.T) {
 	t.Run("cuts Outlook's header block", func(t *testing.T) {
 		t.Parallel()
 
-		got := email.StripText("OK\n\n**From:** Acme\n**Sent:** Monday\n**To:** Bob\n\nold text")
+		got := email.StripText("OK\n\n**From:** Acme\n**Sent:** Monday\n**To:** Bob\n**Subject:** Hello\n\nold text")
 		assert.Equal(t, "OK", got.Visible)
 		assert.False(t, email.StripText("From: the team\nwith love").Quote)
 	})
@@ -84,7 +84,7 @@ func TestBuildBody(t *testing.T) {
 		body := email.BuildBody(`<div>New text</div><div class="gmail_signature">Bob</div>`+
 			`<div class="gmail_quote">On Mon wrote:<blockquote>old</blockquote></div>`, "")
 
-		assert.Equal(t, "New text", body.Markdown)
+		assert.Equal(t, "New text", body.Visible)
 		assert.True(t, body.Quote)
 		assert.True(t, body.Signature)
 		assert.Contains(t, body.HTML, email.QuotedAttr)
@@ -96,8 +96,8 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody(`<blockquote type="cite">Question?</blockquote><div>My answer</div>`, "")
 
-		assert.Contains(t, body.Markdown, "My answer")
-		assert.Contains(t, body.Markdown, "Question?")
+		assert.Contains(t, body.Visible, "My answer")
+		assert.Contains(t, body.Visible, "Question?")
 	})
 
 	t.Run("drops hidden text and tracking pixels", func(t *testing.T) {
@@ -106,7 +106,7 @@ func TestBuildBody(t *testing.T) {
 		body := email.BuildBody(`<p>Visible</p><p style="font-size:0">secret</p><div hidden>x</div>`+
 			`<img src="https://t.test/p.gif" width="0"><span style="opacity:0;">y</span>`, "")
 
-		assert.Equal(t, "Visible", body.Markdown)
+		assert.Equal(t, "Visible", body.Visible)
 		assert.NotContains(t, body.HTML, "t.test")
 	})
 
@@ -115,7 +115,7 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody(`<div class="gmail_quote">All quoted</div>`, "")
 
-		assert.Equal(t, "All quoted", body.Markdown)
+		assert.Equal(t, "All quoted", body.Visible)
 		assert.True(t, body.Fallback)
 	})
 
@@ -126,8 +126,9 @@ func TestBuildBody(t *testing.T) {
 		body := email.BuildBody("", text)
 
 		assert.True(t, body.Truncated)
-		assert.LessOrEqual(t, len(body.Markdown), 64<<10)
-		assert.True(t, strings.HasSuffix(body.Markdown, "[Message truncated. View original.]"))
+		assert.LessOrEqual(t, len(body.Visible), 64<<10)
+		assert.True(t, strings.HasSuffix(body.Visible, "word "), "ends at a paragraph, with no note in the words")
+		assert.Equal(t, strings.TrimSpace(text), body.Full)
 
 		big := email.BuildBody("<p>"+strings.Repeat("x", 600<<10)+"</p>", "")
 		assert.True(t, big.HTMLTooLarge)
@@ -143,7 +144,7 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody(deep("<p>Deep words</p>"), "The order never came.")
 
-		assert.Equal(t, "The order never came.", body.Markdown)
+		assert.Equal(t, "The order never came.", body.Visible)
 		assert.Empty(t, body.HTML)
 	})
 
@@ -152,7 +153,7 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody(deep("<p>The order</p><p>never &amp; came.</p>"), "")
 
-		assert.Equal(t, "The order\n\nnever & came.", strings.ReplaceAll(body.Markdown, "\n\n\n", "\n\n"))
+		assert.Equal(t, "The order\n\nnever & came.", strings.ReplaceAll(body.Visible, "\n\n\n", "\n\n"))
 	})
 
 	t.Run("does not reveal hidden text by nesting html too deep to parse", func(t *testing.T) {
@@ -161,7 +162,7 @@ func TestBuildBody(t *testing.T) {
 		body := email.BuildBody(deep(`<p>Visible</p><div style="display:none">secret <div>nested</div> more</div>`+
 			`<span hidden>other</span><style>p{}</style>`), "")
 
-		assert.Equal(t, "Visible", body.Markdown)
+		assert.Equal(t, "Visible", body.Visible)
 	})
 
 	t.Run("reads the text part when the html is an empty shell", func(t *testing.T) {
@@ -169,7 +170,7 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody("<html><head><title>x</title></head><body>\n</body></html>", "Real text")
 
-		assert.Equal(t, "Real text", body.Markdown)
+		assert.Equal(t, "Real text", body.Visible)
 		assert.Empty(t, body.HTML)
 	})
 
@@ -178,13 +179,13 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody(`<body><div style="display:none">hidden</div></body>`, "Real text")
 
-		assert.Equal(t, "Real text", body.Markdown)
+		assert.Equal(t, "Real text", body.Visible)
 	})
 
 	t.Run("stays empty when neither the html nor the text says anything", func(t *testing.T) {
 		t.Parallel()
 
-		assert.Empty(t, email.BuildBody("<body> </body>", " \n").Markdown)
+		assert.Empty(t, email.BuildBody("<body> </body>", " \n").Visible)
 	})
 
 	t.Run("keeps a second body part below the first, whatever precedes it", func(t *testing.T) {
@@ -192,7 +193,7 @@ func TestBuildBody(t *testing.T) {
 
 		body := email.BuildBody("", "First para\n\nSecond para")
 
-		assert.Equal(t, "First para\n\nSecond para", body.Markdown)
+		assert.Equal(t, "First para\n\nSecond para", body.Visible)
 		assert.False(t, body.Signature)
 	})
 }

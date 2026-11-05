@@ -19,7 +19,8 @@ Tag failures.
 ErrTagLimitReached refuses a tag past the most a conversation, contact
 or company may carry, or a new tag past the most a workspace may have.
 ErrTagExists refuses a name another tag holds, in any case.
-ErrTagNameRequired refuses a tag without a name, and
+ErrTagNameRequired refuses a tag without a name, ErrTagIconUnknown an
+icon the app does not have, and
 ErrTagMessageNotInConversation a message of another conversation as
 what prompted a tag.
 */
@@ -30,6 +31,8 @@ var (
 		"Another tag already has this name.").OnField("name")
 	ErrTagNameRequired = fault.New(fault.Invalid, "tag_name_required",
 		"Give the tag a name.").OnField("name")
+	ErrTagIconUnknown = fault.New(fault.Invalid, "tag_icon_unknown",
+		"Pick one of the tag icons.").OnField("icon")
 	ErrTagMessageNotInConversation = fault.New(fault.Invalid, "message_not_in_conversation",
 		"This message is not part of the conversation.").OnField("message_id")
 )

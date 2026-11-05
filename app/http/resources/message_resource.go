@@ -7,7 +7,9 @@
 | note or an event, with who it is from and, for a reply, how its
 | delivery went. A deleted entry keeps its place with its text gone. An
 | author the workspace no longer has still shows, as a former teammate.
-| An event carries what happened, for the timeline to say in words.
+| An event carries what happened, for the timeline to say in words. An
+| email says how its text is to be read, and whether more of it can be
+| asked for than the body shows.
 |
 */
 
@@ -19,9 +21,9 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/dimmihq/dimmi/framework/markdown"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/redaction"
@@ -47,6 +49,9 @@ type TimelineEntry struct {
 	Type            string          `json:"type"`
 	Author          Author          `json:"author"`
 	Body            *string         `json:"body"`
+	BodyFormat      string          `json:"body_format"`
+	HasOriginal     bool            `json:"has_original"`
+	Truncated       bool            `json:"truncated"`
 	DeliveryStatus  *string         `json:"delivery_status"`
 	DeliveryError   *string         `json:"delivery_error"`
 	Substantive     bool            `json:"substantive"`
@@ -58,6 +63,7 @@ type TimelineEntry struct {
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	Attachments     []Attachment    `json:"attachments"`
 
 	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
@@ -84,6 +90,38 @@ func removerOf(metadata json.RawMessage) *Remover {
 	}
 
 	return read.DeletedBy
+}
+
+/*
+MessageOriginal is the whole of a received message: its full text and
+its sanitized HTML, null when the mail had none. HTMLTooLarge and
+TextTruncated say the mail held more than was kept, which the raw email
+still has. RawAvailable says the caller can download that.
+*/
+type MessageOriginal struct {
+	ID            string  `json:"id"`
+	Object        string  `json:"object"`
+	Text          string  `json:"text"`
+	TextTruncated bool    `json:"text_truncated"`
+	HTML          *string `json:"html"`
+	HTMLTooLarge  bool    `json:"html_too_large"`
+	RawAvailable  bool    `json:"raw_available"`
+}
+
+/*
+NewMessageOriginal shapes the original of a message.
+*/
+func NewMessageOriginal(o messages.Original) MessageOriginal {
+	out := MessageOriginal{
+		ID: models.PublicID(models.PrefixMessage, o.Message.ID), Object: "message_original", Text: o.Text,
+		TextTruncated: o.Limits.FullTruncated, HTMLTooLarge: o.Limits.HTMLTooLarge, RawAvailable: o.RawAvailable,
+	}
+
+	if o.HTML != "" {
+		out.HTML = &o.HTML
+	}
+
+	return out
 }
 
 /*
@@ -118,14 +156,15 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 	out := TimelineEntry{
 		ID: models.PublicID(models.PrefixMessage, m.ID), Object: "message",
 		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID), Type: m.Type,
-		Author: author(m, contact, by), Body: m.Body, DeliveryStatus: m.DeliveryStatus,
+		Author: author(m, contact, by), Body: m.Body, BodyFormat: m.BodyFormat, HasOriginal: m.BodyFull != nil,
+		Truncated: models.ReadEmailMetadata(m.Metadata).Truncated, DeliveryStatus: m.DeliveryStatus,
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
 		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
+		UpdatedAt: m.UpdatedAt, Attachments: []Attachment{},
 	}
 
 	if m.DeletedAt != nil {
-		out.Body = nil
+		out.Body, out.HasOriginal, out.Truncated = nil, false, false
 		out.DeletedBy = removerOf(m.Metadata)
 	}
 
@@ -155,15 +194,53 @@ func redactionsOf(metadata json.RawMessage) []redaction.Hit {
 }
 
 /*
-NewTimelineEntries shapes a page of entries, in the order given.
+NewTimelineEntries shapes a page of entries, in the order given, each
+with its files.
 */
-func NewTimelineEntries(rows []models.Message, contact models.Contact, members Authors) []TimelineEntry {
+func NewTimelineEntries(
+	rows []models.Message, contact models.Contact, members Authors, files map[ids.UUID][]messages.File,
+) []TimelineEntry {
 	out := make([]TimelineEntry, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, NewTimelineEntry(m, contact, members))
+		entry := NewTimelineEntry(m, contact, members)
+		if m.DeletedAt == nil {
+			for _, f := range files[m.ID] {
+				entry.Attachments = append(entry.Attachments, NewAttachment(f))
+			}
+		}
+
+		out = append(out, entry)
 	}
 
 	return out
+}
+
+/*
+Attachment is a file on a message as a teammate sees it. URL reads it
+for a few minutes and is null until the malware scan lets it through;
+Blocked marks a file the scan refused.
+*/
+type Attachment struct {
+	ID          string  `json:"id"`
+	Object      string  `json:"object"`
+	Filename    string  `json:"filename"`
+	ContentType string  `json:"content_type"`
+	SizeBytes   int64   `json:"size_bytes"`
+	Width       *int32  `json:"width"`
+	Height      *int32  `json:"height"`
+	URL         *string `json:"url"`
+	Blocked     bool    `json:"blocked"`
+}
+
+/*
+NewAttachment shapes a file of a message.
+*/
+func NewAttachment(f messages.File) Attachment {
+	return Attachment{
+		ID: models.PublicID(models.PrefixAttachment, f.Row.ID), Object: "attachment", Filename: f.Row.Filename,
+		ContentType: f.Row.ContentType, SizeBytes: f.Row.SizeBytes, Width: f.Row.Width, Height: f.Row.Height,
+		URL: f.URL, Blocked: f.Blocked,
+	}
 }
 
 /*
@@ -195,15 +272,15 @@ func author(m models.Message, contact models.Contact, member *conversations.Memb
 }
 
 /*
-excerpt returns the start of a message as plain text, its Markdown
-taken out, cut short where it is long.
+excerpt returns the start of a message as plain text, cut short where
+it is long.
 */
-func excerpt(body *string) string {
-	if body == nil {
+func excerpt(m *models.Message) string {
+	if m.Body == nil {
 		return ""
 	}
 
-	plain := strings.Join(strings.Fields(markdown.PlainText([]byte(*body))), " ")
+	plain := strings.Join(strings.Fields(models.BodyWords(*m.Body, m.BodyFormat)), " ")
 
 	runes := []rune(plain)
 	if len(runes) <= excerptLength {

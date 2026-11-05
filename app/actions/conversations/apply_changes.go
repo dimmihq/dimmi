@@ -28,6 +28,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/tags"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -275,9 +276,15 @@ func (ap *applier) status(ctx context.Context, ch Changes) error {
 }
 
 /*
-attributes applies the subject, priority and inbox.
+attributes applies the subject, priority and inbox. A conversation only
+moves into an inbox the caller may open, so nobody can send work where
+they cannot follow it.
 */
 func (ap *applier) attributes(ctx context.Context, ch Changes) error {
+	if to := ch.Attributes.InboxID; to != nil && !VisibleScope(ap.m).OpensInbox(*to) {
+		return exceptions.ErrInboxNotFound
+	}
+
 	c, fields, err := ap.w.SetAttributes(ctx, ap.c, ch.Attributes)
 	ap.c = c
 	ap.changed = append(ap.changed, fields...)

@@ -18,7 +18,7 @@ it.describe("automation", () => {
   it("opens a workflow from the list and shows the selected step's settings", async ({ page }) => {
     await page.goto("/d/workflows");
     await page.getByRole("link", { name: /Let Dimmi answer first messages/ }).click();
-    await expect(page).toHaveURL(/\/d\/workflows\/first-message$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/workflows\/first-message$/);
     await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
 
     const inspector = page.getByRole("region", { name: "Step settings" });
@@ -110,7 +110,7 @@ it.describe("automation", () => {
     await expect(picker.getByRole("region", { name: "Start of conversation" })).toBeHidden();
     await picker.getByRole("button", { name: /Teammate stops replying/ }).click();
 
-    await expect(page).toHaveURL(/\/d\/workflows\/new\?trigger=teammate-quiet$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/workflows\/new\?trigger=teammate-quiet$/);
     await expect(page.getByRole("heading", { name: "Untitled workflow" })).toBeVisible();
     const inspector = page.getByRole("region", { name: "When it starts" });
     await expect(inspector).toContainText("Teammate stops replying");
@@ -120,7 +120,7 @@ it.describe("automation", () => {
   it("edits a procedure and keeps tests from spending without asking", async ({ page }) => {
     await page.goto("/d/procedures");
     await page.getByRole("link", { name: /Send a sign-in code/ }).click();
-    await expect(page).toHaveURL(/\/d\/procedures\/sign-in-code$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/procedures\/sign-in-code$/);
 
     const steps = page.getByRole("region", { name: "Steps" });
     await expect(steps.getByRole("textbox")).toHaveCount(5);

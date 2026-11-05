@@ -143,3 +143,21 @@ UPDATE workspaces
 SET purge_after = least(purge_after, @now::timestamptz)
 WHERE id = @id AND deleted_at IS NOT NULL
 RETURNING *;
+
+-- name: UpdateWorkspaceOnboarding :one
+-- UpdateWorkspaceOnboarding records the onboarding step the workspace's
+-- owners reached and, once they finish, when. Finishing again keeps the
+-- first time.
+UPDATE workspaces
+SET onboarding_step = @step,
+    onboarding_completed_at = CASE WHEN @complete::boolean THEN coalesce(onboarding_completed_at, @now) ELSE onboarding_completed_at END,
+    updated_at = @now
+WHERE id = @id
+RETURNING *;
+
+-- name: ReplaceWorkspaceLogoPath :one
+-- ReplaceWorkspaceLogoPath gives the workspace the logo stored at the
+-- path, or none.
+UPDATE workspaces SET logo_path = sqlc.narg(logo_path), updated_at = @now
+WHERE id = @id
+RETURNING *;

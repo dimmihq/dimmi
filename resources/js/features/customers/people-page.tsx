@@ -112,7 +112,7 @@ export function PeoplePage({ blocked = false }: { blocked?: boolean }) {
         {list.isError ? (
           <EmptyState icon={RiUser3Line} title="People could not be loaded" description={list.error.message} />
         ) : (
-          <PeopleTable people={people} blocked={blocked} />
+          <PeopleTable people={people} blocked={blocked} loading={list.isPending} />
         )}
         {list.hasNextPage ? (
           <Button

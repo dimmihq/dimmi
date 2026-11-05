@@ -67,7 +67,7 @@ function DomainLists({ settings, canManage }: { settings: LinkSafety; canManage:
           size="small"
           variant="secondary"
           className="self-start"
-          disabled={save.isPending}
+          loading={save.isPending}
           onClick={() => save.mutate({ allow_domains: lines(allow), block_domains: lines(block) })}
         >
           Save domains
@@ -83,7 +83,7 @@ export function LinkSafetySection({ canManage }: { canManage: boolean }) {
   const save = useSave(workspace);
   const settings = data?.link_safety;
   if (!settings) {
-    return null;
+    return <Section title="Link safety" loading rows={2} />;
   }
 
   return (

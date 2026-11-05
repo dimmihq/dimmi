@@ -57,7 +57,7 @@ export function ExportMembersButton({ workspace, filter }: { workspace: string; 
       variant="secondary"
       size="small"
       leadingIcon={RiDownloadLine}
-      disabled={download.isPending}
+      loading={download.isPending}
       onClick={() => download.mutate()}
     >
       Export CSV

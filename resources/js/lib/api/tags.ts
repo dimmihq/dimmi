@@ -12,6 +12,7 @@ export interface Tag {
   object: string;
   name: string;
   color: string | null;
+  icon: string | null;
 }
 
 export interface TagCounts {
@@ -31,14 +32,18 @@ export function tagsQuery(workspace: string, counts = false) {
   });
 }
 
-export function createTag(workspace: string, name: string, color?: string): Promise<Tag> {
-  return request<Tag>("POST", "/tags", { name, color }, { workspace });
+export function createTag(
+  workspace: string,
+  name: string,
+  appearance: { color?: string; icon?: string } = {},
+): Promise<Tag> {
+  return request<Tag>("POST", "/tags", { name, ...appearance }, { workspace });
 }
 
 export function updateTag(
   workspace: string,
   id: string,
-  changes: { name?: string; color?: string | null },
+  changes: { name?: string; color?: string | null; icon?: string | null },
 ): Promise<Tag> {
   return request<Tag>("PATCH", `/tags/${encodeURIComponent(id)}`, changes, { workspace });
 }

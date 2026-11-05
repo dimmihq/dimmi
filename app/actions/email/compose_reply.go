@@ -43,13 +43,15 @@ const maxQuoteLength = 2000
 
 /*
 sendOptions are the email options a reply request may carry: other
-recipients, and another address to send from.
+recipients, another address to send from, and false in Signature to
+send it unsigned.
 */
 type sendOptions struct {
 	To            []string `json:"to"`
 	Cc            []string `json:"cc"`
 	Bcc           []string `json:"bcc"`
 	FromAddressID string   `json:"from_address_id"`
+	Signature     *bool    `json:"signature"`
 }
 
 /*
@@ -101,7 +103,7 @@ func (a *SendEmailMessage) compose(
 		}
 	}
 
-	return a.quote(ctx, q, out)
+	return a.dress(ctx, q, out)
 }
 
 /*
@@ -118,7 +120,8 @@ func (a *SendEmailMessage) sender(ctx context.Context, q *models.Queries, out *o
 
 /*
 recipients returns who the reply goes to and who is copied, without the
-workspace's own addresses or suppressed copies.
+workspace's own addresses or suppressed copies. Unless the reply names
+its recipients, it goes where the customer asked answers to go.
 */
 func (a *SendEmailMessage) recipients(
 	ctx context.Context, q *models.Queries, out *outbound,
@@ -128,9 +131,16 @@ func (a *SendEmailMessage) recipients(
 		return nil, nil, err
 	}
 
+	own, err := q.ListWorkspaceEmailIdentities(ctx, out.msg.WorkspaceID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list workspace addresses: %w", err)
+	}
+
 	to := slices.Clone(options.To)
-	if len(to) == 0 && out.msg.Recipient.IdentityValue != "" {
-		to = []string{out.msg.Recipient.IdentityValue}
+	if len(to) == 0 {
+		if to, err = askedRecipients(ctx, q, out, own); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	cc := slices.Clone(options.Cc)
@@ -138,11 +148,6 @@ func (a *SendEmailMessage) recipients(
 		for _, r := range out.msg.CC {
 			cc = append(cc, r.IdentityValue)
 		}
-	}
-
-	own, err := q.ListWorkspaceEmailIdentities(ctx, out.msg.WorkspaceID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("list workspace addresses: %w", err)
 	}
 
 	to, cc = clean(to, own, nil), clean(cc, own, to)
@@ -238,7 +243,7 @@ func (a *SendEmailMessage) quote(ctx context.Context, q *models.Queries, out *ou
 		zone = time.UTC
 	}
 
-	text := *last.Body
+	text := models.BodyWords(*last.Body, last.BodyFormat)
 	if runes := []rune(text); len(runes) > maxQuoteLength {
 		text = string(runes[:maxQuoteLength]) + "…"
 	}

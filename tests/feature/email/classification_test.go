@@ -211,3 +211,95 @@ func closeConversation(tc *tests.TestCase, conversation models.Conversation) {
 		})
 	})
 }
+
+func TestAutomaticMailIsKept(t *testing.T) {
+	t.Parallel()
+
+	t.Run("opens a first question whose subject reads like an automatic reply", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, email{
+			from: "Dana <dana@customer.test>", to: address.ForwardingAddress,
+			subject: "Automatic reply not working on my account", id: "subject-1@customer.test",
+			body: "My out of office answer never goes out. Can you help?",
+		}.raw(), "")
+
+		convs := conversations(tc)
+		require.Len(t, convs, 1)
+		assert.Equal(t, "open", convs[0].Status)
+		assert.True(t, messages(tc, convs[0].ID)[0].Substantive)
+	})
+
+	t.Run("keeps a short mail with an automatic subject quiet on its thread", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+		conversation := startConversation(tc, address, "bob@customer.test")
+		first := messages(tc, conversation.ID)[0]
+
+		deliver(tc, email{
+			from: "Bob <bob@customer.test>", to: address.ForwardingAddress, subject: "Autosvar: Refund",
+			id: "autosvar-1@customer.test", inReplyTo: *first.ChannelMessageID, body: "Jeg er på ferie.",
+		}.raw(), "")
+
+		msgs := messages(tc, conversation.ID)
+		require.Len(t, msgs, 2)
+		assert.False(t, msgs[1].Substantive)
+		assert.Equal(t, true, emailMetadata(t, msgs[1])["auto_reply"])
+	})
+
+	t.Run("keeps a notification marked auto-generated and never answers it", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, email{
+			from: "Status <monitor@status.test>", to: address.ForwardingAddress, subject: "Checkout is down",
+			id: "generated-1@status.test", headers: []string{"Auto-Submitted: auto-generated"},
+			body: "The checkout page has failed three checks in a row.",
+		}.raw(), "")
+
+		convs := conversations(tc)
+		require.Len(t, convs, 1)
+		msgs := messages(tc, convs[0].ID)
+		assert.Equal(t, "bulk", emailMetadata(t, msgs[0])["classification"])
+		assert.False(t, msgs[0].Substantive)
+	})
+
+	t.Run("takes the visitor behind a form service that marks its mail auto-generated", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, email{
+			from: "Webflow <no-reply@webflow.com>", to: address.ForwardingAddress, subject: "New form submission",
+			id:      "form-gen-1@webflow.com",
+			headers: []string{"Auto-Submitted: auto-generated", "Reply-To: Jules Verne <jules@visitor.test>"},
+			body:    "Name: Jules Verne\nMessage: Where is my order?",
+		}.raw(), "")
+
+		convs := conversations(tc)
+		require.Len(t, convs, 1)
+		assert.Equal(t, "open", convs[0].Status)
+		assert.Equal(t, "normal", emailMetadata(t, messages(tc, convs[0].ID)[0])["classification"])
+		tc.Table("contacts").AssertHas(map[string]any{"email": "jules@visitor.test"})
+	})
+
+	t.Run("treats mail that switches automatic replies off as a person's", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+
+		deliver(tc, email{
+			from: "Dana <dana@customer.test>", to: address.ForwardingAddress, subject: "Order question",
+			id: "autoreply-no-1@customer.test", headers: []string{"X-Autoreply: no", "X-Autorespond: 0"},
+			body: "Where is my parcel?",
+		}.raw(), "")
+
+		convs := conversations(tc)
+		require.Len(t, convs, 1)
+		assert.Equal(t, "normal", emailMetadata(t, messages(tc, convs[0].ID)[0])["classification"])
+	})
+}

@@ -131,9 +131,32 @@ func (a *Authorizers) Conversation(
 		return false, err
 	}
 
-	seen := conversation.DeletedAt == nil && m.ConversationScope().Contains(conversation)
+	if conversation.DeletedAt != nil || !m.Can(readConversations) {
+		return false, nil
+	}
 
-	return m.Can(readConversations) && seen, nil
+	return a.reads(ctx, m, conversation)
+}
+
+/*
+reads reports whether the member may read the conversation, a mention
+counting as much as their scope.
+*/
+func (a *Authorizers) reads(ctx context.Context, m authz.Membership, c models.Conversation) (bool, error) {
+	var reads bool
+
+	scoped := tenancy.With(ctx, c.WorkspaceID.String())
+	err := a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		reads, err = authz.Reads(ctx, models.New(tx), m.ConversationScope(), c)
+
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("check realtime conversation: %w", err)
+	}
+
+	return reads, nil
 }
 
 /*

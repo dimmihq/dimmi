@@ -35,7 +35,7 @@ export function AddAddress() {
           onChange={setAddress}
           className="w-64"
         />
-        <Button size="small" disabled={!address.trim() || add.isPending} onClick={() => add.mutate()}>
+        <Button size="small" loading={add.isPending} disabled={!address.trim()} onClick={() => add.mutate()}>
           Add address
         </Button>
       </Row>

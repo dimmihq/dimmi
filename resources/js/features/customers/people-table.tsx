@@ -16,8 +16,8 @@ import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from 
 import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { useViewPreferences } from "@/features/inbox/views/use-view-preferences";
 import { avatarColor } from "@/features/shell/avatar-color";
+import { TableSkeleton } from "@/features/shell/table-skeleton";
 import type { Contact } from "@/lib/api/customers";
-
 import { personName, useWorkspace } from "./names";
 
 type ColumnKey = "email" | "phone" | "company" | "kind" | "user_id" | "tags" | "last_seen" | "created";
@@ -57,7 +57,7 @@ function cell(column: ColumnKey, person: Contact): ReactNode {
     tags: () => (
       <span className="flex flex-wrap gap-1">
         {person.tags.map((tag) => (
-          <TagChip key={tag.id} tag={tag} />
+          <TagChip key={tag.id} tag={tag} size="small" />
         ))}
       </span>
     ),
@@ -108,7 +108,15 @@ export function ColumnsChooser() {
   );
 }
 
-export function PeopleTable({ people, blocked }: { people: Contact[]; blocked: boolean }) {
+export function PeopleTable({
+  people,
+  blocked,
+  loading = false,
+}: {
+  people: Contact[];
+  blocked: boolean;
+  loading?: boolean;
+}) {
   const { chosen } = usePeopleColumns();
   const shown = [{ id: "name", label: "Name" }, ...columns.filter((column) => chosen.includes(column.id))];
 
@@ -124,11 +132,15 @@ export function PeopleTable({ people, blocked }: { people: Contact[]; blocked: b
       <TableBody
         items={people}
         dependencies={[chosen.join()]}
-        renderEmptyState={() => (
-          <p className="py-2 text-body-2-regular text-text-tertiary">
-            {blocked ? "No one is blocked." : "No one matches."}
-          </p>
-        )}
+        renderEmptyState={() =>
+          loading ? (
+            <TableSkeleton />
+          ) : (
+            <p className="py-2 text-body-2-regular text-text-tertiary">
+              {blocked ? "No one is blocked." : "No one matches."}
+            </p>
+          )
+        }
       >
         {(person) => (
           <TableRow id={person.id} columns={shown}>

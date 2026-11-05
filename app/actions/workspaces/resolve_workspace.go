@@ -184,7 +184,11 @@ func (a *ResolveWorkspace) load(
 			return err
 		}
 
-		if m.AccessTeams, err = authz.LoadAccessTeams(ctx, q, m.Member); err != nil || !p.IsFirstParty() {
+		if m.AccessTeams, err = authz.LoadAccessTeams(ctx, q, m.Member); err != nil {
+			return err
+		}
+
+		if m.HiddenInboxes, err = authz.LoadHiddenInboxes(ctx, q, m.Member); err != nil || !p.IsFirstParty() {
 			return err
 		}
 
