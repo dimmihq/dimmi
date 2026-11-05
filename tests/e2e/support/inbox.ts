@@ -94,18 +94,26 @@ export async function openAddress(page: Page, name?: string): Promise<void> {
   const link = name ? addresses.getByRole("link", { name }) : addresses.getByRole("link").first();
   await link.click();
   await expect(page.getByTestId("forwarding-address")).toBeVisible();
+  await settled(page);
+}
+
+/*
+ * settled waits for a page the app just navigated to to finish arriving.
+ * The page rises into place as it arrives, and a click aimed while it
+ * moves misses, so Playwright scrolls to try again, and that late scroll
+ * closes any popover the click opened.
+ */
+export async function settled(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
 }
 
 /*
  * openMessenger opens the page of the workspace's first messenger and
- * waits for it to finish arriving. The page rises into place as it
- * arrives, and a click aimed while it moves misses, so Playwright
- * scrolls to try again, and that late scroll closes any popover the
- * click opened.
+ * waits for it to settle.
  */
 export async function openMessenger(page: Page): Promise<void> {
   await page.goto("/d/settings/messenger");
   await page.getByRole("region", { name: "Messengers" }).getByRole("link").first().click();
   await expect(page.getByRole("region", { name: "Appearance" })).toBeVisible();
-  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
+  await settled(page);
 }
