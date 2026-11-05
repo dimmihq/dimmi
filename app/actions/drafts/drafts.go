@@ -49,7 +49,8 @@ ListDrafts returns the caller's drafts, newest first.
 Rules:
   - The caller needs conversations:read.
   - A conversation filter the caller cannot see is not found.
-  - Drafts of conversations in the trash are left out.
+  - Drafts of conversations in the trash, or that the caller may no
+    longer see, are left out.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
 wrapped database error.
@@ -79,9 +80,13 @@ func (a *ListDrafts) Handle(ctx context.Context, in ListInput) ([]models.Convers
 			}
 		}
 
+		access := conversations.VisibleScope(in.Membership).Params()
+
 		rows, err := q.ListMemberDrafts(ctx, models.ListMemberDraftsParams{
 			WorkspaceID: ws, MemberID: in.Membership.Member.ID,
 			ConversationID: in.Conversation, Mode: in.Mode, RowLimit: maxListed,
+			AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
+			AccessUnassigned: access.Unassigned,
 		})
 		if err != nil {
 			return fmt.Errorf("list drafts: %w", err)

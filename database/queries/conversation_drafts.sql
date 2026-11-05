@@ -1,13 +1,16 @@
 -- name: ListMemberDrafts :many
 -- ListMemberDrafts returns the member's drafts, newest first, those of
 -- one conversation or one mode when asked, leaving out drafts of
--- conversations in the trash.
+-- conversations in the trash or that the member may no longer see.
 SELECT d.* FROM conversation_drafts d
 LEFT JOIN conversations c ON c.id = d.conversation_id
 WHERE d.workspace_id = @workspace_id AND d.member_id = @member_id
   AND (sqlc.narg('conversation_id')::uuid IS NULL OR d.conversation_id = sqlc.narg('conversation_id')::uuid)
   AND (sqlc.narg('mode')::text IS NULL OR d.mode = sqlc.narg('mode')::text)
-  AND (d.conversation_id IS NULL OR c.deleted_at IS NULL)
+  AND (d.conversation_id IS NULL OR (c.deleted_at IS NULL AND dimmi_conversation_visible(
+      c.assignee_member_id, c.assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
+      @access_teams::uuid[], @access_unassigned::boolean
+  )))
 ORDER BY d.updated_at DESC, d.id DESC
 LIMIT @row_limit;
 

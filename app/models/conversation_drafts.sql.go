@@ -201,28 +201,39 @@ LEFT JOIN conversations c ON c.id = d.conversation_id
 WHERE d.workspace_id = $1 AND d.member_id = $2
   AND ($3::uuid IS NULL OR d.conversation_id = $3::uuid)
   AND ($4::text IS NULL OR d.mode = $4::text)
-  AND (d.conversation_id IS NULL OR c.deleted_at IS NULL)
+  AND (d.conversation_id IS NULL OR (c.deleted_at IS NULL AND dimmi_conversation_visible(
+      c.assignee_member_id, c.assignee_team_id, $5::text, $6::uuid,
+      $7::uuid[], $8::boolean
+  )))
 ORDER BY d.updated_at DESC, d.id DESC
-LIMIT $5
+LIMIT $9
 `
 
 type ListMemberDraftsParams struct {
-	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	MemberID       ids.UUID  `json:"member_id"`
-	ConversationID *ids.UUID `json:"conversation_id"`
-	Mode           *string   `json:"mode"`
-	RowLimit       int32     `json:"row_limit"`
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	MemberID         ids.UUID   `json:"member_id"`
+	ConversationID   *ids.UUID  `json:"conversation_id"`
+	Mode             *string    `json:"mode"`
+	AccessMode       string     `json:"access_mode"`
+	AccessViewer     *ids.UUID  `json:"access_viewer"`
+	AccessTeams      []ids.UUID `json:"access_teams"`
+	AccessUnassigned bool       `json:"access_unassigned"`
+	RowLimit         int32      `json:"row_limit"`
 }
 
 // ListMemberDrafts returns the member's drafts, newest first, those of
 // one conversation or one mode when asked, leaving out drafts of
-// conversations in the trash.
+// conversations in the trash or that the member may no longer see.
 func (q *Queries) ListMemberDrafts(ctx context.Context, arg ListMemberDraftsParams) ([]ConversationDraft, error) {
 	rows, err := q.db.Query(ctx, listMemberDrafts,
 		arg.WorkspaceID,
 		arg.MemberID,
 		arg.ConversationID,
 		arg.Mode,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
 		arg.RowLimit,
 	)
 	if err != nil {
