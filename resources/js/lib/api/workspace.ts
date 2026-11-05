@@ -19,6 +19,7 @@ export interface Workspace {
   test_mode: boolean;
   require_two_factor: boolean;
   link_safety?: LinkSafety;
+  retention?: Retention;
   customer_facing_name: string | null;
   deleted_at: string | null;
   purge_after: string | null;
@@ -71,6 +72,7 @@ export interface WorkspaceChanges {
   locale?: string;
   require_two_factor?: boolean;
   link_safety?: Partial<LinkSafety>;
+  retention?: Partial<Retention>;
   customer_facing_name?: string | null;
 }
 
@@ -208,4 +210,16 @@ export function importMembers(workspace: string, file: File, dryRun: boolean): P
   form.append("dry_run", String(dryRun));
 
   return request<MemberImport>("POST", "/member-imports", form, { workspace });
+}
+
+export interface Retention {
+  closed_conversation_days: number | null;
+  spam_days: number;
+  trash_days: number;
+  raw_email_days: number;
+  export_days: number;
+}
+
+export function previewRetention(workspace: string, days: number): Promise<{ count: number }> {
+  return request<{ count: number }>("POST", "/retention-previews", { closed_conversation_days: days }, { workspace });
 }

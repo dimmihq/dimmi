@@ -348,6 +348,9 @@ Same session as the shared inbox above, `C` the conversation Ann started:
 | Export a customer | `POST $B/contacts/{ann}/exports {"include_notes":false}`, then `GET $B/contacts/{ann}/exports/{exp}` until ready, then its `url` | 202 `status: pending`, a second POST 409 `export_in_progress`; then `status: ready` with `url`; the zip holds `contact.json`, `conversations/1.json`, `conversations/1.txt` and her files, without the team's notes |
 | Export from the profile | on Ann's page press Export data, then Download export | the button waits while it builds, then saves `exp_….zip` |
 | Erasures page | open `$W/d/customers/erasures` as Ada, then as Bob | Ada sees the requests with Cancel on pending ones; Bob has no Erasures tab |
+| Retention settings | `PATCH $B/workspace {"retention":{"closed_conversation_days":365,"export_days":14}}`, then `{"retention":{"spam_days":6}}` | 200 with `retention` showing both; then 422 `invalid_retention`; `{"closed_conversation_days":null}` keeps closed conversations again |
+| Retention preview | `POST $B/retention-previews {"closed_conversation_days":30}` | 200 `object: retention_preview` with how many closed conversations have sat untouched past 30 days |
+| Retention round | set a period, wait a day (the round skips a period changed in the last 24 hours), then run `apply_conversation_retention` | closed conversations untouched past the period are in the Deleted view; one with a newer note stays |
 | Conversation safety page | open `$W/d/settings/conversation-safety`, add a rule, try a text, then open a conversation whose customer sent a card | the rule lists with its pattern; the try box shows "2 items redacted"; the message shows "1 item redacted" |
 
 ### Two-factor authentication

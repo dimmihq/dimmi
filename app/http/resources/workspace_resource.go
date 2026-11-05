@@ -22,7 +22,8 @@ import (
 Workspace is a workspace a member works in. RequireTwoFactor says
 whether every member must have a second factor to work in it, and
 ShowViewers whether inbox lists show who views each conversation.
-LinkSafety holds the checks the inbox runs on links customers send.
+LinkSafety holds the checks the inbox runs on links customers send, and
+Retention how long conversations and their files are kept.
 CustomerFacingName is the name customers see, null when they see the
 workspace's own name. DeletedAt
 and PurgeAfter are set while it is in the trash: when it was deleted,
@@ -40,6 +41,7 @@ type Workspace struct {
 	ShowViewers        bool              `json:"show_viewers_on_list"`
 	CustomerFacingName *string           `json:"customer_facing_name"`
 	LinkSafety         models.LinkSafety `json:"link_safety"`
+	Retention          models.Retention  `json:"retention"`
 	DeletedAt          *time.Time        `json:"deleted_at"`
 	PurgeAfter         *time.Time        `json:"purge_after"`
 }
@@ -60,6 +62,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		ShowViewers:        w.ShowsViewersOnList(),
 		CustomerFacingName: w.CustomerFacingNameSetting(),
 		LinkSafety:         w.LinkSafety(),
+		Retention:          w.Retention(),
 		DeletedAt:          w.DeletedAt,
 		PurgeAfter:         w.PurgeAfter,
 	}

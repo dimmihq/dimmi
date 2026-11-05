@@ -35,6 +35,7 @@ import { callerQuery } from "@/lib/api/workspace";
 import { Action, Danger } from "../controls";
 import { Empty, Row, Section, SettingsPage } from "../layout";
 import { LinkSafetySection } from "../link-safety-section";
+import { RetentionSection } from "../retention-section";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -333,6 +334,7 @@ export function ConversationSafetySettings() {
         </>
       ) : null}
       <LinkSafetySection canManage={permissions.includes("settings:write")} />
+      <RetentionSection canManage={permissions.includes("settings:write")} />
     </SettingsPage>
   );
 }

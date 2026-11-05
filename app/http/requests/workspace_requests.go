@@ -37,6 +37,7 @@ type UpdateCurrentWorkspaceRequest struct {
 
 		CustomerFacingName *string         `json:"customer_facing_name,omitempty" validate:"omitempty,max=80"`
 		LinkSafety         *LinkSafetyBody `json:"link_safety,omitempty"`
+		Retention          *RetentionBody  `json:"retention,omitempty"`
 	}
 	RawBody []byte
 }
@@ -50,6 +51,20 @@ type LinkSafetyBody struct {
 	AllowDomains           []string `json:"allow_domains,omitempty"             validate:"max=500,dive,max=253"`
 	BlockDomains           []string `json:"block_domains,omitempty"             validate:"max=500,dive,max=253"`
 	StripInboundEmailLinks *bool    `json:"strip_inbound_email_links,omitempty"`
+}
+
+/*
+RetentionBody is a change to the retention periods, in days; a field
+left out keeps its value, and closed_conversation_days set to null
+keeps closed conversations for ever. The ranges are checked by the
+action.
+*/
+type RetentionBody struct {
+	ClosedConversationDays *int `json:"closed_conversation_days,omitempty"`
+	SpamDays               *int `json:"spam_days,omitempty"`
+	TrashDays              *int `json:"trash_days,omitempty"`
+	RawEmailDays           *int `json:"raw_email_days,omitempty"`
+	ExportDays             *int `json:"export_days,omitempty"`
 }
 
 /*

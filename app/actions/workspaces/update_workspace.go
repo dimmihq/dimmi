@@ -78,6 +78,7 @@ type UpdateWorkspaceInput struct {
 	CustomerFacingName      *string
 	ClearCustomerFacingName bool
 	LinkSafety              *LinkSafetyChange
+	Retention               *RetentionChange
 }
 
 /*
@@ -275,10 +276,32 @@ func settingsChange(
 		changes = append(changes, fieldCustomerFacingName)
 	}
 
-	if changed, err := applyLinkSafety(params, w, in.LinkSafety); err != nil || changed {
-		changes = append(changes, "link_safety")
+	return safetyChanges(params, w, in, changes)
+}
 
-		return changes, err
+/*
+safetyChanges applies the link checks and retention periods, adding
+their names to the changes when they changed.
+*/
+func safetyChanges(
+	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput, changes []string,
+) ([]string, error) {
+	changed, err := applyLinkSafety(params, w, in.LinkSafety)
+	if err != nil {
+		return nil, err
+	}
+
+	if changed {
+		changes = append(changes, "link_safety")
+	}
+
+	changed, err = applyRetention(params, w, in.Retention, params.Now)
+	if err != nil {
+		return nil, err
+	}
+
+	if changed {
+		changes = append(changes, "retention")
 	}
 
 	return changes, nil

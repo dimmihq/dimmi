@@ -36,4 +36,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.RemindInvitersArgs{}).DailyAt("09:10")
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()
+	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
 }

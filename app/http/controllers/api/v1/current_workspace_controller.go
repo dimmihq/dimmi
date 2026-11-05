@@ -15,6 +15,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
@@ -59,6 +60,7 @@ func (c *CurrentWorkspaceController) Update(
 		ClearCustomerFacingName: requests.Nulls(in.RawBody)["customer_facing_name"],
 		ShowViewers:             in.Body.ShowViewers,
 		LinkSafety:              linkSafetyChange(in.Body.LinkSafety),
+		Retention:               retentionChange(in.Body.Retention, in.RawBody),
 	})
 	if err != nil {
 		return nil, err
@@ -105,5 +107,25 @@ func linkSafetyChange(body *requests.LinkSafetyBody) *workspaces.LinkSafetyChang
 	return &workspaces.LinkSafetyChange{
 		Enabled: body.Enabled, AllowDomains: body.AllowDomains, BlockDomains: body.BlockDomains,
 		StripInboundEmailLinks: body.StripInboundEmailLinks,
+	}
+}
+
+/*
+retentionChange reads the retention periods sent, nil when none were,
+telling closed_conversation_days sent as null from one left out.
+*/
+func retentionChange(body *requests.RetentionBody, raw []byte) *workspaces.RetentionChange {
+	if body == nil {
+		return nil
+	}
+
+	sent := map[string]json.RawMessage{}
+	_ = json.Unmarshal(raw, &sent)
+
+	return &workspaces.RetentionChange{
+		ClosedConversationDays:      body.ClosedConversationDays,
+		ClearClosedConversationDays: requests.Nulls(sent["retention"])["closed_conversation_days"],
+		SpamDays:                    body.SpamDays, TrashDays: body.TrashDays, RawEmailDays: body.RawEmailDays,
+		ExportDays: body.ExportDays,
 	}
 }

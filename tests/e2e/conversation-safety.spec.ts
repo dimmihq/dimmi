@@ -69,4 +69,21 @@ it.describe("conversation safety", () => {
     await message.getByRole("link", { name: /bit\.ly/ }).click();
     await expect(page.getByRole("alertdialog")).toContainText("link shortener");
   });
+
+  it("sets retention after saying how many conversations it would move", async ({ page }) => {
+    await page.goto("/d/settings/conversation-safety");
+    const retention = page.getByRole("region", { name: "Retention" });
+    await expect(retention.getByRole("textbox", { name: "Trash" })).toHaveValue("30");
+
+    await retention.getByRole("textbox", { name: "Closed conversations" }).fill("365");
+    await retention.getByRole("textbox", { name: "Data exports" }).fill("14");
+    await retention.getByRole("button", { name: "Save retention" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText("0 closed conversations are past this period");
+    await dialog.getByRole("button", { name: "Save retention" }).click();
+    await expect(dialog).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Closed conversations" })).toHaveValue("365");
+    await expect(page.getByRole("textbox", { name: "Data exports" })).toHaveValue("14");
+  });
 });

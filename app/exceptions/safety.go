@@ -64,3 +64,11 @@ var (
 	ErrExportNotReady = fault.New(fault.Conflict, "export_not_ready",
 		"This export is not ready to download.")
 )
+
+/*
+ErrInvalidRetention refuses a retention period outside its range: closed
+conversations 30 to 3650 days, spam and trash 7 to 365, raw email 0 to
+365, data exports 1 to 30.
+*/
+var ErrInvalidRetention = fault.New(fault.Invalid, "invalid_retention",
+	"Choose a period within the allowed range.").OnField("retention")

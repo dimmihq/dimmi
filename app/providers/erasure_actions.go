@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
+	"github.com/dimmihq/dimmi/app/actions/retention"
 	"github.com/dimmihq/dimmi/app/jobs"
 )
 
@@ -53,8 +54,9 @@ func bootErasures(a *app.App) error {
 }
 
 /*
-bootContactExports builds the export actions and registers their jobs.
-Zips go on the default disk and can be downloaded for ExportTTLHours.
+bootContactExports builds the export and retention actions and
+registers their jobs. Zips go on the default disk and can be downloaded
+for ExportTTLHours.
 */
 func bootContactExports(a *app.App) error {
 	acts := a.Actions.Inbox
@@ -69,8 +71,12 @@ func bootContactExports(a *app.App) error {
 	}
 	acts.ExpireContactExports = &contacts.ExpireContactExports{DB: a.DB, Clock: a.Clock, Storage: a.Storage}
 
+	acts.ApplyRetention = &retention.ApplyConversationRetention{DB: a.DB, Clock: a.Clock, Retention: a.Retention}
+	acts.PreviewRetention = &retention.PreviewRetention{DB: a.DB, Clock: a.Clock}
+
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.BuildContactExport{Build: acts.BuildContactExport}),
 		queue.Register(a.Queue, &jobs.ExpireContactExports{Expire: acts.ExpireContactExports}),
+		queue.Register(a.Queue, &jobs.ApplyConversationRetention{Apply: acts.ApplyRetention}),
 	)
 }

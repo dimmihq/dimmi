@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/redaction"
+	"github.com/dimmihq/dimmi/app/actions/retention"
 	"github.com/dimmihq/dimmi/app/actions/tags"
 )
 
@@ -105,4 +106,7 @@ type InboxActions struct {
 	DownloadContactExport *contacts.DownloadContactExport
 	BuildContactExport    *contacts.BuildContactExport
 	ExpireContactExports  *contacts.ExpireContactExports
+
+	ApplyRetention   *retention.ApplyConversationRetention
+	PreviewRetention *retention.PreviewRetention
 }

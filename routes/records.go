@@ -57,6 +57,10 @@ func redactionRoutes(r *routing.Router, a *app.App) {
 	routing.Delete(r, path, "redaction-rules.destroy", c.Destroy).Ability("settings:write")
 	routing.Post(r, "/redaction-tests", "redaction-tests.store", c.Test).Ability("settings:write").
 		Status(http.StatusOK)
+
+	previews := &v1.RetentionController{Preview: acts.PreviewRetention}
+	routing.Post(r, "/retention-previews", "retention-previews.store", previews.Store).Ability("settings:read").
+		Status(http.StatusOK)
 }
 
 /*
