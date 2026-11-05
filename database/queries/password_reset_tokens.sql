@@ -22,3 +22,8 @@ UPDATE password_reset_tokens SET attempts = attempts + 1 WHERE id = @id RETURNIN
 -- reports whether it was still there, so two requests racing for one
 -- reset cannot both use it.
 DELETE FROM password_reset_tokens WHERE id = @id;
+
+-- name: DeleteUserPasswordResetTokens :exec
+-- DeleteUserPasswordResetTokens ends the user's reset, whatever its id, so a
+-- link in a mailbox the account left behind stops working.
+DELETE FROM password_reset_tokens WHERE user_id = @user_id;

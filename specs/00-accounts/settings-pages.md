@@ -11,8 +11,8 @@ Style: caveman. Date: 2026-11-04. Backend routes named here live in [api.md](api
 | Control | Calls | Behavior |
 |---|---|---|
 | Full name | `PATCH /user {name}` | 1..120, NFC. Save on button. Fires `user.updated`; sender name on outgoing mail uses it |
-| Picture | `PUT /user/avatar`, `DELETE /user/avatar` | BoardUI `file-upload`; 2 MB, png/jpeg/webp/gif, re-encoded. Avatar shows image, initials fallback |
-| Email | `POST /email-changes`, confirm page `/email/confirm` | dialog with `recent-auth`; shows pending address with resend + cancel (`POST` again replaces). New SPA route `routes/_auth/email.confirm.tsx` calls `PATCH /email-changes/{ott}` from fragment |
+| Picture | `PUT /user/avatar`, `DELETE /user/avatar` | BoardUI `file-upload`; 2 MB, png/jpeg/webp/gif, re-encoded. Avatar shows image, initials fallback. Served same origin at `GET /avatars/{uuid}.png`, immutable, any disk; `avatar_url` is that path |
+| Email | `POST /email-changes`, confirm page `/email/confirm` | dialog with `recent-auth`; row shows pending masked address with resend + use another address (`POST` again replaces; no server cancel: no route, link dies in 24 h, old mailbox warned). New SPA route `routes/_auth/email.confirm.tsx` calls `PATCH /email-changes/{ott}` from fragment |
 | Leave workspace | `DELETE /user/memberships/{mem}` | confirm dialog; 409 `last_owner` shows hand over text; 409 `managed_by_directory` (21) |
 | Delete account | `GET /user/deletion-preview`, `DELETE /user` | lists blocking workspaces; confirm typed email |
 
@@ -36,7 +36,7 @@ Events: `user.updated` realtime on each workspace channel. Audit: `member.email_
 
 Preferences page. `PATCH /user {timezone}`; IANA validated by `timezone_rule.go`; `null` = follow workspace.
 
-- Choices from `Intl.supportedValuesOf("timeZone")`, BoardUI `select` with search, first option "Workspace default ({zone})". Button-less: saves on pick.
+- Choices from `Intl.supportedValuesOf("timeZone")` plus UTC, react-aria `ComboBox` on BoardUI `InputBase` + `SelectItem` (BoardUI `select` has no search), first option "Workspace default ({zone})". Button-less: saves on pick.
 - First visit with null and browser zone differing from workspace: quiet hint row with "Use {zone}". Never auto-writes.
 - `users.timezone` already read by `Location` in `status.go`; 03 snooze presets read it (X6). `/me.user.timezone` drives display formatting in `lib/location.ts`. 06 quiet hours read it.
 
@@ -49,7 +49,7 @@ Preferences page. `PATCH /user {timezone}`; IANA validated by `timezone_rule.go`
 - Password row links to its section; passkeys listed under two-factor (`two-factor.tsx`), since they are second factors. Provider unconfigured: row absent.
 - SSO identities (21): listed read-only, "Managed by {connection}".
 - Callback returns to `/d/settings/security?linked=github`; notification toast. Provider link conflict 409 `identity_in_use`.
-E2e `tests/e2e/sign-in-methods.spec.ts`, provider via `Social.Fake` not reachable from e2e, so uses `framework/socialite/drivertest` local provider configured by `tests/e2e/server.ts`.
+E2e `tests/e2e/sign-in-methods.spec.ts`, provider via `Social.Fake` not reachable from e2e, and `framework/socialite/drivertest` is Go-only, so `tests/e2e/support/identity-provider.ts` (Node OpenID Connect provider: discovery, signed ID tokens, PKCE, a sign-in page) starts in `tests/e2e/server.ts` on a free port; config only: `auth.oauth.google` client, `socialite.providers.google.issuer`, `http_client.allow_hosts`.
 
 ## Admin helps locked-out teammate (A-05)
 
@@ -59,14 +59,14 @@ Routes (U W C): `POST /members/{mem}/two-factor-resets` 201, `DELETE /members/{m
 
 Flow:
 1. Admin opens member menu "Help with two-factor", dialog says what happens, `recent-auth` confirmation (fresh within `auth.password_confirmation.ttl`).
-2. Server checks: target active, target has 2FA (else 409 `two_factor_not_enabled`), target not caller (422), 3 per target per 24 h (429). Target holds active membership in workspace of another organization: 409 `two_factor_reset_blocked`, text "Ask them to use recovery codes or contact support". Reason: admin of one company must never weaken account security for another company's workspace.
+2. Server checks: target active (else 409 `member_inactive`), target has 2FA (else 409 `two_factor_not_enabled`), target not caller (422 `cannot_reset_self`), 3 per target per 24 h (429). Target holds active membership in workspace of another organization: 409 `two_factor_reset_blocked`, text "Ask them to use recovery codes or contact support". Reason: admin of one company must never weaken account security for another company's workspace.
 3. `one_time_tokens` purpose `two_factor_reset` (new CHECK value, migration 20261201070003 add_two_factor_reset_purpose), 30 min. `TwoFactorResetMail` to target's verified email with `/two-factor-reset#id=ott_...&token=...`. Requires verified email: else 409 `target_unverified`.
-4. Target redeems: page asks password when account has one. Wrong password: 422 `invalid_credentials`, 5 tries burn. Passwordless: token alone, email is their primary proof.
+4. Target redeems: page asks password when account has one (first try without: 422 `password_required` on `password`). Wrong password: 422 `invalid_credentials`, 5 tries burn. Passwordless: token alone, email is their primary proof.
 5. Success: `RemoveAllAuthFactors{force}`, all sessions and first-party grants ended (`two_factor_disabled`), soft lock cleared, `TwoFactorResetCompletedMail`. Target signs in, meets `two_factor_required` if workspace requires, enrolls.
 
 Mailbox plus password still required; mailbox alone is not enough unless passwordless. Audit: `member.two_factor_reset_requested` (actor admin), `member.two_factor_reset_completed` (actor target); security event both. Cloud support and `user:disable-2fa` stay for blocked case.
 
-Sign-in lock: `DELETE /members/{mem}/sign-in-lock` clears per-email soft lock and IP+email counter for that address (`app/auth/lockout.go` adds `Clear`). Audit `member.sign_in_lock_cleared`. Menu item shown when `sign_in_locked: true` on member resource (`members:write` only).
+Sign-in lock: `DELETE /members/{mem}/sign-in-lock` (`members:write`) clears per-email soft lock and IP+email counter for that address (`app/auth/lockout.go` adds `Clear`: IP+email keys carry a per-account generation that `Clear` moves on, so every address restarts without listing them; spray blocks stay). Audit `member.sign_in_lock_cleared`. Menu item shown when `sign_in_locked: true` on member resource (`members:write` only).
 
 UI: `features/settings/members/two-factor-help-dialog.tsx`; `routes/_auth/two-factor-reset.tsx`. E2e `tests/e2e/two-factor-help.spec.ts`: "an admin starts a reset and the teammate finishes it from the email", against Mailpit.
 
@@ -199,7 +199,7 @@ Fires `workspace.updated`. Test: changing it changes email display name when add
 
 ## Workspace language row
 
-Workspace page Language `Choice` wired: `PATCH /workspace {locale}`, list from `/auth/config.locales`. Hidden with one locale. Workspace time zone list uses same full picker as A-03.
+Workspace page Language row (`WorkspaceLanguageRow` in `preferences/language-row.tsx`) wired: `PATCH /workspace {locale}`, list from `/auth/config.locales`, native names. Hidden with one locale (the old static English `Choice` is gone). Workspace time zone list uses same full picker as A-03.
 
 ## Tests
 

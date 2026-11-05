@@ -135,7 +135,7 @@ func TestFetchUserAvatar(t *testing.T) {
 		grace := person("583231", "grace@example.com")
 		grace.AvatarURL = pictureURL
 		tc.SignInWith("github", grace)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET avatar_path = 'avatars/chosen.png'")
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE users SET avatar_path = 'avatars/chosen.png'")
 		require.NoError(t, err)
 
 		tc.Drain()

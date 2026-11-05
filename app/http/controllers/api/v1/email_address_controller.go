@@ -59,7 +59,9 @@ type InboundEmailsOutput struct {
 
 /*
 EmailAddressController serves the workspace's email addresses. Provider
-is the install's customer-stream transport, shown on each address.
+is the install's customer-stream transport, shown on each address,
+Senders works out what each address sends as, and Guides picks the setup
+guide each address opens on.
 */
 type EmailAddressController struct {
 	Create   *email.CreateEmailAddress
@@ -72,6 +74,8 @@ type EmailAddressController struct {
 	IDs      *ids.Registry
 	Cursors  *pagination.Cursors
 	Provider string
+	Senders  *email.Domains
+	Guides   *email.RecommendGuide
 }
 
 /*
@@ -92,7 +96,10 @@ func (c *EmailAddressController) Index(ctx context.Context, _ *requests.NoInput)
 		return nil, err
 	}
 
-	items := resources.NewEmailAddresses(rows, c.Provider)
+	items, err := c.sending(ctx, c.guides(ctx, resources.NewEmailAddresses(rows, c.Provider)))
+	if err != nil {
+		return nil, err
+	}
 
 	return &EmailAddressesOutput{Body: fhttp.NewCollection(pagination.Page[resources.EmailAddress]{
 		Items: items, Limit: len(items),
@@ -169,7 +176,46 @@ func (c *EmailAddressController) Update(
 		return nil, err
 	}
 
-	return &EmailAddressOutput{Body: fhttp.NewResource(c.shape(row))}, nil
+	items, err := c.sending(ctx, c.guides(ctx, []resources.EmailAddress{c.shape(row)}))
+	if err != nil {
+		return nil, err
+	}
+
+	return &EmailAddressOutput{Body: fhttp.NewResource(items[0])}, nil
+}
+
+/*
+sending fills in what each address sends as now.
+*/
+func (c *EmailAddressController) sending(
+	ctx context.Context, items []resources.EmailAddress,
+) ([]resources.EmailAddress, error) {
+	if c.Senders == nil {
+		return items, nil
+	}
+
+	states, err := c.Senders.WorkspaceSendingStates(ctx, membership(ctx).Workspace.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, item := range items {
+		items[i] = item.WithSending(states.For(item.Address, item.ForwardingAddress))
+	}
+
+	return items, nil
+}
+
+/*
+guides fills in each address's setup guides, the one that fits its
+domain first.
+*/
+func (c *EmailAddressController) guides(ctx context.Context, items []resources.EmailAddress) []resources.EmailAddress {
+	for i, item := range items {
+		items[i] = item.WithGuides(ctx, c.Guides.Handle(ctx, item.Address))
+	}
+
+	return items
 }
 
 /*
@@ -286,7 +332,12 @@ func (c *EmailAddressController) answer(ctx context.Context, id ids.UUID) (*Emai
 		return nil, err
 	}
 
-	return &EmailAddressOutput{Body: fhttp.NewResource(c.shape(row))}, nil
+	items, err := c.sending(ctx, c.guides(ctx, []resources.EmailAddress{c.shape(row)}))
+	if err != nil {
+		return nil, err
+	}
+
+	return &EmailAddressOutput{Body: fhttp.NewResource(items[0])}, nil
 }
 
 /*

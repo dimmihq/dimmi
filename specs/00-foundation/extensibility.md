@@ -240,7 +240,7 @@ Decision: keep `workspace_members.role` CHECK owner/admin/member (and `invitatio
 - Token effective permissions = role permissions intersect expanded abilities (replaces "ability ceilings by role" table; same results).
 - `/me` adds `member.permissions` (effective list for caller in workspace). Dashboard and apps gate UI on it (P2).
 - OAuth scopes (09) are ability strings already: keep one vocabulary.
-- Conversation visibility: every conversation list, search, count, realtime channel authorizer and export goes through one builder `conversations.VisibleScope(principal)` (03). MVP returns "all in workspace". Later inbox or team restriction = change one function + `inbox_members` table.
+- Conversation visibility: every conversation list, search, count, realtime channel authorizer and export goes through one builder `conversations.VisibleScope(membership)` (03). Member modes `all`, `assigned`, `teams`, `all_except_teams` ([03 access.md](../03-shared-inbox/access.md)); jobs and the agent use `authz.WorkspaceScope()`.
 
 Later: `roles` table `(id rol_, workspace_id or organization_id, key, name, permissions text[], system boolean)`, `workspace_members.custom_role_id uuid null`; `role` stays base role (ceiling, owner semantics). API member `role` stays, adds `custom_role {id, name}`. Additive.
 
@@ -600,7 +600,7 @@ Add: `encryption_keys` + `encryption.Scope`; RLS function `dimmi_visible_workspa
 - Tasks: factor registry, providers registry, permissions catalog, access policy middleware, organizations migration.
 
 ### 03-shared-inbox
-- `conversations.VisibleScope(principal)` single builder used by list, search, counts, exports, realtime `conversation:` channel authorizer.
+- `conversations.VisibleScope(membership)` single builder used by list, search, counts, exports, realtime `conversation:` channel authorizer.
 - `EraseContact`, spam purge call `RetentionGuard`.
 - `contacts.company_id` = primary company (doc).
 

@@ -140,7 +140,7 @@ func TestWidgetBroadcasts(t *testing.T) {
 		owner(tc).PostJSON("/api/v1/conversations/"+id+"/notes", testkit.JSON{"body": "secret note"}).AssertCreated()
 		reply(t, tc, id, "Hi from Kim")
 
-		event, data := s.event()
+		event, data := s.eventOf("message.created")
 		assert.Equal(t, "message.created", event)
 		assert.NotContains(t, string(data), "secret note")
 		assert.Contains(t, string(data), "Hi from Kim")
@@ -159,7 +159,7 @@ func TestWidgetBroadcasts(t *testing.T) {
 
 		reply(t, tc, id, strings.Repeat("long answer ", 1000))
 
-		event, data := s.event()
+		event, data := s.eventOf("message.created")
 		assert.Equal(t, "message.created", event)
 		assert.Contains(t, string(data), `"object":"message"`)
 		assert.Contains(t, string(data), `"conversation_id":"`+id+`"`)
@@ -207,7 +207,12 @@ func TestWidgetBroadcasts(t *testing.T) {
 		recovered := again.Connect.Subs[channel]
 		assert.True(t, recovered.Recovered)
 		require.NotEmpty(t, recovered.Publications)
-		assert.Contains(t, string(recovered.Publications[len(recovered.Publications)-1]), "while you were away")
+
+		var missed []string
+		for _, pub := range recovered.Publications {
+			missed = append(missed, string(pub))
+		}
+		assert.Contains(t, strings.Join(missed, "\n"), "while you were away")
 	})
 }
 

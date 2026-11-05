@@ -104,7 +104,8 @@ func (a *AddTeamMembers) Handle(ctx context.Context, in AddTeamMembersInput) ([]
 			}
 
 			err = a.Events.Dispatch(ctx, tx, appevents.TeamMemberAdded{
-				WorkspaceID: team.WorkspaceID, TeamID: team.ID, MemberID: memberID, AddedBy: in.Membership.Member.ID,
+				WorkspaceID: team.WorkspaceID, TeamID: team.ID, MemberID: memberID,
+				AddedByMemberID: in.Membership.Member.ID,
 			})
 			if err != nil {
 				return err

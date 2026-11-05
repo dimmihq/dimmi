@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -34,13 +35,15 @@ import (
 
 /*
 memberWriter writes changes to members inside one transaction, on
-behalf of the member making them, at one moment.
+behalf of the member making them, at one moment. Setting keepInvitations
+leaves the invitations a deactivated member sent standing.
 */
 type memberWriter struct {
-	tx     *database.Tx
-	events *events.Dispatcher
-	by     ids.UUID
-	now    time.Time
+	tx              *database.Tx
+	events          *events.Dispatcher
+	by              ids.UUID
+	now             time.Time
+	keepInvitations bool
 }
 
 /*
@@ -74,9 +77,14 @@ func (w memberWriter) changeRole(
 		return member, fmt.Errorf("change member role: %w", err)
 	}
 
-	return member, w.events.Dispatch(ctx, w.tx, appevents.MemberRoleChanged{
+	err = w.events.Dispatch(ctx, w.tx, appevents.MemberRoleChanged{
 		WorkspaceID: m.WorkspaceID, MemberID: m.ID, UserID: m.UserID, From: m.Role, To: member.Role, ChangedBy: w.by,
 	})
+	if err != nil || !appauth.IsOwnerRole(role) {
+		return member, err
+	}
+
+	return member, w.liftAccess(ctx, member)
 }
 
 /*
@@ -106,8 +114,10 @@ func (w memberWriter) deactivate(ctx context.Context, m models.WorkspaceMember, 
 		return fmt.Errorf("revoke member tokens: %w", err)
 	}
 
-	if err := w.withdrawInvitations(ctx, m); err != nil {
-		return err
+	if !w.keepInvitations {
+		if err := w.withdrawInvitations(ctx, m); err != nil {
+			return err
+		}
 	}
 
 	return w.events.Dispatch(ctx, w.tx, appevents.MemberDeactivated{

@@ -27,6 +27,13 @@ func TestEnv(t *testing.T) {
 		assert.Contains(t, rec.Failures()[0], "TESTKIT_NEVER_SET is not set")
 	})
 
+	t.Run("a switch is on only when set to 1", func(t *testing.T) {
+		t.Parallel()
+
+		assert.False(t, testkit.Switch("TESTKIT_NEVER_SET"))
+		assert.False(t, testkit.Switch("DATABASE_URL"))
+	})
+
 	t.Run("names things uniquely", func(t *testing.T) {
 		t.Parallel()
 

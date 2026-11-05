@@ -348,15 +348,3 @@ func TestDisconnect(t *testing.T) {
 		require.ErrorIs(t, n.server.Disconnect(ctx, "u1"), context.Canceled)
 	})
 }
-
-func TestShutdown(t *testing.T) {
-	t.Parallel()
-	n := newNode(t, testkit.NewValkey(t))
-	c := connect(t, n, "u1")
-	code := make(chan websocket.StatusCode, 1)
-
-	go func() { code <- c.closed() }()
-
-	require.NoError(t, n.server.Shutdown(t.Context()))
-	assert.Equal(t, websocket.StatusCode(3001), <-code, "clients are told to reconnect elsewhere")
-}

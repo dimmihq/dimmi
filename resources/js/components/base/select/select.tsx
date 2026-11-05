@@ -4,8 +4,10 @@ import { createContext, useContext, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
 import {
   Button as AriaButton,
+  Header as AriaHeader,
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
+  ListBoxSection as AriaListBoxSection,
   Popover as AriaPopover,
   Select as AriaSelect,
   SelectValue as AriaSelectValue,
@@ -189,5 +191,29 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
     >
       {children}
     </AriaListBoxItem>
+  );
+}
+
+export interface SelectSectionProps {
+  /** Heading shown above the section's options and read as its name. */
+  title: ReactNode;
+  children: ReactNode;
+}
+
+/** A titled group of options, such as one kind of event in a long list. */
+export function SelectSection({ title, children }: SelectSectionProps) {
+  const size = useContext(SelectSizeContext);
+  return (
+    <AriaListBoxSection className="flex flex-col gap-1 not-first:mt-1.5">
+      <AriaHeader
+        className={cx(
+          "px-2 pb-0.5 pt-1 text-text-tertiary",
+          size === "sm" ? "text-caption-1-semibold" : "text-body-2-medium",
+        )}
+      >
+        {title}
+      </AriaHeader>
+      {children}
+    </AriaListBoxSection>
   );
 }

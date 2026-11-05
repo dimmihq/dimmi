@@ -122,6 +122,21 @@ func (s *stream) event() (string, json.RawMessage) {
 }
 
 /*
+eventOf returns the next publication of the event, passing over others,
+such as a seen receipt that a teammate's reply also sends.
+*/
+func (s *stream) eventOf(name string) (string, json.RawMessage) {
+	s.t.Helper()
+
+	for {
+		event, data := s.event()
+		if event == name {
+			return event, data
+		}
+	}
+}
+
+/*
 streamURL serves the application's event stream endpoint on a local port.
 */
 func streamURL(t *testing.T, tc *tests.TestCase) string {

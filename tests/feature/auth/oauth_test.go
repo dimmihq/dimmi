@@ -350,7 +350,7 @@ func TestOAuthAccountMatching(t *testing.T) {
 		tc := tests.New(t, withProviders())
 		tc.SignInWith("github", person("583231", "grace@example.com"))
 		old := userByEmail(t, tc, "grace@example.com")
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"UPDATE users SET deleted_at = now(), email = 'deleted-' || id || '@invalid' WHERE id = $1", old.ID)
 		require.NoError(t, err)
 
@@ -387,7 +387,7 @@ func TestOAuthSignupRules(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withProviders(), tests.WithEnv("DIMMI_AUTH__SIGNUP__MODE=invite_only"))
 		token := inviteGrace(t, tc, time.Hour)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE invitations SET status = 'revoked'")
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE invitations SET status = 'revoked'")
 		require.NoError(t, err)
 		inviteGrace(t, tc, -time.Hour)
 		tc.Social()
@@ -421,7 +421,7 @@ func inviteGrace(t *testing.T, tc *tests.TestCase, expiresIn time.Duration) stri
 	t.Helper()
 
 	token := testkit.UniqueName("invitation")
-	_, err := tc.App.DB.Exec(t.Context(),
+	_, err := tc.Operator().Exec(t.Context(),
 		"INSERT INTO invitations (workspace_id, email, role, token_hash, expires_at, last_sent_at) "+
 			"VALUES ($1, $2, 'member', sha256($3::bytea), $4, $5)",
 		tc.Workspace.Workspace.ID, "grace@example.com", token, tc.Clock.Now().Add(expiresIn), tc.Clock.Now())

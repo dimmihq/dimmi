@@ -5,11 +5,11 @@
 |
 | An operator takes the application down for maintenance with one
 | command, on whichever server they are logged in to, and every replica
-| starts answering 503 within moments. The state is kept in a file under
-| the data directory, so a server that restarts stays down, and every
-| change is announced over Valkey, where each replica updates its own
-| copy and its own file. Reading the state never leaves the process, so
-| checking it on every request costs nothing.
+| starts answering 503 within moments. The state is kept in PostgreSQL,
+| so a replica that starts or restarts stays down, whatever disk it has,
+| and every change is announced over Valkey, where each replica updates
+| its own copy. Reading the state never leaves the process, so checking
+| it on every request costs nothing.
 |
 */
 
@@ -20,14 +20,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/log"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/pubsub"
 )
 
@@ -82,14 +79,13 @@ type Maintenance interface {
 }
 
 /*
-MaintenanceStore keeps the state in a file and announces changes on the
-bus. It is safe for concurrent use. Close it to stop listening.
+MaintenanceStore keeps the state in the database and announces changes
+on the bus. It is safe for concurrent use. Close it to stop listening.
 */
 type MaintenanceStore struct {
-	path        string
+	db          *database.DB
 	bus         *pubsub.Bus
 	clock       clock.Clock
-	logger      log.Logger
 	unsubscribe pubsub.Unsubscribe
 
 	mu    sync.RWMutex
@@ -99,15 +95,15 @@ type MaintenanceStore struct {
 var _ Maintenance = (*MaintenanceStore)(nil)
 
 /*
-NewMaintenanceStore reads the state from the file at the path and
-starts listening for changes announced on the bus.
+NewMaintenanceStore reads the state from the database and starts
+listening for changes announced on the bus.
 */
 func NewMaintenanceStore(
-	ctx context.Context, path string, bus *pubsub.Bus, clk clock.Clock,
+	ctx context.Context, db *database.DB, bus *pubsub.Bus, clk clock.Clock,
 ) (*MaintenanceStore, error) {
-	s := &MaintenanceStore{path: path, bus: bus, clock: clk, logger: log.From(ctx)}
+	s := &MaintenanceStore{db: db, bus: bus, clock: clk}
 
-	state, err := s.read()
+	state, err := s.read(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -164,12 +160,23 @@ func (s *MaintenanceStore) Close() {
 }
 
 /*
-change applies the state here and announces it to every replica.
+change stores the state, applies it here and announces it to every
+replica, which only update their copy.
 */
 func (s *MaintenanceStore) change(ctx context.Context, state MaintenanceState) error {
-	if err := s.apply(state); err != nil {
-		return err
+	since := &state.Since
+	if !state.Enabled {
+		since = nil
 	}
+
+	_, err := s.db.Exec(ctx, `INSERT INTO maintenance (id, enabled, message, since) VALUES (true, $1, $2, $3)
+		ON CONFLICT (id) DO UPDATE SET enabled = EXCLUDED.enabled, message = EXCLUDED.message, since = EXCLUDED.since`,
+		state.Enabled, state.Message, since)
+	if err != nil {
+		return fmt.Errorf("store maintenance state: %w", err)
+	}
+
+	s.apply(state)
 
 	payload, err := json.Marshal(state)
 	if err != nil {
@@ -184,8 +191,7 @@ func (s *MaintenanceStore) change(ctx context.Context, state MaintenanceState) e
 }
 
 /*
-receive applies a state another replica announced. The bus hands over no
-context, so a failure is logged without request fields.
+receive applies a state another replica announced and stored.
 */
 func (s *MaintenanceStore) receive(payload []byte) {
 	var state MaintenanceState
@@ -193,80 +199,52 @@ func (s *MaintenanceStore) receive(payload []byte) {
 		return
 	}
 
-	if err := s.apply(state); err != nil {
-		s.logger.ErrorContext(context.Background(), "maintenance state not stored", log.Err(err))
-	}
+	s.apply(state)
 }
 
 /*
-apply keeps the state in memory and in the file, removing the file when
-the application is up.
+apply keeps the state in memory.
 */
-func (s *MaintenanceStore) apply(state MaintenanceState) error {
+func (s *MaintenanceStore) apply(state MaintenanceState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.state = state
-
-	if !state.Enabled {
-		if err := os.Remove(s.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("remove maintenance file: %w", err)
-		}
-
-		return nil
-	}
-
-	return s.write(state)
 }
 
 /*
-write replaces the file in one step through a temporary file of its
-own, so processes sharing the data directory never read half a state.
+read returns the stored state, or up when none was ever stored. A
+database not yet migrated has no maintenance table and so was never
+taken down; the process still boots, so an operator can migrate it.
 */
-func (s *MaintenanceStore) write(state MaintenanceState) error {
-	data, err := json.Marshal(state)
+func (s *MaintenanceStore) read(ctx context.Context) (MaintenanceState, error) {
+	var (
+		state   MaintenanceState
+		since   *time.Time
+		created bool
+	)
+
+	err := s.db.QueryRow(ctx, "SELECT to_regclass('maintenance') IS NOT NULL").Scan(&created)
 	if err != nil {
-		return fmt.Errorf("encode maintenance state: %w", err)
+		return MaintenanceState{}, fmt.Errorf("find maintenance state: %w", err)
 	}
 
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return fmt.Errorf("create maintenance directory: %w", err)
+	if !created {
+		return MaintenanceState{}, nil
 	}
 
-	temp, err := os.CreateTemp(dir, ".down-*")
-	if err != nil {
-		return fmt.Errorf("write maintenance file: %w", err)
-	}
-
-	_, err = temp.Write(data)
-	if err = errors.Join(err, temp.Close()); err != nil {
-		return fmt.Errorf("write maintenance file: %w", errors.Join(err, os.Remove(temp.Name())))
-	}
-
-	if err := os.Rename(temp.Name(), s.path); err != nil {
-		return fmt.Errorf("replace maintenance file: %w", err)
-	}
-
-	return nil
-}
-
-/*
-read returns the state stored in the file, or up when there is no file.
-*/
-func (s *MaintenanceStore) read() (MaintenanceState, error) {
-	data, err := os.ReadFile(filepath.Clean(s.path))
-	if errors.Is(err, fs.ErrNotExist) {
+	err = s.db.QueryRow(ctx, "SELECT enabled, message, since FROM maintenance WHERE id").
+		Scan(&state.Enabled, &state.Message, &since)
+	if errors.Is(err, database.ErrNotFound) {
 		return MaintenanceState{}, nil
 	}
 
 	if err != nil {
-		return MaintenanceState{}, fmt.Errorf("read maintenance file: %w", err)
+		return MaintenanceState{}, fmt.Errorf("read maintenance state: %w", err)
 	}
 
-	var state MaintenanceState
-	if err := json.Unmarshal(data, &state); err != nil {
-		return MaintenanceState{}, fmt.Errorf("decode maintenance file: %w", err)
+	if since != nil {
+		state.Since = since.UTC()
 	}
 
 	return state, nil

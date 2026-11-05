@@ -1,6 +1,7 @@
 package user_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -104,11 +105,16 @@ func TestMeShow(t *testing.T) {
 	t.Run("accepts a token of a test workspace", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
-		_, plain, err := tc.App.Tokens.Test.Create(t.Context(), token.Token{
-			OwnerID: tc.Workspace.Owner.ID, TenantID: tc.Workspace.Workspace.ID.String(), Name: "Sandbox",
-			Abilities: []string{"members:read"},
+		var plain string
+		tc.InWorkspace(func(ctx context.Context) error {
+			var err error
+			_, plain, err = tc.App.Tokens.Test.Create(ctx, token.Token{
+				OwnerID: tc.Workspace.Owner.ID, TenantID: tc.Workspace.Workspace.ID.String(), Name: "Sandbox",
+				Abilities: []string{"members:read"},
+			})
+
+			return err
 		})
-		require.NoError(t, err)
 
 		assert.True(t, strings.HasPrefix(plain, "dmi_test_"))
 		tc.Client().WithHeader("Authorization", "Bearer "+plain).GetJSON("/api/v1/me").AssertOK().
@@ -143,12 +149,20 @@ func TestMeShow(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		revoked, revokedPlain := tc.MintToken(tc.Workspace.Owner, "*")
-		require.NoError(t, tc.App.Tokens.Live.Revoke(t.Context(), revoked.ID))
-		_, expiringPlain, err := tc.App.Tokens.Live.Create(t.Context(), token.Token{
-			OwnerID: tc.Workspace.Owner.ID, TenantID: tc.Workspace.Workspace.ID.String(), Name: "CI",
-			Abilities: []string{"*"}, ExpiresAt: tests.Epoch().Add(time.Hour),
+		var expiringPlain string
+		tc.InWorkspace(func(ctx context.Context) error {
+			if err := tc.App.Tokens.Live.Revoke(ctx, revoked.ID); err != nil {
+				return err
+			}
+
+			var err error
+			_, expiringPlain, err = tc.App.Tokens.Live.Create(ctx, token.Token{
+				OwnerID: tc.Workspace.Owner.ID, TenantID: tc.Workspace.Workspace.ID.String(), Name: "CI",
+				Abilities: []string{"*"}, ExpiresAt: tests.Epoch().Add(time.Hour),
+			})
+
+			return err
 		})
-		require.NoError(t, err)
 		tc.Clock.Advance(time.Hour)
 
 		tc.Client().WithHeader("Authorization", "Bearer "+revokedPlain).GetJSON("/api/v1/me").

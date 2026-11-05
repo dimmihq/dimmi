@@ -85,6 +85,16 @@ func (q *Queries) CreateOneTimeToken(ctx context.Context, arg CreateOneTimeToken
 	return i, err
 }
 
+const deleteUserOneTimeTokens = `-- name: DeleteUserOneTimeTokens :exec
+DELETE FROM one_time_tokens WHERE user_id = $1
+`
+
+// DeleteUserOneTimeTokens removes every secret of a deleted account.
+func (q *Queries) DeleteUserOneTimeTokens(ctx context.Context, userID *ids.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserOneTimeTokens, userID)
+	return err
+}
+
 const expireOlderOneTimeTokens = `-- name: ExpireOlderOneTimeTokens :exec
 UPDATE one_time_tokens
 SET expires_at = $1
@@ -113,6 +123,23 @@ func (q *Queries) ExpireOlderOneTimeTokens(ctx context.Context, arg ExpireOlderO
 		arg.Purpose,
 		arg.Keep,
 	)
+	return err
+}
+
+const expireUserOneTimeTokens = `-- name: ExpireUserOneTimeTokens :exec
+UPDATE one_time_tokens SET expires_at = $1
+WHERE user_id = $2 AND consumed_at IS NULL AND expires_at > $1
+`
+
+type ExpireUserOneTimeTokensParams struct {
+	Now    time.Time `json:"now"`
+	UserID *ids.UUID `json:"user_id"`
+}
+
+// ExpireUserOneTimeTokens ends every live secret of the user, once the
+// address they were mailed to stops being the account's.
+func (q *Queries) ExpireUserOneTimeTokens(ctx context.Context, arg ExpireUserOneTimeTokensParams) error {
+	_, err := q.db.Exec(ctx, expireUserOneTimeTokens, arg.Now, arg.UserID)
 	return err
 }
 

@@ -1,4 +1,5 @@
 import type { InvitationResult } from "@/lib/api/invitations";
+import { i18n } from "@/lib/i18n";
 
 import { expiryLabel, outcome, roleName, splitEmails } from "./invitation-text";
 
@@ -57,5 +58,19 @@ describe("expiryLabel", () => {
   it("says the date the invitation stops working, and nothing for a broken date", () => {
     expect(expiryLabel("2026-11-10T12:00:00Z", "en-US")).toBe("Expires Nov 10, 2026");
     expect(expiryLabel("soon", "en-US")).toBe("");
+  });
+});
+
+describe("in another language", () => {
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("follows the language the app reads in, and English where it has no words", async () => {
+    i18n.addResourceBundle("en-XA", "settings", { invitations: { sent: "[Ïñṽîţåţîöñ šéñţ]" } });
+    await i18n.changeLanguage("en-XA");
+
+    expect(outcome(result("created")).text).toBe("[Ïñṽîţåţîöñ šéñţ]");
+    expect(outcome(result("already_member")).text).toBe("Already a member");
   });
 });

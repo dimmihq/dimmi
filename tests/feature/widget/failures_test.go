@@ -176,6 +176,26 @@ func failures() map[string]failure {
 				return owner(v.tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Shop"})
 			},
 		},
+		"using a session that cannot be read": {
+			none, func(tc *tests.TestCase) { tc.BreakTable("widget_sessions") },
+			func(v *visitor, _ string) *testkit.Response { return v.client().GetJSON("/widget/v1/session") },
+		},
+		"listing conversations whose latest messages cannot be read": {
+			conversation, func(tc *tests.TestCase) { tc.BreakTable("messages") },
+			func(v *visitor, _ string) *testkit.Response { return v.client().GetJSON("/widget/v1/conversations") },
+		},
+		"catching up while channels cannot be read": {
+			func(t *testing.T, v *visitor) string {
+				t.Helper()
+				v.startConversation(t, "hello")
+
+				return v.client().GetJSON("/widget/v1/updates").AssertOK().String("meta.cursor")
+			},
+			func(tc *tests.TestCase) { tc.BreakTable("channel_connections") },
+			func(v *visitor, cursor string) *testkit.Response {
+				return v.client().GetJSON("/widget/v1/updates?since=" + url.QueryEscape(cursor))
+			},
+		},
 		"signing out while sessions cannot be written": {
 			none, func(tc *tests.TestCase) { tc.FailWrites("widget_sessions", "UPDATE") },
 			func(v *visitor, _ string) *testkit.Response { return v.client().Delete("/widget/v1/session") },

@@ -1,5 +1,7 @@
 import type { AuthFactor } from "@/lib/api/auth-factors";
 
+import { formatDate } from "@/lib/i18n/format";
+
 import { isLastFactor, remainingLabel, twoFactorState, usedLabel } from "./two-factor-state";
 
 function factor(type: AuthFactor["type"], status: AuthFactor["status"]): AuthFactor {
@@ -51,7 +53,7 @@ describe("isLastFactor", () => {
 });
 
 describe("usedLabel", () => {
-  const dates = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
+  const dates = (iso: string) => formatDate(iso, { locale: "en-US", timeZone: "UTC" });
 
   it("says when a factor was added and last used", () => {
     const key = { ...factor("passkey", "active"), last_used_at: "2026-11-03T10:00:00Z" };

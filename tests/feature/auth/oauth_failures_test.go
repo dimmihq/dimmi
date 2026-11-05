@@ -74,7 +74,8 @@ func TestOAuthFailures(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withProviders())
 		tc.SignInWith("github", person("583231", "grace@example.com"))
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE users SET deleted_at = now() WHERE email = 'grace@example.com'")
+		_, err := tc.Operator().Exec(t.Context(),
+			"UPDATE users SET deleted_at = now() WHERE email = 'grace@example.com'")
 		require.NoError(t, err)
 		tc.FailWrites("oauth_identities", "DELETE")
 

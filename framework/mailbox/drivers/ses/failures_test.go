@@ -39,7 +39,7 @@ func TestFailures(t *testing.T) {
 			require.True(t, ok)
 			change(receipt)
 
-			_, err := f.source.Receive(t.Context(), f.signer.notification(t, notification))
+			_, err := f.source.Receive(t.Context(), delivery(f.signer.notification(t, notification)))
 
 			require.ErrorIs(t, err, mailbox.ErrRejected)
 		})
@@ -49,10 +49,10 @@ func TestFailures(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
 
-		_, err := f.source.Receive(t.Context(), f.signer.post(t, map[string]string{
+		_, err := f.source.Receive(t.Context(), drivertest.Post{Body: f.signer.post(t, map[string]string{
 			"Type": "Notification", "MessageId": "sns-3", "TopicArn": topic, "Message": "Successfully validated",
 			"Timestamp": "2026-11-02T10:04:01.000Z",
-		}))
+		})}.Delivery())
 
 		require.ErrorIs(t, err, mailbox.ErrRejected)
 	})
@@ -61,9 +61,9 @@ func TestFailures(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
 
-		env, err := f.source.Receive(t.Context(), f.signer.notification(t, map[string]any{
+		env, err := f.source.Receive(t.Context(), drivertest.Post{Body: f.signer.notification(t, map[string]any{
 			"notificationType": "AMAZON_SES_SETUP_NOTIFICATION",
-		}))
+		})}.Delivery())
 
 		require.NoError(t, err)
 		assert.Nil(t, env)
@@ -73,7 +73,7 @@ func TestFailures(t *testing.T) {
 		t.Parallel()
 		f := newFixture(t)
 
-		_, err := f.source.Receive(t.Context(), f.signer.notification(t, received(drivertest.NewDelivery())))
+		_, err := f.source.Receive(t.Context(), delivery(f.signer.notification(t, received(drivertest.NewDelivery()))))
 
 		require.ErrorIs(t, err, filesystem.ErrNotFound)
 	})
@@ -86,7 +86,7 @@ func TestFailures(t *testing.T) {
 			"Message": "{}", "Timestamp": "2026-11-02T10:04:01.000Z",
 		})
 
-		_, err := f.source.Receive(t.Context(), body)
+		_, err := f.source.Receive(t.Context(), delivery(body))
 
 		require.ErrorIs(t, err, mailbox.ErrRejected)
 	})
@@ -99,7 +99,7 @@ func TestFailures(t *testing.T) {
 		httpclienttest.New(client).PreventStrayRequests()
 		source := ses.New(client, f.disk, ses.Options{TopicARNs: []string{topic}, MaxMessageBytes: 4096})
 
-		_, err = source.Receive(t.Context(), f.signer.notification(t, received(drivertest.NewDelivery())))
+		_, err = source.Receive(t.Context(), delivery(f.signer.notification(t, received(drivertest.NewDelivery()))))
 
 		require.ErrorIs(t, err, httpclienttest.ErrStrayRequest)
 		require.NotErrorIs(t, err, mailbox.ErrRejected)
@@ -113,7 +113,7 @@ func TestFailures(t *testing.T) {
 		httpclienttest.New(client).Stub("GET "+certURL, httpclient.Response{Status: http.StatusNotFound})
 		source := ses.New(client, f.disk, ses.Options{TopicARNs: []string{topic}})
 
-		_, err = source.Receive(t.Context(), f.signer.notification(t, received(drivertest.NewDelivery())))
+		_, err = source.Receive(t.Context(), delivery(f.signer.notification(t, received(drivertest.NewDelivery()))))
 
 		require.ErrorIs(t, err, mailbox.ErrRejected)
 	})

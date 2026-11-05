@@ -41,6 +41,9 @@ type EmailAddress struct {
 	ReplyToMode            string                      `json:"reply_to_mode"`
 	ReplyToPreview         *string                     `json:"reply_to_preview"`
 	SendingIdentity        SendingIdentity             `json:"sending_identity"`
+	SendingState           string                      `json:"sending_state"`
+	SendsAs                string                      `json:"sends_as"`
+	SendingBlockedReason   *string                     `json:"sending_blocked_reason"`
 	FromNameStyle          string                      `json:"from_name_style"`
 	IsDefault              bool                        `json:"is_default"`
 	Settings               models.EmailAddressSettings `json:"settings"`
@@ -113,10 +116,11 @@ func NewEmailAddress(row EmailAddressRow, provider string) EmailAddress {
 			From: `"` + a.DisplayName + `" <` + a.ForwardingAddress + `>`, DomainStatus: "unverified",
 			UsesDefaultSender: true, Provider: provider,
 		},
+		SendingState: "default_sender", SendsAs: `"` + a.DisplayName + `" <` + a.ForwardingAddress + `>`,
 		IsDefault: a.IsDefault, Settings: models.ReadEmailAddressSettings(a.Settings),
 		ForwardingConfirmation: confirmation(a.ForwardingConfirmation), InboundVerifiedAt: a.InboundVerifiedAt,
 		LastInboundAt: a.LastInboundAt, LastOutboundAt: a.LastOutboundAt,
-		SetupGuides: setupGuides(a.Address, a.ForwardingAddress), CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
+		SetupGuides: []SetupGuide{}, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
 	}
 
 	if a.ReplyToMode == "token" {

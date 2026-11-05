@@ -99,7 +99,7 @@ func (c *Connections) Resolve(ctx context.Context, r *fhttp.Request, token strin
 
 	return fbroadcasting.Principal{
 		UserID:     UserID(principal),
-		Info:       Info{Name: principal.User.Name},
+		Info:       Info{Name: principal.User.Name, AvatarURL: principal.User.AvatarURL()},
 		Subject:    principal,
 		Credential: Credential(principal.Kind, principal.CredentialID),
 		Alive:      func(ctx context.Context) (bool, error) { return c.Live.Alive(ctx, principal) },

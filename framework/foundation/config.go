@@ -87,6 +87,7 @@ type Config struct {
 	CustomDomains customdomain.Config  `koanf:"custom_domains"`
 	Idempotency   idempotency.Config   `koanf:"idempotency"`
 	Maintenance   MaintenanceConfig    `koanf:"maintenance"`
+	Gate          GateConfig           `koanf:"gate"`
 }
 
 /*
@@ -100,7 +101,9 @@ DataDir is the writable directory for local files. Roles lists what
 this process does. Locale is the default locale, used when a request
 names none and for messages another locale lacks; Locales lists every
 locale the application is served in, and adding a language means adding
-its lang directory and listing it here.
+its lang directory and listing it here. Release names the build that is
+running, such as its commit; the image sets it, and a binary built from
+a checkout reads its commit from its build information.
 */
 type AppConfig struct {
 	Env             Environment `default:"production"            koanf:"env"`
@@ -111,24 +114,41 @@ type AppConfig struct {
 	Roles           Roles       `default:"[\"web\",\"worker\",\"scheduler\"]" koanf:"roles"`
 	Locale          string      `default:"en"                    koanf:"locale"`
 	Locales         []string    `default:"[\"en\"]"              koanf:"locales"`
+	Release         string      `koanf:"release"`
 }
 
 /*
 HTTPConfig configures the listeners.
 
-Addr is the public listener. AdminAddr is the admin listener for
-health and metrics, loopback by default; empty disables it.
+Addr is the public listener. TLSAddr, when set, is the HTTPS listener,
+served with the default custom domain driver's certificates; Addr then
+answers only health, certificate challenges and redirects to HTTPS.
+AdminAddr is the admin listener for health and metrics, loopback by
+default; empty disables it.
 TrustedProxies lists the addresses and ranges whose forwarded client
 address is believed. ShutdownTimeout bounds the whole graceful
 shutdown.
 */
 type HTTPConfig struct {
 	Addr              string        `default:":8080"          koanf:"addr"`
+	TLSAddr           string        `koanf:"tls_addr"`
 	AdminAddr         string        `default:"127.0.0.1:9090" koanf:"admin_addr"`
 	TrustedProxies    []string      `koanf:"trusted_proxies"`
 	ReadHeaderTimeout time.Duration `default:"10s"            koanf:"read_header_timeout"`
 	IdleTimeout       time.Duration `default:"120s"           koanf:"idle_timeout"`
 	ShutdownTimeout   time.Duration `default:"25s"            koanf:"shutdown_timeout"`
+}
+
+/*
+GateConfig puts the whole application behind one shared password, for a
+public host only invited people should use. Password is what people
+type; CIKey is what automated checks send in the X-Gate-Key header. An
+enabled gate needs at least one of them.
+*/
+type GateConfig struct {
+	Enabled  bool   `koanf:"enabled"`
+	Password string `koanf:"password" secret:"true"`
+	CIKey    string `koanf:"ci_key"   secret:"true"`
 }
 
 /*
@@ -170,6 +190,7 @@ func (c *Config) check() error {
 		{!c.Database.PoolMode.Valid(), "database.pool_mode", database.ErrInvalidPoolMode},
 		{c.Redis.URL == "", "redis.url", errRequired},
 		{c.HTTP.ShutdownTimeout <= 0, "http.shutdown_timeout", errors.New("must be positive")},
+		{c.Gate.Enabled && c.Gate.Password == "" && c.Gate.CIKey == "", "gate.password", errRequired},
 	}
 
 	errs := []error{c.App.Roles.validate(), checkURL(c.App.URL), checkMemoryLimit(c.Runtime.MemoryLimit)}

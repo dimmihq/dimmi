@@ -20,7 +20,8 @@ import (
 
 /*
 ConversationAssigned is dispatched when the assigned member or team
-changes; a nil To is an unassignment.
+changes; a nil To is an unassignment. Reason says why the system moved
+it, such as arrival or away_reassign, and is empty for a person's move.
 */
 type ConversationAssigned struct {
 	Base
@@ -30,6 +31,7 @@ type ConversationAssigned struct {
 	ToMemberID   *ids.UUID
 	FromTeamID   *ids.UUID
 	ToTeamID     *ids.UUID
+	Reason       string
 }
 
 /*

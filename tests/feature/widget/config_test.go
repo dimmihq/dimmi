@@ -14,6 +14,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/config"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -46,6 +47,7 @@ func TestWidgetConfig(t *testing.T) {
 		res.AssertJSONPath("data.dir", "ltr")
 		res.AssertJSONPath("data.tabs", []any{"home", "messages"})
 		res.AssertJSONPath("data.honeypot_field", "website")
+		res.AssertJSONPath("data.branding.show", config.BuiltEdition == config.EditionCloud)
 		res.AssertJSONMissing("data.surface")
 		assert.NotContains(t, string(res.Body), tc.Owner.Email)
 		assert.Contains(t, res.Header.Values("Vary"), "Origin")
@@ -122,7 +124,7 @@ func TestWidgetConfig(t *testing.T) {
 		t.Parallel()
 
 		tc := tests.New(t)
-		_, err := tc.App.DB.Exec(t.Context(), "UPDATE workspaces SET suspended_at = now() WHERE id = $1",
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE workspaces SET suspended_at = now() WHERE id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
 
@@ -251,20 +253,6 @@ func TestWidgetOrigin(t *testing.T) {
 	})
 }
 
-func TestWidgetBranding(t *testing.T) {
-	t.Parallel()
-
-	t.Run("the badge links back with the workspace's slug", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-
-		url := tc.Client().GetJSON(configPath(t, tc)).AssertOK().String("data.branding.url")
-
-		assert.Contains(t, url, "utm_source=widget")
-		assert.Contains(t, url, "ref="+tc.Workspace.Workspace.Slug)
-	})
-}
-
 func TestWidgetAvailability(t *testing.T) {
 	t.Parallel()
 
@@ -301,7 +289,7 @@ func TestWidgetAvailability(t *testing.T) {
 			return tc.Client().GetJSON(path(t, tc)).AssertOK().String("data.reply_time") == "minutes"
 		}, 5*time.Second, 50*time.Millisecond)
 
-		_, err := tc.App.DB.Exec(t.Context(),
+		_, err := tc.Operator().Exec(t.Context(),
 			"UPDATE workspace_members SET availability = 'away' WHERE workspace_id = $1",
 			tc.Workspace.Workspace.ID)
 		require.NoError(t, err)
@@ -320,7 +308,7 @@ func TestWidgetAvailability(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			_, err = tc.App.DB.Exec(t.Context(),
+			_, err = tc.Operator().Exec(t.Context(),
 				"UPDATE users SET avatar_path = 'avatars/x.png' WHERE id = $1", user.ID)
 			require.NoError(t, err)
 		}

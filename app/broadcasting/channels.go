@@ -7,8 +7,10 @@
 | and a public id, such as conversation:conv_01jb.... Raw row ids never
 | appear in a channel name.
 |
-| The workspace channel tells every member about changes to the lists
-| they look at and who is online. A conversation's channel carries its
+| The workspace channel tells every member who joined, who changed and
+| who is online. Changes to conversation lists travel on a channel of
+| their own, open only to members who see every conversation; everyone
+| else gets copies on their own channel. A conversation's channel carries its
 | full timeline and who is viewing it right now, which is how teammates
 | avoid answering the same customer twice. A member's channel carries
 | what only they should see, and a contact's channel what the messenger
@@ -32,10 +34,11 @@ import (
 The channel patterns, with the placeholder each authorizer reads.
 */
 const (
-	WorkspacePattern     = "workspace:{workspace}"
-	ConversationPattern  = "conversation:{conversation}"
-	MemberPattern        = "member:{member}"
-	WidgetContactPattern = "widget_contact:{contact}"
+	WorkspacePattern              = "workspace:{workspace}"
+	WorkspaceConversationsPattern = "workspace_conversations:{workspace}"
+	ConversationPattern           = "conversation:{conversation}"
+	MemberPattern                 = "member:{member}"
+	WidgetContactPattern          = "widget_contact:{contact}"
 )
 
 /*
@@ -50,6 +53,14 @@ broadcasts.
 */
 func WorkspaceOptions() fbroadcasting.ChannelOptions {
 	return fbroadcasting.ChannelOptions{Presence: true, HistorySize: 300, HistoryTTL: historyTTL}
+}
+
+/*
+WorkspaceConversationsOptions keeps the last 300 broadcasts, without
+tracking who listens.
+*/
+func WorkspaceConversationsOptions() fbroadcasting.ChannelOptions {
+	return fbroadcasting.ChannelOptions{HistorySize: 300, HistoryTTL: historyTTL}
 }
 
 /*
@@ -81,6 +92,14 @@ WorkspaceChannel names the workspace's channel.
 */
 func WorkspaceChannel(id ids.UUID) string {
 	return "workspace:" + models.PublicID(models.PrefixWorkspace, id)
+}
+
+/*
+WorkspaceConversationsChannel names the channel carrying the workspace's
+conversation lists.
+*/
+func WorkspaceConversationsChannel(id ids.UUID) string {
+	return "workspace_conversations:" + models.PublicID(models.PrefixWorkspace, id)
 }
 
 /*

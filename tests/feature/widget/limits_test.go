@@ -71,6 +71,16 @@ func TestWidgetLimits(t *testing.T) {
 		require.NotNil(t, dialStream(t, streamURL(t, tc), map[string]any{"token": v.token}).next().Disconnect)
 	})
 
+	t.Run("a stream whose session cannot be read is refused", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		token := v.client().PostJSON("/widget/v1/realtime-tokens", nil).AssertCreated().String("data.token")
+		tc.BreakTable("widget_sessions")
+
+		require.NotNil(t, dialStream(t, streamURL(t, tc), map[string]any{"token": token}).next().Disconnect)
+	})
+
 	t.Run("moving to the inbox it already uses changes nothing", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

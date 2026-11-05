@@ -122,8 +122,9 @@ UI: settings section on `settings/pages/inbox.tsx` "Availability"; reason picker
 
 | Method | Path | Ability, permission | Purpose |
 |---|---|---|---|
-| PATCH | /inboxes/{inbox} | settings:write, `inboxes:manage` | `settings.assignment` keys, validated as table above; `overflow_team_id` equal to default team 422 |
-| GET | /inboxes/{inbox}/assignment-status | settings:read | computed: `{mode, members: [{member, availability, open_count, capacity, eligible, why_not: away|at_capacity|at_channel_capacity|null}], waiting: {count, oldest_at, reasons}}`. Route name `inboxes.assignment-status.show` |
+| PATCH | /inboxes/{inbox} | settings:write, `inboxes:manage` | `name`, `default_team_id` (null clears), `settings` as a merge patch; `settings.assignment` keys, validated as table above; `overflow_team_id` equal to default team 422 |
+| DELETE | /inboxes/{inbox} | settings:write, `inboxes:manage` | `?move_to=inbox_...` required when it holds conversations; moves conversations and channels; default inbox 422 `default_inbox` |
+| GET | /inboxes/{inbox}/assignment-status | settings:read | `?channel_type=widget|email|api` (default widget) picks which channel limits apply; computed: `{mode, members: [{member, availability, open_count, capacity, eligible, why_not: away|at_capacity|at_channel_capacity|null}], waiting: {count, oldest_at, reasons}}`. Route name `inboxes.assignment-status.show` |
 
 Conversation resource adds `assignment_wait: {reason, since}|null`. Filter `filter[assignment_waiting]=true`.
 

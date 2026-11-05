@@ -46,8 +46,9 @@ Me is everything a client learns about its caller.
 
 Workspace and Member are set when a workspace is in play, and
 Permissions then holds what the caller may do there, with Abilities the
-ability groups those permissions reach. Token is the personal access
-token the request came with, nil for other credentials. Workspaces
+ability groups those permissions reach and AccessTeams the teams their
+conversation access names. Token is the personal access token the
+request came with, nil for other credentials. Workspaces
 lists the user's workspaces for credentials that can switch between
 them, and is nil for tokens.
 */
@@ -58,6 +59,7 @@ type Me struct {
 	Token       *models.FindWorkspaceTokenRow
 	Permissions []string
 	Abilities   []string
+	AccessTeams []ids.UUID
 	Workspaces  []models.ListUserWorkspacesRow
 }
 
@@ -147,16 +149,15 @@ func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUI
 		member, err = q.FindWorkspaceMemberForUser(ctx, models.FindWorkspaceMemberForUserParams{
 			WorkspaceID: workspaceID, UserID: me.Principal.User.ID,
 		})
-		if err != nil || me.Principal.Kind != appauth.KindToken {
+		if err != nil {
 			return err
 		}
 
-		token, err := q.FindWorkspaceToken(ctx, models.FindWorkspaceTokenParams{
-			WorkspaceID: workspaceID, ID: me.Principal.CredentialID,
-		})
-		me.Token = &token
+		if me.AccessTeams, err = authz.LoadAccessTeams(ctx, q, member); err != nil {
+			return err
+		}
 
-		return err
+		return loadToken(ctx, q, me, workspaceID)
 	})
 	if errors.Is(err, database.ErrNotFound) || (err == nil && workspace.DeletedAt != nil) {
 		return exceptions.ErrWorkspaceNotFound
@@ -175,4 +176,21 @@ func (a *LoadMe) loadMembership(ctx context.Context, me *Me, workspaceID ids.UUI
 	me.Abilities = authz.EffectiveAbilities(a.Permissions, me.Permissions)
 
 	return nil
+}
+
+/*
+loadToken reads the personal access token the request came with, if it
+came with one.
+*/
+func loadToken(ctx context.Context, q *models.Queries, me *Me, workspaceID ids.UUID) error {
+	if me.Principal.Kind != appauth.KindToken {
+		return nil
+	}
+
+	token, err := q.FindWorkspaceToken(ctx, models.FindWorkspaceTokenParams{
+		WorkspaceID: workspaceID, ID: me.Principal.CredentialID,
+	})
+	me.Token = &token
+
+	return err
 }

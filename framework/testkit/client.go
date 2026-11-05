@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -167,7 +168,7 @@ func (c *Client) Delete(path string) *Response {
 /*
 Send sends a request and returns the response. A nil body sends none, a
 byte slice or string is sent as it is, and anything else is encoded as
-JSON.
+JSON. A body is labeled JSON unless the client set its own content type.
 */
 func (c *Client) Send(method, path string, body any) *Response {
 	c.tb.Helper()
@@ -177,11 +178,81 @@ func (c *Client) Send(method, path string, body any) *Response {
 		c.tb.Fatalf("encode %s %s body: %v", method, path, err)
 	}
 
+	return c.request(method, path, payload, "application/json")
+}
+
+/*
+PutFile uploads the contents as a multipart form with one file in the
+field.
+*/
+func (c *Client) PutFile(path, field, name string, contents []byte) *Response {
+	c.tb.Helper()
+
+	return c.sendForm(http.MethodPut, path, FormFile{Field: field, Name: name, Contents: contents}, nil)
+}
+
+/*
+FormFile is one file of a multipart form: its field, its file name and
+its contents.
+*/
+type FormFile struct {
+	Field    string
+	Name     string
+	Contents []byte
+}
+
+/*
+PostForm posts a multipart form with the file and the plain values.
+*/
+func (c *Client) PostForm(path string, file FormFile, values map[string]string) *Response {
+	c.tb.Helper()
+
+	return c.sendForm(http.MethodPost, path, file, values)
+}
+
+/*
+sendForm sends a multipart form with the file and the plain values.
+*/
+func (c *Client) sendForm(method, path string, file FormFile, values map[string]string) *Response {
+	c.tb.Helper()
+
+	var body bytes.Buffer
+
+	form := multipart.NewWriter(&body)
+
+	for name, value := range values {
+		if err := form.WriteField(name, value); err != nil {
+			c.tb.Fatalf("write field for %s %s: %v", method, path, err)
+		}
+	}
+
+	part, err := form.CreateFormFile(file.Field, file.Name)
+	if err != nil {
+		c.tb.Fatalf("start form for %s %s: %v", method, path, err)
+	}
+
+	if _, err := part.Write(file.Contents); err != nil {
+		c.tb.Fatalf("write form for %s %s: %v", method, path, err)
+	}
+
+	if err := form.Close(); err != nil {
+		c.tb.Fatalf("finish form for %s %s: %v", method, path, err)
+	}
+
+	return c.request(method, path, &body, form.FormDataContentType())
+}
+
+/*
+request makes the request, naming the payload's type when there is one.
+*/
+func (c *Client) request(method, path string, payload io.Reader, contentType string) *Response {
+	c.tb.Helper()
+
 	r := httptest.NewRequestWithContext(c.tb.Context(), method, path, payload)
 	r.Header = c.header.Clone()
 
-	if payload != nil {
-		r.Header.Set("Content-Type", "application/json")
+	if payload != nil && r.Header.Get("Content-Type") == "" {
+		r.Header.Set("Content-Type", contentType)
 	}
 
 	for _, cookie := range c.cookies {

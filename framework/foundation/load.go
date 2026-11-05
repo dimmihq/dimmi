@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"context"
 	"path/filepath"
+	"runtime/debug"
 
 	"github.com/dimmihq/dimmi/framework/config"
 )
@@ -77,6 +78,7 @@ func (c *Config) complete(opts Options) {
 	}
 
 	c.Telemetry.Environment = cmp.Or(c.Telemetry.Environment, string(c.App.Env))
+	c.App.Release = cmp.Or(c.App.Release, buildRevision())
 	c.Redis.KeyPrefix = cmp.Or(c.Redis.KeyPrefix, cmp.Or(opts.Name, "app")+":")
 
 	c.Hashing.Default = cmp.Or(c.Hashing.Default, "argon2id")
@@ -129,4 +131,23 @@ func orSections(sections map[string]config.Section, drivers ...string) map[strin
 	}
 
 	return sections
+}
+
+/*
+buildRevision returns the commit the binary was built from, as the Go
+toolchain recorded it, or "" when it built outside a repository.
+*/
+func buildRevision() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			return setting.Value
+		}
+	}
+
+	return ""
 }

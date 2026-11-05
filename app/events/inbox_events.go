@@ -3,8 +3,8 @@
 | Inbox Events
 |--------------------------------------------------------------------------
 |
-| An inbox was added to a workspace, or renamed. Each is dispatched in
-| the transaction that made the change.
+| An inbox was added to a workspace, changed or deleted. Each is
+| dispatched in the transaction that made the change.
 |
 */
 
@@ -22,7 +22,8 @@ type InboxCreated struct {
 }
 
 /*
-InboxUpdated says an inbox's name changed, from one to the other.
+InboxUpdated says an inbox changed; its name went from one to the
+other, the same when only its team or settings changed.
 */
 type InboxUpdated struct {
 	WorkspaceID ids.UUID
@@ -30,4 +31,16 @@ type InboxUpdated struct {
 	ActorID     ids.UUID
 	FromName    string
 	ToName      string
+}
+
+/*
+InboxDeleted says the member deleted an inbox. MovedTo is the inbox its
+conversations went to, nil when it had none. Moved is how many moved.
+*/
+type InboxDeleted struct {
+	WorkspaceID ids.UUID
+	InboxID     ids.UUID
+	ActorID     ids.UUID
+	MovedTo     *ids.UUID
+	Moved       int64
 }

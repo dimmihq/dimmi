@@ -54,7 +54,7 @@ func (a *ShowConversation) Handle(ctx context.Context, in ShowConversationInput)
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		c, err := Find(ctx, q, in.Membership.Workspace.ID, in.Ref)
+		c, err := Find(ctx, q, in.Membership, in.Ref)
 		if err != nil {
 			return err
 		}

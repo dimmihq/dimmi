@@ -1,0 +1,80 @@
+{
+  "guides": {
+    "common": {
+      "run_test": "Come back here and choose Test forwarding. The test mail should arrive within a minute."
+    },
+    "gmail": {
+      "step_1": "In Gmail, open Settings, See all settings, Forwarding and POP/IMAP, and choose Add a forwarding address.",
+      "step_2": "Enter {{.forwarding_address}}. Gmail mails a confirmation code to it, and the code shows on this page within a minute.",
+      "step_3": "Enter the code in Gmail, then choose Forward a copy of incoming mail to {{.forwarding_address}}.",
+      "step_4": "Keep Gmail's copy in the inbox and save the changes.",
+      "warning_sent_folder": "Replies you send from dimmi do not show in Gmail's Sent folder unless you connect the mailbox."
+    },
+    "google_workspace": {
+      "step_1": "In the Google Admin console, open Apps, Google Workspace, Gmail, Routing.",
+      "step_2": "Under Routing, choose Configure and name the rule dimmi {{.address}}.",
+      "step_3": "Under Email messages to affect, tick Inbound and Internal - receiving.",
+      "step_4": "Under Envelope filter, choose Only affect specific envelope recipients, Single recipient, and enter {{.address}}.",
+      "step_5": "Under Also deliver to, choose Add more recipients, Add, Basic, and enter {{.forwarding_address}}.",
+      "step_6": "Under Options, Account types to affect, tick Users, Groups and Unrecognized / Catch-all.",
+      "step_7": "Save the rule. No confirmation code is needed.",
+      "warning_delay": "Google says a new rule can take up to 24 hours. It usually works within minutes, and the test can stay red until then.",
+      "warning_not_admin": "Not a Google Workspace admin? Use the Gmail steps, or send these instructions to whoever runs your Google account."
+    },
+    "google_group": {
+      "step_1": "Add the routing rule from the Google Workspace steps for {{.address}}, with Groups ticked under account types.",
+      "step_2": "Remove {{.forwarding_address}} from the group's members if you added it.",
+      "step_3": "Keep the group for the people who read it, if you like. The rule passes each message on unchanged.",
+      "warning_via_sender": "A group rewrites each sender to \"Name via {{.address}}\" and can hold mail for moderation. The routing rule keeps the customer as the sender."
+    },
+    "microsoft_365": {
+      "step_1": "In the Exchange admin center, open Recipients, Mailboxes, and choose {{.address}}.",
+      "step_2": "Under Mail flow settings, open Email forwarding and forward to the external address {{.forwarding_address}}.",
+      "step_3": "Keep a copy of forwarded mail in the mailbox and save.",
+      "warning_outbound_policy": "Microsoft 365 blocks automatic forwarding to other domains by default, and mail bounces with 5.7.520. In Microsoft Defender, open the outbound anti-spam policy and set Automatic forwarding to On for this mailbox.",
+      "warning_shared_mailbox": "A shared mailbox needs an admin to set the forward. A rule in Outlook only works for a licensed user."
+    },
+    "outlook_com": {
+      "step_1": "In Outlook.com, open Settings, Mail, Forwarding.",
+      "step_2": "Turn on forwarding and enter {{.forwarding_address}}.",
+      "step_3": "Tick Keep a copy of forwarded messages and save."
+    },
+    "fastmail": {
+      "step_1": "In Fastmail, open Settings, Filters & Rules, and add a rule for mail sent to {{.address}}.",
+      "step_2": "Choose Send a copy to {{.forwarding_address}}.",
+      "step_3": "Keep the copy in your inbox and save the rule."
+    },
+    "icloud": {
+      "step_1": "In iCloud Mail on the web, open Settings, General, Forwarding.",
+      "step_2": "Turn on Forward my email to and enter {{.forwarding_address}}.",
+      "step_3": "Keep the copy in iCloud and save.",
+      "warning_whole_mailbox": "iCloud forwards the whole mailbox, not one address, so every mail to this account reaches dimmi."
+    },
+    "yahoo": {
+      "step_1": "In Yahoo Mail, open Settings, More Settings, Mailboxes, and choose {{.address}}.",
+      "step_2": "Under Forwarding, enter {{.forwarding_address}} and choose Verify.",
+      "step_3": "Open the verification mail that arrives here and confirm, then choose Store and forward.",
+      "warning_paid_plan": "Yahoo only offers forwarding on some plans."
+    },
+    "zoho": {
+      "step_1": "In Zoho Mail, open Settings, Mail Forwarding and POP/IMAP.",
+      "step_2": "Add {{.forwarding_address}} as a forwarding address and enter the code Zoho mails to it; it shows on this page.",
+      "step_3": "Turn forwarding on and keep a copy in the mailbox."
+    },
+    "cpanel": {
+      "step_1": "In cPanel, open Email, Forwarders, and choose Add Forwarder.",
+      "step_2": "Enter {{.address}} as the address to forward and {{.forwarding_address}} as the destination.",
+      "step_3": "Save. cPanel keeps delivering to the mailbox too."
+    },
+    "cloudflare_routing": {
+      "step_1": "In the Cloudflare dashboard, open {{.domain}}, Email, Email Routing, Destination addresses, and add {{.forwarding_address}}.",
+      "step_2": "Confirm it with the link Cloudflare mails there; that mail shows in the activity on this page.",
+      "step_3": "Under Routing rules, create a custom address {{.address}} that sends to {{.forwarding_address}}."
+    },
+    "generic": {
+      "step_1": "In your mail service's settings, find mail forwarding or forwarders.",
+      "step_2": "Forward every message sent to {{.address}} to {{.forwarding_address}}, and keep a copy if you like.",
+      "warning_no_alias": "Use a forward, not an alias that sends mail on as your own address, so each customer stays the sender."
+    }
+  }
+}

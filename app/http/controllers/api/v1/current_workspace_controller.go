@@ -55,7 +55,10 @@ func (c *CurrentWorkspaceController) Update(
 	updated, err := c.UpdateWorkspace.Handle(ctx, workspaces.UpdateWorkspaceInput{
 		Principal: caller(ctx), Membership: membership(ctx), Name: in.Body.Name, Slug: in.Body.Slug,
 		Timezone: in.Body.Timezone, Locale: in.Body.Locale, TestMode: in.Body.TestMode,
-		RequireTwoFactor: in.Body.RequireTwoFactor, ShowViewers: in.Body.ShowViewers,
+		RequireTwoFactor: in.Body.RequireTwoFactor, CustomerFacingName: in.Body.CustomerFacingName,
+		ClearCustomerFacingName: requests.Nulls(in.RawBody)["customer_facing_name"],
+		ShowViewers:             in.Body.ShowViewers,
+		SeenReceiptName:         in.Body.SeenReceiptName,
 	})
 	if err != nil {
 		return nil, err

@@ -23,8 +23,12 @@ import (
 All returns the product's console commands.
 */
 func All(a *app.App) []foundation.Command {
-	return []foundation.Command{
+	return append([]foundation.Command{
 		WorkspaceRepairCommand{App: a},
 		&UserDisableTwoFactorCommand{App: a},
-	}
+		EmailInboundDoctorCommand{App: a},
+		EmailCloudflareWorkerCommand{App: a},
+		EmailResendBackfillCommand{App: a},
+		EmailDoctorCommand{App: a},
+	}, devCommands(a)...)
 }
