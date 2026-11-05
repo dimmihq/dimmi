@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, inbox, test as it, signIn } from "./support/fixtures";
+import { expect, finishOnboarding, inbox, test as it, signIn } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 /*
@@ -23,8 +23,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Create account" }).click();
-
-    await expect(page).toHaveURL(inbox);
+    await finishOnboarding(page, `${person.name}'s team`);
     await expect(page.getByRole("button", { name: person.name, exact: true })).toBeVisible();
 
     await page.goto(await mailedLink(person.email, "Verify"));
@@ -41,7 +40,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(inbox);
+    await finishOnboarding(page, `${person.name}'s team`);
     const link = await mailedLink(person.email, "Verify");
 
     await guest.goto(link);
@@ -62,7 +61,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(inbox);
+    await finishOnboarding(page, `${person.name}'s team`);
 
     await guest.goto(await mailedLink(person.email, "Verify"));
     await guest.getByRole("button", { name: "I did not create this account" }).click();
@@ -84,6 +83,6 @@ it.describe("signing up", () => {
     await page.getByLabel("Password").fill(person.password);
     await expect(page.getByText("The password is too common. Choose another one.")).toBeHidden();
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page).toHaveURL(inbox);
+    await finishOnboarding(page, `${person.name}'s team`);
   });
 });

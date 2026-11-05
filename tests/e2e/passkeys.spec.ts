@@ -4,7 +4,7 @@ import { createAccount, expect, inbox, test as it, type Person, signIn, signOut 
 
 it.describe("passkeys", () => {
   it("adds a passkey, signs in with it, renames it and removes it", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
     await addVirtualAuthenticator(page);
 

@@ -82,6 +82,19 @@ export function addTeammate(ownerEmail: string, email: string, role: "admin" | "
 }
 
 /*
+ * finishSetup marks every workspace the person owns as set up, as walking
+ * its onboarding steps would, so the app opens straight away.
+ */
+export function finishSetup(ownerEmail: string) {
+  psql(
+    `UPDATE workspaces SET onboarding_step = 'done', onboarding_completed_at = now()
+     WHERE id IN (SELECT m.workspace_id FROM workspace_members m JOIN users u ON u.id = m.user_id
+                  WHERE u.email = :'owner' AND m.role = 'owner')`,
+    { owner: ownerEmail },
+  );
+}
+
+/*
  * verifyEmail marks the person's address as proven, as following the
  * mailed link would.
  */

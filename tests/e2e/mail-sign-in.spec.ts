@@ -1,9 +1,11 @@
+import { verifyEmail } from "./support/database";
 import { createAccount, expect, inbox, test as it } from "./support/fixtures";
 import { mailedCode, mailedLink } from "./support/mail";
 
 it.describe("signing in by mail", () => {
   it.beforeEach(async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
+    verifyEmail(person.email);
     await page.goto("/login");
     await page.getByLabel("Email").fill(person.email);
     await page.getByRole("button", { name: "Email me a sign-in link" }).click();

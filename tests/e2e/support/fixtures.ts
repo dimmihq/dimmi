@@ -12,6 +12,8 @@
  */
 import { type APIRequestContext, test as base, expect, type Page } from "@playwright/test";
 
+import { finishSetup } from "./database";
+
 export interface Person {
   name: string;
   email: string;
@@ -84,14 +86,42 @@ export const inbox = /\/d\/inbox\/unassigned$/;
 
 /*
  * createAccount signs the person up through the API, as a quick way to
- * have an account; it leaves the browser signed out. A request outside a
- * browser sends no Origin, which cross-origin protection lets through.
+ * have an account; it leaves the browser signed out. With a workspace
+ * name the account owns that workspace, set up and ready to open; without
+ * one it has none, as a teammate added to someone else's workspace. A
+ * request outside a browser sends no Origin, which cross-origin
+ * protection lets through.
  */
 export async function createAccount(request: APIRequestContext, person: Person, workspace?: string) {
   const response = await request.post("/api/v1/users", {
     data: { name: person.name, email: person.email, password: person.password, workspace_name: workspace },
   });
   expect(response.status(), await response.text()).toBe(201);
+  if (workspace) {
+    finishSetup(person.email);
+  }
+}
+
+/*
+ * finishOnboarding names the first workspace of a person who just signed
+ * up and skips every other setup step, which lands them in the inbox.
+ */
+export async function finishOnboarding(page: Page, workspace: string) {
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await page.getByLabel("Workspace name").fill(workspace);
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  for (const skip of [
+    "Continue without a logo",
+    "Continue",
+    "Continue without tags",
+    "Continue without inviting",
+    "Continue without knowledge",
+    "Continue without test conversations",
+  ]) {
+    await page.getByRole("button", { name: skip, exact: true }).click();
+  }
+  await page.getByRole("button", { name: "Go to your workspace" }).click();
+  await expect(page).toHaveURL(inbox);
 }
 
 /*

@@ -150,5 +150,6 @@ func authPages() map[string]string {
 		"email.confirm":    "/email/confirm",
 		"two-factor-reset": "/two-factor-reset",
 		"invitation":       "/invitation",
+		"onboarding":       "/onboarding",
 	}
 }

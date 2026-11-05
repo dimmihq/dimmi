@@ -24,7 +24,7 @@ it.describe("two-factor authentication", () => {
     person,
     request,
   }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
 
     const { secret, activatedAt, codes } = await turnOn(page);
@@ -52,7 +52,7 @@ it.describe("two-factor authentication", () => {
   });
 
   it("keeps the setup key behind a link and copies it and the recovery codes", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
     await page.goto("/d/settings/security");
     await page

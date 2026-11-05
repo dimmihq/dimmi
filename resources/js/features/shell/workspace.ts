@@ -33,6 +33,16 @@ export function rememberWorkspace(id: string): boolean {
   }
 }
 
+/*
+ * currentWorkspace is the workspace this browser opens, as routes need to
+ * know before they render: the one it chose last, or the most recent.
+ */
+export function currentWorkspace(workspaces: WorkspaceSummary[]): WorkspaceSummary | null {
+  const chosen = remembered();
+
+  return workspaces.find((workspace) => workspace.id === chosen) ?? workspaces[0] ?? null;
+}
+
 export function useCurrentWorkspace(workspaces: WorkspaceSummary[]) {
   const [chosen, setChosen] = useState(remembered);
   const current = workspaces.find((workspace) => workspace.id === chosen) ?? workspaces[0] ?? null;

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as Char91__gateChar93RouteImport } from './routes/[__gate]'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DRouteRouteImport } from './routes/d/route'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthInvitationRouteImport } from './routes/_auth/invitation'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -63,6 +64,11 @@ const AuthRoute = AuthRouteImport.update({
 const DRouteRoute = DRouteRouteImport.update({
   id: '/d',
   path: '/d',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/d': typeof DRouteRouteWithChildren
   '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
   '/login': typeof AuthLoginRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
   '/login': typeof AuthLoginRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/d': typeof DRouteRouteWithChildren
   '/__gate': typeof Char91__gateChar93Route
   '/_auth': typeof AuthRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/invitation': typeof AuthInvitationRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -392,6 +401,7 @@ export interface FileRouteTypes {
     | '/d'
     | '/__gate'
     | '/'
+    | '/onboarding'
     | '/forgot-password'
     | '/invitation'
     | '/login'
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
   to:
     | '/__gate'
     | '/'
+    | '/onboarding'
     | '/forgot-password'
     | '/invitation'
     | '/login'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/d'
     | '/__gate'
     | '/_auth'
+    | '/onboarding'
     | '/_auth/forgot-password'
     | '/_auth/invitation'
     | '/_auth/login'
@@ -519,6 +531,7 @@ export interface RootRouteChildren {
   DRouteRoute: typeof DRouteRouteWithChildren
   Char91__gateChar93Route: typeof Char91__gateChar93Route
   AuthRoute: typeof AuthRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -542,6 +555,13 @@ declare module '@tanstack/react-router' {
       path: '/d'
       fullPath: '/d'
       preLoaderRoute: typeof DRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/forgot-password': {
@@ -930,6 +950,7 @@ const rootRouteChildren: RootRouteChildren = {
   DRouteRoute: DRouteRouteWithChildren,
   Char91__gateChar93Route: Char91__gateChar93Route,
   AuthRoute: AuthRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
