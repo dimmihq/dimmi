@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { MessengerPage } from "@/features/settings/pages/messengers";
+import { MessengerPage } from "@/features/settings/messenger/messenger-page";
 
 export const Route = createFileRoute("/d/settings/messenger/$widget")({
   component: MessengerRoute,

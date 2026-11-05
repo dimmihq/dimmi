@@ -19,7 +19,9 @@
  * says otherwise, so the design can be judged. Dimmi("simulate", ...)
  * changes the latency or delivers a message from the team there.
  * Dimmi("update", { ... }) merges changes over the options and re-renders
- * either way, keeping the panel open on the same tab.
+ * either way, keeping the panel open on the same tab. In a preview,
+ * Dimmi("configure", config) takes a config as the server would serve it,
+ * which is how the messenger settings show unsaved changes.
  */
 import type { Content } from "./content";
 import { ComposerController } from "./controllers/composer_controller";
@@ -29,6 +31,7 @@ import { SearchController } from "./controllers/search_controller";
 import { VoiceController } from "./controllers/voice_controller";
 import { Application } from "./lib/controller";
 import { Live } from "./lib/live";
+import { type Config, fromConfig } from "./lib/map";
 import { report } from "./lib/report";
 import { defaults, merge, type Options, type OptionsUpdate } from "./options";
 import { render, style } from "./render";
@@ -162,6 +165,19 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     }
   };
 
+  /*
+   * configure shows a config as the server would serve it, in a preview:
+   * its look and words, and the company it speaks for.
+   */
+  const configure = (config: Config = {}) => {
+    if (live) {
+      report("warn", "configure_live", 'Dimmi("configure") works only in a preview.');
+      return;
+    }
+    sample = { ...sample, company: config.company?.name || sample.company, logo: config.company?.logo_url ?? null };
+    widget.update(fromConfig(config, options.texts));
+  };
+
   const run = ([name, argument]: Command) => {
     const toggle = toggles.find((known) => known === name);
     if (toggle) {
@@ -170,6 +186,8 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       widget.update(argument as OptionsUpdate);
     } else if (name === "simulate") {
       simulate(argument as Simulation);
+    } else if (name === "configure") {
+      configure(argument as Config);
     } else if (name === "shutdown" || name === "logout") {
       void live?.session.signOut();
     } else {

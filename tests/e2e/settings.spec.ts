@@ -82,13 +82,33 @@ it.describe("settings", () => {
   it("picks the messenger colour with the colour well", async ({ page }) => {
     await openMessenger(page);
     const appearance = page.getByRole("region", { name: "Appearance" });
-    await expect(appearance.getByText("#10B981", { exact: false })).toBeVisible();
+    await expect(appearance.getByText("#1F2328", { exact: false })).toBeVisible();
 
     await appearance.getByRole("button", { name: "Messenger colour" }).click();
     const editor = page.getByRole("dialog", { name: "Messenger colour" });
     await editor.getByRole("textbox").fill("#3b82f6");
     await editor.getByRole("textbox").press("Enter");
     await expect(appearance.getByText("#3B82F6", { exact: false })).toBeVisible();
+  });
+
+  it("previews messenger changes live and keeps them only once saved", async ({ page }) => {
+    await openMessenger(page);
+    const messenger = page.locator("#dimmi-messenger");
+    await messenger.getByRole("button", { name: "Open messages" }).click();
+    const greeting = page.getByRole("textbox", { name: "Greeting" });
+
+    await greeting.fill("Hello from the preview");
+    await expect(messenger.getByRole("heading", { name: /Hello from the preview/ })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unsaved changes" })).toBeVisible();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(greeting).toHaveValue("");
+    await expect(messenger.getByRole("heading", { name: /Hello from the preview/ })).toHaveCount(0);
+
+    await greeting.fill("Saved for real");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Discard" })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Greeting" })).toHaveValue("Saved for real");
   });
 
   it("narrows the connections by search", async ({ page }) => {

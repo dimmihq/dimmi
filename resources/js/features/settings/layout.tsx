@@ -31,19 +31,32 @@ const rowLine =
 const stackLine =
   "flex min-h-[52px] flex-col items-start gap-2 border-b border-separator-border py-2.5 pe-2.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 
+/*
+ * SettingsPage is the panel and centred column of a settings page. footer
+ * floats over the bottom of the panel, outside the scrolling column, such
+ * as a bar to save changes; the column keeps room for it at its end, so
+ * it never covers the last row or changes the page's height when it shows.
+ */
 export function SettingsPage({
   title,
   description,
+  footer,
   children,
 }: {
   title: string | null;
   description?: string;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <Panel label={title ?? "Loading"} ground className="h-full flex-1">
+    <Panel label={title ?? "Loading"} ground className="relative h-full flex-1">
       <ScrollArea ground>
-        <div className="mx-auto flex w-full max-w-[680px] flex-col gap-8 px-4 pt-6 pb-16 sm:gap-10 sm:px-6 sm:pt-10">
+        <div
+          className={cx(
+            "mx-auto flex w-full max-w-[680px] flex-col gap-8 px-4 pt-6 pb-16 sm:gap-10 sm:px-6 sm:pt-10",
+            footer !== undefined && "pb-28",
+          )}
+        >
           <header className="flex flex-col gap-1">
             {title === null ? (
               <Skeleton shape="text" className="my-1 h-6 w-48" />
@@ -55,6 +68,11 @@ export function SettingsPage({
           {children}
         </div>
       </ScrollArea>
+      {footer ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4 sm:px-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-[632px]">{footer}</div>
+        </div>
+      ) : null}
     </Panel>
   );
 }

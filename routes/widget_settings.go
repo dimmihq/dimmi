@@ -30,7 +30,8 @@ func widgetSettingsRoutes(r *routing.Router, a *app.App) {
 
 	acts := a.Actions.Widget
 	c := &v1.WidgetSettingsController{
-		Read: acts.ShowSettings, Create: acts.Create, Change: acts.Update, Remove: acts.Delete, IDs: a.IDs,
+		Read: acts.ShowSettings, Create: acts.Create, Change: acts.Update, Remove: acts.Delete, Preview: acts.Preview,
+		IDs:  a.IDs,
 		Base: strings.TrimRight(a.Application.Config.App.URL, "/"),
 	}
 	one := "/widget-settings/{widget}"
@@ -42,4 +43,6 @@ func widgetSettingsRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, one, "widget-settings.update", c.Update).Ability("settings:write")
 	routing.Delete(r, one, "widget-settings.destroy", c.Destroy).Ability("settings:write").
 		Status(fhttp.StatusNoContent)
+	routing.Post(r, one+"/preview", "widget-settings.preview", c.PreviewConfig).
+		Status(fhttp.StatusOK).Ability("settings:read")
 }

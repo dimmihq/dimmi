@@ -114,7 +114,9 @@ func bootWidget(ctx context.Context, a *app.App) error {
 
 	directory := widget.NewDirectory(a.DB, a.PubSub, cfg.ConfigCacheTTL)
 	branding := &widget.ResolveBranding{Edition: a.Config.App.Edition, Billing: bootBilling(a)}
-	install := widgetinstall.New(a.DB, a.Cache, a.Clock)
+	show := &widget.ShowWidgetConfig{
+		Directory: directory, Branding: branding, Strings: words, PollingInterval: cfg.PollingInterval.Milliseconds(),
+	}
 
 	a.Actions.Widget = &app.WidgetActions{
 		Directory: directory, Strings: words, Branding: branding,
@@ -123,12 +125,10 @@ func bootWidget(ctx context.Context, a *app.App) error {
 		Update: &widget.UpdateWidgetSettings{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Branding: branding, Bust: directory,
 		},
-		ShowConfig: &widget.ShowWidgetConfig{
-			Directory: directory, Branding: branding, Strings: words,
-			PollingInterval: cfg.PollingInterval.Milliseconds(),
-		},
+		ShowConfig:   show,
+		Preview:      &widget.PreviewWidgetConfig{DB: a.DB, Show: show},
 		Availability: &widget.ComputeTeamAvailability{DB: a.DB, Clock: a.Clock, Presence: a.Broadcast, Disk: disk},
-		Install:      install,
+		Install:      widgetinstall.New(a.DB, a.Cache, a.Clock),
 		Delete: &widget.DeleteWidget{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Bust: directory,
 			Streams: widget.BroadcastStreams{Server: a.Broadcast},

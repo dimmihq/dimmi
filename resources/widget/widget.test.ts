@@ -752,6 +752,24 @@ describe("core", () => {
     expect(widget?.options.appearance.launcher.style).toBe("bubble");
   });
 
+  it("takes a server config in a preview, the way a live messenger reads it", async () => {
+    await started();
+    win.Dimmi?.("open");
+
+    win.Dimmi?.("configure", {
+      company: { name: "Parakeet", logo_url: null },
+      appearance: { primary_color: "#5b5bd6", position: "left", launcher: { style: "bubble", shape: "squircle" } },
+      texts: { greeting_intro: "Hi from Parakeet.", greeting: "", nope: "x" },
+    });
+
+    const host = document.getElementById("dimmi-messenger") as HTMLElement;
+    expect(host.style.getPropertyValue("--brand")).toBe("#5b5bd6");
+    expect(launcher().dataset.shape).toBe("squircle");
+    expect(shadow().querySelector(".messenger")?.getAttribute("data-side")).toBe("left");
+    expect(shadow().querySelector("h1")?.textContent).toContain("Hi from Parakeet.");
+    expect(shadow().textContent).toContain("Parakeet");
+  });
+
   it("hides the launcher when the customer opens the messenger from their own buttons", async () => {
     await started();
 
