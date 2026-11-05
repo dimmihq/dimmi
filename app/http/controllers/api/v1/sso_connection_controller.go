@@ -156,6 +156,32 @@ func (c *SSOConnectionController) Destroy(
 }
 
 /*
+customRole decodes the custom role new members start with, when the
+request sent one; null clears it.
+*/
+func (c *SSOConnectionController) customRole(
+	in *requests.UpdateSSOConnectionRequest, change *sso.ConnectionChange,
+) error {
+	if !requests.Sent(in.RawBody)["default_custom_role_id"] {
+		return nil
+	}
+
+	var role *ids.UUID
+	if in.Body.DefaultCustom != nil {
+		id, err := roleID(c.IDs, *in.Body.DefaultCustom)
+		if err != nil {
+			return err
+		}
+
+		role = &id
+	}
+
+	change.DefaultCustomRole = &role
+
+	return nil
+}
+
+/*
 change turns the request into the action's change, decoding the ids it
 names.
 */
@@ -169,6 +195,10 @@ func (c *SSOConnectionController) change(in *requests.UpdateSSOConnectionRequest
 	if b.Config != nil {
 		cfg := configOf(*b.Config)
 		change.Config = &cfg
+	}
+
+	if err := c.customRole(in, &change); err != nil {
+		return change, err
 	}
 
 	if b.DefaultTeamIDs != nil {

@@ -26,7 +26,8 @@ SELECT * FROM sso_connections WHERE organization_id = @organization_id AND id = 
 -- UpdateSSOConnection writes every changeable field of the connection.
 UPDATE sso_connections
 SET name = @name, status = @status, config = @config, secret_encrypted = @secret_encrypted,
-    jit_enabled = @jit_enabled, default_role = @default_role, default_team_ids = @default_team_ids::uuid[],
+    jit_enabled = @jit_enabled, default_role = @default_role, default_custom_role_id = sqlc.narg('default_custom_role_id'),
+    default_team_ids = @default_team_ids::uuid[],
     group_role_map = @group_role_map, enforced = @enforced, tested_at = sqlc.narg('tested_at'), updated_at = @now
 WHERE organization_id = @organization_id AND id = @id
 RETURNING *;

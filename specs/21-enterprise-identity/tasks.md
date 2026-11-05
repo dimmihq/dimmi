@@ -22,7 +22,7 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 
 ## M3. Domains and connections (track 08 enterprise-identity)
 
-- [ ] Migrations 080001, 080002, 080003, 080005, 080011. Prefixes `ssoc_`, `odom_` registered (`app/models/public_ids.go`). Lint annotations.
+- [x] Migrations 080001, 080002, 080003, 080005, 080011 (owners function; lookup functions follow in M4), 080012 (default custom role). Prefixes `ssoc_`, `odom_` registered (`app/models/public_ids.go`). Lint annotations.
 - [x] Domain actions + API. DNS via `framework/dns` with test resolver fake (boundary). Freemail list embed. `RecheckOrganizationDomains`, `sso:verify-domain`.
 - [x] Connection CRUD, state machine, secret sealing (`Scope{Kind: "organization"}`), settings mirrors in same tx. Audit events.
 - [x] Permissions `sso:manage`, `scim:manage` in catalog + `roles.go`; label keys.

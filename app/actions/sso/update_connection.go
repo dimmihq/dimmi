@@ -19,6 +19,7 @@ package sso
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -44,6 +45,8 @@ const testedWindow = 24 * time.Hour
 
 /*
 ConnectionChange is what an update changes; a nil field keeps its value.
+DefaultCustomRole points at nil to clear the custom role new members
+start with.
 ConfirmOwnersCanSignIn is the caller's word that owners can sign in
 through a connection tested within the day.
 */
@@ -56,6 +59,7 @@ type ConnectionChange struct {
 	JITEnabled             *bool
 	DefaultRole            *string
 	DefaultTeamIDs         *[]ids.UUID
+	DefaultCustomRole      **ids.UUID
 	GroupRoleMap           *[]GroupRole
 	ConfirmOwnersCanSignIn bool
 }
@@ -187,7 +191,8 @@ func (a *UpdateConnection) next(ctx context.Context, e editing) (models.UpdateSS
 		OrganizationID: row.OrganizationID, ID: row.ID, Name: row.Name, Status: row.Status, Config: row.Config,
 		SecretEncrypted: row.SecretEncrypted, JitEnabled: row.JitEnabled, DefaultRole: row.DefaultRole,
 		DefaultTeamIds: row.DefaultTeamIds, GroupRoleMap: row.GroupRoleMap, Enforced: row.Enforced,
-		TestedAt: row.TestedAt, Now: a.Clock.Now(),
+		DefaultCustomRoleID: row.DefaultCustomRoleID,
+		TestedAt:            row.TestedAt, Now: a.Clock.Now(),
 	}
 
 	if c.Name != nil {
@@ -200,6 +205,14 @@ func (a *UpdateConnection) next(ctx context.Context, e editing) (models.UpdateSS
 
 	if c.DefaultRole != nil {
 		next.DefaultRole = *c.DefaultRole
+	}
+
+	if c.DefaultCustomRole != nil {
+		if err := a.ownRole(ctx, e, *c.DefaultCustomRole); err != nil {
+			return next, err
+		}
+
+		next.DefaultCustomRoleID = *c.DefaultCustomRole
 	}
 
 	if c.DefaultTeamIDs != nil {
@@ -216,6 +229,26 @@ func (a *UpdateConnection) next(ctx context.Context, e editing) (models.UpdateSS
 	}
 
 	return a.reconnect(ctx, e, next)
+}
+
+/*
+ownRole refuses a custom role that is not one of the workspace's.
+*/
+func (a *UpdateConnection) ownRole(ctx context.Context, e editing, role *ids.UUID) error {
+	if role == nil {
+		return nil
+	}
+
+	_, err := e.q.FindRole(ctx, models.FindRoleParams{WorkspaceID: e.in.Membership.Workspace.ID, ID: *role})
+	if errors.Is(err, database.ErrNotFound) {
+		return exceptions.ErrNotFound
+	}
+
+	if err != nil {
+		return fmt.Errorf("find default role: %w", err)
+	}
+
+	return nil
 }
 
 /*

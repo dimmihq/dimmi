@@ -37,6 +37,7 @@ type SSOConnection struct {
 	HasSecret      bool            `json:"has_secret"`
 	JITEnabled     bool            `json:"jit_enabled"`
 	DefaultRole    string          `json:"default_role"`
+	DefaultCustom  *string         `json:"default_custom_role_id"`
 	DefaultTeamIDs []string        `json:"default_team_ids"`
 	GroupRoleMap   []GroupRole     `json:"group_role_map"`
 	Enforced       bool            `json:"enforced"`
@@ -107,6 +108,7 @@ func NewSSOConnection(c sso.Connection, links appauth.Links) SSOConnection {
 		ID: models.PublicID(models.PrefixSSOConnection, row.ID), Object: "sso_connection", Protocol: row.Protocol,
 		Name: row.Name, Status: row.Status, Config: c.Config, HasSecret: len(row.SecretEncrypted) > 0,
 		JITEnabled: row.JitEnabled, DefaultRole: row.DefaultRole,
+		DefaultCustom:  publicIDOf(models.PrefixRole, row.DefaultCustomRoleID),
 		DefaultTeamIDs: publicIDs(models.PrefixTeam, row.DefaultTeamIds), GroupRoleMap: []GroupRole{},
 		Enforced: row.Enforced, TestedAt: row.TestedAt, LastLoginAt: row.LastLoginAt,
 		MetadataError: row.MetadataError, LastError: row.LastError, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,

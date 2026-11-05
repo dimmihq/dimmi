@@ -21,7 +21,7 @@ VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $10
 )
-RETURNING id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at
+RETURNING id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id
 `
 
 type CreateOAuthIdentityParams struct {
@@ -67,6 +67,7 @@ func (q *Queries) CreateOAuthIdentity(ctx context.Context, arg CreateOAuthIdenti
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SsoConnectionID,
 	)
 	return i, err
 }
@@ -106,7 +107,7 @@ func (q *Queries) DeleteUserOAuthIdentities(ctx context.Context, userID ids.UUID
 }
 
 const findOAuthIdentity = `-- name: FindOAuthIdentity :one
-SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE provider = $1 AND provider_user_id = $2
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities WHERE provider = $1 AND provider_user_id = $2
 `
 
 type FindOAuthIdentityParams struct {
@@ -132,12 +133,13 @@ func (q *Queries) FindOAuthIdentity(ctx context.Context, arg FindOAuthIdentityPa
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SsoConnectionID,
 	)
 	return i, err
 }
 
 const findUserOAuthIdentity = `-- name: FindUserOAuthIdentity :one
-SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE id = $1 AND user_id = $2
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities WHERE id = $1 AND user_id = $2
 `
 
 type FindUserOAuthIdentityParams struct {
@@ -163,12 +165,13 @@ func (q *Queries) FindUserOAuthIdentity(ctx context.Context, arg FindUserOAuthId
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SsoConnectionID,
 	)
 	return i, err
 }
 
 const listUserOAuthIdentities = `-- name: ListUserOAuthIdentities :many
-SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE user_id = $1 ORDER BY created_at, id
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities WHERE user_id = $1 ORDER BY created_at, id
 `
 
 // ListUserOAuthIdentities returns the user's identities, oldest first.
@@ -194,6 +197,7 @@ func (q *Queries) ListUserOAuthIdentities(ctx context.Context, userID ids.UUID) 
 			&i.LastLoginAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SsoConnectionID,
 		); err != nil {
 			return nil, err
 		}

@@ -30,7 +30,7 @@ func (q *Queries) CountSSOConnections(ctx context.Context, organizationID ids.UU
 const createSSOConnection = `-- name: CreateSSOConnection :one
 INSERT INTO sso_connections (organization_id, protocol, name, config, secret_encrypted, created_by_user_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
-RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at
+RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id
 `
 
 type CreateSSOConnectionParams struct {
@@ -76,6 +76,7 @@ func (q *Queries) CreateSSOConnection(ctx context.Context, arg CreateSSOConnecti
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DefaultCustomRoleID,
 	)
 	return i, err
 }
@@ -101,7 +102,7 @@ func (q *Queries) DeleteSSOConnection(ctx context.Context, arg DeleteSSOConnecti
 const disableSSOConnections = `-- name: DisableSSOConnections :many
 UPDATE sso_connections SET status = 'disabled', enforced = false, updated_at = $1
 WHERE organization_id = $2 AND status = 'active'
-RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at
+RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id
 `
 
 type DisableSSOConnectionsParams struct {
@@ -141,6 +142,7 @@ func (q *Queries) DisableSSOConnections(ctx context.Context, arg DisableSSOConne
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DefaultCustomRoleID,
 		); err != nil {
 			return nil, err
 		}
@@ -153,7 +155,7 @@ func (q *Queries) DisableSSOConnections(ctx context.Context, arg DisableSSOConne
 }
 
 const findSSOConnection = `-- name: FindSSOConnection :one
-SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at FROM sso_connections WHERE organization_id = $1 AND id = $2
+SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE organization_id = $1 AND id = $2
 `
 
 type FindSSOConnectionParams struct {
@@ -186,6 +188,7 @@ func (q *Queries) FindSSOConnection(ctx context.Context, arg FindSSOConnectionPa
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DefaultCustomRoleID,
 	)
 	return i, err
 }
@@ -224,7 +227,7 @@ func (q *Queries) ListActiveSSOConnectionIDs(ctx context.Context, organizationID
 }
 
 const listOrganizationSSOConnectionsBySlug = `-- name: ListOrganizationSSOConnectionsBySlug :many
-SELECT c.id, c.organization_id, c.protocol, c.name, c.status, c.config, c.secret_encrypted, c.jit_enabled, c.default_role, c.default_team_ids, c.group_role_map, c.enforced, c.tested_at, c.last_login_at, c.metadata_refreshed_at, c.metadata_error, c.last_error, c.created_by_user_id, c.created_at, c.updated_at, w.id AS workspace_id
+SELECT c.id, c.organization_id, c.protocol, c.name, c.status, c.config, c.secret_encrypted, c.jit_enabled, c.default_role, c.default_team_ids, c.group_role_map, c.enforced, c.tested_at, c.last_login_at, c.metadata_refreshed_at, c.metadata_error, c.last_error, c.created_by_user_id, c.created_at, c.updated_at, c.default_custom_role_id, w.id AS workspace_id
 FROM sso_connections c
 JOIN workspaces w ON w.organization_id = c.organization_id AND w.deleted_at IS NULL
 WHERE w.slug = $1
@@ -252,6 +255,7 @@ type ListOrganizationSSOConnectionsBySlugRow struct {
 	CreatedByUserID     *ids.UUID         `json:"created_by_user_id"`
 	CreatedAt           time.Time         `json:"created_at"`
 	UpdatedAt           time.Time         `json:"updated_at"`
+	DefaultCustomRoleID *ids.UUID         `json:"default_custom_role_id"`
 	WorkspaceID         ids.UUID          `json:"workspace_id"`
 }
 
@@ -287,6 +291,7 @@ func (q *Queries) ListOrganizationSSOConnectionsBySlug(ctx context.Context, slug
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DefaultCustomRoleID,
 			&i.WorkspaceID,
 		); err != nil {
 			return nil, err
@@ -344,7 +349,7 @@ func (q *Queries) ListOrganizationWorkspaces(ctx context.Context, organizationID
 }
 
 const listSSOConnections = `-- name: ListSSOConnections :many
-SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at FROM sso_connections WHERE organization_id = $1 ORDER BY created_at, id
+SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE organization_id = $1 ORDER BY created_at, id
 `
 
 // ListSSOConnections returns the organization's connections, oldest first.
@@ -378,6 +383,7 @@ func (q *Queries) ListSSOConnections(ctx context.Context, organizationID ids.UUI
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DefaultCustomRoleID,
 		); err != nil {
 			return nil, err
 		}
@@ -390,7 +396,7 @@ func (q *Queries) ListSSOConnections(ctx context.Context, organizationID ids.UUI
 }
 
 const lockSSOConnection = `-- name: LockSSOConnection :one
-SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at FROM sso_connections WHERE organization_id = $1 AND id = $2 FOR UPDATE
+SELECT id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id FROM sso_connections WHERE organization_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockSSOConnectionParams struct {
@@ -424,6 +430,7 @@ func (q *Queries) LockSSOConnection(ctx context.Context, arg LockSSOConnectionPa
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DefaultCustomRoleID,
 	)
 	return i, err
 }
@@ -447,26 +454,28 @@ func (q *Queries) SetWorkspaceSettings(ctx context.Context, arg SetWorkspaceSett
 const updateSSOConnection = `-- name: UpdateSSOConnection :one
 UPDATE sso_connections
 SET name = $1, status = $2, config = $3, secret_encrypted = $4,
-    jit_enabled = $5, default_role = $6, default_team_ids = $7::uuid[],
-    group_role_map = $8, enforced = $9, tested_at = $10, updated_at = $11
-WHERE organization_id = $12 AND id = $13
-RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at
+    jit_enabled = $5, default_role = $6, default_custom_role_id = $7,
+    default_team_ids = $8::uuid[],
+    group_role_map = $9, enforced = $10, tested_at = $11, updated_at = $12
+WHERE organization_id = $13 AND id = $14
+RETURNING id, organization_id, protocol, name, status, config, secret_encrypted, jit_enabled, default_role, default_team_ids, group_role_map, enforced, tested_at, last_login_at, metadata_refreshed_at, metadata_error, last_error, created_by_user_id, created_at, updated_at, default_custom_role_id
 `
 
 type UpdateSSOConnectionParams struct {
-	Name            string            `json:"name"`
-	Status          string            `json:"status"`
-	Config          json.RawMessage   `json:"config"`
-	SecretEncrypted encryption.Sealed `json:"secret_encrypted"`
-	JitEnabled      bool              `json:"jit_enabled"`
-	DefaultRole     string            `json:"default_role"`
-	DefaultTeamIds  []ids.UUID        `json:"default_team_ids"`
-	GroupRoleMap    json.RawMessage   `json:"group_role_map"`
-	Enforced        bool              `json:"enforced"`
-	TestedAt        *time.Time        `json:"tested_at"`
-	Now             time.Time         `json:"now"`
-	OrganizationID  ids.UUID          `json:"organization_id"`
-	ID              ids.UUID          `json:"id"`
+	Name                string            `json:"name"`
+	Status              string            `json:"status"`
+	Config              json.RawMessage   `json:"config"`
+	SecretEncrypted     encryption.Sealed `json:"secret_encrypted"`
+	JitEnabled          bool              `json:"jit_enabled"`
+	DefaultRole         string            `json:"default_role"`
+	DefaultCustomRoleID *ids.UUID         `json:"default_custom_role_id"`
+	DefaultTeamIds      []ids.UUID        `json:"default_team_ids"`
+	GroupRoleMap        json.RawMessage   `json:"group_role_map"`
+	Enforced            bool              `json:"enforced"`
+	TestedAt            *time.Time        `json:"tested_at"`
+	Now                 time.Time         `json:"now"`
+	OrganizationID      ids.UUID          `json:"organization_id"`
+	ID                  ids.UUID          `json:"id"`
 }
 
 // UpdateSSOConnection writes every changeable field of the connection.
@@ -478,6 +487,7 @@ func (q *Queries) UpdateSSOConnection(ctx context.Context, arg UpdateSSOConnecti
 		arg.SecretEncrypted,
 		arg.JitEnabled,
 		arg.DefaultRole,
+		arg.DefaultCustomRoleID,
 		arg.DefaultTeamIds,
 		arg.GroupRoleMap,
 		arg.Enforced,
@@ -508,6 +518,7 @@ func (q *Queries) UpdateSSOConnection(ctx context.Context, arg UpdateSSOConnecti
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DefaultCustomRoleID,
 	)
 	return i, err
 }
