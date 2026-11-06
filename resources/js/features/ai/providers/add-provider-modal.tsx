@@ -8,7 +8,7 @@
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Modal, ModalBody, ModalHeader } from "@/components/base/modal/modal";
 import { type AiProviderDescriptor, deleteAiKey } from "@/lib/api/ai";
 import { cx } from "@/utils/cx";
@@ -30,7 +30,7 @@ function ProviderCard({ descriptor, onPick }: { descriptor: AiProviderDescriptor
       onClick={onPick}
       disabled={!descriptor.available}
       className={cx(
-        "flex min-h-[112px] flex-col items-start gap-3 rounded-2xl bg-background-secondary-default p-4 text-start outline-none",
+        "flex min-h-[112px] w-full flex-col items-start gap-3 rounded-2xl bg-background-secondary-default p-4 text-start outline-none",
         "transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-border-focus-ring",
         descriptor.available ? "cursor-pointer hover:bg-background-secondary-hover" : "cursor-not-allowed opacity-60",
       )}
@@ -123,15 +123,15 @@ export function AddProviderModal({
         }
       >
         {picked ? (
-          <Button
-            variant="ghost"
-            size="xs"
+          <LinkButton
+            variant="secondary"
+            size="small"
             leadingIcon={RiArrowLeftSLine}
             onClick={back}
-            className="-ms-1.5 mt-3 self-start"
+            className="mt-3 -ms-1 self-start"
           >
             All providers
-          </Button>
+          </LinkButton>
         ) : null}
       </ModalHeader>
       {picked === null ? <ProviderGrid providers={choices} onPick={setPicked} /> : null}

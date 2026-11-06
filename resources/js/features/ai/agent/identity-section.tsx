@@ -34,8 +34,9 @@ export function IdentitySection({
           label="Agent name"
           value={agent.name}
           maxLength={60}
+          required
           disabled={!canWrite}
-          onSave={(name) => (name ? save({ name }) : undefined)}
+          onSave={(name) => save({ name })}
         />
       </Row>
       <Row label="Product name" description="What it calls your product in answers.">

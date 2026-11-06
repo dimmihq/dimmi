@@ -47,7 +47,7 @@ function StepRow({ step, onJump }: { step: Step; onJump: (step: Step["id"]) => v
           "flex size-5 shrink-0 items-center justify-center rounded-full",
           step.done
             ? "bg-notification-success-background text-notification-success-foreground"
-            : "border border-border-button-default border-dashed",
+            : "border-[1.5px] border-foreground-icon-quaternary border-dashed",
         )}
       >
         {step.done ? <RiCheckLine className="size-3.5" /> : null}

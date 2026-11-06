@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AgentView, AiAgent, AiModelEntry, AiProviderKey } from "@/lib/api/ai";
+import { ApiError } from "@/lib/api/client";
 import { domains, preferred, toggled } from "./agent/options";
 import {
   applyChange,
@@ -14,7 +15,7 @@ import {
   readiness,
   usd,
 } from "./format";
-import { checkFields } from "./providers/problems";
+import { checkFields, problemsOf } from "./providers/problems";
 
 const agent = {
   id: "agent",
@@ -171,5 +172,16 @@ describe("ai format", () => {
       base_url: "Enter the server's address, starting with https://.",
     });
     expect(checkFields("openai_compatible", { name: "Box", apiKey: "", baseUrl: "http://llm.local/v1" })).toEqual({});
+  });
+
+  it("puts the server's refusals on the fields they belong to", () => {
+    expect(problemsOf(new ApiError(422, "validation_failed", "Invalid", { base_url: "Must be a URL." }))).toEqual({
+      base_url: "Must be a URL.",
+    });
+    expect(problemsOf(new ApiError(422, "key_required", "an api key is required"))).toEqual({
+      api_key: "an api key is required",
+    });
+    expect(problemsOf(new ApiError(403, "forbidden", "No"))).toEqual({ form: "Only admins can add providers." });
+    expect(problemsOf(new Error("offline")).form).toContain("could not reach the server");
   });
 });

@@ -176,7 +176,7 @@ export function AgentOverview() {
       <PageHeader title="Agent">
         <Button
           size="small"
-          variant="ghost"
+          variant="secondary"
           leadingIcon={RiSettings3Line}
           onClick={() => navigate({ to: "/d/settings/$section", params: { section: "agent" } })}
         >

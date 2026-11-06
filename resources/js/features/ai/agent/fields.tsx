@@ -21,7 +21,8 @@ function useDraft(saved: string) {
 }
 
 /*
- * SavedText is a one-line text setting.
+ * SavedText is a one-line text setting. A required one goes back to its
+ * saved value when emptied, rather than saving nothing.
  */
 export function SavedText({
   label,
@@ -29,6 +30,7 @@ export function SavedText({
   placeholder,
   disabled,
   maxLength,
+  required = false,
   width = "w-full sm:w-64",
   onSave,
 }: {
@@ -37,11 +39,16 @@ export function SavedText({
   placeholder?: string;
   disabled: boolean;
   maxLength?: number;
+  required?: boolean;
   width?: string;
   onSave: (value: string) => void;
 }) {
   const [draft, setDraft] = useDraft(value);
   const commit = () => {
+    if (required && draft.trim() === "") {
+      setDraft(value);
+      return;
+    }
     if (draft.trim() !== value) {
       onSave(draft.trim());
     }
