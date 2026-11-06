@@ -40,6 +40,12 @@ type AIUpdateAgentRequest struct {
 		PiiRedaction     *bool     `json:"pii_redaction,omitempty"`
 		Languages        *[]string `json:"languages,omitempty"`
 		DefaultLanguage  *string   `json:"default_language,omitempty"   validate:"omitempty,max=10"`
+		UnknownBehavior  *string   `json:"unknown_behavior,omitempty"   validate:"omitempty,oneof=offer_handoff handoff"`
+		AssignedBehavior *string   `json:"assigned_behavior,omitempty"  validate:"omitempty,oneof=skip_when_human_active never_when_assigned always"`
+		Streaming        *bool     `json:"streaming,omitempty"`
+		IncludeContact   *string   `json:"include_contact_context,omitempty" validate:"omitempty,oneof=basic none full"`
+		HandoffTeamID    *string   `json:"handoff_team_id,omitempty"`
+		RaisePriority    *bool     `json:"raise_priority_on_handoff,omitempty"`
 	}
 }
 

@@ -13,6 +13,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 	"fmt"
 
@@ -176,6 +177,34 @@ func (c *AIController) UpdateAgent(ctx context.Context, in *requests.AIUpdateAge
 	}
 	if b.DefaultLanguage != nil {
 		agent.DefaultLanguage = *b.DefaultLanguage
+	}
+	if b.UnknownBehavior != nil {
+		agent.UnknownBehavior = *b.UnknownBehavior
+	}
+	if b.AssignedBehavior != nil {
+		agent.AssignedBehavior = *b.AssignedBehavior
+	}
+	if b.Streaming != nil {
+		agent.Streaming = *b.Streaming
+	}
+	if b.IncludeContact != nil {
+		agent.IncludeContactContext = *b.IncludeContact
+	}
+	if b.HandoffTeamID != nil || b.RaisePriority != nil {
+		handoff := map[string]any{}
+		_ = json.Unmarshal(agent.Handoff, &handoff)
+		if b.HandoffTeamID != nil {
+			if *b.HandoffTeamID == "" {
+				delete(handoff, "target_team_id")
+			} else {
+				handoff["target_team_id"] = *b.HandoffTeamID
+			}
+		}
+		if b.RaisePriority != nil {
+			handoff["raise_priority"] = *b.RaisePriority
+		}
+		raw, _ := json.Marshal(handoff)
+		agent.Handoff = raw
 	}
 
 	if _, err := c.Update.Handle(ctx, ai.UpdateAgentInput{Membership: m, Agent: &agent}); err != nil {
