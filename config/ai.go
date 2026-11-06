@@ -12,8 +12,6 @@
 
 package config
 
-import "time"
-
 /*
 AIConfig configures the AI agent.
 */
@@ -68,77 +66,22 @@ type AIManagedUpstream struct {
 }
 
 /*
-AIChatGPTConfig configures the subscription sign-in source. Enabled
-stays off until the install has an OAuth client id; the hosted cloud
-needs the registered client while self-host registers itself.
+AIChatGPTConfig configures the subscription sign-in source. It signs
+in with the public client the ChatGPT coding tools share, so a hosted
+web app cannot use its own redirect: the member either enters a
+device code on OpenAI's page or pastes the address the sign-in lands
+on. Issuer hosts the device-code endpoints; RedirectURI is the
+loopback address registered for that client; APIBaseURL is the
+subscription's model endpoint; Originator names this app to it.
+Enabled stays off until the operator turns the source on.
 */
 type AIChatGPTConfig struct {
-	Enabled      bool   `default:"false"                               koanf:"enabled"`
-	ClientID     string `koanf:"client_id"`
+	Enabled      bool   `default:"false"                                  koanf:"enabled"`
+	ClientID     string `default:"app_EMoamEEZ73f0CkXaXp7hrann"           koanf:"client_id"`
+	Issuer       string `default:"https://auth.openai.com"                koanf:"issuer"`
 	AuthorizeURL string `default:"https://auth.openai.com/oauth/authorize" koanf:"authorize_url"`
 	TokenURL     string `default:"https://auth.openai.com/oauth/token"     koanf:"token_url"`
-	APIBaseURL   string `default:"https://api.openai.com/v1"             koanf:"api_base_url"`
-}
-
-/*
-AIPricesConfig names where the model price table lives.
-*/
-type AIPricesConfig struct {
-	Path     string `koanf:"path"`
-	SyncURL  string `koanf:"sync_url"`
-	AutoSync bool   `default:"false" koanf:"auto_sync"`
-}
-
-/*
-AIPromptsConfig selects the prompt version and, on self-host, an
-override directory.
-*/
-type AIPromptsConfig struct {
-	Version string `koanf:"version"`
-	Path    string `koanf:"path"`
-}
-
-/*
-AITimeoutsConfig bounds each pipeline step's provider call.
-*/
-type AITimeoutsConfig struct {
-	ClassifyTotal   time.Duration `default:"8s"  koanf:"classify_total"`
-	GenerateFirst   time.Duration `default:"12s" koanf:"generate_first_token"`
-	GenerateIdle    time.Duration `default:"15s" koanf:"generate_idle"`
-	GenerateTotal   time.Duration `default:"60s" koanf:"generate_total"`
-	VerifyTotal     time.Duration `default:"10s" koanf:"verify_total"`
-	SummarizeTotal  time.Duration `default:"10s" koanf:"summarize_total"`
-	ValidationTotal time.Duration `default:"10s" koanf:"validation_total"`
-	ProbeTotal      time.Duration `default:"20s" koanf:"probe_total"`
-}
-
-/*
-AIRetryConfig bounds the retry wrapper.
-*/
-type AIRetryConfig struct {
-	MaxAttempts int `default:"3" koanf:"max_attempts"`
-}
-
-/*
-AIBreakerConfig sets the per-connection circuit breaker.
-*/
-type AIBreakerConfig struct {
-	Failures int           `default:"5"    koanf:"failures"`
-	Window   time.Duration `default:"60s" koanf:"window"`
-	Open     time.Duration `default:"60s" koanf:"open"`
-}
-
-/*
-AIBootstrapConfig carries self-host env keys into the first
-workspace's connections at first boot.
-*/
-type AIBootstrapConfig struct {
-	AnthropicAPIKey string `koanf:"anthropic_api_key"`
-	OpenAIAPIKey    string `koanf:"openai_api_key"`
-	EngyAPIKey      string `koanf:"engy_api_key"`
-	EngyBaseURL     string `koanf:"engy_base_url"`
-	CompatBaseURL   string `koanf:"openai_compatible_base_url"`
-	CompatAPIKey    string `koanf:"openai_compatible_api_key"`
-	AnswerModel     string `koanf:"answer_model"`
-	ClassifierModel string `koanf:"classifier_model"`
+	RedirectURI  string `default:"http://localhost:1455/auth/callback"     koanf:"redirect_uri"`
+	APIBaseURL   string `default:"https://chatgpt.com/backend-api/codex"   koanf:"api_base_url"`
+	Originator   string `default:"dimmi"                                  koanf:"originator"`
 }

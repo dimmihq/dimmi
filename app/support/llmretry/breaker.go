@@ -6,7 +6,9 @@
 | A connection that keeps failing stops costing real calls: after a
 | run of retryable failures it opens, calls fail fast, and one probe
 | slips through after the cool-down to learn whether the provider
-| woke up.
+| woke up. A failed probe opens it for another cool-down; a probe the
+| caller abandons frees the slot for the next one, so the breaker can
+| never stay shut for good.
 |
 */
 
@@ -19,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/config"
 )
 
 /*
@@ -41,7 +44,7 @@ NewBreaker builds a breaker: it opens after limit failures inside the
 window and stays open for openFor.
 */
 func NewBreaker(clk clock.Clock, limit int, window, openFor time.Duration) *Breaker {
-	return &Breaker{clock: clk, limit: limit, window: window, openFor: openFor}
+	return &Breaker{clock: clk, limit: max(limit, 1), window: window, openFor: openFor}
 }
 
 /*
@@ -56,13 +59,10 @@ func (b *Breaker) Allow() error {
 		return nil
 	}
 
-	if b.clock.Now().Before(b.openedAt.Add(b.openFor)) {
+	if b.probing || b.clock.Now().Before(b.openedAt.Add(b.openFor)) {
 		return &contracts.LLMError{Kind: contracts.LLMErrorOverloaded, Message: "circuit open"}
 	}
 
-	if b.probing {
-		return &contracts.LLMError{Kind: contracts.LLMErrorOverloaded, Message: "circuit open"}
-	}
 	b.probing = true
 	return nil
 }
@@ -79,13 +79,30 @@ func (b *Breaker) Success() {
 }
 
 /*
-Failure counts a retryable failure and opens at the limit.
+Release frees the trial slot of a probe that ended without a verdict,
+such as one the caller canceled, leaving the breaker as it was.
+*/
+func (b *Breaker) Release() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.probing = false
+}
+
+/*
+Failure counts a retryable failure and opens at the limit; a failed
+probe reopens the breaker for a fresh cool-down at once.
 */
 func (b *Breaker) Failure() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	now := b.clock.Now()
+	if b.probing {
+		b.openedAt = now
+		b.probing = false
+		return
+	}
+
 	if b.failures == 0 || now.Sub(b.first) > b.window {
 		b.failures = 0
 		b.first = now
@@ -94,6 +111,39 @@ func (b *Breaker) Failure() {
 	b.failures++
 	if b.failures >= b.limit {
 		b.openedAt = now
-		b.probing = false
 	}
+}
+
+/*
+Breakers hands out one breaker per name, built from the configured
+limits, and keeps them for the process's life so a rebuilt driver
+inherits the state of the one it replaced.
+*/
+type Breakers struct {
+	mu    sync.Mutex
+	clock clock.Clock
+	cfg   config.AIBreakerConfig
+	all   map[string]*Breaker
+}
+
+/*
+NewBreakers builds the registry.
+*/
+func NewBreakers(clk clock.Clock, cfg config.AIBreakerConfig) *Breakers {
+	return &Breakers{clock: clk, cfg: cfg, all: map[string]*Breaker{}}
+}
+
+/*
+For returns the breaker for a name, creating it on first use.
+*/
+func (r *Breakers) For(name string) *Breaker {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if b, ok := r.all[name]; ok {
+		return b
+	}
+	b := NewBreaker(r.clock, r.cfg.Failures, r.cfg.Window, r.cfg.Open)
+	r.all[name] = b
+	return b
 }
