@@ -115,11 +115,11 @@ func (r *Runner) runTx(ctx context.Context, tx *database.Tx, args Args, queueWai
 		return &Result{Outcome: "skipped", SkipReason: "agent_missing"}, nil
 	}
 
-	run, err := r.startRun(ctx, tx, env, args, queueWait)
+	run, err := r.startRun(ctx, tx, env, args)
 	if err != nil {
 		return nil, err
 	}
-	recorder := newRecorder(ctx, r.DB, r.Clock, r.Prices, run)
+	recorder := r.newRecorder(run)
 
 	outcome, err := r.execute(ctx, env, recorder, args)
 	if err != nil {
@@ -129,12 +129,12 @@ func (r *Runner) runTx(ctx context.Context, tx *database.Tx, args Args, queueWai
 		}); ferr != nil {
 			return nil, fmt.Errorf("finish run: %w", ferr)
 		}
-		r.recordSpend(ctx, tx, env, recorder, "error")
+		r.recordSpend(ctx, tx, &flow{env: env, recorder: recorder}, "error")
 		return &Result{Outcome: "error", RunID: run.ID}, nil
 	}
 
 	_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
-	r.recordSpend(ctx, tx, env, recorder, outcome.name)
+	r.recordSpend(ctx, tx, &flow{env: env, recorder: recorder}, outcome.name)
 	return &Result{
 		Outcome: outcome.name, SkipReason: outcome.skipReason,
 		HandoffReason: outcome.handoffReason, AnswerID: outcome.AnswerID, RunID: run.ID,
@@ -145,7 +145,7 @@ func (r *Runner) runTx(ctx context.Context, tx *database.Tx, args Args, queueWai
 startRun opens the run row with the prompt fingerprint and a config
 snapshot.
 */
-func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args Args, _ int) (models.AiRun, error) {
+func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args Args) (models.AiRun, error) {
 	family := enums.AIModelFamilyOpenWeight
 	if env.Agent.AnswerModel != nil {
 		family = familyForKey(env.AnswerKey, *env.Agent.AnswerModel)
@@ -189,38 +189,41 @@ func (r *Runner) execute(ctx context.Context, env *env, recorder *Recorder, _ Ar
 	}
 
 	text := triggerText(env.Trigger)
+	f := &flow{
+		env: env, recorder: recorder,
+		c: &classification{
+			Intent: "question", Language: env.Agent.DefaultLanguage,
+			QueryRewritten: triggerText(env.Trigger),
+		},
+	}
 
 	if outcome, reason := env.patterns.fastPath(text, env.pendingConfirm); outcome != "" {
-		return r.commitFastPath(ctx, env, recorder, outcome, reason)
+		return r.commitFastPath(ctx, f, outcome, reason)
 	}
 
-	classified := &classification{
-		Intent: "question", Language: env.Agent.DefaultLanguage,
-		QueryRewritten: triggerText(env.Trigger),
-	}
-
-	found, err := r.retrieve(ctx, env, recorder, classified)
+	found, err := r.retrieve(ctx, f)
 	if err != nil {
 		return nil, err
 	}
+	f.found = found
 
 	if !found.Answerable {
-		return r.commitUnknown(ctx, env, recorder, classified)
+		return r.commitUnknown(ctx, f)
 	}
 
-	answer, err := r.generate(ctx, env, recorder, classified, found)
+	answer, err := r.generate(ctx, f)
 	if err != nil {
 		return nil, err
 	}
 
 	if answer.handoff != "" {
-		return r.commitHandoff(ctx, env, recorder, answer.handoff)
+		return r.commitHandoff(ctx, f, answer.handoff)
 	}
 	if answer.unknown {
-		return r.commitUnknown(ctx, env, recorder, classified)
+		return r.commitUnknown(ctx, f)
 	}
 
-	return r.commitAnswer(ctx, env, recorder, classified, found, answer)
+	return r.commitAnswer(ctx, f, answer)
 }
 
 /*
@@ -294,7 +297,7 @@ func errorCode(_ error) string {
 /*
 recordSpend adds the run's cost and counts to the month's tally row.
 */
-func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, recorder *Recorder, outcome string) {
+func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, f *flow, outcome string) {
 	now := r.Clock.Now().UTC()
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	nowT := r.Clock.Now()
@@ -303,9 +306,9 @@ func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, rec
 	counts[outcome] = 1
 
 	period, err := models.New(tx).AddSpend(ctx, models.AddSpendParams{
-		WorkspaceID: env.Workspace.ID, PeriodStart: database.Date(start),
-		CostMicros: recorder.Cost(), InputTokens: recorder.tokens.input,
-		CachedInputTokens: recorder.tokens.cached, OutputTokens: recorder.tokens.output,
+		WorkspaceID: f.env.Workspace.ID, PeriodStart: database.Date(start),
+		CostMicros: f.recorder.Cost(), InputTokens: f.recorder.tokens.input,
+		CachedInputTokens: f.recorder.tokens.cached, OutputTokens: f.recorder.tokens.output,
 		RunsCount:     1,
 		AnsweredCount: counts["answered"], UnknownCount: counts["unknown"],
 		HandoffCount: counts["handoff"], SilentCount: counts["silent"], Now: nowT,
@@ -314,7 +317,7 @@ func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, rec
 		return
 	}
 
-	r.checkThresholds(ctx, tx, env, period)
+	r.checkThresholds(ctx, tx, f.env, period)
 }
 
 /*

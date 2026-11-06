@@ -28,7 +28,7 @@ type Breaker struct {
 	mu       sync.Mutex
 	clock    clock.Clock
 	failures int
-	limit      int
+	limit    int
 	window   time.Duration
 	openFor  time.Duration
 	first    time.Time

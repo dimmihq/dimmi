@@ -100,10 +100,17 @@ func (t *Table) Find(provider, model string) *ModelPrice {
 }
 
 /*
+TokenCounts are the billable counters of one call.
+*/
+type TokenCounts struct {
+	Input, CachedInput, CacheWrite, Output int64
+}
+
+/*
 Cost computes the micro-USD cost of one usage, nil when the model has
 no price.
 */
-func (t *Table) Cost(provider, model string, input, cachedInput, cacheWrite, output int64) *int64 {
+func (t *Table) Cost(provider, model string, u TokenCounts) *int64 {
 	p := t.Find(provider, model)
 	if p == nil {
 		return nil
@@ -121,10 +128,10 @@ func (t *Table) Cost(provider, model string, input, cachedInput, cacheWrite, out
 		total.Add(total, r.Mul(r, big.NewRat(tokens, 1_000_000)))
 	}
 
-	add(p.InputPerMtok, input)
-	add(p.CachedInputPerMtok, cachedInput)
-	add(p.CacheWritePerMtok, cacheWrite)
-	add(p.OutputPerMtok, output)
+	add(p.InputPerMtok, u.Input)
+	add(p.CachedInputPerMtok, u.CachedInput)
+	add(p.CacheWritePerMtok, u.CacheWrite)
+	add(p.OutputPerMtok, u.Output)
 
 	micros := new(big.Rat).Mul(total, big.NewRat(1_000_000, 1))
 	rounded := new(big.Int).Quo(micros.Num(), micros.Denom())

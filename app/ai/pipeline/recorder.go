@@ -53,8 +53,8 @@ type tokens struct {
 /*
 newRecorder creates the run row.
 */
-func newRecorder(_ context.Context, db *database.DB, clk clock.Clock, prices *aiprices.Table, run models.AiRun) *Recorder {
-	return &Recorder{db: db, clock: clk, prices: prices, Run: run}
+func (r *Runner) newRecorder(run models.AiRun) *Recorder {
+	return &Recorder{db: r.DB, clock: r.Clock, prices: r.Prices, Run: run}
 }
 
 /*
@@ -66,8 +66,10 @@ func (r *Recorder) Step(ctx context.Context, tx *database.Tx, in StepInput) (mod
 	usageEstimated := !in.Usage.Reported && (in.Usage.InputTokens > 0 || in.Usage.OutputTokens > 0)
 	cost := in.CostMicros
 	if cost == 0 && r.prices != nil {
-		if c := r.prices.Cost(in.Provider, in.Model, in.Usage.InputTokens, in.Usage.CachedInputTokens,
-			in.Usage.CacheWriteTokens, in.Usage.OutputTokens); c != nil {
+		if c := r.prices.Cost(in.Provider, in.Model, aiprices.TokenCounts{
+			Input: in.Usage.InputTokens, CachedInput: in.Usage.CachedInputTokens,
+			CacheWrite: in.Usage.CacheWriteTokens, Output: in.Usage.OutputTokens,
+		}); c != nil {
 			cost = *c
 		}
 	}

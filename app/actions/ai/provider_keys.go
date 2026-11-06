@@ -145,7 +145,7 @@ func (a *CreateProviderKey) create(ctx context.Context, tx *database.Tx, in Crea
 		return key, fmt.Errorf("update provider key: %w", err)
 	}
 
-	key, err = recordValidation(ctx, tx, a.LLM, a.Clock, key)
+	key, err = keyValidator{llm: a.LLM, clock: a.Clock}.recordValidation(ctx, tx, key)
 	if err != nil {
 		return key, fmt.Errorf("update key status: %w", err)
 	}
@@ -249,15 +249,7 @@ func (a *TestProviderKey) Handle(ctx context.Context, in TestKeyInput) (*models.
 			return err
 		}
 
-		status, reason, modelsList, info, _ := validate(ctx, a.LLM, key)
-
-		modelsJSON, _ := json.Marshal(modelsList)
-		infoJSON, _ := json.Marshal(info)
-		key, err = models.New(tx).UpdateProviderKeyStatus(ctx, models.UpdateProviderKeyStatusParams{
-			WorkspaceID: key.WorkspaceID, ID: key.ID, Status: status, StatusReason: reason,
-			LastError: nil, LastValidatedAt: timenow(a.Clock), LastErrorAt: nil,
-			Models: modelsJSON, ProviderInfo: infoJSON, Now: a.Clock.Now(),
-		})
+		key, err = keyValidator{llm: a.LLM, clock: a.Clock}.recordValidation(ctx, tx, key)
 		return err
 	})
 	if err != nil {
@@ -278,41 +270,45 @@ func supportedProvider(p enums.AIProvider) bool {
 validate calls the provider through the driver's manager: ListModels
 where offered, a probe where not, and returns the status answer.
 */
-func validate(ctx context.Context, m *managers.LLMManager, key models.AiProviderKey) (status string, reason *string, modelList []string, info map[string]any, err error) {
+/*
+KeyCheck is what validate learned about the connection.
+*/
+type keyCheck struct {
+	status    string
+	reason    *string
+	modelList []string
+	info      map[string]any
+	err       error
+}
+
+func validate(ctx context.Context, m *managers.LLMManager, key models.AiProviderKey) keyCheck {
 	if m == nil {
-		return "unverified", new("not validated"), nil, nil, nil
+		return keyCheck{status: "unverified", reason: new("not validated")}
 	}
 
 	driver, err := m.ForKey(ctx, key)
 	if err != nil {
-		return "error", new(err.Error()), nil, nil, err
+		return keyCheck{status: "error", reason: new(err.Error()), err: err}
 	}
 
 	listed, listErr := driver.ListModels(ctx)
-	if listErr != nil && !errors.Is(listErr, errLLMNotSupported()) {
-		return "invalid", new(listErr.Error()), nil, nil, listErr
+	if listErr != nil && !errors.Is(listErr, contracts.ErrLLMNotSupported) {
+		return keyCheck{status: "invalid", reason: new(listErr.Error()), err: listErr}
 	}
 
 	if len(listed) > 0 {
+		var modelList []string
 		for _, mdl := range listed {
 			modelList = append(modelList, mdl.ID)
 		}
-		return "valid", new("validated"), modelList, map[string]any{"models_count": len(listed)}, nil
+		return keyCheck{
+			status: "valid", reason: new("validated"), modelList: modelList,
+			info: map[string]any{"models_count": len(listed)},
+		}
 	}
 
-	return "valid", new("validated"), nil, nil, nil
+	return keyCheck{status: "valid", reason: new("validated")}
 }
-
-/*
-errLLMNotSupported re-exports the contract sentinel.
-*/
-func errLLMNotSupported() error {
-	return contractsNotSupported()
-}
-
-func contractsNotSupported() error { return errNotSupported }
-
-var errNotSupported = fmt.Errorf("not supported")
 
 /*
 nullable maps an empty string to NULL.
@@ -348,15 +344,23 @@ var _ = exceptions.ErrNotFound
 recordValidation validates the key against its provider and stores
 the status, models and info it returned.
 */
-func recordValidation(ctx context.Context, tx *database.Tx, llm *managers.LLMManager,
-	clk clock.Clock, key models.AiProviderKey,
+/*
+KeyValidator pairs the manager and clock the checks need.
+*/
+type keyValidator struct {
+	llm   *managers.LLMManager
+	clock clock.Clock
+}
+
+func (v keyValidator) recordValidation(ctx context.Context, tx *database.Tx,
+	key models.AiProviderKey,
 ) (models.AiProviderKey, error) {
-	status, reason, modelsList, info, _ := validate(ctx, llm, key)
-	modelsJSON, _ := json.Marshal(modelsList)
-	infoJSON, _ := json.Marshal(info)
+	check := validate(ctx, v.llm, key)
+	modelsJSON, _ := json.Marshal(check.modelList)
+	infoJSON, _ := json.Marshal(check.info)
 	return models.New(tx).UpdateProviderKeyStatus(ctx, models.UpdateProviderKeyStatusParams{
-		WorkspaceID: key.WorkspaceID, ID: key.ID, Status: status, StatusReason: reason,
-		LastError: nil, LastValidatedAt: timenow(clk), LastErrorAt: nil,
-		Models: modelsJSON, ProviderInfo: infoJSON, Now: clk.Now(),
+		WorkspaceID: key.WorkspaceID, ID: key.ID, Status: check.status, StatusReason: check.reason,
+		LastError: nil, LastValidatedAt: timenow(v.clock), LastErrorAt: nil,
+		Models: modelsJSON, ProviderInfo: infoJSON, Now: v.clock.Now(),
 	})
 }

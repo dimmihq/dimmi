@@ -3,11 +3,10 @@
 | Pipeline Stages
 |--------------------------------------------------------------------------
 |
-| Each stage does one thing and records one or more steps: classify
-| reads intent and language on the cheap model, retrieve asks the
-| knowledge index, generate writes the answer on the strong model,
-| and the commits write the outcome transactionally, after a last
-| look for anything newer.
+| Each stage does one thing and records one or more steps: retrieve
+| asks the knowledge index, generate writes the answer on the answer
+| model, and the commits write the outcome transactionally, after a
+| last look for anything newer.
 |
 */
 
@@ -27,7 +26,6 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
-	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/linkguard"
 )
@@ -55,6 +53,17 @@ type retrieval struct {
 }
 
 /*
+flow carries what a stage needs: the environment, the recorder and
+the artifacts earlier stages produced.
+*/
+type flow struct {
+	env      *env
+	recorder *Recorder
+	c        *classification
+	found    *retrieval
+}
+
+/*
 answer is the generated reply.
 */
 type answer struct {
@@ -68,27 +77,27 @@ type answer struct {
 /*
 retrieve asks the knowledge index and decides answerability.
 */
-func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *classification) (*retrieval, error) {
-	query := c.QueryRewritten
+func (r *Runner) retrieve(ctx context.Context, f *flow) (*retrieval, error) {
+	query := f.c.QueryRewritten
 	if query == "" {
-		query = triggerText(env.Trigger)
+		query = triggerText(f.env.Trigger)
 	}
 
 	started := r.Clock.Now()
-	res, err := r.Knowledge.Search(ctx, env.Workspace.ID, env.redact(query),
+	res, err := r.Knowledge.Search(ctx, f.env.Workspace.ID, f.env.redact(query),
 		contracts.KnowledgeSearchOptions{
 			Limit:      6,
 			Visibility: []contracts.KnowledgeVisibility{contracts.KnowledgeVisibilityPublic},
 			Surface:    "agent",
 		})
 	if err != nil {
-		r.stepErr(ctx, env, recorder, enums.AIRunStepKindRetrieve, "", started, err)
+		r.stepErr(ctx, f, stepError{kind: enums.AIRunStepKindRetrieve, started: started, err: err})
 		return nil, fmt.Errorf("retrieve: %w", err)
 	}
 
 	chunks := res.Chunks
 	answerable := len(chunks) > 0
-	if f8, err := env.Agent.MinSimilarity.Float64Value(); err == nil && f8.Valid {
+	if f8, err := f.env.Agent.MinSimilarity.Float64Value(); err == nil && f8.Valid {
 		threshold := f8.Float64
 		answerable = false
 		for _, ch := range chunks {
@@ -100,10 +109,10 @@ func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 
 	payload, _ := json.Marshal(chunks)
-	if _, err := recorder.Step(ctx, env.tx, StepInput{
+	if _, err := f.recorder.Step(ctx, f.env.tx, StepInput{
 		Kind: enums.AIRunStepKindRetrieve, Status: "ok",
 		Latency: r.Clock.Now().Sub(started), StartedAt: started, CompletedAt: r.Clock.Now(),
-		RequestPayload: r.payload(env, query), ResponsePayload: r.payload(env, string(payload)),
+		RequestPayload: r.payload(f.env, query), ResponsePayload: r.payload(f.env, string(payload)),
 	}); err != nil {
 		return nil, fmt.Errorf("record retrieve step: %w", err)
 	}
@@ -115,14 +124,14 @@ func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *
 generate writes the answer on the answer model, streaming into a
 buffer; the stream's first token is timed.
 */
-func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *classification, found *retrieval) (*answer, error) {
-	llm, err := r.driverFor(ctx, env.AnswerKey, env.Agent.AnswerModel)
+func (r *Runner) generate(ctx context.Context, f *flow) (*answer, error) {
+	llm, err := r.driverFor(ctx, f.env.AnswerKey, f.env.Agent.AnswerModel)
 	if err != nil {
 		return nil, err
 	}
-	model := strv(env.Agent.AnswerModel)
+	model := strv(f.env.Agent.AnswerModel)
 
-	system, sources, err := r.answerPrompt(env, c, found)
+	system, sources, err := r.answerPrompt(f.env, f.c, f.found)
 	if err != nil {
 		return nil, err
 	}
@@ -135,28 +144,29 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 		Messages: []contracts.ChatMessage{
 			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: sources}}},
 		},
-		MaxOutputTokens: int(env.Agent.MaxOutputTokens),
+		MaxOutputTokens: int(f.env.Agent.MaxOutputTokens),
 		CacheHint:       true,
 	})
 	if err != nil {
-		r.stepErr(ctx, env, recorder, enums.AIRunStepKindGenerate, model, started, err)
+		r.stepErr(ctx, f, stepError{kind: enums.AIRunStepKindGenerate, model: model, started: started, err: err})
 		return nil, fmt.Errorf("generate: %w", err)
 	}
 	defer func() { _ = stream.Close() }()
 
-	text, usage, firstToken, err := r.streamAnswer(ctx, stream, started)
+	got, err := r.streamAnswer(ctx, stream, started)
 	if err != nil {
-		r.stepErr(ctx, env, recorder, enums.AIRunStepKindGenerate, model, started, err)
+		r.stepErr(ctx, f, stepError{kind: enums.AIRunStepKindGenerate, model: model, started: started, err: err})
 		return nil, fmt.Errorf("generate stream: %w", err)
 	}
 	latency := r.Clock.Now().Sub(started)
+	text, usage, firstToken := got.text, got.usage, got.firstToken
 
-	if _, err := recorder.Step(ctx, env.tx, StepInput{
+	if _, err := f.recorder.Step(ctx, f.env.tx, StepInput{
 		Kind: enums.AIRunStepKindGenerate, Provider: string(llm.Provider()),
-		ProviderKeyID: keyID(env.AnswerKey), Model: model, Status: "ok",
+		ProviderKeyID: keyID(f.env.AnswerKey), Model: model, Status: "ok",
 		Usage: usage, Latency: latency, FirstToken: firstToken,
 		StartedAt: started, CompletedAt: r.Clock.Now(),
-		RequestPayload: r.payload(env, sources), ResponsePayload: r.payload(env, text),
+		RequestPayload: r.payload(f.env, sources), ResponsePayload: r.payload(f.env, text),
 	}); err != nil {
 		return nil, fmt.Errorf("record generate step: %w", err)
 	}
@@ -199,184 +209,12 @@ func (r *Runner) answerPrompt(env *env, c *classification, found *retrieval) (st
 }
 
 /*
-commitAnswer writes the reply and closes the run.
-*/
-func (r *Runner) commitAnswer(ctx context.Context, env *env, recorder *Recorder, c *classification, found *retrieval, a *answer) (*decision, error) {
-	if reason := superseded(env); reason != "" {
-		return &decision{name: "superseded", skipReason: reason}, nil
-	}
-
-	text := postProcess(env, a.Text, found)
-	if text == "" {
-		return r.commitUnknown(ctx, env, recorder, c)
-	}
-
-	writer := r.writer(env)
-	msg, _, err := writer.Append(ctx, env.Conversation, conversations.NewMessage{
-		Type: "message", Body: text, BodyFormat: new("markdown"),
-		Metadata: aiMeta(recorder, found, c),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("write answer: %w", err)
-	}
-
-	if err := models.New(env.tx).BumpConversationAiAnswer(ctx, models.BumpConversationAiAnswerParams{
-		WorkspaceID: env.Workspace.ID, ID: env.Conversation.ID,
-		CostMicros: recorder.Cost(), Language: nilable(c.Language), Now: r.Clock.Now(),
-	}); err != nil {
-		return nil, fmt.Errorf("bump ai answer: %w", err)
-	}
-
-	return &decision{name: "answered", AnswerID: &msg.ID}, nil
-}
-
-/*
-commitUnknown writes the honest no-answer and, when the setting asks,
-hands off.
-*/
-func (r *Runner) commitUnknown(ctx context.Context, env *env, recorder *Recorder,
-	c *classification,
-) (*decision, error) {
-	if reason := superseded(env); reason != "" {
-		return &decision{name: "superseded", skipReason: reason}, nil
-	}
-
-	if env.Agent.UnknownBehavior == "handoff" {
-		return r.commitHandoff(ctx, env, recorder, "unknown")
-	}
-
-	line := messageFor(env, "unknown_offer")
-	writer := r.writer(env)
-	msg, _, err := writer.Append(ctx, env.Conversation, conversations.NewMessage{
-		Type: "message", Body: line, Metadata: aiMeta(recorder, nil, c),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("write unknown: %w", err)
-	}
-
-	return &decision{name: "unknown", AnswerID: &msg.ID}, nil
-}
-
-/*
-commitHandoff writes the handoff line and marks the conversation.
-*/
-func (r *Runner) commitHandoff(ctx context.Context, env *env, recorder *Recorder, reason string) (*decision, error) {
-	if s := superseded(env); s != "" {
-		return &decision{name: "superseded", skipReason: s}, nil
-	}
-
-	line := messageFor(env, "handoff_line")
-	writer := r.writer(env)
-	_, _, err := writer.Append(ctx, env.Conversation, conversations.NewMessage{
-		Type: "message", Body: line, Metadata: aiMeta(recorder, nil, nil),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("write handoff line: %w", err)
-	}
-
-	summary := r.handoffSummary(ctx, env, recorder, reason)
-
-	if err := models.New(env.tx).HandoffConversationAi(ctx, models.HandoffConversationAiParams{
-		WorkspaceID: env.Workspace.ID, ID: env.Conversation.ID,
-		Reason: nilable(reason), Now: nilableTime(r.Clock.Now()),
-	}); err != nil {
-		return nil, fmt.Errorf("handoff conversation: %w", err)
-	}
-
-	if r.Events != nil {
-		_ = r.Events.Dispatch(ctx, env.tx, appevents.AiHandoffRequested{
-			Base: appevents.Base{
-				ID: ids.New(), WorkspaceID: env.Workspace.ID,
-				OccurredAt: r.Clock.Now(), Actor: appevents.Actor{Type: "agent", ID: env.Agent.ID},
-			},
-			ConversationRef: appevents.ConversationRef{ConversationID: env.Conversation.ID},
-			Reason:          reason,
-			Summary:         summary,
-		})
-	}
-
-	return &decision{name: "handoff", handoffReason: reason}, nil
-}
-
-/*
-commitFastPath writes the deterministic answer for a fast path.
-*/
-func (r *Runner) commitFastPath(ctx context.Context, env *env, recorder *Recorder, outcome, reason string) (*decision, error) {
-	if outcome == "handoff" {
-		return r.commitHandoff(ctx, env, recorder, reason)
-	}
-	return &decision{name: "silent"}, nil
-}
-
-/*
-superseded names what changed while the run worked, if anything did:
-a newer customer word, a human reply, a handoff or a close.
-*/
-func superseded(env *env) string {
-	for _, m := range env.Messages {
-		if m.ID.String() > env.Trigger.ID.String() && m.AuthorType == "contact" {
-			return "newer_customer_message"
-		}
-		if m.ID.String() > env.Trigger.ID.String() && m.AuthorType == "member" {
-			return "human_replied"
-		}
-	}
-	return ""
-}
-
-/*
-handoffSummary asks the answer model for the one-paragraph brief a
-teammate reads first: what the customer wants, what was said, why it
-was handed over. Its failure degrades to a reason-only handoff.
-*/
-func (r *Runner) handoffSummary(ctx context.Context, env *env, recorder *Recorder, reason string) string {
-	llm, err := r.driverFor(ctx, env.AnswerKey, env.Agent.AnswerModel)
-	if err != nil {
-		return ""
-	}
-	model := strv(env.Agent.AnswerModel)
-
-	started := r.Clock.Now()
-	res, err := llm.Chat(ctx, contracts.ChatRequest{
-		Model: model,
-		Messages: []contracts.ChatMessage{
-			{
-				Role: contracts.ChatRoleUser,
-				Parts: []contracts.ContentPart{{
-					Text: "Summarize this conversation for a teammate in two or three sentences: " +
-						"what the customer wants, what the assistant already said, and that it was " +
-						"handed over for: " + reason + ".\n\n" + transcriptForLLM(env, 10),
-				}},
-			},
-		},
-		MaxOutputTokens: 300,
-	})
-	if err != nil {
-		r.stepErr(ctx, env, recorder, enums.AIRunStepKindSummarize, model, started, err)
-		return ""
-	}
-
-	text := strings.TrimSpace(res.Text)
-	if _, err := recorder.Step(ctx, env.tx, StepInput{
-		Kind: enums.AIRunStepKindSummarize, Provider: string(llm.Provider()),
-		ProviderKeyID: keyID(env.AnswerKey), Model: model, Status: "ok",
-		Usage: res.Usage, Latency: r.Clock.Now().Sub(started),
-		StartedAt: started, CompletedAt: r.Clock.Now(),
-		ResponsePayload: r.payload(env, text),
-	}); err != nil {
-		return ""
-	}
-	return text
-}
-
-/*
 postProcess applies the deterministic rewrites: link allowlist and
 the citation requirement.
 */
 func postProcess(env *env, text string, _ *retrieval) string {
 	allowed := linkHosts(env)
-	text = linkguard.Filter(text, allowed)
-	return text
+	return linkguard.Filter(text, allowed)
 }
 
 /*
@@ -385,32 +223,6 @@ agent's own.
 */
 func linkHosts(env *env) []string {
 	return append([]string{}, env.Agent.LinkAllowlist...)
-}
-
-/*
-aiMeta is the message metadata every AI reply carries.
-*/
-func aiMeta(recorder *Recorder, found *retrieval, _ *classification) []byte {
-	meta := map[string]any{"ai": map[string]any{
-		"run_id":    recorder.Run.ID.String(),
-		"generated": true,
-	}}
-	if found != nil && len(found.Chunks) > 0 {
-		var sources []map[string]string
-		for _, ch := range found.Chunks {
-			sources = append(sources, map[string]string{
-				"title": ch.Title, "url": ch.URL,
-			})
-		}
-		if ai, ok := meta["ai"].(map[string]any); ok {
-			ai["sources"] = sources
-		}
-	}
-	out, err := json.Marshal(meta)
-	if err != nil {
-		return nil
-	}
-	return out
 }
 
 /*
@@ -458,19 +270,29 @@ func (r *Runner) prompt(env *env, name string, vars map[string]string) (string, 
 }
 
 /*
+stepError describes one failed stage for its step row.
+*/
+type stepError struct {
+	kind    enums.AIRunStepKind
+	model   string
+	started time.Time
+	err     error
+}
+
+/*
 stepErr records a failed step.
 */
-func (r *Runner) stepErr(ctx context.Context, env *env, recorder *Recorder, kind enums.AIRunStepKind, model string, started time.Time, err error) {
-	status := "error"
+func (r *Runner) stepErr(ctx context.Context, f *flow, fail stepError) {
 	code := ""
 	httpStatus := 0
-	if llmErr, ok := errors.AsType[*contracts.LLMError](err); ok {
+	if llmErr, ok := errors.AsType[*contracts.LLMError](fail.err); ok {
 		code = string(llmErr.Kind)
 		httpStatus = llmErr.HTTPStatus
 	}
-	_, _ = recorder.Step(ctx, env.tx, StepInput{
-		Kind: kind, Model: model, Status: status, ErrorKind: code, HTTPStatus: httpStatus,
-		Latency: r.Clock.Now().Sub(started), StartedAt: started, CompletedAt: r.Clock.Now(),
+	_, _ = f.recorder.Step(ctx, f.env.tx, StepInput{
+		Kind: fail.kind, Model: fail.model, Status: "error", ErrorKind: code, HTTPStatus: httpStatus,
+		Latency: r.Clock.Now().Sub(fail.started), StartedAt: fail.started,
+		CompletedAt: r.Clock.Now(),
 	})
 }
 
@@ -508,7 +330,7 @@ func product(env *env) string {
 /*
 standingRules is the workspace's rules block.
 */
-func standingRules(env *env) string {
+func standingRules(_ *env) string {
 	return "Always offer a real person when the customer asks or when you cannot answer."
 }
 
@@ -583,10 +405,23 @@ func transcriptForLLM(env *env, count int) string {
 /*
 streamAnswer consumes the generate stream into text and usage.
 */
-func (r *Runner) streamAnswer(ctx context.Context, stream contracts.ChatStream, started time.Time) (string, contracts.LLMUsage, time.Duration, error) {
+/*
+Streamed is what the generate stream produced.
+*/
+type streamed struct {
+	text       string
+	usage      contracts.LLMUsage
+	firstToken time.Duration
+}
+
+/*
+streamAnswer consumes the generate stream into text and usage.
+*/
+func (r *Runner) streamAnswer(ctx context.Context, stream contracts.ChatStream,
+	started time.Time,
+) (streamed, error) {
+	out := streamed{}
 	var buf strings.Builder
-	var firstToken time.Duration
-	var usage contracts.LLMUsage
 
 	for {
 		ev, err := stream.Next(ctx)
@@ -594,20 +429,21 @@ func (r *Runner) streamAnswer(ctx context.Context, stream contracts.ChatStream, 
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return "", usage, firstToken, err
+			return out, err
 		}
 		switch ev.Kind {
 		case contracts.StreamEventTextDelta:
-			if firstToken == 0 {
-				firstToken = r.Clock.Now().Sub(started)
+			if out.firstToken == 0 {
+				out.firstToken = r.Clock.Now().Sub(started)
 			}
 			buf.WriteString(ev.Text)
 		case contracts.StreamEventUsage:
 			if ev.Usage != nil {
-				usage = *ev.Usage
+				out.usage = *ev.Usage
 			}
 		case contracts.StreamEventToolCallDone, contracts.StreamEventDone:
 		}
 	}
-	return strings.TrimSpace(buf.String()), usage, firstToken, nil
+	out.text = strings.TrimSpace(buf.String())
+	return out, nil
 }

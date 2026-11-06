@@ -82,7 +82,9 @@ func (a *UpdateProviderKey) Handle(ctx context.Context, in UpdateKeyInput) (*mod
 update applies the patch, seals a rotated credential and revalidates
 the key it changed, inside the key's transaction.
 */
-func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx, in UpdateKeyInput) (models.AiProviderKey, error) {
+func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
+	in UpdateKeyInput,
+) (models.AiProviderKey, error) {
 	key, err := findKey(ctx, tx, in.Membership.Workspace.ID, in.KeyID)
 	if err != nil {
 		return key, err
@@ -120,7 +122,7 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx, in Upda
 	}
 
 	if rotated {
-		key, err = recordValidation(ctx, tx, a.LLM, a.Clock, key)
+		key, err = keyValidator{llm: a.LLM, clock: a.Clock}.recordValidation(ctx, tx, key)
 		if err != nil {
 			return key, fmt.Errorf("update key status: %w", err)
 		}
