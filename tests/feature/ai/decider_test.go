@@ -43,7 +43,8 @@ func TestDeciders(t *testing.T) {
 	t.Parallel()
 
 	answer := httpclient.Response{Status: 200, Body: []byte(`{"model":"jev-1.13.0","answers":{` +
-		`"intent":{"type":"choice","choice":"question","confidence":0.91,"probabilities":{"question":0.91,"spam":0.09}},` +
+		`"intent":{"type":"choice","choice":"question","confidence":0.91,` +
+		`"probabilities":{"question":0.91,"spam":0.09}},` +
 		`"billing":{"type":"noul","noul":0.97}},"usage":{"input_tokens":120,"output_tokens":12}}`)}
 
 	newDriver := func(t *testing.T) (*typesafe.Driver, *httpclienttest.Fake) {
@@ -66,14 +67,14 @@ func TestDeciders(t *testing.T) {
 
 	t.Run("the fake keeps the contract", func(t *testing.T) {
 		t.Parallel()
-		d, err := decisionfake.New(true)
+		d, err := decisionfake.New(string(foundation.EnvTesting))
 		require.NoError(t, err)
 		deciderContract(t, d)
 	})
 
 	t.Run("the fake refuses to exist outside testing", func(t *testing.T) {
 		t.Parallel()
-		_, err := decisionfake.New(foundation.EnvProduction == foundation.EnvTesting)
+		_, err := decisionfake.New(string(foundation.EnvProduction))
 		assert.ErrorIs(t, err, decisionfake.ErrNotTesting)
 	})
 

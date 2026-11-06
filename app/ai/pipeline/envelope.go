@@ -1,31 +1,35 @@
 /*
 |--------------------------------------------------------------------------
-| Prompt Envelope
+| Conversation Envelope
 |--------------------------------------------------------------------------
 |
-| Everything that comes from outside — help articles, the customer's
-| profile, the conversation, the customer's message — reaches a model
-| only inside tagged blocks of the user message, with every &, < and >
-| escaped. The only real structure is the envelope itself, so a source
-| or a customer cannot close a tag and pose as an instruction.
-| Internal notes, events and undone messages never enter it.
+| The answer model reads the conversation as chat turns. Everything a
+| person outside wrote stays inside a tag with &, < and > escaped: a
+| customer's words in <customer_message>, a teammate's reply in
+| <teammate_message>, both as user turns; the agent's own replies are
+| its assistant turns. What the workspace allows the agent to know
+| about the customer opens the first user turn as <contact>. Internal
+| notes, events and undone messages never enter it.
 |
 */
 
 package pipeline
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
 Envelope limits: the turns of history sent, the characters each turn
-keeps, and the characters of the customer's pending messages.
+keeps, the characters of the customer's pending messages, and how much
+of the contact's allowlisted attributes is sent.
 */
 const (
 	historyTurns      = 12
@@ -36,22 +40,10 @@ const (
 )
 
 /*
-protocolReminder closes every answer envelope.
-*/
-const protocolReminder = "Reply per the output protocol: the STATUS line, a blank line, then the reply."
-
-/*
 escape makes data inert inside the envelope.
 */
 func escape(s string) string {
 	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(s)
-}
-
-/*
-escapeAttr makes data inert inside an attribute value.
-*/
-func escapeAttr(s string) string {
-	return strings.ReplaceAll(escape(s), `"`, "&quot;")
 }
 
 /*
@@ -65,71 +57,68 @@ func (r *Runner) redactFor(e *env, text string) string {
 }
 
 /*
-answerEnvelope is the answer model's user message.
+conversationMessages are the turns the answer model reads: the recent
+history and, last, the customer's messages since the last reply.
 */
-func (r *Runner) answerEnvelope(e *env, sources []source) string {
-	return strings.Join([]string{
-		sourcesBlock(sources),
-		r.contactBlock(e),
-		r.conversationBlock(e),
-		r.customerBlock(e),
-		protocolReminder,
-	}, "\n")
-}
-
-/*
-sourcesBlock lists the kept chunks, numbered.
-*/
-func sourcesBlock(sources []source) string {
-	var b strings.Builder
-	b.WriteString("<sources>\n")
-	for _, s := range sources {
-		fmt.Fprintf(&b, "<source id=\"%d\" title=\"%s\" url=\"%s\">%s</source>\n",
-			s.n, escapeAttr(s.chunk.Title), escapeAttr(s.chunk.URL), escape(s.chunk.Text))
-	}
-	b.WriteString("</sources>")
-	return b.String()
-}
-
-/*
-conversationBlock is the history before the pending messages.
-*/
-func (r *Runner) conversationBlock(e *env) string {
-	turns := e.History
-	if len(turns) > historyTurns {
-		turns = turns[len(turns)-historyTurns:]
+func (r *Runner) conversationMessages(e *env) []contracts.ChatMessage {
+	history := e.History
+	if len(history) > historyTurns {
+		history = history[len(history)-historyTurns:]
 	}
 
-	var b strings.Builder
-	b.WriteString("<conversation>\n")
-	for _, m := range turns {
+	var msgs []contracts.ChatMessage
+	for _, m := range history {
 		text := truncate(r.redactFor(e, body(m)), turnChars)
-		fmt.Fprintf(&b, "<turn role=\"%s\">%s</turn>\n", roleOf(m), escape(text))
+		switch m.AuthorType {
+		case string(enums.AuthorTypeContact):
+			msgs = addTurn(msgs, contracts.ChatRoleUser, "<customer_message>"+escape(text)+"</customer_message>")
+		case string(enums.AuthorTypeMember):
+			msgs = addTurn(msgs, contracts.ChatRoleUser, "<teammate_message>"+escape(text)+"</teammate_message>")
+		default:
+			msgs = addTurn(msgs, contracts.ChatRoleAssistant, text)
+		}
 	}
-	b.WriteString("</conversation>")
-	return b.String()
+
+	pending := r.redactFor(e, e.pendingText())
+	if runes := []rune(pending); len(runes) > customerChars {
+		pending = string(runes[len(runes)-customerChars:])
+	}
+	msgs = addTurn(msgs, contracts.ChatRoleUser, "<customer_message>"+escape(pending)+"</customer_message>")
+
+	if contact := r.contactBlock(e); contact != "" {
+		if msgs[0].Role != contracts.ChatRoleUser {
+			msgs = append([]contracts.ChatMessage{userMessage(contact)}, msgs...)
+		} else {
+			msgs[0].Parts[0].Text = contact + "\n" + msgs[0].Parts[0].Text
+		}
+	}
+	if msgs[0].Role != contracts.ChatRoleUser {
+		msgs = append([]contracts.ChatMessage{userMessage("<conversation_start></conversation_start>")}, msgs...)
+	}
+	return msgs
 }
 
 /*
-customerBlock holds every customer message since the last reply,
-keeping the newest characters when they run long.
+addTurn appends a turn, joining it to the previous one when the same
+side spoke twice in a row, since providers want turns to alternate.
 */
-func (r *Runner) customerBlock(e *env) string {
-	text := r.redactFor(e, e.pendingText())
-	if runes := []rune(text); len(runes) > customerChars {
-		text = string(runes[len(runes)-customerChars:])
+func addTurn(msgs []contracts.ChatMessage, role contracts.ChatRole, text string) []contracts.ChatMessage {
+	if n := len(msgs); n > 0 && msgs[n-1].Role == role && len(msgs[n-1].Parts) > 0 {
+		msgs[n-1].Parts[0].Text += "\n" + text
+		return msgs
 	}
-	return "<customer_message>" + escape(text) + "</customer_message>"
+	return append(msgs, contracts.ChatMessage{Role: role, Parts: []contracts.ContentPart{{Text: text}}})
 }
 
 /*
 contactBlock carries what the privacy setting allows about the
 customer, as attributes: the first name and locale, plus allowlisted
-attributes when the setting is allowlist.
+attributes when the setting is allowlist. Empty when nothing may be
+said.
 */
 func (r *Runner) contactBlock(e *env) string {
 	if e.Contact == nil || e.Agent.IncludeContactContext == "none" {
-		return "<contact></contact>"
+		return ""
 	}
 
 	var attrs []string
@@ -144,7 +133,7 @@ func (r *Runner) contactBlock(e *env) string {
 	}
 
 	if len(attrs) == 0 {
-		return "<contact></contact>"
+		return ""
 	}
 	return "<contact " + strings.Join(attrs, " ") + "></contact>"
 }
@@ -154,7 +143,7 @@ allowlisted renders the contact's allowlisted custom attributes.
 */
 func (r *Runner) allowlisted(e *env) []string {
 	values := map[string]any{}
-	if !decodeJSON(string(e.Contact.CustomAttributes), &values) {
+	if json.Unmarshal(e.Contact.CustomAttributes, &values) != nil {
 		return nil
 	}
 
@@ -165,8 +154,7 @@ func (r *Runner) allowlisted(e *env) []string {
 		if !ok || name == "" || name == "name" || name == "locale" || len(out) >= contactAttributes {
 			continue
 		}
-		text := truncate(r.redactFor(e, fmt.Sprint(v)), attributeChars)
-		out = append(out, attr(name, text))
+		out = append(out, attr(name, truncate(r.redactFor(e, fmt.Sprint(v)), attributeChars)))
 	}
 	return out
 }
@@ -175,7 +163,7 @@ func (r *Runner) allowlisted(e *env) []string {
 attr renders one escaped attribute.
 */
 func attr(name, value string) string {
-	return name + `="` + escapeAttr(value) + `"`
+	return name + `="` + strings.ReplaceAll(escape(value), `"`, "&quot;") + `"`
 }
 
 /*
@@ -186,16 +174,10 @@ func attrName() *regexp.Regexp {
 }
 
 /*
-roleOf names a turn's author for the envelope.
+userMessage is one user turn.
 */
-func roleOf(m models.Message) string {
-	switch m.AuthorType {
-	case string(enums.AuthorTypeContact):
-		return "customer"
-	case string(enums.AuthorTypeMember):
-		return "teammate"
-	}
-	return "assistant"
+func userMessage(text string) contracts.ChatMessage {
+	return contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: text}}}
 }
 
 /*

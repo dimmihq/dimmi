@@ -27,8 +27,7 @@ import (
 )
 
 /*
-close commits the decision and returns the run's result. A handoff
-then gets its teammate summary, outside the transaction.
+close commits the decision and returns the run's result.
 */
 func (r *Runner) close(ctx context.Context, st *run, d *decision) (*Result, error) {
 	err := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -38,10 +37,6 @@ func (r *Runner) close(ctx context.Context, st *run, d *decision) (*Result, erro
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if d.handoffReason != "" && (d.outcome == outcomeHandoff || d.outcome == outcomeError) {
-		r.afterHandoff(ctx, st, d)
 	}
 	return d.result(st.rec.Run.ID), nil
 }
@@ -66,6 +61,11 @@ func (r *Runner) commit(ctx context.Context, tx *database.Tx, st *run, d *decisi
 		}
 		if stale != nil {
 			d = stale
+		}
+	}
+	if d.writesMessage() && d.outcome != outcomeError {
+		if err := r.applyChanges(ctx, tx, st); err != nil {
+			return d, err
 		}
 	}
 	if err := r.write(ctx, tx, st, d); err != nil {
@@ -153,7 +153,7 @@ func (r *Runner) writeAnswer(ctx context.Context, tx *database.Tx, st *run, d *d
 	}
 	_, err := models.New(tx).BumpConversationAiAnswer(ctx, models.BumpConversationAiAnswerParams{
 		WorkspaceID: st.env.Conversation.WorkspaceID, ID: st.env.Conversation.ID,
-		CostMicros: st.rec.costMicros, Language: nilable(replyLanguage(st.env, st.c)), Now: r.Clock.Now(),
+		CostMicros: st.rec.costMicros, Now: r.Clock.Now(),
 	})
 	if err != nil {
 		return fmt.Errorf("count answer: %w", err)
@@ -209,7 +209,7 @@ func (r *Runner) writeHandoff(ctx context.Context, tx *database.Tx, st *run, d *
 	}); err != nil {
 		return fmt.Errorf("hand off conversation: %w", err)
 	}
-	return nil
+	return r.writeNote(ctx, tx, st, d)
 }
 
 /*
@@ -249,7 +249,7 @@ on the way.
 func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 	ai := map[string]any{
 		"run_id": st.rec.Run.ID.String(), "generated": true, "outcome": d.outcome,
-		"model": strv(st.env.Agent.AnswerModel), "language": replyLanguage(st.env, st.c),
+		"model": strv(st.env.Agent.AnswerModel),
 	}
 	if len(d.citations) > 0 {
 		sources := make([]map[string]any, 0, len(d.citations))

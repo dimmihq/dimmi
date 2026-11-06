@@ -126,6 +126,151 @@ func (q *Queries) FindConversationMessage(ctx context.Context, arg FindConversat
 	return i, err
 }
 
+const lastChangeAuthor = `-- name: LastChangeAuthor :one
+SELECT m.author_type FROM messages m
+WHERE m.workspace_id = $1 AND m.conversation_id = $2
+  AND m.type = 'event' AND m.event->>'name' = $3::text
+  AND ($4::text = '' OR m.event->'changes' ? $4::text)
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT 1
+`
+
+type LastChangeAuthorParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+	Name           string   `json:"name"`
+	Field          string   `json:"field"`
+}
+
+// LastChangeAuthor returns who made the newest timeline change of the
+// name, narrowed to changes of one field when given.
+func (q *Queries) LastChangeAuthor(ctx context.Context, arg LastChangeAuthorParams) (string, error) {
+	row := q.db.QueryRow(ctx, lastChangeAuthor,
+		arg.WorkspaceID,
+		arg.ConversationID,
+		arg.Name,
+		arg.Field,
+	)
+	var author_type string
+	err := row.Scan(&author_type)
+	return author_type, err
+}
+
+const listAgentTags = `-- name: ListAgentTags :many
+SELECT id, workspace_id, name, color, created_at, updated_at, icon FROM tags WHERE workspace_id = $1 ORDER BY name, id LIMIT $2
+`
+
+type ListAgentTagsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	RowLimit    int32    `json:"row_limit"`
+}
+
+// ListAgentTags returns the workspace's tags by name for the agent's
+// tool descriptions.
+func (q *Queries) ListAgentTags(ctx context.Context, arg ListAgentTagsParams) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, listAgentTags, arg.WorkspaceID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tag
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Color,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Icon,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAgentTeams = `-- name: ListAgentTeams :many
+SELECT id, workspace_id, name, deleted_at, created_at, updated_at FROM teams WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY lower(name), id LIMIT $2
+`
+
+type ListAgentTeamsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	RowLimit    int32    `json:"row_limit"`
+}
+
+// ListAgentTeams returns the workspace's live teams by name for the
+// agent's tool descriptions.
+func (q *Queries) ListAgentTeams(ctx context.Context, arg ListAgentTeamsParams) ([]Team, error) {
+	rows, err := q.db.Query(ctx, listAgentTeams, arg.WorkspaceID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listConversationTagAuthors = `-- name: ListConversationTagAuthors :many
+SELECT ct.tag_id, ct.created_by_type FROM conversation_tag ct
+WHERE ct.workspace_id = $1 AND ct.conversation_id = $2
+`
+
+type ListConversationTagAuthorsParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+}
+
+type ListConversationTagAuthorsRow struct {
+	TagID         ids.UUID `json:"tag_id"`
+	CreatedByType string   `json:"created_by_type"`
+}
+
+// ListConversationTagAuthors returns the conversation's tags and who put
+// each on.
+func (q *Queries) ListConversationTagAuthors(ctx context.Context, arg ListConversationTagAuthorsParams) ([]ListConversationTagAuthorsRow, error) {
+	rows, err := q.db.Query(ctx, listConversationTagAuthors, arg.WorkspaceID, arg.ConversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationTagAuthorsRow
+	for rows.Next() {
+		var i ListConversationTagAuthorsRow
+		if err := rows.Scan(&i.TagID, &i.CreatedByType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLatestPublicMessages = `-- name: ListLatestPublicMessages :many
 SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1

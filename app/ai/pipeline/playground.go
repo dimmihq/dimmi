@@ -56,7 +56,7 @@ func (r *Runner) Ask(ctx context.Context, q contracts.PlaygroundQuestion) (*cont
 		if err != nil {
 			return err
 		}
-		st = &run{env: e, rec: r.newRecorder(row), args: Args{Kind: playgroundKind}}
+		st = &run{env: e, rec: r.newRecorder(row), args: Args{Kind: playgroundKind}, settings: settingsFor(e)}
 		return nil
 	})
 	if err != nil {
@@ -65,7 +65,7 @@ func (r *Runner) Ask(ctx context.Context, q contracts.PlaygroundQuestion) (*cont
 
 	d := failed("provider_unavailable", errors.New("no answer model"))
 	if pauseGate(st.env) != "provider_unavailable" {
-		d = r.decide(ctx, st)
+		d = r.turn(ctx, st)
 	}
 
 	err = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -139,7 +139,7 @@ func (r *Runner) playgroundAnswer(st *run, d *decision) *contracts.PlaygroundAns
 	out := &contracts.PlaygroundAnswer{
 		RunID: &rec.Run.ID, Outcome: d.outcome,
 		Classification: contracts.PlaygroundClassification{
-			Intent: st.c.Intent, Language: replyLanguage(st.env, st.c), Query: st.query,
+			Language: st.env.Agent.DefaultLanguage, Query: st.query,
 		},
 		InputTokens: rec.tokens.input, CachedInputTokens: rec.tokens.cached, OutputTokens: rec.tokens.output,
 		CostMicros: rec.costMicros, FirstTokenMs: int(rec.firstToken.Milliseconds()),

@@ -79,3 +79,30 @@ SELECT (
 -- online now.
 SELECT count(*) FROM workspace_members
 WHERE workspace_id = @workspace_id AND status = 'active' AND availability = 'online';
+
+-- name: LastChangeAuthor :one
+-- LastChangeAuthor returns who made the newest timeline change of the
+-- name, narrowed to changes of one field when given.
+SELECT m.author_type FROM messages m
+WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id
+  AND m.type = 'event' AND m.event->>'name' = @name::text
+  AND (@field::text = '' OR m.event->'changes' ? @field::text)
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT 1;
+
+-- name: ListConversationTagAuthors :many
+-- ListConversationTagAuthors returns the conversation's tags and who put
+-- each on.
+SELECT ct.tag_id, ct.created_by_type FROM conversation_tag ct
+WHERE ct.workspace_id = @workspace_id AND ct.conversation_id = @conversation_id;
+
+-- name: ListAgentTags :many
+-- ListAgentTags returns the workspace's tags by name for the agent's
+-- tool descriptions.
+SELECT * FROM tags WHERE workspace_id = @workspace_id ORDER BY name, id LIMIT @row_limit;
+
+-- name: ListAgentTeams :many
+-- ListAgentTeams returns the workspace's live teams by name for the
+-- agent's tool descriptions.
+SELECT * FROM teams WHERE workspace_id = @workspace_id AND deleted_at IS NULL
+ORDER BY lower(name), id LIMIT @row_limit;

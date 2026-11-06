@@ -3,9 +3,9 @@
 | Language And Default Lines
 |--------------------------------------------------------------------------
 |
-| The answer prompt names the reply language in words ("German"), from
-| the decision model's detection when it is a language we know, else the
-| agent's default. The default lines a reply falls back to when the
+| The answer prompt names the workspace's default language in words
+| ("German"); the model replies in the customer's own. The default
+| lines a reply falls back to when the
 | model wrote none come from the prompt version's defaults file, and
 | the workspace can override each one in the agent's messages.
 |
@@ -17,17 +17,6 @@ import (
 	"encoding/json"
 	"strings"
 )
-
-/*
-replyLanguage is the language code the reply should use.
-*/
-func replyLanguage(e *env, c classification) string {
-	code := strings.ToLower(strings.TrimSpace(c.Language))
-	if _, ok := languageNames()[code]; ok {
-		return code
-	}
-	return e.Agent.DefaultLanguage
-}
 
 /*
 languageName spells a language code out; an unknown code stays as is.

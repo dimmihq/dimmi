@@ -206,10 +206,7 @@ finishRun closes the run row with the decision and the run's sums.
 func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
 	rec := st.rec
 	now := r.Clock.Now()
-	retrieval := st.retrieval
-	if len(retrieval) == 0 {
-		retrieval = json.RawMessage("[]")
-	}
+	retrieval := retrievalJSON(st.sources)
 	flags := st.flags
 	if flags == nil {
 		flags = []string{}
@@ -223,7 +220,7 @@ func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *dec
 	_, err := models.New(tx).FinishRun(ctx, models.FinishRunParams{
 		WorkspaceID: rec.Run.WorkspaceID, ID: rec.Run.ID,
 		Status: d.status(), Outcome: nilable(d.outcome), SkipReason: nilable(d.skipReason),
-		HandoffReason: nilable(d.handoffReason), Intent: nilable(st.c.Intent), Language: nilable(st.c.Language),
+		HandoffReason:  nilable(d.handoffReason),
 		QueryOriginal:  nilable(r.redactFor(st.env, st.env.pendingText())),
 		QueryRewritten: nilable(r.redactFor(st.env, st.query)),
 		Retrieval:      retrieval, AnswerMessageID: d.answerID, Flags: flags,

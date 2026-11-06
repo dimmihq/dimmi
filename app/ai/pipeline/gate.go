@@ -26,11 +26,15 @@ import (
 )
 
 /*
-gate returns the first rule that stops the agent, or nil.
+gate returns the first rule that stops the agent, or nil. It decides
+on policy alone and understands no language.
 */
-func (r *Runner) gate(e *env) *decision {
+func (r *Runner) gate(e *env, s *TurnSettings) *decision {
 	if reason := eligibility(e); reason != "" {
 		return skipped(reason)
+	}
+	if s.Workflow.Controlled && !s.Workflow.StepActive {
+		return skipped("workflow_controls_ai")
 	}
 	if reason := humanGate(e); reason != "" {
 		return skipped(reason)
@@ -44,7 +48,7 @@ func (r *Runner) gate(e *env) *decision {
 		}
 		return handoff(reason, "", e.handoffKey())
 	}
-	if e.Conversation.AiReplyCount >= e.Agent.MaxAiReplies {
+	if s.MaxReplies > 0 && e.Conversation.AiReplyCount >= s.MaxReplies {
 		return handoff("max_replies", "", "max_replies")
 	}
 	return nil

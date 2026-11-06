@@ -70,7 +70,7 @@ func TestLoader(t *testing.T) {
 
 	t.Run("refuses a tree missing a required file", func(t *testing.T) {
 		t.Parallel()
-		_, err := loadSet([]fs.FS{tree(map[string]string{"common/verify.system.md": ""})}, "v9")
+		_, err := loadSet([]fs.FS{tree(map[string]string{"common/tone_concise.md": ""})}, "v9")
 		assert.ErrorIs(t, err, ErrInvalid)
 	})
 

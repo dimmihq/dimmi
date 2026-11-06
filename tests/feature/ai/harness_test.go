@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -21,17 +20,17 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
-	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
 	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
 
 /*
-The answer model the scripted agent uses, priced so cost is recorded;
-its cheap sibling writes handoff notes and checks grounding.
+answerModel is the model the scripted agent answers with, priced so
+cost is recorded.
 */
 const answerModel = "claude-sonnet-5-5"
 
@@ -41,13 +40,11 @@ seedPath is the directory of seed articles, from this package.
 const seedPath = "../../../database/seeders/knowledge"
 
 /*
-router is the scripted driver: answer-model calls go to one fake,
-cheap-model calls to another. Hook runs before an answer stream starts;
-stop overrides the answer stream's stop reason.
+router is the scripted driver around the answer fake. Hook runs before
+the next stream starts; stop overrides the streams' stop reason.
 */
 type router struct {
 	answer *fake.LLM
-	cheap  *fake.LLM
 	mu     sync.Mutex
 	hook   func()
 	stop   contracts.StopReason
@@ -55,12 +52,7 @@ type router struct {
 
 func (r *router) Provider() contracts.LLMProvider { return contracts.LLMProviderAnthropic }
 
-func (r *router) pick(model string) *fake.LLM {
-	if model == answerModel {
-		return r.answer
-	}
-	return r.cheap
-}
+func (r *router) pick(string) *fake.LLM { return r.answer }
 
 func (r *router) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
 	return r.pick(req.Model).Chat(ctx, req)
@@ -109,10 +101,9 @@ func (s *stopStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 harness is one test's desk with a scripted agent and decision model.
 */
 type harness struct {
-	t       *testing.T
-	d       tests.Desk
-	llm     *router
-	decider *decisionfake.Decider
+	t   *testing.T
+	d   tests.Desk
+	llm *router
 }
 
 /*
@@ -124,12 +115,7 @@ func newHarness(t *testing.T, change func(*models.UpdateAgentParams)) *harness {
 	t.Helper()
 
 	d := tests.NewDesk(t)
-	decider, err := decisionfake.New(d.TC.App.Application.Config.App.Env == foundation.EnvTesting)
-	require.NoError(t, err)
-	h := &harness{t: t, d: d, decider: decider, llm: &router{
-		answer: fake.New(contracts.LLMProviderAnthropic), cheap: fake.New(contracts.LLMProviderAnthropic),
-	}}
-	d.TC.App.AI.Decider = decider
+	h := &harness{t: t, d: d, llm: &router{answer: fake.New(contracts.LLMProviderAnthropic)}}
 
 	seed, err := knowledge.LoadSeed(t.Context(), d.TC.App.Storage, seedPath)
 	require.NoError(t, err)
@@ -198,28 +184,25 @@ func agentID(ctx context.Context, t *testing.T, d tests.Desk) ids.UUID {
 }
 
 /*
-decide is a scripted decision: a confident intent and language, and
-the named yes-or-no questions answered yes.
+call is a scripted tool call; one step may carry several.
 */
-func decide(intent, language string, yes ...string) decisionfake.Step {
-	answers := map[string]contracts.DecisionAnswer{
-		"intent":   {Type: contracts.DecisionChoice, Choice: intent, Confidence: 0.92},
-		"language": {Type: contracts.DecisionChoice, Choice: language, Confidence: 0.95},
-	}
-	for _, name := range []string{"wants_human", "frustrated", "injection_suspected"} {
-		answers[name] = contracts.DecisionAnswer{Type: contracts.DecisionNoul, Noul: 0.04}
-	}
-	for _, name := range yes {
-		answers[name] = contracts.DecisionAnswer{Type: contracts.DecisionNoul, Noul: 0.93}
-	}
-	return decisionfake.Step{Answers: answers, Usage: contracts.DecisionUsage{InputTokens: 2_000_000}}
+func call(name, args string) contracts.ToolCall {
+	return contracts.ToolCall{ID: "call_" + name, Name: name, Arguments: json.RawMessage(args)}
 }
 
 /*
-summaryStep is a scripted handoff note.
+tools is a scripted model step that only calls tools.
 */
-func summaryStep() fake.Step {
-	return fake.Step{Text: "Wants: help.\nTried: nothing.\nMood: calm.\nHanded off because: asked."}
+func tools(calls ...contracts.ToolCall) fake.Step {
+	return fake.Step{ToolCalls: calls, Usage: contracts.LLMUsage{InputTokens: 900, OutputTokens: 30, Reported: true}}
+}
+
+/*
+search is a scripted search_knowledge call.
+*/
+func search(query string) fake.Step {
+	q, _ := json.Marshal(map[string]string{"query": query})
+	return tools(call("search_knowledge", string(q)))
 }
 
 /*
@@ -429,4 +412,42 @@ func str(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+/*
+team creates a workspace team.
+*/
+func (h *harness) team(name string) models.Team {
+	h.t.Helper()
+	team, err := factories.Team(h.t.Context(), h.d.TC.App, factories.TeamOf{
+		Workspace: h.d.TC.Workspace.Workspace, Name: name,
+	})
+	require.NoError(h.t, err)
+	return team
+}
+
+/*
+tag creates a workspace tag.
+*/
+func (h *harness) tag(name string) models.Tag {
+	h.t.Helper()
+	var tag models.Tag
+	h.d.TC.InWorkspace(func(ctx context.Context) error {
+		var err error
+		tag, err = models.New(h.d.TC.App.DB).CreateTag(ctx, models.CreateTagParams{
+			WorkspaceID: h.d.TC.Workspace.Workspace.ID, Name: name, Now: h.d.TC.App.Clock.Now(),
+		})
+		return err
+	})
+	return tag
+}
+
+/*
+spent records the month's agent spend so far.
+*/
+func (h *harness) spent(micros int64) {
+	h.t.Helper()
+	h.operator(`INSERT INTO ai_spend_periods (workspace_id, period_start, cost_micros, updated_at)
+		VALUES ($1, date_trunc('month', $2::timestamptz AT TIME ZONE 'UTC')::date, $3, now())`,
+		h.d.TC.Workspace.Workspace.ID, h.d.TC.App.Clock.Now(), micros)
 }

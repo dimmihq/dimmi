@@ -54,6 +54,7 @@ type env struct {
 	AnswerKey     *models.AiProviderKey
 	ClassifierKey *models.AiProviderKey
 	Facts         facts
+	Triage        triageFacts
 	Version       string
 	Defaults      map[string]string
 	now           time.Time
@@ -231,7 +232,8 @@ func (r *Runner) loadFacts(ctx context.Context, q *models.Queries, e *env) error
 	}
 	e.Facts.onlineMembers = online
 	e.Facts.withinHours, e.Facts.hoursErr = officehours.Within(e.Agent.OfficeHours, e.now)
-	return nil
+	e.Triage, err = loadTriage(ctx, q, e)
+	return err
 }
 
 /*
@@ -281,17 +283,4 @@ func (e *env) pendingText() string {
 		}
 	}
 	return joinParagraphs(parts)
-}
-
-/*
-agentReplied reports whether the agent already answered once in this
-conversation.
-*/
-func (e *env) agentReplied() bool {
-	if e.Conversation.AiReplyCount > 0 {
-		return true
-	}
-	return slices.ContainsFunc(e.History, func(m models.Message) bool {
-		return m.AuthorType == string(enums.AuthorTypeAgent)
-	})
 }

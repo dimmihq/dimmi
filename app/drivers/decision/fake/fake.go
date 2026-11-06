@@ -46,10 +46,11 @@ type Decider struct {
 }
 
 /*
-New returns the fake when testing is true, the environment's word.
+New returns the fake in the testing environment and refuses it in any
+other.
 */
-func New(testing bool) (*Decider, error) {
-	if !testing {
+func New(env string) (*Decider, error) {
+	if env != "testing" {
 		return nil, ErrNotTesting
 	}
 	return &Decider{}, nil

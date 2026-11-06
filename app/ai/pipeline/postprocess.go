@@ -1,15 +1,17 @@
 /*
 |--------------------------------------------------------------------------
-| Post-Process
+| Review
 |--------------------------------------------------------------------------
 |
-| The model's reply is checked in Go before a customer reads it.
-| Citation markers become citations on the message and leave the text;
-| only sources the run actually supplied count. Untrusted links, images
-| and HTML go. A reply cut off by the token limit is trimmed to its last
-| full sentence, never left dangling. An answer that cites nothing when
-| citations are required, or that a strict verifier finds unsupported,
-| becomes the honest no-answer.
+| The model's last text is checked in Go before a customer reads it.
+| Citation markers become the message's sources and leave the text;
+| only results a search of this turn returned count. Untrusted links,
+| images and HTML go. A reply cut off by the token limit is trimmed to
+| its last full sentence, never left dangling. When the turn's rules
+| demand a handoff the agent did not make, code makes it. The outcome
+| comes from what the turn did: a handoff when one was made, an answer
+| when it cited what it found, small talk when it never searched, and
+| otherwise the honest no-answer.
 |
 */
 
@@ -23,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/support/linkguard"
 )
 
@@ -33,79 +34,31 @@ maxReplyChars caps a reply; a longer one is cut at a paragraph.
 const maxReplyChars = 6000
 
 /*
-postProcess turns a parsed reply into the run's decision.
+review turns the model's draft into the turn's decision.
 */
-func (r *Runner) postProcess(ctx context.Context, st *run, p parsed) *decision {
-	text, cited := citations(p.reply, st.sources)
+func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
+	text, cited := citations(draft, st.sources)
 	text = r.guard.Filter(text, r.allowedHosts(ctx, st))
-	if p.stop == contracts.StopReasonMaxTokens {
+	if st.loop != nil && st.loop.stop == contracts.StopReasonMaxTokens {
 		text = trimToSentence(text)
 	}
 	text = capLength(text)
 
-	switch p.status {
-	case outcomeUnknown:
-		return unknown(text)
-	case outcomeHandoff:
-		return handoff(handoffReason(st), text, st.env.handoffKey())
+	if enforceRules(st) {
+		text = strings.TrimSpace(text + "\n\n" + r.line(st.env, st.env.handoffKey()))
 	}
 
-	return r.answered(ctx, st, text, cited)
-}
-
-/*
-parsed is a reply split by its STATUS line, with why the stream ended.
-*/
-type parsed struct {
-	status, reply string
-	stop          contracts.StopReason
-}
-
-/*
-answered applies the answer-only rules: something left to say, a
-citation when required, the verifier in strict mode, and a person
-when the customer also asked for one.
-*/
-func (r *Runner) answered(ctx context.Context, st *run, text string, cited []citation) *decision {
-	e := st.env
 	switch {
-	case text == "":
-		return unknown("")
-	case st.noSources && st.c.Intent == "greeting":
+	case st.handoff != nil:
+		d := handoff(st.handoff.reason, text, st.env.handoffKey())
+		d.citations = cited
+		return d
+	case len(cited) > 0:
+		return &decision{outcome: outcomeAnswered, reply: text, citations: cited}
+	case !st.searched && text != "":
 		return &decision{outcome: outcomeGreeted, reply: text}
-	case st.noSources:
-		return &decision{outcome: outcomeRefused, reply: text}
-	case e.Agent.RequireCitations && len(cited) == 0:
-		st.flags = append(st.flags, "uncited")
-		return unknown("")
-	case strictGrounding(e) && !r.verify(ctx, st, text):
-		st.flags = append(st.flags, "unsupported")
-		return unknown("")
-	case st.c.WantsHuman:
-		line := r.line(e, e.handoffKey())
-		return &decision{
-			outcome: outcomeHandoff, handoffReason: "customer_requested",
-			reply: text + "\n\n" + line, citations: cited,
-		}
 	}
-	return &decision{outcome: outcomeAnswered, reply: text, citations: cited}
-}
-
-/*
-handoffReason names why the answer model handed off.
-*/
-func handoffReason(st *run) string {
-	switch {
-	case st.c.WantsHuman || st.c.Intent == "human_request":
-		return "customer_requested"
-	case st.c.Intent == "unsafe":
-		return "safety"
-	case st.c.Intent == "abusive":
-		return "abusive"
-	case st.c.Frustrated:
-		return "frustration"
-	}
-	return "needs_human"
+	return unknown(text)
 }
 
 /*
@@ -206,49 +159,4 @@ func capLength(text string) string {
 		return strings.TrimSpace(cut[:i])
 	}
 	return trimToSentence(cut)
-}
-
-/*
-strictGrounding reports whether every answer goes past the verifier.
-*/
-func strictGrounding(e *env) bool {
-	return e.Agent.GroundingMode == "strict" || e.Agent.GroundingMode == "verify"
-}
-
-/*
-verdict is the verifier's answer.
-*/
-type verdict struct {
-	Supported        *bool    `json:"supported"`
-	UnsupportedClaim []string `json:"unsupported_claims"`
-}
-
-/*
-validVerdict accepts a verdict that says whether the draft holds.
-*/
-func validVerdict(v any) bool {
-	out, ok := v.(*verdict)
-	return ok && out.Supported != nil
-}
-
-/*
-verify asks the answer provider's cheap model whether the sources support every
-claim of the draft. A verifier that fails to answer fails closed.
-*/
-func (r *Runner) verify(ctx context.Context, st *run, draft string) bool {
-	e := st.env
-	llm, model, key := r.cheapLLM(ctx, e)
-	if llm == nil {
-		return false
-	}
-
-	var out verdict
-	ok := r.callJSON(ctx, st, jsonCall{
-		kind: enums.AIRunStepKindVerify, llm: llm, key: key, model: model,
-		system:  r.render(e, "verify.system.md", nil),
-		user:    "<draft>" + escape(draft) + "</draft>\n" + sourcesBlock(st.sources),
-		timeout: r.Timeouts.VerifyTotal, maxTokens: 500, valid: validVerdict,
-	}, &out)
-
-	return ok && *out.Supported
 }

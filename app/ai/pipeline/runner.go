@@ -3,14 +3,15 @@
 | Pipeline Runner
 |--------------------------------------------------------------------------
 |
-| One customer message in, one decision out. A run happens in three
-| moves so no database transaction ever waits on a model: a short
-| transaction loads the conversation, checks the gate and opens the run
-| row; the model calls happen outside any transaction, each step
-| written as it completes; a last short transaction locks the
-| conversation, makes sure nothing newer landed and commits the reply.
+| One customer message in, one turn of the agent out. A turn happens in
+| three moves so no database transaction ever waits on a model: a short
+| transaction loads the conversation, checks the policy gate and opens
+| the run row; the agent's tool loop and the draft's check run outside
+| any transaction, each step written as it completes; a last short
+| transaction locks the conversation, makes sure nothing newer landed
+| and commits the reply and any handoff together.
 |
-| A run never ends in silence when the customer is talking to the
+| A turn never ends in silence when the customer is talking to the
 | agent: a provider failure still hands the conversation to the team.
 |
 */
@@ -38,12 +39,10 @@ import (
 )
 
 /*
-Runner runs the answer pipeline for one conversation. Timeouts bound
-each provider call; StorePayloads keeps request and response text on
-the run's steps. Publisher, when set, shows the customer the agent is
-typing while it writes. Decider, when set, classifies messages, priced
-at DecisionPricePerMtok US dollars per million input tokens of
-DecisionModel; without it messages are routed without a model.
+Runner runs the agent for one conversation. Timeouts bound each
+provider call; StorePayloads keeps request and response text on the
+run's steps. Publisher, when set, shows the customer the agent is
+typing while it writes.
 */
 type Runner struct {
 	DB            *database.DB
@@ -56,10 +55,6 @@ type Runner struct {
 	Publisher     appbroadcasting.Publisher
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
-
-	Decider              contracts.Decider
-	DecisionModel        string
-	DecisionPricePerMtok float64
 
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
@@ -92,14 +87,22 @@ type Result struct {
 }
 
 /*
-Run answers one trigger message and returns the outcome. An error
-means the infrastructure failed and the job should retry; a model
-failure is an outcome, never an error.
+Run answers one trigger message with the agent's own settings.
 */
 func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
+	return r.RunConversationTurn(ctx, args, nil)
+}
+
+/*
+RunConversationTurn runs one agent turn for the trigger message. Nil
+settings means the agent's own; a workflow step passes its overrides.
+An error means the infrastructure failed and the job should retry; a
+model failure is an outcome, never an error.
+*/
+func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *TurnSettings) (*Result, error) {
 	r.prepare()
 
-	st, early, err := r.open(ctx, args)
+	st, early, err := r.open(ctx, args, settings)
 	if err != nil {
 		return nil, fmt.Errorf("pipeline open: %w", err)
 	}
@@ -109,7 +112,7 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 
 	d := st.gate
 	if d == nil {
-		d = r.decide(ctx, st)
+		d = r.turn(ctx, st)
 	}
 
 	res, err := r.close(ctx, st, d)
@@ -135,27 +138,26 @@ func (r *Runner) prepare() {
 }
 
 /*
-decide walks the stages that may call a model: the human fast path,
-classify, route, retrieve, generate and post-process.
+turn is the agent's turn: the tool loop writes the reply, and the
+review turns it into a decision.
 */
-func (r *Runner) decide(ctx context.Context, st *run) *decision {
-	if d := r.fastPath(st); d != nil {
-		return d
+func (r *Runner) turn(ctx context.Context, st *run) *decision {
+	llm, err := r.LLM.ForKey(ctx, *st.env.AnswerKey)
+	if err != nil {
+		return failed("provider_unavailable", err)
 	}
 
-	r.classify(ctx, st)
-	if d := r.route(st); d != nil {
-		return d
-	}
+	stopTyping := r.typing(ctx, st.env)
+	defer stopTyping()
 
-	if !st.skipRetrieval {
-		r.retrieve(ctx, st)
-		if d := r.answerability(st); d != nil {
-			return d
-		}
-	}
+	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
+	st.loop.messages = r.conversationMessages(st.env)
 
-	return r.answer(ctx, st)
+	draft, err := r.agentLoop(ctx, st)
+	if err != nil {
+		return failed("provider_error", err)
+	}
+	return r.review(ctx, st, draft)
 }
 
 /*

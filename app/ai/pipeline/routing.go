@@ -6,7 +6,8 @@
 | A handed-off conversation goes where the workspace said: to its
 | target team when nobody holds it yet, and up in priority when the
 | workspace asked for that. A customer who may be in danger always gets
-| a high priority, whatever the setting.
+| a high priority, whatever the setting, and so does a security matter
+| when no person is offered, so the team still sees it first.
 |
 */
 
@@ -14,12 +15,10 @@ package pipeline
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -28,26 +27,16 @@ import (
 )
 
 /*
-handoffSettings is the agent's stored handoff routing.
-*/
-type handoffSettings struct {
-	TargetTeamID  *ids.UUID `json:"target_team_id"`
-	RaisePriority bool      `json:"raise_priority"`
-}
-
-/*
 routeHandoff assigns the target team and raises the priority as the
-agent's settings ask. A target team that no longer exists is skipped.
+turn's settings ask. A target team that no longer exists is skipped.
 */
 func (r *Runner) routeHandoff(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
-	e := st.env
-	var h handoffSettings
-	_ = json.Unmarshal(e.Agent.Handoff, &h)
+	e, s := st.env, st.settings
 	w := r.agentWriter(tx, e)
 
 	c := e.Conversation
-	if h.TargetTeamID != nil && c.AssigneeTeamID == nil && c.AssigneeMemberID == nil {
-		assigned, _, err := w.Assign(ctx, c, conversations.Assignment{Team: h.TargetTeamID})
+	if s.HandoffTeamID != nil && c.AssigneeTeamID == nil && c.AssigneeMemberID == nil {
+		assigned, _, err := w.Assign(ctx, c, conversations.Assignment{Team: s.HandoffTeamID})
 		switch {
 		case err == nil:
 			c = assigned
@@ -57,7 +46,7 @@ func (r *Runner) routeHandoff(ctx context.Context, tx *database.Tx, st *run, d *
 	}
 
 	high := enums.ConversationPriorityHigh
-	if level, ok := high.Level(); ok && (h.RaisePriority || d.handoffReason == "safety") && c.Priority < level {
+	if level, ok := high.Level(); ok && raisesPriority(st, d) && c.Priority < level {
 		raised, _, err := w.SetAttributes(ctx, c, conversations.Attributes{Priority: &high})
 		if err != nil {
 			return fmt.Errorf("raise handoff priority: %w", err)
@@ -66,6 +55,21 @@ func (r *Runner) routeHandoff(ctx context.Context, tx *database.Tx, st *run, d *
 	}
 	e.Conversation = c
 	return nil
+}
+
+/*
+raisesPriority reports whether a handoff makes the conversation high
+priority: when the settings say so, always for a customer who may be
+in danger, and for a security matter when no person is offered.
+*/
+func raisesPriority(st *run, d *decision) bool {
+	switch {
+	case st.settings.RaisePriority, d.handoffReason == "safety":
+		return true
+	case d.handoffReason == "security":
+		return st.env.availability() == "unavailable"
+	}
+	return false
 }
 
 /*

@@ -27,28 +27,32 @@ import (
 )
 
 /*
-run is one run in flight: its environment, recorder and what the
-stages produced.
+run is one run in flight: its environment, recorder and settings, and
+what the turn produced: the loop's state, the search results numbered
+for citation, the last search query, the handoff and the internal
+changes the tools asked for.
 */
 type run struct {
-	env           *env
-	rec           *Recorder
-	args          Args
-	gate          *decision
-	c             classification
-	sources       []source
-	flags         []string
-	retrieval     json.RawMessage
-	query         string
-	skipRetrieval bool
-	noSources     bool
+	env      *env
+	rec      *Recorder
+	args     Args
+	settings *TurnSettings
+	gate     *decision
+	loop     *loop
+	sources  []source
+	flags    []string
+	query    string
+	searched bool
+	searches int
+	handoff  *handoffRequest
+	changes  changeSet
 }
 
 /*
 open loads the world and opens the run. It returns a finished result
 instead of a run when there is nothing to do.
 */
-func (r *Runner) open(ctx context.Context, args Args) (*run, *Result, error) {
+func (r *Runner) open(ctx context.Context, args Args, settings *TurnSettings) (*run, *Result, error) {
 	var st *run
 	var early *Result
 
@@ -71,7 +75,10 @@ func (r *Runner) open(ctx context.Context, args Args) (*run, *Result, error) {
 			return err
 		}
 
-		st, early, err = r.start(ctx, tx, e, args)
+		if settings == nil {
+			settings = settingsFor(e)
+		}
+		st, early, err = r.start(ctx, tx, &run{env: e, args: args, settings: settings})
 		return err
 	})
 	return st, early, err
@@ -115,14 +122,15 @@ func (r *Runner) stepAside(ctx context.Context, tx *database.Tx, e *env) (string
 start opens the run row and runs the gate. A gate skip finishes the
 run right here; a gate pass hands the conversation to the agent.
 */
-func (r *Runner) start(ctx context.Context, tx *database.Tx, e *env, args Args) (*run, *Result, error) {
-	row, err := r.createRun(ctx, tx, e, args)
+func (r *Runner) start(ctx context.Context, tx *database.Tx, st *run) (*run, *Result, error) {
+	e := st.env
+	row, err := r.createRun(ctx, tx, e, st.args)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	st := &run{env: e, rec: r.newRecorder(row), args: args}
-	st.gate = r.gate(e)
+	st.rec = r.newRecorder(row)
+	st.gate = r.gate(e, st.settings)
 
 	if st.gate != nil && st.gate.outcome == outcomeSkipped {
 		if err := r.finishRun(ctx, tx, st, st.gate); err != nil {
@@ -156,9 +164,8 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	}
 
 	snapshot, _ := json.Marshal(map[string]any{
-		"answer_model": strv(e.Agent.AnswerModel), "decision_model": r.DecisionModel,
-		"decider": r.Decider != nil,
-		"tone": e.Agent.Tone, "grounding_mode": e.Agent.GroundingMode,
+		"answer_model": strv(e.Agent.AnswerModel),
+		"tone":         e.Agent.Tone, "grounding_mode": e.Agent.GroundingMode,
 		"require_citations": e.Agent.RequireCitations, "pii_redaction": e.Agent.PiiRedaction,
 		"unknown_behavior": e.Agent.UnknownBehavior, "max_ai_replies": e.Agent.MaxAiReplies,
 	})
