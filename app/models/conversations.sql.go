@@ -29,14 +29,13 @@ func (q *Queries) AllocateConversationNumber(ctx context.Context, workspaceID id
 	return number, err
 }
 
-const bumpConversationAiAnswer = `-- name: BumpConversationAiAnswer :exec
+const bumpConversationAiAnswer = `-- name: BumpConversationAiAnswer :execrows
 UPDATE conversations SET
     ai_reply_count = ai_reply_count + 1,
     ai_cost_micros = ai_cost_micros + $1,
     ai_language = COALESCE($2, ai_language),
-    ai_state = 'active',
     updated_at = $3
-WHERE workspace_id = $4 AND id = $5
+WHERE workspace_id = $4 AND id = $5 AND ai_state = 'active'
 `
 
 type BumpConversationAiAnswerParams struct {
@@ -47,17 +46,20 @@ type BumpConversationAiAnswerParams struct {
 	ID          ids.UUID  `json:"id"`
 }
 
-// BumpConversationAiAnswer adds one agent reply's cost and count to the
-// conversation.
-func (q *Queries) BumpConversationAiAnswer(ctx context.Context, arg BumpConversationAiAnswerParams) error {
-	_, err := q.db.Exec(ctx, bumpConversationAiAnswer,
+// BumpConversationAiAnswer adds one agent reply's cost and count to a
+// conversation the agent still holds; a handed-off one is left alone.
+func (q *Queries) BumpConversationAiAnswer(ctx context.Context, arg BumpConversationAiAnswerParams) (int64, error) {
+	result, err := q.db.Exec(ctx, bumpConversationAiAnswer,
 		arg.CostMicros,
 		arg.Language,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const createConversation = `-- name: CreateConversation :one

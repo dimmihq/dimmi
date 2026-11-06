@@ -3,10 +3,11 @@
 | AI Agent
 |--------------------------------------------------------------------------
 |
-| The agent's wiring: the knowledge contract starts on its stand-in
-| while the index is built, the manager resolves connections to
-| drivers, the runner carries a customer's message through the
-| pipeline, and every AI action lands on the registry.
+| The agent's wiring: the knowledge contract starts on the seeded
+| index while the help center's index is built, the manager resolves
+| connections to drivers, the prompt tree is checked before anything
+| runs, the runner carries a customer's message through the pipeline,
+| and every AI action lands on the registry.
 |
 */
 
@@ -15,10 +16,13 @@ package providers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/queue"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
@@ -26,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
+	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 	airesources "github.com/dimmihq/dimmi/resources/ai"
@@ -34,28 +39,17 @@ import (
 /*
 bootAI wires the agent's services, actions, listener and job.
 */
-func bootAI(a *app.App) error {
-	if a.Knowledge == nil {
-		a.Knowledge = knowledge.NewStub()
-	}
-	if a.LLM == nil {
-		a.LLM = managers.NewLLMManager(managers.LLMDeps{
-			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock, DB: a.DB,
-		})
-	}
-
-	runner := &pipeline.Runner{
-		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge,
-		Prompts: prompts.NewLoader(a.Config.AI.Prompts.Version, nil),
-		Prices:  loadPrices(a),
-		Events:  a.Events,
+func bootAI(ctx context.Context, a *app.App) error {
+	runner, err := newRunner(ctx, a)
+	if err != nil {
+		return err
 	}
 	a.AI = runner
 
 	a.Actions.AI = aiActions(a, runner, runner.Prices)
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
-		return enqueueAnswer(ctx, a, runner, e)
+		return enqueueAnswer(ctx, a, e)
 	})
 
 	return errors.Join(
@@ -65,29 +59,99 @@ func bootAI(a *app.App) error {
 }
 
 /*
-enqueueAnswer dispatches the answer job for a substantive customer
-message, a debounce after it landed so rapid typing gathers.
+newRunner builds the pipeline runner: the knowledge index, the driver
+manager and the checked prompt tree. A broken prompt tree or an
+unreadable seed directory stops the boot.
 */
-func enqueueAnswer(ctx context.Context, a *app.App, _ *pipeline.Runner,
-	e appevents.MessageCreated,
-) error {
-	if e.Type != "message" || e.AuthorType != "contact" || !e.Substantive {
-		return nil
+func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
+	if a.Knowledge == nil {
+		seed, err := knowledge.LoadSeed(ctx, a.Storage, a.Config.AI.KnowledgeSeedPath)
+		if err != nil {
+			return nil, err
+		}
+		a.Knowledge = seed
 	}
-	if !a.Config.AI.Enabled {
+	if a.LLM == nil {
+		a.LLM = managers.NewLLMManager(managers.LLMDeps{
+			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock, DB: a.DB,
+		})
+	}
+
+	loader, err := prompts.NewLoader(a.Config.AI.Prompts.Version, nil)
+	if err != nil {
+		return nil, fmt.Errorf("load agent prompts: %w", err)
+	}
+
+	return &pipeline.Runner{
+		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge, Prompts: loader,
+		Prices: loadPrices(a), Events: a.Events, Publisher: a.Broadcast,
+		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
+	}, nil
+}
+
+/*
+enqueueAnswer queues the answer job for a customer message, a
+debounce after it landed. Every message gets its own job, unique to
+that message: in a burst, each job but the newest steps aside and the
+newest answers them all. Conversations the agent can never answer
+queue nothing.
+*/
+func enqueueAnswer(ctx context.Context, a *app.App, e appevents.MessageCreated) error {
+	if e.Type != "message" || e.AuthorType != "contact" || !e.Substantive || !a.Config.AI.Enabled {
 		return nil
 	}
 
-	debounce := debounceFor(a, e.ChannelType)
+	channel, eligible, err := answerable(ctx, a, e)
+	if err != nil || !eligible {
+		return err
+	}
 
+	debounce := time.Duration(debounceFor(a, channel)) * time.Millisecond
 	return a.Queue.Push(context.WithoutCancel(ctx), aijobs.AnswerWithAIArgs{
 		WorkspaceID:      e.WorkspaceID,
 		ConversationID:   e.ConversationID,
 		TriggerMessageID: e.MessageID,
 		RunKind:          "conversation",
-		QueuedAt:         a.Clock.Now().Unix(),
-	}, queue.At(a.Clock.Now().Add(time.Duration(debounce)*time.Millisecond)),
-		queue.Unique(queue.UniqueOpts{ByArgs: true}))
+		QueuedAt:         a.Clock.Now().UnixMilli(),
+	}, queue.At(a.Clock.Now().Add(debounce)), queue.Unique(queue.UniqueOpts{ByArgs: true}))
+}
+
+/*
+answerable is the cheap check before queueing: the workspace has an
+enabled agent and the conversation is live and not handed to the
+team. It returns the conversation's channel type for the debounce.
+*/
+func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (string, bool, error) {
+	channel, eligible := "", false
+	ctx = tenancy.With(ctx, e.WorkspaceID.String())
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+		agent, err := q.FindAgent(ctx, e.WorkspaceID)
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		conv, err := q.FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: e.WorkspaceID, ID: e.ConversationID,
+		})
+		if err != nil {
+			return err
+		}
+		eligible = agent.Enabled && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
+		if conn, err := q.FindChannelConnection(ctx, models.FindChannelConnectionParams{
+			WorkspaceID: e.WorkspaceID, ID: conv.ChannelConnectionID,
+		}); err == nil {
+			channel = conn.Type
+		}
+		return nil
+	})
+	if err != nil {
+		return "", false, fmt.Errorf("check answerable: %w", err)
+	}
+	return channel, eligible, nil
 }
 
 /*

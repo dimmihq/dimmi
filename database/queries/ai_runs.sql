@@ -50,15 +50,19 @@ WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
 -- name: CountConversationOutcomes :one
--- CountConversationOutcomes counts consecutive trailing runs of one
--- outcome kind for the streak rules.
+-- CountConversationOutcomes counts the conversation's trailing runs that
+-- ended with the outcome, for the streak rules. Skipped and superseded
+-- runs neither count nor break the streak.
 SELECT count(*) FROM ai_runs r
 WHERE r.workspace_id = @workspace_id AND r.conversation_id = @conversation_id
-    AND r.outcome = @outcome AND r.id > COALESCE((
-        SELECT max(r2.id) FROM ai_runs r2
+    AND r.outcome = @outcome
+    AND NOT EXISTS (
+        SELECT 1 FROM ai_runs r2
         WHERE r2.workspace_id = r.workspace_id AND r2.conversation_id = r.conversation_id
-            AND r2.outcome IS DISTINCT FROM r.outcome AND r2.outcome IS NOT NULL
-    ), '00000000-0000-0000-0000-000000000000'::uuid);
+            AND r2.outcome IS NOT NULL AND r2.outcome NOT IN ('skipped', 'superseded')
+            AND r2.outcome <> r.outcome
+            AND (r2.created_at, r2.id) > (r.created_at, r.id)
+    );
 
 -- name: ListConversationRuns :many
 -- ListConversationRuns returns a conversation's runs newest first.

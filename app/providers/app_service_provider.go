@@ -161,7 +161,7 @@ func bootSurfaces(ctx context.Context, a *app.App) error {
 	if err := bootChannels(ctx, a); err != nil {
 		return err
 	}
-	return bootAI(a)
+	return bootAI(ctx, a)
 }
 
 /*

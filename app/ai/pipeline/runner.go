@@ -3,11 +3,15 @@
 | Pipeline Runner
 |--------------------------------------------------------------------------
 |
-| One customer message in, one decision out. The runner loads the
-| world, opens a run row, walks the stages — gate, fast path,
-| classify, retrieve, generate, post-process — and only then commits
-| what was written, after a last check nothing newer landed. Every
-| step is traced; a skipped or failed run is a row, not a lost task.
+| One customer message in, one decision out. A run happens in three
+| moves so no database transaction ever waits on a model: a short
+| transaction loads the conversation, checks the gate and opens the run
+| row; the model calls happen outside any transaction, each step
+| written as it completes; a last short transaction locks the
+| conversation, makes sure nothing newer landed and commits the reply.
+|
+| A run never ends in silence when the customer is talking to the
+| agent: a provider failure still hands the conversation to the team.
 |
 */
 
@@ -15,7 +19,6 @@ package pipeline
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -24,40 +27,41 @@ import (
 	fevents "github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
-	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
+	"github.com/dimmihq/dimmi/app/support/linkguard"
+	"github.com/dimmihq/dimmi/app/support/pii"
 	"github.com/dimmihq/dimmi/app/support/prompts"
+	"github.com/dimmihq/dimmi/config"
 )
 
 /*
-Runner runs the answer pipeline for one conversation.
+Runner runs the answer pipeline for one conversation. Timeouts bound
+each provider call; StorePayloads keeps request and response text on
+the run's steps. Publisher, when set, shows the customer the agent is
+typing while it writes.
 */
 type Runner struct {
-	DB        *database.DB
-	Clock     clock.Clock
-	LLM       *managers.LLMManager
-	Knowledge contracts.Knowledge
-	Prompts   *prompts.Loader
-	Prices    *aiprices.Table
-	Config    pipelineConfig
-	Events    *fevents.Dispatcher
+	DB            *database.DB
+	Clock         clock.Clock
+	LLM           *managers.LLMManager
+	Knowledge     contracts.Knowledge
+	Prompts       *prompts.Loader
+	Prices        *aiprices.Table
+	Events        *fevents.Dispatcher
+	Publisher     appbroadcasting.Publisher
+	Timeouts      config.AITimeoutsConfig
+	StorePayloads bool
+
+	redactor *pii.Redactor
+	guard    *linkguard.Guard
 }
 
 /*
-pipelineConfig is the slice of config the pipeline reads.
-*/
-type pipelineConfig interface {
-	DebounceMS() int
-	MaxContextTokens() int
-	StorePayloads() bool
-}
-
-/*
-Args is what one run needs.
+Args is what one run needs: the conversation and the customer message
+that triggered it.
 */
 type Args struct {
 	WorkspaceID      ids.UUID
@@ -68,7 +72,9 @@ type Args struct {
 }
 
 /*
-Result is how the run ended.
+Result is how the run ended. RunID is zero when the run was skipped
+before a row was worth writing: a duplicate, a debounced message, or
+a trigger that is gone.
 */
 type Result struct {
 	Outcome       string
@@ -79,282 +85,84 @@ type Result struct {
 }
 
 /*
-Run answers one trigger message, returning the outcome.
+Run answers one trigger message and returns the outcome. An error
+means the infrastructure failed and the job should retry; a model
+failure is an outcome, never an error.
 */
 func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
+	r.prepare()
+
+	st, early, err := r.open(ctx, args)
+	if err != nil {
+		return nil, fmt.Errorf("pipeline open: %w", err)
+	}
+	if early != nil {
+		return early, nil
+	}
+
+	d := st.gate
+	if d == nil {
+		d = r.decide(ctx, st)
+	}
+
+	res, err := r.close(ctx, st, d)
+	if err != nil {
+		return nil, fmt.Errorf("pipeline commit: %w", err)
+	}
+	return res, nil
+}
+
+/*
+prepare fills the defaults a zero-configured runner lacks.
+*/
+func (r *Runner) prepare() {
 	if r.Clock == nil {
 		r.Clock = clock.System()
 	}
-
-	queueWait := max(int(r.Clock.Now().Sub(args.QueuedAt).Milliseconds()), 0)
-
-	var result *Result
-
-	err := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		out, err := r.runTx(ctx, tx, args, queueWait)
-		result = out
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("pipeline: %w", err)
+	if r.redactor == nil {
+		r.redactor = pii.New()
 	}
-
-	return result, nil
+	if r.guard == nil {
+		r.guard = linkguard.New()
+	}
 }
 
 /*
-runTx is the run's body inside its transaction.
+decide walks the stages that may call a model: the human fast path,
+classify, route, retrieve, generate and post-process.
 */
-func (r *Runner) runTx(ctx context.Context, tx *database.Tx, args Args, queueWait int) (*Result, error) {
-	env, err := r.loadEnv(ctx, tx, args.WorkspaceID, args.ConversationID)
-	if err != nil {
-		return nil, err
+func (r *Runner) decide(ctx context.Context, st *run) *decision {
+	if d := r.fastPath(st); d != nil {
+		return d
 	}
 
-	if env.Agent == nil {
-		return &Result{Outcome: "skipped", SkipReason: "agent_missing"}, nil
+	r.classify(ctx, st)
+	if d := r.route(st); d != nil {
+		return d
 	}
 
-	run, err := r.startRun(ctx, tx, env, args)
-	if err != nil {
-		return nil, err
-	}
-	recorder := r.newRecorder(run)
-
-	outcome, err := r.execute(ctx, env, recorder, args)
-	if err != nil {
-		if ferr := recorder.Finish(ctx, tx, FinishInput{
-			Status: "failed", Outcome: "error",
-			ErrorCode: errorCode(err), ErrorMessage: err.Error(), QueueWaitMS: queueWait,
-		}); ferr != nil {
-			return nil, fmt.Errorf("finish run: %w", ferr)
-		}
-		r.recordSpend(ctx, tx, &flow{env: env, recorder: recorder}, "error")
-		return &Result{Outcome: "error", RunID: run.ID}, nil
-	}
-
-	_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
-	r.recordSpend(ctx, tx, &flow{env: env, recorder: recorder}, outcome.name)
-	return &Result{
-		Outcome: outcome.name, SkipReason: outcome.skipReason,
-		HandoffReason: outcome.handoffReason, AnswerID: outcome.AnswerID, RunID: run.ID,
-	}, nil
-}
-
-/*
-startRun opens the run row with the prompt fingerprint and a config
-snapshot.
-*/
-func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args Args) (models.AiRun, error) {
-	family := enums.AIModelFamilyOpenWeight
-	if env.Agent.AnswerModel != nil {
-		family = familyForKey(env.AnswerKey, *env.Agent.AnswerModel)
-	}
-
-	fp := map[string]string{}
-	version := "v1"
-	if r.Prompts != nil {
-		if env.Agent.PromptVersion != nil && *env.Agent.PromptVersion != "" {
-			version = *env.Agent.PromptVersion
-		}
-		if f, err := r.Prompts.Fingerprint(family, []string{"answer.system.md"}); err == nil {
-			fp = f.Hashes
+	if !st.skipRetrieval {
+		r.retrieve(ctx, st)
+		if d := r.answerability(st); d != nil {
+			return d
 		}
 	}
 
-	snapshot, _ := json.Marshal(map[string]any{
-		"model_family": family, "answer_model": strv(env.Agent.AnswerModel),
-		"classifier_model": strv(env.Agent.ClassifierModel), "tone": env.Agent.Tone,
-		"require_citations": env.Agent.RequireCitations, "pii_redaction": env.Agent.PiiRedaction,
-	})
-	hashes, _ := json.Marshal(fp)
-
-	now := r.Clock.Now()
-	return models.New(tx).CreateRun(ctx, models.CreateRunParams{
-		WorkspaceID: env.Workspace.ID, AgentID: env.Agent.ID, Kind: args.Kind,
-		ConversationID: &args.ConversationID, TriggerMessageID: &args.TriggerMessageID,
-		IncludedMessageIds: messageIDs(env.Messages), ActorType: new("contact"),
-		ChannelType: new(env.ChannelType), Status: "running",
-		PromptVersion: version, PromptHashes: hashes, ConfigSnapshot: snapshot,
-		StartedAt: &now, Now: now,
-	})
+	return r.answer(ctx, st)
 }
 
 /*
-execute walks the stages.
+timeout derives a context that ends after d on the runner's clock; a
+zero d leaves the context alone.
 */
-func (r *Runner) execute(ctx context.Context, env *env, recorder *Recorder, _ Args) (*decision, error) {
-	if s := r.gate(ctx, env); s != nil {
-		return &decision{name: "skipped", skipReason: s.Reason}, nil
+func (r *Runner) timeout(ctx context.Context, d time.Duration) (context.Context, context.CancelFunc) {
+	if d <= 0 {
+		return context.WithCancel(ctx)
 	}
-
-	text := triggerText(env.Trigger)
-	f := &flow{
-		env: env, recorder: recorder,
-		c: &classification{
-			Intent: "question", Language: env.Agent.DefaultLanguage,
-			QueryRewritten: triggerText(env.Trigger),
-		},
+	ctx, cancel := context.WithCancelCause(ctx)
+	timer := r.Clock.AfterFunc(d, func() { cancel(context.DeadlineExceeded) })
+	return ctx, func() {
+		timer.Stop()
+		cancel(context.Canceled)
 	}
-
-	if outcome, reason := env.patterns.fastPath(text, env.pendingConfirm); outcome != "" {
-		return r.commitFastPath(ctx, f, outcome, reason)
-	}
-
-	found, err := r.retrieve(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	f.found = found
-
-	if !found.Answerable {
-		return r.commitUnknown(ctx, f)
-	}
-
-	answer, err := r.generate(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-
-	if answer.handoff != "" {
-		return r.commitHandoff(ctx, f, answer.handoff)
-	}
-	if answer.unknown {
-		return r.commitUnknown(ctx, f)
-	}
-
-	return r.commitAnswer(ctx, f, answer)
-}
-
-/*
-decision is what a stage resolved to.
-*/
-type decision struct {
-	name          string
-	skipReason    string
-	handoffReason string
-	AnswerID      *ids.UUID
-}
-
-/*
-finish maps a decision to the run's finish input.
-*/
-func (d *decision) finish(queueWait int) FinishInput {
-	out := FinishInput{Status: "completed", QueueWaitMS: queueWait}
-	switch {
-	case d.skipReason != "":
-		out.Outcome = "skipped"
-		out.SkipReason = d.skipReason
-		out.Status = "skipped"
-	case d.name == "":
-		out.Outcome = "silent"
-	default:
-		out.Outcome = d.name
-	}
-	out.HandoffReason = d.handoffReason
-	out.AnswerMessageID = d.AnswerID
-	return out
-}
-
-/*
-triggerText is the message's plain body.
-*/
-func triggerText(m models.Message) string {
-	if m.Body != nil {
-		return *m.Body
-	}
-	return ""
-}
-
-/*
-messageIDs lists the transcript ids included.
-*/
-func messageIDs(msgs []models.Message) []ids.UUID {
-	out := make([]ids.UUID, len(msgs))
-	for i, m := range msgs {
-		out[i] = m.ID
-	}
-	return out
-}
-
-/*
-strv reads a nullable string.
-*/
-func strv(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-/*
-errorCode folds an error to a short code.
-*/
-func errorCode(_ error) string {
-	return "pipeline_error"
-}
-
-/*
-recordSpend adds the run's cost and counts to the month's tally row.
-*/
-func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, f *flow, outcome string) {
-	now := r.Clock.Now().UTC()
-	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	nowT := r.Clock.Now()
-
-	counts := map[string]int32{}
-	counts[outcome] = 1
-
-	period, err := models.New(tx).AddSpend(ctx, models.AddSpendParams{
-		WorkspaceID: f.env.Workspace.ID, PeriodStart: database.Date(start),
-		CostMicros: f.recorder.Cost(), InputTokens: f.recorder.tokens.input,
-		CachedInputTokens: f.recorder.tokens.cached, OutputTokens: f.recorder.tokens.output,
-		RunsCount:     1,
-		AnsweredCount: counts["answered"], UnknownCount: counts["unknown"],
-		HandoffCount: counts["handoff"], SilentCount: counts["silent"], Now: nowT,
-	})
-	if err != nil {
-		return
-	}
-
-	r.checkThresholds(ctx, tx, f.env, period)
-}
-
-/*
-checkThresholds marks the 50 and 80 percent notices and caps the
-period at a hundred, each once.
-*/
-func (r *Runner) checkThresholds(ctx context.Context, tx *database.Tx, env *env, period models.AiSpendPeriod) {
-	if env.Agent.MonthlySpendCapMicros == nil || *env.Agent.MonthlySpendCapMicros <= 0 {
-		return
-	}
-	capMicros := *env.Agent.MonthlySpendCapMicros
-	pct := sat32(period.CostMicros * 100 / capMicros)
-
-	for _, threshold := range []int32{50, 80, 100} {
-		if pct >= threshold {
-			_ = models.New(tx).MarkSpendThreshold(ctx, models.MarkSpendThresholdParams{
-				WorkspaceID: env.Workspace.ID,
-				PeriodStart: period.PeriodStart, Threshold: threshold,
-			})
-		}
-	}
-	if pct >= 100 && period.CappedAt == nil {
-		now := r.Clock.Now()
-		_ = models.New(tx).SetSpendCap(ctx, models.SetSpendCapParams{
-			WorkspaceID: env.Workspace.ID, PeriodStart: period.PeriodStart,
-			CappedAt: &now, Now: now,
-		})
-	}
-}
-
-/*
-familyForKey resolves a model's family from its connection.
-*/
-func familyForKey(key *models.AiProviderKey, model string) enums.AIModelFamily {
-	provider := enums.AIProviderDimmi
-	if key != nil {
-		provider = enums.AIProvider(key.Provider)
-	}
-	return aimodels.FamilyOf(provider, model)
 }

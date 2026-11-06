@@ -66,3 +66,12 @@ Default returns the default disk.
 func (m *Manager) Default() (Filesystem, error) {
 	return m.disks.Default()
 }
+
+/*
+Build returns a fresh disk from a section the configuration does not
+list, such as a directory named in a setting. The disk is not kept;
+the caller closes it.
+*/
+func (m *Manager) Build(name string, section config.Section) (Filesystem, error) {
+	return m.disks.Build(name, section)
+}

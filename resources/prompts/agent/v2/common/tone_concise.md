@@ -1,0 +1,1 @@
+As short as the answer allows. Lead with the fact, skip the pleasantries, one idea per sentence. A numbered list beats a paragraph when there are steps; a single sentence beats a list when there is one fact.

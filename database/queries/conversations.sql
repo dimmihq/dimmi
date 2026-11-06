@@ -58,16 +58,15 @@ LIMIT @row_limit;
 -- billed and never reaches a real customer.
 UPDATE conversations SET is_test = true WHERE workspace_id = @workspace_id AND id = @id;
 
--- name: BumpConversationAiAnswer :exec
--- BumpConversationAiAnswer adds one agent reply's cost and count to the
--- conversation.
+-- name: BumpConversationAiAnswer :execrows
+-- BumpConversationAiAnswer adds one agent reply's cost and count to a
+-- conversation the agent still holds; a handed-off one is left alone.
 UPDATE conversations SET
     ai_reply_count = ai_reply_count + 1,
     ai_cost_micros = ai_cost_micros + @cost_micros,
     ai_language = COALESCE(@language, ai_language),
-    ai_state = 'active',
     updated_at = @now
-WHERE workspace_id = @workspace_id AND id = @id;
+WHERE workspace_id = @workspace_id AND id = @id AND ai_state = 'active';
 
 -- name: HandoffConversationAi :exec
 -- HandoffConversationAi stops the agent in a conversation, naming why.

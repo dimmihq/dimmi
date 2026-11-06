@@ -1,216 +1,163 @@
 package ai_test
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/httpclient"
-	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/dimmihq/dimmi/framework/tenancy"
-	"github.com/dimmihq/dimmi/framework/testkit"
-
-	"github.com/dimmihq/dimmi/app/ai/pipeline"
-	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
-	"github.com/dimmihq/dimmi/app/enums"
-	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/tests"
 )
 
 /*
-TestAiPipeline runs the agent's machinery end to end on the real
-application with a scripted model answering.
+TestAiPipeline answers customers end to end on the real application,
+with scripted models and the seed articles as knowledge.
 */
 func TestAiPipeline(t *testing.T) {
 	t.Parallel()
 
-	t.Run("answers a customer question", func(t *testing.T) {
+	t.Run("answers a question with citations from the sources", func(t *testing.T) {
 		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.llm.answer.Script(reply("STATUS: answered\n\nThe Pro plan costs $12 per seat per month [1]."))
 
-		d := tests.NewDesk(t)
-		setup(t, d, fake.New(contracts.LLMProviderAnthropic).Script(
-			fake.Step{
-				Text:  "You can change your billing email in Settings > Billing. [1]",
-				Usage: contracts.LLMUsage{InputTokens: 120, OutputTokens: 42, Reported: true},
-			},
-		))
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
 
-		conv, trigger := conversation(t, d, "billing email")
-		ctx := tenancy.With(t.Context(), d.TC.Workspace.Workspace.ID.String())
-		res, err := d.TC.App.AI.Run(ctx, pipeline.Args{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv,
-			TriggerMessageID: trigger, Kind: "conversation", QueuedAt: d.TC.App.Clock.Now(),
-		})
-		require.NoError(t, err)
-		assert.Equal(t, "answered", res.Outcome)
+		s := h.load(conv, res.RunID)
+		assert.Equal(t, "completed", s.run.Status)
+		assert.Equal(t, "v2", s.run.PromptVersion)
+		assert.Equal(t, []string{"classify", "retrieve", "generate"}, s.stepKinds())
+		assert.Positive(t, s.run.CostMicros)
+		assert.Positive(t, s.run.OutputTokens)
+		assert.Equal(t, int32(1), s.conv.AiReplyCount)
+		assert.Equal(t, "active", s.conv.AiState)
 
-		d.TC.InWorkspace(func(ctx context.Context) error {
-			run, err := models.New(d.TC.App.DB).FindRun(ctx, models.FindRunParams{
-				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: res.RunID,
-			})
-			require.NoError(t, err)
-			t.Logf("run: status=%s outcome=%v err=%v msg=%v",
-				run.Status, run.Outcome, str(run.ErrorCode), str(run.ErrorMessage))
-			assert.Equal(t, "completed", run.Status)
-			assert.Equal(t, "answered", str(run.Outcome))
-			assert.Greater(t, run.OutputTokens, int64(0))
+		replies := s.agentReplies()
+		require.Len(t, replies, 1)
+		assert.Equal(t, "The Pro plan costs $12 per seat per month.", str(replies[0].Body))
+		assert.True(t, replies[0].Substantive)
+		citations, ok := aiMeta(t, replies[0])["citations"].([]any)
+		require.True(t, ok)
+		require.Len(t, citations, 1)
+		first, _ := citations[0].(map[string]any)
+		assert.Equal(t, "https://help.lovelace.test/plans-and-pricing", first["url"])
 
-			steps, err := models.New(d.TC.App.DB).ListRunSteps(ctx, models.ListRunStepsParams{
-				WorkspaceID: d.TC.Workspace.Workspace.ID, RunID: run.ID,
-			})
-			require.NoError(t, err)
-			assert.Len(t, steps, 2)
-
-			conv, err := models.New(d.TC.App.DB).FindConversation(ctx, models.FindConversationParams{
-				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: conv,
-			})
-			require.NoError(t, err)
-			t.Logf("conv: state=%s replies=%d cost=%d lang=%v",
-				conv.AiState, conv.AiReplyCount, conv.AiCostMicros, conv.AiLanguage)
-			msgs, _ := models.New(d.TC.App.DB).ListMessages(ctx, models.ListMessagesParams{
-				WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv.ID, RowLimit: 20,
-			})
-			for _, m := range msgs {
-				t.Logf("msg %s author=%s type=%s", m.ID, m.AuthorType, m.Type)
-			}
-			assert.Equal(t, int32(1), conv.AiReplyCount)
-			return nil
-		})
+		sent := sentText(h.llm.answer)
+		assert.Contains(t, sent, "You are Ada, the AI support assistant for Lovelace")
+		assert.Contains(t, sent, `<source id="1" title="Plans and pricing"`)
+		assert.Contains(t, sent, `<contact name="Ana"`)
+		assert.Contains(t, sent, "<customer_message>How much is Pro per seat?</customer_message>")
+		assert.Contains(t, sent, "Reply per the output protocol: the STATUS line, a blank line, then the reply.")
+		assert.NotContains(t, sent, "{{")
 	})
 
-	t.Run("hands off when the customer asks for a person", func(t *testing.T) {
+	t.Run("answers the covered part of a partly covered question", func(t *testing.T) {
 		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.classifier.Script(classify("question", "en",
+			"Is SAML single sign-on available and does it support SCIM?"))
+		h.llm.answer.Script(reply("STATUS: answered\n\nSAML single sign-on is on the Business plan [1]. " +
+			"The documentation does not cover SCIM, so a teammate can confirm that part."))
 
-		d := tests.NewDesk(t)
-		setup(t, d, fake.New(contracts.LLMProviderAnthropic))
+		conv, trigger := h.conversation("Do you have SAML SSO with SCIM?")
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
 
-		conv, trigger := conversation(t, d, "I want to talk to a human please")
-		ctx := tenancy.With(t.Context(), d.TC.Workspace.Workspace.ID.String())
-		res, err := d.TC.App.AI.Run(ctx, pipeline.Args{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv,
-			TriggerMessageID: trigger, Kind: "conversation", QueuedAt: d.TC.App.Clock.Now(),
-		})
-		require.NoError(t, err)
+		replies := h.load(conv, res.RunID).agentReplies()
+		require.Len(t, replies, 1)
+		assert.Contains(t, str(replies[0].Body), "does not cover SCIM")
+	})
+
+	t.Run("hands off when nothing answers the question and the agent is set to hand off", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, func(p *models.UpdateAgentParams) { p.UnknownBehavior = "handoff" })
+		h.llm.classifier.Script(classify("question", "en", "What is the weather in Paris tomorrow?"), summaryStep())
+
+		conv, trigger := h.conversation("What's the weather in Paris tomorrow?")
+		res := h.run(conv, trigger)
 		assert.Equal(t, "handoff", res.Outcome)
-		assert.Equal(t, "customer_requested", res.HandoffReason)
+		assert.Equal(t, "unknown", res.HandoffReason)
+		assert.Empty(t, h.llm.answer.Sent())
 
-		d.TC.InWorkspace(func(ctx context.Context) error {
-			conv, err := models.New(d.TC.App.DB).FindConversation(ctx, models.FindConversationParams{
-				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: conv,
-			})
-			require.NoError(t, err)
-			assert.Equal(t, "handed_off", conv.AiState)
-			return nil
-		})
-	})
-}
-
-/*
-setup registers a scripted driver and points the workspace's agent at
-a fake connection.
-*/
-func setup(t *testing.T, d tests.Desk, llm *fake.LLM) {
-	t.Helper()
-
-	d.TC.App.LLM.Extend(enums.AIProvider("fake"), func(
-		_ context.Context, _ *managers.LLMManager, _ models.AiProviderKey, _ managers.Credentials, _ *httpclient.Client,
-	) (contracts.LLM, error) {
-		return llm, nil
+		s := h.load(conv, res.RunID)
+		assert.Equal(t, "handed_off", s.conv.AiState)
+		replies := s.agentReplies()
+		require.Len(t, replies, 1)
+		assert.Contains(t, str(replies[0].Body), "couldn't find that in our documentation")
+		assert.False(t, replies[0].Substantive)
+		require.Len(t, s.notes(), 1)
+		assert.Contains(t, str(s.notes()[0].Body), "Wants:")
 	})
 
-	d.TC.InWorkspace(func(ctx context.Context) error {
-		now := d.TC.App.Clock.Now()
-		key, err := models.New(d.TC.App.DB).CreateProviderKey(ctx, models.CreateProviderKeyParams{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, Name: "fake", Provider: "fake",
-			AuthType: "none", Status: "valid", Models: json.RawMessage("[]"),
-			ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
-			Source: "system", Now: now,
-		})
-		if err != nil {
-			return err
-		}
+	t.Run("offers a person when the model cannot answer", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.classifier.Script(classify("question", "en", "Can I pay for the Business plan with PayPal?",
+			"Business plan price"))
+		h.llm.answer.Script(reply("STATUS: unknown\n\nThe documentation doesn't say whether PayPal works [1]. " +
+			"A teammate can help with that."))
 
-		answer, classifier := "fake-answer", "fake-classifier"
-		minSim := database.NumericFloat(0.35)
-		_, err = models.New(d.TC.App.DB).UpdateAgent(ctx, models.UpdateAgentParams{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, ID: agentID(ctx, t, d),
-			Name: "Dimmi", Enabled: true, Tone: "friendly", Guidance: "",
-			EnabledChannels: []string{"api"}, Schedule: "always",
-			AssignedBehavior: "skip_when_human_active",
-			AnswerKeyID:      &key.ID, AnswerModel: &answer,
-			ClassifierKeyID: &key.ID, ClassifierModel: &classifier,
-			ExcludedChannelConnectionIds: []ids.UUID{},
-			MaxOutputTokens:              600, MaxAiReplies: 5, UnknownBehavior: "offer_handoff",
-			GroundingMode: "citations", RequireCitations: false, DefaultLanguage: "en",
-			Languages: []string{}, ContactAttributeAllowlist: []string{},
-			LinkAllowlist: []string{},
-			Streaming:     true, IncludeContactContext: "basic", PiiRedaction: false,
-			MinSimilarity: minSim,
-			Handoff:       json.RawMessage("{}"), Messages: json.RawMessage("{}"),
-			Now: now,
-		})
-		return err
+		conv, trigger := h.conversation("Can I pay for the Business plan with PayPal?")
+		res := h.run(conv, trigger)
+		assert.Equal(t, "unknown", res.Outcome)
+
+		s := h.load(conv, res.RunID)
+		assert.Equal(t, "active", s.conv.AiState)
+		replies := s.agentReplies()
+		require.Len(t, replies, 1)
+		assert.Equal(t, "The documentation doesn't say whether PayPal works. A teammate can help with that.",
+			str(replies[0].Body))
+		assert.Equal(t, []any{"handoff"}, aiMeta(t, replies[0])["actions"])
+		assert.Equal(t, int32(0), s.conv.AiReplyCount)
 	})
-}
 
-/*
-agentID returns the workspace's agent id, creating the row if needed.
-*/
-func agentID(ctx context.Context, t *testing.T, d tests.Desk) ids.UUID {
-	t.Helper()
-	agent, err := models.New(d.TC.App.DB).FindAgent(ctx, d.TC.Workspace.Workspace.ID)
-	if err != nil {
-		agent, err = models.New(d.TC.App.DB).CreateAgent(ctx, models.CreateAgentParams{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, Now: d.TC.App.Clock.Now(),
-		})
-		require.NoError(t, err)
-	}
-	return agent.ID
-}
+	t.Run("hands off a second unknown in a row", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.classifier.Script(classify("question", "en", "What is the weather in Paris?"))
 
-/*
-conversation creates a conversation and returns its id and trigger
-message id.
-*/
-func conversation(t *testing.T, d tests.Desk, body string) (ids.UUID, ids.UUID) {
-	t.Helper()
+		conv, trigger := h.conversation("What's the weather in Paris?")
+		require.Equal(t, "unknown", h.run(conv, trigger).Outcome)
 
-	res := d.Owner.PostJSON("/api/v1/conversations", testkit.JSON{
-		"inbox_id": d.InboxID(), "author": "contact", "subject": "help", "body": body,
-		"contact": testkit.JSON{"email": "jane@example.com", "name": "Jane"},
-	}).AssertCreated()
-	publicID := res.String("data.id")
-
-	var convID, msgID ids.UUID
-	d.TC.InWorkspace(func(ctx context.Context) error {
-		convUUID, err := d.TC.App.IDs.Decode("conv", publicID)
-		if err != nil {
-			return err
-		}
-		convID = convUUID
-
-		msgs, err := models.New(d.TC.App.DB).ListMessages(ctx, models.ListMessagesParams{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: convID, RowLimit: 1,
-		})
-		if err != nil || len(msgs) == 0 {
-			return fmt.Errorf("trigger message missing: %w", err)
-		}
-		msgID = msgs[0].ID
-		return nil
+		next := h.add(conv, "contact", "message", "And in Rome?")
+		res := h.run(conv, next)
+		assert.Equal(t, "handoff", res.Outcome)
+		assert.Equal(t, "unknown_streak", res.HandoffReason)
 	})
-	return convID, msgID
-}
 
-func str(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
+	t.Run("treats an uncited answer as unknown when citations are required", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost?"))
+		h.llm.answer.Script(reply("STATUS: answered\n\nPro is very affordable."))
+
+		conv, trigger := h.conversation("How much is Pro?")
+		res := h.run(conv, trigger)
+		assert.Equal(t, "unknown", res.Outcome)
+
+		s := h.load(conv, res.RunID)
+		assert.Contains(t, s.run.Flags, "uncited")
+		assert.Contains(t, str(s.agentReplies()[0].Body), "couldn't find that in our documentation")
+	})
+
+	t.Run("passes the customer's language through", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.classifier.Script(classify("question", "de", "Wie viel kostet der Pro-Plan pro Nutzer?",
+			"Pro plan cost per seat"))
+		h.llm.answer.Script(reply("STATUS: answered\n\nDer Pro-Plan kostet 12 $ pro Nutzer und Monat [1]."))
+
+		conv, trigger := h.conversation("Was kostet Pro pro Nutzer?")
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
+
+		s := h.load(conv, res.RunID)
+		assert.Equal(t, "Der Pro-Plan kostet 12 $ pro Nutzer und Monat.", str(s.agentReplies()[0].Body))
+		assert.Equal(t, "de", str(s.run.Language))
+		assert.Equal(t, "de", str(s.conv.AiLanguage))
+		assert.Contains(t, sentText(h.llm.answer), "The workspace default language is German")
+	})
 }

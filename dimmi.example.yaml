@@ -39,3 +39,7 @@ mail:
       host: localhost
       port: 11025
       allow_insecure: true
+ai:
+  # Markdown articles the agent answers from until the help center's index
+  # exists: a fictional product, so the agent has something to cite.
+  knowledge_seed_path: database/seeders/knowledge

@@ -5,150 +5,165 @@
 |
 | Before any model is called, the gate answers whether the agent may
 | speak here at all: the agent is on, the channel is allowed, the
-| conversation is live and handed to no one, the writer is a real
-| customer, and the budgets hold. A "no" is a skip, never an error.
+| conversation is live and nobody on the team has taken it, and the
+| budgets hold. It decides from what the run loaded and spends no
+| tokens.
+|
+| A customer already talking to the agent is never left hanging: when
+| the schedule, the spend cap, a missing model or the reply limit stops
+| the agent mid-conversation, the conversation is handed to the team
+| with a line saying so. A customer the agent never served simply
+| waits for a person.
 |
 */
 
 package pipeline
 
 import (
-	"context"
 	"slices"
-	"time"
 
-	"github.com/dimmihq/dimmi/framework/database"
-
-	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/officehours"
+	"github.com/dimmihq/dimmi/app/enums"
 )
 
 /*
-skip names why the agent stayed quiet.
+gate returns the first rule that stops the agent, or nil.
 */
-type skip struct {
-	Reason string
-}
-
-/*
-gate runs the eligibility checks in order and returns the first
-reason the agent may not answer, or nil.
-*/
-func (r *Runner) gate(ctx context.Context, env *env) *skip {
-	if env.Agent == nil {
-		return &skip{Reason: "agent_missing"}
+func (r *Runner) gate(e *env) *decision {
+	if reason := eligibility(e); reason != "" {
+		return skipped(reason)
 	}
-	if !env.Agent.Enabled {
-		return &skip{Reason: "agent_disabled"}
+	if reason := humanGate(e); reason != "" {
+		return skipped(reason)
 	}
-	if reason := channelGate(env); reason != "" {
-		return &skip{Reason: reason}
+	if len(e.Pending) == 0 || e.pendingText() == "" {
+		return skipped("no_text")
 	}
-	if reason := conversationGate(env); reason != "" {
-		return &skip{Reason: reason}
+	if reason := pauseGate(e); reason != "" {
+		if e.Conversation.AiState != aiStateActive {
+			return skipped(reason)
+		}
+		return handoff(reason, "", e.handoffKey())
 	}
-	if env.Conversation.AiReplyCount >= env.Agent.MaxAiReplies {
-		return &skip{Reason: "max_ai_replies"}
-	}
-	if env.Agent.AssignedBehavior == "never_when_assigned" &&
-		(env.Conversation.AssigneeMemberID != nil || env.Conversation.AssigneeTeamID != nil) {
-		return &skip{Reason: "assigned"}
-	}
-	if reason := r.scheduleGate(env); reason != "" {
-		return &skip{Reason: reason}
-	}
-	if reason := r.spendGate(ctx, env); reason != "" {
-		return &skip{Reason: reason}
-	}
-	if reason := r.readinessGate(env); reason != "" {
-		return &skip{Reason: reason}
+	if e.Conversation.AiReplyCount >= e.Agent.MaxAiReplies {
+		return handoff("max_replies", "", "max_replies")
 	}
 	return nil
 }
 
 /*
-channelGate applies the channel allow- and block-lists.
+eligibility refuses conversations the agent must never touch.
 */
-func channelGate(env *env) string {
-	if len(env.Agent.EnabledChannels) > 0 && !slices.Contains(env.Agent.EnabledChannels, env.ChannelType) {
-		return "channel_excluded"
-	}
-	if slices.Contains(env.Agent.ExcludedChannelConnectionIds, env.Conversation.ChannelConnectionID) {
-		return "connection_excluded"
+func eligibility(e *env) string {
+	c := e.Conversation
+	switch {
+	case c.DeletedAt != nil || c.Spam:
+		return "conversation_ineligible"
+	case e.Contact != nil && (e.Contact.BlockedAt != nil || e.Contact.DeletedAt != nil):
+		return "conversation_ineligible"
+	case !e.Agent.Enabled:
+		return "agent_disabled"
+	case len(e.Agent.EnabledChannels) > 0 && !slices.Contains(e.Agent.EnabledChannels, e.ChannelType):
+		return "agent_disabled"
+	case slices.Contains(e.Agent.ExcludedChannelConnectionIds, c.ChannelConnectionID):
+		return "agent_disabled"
+	case c.AiState == aiStateHandedOff:
+		return "handed_off"
+	case e.Workspace.SuspendedAt != nil:
+		return "workspace_ineligible"
 	}
 	return ""
 }
 
 /*
-conversationGate refuses conversations the agent must not touch.
+humanGate steps back when a teammate already answered the trigger or
+is working the conversation.
 */
-func conversationGate(env *env) string {
-	if env.Conversation.AiState != "active" && env.Conversation.AiState != "off" {
-		return "ai_handed_off"
+func humanGate(e *env) string {
+	if e.ReplyAfter == string(enums.AuthorTypeMember) {
+		return "human_replied"
 	}
-	if env.Conversation.DeletedAt != nil {
-		return "conversation_deleted"
+	if e.Conversation.AssigneeMemberID == nil {
+		return ""
 	}
-	if env.Conversation.Spam {
-		return "conversation_spam"
-	}
-	if env.Conversation.Status == "closed" {
-		return "conversation_closed"
+	switch e.Agent.AssignedBehavior {
+	case "never_when_assigned":
+		return "assigned"
+	case "skip_when_human_active":
+		if e.Facts.assigneeActive {
+			return "human_active"
+		}
 	}
 	return ""
 }
 
 /*
-scheduleGate applies the schedule setting.
+pauseGate names the rule that pauses the agent: its schedule, the
+spend cap, or no usable answer model.
 */
-func (r *Runner) scheduleGate(env *env) string {
-	if env.Agent.Schedule == "always" {
-		return ""
+func pauseGate(e *env) string {
+	if reason := scheduleGate(e); reason != "" {
+		return reason
 	}
-	if env.Agent.OfficeHours == nil {
-		return ""
-	}
-	within := officehours.Within(env.Agent.OfficeHours, r.Clock.Now())
-	if env.Agent.Schedule == "outside_office_hours" && within {
-		return "schedule_inside_hours"
-	}
-	if env.Agent.Schedule == "inside_office_hours" && !within {
-		return "schedule_outside_hours"
-	}
-	return ""
-}
-
-/*
-spendGate pauses when the workspace is over its monthly cap.
-*/
-func (r *Runner) spendGate(ctx context.Context, env *env) string {
-	if env.Agent.MonthlySpendCapMicros == nil {
-		return ""
-	}
-	now := r.Clock.Now().UTC()
-	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-
-	periodRow, err := models.New(env.tx).GetSpendPeriod(ctx, models.GetSpendPeriodParams{
-		WorkspaceID: env.Workspace.ID, PeriodStart: database.Date(start),
-	})
-	if err != nil {
-		return ""
-	}
-	if periodRow.CappedAt != nil {
+	if e.Facts.spendCapped {
 		return "spend_cap"
 	}
-	if periodRow.CostMicros >= *env.Agent.MonthlySpendCapMicros {
-		return "spend_cap"
+	if e.Agent.AnswerModel == nil || *e.Agent.AnswerModel == "" || e.AnswerKey == nil {
+		return "provider_unavailable"
+	}
+	if s := e.AnswerKey.Status; s == "invalid" || s == "error" {
+		return "provider_unavailable"
 	}
 	return ""
 }
 
 /*
-readinessGate needs an answer model and a usable key.
+scheduleGate applies the schedule setting. Office hours that cannot be
+read count as closed for both schedules, so a broken setting never
+lets the agent answer when it should not.
 */
-func (r *Runner) readinessGate(env *env) string {
-	if env.Agent.AnswerModel == nil || env.Agent.AnswerKeyID == nil {
-		return "no_answer_model"
+func scheduleGate(e *env) string {
+	switch e.Agent.Schedule {
+	case string(enums.AIScheduleOutsideOffice):
+		if e.Facts.hoursErr != nil || e.Facts.withinHours {
+			return "schedule"
+		}
+	case string(enums.AIScheduleInsideOffice):
+		if e.Facts.hoursErr != nil || !e.Facts.withinHours {
+			return "schedule"
+		}
 	}
 	return ""
+}
+
+/*
+availability is what the answer prompt is told about handing off:
+available, later when the team is offline, or unavailable when the
+workspace configured no human handoff.
+*/
+func (e *env) availability() string {
+	switch e.Agent.UnknownBehavior {
+	case "offer_handoff", "handoff":
+	default:
+		return "unavailable"
+	}
+	if e.Facts.onlineMembers == 0 {
+		return "later"
+	}
+	if e.Facts.hoursErr == nil && !e.Facts.withinHours {
+		return "later"
+	}
+	return "available"
+}
+
+/*
+handoffKey names the default line a handoff without model text uses.
+*/
+func (e *env) handoffKey() string {
+	switch e.availability() {
+	case "later":
+		return "handoff_later"
+	case "unavailable":
+		return "handoff_unavailable"
+	}
+	return "handoff"
 }

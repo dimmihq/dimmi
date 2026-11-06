@@ -67,4 +67,19 @@ func TestManager(t *testing.T) {
 
 		require.ErrorIs(t, err, manager.ErrUnknownInstance)
 	})
+
+	t.Run("builds a disk the configuration does not list", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		disk, err := newManager(t).Build("adhoc", config.Section{"driver": "local", "root": root})
+		require.NoError(t, err)
+		require.NoError(t, disk.Put(t.Context(), "a.txt", []byte("x"), filesystem.PutOptions{}))
+
+		again, err := newManager(t).Build("adhoc", config.Section{"driver": "local", "root": root})
+		require.NoError(t, err)
+		exists, err := again.Exists(t.Context(), "a.txt")
+		require.NoError(t, err)
+		assert.True(t, exists)
+	})
 }

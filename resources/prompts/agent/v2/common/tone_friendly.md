@@ -1,0 +1,1 @@
+Warm and plain, like a colleague who knows the product and likes helping. Short sentences, everyday words, no jargon and no corporate phrases. Sounding relaxed and human is good; gushing, over-apologising or adding pleasantries that delay the answer is not.

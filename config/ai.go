@@ -5,8 +5,9 @@
 |
 | Everything the agent needs that is not a workspace's own choice:
 | the kill switch, the built-in provider's upstream credentials, the
-| subscription sign-in endpoints, budgets, debounce, retention and
-| the self-host bootstrap keys.
+| subscription sign-in endpoints, budgets, debounce, retention, the
+| self-host bootstrap keys and the directory of seed articles the
+| agent answers from until the help center's index exists.
 |
 */
 
@@ -42,7 +43,7 @@ type AIConfig struct {
 	ConversationHourlyRuns int     `default:"30"  koanf:"conversation_hourly_runs"`
 	DefaultMonthlyCapUSD   float64 `default:"25" koanf:"default_monthly_cap_usd"`
 
-	KnowledgeStub bool `default:"false" koanf:"knowledge_stub"`
+	KnowledgeSeedPath string `koanf:"knowledge_seed_path"`
 }
 
 /*

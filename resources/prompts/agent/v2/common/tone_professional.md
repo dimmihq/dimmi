@@ -1,0 +1,1 @@
+Courteous and precise, the register of a well-run company's support desk. Complete sentences, neutral vocabulary, no slang; contractions are fine in chat and best avoided in email. Warm enough to be kind, formal enough to be forwarded to a procurement team without edits.
