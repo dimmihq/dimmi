@@ -9,6 +9,10 @@
  * such as staging: no server is started, E2E_GATE_KEY is sent as the
  * gate's key on every request, and specs that need what only a local run
  * has (the database, Mailpit, the test inbound driver) are left out.
+ *
+ * In CI a failed test runs once more so its first trace is kept, but a
+ * test that passes only on the second try still fails the run: a flaky
+ * test is a bug to fix, not a result to accept.
  */
 import { globSync, readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
@@ -34,6 +38,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: Boolean(process.env.CI),
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,
