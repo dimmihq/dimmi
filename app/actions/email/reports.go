@@ -69,6 +69,10 @@ notice keeps a forwarding confirmation, or notes that a forwarding test
 arrived, on the address.
 */
 func (a *ProcessInboundEmail) notice(ctx context.Context, mail *received, insp inspection) error {
+	if insp.testToken != "" {
+		return a.testArrived(ctx, mail, insp.testToken)
+	}
+
 	reason := ignoreForwardingTest
 
 	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {

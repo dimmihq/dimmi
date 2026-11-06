@@ -44,13 +44,6 @@ type EmailAddressOutput struct {
 }
 
 /*
-EmailAddressTestOutput is the outcome of a forwarding test.
-*/
-type EmailAddressTestOutput struct {
-	Body fhttp.Resource[resources.EmailAddressTest]
-}
-
-/*
 InboundEmailsOutput is a page of what arrived at an address.
 */
 type InboundEmailsOutput struct {
@@ -69,7 +62,6 @@ type EmailAddressController struct {
 	Show     *email.ShowEmailAddress
 	Change   *email.UpdateEmailAddress
 	Remove   *email.DeleteEmailAddress
-	Test     *email.SendEmailAddressTest
 	Activity *email.ListInboundEmails
 	IDs      *ids.Registry
 	Cursors  *pagination.Cursors
@@ -244,27 +236,6 @@ func (c *EmailAddressController) Destroy(ctx context.Context, in *requests.Email
 	}
 
 	return &EmptyOutput{}, nil
-}
-
-/*
-StoreTest sends a forwarding test to the address's public address.
-*/
-func (c *EmailAddressController) StoreTest(
-	ctx context.Context, in *requests.EmailAddressRequest,
-) (*EmailAddressTestOutput, error) {
-	id, err := c.addressID(in.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	sent, err := c.Test.Handle(ctx, membership(ctx), id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &EmailAddressTestOutput{Body: fhttp.NewResource(resources.EmailAddressTest{
-		Object: "email_address_test", Status: "sent", SentTo: sent.SentTo, MessageID: sent.MessageID,
-	})}, nil
 }
 
 /*

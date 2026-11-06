@@ -86,6 +86,7 @@ func API(a *app.App) {
 			workspaceRoutes(workspace, c)
 			realtimeRoutes(workspace, a)
 			emailSenderRoutes(workspace, a)
+			emailSetupRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
@@ -236,8 +237,6 @@ func emailAddressRoutes(workspace *routing.Router, c *v1.EmailAddressController)
 		Ability("settings:write")
 	routing.Delete(workspace, "/email-addresses/{address}", "email-addresses.destroy", c.Destroy).
 		Ability("settings:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, "/email-addresses/{address}/tests", "email-addresses.tests.store", c.StoreTest).
-		Ability("settings:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, "/email-addresses/{address}/inbound-emails", "email-addresses.inbound-emails.index",
 		c.InboundEmails).Ability("settings:read")
 }
@@ -333,7 +332,7 @@ func emailAddressController(a *app.App, cursors *pagination.Cursors) *v1.EmailAd
 
 	return &v1.EmailAddressController{
 		Create: acts.CreateEmailAddress, List: acts.ListEmailAddresses, Show: acts.ShowEmailAddress,
-		Change: acts.UpdateEmailAddress, Remove: acts.DeleteEmailAddress, Test: acts.SendEmailAddressTest,
+		Change: acts.UpdateEmailAddress, Remove: acts.DeleteEmailAddress,
 		Activity: acts.ListInboundEmails, IDs: a.IDs, Provider: a.EmailChannel.Transport, Cursors: cursors,
 		Senders: a.EmailDomains, Guides: acts.RecommendGuide,
 	}

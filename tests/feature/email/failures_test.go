@@ -273,7 +273,7 @@ func TestAddressStorageFailures(t *testing.T) {
 			{"email_addresses", []string{"INSERT", "UPDATE"}},
 			{"channel_connections", []string{"INSERT", "UPDATE"}},
 			{"inbound_emails", nil},
-			{"outbound_emails", []string{"INSERT"}},
+			{"email_address_tests", []string{"INSERT"}},
 			{"inboxes", nil},
 		} {
 			t.Run(b.name(), func(t *testing.T) {

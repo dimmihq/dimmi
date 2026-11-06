@@ -18,18 +18,23 @@
 | through the ids it quotes, and fails the reply it names. It suppresses
 | nothing, because nothing in it says the address is gone for good.
 |
+| A bounced forwarding test fails that test and suppresses nothing: the
+| address it bounced from is the workspace's own.
+|
 */
 
 package email
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 
 	"github.com/dimmihq/dimmi/app/enums"
@@ -85,6 +90,7 @@ reportRun records a report's outcomes on one sent email.
 */
 type reportRun struct {
 	a    *ProcessInboundEmail
+	tx   *database.Tx
 	q    *models.Queries
 	sent models.OutboundEmail
 }
@@ -145,14 +151,16 @@ func (a *ProcessInboundEmail) bounce(ctx context.Context, mail *received) error 
 
 	reason := ignoreBounceUnmatched
 
-	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+
 		sent, ok, err := findSent(ctx, q, mail.row.WorkspaceID, original)
 		if err != nil || !ok {
 			return err
 		}
 
 		reason = ignoreBounce
-		run := reportRun{a: a, q: q, sent: sent}
+		run := reportRun{a: a, tx: tx, q: q, sent: sent}
 
 		for _, r := range report.Recipients {
 			if err := run.bounced(ctx, r); err != nil {
@@ -190,6 +198,11 @@ func (run reportRun) bounced(ctx context.Context, r dsn.Recipient) error {
 	}
 
 	status.Status = string(enums.OutboundEmailStatusBounced)
+
+	if run.sent.Kind == string(enums.OutboundEmailKindTest) {
+		return run.testBounced(ctx, address, status)
+	}
+
 	failed := outcome{
 		address: address, status: status, reason: enums.EmailSuppressionReasonHardBounce, source: "dsn",
 		overall: status.Status,
@@ -340,6 +353,35 @@ sentTo reports whether the sent email went to the address.
 */
 func sentTo(sent models.OutboundEmail, address string) bool {
 	return slices.Contains(sent.ToAddresses, address) || slices.Contains(sent.CcAddresses, address)
+}
+
+/*
+testBounced fails the forwarding test whose mail bounced, with what the
+bounce says, and suppresses nothing.
+*/
+func (run reportRun) testBounced(ctx context.Context, address string, status recipientStatus) error {
+	err := run.record(ctx, outcome{address: address, status: status, overall: status.Status})
+	if err != nil {
+		return err
+	}
+
+	test, err := run.q.FindEmailAddressTestByOutbound(ctx, models.FindEmailAddressTestByOutboundParams{
+		WorkspaceID: run.sent.WorkspaceID, OutboundEmailID: &run.sent.ID,
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("find bounced email address test: %w", err)
+	}
+
+	steps := testSteps{Clock: run.a.Clock, Events: run.a.Events}
+	_, err = steps.settle(ctx, run.tx, test, testEnd{
+		status: TestFailed, findings: bounceFindings(status.Code, status.Diagnostic),
+	})
+
+	return err
 }
 
 /*

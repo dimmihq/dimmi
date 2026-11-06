@@ -15,19 +15,28 @@ const base = "/api/v1";
 /*
  * ApiError is a request the server refused. Code is stable for programs;
  * message is meant for people. Fields maps each rejected field to its
- * first message.
+ * first message. Details holds whatever else the error carries, such as
+ * how long to wait.
  */
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly fields: Record<string, string>;
+  readonly details: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string, fields: Record<string, string> = {}) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    fields: Record<string, string> = {},
+    details: Record<string, unknown> = {},
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.fields = fields;
+    this.details = details;
   }
 }
 
@@ -38,6 +47,7 @@ interface ErrorBody {
   requirement?: string;
   action_url?: string | null;
   ip?: string;
+  [detail: string]: unknown;
 }
 
 /*
@@ -62,8 +72,9 @@ function reportRefusal(status: number, body: ErrorBody | null) {
  */
 function toApiError(status: number, body: ErrorBody | null): ApiError {
   const fields: Record<string, string> = {};
+  const { code, message, errors, ...details } = body ?? {};
 
-  for (const [field, messages] of Object.entries(body?.errors ?? {})) {
+  for (const [field, messages] of Object.entries(errors ?? {})) {
     if (messages[0]) {
       fields[field] = messages[0];
     }
@@ -71,9 +82,10 @@ function toApiError(status: number, body: ErrorBody | null): ApiError {
 
   return new ApiError(
     status,
-    body?.code ?? "unexpected_response",
-    body?.message ?? i18n.t("common:errors.unexpected"),
+    code ?? "unexpected_response",
+    message ?? i18n.t("common:errors.unexpected"),
     fields,
+    details,
   );
 }
 

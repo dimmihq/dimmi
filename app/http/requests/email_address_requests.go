@@ -20,6 +20,14 @@ type EmailAddressRequest struct {
 }
 
 /*
+EmailAddressTestRequest names a forwarding test of an address.
+*/
+type EmailAddressTestRequest struct {
+	Address string `path:"address"`
+	Test    string `path:"test"`
+}
+
+/*
 StoreEmailAddressRequest is the input of POST /email-addresses.
 */
 type StoreEmailAddressRequest struct {

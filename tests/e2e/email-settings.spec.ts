@@ -1,6 +1,7 @@
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { deliverEmail, rawEmail } from "./support/inbound";
 import { openAddress } from "./support/inbox";
+import { mailedText } from "./support/mail";
 
 /*
  * suffixOf is the unique part of the person's address, so workspaces
@@ -53,13 +54,31 @@ it.describe("email settings", () => {
     expect(emails.data[0]?.conversation.object).toBe("conversation");
   });
 
-  it("sends a forwarding test and connects another address", async ({ page, person, request }) => {
+  it("runs a forwarding test and connects another address", async ({ page, person, request }) => {
     await createAccount(request, person, `Test ${suffixOf(person)}`);
     await signIn(page, person);
     await openAddress(page);
 
-    await page.getByRole("button", { name: "Send test email" }).click();
-    await expect(page.getByText(/^Sent to .*It shows as receiving once it comes back\.$/)).toBeVisible();
+    await page.getByRole("button", { name: "Test forwarding" }).click();
+    const status = page.getByTestId("forwarding-test-status").first();
+    await expect(status).toHaveText(/^Waiting for it to come back/);
+
+    const list = await page.request.get("/api/v1/email-addresses");
+    const [address] = ((await list.json()) as { data: { address: string; forwarding_address: string }[] }).data;
+    const sent = await mailedText(address?.address ?? "", "dimmi forwarding test");
+    const line = /dimmi test t1\.\S+/.exec(sent)?.[0] ?? "";
+    expect(line).not.toBe("");
+    await deliverEmail(
+      request,
+      rawEmail(
+        `it.${suffixOf(person)}@customer.test`,
+        address?.address ?? "",
+        "Fwd: forwarding test",
+        `Forwarded.\n\n${line}`,
+      ),
+      address?.forwarding_address ?? "",
+    );
+    await expect(status).toHaveText(/^Forwarding works, took \d+ s$/, { timeout: 15_000 });
 
     const added = `sales@acme-${suffixOf(person)}.test`;
     await page.goto("/d/settings/email");

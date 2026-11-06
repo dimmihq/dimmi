@@ -76,16 +76,6 @@ func NewInboundEmails(rows []models.InboundEmail) []InboundEmail {
 }
 
 /*
-EmailAddressTest is the outcome of a forwarding test.
-*/
-type EmailAddressTest struct {
-	Object    string `json:"object"`
-	Status    string `json:"status"`
-	SentTo    string `json:"sent_to"`
-	MessageID string `json:"message_id"`
-}
-
-/*
 ref names a row by its public id, or nothing.
 */
 func ref(prefix models.Prefix, object string, id *ids.UUID) *ObjectRef {

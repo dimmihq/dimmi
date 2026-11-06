@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/dns"
+	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mailbox"
@@ -86,6 +87,7 @@ type ProcessInboundEmail struct {
 	Limiter  *ratelimit.Limiter
 	Config   appconfig.EmailConfig
 	Stamps   inbound.Stamps
+	Events   *events.Dispatcher
 	Receiver contracts.InboundReceiver
 }
 

@@ -76,5 +76,17 @@
       "step_2": "Forward every message sent to {{.address}} to {{.forwarding_address}}, and keep a copy if you like.",
       "warning_no_alias": "Use a forward, not an alias that sends mail on as your own address, so each customer stays the sender."
     }
+  },
+  "findings": {
+    "slow_forward": "The test took more than five minutes. Your mail service queues forwarded mail, so customers may wait too.",
+    "subject_rewritten": "Your mail service changed the subject on the way, for example by adding [External]. Replies still thread, but less reliably.",
+    "m365_external_forward_blocked": "Microsoft 365 refused to forward outside your organization. Allow automatic forwarding in the outbound spam policy, then test again.",
+    "test_bounced": "The test email bounced before it reached your address. Check that the address exists and accepts mail.",
+    "gmail_confirmation_pending": "Gmail is still waiting for its confirmation code. Enter the code shown on this page in Gmail, then test again.",
+    "gmail_not_confirmed": "Check that forwarding is turned on in Gmail and that the forwarding address was confirmed.",
+    "google_rule_delay": "Google can take up to 24 hours to apply a new routing rule. Test again later.",
+    "group_moderation": "If the address is a Google Group, the group may be holding mail for moderation. A routing rule avoids this.",
+    "m365_forward_policy": "Microsoft 365 blocks automatic forwarding outside your organization by default. Check the outbound spam policy.",
+    "check_spam": "Look in the spam folder of your mail service. Some services stop forwarding mail they marked as spam."
   }
 }
