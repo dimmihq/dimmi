@@ -217,8 +217,8 @@ func (d *Driver) completionParams(req contracts.ChatRequest) (oai.ChatCompletion
 	if req.MaxOutputTokens > 0 {
 		params.MaxCompletionTokens = oai.Int(int64(req.MaxOutputTokens))
 	}
-	if req.Effort != "" && reasons(req.Model) {
-		params.ReasoningEffort = shared.ReasoningEffort(req.Effort)
+	if effort := reasoningEffort(req); effort != "" {
+		params.ReasoningEffort = effort
 	}
 	if req.Temperature != nil {
 		params.Temperature = oai.Float(*req.Temperature)
@@ -374,6 +374,22 @@ func MapFinish(reason string) contracts.StopReason {
 	default:
 		return contracts.StopReasonOther
 	}
+}
+
+/*
+reasoningEffort is the effort to send for the request. Chat Completions
+refuses function tools alongside any reasoning on OpenAI's reasoning
+models, so a request with tools turns reasoning off; one without asks
+for the effort the caller wanted.
+*/
+func reasoningEffort(req contracts.ChatRequest) shared.ReasoningEffort {
+	if !reasons(req.Model) {
+		return ""
+	}
+	if len(req.Tools) > 0 {
+		return shared.ReasoningEffort("none")
+	}
+	return shared.ReasoningEffort(req.Effort)
 }
 
 /*

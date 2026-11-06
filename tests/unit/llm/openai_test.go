@@ -62,6 +62,26 @@ func TestOpenAIDriver(t *testing.T) {
 		assert.Equal(t, "Bearer sk-test", fake.Sent()[0].Header.Get("Authorization"))
 	})
 
+	t.Run("turns reasoning off with tools and asks for the effort without them", func(t *testing.T) {
+		t.Parallel()
+		hc, fake := fakeHTTP(t)
+		fake.Stub(completionURL, fixtures.Reply("openai_completion.json"))
+		drv := openai.New(openai.Options{APIKey: "sk-test", HTTP: hc.StdClient()})
+
+		withTools := request("gpt-6-luna")
+		withTools.Effort = contracts.EffortLow
+		withTools.Tools = []contracts.ToolSpec{{Name: "lookup", Description: "Finds", Schema: json.RawMessage(`{}`)}}
+		plain := request("gpt-6-luna")
+		plain.Effort = contracts.EffortLow
+		_, err := drv.Chat(t.Context(), withTools)
+		require.NoError(t, err)
+		_, err = drv.Chat(t.Context(), plain)
+		require.NoError(t, err)
+
+		assert.Equal(t, "none", body(t, fake.Sent()[0])["reasoning_effort"])
+		assert.Equal(t, "low", body(t, fake.Sent()[1])["reasoning_effort"])
+	})
+
 	t.Run("streams text, a whole tool call, usage and the stop reason", func(t *testing.T) {
 		t.Parallel()
 		hc, fake := fakeHTTP(t)
