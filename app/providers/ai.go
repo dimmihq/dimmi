@@ -52,7 +52,7 @@ func bootAI(a *app.App) error {
 	a.AI = runner
 
 	a.Actions.AI = &app.AIActions{
-		GetAgent:    &ai.GetAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
+		GetAgent:    &ai.GetAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI, Prices: runner.Prices},
 		UpdateAgent: &ai.UpdateAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
 
 		ListProviderKeys:  &ai.ListProviderKeys{DB: a.DB},

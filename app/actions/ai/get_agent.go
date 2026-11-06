@@ -20,6 +20,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
+	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/config"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -60,6 +61,7 @@ type GetAiAgent struct {
 	DB     *database.DB
 	Clock  clock.Clock
 	Config config.AIConfig
+	Prices *aiprices.Table
 }
 
 /*
@@ -99,7 +101,7 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 			Agent:     agent,
 			Keys:      keys,
 			Providers: providers(a.Config),
-			Catalog:   catalog(),
+			Catalog:   catalog(a.Prices),
 			Managed:   managedKey != nil,
 		}
 		view.Ready, view.ReadinessErrs = readiness(agent, keys)
@@ -220,13 +222,13 @@ func providers(cfg config.AIConfig) []ProviderDescriptor {
 /*
 catalog lists the model pickers' entries per provider.
 */
-func catalog() map[string][]CatalogEntry {
+func catalog(prices *aiprices.Table) map[string][]CatalogEntry {
 	out := map[string][]CatalogEntry{}
 	for _, e := range aimodels.Managed() {
-		out[string(enums.AIProviderDimmi)] = append(out[string(enums.AIProviderDimmi)], catalogEntry(e))
+		out[string(enums.AIProviderDimmi)] = append(out[string(enums.AIProviderDimmi)], catalogEntry(e, prices))
 	}
 	for _, e := range aimodels.ChatGPT() {
-		out[string(enums.AIProviderChatGPT)] = append(out[string(enums.AIProviderChatGPT)], catalogEntry(e))
+		out[string(enums.AIProviderChatGPT)] = append(out[string(enums.AIProviderChatGPT)], catalogEntry(e, prices))
 	}
 	return out
 }
