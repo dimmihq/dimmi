@@ -65,7 +65,7 @@ func bootAI(a *app.App) error {
 		TestProviderKey:   &ai.TestProviderKey{DB: a.DB, Clock: a.Clock, LLM: a.LLM},
 
 		StartChatGPTConnect: &ai.StartChatGPTConnect{
-			Config: a.Config.AI, Cache: a.Cache, Clock: a.Clock,
+			Config: a.Config.AI, Cache: a.Cache, Clock: a.Clock, HTTP: a.HTTP,
 		},
 		CompleteChatGPTConnect: &ai.CompleteChatGPTConnect{
 			DB: a.DB, Config: a.Config.AI, Cache: a.Cache, Clock: a.Clock,

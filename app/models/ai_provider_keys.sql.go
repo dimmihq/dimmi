@@ -315,6 +315,51 @@ func (q *Queries) ListProviderKeysForRevalidation(ctx context.Context, batchLimi
 	return items, nil
 }
 
+const lockProviderKeyCredentials = `-- name: LockProviderKeyCredentials :one
+SELECT id, workspace_id, name, provider, base_url, region, auth_type, credentials_encrypted, key_hint, status, status_reason, last_error, last_validated_at, last_error_at, last_used_at, models, provider_info, config, source, created_by_member_id, deleted_at, created_at, updated_at FROM ai_provider_keys
+WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+type LockProviderKeyCredentialsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// LockProviderKeyCredentials returns the live key and holds its row
+// until the transaction ends, so two renewals of one sign-in never run
+// at once.
+func (q *Queries) LockProviderKeyCredentials(ctx context.Context, arg LockProviderKeyCredentialsParams) (AiProviderKey, error) {
+	row := q.db.QueryRow(ctx, lockProviderKeyCredentials, arg.WorkspaceID, arg.ID)
+	var i AiProviderKey
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Provider,
+		&i.BaseUrl,
+		&i.Region,
+		&i.AuthType,
+		&i.CredentialsEncrypted,
+		&i.KeyHint,
+		&i.Status,
+		&i.StatusReason,
+		&i.LastError,
+		&i.LastValidatedAt,
+		&i.LastErrorAt,
+		&i.LastUsedAt,
+		&i.Models,
+		&i.ProviderInfo,
+		&i.Config,
+		&i.Source,
+		&i.CreatedByMemberID,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const touchProviderKeyUsed = `-- name: TouchProviderKeyUsed :exec
 UPDATE ai_provider_keys SET last_used_at = $1
 WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
@@ -373,6 +418,58 @@ func (q *Queries) UpdateProviderKey(ctx context.Context, arg UpdateProviderKeyPa
 		arg.CredentialsEncrypted,
 		arg.KeyHint,
 		arg.Config,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i AiProviderKey
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Provider,
+		&i.BaseUrl,
+		&i.Region,
+		&i.AuthType,
+		&i.CredentialsEncrypted,
+		&i.KeyHint,
+		&i.Status,
+		&i.StatusReason,
+		&i.LastError,
+		&i.LastValidatedAt,
+		&i.LastErrorAt,
+		&i.LastUsedAt,
+		&i.Models,
+		&i.ProviderInfo,
+		&i.Config,
+		&i.Source,
+		&i.CreatedByMemberID,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateProviderKeyCredentials = `-- name: UpdateProviderKeyCredentials :one
+UPDATE ai_provider_keys SET credentials_encrypted = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
+RETURNING id, workspace_id, name, provider, base_url, region, auth_type, credentials_encrypted, key_hint, status, status_reason, last_error, last_validated_at, last_error_at, last_used_at, models, provider_info, config, source, created_by_member_id, deleted_at, created_at, updated_at
+`
+
+type UpdateProviderKeyCredentialsParams struct {
+	CredentialsEncrypted encryption.Sealed `json:"credentials_encrypted"`
+	Now                  time.Time         `json:"now"`
+	WorkspaceID          ids.UUID          `json:"workspace_id"`
+	ID                   ids.UUID          `json:"id"`
+}
+
+// UpdateProviderKeyCredentials replaces only the sealed credentials of
+// a key, leaving every field an editor may be changing untouched, and
+// bumps its version so cached drivers expire.
+func (q *Queries) UpdateProviderKeyCredentials(ctx context.Context, arg UpdateProviderKeyCredentialsParams) (AiProviderKey, error) {
+	row := q.db.QueryRow(ctx, updateProviderKeyCredentials,
+		arg.CredentialsEncrypted,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,

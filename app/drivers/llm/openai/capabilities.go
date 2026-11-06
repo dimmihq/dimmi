@@ -3,8 +3,9 @@
 | OpenAI Capabilities
 |--------------------------------------------------------------------------
 |
-| The static table of what each model can do. Unknown models get the
-| conservative row; the connection may override it.
+| The static table of what each model can do. The current GPT models
+| share a 1.05M-token window and a 128K output bound; older models get
+| smaller rows, and a connection may still override either.
 |
 */
 
@@ -31,9 +32,13 @@ func Capabilities(model string) contracts.LLMCapabilities {
 	}
 
 	lower := strings.ToLower(model)
-	if strings.HasPrefix(lower, "gpt-3") || strings.HasPrefix(lower, "gpt-4-turbo") {
-		caps.ContextTokens = 272_000
+	switch {
+	case strings.HasPrefix(lower, "gpt-3"), strings.HasPrefix(lower, "gpt-4"):
+		caps.ContextTokens = 128_000
+		caps.MaxOutputTokens = 16_384
 		caps.PromptCache = false
+	case strings.HasPrefix(lower, "gpt-5"):
+		caps.ContextTokens = 400_000
 	}
 
 	return caps

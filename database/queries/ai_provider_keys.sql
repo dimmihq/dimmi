@@ -38,6 +38,22 @@ UPDATE ai_provider_keys SET
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 
+-- name: LockProviderKeyCredentials :one
+-- LockProviderKeyCredentials returns the live key and holds its row
+-- until the transaction ends, so two renewals of one sign-in never run
+-- at once.
+SELECT * FROM ai_provider_keys
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
+FOR UPDATE;
+
+-- name: UpdateProviderKeyCredentials :one
+-- UpdateProviderKeyCredentials replaces only the sealed credentials of
+-- a key, leaving every field an editor may be changing untouched, and
+-- bumps its version so cached drivers expire.
+UPDATE ai_provider_keys SET credentials_encrypted = @credentials_encrypted, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
+RETURNING *;
+
 -- name: UpdateProviderKeyStatus :one
 -- UpdateProviderKeyStatus records a validation outcome.
 UPDATE ai_provider_keys SET

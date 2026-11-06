@@ -1,0 +1,6 @@
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":1,"item_id":"m","output_index":0,"content_index":0,"delta":"Hi"}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":2,"response":{"id":"r","status":"completed","output":[],"usage":{"input_tokens":5,"input_tokens_details":{"cached_tokens":0},"output_tokens":1,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":6}}}
+

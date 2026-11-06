@@ -87,6 +87,11 @@ func (a *CreateProviderKey) Handle(ctx context.Context, in CreateKeyInput) (*mod
 	if in.Provider == enums.AIProviderOpenAICompatible && in.BaseURL == "" {
 		return nil, fault.New(fault.Invalid, "base_url_required", "a base url is required")
 	}
+	if in.BaseURL != "" && a.LLM != nil {
+		if err := a.LLM.CheckBaseURL(in.BaseURL); err != nil {
+			return nil, err
+		}
+	}
 
 	var key models.AiProviderKey
 
@@ -127,11 +132,9 @@ func (a *CreateProviderKey) create(ctx context.Context, tx *database.Tx, in Crea
 	}
 
 	if in.APIKey != "" {
-		sealed, err := encryption.Seal(ctx, a.Keys,
-			encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: in.Membership.Workspace.ID.String()}},
-			managers.Credentials{APIKey: in.APIKey})
+		sealed, err := managers.SealCredentials(ctx, a.Keys, key, managers.Credentials{APIKey: in.APIKey})
 		if err != nil {
-			return key, fmt.Errorf("seal credentials: %w", err)
+			return key, err
 		}
 		key.CredentialsEncrypted = sealed
 	}

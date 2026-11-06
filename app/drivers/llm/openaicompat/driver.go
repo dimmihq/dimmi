@@ -5,8 +5,9 @@
 |
 | Any endpoint that speaks the OpenAI wire — Ollama, LM Studio, vLLM,
 | or a hosted gateway — answers through this driver. It shares the
-| OpenAI mapping and only differs in what the connection supplies:
-| a base URL, an optional key, and the quirks the key's config notes.
+| OpenAI mapping and only differs in what the connection supplies: a
+| base URL, an optional key, and the quirks the key's config notes,
+| such as the max-tokens field the server reads or a missing JSON mode.
 |
 */
 
@@ -14,6 +15,7 @@ package openaicompat
 
 import (
 	"context"
+	"errors"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/httpclient"
@@ -24,88 +26,98 @@ import (
 
 /*
 Config carries the connection's quirks: which max-tokens field the
-server honors, whether tools work, and whether stream usage arrives.
+server honors ("max_tokens" or "max_completion_tokens"), whether
+tools work, whether usage arrives inside a stream, whether a native
+JSON mode exists, and the context window when the connection knows
+it.
 */
 type Config struct {
-	Clock               clock.Clock
 	MaxTokensField      string
 	SupportsTools       bool
 	SupportsStreamUsage bool
 	JSONMode            bool
 	ContextTokens       int
+	MaxOutputTokens     int
+}
+
+/*
+DefaultConfig is what an unknown compatible server is assumed to do:
+the legacy max_tokens field every server reads, tools, stream usage
+and a JSON mode, each switchable from the connection's config.
+*/
+func DefaultConfig() Config {
+	return Config{
+		MaxTokensField: openai.MaxTokensLegacy, SupportsTools: true,
+		SupportsStreamUsage: true, JSONMode: true,
+	}
+}
+
+/*
+Options configures the compatible endpoint. Provider names the
+connection, openai_compatible when empty.
+*/
+type Options struct {
+	Provider contracts.LLMProvider
+	BaseURL  string
+	APIKey   string
+	Headers  map[string]string
+	HTTP     *httpclient.StdClient
+	Clock    clock.Clock
+	Config   Config
 }
 
 /*
 Driver is a contracts.LLM over an OpenAI-compatible endpoint.
 */
 type Driver struct {
-	inner *openai.Driver
-	cfg   Config
-}
-
-/*
-New builds a compatible driver for the endpoint.
-*/
-/*
-Options configures the compatible endpoint.
-*/
-
-/*
-Options configures the compatible endpoint.
-*/
-type Options struct {
-	BaseURL, APIKey string
-	Headers         map[string]string
-	HTTP            *httpclient.StdClient
-	Config          Config
+	*openai.Driver
 }
 
 /*
 New builds the compatible driver.
 */
 func New(o Options) *Driver {
-	return &Driver{
-		inner: openai.New(openai.Options{
-			BaseURL: o.BaseURL, APIKey: o.APIKey, Headers: o.Headers, HTTP: o.HTTP, Clock: o.Config.Clock,
-		}),
-		cfg: o.Config,
+	if o.Provider == "" {
+		o.Provider = contracts.LLMProviderOpenAICompatible
 	}
+	cfg := o.Config
+	return &Driver{Driver: openai.New(openai.Options{
+		Provider: o.Provider, BaseURL: o.BaseURL, APIKey: o.APIKey, Headers: o.Headers,
+		HTTP: o.HTTP, Clock: o.Clock, MaxTokensField: cfg.MaxTokensField,
+		NoStreamUsage: !cfg.SupportsStreamUsage, NoJSONMode: !cfg.JSONMode,
+		Capabilities: func(model string) contracts.LLMCapabilities { return capabilities(cfg, model) },
+	})}
 }
 
 /*
-Provider names the driver.
-*/
-func (d *Driver) Provider() contracts.LLMProvider { return contracts.LLMProviderOpenAICompatible }
-
-/*
-Chat runs one non-streaming completion.
-*/
-func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
-	return d.inner.Chat(ctx, req)
-}
-
-/*
-Stream runs one streaming completion.
-*/
-func (d *Driver) Stream(ctx context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
-	return d.inner.Stream(ctx, req)
-}
-
-/*
-ListModels returns the endpoint's models.
+ListModels returns the endpoint's models; a server without the list
+endpoint reports that it has none, so the caller probes instead.
 */
 func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
-	return d.inner.ListModels(ctx)
+	models, err := d.Driver.ListModels(ctx)
+	if err == nil {
+		return models, nil
+	}
+	if llmErr, ok := errors.AsType[*contracts.LLMError](err); ok && llmErr.Kind == contracts.LLMErrorModelNotFound {
+		return nil, contracts.ErrLLMNotSupported
+	}
+	return nil, err
 }
 
 /*
-Capabilities answers from the connection's config.
+capabilities answers from the connection's config over a conservative
+base row.
 */
-func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
-	caps := d.inner.Capabilities(model)
-	caps.Tools = d.cfg.SupportsTools
-	if d.cfg.ContextTokens > 0 {
-		caps.ContextTokens = d.cfg.ContextTokens
+func capabilities(cfg Config, _ string) contracts.LLMCapabilities {
+	caps := contracts.LLMCapabilities{
+		Tools: cfg.SupportsTools, Streaming: true, SystemPrompt: true, JSONMode: cfg.JSONMode,
+		ContextTokens: 128_000, MaxOutputTokens: 8_192,
+	}
+	if cfg.ContextTokens > 0 {
+		caps.ContextTokens = cfg.ContextTokens
+	}
+	if cfg.MaxOutputTokens > 0 {
+		caps.MaxOutputTokens = cfg.MaxOutputTokens
 	}
 	return caps
 }

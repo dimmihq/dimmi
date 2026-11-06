@@ -4,10 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | One place builds a contracts.LLM from a provider-key row: it opens
-| the sealed credentials, picks the driver for the provider, and keeps
-| a short-lived cache so a rotated key never keeps its old driver.
-| Drivers are built per provider through the registry, so a new
-| provider lands as one registered factory, never a manager edit.
+| the sealed credentials, picks the driver for the provider, wraps it
+| with retries, a circuit breaker per connection and model, and the
+| step timeouts each request carries, and keeps a short-lived cache so
+| a rotated key never keeps its old driver. Drivers are built per
+| provider through the registry, so a new provider lands as one
+| registered factory, never a manager edit.
 |
 */
 
@@ -15,9 +17,7 @@ package managers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/url"
 	"sync"
 	"time"
 
@@ -28,14 +28,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/drivers/llm/anthropic"
-	"github.com/dimmihq/dimmi/app/drivers/llm/chatgpt"
-	"github.com/dimmihq/dimmi/app/drivers/llm/engy"
-	"github.com/dimmihq/dimmi/app/drivers/llm/managed"
-	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
+	"github.com/dimmihq/dimmi/app/support/llmretry"
 	"github.com/dimmihq/dimmi/config"
 )
 
@@ -49,21 +45,10 @@ type DriverFactory func(
 ) (contracts.LLM, error)
 
 /*
-Credentials is a connection's opened secret shape.
-*/
-type Credentials struct {
-	APIKey       string            `json:"api_key,omitempty"`
-	AccessToken  string            `json:"access_token,omitempty"`
-	RefreshToken string            `json:"refresh_token,omitempty"`
-	AccountID    string            `json:"account_id,omitempty"`
-	ExpiresAt    time.Time         `json:"expires_at,omitzero"`
-	Scopes       []string          `json:"scopes,omitempty"`
-	ExtraHeaders map[string]string `json:"extra_headers,omitempty"`
-}
-
-/*
 LLMManager resolves and caches drivers. The cache key is the key id
-with its updated_at, so a rotation or re-seal retires the old driver.
+with its updated_at, so a rotation or re-seal retires the old driver;
+breakers outlive the cache, so a rebuilt driver inherits the state of
+the one it replaced.
 */
 type LLMManager struct {
 	keys      *encryption.Keys
@@ -72,9 +57,11 @@ type LLMManager struct {
 	config    config.AIConfig
 	clock     clock.Clock
 	factories map[enums.AIProvider]DriverFactory
+	breakers  *llmretry.Breakers
 	mu        sync.Mutex
 	cache     map[string]cachedDriver
 	order     []string
+	renewing  map[ids.UUID]*sync.Mutex
 }
 
 /*
@@ -103,84 +90,17 @@ NewLLMManager builds the manager with the drivers of today
 registered.
 */
 func NewLLMManager(deps LLMDeps) *LLMManager {
+	clk := deps.Clock
+	if clk == nil {
+		clk = clock.System()
+	}
 	m := &LLMManager{
-		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: deps.Clock, db: deps.DB,
+		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: clk, db: deps.DB,
 		factories: make(map[enums.AIProvider]DriverFactory), cache: map[string]cachedDriver{},
+		breakers: llmretry.NewBreakers(clk, deps.Config.Breaker), renewing: map[ids.UUID]*sync.Mutex{},
 	}
 	m.registerBuiltins()
 	return m
-}
-
-/*
-registerBuiltins registers the drivers of the launch set.
-*/
-func (m *LLMManager) registerBuiltins() {
-	m.registerKeyDriven()
-	m.registerSources()
-}
-
-/*
-registerKeyDriven registers the providers that run on key rows.
-*/
-func (m *LLMManager) registerKeyDriven() {
-	m.Extend(enums.AIProviderAnthropic, func(
-		_ context.Context, _ *LLMManager, key models.AiProviderKey,
-		creds Credentials, httpClient *httpclient.Client,
-	) (contracts.LLM, error) {
-		return anthropic.New(anthropic.Options{
-			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
-			Version: configString(key.Config, "anthropic_version"), HTTP: httpClient.StdClient(),
-		}), nil
-	})
-
-	m.Extend(enums.AIProviderOpenAI, func(
-		_ context.Context, _ *LLMManager, key models.AiProviderKey,
-		creds Credentials, httpClient *httpclient.Client,
-	) (contracts.LLM, error) {
-		return openai.New(openai.Options{
-			Clock:   m.clock,
-			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
-			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
-		}), nil
-	})
-
-	m.Extend(enums.AIProviderEngy, func(
-		_ context.Context, _ *LLMManager, _ models.AiProviderKey,
-		creds Credentials, httpClient *httpclient.Client,
-	) (contracts.LLM, error) {
-		return engy.New(creds.APIKey, httpClient.StdClient(), m.clock), nil
-	})
-
-	m.Extend(enums.AIProviderOpenAICompatible, func(
-		_ context.Context, _ *LLMManager, key models.AiProviderKey,
-		creds Credentials, httpClient *httpclient.Client,
-	) (contracts.LLM, error) {
-		return openai.New(openai.Options{
-			Clock:   m.clock,
-			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
-			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
-		}), nil
-	})
-}
-
-/*
-registerSources registers the providers that hold no user key.
-*/
-func (m *LLMManager) registerSources() {
-	m.Extend(enums.AIProviderChatGPT, func(
-		_ context.Context, m *LLMManager, key models.AiProviderKey,
-		creds Credentials, httpClient *httpclient.Client,
-	) (contracts.LLM, error) {
-		source := &oauthSource{m: m, key: key, creds: creds}
-		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient.StdClient(), source, m.clock), nil
-	})
-
-	m.Extend(enums.AIProviderDimmi, func(
-		_ context.Context, m *LLMManager, _ models.AiProviderKey,
-		_ Credentials, httpClient *httpclient.Client,
-	) (contracts.LLM, error) {
-		return m.managedDriver(httpClient)
-	})
 }
 
 /*
@@ -191,7 +111,10 @@ func (m *LLMManager) Extend(provider enums.AIProvider, factory DriverFactory) {
 }
 
 /*
-ForKey returns the driver for a provider-key row.
+ForKey returns the driver for a provider-key row, wrapped with
+retries, the connection's breakers and timeout enforcement. A caller
+bounds a step by setting the request's Timeout, typically from
+llmretry.StepTimeouts(config.AI.Timeouts, step).
 */
 func (m *LLMManager) ForKey(ctx context.Context, key models.AiProviderKey) (contracts.LLM, error) {
 	cacheKey := key.ID.String() + ":" + key.UpdatedAt.String()
@@ -203,50 +126,52 @@ func (m *LLMManager) ForKey(ctx context.Context, key models.AiProviderKey) (cont
 	}
 	m.mu.Unlock()
 
-	factory, ok := m.factories[enums.AIProvider(key.Provider)]
-	if !ok {
-		return nil, fmt.Errorf("no llm driver for provider %q", key.Provider)
-	}
-
-	creds, err := m.openCredentials(ctx, key)
+	drv, err := m.build(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-
-	httpClient := m.httpForKey(key)
-
-	drv, err := factory(ctx, m, key, creds, httpClient)
-	if err != nil {
-		return nil, err
-	}
+	wrapped := m.wrap(key, drv)
 
 	m.mu.Lock()
 	if len(m.order) >= cacheLimit {
 		delete(m.cache, m.order[0])
 		m.order = m.order[1:]
 	}
-	m.cache[cacheKey] = cachedDriver{llm: drv, at: m.clock.Now()}
+	m.cache[cacheKey] = cachedDriver{llm: wrapped, at: m.clock.Now()}
 	m.order = append(m.order, cacheKey)
 	m.mu.Unlock()
 
-	return drv, nil
+	return wrapped, nil
 }
 
 /*
-openCredentials opens the sealed credential blob, empty for managed
-and none-auth connections.
+build opens the key's credentials and runs its provider's factory.
 */
-func (m *LLMManager) openCredentials(ctx context.Context, key models.AiProviderKey) (Credentials, error) {
-	if len(key.CredentialsEncrypted) == 0 {
-		return Credentials{}, nil
+func (m *LLMManager) build(ctx context.Context, key models.AiProviderKey) (contracts.LLM, error) {
+	factory, ok := m.factories[enums.AIProvider(key.Provider)]
+	if !ok {
+		return nil, fmt.Errorf("no llm driver for provider %q", key.Provider)
 	}
 
-	creds, err := encryption.Open[Credentials](ctx, m.keys, key.CredentialsEncrypted, []byte(key.ID.String()))
+	creds, err := OpenCredentials(ctx, m.keys, key)
 	if err != nil {
-		return Credentials{}, fmt.Errorf("open provider credentials: %w", err)
+		return nil, err
 	}
 
-	return creds, nil
+	return factory(ctx, m, key, creds, m.httpForKey(key))
+}
+
+/*
+wrap adds retries, the per-model breakers and timeout enforcement.
+*/
+func (m *LLMManager) wrap(key models.AiProviderKey, drv contracts.LLM) contracts.LLM {
+	prefix := key.ID.String() + ":"
+	return llmretry.Wrap(drv, llmretry.Options{
+		Clock:         m.clock,
+		MaxAttempts:   m.config.Retry.MaxAttempts,
+		MaxRetryAfter: m.config.Retry.MaxRetryAfter,
+		BreakerFor:    func(model string) *llmretry.Breaker { return m.breakers.For(prefix + model) },
+	})
 }
 
 /*
@@ -257,144 +182,33 @@ func (m *LLMManager) httpForKey(_ models.AiProviderKey) *httpclient.Client {
 }
 
 /*
-managedDriver builds the multiplexer from the instance's managed
-credentials.
+ManagedAvailable reports whether the install has an upstream key for
+the built-in provider, which is then offered to every workspace.
 */
-func (m *LLMManager) managedDriver(httpClient *httpclient.Client) (contracts.LLM, error) {
+func (m *LLMManager) ManagedAvailable() bool {
+	return len(m.ManagedModels()) > 0
+}
+
+/*
+ManagedModels lists the built-in provider's models whose family has
+an upstream key configured.
+*/
+func (m *LLMManager) ManagedModels() []aimodels.Entry {
+	return aimodels.ManagedFor(m.managedFamily)
+}
+
+/*
+managedFamily reports whether a family has an upstream key.
+*/
+func (m *LLMManager) managedFamily(family enums.AIModelFamily) bool {
 	cfg := m.config.Managed
-	families := make(map[enums.AIModelFamily]contracts.LLM)
-
-	if cfg.Anthropic.APIKey != "" {
-		families[enums.AIModelFamilyAnthropic] = anthropic.New(anthropic.Options{
-			BaseURL: cfg.Anthropic.BaseURL, APIKey: cfg.Anthropic.APIKey, HTTP: httpClient.StdClient(),
-		})
+	switch family {
+	case enums.AIModelFamilyAnthropic:
+		return cfg.Anthropic.APIKey != ""
+	case enums.AIModelFamilyOpenAI:
+		return cfg.OpenAI.APIKey != ""
+	case enums.AIModelFamilyOpenWeight:
+		return cfg.OpenWeight.APIKey != ""
 	}
-	if cfg.OpenAI.APIKey != "" {
-		families[enums.AIModelFamilyOpenAI] = openai.New(openai.Options{
-			Clock:   m.clock,
-			BaseURL: cfg.OpenAI.BaseURL, APIKey: cfg.OpenAI.APIKey, HTTP: httpClient.StdClient(),
-		})
-	}
-	if cfg.OpenWeight.APIKey != "" {
-		families[enums.AIModelFamilyOpenWeight] = engy.New(cfg.OpenWeight.APIKey, httpClient.StdClient(), m.clock)
-	}
-
-	if len(families) == 0 {
-		return nil, fmt.Errorf("managed provider not configured")
-	}
-
-	modelList := []contracts.LLMModel{}
-	for _, e := range aimodels.Managed() {
-		if _, ok := families[e.Family]; ok {
-			modelList = append(modelList, contracts.LLMModel{
-				ID: e.ID, DisplayName: e.DisplayName, ContextTokens: e.ContextTokens,
-			})
-		}
-	}
-
-	return managed.New(families, modelList), nil
+	return false
 }
-
-/*
-oauthSource is the chatgpt TokenSource bound to one key row.
-*/
-type oauthSource struct {
-	m     *LLMManager
-	key   models.AiProviderKey
-	creds Credentials
-}
-
-/*
-Token returns the access token, refreshing it when near expiry.
-*/
-func (s *oauthSource) Token(ctx context.Context) (string, error) {
-	if s.creds.AccessToken != "" && s.m.clock.Now().Before(s.creds.ExpiresAt.Add(-2*time.Minute)) {
-		return s.creds.AccessToken, nil
-	}
-	return s.refresh(ctx)
-}
-
-/*
-refresh exchanges the refresh token and re-seals the row's
-credentials; on success the key's updated_at bumps, retiring this
-driver from the cache.
-*/
-func (s *oauthSource) refresh(ctx context.Context) (string, error) {
-	if s.m.db == nil || s.creds.RefreshToken == "" {
-		return "", fmt.Errorf("chatgpt refresh unavailable")
-	}
-	cfg := s.m.config.ChatGPT
-
-	form := url.Values{
-		"grant_type":    {"refresh_token"},
-		"client_id":     {cfg.ClientID},
-		"refresh_token": {s.creds.RefreshToken},
-	}
-	resp, err := s.m.http.New().
-		WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		Post(ctx, cfg.TokenURL, form.Encode())
-	if err != nil {
-		return "", fmt.Errorf("refresh token: %w", err)
-	}
-
-	var tokens struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpiresIn    int    `json:"expires_in"`
-	}
-	if err := json.Unmarshal(resp.Body, &tokens); err != nil || tokens.AccessToken == "" {
-		return "", fmt.Errorf("bad refresh answer")
-	}
-	if tokens.RefreshToken == "" {
-		tokens.RefreshToken = s.creds.RefreshToken
-	}
-
-	s.creds.AccessToken = tokens.AccessToken
-	s.creds.RefreshToken = tokens.RefreshToken
-	s.creds.ExpiresAt = s.m.clock.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
-
-	sealed, err := encryption.Seal(ctx, s.m.keys,
-		encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: s.key.WorkspaceID.String()}},
-		s.creds)
-	if err != nil {
-		return "", fmt.Errorf("seal refreshed credentials: %w", err)
-	}
-
-	if _, err := models.New(s.m.db).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
-		WorkspaceID: s.key.WorkspaceID, ID: s.key.ID, Name: s.key.Name,
-		BaseUrl: s.key.BaseUrl, Region: s.key.Region, AuthType: s.key.AuthType,
-		CredentialsEncrypted: sealed, KeyHint: s.key.KeyHint, Config: s.key.Config,
-		Now: s.m.clock.Now(),
-	}); err != nil {
-		return "", fmt.Errorf("store refreshed credentials: %w", err)
-	}
-
-	return s.creds.AccessToken, nil
-}
-
-/*
-str dereferences a nullable string.
-*/
-func str(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-/*
-configString reads one string from a key's config blob.
-*/
-func configString(cfg json.RawMessage, name string) string {
-	var m map[string]any
-	if err := json.Unmarshal(cfg, &m); err != nil {
-		return ""
-	}
-	v, _ := m[name].(string)
-	return v
-}
-
-/*
-_ keeps ids imported for the credential decode helpers.
-*/
-var _ = ids.New

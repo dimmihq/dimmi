@@ -94,6 +94,9 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
 		key.Name = in.Name
 	}
 	if in.BaseURL != nil {
+		if err := a.checkBaseURL(*in.BaseURL); err != nil {
+			return key, err
+		}
 		key.BaseUrl = in.BaseURL
 	}
 	if in.Config != nil {
@@ -102,11 +105,9 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
 
 	rotated := in.APIKey != nil && *in.APIKey != ""
 	if rotated {
-		sealed, err := encryption.Seal(ctx, a.Keys,
-			encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: key.WorkspaceID.String()}},
-			managers.Credentials{APIKey: *in.APIKey})
+		sealed, err := managers.SealCredentials(ctx, a.Keys, key, managers.Credentials{APIKey: *in.APIKey})
 		if err != nil {
-			return key, fmt.Errorf("seal credentials: %w", err)
+			return key, err
 		}
 		key.CredentialsEncrypted = sealed
 		key.KeyHint = nullable(keyHint(*in.APIKey))
@@ -129,6 +130,16 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
 	}
 
 	return key, nil
+}
+
+/*
+checkBaseURL refuses an endpoint a credential may not be sent to.
+*/
+func (a *UpdateProviderKey) checkBaseURL(raw string) error {
+	if raw == "" || a.LLM == nil {
+		return nil
+	}
+	return a.LLM.CheckBaseURL(raw)
 }
 
 /*

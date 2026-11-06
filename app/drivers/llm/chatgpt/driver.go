@@ -3,10 +3,12 @@
 | ChatGPT Driver
 |--------------------------------------------------------------------------
 |
-| A subscription connection speaks the public Responses API with an
-| OAuth bearer instead of a key: the user's own plan answers, with no
-| stored state and streaming always on. The token source refreshes
-| and re-seals the credential before it ever expires.
+| A subscription connection spends the member's ChatGPT plan through
+| the Responses endpoint the ChatGPT coding tools use. It takes an
+| OAuth bearer and the plan's account id instead of a key, always
+| streams, never stores the conversation, and refuses an output bound
+| or sampling settings, so the driver sends neither. A bearer that
+| stopped working is renewed once and the call tried again.
 |
 */
 
@@ -17,59 +19,89 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
-	"time"
 
 	oai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
+	"github.com/openai/openai-go/v3/shared"
 
 	"github.com/dimmihq/dimmi/framework/clock"
-	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 )
 
 /*
-TokenSource hands the driver a bearer token, refreshing and re-sealing
-the connection's credential before expiry.
+BaseURL is the subscription's Responses endpoint root.
+*/
+const BaseURL = "https://chatgpt.com/backend-api/codex"
+
+/*
+defaultInstructions stands in when a request has no system text, as
+the endpoint requires instructions.
+*/
+const defaultInstructions = "You are a helpful assistant."
+
+/*
+Token is a bearer and the plan account it spends.
+*/
+type Token struct {
+	AccessToken string
+	AccountID   string
+}
+
+/*
+TokenSource hands the driver a bearer, refreshing and re-sealing the
+connection's credential before expiry.
 */
 type TokenSource interface {
 	/*
 		Token returns a bearer valid for the next call.
 	*/
-	Token(ctx context.Context) (string, error)
+	Token(ctx context.Context) (Token, error)
+
+	/*
+		Renew returns a new bearer because the endpoint refused the
+		last one.
+	*/
+	Renew(ctx context.Context) (Token, error)
 }
 
 /*
-Tokens is one sealed credential set as stored on the connection.
+Options configures one subscription connection. Originator names this
+app to the endpoint.
 */
-type Tokens struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	AccountID    string    `json:"account_id"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	Scopes       []string  `json:"scopes"`
+type Options struct {
+	BaseURL    string
+	Originator string
+	HTTP       *httpclient.StdClient
+	Source     TokenSource
+	Clock      clock.Clock
 }
 
 /*
 Driver is a contracts.LLM over the subscription Responses API.
 */
 type Driver struct {
-	clk     clock.Clock
-	baseURL string
-	http    *httpclient.StdClient
-	source  TokenSource
+	opts Options
 }
 
 /*
 New builds the driver for one connection.
 */
-func New(baseURL string, httpClient *httpclient.StdClient, source TokenSource, clk clock.Clock) *Driver {
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
+func New(opts Options) *Driver {
+	if opts.BaseURL == "" {
+		opts.BaseURL = BaseURL
 	}
-	return &Driver{clk: clk, baseURL: baseURL, http: httpClient, source: source}
+	if opts.Originator == "" {
+		opts.Originator = "dimmi"
+	}
+	if opts.Clock == nil {
+		opts.Clock = clock.System()
+	}
+	return &Driver{opts: opts}
 }
 
 /*
@@ -78,10 +110,12 @@ Provider names the driver.
 func (d *Driver) Provider() contracts.LLMProvider { return contracts.LLMProviderChatGPT }
 
 /*
-Chat runs one non-streaming completion, as a streamed request read to
-completion since the contract requires stream:true.
+Chat runs one completion as a stream read to its end, since the
+endpoint only streams.
 */
 func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
+	started := d.opts.Clock.Now()
+
 	stream, err := d.Stream(ctx, req)
 	if err != nil {
 		return nil, err
@@ -89,6 +123,7 @@ func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contract
 	defer func() { _ = stream.Close() }()
 
 	out := &contracts.ChatResponse{Model: req.Model}
+	var text strings.Builder
 	for {
 		ev, err := stream.Next(ctx)
 		if err != nil {
@@ -96,56 +131,87 @@ func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contract
 		}
 		switch ev.Kind {
 		case contracts.StreamEventTextDelta:
-			out.Text += ev.Text
+			text.WriteString(ev.Text)
 		case contracts.StreamEventToolCallDone:
 			out.ToolCalls = append(out.ToolCalls, *ev.ToolCall)
 		case contracts.StreamEventUsage:
 			out.Usage = *ev.Usage
 		case contracts.StreamEventDone:
+			out.Text = text.String()
 			out.StopReason = ev.StopReason
+			out.Latency = d.opts.Clock.Since(started)
 			return out, nil
 		}
 	}
 }
 
 /*
-Stream runs one streamed completion.
+Stream runs one streamed completion, renewing a refused bearer once.
 */
 func (d *Driver) Stream(ctx context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
-	token, err := d.source.Token(ctx)
-	if err != nil {
-		return nil, &contracts.LLMError{Kind: contracts.LLMErrorAuth, Message: "subscription token: " + err.Error()}
-	}
-
-	client := oai.NewClient(
-		option.WithBaseURL(d.baseURL),
-		option.WithAPIKey(token),
-		option.WithHTTPClient(d.http),
-		option.WithMaxRetries(0),
-	)
-
 	params, err := responseParams(req)
 	if err != nil {
 		return nil, err
 	}
 
-	stream := client.Responses.NewStreaming(ctx, params)
-	if err := stream.Err(); err != nil {
-		return nil, mapError(err)
+	token, err := d.opts.Source.Token(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return newChatStream(stream, req.Model), nil
+
+	stream, err := d.open(ctx, req, params, token)
+	if !isAuth(err) {
+		return stream, err
+	}
+
+	token, err = d.opts.Source.Renew(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return d.open(ctx, req, params, token)
 }
 
 /*
-ListModels is not offered by the plan endpoint; callers use the
-curated list or Probe.
+open sends the request with the plan's headers.
+*/
+func (d *Driver) open(ctx context.Context, req contracts.ChatRequest,
+	params responses.ResponseNewParams, token Token,
+) (contracts.ChatStream, error) {
+	client := oai.NewClient(
+		option.WithBaseURL(d.opts.BaseURL),
+		option.WithAPIKey(token.AccessToken),
+		option.WithHTTPClient(d.opts.HTTP),
+		option.WithMaxRetries(0),
+	)
+
+	headers := []option.RequestOption{
+		option.WithHeader("originator", d.opts.Originator),
+		option.WithHeader("OpenAI-Beta", "responses=experimental"),
+		option.WithHeader("session-id", sessionID(req)),
+		option.WithHeader("Accept", "text/event-stream"),
+	}
+	if token.AccountID != "" {
+		headers = append(headers, option.WithHeader("chatgpt-account-id", token.AccountID))
+	}
+
+	stream := client.Responses.NewStreaming(ctx, params, headers...)
+	if err := stream.Err(); err != nil {
+		_ = stream.Close()
+		return nil, openai.MapError(err, d.opts.Clock.Now())
+	}
+	return newChatStream(stream, d.opts.Clock), nil
+}
+
+/*
+ListModels is not offered to plans; callers use the curated list.
 */
 func (d *Driver) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 	return nil, contracts.ErrLLMNotSupported
 }
 
 /*
-Capabilities answers what a plan model supports.
+Capabilities answers what a plan model supports. Plans cap a model's
+window below the API's, and the output bound is the plan's own.
 */
 func (d *Driver) Capabilities(_ string) contracts.LLMCapabilities {
 	return contracts.LLMCapabilities{
@@ -154,120 +220,129 @@ func (d *Driver) Capabilities(_ string) contracts.LLMCapabilities {
 		SystemPrompt:    true,
 		JSONMode:        true,
 		PromptCache:     true,
-		ContextTokens:   400_000,
+		ContextTokens:   272_000,
 		MaxOutputTokens: 128_000,
 	}
 }
 
 /*
 responseParams maps our request to the Responses API: system blocks
-join into instructions, messages into input items, store always
-false, stream always on.
+join into instructions, messages and tool traffic into input items,
+store always off.
 */
 func responseParams(req contracts.ChatRequest) (responses.ResponseNewParams, error) {
 	params := responses.ResponseNewParams{
-		Model:           req.Model,
-		Store:           oai.Bool(false),
-		MaxOutputTokens: oai.Int(int64(req.MaxOutputTokens)),
+		Model:        req.Model,
+		Store:        oai.Bool(false),
+		Instructions: oai.String(instructions(req.System)),
+		Input:        responses.ResponseNewParamsInputUnion{OfInputItemList: inputItems(req.Messages)},
 	}
-
-	var instructions []string
-	for _, block := range req.System {
-		instructions = append(instructions, block.Text)
-	}
-	params.Instructions = oai.String(strings.Join(instructions, "\n\n"))
-
-	items := responses.ResponseInputParam{}
-	for _, msg := range req.Messages {
-		items = append(items, inputItem(msg))
-	}
-	params.Input = responses.ResponseNewParamsInputUnion{OfInputItemList: items}
 
 	for _, tool := range req.Tools {
 		var schema map[string]any
 		if err := json.Unmarshal(tool.Schema, &schema); err != nil {
-			return params, contracts.ErrLLMNotSupported
+			return params, &contracts.LLMError{
+				Kind: contracts.LLMErrorInvalidRequest, Message: "tool " + tool.Name + " has an invalid schema",
+			}
 		}
-		params.Tools = append(params.Tools, responses.ToolUnionParam{
-			OfFunction: &responses.FunctionToolParam{
-				Name:       tool.Name,
-				Parameters: schema,
-			},
-		})
+		fn := &responses.FunctionToolParam{Name: tool.Name, Parameters: schema, Strict: oai.Bool(false)}
+		if tool.Description != "" {
+			fn.Description = oai.String(tool.Description)
+		}
+		params.Tools = append(params.Tools, responses.ToolUnionParam{OfFunction: fn})
+	}
+	if len(params.Tools) > 0 {
+		choice := responses.ToolChoiceOptionsAuto
+		if req.ToolChoice == contracts.ToolChoiceNone {
+			choice = responses.ToolChoiceOptionsNone
+		}
+		params.ToolChoice = responses.ResponseNewParamsToolChoiceUnion{OfToolChoiceMode: oai.Opt(choice)}
 	}
 
-	if req.Temperature != nil {
-		params.Temperature = oai.Float(*req.Temperature)
+	if req.ResponseFormat == contracts.ResponseFormatJSON {
+		params.Text = responses.ResponseTextConfigParam{Format: responses.ResponseFormatTextConfigUnionParam{
+			OfJSONObject: &shared.ResponseFormatJSONObjectParam{},
+		}}
 	}
 
 	return params, nil
 }
 
 /*
-inputItem maps one message to a Responses input item.
+instructions joins the system blocks.
 */
-func inputItem(msg contracts.ChatMessage) responses.ResponseInputItemUnionParam {
-	var text strings.Builder
-	for _, part := range msg.Parts {
-		text.WriteString(part.Text)
+func instructions(blocks []contracts.SystemBlock) string {
+	parts := make([]string, 0, len(blocks))
+	for _, block := range blocks {
+		if block.Text != "" {
+			parts = append(parts, block.Text)
+		}
 	}
-
-	role := responses.EasyInputMessageRoleUser
-	if msg.Role == contracts.ChatRoleAssistant {
-		role = responses.EasyInputMessageRoleAssistant
+	if len(parts) == 0 {
+		return defaultInstructions
 	}
-
-	return responses.ResponseInputItemUnionParam{
-		OfMessage: &responses.EasyInputMessageParam{
-			Role: role,
-			Content: responses.EasyInputMessageContentUnionParam{
-				OfString: oai.String(text.String()),
-			},
-		},
-	}
+	return strings.Join(parts, "\n\n")
 }
 
 /*
-mapError folds errors into the shared kinds.
+inputItems maps the transcript: text turns become messages, an
+assistant's tool calls become function_call items and tool results
+function_call_output items, linked by call id.
 */
-func mapError(err error) error {
-	var apiErr *oai.Error
-	if asError(err, &apiErr) {
-		kind := contracts.LLMErrorServer
-		switch apiErr.StatusCode {
-		case fhttp.StatusUnauthorized:
-			kind = contracts.LLMErrorAuth
-		case fhttp.StatusForbidden:
-			kind = contracts.LLMErrorPermission
-		case fhttp.StatusNotFound:
-			kind = contracts.LLMErrorModelNotFound
-		case fhttp.StatusBadRequest, fhttp.StatusUnprocessableEntity:
-			kind = contracts.LLMErrorInvalidRequest
-		case fhttp.StatusPaymentRequired:
-			kind = contracts.LLMErrorQuota
-		case fhttp.StatusTooManyRequests:
-			kind = contracts.LLMErrorRateLimited
-		case fhttp.StatusServiceUnavailable:
-			kind = contracts.LLMErrorOverloaded
+func inputItems(messages []contracts.ChatMessage) responses.ResponseInputParam {
+	items := responses.ResponseInputParam{}
+	for _, msg := range messages {
+		text := joinParts(msg.Parts)
+		switch msg.Role {
+		case contracts.ChatRoleTool:
+			item := responses.ResponseInputItemParamOfFunctionCallOutput(text)
+			item.OfFunctionCallOutput.CallID = oai.String(msg.ToolCallID)
+			items = append(items, item)
+		case contracts.ChatRoleAssistant:
+			if text != "" {
+				items = append(items,
+					responses.ResponseInputItemParamOfMessage(text, responses.EasyInputMessageRoleAssistant))
+			}
+			for _, call := range msg.ToolCalls {
+				args := string(call.Arguments)
+				if args == "" {
+					args = "{}"
+				}
+				items = append(items, responses.ResponseInputItemParamOfFunctionCall(args, call.ID, call.Name))
+			}
+		case contracts.ChatRoleUser:
+			items = append(items, responses.ResponseInputItemParamOfMessage(text, responses.EasyInputMessageRoleUser))
 		}
-		return &contracts.LLMError{Kind: kind, HTTPStatus: apiErr.StatusCode, Message: apiErr.Error()}
 	}
-	return &contracts.LLMError{Kind: contracts.LLMErrorNetwork, Message: err.Error()}
+	return items
 }
 
-func asError(err error, target **oai.Error) bool {
-	for err != nil {
-		e := &oai.Error{}
-		if errors.As(err, &e) {
-			*target = e
-			return true
-		}
-		type unwrapper interface{ Unwrap() error }
-		u, ok := err.(unwrapper)
-		if !ok {
-			return false
-		}
-		err = u.Unwrap()
+/*
+joinParts concatenates a message's text parts.
+*/
+func joinParts(parts []contracts.ContentPart) string {
+	var text strings.Builder
+	for _, part := range parts {
+		text.WriteString(part.Text)
 	}
-	return false
+	return text.String()
+}
+
+/*
+sessionID keys the endpoint's prompt cache: the conversation's id
+when the caller passes one, so its turns share a cache.
+*/
+func sessionID(req contracts.ChatRequest) string {
+	if id := req.Metadata["session_id"]; id != "" {
+		return id
+	}
+	return ids.New().String()
+}
+
+/*
+isAuth reports a refused bearer.
+*/
+func isAuth(err error) bool {
+	llmErr, ok := errors.AsType[*contracts.LLMError](err)
+	return ok && llmErr.Kind == contracts.LLMErrorAuth
 }

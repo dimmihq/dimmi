@@ -41,7 +41,7 @@ type ModelPrice struct {
 }
 
 /*
-tableFile is the YAML shape.
+tableFile is the file's JSON shape.
 */
 type tableFile struct {
 	Version string       `json:"version"`
@@ -60,7 +60,7 @@ type modelEntry struct {
 }
 
 /*
-Parse loads a table from YAML.
+Parse loads a table from its JSON file.
 */
 func Parse(data []byte) (*Table, error) {
 	var f tableFile

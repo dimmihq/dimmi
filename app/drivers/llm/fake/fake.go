@@ -5,7 +5,9 @@
 |
 | Tests script a whole conversation with a model without spending a
 | token: canned answers, streams, tool calls, errors and delays, and
-| afterwards they read back exactly what the pipeline sent.
+| afterwards they read back exactly what the pipeline sent. Outside a
+| test binary every call fails, so a fake wired in by mistake can
+| never answer a real customer with canned text.
 |
 */
 
@@ -17,6 +19,7 @@ import (
 	"io"
 	"slices"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -110,9 +113,19 @@ Provider names the scripted provider.
 func (l *LLM) Provider() contracts.LLMProvider { return l.provider }
 
 /*
+ErrOutsideTests is what every call answers outside a test binary.
+*/
+var ErrOutsideTests = &contracts.LLMError{
+	Kind: contracts.LLMErrorInvalidRequest, Message: "the fake model only answers in tests",
+}
+
+/*
 Chat serves the next step as a finished response.
 */
 func (l *LLM) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
+	if !testing.Testing() {
+		return nil, ErrOutsideTests
+	}
 	step := l.next(req)
 
 	if step.Delay > 0 {
@@ -141,6 +154,9 @@ func (l *LLM) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.C
 Stream serves the next step as a stream of deltas.
 */
 func (l *LLM) Stream(_ context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
+	if !testing.Testing() {
+		return nil, ErrOutsideTests
+	}
 	step := l.next(req)
 
 	if step.Err != nil {
@@ -177,6 +193,9 @@ func (l *LLM) Stream(_ context.Context, req contracts.ChatRequest) (contracts.Ch
 ListModels serves the scripted list or the supported error.
 */
 func (l *LLM) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
+	if !testing.Testing() {
+		return nil, ErrOutsideTests
+	}
 	if l.listErr != nil {
 		return nil, l.listErr
 	}

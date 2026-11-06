@@ -1,0 +1,15 @@
+{
+  "id": "c1",
+  "object": "chat.completion",
+  "created": 1,
+  "model": "gpt-6.1-sol",
+  "choices": [
+    {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "Hello"}}
+  ],
+  "usage": {
+    "prompt_tokens": 100,
+    "completion_tokens": 20,
+    "total_tokens": 120,
+    "prompt_tokens_details": {"cached_tokens": 60}
+  }
+}

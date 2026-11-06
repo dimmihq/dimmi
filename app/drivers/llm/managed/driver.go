@@ -7,7 +7,9 @@
 | no key of the workspace's own, and a model id alone decides whether
 | a call lands on Anthropic, OpenAI or the open-weight host. The
 | workspace's provider sees exactly one provider name — "dimmi" —
-| while the drivers underneath stay ordinary.
+| while the drivers underneath stay ordinary. A model whose family the
+| install has no upstream for is refused, never sent to another
+| family's host under a name it does not know.
 |
 */
 
@@ -26,23 +28,16 @@ Driver multiplexes calls to one upstream driver per family.
 */
 type Driver struct {
 	families map[enums.AIModelFamily]contracts.LLM
-	fallback contracts.LLM
 	models   []contracts.LLMModel
 }
 
 /*
 New builds the multiplexer. Families maps each family to the upstream
 driver built from the instance's managed credentials; models is the
-curated list the connection offers. Requests for a family with no
-driver land on the first available one.
+curated list the connection offers.
 */
 func New(families map[enums.AIModelFamily]contracts.LLM, models []contracts.LLMModel) *Driver {
-	var fallback contracts.LLM
-	for _, d := range families {
-		fallback = d
-		break
-	}
-	return &Driver{families: families, fallback: fallback, models: models}
+	return &Driver{families: families, models: models}
 }
 
 /*
@@ -54,14 +49,22 @@ func (d *Driver) Provider() contracts.LLMProvider { return contracts.LLMProvider
 Chat routes the call to the model's family driver.
 */
 func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
-	return d.forModel(req.Model).Chat(ctx, req)
+	drv, err := d.forModel(req.Model)
+	if err != nil {
+		return nil, err
+	}
+	return drv.Chat(ctx, req)
 }
 
 /*
 Stream routes the call to the model's family driver.
 */
 func (d *Driver) Stream(ctx context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
-	return d.forModel(req.Model).Stream(ctx, req)
+	drv, err := d.forModel(req.Model)
+	if err != nil {
+		return nil, err
+	}
+	return drv.Stream(ctx, req)
 }
 
 /*
@@ -72,19 +75,27 @@ func (d *Driver) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 }
 
 /*
-Capabilities delegates to the model's family driver.
+Capabilities delegates to the model's family driver, and answers
+nothing for a model no upstream serves.
 */
 func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
-	return d.forModel(model).Capabilities(model)
+	drv, err := d.forModel(model)
+	if err != nil {
+		return contracts.LLMCapabilities{}
+	}
+	return drv.Capabilities(model)
 }
 
 /*
 forModel picks the driver for the model's family.
 */
-func (d *Driver) forModel(model string) contracts.LLM {
+func (d *Driver) forModel(model string) (contracts.LLM, error) {
 	family := aimodels.FamilyOf(enums.AIProviderDimmi, model)
 	if drv, ok := d.families[family]; ok {
-		return drv
+		return drv, nil
 	}
-	return d.fallback
+	return nil, &contracts.LLMError{
+		Kind: contracts.LLMErrorModelNotFound, ProviderCode: "family_not_configured",
+		Message: "the built-in provider has no upstream for " + model,
+	}
 }
