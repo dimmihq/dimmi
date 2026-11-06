@@ -126,12 +126,17 @@ func (s *session) written(ctx context.Context) (Written, error) {
 		return Written{}, err
 	}
 
-	members, err := conversations.Members(ctx, s.w.Q, s.c.WorkspaceID, []ids.UUID{s.m.Member.ID})
+	author := s.m.Member.ID
+	if s.msg.AuthorID != nil {
+		author = *s.msg.AuthorID
+	}
+
+	members, err := conversations.Members(ctx, s.w.Q, s.c.WorkspaceID, []ids.UUID{author})
 	if err != nil {
 		return Written{}, fmt.Errorf("load author: %w", err)
 	}
 
-	return Written{Message: s.msg, Conversation: loaded, Author: members[s.m.Member.ID]}, nil
+	return Written{Message: s.msg, Conversation: loaded, Author: members[author]}, nil
 }
 
 /*

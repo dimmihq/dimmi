@@ -76,6 +76,8 @@ type UpdateWorkspaceInput struct {
 	ShowViewers      *bool
 	UndoSendSeconds  *int
 	SeenReceiptName  *bool
+	GIFPicker        *bool
+	TeamMentions     *bool
 
 	CustomerFacingName      *string
 	ClearCustomerFacingName bool
@@ -285,6 +287,8 @@ func inboxSettingChanges(
 	for _, flag := range []inboxFlag{
 		{key: "show_viewers_on_list", want: in.ShowViewers, has: w.ShowsViewersOnList()},
 		{key: "seen_receipt_shows_name", want: in.SeenReceiptName, has: w.SeenReceiptShowsName()},
+		{key: "gif_picker", want: in.GIFPicker, has: w.GIFPickerOn()},
+		{key: "team_mentions_enabled", want: in.TeamMentions, has: w.TeamMentionsOn()},
 	} {
 		if flag.want == nil || *flag.want == flag.has {
 			continue

@@ -11,8 +11,9 @@
 | vanish.
 |
 | Spam never shows outside the spam view, nor deleted conversations
-| outside the trash, which takes conversations:delete. Mentions have
-| their own view, which stays empty until mentions are recorded.
+| outside the trash, which takes conversations:delete. The Mentions view
+| lists conversations whose notes mention the caller, of those they may
+| see.
 |
 */
 

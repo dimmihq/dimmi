@@ -8,7 +8,8 @@
 | safe HTML for channels that render one of those, the customer by the
 | address the channel reaches them at, everyone else on the thread as a
 | copy, the way a reply to all would, and the teammate who wrote it by
-| name. The driver never reads the database to learn any of it.
+| name. The driver never reads the database to learn any of it. Remote
+| pictures leave only when they are GIFs from GIPHY and GIF search is on.
 |
 */
 
@@ -27,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/gifs"
 )
 
 /*
@@ -68,7 +70,7 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 		return outbound{}, err
 	}
 
-	message, err := outboundMessage(c, msg, contact)
+	message, err := outboundMessage(c, msg, contact, w.remoteImages())
 	message.Author = author
 	if err != nil {
 		return outbound{}, err
@@ -81,6 +83,18 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 	message.Attachments, err = w.filesOf(ctx, q, msg)
 
 	return outbound{conn: conn, driver: driver, message: message}, err
+}
+
+/*
+remoteImages says which remote pictures a reply may carry: GIFs from
+GIPHY while GIF search is on, none otherwise.
+*/
+func (w *SendChannelMessage) remoteImages() func(string) bool {
+	if w.GIFs {
+		return gifs.Hosted
+	}
+
+	return gifs.Never
 }
 
 /*
@@ -152,16 +166,19 @@ func copiesOf(ctx context.Context, q *models.Queries, c models.Conversation) ([]
 
 /*
 outboundMessage shapes the reply for its driver, its body rendered from
-the Markdown it was written in: every line break the teammate typed is
-kept, and the plain version keeps links' addresses and list numbers, so
-the customer reads what the thread shows.
+the Markdown it was written in, keeping the remote pictures keep allows:
+every line break the teammate typed is kept, and the plain version keeps
+links' addresses and list numbers, so the customer reads what the thread
+shows.
 */
 func outboundMessage(
-	c models.Conversation, msg models.Message, contact models.Contact,
+	c models.Conversation, msg models.Message, contact models.Contact, keep func(string) bool,
 ) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
-	rendered, err := markdown.New(markdown.Options{GFM: true, HardWraps: true}).HTML([]byte(body))
+	rendered, err := markdown.New(markdown.Options{
+		GFM: true, HardWraps: true, RewriteLink: gifs.Images(keep),
+	}).HTML([]byte(body))
 	if err != nil {
 		return contracts.OutboundMessage{}, fmt.Errorf("render reply: %w", err)
 	}

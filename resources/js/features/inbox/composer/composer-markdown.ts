@@ -1,15 +1,17 @@
 /*
  * The composer's document: only what Markdown can carry and every
  * channel can show. Paragraphs, line breaks, bold, italic, strike, inline
- * code, code blocks, links, lists, quotes and inline images; no headings,
+ * code, code blocks, links, lists, quotes, inline images and mentions; no headings,
  * rules, underline, sizes or colours, which a reply cannot keep. The
  * composer reads and writes Markdown only, so the API never changes.
  */
 
 import Image from "@tiptap/extension-image";
 import { Markdown } from "@tiptap/markdown";
-import { Extension } from "@tiptap/react";
+import { type AnyExtension, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+
+import { MentionToken } from "./mention-token";
 
 /*
  * ComposerKeys adds the composer's own shortcuts: Cmd+Shift+X strikes
@@ -31,9 +33,10 @@ function composerKeys(onLink: () => void) {
 }
 
 /*
- * composerExtensions is the composer's schema with Markdown in and out.
+ * composerExtensions is the composer's schema with Markdown in and out,
+ * plus any helpers, such as suggestions while typing.
  */
-export function composerExtensions(onLink: () => void = () => undefined) {
+export function composerExtensions(onLink: () => void = () => undefined, helpers: AnyExtension[] = []) {
   return [
     StarterKit.configure({
       heading: false,
@@ -42,7 +45,9 @@ export function composerExtensions(onLink: () => void = () => undefined) {
       link: { openOnClick: false, autolink: true, protocols: ["http", "https", "mailto"] },
     }),
     Image.configure({ inline: true, allowBase64: false }),
+    MentionToken,
     Markdown,
     composerKeys(onLink),
+    ...helpers,
   ];
 }

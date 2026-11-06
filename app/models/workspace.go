@@ -36,6 +36,43 @@ func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, 
 }
 
 /*
+TeamMentionsOn reports whether a note may mention a whole team. It may
+unless the workspace turned it off.
+*/
+func (w Workspace) TeamMentionsOn() bool {
+	var settings struct {
+		Inbox struct {
+			TeamMentions *bool `json:"team_mentions_enabled"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return true
+	}
+
+	return settings.Inbox.TeamMentions == nil || *settings.Inbox.TeamMentions
+}
+
+/*
+GIFPickerOn reports whether teammates may search GIFs from the composer.
+It is on unless the workspace turned it off; the instance must also have
+a GIF search key for the picker to show.
+*/
+func (w Workspace) GIFPickerOn() bool {
+	var settings struct {
+		Inbox struct {
+			GIFPicker *bool `json:"gif_picker"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return true
+	}
+
+	return settings.Inbox.GIFPicker == nil || *settings.Inbox.GIFPicker
+}
+
+/*
 ShowsViewersOnList reports whether the inbox list shows who views each
 conversation. It does unless the workspace turned it off.
 */

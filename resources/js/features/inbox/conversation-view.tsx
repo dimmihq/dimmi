@@ -10,9 +10,11 @@
  * unread; a reply or note is added to the thread once the server has it.
  * While it is open the conversation follows its realtime channel, so a
  * teammate's reply shows without a reload; the header shows who else has
- * it open, and the thread says when the customer is typing.
+ * it open, and the thread says when the customer is typing. When the
+ * customer's time zone is known, a header control reads the thread's
+ * times in it.
  */
-import { RiArrowLeftSLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
+import { RiArrowLeftSLine, RiGlobalLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,6 +52,7 @@ import { OriginalMessage } from "./original-message";
 import { PriorityMenu } from "./priority/priority-menu";
 import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
+import { useThreadSettings } from "./thread/thread-settings";
 import { useSidePanes } from "./use-side-panes";
 import { useTypingReport } from "./use-typing-report";
 import { useWalk } from "./use-walk";
@@ -123,6 +126,81 @@ function useTimeline(workspace: string, conversation: Conversation) {
   return { entries: messages.map(toEntry), loading, send, retry: retry.mutate };
 }
 
+/*
+ * CustomerClock switches the thread's times to the customer's zone, shown
+ * only when that zone is known.
+ */
+function CustomerClock({
+  zone,
+  customer,
+  settings,
+}: {
+  zone: string | null;
+  customer: string;
+  settings: ReturnType<typeof useThreadSettings>;
+}) {
+  if (!zone) {
+    return null;
+  }
+
+  return (
+    <IconButton
+      size="small"
+      icon={RiGlobalLine}
+      className={cx(settings.customerTime && pressed)}
+      aria-label={`${customer}'s local time`}
+      aria-pressed={settings.customerTime}
+      onClick={settings.toggleCustomerTime}
+    />
+  );
+}
+
+/*
+ * ThreadTitle names the conversation above its thread: back to the list,
+ * the view it came from when the list is hidden, its subject, number and
+ * status.
+ */
+function ThreadTitle({
+  view,
+  workspace,
+  conversation,
+  listHidden,
+}: {
+  view: string;
+  workspace: string;
+  conversation: Conversation;
+  listHidden: boolean;
+}) {
+  const viewTitle = useViewTitle(workspace, view);
+
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Link
+        to="/d/inbox/$view"
+        params={{ view }}
+        aria-label="Back to the list"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring 2xl:hidden"
+      >
+        <RiArrowLeftSLine aria-hidden className="size-5" />
+      </Link>
+      {listHidden ? (
+        <>
+          <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
+          <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary">
+            /
+          </span>
+        </>
+      ) : null}
+      <h1 className={cx("min-w-0 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
+        {subjectOf(conversation)}
+      </h1>
+      <Chip variant="caption" color="neutral">
+        #{conversation.number} · {statusLabel[conversation.status]}
+      </Chip>
+    </div>
+  );
+}
+
 export function ConversationView({
   view,
   workspace,
@@ -139,20 +217,23 @@ export function ConversationView({
   const [snoozing, setSnoozing] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const toggleRef = useRef<() => void>(() => undefined);
+  const settings = useThreadSettings(workspace);
+  const { toggleEvents } = settings;
   const panels = useMemo(
     () => ({
       openSnooze: () => setSnoozing(true),
       openAssign: () => setAssigning(true),
       toggleDetails: () => toggleRef.current(),
+      toggleEvents,
     }),
-    [],
+    [toggleEvents],
   );
   const walk = useWalk(view, workspace, conversation, caze, panels);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
+  const contactZone = conversation.contact.timezone ?? null;
   const sideBySide = useWide(1024);
   const listHidden = !useWide(1536);
-  const viewTitle = useViewTitle(workspace, view);
   const operatorDefault = useWide(1280);
   const sides = useSidePanes(
     pane.thread,
@@ -173,30 +254,7 @@ export function ConversationView({
   const thread = (
     <Panel label="Conversation" className="h-full w-full">
       <header className="flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link
-            to="/d/inbox/$view"
-            params={{ view }}
-            aria-label="Back to the list"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring 2xl:hidden"
-          >
-            <RiArrowLeftSLine aria-hidden className="size-5" />
-          </Link>
-          {listHidden ? (
-            <>
-              <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
-              <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary">
-                /
-              </span>
-            </>
-          ) : null}
-          <h1 className={cx("min-w-0 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
-            {subjectOf(conversation)}
-          </h1>
-          <Chip variant="caption" color="neutral">
-            #{conversation.number} · {statusLabel[conversation.status]}
-          </Chip>
-        </div>
+        <ThreadTitle view={view} workspace={workspace} conversation={conversation} listHidden={listHidden} />
         <div className="flex shrink-0 items-center gap-2">
           <ConversationViewers conversation={conversation.id} self={userId} />
           <AssignPicker
@@ -223,6 +281,7 @@ export function ConversationView({
             }}
           />
           <PriorityMenu priority={conversation.priority} onChange={caze.setPriority} />
+          <CustomerClock zone={contactZone} customer={customer} settings={settings} />
           {sideBySide ? (
             <IconButton
               size="small"
@@ -262,6 +321,8 @@ export function ConversationView({
         onOpenOriginal={setOriginal}
         onRetry={timeline.retry}
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
+        zone={settings.customerTime ? contactZone : null}
+        hideEvents={settings.hideEvents}
       />
       {original ? (
         <OriginalMessage

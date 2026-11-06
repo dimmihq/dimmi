@@ -104,7 +104,8 @@ func NewContacts(rows []models.Contact) []Contact {
 }
 
 /*
-ContactSummary is the short form of a contact.
+ContactSummary is the short form of a contact. Timezone is where the
+contact lives, when known, so times can be read in their local time.
 */
 type ContactSummary struct {
 	ID        string  `json:"id"`
@@ -113,6 +114,7 @@ type ContactSummary struct {
 	Name      *string `json:"name"`
 	Email     *string `json:"email"`
 	AvatarURL *string `json:"avatar_url"`
+	Timezone  *string `json:"timezone"`
 }
 
 /*
@@ -121,7 +123,7 @@ NewContactSummary shapes the short form of the contact.
 func NewContactSummary(c models.Contact) ContactSummary {
 	return ContactSummary{
 		ID: models.PublicID(models.PrefixContact, c.ID), Object: "contact", Kind: c.Kind, Name: c.Name,
-		Email: c.Email, AvatarURL: c.AvatarUrl,
+		Email: c.Email, AvatarURL: c.AvatarUrl, Timezone: c.Timezone,
 	}
 }
 

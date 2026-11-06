@@ -78,6 +78,7 @@ func NewConversationCounts(c conversations.Counts, at time.Time) ConversationCou
 	v.Unassigned.Open, v.Unassigned.Unread = capped(c.UnassignedOpen), capped(c.UnassignedUnread)
 	v.All.Open, v.All.Capped = capped(c.AllOpen), c.AllOpen > conversations.CountCap
 	v.Spam.Total = capped(c.SpamTotal)
+	v.Mentions.Unread = capped(c.MentionsUnread)
 	v.Inboxes = openCounts(models.PrefixInbox, c.Inboxes)
 	v.Teams = openCounts(models.PrefixTeam, c.Teams)
 	v.Members = openCounts(models.PrefixMember, c.Members)

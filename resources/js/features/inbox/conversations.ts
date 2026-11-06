@@ -6,7 +6,15 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
-import type { Attachment, ContactSummary, Conversation, Message, TimelineEvent } from "@/lib/api/inbox";
+import type {
+  Attachment,
+  ContactSummary,
+  Conversation,
+  MentionRef,
+  Message,
+  Reaction,
+  TimelineEvent,
+} from "@/lib/api/inbox";
 import { formatRelative } from "@/lib/i18n/format";
 
 /*
@@ -77,6 +85,8 @@ export type ThreadEntry =
       id: string;
       author: string;
       at: string;
+      iso?: string;
+      seenAt?: string | null;
       text: string;
       format: Message["body_format"];
       original: boolean;
@@ -86,9 +96,11 @@ export type ThreadEntry =
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
+      mentions?: MentionRef[];
+      reactions?: Reaction[];
       files: Attachment[];
     }
-  | { kind: "event"; id: string; at: string; text: string };
+  | { kind: "event"; id: string; at: string; iso?: string; text: string };
 
 const statusWords: Record<string, string> = {
   "conversation.closed": "closed the conversation",
@@ -132,17 +144,19 @@ function filesOf(message: Message): Attachment[] {
 
 export function toEntry(message: Message): ThreadEntry {
   const at = ago(message.created_at);
+  const iso = message.created_at;
   if (message.type === "event" && message.event) {
-    return { kind: "event", id: message.id, at, text: eventText(message.event) };
+    return { kind: "event", id: message.id, at, iso, text: eventText(message.event) };
   }
   if (message.deleted_at) {
     const by = message.deleted_by?.name;
-    return { kind: "event", id: message.id, at, text: by ? `Message deleted by ${by}` : "Message deleted" };
+    return { kind: "event", id: message.id, at, iso, text: by ? `Message deleted by ${by}` : "Message deleted" };
   }
   const said = {
     id: message.id,
     author: message.author.name,
     at,
+    iso,
     text: message.body ?? "",
     format: message.body_format ?? "markdown",
     original: message.has_original ?? false,
@@ -152,16 +166,32 @@ export function toEntry(message: Message): ThreadEntry {
     files: filesOf(message),
   } as const;
   const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
-  const marked = redacted ? { ...said, redacted } : said;
+
+  return byAuthor(message, redacted ? { ...said, redacted } : said);
+}
+
+type SaidFields = Omit<Extract<ThreadEntry, { author: string }>, "kind">;
+
+/*
+ * byAuthor finishes a said entry by who wrote it: a note keeps its
+ * mentions and reactions, and a reply to the customer when they saw it.
+ */
+function byAuthor(message: Message, said: SaidFields): ThreadEntry {
   if (message.type === "note") {
-    return { kind: "note", ...marked, edited: Boolean(message.edited_at) };
+    return {
+      kind: "note",
+      ...said,
+      edited: Boolean(message.edited_at),
+      mentions: message.mentions ?? [],
+      reactions: message.reactions ?? [],
+    };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", ...marked };
+    return { kind: "customer", ...said };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", ...marked };
+    return { kind: "dimmi", ...said, seenAt: message.read_at ?? null };
   }
 
-  return { kind: "teammate", ...marked, held: Boolean(message.scheduled_send_at) };
+  return { kind: "teammate", ...said, seenAt: message.read_at ?? null, held: Boolean(message.scheduled_send_at) };
 }

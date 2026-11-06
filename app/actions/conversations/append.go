@@ -34,6 +34,7 @@ first entry. Metadata defaults to an empty object. A channel bringing a
 message in also gives its HTML, its own id for it and when it was sent.
 Automatic marks a message nobody wrote by hand, such as an auto-reply,
 which only moves the timeline and never counts as anyone's latest word.
+Mentioned are the members a note mentions.
 */
 type NewMessage struct {
 	Type             string
@@ -47,6 +48,7 @@ type NewMessage struct {
 	DedupeKey        *string
 	Metadata         json.RawMessage
 	Automatic        bool
+	Mentioned        []ids.UUID
 }
 
 /*
@@ -87,13 +89,7 @@ func (w *Writer) Append(
 		return msg, c, err
 	}
 
-	connection := c.ChannelConnectionID
-	if err := w.Dispatch(ctx, appevents.MessageCreated{
-		Base:       w.Base(c.WorkspaceID),
-		MessageRef: appevents.MessageRef{ConversationRef: ref(c), MessageID: msg.ID},
-		ContactID:  c.ContactID, ChannelConnectionID: &connection, Type: msg.Type,
-		AuthorType: msg.AuthorType, AuthorID: msg.AuthorID, Substantive: msg.Substantive,
-	}); err != nil {
+	if err := w.announceCreated(ctx, c, msg, m.Mentioned); err != nil {
 		return msg, c, err
 	}
 
@@ -104,6 +100,24 @@ func (w *Writer) Append(
 	_, err = w.MarkRead(ctx, c, w.Actor.ID, &msg)
 
 	return msg, c, err
+}
+
+/*
+announceCreated tells the application the entry was written, with the
+teammates a note mentions.
+*/
+func (w *Writer) announceCreated(
+	ctx context.Context, c models.Conversation, msg models.Message, mentioned []ids.UUID,
+) error {
+	connection := c.ChannelConnectionID
+
+	return w.Dispatch(ctx, appevents.MessageCreated{
+		Base:       w.Base(c.WorkspaceID),
+		MessageRef: appevents.MessageRef{ConversationRef: ref(c), MessageID: msg.ID},
+		ContactID:  c.ContactID, ChannelConnectionID: &connection, Type: msg.Type,
+		AuthorType: msg.AuthorType, AuthorID: msg.AuthorID, Substantive: msg.Substantive,
+		MentionedMemberIDs: mentioned,
+	})
 }
 
 /*

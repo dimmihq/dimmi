@@ -5,10 +5,11 @@
  * same panel: help center
  * articles, saved replies, past conversations, issues, feature requests
  * and changelog entries; typing narrows the list, Enter takes the first
- * match and the down arrow moves into the list. A saved reply drops its
- * text into the draft, and anything else drops in a line naming it, so
- * whatever is picked reaches the customer with the message. Files are
- * not offered until replies can carry them. Moving between the menu
+ * match and the down arrow moves into the list. Emoji and, when the
+ * workspace allows it, GIFs from GIPHY have pickers of their own. A saved
+ * reply drops its text into the draft, and anything else drops in a line
+ * naming it, so whatever is picked reaches the customer with the message.
+ * Files are not offered until replies can carry them. Moving between the menu
  * and a list slides the view the way the person is heading while the
  * panel eases to its new height, on BoardUI's timings. The panel always
  * reopens on the menu.
@@ -19,6 +20,8 @@ import {
   RiArticleLine,
   RiChat3Line,
   RiChatQuoteLine,
+  RiEmotionLine,
+  RiFileGifLine,
   RiGitPullRequestLine,
   RiHistoryLine,
   RiLightbulbLine,
@@ -32,6 +35,8 @@ import { MENU_POPOVER_SURFACE } from "@/components/base/dropdown/menu-styles";
 import { Input } from "@/components/base/input/input";
 import { cx } from "@/utils/cx";
 
+import { EmojiPicker } from "./composer/emoji-picker";
+import { GifPicker, type PickedGif } from "./composer/gif-picker";
 import { type LibraryItem, type SourceKind, search } from "./library";
 import { Resize, Swap } from "./motion";
 
@@ -136,6 +141,22 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+function Back({ label, onBack }: { label: string; onBack: () => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        aria-label="Back"
+        onClick={onBack}
+        className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-primary-hover focus-visible:bg-background-primary-hover"
+      >
+        <RiArrowLeftSLine aria-hidden className="size-5" />
+      </button>
+      <span className="text-body-medium text-text-primary">{label}</span>
+    </div>
+  );
+}
+
 function Picker({
   source,
   onBack,
@@ -151,17 +172,7 @@ function Picker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={onBack}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-primary-hover focus-visible:bg-background-primary-hover"
-        >
-          <RiArrowLeftSLine aria-hidden className="size-5" />
-        </button>
-        <span className="text-body-medium text-text-primary">{source.label}</span>
-      </div>
+      <Back label={source.label} onBack={onBack} />
       <Input
         aria-label={`Search ${source.noun}`}
         placeholder={`Search ${source.noun}`}
@@ -212,9 +223,53 @@ function Picker({
   );
 }
 
-export function AddMenu({ onInsert }: { onInsert: (text: string) => void }) {
+/*
+ * Gifs is the GIF search the add menu may offer: GIPHY's key and the
+ * teammate searching, or null when the workspace has none.
+ */
+export interface Gifs {
+  apiKey: string;
+  member: string;
+  onPick: (picked: PickedGif) => void;
+}
+
+type Panel = Source | "emoji" | "gif";
+
+const emojiRow: Source = {
+  kind: "article",
+  label: "Emoji",
+  description: "Add an emoji",
+  icon: RiEmotionLine,
+  noun: "emoji",
+};
+
+const gifRow: Source = {
+  kind: "article",
+  label: "GIF",
+  description: "Search GIPHY",
+  icon: RiFileGifLine,
+  noun: "GIFs",
+};
+
+function panelKey(panel: Panel | null): string {
+  if (panel === null) {
+    return "menu";
+  }
+
+  return typeof panel === "string" ? panel : panel.kind;
+}
+
+export function AddMenu({
+  onInsert,
+  onEmoji,
+  gifs,
+}: {
+  onInsert: (text: string) => void;
+  onEmoji: (emoji: string) => void;
+  gifs: Gifs | null;
+}) {
   const [open, setOpen] = useState(false);
-  const [source, setSource] = useState<Source | null>(null);
+  const [source, setSource] = useState<Panel | null>(null);
 
   const toggle = (next: boolean) => {
     setOpen(next);
@@ -244,9 +299,31 @@ export function AddMenu({ onInsert }: { onInsert: (text: string) => void }) {
       <Popover placement="top start" offset={8} className={cx(MENU_POPOVER_SURFACE, "w-[361px] p-2")}>
         <Dialog aria-label="Add to message" className="outline-none">
           <Resize>
-            <Swap view={source?.kind ?? "menu"} forward={source !== null}>
+            <Swap view={panelKey(source)} forward={source !== null}>
               <div className="flex flex-col gap-2">
-                {source ? (
+                {source === "emoji" ? (
+                  <>
+                    <Back label="Emoji" onBack={() => setSource(null)} />
+                    <EmojiPicker
+                      onPick={(emoji) => {
+                        onEmoji(emoji);
+                        toggle(false);
+                      }}
+                    />
+                  </>
+                ) : source === "gif" && gifs ? (
+                  <>
+                    <Back label="GIF" onBack={() => setSource(null)} />
+                    <GifPicker
+                      apiKey={gifs.apiKey}
+                      member={gifs.member}
+                      onPick={(picked) => {
+                        gifs.onPick(picked);
+                        toggle(false);
+                      }}
+                    />
+                  </>
+                ) : source && typeof source !== "string" ? (
                   <Picker source={source} onBack={() => setSource(null)} onPick={pick} />
                 ) : (
                   <>
@@ -254,6 +331,8 @@ export function AddMenu({ onInsert }: { onInsert: (text: string) => void }) {
                       {basics.map((item) => (
                         <Row key={item.kind} source={item} onPress={() => setSource(item)} />
                       ))}
+                      <Row source={emojiRow} onPress={() => setSource("emoji")} />
+                      {gifs ? <Row source={gifRow} onPress={() => setSource("gif")} /> : null}
                     </Section>
                     <Section title="From your workspace">
                       {workspace.map((item) => (

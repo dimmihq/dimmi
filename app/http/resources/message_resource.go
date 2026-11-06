@@ -40,7 +40,11 @@ TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
 DeletedBy names who deleted a deleted entry. Redactions names the
 redaction rules that changed it before it was stored and how often, and
-is left out when none did.
+is left out when none did. ReadAt is when the customer saw a teammate's
+reply, known only on channels that report it, such as the messenger;
+email never does. Mentions are the teammates and teams a note names,
+with their names, for showing its tokens. Reactions are a note's emoji
+reactions, each with who reacted.
 */
 type TimelineEntry struct {
 	ID              string          `json:"id"`
@@ -59,6 +63,9 @@ type TimelineEntry struct {
 	SentAt          *time.Time      `json:"sent_at"`
 	ScheduledSendAt *time.Time      `json:"scheduled_send_at"`
 	EditedAt        *time.Time      `json:"edited_at"`
+	ReadAt          *time.Time      `json:"read_at"`
+	Mentions        []Mention       `json:"mentions"`
+	Reactions       []Reaction      `json:"reactions"`
 	DeletedAt       *time.Time      `json:"deleted_at"`
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
@@ -161,6 +168,15 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
 		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
 		UpdatedAt: m.UpdatedAt, Attachments: []Attachment{},
+	}
+
+	if m.AuthorType == string(enums.AuthorTypeMember) || m.AuthorType == string(enums.AuthorTypeAgent) {
+		out.ReadAt = m.ReadAt
+	}
+
+	out.Mentions, out.Reactions = []Mention{}, []Reaction{}
+	if m.Type == string(enums.MessageTypeNote) {
+		out.Mentions, out.Reactions = mentionsOf(m.Metadata), reactionsOf(m.Metadata)
 	}
 
 	if m.DeletedAt != nil {

@@ -15,6 +15,7 @@ package conversations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/cache"
@@ -36,13 +37,15 @@ type CountsInput struct {
 /*
 Counts is how many conversations wait in each view of the sidebar, each
 capped at CountCap: the caller's open, unread and snoozed ones, the
-open and unread ones nobody holds, every open one, spam, and the open
-ones of each inbox, team, member and pinned saved view.
+open and unread ones nobody holds, every open one, spam, those whose
+notes mention the caller since they last read them, and the open ones
+of each inbox, team, member and pinned saved view.
 */
 type Counts struct {
 	MineOpen, MineUnread, MineSnoozed int64
 	UnassignedOpen, UnassignedUnread  int64
 	AllOpen, SpamTotal                int64
+	MentionsUnread                    int64
 	Inboxes, Teams, Members, Views    map[ids.UUID]int64
 }
 
@@ -114,10 +117,28 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 
 		out.Views = a.countViews(ctx, tx, in.Membership)
 
-		return countHolders(ctx, q, in.Membership, out)
+		return errors.Join(countMentions(ctx, q, in.Membership, &out), countHolders(ctx, q, in.Membership, out))
 	})
 
 	return out, err
+}
+
+/*
+countMentions counts the conversations whose notes mention the member
+after what they last read. A mention lets them read the conversation
+whatever their access, so the count needs no access rule.
+*/
+func countMentions(ctx context.Context, q *models.Queries, m authz.Membership, out *Counts) error {
+	n, err := q.CountUnreadMentions(ctx, models.CountUnreadMentionsParams{
+		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("count unread mentions: %w", err)
+	}
+
+	out.MentionsUnread = n
+
+	return nil
 }
 
 /*

@@ -200,8 +200,16 @@ Message change failures.
 
 ErrMessageNotDeletable refuses to delete a timeline event.
 ErrMessageNotEditable refuses to edit anything but one's own note.
+ErrMessageNotReactable refuses a reaction to anything but a note,
+ErrReactionLimit a new emoji on a note that has the most it may, and
+ErrInvalidReaction a reaction that is not an emoji.
 */
 var (
 	ErrMessageNotDeletable = fault.New(fault.Invalid, "message_not_deletable", "Timeline events cannot be deleted.")
 	ErrMessageNotEditable  = fault.New(fault.Invalid, "message_not_editable", "Only your own notes can be edited.")
+	ErrMessageNotReactable = fault.New(fault.Invalid, "message_not_reactable", "Only notes take reactions.")
+	ErrReactionLimit       = fault.New(fault.Invalid, "reaction_limit_reached",
+		"A note can have 20 different reactions at most.")
+	ErrInvalidReaction = fault.New(fault.Invalid, "invalid_reaction", "A reaction must be one emoji.").
+				OnField("emoji")
 )

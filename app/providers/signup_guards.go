@@ -51,12 +51,12 @@ func signupRisk(a *app.App) (*appauth.SignupRisk, error) {
 captchaSources returns the origins pages must trust for the configured
 captcha to show, none without one.
 */
-func captchaSources(a *app.App) appmiddleware.Trusted {
+func captchaSources(a *app.App) appmiddleware.Sources {
 	if a.Config.Auth.Captcha.Driver != appconfig.CaptchaTurnstile {
-		return appmiddleware.Trusted{}
+		return appmiddleware.Sources{}
 	}
 
 	origins := []string{turnstile.Origin}
 
-	return appmiddleware.Trusted{Scripts: origins, Frames: origins}
+	return appmiddleware.Sources{Scripts: origins, Frames: origins}
 }

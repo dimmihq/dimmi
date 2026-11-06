@@ -67,10 +67,9 @@ func bootInbox(a *app.App) error {
 		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
 
 		ListMessages:      &messages.ListMessages{DB: a.DB, Disks: a.Storage},
-		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock, IDs: a.IDs},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		DeleteMessage:     &messages.DeleteMessage{DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue},
-		EditNote:          &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock},
 	}
 
 	bootRecords(a)
@@ -81,6 +80,7 @@ func bootInbox(a *app.App) error {
 		bootErasures(a),
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
 			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels, Disks: a.Storage,
+			GIFs: a.Config.Inbox.GIF.GiphyAPIKey != "",
 		}),
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{
@@ -126,6 +126,9 @@ func bootWorkbench(a *app.App) error {
 	acts.ListSnoozeLists = &conversations.ListSnoozeLists{DB: a.DB}
 	acts.UpdateSnoozeList = &conversations.UpdateSnoozeList{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ShowSnoozeOptions = &conversations.ShowSnoozeOptions{DB: a.DB, Clock: a.Clock}
+	acts.ListMentionables = &conversations.ListMentionables{DB: a.DB}
+	acts.ReactToNote = &messages.ReactToNote{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.EditNote = &messages.EditNote{DB: a.DB, Events: a.Events, Clock: a.Clock, IDs: a.IDs}
 
 	drafter := drafts.Saver{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ListDrafts = &drafts.ListDrafts{DB: a.DB}

@@ -12,7 +12,10 @@
  * that never reached the customer says so, with the reason, and can be
  * sent again. Hovering a message offers a link to it, editing one's own
  * note and deleting; a deleted message stays as a line saying who deleted
- * it. Below the thread sits the composer; R and N open it for a reply or
+ * it. A reply the customer has seen says when. Every time shows its full
+ * date on hover, and reads in the customer's zone when the person
+ * chooses; with events hidden, each run of them folds into one line.
+ * Below the thread sits the composer; R and N open it for a reply or
  * a note from anywhere, and O opens or closes Operator.
  */
 import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
@@ -32,8 +35,12 @@ import { MessageBody } from "./message-body";
 import { MessageFiles } from "./message-files";
 import type { Mode } from "./modes";
 import { ThreadSkeleton } from "./skeletons";
+import { foldEvents, foldedText } from "./thread/fold-events";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
+import { ReactionChips } from "./thread/reactions";
+import { ThreadZone } from "./thread/thread-zone";
 import { useMessageMoves } from "./thread/use-message-moves";
+import { When } from "./thread/when";
 import type { Report } from "./use-typing-report";
 
 type Said = Extract<ThreadEntry, { author: string }>;
@@ -61,6 +68,12 @@ function Mark({ entry }: { entry: Said }) {
   return <Avatar size="xs" color={avatarColor(entry.author)} initials={entry.author.charAt(0)} />;
 }
 
+function At({ entry }: { entry: Said }) {
+  const style = "text-body-2-regular text-text-tertiary";
+
+  return entry.iso ? <When iso={entry.iso} className={style} /> : <span className={style}>{entry.at}</span>;
+}
+
 function Tag({ entry }: { entry: Said }) {
   return (
     <span className="my-1 flex items-center gap-1.5 text-body-2-medium text-text-secondary">
@@ -71,7 +84,7 @@ function Tag({ entry }: { entry: Said }) {
           AI agent
         </Chip>
       ) : null}
-      <span className="text-body-2-regular text-text-tertiary">{entry.at}</span>
+      <At entry={entry} />
       {entry.redacted ? (
         <span className="text-body-2-regular text-text-tertiary">
           · {entry.redacted === 1 ? "1 item redacted" : `${entry.redacted} items redacted`}
@@ -83,6 +96,9 @@ function Tag({ entry }: { entry: Said }) {
           <RiTimeLine aria-hidden className="size-3.5" />
           Sending
         </span>
+      ) : null}
+      {entry.seenAt ? (
+        <When iso={entry.seenAt} prefix="Seen " className="text-body-2-regular text-text-tertiary" />
       ) : null}
     </span>
   );
@@ -100,7 +116,9 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
         <Chip variant="caption" color="soft" className="py-0">
           Internal
         </Chip>
-        <span className="ms-auto text-body-2-regular text-text-tertiary">{entry.at}</span>
+        <span className="ms-auto">
+          <At entry={entry} />
+        </span>
       </header>
       <MessageBody text={entry.text} className="text-body-regular text-text-primary" />
       <p className="flex items-center gap-1 text-body-2-regular text-text-tertiary">
@@ -201,6 +219,44 @@ function bubbleClass(entry: Said, editing: boolean): string {
   );
 }
 
+/*
+ * EntryActions sits beside a message's bubble on hover: a link to it,
+ * editing one's own note, deleting, and reacting to a note.
+ */
+function EntryActions({
+  entry,
+  customer,
+  moves,
+  editing,
+  onEdit,
+}: {
+  entry: Said;
+  customer: string;
+  moves: Moves;
+  editing: boolean;
+  onEdit: () => void;
+}) {
+  const ours = entry.kind !== "customer";
+  const note = entry.kind === "note";
+  const mine = Boolean(entry.authorId) && entry.authorId === moves.me;
+  const kind = note ? "note" : ours ? "reply" : "customer";
+
+  return (
+    <div className={cx("absolute top-1/2 z-10 w-max -translate-y-1/2", ours ? "end-full me-2" : "start-full ms-2")}>
+      <MessageActions
+        kind={kind}
+        customer={customer}
+        canEdit={note && mine && !editing}
+        canDelete={mine || moves.moderates}
+        onCopy={() => moves.link(entry.id)}
+        onEdit={onEdit}
+        onDelete={() => moves.remove(entry.id)}
+        onReact={note ? (emoji) => void moves.react(entry.id, emoji, false) : undefined}
+      />
+    </div>
+  );
+}
+
 function SaidEntry({
   entry,
   customer,
@@ -215,8 +271,6 @@ function SaidEntry({
   const [editing, setEditing] = useState(false);
   const ours = entry.kind !== "customer";
   const note = entry.kind === "note";
-  const mine = Boolean(entry.authorId) && entry.authorId === moves.me;
-  const kind = note ? "note" : ours ? "reply" : "customer";
 
   return (
     <article
@@ -231,17 +285,13 @@ function SaidEntry({
           editing && "w-full",
         )}
       >
-        <div className={cx("absolute top-1/2 z-10 w-max -translate-y-1/2", ours ? "end-full me-2" : "start-full ms-2")}>
-          <MessageActions
-            kind={kind}
-            customer={customer}
-            canEdit={note && mine && !editing}
-            canDelete={mine || moves.moderates}
-            onCopy={() => moves.link(entry.id)}
-            onEdit={() => setEditing(true)}
-            onDelete={() => moves.remove(entry.id)}
-          />
-        </div>
+        <EntryActions
+          entry={entry}
+          customer={customer}
+          moves={moves}
+          editing={editing}
+          onEdit={() => setEditing(true)}
+        />
         <div className={cx(bubbleClass(entry, editing), "max-w-full", !editing && entry.text === "" && "hidden")}>
           {editing ? (
             <NoteEditor
@@ -253,12 +303,17 @@ function SaidEntry({
               }}
             />
           ) : (
-            <MessageBody text={entry.text} format={entry.format} fromCustomer={!ours} />
+            <MessageBody text={entry.text} format={entry.format} fromCustomer={!ours} mentions={entry.mentions} />
           )}
           {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
         </div>
         <MessageFiles files={entry.files} ours={ours} />
       </div>
+      <ReactionChips
+        reactions={entry.reactions ?? []}
+        me={moves.me}
+        onToggle={(emoji, remove) => void moves.react(entry.id, emoji, remove)}
+      />
       <Tag entry={entry} />
       <More entry={entry} onOpen={follow.onOpenOriginal} />
       <Undelivered entry={entry} onRetry={follow.onRetry} />
@@ -312,6 +367,8 @@ export function Thread({
   onOpenOriginal,
   onRetry,
   status,
+  zone = null,
+  hideEvents = false,
 }: {
   conversation: string;
   entries: ThreadEntry[];
@@ -325,6 +382,8 @@ export function Thread({
   onOpenOriginal?: (id: string) => void;
   onRetry?: (id: string) => void;
   status?: ReactNode;
+  zone?: string | null;
+  hideEvents?: boolean;
 }) {
   const moves = useMessageMoves(conversation);
   const [mode, setMode] = useState<Mode | null>(null);
@@ -349,15 +408,21 @@ export function Thread({
         {loading ? (
           <ThreadSkeleton />
         ) : (
-          <LinkPolicyProvider channelType={channelType}>
-            <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-              {entries.map((entry) => (
-                <li key={entry.id}>
-                  <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
-                </li>
-              ))}
-            </ol>
-          </LinkPolicyProvider>
+          <ThreadZone.Provider value={zone}>
+            <LinkPolicyProvider channelType={channelType}>
+              <ol className="mx-auto flex max-w-3xl flex-col gap-3">
+                {foldEvents(entries, hideEvents).map((entry) => (
+                  <li key={entry.id}>
+                    {entry.kind === "folded" ? (
+                      <Pill>{foldedText(entry.count)}</Pill>
+                    ) : (
+                      <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </LinkPolicyProvider>
+          </ThreadZone.Provider>
         )}
       </ScrollArea>
       <div className="shrink-0 px-3 pb-3">

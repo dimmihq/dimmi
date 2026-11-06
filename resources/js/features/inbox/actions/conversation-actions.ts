@@ -1,12 +1,13 @@
 /*
  * The moves on the open conversation: walking the list, closing,
- * reopening, snoozing and taking it.
+ * reopening, snoozing and taking it, and how the thread reads.
  */
 import {
   RiAlarmLine,
   RiArrowDownLine,
   RiArrowUpLine,
   RiCheckboxCircleLine,
+  RiEyeOffLine,
   RiLayoutRightLine,
   RiRefreshLine,
   RiUserAddLine,
@@ -95,5 +96,15 @@ export const conversationActions: InboxAction[] = [
     keys: ["]"],
     when: (ctx) => ctx.conversation !== null,
     run: (ctx) => ctx.conversation?.toggleDetails(),
+  },
+  {
+    id: "conversation.events",
+    label: "Show or hide events",
+    group: "Conversation",
+    icon: RiEyeOffLine,
+    shortcut: "$mod+e",
+    keys: ["⌘", "E"],
+    when: (ctx) => ctx.conversation !== null,
+    run: (ctx) => ctx.conversation?.toggleEvents(),
   },
 ];

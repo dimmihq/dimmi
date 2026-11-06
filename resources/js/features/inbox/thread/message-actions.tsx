@@ -3,7 +3,8 @@
  * it, edit their own note in place, and delete what they wrote or, when
  * they may moderate, anything a colleague or the customer wrote. Deleting
  * asks first and says what stays: a reply the customer received is still
- * theirs. The actions show on hover and on keyboard focus.
+ * theirs. A note also takes an emoji reaction. The actions show on hover
+ * and on keyboard focus.
  */
 import { RiDeleteBinLine, RiEditLine, RiLinkM } from "@remixicon/react";
 import { useState } from "react";
@@ -11,6 +12,8 @@ import { useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { cx } from "@/utils/cx";
+
+import { ReactionPicker } from "./reactions";
 
 const action =
   "flex size-7 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring";
@@ -23,6 +26,7 @@ export function MessageActions({
   onCopy,
   onEdit,
   onDelete,
+  onReact,
 }: {
   kind: "note" | "reply" | "customer";
   customer: string;
@@ -31,6 +35,7 @@ export function MessageActions({
   onCopy: () => void;
   onEdit: () => void;
   onDelete: () => Promise<unknown>;
+  onReact?: (emoji: string) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const description =
@@ -47,6 +52,7 @@ export function MessageActions({
         "opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100",
       )}
     >
+      {onReact ? <ReactionPicker className={action} onPick={onReact} /> : null}
       <button type="button" aria-label="Copy link" onClick={onCopy} className={action}>
         <RiLinkM aria-hidden className="size-4" />
       </button>

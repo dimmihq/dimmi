@@ -29,10 +29,10 @@ type desk struct {
 open boots the application with a workspace, its default inbox with
 its API channel and the owner signed in.
 */
-func open(t *testing.T) desk {
+func open(t *testing.T, opts ...tests.Option) desk {
 	t.Helper()
 
-	tc := tests.New(t)
+	tc := tests.New(t, opts...)
 	inbox, err := factories.DefaultInbox(t.Context(), tc.App, tc.Workspace.Workspace)
 	require.NoError(t, err)
 

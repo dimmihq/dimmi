@@ -17,6 +17,9 @@
 | so no hash can name it. Styles cannot run code, so scripts stay locked
 | to the nonce.
 |
+| A page may name more sources, such as the dashboard reaching GIPHY
+| when GIF search is on; only pages that need them get them.
+|
 | While the Vite dev server runs, pages also load modules, styles and
 | fonts from it and keep a socket open for hot updates. A production
 | server never runs one, so it never relaxes the policy further.
@@ -44,22 +47,25 @@ type DevServer interface {
 }
 
 /*
-Trusted lists the outside origins a page may load scripts and frames
-from, such as a captcha provider's; empty in the strict policy.
+Sources are the outside origins a page may reach beyond its own: Scripts
+and Frames for a captcha provider, Connect for its requests and Images
+for the pictures it shows. All empty in the strict policy.
 */
-type Trusted struct {
+type Sources struct {
 	Scripts []string
 	Frames  []string
+	Connect []string
+	Images  []string
 }
 
 /*
 ContentSecurityPolicy returns the middleware that sets the security
-headers of pages, allowing the trusted origins, and relaxed for the dev
-server while it runs.
+headers of pages allowing the extra sources, the policy relaxed for the
+dev server while it runs.
 */
-func ContentSecurityPolicy(dev DevServer, trusted Trusted) fhttp.Middleware {
+func ContentSecurityPolicy(dev DevServer, extra Sources) fhttp.Middleware {
 	production := middleware.SecurityHeaders(middleware.SecurityHeadersOptions{
-		ContentSecurityPolicy: policy("", trusted),
+		ContentSecurityPolicy: policy("", extra),
 	})
 
 	return func(next fhttp.Handler) fhttp.Handler {
@@ -73,31 +79,33 @@ func ContentSecurityPolicy(dev DevServer, trusted Trusted) fhttp.Middleware {
 				return
 			}
 
-			relaxed := middleware.SecurityHeadersOptions{ContentSecurityPolicy: policy(server, trusted)}
+			relaxed := middleware.SecurityHeadersOptions{ContentSecurityPolicy: policy(server, extra)}
 			middleware.SecurityHeaders(relaxed)(next).ServeHTTP(w, r)
 		})
 	}
 }
 
 /*
-policy returns the policy, allowing the dev server at the address when
-one is given, and the trusted origins.
+policy returns the policy with the extra sources, allowing the dev server
+at the address when one is given.
 */
-func policy(dev string, trusted Trusted) string {
+func policy(dev string, extra Sources) string {
 	script, style, connect, assets := "", "", "", ""
 	if dev != "" {
 		socket := "ws" + strings.TrimPrefix(dev, "http")
 		script, style, connect, assets = " "+dev, " "+dev, " "+dev+" "+socket, " "+dev
 	}
 
-	script += sources(trusted.Scripts)
-	frames := sources(trusted.Frames)
+	script += sources(extra.Scripts)
+	frames := sources(extra.Frames)
+	images := assets + sources(extra.Images)
+	connect += sources(extra.Connect)
 
 	return strings.Join([]string{
 		"default-src 'self'",
 		"script-src 'self' 'nonce-" + middleware.NoncePlaceholder + "'" + script,
 		"style-src 'self' 'unsafe-inline'" + style,
-		"img-src 'self' data: blob:" + assets,
+		"img-src 'self' data: blob:" + images,
 		"font-src 'self'" + assets,
 		"connect-src 'self'" + connect,
 		"frame-src 'self'" + frames,

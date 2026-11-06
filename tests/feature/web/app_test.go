@@ -144,6 +144,21 @@ func TestAppPage(t *testing.T) {
 
 		assert.Equal(t, "/d", res.Header.Get("Location"))
 	})
+
+	t.Run("lets only the app reach GIPHY, and only once the instance has a key", func(t *testing.T) {
+		t.Parallel()
+		off := tests.New(t, withBuild())
+		on := tests.New(t, withBuild(), tests.Before(func(a *app.App) { a.Config.Inbox.GIF.GiphyAPIKey = "k" }))
+
+		assert.NotContains(t, off.Client().Send(fhttp.MethodGet, "/d", nil).Header.Get("Content-Security-Policy"),
+			"giphy")
+
+		policy := on.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy")
+		assert.Contains(t, policy, "img-src 'self' data: blob: https://*.giphy.com;")
+		assert.Contains(t, policy, "connect-src 'self' https://api.giphy.com;")
+		assert.NotContains(t, on.Client().Send(fhttp.MethodGet, "/login", nil).Header.Get("Content-Security-Policy"),
+			"giphy")
+	})
 }
 
 func TestAuthPages(t *testing.T) {

@@ -5,8 +5,8 @@
  * stays open until the person leaves the conversation. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
  * a field that grows with what is typed with formatting kept as
- * Markdown, and a toolbar with the add menu (help articles, saved replies
- * and more from the workspace, dropped into the text) and a way to ask
+ * Markdown, and a toolbar with the add menu (help articles, saved replies,
+ * emoji, GIFs and more from the workspace, dropped into the text) and a way to ask
  * Operator. Replies cannot carry files yet, so the composer offers none
  * rather than show files that would never be sent. Sending goes to the
  * server; a sent draft empties, a refused one stays with the reason under
@@ -23,12 +23,14 @@ import { useEffect, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
-import type { Message } from "@/lib/api/inbox";
+import { type Message, mentionables } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
 import { ComposerField } from "./composer/composer-field";
 import { preloadEditor } from "./composer/load-editor";
+import { toMentionables } from "./composer/mentionable";
+import { useGifs } from "./composer/use-gifs";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
@@ -146,8 +148,9 @@ function Bar({ customer, onOpen }: { customer: string; onOpen: (mode: Mode) => v
 
 /*
  * useSend sends what the composer holds: the text and, for a reply, its
- * uploaded files. It waits for every file to finish uploading, and keeps
- * the text when sending fails so nothing typed is lost.
+ * uploaded files, and tells onSent what text went. It waits for every
+ * file to finish uploading, and keeps the text when sending fails so
+ * nothing typed is lost.
  */
 function useSend({
   mode,
@@ -156,6 +159,7 @@ function useSend({
   held,
   onSend,
   onTyping,
+  onSent,
 }: {
   mode: Mode;
   draft: ReturnType<typeof useDraft>;
@@ -163,6 +167,7 @@ function useSend({
   held: ReturnType<typeof useHeld>;
   onSend: Send;
   onTyping: Report;
+  onSent: (text: string) => void;
 }) {
   const [sending, setSending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -181,6 +186,7 @@ function useSend({
     draft.pause();
     try {
       const sent = await onSend(mode, text, note ? undefined : then, attaching ? files.ids : undefined);
+      onSent(text);
       draft.sent();
       files.clear();
       held.hold(sent);
@@ -218,7 +224,7 @@ function Panel({
   onAskOperator: () => void;
   onTyping: Report;
 }) {
-  const { workspace } = useInbox();
+  const { workspace, userId } = useInbox();
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
   const draft = drafts[mode];
   const note = mode === "note";
@@ -227,9 +233,11 @@ function Panel({
     onModeChange("reply");
   });
   const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
+  const addEmoji = (emoji: string) => draft.edit(`${draft.body}${emoji}`);
+  const gifs = useGifs(workspace, userId, insert);
   const files = useReplyFiles(workspace);
   const attachable = !note && canAttach;
-  const { send, sending, failure, ready } = useSend({ mode, draft, files, held, onSend, onTyping });
+  const { send, sending, failure, ready } = useSend({ mode, draft, files, held, onSend, onTyping, onSent: gifs.sent });
 
   return (
     <div>
@@ -276,11 +284,14 @@ function Panel({
             onSubmit={(then) => void send(then)}
             onBlur={() => onTyping(false)}
             onFiles={(picked) => files.add(picked, attachable)}
+            findMentions={
+              note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined
+            }
           />
         </div>
         <ReplyFileChips files={files} shown={attachable} />
         <div className="flex items-center gap-2">
-          <AddMenu onInsert={insert} />
+          <AddMenu onInsert={insert} onEmoji={addEmoji} gifs={gifs.gifs} />
           <AttachButton onPick={files.add} shown={attachable} />
           <button
             type="button"

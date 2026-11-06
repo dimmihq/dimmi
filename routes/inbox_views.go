@@ -55,6 +55,8 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Ability("settings:write")
 	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read")
 
+	collaborationRoutes(r, a)
+
 	drafts := &v1.DraftController{
 		List: acts.ListDrafts, Save: acts.SaveDraft, Update: acts.UpdateDraft, Delete: acts.DeleteDraft, IDs: a.IDs,
 	}
@@ -64,4 +66,26 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, "/drafts/{draft}", "drafts.update", drafts.Patch).Ability("conversations:write")
 	routing.Delete(r, "/drafts/{draft}", "drafts.destroy", drafts.Destroy).Ability("conversations:write").
 		Status(fhttp.StatusNoContent)
+}
+
+/*
+collaborationRoutes declares how teammates work together on a note: who
+it may mention, emoji reactions, and the GIF search the composer uses.
+*/
+func collaborationRoutes(r *routing.Router, a *app.App) {
+	acts := a.Actions.Inbox
+
+	mentionables := &v1.MentionableController{List: acts.ListMentionables, IDs: a.IDs}
+	routing.Get(r, "/conversations/{conversation}/mentionables", "conversations.mentionables.index",
+		mentionables.Index).Ability("conversations:read")
+
+	reactions := &v1.ReactionController{React: acts.ReactToNote, IDs: a.IDs}
+	message := "/conversations/{conversation}/messages/{message}/reactions"
+	routing.Post(r, message, "conversations.messages.reactions.store", reactions.Store).
+		Ability("conversations:write").Status(fhttp.StatusOK)
+	routing.Delete(r, message+"/{emoji}", "conversations.messages.reactions.destroy", reactions.Destroy).
+		Ability("conversations:write").Status(fhttp.StatusOK)
+
+	gifs := &v1.GIFSearchController{APIKey: a.Config.Inbox.GIF.GiphyAPIKey}
+	routing.Get(r, "/gif-search", "gif-search.show", gifs.Show).Ability("conversations:write")
 }
