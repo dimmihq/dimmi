@@ -90,3 +90,18 @@ type AIChatGPTCompleteRequest struct {
 		Code  string `json:"code"  validate:"required"`
 	}
 }
+
+/*
+AIRunsRequest is the input of GET .../conversations/:id/ai/runs.
+*/
+type AIRunsRequest struct {
+	Conversation string `path:"conversation"`
+}
+
+/*
+AIRunRequest is the input of GET .../conversations/:id/ai/runs/:run.
+*/
+type AIRunRequest struct {
+	Conversation string `path:"conversation"`
+	Run          string `path:"run"`
+}

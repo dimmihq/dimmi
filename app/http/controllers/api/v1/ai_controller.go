@@ -13,9 +13,11 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
@@ -75,6 +77,7 @@ type AIController struct {
 	StartChatGPT    *ai.StartChatGPTConnect
 	CompleteChatGPT *ai.CompleteChatGPTConnect
 	IDs             *ids.Registry
+	DB              *database.DB
 	URL             string
 }
 
@@ -305,3 +308,78 @@ func (c *AIController) keyID(public string) (ids.UUID, error) {
 }
 
 var _ = models.AiAgent{}
+
+/*
+AIRunsOutput is a conversation's run list.
+*/
+type AIRunsOutput struct {
+	Body fhttp.Collection[resources.AiRun]
+}
+
+/*
+AIRunOutput is one run with its steps.
+*/
+type AIRunOutput struct {
+	Body fhttp.Resource[resources.AiRun]
+}
+
+/*
+Runs lists a conversation's agent runs, newest first.
+*/
+func (c *AIController) Runs(ctx context.Context, in *requests.AIRunsRequest) (*AIRunsOutput, error) {
+	m := membership(ctx)
+
+	conv, err := c.IDs.Decode(string(models.PrefixConversation), in.Conversation)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	runs, err := models.New(c.DB).ListConversationRuns(ctx, models.ListConversationRunsParams{
+		WorkspaceID: m.Workspace.ID, ConversationID: &conv,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list runs: %w", err)
+	}
+
+	out := make([]resources.AiRun, len(runs))
+	for i, r := range runs {
+		out[i] = resources.NewAiRun(r)
+	}
+		return &AIRunsOutput{Body: fhttp.NewCollection(pagination.Page[resources.AiRun]{Items: out, Limit: 100})}, nil
+}
+
+/*
+Run shows one run with every traced step.
+*/
+func (c *AIController) Run(ctx context.Context, in *requests.AIRunRequest) (*AIRunOutput, error) {
+	m := membership(ctx)
+
+	conv, err := c.IDs.Decode(string(models.PrefixConversation), in.Conversation)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+	runID, err := c.IDs.Decode(string(models.PrefixAiRun), in.Run)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	run, err := models.New(c.DB).FindRun(ctx, models.FindRunParams{WorkspaceID: m.Workspace.ID, ID: runID})
+	if err != nil || run.ConversationID == nil || *run.ConversationID != conv {
+		return nil, exceptions.ErrNotFound
+	}
+
+	steps, err := models.New(c.DB).ListRunSteps(ctx, models.ListRunStepsParams{
+		WorkspaceID: m.Workspace.ID, RunID: run.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list steps: %w", err)
+	}
+
+	out := resources.NewAiRun(run)
+	out.Steps = make([]resources.AiRunStep, len(steps))
+	for i, st := range steps {
+		out.Steps[i] = resources.NewAiRunStep(st)
+	}
+
+	return &AIRunOutput{Body: fhttp.NewResource(out)}, nil
+}

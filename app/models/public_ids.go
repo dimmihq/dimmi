@@ -223,16 +223,30 @@ assistantPublicIDs lists the prefixes of the AI agent and its actions.
 */
 func assistantPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
-		{"aia", "ai_agents"},
-		{"aik", "ai_provider_keys"},
-		{"air", "ai_runs"},
-		{"ais", "ai_run_steps"},
-		{"acn", "ai_action_connections"},
-		{"aac", "ai_actions"},
-		{"aacv", "ai_action_versions"},
-		{"aax", "ai_action_calls"},
+		{PrefixAiAgent, "ai_agents"},
+		{PrefixAiProviderKey, "ai_provider_keys"},
+		{PrefixAiRun, "ai_runs"},
+		{PrefixAiRunStep, "ai_run_steps"},
+		{PrefixAiActionConnection, "ai_action_connections"},
+		{PrefixAiAction, "ai_actions"},
+		{PrefixAiActionVersion, "ai_action_versions"},
+		{PrefixAiActionCall, "ai_action_calls"},
 	}
 }
+
+/*
+The prefixes of the AI agent's tables.
+*/
+const (
+	PrefixAiAgent            Prefix = "aia"
+	PrefixAiProviderKey      Prefix = "aik"
+	PrefixAiRun              Prefix = "air"
+	PrefixAiRunStep          Prefix = "ais"
+	PrefixAiActionConnection Prefix = "acn"
+	PrefixAiAction           Prefix = "aac"
+	PrefixAiActionVersion    Prefix = "aacv"
+	PrefixAiActionCall       Prefix = "aax"
+)
 
 /*
 helpCenterPublicIDs lists the prefixes of the help center, its
