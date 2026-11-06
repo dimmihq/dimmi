@@ -20,7 +20,7 @@ import { toast } from "@/components/base/toast/toast";
 import { useCopy } from "@/features/settings/use-copy";
 import { type AiProviderDescriptor, aiKey } from "@/lib/api/ai";
 
-import { ProviderMark } from "../provider-mark";
+import { ProviderLogo } from "../logos";
 import { type Phase, type SignInMethod, useChatGPTSignIn } from "./use-chatgpt-sign-in";
 
 const alert =
@@ -206,7 +206,7 @@ export function ChatGPTConnect({
     <form className="contents" onSubmit={submit} noValidate>
       <ModalBody className="flex flex-col gap-5 pb-1">
         <div className="flex items-center gap-3 rounded-2xl bg-background-secondary-default p-3">
-          <ProviderMark provider="chatgpt" size="lg" />
+          <ProviderLogo provider="chatgpt" size="lg" />
           <div className="flex min-w-0 flex-col">
             <span className="text-body-medium text-text-primary">ChatGPT subscription</span>
             <span className="text-body-2-regular text-text-secondary">

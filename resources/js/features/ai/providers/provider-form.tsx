@@ -25,8 +25,8 @@ import {
 } from "@/lib/api/ai";
 
 import { keyStatus, modelCount } from "../format";
+import { ProviderLogo } from "../logos";
 import { providerInfo, providerName } from "../provider-info";
-import { ProviderMark } from "../provider-mark";
 import { checkFields, type Problems, problemsOf } from "./problems";
 
 /*
@@ -104,7 +104,7 @@ export function ProviderForm({
     <form className="contents" onSubmit={submit} noValidate>
       <ModalBody className="flex flex-col gap-5 pb-1">
         <div className="flex items-center gap-3 rounded-2xl bg-background-secondary-default p-3">
-          <ProviderMark provider={provider} size="lg" />
+          <ProviderLogo provider={provider} size="lg" />
           <div className="flex min-w-0 flex-col">
             <span className="text-body-medium text-text-primary">{providerName(provider)}</span>
             <span className="text-body-2-regular text-text-secondary">{info?.blurb}</span>

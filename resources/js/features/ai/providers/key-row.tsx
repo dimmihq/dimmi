@@ -21,8 +21,8 @@ import { Item } from "@/features/settings/layout";
 import { type AiProviderKey, aiKey, deleteAiKey, testAiKey, updateAiKey } from "@/lib/api/ai";
 
 import { type KeyStatus, keyStatus, maskedHint, modelCount, statusLabels } from "../format";
+import { ProviderLogo } from "../logos";
 import { providerName } from "../provider-info";
-import { ProviderMark } from "../provider-mark";
 import { refusal } from "../use-agent";
 
 const chipColors: Record<KeyStatus, "lime" | "rose" | "neutral"> = {
@@ -82,7 +82,7 @@ function detailOf(connection: AiProviderKey): string {
 export function BuiltInRow({ connection }: { connection: AiProviderKey }) {
   return (
     <Item
-      mark={<ProviderMark provider="dimmi" />}
+      mark={<ProviderLogo provider="dimmi" />}
       title="dimmi"
       detail={`Included with dimmi · no key needed · ${modelCount(connection)}`}
     >
@@ -210,7 +210,7 @@ export function KeyRow({
   };
 
   return (
-    <Item mark={<ProviderMark provider={connection.provider} />} title={connection.name} detail={detailOf(connection)}>
+    <Item mark={<ProviderLogo provider={connection.provider} />} title={connection.name} detail={detailOf(connection)}>
       {test.isPending ? (
         <Chip variant="caption" color="neutral">
           Testing…

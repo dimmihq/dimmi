@@ -12,7 +12,7 @@ import { Row, Section } from "@/features/settings/layout";
 import type { AgentView, AiModelEntry, AiProviderKey } from "@/lib/api/ai";
 
 import { type AgentChange, modelDetail, modelsFor, usableKeys } from "../format";
-import { ProviderMark } from "../provider-mark";
+import { ModelLogo, ProviderLogo } from "../logos";
 import { preferred } from "./options";
 
 function ConnectionSelect({
@@ -44,7 +44,7 @@ function ConnectionSelect({
     >
       {keys.map((key) => (
         <SelectItem key={key.id} id={key.id} textValue={key.name}>
-          <ProviderMark provider={key.provider} size="sm" />
+          <ProviderLogo provider={key.provider} size="xs" />
           <span className="truncate">{key.provider === "dimmi" ? "dimmi" : key.name}</span>
         </SelectItem>
       ))}
@@ -77,10 +77,20 @@ function ModelSelect({
       onSelectionChange={(id) => (id ? onPick(String(id)) : undefined)}
       className="w-full sm:w-64"
       popoverClassName="w-80"
-      renderValue={({ selectedText, isPlaceholder }) => (isPlaceholder ? placeholder : selectedText)}
+      renderValue={({ selectedText, isPlaceholder }) =>
+        isPlaceholder || !value ? (
+          placeholder
+        ) : (
+          <>
+            <ModelLogo model={value} size="xs" />
+            <span className="truncate">{selectedText}</span>
+          </>
+        )
+      }
     >
       {models.map((model) => (
         <SelectItem key={model.id} id={model.id} textValue={model.display_name}>
+          <ModelLogo model={model.id} size="sm" />
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-body-2-medium text-text-primary">{model.display_name}</span>
             {modelDetail(model) ? (

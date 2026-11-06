@@ -24,6 +24,7 @@ import { type AgentView, type AiUsage, aiUsageQuery } from "@/lib/api/ai";
 import { conversationsQuery } from "@/lib/api/inbox";
 
 import { modelsFor, readiness, usableKeys, usd } from "../format";
+import { ModelLogo } from "../logos";
 import { useAgent } from "../use-agent";
 
 /*
@@ -60,6 +61,7 @@ function StatusCard({ view }: { view: AgentView }) {
           )}
           <span>{state.text}</span>
           <span aria-hidden>·</span>
+          {model ? <ModelLogo model={model.id} size="xs" /> : null}
           <span className="truncate">{detail}</span>
         </span>
       </div>
@@ -107,6 +109,37 @@ function MonthStats({ usage, cap }: { usage: AiUsage | undefined; cap: number | 
       <Stat label="Didn't know" value={usage.unknown_count.toLocaleString()} />
       <Stat label="Spend" value={usd(usage.cost_micros)} note={cap === null ? "No cap" : `of ${usd(cap)} cap`} />
     </div>
+  );
+}
+
+/*
+ * ByModel is this month's spend split by the model that ran, each named
+ * from the catalog when it knows the model.
+ */
+function ByModel({ usage, view }: { usage: AiUsage | undefined; view: AgentView | undefined }) {
+  const rows = usage?.by_model ?? [];
+  if (rows.length === 0) {
+    return null;
+  }
+  const names = new Map(
+    Object.values(view?.catalog ?? {})
+      .flat()
+      .map((entry) => [entry.id, entry.display_name]),
+  );
+
+  return (
+    <Section title="By model" description="What each model cost this month.">
+      {rows.map((row) => (
+        <Item
+          key={row.model}
+          mark={<ModelLogo model={row.model} size="md" tile />}
+          title={names.get(row.model) ?? row.model}
+          detail={row.calls === 1 ? "1 call" : `${row.calls.toLocaleString()} calls`}
+        >
+          <span className="text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
+        </Item>
+      ))}
+    </Section>
   );
 }
 
@@ -190,6 +223,7 @@ export function AgentOverview() {
             <h2 className="px-3 text-body-2-medium text-text-secondary">This month</h2>
             <MonthStats usage={usage} cap={view.data?.agent.monthly_spend_cap_micros ?? null} />
           </section>
+          <ByModel usage={usage} view={view.data} />
           <RecentConversations workspace={workspace} />
         </div>
       </ScrollArea>

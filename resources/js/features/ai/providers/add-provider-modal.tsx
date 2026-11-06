@@ -12,9 +12,8 @@ import { LinkButton } from "@/components/base/buttons/link-button";
 import { Modal, ModalBody, ModalHeader } from "@/components/base/modal/modal";
 import { type AiProviderDescriptor, deleteAiKey } from "@/lib/api/ai";
 import { cx } from "@/utils/cx";
-
+import { ProviderLogo } from "../logos";
 import { providerInfo, providerName } from "../provider-info";
-import { ProviderMark } from "../provider-mark";
 import { ChatGPTConnect } from "./chatgpt-connect";
 import { ProviderForm } from "./provider-form";
 
@@ -35,7 +34,7 @@ function ProviderCard({ descriptor, onPick }: { descriptor: AiProviderDescriptor
         descriptor.available ? "cursor-pointer hover:bg-background-secondary-hover" : "cursor-not-allowed opacity-60",
       )}
     >
-      <ProviderMark provider={descriptor.id} />
+      <ProviderLogo provider={descriptor.id} />
       <span className="flex flex-col gap-0.5">
         <span className="text-body-medium text-text-primary">{providerName(descriptor.id)}</span>
         <span className="text-body-2-regular text-text-secondary">
