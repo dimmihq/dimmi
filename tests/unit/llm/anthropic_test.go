@@ -42,7 +42,7 @@ func TestAnthropicDriver(t *testing.T) {
 		first, second := body(t, fake.Sent()[0]), body(t, fake.Sent()[1])
 		assert.NotContains(t, first, "temperature")
 		assert.InDelta(t, 0.2, second["temperature"], 0.0001)
-		assert.InDelta(t, 4096, first["max_tokens"], 0)
+		assert.InDelta(t, 16000, first["max_tokens"], 0)
 		system := list(first["system"])
 		require.Len(t, system, 1)
 		assert.Equal(t, map[string]any{"type": "ephemeral"}, object(system[0])["cache_control"])
