@@ -37,6 +37,7 @@ func All(a *app.App) []foundation.Command {
 		EmailInboundDoctorCommand{App: a},
 		EmailCloudflareWorkerCommand{App: a},
 		EmailResendBackfillCommand{App: a},
+		AIDoctorCommand{App: a},
 		EmailDoctorCommand{App: a},
 	}, append(operatorCommands(a), devCommands(a)...)...)
 }
