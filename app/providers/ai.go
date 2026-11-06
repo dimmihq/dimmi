@@ -39,7 +39,7 @@ func bootAI(a *app.App) error {
 	}
 	if a.LLM == nil {
 		a.LLM = managers.NewLLMManager(managers.LLMDeps{
-			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock,
+			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock, DB: a.DB,
 		})
 	}
 

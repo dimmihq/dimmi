@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/config"
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -62,6 +64,7 @@ with its updated_at, so a rotation or re-seal retires the old driver.
 */
 type LLMManager struct {
 	keys      *encryption.Keys
+	db        *database.DB
 	http      *httpclient.Client
 	config    config.AIConfig
 	clock     clock.Clock
@@ -93,11 +96,12 @@ type LLMDeps struct {
 	HTTP   *httpclient.Client
 	Config config.AIConfig
 	Clock  clock.Clock
+	DB     *database.DB
 }
 
 func NewLLMManager(deps LLMDeps) *LLMManager {
 	m := &LLMManager{
-		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: deps.Clock,
+		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: deps.Clock, db: deps.DB,
 		factories: map[enums.AIProvider]DriverFactory{}, cache: map[string]cachedDriver{},
 	}
 	m.registerBuiltins()
@@ -276,7 +280,56 @@ credentials; on success the key's updated_at bumps, retiring this
 driver from the cache.
 */
 func (s *oauthSource) refresh(ctx context.Context) (string, error) {
-	return "", fmt.Errorf("chatgpt refresh not wired")
+	if s.m.db == nil || s.creds.RefreshToken == "" {
+		return "", fmt.Errorf("chatgpt refresh unavailable")
+	}
+	cfg := s.m.config.ChatGPT
+
+	form := url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {cfg.ClientID},
+		"refresh_token": {s.creds.RefreshToken},
+	}
+	resp, err := s.m.http.New().
+		WithHeader("Content-Type", "application/x-www-form-urlencoded").
+		Post(ctx, cfg.TokenURL, form.Encode())
+	if err != nil {
+		return "", fmt.Errorf("refresh token: %w", err)
+	}
+
+	var tokens struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int    `json:"expires_in"`
+	}
+	if err := json.Unmarshal(resp.Body, &tokens); err != nil || tokens.AccessToken == "" {
+		return "", fmt.Errorf("bad refresh answer")
+	}
+	if tokens.RefreshToken == "" {
+		tokens.RefreshToken = s.creds.RefreshToken
+	}
+
+	s.creds.AccessToken = tokens.AccessToken
+	s.creds.RefreshToken = tokens.RefreshToken
+	s.creds.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+
+	sealed, err := encryption.Seal(ctx, s.m.keys,
+		encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: s.key.WorkspaceID.String()}},
+		s.creds)
+	if err != nil {
+		return "", fmt.Errorf("seal refreshed credentials: %w", err)
+	}
+
+	if _, err := models.New(s.m.db).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
+		WorkspaceID: s.key.WorkspaceID, ID: s.key.ID, Name: s.key.Name,
+		BaseUrl: s.key.BaseUrl, Region: s.key.Region, AuthType: s.key.AuthType,
+		CredentialsEncrypted: sealed, KeyHint: s.key.KeyHint, Config: s.key.Config,
+		Now: s.m.clock.Now(),
+	}); err != nil {
+		return "", fmt.Errorf("store refreshed credentials: %w", err)
+	}
+
+	return s.creds.AccessToken, nil
 }
 
 /*
