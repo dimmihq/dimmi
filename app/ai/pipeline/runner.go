@@ -311,7 +311,7 @@ func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, rec
 	counts := map[string]int32{}
 	counts[outcome] = 1
 
-	_, err := models.New(tx).AddSpend(ctx, models.AddSpendParams{
+	period, err := models.New(tx).AddSpend(ctx, models.AddSpendParams{
 		WorkspaceID: env.Workspace.ID, PeriodStart: pgtype.Date{Time: start, Valid: true},
 		CostMicros: recorder.Cost(), InputTokens: recorder.tokens.input,
 		CachedInputTokens: recorder.tokens.cached, OutputTokens: recorder.tokens.output,
@@ -321,6 +321,36 @@ func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, rec
 	})
 	if err != nil {
 		return
+	}
+
+	r.checkThresholds(ctx, tx, env, period)
+}
+
+/*
+checkThresholds marks the 50 and 80 percent notices and caps the
+period at a hundred, each once.
+*/
+func (r *Runner) checkThresholds(ctx context.Context, tx *database.Tx, env *env, period models.AiSpendPeriod) {
+	if env.Agent.MonthlySpendCapMicros == nil || *env.Agent.MonthlySpendCapMicros <= 0 {
+		return
+	}
+	cap := *env.Agent.MonthlySpendCapMicros
+	pct := int32(period.CostMicros * 100 / cap)
+
+	for _, threshold := range []int32{50, 80, 100} {
+		if pct >= threshold {
+			_ = models.New(tx).MarkSpendThreshold(ctx, models.MarkSpendThresholdParams{
+				WorkspaceID: env.Workspace.ID,
+				PeriodStart: period.PeriodStart, Threshold: threshold,
+			})
+		}
+	}
+	if pct >= 100 && period.CappedAt == nil {
+		now := r.Clock.Now()
+		_ = models.New(tx).SetSpendCap(ctx, models.SetSpendCapParams{
+			WorkspaceID: env.Workspace.ID, PeriodStart: period.PeriodStart,
+			CappedAt: &now, Now: now,
+		})
 	}
 }
 
