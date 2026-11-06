@@ -30,12 +30,15 @@ func TestConversationViewers(t *testing.T) {
 		watching := d.tc.ListenAs(bob, url)
 		require.Nil(t, watching.Subscribe("conversation:"+id).Error)
 
+		var seen *testkit.Response
 		require.Eventually(t, func() bool {
-			return d.owner.GetJSON(list).String("data.0.viewers.0.id") == memberID(member)
+			seen = d.owner.GetJSON(list)
+			return seen.String("data.0.viewers.0.id") == memberID(member)
 		}, testkit.RealtimeWait, 20*time.Millisecond)
-		d.owner.GetJSON(list).AssertJSONPath("data.0.viewers.0.name", bob.Name).
-			AssertJSONPath("data.0.viewers.#", 1)
-		in(d.tc, bob).GetJSON(list).AssertJSONPath("data.0.viewers", []any{})
+		seen.AssertJSONPath("data.0.viewers.0.name", bob.Name).AssertJSONPath("data.0.viewers.#", 1)
+		assert.Eventually(t, func() bool {
+			return in(d.tc, bob).GetJSON(list).AssertOK().String("data.0.viewers") == "[]"
+		}, testkit.RealtimeWait, 20*time.Millisecond)
 	})
 
 	t.Run("leaves viewers out unless asked, or when the workspace hides them", func(t *testing.T) {
@@ -43,7 +46,9 @@ func TestConversationViewers(t *testing.T) {
 		d := open(t)
 		d.customer(t, "ann", "Refund", "Please")
 
-		d.owner.GetJSON(list).AssertJSONPath("data.0.viewers", []any{})
+		assert.Eventually(t, func() bool {
+			return d.owner.GetJSON(list).AssertOK().String("data.0.viewers") == "[]"
+		}, testkit.RealtimeWait, 20*time.Millisecond)
 		d.owner.GetJSON("/api/v1/conversations?filter[view]=all").AssertJSONMissing("data.0.viewers")
 
 		d.owner.PatchJSON("/api/v1/workspace", testkit.JSON{"show_viewers_on_list": false}).AssertOK().
