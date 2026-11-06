@@ -136,7 +136,15 @@ export function AddProviderModal({
       </ModalHeader>
       {picked === null ? <ProviderGrid providers={choices} onPick={setPicked} /> : null}
       {picked?.auth_type === "oauth" ? (
-        <ChatGPTConnect workspace={workspace} descriptor={picked} onCancel={close} />
+        <ChatGPTConnect
+          workspace={workspace}
+          descriptor={picked}
+          onCancel={close}
+          onDone={() => {
+            setPicked(null);
+            onClose();
+          }}
+        />
       ) : null}
       {picked && picked.auth_type !== "oauth" ? (
         <ProviderForm

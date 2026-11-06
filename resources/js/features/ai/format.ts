@@ -9,59 +9,28 @@
 import type { AgentPatch, AgentView, AiAgent, AiModelEntry, AiProviderKey } from "@/lib/api/ai";
 
 /*
- * AgentChange is a change to the agent as the pages make it: the patch
- * the server takes, where a null cap means no cap, plus the classifier
- * model and the link allowlist.
+ * AgentChange is a change to the agent as the pages make it: exactly the
+ * patch the server takes, where a null or zero cap means no cap.
  */
-export type AgentChange = Omit<AgentPatch, "monthly_cap_usd"> & {
-  monthly_cap_usd?: number | null;
-  classifier_key_id?: string;
-  classifier_model?: string;
-  link_allowlist?: string[];
-};
-
-/*
- * AgentExtras are the agent's fields the server sends that the shared
- * type does not name yet.
- */
-export interface AgentExtras {
-  classifier_key_id?: string | null;
-  classifier_model?: string | null;
-  link_allowlist?: string[] | null;
-}
-
-/*
- * toPatch hands a change to the API, whose patch type does not yet know
- * a null cap or the extra fields; the server reads them as sent.
- */
-export function toPatch(change: AgentChange): AgentPatch {
-  return change as AgentPatch;
-}
-
-/*
- * extras reads the agent's fields the shared type does not name yet.
- */
-export function extras(agent: AiAgent): AgentExtras {
-  return agent as AiAgent & AgentExtras;
-}
+export type AgentChange = AgentPatch;
 
 /*
  * applyChange is the agent as it will be once the server takes the
- * change, for showing it straight away.
+ * change, for showing it straight away. A blank team or product name
+ * clears it, the way the server reads it.
  */
 export function applyChange(agent: AiAgent, change: AgentChange): AiAgent {
-  const { monthly_cap_usd, raise_priority_on_handoff, handoff_team_id, ...rest } = change;
+  const { monthly_cap_usd, handoff_team_id, product_name, ...rest } = change;
   const next: AiAgent = { ...agent, ...(rest as Partial<AiAgent>) };
 
   if (monthly_cap_usd !== undefined) {
-    next.monthly_spend_cap_micros = monthly_cap_usd === null ? null : Math.round(monthly_cap_usd * 1_000_000);
+    next.monthly_spend_cap_micros = monthly_cap_usd ? Math.round(monthly_cap_usd * 1_000_000) : null;
   }
-  if (raise_priority_on_handoff !== undefined || handoff_team_id !== undefined) {
-    next.handoff = {
-      ...agent.handoff,
-      ...(raise_priority_on_handoff === undefined ? {} : { raise_priority: raise_priority_on_handoff }),
-      ...(handoff_team_id === undefined ? {} : { target_team_id: handoff_team_id }),
-    };
+  if (handoff_team_id !== undefined) {
+    next.handoff_team_id = handoff_team_id || null;
+  }
+  if (product_name !== undefined) {
+    next.product_name = product_name || null;
   }
 
   return next;
@@ -106,28 +75,10 @@ export const statusLabels: Record<KeyStatus, string> = {
 };
 
 /*
- * modelIds reads the models a connection offers, which the server sends
- * as plain ids or as objects carrying one.
+ * modelCount says how many models a connection offers.
  */
-export function modelIds(models: unknown): string[] {
-  if (!Array.isArray(models)) {
-    return [];
-  }
-
-  return models.flatMap((model: unknown) => {
-    if (typeof model === "string") {
-      return [model];
-    }
-    if (model && typeof model === "object" && "id" in model && typeof model.id === "string") {
-      return [model.id];
-    }
-
-    return [];
-  });
-}
-
-export function modelCount(models: unknown): string {
-  const count = modelIds(models).length;
+export function modelCount(key: Pick<AiProviderKey, "models" | "models_count">): string {
+  const count = key.models_count ?? key.models?.length ?? 0;
 
   return count === 1 ? "1 model" : `${count} models`;
 }
@@ -172,7 +123,7 @@ export function modelsFor(key: AiProviderKey | undefined, catalog: AgentView["ca
       .map((entry) => [entry.id, entry]),
   );
 
-  return modelIds(key.models).map((id) => known.get(id) ?? bareModel(id, key.provider));
+  return (key.models ?? []).map((id) => known.get(id) ?? bareModel(id, key.provider));
 }
 
 function bareModel(id: string, provider: string): AiModelEntry {

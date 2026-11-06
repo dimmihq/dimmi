@@ -51,7 +51,7 @@ export function ImportSettings() {
 
 export function BillingSettings() {
   return (
-    <SettingsPage title="Billing" description="Pay for what you use. Dimmi agent usage is billed by your AI provider.">
+    <SettingsPage title="Billing" description="Pay for what you use. dimmi agent usage is billed by your AI provider.">
       <Section title="This month">
         <Row label="Usage so far" description="1,284 conversations · 3 seats">
           <span className="text-body-2-medium text-text-primary">$18.40</span>

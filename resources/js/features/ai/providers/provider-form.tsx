@@ -65,7 +65,7 @@ export function ProviderForm({
     };
     if (draft) {
       await updateAiKey(workspace, draft, body);
-      return (await testAiKey(workspace, draft)) as unknown as AiProviderKey;
+      return testAiKey(workspace, draft);
     }
     const created = await createAiKey(workspace, { provider, ...body });
     onDraft(created.id);
@@ -91,7 +91,7 @@ export function ProviderForm({
         return;
       }
       onDraft(null);
-      toast.success(`${saved.name} connected`, { description: modelCount(saved.models) });
+      toast.success(`${saved.name} connected`, { description: modelCount(saved) });
       onDone();
     } catch (error) {
       setProblems(problemsOf(error));

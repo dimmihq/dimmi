@@ -11,7 +11,7 @@ import { Switch } from "@/components/base/switch/switch";
 import { Row, Section } from "@/features/settings/layout";
 import type { AiAgent } from "@/lib/api/ai";
 
-import { type AgentChange, extras } from "../format";
+import type { AgentChange } from "../format";
 import { SavedTextarea, StackedRow } from "./fields";
 import { contactContexts, domains, unknownBehaviors } from "./options";
 
@@ -29,7 +29,7 @@ export function AnswersSection({
   const limits = replyLimits.includes(agent.max_ai_replies)
     ? replyLimits
     : [...replyLimits, agent.max_ai_replies].sort((a, b) => a - b);
-  const allowlist = (extras(agent).link_allowlist ?? []).join("\n");
+  const allowlist = agent.link_allowlist.join("\n");
 
   return (
     <Section title="Answers" description="How far it goes on its own.">
@@ -64,15 +64,6 @@ export function AnswersSection({
             </SelectItem>
           ))}
         </Select>
-      </Row>
-      <Row label="Raise priority on handover" description="Conversations it hands over jump the queue.">
-        <Switch
-          aria-label="Raise priority on handover"
-          size="sm"
-          isDisabled={!canWrite}
-          isSelected={agent.handoff?.raise_priority ?? false}
-          onChange={(raise_priority_on_handoff) => save({ raise_priority_on_handoff })}
-        />
       </Row>
       <Row label="Cite sources" description="Each answer links the articles it came from.">
         <Switch

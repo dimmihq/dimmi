@@ -10,15 +10,16 @@ import {
   maskedHint,
   modelCount,
   modelDetail,
-  modelIds,
   modelsFor,
   readiness,
   usd,
 } from "./format";
 import { checkFields, problemsOf } from "./providers/problems";
+import { failure } from "./providers/use-chatgpt-sign-in";
 
-const agent = {
-  id: "agent",
+const agent: AiAgent = {
+  id: "aia_1",
+  object: "ai_agent",
   name: "Ada",
   enabled: false,
   product_name: null,
@@ -31,33 +32,44 @@ const agent = {
   answer_model: null,
   fallback_key_id: null,
   fallback_model: null,
+  max_output_tokens: 600,
   max_ai_replies: 5,
   unknown_behavior: "offer_handoff",
+  grounding_mode: "citations",
   require_citations: true,
+  languages: [],
   default_language: "en",
   streaming: true,
   pii_redaction: true,
+  link_allowlist: [],
+  handoff_team_id: null,
+  raise_priority_on_handoff: false,
   monthly_spend_cap_micros: 25_000_000,
   actions_enabled: true,
   include_contact_context: "basic",
   office_hours: null,
-  handoff: {},
-} satisfies AiAgent;
+  updated_at: "2026-11-01T00:00:00Z",
+};
 
 function key(over: Partial<AiProviderKey>): AiProviderKey {
   return {
     id: "aik_1",
+    object: "ai_provider_key",
     name: "Anthropic",
     provider: "anthropic",
     base_url: null,
+    region: null,
     auth_type: "api_key",
     key_hint: "••••abcd",
     status: "valid",
     status_reason: null,
     models: [],
+    models_count: 0,
+    source: "dashboard",
     last_validated_at: null,
     last_used_at: null,
     created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-01T00:00:00Z",
     ...over,
   };
 }
@@ -82,6 +94,7 @@ function view(over: Partial<AgentView>): AgentView {
     ready: false,
     readiness_errors: [],
     managed: false,
+    prompt_version: "v1",
     ...over,
   };
 }
@@ -101,11 +114,9 @@ describe("ai format", () => {
     expect(keyStatus({ status: "unverified", provider: "openai" })).toBe("untested");
   });
 
-  it("reads models sent as ids or as objects", () => {
-    expect(modelIds(["a", { id: "b" }, 3, null])).toEqual(["a", "b"]);
-    expect(modelIds(null)).toEqual([]);
-    expect(modelCount(["a"])).toBe("1 model");
-    expect(modelCount(["a", "b"])).toBe("2 models");
+  it("counts a connection's models", () => {
+    expect(modelCount(key({ models: ["a"], models_count: 1 }))).toBe("1 model");
+    expect(modelCount(key({ models: ["a", "b"], models_count: 2 }))).toBe("2 models");
   });
 
   it("masks a key down to its last four", () => {
@@ -116,17 +127,21 @@ describe("ai format", () => {
 
   it("folds a change into the agent", () => {
     expect(applyChange(agent, { monthly_cap_usd: null }).monthly_spend_cap_micros).toBeNull();
+    expect(applyChange(agent, { monthly_cap_usd: 0 }).monthly_spend_cap_micros).toBeNull();
     expect(applyChange(agent, { monthly_cap_usd: 40 }).monthly_spend_cap_micros).toBe(40_000_000);
-    expect(applyChange(agent, { raise_priority_on_handoff: true }).handoff).toEqual({ raise_priority: true });
+    expect(applyChange(agent, { raise_priority_on_handoff: true }).raise_priority_on_handoff).toBe(true);
+    expect(applyChange(agent, { handoff_team_id: "team_1" }).handoff_team_id).toBe("team_1");
+    expect(applyChange({ ...agent, handoff_team_id: "team_1" }, { handoff_team_id: null }).handoff_team_id).toBeNull();
     expect(applyChange(agent, { tone: "concise" }).tone).toBe("concise");
   });
 
   it("prices models from the catalog, and lists bare ids it does not know", () => {
     const catalog = { dimmi: [sonnet] };
     expect(modelsFor(key({ provider: "dimmi" }), catalog)).toEqual([sonnet]);
-    expect(
-      modelsFor(key({ models: [{ id: "claude-sonnet" }, { id: "mystery" }] }), catalog).map((m) => m.display_name),
-    ).toEqual(["Claude Sonnet", "mystery"]);
+    expect(modelsFor(key({ models: ["claude-sonnet", "mystery"] }), catalog).map((m) => m.display_name)).toEqual([
+      "Claude Sonnet",
+      "mystery",
+    ]);
     expect(modelDetail(sonnet)).toBe("$3 in · $15 out per 1M tokens · 200K context");
     expect(contextSize(1_000_000)).toBe("1M");
   });
@@ -183,5 +198,16 @@ describe("ai format", () => {
     });
     expect(problemsOf(new ApiError(403, "forbidden", "No"))).toEqual({ form: "Only admins can add providers." });
     expect(problemsOf(new Error("offline")).form).toContain("could not reach the server");
+  });
+
+  it("explains why a ChatGPT sign-in stopped", () => {
+    expect(failure(new ApiError(422, "chatgpt_device_disabled", "off")).message).toContain("Use browser sign-in");
+    expect(failure(new ApiError(422, "oauth_state_invalid", "expired")).message).toBe(
+      "This sign-in expired. Start again.",
+    );
+    expect(failure(new ApiError(422, "something_new", "Plain words."))).toEqual({
+      code: "something_new",
+      message: "Plain words.",
+    });
   });
 });

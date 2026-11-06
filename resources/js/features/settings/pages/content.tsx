@@ -70,7 +70,7 @@ export function HelpCentersSettings() {
 
 export function KnowledgeSettings() {
   return (
-    <SettingsPage title="Knowledge" description="What Dimmi reads to answer customers, besides your help center.">
+    <SettingsPage title="Knowledge" description="What dimmi reads to answer customers, besides your help center.">
       <Section title="Sources" action={<Action>Add source</Action>}>
         <Item mark={<Glyph icon={RiGlobalLine} />} title="acme.com/docs" detail="Website · Synced daily · 214 pages">
           <Action>Sync now</Action>
@@ -227,8 +227,8 @@ export function EngageSettings() {
         <Row label="Ask after">
           <Choice label="Ask after" options={["10 minutes", "Straight away", "1 hour", "1 day"]} />
         </Row>
-        <Row label="Include conversations Dimmi solved">
-          <Toggle label="Include conversations Dimmi solved" on />
+        <Row label="Include conversations dimmi solved">
+          <Toggle label="Include conversations dimmi solved" on />
         </Row>
       </Section>
     </SettingsPage>

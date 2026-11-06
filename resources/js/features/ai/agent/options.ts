@@ -1,38 +1,73 @@
 /*
- * The choices the agent settings offer, each in the words a person
- * reads, with the value the server stores, and the small rules that go
+ * The choices the agent settings offer, one for every value the server
+ * accepts, each in the words a person reads, and the small rules that go
  * with them: the order channels are kept in, how a typed allowlist is
  * read, and which model a connection suggests.
  */
-import type { AiModelEntry } from "@/lib/api/ai";
+import {
+  AI_ASSIGNED_BEHAVIORS,
+  AI_CHANNELS,
+  AI_CONTACT_CONTEXTS,
+  AI_SCHEDULES,
+  AI_TONES,
+  AI_UNKNOWN_BEHAVIORS,
+  type AiAssignedBehavior,
+  type AiChannel,
+  type AiContactContext,
+  type AiModelEntry,
+  type AiSchedule,
+  type AiTone,
+  type AiUnknownBehavior,
+} from "@/lib/api/ai";
 
 /*
- * tones are the voices the agent can take, each with what it sounds
- * like.
+ * Choice is one value with its label and, where it helps, a line saying
+ * what it means.
  */
-export const tones = [
-  { id: "friendly", label: "Friendly", line: "Warm and plain-spoken, like a helpful colleague." },
-  { id: "professional", label: "Professional", line: "Polite and precise, without small talk." },
-  { id: "concise", label: "Concise", line: "The answer first, in as few words as it takes." },
-] as const;
+export interface Choice<T extends string> {
+  id: T;
+  label: string;
+  line: string;
+}
 
-export const channels = [
-  { id: "widget", label: "Messenger", line: "The chat on your site and in your app." },
-  { id: "email", label: "Email", line: "Replies to mail sent to your support addresses." },
-  { id: "api", label: "API", line: "Conversations your own systems start." },
-] as const;
+function choices<T extends string>(values: readonly T[], words: Record<T, [string, string]>): Choice<T>[] {
+  return values.map((id) => ({ id, label: words[id][0], line: words[id][1] }));
+}
 
-export const schedules = [
-  { id: "always", label: "Always", line: "Day and night, every day." },
-  { id: "inside_office_hours", label: "During office hours", line: "While the team is in, to take the first reply." },
-  { id: "outside_office_hours", label: "Outside office hours", line: "Only while the team is away." },
-] as const;
+export const tones = choices<AiTone>(AI_TONES, {
+  friendly: ["Friendly", "Warm and plain-spoken, like a helpful colleague."],
+  professional: ["Professional", "Polite and precise, without small talk."],
+  concise: ["Concise", "The answer first, in as few words as it takes."],
+});
 
-export const assignedBehaviors = [
-  { id: "skip_when_human_active", label: "Step back while a teammate is active" },
-  { id: "never_when_assigned", label: "Stop once someone is assigned" },
-  { id: "always", label: "Keep answering" },
-] as const;
+export const channels = choices<AiChannel>(AI_CHANNELS, {
+  widget: ["Messenger", "The chat on your site and in your app."],
+  email: ["Email", "Replies to mail sent to your support addresses."],
+  api: ["API", "Conversations your own systems start."],
+});
+
+export const schedules = choices<AiSchedule>(AI_SCHEDULES, {
+  always: ["Always", "Day and night, every day."],
+  outside_office_hours: ["Outside office hours", "Only while the team is away."],
+  inside_office_hours: ["During office hours", "While the team is in, to take the first reply."],
+});
+
+export const assignedBehaviors = choices<AiAssignedBehavior>(AI_ASSIGNED_BEHAVIORS, {
+  skip_when_human_active: ["Step back while a teammate is active", ""],
+  never_when_assigned: ["Stop once someone is assigned", ""],
+  always: ["Keep answering", ""],
+});
+
+export const unknownBehaviors = choices<AiUnknownBehavior>(AI_UNKNOWN_BEHAVIORS, {
+  offer_handoff: ["Offer a teammate", ""],
+  handoff: ["Hand over straight away", ""],
+  say_unknown: ["Just say it doesn't know", ""],
+});
+
+export const contactContexts = choices<AiContactContext>(AI_CONTACT_CONTEXTS, {
+  none: ["None", "Nothing about the customer beyond the conversation."],
+  basic: ["Basic", "Name, plan and company, so answers can be personal."],
+});
 
 /*
  * toggled is the channels with one switched on or off, in the order the
@@ -49,19 +84,10 @@ export function toggled(current: string[], channel: string, on: boolean): string
   return channels.map((c) => c.id as string).filter((id) => next.has(id));
 }
 
-export const unknownBehaviors = [
-  { id: "offer_handoff", label: "Offer a teammate" },
-  { id: "handoff", label: "Hand over straight away" },
-] as const;
-
-export const contactContexts = [
-  { id: "basic", label: "Basic", line: "Name, plan and company, so answers can be personal." },
-  { id: "none", label: "None", line: "Nothing about the customer beyond the conversation." },
-] as const;
-
 /*
  * domains reads the allowlist as typed: one site per line or between
- * commas, without the scheme.
+ * commas, without the scheme. "*.example.com" keeps its star and covers
+ * every subdomain.
  */
 export function domains(text: string): string[] {
   return [

@@ -12,6 +12,7 @@ import { PageSkeleton, SettingsPage } from "@/features/settings/layout";
 
 import { useAgent, useAgentSave } from "../use-agent";
 import { AnswersSection, PrivacySection } from "./answers-section";
+import { HandoverSection } from "./handover-section";
 import { IdentitySection } from "./identity-section";
 import { ModelSection } from "./model-section";
 import { SpendSection } from "./spend-section";
@@ -58,6 +59,7 @@ export function AgentSettings() {
         <ModelSection view={view.data} canWrite={canWrite} save={save} />
       </div>
       <AnswersSection agent={agent} canWrite={canWrite} save={save} />
+      <HandoverSection workspace={workspace} agent={agent} canWrite={canWrite} save={save} />
       <PrivacySection agent={agent} canWrite={canWrite} save={save} />
       <SpendSection workspace={workspace} agent={agent} canWrite={canWrite} save={save} />
     </SettingsPage>

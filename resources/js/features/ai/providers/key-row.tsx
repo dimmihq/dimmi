@@ -71,7 +71,7 @@ function detailOf(connection: AiProviderKey): string {
   if (connection.base_url) {
     parts.push(connection.base_url.replace(/^https?:\/\//, ""));
   }
-  parts.push(modelCount(connection.models));
+  parts.push(modelCount(connection));
 
   return parts.join(" · ");
 }
@@ -84,7 +84,7 @@ export function BuiltInRow({ connection }: { connection: AiProviderKey }) {
     <Item
       mark={<ProviderMark provider="dimmi" />}
       title="dimmi"
-      detail={`Included with dimmi · no key needed · ${modelCount(connection.models)}`}
+      detail={`Included with dimmi · no key needed · ${modelCount(connection)}`}
     >
       <Chip variant="caption" color="lime">
         Ready
@@ -192,9 +192,8 @@ export function KeyRow({
   const label = `${connection.name} actions`;
   const test = useMutation({
     mutationFn: () => testAiKey(workspace, connection.id),
-    onSuccess: async (checked) => {
-      const tested = checked as Partial<AiProviderKey>;
-      if (keyStatus({ status: tested.status ?? "", provider: connection.provider }) === "ok") {
+    onSuccess: async (tested) => {
+      if (keyStatus(tested) === "ok") {
         toast.success("Connection works", { description: `${connection.name} answered the check.` });
       } else {
         toast.error("Connection failed", {

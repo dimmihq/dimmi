@@ -286,8 +286,35 @@ export function askPlayground(workspace: string, body: { message: string; conver
   return request<AiPlaygroundAnswer>("POST", "/ai/playground", body, { workspace });
 }
 
-export function startChatGPTConnect(workspace: string) {
-  return request<{ url: string; state: string }>("POST", "/ai/chatgpt/connect", undefined, {
-    workspace,
-  });
+/*
+ * ChatGPTStart is a started subscription sign-in: a device code to type
+ * on OpenAI's page, or a browser address whose final address the person
+ * pastes back.
+ */
+export type ChatGPTStart =
+  | {
+      method: "device";
+      state: string;
+      url: string;
+      user_code: string;
+      interval_seconds: number;
+      expires_at: string;
+    }
+  | { method: "browser"; state: string; url: string; redirect_uri: string; expires_at: string };
+
+/*
+ * ChatGPTProgress is where a sign-in stands: still waiting for approval,
+ * or connected as a new connection.
+ */
+export type ChatGPTProgress =
+  | { status: "pending"; interval_seconds?: number }
+  | { status: "connected"; key_id: string; account_id: string };
+
+export function startChatGPTConnect(workspace: string, method: "device" | "browser" = "device") {
+  return request<ChatGPTStart>("POST", "/ai/chatgpt/connect", { method }, { workspace });
+}
+
+/* code is the browser sign-in's final address, or its code; a device sign-in sends none. */
+export function completeChatGPTConnect(workspace: string, body: { state: string; code?: string }) {
+  return request<ChatGPTProgress>("POST", "/ai/chatgpt/callback", body, { workspace });
 }

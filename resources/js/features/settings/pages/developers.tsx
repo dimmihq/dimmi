@@ -58,12 +58,12 @@ export function AppsSettings() {
   return (
     <SettingsPage
       title="Authorized apps"
-      description="Agents, the CLI and other apps people let act in Dimmi with their account."
+      description="Agents, the CLI and other apps people let act in dimmi with their account."
     >
       <Section title="Your apps">
         <Item
           mark={<Glyph icon={RiTerminalBoxLine} />}
-          title="Dimmi CLI"
+          title="dimmi CLI"
           detail="Conversations, articles · This Mac · Used today"
         >
           <Action>Revoke</Action>

@@ -22,7 +22,7 @@ const items: LibraryItem[] = [
   { id: "a1", kind: "article", title: "Reset your password", detail: "Help center · Account" },
   { id: "a2", kind: "article", title: "Sign in with a one-time code", detail: "Help center · Account" },
   { id: "a3", kind: "article", title: "Why reset links expire", detail: "Help center · Security" },
-  { id: "a4", kind: "article", title: "Use Dimmi with a password manager", detail: "Help center · Account" },
+  { id: "a4", kind: "article", title: "Use dimmi with a password manager", detail: "Help center · Account" },
   {
     id: "r1",
     kind: "reply",

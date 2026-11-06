@@ -1,5 +1,5 @@
 /*
- * The AI providers page: the model connections the agent and Operator
+ * The AI providers page: the model connections the agent
  * can write with. dimmi's own models come first when the install offers
  * them, then every key the workspace added, each with how its last check
  * went. Adding, testing, renaming and removing are for people the server
@@ -56,7 +56,7 @@ export function ProvidersSettings() {
   return (
     <SettingsPage
       title="AI providers"
-      description="The models the agent and Operator write with. Your own keys are billed by the provider, at their prices."
+      description="The models the agent answers with. Your own keys are billed by the provider, at their prices."
     >
       <Section
         title="Connections"

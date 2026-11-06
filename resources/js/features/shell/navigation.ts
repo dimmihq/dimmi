@@ -115,14 +115,14 @@ export const workspacePages = {
     "Workflows",
     RiGitBranchLine,
     "/d/workflows",
-    "Route conversations and decide when Dimmi takes them.",
+    "Route conversations and decide when dimmi takes them.",
   ),
   procedures: page(
     "procedures",
     "Procedures",
     RiListOrdered2,
     "/d/procedures",
-    "Step-by-step instructions Dimmi follows for particular requests.",
+    "Step-by-step instructions dimmi follows for particular requests.",
   ),
   docs: page(
     "docs",
@@ -255,7 +255,7 @@ export const settingsPages = {
     "AI providers",
     RiCpuLine,
     "/d/settings/ai-providers",
-    "The models the agent and Operator write with.",
+    "The models the agent answers with.",
   ),
   "help-centers": page(
     "settings-help-centers",
@@ -269,7 +269,7 @@ export const settingsPages = {
     "Knowledge",
     RiDatabase2Line,
     "/d/settings/knowledge",
-    "Sites, files and repositories Dimmi learns from.",
+    "Sites, files and repositories dimmi learns from.",
   ),
   changelog: page(
     "settings-changelog",
@@ -311,7 +311,7 @@ export const settingsPages = {
     "Authorized apps",
     RiApps2Line,
     "/d/settings/apps",
-    "Agents, the CLI and other apps you have let act in Dimmi for you.",
+    "Agents, the CLI and other apps you have let act in dimmi for you.",
   ),
   github: page(
     "settings-github",

@@ -14,7 +14,7 @@ import { useAccount } from "@/features/settings/use-account";
 import { type AgentView, agentQuery, aiKey, updateAgent } from "@/lib/api/ai";
 import { ApiError } from "@/lib/api/client";
 
-import { type AgentChange, applyChange, toPatch } from "./format";
+import { type AgentChange, applyChange } from "./format";
 
 /*
  * useAgent loads the agent view, and says whether the reader may change
@@ -52,7 +52,7 @@ export function useAgentSave(workspace: string) {
   const key = agentQuery(workspace).queryKey;
 
   const save = useMutation({
-    mutationFn: (change: AgentChange) => updateAgent(workspace, toPatch(change)),
+    mutationFn: (change: AgentChange) => updateAgent(workspace, change),
     onMutate: async (change) => {
       await client.cancelQueries({ queryKey: key });
       const before = client.getQueryData<AgentView>(key);

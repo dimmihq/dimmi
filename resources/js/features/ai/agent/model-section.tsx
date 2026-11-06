@@ -3,18 +3,15 @@
  * the model on it, each model with its price per million tokens and how
  * much it can read at once. Switching connections keeps the model when
  * the new one offers it, and otherwise picks the model suggested for
- * answers. A smaller model for sorting messages hides under Advanced.
+ * answers.
  */
-import { RiArrowDownSLine } from "@remixicon/react";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Row, Section } from "@/features/settings/layout";
 import type { AgentView, AiModelEntry, AiProviderKey } from "@/lib/api/ai";
-import { cx } from "@/utils/cx";
 
-import { type AgentChange, extras, modelDetail, modelsFor, usableKeys } from "../format";
+import { type AgentChange, modelDetail, modelsFor, usableKeys } from "../format";
 import { ProviderMark } from "../provider-mark";
 import { preferred } from "./options";
 
@@ -110,8 +107,6 @@ export function ModelSection({
   const answerKey = keys.find((key) => key.id === agent.answer_key_id);
   const models = modelsFor(answerKey, catalog);
   const current = models.find((model) => model.id === agent.answer_model);
-  const classifier = extras(agent).classifier_model ?? null;
-  const [advanced, setAdvanced] = useState(Boolean(classifier));
 
   if (keys.length === 0) {
     return (
@@ -156,32 +151,6 @@ export function ModelSection({
           onPick={(answer_model) => save({ answer_model })}
         />
       </Row>
-      <button
-        type="button"
-        aria-expanded={advanced}
-        onClick={() => setAdvanced(!advanced)}
-        className="flex min-h-[44px] items-center gap-1 pe-3 text-start text-body-2-medium text-text-secondary outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-      >
-        Advanced
-        <RiArrowDownSLine aria-hidden className={cx("size-4 transition-transform", advanced && "rotate-180")} />
-      </button>
-      {advanced ? (
-        <Row
-          label="Sorting model"
-          description="A small, fast model that reads each message first. Optional; the answer model does it otherwise."
-        >
-          <ModelSelect
-            label="Sorting model"
-            models={models}
-            value={classifier}
-            disabled={!canWrite || !answerKey}
-            placeholder="Same as answers"
-            onPick={(classifier_model) =>
-              save({ classifier_model, ...(answerKey ? { classifier_key_id: answerKey.id } : {}) })
-            }
-          />
-        </Row>
-      ) : null}
     </Section>
   );
 }
