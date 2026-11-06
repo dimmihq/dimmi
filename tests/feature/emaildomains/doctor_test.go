@@ -1,12 +1,14 @@
 package emaildomains_test
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/dns"
+	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/tests"
@@ -43,9 +45,11 @@ func TestEmailDoctor(t *testing.T) {
 		tc.ActingAsOwner().PostJSON("/api/v1/email-domains", map[string]any{"domain": "acme.test"}).AssertCreated()
 
 		got := diagnose(tc, false)
+		relay, err := url.Parse(testkit.Env(t, "MAIL_SMTP_URL"))
+		require.NoError(t, err)
 
 		assert.Equal(t, []string{
-			"[ok] Customer mail leaves through the SMTP relay localhost.",
+			"[ok] Customer mail leaves through the SMTP relay " + relay.Hostname() + ".",
 			"[info] dimmi never runs a mail server of its own: mail arrives through your provider's inbound service.",
 			"[ok] inbound.test receives mail at inbound-smtp.eu-west-1.amazonaws.com.",
 			"[info] 1 workspace(s) added acme.test: pending.",
