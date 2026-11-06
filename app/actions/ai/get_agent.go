@@ -180,14 +180,15 @@ func ensureManagedKey(ctx context.Context, d seedDeps, tx *database.Tx,
 		return nil, nil
 	}
 
+	modelsJSON, _ := json.Marshal(managedModelIDs())
+
 	key, err := models.New(tx).FindManagedProviderKey(ctx, workspaceID)
 	if err == nil {
-		return &key, nil
+		return refreshManagedKey(ctx, d, tx, key)
 	}
 
-	modelsJSON, _ := json.Marshal(managedModelIDs())
 	created, err := models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
-		WorkspaceID: workspaceID, Name: "Dimmi (built-in)", Provider: "dimmi",
+		WorkspaceID: workspaceID, Name: managedKeyName, Provider: "dimmi",
 		AuthType: "managed", Status: "valid", StatusReason: new("built-in provider"),
 		Models: modelsJSON, ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
 		Source: "system", Now: d.clock.Now(),
@@ -196,6 +197,59 @@ func ensureManagedKey(ctx context.Context, d seedDeps, tx *database.Tx,
 		return nil, fmt.Errorf("create managed key: %w", err)
 	}
 	return &created, nil
+}
+
+/*
+managedKeyName is what the built-in connection is called.
+*/
+const managedKeyName = "dimmi"
+
+/*
+refreshManagedKey brings an existing built-in connection up to date:
+the models the install offers today, which change as the supported
+catalog does, and its current name. A connection already current is
+returned untouched, so reading the agent writes nothing.
+*/
+func refreshManagedKey(ctx context.Context, d seedDeps, tx *database.Tx,
+	key models.AiProviderKey,
+) (*models.AiProviderKey, error) {
+	modelsJSON, _ := json.Marshal(managedModelIDs())
+	var err error
+	if key.Name != managedKeyName {
+		key, err = models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
+			WorkspaceID: key.WorkspaceID, ID: key.ID, Name: managedKeyName, BaseUrl: key.BaseUrl,
+			Region: key.Region, AuthType: key.AuthType, CredentialsEncrypted: key.CredentialsEncrypted,
+			KeyHint: key.KeyHint, Config: key.Config, Now: d.clock.Now(),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("rename managed key: %w", err)
+		}
+	}
+	if sameModels(key.Models, modelsJSON) {
+		return &key, nil
+	}
+
+	key, err = models.New(tx).UpdateProviderKeyStatus(ctx, models.UpdateProviderKeyStatusParams{
+		WorkspaceID: key.WorkspaceID, ID: key.ID, Status: key.Status, StatusReason: key.StatusReason,
+		LastError: key.LastError, LastValidatedAt: key.LastValidatedAt, LastErrorAt: key.LastErrorAt,
+		Models: modelsJSON, ProviderInfo: key.ProviderInfo, Now: d.clock.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("refresh managed models: %w", err)
+	}
+	return &key, nil
+}
+
+/*
+sameModels reports whether two model lists name the same ids in the
+same order, however their JSON is spaced.
+*/
+func sameModels(stored, want json.RawMessage) bool {
+	var a, b []string
+	if json.Unmarshal(stored, &a) != nil || json.Unmarshal(want, &b) != nil {
+		return false
+	}
+	return slices.Equal(a, b)
 }
 
 /*
@@ -246,7 +300,7 @@ func providers(cfg config.AIConfig) []ProviderDescriptor {
 
 	return []ProviderDescriptor{
 		{
-			ID: enums.AIProviderDimmi, Name: "Dimmi (built-in)",
+			ID: enums.AIProviderDimmi, Name: managedKeyName,
 			AuthType: "managed", Available: managedUp,
 		},
 		{
