@@ -1,0 +1,2437 @@
+{
+  "components": {
+    "schemas": {
+      "Author": {
+        "additionalProperties": false,
+        "properties": {
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "name",
+          "avatar_url"
+        ],
+        "type": "object"
+      },
+      "AvailabilityResource": {
+        "additionalProperties": false,
+        "properties": {
+          "object": {
+            "type": "string"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "reply_time": {
+            "type": "string"
+          },
+          "reply_time_text": {
+            "type": "string"
+          },
+          "server_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "team": {
+            "items": {
+              "$ref": "#/components/schemas/TeamFace"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "within_hours": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "object",
+          "online",
+          "within_hours",
+          "reply_time",
+          "reply_time_text",
+          "team",
+          "server_time"
+        ],
+        "type": "object"
+      },
+      "Branding": {
+        "additionalProperties": false,
+        "properties": {
+          "locked": {
+            "type": "boolean"
+          },
+          "show": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "show",
+          "locked",
+          "url"
+        ],
+        "type": "object"
+      },
+      "CollectionWidgetConversation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetConversation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWidgetConversationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWidgetConversationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionWidgetMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetMessage"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWidgetMessageMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWidgetMessageMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "Config": {
+        "additionalProperties": false,
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/ConfigAppearance"
+          },
+          "branding": {
+            "$ref": "#/components/schemas/Branding"
+          },
+          "company": {
+            "$ref": "#/components/schemas/ConfigCompany"
+          },
+          "config_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "customer_status": {
+            "type": "boolean"
+          },
+          "delay_notice": {
+            "type": "boolean"
+          },
+          "dir": {
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/ConfigFeatures"
+          },
+          "home_links": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigHomeLink"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "honeypot_field": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "locales": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "object": {
+            "type": "string"
+          },
+          "open_to": {
+            "type": "string"
+          },
+          "privacy": {
+            "$ref": "#/components/schemas/ConfigPrivacy"
+          },
+          "realtime": {
+            "$ref": "#/components/schemas/ConfigRealtime"
+          },
+          "show_availability": {
+            "type": "boolean"
+          },
+          "show_team_avatars": {
+            "type": "boolean"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/ConfigSurface"
+          },
+          "tabs": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "texts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "object",
+          "app_id",
+          "config_version",
+          "company",
+          "appearance",
+          "texts",
+          "locale",
+          "dir",
+          "locales",
+          "tabs",
+          "open_to",
+          "show_team_avatars",
+          "show_availability",
+          "customer_status",
+          "delay_notice",
+          "privacy",
+          "home_links",
+          "features",
+          "branding",
+          "realtime",
+          "honeypot_field"
+        ],
+        "type": "object"
+      },
+      "ConfigAppearance": {
+        "additionalProperties": false,
+        "properties": {
+          "background": {
+            "$ref": "#/components/schemas/ConfigBackground"
+          },
+          "button_color": {
+            "type": "string"
+          },
+          "button_ink": {
+            "type": "string"
+          },
+          "font": {
+            "type": "string"
+          },
+          "header_color": {
+            "type": "string"
+          },
+          "header_ink": {
+            "type": "string"
+          },
+          "launcher": {
+            "$ref": "#/components/schemas/ConfigLauncher"
+          },
+          "padding_x": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "padding_y": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "position": {
+            "type": "string"
+          },
+          "primary_color": {
+            "type": "string"
+          },
+          "sound": {
+            "type": "boolean"
+          },
+          "theme": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "primary_color",
+          "header_color",
+          "button_color",
+          "header_ink",
+          "button_ink",
+          "background",
+          "theme",
+          "position",
+          "padding_x",
+          "padding_y",
+          "launcher",
+          "font",
+          "sound"
+        ],
+        "type": "object"
+      },
+      "ConfigBackground": {
+        "additionalProperties": false,
+        "properties": {
+          "fade": {
+            "type": "boolean"
+          },
+          "gradient": {
+            "$ref": "#/components/schemas/ConfigGradient"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "fade"
+        ],
+        "type": "object"
+      },
+      "ConfigCompany": {
+        "additionalProperties": false,
+        "properties": {
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "logo_url"
+        ],
+        "type": "object"
+      },
+      "ConfigDevContext": {
+        "additionalProperties": false,
+        "properties": {
+          "console": {
+            "type": "boolean"
+          },
+          "network": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "console",
+          "network"
+        ],
+        "type": "object"
+      },
+      "ConfigFeatures": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_agent": {
+            "type": "boolean"
+          },
+          "allow_anonymous": {
+            "type": "boolean"
+          },
+          "attachments": {
+            "type": "boolean"
+          },
+          "collect_email": {
+            "type": "string"
+          },
+          "dev_context": {
+            "$ref": "#/components/schemas/ConfigDevContext"
+          },
+          "help_tab": {
+            "type": "boolean"
+          },
+          "intercom_shim": {
+            "type": "boolean"
+          },
+          "max_attachment_mb": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "require_email_when_offline": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attachments",
+          "max_attachment_mb",
+          "help_tab",
+          "ai_agent",
+          "collect_email",
+          "require_email_when_offline",
+          "allow_anonymous",
+          "intercom_shim",
+          "dev_context"
+        ],
+        "type": "object"
+      },
+      "ConfigGradient": {
+        "additionalProperties": false,
+        "properties": {
+          "angle": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "angle"
+        ],
+        "type": "object"
+      },
+      "ConfigHomeLink": {
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "icon"
+        ],
+        "type": "object"
+      },
+      "ConfigLauncher": {
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "shape": {
+            "type": "string"
+          },
+          "style": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "style",
+          "shape",
+          "label",
+          "icon",
+          "image_url"
+        ],
+        "type": "object"
+      },
+      "ConfigPrivacy": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "url"
+        ],
+        "type": "object"
+      },
+      "ConfigRealtime": {
+        "additionalProperties": false,
+        "properties": {
+          "polling_interval_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "token_url": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "token_url",
+          "polling_interval_ms"
+        ],
+        "type": "object"
+      },
+      "ConfigSurface": {
+        "additionalProperties": false,
+        "properties": {
+          "anonymous": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "dynamic": {
+            "type": "boolean"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "dynamic",
+          "anonymous"
+        ],
+        "type": "object"
+      },
+      "MetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "poll_after_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "server_time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cursor",
+          "poll_after_ms",
+          "has_more",
+          "server_time"
+        ],
+        "type": "object"
+      },
+      "PostedMessageMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_status": {
+            "type": "string"
+          },
+          "redirected_from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reopened": {
+            "type": "boolean"
+          },
+          "server_time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_status",
+          "reopened",
+          "redirected_from",
+          "server_time"
+        ],
+        "type": "object"
+      },
+      "PostedMessageOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetMessage"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PostedMessageMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "ReadStateResource": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_id": {
+            "type": "string"
+          },
+          "last_read_message_id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "unread_count": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object",
+          "conversation_id",
+          "last_read_message_id",
+          "unread_count"
+        ],
+        "type": "object"
+      },
+      "Realtime": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "token_url": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "channel",
+          "token_url"
+        ],
+        "type": "object"
+      },
+      "RealtimeTokenResource": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "token",
+          "expires_at",
+          "url",
+          "channel"
+        ],
+        "type": "object"
+      },
+      "ResourceAvailabilityResource": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AvailabilityResource"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Config"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceReadStateResource": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReadStateResource"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceRealtimeTokenResource": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RealtimeTokenResource"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWidgetAttachment": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetAttachment"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWidgetConversation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetConversation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWidgetProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetProfile"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWidgetSession": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetSession"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWidgetUpload": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetUpload"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResponseError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "errors": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "code"
+        ],
+        "type": "object"
+      },
+      "StartedConversation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetConversation"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/StartedConversationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "StartedConversationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/WidgetMessage"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "StoreWidgetAttachmentRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "content_type": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filename",
+          "content_type",
+          "size_bytes"
+        ],
+        "type": "object"
+      },
+      "StoreWidgetPingRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "context": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "page": {
+            "$ref": "#/components/schemas/WidgetPageBody"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "StoreWidgetSessionBody": {
+        "additionalProperties": true,
+        "properties": {
+          "app_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "context": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "locale": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "page": {
+            "$ref": "#/components/schemas/WidgetPageBody"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetPageBody"
+            },
+            "maxItems": 10,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "previous_token": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "sdk": {
+            "$ref": "#/components/schemas/WidgetSDKBody"
+          },
+          "test_token": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "timezone": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "user_jwt": {
+            "maxLength": 8192,
+            "type": "string"
+          },
+          "website": {
+            "maxLength": 1000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_id"
+        ],
+        "type": "object"
+      },
+      "StoreWidgetTypingRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "state": {
+            "enum": [
+              "started",
+              "stopped"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "type": "object"
+      },
+      "TeamFace": {
+        "additionalProperties": false,
+        "properties": {
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "avatar_url"
+        ],
+        "type": "object"
+      },
+      "UpdateItem": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "payload": {}
+        },
+        "required": [
+          "event",
+          "id",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "UpdateWidgetAttachmentRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "status": {
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "UpdateWidgetContactBody": {
+        "additionalProperties": true,
+        "properties": {
+          "custom_attributes": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "email": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "phone": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateWidgetReadStateRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "last_read_message_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "last_read_message_id"
+        ],
+        "type": "object"
+      },
+      "UpdatesOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/UpdateItem"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "WidgetAttachment": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "type": "boolean"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "height": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "width": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "url",
+          "width",
+          "height"
+        ],
+        "type": "object"
+      },
+      "WidgetContact": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "kind",
+          "name",
+          "email"
+        ],
+        "type": "object"
+      },
+      "WidgetConversation": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_state": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "customer_status": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "imported": {
+            "type": "boolean"
+          },
+          "last_message": {
+            "$ref": "#/components/schemas/WidgetLastMessage"
+          },
+          "last_message_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "number": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "object": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unread_count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "widget_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "number",
+          "status",
+          "subject",
+          "last_message",
+          "unread_count",
+          "ai_state",
+          "customer_status",
+          "widget_id",
+          "created_at",
+          "last_message_at"
+        ],
+        "type": "object"
+      },
+      "WidgetIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "error",
+          "warnings"
+        ],
+        "type": "object"
+      },
+      "WidgetLastMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "excerpt",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "WidgetMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetAttachment"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "read_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "conversation_id",
+          "client_id",
+          "author",
+          "body",
+          "attachments",
+          "created_at",
+          "read_at"
+        ],
+        "type": "object"
+      },
+      "WidgetMessageBody": {
+        "additionalProperties": true,
+        "properties": {
+          "attachment_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "body": {
+            "maxLength": 262144,
+            "type": "string"
+          },
+          "client_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "context": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "page": {
+            "$ref": "#/components/schemas/WidgetPageBody"
+          },
+          "website": {
+            "maxLength": 1000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id"
+        ],
+        "type": "object"
+      },
+      "WidgetPageBody": {
+        "additionalProperties": true,
+        "properties": {
+          "referrer": {
+            "maxLength": 4096,
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "WidgetProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "custom_attributes": {},
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "type": "string"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "email_verified",
+          "phone",
+          "locale",
+          "custom_attributes",
+          "id",
+          "object",
+          "kind",
+          "name",
+          "email"
+        ],
+        "type": "object"
+      },
+      "WidgetSDKBody": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "WidgetSession": {
+        "additionalProperties": false,
+        "properties": {
+          "config_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/WidgetContact"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/WidgetIdentity"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "open_conversation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "realtime": {
+            "$ref": "#/components/schemas/Realtime"
+          },
+          "server_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "test": {
+            "type": "boolean"
+          },
+          "token": {
+            "type": "string"
+          },
+          "unread_count": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "kind",
+          "test",
+          "expires_at",
+          "contact",
+          "identity",
+          "unread_count",
+          "open_conversation_ids",
+          "realtime",
+          "config_version",
+          "server_time"
+        ],
+        "type": "object"
+      },
+      "WidgetUpload": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "object": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/WidgetUploadTarget"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "status",
+          "upload",
+          "links"
+        ],
+        "type": "object"
+      },
+      "WidgetUploadTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "method": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "url",
+          "headers",
+          "expires_at"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Dimmi Messenger API",
+    "version": "2026-11-01"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/apps/{app}/availability": {
+      "get": {
+        "operationId": "widget.apps.availability.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAvailabilityResource"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/apps/{app}/config": {
+      "get": {
+        "operationId": "widget.apps.config.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "app",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "v",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-None-Match",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConfig"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Etag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/attachments": {
+      "post": {
+        "operationId": "widget.attachments.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetAttachmentRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetUpload"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/attachments/{attachment}": {
+      "patch": {
+        "operationId": "widget.attachments.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWidgetAttachmentRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetAttachment"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/contact": {
+      "get": {
+        "operationId": "widget.contact.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "widget.contact.update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWidgetContactBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetProfile"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "operationId": "widget.conversations.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWidgetConversation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "widget.conversations.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetMessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedConversation"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}": {
+      "get": {
+        "operationId": "widget.conversations.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetConversation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/messages": {
+      "get": {
+        "operationId": "widget.conversations.messages.index",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "format": "int64",
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWidgetMessage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "widget.conversations.messages.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetMessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostedMessageOutputBody"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/read-state": {
+      "patch": {
+        "operationId": "widget.conversations.read-state.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWidgetReadStateRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceReadStateResource"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/typing-indicators": {
+      "post": {
+        "operationId": "widget.conversations.typing-indicators.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetTypingRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/pings": {
+      "post": {
+        "operationId": "widget.pings.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetPingRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/realtime-tokens": {
+      "post": {
+        "operationId": "widget.realtime-tokens.store",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceRealtimeTokenResource"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/session": {
+      "delete": {
+        "operationId": "widget.session.destroy",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      },
+      "get": {
+        "operationId": "widget.session.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetSession"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "post": {
+        "operationId": "widget.sessions.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetSession"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/updates": {
+      "get": {
+        "operationId": "widget.updates.index",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatesOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/widget/v1"
+    }
+  ]
+}

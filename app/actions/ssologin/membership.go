@@ -16,6 +16,7 @@
 package ssologin
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -116,12 +117,12 @@ their role.
 func (a *CompleteSSOLogin) applyGroups(
 	ctx context.Context, tx *database.Tx, in CompleteSSOLoginInput, member models.WorkspaceMember,
 ) error {
-	if member.Role == string(enums.RoleOwner) || len(in.Identity.Groups) == 0 {
+	if appauth.IsOwnerRole(enums.Role(member.Role)) || len(in.Identity.Groups) == 0 {
 		return nil
 	}
 
 	mapped, ok := highest(in.Connection.GroupRoleMap, in.Identity.Groups)
-	if !ok || (mapped.Role == member.Role && sameRole(mapped.CustomRoleID, member.CustomRoleID)) {
+	if !ok || (!appauth.RoleChanged(member.Role, mapped.Role) && sameRole(mapped.CustomRoleID, member.CustomRoleID)) {
 		return nil
 	}
 
@@ -130,7 +131,7 @@ func (a *CompleteSSOLogin) applyGroups(
 		return err
 	}
 
-	if updated.Role == member.Role {
+	if !appauth.RoleChanged(member.Role, updated.Role) {
 		return nil
 	}
 
@@ -174,11 +175,9 @@ func highest(mappings []sso.GroupRole, groups []string) (sso.GroupRole, bool) {
 			continue
 		}
 
-		if m.Role == "" {
-			m.Role = string(enums.RoleMember)
-		}
+		m.Role = cmp.Or(m.Role, string(enums.RoleMember))
 
-		if !found || (m.Role == string(enums.RoleAdmin) && best.Role != string(enums.RoleAdmin)) {
+		if !found || appauth.RoleOutranks(enums.Role(m.Role), enums.Role(best.Role)) {
 			best, found = m, true
 		}
 	}

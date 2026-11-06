@@ -97,8 +97,8 @@ export function EmailRow({ email, hasPassword }: { email: string; hasPassword: b
             <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
-            <Button type="submit" disabled={typed === "" || send.isPending}>
-              {send.isPending ? "Sending…" : "Send link"}
+            <Button type="submit" loading={send.isPending} disabled={typed === ""}>
+              Send link
             </Button>
           </ModalFooter>
         </form>

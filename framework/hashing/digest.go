@@ -17,6 +17,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"hash"
 )
 
 /*
@@ -26,6 +27,14 @@ func SHA256(data []byte) []byte {
 	sum := sha256.Sum256(data)
 
 	return sum[:]
+}
+
+/*
+NewSHA256 returns a SHA-256 digest to write content into piece by piece,
+for content too large to hold at once.
+*/
+func NewSHA256() hash.Hash {
+	return sha256.New()
 }
 
 /*

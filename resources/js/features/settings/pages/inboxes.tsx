@@ -85,7 +85,7 @@ function MessengerSection() {
   });
 
   if (!data) {
-    return null;
+    return <Section title="Messenger" loading rows={1} />;
   }
 
   return (
@@ -115,7 +115,7 @@ export function InboxesSettings() {
       title="Inboxes"
       description="Every conversation lands in one inbox, picked by the channel it came from."
     >
-      <Section title="Inboxes" action={newInbox}>
+      <Section title="Inboxes" action={newInbox} loading={!inboxes} rows={2}>
         {inboxes?.map((inbox) => (
           <Item
             key={inbox.id}

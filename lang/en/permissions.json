@@ -307,6 +307,10 @@
     "label": "Manage app access",
     "description": "Revoke apps anyone in the workspace authorized."
   },
+  "redaction:manage": {
+    "label": "Manage redaction",
+    "description": "Choose what is masked in messages before it is stored."
+  },
   "roles:manage": {
     "label": "Manage roles",
     "description": "Create custom roles and assign them."

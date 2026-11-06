@@ -62,7 +62,7 @@ it.describe("workspace security", () => {
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
-    await expect(page).toHaveURL(/\/d\/settings\/workspace$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/workspace$/);
     await expect(page.getByText("Sign in again to continue")).toHaveCount(0);
   });
 

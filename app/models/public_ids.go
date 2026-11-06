@@ -72,6 +72,10 @@ const (
 	PrefixAttachment        Prefix = "att"
 	PrefixTag               Prefix = "tag"
 	PrefixSavedReply        Prefix = "rpl"
+	PrefixContactIdentity   Prefix = "cid"
+	PrefixRedactionRule     Prefix = "rxr"
+	PrefixContactErasure    Prefix = "ces"
+	PrefixContactExport     Prefix = "exp"
 	PrefixConversationView  Prefix = "cvw"
 	PrefixDraft             Prefix = "drf"
 )
@@ -174,9 +178,12 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixAttachment, "attachments"},
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
+		{PrefixContactIdentity, "contact_identities"},
+		{PrefixRedactionRule, "redaction_rules"},
+		{PrefixContactErasure, "contact_erasures"},
 		{PrefixConversationView, "conversation_views"},
 		{PrefixDraft, "conversation_drafts"},
-		{"exp", "contact_exports"},
+		{PrefixContactExport, "contact_exports"},
 		{"evt", "events"},
 	}
 }

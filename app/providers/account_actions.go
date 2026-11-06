@@ -19,6 +19,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/users"
+	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/jobs"
 )
 
@@ -44,6 +45,8 @@ func bootAccount(a *app.App) error {
 	}
 	acts.UpdateAvatar = &users.UpdateAvatar{DB: a.DB, Clock: a.Clock, Events: a.Events, Disk: disk, Queue: a.Queue}
 	acts.DeleteAvatar = &users.DeleteAvatar{DB: a.DB, Clock: a.Clock, Events: a.Events, Queue: a.Queue}
+	acts.UpdateLogo = &workspaces.UpdateLogo{DB: a.DB, Clock: a.Clock, Events: a.Events, Disk: disk, Queue: a.Queue}
+	acts.DeleteLogo = &workspaces.DeleteLogo{DB: a.DB, Clock: a.Clock, Events: a.Events, Queue: a.Queue}
 	acts.RequestEmailChange = &users.RequestEmailChange{
 		DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links, Tokens: a.Secrets, SecurityLog: a.SecurityLog,
 	}

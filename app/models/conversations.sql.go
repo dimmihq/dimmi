@@ -313,6 +313,23 @@ func (q *Queries) ListTeamConversations(ctx context.Context, arg ListTeamConvers
 	return items, nil
 }
 
+const markConversationAsTest = `-- name: MarkConversationAsTest :exec
+UPDATE conversations SET is_test = true WHERE workspace_id = $1 AND id = $2
+`
+
+type MarkConversationAsTestParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// MarkConversationAsTest flags a conversation as a made-up one, such as
+// the practice conversations a new workspace starts with: it is never
+// billed and never reaches a real customer.
+func (q *Queries) MarkConversationAsTest(ctx context.Context, arg MarkConversationAsTestParams) error {
+	_, err := q.db.Exec(ctx, markConversationAsTest, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const setConversationThreadKey = `-- name: SetConversationThreadKey :exec
 UPDATE conversations SET external_thread_key = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND external_thread_key IS NULL

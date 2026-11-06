@@ -19,12 +19,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/dimmihq/dimmi/framework/console"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/mail"
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/factors"
@@ -72,7 +72,7 @@ Handle removes every factor of the account and says what changed.
 func (c *UserDisableTwoFactorCommand) Handle(
 	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
 ) error {
-	email := strings.ToLower(strings.TrimSpace(in.Argument("email")))
+	email := mail.CanonicalAddress(in.Argument("email"))
 
 	user, err := models.New(c.App.DB).FindUserByEmail(ctx, email)
 	if errors.Is(err, database.ErrNotFound) {

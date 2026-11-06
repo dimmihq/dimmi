@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -80,7 +79,7 @@ type SendPasswordResetLink struct {
 Handle sends the link when the email has an account.
 */
 func (a *SendPasswordResetLink) Handle(ctx context.Context, in SendPasswordResetLinkInput) error {
-	email := strings.ToLower(strings.TrimSpace(in.Email))
+	email := mail.CanonicalAddress(in.Email)
 
 	if err := a.Lockout.CheckAddress(ctx, in.Client.IP); err != nil {
 		return err

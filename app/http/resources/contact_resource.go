@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -36,6 +37,10 @@ type Contact struct {
 	Timezone         *string         `json:"timezone"`
 	CustomAttributes json.RawMessage `json:"custom_attributes"`
 	Blocked          bool            `json:"blocked"`
+	Notes            *string         `json:"notes"`
+	Location         json.RawMessage `json:"location"`
+	Company          *CompanySummary `json:"company"`
+	Tags             []Tag           `json:"tags"`
 	FirstSeenAt      *time.Time      `json:"first_seen_at"`
 	LastSeenAt       *time.Time      `json:"last_seen_at"`
 	CreatedAt        time.Time       `json:"created_at"`
@@ -55,9 +60,35 @@ func NewContact(c models.Contact) Contact {
 		ID: models.PublicID(models.PrefixContact, c.ID), Object: "contact", Kind: c.Kind, Name: c.Name,
 		Email: c.Email, EmailVerified: c.EmailVerified, ExternalID: c.ExternalID, Phone: c.Phone,
 		AvatarURL: c.AvatarUrl, Locale: c.Locale, Timezone: c.Timezone, CustomAttributes: attrs,
-		Blocked: c.BlockedAt != nil, FirstSeenAt: c.FirstSeenAt, LastSeenAt: c.LastSeenAt, CreatedAt: c.CreatedAt,
-		UpdatedAt: c.UpdatedAt,
+		Blocked: c.BlockedAt != nil, Notes: c.Notes, Location: c.Location, Tags: []Tag{},
+		FirstSeenAt: c.FirstSeenAt, LastSeenAt: c.LastSeenAt, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
+}
+
+/*
+NewContactDetail shapes the contact with its company and tags.
+*/
+func NewContactDetail(d contacts.Detail) Contact {
+	out := NewContact(d.Contact)
+	out.Tags = NewTags(d.Tags)
+
+	if d.Company != nil {
+		out.Company = new(NewCompanySummary(*d.Company))
+	}
+
+	return out
+}
+
+/*
+NewContactDetails shapes a list of contacts, in the order given.
+*/
+func NewContactDetails(rows []contacts.Detail) []Contact {
+	out := make([]Contact, 0, len(rows))
+	for _, d := range rows {
+		out = append(out, NewContactDetail(d))
+	}
+
+	return out
 }
 
 /*

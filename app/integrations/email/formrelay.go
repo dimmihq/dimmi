@@ -19,8 +19,8 @@ import (
 	"strings"
 )
 
-var bodyEmailField = regexp.MustCompile(`(?im)^\s*\**e-?mail(\s+address)?\**\s*:\**\s*` +
-	`\[?([^\s<>\]()]+@[^\s<>\]()]+\.[a-z]{2,})`)
+var bodyEmailField = regexp.MustCompile(`(?im)^\s*\|?\s*\**e-?mail(\s+address)?\**\s*(:\**\s*\|?|\|)\s*\**` +
+	`\[?([^\s<>\]()|]+@[^\s<>\]()|]+\.[a-z]{2,})`)
 
 /*
 FormRelay returns the form service that sent the message on a
@@ -54,7 +54,7 @@ func FormRelay(from string, replyTo []string) (string, bool) {
 
 /*
 BodyEmail returns the address a form printed in its body as an Email
-field, or "".
+field, on a line of its own or in a table row, or "".
 */
 func BodyEmail(text string) string {
 	match := bodyEmailField.FindStringSubmatch(text)
@@ -62,7 +62,7 @@ func BodyEmail(text string) string {
 		return ""
 	}
 
-	return strings.ToLower(match[2])
+	return strings.ToLower(strings.ReplaceAll(match[3], `\`, ""))
 }
 
 /*

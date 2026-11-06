@@ -74,3 +74,46 @@ export async function openComposer(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).click();
   await expect(page.getByRole("toolbar", { name: "Formatting" })).toBeVisible({ timeout: 15_000 });
 }
+
+/*
+ * pickView opens the view picker in the list's title and goes to the
+ * named view.
+ */
+export async function pickView(page: Page, name: string | RegExp): Promise<void> {
+  await page.locator("button[data-view-picker]").click();
+  await page.getByRole("dialog", { name: "Views" }).getByRole("button", { name }).click();
+}
+
+/*
+ * openAddress opens the page of one of the workspace's email addresses,
+ * the first unless one is named.
+ */
+export async function openAddress(page: Page, name?: string): Promise<void> {
+  await page.goto("/d/settings/email");
+  const addresses = page.getByRole("region", { name: "Addresses" });
+  const link = name ? addresses.getByRole("link", { name }) : addresses.getByRole("link").first();
+  await link.click();
+  await expect(page.getByTestId("forwarding-address")).toBeVisible();
+  await settled(page);
+}
+
+/*
+ * settled waits for a page the app just navigated to to finish arriving.
+ * The page rises into place as it arrives, and a click aimed while it
+ * moves misses, so Playwright scrolls to try again, and that late scroll
+ * closes any popover the click opened.
+ */
+export async function settled(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
+}
+
+/*
+ * openMessenger opens the page of the workspace's first messenger and
+ * waits for it to settle.
+ */
+export async function openMessenger(page: Page): Promise<void> {
+  await page.goto("/d/settings/messenger");
+  await page.getByRole("region", { name: "Messengers" }).getByRole("link").first().click();
+  await expect(page.getByRole("region", { name: "Appearance" })).toBeVisible();
+  await settled(page);
+}

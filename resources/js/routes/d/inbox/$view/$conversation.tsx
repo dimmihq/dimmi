@@ -2,9 +2,9 @@ import { RiChatOffLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { Spinner } from "@/components/base/spinner/spinner";
 import { ConversationView } from "@/features/inbox/conversation-view";
 import { useInbox } from "@/features/inbox/conversations";
+import { ConversationSkeleton } from "@/features/inbox/skeletons";
 import { EmptyState, Panel } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
 import { conversationQuery } from "@/lib/api/inbox";
@@ -35,9 +35,7 @@ function ConversationRoute() {
   return (
     <Panel label="Conversation" className="flex-1">
       {isPending ? (
-        <div className="flex flex-1 items-center justify-center">
-          <Spinner aria-label="Loading the conversation" />
-        </div>
+        <ConversationSkeleton />
       ) : (
         <EmptyState
           icon={RiChatOffLine}

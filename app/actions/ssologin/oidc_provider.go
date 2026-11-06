@@ -17,11 +17,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/encryption"
-	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/socialite"
-	"github.com/dimmihq/dimmi/framework/socialite/drivers/oidc"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
 	"github.com/dimmihq/dimmi/app/actions/sso"
@@ -32,24 +30,28 @@ import (
 OIDCProviders builds the OpenID Connect side of a connection.
 */
 type OIDCProviders struct {
-	Keys  encryption.KeyManager
-	Links appauth.Links
-	HTTP  *httpclient.Client
-	Clock clock.Clock
+	Keys   encryption.KeyManager
+	Links  appauth.Links
+	Social *socialite.Manager
 }
 
 /*
 For returns the provider of the connection.
 */
-func (p OIDCProviders) For(ctx context.Context, conn sso.Connection) (*oidc.Provider, error) {
+func (p OIDCProviders) For(ctx context.Context, conn sso.Connection) (socialite.Provider, error) {
 	secret, err := sso.OpenSecret(ctx, p.Keys, conn.Connection)
 	if err != nil {
 		return nil, err
 	}
 
-	provider, err := oidc.New(appauth.MethodSSO, p.HTTP, p.Clock, oidc.Options{
-		Issuer: conn.Config.Issuer, ClientID: conn.Config.ClientID, ClientSecret: secret.ClientSecret,
-		Scopes: conn.Config.Scopes,
+	scopes := make([]any, 0, len(conn.Config.Scopes))
+	for _, scope := range conn.Config.Scopes {
+		scopes = append(scopes, scope)
+	}
+
+	provider, err := p.Social.Build(appauth.MethodSSO, config.Section{
+		"driver": "oidc", "issuer": conn.Config.Issuer, "client_id": conn.Config.ClientID,
+		"client_secret": secret.ClientSecret, "scopes": scopes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build openid provider: %w", err)

@@ -134,13 +134,13 @@ Actions, hook registries, API in README and api.md. Decisions added:
 
 Recoverable 7 days, like Intercom; contains mistake cost. `contacts.erase_grace_days` config default 7, 0 allowed. Per request `immediate: true` when legal hold not in force and caller re-confirmed.
 
-`contact_erasures` (`ces_`): `workspace_id`, `contact_id` (no fk, survives), `status CHECK in ('pending','pending_hold','completed','cancelled')`, `requested_by_member_id`, `scheduled_for`, `completed_at`, `counts jsonb`, `identities_stash bytea` (encrypted with `encryption`, wiped at completion), timestamps. Partial unique `(workspace_id, contact_id) WHERE status IN ('pending','pending_hold')`. Migration `20261201040010_create_contact_erasures_table.sql`.
+`contact_erasures` (`ces_`): `workspace_id`, `contact_id` (no fk, survives), `status CHECK in ('pending','pending_hold','completed','canceled')`, `requested_by_member_id`, `scheduled_for`, `completed_at`, `counts jsonb`, `identities_stash bytea` (encrypted with `encryption`, wiped at completion), timestamps. Partial unique `(workspace_id, contact_id) WHERE status IN ('pending','pending_hold')`. Migration `20261201040010_create_contact_erasures_table.sql`.
 
 Flow:
 
 1. `DELETE /contacts/{id}?erase=true[&immediate=true]`: `contacts:erase` + `conversation_access = all` + recent confirmation for immediate (`password.confirm`). Tx: `deleted_at`, stash identities and delete their rows (unique index would hold address hostage), insert row, schedule `erase_contact` at `scheduled_for`. 202 `contact_erasure`.
 2. During grace: contact hidden, conversations hidden from lists (contact deleted filter) and no outbound (422 `contact_unreachable_on_channel`). Inbound from same address creates new lead: person writing again is a new request, not reversal.
-3. Cancel: `PATCH /contact-erasures/{ces} {status: "cancelled"}`, same permission. Restores `deleted_at`, identities unless address now taken (then listed in response `identities_conflicted`, surfaced for manual merge).
+3. Cancel: `PATCH /contact-erasures/{ces} {status: "canceled"}`, same permission. Restores `deleted_at`, identities unless address now taken (then listed in response `identities_conflicted`, surfaced for manual merge).
 4. Job: `RetentionGuard`, core wipe, every `ContactEraser`. Retried until all nil. `completed`, stash wiped, audit.
 
 `GET /contact-erasures`, `GET /contact-erasures/{ces}`: `contacts:erase`. Replaces audit-only status. New hooks required: 04 raw + outbound, 01 widget sessions, 18 no server state beyond sessions, 19 none. Search index: generated columns clear with body. Backups age out: documented in privacy page, 11.

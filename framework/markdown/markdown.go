@@ -25,6 +25,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
+	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/toc"
@@ -50,7 +51,8 @@ Footnotes adds GFM footnotes. Alerts renders GitHub alerts such as
 "> [!NOTE]" as aside elements. HeadingIDs gives every heading a unique
 id, keeping letters of every script. Highlight colors fenced code
 blocks of a known language with CSS classes; StyleSheet returns the
-matching CSS.
+matching CSS. HardWraps keeps every line break inside a paragraph, as a
+person typing into a message box expects.
 
 RewriteLink, when set, sees every link and image and returns what to
 render instead. Sanitize is the policy the HTML passes through; nil
@@ -62,6 +64,7 @@ type Options struct {
 	Alerts      bool
 	HeadingIDs  bool
 	Highlight   bool
+	HardWraps   bool
 	RewriteLink func(Link) Link
 	Sanitize    *sanitize.Policy
 }
@@ -164,11 +167,16 @@ func newEngine(opts Options) goldmark.Markdown {
 	}
 
 	nodes := newNodeRenderer(opts.Highlight, opts.Alerts)
+	rendering := []renderer.Option{renderer.WithNodeRenderers(util.Prioritized(nodes, rendererPriority))}
+
+	if opts.HardWraps {
+		rendering = append(rendering, html.WithHardWraps())
+	}
 
 	return goldmark.New(
 		goldmark.WithExtensions(extensions...),
 		goldmark.WithParserOptions(parsing...),
-		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(nodes, rendererPriority))),
+		goldmark.WithRendererOptions(rendering...),
 	)
 }
 

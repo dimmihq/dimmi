@@ -49,12 +49,12 @@ func TestPlainText(t *testing.T) {
 		assert.Equal(t, "Fish & chips *not em* a \\* &amp;\nindented &amp;", got)
 	})
 
-	t.Run("drops raw html", func(t *testing.T) {
+	t.Run("keeps raw html as the words it is", func(t *testing.T) {
 		t.Parallel()
 
-		got := markdown.PlainText([]byte("Hi <b>there</b>\n\n<div>\nblock\n</div>\n\nend"))
+		got := markdown.PlainText([]byte("Use the <div> tag\n\n<div>\nblock\n</div>\n\nend"))
 
-		assert.Equal(t, "Hi there\nend", got)
+		assert.Equal(t, "Use the <div> tag\n<div>\nblock\n</div>\nend", got)
 	})
 
 	t.Run("returns nothing for an empty document", func(t *testing.T) {

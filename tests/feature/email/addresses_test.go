@@ -86,6 +86,20 @@ func TestEmailAddresses(t *testing.T) {
 			map[string]any{"reply_to_mode": "never"}).AssertValidationError("reply_to_mode")
 	})
 
+	t.Run("sends an address's new conversations to another inbox", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+		owner := tc.ActingAsOwner()
+		it := owner.PostJSON("/api/v1/inboxes", map[string]any{"name": "IT"}).AssertCreated().String("data.id")
+
+		owner.PatchJSON("/api/v1/email-addresses/"+publicID(address), map[string]any{"inbox_id": it}).
+			AssertOK().AssertJSONPath("data.inbox.id", it)
+		owner.PatchJSON("/api/v1/email-addresses/"+publicID(address), map[string]any{
+			"inbox_id": "inbox_00000000000000000000000000",
+		}).AssertValidationError("inbox_id")
+	})
+
 	t.Run("disconnects an address", func(t *testing.T) {
 		t.Parallel()
 		tc, _ := emailCase(t)

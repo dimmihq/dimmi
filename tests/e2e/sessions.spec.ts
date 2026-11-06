@@ -20,7 +20,7 @@ async function signInElsewhere(browser: Browser, person: Person): Promise<Page> 
  */
 it.describe("sessions", () => {
   it("lists where the person is signed in and signs other sessions out", async ({ browser, page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
     const laptop = await signInElsewhere(browser, person);
     const phone = await signInElsewhere(browser, person);

@@ -22,7 +22,7 @@ import {
 } from "@/lib/api/sso";
 
 import { Action, Danger } from "../controls";
-import { Empty, Glyph, Item, Section } from "../layout";
+import { Empty, Glyph, Item, RowsSkeleton, Section } from "../layout";
 import { ConnectionDialog } from "./connection-dialog";
 import { CopyField } from "./copy-field";
 import { useSSOChange } from "./use-sso";
@@ -244,6 +244,7 @@ export function ConnectionsSection({ canManage }: { canManage: boolean }) {
       description="Your identity providers. A connection signs people in once it is tested and turned on."
       action={canManage ? <Action onPress={() => setCreating(true)}>New connection</Action> : undefined}
     >
+      {connections ? null : <RowsSkeleton rows={1} />}
       {connections?.length === 0 ? <Empty>No connections yet.</Empty> : null}
       {connections?.map((connection) => (
         <ConnectionItem

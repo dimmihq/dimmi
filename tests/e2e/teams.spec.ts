@@ -62,7 +62,7 @@ it.describe("teams", () => {
     const confirm = page.getByRole("dialog");
     await expect(confirm.getByText("It holds no conversations.")).toBeVisible();
     await confirm.getByRole("button", { name: "Delete team" }).click();
-    await expect(page).toHaveURL(/\/d\/settings\/teams$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/teams$/);
     await expect(teams.getByText("No teams yet.")).toBeVisible();
   });
 
@@ -116,7 +116,7 @@ it.describe("teams", () => {
     await page.getByRole("option", { name: "Support" }).click();
     await remove.click();
 
-    await expect(page).toHaveURL(/\/d\/settings\/teams$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/teams$/);
     await expect(teams.getByText("Billing")).toBeHidden();
     expect(conversationTeams(person.email)).toEqual(["Support", "Support"]);
   });

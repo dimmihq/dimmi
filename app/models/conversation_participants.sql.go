@@ -49,6 +49,51 @@ func (q *Queries) AddConversationParticipant(ctx context.Context, arg AddConvers
 	return i, err
 }
 
+const listConversationCopies = `-- name: ListConversationCopies :many
+SELECT c.id, c.name, c.email::text AS email
+FROM conversation_participants AS p
+JOIN contacts AS c ON c.id = p.contact_id AND c.workspace_id = p.workspace_id
+WHERE p.workspace_id = $1 AND p.conversation_id = $2
+  AND p.contact_id <> $3 AND c.email IS NOT NULL AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+ORDER BY p.created_at, p.contact_id
+LIMIT 50
+`
+
+type ListConversationCopiesParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+	ContactID      ids.UUID `json:"contact_id"`
+}
+
+type ListConversationCopiesRow struct {
+	ID    ids.UUID `json:"id"`
+	Name  *string  `json:"name"`
+	Email string   `json:"email"`
+}
+
+// ListConversationCopies returns who a reply copies: everyone on the
+// conversation besides its contact who still has an email address, in
+// the order they joined.
+func (q *Queries) ListConversationCopies(ctx context.Context, arg ListConversationCopiesParams) ([]ListConversationCopiesRow, error) {
+	rows, err := q.db.Query(ctx, listConversationCopies, arg.WorkspaceID, arg.ConversationID, arg.ContactID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationCopiesRow
+	for rows.Next() {
+		var i ListConversationCopiesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listConversationParticipants = `-- name: ListConversationParticipants :many
 SELECT workspace_id, conversation_id, contact_id, role, created_at FROM conversation_participants
 WHERE workspace_id = $1 AND conversation_id = $2

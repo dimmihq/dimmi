@@ -175,6 +175,10 @@ func (a *Application) bootIO(ctx context.Context) error {
 
 	a.DNS = dns.New(a.Config.DNS)
 	a.Process = process.New()
+	if err := a.signLocalDisks(); err != nil {
+		return err
+	}
+
 	a.Storage = filesystem.NewManager(a.Config.Filesystems)
 	a.Scanner = malware.NewManager(a.Config.Malware)
 	a.Lang, err = i18n.New(

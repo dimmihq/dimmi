@@ -3,7 +3,10 @@
  * through the API, and the teammate's browser shows only their team's
  * conversations, no Unassigned view, and the same no-access page for a
  * link to anything hidden, whether they opened it just now or had it
- * open when it moved away from them.
+ * open when it moved away from them. An inbox restricted from its
+ * settings page hides its conversations and itself from everyone not on
+ * its list, and adding the teammate shows them again. A messenger added
+ * from the inbox's page feeds that inbox.
  */
 import type { Page } from "@playwright/test";
 
@@ -61,11 +64,27 @@ class Admin {
     return (await response.json()).data;
   }
 
+  async post(path: string, data: unknown) {
+    const response = await this.page.request.post(`/api/v1/${path}`, { headers: await this.headers(), data });
+    expect(response.status(), await response.text()).toBe(201);
+    return (await response.json()).data;
+  }
+
   async memberId(email: string): Promise<string> {
     const response = await this.page.request.get("/api/v1/members", { headers: await this.headers() });
     const members = (await response.json()).data as { id: string; user: { email: string } }[];
     return members.find((member) => member.user.email === email)?.id ?? "";
   }
+}
+
+/*
+ * saveAccess saves the inbox page and waits for the server to hold the
+ * new access.
+ */
+async function saveAccess(page: Page) {
+  const saved = page.waitForResponse((r) => r.url().endsWith("/access") && r.request().method() === "PUT");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  expect((await saved).status()).toBe(200);
 }
 
 it.describe("conversation access", () => {
@@ -101,7 +120,11 @@ it.describe("conversation access", () => {
     await signIn(restricted, teammate);
     await expect(restricted.locator('[data-realtime="connected"]')).toBeAttached();
 
-    await expect(restricted.getByRole("link", { name: "Unassigned" })).toHaveCount(0);
+    await restricted.locator("button[data-view-picker]").click();
+    await expect(
+      restricted.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /Unassigned/ }),
+    ).toHaveCount(0);
+    await restricted.keyboard.press("Escape");
 
     await restricted.goto("/d/inbox/all");
     await expect(restricted.getByRole("link", { name: /Bea Billing/ })).toBeVisible();
@@ -111,7 +134,7 @@ it.describe("conversation access", () => {
     await expect(restricted.getByText("You do not have access to this conversation")).toBeVisible();
     await expect(restricted.getByText("Cannot log in")).toHaveCount(0);
     await restricted.getByRole("link", { name: "Go to my inbox" }).click();
-    await expect(restricted).toHaveURL(/\/d\/inbox\/mine/);
+    await expect(restricted).toHaveURL(/\/d\/[^/]+\/inbox\/mine/);
 
     await restricted.goto(`/d/inbox/all/${seen}`);
     await expect(restricted.getByRole("heading", { name: "Invoice is wrong" })).toBeVisible();
@@ -122,10 +145,74 @@ it.describe("conversation access", () => {
 
     await admin.patch(`members/${member}`, { conversation_access: "all" });
     await restricted.goto("/d/inbox/all");
-    await expect(restricted.getByRole("link", { name: "Unassigned" })).toBeVisible();
+    await restricted.locator("button[data-view-picker]").click();
+    await expect(
+      restricted.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /Unassigned/ }),
+    ).toBeVisible();
+    await restricted.keyboard.press("Escape");
     await expect(restricted.getByRole("link", { name: /Sam Support/ })).toBeVisible();
 
     expect(problems).toEqual([]);
+    await other.close();
+  });
+
+  it("keeps a restricted inbox to the teammates on its list", async ({ page, person, request, browser }) => {
+    const teammate = teammateOf(person);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await createAccount(request, person, `Desks ${person.email.split("@")[0]?.split(".").at(-1) ?? ""}`);
+    await createAccount(request, teammate);
+    addTeammate(person.email, teammate.email, "member");
+    await signIn(page, person);
+
+    const admin = new Admin(page);
+    await startConversation(page, bea);
+    const it = (await admin.post("inboxes", { name: "IT" })).id;
+    const hidden = (
+      await admin.post("conversations", {
+        inbox_id: it,
+        author: "contact",
+        subject: sam.subject,
+        body: sam.body,
+        contact: { email: sam.email, name: sam.name },
+      })
+    ).id;
+
+    await page.goto("/d/inbox/all");
+    await expect(page.getByRole("link", { name: /Sam Support/ })).toContainText("IT");
+
+    await page.goto(`/d/settings/inboxes/${it}`);
+    const channels = page.getByRole("region", { name: "Channels" });
+    await expect(channels.getByText("API", { exact: true })).toBeVisible();
+    await channels.getByRole("button", { name: "Add messenger" }).click();
+    await page.getByRole("alertdialog", { name: "Add a messenger" }).getByLabel("Name").fill("IT helpdesk");
+    await page.getByRole("button", { name: "Add messenger" }).last().click();
+    await expect(channels.getByText("IT helpdesk")).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+
+    await page.getByRole("button", { name: "Who can open it" }).click();
+    await page.getByRole("option", { name: "Chosen teams and teammates" }).click();
+    await expect(page.getByText("only owners and admins can open it")).toBeVisible();
+    await saveAccess(page);
+
+    const other = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const restricted = await other.newPage();
+    await signIn(restricted, teammate);
+    await restricted.goto("/d/inbox/all");
+    await expect(restricted.getByRole("link", { name: /Bea Billing/ })).toBeVisible();
+    await expect(restricted.getByRole("link", { name: /Sam Support/ })).toHaveCount(0);
+    await restricted.locator("button[data-view-picker]").click();
+    await expect(restricted.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /^IT/ })).toHaveCount(0);
+    await restricted.keyboard.press("Escape");
+    await restricted.goto(`/d/inbox/all/${hidden}`);
+    await expect(restricted.getByText("You do not have access to this conversation")).toBeVisible();
+
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("dialog", { name: "Add to access" }).getByRole("button", { name: teammate.name }).click();
+    await expect(page.getByRole("button", { name: `Remove ${teammate.name}` })).toBeVisible();
+    await saveAccess(page);
+
+    await restricted.goto("/d/inbox/all");
+    await expect(restricted.getByRole("link", { name: /Sam Support/ })).toBeVisible();
     await other.close();
   });
 });

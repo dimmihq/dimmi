@@ -4,7 +4,7 @@
  * date and time of the reader's own. Z opens it from anywhere in the
  * open conversation.
  */
-import { type CalendarDate, getLocalTimeZone, today } from "@internationalized/date";
+import { type CalendarDate, getLocalTimeZone, Time, today } from "@internationalized/date";
 import { RiAlarmLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -18,11 +18,18 @@ import {
   DropdownPopover,
   DropdownTrigger,
 } from "@/components/base/dropdown/dropdown";
-import { Input } from "@/components/base/input/input";
+import { TimeField } from "@/components/base/time-field/time-field";
 import { snoozeChoicesQuery } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
 import { untilLabel, untilOf } from "./until";
+
+/*
+ * clockOf writes a time of day as HH:MM.
+ */
+function clockOf(time: Time): string {
+  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}`;
+}
 
 export function SnoozePicker({
   workspace,
@@ -41,8 +48,8 @@ export function SnoozePicker({
 }) {
   const { data: choices = [] } = useQuery({ ...snoozeChoicesQuery(workspace, conversation), enabled: isOpen });
   const [day, setDay] = useState<CalendarDate | null>(today(getLocalTimeZone()).add({ days: 1 }));
-  const [time, setTime] = useState("09:00");
-  const custom = day ? untilOf(day, time) : null;
+  const [time, setTime] = useState<Time | null>(new Time(9, 0));
+  const custom = day && time ? untilOf(day, clockOf(time)) : null;
   const pick = (run: () => void) => {
     run();
     onOpenChange(false);
@@ -71,7 +78,7 @@ export function SnoozePicker({
           <span className="text-caption-1-medium text-text-tertiary">Pick date and time</span>
           <div className="flex items-center gap-2">
             <DatePicker aria-label="Snooze date" value={day} onChange={setDay} />
-            <Input aria-label="Snooze time" type="time" value={time} onChange={setTime} className="w-28" />
+            <TimeField aria-label="Snooze time" size="small" value={time} onChange={setTime} className="w-32" />
           </div>
           <Button size="small" disabled={custom === null} onClick={() => custom && pick(() => onUntil(custom))}>
             Snooze

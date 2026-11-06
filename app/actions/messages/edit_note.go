@@ -90,7 +90,8 @@ func (a *EditNote) Handle(ctx context.Context, in EditInput) (Written, error) {
 }
 
 /*
-edit rewrites the caller's note and announces it.
+edit rewrites the caller's note under the workspace's redaction rules,
+replacing which rules hit the earlier text, and announces it.
 */
 func (s *session) edit(ctx context.Context, id ids.UUID, body string) error {
 	msg, err := s.w.Q.LockMessage(ctx, models.LockMessageParams{
@@ -109,7 +110,14 @@ func (s *session) edit(ctx context.Context, id ids.UUID, body string) error {
 		return exceptions.ErrMessageNotEditable
 	}
 
-	raw, err := json.Marshal(map[string]any{"edited_by": models.PublicID(models.PrefixMember, s.w.Actor.ID)})
+	hits, err := s.w.RedactEdit(ctx, s.c.WorkspaceID, &body)
+	if err != nil {
+		return fmt.Errorf("redact note: %w", err)
+	}
+
+	raw, err := json.Marshal(map[string]any{
+		"edited_by": models.PublicID(models.PrefixMember, s.w.Actor.ID), "redactions": hits,
+	})
 	if err != nil {
 		return fmt.Errorf("encode edit: %w", err)
 	}
@@ -118,6 +126,10 @@ func (s *session) edit(ctx context.Context, id ids.UUID, body string) error {
 		Body: &body, Now: s.w.Now, Metadata: raw, WorkspaceID: s.c.WorkspaceID, ID: msg.ID,
 	}); err != nil {
 		return fmt.Errorf("edit note: %w", err)
+	}
+
+	if err := s.w.AnnounceRedaction(ctx, s.c, s.msg, hits); err != nil {
+		return err
 	}
 
 	r := appevents.MessageRef{ConversationRef: appevents.ConversationRef{ConversationID: s.c.ID}, MessageID: msg.ID}

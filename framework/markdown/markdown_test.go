@@ -79,6 +79,18 @@ func assertInert(t *testing.T, out, source string) {
 func TestHTML(t *testing.T) {
 	t.Parallel()
 
+	t.Run("keeps each typed line break when asked", func(t *testing.T) {
+		t.Parallel()
+
+		wrapped, err := markdown.New(markdown.Options{HardWraps: true}).HTML([]byte("Hi,\nThanks,\nAna"))
+		require.NoError(t, err)
+		flowing, err := markdown.New(markdown.Options{}).HTML([]byte("Hi,\nThanks,\nAna"))
+		require.NoError(t, err)
+
+		assert.Equal(t, 2, strings.Count(wrapped.HTML, "<br"))
+		assert.NotContains(t, flowing.HTML, "<br")
+	})
+
 	t.Run("renders the full dialect", func(t *testing.T) {
 		t.Parallel()
 

@@ -26,3 +26,4 @@ coverage-app.filtered.out
 /deploy/dns/outputs/
 /lang/en-XA/
 /resources/js/lang/en-XA/
+.env.*

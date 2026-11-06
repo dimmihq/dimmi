@@ -92,13 +92,26 @@ export class Application {
     controller.connect?.();
   }
 
+  /*
+   * handle runs the actions of the nearest element around the event's
+   * target that answers this kind of event, so a key pressed on a button
+   * that only answers clicks still reaches the panel around it.
+   */
   #handle(event: Event): void {
-    const source = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-action]") : null;
-    for (const descriptor of source?.dataset.action?.split(" ") ?? []) {
-      const [type, method] = descriptor.split("->");
-      if (type === event.type && method) {
-        this.#invoke(source as HTMLElement, method, event);
+    let source = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-action]") : null;
+    while (source) {
+      const methods = (source.dataset.action ?? "")
+        .split(" ")
+        .map((descriptor) => descriptor.split("->"))
+        .filter(([type, method]) => type === event.type && method)
+        .map(([, method]) => method as string);
+      if (methods.length > 0) {
+        for (const method of methods) {
+          this.#invoke(source, method, event);
+        }
+        return;
       }
+      source = source.parentElement?.closest<HTMLElement>("[data-action]") ?? null;
     }
   }
 

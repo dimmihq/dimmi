@@ -12,7 +12,10 @@
 
 package exceptions
 
-import "github.com/dimmihq/dimmi/framework/fault"
+import (
+	"github.com/dimmihq/dimmi/framework/fault"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+)
 
 /*
 Failures reaching a widget.
@@ -41,8 +44,15 @@ var (
 
 /*
 WidgetField returns the refusal of a settings field, naming the field and
-why, with the code forms show field errors under.
+why, with the code forms show field errors under. The why is listed under
+the field as written, so the page can say what to change on the row it is
+about rather than only that something was wrong.
 */
-func WidgetField(field, message string) *fault.Error {
-	return fault.New(fault.Invalid, "validation_failed", message).OnField(field)
+func WidgetField(field, message string) *fhttp.ResponseError {
+	return &fhttp.ResponseError{
+		Status:  fhttp.StatusUnprocessableEntity,
+		Code:    fhttp.CodeValidationFailed,
+		Message: message,
+		Errors:  map[string][]string{field: {message}},
+	}
 }

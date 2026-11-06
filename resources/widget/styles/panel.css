@@ -2,6 +2,7 @@
  * The panel, its open and closed states, and the stack of views inside it.
  */
 .panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   inline-size: min(400px, calc(100vw - 2 * var(--x)));
@@ -83,4 +84,67 @@
 
 [data-expanded="true"] .narrow {
   display: block;
+}
+
+/*
+ * The picture viewer covers the panel: a dark ground, the picture as large
+ * as fits, and its controls along the top. It settles in the way the
+ * panel itself does, and closes at once.
+ */
+.viewer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: rgb(0 0 0 / 0.88);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  scale: 0.98;
+  transition:
+    opacity 220ms var(--modal),
+    scale 220ms var(--modal);
+}
+
+.viewer[hidden] {
+  display: none;
+}
+
+.viewer[data-shown="true"] {
+  opacity: 1;
+  scale: 1;
+}
+
+.viewer-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 12px;
+  color: #fff;
+}
+
+.viewer-bar .icon-button {
+  color: inherit;
+}
+
+.viewer-stage {
+  display: grid;
+  place-items: center;
+  min-block-size: 0;
+  padding: 0 16px 16px;
+  cursor: zoom-out;
+}
+
+.viewer-stage img {
+  max-inline-size: 100%;
+  max-block-size: 100%;
+  border-radius: 12px;
+  object-fit: contain;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer {
+    transition: none;
+  }
 }

@@ -17,11 +17,11 @@ package users
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -77,7 +77,7 @@ func (a *CreateUser) Handle(ctx context.Context, in CreateUserInput) (models.Use
 
 		user, err = models.New(tx).CreateUser(ctx, models.CreateUserParams{
 			Name:            str.Clean(in.Name),
-			Email:           strings.TrimSpace(in.Email),
+			Email:           mail.CanonicalAddress(in.Email),
 			PasswordHash:    in.PasswordHash,
 			EmailVerifiedAt: verifiedAt,
 			CreatedVia:      &in.CreatedVia,

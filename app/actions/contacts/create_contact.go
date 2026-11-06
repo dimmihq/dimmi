@@ -36,6 +36,7 @@ import (
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/attributes"
 )
 
 /*
@@ -64,11 +65,13 @@ CreateContact adds a contact to the workspace.
 Rules:
   - The caller needs contacts:write.
   - An external id another contact holds is refused.
+  - An address another contact receives mail at is refused.
 
 Events: [appevents.ContactCreated].
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrContactExists],
-[exceptions.ErrInvalidAttributes], or a wrapped database error.
+[exceptions.ErrContactEmailTaken], [exceptions.ErrInvalidAttributes],
+or a wrapped database error.
 */
 type CreateContact struct {
 	DB     *database.DB
@@ -90,6 +93,11 @@ func (a *CreateContact) Handle(ctx context.Context, in CreateContactInput) (mode
 		var err error
 
 		n := NewContact{WorkspaceID: in.Membership.Workspace.ID, Fields: in.Fields}
+
+		self := models.Contact{WorkspaceID: n.WorkspaceID}
+		if err := emailFree(ctx, models.New(tx), self, NormalizeEmail(in.Fields.Email)); err != nil {
+			return err
+		}
 
 		out, err = Create(ctx, tx, a.Clock.Now(), n)
 		if err != nil {
@@ -131,7 +139,7 @@ func Create(ctx context.Context, tx *database.Tx, now time.Time, n NewContact) (
 		}
 	}
 
-	attrs, keys, err := MergeAttributes(nil, f.CustomAttributes)
+	attrs, keys, err := attributes.Merge(nil, f.CustomAttributes)
 	if err != nil {
 		return models.Contact{}, err
 	}
@@ -167,11 +175,10 @@ func trust(ctx context.Context, q *models.Queries, c models.Contact, keys []stri
 		return c, nil
 	}
 
-	trusted, err := q.UpdateContact(ctx, models.UpdateContactParams{
-		Kind: c.Kind, ExternalID: c.ExternalID, Email: c.Email, Name: c.Name, Phone: c.Phone,
-		CustomAttributes: c.CustomAttributes, TrustedAttributeKeys: keys, BlockedAt: c.BlockedAt, Now: c.UpdatedAt,
-		WorkspaceID: c.WorkspaceID, ID: c.ID,
-	})
+	params := paramsOf(c, c.UpdatedAt)
+	params.TrustedAttributeKeys = keys
+
+	trusted, err := q.UpdateContact(ctx, params)
 	if err != nil {
 		return c, fmt.Errorf("trust custom attributes: %w", err)
 	}

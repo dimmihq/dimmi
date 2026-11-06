@@ -13,6 +13,23 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const liftBounceSuppressions = `-- name: LiftBounceSuppressions :exec
+DELETE FROM email_suppressions
+WHERE workspace_id = $1 AND email = $2 AND reason IN ('hard_bounce', 'soft_bounce')
+`
+
+type LiftBounceSuppressionsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Email       string   `json:"email"`
+}
+
+// LiftBounceSuppressions lets mail reach the address again after it
+// bounced, once its owner has written in from it.
+func (q *Queries) LiftBounceSuppressions(ctx context.Context, arg LiftBounceSuppressionsParams) error {
+	_, err := q.db.Exec(ctx, liftBounceSuppressions, arg.WorkspaceID, arg.Email)
+	return err
+}
+
 const listSuppressedEmails = `-- name: ListSuppressedEmails :many
 SELECT email::text AS email FROM email_suppressions
 WHERE workspace_id = $1 AND email = ANY ($2::citext[]) AND scope = 'all'
@@ -54,7 +71,13 @@ INSERT INTO email_suppressions (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9::timestamptz, $9::timestamptz
 )
-ON CONFLICT (workspace_id, email, scope) DO UPDATE SET expires_at = excluded.expires_at, updated_at = excluded.updated_at
+ON CONFLICT (workspace_id, email, scope) DO UPDATE SET
+    reason = CASE WHEN excluded.expires_at IS NULL THEN excluded.reason ELSE email_suppressions.reason END,
+    expires_at = CASE
+        WHEN email_suppressions.expires_at IS NULL OR excluded.expires_at IS NULL THEN NULL
+        ELSE greatest(email_suppressions.expires_at, excluded.expires_at)
+    END,
+    updated_at = excluded.updated_at
 `
 
 type SuppressEmailParams struct {
@@ -70,7 +93,9 @@ type SuppressEmailParams struct {
 }
 
 // SuppressEmail stops mail to the address for the scope. Suppressing it
-// again keeps the first reason and refreshes when it lapses.
+// again never turns a lasting suppression into one that lapses: a
+// lasting reason replaces a lapsing one, and two lapsing ones keep the
+// later end.
 func (q *Queries) SuppressEmail(ctx context.Context, arg SuppressEmailParams) error {
 	_, err := q.db.Exec(ctx, suppressEmail,
 		arg.WorkspaceID,

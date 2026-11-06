@@ -69,6 +69,7 @@ export interface WorkspaceSummary {
   name: string;
   slug: string;
   role: string;
+  previous_slugs?: { slug: string; until: string }[];
 }
 
 export interface Instance {

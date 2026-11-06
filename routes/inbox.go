@@ -16,12 +16,18 @@ package routes
 
 import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 )
+
+/*
+uploadOverhead is room past a file's limit for the request around it.
+*/
+const uploadOverhead = 16 << 10
 
 /*
 inboxControllers are the inbox's controllers, built once with the
@@ -44,11 +50,12 @@ func newInboxControllers(a *app.App) inboxControllers {
 	return inboxControllers{
 		inboxes: &v1.InboxController{
 			List: acts.ListInboxes, Show: acts.ShowInbox, Create: acts.CreateInbox, Change: acts.UpdateInbox,
-			Remove: acts.DeleteInbox,
+			Remove: acts.DeleteInbox, Access: acts.SetInboxAccess,
 			Status: a.Actions.AssignmentStatus, IDs: a.IDs,
 		},
 		contacts: &v1.ContactController{
-			List: acts.ListContacts, Show: acts.ShowContact, Create: acts.CreateContact, Change: acts.UpdateContact,
+			List: acts.ListContacts, Show: acts.ShowContact, Create: acts.CreateContact, Upsert: acts.UpsertContact,
+			Change: acts.UpdateContact, Conversations: acts.ListRecordConversations,
 			IDs: a.IDs, Cursors: cursors,
 		},
 		conversations: &v1.ConversationController{
@@ -58,7 +65,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
-			Delete: acts.DeleteMessage, Edit: acts.EditNote, IDs: a.IDs, Cursors: cursors,
+			Delete: acts.DeleteMessage, Edit: acts.EditNote, Original: acts.ShowOriginal, Raw: acts.DownloadOriginal,
+			Resend: acts.RetryDelivery, IDs: a.IDs, Cursors: cursors,
 		},
 		views: &v1.InboxViewController{
 			Counts: acts.CountConversations, ReadShow: acts.ShowReadState, ReadSave: acts.UpdateReadState,
@@ -80,11 +88,16 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/inboxes/{inbox}", "inboxes.show", c.inboxes.Get).Ability("conversations:read")
 	routing.Patch(r, "/inboxes/{inbox}", "inboxes.update", c.inboxes.Update).Ability("settings:write")
 	routing.Delete(r, "/inboxes/{inbox}", "inboxes.destroy", c.inboxes.Destroy).Ability("settings:write")
+	routing.Put(r, "/inboxes/{inbox}/access", "inboxes.access.update", c.inboxes.UpdateAccess).
+		Ability("settings:write")
 	routing.Get(r, "/inboxes/{inbox}/assignment-status", "inboxes.assignment-status.show",
 		c.inboxes.AssignmentStatus).Ability("settings:read")
 
 	routing.Get(r, "/contacts", "contacts.index", c.contacts.Index).Ability("contacts:read")
 	routing.Post(r, "/contacts", "contacts.store", c.contacts.Store).Ability("contacts:write")
+	files := &v1.AttachmentController{Upload: a.Actions.Inbox.UploadFile, Disks: a.Storage, Errors: a.Errors}
+	r.Handle(fhttp.MethodPost, "/attachments", "attachments.store", fhttp.HandlerFunc(files.Store)).
+		Ability("conversations:write").Use(middleware.BodyLimit(v1.MaxMemberUploadBytes + uploadOverhead))
 	routing.Get(r, "/contacts/{contact}", "contacts.show", c.contacts.Get).Ability("contacts:read")
 	routing.Patch(r, "/contacts/{contact}", "contacts.update", c.contacts.Update).Ability("contacts:write")
 
@@ -116,9 +129,15 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Ability("conversations:read")
 	routing.Get(r, conv+"/messages", "conversations.messages.index", c.messages.Index).
 		Ability("conversations:read")
+	routing.Get(r, conv+"/messages/{message}/original", "conversations.messages.original.show",
+		c.messages.ShowOriginal).Ability("conversations:read")
+	routing.Get(r, conv+"/messages/{message}/original/raw", "conversations.messages.original.raw",
+		c.messages.DownloadRaw).Ability("conversations:read")
 	routing.Post(r, conv+"/messages", "conversations.messages.store", c.messages.Store).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/replies", "conversations.replies.store", c.messages.StoreReply).
+		Ability("conversations:write")
+	routing.Post(r, conv+"/messages/{message}/retry", "conversations.messages.retry", c.messages.Retry).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/notes", "conversations.notes.store", c.messages.StoreNote).
 		Ability("conversations:write")

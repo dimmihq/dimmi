@@ -93,6 +93,8 @@ func API(a *app.App) {
 		identityRoutes(api, a)
 		roleRoutes(api, a)
 		accountRoutes(api, a)
+		api.Group("", func(records *routing.Router) { recordRoutes(records, a) })
+		api.Group("", func(setup *routing.Router) { onboardingRoutes(setup, a) })
 		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 		signInHelpRoutes(api, a)
 	})
@@ -137,6 +139,7 @@ func userRoutes(user *routing.Router, c controllers) {
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)
 	routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
 	routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store)
+	routing.Post(user, "/workspaces", "workspaces.store", c.workspaces.Store).Status(fhttp.StatusCreated)
 	routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update)
 	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
 		Status(fhttp.StatusNoContent)
@@ -378,7 +381,9 @@ func membershipControllers(a *app.App, c *controllers, cursors *pagination.Curso
 	c.memberships = &v1.MembershipController{
 		List: acts.ListMemberships, Accept: acts.AcceptInvitation, Leave: acts.LeaveWorkspace, IDs: a.IDs,
 	}
-	c.workspaces = &v1.WorkspaceController{Restore: acts.RestoreWorkspace, IDs: a.IDs}
+	c.workspaces = &v1.WorkspaceController{
+		Create: acts.CreateWorkspace, Restore: acts.RestoreWorkspace, IDs: a.IDs,
+	}
 
 	c.invitations = &v1.InvitationController{
 		List: acts.ListInvitations, Create: acts.CreateInvitations, Revoke: acts.RevokeInvitation, IDs: a.IDs,

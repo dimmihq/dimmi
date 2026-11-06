@@ -11,6 +11,7 @@ import { type ReactNode, useEffect } from "react";
 import { useLocale } from "react-aria-components";
 
 import { DirectionProvider } from "@/components/foundations/direction/direction";
+import { onGatePage } from "@/features/gate/gate-path";
 import { authConfigQuery, meQuery } from "@/lib/api/auth";
 import { sourceLocale } from "@/lib/i18n";
 import { useLocaleSync } from "@/lib/i18n/locale-sync";
@@ -33,7 +34,7 @@ function PageLanguage() {
 }
 
 export function LocaleRoot({ children }: { children: ReactNode }) {
-  const { data: config } = useQuery(authConfigQuery);
+  const { data: config } = useQuery({ ...authConfigQuery, enabled: !onGatePage() });
   const enabled = config?.locales.map((locale) => locale.code) ?? [sourceLocale];
   const { data: me } = useQuery({ ...meQuery, enabled: enabled.length > 1 });
   const { current } = useCurrentWorkspace(me?.workspaces ?? []);

@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -113,7 +114,7 @@ func (p OrganizationLoginPolicy) MayBypass(ctx context.Context, email string, us
 			return nil
 		}
 
-		owner = err == nil && member.Role == "owner" && member.Status == "active"
+		owner = err == nil && IsOwnerRole(enums.Role(member.Role)) && member.Status == "active"
 
 		return err
 	})

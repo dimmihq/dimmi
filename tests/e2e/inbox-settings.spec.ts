@@ -100,7 +100,7 @@ it.describe("inbox settings", () => {
     const dialog = page.getByRole("alertdialog");
     await expect(dialog.getByRole("button", { name: "Move conversations to" })).toContainText(main.name);
     await dialog.getByRole("button", { name: "Delete inbox" }).click();
-    await expect(page).toHaveURL(/\/d\/settings\/inboxes$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/inboxes$/);
     await expect(inboxes.getByText("Billing")).toHaveCount(0);
 
     expect((await client.get(`conversations/${conversation.id}`)).inbox.id).toBe(main.id);

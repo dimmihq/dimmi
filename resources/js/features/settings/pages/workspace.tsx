@@ -37,7 +37,8 @@ import {
 import { Danger, Field } from "../controls";
 import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
-import { Item, Row, Section, SettingsPage } from "../layout";
+import { Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
+import { LogoRow } from "../logo-row";
 import { MemberImportButton } from "../members/member-import-dialog";
 import { type FilterKey, filterFor, filterKeyFrom } from "../members/member-review";
 import { ExportMembersButton, LastActive, MemberFilterSelect, TwoFactorMark } from "../members/member-review-controls";
@@ -115,11 +116,17 @@ export function WorkspaceSettings() {
       <Section
         title="General"
         action={
-          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate(draftChanges(draft))}>
+          <Button
+            size="small"
+            loading={save.isPending}
+            disabled={!changed}
+            onClick={() => save.mutate(draftChanges(draft))}
+          >
             Save changes
           </Button>
         }
       >
+        <LogoRow workspace={me.workspace.id} url={workspace?.logo_url ?? null} />
         <Row label="Name">
           <Field
             key={`name-${name}`}
@@ -421,6 +428,13 @@ function PasswordPrompt({
   );
 }
 
+/*
+ * RowsWhile stands in for the members while they load.
+ */
+function RowsWhile({ loading }: { loading: boolean }) {
+  return loading ? <RowsSkeleton rows={4} /> : null;
+}
+
 export function MembersSettings() {
   const me = useAccount();
   const workspace = me.workspace.id;
@@ -430,7 +444,10 @@ export function MembersSettings() {
   const { data: roles = [] } = useQuery(rolesQuery(workspace));
   const manages = caller?.member?.permissions.includes("members:write") ?? false;
   const filter = manages ? filterFor(view) : {};
-  const { data: members = [] } = useQuery({ ...membersQuery(workspace, filter), enabled: caller !== undefined });
+  const { data: members = [], isPending: loadingMembers } = useQuery({
+    ...membersQuery(workspace, filter),
+    enabled: caller !== undefined,
+  });
   const [pending, setPending] = useState<Pending | null>(null);
   const [retry, setRetry] = useState<Pending | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -481,6 +498,7 @@ export function MembersSettings() {
             ) : null}
           </div>
         ) : null}
+        <RowsWhile loading={loadingMembers} />
         {members.map((member) => (
           <Person
             key={member.id}

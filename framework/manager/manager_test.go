@@ -75,6 +75,24 @@ func TestManager(t *testing.T) {
 		require.ErrorContains(t, err, `build disk "broken": no credentials`)
 	})
 
+	t.Run("builds a fresh instance from a section it was not given", func(t *testing.T) {
+		t.Parallel()
+		m := newManager()
+		section := config.Section{"driver": "local", "root": "/srv/tenant"}
+
+		first, err := m.Build("tenant", section)
+		require.NoError(t, err)
+		again, err := m.Build("tenant", section)
+		require.NoError(t, err)
+
+		assert.Equal(t, &disk{name: "tenant", root: "/srv/tenant"}, first)
+		assert.NotSame(t, first, again)
+		assert.NotContains(t, m.Names(), "tenant")
+
+		_, err = m.Build("tenant", config.Section{"driver": "s3"})
+		require.ErrorIs(t, err, manager.ErrUnknownDriver)
+	})
+
 	t.Run("serves a swapped instance to every caller", func(t *testing.T) {
 		t.Parallel()
 		m := newManager()

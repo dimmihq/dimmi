@@ -106,6 +106,16 @@ func (m *Manager) Driver(name string) (Provider, error) {
 }
 
 /*
+Build returns a provider from settings kept as data rather than
+configuration, such as a company's own issuer, through the driver the
+section names. It is built fresh on every call and takes no part in
+Redirect and Callback, so its caller keeps the attempt.
+*/
+func (m *Manager) Build(name string, section config.Section) (Provider, error) {
+	return m.providers.Build(name, section)
+}
+
+/*
 Redirect starts an attempt with the named provider and returns the URL
 to send the browser to and the state to keep in that browser. An empty
 redirect URL means the provider's configured one; any other must be

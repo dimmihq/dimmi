@@ -239,6 +239,27 @@ func TestConversationContactMessages(t *testing.T) {
 		}, events)
 	})
 
+	t.Run("keeps a key used on another conversation as a message of its own", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		first := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Charged twice")
+		second := "/api/v1/conversations/" + d.customer(t, "bob", "Login", "Locked out")
+
+		d.owner.PostJSON(first+"/messages", testkit.JSON{"body": "For Ann", "dedupe_key": "evt_9"}).AssertCreated()
+		d.owner.PostJSON(second+"/messages", testkit.JSON{"body": "For Bob", "dedupe_key": "evt_9"}).AssertCreated().
+			AssertJSONPath("data.body", "For Bob")
+	})
+
+	t.Run("leaves a conversation marked as spam where it is", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		path := "/api/v1/conversations/" + d.customer(t, "ann", "Billing", "Charged twice")
+		d.owner.PatchJSON(path, testkit.JSON{"status": "closed", "spam": true}).AssertOK()
+
+		d.owner.PostJSON(path+"/messages", testkit.JSON{"body": "Buy now"}).AssertCreated().
+			AssertJSONPath("meta.conversation.status", "closed")
+	})
+
 	t.Run("refuses conversations of other channels", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)

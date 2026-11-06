@@ -1,187 +1,68 @@
 /*
- * What a teammate needs beside the thread, and the moves they make on the
- * case: assign it, change its status or priority, mark it done or snooze
- * it. Below, who the customer is and what is related. Sections fold in
- * BoardUI's divided accordion, straight on the panel, so nothing sits in
- * a card within the card. The sections without data yet say what will
- * appear there.
+ * What a teammate needs beside the thread. On top, the moves they make on
+ * the case. Below, in BoardUI's divided accordion straight on the panel,
+ * who the customer is, their company and their other conversations, all
+ * read from the conversation's context in one request. A section only
+ * shows when it has something to say.
  */
-import {
-  RiArticleLine,
-  RiCheckLine,
-  RiCloseLine,
-  RiLinksLine,
-  RiTimeLine,
-  RiUser3Line,
-  RiUserSharedLine,
-} from "@remixicon/react";
+import { RiBuilding2Line, RiChatHistoryLine, RiCloseLine, RiUser3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import type { Key, ReactNode } from "react";
 
 import { Accordion, AccordionItem } from "@/components/base/accordion/accordion";
-import { Avatar } from "@/components/base/avatar/avatar";
-import { StatusDot } from "@/components/base/badges/status-dot";
-import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
-import { Select, SelectItem } from "@/components/base/select/select";
-import { TeamRow } from "@/features/inbox/team-select";
-import { avatarColor } from "@/features/shell/avatar-color";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
-import { ApiError } from "@/lib/api/client";
-import {
-  type Conversation,
-  type ConversationPriority,
-  type ConversationStatus,
-  conversationPriorities,
-} from "@/lib/api/inbox";
+import { contextQuery } from "@/lib/api/customers";
+import type { Conversation } from "@/lib/api/inbox";
 import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
-import { type CaseControls, statusLabel } from "../case";
-import { customerName } from "../conversations";
-import { priorityLabel } from "../priority/labels";
-
-const nobody = "nobody";
-const statusDot = { open: "green", snoozed: "yellow", closed: "indigo" } as const;
+import type { CaseControls } from "../case";
+import { CustomerSkeleton } from "../skeletons";
+import { Actions, CaseFields, CaseTags, Refusal } from "./case-section";
+import { CompanySection } from "./company-section";
+import { ContactSection } from "./contact-section";
+import { DeliverySection } from "./delivery-section";
+import { DuplicateBanner } from "./duplicate-banner";
+import { PastConversations } from "./past-conversations";
+import { Nothing } from "./rows";
 
 /*
  * The sections' keys, which the accordion uses to remember which are open.
  */
-const section = { customer: "customer", links: "links", articles: "articles" } as const;
+const section = { customer: "customer", company: "company", past: "past" } as const;
 
-interface Person {
-  id: string;
-  name: string;
-}
+function Customer({ workspace, conversation }: { workspace: string; conversation: Conversation }) {
+  const { data: context, isPending } = useQuery(contextQuery(workspace, conversation.id));
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid min-h-9 grid-cols-[80px_minmax(0,1fr)] items-center gap-2">
-      <dt className="text-body-2-regular text-text-secondary">{label}</dt>
-      <dd className="flex min-w-0 justify-end text-body-2-medium text-text-primary">{children}</dd>
-    </div>
-  );
-}
+  if (isPending) {
+    return <CustomerSkeleton />;
+  }
 
-function PersonName({ name }: { name: string }) {
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <Avatar size="xs" color={avatarColor(name)} initials={name.charAt(0)} />
-      <span className="truncate">{name}</span>
-    </span>
-  );
-}
-
-function Nothing({ children }: { children: ReactNode }) {
-  return <p className="text-body-2-regular text-text-tertiary">{children}</p>;
-}
-
-function choose<T extends string>(apply: (value: T) => void) {
-  return (key: Key | null) => {
-    if (key !== null) {
-      apply(String(key) as T);
-    }
-  };
-}
-
-function CaseFields({
-  conversation,
-  caze,
-  people,
-}: {
-  conversation: Conversation;
-  caze: CaseControls;
-  people: Person[];
-}) {
-  return (
-    <dl className="flex flex-col">
-      <Row label="Assignee">
-        <Select
-          aria-label="Assignee"
-          size="sm"
-          selectedKey={conversation.assignee?.id ?? nobody}
-          onSelectionChange={choose((key) => caze.assign(key === nobody ? null : key))}
-        >
-          <SelectItem id={nobody} textValue="Unassigned">
-            Unassigned
-          </SelectItem>
-          {people.map((person) => (
-            <SelectItem key={person.id} id={person.id} textValue={person.name}>
-              <PersonName name={person.name} />
-            </SelectItem>
-          ))}
-        </Select>
-      </Row>
-      <TeamRow conversation={conversation} caze={caze} />
-      <Row label="Status">
-        <Select
-          aria-label="Status"
-          size="sm"
-          selectedKey={conversation.status}
-          onSelectionChange={choose<ConversationStatus>(caze.setStatus)}
-        >
-          {(Object.keys(statusLabel) as ConversationStatus[]).map((status) => (
-            <SelectItem key={status} id={status} textValue={statusLabel[status]}>
-              <span className="flex items-center gap-2">
-                <StatusDot color={statusDot[status]} />
-                {statusLabel[status]}
-              </span>
-            </SelectItem>
-          ))}
-        </Select>
-      </Row>
-      <Row label="Priority">
-        <Select
-          aria-label="Priority"
-          size="sm"
-          selectedKey={conversation.priority}
-          onSelectionChange={choose<ConversationPriority>(caze.setPriority)}
-        >
-          {conversationPriorities.map((value) => (
-            <SelectItem key={value} id={value} textValue={priorityLabel[value]}>
-              {priorityLabel[value]}
-            </SelectItem>
-          ))}
-        </Select>
-      </Row>
-    </dl>
-  );
-}
-
-function Actions({ conversation, caze, me }: { conversation: Conversation; caze: CaseControls; me: string | null }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {me === null || conversation.assignee?.id === me ? null : (
-        <Button variant="secondary" size="small" leadingIcon={RiUserSharedLine} onClick={() => caze.assign(me)}>
-          Assign to me
-        </Button>
-      )}
-      {conversation.status === "open" ? (
-        <Button variant="secondary" size="small" leadingIcon={RiTimeLine} onClick={() => caze.setStatus("snoozed")}>
-          Snooze
-        </Button>
-      ) : null}
-      {conversation.status === "closed" ? (
-        <Button variant="secondary" size="small" onClick={() => caze.setStatus("open")}>
-          Reopen
-        </Button>
-      ) : (
-        <Button size="small" leadingIcon={RiCheckLine} onClick={() => caze.setStatus("closed")}>
-          Mark as done
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function Refusal({ error }: { error: Error | null }) {
-  if (!error) {
-    return null;
+  if (!context) {
+    return <Nothing>The customer could not be loaded.</Nothing>;
   }
 
   return (
-    <p role="alert" className="text-body-2-regular text-text-error-primary">
-      {error instanceof ApiError ? (Object.values(error.fields)[0] ?? error.message) : error.message}
-    </p>
+    <div className="flex flex-col gap-3">
+      <DuplicateBanner workspace={workspace} contact={context.contact.id} count={context.duplicates_count} />
+      <Accordion
+        variant="divided"
+        size="sm"
+        allowsMultipleExpanded
+        defaultExpandedKeys={[section.customer, section.company, section.past]}
+        className="border-t border-separator-border"
+      >
+        <AccordionItem id={section.customer} title="Customer" icon={RiUser3Line}>
+          <ContactSection workspace={workspace} context={context} />
+        </AccordionItem>
+        <AccordionItem id={section.company} title="Company" icon={RiBuilding2Line}>
+          <CompanySection context={context} />
+        </AccordionItem>
+        <AccordionItem id={section.past} title="Past conversations" icon={RiChatHistoryLine}>
+          <PastConversations workspace={workspace} context={context} current={conversation.id} />
+        </AccordionItem>
+      </Accordion>
+      <DeliverySection workspace={workspace} contact={context.contact.id} />
+    </div>
   );
 }
 
@@ -201,7 +82,6 @@ export function DetailsPanel({
   const people = members
     .filter((member) => member.status === "active")
     .map((member) => ({ id: member.id, name: member.user.name }));
-  const customer = customerName(conversation.contact);
 
   return (
     <Panel label="Details" className="h-full w-full">
@@ -213,39 +93,9 @@ export function DetailsPanel({
           <Actions conversation={conversation} caze={caze} me={caller?.member?.id ?? null} />
           <Refusal error={caze.error} />
           <CaseFields conversation={conversation} caze={caze} people={people} />
+          <CaseTags workspace={workspace} conversation={conversation} caze={caze} />
         </div>
-        <Accordion
-          variant="divided"
-          size="sm"
-          allowsMultipleExpanded
-          defaultExpandedKeys={[section.customer]}
-          className="border-t border-separator-border"
-        >
-          <AccordionItem id={section.customer} title="Customer" icon={RiUser3Line}>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2.5">
-                <Avatar size="md" color={avatarColor(customer)} initials={customer.charAt(0).toUpperCase()} />
-                <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-body-2-medium text-text-primary">{customer}</span>
-                  <span className="truncate text-body-2-regular text-text-tertiary">
-                    {conversation.contact.email ?? "No email address"}
-                  </span>
-                </div>
-              </div>
-              <dl className="flex flex-col">
-                <Row label="Kind">{conversation.contact.kind === "user" ? "User" : "Lead"}</Row>
-                <Row label="Inbox">{conversation.inbox.name}</Row>
-                <Row label="Channel">{conversation.channel.name}</Row>
-              </dl>
-            </div>
-          </AccordionItem>
-          <AccordionItem id={section.links} title="Links" icon={RiLinksLine}>
-            <Nothing>Issues and tickets linked to this conversation show here.</Nothing>
-          </AccordionItem>
-          <AccordionItem id={section.articles} title="Help center articles" icon={RiArticleLine}>
-            <Nothing>Articles dimmi used or suggested show here.</Nothing>
-          </AccordionItem>
-        </Accordion>
+        <Customer workspace={workspace} conversation={conversation} />
       </ScrollArea>
     </Panel>
   );

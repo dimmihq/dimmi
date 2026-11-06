@@ -33,11 +33,11 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
-	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/attributes"
 )
 
 /*
@@ -117,7 +117,7 @@ func (a *UpdateWidgetContact) write(
 	q, now := models.New(tx), a.Clock.Now()
 	next, changes := applyContactChange(current, change)
 
-	attrs, written, err := contacts.MergeAttributes(current.CustomAttributes, change.CustomAttributes)
+	attrs, written, err := attributes.Merge(current.CustomAttributes, change.CustomAttributes)
 	if err != nil {
 		return current, err
 	}

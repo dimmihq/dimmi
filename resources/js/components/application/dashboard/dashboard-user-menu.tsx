@@ -3,7 +3,8 @@
 import { useTemplateCopy } from "@/components/foundations/template-copy/template-copy";
 
 import { useDirection } from "@/components/foundations/direction/direction";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { RiCheckLine } from "@remixicon/react";
 import {
   Button as AriaButton,
   Dialog as AriaDialog,
@@ -31,6 +32,8 @@ export type UserRow = {
   initials: string;
   color: AvatarColor;
   name: string;
+  /** Second line under the name, e.g. the person's role in the workspace. */
+  detail?: string;
   isSelected?: boolean;
 };
 
@@ -49,7 +52,7 @@ function Collapsible({ collapsed, children }: { collapsed: boolean; children: Re
   ));
 }
 
-export function UserMenuItem({ initials, color, name, isSelected, onSelect }: UserRow & { onSelect: () => void }) {
+export function UserMenuItem({ initials, color, name, detail, isSelected, onSelect }: UserRow & { onSelect: () => void }) {
   const localize = useTemplateCopy();
   return localize((
     <AriaButton
@@ -57,14 +60,61 @@ export function UserMenuItem({ initials, color, name, isSelected, onSelect }: Us
       aria-current={isSelected ? "page" : undefined}
       onPress={onSelect}
       className={cx(
-        "flex w-full cursor-pointer items-center gap-2 rounded-2lg px-2 py-1.5 text-start outline-none transition-colors",
-        isSelected
-          ? "bg-background-primary-hover"
-          : "hover:bg-background-primary-hover focus-visible:bg-background-primary-hover",
+        "flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-start outline-none transition-colors",
+        "hover:bg-background-primary-hover focus-visible:bg-background-primary-hover",
+        isSelected && "bg-background-primary-hover",
       )}
     >
       <Avatar size="xs" color={color} initials={initials} />
-      <span className="truncate text-body-medium text-text-primary">{name}</span>
+      <span className="min-w-0 truncate text-body-2-medium text-text-primary">{name}</span>
+      {isSelected ? <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" /> : null}
+      {detail ? (
+        <span className="ms-auto shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-px text-caption-1-medium text-text-tertiary">
+          {detail}
+        </span>
+      ) : null}
+    </AriaButton>
+  ));
+}
+
+/** The panel's header: who or what the menu is about, larger than the rows below it. */
+export function MenuHeader({ initials, color, name, detail }: Omit<UserRow, "isSelected">) {
+  const localize = useTemplateCopy();
+  return localize((
+    <div className="flex items-center gap-2 px-2 py-1.5">
+      <Avatar size="xs" color={color} initials={initials} />
+      <span className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{name}</span>
+      {detail ? (
+        <span className="shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-px text-caption-1-medium text-text-tertiary">
+          {detail}
+        </span>
+      ) : null}
+    </div>
+  ));
+}
+
+/** An action at the foot of the panel: an icon and a label, like the sidebar's rows. */
+export function MenuActionRow({
+  icon: Icon,
+  label,
+  onSelect,
+}: {
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+  label: string;
+  onSelect: () => void;
+}) {
+  const localize = useTemplateCopy();
+  return localize((
+    <AriaButton
+      type="button"
+      onPress={onSelect}
+      className={cx(
+        "flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-start outline-none transition-colors",
+        "hover:bg-background-primary-hover focus-visible:bg-background-primary-hover",
+      )}
+    >
+      <Icon className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+      <span className="truncate text-body-2-medium text-text-primary">{label}</span>
     </AriaButton>
   ));
 }
@@ -81,9 +131,9 @@ export function MenuRowList({
 }) {
   const localize = useTemplateCopy();
   return localize((
-    <div className="flex w-full flex-col gap-1.5 pt-[5px]">
-      <span className="px-2 text-body-medium text-text-secondary">{title}</span>
-      <div className="flex w-full flex-col gap-1">
+    <div className="flex w-full flex-col gap-0.5">
+      <span className="px-2 pt-1 pb-0.5 text-caption-1-medium text-text-tertiary">{title}</span>
+      <div className="flex w-full flex-col gap-0.5">
         {rows.map(({ key, ...row }) => (
           <UserMenuItem key={key} {...row} onSelect={() => onSelect(key)} />
         ))}
@@ -94,7 +144,7 @@ export function MenuRowList({
 
 /** Full-bleed divider centered in the panel, between a list and its actions. */
 export function MenuDivider() {
-  return <div className="-mx-2.5 my-3.5 h-px bg-border-button-default" />;
+  return <div className="-mx-1.5 my-1.5 h-px bg-border-button-default" />;
 }
 
 export function DashboardUserMenu({
@@ -178,8 +228,8 @@ export function DashboardUserMenu({
         placement={isMobile ? "bottom start" : direction === "rtl" ? "left top" : "right top"}
         offset={8}
         className={cx(
-          "w-[265px] max-w-[calc(100vw-32px)] origin-top-left overflow-y-auto",
-          "rounded-2xl border border-border-button-default bg-background-primary-default p-2.5 shadow-dropdown",
+          "w-60 max-w-[calc(100vw-32px)] origin-top-left overflow-y-auto",
+          "rounded-2xl border border-border-button-default bg-background-primary-default p-1.5 shadow-dropdown",
           "transition duration-150 ease-out",
           "data-[entering]:opacity-0 data-[entering]:scale-95 data-[entering]:blur-[2px]",
           "data-[exiting]:opacity-0 data-[exiting]:scale-95 data-[exiting]:blur-[2px]",

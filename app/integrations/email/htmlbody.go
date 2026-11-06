@@ -3,16 +3,21 @@
 | Message Body
 |--------------------------------------------------------------------------
 |
-| A received email becomes two things. The visible body is Markdown of
-| what the customer wrote this time, the only text teammates read first
-| and the agent ever sees. The full HTML is kept beside it, sanitized,
-| with the quoted thread and the signature marked rather than removed.
+| A received email becomes three things. The visible body is what the
+| customer wrote this time, the only text teammates read first and the
+| agent ever sees. It is Markdown when it came from HTML and the words
+| exactly as written when the mail was plain text, because plain text
+| is not Markdown: its format says which, so that a "*" or a "<div>" is
+| never taken for markup. The full text of the whole message and its
+| HTML, sanitized, with the quoted thread and the signature marked, are
+| kept beside it for anyone who wants to read more.
 |
 | HTML is distrusted throughout. Before anything else, what a reader
 | would never see is dropped: hidden elements, which can carry
 | instructions aimed at the agent, and tracking pixels. The sanitizer
 | then keeps only email-safe markup, inline styles from a short list
-| and links to the web, mail, inline parts and embedded images.
+| and links to the web, mail, phone numbers, inline parts and embedded
+| images.
 |
 | Mail clients mark their quoted thread in the HTML itself, so that pass
 | comes first; plain text quotes are found again in the Markdown.
@@ -24,18 +29,28 @@ package email
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/dom"
 	"github.com/dimmihq/dimmi/framework/sanitize"
+
+	"github.com/dimmihq/dimmi/app/enums"
 )
 
 /*
-Size bounds of a stored body: Markdown and HTML.
+maxForwardHead is how much of a quote is read for a forward's marker.
+*/
+const maxForwardHead = 800
+
+/*
+Size bounds of a stored body: the visible part, the HTML and the full
+text.
 */
 const (
 	maxBodyBytes = 64 << 10
 	maxHTMLBytes = 512 << 10
+	maxFullBytes = 1 << 20
 )
 
 /*
@@ -48,32 +63,50 @@ const (
 )
 
 /*
-truncatedNote ends a body cut at the size limit.
+Selectors of what is not the customer's answer next to a quote, and of
+quotes that wrap what they quote, as opposed to a header above it.
 */
-const truncatedNote = "\n\n[Message truncated. View original.]"
+const (
+	notAnswerSelector    = "blockquote, [" + SignatureAttr + "]"
+	wrappingQuoteElement = "blockquote, div.gmail_quote, div[class*=yahoo_quoted], div.protonmail_quote, " +
+		"div[data-marker]"
+)
 
 var (
-	hiddenStyle = regexp.MustCompile(`(?i)(display\s*:\s*none|visibility\s*:\s*hidden|` +
-		`font-size\s*:\s*0(px|pt|em)?\s*(;|$)|max-height\s*:\s*0(px)?\s*(;|$)|opacity\s*:\s*0(\.0+)?\s*(;|$))`)
-	blankLines = regexp.MustCompile(`\n{3,}`)
+	hiddenStyle = regexp.MustCompile(`(?i)(display\s*:\s*none|visibility\s*:\s*hidden|mso-hide\s*:\s*all|` +
+		`(^|[;\s])color\s*:\s*(transparent|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0(\.0+)?\s*\))|` +
+		`font-size\s*:\s*(0(\.0+)?(px|pt|em|rem)?|0?\.\d+(px|pt)|0?\.0\d*(em|rem)|` +
+		`1(\.0+)?(px|pt))\s*(;|!|$)|` +
+		`max-height\s*:\s*0(px)?\s*(;|!|$)|opacity\s*:\s*0(\.0+)?\s*(;|!|$)|text-indent\s*:\s*-\d{3,}|` +
+		`(^|[;\s])(left|top|margin-left)\s*:\s*-\d{4,})`)
+	zeroBox        = regexp.MustCompile(`(?i)(^|[;\s])(height|width)\s*:\s*0(px)?\s*(;|!|$)`)
+	overflowHidden = regexp.MustCompile(`(?i)overflow\s*:\s*hidden`)
+	pixelBox       = regexp.MustCompile(`(?i)(^|[;\s])(height|width)\s*:\s*[01](px)?\s*(;|!|$)`)
+	trailingRule   = regexp.MustCompile(`(\n\s*(\* \* \*|-{3,}|_{3,})\s*)+$`)
+	blankLines     = regexp.MustCompile(`\n{3,}`)
 )
 
 /*
 Body is a received message's body as stored.
 
-Markdown is the visible part, HTML the full sanitized HTML with the
-quote and signature marked, empty for plain text mail. Quote, Signature
-and Fallback say what stripping did; Truncated that the Markdown was
-cut at the size limit, HTMLTooLarge that the HTML was not kept.
+Visible is the part teammates read, in Format. Full is the whole
+message as plain words, quote and signature included. HTML is the full
+sanitized HTML with the quote and signature marked, empty for plain
+text mail. Quote, Signature and Fallback say what stripping did;
+Truncated that Visible was cut at the size limit, FullTruncated that
+Full was, and HTMLTooLarge that the HTML was not kept.
 */
 type Body struct {
-	Markdown     string
-	HTML         string
-	Quote        bool
-	Signature    bool
-	Fallback     bool
-	Truncated    bool
-	HTMLTooLarge bool
+	Visible       string
+	Format        enums.BodyFormat
+	Full          string
+	HTML          string
+	Quote         bool
+	Signature     bool
+	Fallback      bool
+	Truncated     bool
+	FullTruncated bool
+	HTMLTooLarge  bool
 }
 
 /*
@@ -93,7 +126,7 @@ func BuildBody(html, text string) Body {
 		return unreadableHTMLBody(html, text)
 	}
 
-	if strings.TrimSpace(body.Markdown) == "" && strings.TrimSpace(text) != "" {
+	if strings.TrimSpace(body.Visible) == "" && strings.TrimSpace(text) != "" {
 		return textBody(text)
 	}
 
@@ -120,7 +153,16 @@ func hiddenTag(tag dom.Tag) bool {
 		return true
 	}
 
-	return hiddenStyle.MatchString(tag.Attrs["style"])
+	return hiddenByStyle(tag.Attrs["style"])
+}
+
+/*
+hiddenByStyle reports whether an inline style keeps its element from a
+reader: not displayed, invisible, too small to read or pushed off the
+page.
+*/
+func hiddenByStyle(style string) bool {
+	return hiddenStyle.MatchString(style) || (zeroBox.MatchString(style) && overflowHidden.MatchString(style))
 }
 
 /*
@@ -134,12 +176,13 @@ func htmlBody(html string) (Body, error) {
 	}
 
 	dropHidden(doc)
-	quote := markQuote(doc)
 	signature := markSignature(doc)
+	quote := markQuote(doc)
 	full := HTMLPolicy().Sanitize(doc.Find("body").HTML())
 
 	doc.Find("[" + QuotedAttr + "]").Remove()
 	doc.Find("[" + SignatureAttr + "]").Remove()
+	unwrapLayoutTables(doc)
 
 	markdown, err := dom.ToMarkdown(HTMLPolicy().Sanitize(doc.Find("body").HTML()))
 	if err != nil {
@@ -147,12 +190,14 @@ func htmlBody(html string) (Body, error) {
 	}
 
 	body := strippedBody(markdown)
+	body.Visible = strings.TrimSpace(trailingRule.ReplaceAllString(body.Visible, ""))
 	body.Quote, body.Signature = body.Quote || quote, body.Signature || signature
 
-	if body.Fallback || strings.TrimSpace(body.Markdown) == "" {
+	if body.Fallback || strings.TrimSpace(body.Visible) == "" {
 		body = fallbackBody(full, body)
 	}
 
+	body.Full, body.FullTruncated = capFull(strings.TrimSpace(dom.ToText(full)))
 	body.HTML = full
 	if len(full) > maxHTMLBytes {
 		body.HTML, body.HTMLTooLarge = "", true
@@ -165,19 +210,26 @@ func htmlBody(html string) (Body, error) {
 textBody builds the body of a plain text message.
 */
 func textBody(text string) Body {
-	return strippedBody(strings.TrimSpace(strings.ReplaceAll(text, "\r\n", "\n")))
+	whole := strings.TrimSpace(strings.ReplaceAll(text, "\r\n", "\n"))
+
+	body := strippedBody(whole)
+	body.Format = enums.BodyFormatPlain
+	body.Full, body.FullTruncated = capFull(whole)
+
+	return body
 }
 
 /*
-strippedBody runs the text pass and caps the result.
+strippedBody runs the text pass and caps the result, as Markdown unless
+the caller says otherwise.
 */
 func strippedBody(markdown string) Body {
 	stripped := StripText(markdown)
 	visible, truncated := capBody(blankLines.ReplaceAllString(stripped.Visible, "\n\n"))
 
 	return Body{
-		Markdown: visible, Quote: stripped.Quote, Signature: stripped.Signature, Fallback: stripped.Fallback,
-		Truncated: truncated,
+		Visible: visible, Format: enums.BodyFormatMarkdown, Quote: stripped.Quote, Signature: stripped.Signature,
+		Fallback: stripped.Fallback, Truncated: truncated,
 	}
 }
 
@@ -193,24 +245,40 @@ func fallbackBody(full string, body Body) Body {
 
 	visible, truncated := capBody(blankLines.ReplaceAllString(strings.TrimSpace(markdown), "\n\n"))
 
-	return Body{Markdown: visible, Fallback: body.Quote || body.Signature, Truncated: truncated}
+	return Body{
+		Visible: visible, Format: enums.BodyFormatMarkdown, Fallback: body.Quote || body.Signature,
+		Truncated: truncated,
+	}
 }
 
 /*
 capBody cuts a body over the size limit at the last paragraph break
-before it, and notes the cut.
+before it, and says so. The thread offers the whole message beside a
+body cut this way.
 */
-func capBody(markdown string) (string, bool) {
-	if len(markdown) <= maxBodyBytes {
-		return markdown, false
+func capBody(text string) (string, bool) {
+	if len(text) <= maxBodyBytes {
+		return text, false
 	}
 
-	cut := markdown[:maxBodyBytes-len(truncatedNote)]
+	cut := text[:maxBodyBytes]
 	if i := strings.LastIndex(cut, "\n\n"); i > 0 {
 		cut = cut[:i]
 	}
 
-	return strings.ToValidUTF8(cut, "") + truncatedNote, true
+	return strings.ToValidUTF8(cut, ""), true
+}
+
+/*
+capFull cuts the full text at its size limit, and says so. The raw
+email still holds the rest.
+*/
+func capFull(text string) (string, bool) {
+	if len(text) <= maxFullBytes {
+		return text, false
+	}
+
+	return strings.ToValidUTF8(text[:maxFullBytes], ""), true
 }
 
 /*
@@ -221,26 +289,65 @@ func dropHidden(doc *dom.Document) {
 	doc.Find("script, style, head, title, [hidden]").Remove()
 
 	doc.Find("[style]").Each(func(el dom.Selection) {
-		if style, _ := el.Attr("style"); hiddenStyle.MatchString(style) {
+		if style, _ := el.Attr("style"); hiddenByStyle(style) {
 			el.Remove()
 		}
 	})
 
 	doc.Find("img").Each(func(img dom.Selection) {
-		width, _ := img.Attr("width")
-		height, _ := img.Attr("height")
-
-		if strings.TrimSpace(width) == "1" || strings.TrimSpace(height) == "1" ||
-			strings.TrimSpace(width) == "0" || strings.TrimSpace(height) == "0" {
+		if pixelImage(img) {
 			img.Remove()
 		}
 	})
 }
 
 /*
+unwrapLayoutTables replaces every table of a single column, which only
+lays a mail out, with its content. Inner tables go first, so an outer
+one takes their content along.
+*/
+func unwrapLayoutTables(doc *dom.Document) {
+	var tables []dom.Selection
+
+	doc.Find("table").Each(func(table dom.Selection) { tables = append(tables, table) })
+
+	for _, table := range slices.Backward(tables) {
+		if table.Find("td + td, td + th, th + td, th + th").Len() > 0 {
+			continue
+		}
+
+		var content strings.Builder
+
+		table.Find("td, th").Each(func(cell dom.Selection) {
+			content.WriteString("<div>" + cell.HTML() + "</div>")
+		})
+
+		table.ReplaceWithHTML(content.String())
+	}
+}
+
+/*
+pixelImage reports whether an image is a pixel or smaller, by its size
+attributes or its style.
+*/
+func pixelImage(img dom.Selection) bool {
+	for _, name := range []string{"width", "height"} {
+		value, _ := img.Attr(name)
+		if size := strings.TrimSuffix(strings.TrimSpace(value), "px"); size == "0" || size == "1" {
+			return true
+		}
+	}
+
+	style, _ := img.Attr("style")
+
+	return pixelBox.MatchString(style)
+}
+
+/*
 markQuote marks the first quoted thread a mail client wrapped, and
-everything after it, unless the customer answered below a cited quote,
-as in an inline reply. It reports whether it marked one.
+everything after it, unless it holds a forward, which is content, or
+the customer answered inside or below it. It reports whether it marked
+one.
 */
 func markQuote(doc *dom.Document) bool {
 	marked := false
@@ -251,7 +358,7 @@ func markQuote(doc *dom.Document) bool {
 		}
 
 		marked = true
-		if kind, _ := el.Attr("type"); kind == "cite" && answeredAfter(el) {
+		if forwardedQuote(el) || answeredInside(el) {
 			return
 		}
 
@@ -263,22 +370,41 @@ func markQuote(doc *dom.Document) bool {
 }
 
 /*
-answeredAfter reports whether a quote is followed by text of the
-customer's own, other than more quotes, which makes it an inline reply.
+forwardedQuote reports whether what looks like a quote opens with a
+forward's marker, or a header whose subject says it was forwarded.
 */
-func answeredAfter(quote dom.Selection) bool {
+func forwardedQuote(el dom.Selection) bool {
+	head := []rune(strings.ReplaceAll(el.Text()+" "+el.TextAfter(""), "\u00a0", " "))
+
+	return forwardedHead.MatchString(string(head[:min(len(head), maxForwardHead)]))
+}
+
+/*
+answeredInside reports whether the customer wrote below a quote, or
+between the quoted parts inside it, as in an inline reply.
+*/
+func answeredInside(el dom.Selection) bool {
+	if el.Is(wrappingQuoteElement) && answeredAfter(el) {
+		return true
+	}
+
 	answered := false
 
-	quote.NextAll().Each(func(el dom.Selection) {
-		kind, _ := el.Attr("type")
-		if kind == "cite" || el.Find("blockquote").Len() > 0 || strings.TrimSpace(el.Text()) == "" {
-			return
+	el.Find("blockquote").Each(func(quote dom.Selection) {
+		if !quote.Inside("blockquote") && answeredAfter(quote) {
+			answered = true
 		}
-
-		answered = true
 	})
 
 	return answered
+}
+
+/*
+answeredAfter reports whether a quote is followed by text of the
+customer's own: not more quotes, not a signature and not a footer.
+*/
+func answeredAfter(quote dom.Selection) bool {
+	return !isFooter(strings.Split(quote.TextAfter(notAnswerSelector), "\n"))
 }
 
 /*
@@ -301,7 +427,7 @@ Yahoo, Proton, Zimbra and Zoho.
 func quoteSelectors() string {
 	return strings.Join([]string{
 		"div.gmail_quote", `blockquote[type="cite"]`, "div#divRplyFwdMsg", "div#appendonsend",
-		"hr#stopSpelling", "div.yahoo_quoted", "div.protonmail_quote", "blockquote.protonmail_quote",
+		"hr#stopSpelling", `div[class*="yahoo_quoted"]`, "div.protonmail_quote", "blockquote.protonmail_quote",
 		"div.moz-cite-prefix", `div[data-marker="__QUOTED_TEXT__"]`, `div[style*="border-top:solid #E1E1E1"]`,
 		"#zwchr",
 	}, ", ")
@@ -310,14 +436,14 @@ func quoteSelectors() string {
 /*
 HTMLPolicy returns the sanitizer policy for received HTML: the markup
 mail is written in, a short list of inline styles, and links to the
-web, mail, inline parts and embedded images only.
+web, mail, phone numbers, inline parts and embedded images only.
 */
 func HTMLPolicy() *sanitize.Policy {
 	p := sanitize.NewPolicy().
 		AllowElements("a", "b", "i", "u", "s", "em", "strong", "p", "br", "div", "span", "blockquote", "ul",
 			"ol", "li", "table", "thead", "tbody", "tfoot", "tr", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6",
 			"pre", "code", "hr", "img", "font", "center", "small", "sub", "sup", "strike", "del", "ins", "caption").
-		AllowURLSchemes("http", "https", "mailto", "cid").
+		AllowURLSchemes("http", "https", "mailto", "tel", "cid").
 		AllowDataURIImages()
 
 	p.AllowAttrs("href").OnElements("a")

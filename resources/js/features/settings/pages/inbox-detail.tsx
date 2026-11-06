@@ -1,11 +1,12 @@
 /*
- * One inbox of the workspace: its name, colour and default team, how
- * long a reply reopens a closed conversation, whether a reply takes a
- * conversation nobody holds, how new conversations are assigned, how
- * that assignment stands right now, and deleting it. Changes collect on
- * the page and save together. Deleting moves the inbox's conversations
- * to another inbox; the default inbox is never deleted. People who may
- * not manage inboxes see every setting without changing it.
+ * One inbox of the workspace: its name, colour and default team, who may
+ * open it, the channels that feed it, how long a reply reopens a closed
+ * conversation, whether a reply takes a conversation nobody holds, how
+ * new conversations are assigned, how that assignment stands right now,
+ * and deleting it. Changes collect on the page and save together.
+ * Deleting moves the inbox's conversations to another inbox; the default
+ * inbox is never deleted. People who may not manage inboxes see every
+ * setting without changing it.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,15 +28,20 @@ import {
   type InboxSettings,
   inboxesQuery,
   inboxQuery,
+  sameAccess,
   updateInbox,
+  updateInboxAccess,
 } from "@/lib/api/inboxes";
 import { type Team, teamsQuery } from "@/lib/api/teams";
+import { membersQuery } from "@/lib/api/workspace";
 
 import { Choice, Colour, Danger, Field, Toggle } from "../controls";
 import { assignmentModes, keyOf, poolLine, queueOrders, reopenLabel, reopenWindows, usePermission } from "../inboxes";
-import { Empty, Item, Row, Section, SettingsPage } from "../layout";
+import { Empty, Item, PageSkeleton, Row, Section, SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
+import { AccessSection } from "./inbox-access";
+import { ChannelsSection } from "./inbox-channels";
 
 function BackToInboxes() {
   const navigate = useNavigate();
@@ -247,7 +253,7 @@ function StatusSection({ inbox }: { inbox: Inbox }) {
   const { data: status } = useQuery(assignmentStatusQuery(workspace, inbox.id));
 
   if (!status) {
-    return null;
+    return <Section title="Assignment status" loading rows={2} />;
   }
 
   const waiting = status.waiting.count;
@@ -337,9 +343,20 @@ function InboxPage({ inbox, canManage }: { inbox: Inbox; canManage: boolean }) {
   const workspace = useAccount().workspace.id;
   const queryClient = useQueryClient();
   const { data: teams = [] } = useQuery(teamsQuery(workspace));
+  const { data: members = [] } = useQuery(membersQuery(workspace));
+  const { data: inboxes = [] } = useQuery(inboxesQuery(workspace));
   const edit = useDraft();
+  const [access, setAccess] = useState(inbox.access);
+  const accessChanged = !sameAccess(access, inbox.access);
   const save = useMutation({
-    mutationFn: () => updateInbox(workspace, inbox.id, edit.draft),
+    mutationFn: async () => {
+      if (Object.keys(edit.draft).length > 0) {
+        await updateInbox(workspace, inbox.id, edit.draft);
+      }
+      if (accessChanged) {
+        await updateInboxAccess(workspace, inbox.id, access);
+      }
+    },
     onSuccess: async () => {
       edit.reset();
       await queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "inboxes"] });
@@ -347,12 +364,14 @@ function InboxPage({ inbox, canManage }: { inbox: Inbox; canManage: boolean }) {
   });
   const canReadSettings = usePermission(workspace, "settings:read");
   const locked = !canManage;
-  const changed = Object.keys(edit.draft).length > 0;
+  const changed = Object.keys(edit.draft).length > 0 || accessChanged;
 
   return (
     <SettingsPage title={inbox.name} description={canManage ? undefined : "Only admins can change inboxes."}>
       <BackToInboxes />
       <GeneralSection inbox={inbox} teams={teams} edit={edit} locked={locked} />
+      <AccessSection access={access} teams={teams} members={members} locked={locked} onChange={setAccess} />
+      <ChannelsSection workspace={workspace} inbox={inbox} inboxes={inboxes} canManage={canManage} />
       <AssignmentSection inbox={inbox} teams={teams} edit={edit} locked={locked} />
       {canManage ? (
         <div className="flex items-center justify-end gap-3">
@@ -361,7 +380,7 @@ function InboxPage({ inbox, canManage }: { inbox: Inbox; canManage: boolean }) {
               {failureText(save.error)}
             </p>
           ) : null}
-          <Button size="small" disabled={!changed || save.isPending} onClick={() => save.mutate()}>
+          <Button size="small" loading={save.isPending} disabled={!changed} onClick={() => save.mutate()}>
             Save changes
           </Button>
         </div>
@@ -386,7 +405,7 @@ export function InboxSettingsPage({ inbox }: { inbox: string }) {
   }
 
   if (!data) {
-    return null;
+    return <PageSkeleton />;
   }
 
   return <InboxPage key={data.updated_at} inbox={data} canManage={canManage} />;

@@ -84,7 +84,7 @@ func bootSSOLogin(a *app.App) {
 	acts := a.Actions
 	attempts := appauth.SSOAttempts{Cache: a.Cache}
 	providers := sso.SAMLProviders{Keys: a.Keys, Links: a.Links, Clock: a.Clock}
-	issuers := ssologin.OIDCProviders{Keys: a.Keys, Links: a.Links, HTTP: a.HTTP, Clock: a.Clock}
+	issuers := ssologin.OIDCProviders{Keys: a.Keys, Links: a.Links, Social: a.Social}
 
 	acts.StartSSOSignIn = &ssologin.StartSignIn{DB: a.DB, Attempts: attempts, SAML: providers, OIDC: issuers}
 	acts.CompleteSSOLogin = &ssologin.CompleteSSOLogin{

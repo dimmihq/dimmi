@@ -82,6 +82,19 @@ export function addTeammate(ownerEmail: string, email: string, role: "admin" | "
 }
 
 /*
+ * finishSetup marks every workspace the person owns as set up, as walking
+ * its onboarding steps would, so the app opens straight away.
+ */
+export function finishSetup(ownerEmail: string) {
+  psql(
+    `UPDATE workspaces SET onboarding_step = 'done', onboarding_completed_at = now()
+     WHERE id IN (SELECT m.workspace_id FROM workspace_members m JOIN users u ON u.id = m.user_id
+                  WHERE u.email = :'owner' AND m.role = 'owner')`,
+    { owner: ownerEmail },
+  );
+}
+
+/*
  * verifyEmail marks the person's address as proven, as following the
  * mailed link would.
  */
@@ -139,4 +152,25 @@ export function conversationTeams(ownerEmail: string): string[] {
   )
     .split("\n")
     .slice(0, -1);
+}
+
+/*
+ * stopMail stops all mail to the address in the workspace the owner with
+ * ownerEmail created, as a hard bounce would.
+ */
+export function stopMail(ownerEmail: string, email: string) {
+  psql(
+    `INSERT INTO email_suppressions (workspace_id, email, reason, scope, source, details, created_at, updated_at)
+     SELECT m.workspace_id, :'email', 'hard_bounce', 'all', 'dsn', '{}', now(), now()
+     FROM workspace_members m JOIN users u ON u.id = m.user_id
+     WHERE u.email = :'owner' AND m.role = 'owner'`,
+    { owner: ownerEmail, email },
+  );
+}
+
+/*
+ * resumeMail lets mail reach the address again.
+ */
+export function resumeMail(email: string) {
+  psql("DELETE FROM email_suppressions WHERE email = :'email'", { email });
 }

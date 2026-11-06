@@ -59,6 +59,7 @@ type InboxController struct {
 	Create *inboxes.CreateInbox
 	Change *inboxes.UpdateInbox
 	Remove *inboxes.DeleteInbox
+	Access *inboxes.SetInboxAccess
 	Status *assignment.ShowAssignmentStatus
 	IDs    *ids.Registry
 }

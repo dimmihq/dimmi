@@ -21,7 +21,7 @@ INSERT INTO contacts (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9::timestamptz, $9::timestamptz, $9::timestamptz, $9::timestamptz
 )
-RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder
 `
 
 type CreateContactParams struct {
@@ -75,6 +75,8 @@ func (q *Queries) CreateContact(ctx context.Context, arg CreateContactParams) (C
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
@@ -120,8 +122,56 @@ func (q *Queries) CreateContactIdentity(ctx context.Context, arg CreateContactId
 	return i, err
 }
 
+const deleteContactIdentity = `-- name: DeleteContactIdentity :execrows
+DELETE FROM contact_identities
+WHERE workspace_id = $1 AND contact_id = $2 AND id = $3
+`
+
+type DeleteContactIdentityParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// DeleteContactIdentity detaches an identity from the contact and reports
+// whether it was theirs.
+func (q *Queries) DeleteContactIdentity(ctx context.Context, arg DeleteContactIdentityParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteContactIdentity, arg.WorkspaceID, arg.ContactID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteContactIdentityByValue = `-- name: DeleteContactIdentityByValue :execrows
+DELETE FROM contact_identities
+WHERE workspace_id = $1 AND contact_id = $2 AND type = $3 AND value = $4
+`
+
+type DeleteContactIdentityByValueParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+	Type        string   `json:"type"`
+	Value       string   `json:"value"`
+}
+
+// DeleteContactIdentityByValue detaches the identity of the type and
+// value from the contact, when it holds one.
+func (q *Queries) DeleteContactIdentityByValue(ctx context.Context, arg DeleteContactIdentityByValueParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteContactIdentityByValue,
+		arg.WorkspaceID,
+		arg.ContactID,
+		arg.Type,
+		arg.Value,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findContact = `-- name: FindContact :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND id = $2
 `
 
 type FindContactParams struct {
@@ -158,12 +208,14 @@ func (q *Queries) FindContact(ctx context.Context, arg FindContactParams) (Conta
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const findContactByExternalID = `-- name: FindContactByExternalID :one
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at FROM contacts WHERE workspace_id = $1 AND external_id = $2
+SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts WHERE workspace_id = $1 AND external_id = $2
 `
 
 type FindContactByExternalIDParams struct {
@@ -200,12 +252,14 @@ func (q *Queries) FindContactByExternalID(ctx context.Context, arg FindContactBy
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
 }
 
 const findContactByIdentity = `-- name: FindContactByIdentity :one
-SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at FROM contacts AS c
+SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder FROM contacts AS c
 JOIN contact_identities AS i ON i.contact_id = c.id AND i.workspace_id = c.workspace_id
 WHERE c.workspace_id = $1 AND i.type = $2 AND i.value = $3
 `
@@ -245,6 +299,50 @@ func (q *Queries) FindContactByIdentity(ctx context.Context, arg FindContactById
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
+		&i.Placeholder,
 	)
 	return i, err
+}
+
+const listContactIdentities = `-- name: ListContactIdentities :many
+SELECT id, workspace_id, contact_id, type, value, verified, created_at, updated_at FROM contact_identities
+WHERE workspace_id = $1 AND contact_id = $2
+ORDER BY created_at, id
+`
+
+type ListContactIdentitiesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// ListContactIdentities returns how the contact appears on channels, in
+// the order they were added.
+func (q *Queries) ListContactIdentities(ctx context.Context, arg ListContactIdentitiesParams) ([]ContactIdentity, error) {
+	rows, err := q.db.Query(ctx, listContactIdentities, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ContactIdentity
+	for rows.Next() {
+		var i ContactIdentity
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ContactID,
+			&i.Type,
+			&i.Value,
+			&i.Verified,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

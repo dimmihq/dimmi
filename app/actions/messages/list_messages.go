@@ -52,12 +52,14 @@ type ListMessagesInput struct {
 
 /*
 Timeline is a page of entries, oldest first, with the conversation's
-customer and the members who wrote them. Older and Newer say whether
+customer, the members who wrote them and the files each entry carries,
+by message. Older and Newer say whether
 entries lie beyond the page on either side; a page read backwards does
 not look forward, and the other way round.
 */
 type Timeline struct {
 	Messages []models.Message
+	Files    map[ids.UUID][]File
 	Contact  models.Contact
 	Members  map[ids.UUID]conversations.Member
 	Older    bool
@@ -74,7 +76,8 @@ Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
 wrapped database error.
 */
 type ListMessages struct {
-	DB *database.DB
+	DB    *database.DB
+	Disks Disks
 }
 
 /*
@@ -85,7 +88,10 @@ func (a *ListMessages) Handle(ctx context.Context, in ListMessagesInput) (Timeli
 		return Timeline{}, err
 	}
 
-	var out Timeline
+	var (
+		out   Timeline
+		files map[ids.UUID][]models.Attachment
+	)
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
@@ -99,10 +105,19 @@ func (a *ListMessages) Handle(ctx context.Context, in ListMessagesInput) (Timeli
 			return err
 		}
 
+		if files, err = loadFiles(ctx, q, c.WorkspaceID, out.Messages); err != nil {
+			return err
+		}
+
 		return out.loadPeople(ctx, q, c)
 	})
+	if err != nil {
+		return out, err
+	}
 
-	return out, err
+	out.Files = presentFiles(ctx, a.Disks, files)
+
+	return out, nil
 }
 
 /*

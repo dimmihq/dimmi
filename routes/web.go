@@ -18,6 +18,7 @@ package routes
 
 import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/routing"
 	"github.com/dimmihq/dimmi/framework/view/static"
 	"github.com/dimmihq/dimmi/framework/view/vite"
@@ -55,6 +56,8 @@ func Web(a *app.App) {
 		for name, path := range authPages() {
 			pages.Handle(fhttp.MethodGet, path, name, fhttp.HandlerFunc(spa.ShowAuth))
 		}
+
+		pages.Handle(fhttp.MethodGet, middleware.GatePath, "gate", fhttp.HandlerFunc(spa.ShowAuth))
 
 		helpCenter(pages, a)
 	})
@@ -175,5 +178,6 @@ func authPages() map[string]string {
 		"email.confirm":    "/email/confirm",
 		"two-factor-reset": "/two-factor-reset",
 		"invitation":       "/invitation",
+		"onboarding":       "/onboarding",
 	}
 }
