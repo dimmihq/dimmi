@@ -190,19 +190,13 @@ func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey) bool {
 	if key == nil {
 		return false
 	}
-	changed := false
-	answer, classifier := "claude-sonnet-5-5", "claude-sonnet-5-5"
 	if agent.AnswerKeyID == nil {
+		answer := "claude-sonnet-5-5"
 		agent.AnswerKeyID = &key.ID
 		agent.AnswerModel = &answer
-		changed = true
+		return true
 	}
-	if agent.ClassifierKeyID == nil {
-		agent.ClassifierKeyID = &key.ID
-		agent.ClassifierModel = &classifier
-		changed = true
-	}
-	return changed
+	return false
 }
 
 /*

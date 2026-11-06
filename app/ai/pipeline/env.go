@@ -33,7 +33,6 @@ type env struct {
 	Messages     []models.Message
 	ChannelType  string
 	AnswerKey    *models.AiProviderKey
-	ClassifyKey  *models.AiProviderKey
 	pendingConfirm bool
 	now          time.Time
 }
@@ -80,7 +79,6 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, workspaceID, conv
 
 	if env.Agent != nil {
 		env.AnswerKey = keyFor(ctx, tx, ws.ID, env.Agent.AnswerKeyID)
-		env.ClassifyKey = keyFor(ctx, tx, ws.ID, env.Agent.ClassifierKeyID)
 	}
 
 	return env, nil

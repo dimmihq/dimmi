@@ -135,6 +135,12 @@ type usageInput = contracts.LLMUsage
 Finish closes the run with its outcome and sums.
 */
 func (r *Recorder) Finish(ctx context.Context, tx *database.Tx, in FinishInput) error {
+	if len(in.Retrieval) == 0 {
+		in.Retrieval = json.RawMessage("[]")
+	}
+	if in.Flags == nil {
+		in.Flags = []string{}
+	}
 	now := r.clock.Now()
 	latency := time.Duration(0)
 	if r.Run.StartedAt != nil {

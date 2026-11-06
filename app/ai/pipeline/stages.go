@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"fmt"
 	"strings"
 	"time"
@@ -33,7 +34,9 @@ import (
 )
 
 /*
-classification is what the cheap model read.
+classification is the run's decision state: no model fills it yet —
+the dedicated decisions model is out of scope — so the pipeline
+defaults it from the trigger and the agent's settings.
 */
 type classification struct {
 	Intent         string `json:"intent"`
@@ -65,83 +68,6 @@ type answer struct {
 	unknown    bool
 	FirstToken time.Duration
 	Latency    time.Duration
-}
-
-/*
-classify runs the cheap-model step: intent, language and the
-standalone query.
-*/
-func (r *Runner) classify(ctx context.Context, env *env, recorder *Recorder) (*classification, error) {
-	llm, err := r.driverFor(ctx, env.ClassifyKey, env.Agent.ClassifierModel)
-	if err != nil {
-		return nil, err
-	}
-	model := strv(env.Agent.ClassifierModel)
-
-	system, err := r.prompt(env, "classifier.system.md", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	transcript := transcriptForLLM(env, 8)
-
-	started := r.Clock.Now()
-	res, err := llm.Chat(ctx, contracts.ChatRequest{
-		Model:  model,
-		System: []contracts.SystemBlock{{Text: system, Cacheable: true}},
-		Messages: []contracts.ChatMessage{
-			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: transcript}}},
-		},
-		MaxOutputTokens: 300,
-		ResponseFormat:  contracts.ResponseFormatJSON,
-	})
-	if err != nil {
-		r.stepErr(ctx, env, recorder, enums.AIRunStepKindClassify, model, started, err)
-		return nil, fmt.Errorf("classify: %w", err)
-	}
-
-	if _, err := recorder.Step(ctx, env.tx, StepInput{
-		Kind: enums.AIRunStepKindClassify, Provider: string(llm.Provider()),
-		ProviderKeyID: keyID(env.ClassifyKey), Model: model, ResponseModel: res.Model,
-		Status: "ok", Usage: res.Usage, Latency: r.Clock.Now().Sub(started),
-		StartedAt: started, CompletedAt: r.Clock.Now(),
-		RequestPayload: r.payload(env, transcript), ResponsePayload: r.payload(env, res.Text),
-	}); err != nil {
-		return nil, fmt.Errorf("record classify step: %w", err)
-	}
-
-	out := &classification{Intent: "question", Language: "en"}
-	if err := json.Unmarshal([]byte(jsonObject(res.Text)), out); err != nil {
-		out.Intent = "question"
-		out.QueryRewritten = triggerText(env.Trigger)
-		out.Summary = "unparsed"
-	}
-
-	if out.QueryRewritten == "" {
-		out.QueryRewritten = triggerText(env.Trigger)
-	}
-
-	switch out.Intent {
-	case "human_request":
-		out.handoff = "customer_requested"
-	case "abuse":
-		out.handoff = "abusive"
-	case "acknowledgement", "confirmation", "cancel":
-		out.silent = true
-	case "unclear":
-		out.silent = false
-	}
-
-	if out.Safety == "legal" || out.Safety == "medical" || out.Safety == "crisis" {
-		out.handoff = "safety"
-	}
-
-	if len(env.Agent.Languages) > 0 && out.Language != "" &&
-		!contains(env.Agent.Languages, out.Language) {
-		out.handoff = "unsupported_language"
-	}
-
-	return out, nil
 }
 
 /*
@@ -231,7 +157,7 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 	for {
 		ev, err := stream.Next(ctx)
 		if err != nil {
-			if errors.Is(err, errStreamDone()) {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			r.stepErr(ctx, env, recorder, enums.AIRunStepKindGenerate, model, started, err)
@@ -647,13 +573,6 @@ func contains(list []string, v string) bool {
 	}
 	return false
 }
-
-/*
-errStreamDone marks the stream's natural end.
-*/
-func errStreamDone() error { return ioEOF }
-
-var ioEOF = errors.New("EOF")
 
 var _ = aimodels.FamilyOf
 var _ = database.DB{}

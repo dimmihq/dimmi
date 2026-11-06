@@ -161,7 +161,7 @@ func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args A
 		if env.Agent.PromptVersion != nil && *env.Agent.PromptVersion != "" {
 			version = *env.Agent.PromptVersion
 		}
-		if f, err := r.Prompts.Fingerprint(family, []string{"answer.system.md", "classifier.system.md"}); err == nil {
+		if f, err := r.Prompts.Fingerprint(family, []string{"answer.system.md"}); err == nil {
 			fp = f.Hashes
 		}
 	}
@@ -198,15 +198,9 @@ func (r *Runner) execute(ctx context.Context, env *env, recorder *Recorder, args
 		return r.commitFastPath(ctx, env, recorder, outcome, reason)
 	}
 
-	classified, err := r.classify(ctx, env, recorder)
-	if err != nil {
-		return nil, err
-	}
-	if classified.handoff != "" {
-		return r.commitHandoff(ctx, env, recorder, classified.handoff)
-	}
-	if classified.silent {
-		return &decision{name: "silent"}, nil
+	classified := &classification{
+		Intent: "question", Language: env.Agent.DefaultLanguage,
+		QueryRewritten: triggerText(env.Trigger),
 	}
 
 	found, err := r.retrieve(ctx, env, recorder, classified)

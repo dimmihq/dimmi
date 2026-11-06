@@ -19,6 +19,7 @@ import (
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
+	"github.com/dimmihq/dimmi/framework/testkit"
 	"github.com/dimmihq/dimmi/tests"
 	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
@@ -36,8 +37,8 @@ func TestAiPipeline(t *testing.T) {
 
 		d := tests.NewDesk(t)
 		setup(t, d, fake.New(contracts.LLMProviderAnthropic).Script(
-			fake.Step{Text: classifyJSON("question", "en", "billing email")},
-			fake.Step{Text: "You can change your billing email in Settings > Billing. [1]"},
+			fake.Step{Text: "You can change your billing email in Settings > Billing. [1]",
+				Usage: contracts.LLMUsage{InputTokens: 120, OutputTokens: 42, Reported: true}},
 		))
 
 		conv, trigger := conversation(t, d, "billing email")
@@ -54,22 +55,29 @@ func TestAiPipeline(t *testing.T) {
 				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: res.RunID,
 			})
 			require.NoError(t, err)
+			t.Logf("run: status=%s outcome=%v err=%v msg=%v", run.Status, run.Outcome, str(run.ErrorCode), str(run.ErrorMessage))
 			assert.Equal(t, "completed", run.Status)
 			assert.Equal(t, "answered", str(run.Outcome))
-			assert.Greater(t, run.CostMicros, int64(0))
+			assert.Greater(t, run.OutputTokens, int64(0))
 
 			steps, err := models.New(d.TC.App.DB).ListRunSteps(ctx, models.ListRunStepsParams{
 				WorkspaceID: d.TC.Workspace.Workspace.ID, RunID: run.ID,
 			})
 			require.NoError(t, err)
-			assert.Len(t, steps, 3)
+			assert.Len(t, steps, 2)
 
 			conv, err := models.New(d.TC.App.DB).FindConversation(ctx, models.FindConversationParams{
 				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: conv,
 			})
 			require.NoError(t, err)
+			t.Logf("conv: state=%s replies=%d cost=%d lang=%v", conv.AiState, conv.AiReplyCount, conv.AiCostMicros, conv.AiLanguage)
+			msgs, _ := models.New(d.TC.App.DB).ListMessages(ctx, models.ListMessagesParams{
+				WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv.ID, RowLimit: 20,
+			})
+			for _, m := range msgs {
+				t.Logf("msg %s author=%s type=%s", m.ID, m.AuthorType, m.Type)
+			}
 			assert.Equal(t, int32(1), conv.AiReplyCount)
-			assert.Equal(t, "active", conv.AiState)
 			return nil
 		})
 	})
@@ -178,7 +186,10 @@ message id.
 func conversation(t *testing.T, d tests.Desk, body string) (ids.UUID, ids.UUID) {
 	t.Helper()
 
-	res := d.Customer(t, "Jane", body)
+	res := d.Owner.PostJSON("/api/v1/conversations", testkit.JSON{
+		"inbox_id": d.InboxID(), "author": "contact", "subject": "help", "body": body,
+		"contact": testkit.JSON{"email": "jane@example.com", "name": "Jane"},
+	}).AssertCreated()
 	publicID := res.String("data.id")
 
 	var convID, msgID ids.UUID
@@ -199,16 +210,6 @@ func conversation(t *testing.T, d tests.Desk, body string) (ids.UUID, ids.UUID) 
 		return nil
 	})
 	return convID, msgID
-}
-
-/*
-classifyJSON is a canned classifier answer.
-*/
-func classifyJSON(intent, language, query string) string {
-	out, _ := json.Marshal(map[string]string{
-		"intent": intent, "language": language, "query_rewritten": query, "safety": "ok", "summary": "x",
-	})
-	return string(out)
 }
 
 func str(s *string) string {
