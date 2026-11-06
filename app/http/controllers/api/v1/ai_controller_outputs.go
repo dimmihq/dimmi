@@ -20,7 +20,7 @@ import (
 AIAgentOutput is the agent view for the settings page.
 */
 type AIAgentOutput struct {
-	Body fhttp.Resource[ai.AgentView]
+	Body fhttp.Resource[resources.AIAgentView]
 }
 
 /*
@@ -48,5 +48,5 @@ type AIConnectOutput struct {
 AIConnectDoneOutput is the completed connection.
 */
 type AIConnectDoneOutput struct {
-	Body fhttp.Resource[ai.CompleteAnswer]
+	Body fhttp.Resource[resources.AIChatGPTConnection]
 }

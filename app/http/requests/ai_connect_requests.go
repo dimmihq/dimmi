@@ -1,10 +1,10 @@
 /*
 |--------------------------------------------------------------------------
-| AI Connect And Runs Requests
+| AI Connect Requests
 |--------------------------------------------------------------------------
 |
-| The connect callback's shape and the trace reads: thin carriers,
-| the controller does the work.
+| The subscription connect's start and the callback's shape: thin
+| carriers, the action does the work.
 |
 */
 
@@ -23,19 +23,4 @@ type AIChatGPTCompleteRequest struct {
 		State string `json:"state" validate:"required"`
 		Code  string `json:"code" validate:"required"`
 	}
-}
-
-/*
-AIRunsRequest is the input of GET .../conversations/:id/ai/runs.
-*/
-type AIRunsRequest struct {
-	Conversation string `path:"conversation"`
-}
-
-/*
-AIRunRequest is the input of GET .../conversations/:id/ai/runs/:run.
-*/
-type AIRunRequest struct {
-	Conversation string `path:"conversation"`
-	Run          string `path:"run"`
 }

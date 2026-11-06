@@ -21,7 +21,7 @@ WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
 -- ListProviderKeys returns the workspace's live keys.
 SELECT * FROM ai_provider_keys
 WHERE workspace_id = @workspace_id AND deleted_at IS NULL
-ORDER BY created_at;
+ORDER BY created_at, id;
 
 -- name: CountProviderKeys :one
 -- CountProviderKeys counts the workspace's live keys.

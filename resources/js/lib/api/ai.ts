@@ -1,11 +1,27 @@
 /*
  * The agent's API: the agent's settings, the provider connections it
- * runs on, and the month's usage. Every call names the workspace in the
- * Dimmi-Workspace header.
+ * runs on, the month's usage, a conversation's runs and the playground.
+ * Every call names the workspace in the Dimmi-Workspace header, and
+ * every id is a public one (aia_, aik_, team_, conv_, air_, ais_).
  */
 import { queryOptions } from "@tanstack/react-query";
 
 import { request } from "./client";
+
+/* The values the server accepts for the agent's fixed-choice settings. */
+export const AI_TONES = ["friendly", "professional", "concise"] as const;
+export const AI_SCHEDULES = ["always", "outside_office_hours", "inside_office_hours"] as const;
+export const AI_ASSIGNED_BEHAVIORS = ["skip_when_human_active", "never_when_assigned", "always"] as const;
+export const AI_UNKNOWN_BEHAVIORS = ["offer_handoff", "handoff", "say_unknown"] as const;
+export const AI_CONTACT_CONTEXTS = ["none", "basic"] as const;
+export const AI_CHANNELS = ["widget", "email", "api"] as const;
+
+export type AiTone = (typeof AI_TONES)[number];
+export type AiSchedule = (typeof AI_SCHEDULES)[number];
+export type AiAssignedBehavior = (typeof AI_ASSIGNED_BEHAVIORS)[number];
+export type AiUnknownBehavior = (typeof AI_UNKNOWN_BEHAVIORS)[number];
+export type AiContactContext = (typeof AI_CONTACT_CONTEXTS)[number];
+export type AiChannel = (typeof AI_CHANNELS)[number];
 
 export interface AiModelEntry {
   id: string;
@@ -23,50 +39,62 @@ export interface AiProviderDescriptor {
   name: string;
   auth_type: "managed" | "api_key" | "oauth" | "none";
   key_required: boolean;
-  docs_url?: string;
+  docs_url: string;
   available: boolean;
 }
 
 export interface AiAgent {
   id: string;
+  object: "ai_agent";
   name: string;
   enabled: boolean;
   product_name: string | null;
-  tone: string;
+  tone: AiTone;
   guidance: string;
   enabled_channels: string[];
-  schedule: string;
-  assigned_behavior: string;
+  schedule: AiSchedule;
+  office_hours: Record<string, unknown> | null;
+  assigned_behavior: AiAssignedBehavior;
   answer_key_id: string | null;
   answer_model: string | null;
   fallback_key_id: string | null;
   fallback_model: string | null;
+  max_output_tokens: number;
   max_ai_replies: number;
-  unknown_behavior: string;
+  unknown_behavior: AiUnknownBehavior;
+  grounding_mode: "citations" | "verify";
   require_citations: boolean;
+  languages: string[];
   default_language: string;
   streaming: boolean;
+  include_contact_context: string;
   pii_redaction: boolean;
+  link_allowlist: string[];
+  handoff_team_id: string | null;
+  raise_priority_on_handoff: boolean;
   monthly_spend_cap_micros: number | null;
   actions_enabled: boolean;
-  include_contact_context: string;
-  office_hours: Record<string, unknown> | null;
-  handoff: { target_team_id?: string; raise_priority?: boolean };
+  updated_at: string;
 }
 
 export interface AiProviderKey {
   id: string;
+  object: "ai_provider_key";
   name: string;
   provider: string;
   base_url: string | null;
+  region: string | null;
   auth_type: string;
   key_hint: string | null;
-  status: string;
+  status: "unverified" | "valid" | "invalid" | "error";
   status_reason: string | null;
-  models: { id: string }[];
+  models: string[];
+  models_count: number;
+  source: string;
   last_validated_at: string | null;
   last_used_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface AgentView {
@@ -77,21 +105,78 @@ export interface AgentView {
   ready: boolean;
   readiness_errors: string[];
   managed: boolean;
+  prompt_version: string;
 }
 
 export interface AiUsage {
   period_start: string;
   cost_micros: number;
   input_tokens: number;
+  cached_input_tokens: number;
   output_tokens: number;
   runs_count: number;
   answered_count: number;
   unknown_count: number;
   handoff_count: number;
+  silent_count: number;
+  monthly_spend_cap_micros: number | null;
   capped_at: string | null;
   daily: { day: string; cost_micros: number; runs_count: number }[];
   by_model: { model: string; cost_micros: number; calls: number }[];
   by_outcome: { outcome: string; runs_count: number }[];
+}
+
+export interface AiRunStep {
+  id: string;
+  seq: number;
+  kind: string;
+  provider: string | null;
+  model: string | null;
+  status: string;
+  error_kind: string | null;
+  latency_ms: number | null;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros: number;
+  /* Present only for those allowed to read payloads, and null once retention passes. */
+  request: unknown;
+  response: unknown;
+}
+
+export interface AiRun {
+  id: string;
+  conversation_id: string | null;
+  kind: string;
+  status: string;
+  outcome: string | null;
+  skip_reason: string | null;
+  handoff_reason: string | null;
+  language: string | null;
+  answer_message_id: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros: number;
+  latency_ms: number | null;
+  first_token_ms: number | null;
+  prompt_version: string;
+  flags: string[];
+  error: { code: string; message: string | null } | null;
+  feedback: "helped" | "not_helped" | null;
+  steps?: AiRunStep[];
+  payloads_visible?: boolean;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface AiPlaygroundAnswer {
+  object: "ai_playground_answer";
+  run_id: string | null;
+  outcome: string;
+  classification: { intent: string; language: string; query: string };
+  retrieved: { n: number; title: string; url: string; similarity: number; used: boolean; text: string }[];
+  answer: { body: string; citations: { n: number; title: string; url: string }[] };
+  usage: { input_tokens: number; cached_input_tokens: number; output_tokens: number; cost_micros: number };
+  timing: { first_token_ms: number; latency_ms: number };
 }
 
 export function aiKey(workspace: string) {
@@ -108,30 +193,52 @@ export function agentQuery(workspace: string) {
 export function aiKeysQuery(workspace: string) {
   return queryOptions({
     queryKey: [...aiKey(workspace), "keys"],
-    queryFn: () => request<{ data: AiProviderKey[] }>("GET", "/ai/keys", undefined, { workspace }),
+    queryFn: () => request<AiProviderKey[]>("GET", "/ai/keys", undefined, { workspace }),
   });
 }
 
-export function aiUsageQuery(workspace: string) {
+/* period is a month as YYYY-MM; leave it out for the current month. */
+export function aiUsageQuery(workspace: string, period?: string) {
+  const query = period ? `?period=${encodeURIComponent(period)}` : "";
   return queryOptions({
-    queryKey: [...aiKey(workspace), "usage"],
-    queryFn: () => request<AiUsage>("GET", "/ai/usage", undefined, { workspace }),
+    queryKey: [...aiKey(workspace), "usage", period ?? "current"],
+    queryFn: () => request<AiUsage>("GET", `/ai/usage${query}`, undefined, { workspace }),
   });
 }
 
+export function aiRunsQuery(workspace: string, conversation: string) {
+  return queryOptions({
+    queryKey: [...aiKey(workspace), "runs", conversation],
+    queryFn: () => request<AiRun[]>("GET", `/conversations/${conversation}/ai/runs`, undefined, { workspace }),
+  });
+}
+
+export function aiRunQuery(workspace: string, conversation: string, run: string) {
+  return queryOptions({
+    queryKey: [...aiKey(workspace), "runs", conversation, run],
+    queryFn: () => request<AiRun>("GET", `/conversations/${conversation}/ai/runs/${run}`, undefined, { workspace }),
+  });
+}
+
+/*
+ * AgentPatch changes only the fields it carries. Nullable fields
+ * (product_name, the models, the key ids, handoff_team_id,
+ * monthly_cap_usd) clear when sent as null or ""; a cap of 0 also means
+ * no cap.
+ */
 export interface AgentPatch {
   name?: string;
   enabled?: boolean;
   tone?: string;
   guidance?: string;
-  product_name?: string;
+  product_name?: string | null;
   enabled_channels?: string[];
   schedule?: string;
-  answer_key_id?: string;
-  answer_model?: string;
-  fallback_key_id?: string;
-  fallback_model?: string;
-  monthly_cap_usd?: number;
+  answer_key_id?: string | null;
+  answer_model?: string | null;
+  fallback_key_id?: string | null;
+  fallback_model?: string | null;
+  monthly_cap_usd?: number | null;
   max_ai_replies?: number;
   require_citations?: boolean;
   pii_redaction?: boolean;
@@ -141,12 +248,14 @@ export interface AgentPatch {
   assigned_behavior?: string;
   streaming?: boolean;
   include_contact_context?: string;
-  handoff_team_id?: string;
+  /* Hosts the agent may link to; "*.example.com" covers every subdomain. */
+  link_allowlist?: string[];
+  handoff_team_id?: string | null;
   raise_priority_on_handoff?: boolean;
 }
 
 export function updateAgent(workspace: string, body: AgentPatch) {
-  return request<AiAgent>("PATCH", "/ai/agent", body, { workspace });
+  return request<AgentView>("PATCH", "/ai/agent", body, { workspace });
 }
 
 export interface NewAiKey {
@@ -154,6 +263,7 @@ export interface NewAiKey {
   provider: string;
   base_url?: string;
   api_key?: string;
+  config?: Record<string, unknown>;
 }
 
 export function createAiKey(workspace: string, body: NewAiKey) {
@@ -165,15 +275,19 @@ export function updateAiKey(workspace: string, keyId: string, body: Partial<NewA
 }
 
 export function deleteAiKey(workspace: string, keyId: string) {
-  return request("DELETE", `/ai/keys/${keyId}`, undefined, { workspace });
+  return request<void>("DELETE", `/ai/keys/${keyId}`, undefined, { workspace });
 }
 
 export function testAiKey(workspace: string, keyId: string) {
-  return request<{ status: string; reason?: string }>("POST", `/ai/keys/${keyId}/test`, undefined, { workspace });
+  return request<AiProviderKey>("POST", `/ai/keys/${keyId}/test`, undefined, { workspace });
+}
+
+export function askPlayground(workspace: string, body: { message: string; conversation?: string }) {
+  return request<AiPlaygroundAnswer>("POST", "/ai/playground", body, { workspace });
 }
 
 export function startChatGPTConnect(workspace: string) {
-  return request<{ authorize_url: string; expires_at: string }>("POST", "/ai/chatgpt/connect", undefined, {
+  return request<{ url: string; state: string }>("POST", "/ai/chatgpt/connect", undefined, {
     workspace,
   });
 }

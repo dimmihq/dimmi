@@ -60,15 +60,6 @@ WHERE r.workspace_id = @workspace_id AND r.conversation_id = @conversation_id
             AND r2.outcome IS DISTINCT FROM r.outcome AND r2.outcome IS NOT NULL
     ), '00000000-0000-0000-0000-000000000000'::uuid);
 
--- name: ListRunsForPayloadPrune :many
--- ListRunsForPayloadPrune returns step-holding runs past payload
--- retention, in batches.
-SELECT DISTINCT r.* FROM ai_runs r
-JOIN ai_run_steps s ON s.run_id = r.id AND (s.request IS NOT NULL OR s.response IS NOT NULL)
-WHERE r.workspace_id = @workspace_id AND r.completed_at < @before
-ORDER BY r.created_at
-LIMIT @batch_limit;
-
 -- name: ListConversationRuns :many
 -- ListConversationRuns returns a conversation's runs newest first.
 SELECT * FROM ai_runs
@@ -76,20 +67,25 @@ WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id
 ORDER BY created_at DESC
 LIMIT @page_limit;
 
--- name: ResolveLatestRunOutcome :execrows
--- ResolveLatestRunOutcome stamps a resolution outcome on the
--- conversation's newest finished run.
-UPDATE ai_runs AS ar SET outcome = @outcome, completed_at = @now
+-- name: SetLatestAnswerFeedback :execrows
+-- SetLatestAnswerFeedback records the customer's verdict on the
+-- conversation's newest answered run.
+UPDATE ai_runs AS ar SET feedback = @feedback, updated_at = @now
 WHERE ar.workspace_id = @workspace_id
   AND ar.id = (
       SELECT r.id FROM ai_runs r
-      WHERE r.workspace_id = ar.workspace_id AND r.conversation_id = @conversation_id
-        AND r.status = 'completed'
-      ORDER BY r.id DESC LIMIT 1
+      WHERE r.workspace_id = @workspace_id AND r.conversation_id = @conversation_id
+        AND r.status = 'completed' AND r.outcome = 'answered'
+      ORDER BY r.created_at DESC, r.id DESC LIMIT 1
   );
 
 -- name: PruneAiRuns :execrows
--- PruneAiRuns deletes up to a batch of runs older than the cutoff.
+-- PruneAiRuns deletes up to a batch of the workspace's runs older than
+-- the cutoff, of one kind when a kind is given; their steps go with
+-- them.
 DELETE FROM ai_runs WHERE id IN (
-    SELECT r.id FROM ai_runs AS r WHERE r.created_at < @cutoff ORDER BY r.created_at LIMIT @batch::bigint
+    SELECT r.id FROM ai_runs AS r
+    WHERE r.workspace_id = @workspace_id AND r.created_at < @cutoff
+        AND (@kind::text = '' OR r.kind = @kind::text)
+    ORDER BY r.created_at LIMIT @batch::bigint
 );

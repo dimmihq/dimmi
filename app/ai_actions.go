@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The agent's business actions: its settings, its provider
-| connections and the ChatGPT sign-in. The pipeline and the run and
-| spend readers join here as they land.
+| connections, the ChatGPT sign-in, the run and usage readers and the
+| playground.
 |
 */
 
@@ -28,4 +28,9 @@ type AIActions struct {
 
 	StartChatGPTConnect    *ai.StartChatGPTConnect
 	CompleteChatGPTConnect *ai.CompleteChatGPTConnect
+
+	ListRuns      *ai.ListConversationRuns
+	ShowRun       *ai.ShowRun
+	ShowUsage     *ai.ShowUsage
+	AskPlayground *ai.AskPlayground
 }

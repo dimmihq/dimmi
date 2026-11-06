@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | The agent and its connections as the dashboard sees them: every
-| setting except the one thing never shown, a credential. A key tells
-| its status and its last four; a run tells its outcome and cost.
+| setting a teammate can change, and never a credential, a workspace
+| or member id, or a provider's raw error. A key tells its status, a
+| safe reason and its last four; every id is a public one.
 |
 */
 
@@ -13,46 +14,73 @@ package resources
 
 import (
 	"encoding/json"
+	"time"
 
-	"github.com/dimmihq/dimmi/framework/ids"
-
+	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
-AIProviderKey is one connection, secrets withheld.
+AIProviderKey is one connection, secrets withheld. Models lists the
+model ids the provider offered when the key last validated.
 */
 type AIProviderKey struct {
-	ID              string          `json:"id"`
-	Name            string          `json:"name"`
-	Provider        string          `json:"provider"`
-	BaseURL         *string         `json:"base_url"`
-	AuthType        string          `json:"auth_type"`
-	KeyHint         *string         `json:"key_hint"`
-	Status          string          `json:"status"`
-	StatusReason    *string         `json:"status_reason"`
-	Models          json.RawMessage `json:"models"`
-	LastValidatedAt any             `json:"last_validated_at"`
-	LastUsedAt      any             `json:"last_used_at"`
-	CreatedAt       any             `json:"created_at"`
+	ID              string     `json:"id"`
+	Object          string     `json:"object"`
+	Name            string     `json:"name"`
+	Provider        string     `json:"provider"`
+	BaseURL         *string    `json:"base_url"`
+	Region          *string    `json:"region"`
+	AuthType        string     `json:"auth_type"`
+	KeyHint         *string    `json:"key_hint"`
+	Status          string     `json:"status"`
+	StatusReason    *string    `json:"status_reason"`
+	Models          []string   `json:"models"`
+	ModelsCount     int        `json:"models_count"`
+	Source          string     `json:"source"`
+	LastValidatedAt *time.Time `json:"last_validated_at"`
+	LastUsedAt      *time.Time `json:"last_used_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 /*
 NewAIProviderKey shapes a key for the API.
 */
 func NewAIProviderKey(k models.AiProviderKey) AIProviderKey {
+	listed := []string{}
+	_ = json.Unmarshal(k.Models, &listed)
+	if listed == nil {
+		listed = []string{}
+	}
+
 	return AIProviderKey{
-		ID: k.ID.String(), Name: k.Name, Provider: k.Provider, BaseURL: k.BaseUrl,
+		ID: models.PublicID(models.PrefixAiProviderKey, k.ID), Object: "ai_provider_key",
+		Name: k.Name, Provider: k.Provider, BaseURL: k.BaseUrl, Region: k.Region,
 		AuthType: k.AuthType, KeyHint: k.KeyHint, Status: k.Status, StatusReason: k.StatusReason,
-		Models: k.Models, LastValidatedAt: k.LastValidatedAt, LastUsedAt: k.LastUsedAt, CreatedAt: k.CreatedAt,
+		Models: listed, ModelsCount: len(listed), Source: k.Source,
+		LastValidatedAt: k.LastValidatedAt, LastUsedAt: k.LastUsedAt, CreatedAt: k.CreatedAt, UpdatedAt: k.UpdatedAt,
 	}
 }
 
 /*
-AIAgent is the agent's full editable shape.
+NewAIProviderKeys shapes a list of keys for the API.
+*/
+func NewAIProviderKeys(keys []models.AiProviderKey) []AIProviderKey {
+	out := make([]AIProviderKey, len(keys))
+	for i, k := range keys {
+		out[i] = NewAIProviderKey(k)
+	}
+	return out
+}
+
+/*
+AIAgent is the agent's editable shape. Connection and team ids are
+public ids; MonthlySpendCapMicros is null when there is no cap.
 */
 type AIAgent struct {
 	ID                    string          `json:"id"`
+	Object                string          `json:"object"`
 	Name                  string          `json:"name"`
 	Enabled               bool            `json:"enabled"`
 	ProductName           *string         `json:"product_name"`
@@ -64,57 +92,88 @@ type AIAgent struct {
 	AssignedBehavior      string          `json:"assigned_behavior"`
 	AnswerKeyID           *string         `json:"answer_key_id"`
 	AnswerModel           *string         `json:"answer_model"`
-	ClassifierKeyID       *string         `json:"classifier_key_id"`
-	ClassifierModel       *string         `json:"classifier_model"`
 	FallbackKeyID         *string         `json:"fallback_key_id"`
 	FallbackModel         *string         `json:"fallback_model"`
-	Temperature           any             `json:"temperature"`
 	MaxOutputTokens       int             `json:"max_output_tokens"`
 	MaxAiReplies          int             `json:"max_ai_replies"`
 	UnknownBehavior       string          `json:"unknown_behavior"`
 	GroundingMode         string          `json:"grounding_mode"`
 	RequireCitations      bool            `json:"require_citations"`
-	MinSimilarity         any             `json:"min_similarity"`
 	Languages             []string        `json:"languages"`
 	DefaultLanguage       string          `json:"default_language"`
 	Streaming             bool            `json:"streaming"`
 	IncludeContactContext string          `json:"include_contact_context"`
 	PiiRedaction          bool            `json:"pii_redaction"`
 	LinkAllowlist         []string        `json:"link_allowlist"`
-	Handoff               json.RawMessage `json:"handoff"`
-	Messages              json.RawMessage `json:"messages"`
+	HandoffTeamID         *string         `json:"handoff_team_id"`
+	RaisePriority         bool            `json:"raise_priority_on_handoff"`
 	MonthlySpendCapMicros *int64          `json:"monthly_spend_cap_micros"`
 	ActionsEnabled        bool            `json:"actions_enabled"`
+	UpdatedAt             time.Time       `json:"updated_at"`
 }
 
 /*
 NewAIAgent shapes the agent for the API.
 */
 func NewAIAgent(a models.AiAgent) AIAgent {
+	handoff := ai.ReadHandoff(a.Handoff)
+
 	return AIAgent{
-		ID: a.ID.String(), Name: a.Name, Enabled: a.Enabled, ProductName: a.ProductName,
-		Tone: a.Tone, Guidance: a.Guidance, EnabledChannels: a.EnabledChannels,
+		ID: models.PublicID(models.PrefixAiAgent, a.ID), Object: "ai_agent",
+		Name: a.Name, Enabled: a.Enabled, ProductName: a.ProductName,
+		Tone: a.Tone, Guidance: a.Guidance, EnabledChannels: orEmpty(a.EnabledChannels),
 		Schedule: a.Schedule, OfficeHours: a.OfficeHours, AssignedBehavior: a.AssignedBehavior,
-		AnswerKeyID: uuidPtr(a.AnswerKeyID), AnswerModel: a.AnswerModel,
-		ClassifierKeyID: uuidPtr(a.ClassifierKeyID), ClassifierModel: a.ClassifierModel,
-		FallbackKeyID: uuidPtr(a.FallbackKeyID), FallbackModel: a.FallbackModel,
-		Temperature: a.Temperature, MaxOutputTokens: int(a.MaxOutputTokens), MaxAiReplies: int(a.MaxAiReplies),
-		UnknownBehavior: a.UnknownBehavior, GroundingMode: a.GroundingMode,
-		RequireCitations: a.RequireCitations, MinSimilarity: a.MinSimilarity,
-		Languages: a.Languages, DefaultLanguage: a.DefaultLanguage, Streaming: a.Streaming,
+		AnswerKeyID: publicPtr(models.PrefixAiProviderKey, a.AnswerKeyID), AnswerModel: a.AnswerModel,
+		FallbackKeyID: publicPtr(models.PrefixAiProviderKey, a.FallbackKeyID), FallbackModel: a.FallbackModel,
+		MaxOutputTokens: int(a.MaxOutputTokens), MaxAiReplies: int(a.MaxAiReplies),
+		UnknownBehavior: a.UnknownBehavior, GroundingMode: a.GroundingMode, RequireCitations: a.RequireCitations,
+		Languages: orEmpty(a.Languages), DefaultLanguage: a.DefaultLanguage, Streaming: a.Streaming,
 		IncludeContactContext: a.IncludeContactContext, PiiRedaction: a.PiiRedaction,
-		LinkAllowlist: a.LinkAllowlist, Handoff: a.Handoff, Messages: a.Messages,
-		MonthlySpendCapMicros: a.MonthlySpendCapMicros, ActionsEnabled: a.ActionsEnabled,
+		LinkAllowlist: orEmpty(a.LinkAllowlist),
+		HandoffTeamID: publicPtr(models.PrefixTeam, handoff.TargetTeamID), RaisePriority: handoff.RaisePriority,
+		MonthlySpendCapMicros: a.MonthlySpendCapMicros, ActionsEnabled: a.ActionsEnabled, UpdatedAt: a.UpdatedAt,
 	}
 }
 
 /*
-uuidPtr maps a nullable uuid to a nullable string.
+AIAgentView is everything the agent's settings page reads in one call:
+the agent, its connections, the providers it could connect, the model
+catalog, whether it could go live and why not, and the prompt version
+its answers use.
 */
-func uuidPtr(id *ids.UUID) *string {
-	if id == nil {
-		return nil
+type AIAgentView struct {
+	Agent           AIAgent                      `json:"agent"`
+	Keys            []AIProviderKey              `json:"keys"`
+	Providers       []ai.ProviderDescriptor      `json:"providers"`
+	Catalog         map[string][]ai.CatalogEntry `json:"catalog"`
+	Ready           bool                         `json:"ready"`
+	ReadinessErrors []string                     `json:"readiness_errors"`
+	Managed         bool                         `json:"managed"`
+	PromptVersion   string                       `json:"prompt_version"`
+}
+
+/*
+AIChatGPTConnection is the connection a finished subscription sign-in
+created, named by its public id.
+*/
+type AIChatGPTConnection struct {
+	KeyID     string `json:"key_id"`
+	AccountID string `json:"account_id"`
+}
+
+/*
+NewAIChatGPTConnection shapes a finished sign-in for the API.
+*/
+func NewAIChatGPTConnection(c ai.CompleteAnswer) AIChatGPTConnection {
+	return AIChatGPTConnection{KeyID: models.PublicID(models.PrefixAiProviderKey, c.KeyID), AccountID: c.AccountID}
+}
+
+/*
+NewAIAgentView shapes the settings view for the API.
+*/
+func NewAIAgentView(v ai.AgentView) AIAgentView {
+	return AIAgentView{
+		Agent: NewAIAgent(v.Agent), Keys: NewAIProviderKeys(v.Keys), Providers: v.Providers, Catalog: v.Catalog,
+		Ready: v.Ready, ReadinessErrors: orEmpty(v.ReadinessErrs), Managed: v.Managed, PromptVersion: v.PromptVersion,
 	}
-	s := id.String()
-	return &s
 }

@@ -4,8 +4,11 @@
 |--------------------------------------------------------------------------
 |
 | The agent's whole settings surface in one save: identity, models,
-| rules, channels, schedule, handoff, privacy and spend. Whatever the
-| caller leaves unset keeps its stored value.
+| rules, channels, schedule, handoff, privacy and spend. Only what the
+| caller sends changes; a field it leaves out keeps its stored value,
+| and clearing a nullable field is an explicit request. Every
+| connection and team it names must belong to the workspace, and an
+| agent is only switched on once it could actually answer.
 |
 */
 
@@ -13,12 +16,16 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
@@ -26,22 +33,59 @@ import (
 )
 
 /*
-UpdateAgentInput is the full mutable agent shape; nil fields keep
-their stored values.
+Optional is a patch field that may be left out, set or cleared: Set
+says the caller sent it, and a nil Value then clears the stored value.
+*/
+type Optional[T any] struct {
+	Set   bool
+	Value *T
+}
+
+/*
+AgentPatch is what one save changes. Plain pointer fields change when
+non-nil and cannot be cleared; Optional fields may also be cleared.
+EnabledChannels, Languages and LinkAllowlist replace their lists
+whole; link hosts are stored lowercase.
+MonthlyCapMicros cleared means no cap. HandoffTeamID names the team a
+handed-off conversation goes to.
+*/
+type AgentPatch struct {
+	Name, Tone, Guidance, Schedule     *string
+	AssignedBehavior, UnknownBehavior  *string
+	DefaultLanguage, IncludeContact    *string
+	Enabled, RequireCitations          *bool
+	PiiRedaction, Streaming, RaisePrio *bool
+	EnabledChannels, Languages         *[]string
+	LinkAllowlist                      *[]string
+	MaxAiReplies                       *int32
+	ProductName, AnswerModel           Optional[string]
+	FallbackModel                      Optional[string]
+	AnswerKeyID, FallbackKeyID         Optional[ids.UUID]
+	HandoffTeamID                      Optional[ids.UUID]
+	MonthlyCapMicros                   Optional[int64]
+}
+
+/*
+UpdateAgentInput is who saves and what changes.
 */
 type UpdateAgentInput struct {
 	Membership authz.Membership
-	Agent      *models.AiAgent
+	Patch      AgentPatch
 }
 
 /*
 UpdateAiAgent saves the agent's settings.
 
 Rules:
-  - The caller needs ai:write.
+  - The caller needs ai_agent:manage.
+  - Connections named for a role and the handoff team must be live
+    rows of the workspace.
+  - Switching the agent on needs a usable answer model and a channel.
+  - Changing the cap lifts a pause the old cap caused, when the month's
+    spend is below the new one.
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
-wrapped database error.
+Errors: [exceptions.ErrForbidden], a [fault] naming the field it
+refuses, or a wrapped database error.
 */
 type UpdateAiAgent struct {
 	DB     *database.DB
@@ -53,34 +97,270 @@ type UpdateAiAgent struct {
 Handle saves and returns the agent.
 */
 func (a *UpdateAiAgent) Handle(ctx context.Context, in UpdateAgentInput) (*models.AiAgent, error) {
-	if err := RequireAgentWrite(in.Membership); err != nil {
+	if err := RequireAgentManage(in.Membership); err != nil {
 		return nil, err
-	}
-	if in.Agent == nil {
-		return nil, fault.New(fault.Invalid, "agent_required", "the agent is required")
 	}
 
 	var out models.AiAgent
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		existing, err := ensureAgent(ctx, seedDeps{clock: a.Clock, config: a.Config}, tx, in.Membership.Workspace.ID)
+		agent, err := ensureAgent(ctx, seedDeps{clock: a.Clock, config: a.Config}, tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
 		}
 
-		in.Agent.ID = existing.ID
+		applyPatch(&agent, in.Patch)
 
-		out, err = models.New(tx).UpdateAgent(ctx, updateParams(in.Agent, a.Clock.Now()))
+		if err := checkPatch(ctx, tx, agent, in.Patch); err != nil {
+			return err
+		}
+
+		out, err = models.New(tx).UpdateAgent(ctx, updateParams(&agent, a.Clock.Now()))
 		if err != nil {
 			return fmt.Errorf("update ai agent: %w", err)
 		}
-		return nil
+
+		return a.liftCap(ctx, tx, out, in.Patch)
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &out, nil
+}
+
+/*
+liftCap clears the month's pause when the cap changed and the spend so
+far sits below the new cap, or there is no cap any more.
+*/
+func (a *UpdateAiAgent) liftCap(ctx context.Context, tx *database.Tx, agent models.AiAgent, p AgentPatch) error {
+	if !p.MonthlyCapMicros.Set {
+		return nil
+	}
+
+	now := a.Clock.Now().UTC()
+	start := database.Date(time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC))
+
+	period, err := models.New(tx).GetSpendPeriod(ctx, models.GetSpendPeriodParams{
+		WorkspaceID: agent.WorkspaceID, PeriodStart: start,
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("find spend period: %w", err)
+	}
+	if period.CappedAt == nil {
+		return nil
+	}
+	if agent.MonthlySpendCapMicros != nil && period.CostMicros >= *agent.MonthlySpendCapMicros {
+		return nil
+	}
+
+	if err := models.New(tx).SetSpendCap(ctx, models.SetSpendCapParams{
+		WorkspaceID: agent.WorkspaceID, PeriodStart: start, CappedAt: nil, Now: a.Clock.Now(),
+	}); err != nil {
+		return fmt.Errorf("lift spend cap: %w", err)
+	}
+
+	return nil
+}
+
+/*
+applyPatch folds every field the caller sent into the agent row.
+*/
+func applyPatch(agent *models.AiAgent, p AgentPatch) {
+	set(&agent.Name, p.Name)
+	set(&agent.Tone, p.Tone)
+	set(&agent.Guidance, p.Guidance)
+	set(&agent.Schedule, p.Schedule)
+	set(&agent.AssignedBehavior, p.AssignedBehavior)
+	set(&agent.UnknownBehavior, p.UnknownBehavior)
+	set(&agent.DefaultLanguage, p.DefaultLanguage)
+	set(&agent.IncludeContactContext, p.IncludeContact)
+	set(&agent.Enabled, p.Enabled)
+	set(&agent.RequireCitations, p.RequireCitations)
+	set(&agent.PiiRedaction, p.PiiRedaction)
+	set(&agent.Streaming, p.Streaming)
+	set(&agent.EnabledChannels, p.EnabledChannels)
+	set(&agent.Languages, p.Languages)
+	set(&agent.LinkAllowlist, lowered(p.LinkAllowlist))
+	set(&agent.MaxAiReplies, p.MaxAiReplies)
+	setText(&agent.ProductName, p.ProductName)
+	setText(&agent.AnswerModel, p.AnswerModel)
+	setText(&agent.FallbackModel, p.FallbackModel)
+	setOptional(&agent.AnswerKeyID, p.AnswerKeyID)
+	setOptional(&agent.FallbackKeyID, p.FallbackKeyID)
+	setOptional(&agent.MonthlySpendCapMicros, capMicros(p.MonthlyCapMicros))
+	agent.Handoff = mergeHandoff(agent.Handoff, p.HandoffTeamID, p.RaisePrio)
+}
+
+/*
+set applies a field the caller sent.
+*/
+func set[T any](dst, src *T) {
+	if src != nil {
+		*dst = *src
+	}
+}
+
+/*
+lowered returns the list in lowercase, nil staying nil.
+*/
+func lowered(list *[]string) *[]string {
+	if list == nil {
+		return nil
+	}
+	out := make([]string, len(*list))
+	for i, v := range *list {
+		out[i] = strings.ToLower(v)
+	}
+	return &out
+}
+
+/*
+setOptional applies a field the caller sent or cleared.
+*/
+func setOptional[T any](dst **T, src Optional[T]) {
+	if src.Set {
+		*dst = src.Value
+	}
+}
+
+/*
+setText applies a nullable text field, where an empty string clears it
+like null does.
+*/
+func setText(dst **string, src Optional[string]) {
+	if src.Set && src.Value != nil && *src.Value == "" {
+		src.Value = nil
+	}
+	setOptional(dst, src)
+}
+
+/*
+capMicros maps a cap of zero or below to no cap at all: a cleared cap
+field never pauses the agent.
+*/
+func capMicros(c Optional[int64]) Optional[int64] {
+	if c.Set && c.Value != nil && *c.Value <= 0 {
+		return Optional[int64]{Set: true}
+	}
+	return c
+}
+
+/*
+Handoff is the agent's handoff settings as stored: the team a
+handed-off conversation goes to and whether its priority rises.
+*/
+type Handoff struct {
+	TargetTeamID  *ids.UUID `json:"target_team_id,omitempty"`
+	RaisePriority bool      `json:"raise_priority,omitempty"`
+}
+
+/*
+ReadHandoff reads the stored handoff settings; a value it cannot read
+counts as none.
+*/
+func ReadHandoff(raw json.RawMessage) Handoff {
+	var h Handoff
+	_ = json.Unmarshal(raw, &h)
+	return h
+}
+
+/*
+mergeHandoff folds the handoff fields the caller sent into the stored
+settings.
+*/
+func mergeHandoff(raw json.RawMessage, team Optional[ids.UUID], raise *bool) json.RawMessage {
+	if !team.Set && raise == nil {
+		return raw
+	}
+
+	h := ReadHandoff(raw)
+	setOptional(&h.TargetTeamID, team)
+	set(&h.RaisePriority, raise)
+
+	out, err := json.Marshal(h)
+	if err != nil {
+		return raw
+	}
+	return out
+}
+
+/*
+checkPatch refuses a save that names rows outside the workspace or
+switches on an agent that could not answer.
+*/
+func checkPatch(ctx context.Context, tx *database.Tx, agent models.AiAgent, p AgentPatch) error {
+	roles := []struct {
+		field string
+		id    Optional[ids.UUID]
+	}{
+		{"answer_key_id", p.AnswerKeyID},
+		{"fallback_key_id", p.FallbackKeyID},
+	}
+	for _, role := range roles {
+		if err := checkKey(ctx, tx, agent.WorkspaceID, role.id); err != nil {
+			return fault.New(fault.Invalid, "provider_key_not_found", "the connection does not exist").
+				OnField(role.field)
+		}
+	}
+
+	if err := checkTeam(ctx, tx, agent.WorkspaceID, p.HandoffTeamID); err != nil {
+		return err
+	}
+
+	if p.Enabled == nil || !*p.Enabled {
+		return nil
+	}
+
+	return checkReady(ctx, tx, agent)
+}
+
+/*
+checkKey finds the connection a role names, when the caller named one.
+*/
+func checkKey(ctx context.Context, tx *database.Tx, workspaceID ids.UUID, id Optional[ids.UUID]) error {
+	if !id.Set || id.Value == nil {
+		return nil
+	}
+	_, err := findKey(ctx, tx, workspaceID, *id.Value)
+	return err
+}
+
+/*
+checkTeam finds the handoff team, when the caller named one.
+*/
+func checkTeam(ctx context.Context, tx *database.Tx, workspaceID ids.UUID, id Optional[ids.UUID]) error {
+	if !id.Set || id.Value == nil {
+		return nil
+	}
+
+	_, err := models.New(tx).FindTeam(ctx, models.FindTeamParams{WorkspaceID: workspaceID, ID: *id.Value})
+	if err != nil {
+		return fault.New(fault.Invalid, "team_not_found", "the team does not exist").OnField("handoff_team_id")
+	}
+	return nil
+}
+
+/*
+checkReady refuses to switch on an agent that could not answer,
+naming every reason.
+*/
+func checkReady(ctx context.Context, tx *database.Tx, agent models.AiAgent) error {
+	keys, err := models.New(tx).ListProviderKeys(ctx, agent.WorkspaceID)
+	if err != nil {
+		return fmt.Errorf("list provider keys: %w", err)
+	}
+
+	ready, reasons := readiness(agent, keys)
+	if ready {
+		return nil
+	}
+
+	return fault.New(fault.Invalid, "agent_not_ready", "the agent cannot answer yet").
+		OnField("enabled").With("reasons", reasons)
 }
 
 /*

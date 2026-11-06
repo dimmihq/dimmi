@@ -3,9 +3,12 @@
 | Visitor's Agent Controls
 |--------------------------------------------------------------------------
 |
-| The two buttons under every AI reply: "That helped" confirms the
-| answer resolved the conversation, and "Talk to a person" hands it
-| to the team. Both touch the visitor's own conversation only.
+| The two buttons under every AI reply: "That helped" records that the
+| agent's latest answer helped, and "Talk to a person" hands the
+| conversation to the team. Both touch the visitor's own conversation
+| only; any other is simply not found. Handing over happens once: a
+| conversation already with the team stays as it is, and a visitor
+| pressing the button over and over is slowed down.
 |
 */
 
@@ -14,23 +17,27 @@ package widget
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/ratelimit"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/auth"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
-errNotFound is the visitor-facing "no such conversation".
+handoffPerMinute is how many handoff requests one session may send a
+minute.
 */
-var errNotFound = errors.New("not found")
+const handoffPerMinute = 5
 
 /*
 HelpInput names the conversation the visitor confirmed.
@@ -41,8 +48,10 @@ type HelpInput struct {
 }
 
 /*
-ConfirmAiHelp marks the newest finished run of the visitor's
-conversation as confirmed-resolved: the visitor said it helped.
+ConfirmAiHelp records the visitor's "That helped" on the newest answer
+the agent gave in their conversation. Pressing it again changes
+nothing, and a conversation the agent never answered has nothing to
+record.
 */
 type ConfirmAiHelp struct {
 	DB    *database.DB
@@ -50,22 +59,21 @@ type ConfirmAiHelp struct {
 }
 
 /*
-Handle stamps the resolution on the latest run.
+Handle records the feedback.
 */
 func (a *ConfirmAiHelp) Handle(ctx context.Context, in HelpInput) error {
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		found, err := models.New(tx).FindWidgetConversation(ctx, scopeOf(in.Auth, in.Conversation))
 		if err != nil {
-			return errNotFound
+			return exceptions.ErrWidgetConversationNotFound
 		}
 
-		now := a.Clock.Now()
-		_, err = models.New(tx).ResolveLatestRunOutcome(ctx, models.ResolveLatestRunOutcomeParams{
+		_, err = models.New(tx).SetLatestAnswerFeedback(ctx, models.SetLatestAnswerFeedbackParams{
 			WorkspaceID: found.Conversation.WorkspaceID, ConversationID: &found.Conversation.ID,
-			Outcome: new("resolved_confirmed"), Now: &now,
+			Feedback: new("helped"), Now: a.Clock.Now(),
 		})
 		if err != nil {
-			return fmt.Errorf("resolve run: %w", err)
+			return fmt.Errorf("record answer feedback: %w", err)
 		}
 		return nil
 	})
@@ -82,62 +90,95 @@ type HandoffInput struct {
 /*
 RequestAiHandoff is the visitor's "talk to a person": the agent says
 its one line, the conversation flips to handed_off and the team hears
-about it.
+about it. A conversation already handed off is left alone, so a double
+click writes one line and one notice.
 */
 type RequestAiHandoff struct {
-	DB     *database.DB
-	Clock  clock.Clock
-	Events *events.Dispatcher
+	DB      *database.DB
+	Clock   clock.Clock
+	Events  *events.Dispatcher
+	Limiter *ratelimit.Limiter
 }
 
 /*
 Handle hands the conversation to the team.
 */
 func (a *RequestAiHandoff) Handle(ctx context.Context, in HandoffInput) error {
+	if err := a.throttle(ctx, in.Auth); err != nil {
+		return err
+	}
+
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		found, err := models.New(tx).FindWidgetConversation(ctx, scopeOf(in.Auth, in.Conversation))
+		q := models.New(tx)
+
+		found, err := q.FindWidgetConversation(ctx, scopeOf(in.Auth, in.Conversation))
 		if err != nil {
-			return errNotFound
+			return exceptions.ErrWidgetConversationNotFound
 		}
 
-		agent, err := models.New(tx).FindAgent(ctx, found.Conversation.WorkspaceID)
-		if err != nil {
-			return errNotFound
-		}
-
-		conv, err := models.New(tx).FindConversation(ctx, models.FindConversationParams{
+		conv, err := q.LockConversation(ctx, models.LockConversationParams{
 			WorkspaceID: found.Conversation.WorkspaceID, ID: found.Conversation.ID,
 		})
 		if err != nil {
-			return errNotFound
+			return exceptions.ErrWidgetConversationNotFound
+		}
+		if conv.AiState == "handed_off" {
+			return nil
 		}
 
-		writer := &conversations.Writer{
-			Q: models.New(tx), Tx: tx, Events: a.Events, Now: a.Clock.Now(),
-			Actor: conversations.Actor{Type: "agent", ID: agent.ID, Name: agent.Name},
-		}
-		if _, _, err := writer.Append(ctx, conv, conversations.NewMessage{
-			Type: "message", Body: handoffLine(agent.Messages),
-		}); err != nil {
-			return fmt.Errorf("write handoff line: %w", err)
-		}
+		return a.handOff(ctx, tx, conv)
+	})
+}
 
-		now := a.Clock.Now()
-		if err := models.New(tx).HandoffConversationAi(ctx, models.HandoffConversationAiParams{
-			WorkspaceID: found.Conversation.WorkspaceID, ID: found.Conversation.ID,
-			Reason: new("customer_requested"), Now: &now,
-		}); err != nil {
-			return fmt.Errorf("handoff conversation: %w", err)
-		}
+/*
+throttle counts the request against the session's minute.
+*/
+func (a *RequestAiHandoff) throttle(ctx context.Context, who Authenticated) error {
+	if a.Limiter == nil {
+		return nil
+	}
 
-		return a.Events.Dispatch(ctx, tx, appevents.AiHandoffRequested{
-			Base: appevents.Base{
-				ID: ids.New(), WorkspaceID: found.Conversation.WorkspaceID,
-				OccurredAt: now, Actor: appevents.Actor{Type: "contact", ID: found.Conversation.ContactID},
-			},
-			ConversationRef: appevents.ConversationRef{ConversationID: found.Conversation.ID},
-			Reason:          "customer_requested",
-		})
+	return auth.Throttle(ctx, a.Limiter, auth.Rate{
+		Key: "widget-handoff:" + who.Session.ID.String(), Limit: handoffPerMinute, Window: time.Minute,
+	})
+}
+
+/*
+handOff writes the agent's handoff line, flips the conversation and
+tells the team, in the caller's transaction.
+*/
+func (a *RequestAiHandoff) handOff(ctx context.Context, tx *database.Tx, conv models.Conversation) error {
+	q := models.New(tx)
+	now := a.Clock.Now()
+
+	agent, err := q.FindAgent(ctx, conv.WorkspaceID)
+	if err != nil {
+		return exceptions.ErrWidgetConversationNotFound
+	}
+
+	writer := &conversations.Writer{
+		Q: q, Tx: tx, Events: a.Events, Now: now,
+		Actor: conversations.Actor{Type: "agent", ID: agent.ID, Name: agent.Name},
+	}
+	if _, _, err := writer.Append(ctx, conv, conversations.NewMessage{
+		Type: "message", Body: handoffLine(agent.Messages),
+	}); err != nil {
+		return fmt.Errorf("write handoff line: %w", err)
+	}
+
+	if err := q.HandoffConversationAi(ctx, models.HandoffConversationAiParams{
+		WorkspaceID: conv.WorkspaceID, ID: conv.ID, Reason: new("customer_requested"), Now: &now,
+	}); err != nil {
+		return fmt.Errorf("handoff conversation: %w", err)
+	}
+
+	return a.Events.Dispatch(ctx, tx, appevents.AiHandoffRequested{
+		Base: appevents.Base{
+			ID: ids.New(), WorkspaceID: conv.WorkspaceID,
+			OccurredAt: now, Actor: appevents.Actor{Type: "contact", ID: conv.ContactID},
+		},
+		ConversationRef: appevents.ConversationRef{ConversationID: conv.ID},
+		Reason:          "customer_requested",
 	})
 }
 

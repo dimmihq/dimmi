@@ -120,17 +120,18 @@ func (q *Queries) GetSpendPeriod(ctx context.Context, arg GetSpendPeriodParams) 
 }
 
 const listDailySpend = `-- name: ListDailySpend :many
-SELECT date_trunc('day', created_at)::date AS day,
+SELECT date_trunc('day', created_at AT TIME ZONE 'UTC')::date AS day,
     COALESCE(sum(cost_micros), 0)::bigint AS cost_micros,
     count(*)::integer AS runs_count
 FROM ai_runs
-WHERE workspace_id = $1 AND created_at >= $2
+WHERE workspace_id = $1 AND created_at >= $2 AND created_at < $3
 GROUP BY 1 ORDER BY 1
 `
 
 type ListDailySpendParams struct {
 	WorkspaceID ids.UUID  `json:"workspace_id"`
 	PeriodStart time.Time `json:"period_start"`
+	PeriodEnd   time.Time `json:"period_end"`
 }
 
 type ListDailySpendRow struct {
@@ -139,9 +140,10 @@ type ListDailySpendRow struct {
 	RunsCount  int32       `json:"runs_count"`
 }
 
-// ListDailySpend returns per-day cost and runs for the period.
+// ListDailySpend returns per-day cost and runs for the period, days
+// counted in UTC like the period itself.
 func (q *Queries) ListDailySpend(ctx context.Context, arg ListDailySpendParams) ([]ListDailySpendRow, error) {
-	rows, err := q.db.Query(ctx, listDailySpend, arg.WorkspaceID, arg.PeriodStart)
+	rows, err := q.db.Query(ctx, listDailySpend, arg.WorkspaceID, arg.PeriodStart, arg.PeriodEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -165,14 +167,16 @@ SELECT COALESCE(s.model, '') AS model,
     COALESCE(sum(s.cost_micros), 0)::bigint AS cost_micros,
     count(*)::integer AS calls
 FROM ai_run_steps s
-JOIN ai_runs r ON r.id = s.run_id
-WHERE s.workspace_id = $1 AND r.created_at >= $2 AND s.model IS NOT NULL
-GROUP BY s.model ORDER BY 2 DESC
+JOIN ai_runs r ON r.id = s.run_id AND r.workspace_id = s.workspace_id
+WHERE s.workspace_id = $1 AND r.created_at >= $2 AND r.created_at < $3
+    AND s.model IS NOT NULL
+GROUP BY s.model ORDER BY 2 DESC, 1
 `
 
 type ListSpendByModelParams struct {
 	WorkspaceID ids.UUID  `json:"workspace_id"`
 	PeriodStart time.Time `json:"period_start"`
+	PeriodEnd   time.Time `json:"period_end"`
 }
 
 type ListSpendByModelRow struct {
@@ -183,7 +187,7 @@ type ListSpendByModelRow struct {
 
 // ListSpendByModel returns per-model cost for the period.
 func (q *Queries) ListSpendByModel(ctx context.Context, arg ListSpendByModelParams) ([]ListSpendByModelRow, error) {
-	rows, err := q.db.Query(ctx, listSpendByModel, arg.WorkspaceID, arg.PeriodStart)
+	rows, err := q.db.Query(ctx, listSpendByModel, arg.WorkspaceID, arg.PeriodStart, arg.PeriodEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -205,13 +209,15 @@ func (q *Queries) ListSpendByModel(ctx context.Context, arg ListSpendByModelPara
 const listSpendByOutcome = `-- name: ListSpendByOutcome :many
 SELECT COALESCE(outcome, '') AS outcome, count(*)::integer AS runs_count
 FROM ai_runs
-WHERE workspace_id = $1 AND created_at >= $2 AND outcome IS NOT NULL
-GROUP BY outcome
+WHERE workspace_id = $1 AND created_at >= $2 AND created_at < $3
+    AND outcome IS NOT NULL
+GROUP BY outcome ORDER BY outcome
 `
 
 type ListSpendByOutcomeParams struct {
 	WorkspaceID ids.UUID  `json:"workspace_id"`
 	PeriodStart time.Time `json:"period_start"`
+	PeriodEnd   time.Time `json:"period_end"`
 }
 
 type ListSpendByOutcomeRow struct {
@@ -221,7 +227,7 @@ type ListSpendByOutcomeRow struct {
 
 // ListSpendByOutcome returns per-outcome counts for the period.
 func (q *Queries) ListSpendByOutcome(ctx context.Context, arg ListSpendByOutcomeParams) ([]ListSpendByOutcomeRow, error) {
-	rows, err := q.db.Query(ctx, listSpendByOutcome, arg.WorkspaceID, arg.PeriodStart)
+	rows, err := q.db.Query(ctx, listSpendByOutcome, arg.WorkspaceID, arg.PeriodStart, arg.PeriodEnd)
 	if err != nil {
 		return nil, err
 	}

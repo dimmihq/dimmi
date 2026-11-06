@@ -19,10 +19,11 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
-	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -43,7 +44,7 @@ type UpdateKeyInput struct {
 UpdateProviderKey saves a connection's fields.
 
 Rules:
-  - The caller needs ai:keys:write.
+  - The caller needs ai:keys.
   - A new secret seals before it saves and revalidates.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
@@ -90,18 +91,16 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
 		return key, err
 	}
 
-	if in.Name != "" {
-		key.Name = in.Name
+	if err := checkKeyPatch(key, in); err != nil {
+		return key, err
 	}
-	if in.BaseURL != nil {
-		if err := a.checkBaseURL(*in.BaseURL); err != nil {
+	if in.BaseURL != nil && *in.BaseURL != "" && a.LLM != nil {
+		if err := a.LLM.CheckBaseURL(*in.BaseURL); err != nil {
 			return key, err
 		}
-		key.BaseUrl = in.BaseURL
 	}
-	if in.Config != nil {
-		key.Config, _ = json.Marshal(in.Config)
-	}
+
+	moved := applyKeyPatch(&key, in)
 
 	rotated := in.APIKey != nil && *in.APIKey != ""
 	if rotated {
@@ -122,7 +121,7 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
 		return key, fmt.Errorf("update provider key: %w", err)
 	}
 
-	if rotated {
+	if rotated || moved {
 		key, err = keyValidator{llm: a.LLM, clock: a.Clock}.recordValidation(ctx, tx, key)
 		if err != nil {
 			return key, fmt.Errorf("update key status: %w", err)
@@ -133,13 +132,50 @@ func (a *UpdateProviderKey) update(ctx context.Context, tx *database.Tx,
 }
 
 /*
-checkBaseURL refuses an endpoint a credential may not be sent to.
+applyKeyPatch folds the name, endpoint and config the caller sent into
+the key, and reports whether the endpoint moved, which calls for a
+fresh validation.
 */
-func (a *UpdateProviderKey) checkBaseURL(raw string) error {
-	if raw == "" || a.LLM == nil {
-		return nil
+func applyKeyPatch(key *models.AiProviderKey, in UpdateKeyInput) bool {
+	if in.Name != "" {
+		key.Name = in.Name
 	}
-	return a.LLM.CheckBaseURL(raw)
+	if in.Config != nil {
+		key.Config, _ = json.Marshal(in.Config)
+	}
+
+	moved := in.BaseURL != nil && !sameText(key.BaseUrl, *in.BaseURL)
+	if moved {
+		key.BaseUrl = nullable(*in.BaseURL)
+	}
+	return moved
+}
+
+/*
+checkKeyPatch refuses credential and endpoint changes on connections
+that manage their own: the built-in provider and the subscription
+sign-in. An OpenAI-compatible connection always keeps an endpoint.
+*/
+func checkKeyPatch(key models.AiProviderKey, in UpdateKeyInput) error {
+	changesSecret := (in.APIKey != nil && *in.APIKey != "") || in.BaseURL != nil
+	if changesSecret && (key.AuthType == "managed" || key.AuthType == "oauth") {
+		return fault.New(fault.Invalid, "provider_managed", "this connection manages its own credentials")
+	}
+	if in.BaseURL != nil && *in.BaseURL == "" && key.Provider == string(enums.AIProviderOpenAICompatible) {
+		return fault.New(fault.Invalid, "base_url_required", "a base url is required").OnField("base_url")
+	}
+	return nil
+}
+
+/*
+sameText reports whether a nullable text holds the value, an empty
+value standing for null.
+*/
+func sameText(stored *string, value string) bool {
+	if stored == nil {
+		return value == ""
+	}
+	return *stored == value
 }
 
 /*
@@ -153,7 +189,7 @@ type ListKeysInput struct {
 ListProviderKeys returns the workspace's connections.
 
 Rules:
-  - The caller needs ai:keys:read or ai:read.
+  - The caller needs ai:read.
 
 Errors: [exceptions.ErrForbidden], or a wrapped database error.
 */
@@ -165,8 +201,8 @@ type ListProviderKeys struct {
 Handle lists the keys.
 */
 func (a *ListProviderKeys) Handle(ctx context.Context, in ListKeysInput) ([]models.AiProviderKey, error) {
-	if !in.Membership.Can("ai:keys:read") && !in.Membership.Can("ai:read") {
-		return nil, exceptions.ErrForbidden
+	if err := RequireAgentRead(in.Membership); err != nil {
+		return nil, err
 	}
 
 	var keys []models.AiProviderKey

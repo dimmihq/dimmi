@@ -487,127 +487,61 @@ func (q *Queries) ListRuns(ctx context.Context, arg ListRunsParams) ([]AiRun, er
 	return items, nil
 }
 
-const listRunsForPayloadPrune = `-- name: ListRunsForPayloadPrune :many
-SELECT DISTINCT r.id, r.workspace_id, r.agent_id, r.kind, r.conversation_id, r.trigger_message_id, r.included_message_ids, r.actor_type, r.actor_id, r.channel_type, r.status, r.outcome, r.skip_reason, r.handoff_reason, r.intent, r.language, r.query_original, r.query_rewritten, r.retrieval, r.answer_message_id, r.prompt_version, r.prompt_hashes, r.config_snapshot, r.flags, r.input_tokens, r.cached_input_tokens, r.cache_write_tokens, r.output_tokens, r.cost_micros, r.price_table_version, r.first_token_ms, r.latency_ms, r.queue_wait_ms, r.error_code, r.error_message, r.feedback, r.action_calls_count, r.started_at, r.completed_at, r.created_at, r.updated_at FROM ai_runs r
-JOIN ai_run_steps s ON s.run_id = r.id AND (s.request IS NOT NULL OR s.response IS NOT NULL)
-WHERE r.workspace_id = $1 AND r.completed_at < $2
-ORDER BY r.created_at
-LIMIT $3
-`
-
-type ListRunsForPayloadPruneParams struct {
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	Before      *time.Time `json:"before"`
-	BatchLimit  int32      `json:"batch_limit"`
-}
-
-// ListRunsForPayloadPrune returns step-holding runs past payload
-// retention, in batches.
-func (q *Queries) ListRunsForPayloadPrune(ctx context.Context, arg ListRunsForPayloadPruneParams) ([]AiRun, error) {
-	rows, err := q.db.Query(ctx, listRunsForPayloadPrune, arg.WorkspaceID, arg.Before, arg.BatchLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []AiRun
-	for rows.Next() {
-		var i AiRun
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.AgentID,
-			&i.Kind,
-			&i.ConversationID,
-			&i.TriggerMessageID,
-			&i.IncludedMessageIds,
-			&i.ActorType,
-			&i.ActorID,
-			&i.ChannelType,
-			&i.Status,
-			&i.Outcome,
-			&i.SkipReason,
-			&i.HandoffReason,
-			&i.Intent,
-			&i.Language,
-			&i.QueryOriginal,
-			&i.QueryRewritten,
-			&i.Retrieval,
-			&i.AnswerMessageID,
-			&i.PromptVersion,
-			&i.PromptHashes,
-			&i.ConfigSnapshot,
-			&i.Flags,
-			&i.InputTokens,
-			&i.CachedInputTokens,
-			&i.CacheWriteTokens,
-			&i.OutputTokens,
-			&i.CostMicros,
-			&i.PriceTableVersion,
-			&i.FirstTokenMs,
-			&i.LatencyMs,
-			&i.QueueWaitMs,
-			&i.ErrorCode,
-			&i.ErrorMessage,
-			&i.Feedback,
-			&i.ActionCallsCount,
-			&i.StartedAt,
-			&i.CompletedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const pruneAiRuns = `-- name: PruneAiRuns :execrows
 DELETE FROM ai_runs WHERE id IN (
-    SELECT r.id FROM ai_runs AS r WHERE r.created_at < $1 ORDER BY r.created_at LIMIT $2::bigint
+    SELECT r.id FROM ai_runs AS r
+    WHERE r.workspace_id = $1 AND r.created_at < $2
+        AND ($3::text = '' OR r.kind = $3::text)
+    ORDER BY r.created_at LIMIT $4::bigint
 )
 `
 
 type PruneAiRunsParams struct {
-	Cutoff time.Time `json:"cutoff"`
-	Batch  int64     `json:"batch"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Cutoff      time.Time `json:"cutoff"`
+	Kind        string    `json:"kind"`
+	Batch       int64     `json:"batch"`
 }
 
-// PruneAiRuns deletes up to a batch of runs older than the cutoff.
+// PruneAiRuns deletes up to a batch of the workspace's runs older than
+// the cutoff, of one kind when a kind is given; their steps go with
+// them.
 func (q *Queries) PruneAiRuns(ctx context.Context, arg PruneAiRunsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneAiRuns, arg.Cutoff, arg.Batch)
+	result, err := q.db.Exec(ctx, pruneAiRuns,
+		arg.WorkspaceID,
+		arg.Cutoff,
+		arg.Kind,
+		arg.Batch,
+	)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const resolveLatestRunOutcome = `-- name: ResolveLatestRunOutcome :execrows
-UPDATE ai_runs AS ar SET outcome = $1, completed_at = $2
+const setLatestAnswerFeedback = `-- name: SetLatestAnswerFeedback :execrows
+UPDATE ai_runs AS ar SET feedback = $1, updated_at = $2
 WHERE ar.workspace_id = $3
   AND ar.id = (
       SELECT r.id FROM ai_runs r
-      WHERE r.workspace_id = ar.workspace_id AND r.conversation_id = $4
-        AND r.status = 'completed'
-      ORDER BY r.id DESC LIMIT 1
+      WHERE r.workspace_id = $3 AND r.conversation_id = $4
+        AND r.status = 'completed' AND r.outcome = 'answered'
+      ORDER BY r.created_at DESC, r.id DESC LIMIT 1
   )
 `
 
-type ResolveLatestRunOutcomeParams struct {
-	Outcome        *string    `json:"outcome"`
-	Now            *time.Time `json:"now"`
-	WorkspaceID    ids.UUID   `json:"workspace_id"`
-	ConversationID *ids.UUID  `json:"conversation_id"`
+type SetLatestAnswerFeedbackParams struct {
+	Feedback       *string   `json:"feedback"`
+	Now            time.Time `json:"now"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID *ids.UUID `json:"conversation_id"`
 }
 
-// ResolveLatestRunOutcome stamps a resolution outcome on the
-// conversation's newest finished run.
-func (q *Queries) ResolveLatestRunOutcome(ctx context.Context, arg ResolveLatestRunOutcomeParams) (int64, error) {
-	result, err := q.db.Exec(ctx, resolveLatestRunOutcome,
-		arg.Outcome,
+// SetLatestAnswerFeedback records the customer's verdict on the
+// conversation's newest answered run.
+func (q *Queries) SetLatestAnswerFeedback(ctx context.Context, arg SetLatestAnswerFeedbackParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setLatestAnswerFeedback,
+		arg.Feedback,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ConversationID,

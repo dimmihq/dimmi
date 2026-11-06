@@ -3,8 +3,8 @@
 | Agent Usage Resource
 |--------------------------------------------------------------------------
 |
-| The month so far, for the settings overview: what the agent cost,
-| how much it did, day by day, by model and by how runs ended.
+| One month, for the settings overview: what the agent cost, how much
+| it did, day by day in UTC, by model and by how runs ended.
 |
 */
 
@@ -13,25 +13,30 @@ package resources
 import (
 	"time"
 
-	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/actions/ai"
 )
 
 /*
-AiUsage is the month's tallies.
+AiUsage is one month's tallies. The counts come from the running tally
+the cap reads; the series, the models and the outcomes from the
+month's runs. MonthlySpendCapMicros is null when there is no cap.
 */
 type AiUsage struct {
-	PeriodStart   string           `json:"period_start"`
-	CostMicros    int64            `json:"cost_micros"`
-	InputTokens   int64            `json:"input_tokens"`
-	OutputTokens  int64            `json:"output_tokens"`
-	RunsCount     int              `json:"runs_count"`
-	AnsweredCount int              `json:"answered_count"`
-	UnknownCount  int              `json:"unknown_count"`
-	HandoffCount  int              `json:"handoff_count"`
-	CappedAt      *time.Time       `json:"capped_at"`
-	Daily         []AiUsageDay     `json:"daily"`
-	ByModel       []AiUsageModel   `json:"by_model"`
-	ByOutcome     []AiUsageOutcome `json:"by_outcome"`
+	PeriodStart           string           `json:"period_start"`
+	CostMicros            int64            `json:"cost_micros"`
+	InputTokens           int64            `json:"input_tokens"`
+	CachedInputTokens     int64            `json:"cached_input_tokens"`
+	OutputTokens          int64            `json:"output_tokens"`
+	RunsCount             int              `json:"runs_count"`
+	AnsweredCount         int              `json:"answered_count"`
+	UnknownCount          int              `json:"unknown_count"`
+	HandoffCount          int              `json:"handoff_count"`
+	SilentCount           int              `json:"silent_count"`
+	MonthlySpendCapMicros *int64           `json:"monthly_spend_cap_micros"`
+	CappedAt              *time.Time       `json:"capped_at"`
+	Daily                 []AiUsageDay     `json:"daily"`
+	ByModel               []AiUsageModel   `json:"by_model"`
+	ByOutcome             []AiUsageOutcome `json:"by_outcome"`
 }
 
 /*
@@ -63,38 +68,28 @@ type AiUsageOutcome struct {
 /*
 NewAiUsage shapes the usage view.
 */
-func NewAiUsage(period models.AiSpendPeriod, daily []models.ListDailySpendRow,
-	byModel []models.ListSpendByModelRow, byOutcome []models.ListSpendByOutcomeRow,
-) AiUsage {
+func NewAiUsage(v ai.UsageView) AiUsage {
+	p := v.Period
 	out := AiUsage{
-		PeriodStart:  period.PeriodStart.Time.Format("2006-01-02"),
-		CostMicros:   period.CostMicros,
-		InputTokens:  period.InputTokens,
-		OutputTokens: period.OutputTokens,
-		RunsCount:    int(period.RunsCount),
-		CappedAt:     period.CappedAt,
+		PeriodStart: p.PeriodStart.Time.Format("2006-01-02"), CostMicros: p.CostMicros,
+		InputTokens: p.InputTokens, CachedInputTokens: p.CachedInputTokens, OutputTokens: p.OutputTokens,
+		RunsCount: int(p.RunsCount), AnsweredCount: int(p.AnsweredCount), UnknownCount: int(p.UnknownCount),
+		HandoffCount: int(p.HandoffCount), SilentCount: int(p.SilentCount),
+		MonthlySpendCapMicros: v.CapMicros, CappedAt: p.CappedAt,
+		Daily:     make([]AiUsageDay, len(v.Daily)),
+		ByModel:   make([]AiUsageModel, len(v.ByModel)),
+		ByOutcome: make([]AiUsageOutcome, len(v.ByOutcome)),
 	}
-	out.Daily = make([]AiUsageDay, len(daily))
-	for i, d := range daily {
+	for i, d := range v.Daily {
 		out.Daily[i] = AiUsageDay{
 			Day: d.Day.Time.Format("2006-01-02"), CostMicros: d.CostMicros, RunsCount: int(d.RunsCount),
 		}
 	}
-	out.ByModel = make([]AiUsageModel, len(byModel))
-	for i, m := range byModel {
+	for i, m := range v.ByModel {
 		out.ByModel[i] = AiUsageModel{Model: m.Model, CostMicros: m.CostMicros, Calls: int(m.Calls)}
 	}
-	out.ByOutcome = make([]AiUsageOutcome, len(byOutcome))
-	for i, o := range byOutcome {
+	for i, o := range v.ByOutcome {
 		out.ByOutcome[i] = AiUsageOutcome{Outcome: o.Outcome, RunsCount: int(o.RunsCount)}
-		switch o.Outcome {
-		case "answered":
-			out.AnsweredCount += int(o.RunsCount)
-		case "unknown":
-			out.UnknownCount += int(o.RunsCount)
-		case "handoff":
-			out.HandoffCount += int(o.RunsCount)
-		}
 	}
 	return out
 }

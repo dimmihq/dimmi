@@ -35,7 +35,7 @@ TestProviderKey revalidates a connection on demand and returns its
 fresh status.
 
 Rules:
-  - The caller needs ai:keys:write.
+  - The caller needs ai:keys.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
 wrapped database error.

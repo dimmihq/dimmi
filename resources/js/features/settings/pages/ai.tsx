@@ -195,7 +195,7 @@ export function AgentSettings() {
         <Row label="Raise priority on handover">
           <Toggle
             label="Raise priority on handover"
-            on={agent.handoff?.raise_priority ?? false}
+            on={agent.raise_priority_on_handoff}
             onChange={(on) => patch({ raise_priority_on_handoff: on })}
           />
         </Row>

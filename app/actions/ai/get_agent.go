@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -25,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 	"github.com/dimmihq/dimmi/config"
 )
 
@@ -36,17 +38,20 @@ type GetAgentInput struct {
 }
 
 /*
-AgentView is the agent with everything the settings page needs:
-| readiness, keys, the providers it could connect and the catalog.
+AgentView is the agent with everything the settings page needs: its
+connections, the providers it could connect, the model catalog,
+whether it could go live and the prompt version its answers use. It
+holds rows, so it is shaped by a resource before it leaves the server.
 */
 type AgentView struct {
-	Agent         models.AiAgent            `json:"agent"`
-	Keys          []models.AiProviderKey    `json:"keys"`
-	Providers     []ProviderDescriptor      `json:"providers"`
-	Catalog       map[string][]CatalogEntry `json:"catalog"`
-	Ready         bool                      `json:"ready"`
-	ReadinessErrs []string                  `json:"readiness_errors"`
-	Managed       bool                      `json:"managed"`
+	Agent         models.AiAgent
+	Keys          []models.AiProviderKey
+	Providers     []ProviderDescriptor
+	Catalog       map[string][]CatalogEntry
+	Ready         bool
+	ReadinessErrs []string
+	Managed       bool
+	PromptVersion string
 }
 
 /*
@@ -76,23 +81,9 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 	var view *AgentView
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-
-		agent, err := ensureAgent(ctx, seedDeps{clock: a.Clock, config: a.Config},
-			tx, in.Membership.Workspace.ID)
+		agent, managedKey, err := a.provision(ctx, tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
-		}
-
-		managedKey, err := ensureManagedKey(ctx, seedDeps{clock: a.Clock, config: a.Config},
-			tx, in.Membership.Workspace.ID)
-		if err != nil {
-			return err
-		}
-		if managedKey != nil && defaultRoles(&agent, managedKey) {
-			if agent, err = models.New(tx).UpdateAgent(ctx, updateParams(&agent, a.Clock.Now())); err != nil {
-				return fmt.Errorf("save default roles: %w", err)
-			}
 		}
 
 		keys, err := models.New(tx).ListProviderKeys(ctx, in.Membership.Workspace.ID)
@@ -101,20 +92,14 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 		}
 
 		view = &AgentView{
-			Agent:     agent,
-			Keys:      keys,
-			Providers: providers(a.Config),
-			Catalog:   catalog(a.Prices),
-			Managed:   managedKey != nil,
+			Agent:         agent,
+			Keys:          keys,
+			Providers:     providers(a.Config),
+			Catalog:       catalog(a.Prices),
+			Managed:       managedKey != nil,
+			PromptVersion: promptVersion(agent, a.Config),
 		}
-		ready, errs := readiness(agent, keys)
-		view.Ready, view.ReadinessErrs = ready, errs
-		if view.Keys == nil {
-			view.Keys = []models.AiProviderKey{}
-		}
-		if view.ReadinessErrs == nil {
-			view.ReadinessErrs = []string{}
-		}
+		view.Ready, view.ReadinessErrs = readiness(agent, keys)
 
 		return nil
 	})
@@ -123,6 +108,36 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 	}
 
 	return view, nil
+}
+
+/*
+provision makes sure the agent and, when the install offers one, the
+built-in connection exist, pointing a fresh agent's answer role at the
+built-in defaults.
+*/
+func (a *GetAiAgent) provision(ctx context.Context, tx *database.Tx,
+	workspaceID ids.UUID,
+) (models.AiAgent, *models.AiProviderKey, error) {
+	deps := seedDeps{clock: a.Clock, config: a.Config}
+
+	agent, err := ensureAgent(ctx, deps, tx, workspaceID)
+	if err != nil {
+		return agent, nil, err
+	}
+
+	managedKey, err := ensureManagedKey(ctx, deps, tx, workspaceID)
+	if err != nil {
+		return agent, nil, err
+	}
+	if managedKey == nil || !defaultRoles(&agent, managedKey) {
+		return agent, managedKey, nil
+	}
+
+	agent, err = models.New(tx).UpdateAgent(ctx, updateParams(&agent, a.Clock.Now()))
+	if err != nil {
+		return agent, nil, fmt.Errorf("save default roles: %w", err)
+	}
+	return agent, managedKey, nil
 }
 
 /*
@@ -274,19 +289,15 @@ func catalog(prices *aiprices.Table) map[string][]CatalogEntry {
 }
 
 /*
-readiness answers whether the agent could go live and why not.
+readiness answers whether the agent could go live and why not: it
+needs an answer model on a working connection that offers it, and at
+least one channel. Classifying a question is not a model role the
+workspace configures.
 */
 func readiness(agent models.AiAgent, keys []models.AiProviderKey) (bool, []string) {
 	var errs []string
 
-	usable := map[ids.UUID]bool{}
-	for _, key := range keys {
-		if key.Status == "valid" || key.Provider == "dimmi" {
-			usable[key.ID] = true
-		}
-	}
-
-	if agent.AnswerKeyID == nil || agent.AnswerModel == nil || !usable[*agent.AnswerKeyID] {
+	if !answerUsable(agent, keys) {
 		errs = append(errs, "answer model not configured")
 	}
 	if len(agent.EnabledChannels) == 0 {
@@ -294,4 +305,56 @@ func readiness(agent models.AiAgent, keys []models.AiProviderKey) (bool, []strin
 	}
 
 	return len(errs) == 0, errs
+}
+
+/*
+answerUsable reports whether the answer role points at a model its
+connection can serve: the built-in connection always can, any other
+must have validated and, when it listed its models, list this one.
+*/
+func answerUsable(agent models.AiAgent, keys []models.AiProviderKey) bool {
+	if agent.AnswerKeyID == nil || agent.AnswerModel == nil || *agent.AnswerModel == "" {
+		return false
+	}
+
+	for _, key := range keys {
+		if key.ID != *agent.AnswerKeyID {
+			continue
+		}
+		if key.Provider == string(enums.AIProviderDimmi) {
+			return true
+		}
+		return key.Status == "valid" && offers(key, *agent.AnswerModel)
+	}
+
+	return false
+}
+
+/*
+offers reports whether the connection lists the model, or lists no
+models at all and so cannot be held to a list.
+*/
+func offers(key models.AiProviderKey, model string) bool {
+	var listed []string
+	if err := json.Unmarshal(key.Models, &listed); err != nil || len(listed) == 0 {
+		return true
+	}
+
+	return slices.Contains(listed, model)
+}
+
+/*
+promptVersion is the prompt set the agent's answers use: its own pin
+when it has one, the install's otherwise.
+*/
+func promptVersion(agent models.AiAgent, cfg config.AIConfig) string {
+	if agent.PromptVersion != nil && *agent.PromptVersion != "" {
+		return *agent.PromptVersion
+	}
+
+	fp, err := prompts.NewLoader(cfg.Prompts.Version, nil).Fingerprint(enums.AIModelFamilyAnthropic, nil)
+	if err != nil {
+		return cfg.Prompts.Version
+	}
+	return fp.Version
 }

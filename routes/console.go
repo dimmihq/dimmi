@@ -8,8 +8,9 @@
 | spent mailed links and codes, expired password resets and sessions
 | nobody can resume. Every night the workspaces whose time in the trash
 | ran out are handed to their purges, the audit log and the security log
-| drop the entries older than they are kept for, a few minutes apart so
-| they never compete, and every workspace is checked for an active owner.
+| drop the entries older than they are kept for, the agent's traces lose
+| their payloads and old runs, all a few minutes apart so they never
+| compete, and every workspace is checked for an active owner.
 | In the morning owners of workspaces about to be purged are reminded,
 | and owners of access tokens about to expire are warned.
 |
@@ -44,4 +45,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ExpireDataExportsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
+	a.Schedule.Job(jobs.PruneAiTracesArgs{}).DailyAt("03:50")
 }

@@ -16,39 +16,39 @@ import (
 	"context"
 
 	"github.com/dimmihq/dimmi/app/enums"
-	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
+	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 	"github.com/dimmihq/dimmi/config"
 )
 
 /*
-AICheckStatus says how an AI check went.
+CheckStatus says how an AI check went.
 */
-type AICheckStatus string
+type CheckStatus string
 
 /*
 The outcomes of an AI check.
 */
 const (
-	AICheckPass AICheckStatus = "pass"
-	AICheckWarn AICheckStatus = "warn"
-	AICheckFail AICheckStatus = "fail"
+	CheckPass CheckStatus = "pass"
+	CheckWarn CheckStatus = "warn"
+	CheckFail CheckStatus = "fail"
 )
 
 /*
-AICheck is one finding of the doctor.
+Check is one finding of the doctor.
 */
-type AICheck struct {
+type Check struct {
 	ID      string
-	Status  AICheckStatus
+	Status  CheckStatus
 	Message string
 }
 
 /*
-AiDoctor checks the install's agent plumbing.
+Doctor checks the install's agent plumbing.
 */
-type AiDoctor struct {
+type Doctor struct {
 	Config  config.AIConfig
 	Prompts *prompts.Loader
 	Prices  *aiprices.Table
@@ -57,8 +57,8 @@ type AiDoctor struct {
 /*
 Handle runs every check.
 */
-func (d *AiDoctor) Handle(ctx context.Context) []AICheck {
-	return []AICheck{
+func (d *Doctor) Handle(_ context.Context) []Check {
+	return []Check{
 		d.managedCheck(),
 		d.promptsCheck(),
 		d.pricesCheck(),
@@ -70,61 +70,69 @@ func (d *AiDoctor) Handle(ctx context.Context) []AICheck {
 managedCheck passes when at least one upstream backs the built-in
 provider.
 */
-func (d *AiDoctor) managedCheck() AICheck {
+func (d *Doctor) managedCheck() Check {
 	m := d.Config.Managed
 	if m.Anthropic.APIKey != "" || m.OpenAI.APIKey != "" || m.OpenWeight.APIKey != "" {
-		return AICheck{ID: "ai.managed", Status: AICheckPass, Message: "the built-in provider has an upstream"}
+		return Check{ID: "ai.managed", Status: CheckPass, Message: "the built-in provider has an upstream"}
 	}
-	return AICheck{ID: "ai.managed", Status: AICheckWarn,
+	return Check{
+		ID: "ai.managed", Status: CheckWarn,
 		Message: "no managed upstream is configured; the built-in provider answers nothing until one is, " +
-			"but connections a workspace adds itself still work"}
+			"but connections a workspace adds itself still work",
+	}
 }
 
 /*
 promptsCheck renders one template per model family.
 */
-func (d *AiDoctor) promptsCheck() AICheck {
+func (d *Doctor) promptsCheck() Check {
 	for _, family := range []enums.AIModelFamily{
 		enums.AIModelFamilyAnthropic, enums.AIModelFamilyOpenAI, enums.AIModelFamilyOpenWeight,
 	} {
 		if _, err := d.Prompts.RenderFile(family, "answer.system.md", prompts.Vars{}); err != nil {
-			return AICheck{ID: "ai.prompts", Status: AICheckFail,
-				Message: "the " + string(family) + " prompt templates do not render: " + err.Error()}
+			return Check{
+				ID: "ai.prompts", Status: CheckFail,
+				Message: "the " + string(family) + " prompt templates do not render: " + err.Error(),
+			}
 		}
 	}
-	return AICheck{ID: "ai.prompts", Status: AICheckPass, Message: "every family's prompt templates render"}
+	return Check{ID: "ai.prompts", Status: CheckPass, Message: "every family's prompt templates render"}
 }
 
 /*
 pricesCheck passes when every cataloged model has a price.
 */
-func (d *AiDoctor) pricesCheck() AICheck {
+func (d *Doctor) pricesCheck() Check {
 	if d.Prices == nil {
-		return AICheck{ID: "ai.prices", Status: AICheckWarn, Message: "the price table is not loaded"}
+		return Check{ID: "ai.prices", Status: CheckWarn, Message: "the price table is not loaded"}
 	}
 	for _, e := range append(append(aimodels.Managed(), aimodels.Anthropic()...), aimodels.OpenAI()...) {
 		if d.Prices.Find(providerForFamily(e.Family), e.ID) == nil {
-			return AICheck{ID: "ai.prices", Status: AICheckWarn,
-				Message: "model " + e.ID + " has no price; its answers record no cost"}
+			return Check{
+				ID: "ai.prices", Status: CheckWarn,
+				Message: "model " + e.ID + " has no price; its answers record no cost",
+			}
 		}
 	}
-	return AICheck{ID: "ai.prices", Status: AICheckPass, Message: "every cataloged model has a price"}
+	return Check{ID: "ai.prices", Status: CheckPass, Message: "every cataloged model has a price"}
 }
 
 /*
 chatGPTCheck passes when the subscription connect's endpoints are all
 present, or when it is off.
 */
-func (d *AiDoctor) chatGPTCheck() AICheck {
+func (d *Doctor) chatGPTCheck() Check {
 	if !d.Config.ChatGPT.Enabled {
-		return AICheck{ID: "ai.chatgpt", Status: AICheckPass, Message: "the subscription connect is off"}
+		return Check{ID: "ai.chatgpt", Status: CheckPass, Message: "the subscription connect is off"}
 	}
 	c := d.Config.ChatGPT
 	if c.ClientID == "" || c.AuthorizeURL == "" || c.TokenURL == "" || c.APIBaseURL == "" {
-		return AICheck{ID: "ai.chatgpt", Status: AICheckFail,
-			Message: "the subscription connect is enabled but an endpoint or the client id is missing"}
+		return Check{
+			ID: "ai.chatgpt", Status: CheckFail,
+			Message: "the subscription connect is enabled but an endpoint or the client id is missing",
+		}
 	}
-	return AICheck{ID: "ai.chatgpt", Status: AICheckPass, Message: "the subscription connect is configured"}
+	return Check{ID: "ai.chatgpt", Status: CheckPass, Message: "the subscription connect is configured"}
 }
 
 /*

@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | The small shared bits the agent's actions lean on: the permissions
-| that gate them, the credential seal shape and the model catalog
-| answers.
+| that gate them and the model catalog answers. Every member may read;
+| changing the agent, its connections, and reading the prompts
+| themselves are for the people who run the workspace.
 |
 */
 
@@ -27,7 +28,8 @@ import (
 )
 
 /*
-RequireAgentRead checks the caller may see the agent's settings.
+RequireAgentRead checks the caller may see the agent's settings, its
+connections without their secrets, its runs and its usage.
 */
 func RequireAgentRead(m authz.Membership) error {
 	if !m.Can("ai:read") {
@@ -37,17 +39,19 @@ func RequireAgentRead(m authz.Membership) error {
 }
 
 /*
-RequireAgentWrite checks the caller may change the agent.
+RequireAgentManage checks the caller may change the agent: its
+settings, whether it answers at all and what it may spend.
 */
-func RequireAgentWrite(m authz.Membership) error {
-	if !m.Can("ai:write") {
+func RequireAgentManage(m authz.Membership) error {
+	if !m.Can("ai_agent:manage") {
 		return exceptions.ErrForbidden
 	}
 	return nil
 }
 
 /*
-RequireAgentKeys checks the caller may manage provider keys.
+RequireAgentKeys checks the caller may manage provider connections,
+which spend the workspace's money.
 */
 func RequireAgentKeys(m authz.Membership) error {
 	if !m.Can("ai:keys") {
@@ -57,13 +61,22 @@ func RequireAgentKeys(m authz.Membership) error {
 }
 
 /*
-RequireUsage checks the caller may see usage and spend.
+RequirePlayground checks the caller may ask the agent a test question.
 */
-func RequireUsage(m authz.Membership) error {
-	if !m.Can("ai:read") {
+func RequirePlayground(m authz.Membership) error {
+	if !m.Can("ai:write") {
 		return exceptions.ErrForbidden
 	}
 	return nil
+}
+
+/*
+CanReadPayloads reports whether the caller may read the redacted
+prompts and replies a run's steps carry; everyone else sees only the
+numbers.
+*/
+func CanReadPayloads(m authz.Membership) bool {
+	return m.Can("ai_runs:read_payloads")
 }
 
 /*
@@ -112,9 +125,6 @@ func keyInUse(agent models.AiAgent, keyID ids.UUID) []string {
 	var roles []string
 	if agent.AnswerKeyID != nil && *agent.AnswerKeyID == keyID {
 		roles = append(roles, "answer")
-	}
-	if agent.ClassifierKeyID != nil && *agent.ClassifierKeyID == keyID {
-		roles = append(roles, "classifier")
 	}
 	if agent.FallbackKeyID != nil && *agent.FallbackKeyID == keyID {
 		roles = append(roles, "fallback")

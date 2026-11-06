@@ -21,12 +21,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
-	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	appevents "github.com/dimmihq/dimmi/app/events"
-	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
@@ -54,24 +52,7 @@ func bootAI(a *app.App) error {
 	}
 	a.AI = runner
 
-	a.Actions.AI = &app.AIActions{
-		GetAgent:    &ai.GetAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI, Prices: runner.Prices},
-		UpdateAgent: &ai.UpdateAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
-
-		ListProviderKeys:  &ai.ListProviderKeys{DB: a.DB},
-		CreateProviderKey: &ai.CreateProviderKey{DB: a.DB, Clock: a.Clock, Keys: a.Keys, LLM: a.LLM},
-		UpdateProviderKey: &ai.UpdateProviderKey{DB: a.DB, Clock: a.Clock, Keys: a.Keys, LLM: a.LLM},
-		DeleteProviderKey: &ai.DeleteProviderKey{DB: a.DB, Clock: a.Clock, Knowledge: a.Knowledge},
-		TestProviderKey:   &ai.TestProviderKey{DB: a.DB, Clock: a.Clock, LLM: a.LLM},
-
-		StartChatGPTConnect: &ai.StartChatGPTConnect{
-			Config: a.Config.AI, Cache: a.Cache, Clock: a.Clock, HTTP: a.HTTP,
-		},
-		CompleteChatGPTConnect: &ai.CompleteChatGPTConnect{
-			DB: a.DB, Config: a.Config.AI, Cache: a.Cache, Clock: a.Clock,
-			Keys: a.Keys, HTTP: a.HTTP,
-		},
-	}
+	a.Actions.AI = aiActions(a, runner, runner.Prices)
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
 		return enqueueAnswer(ctx, a, runner, e)
@@ -79,11 +60,7 @@ func bootAI(a *app.App) error {
 
 	return errors.Join(
 		queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner}),
-		queue.Register(a.Queue, &jobs.PruneAiTraces{
-			DB: a.DB, Clock: a.Clock,
-			StepsRetentionDays: a.Config.AI.TracesRetentionDays,
-			RunsRetentionDays:  a.Config.AI.RunsRetentionDays,
-		}),
+		queue.Register(a.Queue, pruneAiTraces(a)),
 	)
 }
 

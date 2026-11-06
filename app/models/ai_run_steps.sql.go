@@ -220,32 +220,27 @@ func (q *Queries) NextRunStepSeq(ctx context.Context, runID ids.UUID) (int32, er
 	return column_1, err
 }
 
-const nullRunStepPayloads = `-- name: NullRunStepPayloads :exec
+const nullExpiredRunStepPayloads = `-- name: NullExpiredRunStepPayloads :execrows
 UPDATE ai_run_steps SET request = NULL, response = NULL
-WHERE run_id = $1 AND (request IS NOT NULL OR response IS NOT NULL)
-`
-
-// NullRunStepPayloads drops the request and response payloads of one
-// run's steps, keeping every number.
-func (q *Queries) NullRunStepPayloads(ctx context.Context, runID ids.UUID) error {
-	_, err := q.db.Exec(ctx, nullRunStepPayloads, runID)
-	return err
-}
-
-const pruneAiRunSteps = `-- name: PruneAiRunSteps :execrows
-DELETE FROM ai_run_steps WHERE id IN (
-    SELECT s.id FROM ai_run_steps AS s WHERE s.created_at < $1 ORDER BY s.created_at LIMIT $2::bigint
+WHERE id IN (
+    SELECT s.id FROM ai_run_steps AS s
+    WHERE s.workspace_id = $1 AND s.created_at < $2
+        AND (s.request IS NOT NULL OR s.response IS NOT NULL)
+    ORDER BY s.created_at LIMIT $3::bigint
 )
 `
 
-type PruneAiRunStepsParams struct {
-	Cutoff time.Time `json:"cutoff"`
-	Batch  int64     `json:"batch"`
+type NullExpiredRunStepPayloadsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Cutoff      time.Time `json:"cutoff"`
+	Batch       int64     `json:"batch"`
 }
 
-// PruneAiRunSteps deletes up to a batch of steps older than the cutoff.
-func (q *Queries) PruneAiRunSteps(ctx context.Context, arg PruneAiRunStepsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneAiRunSteps, arg.Cutoff, arg.Batch)
+// NullExpiredRunStepPayloads drops the request and response payloads of
+// up to a batch of the workspace's steps older than the cutoff, keeping
+// the step rows and every number on them.
+func (q *Queries) NullExpiredRunStepPayloads(ctx context.Context, arg NullExpiredRunStepPayloadsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nullExpiredRunStepPayloads, arg.WorkspaceID, arg.Cutoff, arg.Batch)
 	if err != nil {
 		return 0, err
 	}

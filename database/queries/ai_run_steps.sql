@@ -21,12 +21,6 @@ SELECT * FROM ai_run_steps
 WHERE workspace_id = @workspace_id AND run_id = @run_id
 ORDER BY seq;
 
--- name: NullRunStepPayloads :exec
--- NullRunStepPayloads drops the request and response payloads of one
--- run's steps, keeping every number.
-UPDATE ai_run_steps SET request = NULL, response = NULL
-WHERE run_id = @run_id AND (request IS NOT NULL OR response IS NOT NULL);
-
 -- name: NextRunStepSeq :one
 -- NextRunStepSeq is the sequence number for the next step of a run.
 SELECT COALESCE(max(seq), 0) + 1 FROM ai_run_steps WHERE run_id = @run_id;
@@ -41,8 +35,14 @@ WHERE run_id IN (
 UPDATE ai_runs SET query_original = NULL, query_rewritten = NULL
 WHERE conversation_id = ANY(@conversation_ids::uuid[]);
 
--- name: PruneAiRunSteps :execrows
--- PruneAiRunSteps deletes up to a batch of steps older than the cutoff.
-DELETE FROM ai_run_steps WHERE id IN (
-    SELECT s.id FROM ai_run_steps AS s WHERE s.created_at < @cutoff ORDER BY s.created_at LIMIT @batch::bigint
+-- name: NullExpiredRunStepPayloads :execrows
+-- NullExpiredRunStepPayloads drops the request and response payloads of
+-- up to a batch of the workspace's steps older than the cutoff, keeping
+-- the step rows and every number on them.
+UPDATE ai_run_steps SET request = NULL, response = NULL
+WHERE id IN (
+    SELECT s.id FROM ai_run_steps AS s
+    WHERE s.workspace_id = @workspace_id AND s.created_at < @cutoff
+        AND (s.request IS NOT NULL OR s.response IS NOT NULL)
+    ORDER BY s.created_at LIMIT @batch::bigint
 );

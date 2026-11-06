@@ -214,7 +214,7 @@ func (q *Queries) FindProviderKey(ctx context.Context, arg FindProviderKeyParams
 const listProviderKeys = `-- name: ListProviderKeys :many
 SELECT id, workspace_id, name, provider, base_url, region, auth_type, credentials_encrypted, key_hint, status, status_reason, last_error, last_validated_at, last_error_at, last_used_at, models, provider_info, config, source, created_by_member_id, deleted_at, created_at, updated_at FROM ai_provider_keys
 WHERE workspace_id = $1 AND deleted_at IS NULL
-ORDER BY created_at
+ORDER BY created_at, id
 `
 
 // ListProviderKeys returns the workspace's live keys.

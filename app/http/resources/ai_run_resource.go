@@ -5,7 +5,8 @@
 |
 | One run and, when asked, its steps: the trace a teammate opens from
 | a conversation's "why". Payloads are the redacted records the
-| pipeline stored, trimmed to what the panel shows.
+| pipeline stored, shown only to those allowed to read them and gone
+| once their retention passes.
 |
 */
 
@@ -13,9 +14,11 @@ package resources
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -41,7 +44,10 @@ type AiRun struct {
 	Flags           []string    `json:"flags"`
 	Error           any         `json:"error"`
 	Steps           []AiRunStep `json:"steps,omitempty"`
-	CreatedAt       any         `json:"created_at"`
+	Payloads        *bool       `json:"payloads_visible,omitempty"`
+	Feedback        *string     `json:"feedback"`
+	CreatedAt       time.Time   `json:"created_at"`
+	CompletedAt     *time.Time  `json:"completed_at"`
 }
 
 /*
@@ -66,8 +72,24 @@ func NewAiRun(r models.AiRun) AiRun {
 		PromptVersion:   r.PromptVersion,
 		Flags:           orEmpty(r.Flags),
 		Error:           runError(r),
+		Feedback:        r.Feedback,
 		CreatedAt:       r.CreatedAt,
+		CompletedAt:     r.CompletedAt,
 	}
+}
+
+/*
+NewAiRunView shapes one run with its steps; the steps carry their
+payloads only when the caller may read them.
+*/
+func NewAiRunView(v ai.RunView) AiRun {
+	out := NewAiRun(v.Run)
+	out.Payloads = &v.Payloads
+	out.Steps = make([]AiRunStep, len(v.Steps))
+	for i, st := range v.Steps {
+		out.Steps[i] = NewAiRunStep(st)
+	}
+	return out
 }
 
 /*

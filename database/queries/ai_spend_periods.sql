@@ -38,12 +38,13 @@ WHERE workspace_id = @workspace_id AND period_start = @period_start
     AND NOT (@threshold = ANY(thresholds_notified));
 
 -- name: ListDailySpend :many
--- ListDailySpend returns per-day cost and runs for the period.
-SELECT date_trunc('day', created_at)::date AS day,
+-- ListDailySpend returns per-day cost and runs for the period, days
+-- counted in UTC like the period itself.
+SELECT date_trunc('day', created_at AT TIME ZONE 'UTC')::date AS day,
     COALESCE(sum(cost_micros), 0)::bigint AS cost_micros,
     count(*)::integer AS runs_count
 FROM ai_runs
-WHERE workspace_id = @workspace_id AND created_at >= @period_start
+WHERE workspace_id = @workspace_id AND created_at >= @period_start AND created_at < @period_end
 GROUP BY 1 ORDER BY 1;
 
 -- name: ListSpendByModel :many
@@ -52,13 +53,15 @@ SELECT COALESCE(s.model, '') AS model,
     COALESCE(sum(s.cost_micros), 0)::bigint AS cost_micros,
     count(*)::integer AS calls
 FROM ai_run_steps s
-JOIN ai_runs r ON r.id = s.run_id
-WHERE s.workspace_id = @workspace_id AND r.created_at >= @period_start AND s.model IS NOT NULL
-GROUP BY s.model ORDER BY 2 DESC;
+JOIN ai_runs r ON r.id = s.run_id AND r.workspace_id = s.workspace_id
+WHERE s.workspace_id = @workspace_id AND r.created_at >= @period_start AND r.created_at < @period_end
+    AND s.model IS NOT NULL
+GROUP BY s.model ORDER BY 2 DESC, 1;
 
 -- name: ListSpendByOutcome :many
 -- ListSpendByOutcome returns per-outcome counts for the period.
 SELECT COALESCE(outcome, '') AS outcome, count(*)::integer AS runs_count
 FROM ai_runs
-WHERE workspace_id = @workspace_id AND created_at >= @period_start AND outcome IS NOT NULL
-GROUP BY outcome;
+WHERE workspace_id = @workspace_id AND created_at >= @period_start AND created_at < @period_end
+    AND outcome IS NOT NULL
+GROUP BY outcome ORDER BY outcome;

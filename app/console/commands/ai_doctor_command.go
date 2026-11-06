@@ -60,14 +60,14 @@ Handle prints one line per check.
 func (c AIDoctorCommand) Handle(
 	ctx context.Context, _ *foundation.Application, _ *console.Input, out *console.Output,
 ) error {
-	doctor := &ai.AiDoctor{
+	doctor := &ai.Doctor{
 		Config: c.App.Config.AI, Prompts: c.App.AI.Prompts, Prices: c.App.AI.Prices,
 	}
 
 	blocked := false
 	for _, check := range doctor.Handle(ctx) {
 		out.Line("[%s] %s", check.Status, check.Message)
-		blocked = blocked || check.Status == ai.AICheckFail
+		blocked = blocked || check.Status == ai.CheckFail
 	}
 
 	if blocked {

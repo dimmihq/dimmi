@@ -119,7 +119,7 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Post(visitor, one+"/typing-indicators", "widget.conversations.typing-indicators.store", activity.Typing)
 
 	routing.Post(visitor, one+"/ai/helped", "widget.conversations.ai.helped", conv.Helped)
-	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff)
+	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff).Middleware("idempotent")
 }
 
 /*
