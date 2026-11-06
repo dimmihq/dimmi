@@ -13,9 +13,10 @@
 package engy
 
 import (
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
-	"net/http"
-	"strconv"
+		"strconv"
 	"strings"
 
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -37,7 +38,7 @@ type Driver struct {
 /*
 New builds an Engy driver for a key.
 */
-func New(apiKey string, httpClient *http.Client) *Driver {
+func New(apiKey string, httpClient *httpclient.StdClient) *Driver {
 	return &Driver{inner: openaicompat.New(BaseURL, apiKey, nil, httpClient, openaicompat.Config{
 		MaxTokensField:      "max_tokens",
 		SupportsTools:       true,
@@ -91,7 +92,7 @@ func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
 ChargedMicros parses the per-request charge Engy reports, in
 micro-USD, from a response header or extension field.
 */
-func ChargedMicros(headers http.Header, body string) int64 {
+func ChargedMicros(headers fhttp.Header, body string) int64 {
 	if v := headers.Get("X-Engy-Charged-Micro"); v != "" {
 		if n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil {
 			return n

@@ -153,7 +153,7 @@ func ensureManagedKey(ctx context.Context, cfg config.AIConfig, clk clock.Clock,
 	modelsJSON, _ := json.Marshal(managedModelIDs())
 	created, err := models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
 		WorkspaceID: workspaceID, Name: "Dimmi (built-in)", Provider: "dimmi",
-		AuthType: "managed", Status: "valid", StatusReason: str("built-in provider"),
+		AuthType: "managed", Status: "valid", StatusReason: strPtr("built-in provider"),
 		Models: modelsJSON, ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
 		Source: "system", Now: clk.Now(),
 	})

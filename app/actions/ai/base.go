@@ -129,9 +129,9 @@ func catalogEntry(e aimodels.Entry, prices *aiprices.Table) CatalogEntry {
 		Suggested: e.Suggested, ContextTokens: e.ContextTokens}
 	if prices != nil {
 		if p := prices.Find(string(enums.AIProviderDimmi), e.ID); p != nil {
-			out.InputPerMtok = str(p.InputPerMtok)
-			out.OutputPerMtok = str(p.OutputPerMtok)
-			out.CachedInputPerMtok = str(p.CachedInputPerMtok)
+			out.InputPerMtok = strPtr(p.InputPerMtok)
+			out.OutputPerMtok = strPtr(p.OutputPerMtok)
+			out.CachedInputPerMtok = strPtr(p.CachedInputPerMtok)
 		}
 	}
 	return out

@@ -45,7 +45,7 @@ func bootAI(a *app.App) error {
 
 	runner := &pipeline.Runner{
 		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge,
-		Prompts: prompts.NewLoader(a.Config.AI.Prompts.Version, a.Config.AI.Prompts.Path),
+		Prompts: prompts.NewLoader(a.Config.AI.Prompts.Version, nil),
 		Prices:  loadPrices(a),
 		Events:  a.Events,
 	}
@@ -119,7 +119,7 @@ func debounceFor(a *app.App, channelType string) int {
 loadPrices reads the shipped price table.
 */
 func loadPrices(a *app.App) *aiprices.Table {
-	data, err := airesources.Files.ReadFile("prices.yaml")
+	data, err := airesources.Files.ReadFile("prices.json")
 	if err != nil {
 		return nil
 	}

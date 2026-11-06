@@ -14,8 +14,9 @@ package ai
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
+	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/support/str"
+	
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -108,8 +109,8 @@ func (a *StartChatGPTConnect) Handle(ctx context.Context, in StartInput) (*Start
 
 	verifier := randomURL(64)
 	state := randomURL(32)
-	sum := sha256.Sum256([]byte(verifier))
-	challenge := base64.RawURLEncoding.EncodeToString(sum[:])
+	sum := hashing.SHA256([]byte(verifier))
+	challenge := base64.RawURLEncoding.EncodeToString(sum)
 
 	payload, _ := json.Marshal(oauthState{
 		WorkspaceID: in.Membership.Workspace.ID.String(),
@@ -205,7 +206,7 @@ func (a *CompleteChatGPTConnect) Handle(ctx context.Context, in CompleteInput) (
 		key, err = models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
 			WorkspaceID: in.Membership.Workspace.ID, Name: "ChatGPT subscription",
 			Provider: string(enums.AIProviderChatGPT), AuthType: "oauth", Status: "valid",
-			StatusReason: str("connected"), Models: json.RawMessage("[]"),
+			StatusReason: strPtr("connected"), Models: json.RawMessage("[]"),
 			ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"), Source: "dashboard",
 			CreatedByMemberID: &memberID, Now: a.Clock.Now(),
 		})
@@ -270,11 +271,7 @@ func (a *CompleteChatGPTConnect) exchange(ctx context.Context, code, verifier, r
 randomURL is a URL-safe random string for state and verifier.
 */
 func randomURL(n int) string {
-	buf := make([]byte, n)
-	if _, err := rand.Read(buf); err != nil {
-		return ""
-	}
-	return base64.RawURLEncoding.EncodeToString(buf)[:n]
+	return str.Random(n)
 }
 
 var _ = strings.TrimSpace

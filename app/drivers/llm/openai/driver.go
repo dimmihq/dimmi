@@ -13,10 +13,10 @@
 package openai
 
 import (
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
 	"encoding/json"
-	"net/http"
-	"time"
+		"time"
 
 	oai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -34,7 +34,7 @@ type Options struct {
 	BaseURL     string
 	APIKey      string
 	Headers     map[string]string
-	HTTP        *http.Client
+	HTTP        *httpclient.StdClient
 	Context     map[string]string
 	ModelParams func(model string) []option.RequestOption
 }

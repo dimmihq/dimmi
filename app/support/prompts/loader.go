@@ -14,12 +14,10 @@
 package prompts
 
 import (
-	"crypto/sha256"
+	"github.com/dimmihq/dimmi/framework/hashing"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -52,7 +50,7 @@ Loader resolves prompt files for a version and family.
 type Loader struct {
 	mu       sync.Mutex
 	version  string
-	override string
+	override fs.FS
 	cache    map[string]File
 }
 
@@ -60,7 +58,7 @@ type Loader struct {
 NewLoader builds the loader for a version, with an optional override
 directory that shadows the embedded tree on self-host.
 */
-func NewLoader(version, override string) *Loader {
+func NewLoader(version string, override fs.FS) *Loader {
 	if version == "" {
 		version = "v1"
 	}
@@ -100,8 +98,8 @@ func (l *Loader) Get(family enums.AIModelFamily, name string) (*File, error) {
 read loads a file, the override directory first.
 */
 func (l *Loader) read(path string) (string, string, error) {
-	if l.override != "" {
-		if data, err := os.ReadFile(filepath.Join(l.override, path)); err == nil {
+	if l.override != nil {
+		if data, err := fs.ReadFile(l.override, path); err == nil {
 			return path, string(data), nil
 		}
 	}
@@ -131,7 +129,7 @@ func (l *Loader) Fingerprint(family enums.AIModelFamily, names []string) (*Finge
 hash is the short content fingerprint recorded on runs.
 */
 func hash(content string) string {
-	sum := sha256.Sum256([]byte(content))
+	sum := hashing.SHA256([]byte(content))
 	return hex.EncodeToString(sum[:8])
 }
 

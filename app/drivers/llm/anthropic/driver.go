@@ -12,10 +12,10 @@
 package anthropic
 
 import (
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
 	"encoding/json"
-	"net/http"
-	"time"
+		"time"
 
 	anth "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
@@ -30,7 +30,7 @@ type Options struct {
 	BaseURL string
 	APIKey  string
 	Version string
-	HTTP    *http.Client
+	HTTP    *httpclient.StdClient
 }
 
 /*

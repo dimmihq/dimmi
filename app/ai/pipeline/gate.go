@@ -13,13 +13,13 @@
 package pipeline
 
 import (
+	"github.com/dimmihq/dimmi/framework/database"
 	"context"
 	"slices"
 	"time"
 
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/officehours"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 /*
@@ -108,7 +108,7 @@ func (r *Runner) spendGate(ctx context.Context, env *env) string {
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	periodRow, err := models.New(env.tx).GetSpendPeriod(ctx, models.GetSpendPeriodParams{
-		WorkspaceID: env.Workspace.ID, PeriodStart: pgtype.Date{Time: start, Valid: true},
+		WorkspaceID: env.Workspace.ID, PeriodStart: database.Date(start),
 	})
 	if err != nil {
 		return ""

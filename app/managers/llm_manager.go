@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -43,7 +42,7 @@ import (
 DriverFactory builds a driver for one key row with the decrypted
 credentials and the per-key HTTP client.
 */
-type DriverFactory func(ctx context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error)
+type DriverFactory func(ctx context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error)
 
 /*
 Credentials is a connection's opened secret shape.
@@ -112,36 +111,36 @@ func NewLLMManager(deps LLMDeps) *LLMManager {
 registerBuiltins registers the drivers of the launch set.
 */
 func (m *LLMManager) registerBuiltins() {
-	m.Extend(enums.AIProviderAnthropic, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderAnthropic, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
 		return anthropic.New(anthropic.Options{
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
-			Version: configString(key.Config, "anthropic_version"), HTTP: httpClient,
+			Version: configString(key.Config, "anthropic_version"), HTTP: httpClient.StdClient(),
 		}), nil
 	})
 
-	m.Extend(enums.AIProviderOpenAI, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderOpenAI, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
 		return openai.New(openai.Options{
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
-			Headers: creds.ExtraHeaders, HTTP: httpClient,
+			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
 		}), nil
 	})
 
-	m.Extend(enums.AIProviderEngy, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error) {
-		return engy.New(creds.APIKey, httpClient), nil
+	m.Extend(enums.AIProviderEngy, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+		return engy.New(creds.APIKey, httpClient.StdClient()), nil
 	})
 
-	m.Extend(enums.AIProviderOpenAICompatible, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderOpenAICompatible, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
 		return openai.New(openai.Options{
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
-			Headers: creds.ExtraHeaders, HTTP: httpClient,
+			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
 		}), nil
 	})
 
-	m.Extend(enums.AIProviderChatGPT, func(_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error) {
-		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient, &oauthSource{m: m, key: key, creds: creds}), nil
+	m.Extend(enums.AIProviderChatGPT, func(_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient.StdClient(), &oauthSource{m: m, key: key, creds: creds}), nil
 	})
 
-	m.Extend(enums.AIProviderDimmi, func(_ context.Context, m *LLMManager, _ models.AiProviderKey, _ Credentials, httpClient *http.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderDimmi, func(_ context.Context, m *LLMManager, _ models.AiProviderKey, _ Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
 		return m.managedDriver(httpClient)
 	})
 }
@@ -215,30 +214,30 @@ func (m *LLMManager) openCredentials(ctx context.Context, key models.AiProviderK
 /*
 httpForKey returns the egress-guarded client the driver uses.
 */
-func (m *LLMManager) httpForKey(_ models.AiProviderKey) *http.Client {
-	return m.http.StdClient()
+func (m *LLMManager) httpForKey(_ models.AiProviderKey) *httpclient.Client {
+	return m.http
 }
 
 /*
 managedDriver builds the multiplexer from the instance's managed
 credentials.
 */
-func (m *LLMManager) managedDriver(httpClient *http.Client) (contracts.LLM, error) {
+func (m *LLMManager) managedDriver(httpClient *httpclient.Client) (contracts.LLM, error) {
 	cfg := m.config.Managed
 	families := map[enums.AIModelFamily]contracts.LLM{}
 
 	if cfg.Anthropic.APIKey != "" {
 		families[enums.AIModelFamilyAnthropic] = anthropic.New(anthropic.Options{
-			BaseURL: cfg.Anthropic.BaseURL, APIKey: cfg.Anthropic.APIKey, HTTP: httpClient,
+			BaseURL: cfg.Anthropic.BaseURL, APIKey: cfg.Anthropic.APIKey, HTTP: httpClient.StdClient(),
 		})
 	}
 	if cfg.OpenAI.APIKey != "" {
 		families[enums.AIModelFamilyOpenAI] = openai.New(openai.Options{
-			BaseURL: cfg.OpenAI.BaseURL, APIKey: cfg.OpenAI.APIKey, HTTP: httpClient,
+			BaseURL: cfg.OpenAI.BaseURL, APIKey: cfg.OpenAI.APIKey, HTTP: httpClient.StdClient(),
 		})
 	}
 	if cfg.OpenWeight.APIKey != "" {
-		families[enums.AIModelFamilyOpenWeight] = engy.New(cfg.OpenWeight.APIKey, httpClient)
+		families[enums.AIModelFamilyOpenWeight] = engy.New(cfg.OpenWeight.APIKey, httpClient.StdClient())
 	}
 
 	if len(families) == 0 {

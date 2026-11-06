@@ -16,7 +16,7 @@ import (
 	"math/big"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"encoding/json"
 )
 
 /*
@@ -45,19 +45,19 @@ type ModelPrice struct {
 tableFile is the YAML shape.
 */
 type tableFile struct {
-	Version string       `yaml:"version"`
-	Models  []modelEntry `yaml:"models"`
+	Version string       `json:"version"`
+	Models  []modelEntry `json:"models"`
 }
 
 type modelEntry struct {
-	Provider           string   `yaml:"provider"`
-	Match              string   `yaml:"match"`
-	Model              string   `yaml:"model"`
-	InputPerMtok       string   `yaml:"input_per_mtok"`
-	CachedInputPerMtok string   `yaml:"cached_input_per_mtok"`
-	CacheWritePerMtok  string   `yaml:"cache_write_per_mtok"`
-	OutputPerMtok      string   `yaml:"output_per_mtok"`
-	Roles              []string `yaml:"roles"`
+	Provider           string   `json:"provider"`
+	Match              string   `json:"match"`
+	Model              string   `json:"model"`
+	InputPerMtok       string   `json:"input_per_mtok"`
+	CachedInputPerMtok string   `json:"cached_input_per_mtok"`
+	CacheWritePerMtok  string   `json:"cache_write_per_mtok"`
+	OutputPerMtok      string   `json:"output_per_mtok"`
+	Roles              []string `json:"roles"`
 }
 
 /*
@@ -65,7 +65,7 @@ Parse loads a table from YAML.
 */
 func Parse(data []byte) (*Table, error) {
 	var f tableFile
-	if err := yaml.Unmarshal(data, &f); err != nil {
+	if err := json.Unmarshal(data, &f); err != nil {
 		return nil, err
 	}
 

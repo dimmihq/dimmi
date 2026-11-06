@@ -13,10 +13,10 @@
 package chatgpt
 
 import (
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
 	"encoding/json"
-	"net/http"
-	"strings"
+		"strings"
 	"time"
 
 	oai "github.com/openai/openai-go/v3"
@@ -54,14 +54,14 @@ Driver is a contracts.LLM over the subscription Responses API.
 */
 type Driver struct {
 	baseURL string
-	http    *http.Client
+	http    *httpclient.StdClient
 	source  TokenSource
 }
 
 /*
 New builds the driver for one connection.
 */
-func New(baseURL string, httpClient *http.Client, source TokenSource) *Driver {
+func New(baseURL string, httpClient *httpclient.StdClient, source TokenSource) *Driver {
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
 	}

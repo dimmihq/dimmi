@@ -354,6 +354,8 @@ linters:
             - "**/app/drivers/llm/openai/**"
             - "**/app/drivers/llm/openaicompat/**"
             - "**/app/drivers/llm/openrouter/**"
+            - "**/app/drivers/llm/engy/**"
+            - "**/app/drivers/llm/chatgpt/**"
           allow: [$gostd, github.com/dimmihq/dimmi, github.com/openai/openai-go]
           deny: *app_std_deny
         adapter-llm-anthropic:
@@ -414,6 +416,8 @@ linters:
             - "!**/app/drivers/llm/openai/**"
             - "!**/app/drivers/llm/openaicompat/**"
             - "!**/app/drivers/llm/openrouter/**"
+            - "!**/app/drivers/llm/engy/**"
+            - "!**/app/drivers/llm/chatgpt/**"
             - "!**/app/drivers/llm/anthropic/**"
             - "!**/app/drivers/llm/bedrock/**"
             - "!**/app/drivers/llm/gemini/**"

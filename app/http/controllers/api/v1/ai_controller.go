@@ -20,7 +20,6 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
@@ -432,9 +431,9 @@ func (c *AIController) Usage(ctx context.Context, _ *requests.AIAgentRequest) (*
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	period, _ := models.New(c.DB).GetSpendPeriod(ctx, models.GetSpendPeriodParams{
-		WorkspaceID: m.Workspace.ID, PeriodStart: pgtype.Date{Time: start, Valid: true},
+		WorkspaceID: m.Workspace.ID, PeriodStart: database.Date(start),
 	})
-	period.PeriodStart = pgtype.Date{Time: start, Valid: true}
+	period.PeriodStart = database.Date(start)
 
 	daily, err := models.New(c.DB).ListDailySpend(ctx, models.ListDailySpendParams{
 		WorkspaceID: m.Workspace.ID, PeriodStart: start,

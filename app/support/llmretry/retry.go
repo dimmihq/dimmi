@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/cenkalti/backoff/v5"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -30,7 +29,6 @@ Options tunes the wrapper.
 type Options struct {
 	Clock       clock.Clock
 	MaxAttempts int
-	Backoff     backoff.BackOff
 	Fallback    contracts.LLM
 	Breaker     *Breaker
 }

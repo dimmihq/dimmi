@@ -13,9 +13,9 @@
 package openaicompat
 
 import (
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
-	"net/http"
-
+	
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 )
@@ -43,7 +43,7 @@ type Driver struct {
 /*
 New builds a compatible driver for the endpoint.
 */
-func New(baseURL, apiKey string, headers map[string]string, httpClient *http.Client, cfg Config) *Driver {
+func New(baseURL, apiKey string, headers map[string]string, httpClient *httpclient.StdClient, cfg Config) *Driver {
 	return &Driver{
 		inner: openai.New(openai.Options{BaseURL: baseURL, APIKey: apiKey, Headers: headers, HTTP: httpClient}),
 		cfg:   cfg,

@@ -142,6 +142,12 @@ func (c *Client) New() *Request {
 }
 
 /*
+StdClient is the standard library client SDK adapters receive, so
+they never import net/http themselves.
+*/
+type StdClient = http.Client
+
+/*
 StdClient returns a standard library client for SDKs that take one. It
 shares the connection checks, redirect policy and fakes of this client.
 It sets no overall timeout and no size cap, because SDKs stream long

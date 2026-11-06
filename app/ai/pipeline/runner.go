@@ -30,7 +30,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 /*
@@ -312,7 +311,7 @@ func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, rec
 	counts[outcome] = 1
 
 	period, err := models.New(tx).AddSpend(ctx, models.AddSpendParams{
-		WorkspaceID: env.Workspace.ID, PeriodStart: pgtype.Date{Time: start, Valid: true},
+		WorkspaceID: env.Workspace.ID, PeriodStart: database.Date(start),
 		CostMicros: recorder.Cost(), InputTokens: recorder.tokens.input,
 		CachedInputTokens: recorder.tokens.cached, OutputTokens: recorder.tokens.output,
 		RunsCount: 1,

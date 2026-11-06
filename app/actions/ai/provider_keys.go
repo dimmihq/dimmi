@@ -100,7 +100,7 @@ func (a *CreateProviderKey) Handle(ctx context.Context, in CreateKeyInput) (*mod
 		key, err = models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
 			WorkspaceID: in.Membership.Workspace.ID, Name: in.Name, Provider: string(in.Provider),
 			BaseUrl: nullable(in.BaseURL), AuthType: authType, Status: "unverified",
-			StatusReason: str("never validated"), Models: json.RawMessage("[]"),
+			StatusReason: strPtr("never validated"), Models: json.RawMessage("[]"),
 			ProviderInfo: json.RawMessage("{}"), Config: cfg, Source: "dashboard",
 			CreatedByMemberID: &memberID, Now: a.Clock.Now(),
 		})
@@ -284,27 +284,27 @@ where offered, a probe where not, and returns the status answer.
 */
 func validate(ctx context.Context, m *managers.LLMManager, key models.AiProviderKey) (status string, reason *string, modelList []string, info map[string]any, err error) {
 	if m == nil {
-		return "unverified", str("not validated"), nil, nil, nil
+		return "unverified", strPtr("not validated"), nil, nil, nil
 	}
 
 	driver, err := m.ForKey(ctx, key)
 	if err != nil {
-		return "error", str(err.Error()), nil, nil, err
+		return "error", strPtr(err.Error()), nil, nil, err
 	}
 
 	models, listErr := driver.ListModels(ctx)
 	if listErr != nil && listErr != errLLMNotSupported() {
-		return "invalid", str(listErr.Error()), nil, nil, listErr
+		return "invalid", strPtr(listErr.Error()), nil, nil, listErr
 	}
 
 	if len(models) > 0 {
 		for _, mdl := range models {
 			modelList = append(modelList, mdl.ID)
 		}
-		return "valid", str("validated"), modelList, map[string]any{"models_count": len(models)}, nil
+		return "valid", strPtr("validated"), modelList, map[string]any{"models_count": len(models)}, nil
 	}
 
-	return "valid", str("validated"), nil, nil, nil
+	return "valid", strPtr("validated"), nil, nil, nil
 }
 
 /*
@@ -331,7 +331,7 @@ func nullable(s string) *string {
 /*
 str returns a string pointer.
 */
-func str(s string) *string { return &s }
+func strPtr(s string) *string { return &s }
 
 /*
 keyHint stores the key's last four, never more.
