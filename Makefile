@@ -86,9 +86,10 @@ test-cloud:
 	pkgs=$(call SHARD_PKGS,-tags cloud,$(CLOUD_PKGS)) && $(WITH_ENV) go test -race -shuffle=on -tags cloud $$pkgs
 
 # Timing comparisons skip themselves under the race detector, which distorts
-# them, so they get a pass of their own without it.
+# them, so they get a pass of their own without it, one test at a time so no
+# comparison shares the machine with another.
 test-timing:
-	$(WITH_ENV) go test -count=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate|TestAudienceBudget' ./tests/feature/auth/ ./tests/feature/access/
+	$(WITH_ENV) go test -count=1 -p=1 -parallel=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate|TestAudienceBudget' ./tests/feature/auth/ ./tests/feature/access/
 
 test-web:
 	pnpm test
