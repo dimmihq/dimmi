@@ -17,7 +17,7 @@ import (
 TestAiPlayground answers a teammate's test question with the agent's
 own turn and writes nothing a customer sees.
 */
-func TestAiPlayground(t *testing.T) {
+func TestAiPlaygroundTurn(t *testing.T) {
 	t.Parallel()
 
 	t.Run("answers with citations and records a playground run", func(t *testing.T) {

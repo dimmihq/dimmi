@@ -153,7 +153,7 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off when the provider fails", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.answer.Script(fake.Step{Err: &contracts.LLMError{Kind: contracts.LLMErrorServer, HTTPStatus: 503}})
+		h.llm.answer.Script(fake.Step{Err: &contracts.LLMError{Kind: contracts.LLMErrorAuth, HTTPStatus: 401}})
 
 		conv, trigger := h.conversation("How much is Pro?")
 		res := h.run(conv, trigger)

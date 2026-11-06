@@ -345,16 +345,15 @@ func offers(key models.AiProviderKey, model string) bool {
 
 /*
 promptVersion is the prompt set the agent's answers use: its own pin
-when it has one, the install's otherwise.
+when that version is compiled in, the install's otherwise.
 */
 func promptVersion(agent models.AiAgent, cfg config.AIConfig) string {
-	if agent.PromptVersion != nil && *agent.PromptVersion != "" {
-		return *agent.PromptVersion
-	}
-
-	fp, err := prompts.NewLoader(cfg.Prompts.Version, nil).Fingerprint(enums.AIModelFamilyAnthropic, nil)
+	loader, err := prompts.NewLoader(cfg.Prompts.Version, nil)
 	if err != nil {
 		return cfg.Prompts.Version
 	}
-	return fp.Version
+	if agent.PromptVersion != nil {
+		return loader.Version(*agent.PromptVersion)
+	}
+	return loader.Version("")
 }

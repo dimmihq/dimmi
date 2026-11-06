@@ -86,13 +86,13 @@ func (r *Runner) conversationMessages(e *env) []contracts.ChatMessage {
 	msgs = addTurn(msgs, contracts.ChatRoleUser, "<customer_message>"+escape(pending)+"</customer_message>")
 
 	if contact := r.contactBlock(e); contact != "" {
-		if msgs[0].Role != contracts.ChatRoleUser {
+		if speaker(msgs[0]) != contracts.ChatRoleUser {
 			msgs = append([]contracts.ChatMessage{userMessage(contact)}, msgs...)
 		} else {
 			msgs[0].Parts[0].Text = contact + "\n" + msgs[0].Parts[0].Text
 		}
 	}
-	if msgs[0].Role != contracts.ChatRoleUser {
+	if speaker(msgs[0]) != contracts.ChatRoleUser {
 		msgs = append([]contracts.ChatMessage{userMessage("<conversation_start></conversation_start>")}, msgs...)
 	}
 	return msgs
@@ -103,11 +103,18 @@ addTurn appends a turn, joining it to the previous one when the same
 side spoke twice in a row, since providers want turns to alternate.
 */
 func addTurn(msgs []contracts.ChatMessage, role contracts.ChatRole, text string) []contracts.ChatMessage {
-	if n := len(msgs); n > 0 && msgs[n-1].Role == role && len(msgs[n-1].Parts) > 0 {
+	if n := len(msgs); n > 0 && speaker(msgs[n-1]) == role && len(msgs[n-1].Parts) > 0 {
 		msgs[n-1].Parts[0].Text += "\n" + text
 		return msgs
 	}
 	return append(msgs, contracts.ChatMessage{Role: role, Parts: []contracts.ContentPart{{Text: text}}})
+}
+
+/*
+speaker is who spoke a turn.
+*/
+func speaker(m contracts.ChatMessage) contracts.ChatRole {
+	return m.Role
 }
 
 /*

@@ -33,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
+	"github.com/dimmihq/dimmi/app/support/llmretry"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
@@ -132,9 +133,10 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 	req := contracts.ChatRequest{
 		Model: model, System: []contracts.SystemBlock{{Text: lp.system, Cacheable: true}},
 		Messages: lp.messages, Tools: tools, MaxOutputTokens: int(e.Agent.MaxOutputTokens), CacheHint: true,
-		Temperature: temperature(e), Timeout: contracts.StepTimeouts{
-			FirstToken: r.Timeouts.GenerateFirst, Idle: r.Timeouts.GenerateIdle, Total: r.Timeouts.GenerateTotal,
-		},
+		Temperature: temperature(e), Timeout: llmretry.StepTimeouts(r.Timeouts, llmretry.StepGenerate),
+	}
+	if e.Conversation.ID != (ids.UUID{}) {
+		req.Metadata = map[string]string{"session_id": e.Conversation.ID.String()}
 	}
 	if len(tools) > 0 {
 		req.ToolChoice = contracts.ToolChoiceAuto
