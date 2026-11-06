@@ -143,13 +143,18 @@ func TestRealtimeAccess(t *testing.T) {
 		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": "high"}).AssertOK()
 		d.restrict(t, m, testkit.JSON{"conversation_access": "all"})
 
-		c := d.tc.ListenAs(m.user, url)
-		require.Nil(t, c.Subscribe(appbroadcasting.MemberChannel(m.member.ID)).Error)
+		channel := appbroadcasting.MemberChannel(m.member.ID)
+		sub := d.tc.ListenAs(m.user, url).Subscribe(channel)
+		require.Nil(t, sub.Error)
+		require.True(t, sub.Recoverable)
 		d.owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"priority": "none"}).AssertOK()
 		d.restrict(t, d.join(t, enums.RoleMember), testkit.JSON{"conversation_access": "assigned"})
 		d.owner.PatchJSON("/api/v1/members/"+m.public(), testkit.JSON{"conversation_access": "assigned"}).AssertOK()
 
-		assert.Equal(t, "member.access_changed", c.Publication().Event)
+		missed := d.tc.ListenAs(m.user, url).Recover(channel, sub.Epoch, sub.Offset)
+		require.Nil(t, missed.Error)
+		require.NotEmpty(t, missed.Publications)
+		assert.Equal(t, "member.access_changed", missed.Publications[0].Event)
 	})
 }
 
