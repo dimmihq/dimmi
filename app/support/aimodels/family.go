@@ -3,10 +3,10 @@
 | Model Families
 |--------------------------------------------------------------------------
 |
-| Which prompt tuning a model gets, what it can do, and how much it
-| can read are settled here, in a static table — never by asking the
-| provider. A model the table does not know falls back to the
-| open-weight family and conservative capabilities.
+| A model's family decides the prompt set it reads, while the
+| provider says whose credentials the call spends. The managed
+| provider fronts several upstreams, so its family comes from the
+| catalog entry the model belongs to.
 |
 */
 
@@ -19,36 +19,51 @@ import (
 )
 
 /*
-FamilyOf names the family a model belongs to, decided from its
-provider and id. Prefixes match longest-first; an unknown model is
-treated as open-weight, which asks for the simplest prompting.
+FamilyOf resolves a model's family for a provider's model id. The
+catalog knows the managed list; other providers fall back to their
+name's prefix.
 */
 func FamilyOf(provider enums.AIProvider, model string) enums.AIModelFamily {
+	if provider == enums.AIProviderDimmi {
+		if e := Find(Managed(), model); e != nil {
+			return e.Family
+		}
+		return familyOfManaged(model)
+	}
+
 	switch provider {
 	case enums.AIProviderAnthropic:
 		return enums.AIModelFamilyAnthropic
 	case enums.AIProviderOpenAI, enums.AIProviderChatGPT:
 		return enums.AIModelFamilyOpenAI
 	case enums.AIProviderEngy, enums.AIProviderOpenAICompatible:
-		return enums.AIModelFamilyOpenWeight
-	case enums.AIProviderDimmi:
 		return familyOfManaged(model)
 	}
-	return familyOfManaged(model)
+	return enums.AIModelFamilyOpenWeight
 }
 
 /*
-familyOfManaged resolves a model on the built-in provider by its id,
-since one connection fronts every family.
+Find returns the catalog entry for a model id, or nil.
+*/
+func Find(models []Entry, id string) *Entry {
+	for i := range models {
+		if models[i].ID == id {
+			return &models[i]
+		}
+	}
+	return nil
+}
+
+/*
+familyOfManaged guesses a family from the id's prefix for models the
+catalog does not list.
 */
 func familyOfManaged(model string) enums.AIModelFamily {
-	lower := strings.ToLower(model)
-
-	switch {
-	case strings.HasPrefix(lower, "claude"):
+	if strings.HasPrefix(model, "claude") {
 		return enums.AIModelFamilyAnthropic
-	case strings.HasPrefix(lower, "gpt"), strings.HasPrefix(lower, "o1"), strings.HasPrefix(lower, "o3"),
-		strings.HasPrefix(lower, "o4"), strings.HasPrefix(lower, "codex"):
+	}
+	if strings.HasPrefix(model, "gpt") || strings.HasPrefix(model, "o1") ||
+		strings.HasPrefix(model, "o3") || strings.HasPrefix(model, "o4") {
 		return enums.AIModelFamilyOpenAI
 	}
 	return enums.AIModelFamilyOpenWeight

@@ -112,10 +112,12 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 
 		outcome, err := r.execute(ctx, env, recorder, args)
 		if err != nil {
-			_ = recorder.Finish(ctx, tx, FinishInput{
+			if ferr := recorder.Finish(ctx, tx, FinishInput{
 				Status: "failed", Outcome: "error",
 				ErrorCode: errorCode(err), ErrorMessage: err.Error(), QueueWaitMS: queueWait,
-			})
+			}); ferr != nil {
+				return fmt.Errorf("finish run: %w", ferr)
+			}
 			result = &Result{Outcome: "error", RunID: run.ID}
 			return nil
 		}

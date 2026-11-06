@@ -3,6 +3,8 @@ package ai_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/tests"
+	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
 )
 
@@ -119,24 +122,30 @@ func setup(t *testing.T, d tests.Desk, llm *fake.LLM) {
 			ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
 			Source: "system", Now: now,
 		})
-		require.NoError(t, err)
+		if err != nil {
+			return err
+		}
 
 		answer, classifier := "fake-answer", "fake-classifier"
+		minSim := pgtype.Numeric{Int: big.NewInt(35), Exp: -2, Valid: true}
 		_, err = models.New(d.TC.App.DB).UpdateAgent(ctx, models.UpdateAgentParams{
 			WorkspaceID: d.TC.Workspace.Workspace.ID, ID: agentID(t, d),
 			Name: "Dimmi", Enabled: true, Tone: "friendly", Guidance: "",
 			EnabledChannels: []string{"api"}, Schedule: "always",
 			AssignedBehavior: "skip_when_human_active",
-			AnswerKeyID: &key.ID, AnswerModel: &answer,
+			AnswerKeyID:      &key.ID, AnswerModel: &answer,
 			ClassifierKeyID: &key.ID, ClassifierModel: &classifier,
-			MaxOutputTokens: 600, MaxAiReplies: 5, UnknownBehavior: "offer_handoff",
+			ExcludedChannelConnectionIds: []ids.UUID{},
+			MaxOutputTokens:              600, MaxAiReplies: 5, UnknownBehavior: "offer_handoff",
 			GroundingMode: "citations", RequireCitations: false, DefaultLanguage: "en",
-			Streaming: true, IncludeContactContext: "basic", PiiRedaction: false,
-			Handoff: json.RawMessage("{}"), Messages: json.RawMessage("{}"),
+			Languages: []string{}, ContactAttributeAllowlist: []string{},
+			LinkAllowlist: []string{},
+			Streaming:     true, IncludeContactContext: "basic", PiiRedaction: false,
+			MinSimilarity: minSim,
+			Handoff:       json.RawMessage("{}"), Messages: json.RawMessage("{}"),
 			Now: now,
 		})
-		require.NoError(t, err)
-		return nil
+		return err
 	})
 }
 
@@ -152,7 +161,9 @@ func agentID(t *testing.T, d tests.Desk) ids.UUID {
 			agent, err = models.New(d.TC.App.DB).CreateAgent(ctx, models.CreateAgentParams{
 				WorkspaceID: d.TC.Workspace.Workspace.ID, Now: d.TC.App.Clock.Now(),
 			})
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
 		}
 		id = agent.ID
 		return nil
@@ -173,14 +184,17 @@ func conversation(t *testing.T, d tests.Desk, body string) (ids.UUID, ids.UUID) 
 	var convID, msgID ids.UUID
 	d.TC.InWorkspace(func(ctx context.Context) error {
 		convUUID, err := d.TC.App.IDs.Decode("conv", publicID)
-		require.NoError(t, err)
+		if err != nil {
+			return err
+		}
 		convID = convUUID
 
 		msgs, err := models.New(d.TC.App.DB).ListMessages(ctx, models.ListMessagesParams{
 			WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: convID, RowLimit: 1,
 		})
-		require.NoError(t, err)
-		require.NotEmpty(t, msgs)
+		if err != nil || len(msgs) == 0 {
+			return fmt.Errorf("trigger message missing: %w", err)
+		}
 		msgID = msgs[0].ID
 		return nil
 	})

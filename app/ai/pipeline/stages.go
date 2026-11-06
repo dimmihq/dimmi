@@ -100,13 +100,15 @@ func (r *Runner) classify(ctx context.Context, env *env, recorder *Recorder) (*c
 		return nil, fmt.Errorf("classify: %w", err)
 	}
 
-	_, _ = recorder.Step(ctx, env.tx, StepInput{
+	if _, err := recorder.Step(ctx, env.tx, StepInput{
 		Kind: enums.AIRunStepKindClassify, Provider: string(llm.Provider()),
 		ProviderKeyID: keyID(env.ClassifyKey), Model: model, ResponseModel: res.Model,
 		Status: "ok", Usage: res.Usage, Latency: r.Clock.Now().Sub(started),
 		StartedAt: started, CompletedAt: r.Clock.Now(),
 		RequestPayload: r.payload(env, transcript), ResponsePayload: r.payload(env, res.Text),
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("record classify step: %w", err)
+	}
 
 	out := &classification{Intent: "question", Language: "en"}
 	if err := json.Unmarshal([]byte(jsonObject(res.Text)), out); err != nil {
@@ -177,11 +179,13 @@ func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 
 	payload, _ := json.Marshal(chunks)
-	_, _ = recorder.Step(ctx, env.tx, StepInput{
+	if _, err := recorder.Step(ctx, env.tx, StepInput{
 		Kind: enums.AIRunStepKindRetrieve, Status: "ok",
 		Latency: r.Clock.Now().Sub(started), StartedAt: started, CompletedAt: r.Clock.Now(),
 		RequestPayload: r.payload(env, query), ResponsePayload: r.payload(env, string(payload)),
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("record retrieve step: %w", err)
+	}
 
 	return &retrieval{Chunks: chunks, Query: query, Answerable: answerable}, nil
 }
@@ -255,13 +259,15 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 	latency := r.Clock.Now().Sub(started)
 	text := strings.TrimSpace(buf.String())
 
-	_, _ = recorder.Step(ctx, env.tx, StepInput{
+	if _, err := recorder.Step(ctx, env.tx, StepInput{
 		Kind: enums.AIRunStepKindGenerate, Provider: string(llm.Provider()),
 		ProviderKeyID: keyID(env.AnswerKey), Model: model, Status: "ok",
 		Usage: usage, Latency: latency, FirstToken: firstToken,
 		StartedAt: started, CompletedAt: r.Clock.Now(),
 		RequestPayload: r.payload(env, sources), ResponsePayload: r.payload(env, text),
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("record generate step: %w", err)
+	}
 
 	out := &answer{Text: text, FirstToken: firstToken, Latency: latency}
 	_ = stopReason

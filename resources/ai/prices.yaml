@@ -27,7 +27,7 @@ models:
     cached_input_per_mtok: "0.01"
     cache_write_per_mtok: "0.125"
     output_per_mtok: "0.50"
-    roles: [classifier]
+    roles: [answer]
   - provider: openai
     match: exact
     model: gpt-6.1-sol
@@ -51,7 +51,7 @@ models:
     cached_input_per_mtok: "0.01"
     cache_write_per_mtok: "0.125"
     output_per_mtok: "0.50"
-    roles: [classifier]
+    roles: [answer]
   - provider: engy
     match: exact
     model: glm-5.3-flash
