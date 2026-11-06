@@ -108,7 +108,7 @@ export const workspacePages = {
     "Agent",
     RiSparkling2Line,
     "/d/agent",
-    "Dimmi Agent answers customers from your docs and hands over when it should.",
+    "dimmi agent answers customers from your docs and hands over when it should.",
   ),
   workflows: page(
     "workflows",
@@ -238,24 +238,24 @@ export const settingsPages = {
   ),
   agent: page(
     "settings-agent",
-    "Dimmi agent",
+    "dimmi agent",
     RiSparkling2Line,
     "/d/settings/agent",
-    "How Dimmi answers customers, when it hands over and what it may spend.",
+    "How the agent answers customers, when it hands over and what it may spend.",
   ),
   actions: page(
     "settings-actions",
     "Actions",
     RiFlashlightLine,
     "/d/settings/actions",
-    "What Dimmi can do in your own systems, such as looking up an order.",
+    "What the agent can do in your own systems, such as looking up an order.",
   ),
   "ai-providers": page(
     "settings-ai-providers",
     "AI providers",
     RiCpuLine,
     "/d/settings/ai-providers",
-    "The model keys Dimmi and Operator run on.",
+    "The models the agent and Operator write with.",
   ),
   "help-centers": page(
     "settings-help-centers",

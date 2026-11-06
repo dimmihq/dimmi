@@ -52,6 +52,7 @@ import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$vi
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
+import { Route as DSettingsAiChatgptCallbackRouteImport } from './routes/d/settings/ai.chatgpt.callback'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
@@ -272,6 +273,12 @@ const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   path: '/settings/teams/$team',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsAiChatgptCallbackRoute =
+  DSettingsAiChatgptCallbackRouteImport.update({
+    id: '/settings/ai/chatgpt/callback',
+    path: '/settings/ai/chatgpt/callback',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsEmailAddressesAddressRoute =
   DSettingsEmailAddressesAddressRouteImport.update({
     id: '/settings/email/addresses/$address',
@@ -329,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/ai/chatgpt/callback': typeof DSettingsAiChatgptCallbackRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
@@ -373,6 +381,7 @@ export interface FileRoutesByTo {
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/settings/ai/chatgpt/callback': typeof DSettingsAiChatgptCallbackRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
@@ -421,6 +430,7 @@ export interface FileRoutesById {
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/ai/chatgpt/callback': typeof DSettingsAiChatgptCallbackRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
@@ -470,6 +480,7 @@ export interface FileRouteTypes {
     | '/d/settings/teams/$team'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
+    | '/d/settings/ai/chatgpt/callback'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
   fileRoutesByTo: FileRoutesByTo
@@ -514,6 +525,7 @@ export interface FileRouteTypes {
     | '/d/settings/teams/$team'
     | '/d/customers/companies'
     | '/d/inbox/$view'
+    | '/d/settings/ai/chatgpt/callback'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
   id:
@@ -561,6 +573,7 @@ export interface FileRouteTypes {
     | '/d/settings/teams/$team'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
+    | '/d/settings/ai/chatgpt/callback'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
   fileRoutesById: FileRoutesById
@@ -875,6 +888,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsTeamsTeamRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/ai/chatgpt/callback': {
+      id: '/d/settings/ai/chatgpt/callback'
+      path: '/settings/ai/chatgpt/callback'
+      fullPath: '/d/settings/ai/chatgpt/callback'
+      preLoaderRoute: typeof DSettingsAiChatgptCallbackRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/email/addresses/$address': {
       id: '/d/settings/email/addresses/$address'
       path: '/settings/email/addresses/$address'
@@ -950,6 +970,7 @@ interface DRouteRouteChildren {
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSettingsAiChatgptCallbackRoute: typeof DSettingsAiChatgptCallbackRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
 }
@@ -976,6 +997,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSettingsAiChatgptCallbackRoute: DSettingsAiChatgptCallbackRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
 }

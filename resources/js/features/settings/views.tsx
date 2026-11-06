@@ -4,11 +4,13 @@
  */
 import type { ComponentType } from "react";
 
+import { ActionsSettings } from "@/features/ai/actions-page";
+import { AgentSettings } from "@/features/ai/agent/agent-settings-page";
+import { ProvidersSettings } from "@/features/ai/providers/providers-page";
 import type { SettingsSection } from "@/features/shell/navigation";
 
 import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
-import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectionsSettings } from "./pages/channels";
 import {

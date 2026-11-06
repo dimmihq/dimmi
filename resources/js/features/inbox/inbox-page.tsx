@@ -5,7 +5,8 @@
  * the screen is very wide, so the thread, its details and Operator have
  * room. On phones one of the two shows at a time. Above the list the
  * person picks the status shown and the order, remembered per view; a
- * search keeps that status.
+ * search keeps that status. The agent's part in the conversations can
+ * narrow the list too, kept on the address.
  */
 import { RiChatSmile3Line, RiInbox2Line, RiSearchLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -22,7 +23,7 @@ import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
 import { type Draft, draftsQuery } from "@/lib/api/drafts";
-import { type ConversationSort, conversationsQuery, countsQuery } from "@/lib/api/inbox";
+import { type AiFilter, type ConversationSort, conversationsQuery, countsQuery } from "@/lib/api/inbox";
 import { viewsQuery } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
 import { ConversationList } from "./conversation-list";
@@ -95,7 +96,7 @@ export function InboxPage({ view }: { view: string }) {
  */
 function useListSettings(workspace: string, view: string) {
   const params = viewParams(view) ?? { kind: "fixed" as const, filter: view };
-  const { status: fromUrl } = useSearch({ strict: false }) as { status?: StatusChoice };
+  const { status: fromUrl, ai } = useSearch({ strict: false }) as { status?: StatusChoice; ai?: AiFilter };
   const navigate = useNavigate();
   const { preference, save } = useViewPreferences(workspace, view);
   const { data: views } = useQuery({ ...viewsQuery(workspace), enabled: params.kind === "custom" });
@@ -109,6 +110,10 @@ function useListSettings(workspace: string, view: string) {
     params,
     status,
     sort,
+    ai,
+    setAi: (next?: AiFilter) => {
+      void navigate({ to: ".", search: (prev: Record<string, unknown>) => ({ ...prev, ai: next }) });
+    },
     setStatus: (next: StatusChoice) => {
       save({ status: next });
       void navigate({ to: ".", search: (prev: Record<string, unknown>) => ({ ...prev, status: next }) });
@@ -137,6 +142,7 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
       sort: settings.sort,
       search: query,
       unread: mentions && !everyMention,
+      ai: settings.ai,
     }),
     enabled: workspace !== "",
   });
@@ -177,8 +183,10 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
         status={settings.status}
         fixedStatus={settings.params.status !== undefined}
         sort={settings.sort ?? "-last_message_at"}
+        ai={settings.ai}
         onStatusChange={settings.setStatus}
         onSortChange={settings.setSort}
+        onAiChange={settings.setAi}
       />
       {mentions ? <MentionsFilter everything={everyMention} onChange={setEveryMention} /> : null}
       <ListBody

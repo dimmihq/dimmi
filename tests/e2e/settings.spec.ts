@@ -12,7 +12,7 @@ const pages = [
   "Messengers",
   "Email",
   "Connections",
-  "Dimmi agent",
+  "dimmi agent",
   "Actions",
   "AI providers",
   "Help centers",

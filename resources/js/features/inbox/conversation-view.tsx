@@ -42,6 +42,7 @@ import {
 import { useMutationId } from "@/lib/realtime/context";
 import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
+import { AiBadge } from "./ai-badge";
 import { AssignPicker } from "./assign/assign-picker";
 import { statusLabel, useCase } from "./case";
 import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
@@ -197,6 +198,7 @@ function ThreadTitle({
       <Chip variant="caption" color="neutral">
         #{conversation.number} · {statusLabel[conversation.status]}
       </Chip>
+      <AiBadge state={conversation.ai_state} long />
     </div>
   );
 }

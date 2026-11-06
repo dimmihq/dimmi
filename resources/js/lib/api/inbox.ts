@@ -81,9 +81,24 @@ export interface Conversation {
   last_message: MessageSummary | null;
   tags: Tag[];
   viewers?: Viewer[];
+  ai_state?: AiState;
+  ai_reply_count?: number;
+  ai_handoff_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+/*
+ * AiState is where the agent stands in a conversation: not involved,
+ * answering, or handed over to the team.
+ */
+export type AiState = "off" | "active" | "handed_off";
+
+/*
+ * AiFilter narrows a list by the agent's part: any conversation it
+ * touched, those it still answers, or those it handed over.
+ */
+export type AiFilter = "any" | "active" | "handed_off";
 
 /*
  * TimelineEvent is what an event entry says happened: its name, who did
@@ -245,8 +260,9 @@ export interface ConversationChanges {
 
 /*
  * ListParams is what one list asks for: the view as filter[view] reads
- * it, the status shown, the order, what the person searched and whether
- * only unread conversations show.
+ * it, the status shown, the order, what the person searched, whether
+ * only unread conversations show, the agent's part in them and how many
+ * come back.
  */
 export interface ListParams {
   view: string;
@@ -254,14 +270,27 @@ export interface ListParams {
   sort?: ConversationSort;
   search?: string;
   unread?: boolean;
+  ai?: AiFilter;
+  limit?: number;
 }
 
 /*
  * conversationsPath is the list's address. Viewers come along with every
  * page, so rows show who has a conversation open.
  */
-export function conversationsPath({ view, status, sort, search = "", unread = false }: ListParams): string {
-  const params = new URLSearchParams({ "filter[view]": view, "filter[status]": status, limit: "50" });
+export function conversationsPath({
+  view,
+  status,
+  sort,
+  search = "",
+  unread = false,
+  ai,
+  limit = 50,
+}: ListParams): string {
+  const params = new URLSearchParams({ "filter[view]": view, "filter[status]": status, limit: String(limit) });
+  if (ai) {
+    params.set("filter[ai]", ai);
+  }
   params.set("include", "viewers");
   if (unread) {
     params.set("filter[unread]", "true");
@@ -285,6 +314,8 @@ export function conversationsQuery(workspace: string, list: ListParams) {
       list.sort ?? "",
       list.search ?? "",
       list.unread ?? false,
+      list.ai ?? "",
+      list.limit ?? 50,
     ],
     queryFn: () => request<Conversation[]>("GET", conversationsPath(list), undefined, { workspace }),
   });
