@@ -91,8 +91,7 @@ func (a *EditNote) Handle(ctx context.Context, in EditInput) (Written, error) {
 }
 
 /*
-edit rewrites the caller's note, keeps its mentions in step and
-announces it with the teammates it newly mentions.
+edit finds the caller's own live note and rewrites it.
 */
 func (s *session) edit(ctx context.Context, reg *ids.Registry, id ids.UUID, body string) error {
 	msg, err := s.w.Q.LockMessage(ctx, models.LockMessageParams{
@@ -111,22 +110,41 @@ func (s *session) edit(ctx context.Context, reg *ids.Registry, id ids.UUID, body
 		return exceptions.ErrMessageNotEditable
 	}
 
+	return s.rewrite(ctx, reg, msg.ID, body)
+}
+
+/*
+rewrite stores the note's new text under the workspace's redaction
+rules, replacing which rules hit the earlier text, keeps its mentions in
+step with what the redacted text names, and announces it with the
+teammates it newly mentions.
+*/
+func (s *session) rewrite(ctx context.Context, reg *ids.Registry, id ids.UUID, body string) error {
+	hits, err := s.w.RedactEdit(ctx, s.c.WorkspaceID, &body)
+	if err != nil {
+		return fmt.Errorf("redact note: %w", err)
+	}
+
 	m, err := s.resolve(ctx, reg, body)
 	if err != nil {
 		return err
 	}
 
 	raw, err := json.Marshal(map[string]any{
-		"edited_by": models.PublicID(models.PrefixMember, s.w.Actor.ID), "mentions": m.tokens,
+		"edited_by": models.PublicID(models.PrefixMember, s.w.Actor.ID), "mentions": m.tokens, "redactions": hits,
 	})
 	if err != nil {
 		return fmt.Errorf("encode edit: %w", err)
 	}
 
 	if s.msg, err = s.w.Q.EditMessage(ctx, models.EditMessageParams{
-		Body: &body, Now: s.w.Now, Metadata: raw, WorkspaceID: s.c.WorkspaceID, ID: msg.ID,
+		Body: &body, Now: s.w.Now, Metadata: raw, WorkspaceID: s.c.WorkspaceID, ID: id,
 	}); err != nil {
 		return fmt.Errorf("edit note: %w", err)
+	}
+
+	if err := s.w.AnnounceRedaction(ctx, s.c, s.msg, hits); err != nil {
+		return err
 	}
 
 	added, err := s.record(ctx, m)
@@ -134,7 +152,7 @@ func (s *session) edit(ctx context.Context, reg *ids.Registry, id ids.UUID, body
 		return err
 	}
 
-	r := appevents.MessageRef{ConversationRef: appevents.ConversationRef{ConversationID: s.c.ID}, MessageID: msg.ID}
+	r := appevents.MessageRef{ConversationRef: appevents.ConversationRef{ConversationID: s.c.ID}, MessageID: id}
 
 	return s.w.Dispatch(ctx, appevents.MessageUpdated{
 		Base: s.w.Base(s.c.WorkspaceID), MessageRef: r, AddedMentionedMemberIDs: added,

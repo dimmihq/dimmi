@@ -3,7 +3,18 @@ import { describe, expect, it } from "vitest";
 import type { ThreadEntry } from "../conversations";
 import { foldEvents, foldedText } from "./fold-events";
 
-const said = (id: string): ThreadEntry => ({ kind: "customer", id, author: "Ann", at: "", text: "Hi" });
+const said = (id: string): ThreadEntry => ({
+  kind: "customer",
+  id,
+  author: "Ann",
+  at: "",
+  text: "Hi",
+  format: "markdown",
+  original: false,
+  truncated: false,
+  failed: null,
+  files: [],
+});
 const event = (id: string): ThreadEntry => ({ kind: "event", id, at: "", text: "Ada closed the conversation" });
 
 describe("foldEvents", () => {

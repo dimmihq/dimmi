@@ -22,7 +22,8 @@ import (
 
 /*
 Inbox is one inbox of the workspace. Default marks the inbox where
-conversations land when nothing routes them elsewhere.
+conversations land when nothing routes them elsewhere; Access says who
+may open it.
 */
 type Inbox struct {
 	ID            string        `json:"id"`
@@ -30,9 +31,20 @@ type Inbox struct {
 	Name          string        `json:"name"`
 	Default       bool          `json:"default"`
 	DefaultTeamID *string       `json:"default_team_id"`
+	Access        InboxAccess   `json:"access"`
 	Settings      InboxSettings `json:"settings"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
+}
+
+/*
+InboxAccess is who may open an inbox: everyone, or the teams and
+teammates on its list.
+*/
+type InboxAccess struct {
+	Mode    string   `json:"mode"`
+	Teams   []string `json:"team_ids"`
+	Members []string `json:"member_ids"`
 }
 
 /*
@@ -70,6 +82,10 @@ func NewInbox(i inboxes.Inbox) Inbox {
 	return Inbox{
 		ID: models.PublicID(models.PrefixInbox, i.ID), Object: "inbox", Name: i.Name, Default: i.Default,
 		DefaultTeamID: teamID(i.DefaultTeamID), CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt,
+		Access: InboxAccess{
+			Mode: i.Access.Mode, Teams: publicIDs(models.PrefixTeam, i.Access.Teams),
+			Members: publicIDs(models.PrefixMember, i.Access.Members),
+		},
 		Settings: InboxSettings{
 			ReopenWindowDays: s.ReopenWindowDays, AssignOnReply: s.AssignOnReply, Color: s.Color,
 			Assignment: InboxAssignment{

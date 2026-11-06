@@ -114,7 +114,7 @@ SET metadata = jsonb_set(m.metadata, '{reactions}', coalesce((
     ), '[]'::jsonb)),
     updated_at = $1::timestamptz
 WHERE m.workspace_id = $2 AND m.id = $3
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type SummarizeMessageReactionsParams struct {
@@ -137,6 +137,8 @@ func (q *Queries) SummarizeMessageReactions(ctx context.Context, arg SummarizeMe
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,

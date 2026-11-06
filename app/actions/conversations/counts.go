@@ -85,7 +85,7 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 
 		totals, err := q.CountConversations(ctx, models.CountConversationsParams{
 			WorkspaceID: ws, MemberID: &me, AccessMode: access.Mode, AccessViewer: access.Viewer,
-			AccessTeams: access.Teams, AccessUnassigned: access.Unassigned,
+			AccessTeams: access.Teams, AccessUnassigned: access.Unassigned, AccessHiddenInboxes: access.HiddenInboxes,
 		})
 		if err != nil {
 			return fmt.Errorf("count conversations: %w", err)
@@ -93,7 +93,7 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 
 		unread, err := q.CountUnreadConversations(ctx, models.CountUnreadConversationsParams{
 			WorkspaceID: ws, MemberID: me, AccessMode: access.Mode, AccessViewer: access.Viewer,
-			AccessTeams: access.Teams, AccessUnassigned: access.Unassigned,
+			AccessTeams: access.Teams, AccessUnassigned: access.Unassigned, AccessHiddenInboxes: access.HiddenInboxes,
 		})
 		if err != nil {
 			return fmt.Errorf("count unread conversations: %w", err)
@@ -101,7 +101,7 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 
 		inboxes, err := q.CountOpenConversationsByInbox(ctx, models.CountOpenConversationsByInboxParams{
 			WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
-			AccessUnassigned: access.Unassigned,
+			AccessUnassigned: access.Unassigned, AccessHiddenInboxes: access.HiddenInboxes,
 		})
 		if err != nil {
 			return fmt.Errorf("count conversations by inbox: %w", err)
@@ -124,15 +124,13 @@ func (a *CountConversations) Handle(ctx context.Context, in CountsInput) (Counts
 }
 
 /*
-countMentions counts the conversations the member may see whose notes
-mention them after what they last read.
+countMentions counts the conversations whose notes mention the member
+after what they last read. A mention lets them read the conversation
+whatever their access, so the count needs no access rule.
 */
 func countMentions(ctx context.Context, q *models.Queries, m authz.Membership, out *Counts) error {
-	access := VisibleScope(m).Params()
-
 	n, err := q.CountUnreadMentions(ctx, models.CountUnreadMentionsParams{
-		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, AccessMode: access.Mode, AccessViewer: access.Viewer,
-		AccessTeams: access.Teams, AccessUnassigned: access.Unassigned,
+		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("count unread mentions: %w", err)
@@ -152,7 +150,7 @@ func countHolders(ctx context.Context, q *models.Queries, m authz.Membership, ou
 
 	teams, err := q.CountOpenConversationsByTeam(ctx, models.CountOpenConversationsByTeamParams{
 		WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
-		AccessUnassigned: access.Unassigned,
+		AccessUnassigned: access.Unassigned, AccessHiddenInboxes: access.HiddenInboxes,
 	})
 	if err != nil {
 		return fmt.Errorf("count conversations by team: %w", err)
@@ -160,7 +158,7 @@ func countHolders(ctx context.Context, q *models.Queries, m authz.Membership, ou
 
 	members, err := q.CountOpenConversationsByAssignee(ctx, models.CountOpenConversationsByAssigneeParams{
 		WorkspaceID: ws, AccessMode: access.Mode, AccessViewer: access.Viewer, AccessTeams: access.Teams,
-		AccessUnassigned: access.Unassigned,
+		AccessUnassigned: access.Unassigned, AccessHiddenInboxes: access.HiddenInboxes,
 	})
 	if err != nil {
 		return fmt.Errorf("count conversations by member: %w", err)

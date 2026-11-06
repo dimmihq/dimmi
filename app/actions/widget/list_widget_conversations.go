@@ -303,16 +303,7 @@ func (a *ListWidgetConversations) files(
 	out := map[ids.UUID][]VisibleAttachment{}
 
 	for _, row := range found {
-		item := VisibleAttachment{Row: row, Blocked: true}
-
-		if row.ScanStatus == "clean" || row.ScanStatus == "skipped" {
-			url, err := a.Disk.TemporaryURL(ctx, row.Path, attachmentLinkTTL)
-			if err == nil {
-				item.URL, item.Blocked = &url, false
-			}
-		}
-
-		out[*row.MessageID] = append(out[*row.MessageID], item)
+		out[*row.MessageID] = append(out[*row.MessageID], presentAttachment(ctx, a.Disk, row))
 	}
 
 	return out, nil

@@ -1,13 +1,15 @@
 /*
  * The composer's add menu, on BoardUI's composer add menu: the round plus
  * turns into a close, and a panel rises above it with what a teammate can
- * bring into the message. Files open the computer's file picker. Every
- * other source opens a searchable list in the same panel: help center
+ * bring into the message. Each source opens a searchable list in the
+ * same panel: help center
  * articles, saved replies, past conversations, issues, feature requests
  * and changelog entries; typing narrows the list, Enter takes the first
  * match and the down arrow moves into the list. Emoji and, when the
- * workspace allows it, GIFs from GIPHY have pickers of their own. A saved reply drops its
- * text into the draft; the rest attach as tiles. Moving between the menu
+ * workspace allows it, GIFs from GIPHY have pickers of their own. A saved
+ * reply drops its text into the draft, and anything else drops in a line
+ * naming it, so whatever is picked reaches the customer with the message.
+ * Files are not offered until replies can carry them. Moving between the menu
  * and a list slides the view the way the person is heading while the
  * panel eases to its new height, on BoardUI's timings. The panel always
  * reopens on the menu.
@@ -16,7 +18,6 @@ import {
   RiAddLine,
   RiArrowLeftSLine,
   RiArticleLine,
-  RiAttachment2,
   RiChat3Line,
   RiChatQuoteLine,
   RiEmotionLine,
@@ -36,7 +37,7 @@ import { cx } from "@/utils/cx";
 
 import { EmojiPicker } from "./composer/emoji-picker";
 import { GifPicker, type PickedGif } from "./composer/gif-picker";
-import { type LibraryItem, type LinkedItem, type SourceKind, search } from "./library";
+import { type LibraryItem, type SourceKind, search } from "./library";
 import { Resize, Swap } from "./motion";
 
 interface Source {
@@ -259,14 +260,10 @@ function panelKey(panel: Panel | null): string {
 }
 
 export function AddMenu({
-  onFiles,
-  onAttach,
   onInsert,
   onEmoji,
   gifs,
 }: {
-  onFiles: () => void;
-  onAttach: (item: LinkedItem) => void;
   onInsert: (text: string) => void;
   onEmoji: (emoji: string) => void;
   gifs: Gifs | null;
@@ -281,11 +278,7 @@ export function AddMenu({
     }
   };
   const pick = (item: LibraryItem) => {
-    if (item.kind === "reply") {
-      onInsert(item.body ?? item.title);
-    } else {
-      onAttach({ ...item, kind: item.kind });
-    }
+    onInsert(item.kind === "reply" ? (item.body ?? item.title) : `${item.title} (${item.detail})`);
     toggle(false);
   };
 
@@ -335,19 +328,6 @@ export function AddMenu({
                 ) : (
                   <>
                     <Section title="Add">
-                      <Row
-                        source={{
-                          kind: "article",
-                          label: "Files and photos",
-                          description: "Upload from your computer",
-                          icon: RiAttachment2,
-                          noun: "files",
-                        }}
-                        onPress={() => {
-                          toggle(false);
-                          onFiles();
-                        }}
-                      />
                       {basics.map((item) => (
                         <Row key={item.kind} source={item} onPress={() => setSource(item)} />
                       ))}

@@ -3,6 +3,8 @@
  * every request goes to, and where the visitor's identity comes from. The
  * loader reads these off its own script tag, so a page that pastes the
  * snippet twice or behind a subpath still points at the right install.
+ * A preview, such as the one in the dashboard, shows sample content and
+ * never calls the server.
  */
 
 export interface Settings {
@@ -10,7 +12,7 @@ export interface Settings {
   apiBase: string;
   identityUrl?: string;
   latency?: number;
-  demo?: boolean;
+  preview?: boolean;
 }
 
 export type Command = [name: string, ...args: unknown[]];

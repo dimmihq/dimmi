@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -56,7 +57,8 @@ ExpectedLastMessageID is the newest message the replier saw. Then is
 one of the Then values, with Snooze saying until when. Delay holds the
 reply for the caller's undo window on a channel that cannot take it
 back. MutationID is the id the client gave the change, empty when it
-gave none.
+gave none. Files are the caller's finished uploads that go with the
+reply; a reply needs a body or at least one file.
 */
 type ReplyInput struct {
 	Membership            authz.Membership
@@ -68,6 +70,7 @@ type ReplyInput struct {
 	Snooze                SnoozeInput
 	Delay                 bool
 	MutationID            string
+	Files                 []ids.UUID
 }
 
 /*
@@ -126,6 +129,10 @@ func (a *ReplyToConversation) Handle(ctx context.Context, in ReplyInput) (Writte
 		return Written{}, err
 	}
 
+	if strings.TrimSpace(in.Body) == "" && len(in.Files) == 0 {
+		return Written{}, exceptions.ErrBodyRequired
+	}
+
 	var out Written
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -172,6 +179,10 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 		return err
 	}
 
+	if err := checkFiles(route, in.Files); err != nil {
+		return err
+	}
+
 	before, window := stateOf(s.c), time.Duration(0)
 	if in.Delay {
 		window = undoWindow(s.m, route)
@@ -181,6 +192,10 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 		Type: string(enums.MessageTypeMessage), Body: in.Body, DeliveryStatus: &route.Status, DedupeKey: key,
 		Metadata: gifs.Metadata(in.Body),
 	}); err != nil {
+		return err
+	}
+
+	if err := attachFiles(ctx, s, in.Files, a.Clock.Now()); err != nil {
 		return err
 	}
 

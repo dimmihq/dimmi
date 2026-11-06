@@ -10,7 +10,8 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { realtimeKeys } from "@/lib/realtime/keys";
 
-import { request } from "./client";
+import { type DownloadedFile, request, requestFile } from "./client";
+import type { Tag } from "./tags";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
 
@@ -78,6 +79,7 @@ export interface Conversation {
   assignee: Named | null;
   team: Named | null;
   last_message: MessageSummary | null;
+  tags: Tag[];
   viewers?: Viewer[];
   created_at: string;
   updated_at: string;
@@ -92,6 +94,7 @@ export interface TimelineEvent {
   actor: { type: string; id: string; name: string };
   reason?: string;
   until?: string;
+  tags?: string[];
   from?: string;
   to?: { member: Named | null; team: Named | null } | string;
   changes?: Record<string, [unknown, unknown]>;
@@ -122,7 +125,11 @@ export interface Message {
   type: "message" | "note" | "event";
   author: Author;
   body: string | null;
+  body_format: "markdown" | "plain";
+  has_original: boolean;
+  truncated: boolean;
   delivery_status: string | null;
+  delivery_error: string | null;
   scheduled_send_at?: string | null;
   event: TimelineEvent | null;
   edited_at?: string | null;
@@ -132,6 +139,36 @@ export interface Message {
   deleted_at: string | null;
   deleted_by?: { id: string; name: string } | null;
   created_at: string;
+  redactions?: { rule: string; count: number }[];
+  attachments?: Attachment[];
+}
+
+/*
+ * Attachment is a file on a message. Its url reads it for a few minutes
+ * and is null until the malware scan lets it through; blocked marks a
+ * file the scan refused.
+ */
+export interface Attachment {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  url: string | null;
+  blocked: boolean;
+}
+
+/*
+ * uploadAttachment sends a file the teammate is about to reply with and
+ * returns it, ready to be named by the reply.
+ */
+export function uploadAttachment(workspace: string, file: File, signal?: AbortSignal): Promise<Attachment> {
+  return request<Attachment>("POST", `/attachments?filename=${encodeURIComponent(file.name)}`, file, {
+    workspace,
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    signal,
+  });
 }
 
 export interface Counts {
@@ -186,6 +223,7 @@ export interface InboxPreferences {
 export interface InboxSummary {
   id: string;
   name: string;
+  settings?: { color: string };
 }
 
 /*
@@ -201,6 +239,8 @@ export interface ConversationChanges {
   priority?: ConversationPriority;
   team_id?: string | null;
   unread?: boolean;
+  add_tags?: string[];
+  remove_tags?: string[];
 }
 
 /*
@@ -288,6 +328,37 @@ export function messagesQuery(workspace: string, id: string) {
   });
 }
 
+/*
+ * MessageOriginal is the whole of a received email: its full text, its
+ * sanitized HTML when it had any, whether either was cut at a size
+ * limit, and whether the caller may download the email as it arrived.
+ */
+export interface MessageOriginal {
+  id: string;
+  text: string;
+  text_truncated: boolean;
+  html: string | null;
+  html_too_large: boolean;
+  raw_available: boolean;
+}
+
+function messagePath(conversation: string, message: string): string {
+  return `/conversations/${encodeURIComponent(conversation)}/messages/${encodeURIComponent(message)}`;
+}
+
+export function messageOriginalQuery(workspace: string, conversation: string, message: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "message-original", message],
+    queryFn: () =>
+      request<MessageOriginal>("GET", `${messagePath(conversation, message)}/original`, undefined, { workspace }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function downloadRawEmail(workspace: string, conversation: string, message: string): Promise<DownloadedFile> {
+  return requestFile(`${messagePath(conversation, message)}/original/raw`, "message/rfc822", { workspace });
+}
+
 export function countsQuery(workspace: string) {
   return queryOptions({
     queryKey: realtimeKeys.counts(workspace),
@@ -335,13 +406,14 @@ function afterFields(then: Then | undefined): Record<string, unknown> {
   return then.kind === "snooze" ? { ...fields, snooze: { option: then.option } } : fields;
 }
 
-export function reply(write: Write, id: string, body: string, then?: Then): Promise<Message> {
+export function reply(write: Write, id: string, body: string, then?: Then, files?: string[]): Promise<Message> {
   const after = afterFields(then);
+  const attached = files && files.length > 0 ? { attachment_ids: files } : {};
 
   return request<Message>(
     "POST",
     `/conversations/${encodeURIComponent(id)}/replies`,
-    { body, client_message_id: crypto.randomUUID(), delay: true, ...after },
+    { body, client_message_id: crypto.randomUUID(), delay: true, ...after, ...attached },
     writeOptions(write),
   );
 }
@@ -420,6 +492,15 @@ export function addNote(write: Write, id: string, body: string): Promise<Message
     "POST",
     `/conversations/${encodeURIComponent(id)}/notes`,
     { body, client_message_id: crypto.randomUUID() },
+    writeOptions(write),
+  );
+}
+
+export function retryDelivery(write: Write, id: string, message: string): Promise<Message> {
+  return request<Message>(
+    "POST",
+    `/conversations/${encodeURIComponent(id)}/messages/${encodeURIComponent(message)}/retry`,
+    {},
     writeOptions(write),
   );
 }

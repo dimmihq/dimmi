@@ -125,21 +125,25 @@ func TestMentions(t *testing.T) {
 		bobClient.GetJSON("/api/v1/conversation-counts").AssertOK().AssertJSONPath("data.views.mentions.unread", 0)
 	})
 
-	t.Run("keeps a mention of someone who cannot see the conversation out of their view", func(t *testing.T) {
+	t.Run("lets someone who could not see the conversation read along once mentioned", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		bobClient, bob := d.join(t, enums.RoleMember)
 		d.owner.PatchJSON("/api/v1/members/"+memberID(bob), testkit.JSON{"conversation_access": "assigned"}).AssertOK()
-		path := "/api/v1/conversations/" + d.customer(t, "ann", "Refund", "Refund please")
+		conv := d.customer(t, "ann", "Refund", "Refund please")
+		path := "/api/v1/conversations/" + conv
 		d.owner.PatchJSON(path, testkit.JSON{"assignee_id": d.ownerID()}).AssertOK()
+		bobClient.GetJSON(path).AssertNotFound()
 
 		d.owner.GetJSON(path+"/mentionables?q="+url.QueryEscape(bobName(t, d, bob))).AssertOK().
 			AssertJSONPath(`data.members.#(id=="`+memberID(bob)+`").can_see`, false)
 		d.owner.PostJSON(path+"/notes", testkit.JSON{"body": "<@" + memberID(bob) + ">"}).AssertCreated()
 
 		d.tc.Table("message_mentions").AssertCount(1, testkit.Row{"workspace_member_id": bob.ID})
-		bobClient.GetJSON("/api/v1/conversations?filter[view]=mentions").AssertOK().AssertJSONPath("data.#", 0)
-		bobClient.GetJSON("/api/v1/conversation-counts").AssertOK().AssertJSONPath("data.views.mentions.unread", 0)
+		bobClient.GetJSON(path).AssertOK()
+		bobClient.GetJSON("/api/v1/conversations?filter[view]=mentions").AssertOK().
+			AssertJSONPath("data.#", 1).AssertJSONPath("data.0.id", conv)
+		bobClient.GetJSON("/api/v1/conversation-counts").AssertOK().AssertJSONPath("data.views.mentions.unread", 1)
 	})
 
 	t.Run("finds who to mention by a word of their name", func(t *testing.T) {

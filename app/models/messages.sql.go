@@ -15,14 +15,16 @@ import (
 
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
-    workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id,
-    dedupe_key, delivery_status, substantive, metadata, sent_at, channel_connection_id, created_at, updated_at
+    workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event,
+    channel_message_id, dedupe_key, delivery_status, substantive, metadata, sent_at, channel_connection_id,
+    created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8,
-    $9, $10, $11, $12, $13, $14,
-    $15, $16, $16
+    $1, $2, $3, $4, $5, $6,
+    coalesce($7, 'markdown'), $8, $9, $10,
+    $11, $12, $13, $14, $15, $16,
+    $17, $18, $18
 )
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type CreateMessageParams struct {
@@ -32,6 +34,8 @@ type CreateMessageParams struct {
 	AuthorType          string          `json:"author_type"`
 	AuthorID            *ids.UUID       `json:"author_id"`
 	Body                *string         `json:"body"`
+	BodyFormat          interface{}     `json:"body_format"`
+	BodyFull            *string         `json:"body_full"`
 	BodyHtml            *string         `json:"body_html"`
 	Event               json.RawMessage `json:"event"`
 	ChannelMessageID    *string         `json:"channel_message_id"`
@@ -56,6 +60,8 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		arg.AuthorType,
 		arg.AuthorID,
 		arg.Body,
+		arg.BodyFormat,
+		arg.BodyFull,
 		arg.BodyHtml,
 		arg.Event,
 		arg.ChannelMessageID,
@@ -76,6 +82,8 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,
@@ -105,7 +113,7 @@ SET deleted_at = $1::timestamptz, body = NULL, body_html = NULL, scheduled_send_
     delivery_status = CASE WHEN delivery_status = 'pending' THEN 'failed' ELSE delivery_status END,
     updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type DeleteMessageParams struct {
@@ -134,6 +142,8 @@ func (q *Queries) DeleteMessage(ctx context.Context, arg DeleteMessageParams) (M
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,
@@ -161,7 +171,7 @@ UPDATE messages
 SET body = $1, edited_at = $2::timestamptz, metadata = metadata || $3::jsonb,
     updated_at = $2::timestamptz
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type EditMessageParams struct {
@@ -190,6 +200,8 @@ func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Messa
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,
@@ -213,7 +225,7 @@ func (q *Queries) EditMessage(ctx context.Context, arg EditMessageParams) (Messa
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1
   AND conversation_id = $2
   AND undone_at IS NULL
@@ -260,6 +272,8 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 			&i.AuthorType,
 			&i.AuthorID,
 			&i.Body,
+			&i.BodyFormat,
+			&i.BodyFull,
 			&i.BodyHtml,
 			&i.Event,
 			&i.ChannelMessageID,
@@ -290,7 +304,7 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 }
 
 const lockMessage = `-- name: LockMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = $2 AND id = $3
 FOR UPDATE
 `
@@ -314,6 +328,8 @@ func (q *Queries) LockMessage(ctx context.Context, arg LockMessageParams) (Messa
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,
@@ -427,7 +443,7 @@ const scheduleMessage = `-- name: ScheduleMessage :one
 UPDATE messages
 SET scheduled_send_at = $1, metadata = metadata || $2::jsonb, updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type ScheduleMessageParams struct {
@@ -457,6 +473,8 @@ func (q *Queries) ScheduleMessage(ctx context.Context, arg ScheduleMessageParams
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,
@@ -641,7 +659,7 @@ UPDATE messages
 SET undone_at = $1::timestamptz, body = '', body_html = NULL, scheduled_send_at = NULL, delivery_status = 'failed',
     delivery_error = 'canceled', updated_at = $1
 WHERE workspace_id = $2 AND id = $3
-RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
+RETURNING id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at
 `
 
 type UndoMessageParams struct {
@@ -663,6 +681,8 @@ func (q *Queries) UndoMessage(ctx context.Context, arg UndoMessageParams) (Messa
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,

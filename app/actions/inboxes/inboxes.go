@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | An inbox is where a workspace's conversations land, routed there by
-| the channels connected to it. Every member sees the inboxes; adding
-| and renaming them is for those who manage inboxes. A new inbox comes
+| the channels connected to it. Members see the inboxes they may open; a
+| restricted inbox stays out of sight for everyone not on its list.
+| Adding and renaming them is for those who manage inboxes. A new inbox comes
 | with its API channel, so conversations can be started in it through
 | the REST API from the start.
 |
@@ -17,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -27,16 +29,19 @@ import (
 )
 
 /*
-Inbox is an inbox and whether it is the workspace's default, where
-conversations land when nothing routes them elsewhere.
+Inbox is an inbox, whether it is the workspace's default, where
+conversations land when nothing routes them elsewhere, and who may open
+it.
 */
 type Inbox struct {
 	models.Inbox
 	Default bool
+	Access  Access
 }
 
 /*
-ListInboxes lists the workspace's live inboxes, oldest first.
+ListInboxes lists the workspace's live inboxes the caller may open,
+oldest first.
 
 Rules:
   - The caller needs conversations:read.
@@ -70,9 +75,18 @@ func (a *ListInboxes) Handle(ctx context.Context, m authz.Membership) ([]Inbox, 
 			return err
 		}
 
-		out = make([]Inbox, len(rows))
-		for i, row := range rows {
-			out[i] = Inbox{Inbox: row, Default: row.ID == def}
+		access, err := accessOf(ctx, q, m.Workspace.ID, rows)
+		if err != nil {
+			return err
+		}
+
+		out = []Inbox{}
+		for _, row := range rows {
+			if slices.Contains(m.HiddenInboxes, row.ID) {
+				continue
+			}
+
+			out = append(out, Inbox{Inbox: row, Default: row.ID == def, Access: access[row.ID]})
 		}
 
 		return nil
@@ -93,7 +107,7 @@ type ShowInboxInput struct {
 }
 
 /*
-ShowInbox returns one live inbox of the workspace.
+ShowInbox returns one live inbox of the workspace the caller may open.
 
 Rules:
   - The caller needs conversations:read.
@@ -117,6 +131,10 @@ func (a *ShowInbox) Handle(ctx context.Context, in ShowInboxInput) (Inbox, error
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
+
+		if slices.Contains(in.Membership.HiddenInboxes, in.InboxID) {
+			return exceptions.ErrNotFound
+		}
 
 		inbox, err := find(ctx, q, in.Membership.Workspace.ID, in.InboxID)
 		if err != nil {
@@ -165,10 +183,16 @@ func defaultID(ctx context.Context, q *models.Queries, ws ids.UUID) (ids.UUID, e
 }
 
 /*
-withDefault returns the inbox with whether it is the default.
+withDefault returns the inbox with whether it is the default and who may
+open it.
 */
 func withDefault(ctx context.Context, q *models.Queries, inbox models.Inbox) (Inbox, error) {
 	def, err := defaultID(ctx, q, inbox.WorkspaceID)
+	if err != nil {
+		return Inbox{}, err
+	}
 
-	return Inbox{Inbox: inbox, Default: inbox.ID == def}, err
+	access, err := accessOf(ctx, q, inbox.WorkspaceID, []models.Inbox{inbox})
+
+	return Inbox{Inbox: inbox, Default: inbox.ID == def, Access: access[inbox.ID]}, err
 }

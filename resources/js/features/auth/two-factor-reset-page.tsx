@@ -116,8 +116,8 @@ export function TwoFactorResetPage({ id, token }: { id: string; token: string })
             {passwordError}
           </p>
         ) : null}
-        <Button type="submit" className="w-full" disabled={reset.isPending || (asksPassword && password === "")}>
-          {reset.isPending ? "Turning off…" : "Turn off two-factor authentication"}
+        <Button type="submit" className="w-full" loading={reset.isPending} disabled={asksPassword && password === ""}>
+          Turn off two-factor authentication
         </Button>
       </form>
     </AuthCard>

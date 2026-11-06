@@ -34,9 +34,20 @@ export interface Inbox {
   name: string;
   default: boolean;
   default_team_id: string | null;
+  access: InboxAccess;
   settings: InboxSettings;
   created_at: string;
   updated_at: string;
+}
+
+/*
+ * InboxAccess is who may open an inbox: everyone, or only the teams and
+ * teammates on its list. Owners and admins open every inbox.
+ */
+export interface InboxAccess {
+  mode: "everyone" | "restricted";
+  team_ids: string[];
+  member_ids: string[];
 }
 
 /*
@@ -99,6 +110,23 @@ export function createInbox(workspace: string, name: string): Promise<Inbox> {
 
 export function updateInbox(workspace: string, inbox: string, change: InboxChange): Promise<Inbox> {
   return request<Inbox>("PATCH", `/inboxes/${encodeURIComponent(inbox)}`, change, { workspace });
+}
+
+/*
+ * sameAccess reports whether two accesses hold the same people, in any
+ * order.
+ */
+export function sameAccess(a: InboxAccess, b: InboxAccess): boolean {
+  const same = (x: string[], y: string[]) => x.length === y.length && x.every((id) => y.includes(id));
+
+  return a.mode === b.mode && same(a.team_ids, b.team_ids) && same(a.member_ids, b.member_ids);
+}
+
+/*
+ * updateInboxAccess replaces who may open the inbox.
+ */
+export function updateInboxAccess(workspace: string, inbox: string, access: InboxAccess): Promise<Inbox> {
+  return request<Inbox>("PUT", `/inboxes/${encodeURIComponent(inbox)}/access`, access, { workspace });
 }
 
 /*

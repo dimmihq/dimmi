@@ -10,28 +10,29 @@
 import { RiChatSmile3Line, RiInbox2Line, RiSearchLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
-import { Chip } from "@/components/base/badges/chip";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
-import { Spinner } from "@/components/base/spinner/spinner";
 import { PageOutlet } from "@/features/layout/page-outlet";
 import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
 import { type Draft, draftsQuery } from "@/lib/api/drafts";
-import { type ConversationSort, type Counts, conversationsQuery, countsQuery } from "@/lib/api/inbox";
+import { type ConversationSort, conversationsQuery, countsQuery } from "@/lib/api/inbox";
 import { viewsQuery } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
 import { ConversationList } from "./conversation-list";
 import { useInbox } from "./conversations";
+import { ConversationRowsSkeleton } from "./skeletons";
+import { rememberView } from "./views/last-view";
 import { ListControls } from "./views/list-controls";
-import { useViewName } from "./views/use-sidebar-views";
 import { useViewPreferences } from "./views/use-view-preferences";
 import { ViewActions } from "./views/view-actions";
+import { openCount, useViewTitle } from "./views/view-groups";
+import { ViewPicker } from "./views/view-picker";
 import { listStatus, type StatusChoice, sortsFor, viewParams } from "./views/view-route";
 
 const visible = { overflow: "visible" } as const;
@@ -87,29 +88,6 @@ export function InboxPage({ view }: { view: string }) {
 }
 
 /*
- * openCount is how many open conversations wait in the view, as the
- * sidebar counts them.
- */
-function openCount(counts: Counts | undefined, view: string): number | undefined {
-  if (!counts) {
-    return undefined;
-  }
-  const v = counts.views;
-  switch (view) {
-    case "mentions":
-      return v.mentions.unread;
-    case "mine":
-    case "unassigned":
-    case "all":
-      return v[view].open;
-    case "snoozed":
-      return v.mine.snoozed;
-  }
-
-  return (v.teams[view] ?? v.members[view] ?? v.inboxes[view])?.open;
-}
-
-/*
  * useListSettings returns the status and order the list shows: the
  * address's status first, then the person's saved choice for the view,
  * and the setters that keep both.
@@ -141,8 +119,7 @@ function useListSettings(workspace: string, view: string) {
 function ListPanel({ view, openId }: { view: string; openId: string | undefined }) {
   const fixed = inboxViews[view as keyof typeof inboxViews] as Page | undefined;
   const { workspace } = useInbox();
-  const name = useViewName(workspace, view);
-  const title = fixed?.label ?? name ?? "Conversations";
+  const title = useViewTitle(workspace, view);
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search);
   const settings = useListSettings(workspace, view);
@@ -165,19 +142,17 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
   const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: workspace !== "" });
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
   const { data: drafts } = useQuery({ ...draftsQuery(workspace), enabled: workspace !== "" });
-  const count = openCount(counts, view);
+  const count = openCount(counts?.views, view);
+  useEffect(() => rememberView(view), [view]);
 
   return (
     <Panel label={`${title} conversations`} className="h-full w-full">
-      <PageHeader title={title}>
+      <PageHeader title={<ViewPicker workspace={workspace} view={view} title={title} count={count} />}>
         <ViewActions
           workspace={workspace}
           view={view}
           start={{ sort: settings.sort, status: settings.params.status ? undefined : settings.status }}
         />
-        <Chip variant="caption" color="neutral">
-          {count === undefined ? "Open" : `${count} open`}
-        </Chip>
       </PageHeader>
       <div className="shrink-0 px-[7px] pb-2">
         <Input
@@ -259,11 +234,7 @@ function ListBody({
   drafted: ReadonlySet<string>;
 }) {
   if (state === "loading") {
-    return (
-      <div className="flex flex-1 items-center justify-center py-12">
-        <Spinner aria-label="Loading conversations" />
-      </div>
-    );
+    return <ConversationRowsSkeleton />;
   }
   if (state === "error") {
     return (

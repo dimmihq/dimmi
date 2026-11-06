@@ -16,6 +16,11 @@
 | disconnect push, which EventSource can read where a status code is
 | invisible to it.
 |
+| A client with a token may listen from any site, since the token alone
+| proves who it is: the answer allows the asking origin, but never with
+| credentials, so a browser sends no cookie along. A client without one
+| authenticates by its cookie and stays on the install's own site.
+|
 */
 
 package broadcasting
@@ -67,8 +72,13 @@ func (s *Server) serveUniSSE(w http.ResponseWriter, r *http.Request) {
 
 	header := w.Header()
 	header.Set("Content-Type", "text/event-stream")
-	header.Set("Cache-Control", "no-cache")
+	header.Set("Cache-Control", "no-store")
 	header.Set("X-Accel-Buffering", "no")
+	header.Add("Vary", "Origin")
+
+	if origin := r.Header.Get("Origin"); origin != "" && req.Token != "" {
+		header.Set("Access-Control-Allow-Origin", origin)
+	}
 	w.WriteHeader(http.StatusOK)
 
 	rc := http.NewResponseController(w)
@@ -219,9 +229,13 @@ func (t *uniTransport) Close(centrifuge.Disconnect) error {
 
 /*
 pump writes pushes as server-sent events until the transport closes,
-the client goes away or a write fails.
+the client goes away or a write fails. Leaving closes the transport, so a
+writer still waiting to hand over a push is released instead of holding
+the client's shutdown forever.
 */
 func (t *uniTransport) pump(r *http.Request, w http.ResponseWriter, rc *http.ResponseController) {
+	defer t.once.Do(func() { close(t.closed) })
+
 	for {
 		select {
 		case frames := <-t.frames:

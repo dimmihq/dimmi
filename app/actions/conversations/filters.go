@@ -199,7 +199,9 @@ access returns what the caller may see, as a list takes it.
 func access(m authz.Membership) querybuilder.Access {
 	p := VisibleScope(m).Params()
 
-	return querybuilder.Access{Mode: p.Mode, Viewer: p.Viewer, Teams: p.Teams, Unassigned: p.Unassigned}
+	return querybuilder.Access{
+		Mode: p.Mode, Viewer: p.Viewer, Teams: p.Teams, Unassigned: p.Unassigned, HiddenInboxes: p.HiddenInboxes,
+	}
 }
 
 /*

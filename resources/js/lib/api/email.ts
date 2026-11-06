@@ -35,7 +35,13 @@ export interface EmailAddress {
   reply_to_mode: "token" | "none";
   from_name_style: "member_and_name" | "name_only";
   sending_identity: { from: string; uses_default_sender: boolean; provider: string };
-  settings: { quote_previous: boolean; bulk_mail_handling: "close" | "open" | "drop" };
+  settings: {
+    quote_previous: boolean;
+    bulk_mail_handling: "close" | "open" | "drop";
+    template: ReplyStyle["template"];
+    brand_color: string;
+    footer_markdown: string;
+  };
   forwarding_confirmation: ForwardingConfirmation | null;
   inbound_verified_at: string | null;
   last_inbound_at: string | null;
@@ -52,8 +58,16 @@ export interface InboundEmail {
   received_at: string;
 }
 
+export interface ReplyStyle {
+  template: "plain" | "branded";
+  brand_color: string;
+  footer_markdown: string;
+}
+
 export interface EmailAddressChanges {
   display_name?: string;
+  is_default?: boolean;
+  inbox_id?: string;
   reply_to_mode?: EmailAddress["reply_to_mode"];
   from_name_style?: EmailAddress["from_name_style"];
   settings?: Partial<EmailAddress["settings"]>;
@@ -99,4 +113,17 @@ export function sendEmailAddressTest(workspace: string, address: string): Promis
   return request<{ sent_to: string }>("POST", `/email-addresses/${encodeURIComponent(address)}/tests`, undefined, {
     workspace,
   });
+}
+
+export function renderEmailTemplate(
+  workspace: string,
+  address: string,
+  style: Partial<ReplyStyle>,
+): Promise<{ html: string; text: string }> {
+  return request<{ html: string; text: string }>(
+    "POST",
+    `/email-addresses/${encodeURIComponent(address)}/template-renderings`,
+    style,
+    { workspace },
+  );
 }

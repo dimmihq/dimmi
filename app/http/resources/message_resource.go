@@ -7,7 +7,9 @@
 | note or an event, with who it is from and, for a reply, how its
 | delivery went. A deleted entry keeps its place with its text gone. An
 | author the workspace no longer has still shows, as a former teammate.
-| An event carries what happened, for the timeline to say in words.
+| An event carries what happened, for the timeline to say in words. An
+| email says how its text is to be read, and whether more of it can be
+| asked for than the body shows.
 |
 */
 
@@ -19,11 +21,12 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/dimmihq/dimmi/framework/markdown"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/redaction"
 )
 
 /*
@@ -35,11 +38,13 @@ const excerptLength = 140
 /*
 TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
-DeletedBy names who deleted a deleted entry. ReadAt is when the customer
-saw a teammate's reply, known only on channels that report it, such as
-the messenger; email never does. Mentions are the teammates and teams a
-note names, with their names, for showing its tokens. Reactions are a
-note's emoji reactions, each with who reacted.
+DeletedBy names who deleted a deleted entry. Redactions names the
+redaction rules that changed it before it was stored and how often, and
+is left out when none did. ReadAt is when the customer saw a teammate's
+reply, known only on channels that report it, such as the messenger;
+email never does. Mentions are the teammates and teams a note names,
+with their names, for showing its tokens. Reactions are a note's emoji
+reactions, each with who reacted.
 */
 type TimelineEntry struct {
 	ID              string          `json:"id"`
@@ -48,6 +53,9 @@ type TimelineEntry struct {
 	Type            string          `json:"type"`
 	Author          Author          `json:"author"`
 	Body            *string         `json:"body"`
+	BodyFormat      string          `json:"body_format"`
+	HasOriginal     bool            `json:"has_original"`
+	Truncated       bool            `json:"truncated"`
 	DeliveryStatus  *string         `json:"delivery_status"`
 	DeliveryError   *string         `json:"delivery_error"`
 	Substantive     bool            `json:"substantive"`
@@ -62,70 +70,9 @@ type TimelineEntry struct {
 	DeletedBy       *Remover        `json:"deleted_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
-}
+	Attachments     []Attachment    `json:"attachments"`
 
-/*
-Mention is a teammate or team a note names: its kind, member or team,
-its public id and its name when the note was written.
-*/
-type Mention struct {
-	Type string `json:"type"`
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-/*
-Reaction is one emoji on a note: how many teammates reacted with it and
-who, in the order they did.
-*/
-type Reaction struct {
-	Emoji     string   `json:"emoji"`
-	Count     int      `json:"count"`
-	MemberIDs []string `json:"member_ids"`
-}
-
-/*
-reactionsOf reads a note's reactions from the summary in its metadata.
-*/
-func reactionsOf(metadata json.RawMessage) []Reaction {
-	var read struct {
-		Reactions []struct {
-			Emoji     string     `json:"emoji"`
-			MemberIDs []ids.UUID `json:"member_ids"`
-		} `json:"reactions"`
-	}
-
-	out := []Reaction{}
-	if json.Unmarshal(metadata, &read) != nil {
-		return out
-	}
-
-	for _, r := range read.Reactions {
-		members := make([]string, 0, len(r.MemberIDs))
-		for _, id := range r.MemberIDs {
-			members = append(members, models.PublicID(models.PrefixMember, id))
-		}
-
-		out = append(out, Reaction{Emoji: r.Emoji, Count: len(members), MemberIDs: members})
-	}
-
-	return out
-}
-
-/*
-mentionsOf reads a note's mentions from its metadata, an empty list
-when it has none.
-*/
-func mentionsOf(metadata json.RawMessage) []Mention {
-	var read struct {
-		Mentions []Mention `json:"mentions"`
-	}
-
-	if json.Unmarshal(metadata, &read) != nil || read.Mentions == nil {
-		return []Mention{}
-	}
-
-	return read.Mentions
+	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
 
 /*
@@ -150,6 +97,38 @@ func removerOf(metadata json.RawMessage) *Remover {
 	}
 
 	return read.DeletedBy
+}
+
+/*
+MessageOriginal is the whole of a received message: its full text and
+its sanitized HTML, null when the mail had none. HTMLTooLarge and
+TextTruncated say the mail held more than was kept, which the raw email
+still has. RawAvailable says the caller can download that.
+*/
+type MessageOriginal struct {
+	ID            string  `json:"id"`
+	Object        string  `json:"object"`
+	Text          string  `json:"text"`
+	TextTruncated bool    `json:"text_truncated"`
+	HTML          *string `json:"html"`
+	HTMLTooLarge  bool    `json:"html_too_large"`
+	RawAvailable  bool    `json:"raw_available"`
+}
+
+/*
+NewMessageOriginal shapes the original of a message.
+*/
+func NewMessageOriginal(o messages.Original) MessageOriginal {
+	out := MessageOriginal{
+		ID: models.PublicID(models.PrefixMessage, o.Message.ID), Object: "message_original", Text: o.Text,
+		TextTruncated: o.Limits.FullTruncated, HTMLTooLarge: o.Limits.HTMLTooLarge, RawAvailable: o.RawAvailable,
+	}
+
+	if o.HTML != "" {
+		out.HTML = &o.HTML
+	}
+
+	return out
 }
 
 /*
@@ -184,10 +163,11 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 	out := TimelineEntry{
 		ID: models.PublicID(models.PrefixMessage, m.ID), Object: "message",
 		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID), Type: m.Type,
-		Author: author(m, contact, by), Body: m.Body, DeliveryStatus: m.DeliveryStatus,
+		Author: author(m, contact, by), Body: m.Body, BodyFormat: m.BodyFormat, HasOriginal: m.BodyFull != nil,
+		Truncated: models.ReadEmailMetadata(m.Metadata).Truncated, DeliveryStatus: m.DeliveryStatus,
 		DeliveryError: m.DeliveryError, Substantive: m.Substantive, Event: m.Event, SentAt: m.SentAt,
 		ScheduledSendAt: m.ScheduledSendAt, EditedAt: m.EditedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
+		UpdatedAt: m.UpdatedAt, Attachments: []Attachment{},
 	}
 
 	if m.AuthorType == string(enums.AuthorTypeMember) || m.AuthorType == string(enums.AuthorTypeAgent) {
@@ -200,7 +180,7 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 	}
 
 	if m.DeletedAt != nil {
-		out.Body = nil
+		out.Body, out.HasOriginal, out.Truncated = nil, false, false
 		out.DeletedBy = removerOf(m.Metadata)
 	}
 
@@ -208,19 +188,75 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		out.Event = json.RawMessage(`null`)
 	}
 
+	out.Redactions = redactionsOf(m.Metadata)
+
 	return out
 }
 
 /*
-NewTimelineEntries shapes a page of entries, in the order given.
+redactionsOf reads which rules changed the entry before it was stored,
+nil when none did.
 */
-func NewTimelineEntries(rows []models.Message, contact models.Contact, members Authors) []TimelineEntry {
+func redactionsOf(metadata json.RawMessage) []redaction.Hit {
+	var stamped struct {
+		Redactions []redaction.Hit `json:"redactions"`
+	}
+
+	if json.Unmarshal(metadata, &stamped) != nil {
+		return nil
+	}
+
+	return stamped.Redactions
+}
+
+/*
+NewTimelineEntries shapes a page of entries, in the order given, each
+with its files.
+*/
+func NewTimelineEntries(
+	rows []models.Message, contact models.Contact, members Authors, files map[ids.UUID][]messages.File,
+) []TimelineEntry {
 	out := make([]TimelineEntry, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, NewTimelineEntry(m, contact, members))
+		entry := NewTimelineEntry(m, contact, members)
+		if m.DeletedAt == nil {
+			for _, f := range files[m.ID] {
+				entry.Attachments = append(entry.Attachments, NewAttachment(f))
+			}
+		}
+
+		out = append(out, entry)
 	}
 
 	return out
+}
+
+/*
+Attachment is a file on a message as a teammate sees it. URL reads it
+for a few minutes and is null until the malware scan lets it through;
+Blocked marks a file the scan refused.
+*/
+type Attachment struct {
+	ID          string  `json:"id"`
+	Object      string  `json:"object"`
+	Filename    string  `json:"filename"`
+	ContentType string  `json:"content_type"`
+	SizeBytes   int64   `json:"size_bytes"`
+	Width       *int32  `json:"width"`
+	Height      *int32  `json:"height"`
+	URL         *string `json:"url"`
+	Blocked     bool    `json:"blocked"`
+}
+
+/*
+NewAttachment shapes a file of a message.
+*/
+func NewAttachment(f messages.File) Attachment {
+	return Attachment{
+		ID: models.PublicID(models.PrefixAttachment, f.Row.ID), Object: "attachment", Filename: f.Row.Filename,
+		ContentType: f.Row.ContentType, SizeBytes: f.Row.SizeBytes, Width: f.Row.Width, Height: f.Row.Height,
+		URL: f.URL, Blocked: f.Blocked,
+	}
 }
 
 /*
@@ -252,15 +288,15 @@ func author(m models.Message, contact models.Contact, member *conversations.Memb
 }
 
 /*
-excerpt returns the start of a message as plain text, its Markdown
-taken out, cut short where it is long.
+excerpt returns the start of a message as plain text, cut short where
+it is long.
 */
-func excerpt(body *string) string {
-	if body == nil {
+func excerpt(m *models.Message) string {
+	if m.Body == nil {
 		return ""
 	}
 
-	plain := strings.Join(strings.Fields(markdown.PlainText([]byte(*body))), " ")
+	plain := strings.Join(strings.Fields(models.BodyWords(*m.Body, m.BodyFormat)), " ")
 
 	runes := []rune(plain)
 	if len(runes) <= excerptLength {

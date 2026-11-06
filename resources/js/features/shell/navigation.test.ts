@@ -6,7 +6,8 @@ describe("selectedKey", () => {
 
     expect(selectedKey(sections, [], "/d/settings/members")).toBe("settings-members");
     expect(selectedKey(appSections(), [settingsLink], "/d/settings/profile")).toBe("settings");
-    expect(selectedKey(appSections(), [settingsLink], "/d/inbox/all")).toBe("inbox-all");
+    expect(selectedKey(appSections(), [settingsLink], "/d/inbox/all")).toBe("inbox");
+    expect(selectedKey(appSections(), [settingsLink], "/d/inbox/team_a/conv_1")).toBe("inbox");
   });
 
   it("selects nothing for a path no row holds", () => {

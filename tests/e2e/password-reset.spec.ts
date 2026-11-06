@@ -1,9 +1,11 @@
+import { verifyEmail } from "./support/database";
 import { createAccount, expect, inbox, test as it, signOut } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 it.describe("resetting a password", () => {
   it("mails a link, sets the new password from it and signs in", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
+    verifyEmail(person.email);
 
     await page.goto("/login");
     await page.getByRole("link", { name: "Forgot password?" }).click();

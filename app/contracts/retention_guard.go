@@ -21,11 +21,13 @@ import (
 
 /*
 The kinds of subject a job asks about: a whole workspace its purge is
-about to destroy, and a workspace's expired audit entries.
+about to destroy, a workspace's expired audit entries, and a
+conversation retention is about to move to the trash.
 */
 const (
-	RetentionWorkspace = "workspace"
-	RetentionAuditLog  = "audit_log"
+	RetentionWorkspace    = "workspace"
+	RetentionAuditLog     = "audit_log"
+	RetentionConversation = "conversation"
 )
 
 /*

@@ -12,7 +12,7 @@ import { useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Failure } from "@/features/email/setup/failure";
-import { Empty, Glyph, Item, Row, Section } from "@/features/settings/layout";
+import { Empty, Glyph, Item, Row, RowsSkeleton, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
 import { createEmailDomain, domainsKey, emailDomainsQuery } from "@/lib/api/email-domains";
 
@@ -45,7 +45,7 @@ function AddDomain() {
           onChange={setDomain}
           className="w-56"
         />
-        <Button size="small" disabled={!domain.trim() || add.isPending} onClick={() => add.mutate()}>
+        <Button size="small" loading={add.isPending} disabled={!domain.trim()} onClick={() => add.mutate()}>
           Add domain
         </Button>
       </Row>
@@ -63,6 +63,7 @@ export function DomainList({ manage }: { manage: boolean }) {
 
   return (
     <Section title="Sending domains" description="Prove you own a domain so replies come from it.">
+      {domains || error ? null : <RowsSkeleton rows={1} />}
       {domains && domains.length === 0 && !manage ? <Empty>No domain is set up yet.</Empty> : null}
       {domains?.map((domain) => (
         <Item

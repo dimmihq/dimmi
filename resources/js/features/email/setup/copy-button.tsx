@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 
 /*
- * CopyButton copies a value and says so for a moment.
+ * CopyButton copies a value and shows a check for a moment.
  */
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -21,7 +21,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
         window.setTimeout(() => setCopied(false), 2000);
       }}
     >
-      {copied ? "Copied" : "Copy"}
+      Copy
     </Button>
   );
 }

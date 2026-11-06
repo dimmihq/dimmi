@@ -158,11 +158,19 @@ func merged(current Preferences, in UpdatePreferencesInput) Preferences {
 }
 
 /*
-fixedViews returns the views every member has.
+PeopleView is the preference key of the customer directory's people
+list, whose saved columns are all it keeps.
+*/
+const PeopleView = "people"
+
+/*
+fixedViews returns the views every member has, and the people list of
+the customer directory, which keeps its columns beside them.
 */
 func fixedViews() []string {
 	return []string{
 		ViewMine, ViewUnassigned, ViewAll, ViewMentions, ViewSpam, ViewDeleted, string(enums.ConversationStatusSnoozed),
+		PeopleView,
 	}
 }
 

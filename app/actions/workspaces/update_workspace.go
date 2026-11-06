@@ -81,6 +81,8 @@ type UpdateWorkspaceInput struct {
 
 	CustomerFacingName      *string
 	ClearCustomerFacingName bool
+	LinkSafety              *LinkSafetyChange
+	Retention               *RetentionChange
 }
 
 /*
@@ -250,8 +252,8 @@ type inboxFlag struct {
 /*
 settingsChange applies to params the changes kept in the settings
 document: the requirement of a second factor, whether inbox lists show
-viewers, whether seen receipts name the teammate, and the name
-customers see, and returns the names of those that changed.
+viewers, whether seen receipts name the teammate, the name customers
+see and the link checks, and returns the names of those that changed.
 */
 func settingsChange(
 	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput,
@@ -319,6 +321,34 @@ func inboxSettingChanges(
 	if changed {
 		params.Settings = settings
 		changes = append(changes, fieldCustomerFacingName)
+	}
+
+	return safetyChanges(params, w, in, changes)
+}
+
+/*
+safetyChanges applies the link checks and retention periods, adding
+their names to the changes when they changed.
+*/
+func safetyChanges(
+	params *models.UpdateWorkspaceParams, w models.Workspace, in UpdateWorkspaceInput, changes []string,
+) ([]string, error) {
+	changed, err := applyLinkSafety(params, w, in.LinkSafety)
+	if err != nil {
+		return nil, err
+	}
+
+	if changed {
+		changes = append(changes, "link_safety")
+	}
+
+	changed, err = applyRetention(params, w, in.Retention, params.Now)
+	if err != nil {
+		return nil, err
+	}
+
+	if changed {
+		changes = append(changes, "retention")
 	}
 
 	return changes, nil

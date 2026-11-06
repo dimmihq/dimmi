@@ -31,7 +31,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
+	"github.com/dimmihq/dimmi/app/actions/contacts"
 	emailactions "github.com/dimmihq/dimmi/app/actions/email"
+	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
@@ -65,7 +67,9 @@ services providers build at boot, and Actions every business action.
 Channels holds the channel drivers replies go out through, and
 MessageErasers what erases the copies of a deleted message.
 WorkspaceInitializers are the setup steps every new workspace goes
-through, registered by the parts of the product that need defaults.
+through, registered by the parts of the product that need defaults, and
+ContactErasers what each part removes when a customer is erased, and
+ContactExporters what each adds to a customer's export.
 Retention is asked before any purge destroys data. Entitlements answers
 what a workspace may have and BillingStatus whether it ever paid.
 EmailChannel is the email channel driver, which also receives inbound
@@ -105,6 +109,8 @@ type App struct {
 	MessageErasers *jobs.MessageErasers
 
 	WorkspaceInitializers *workspaces.Initializers
+	ContactErasers        *erasures.Erasers
+	ContactExporters      *contacts.Exporters
 	Retention             contracts.RetentionGuard
 	Entitlements          contracts.Entitlements
 	BillingStatus         contracts.BillingStatus
@@ -125,22 +131,23 @@ type App struct {
 /*
 New returns the application before boot, with its configuration empty
 until the framework loads it, the full permission catalog, the login
-policy that allows every method, the access policy of every rule a
-workspace may set, no first-party app grants, no identity providers or
-workspace initializers yet, and no retention holds.
+policy that allows every method, no first-party app grants, no identity
+providers or workspace initializers yet, and no retention holds. The
+access policy is built at boot, when the clock exists.
 */
 func New(version string) *App {
 	return &App{
-		Version:      version,
-		Config:       &appconfig.Config{},
-		Permissions:  auth.NewCatalog(),
-		LoginPolicy:  auth.AllowAll{},
-		AccessPolicy: auth.DefaultAccessPolicy(),
-		AppGrants:    auth.NoAppGrants{},
+		Version:     version,
+		Config:      &appconfig.Config{},
+		Permissions: auth.NewCatalog(),
+		LoginPolicy: auth.AllowAll{},
+		AppGrants:   auth.NoAppGrants{},
 
 		IdentityProviders: providers.NewRegistry(),
 
 		WorkspaceInitializers: workspaces.NewInitializers(),
+		ContactErasers:        erasures.NewErasers(),
+		ContactExporters:      contacts.NewExporters(),
 		Retention:             retention.NoHolds{},
 		MessageErasers:        &jobs.MessageErasers{},
 	}

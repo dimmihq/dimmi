@@ -49,12 +49,13 @@ WidgetSettingsController serves the workspace's widgets. Base is this
 install's address.
 */
 type WidgetSettingsController struct {
-	Read   *widget.ShowWidgetSettings
-	Create *widget.CreateWidget
-	Change *widget.UpdateWidgetSettings
-	Remove *widget.DeleteWidget
-	IDs    *ids.Registry
-	Base   string
+	Read    *widget.ShowWidgetSettings
+	Create  *widget.CreateWidget
+	Change  *widget.UpdateWidgetSettings
+	Remove  *widget.DeleteWidget
+	Preview *widget.PreviewWidgetConfig
+	IDs     *ids.Registry
+	Base    string
 }
 
 /*

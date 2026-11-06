@@ -32,6 +32,7 @@ import {
   RiKey2Line,
   RiLightbulbLine,
   RiListOrdered2,
+  RiLoginBoxLine,
   RiMailLine,
   RiMegaphoneLine,
   RiNotification3Line,
@@ -200,12 +201,19 @@ export const settingsPages = {
     "/d/settings/saved-replies",
     "Answers your team sends often, with variables.",
   ),
+  "conversation-safety": page(
+    "settings-conversation-safety",
+    "Conversation safety",
+    RiShieldCheckLine,
+    "/d/settings/conversation-safety",
+    "Keep card numbers and other sensitive text out of conversations.",
+  ),
   messenger: page(
     "settings-messenger",
-    "Messenger",
+    "Messengers",
     RiChatSmile3Line,
     "/d/settings/messenger",
-    "The widget on your site: its look, texts and install.",
+    "The chat on your site or in your app: its look, texts and install.",
   ),
   email: page(
     "settings-email",
@@ -326,12 +334,26 @@ export const settingsPages = {
     "/d/settings/teams",
     "Groups of teammates conversations can be assigned to.",
   ),
+  roles: page(
+    "settings-roles",
+    "Roles",
+    RiShieldUserLine,
+    "/d/settings/roles",
+    "What each person in the workspace may do.",
+  ),
   "workspace-security": page(
     "settings-workspace-security",
     "Security",
     RiShieldCheckLine,
     "/d/settings/workspace-security",
     "Rules every member signs in under.",
+  ),
+  "single-sign-on": page(
+    "settings-single-sign-on",
+    "Single sign-on",
+    RiLoginBoxLine,
+    "/d/settings/single-sign-on",
+    "Sign in through your company's identity provider.",
   ),
   "audit-log": page(
     "settings-audit-log",
@@ -358,27 +380,20 @@ export const settingsPages = {
 export type SettingsSection = keyof typeof settingsPages;
 
 /*
- * appSections lists the workspace's pages in the sidebar, with the inbox
- * sections that come from the workspace's own teams, teammates and
- * inboxes after the fixed views. The trash shows only to those who may
- * delete conversations, and Unassigned only to those who can see
- * conversations nobody holds.
+ * inboxLink is the sidebar's one way into the inbox. The inbox opens on
+ * the view the person last looked at, and the list's title switches
+ * between views, so the sidebar stays short however many views, teams
+ * and teammates the workspace has.
  */
-export function appSections(
-  inbox: DashboardNavSection[] = [],
-  canDelete = false,
-  unassigned = true,
-): DashboardNavSection[] {
-  const more = canDelete ? [inboxViews.spam, inboxViews.deleted] : [inboxViews.spam];
-  const views = unassigned
-    ? [inboxViews.unassigned, inboxViews.all, inboxViews.mentions]
-    : [inboxViews.all, inboxViews.mentions];
+export const inboxLink = page("inbox", "Inbox", RiInbox2Line, "/d/inbox", "Every conversation, in the view you pick.");
 
+/*
+ * appSections lists the workspace's pages in the sidebar, the inbox
+ * showing how many open conversations are assigned to the person.
+ */
+export function appSections(inboxBadge?: number): DashboardNavSection[] {
   return [
-    { key: "you", items: [workspacePages.notifications, inboxViews.mine, inboxViews.snoozed] },
-    { key: "inbox", label: "Inbox", items: views },
-    ...inbox,
-    { key: "inbox-more", label: "More", items: more },
+    { key: "you", items: [workspacePages.notifications, { ...inboxLink, badge: inboxBadge || undefined }] },
     { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },
     {
       key: "workspace",
@@ -407,7 +422,9 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     pages.workspace,
     pages.members,
     pages.teams,
+    pages.roles,
     pages["workspace-security"],
+    pages["single-sign-on"],
     pages["audit-log"],
     pages.import,
   ];
@@ -419,7 +436,11 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
       label: "Account",
       items: [pages.profile, pages.preferences, pages.security, pages.tokens],
     },
-    { key: "inbox", label: "Inbox", items: [pages.inboxes, pages.tags, pages["saved-replies"]] },
+    {
+      key: "inbox",
+      label: "Inbox",
+      items: [pages.inboxes, pages.tags, pages["saved-replies"], pages["conversation-safety"]],
+    },
     { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
     { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
     {

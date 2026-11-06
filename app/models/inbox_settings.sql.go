@@ -98,7 +98,7 @@ func (q *Queries) FindInboxAPIConnection(ctx context.Context, arg FindInboxAPICo
 }
 
 const inboxesByIDs = `-- name: InboxesByIDs :many
-SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at FROM inboxes WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access FROM inboxes WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type InboxesByIDsParams struct {
@@ -126,6 +126,7 @@ func (q *Queries) InboxesByIDs(ctx context.Context, arg InboxesByIDsParams) ([]I
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Access,
 		); err != nil {
 			return nil, err
 		}
@@ -138,7 +139,7 @@ func (q *Queries) InboxesByIDs(ctx context.Context, arg InboxesByIDsParams) ([]I
 }
 
 const membersByIDs = `-- name: MembersByIDs :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.undo_send_seconds, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.undo_send_seconds, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = ANY ($2::uuid[])
@@ -189,6 +190,7 @@ func (q *Queries) MembersByIDs(ctx context.Context, arg MembersByIDsParams) ([]M
 			&i.WorkspaceMember.CapacityByChannel,
 			&i.WorkspaceMember.LastAssignedAt,
 			&i.WorkspaceMember.UndoSendSeconds,
+			&i.WorkspaceMember.CustomRoleID,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
@@ -206,6 +208,7 @@ func (q *Queries) MembersByIDs(ctx context.Context, arg MembersByIDsParams) ([]M
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
 			&i.User.Preferences,
+			&i.User.ManagedByOrganizationID,
 		); err != nil {
 			return nil, err
 		}
@@ -258,7 +261,7 @@ func (q *Queries) TeamsByIDs(ctx context.Context, arg TeamsByIDsParams) ([]Team,
 const updateInbox = `-- name: UpdateInbox :one
 UPDATE inboxes SET name = $1, settings = $2, updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access
 `
 
 type UpdateInboxParams struct {
@@ -288,6 +291,7 @@ func (q *Queries) UpdateInbox(ctx context.Context, arg UpdateInboxParams) (Inbox
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Access,
 	)
 	return i, err
 }

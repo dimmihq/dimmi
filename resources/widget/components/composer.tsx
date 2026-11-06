@@ -28,6 +28,7 @@ export function Composer({ options }: { options: Options }) {
   return (
     <form className="composer" data-controller="composer" data-action="submit->send">
       <div className="chips" data-target="chips" />
+      <p className="composer-note" data-target="note" role="status" hidden />
       <textarea
         data-target="input"
         rows={1}

@@ -51,10 +51,14 @@ type Route struct {
 
 /*
 Plan finds the route of a reply to the customer on the connection,
-refusing a channel this server cannot send on, and a pushing channel
-without an address for the customer.
+refusing a customer being erased, a channel this server cannot send on,
+and a pushing channel without an address for the customer.
 */
 func (d Delivery) Plan(conn models.ChannelConnection, contact models.Contact) (Route, error) {
+	if contact.DeletedAt != nil {
+		return Route{}, exceptions.ErrContactUnreachable
+	}
+
 	driver, err := d.Channels.Driver(conn.Type)
 	if errors.Is(err, channels.ErrUnknownChannel) {
 		return Route{}, exceptions.ErrChannelUnsupported

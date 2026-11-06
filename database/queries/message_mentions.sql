@@ -39,8 +39,9 @@ WHERE workspace_id = @workspace_id AND message_id = @message_id
   AND NOT (workspace_member_id = ANY (@keep::uuid[]));
 
 -- name: CountUnreadMentions :one
--- CountUnreadMentions counts the conversations the member may see whose
--- notes mention them after what they last read.
+-- CountUnreadMentions counts the conversations whose notes mention the
+-- member after what they last read. Being mentioned lets them read the
+-- conversation, so no other access rule applies.
 SELECT count(DISTINCT mm.conversation_id)::bigint
 FROM message_mentions mm
 JOIN conversations c ON c.workspace_id = mm.workspace_id AND c.id = mm.conversation_id
@@ -48,10 +49,6 @@ WHERE mm.workspace_id = @workspace_id
   AND mm.workspace_member_id = @member_id
   AND c.deleted_at IS NULL
   AND NOT c.spam
-  AND dimmi_conversation_visible(
-      c.assignee_member_id, c.assignee_team_id, @access_mode::text, sqlc.narg(access_viewer)::uuid,
-      @access_teams::uuid[], @access_unassigned::boolean
-  )
   AND mm.message_id > coalesce((
       SELECT r.last_read_message_id FROM conversation_reads r
       WHERE r.workspace_id = mm.workspace_id AND r.conversation_id = mm.conversation_id

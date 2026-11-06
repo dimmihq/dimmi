@@ -116,3 +116,33 @@ func (c *LiveCredentials) tokenAlive(ctx context.Context, p *Principal) (bool, e
 
 	return alive, nil
 }
+
+/*
+Refreshed returns a copy of the caller as their session now stands, for
+a credential that stays open while the person keeps working: someone
+active over the API since a connection opened is not idle, and someone
+who signed in again is not expired. A session that ended leaves the
+caller as they were, for Alive to refuse.
+*/
+func (c *LiveCredentials) Refreshed(ctx context.Context, p *Principal) (*Principal, error) {
+	if p.Kind != KindSession {
+		return p, nil
+	}
+
+	records, err := c.Sessions.Sessions(ctx, p.User.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list sessions to refresh one: %w", err)
+	}
+
+	fresh := *p
+
+	for _, record := range records {
+		if record.ID == p.CredentialID {
+			fresh.AuthenticatedAt, fresh.LastActivityAt = record.AuthenticatedAt, WorkedAt(record)
+			fresh.SignIn = SignInFrom(record)
+			fresh.SSOConnectionID, fresh.AuthDomain = record.ConnectionID, record.AuthDomain
+		}
+	}
+
+	return &fresh, nil
+}

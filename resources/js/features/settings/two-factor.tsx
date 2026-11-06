@@ -28,7 +28,7 @@ import {
 import { passkeysSupported } from "@/lib/passkeys";
 
 import { Action, Danger } from "./controls";
-import { Empty, Glyph, Item, Row, Section } from "./layout";
+import { Empty, Glyph, Item, Row, RowsSkeleton, Section } from "./layout";
 import { useRecentAuth } from "./recent-auth";
 import { CodesDialog, NameDialog, SetupDialog } from "./two-factor-dialogs";
 import { isLastFactor, remainingLabel, twoFactorState, usedLabel } from "./two-factor-state";
@@ -98,7 +98,7 @@ export function TwoFactorSection({ hasPassword }: { hasPassword: boolean }) {
         </div>
       ) : null}
       {isPending ? (
-        <Empty>Loading…</Empty>
+        <RowsSkeleton rows={1} />
       ) : (
         <Methods
           factors={factors}

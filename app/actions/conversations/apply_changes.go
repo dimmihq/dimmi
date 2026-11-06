@@ -24,8 +24,11 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/tags"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -47,6 +50,8 @@ type Changes struct {
 	SnoozeOption string
 	Note         *string
 	Attributes   Attributes
+	AddTags      tags.Refs
+	RemoveTags   []ids.UUID
 	Unread       *bool
 }
 
@@ -76,21 +81,22 @@ ApplyConversationChanges changes a conversation.
 
 Rules:
   - The caller needs conversations:write.
-  - Fields apply in the order spam, assignment, status, details, unread,
-    in one transaction; one failing field undoes them all.
+  - Fields apply in the order spam, assignment, status, details, tags,
+    unread, in one transaction; one failing field undoes them all.
   - A field already as asked is skipped.
 
 Events: [appevents.ConversationMarkedSpam] or
 [appevents.ConversationUnmarkedSpam],
 [appevents.ConversationAssigned], the status events,
-[appevents.ConversationUpdated], [appevents.ConversationPriorityChanged]
-and [appevents.ConversationRead], for what changed.
+[appevents.ConversationUpdated], [appevents.ConversationPriorityChanged],
+[appevents.ConversationTagged], [appevents.ConversationUntagged] and
+[appevents.ConversationRead], for what changed.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
 [exceptions.ErrMemberInactive], [exceptions.ErrTeamNotFound],
 [exceptions.ErrInvalidTransition], [exceptions.ErrSnoozeInPast],
-[exceptions.ErrSnoozeTooFar], [exceptions.ErrInboxNotFound], or a
-wrapped database error.
+[exceptions.ErrSnoozeTooFar], [exceptions.ErrInboxNotFound],
+[exceptions.ErrTagLimitReached], or a wrapped database error.
 */
 type ApplyConversationChanges struct {
 	DB     *database.DB
@@ -152,7 +158,7 @@ apply runs each step in order.
 */
 func (ap *applier) apply(ctx context.Context, ch Changes) error {
 	for _, step := range []func(context.Context, Changes) error{
-		ap.spam, ap.assign, ap.status, ap.attributes, ap.unread,
+		ap.spam, ap.assign, ap.status, ap.attributes, ap.tags, ap.unread,
 	} {
 		if err := step(ctx, ch); err != nil {
 			return err
@@ -270,12 +276,39 @@ func (ap *applier) status(ctx context.Context, ch Changes) error {
 }
 
 /*
-attributes applies the subject, priority and inbox.
+attributes applies the subject, priority and inbox. A conversation only
+moves into an inbox the caller may open, so nobody can send work where
+they cannot follow it.
 */
 func (ap *applier) attributes(ctx context.Context, ch Changes) error {
+	if to := ch.Attributes.InboxID; to != nil && !VisibleScope(ap.m).OpensInbox(*to) {
+		return exceptions.ErrInboxNotFound
+	}
+
 	c, fields, err := ap.w.SetAttributes(ctx, ap.c, ch.Attributes)
 	ap.c = c
 	ap.changed = append(ap.changed, fields...)
+
+	return err
+}
+
+/*
+tags adds, then removes, the tags named.
+*/
+func (ap *applier) tags(ctx context.Context, ch Changes) error {
+	added, err := ap.w.AddTags(ctx, ap.c, ch.AddTags, nil)
+	if err != nil {
+		return err
+	}
+
+	if added {
+		ap.changed = append(ap.changed, "add_tags")
+	}
+
+	removed, err := ap.w.RemoveTags(ctx, ap.c, ch.RemoveTags)
+	if removed {
+		ap.changed = append(ap.changed, "remove_tags")
+	}
 
 	return err
 }

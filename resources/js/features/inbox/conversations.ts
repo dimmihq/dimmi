@@ -6,7 +6,15 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
-import type { ContactSummary, Conversation, MentionRef, Message, Reaction, TimelineEvent } from "@/lib/api/inbox";
+import type {
+  Attachment,
+  ContactSummary,
+  Conversation,
+  MentionRef,
+  Message,
+  Reaction,
+  TimelineEvent,
+} from "@/lib/api/inbox";
 import { formatRelative } from "@/lib/i18n/format";
 
 /*
@@ -64,6 +72,13 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * customer, from a teammate, from dimmi (the agent that answers
  * customers), an internal note, or an event such as a handover.
  */
+/*
+ * ThreadEntry is one entry as the thread shows it. A said entry carries
+ * how its text is read, Markdown or plain words, and for received email
+ * whether more of it can be opened and whether its body was cut short.
+ * Failed holds why a reply never reached the customer, null otherwise.
+ * Files are what the message carries.
+ */
 export type ThreadEntry =
   | {
       kind: "customer" | "teammate" | "dimmi" | "note";
@@ -73,11 +88,17 @@ export type ThreadEntry =
       iso?: string;
       seenAt?: string | null;
       text: string;
+      format: Message["body_format"];
+      original: boolean;
+      truncated: boolean;
+      failed: string | null;
+      redacted?: number;
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
       mentions?: MentionRef[];
       reactions?: Reaction[];
+      files: Attachment[];
     }
   | { kind: "event"; id: string; at: string; iso?: string; text: string };
 
@@ -104,7 +125,21 @@ export function eventText(event: TimelineEvent): string {
     return event.to === "none" ? `${actor} removed the priority` : `${actor} set the priority to ${event.to}`;
   }
 
+  if (event.name === "conversation.tagged") {
+    return `${actor} tagged the conversation ${(event.tags ?? []).join(", ")}`;
+  }
+  if (event.name === "conversation.untagged") {
+    return `${actor} removed the tag ${(event.tags ?? []).join(", ")}`;
+  }
+
   return `${actor} ${statusWords[event.name] ?? "changed the conversation"}`;
+}
+
+/*
+ * filesOf returns the files the message carries.
+ */
+function filesOf(message: Message): Attachment[] {
+  return message.attachments ?? [];
 }
 
 export function toEntry(message: Message): ThreadEntry {
@@ -117,38 +152,46 @@ export function toEntry(message: Message): ThreadEntry {
     const by = message.deleted_by?.name;
     return { kind: "event", id: message.id, at, iso, text: by ? `Message deleted by ${by}` : "Message deleted" };
   }
-  const text = message.body ?? "";
-  const author = message.author.name;
+  const said = {
+    id: message.id,
+    author: message.author.name,
+    at,
+    iso,
+    text: message.body ?? "",
+    format: message.body_format ?? "markdown",
+    original: message.has_original ?? false,
+    truncated: message.truncated ?? false,
+    failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
+    authorId: message.author.id,
+    files: filesOf(message),
+  } as const;
+  const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
+
+  return byAuthor(message, redacted ? { ...said, redacted } : said);
+}
+
+type SaidFields = Omit<Extract<ThreadEntry, { author: string }>, "kind">;
+
+/*
+ * byAuthor finishes a said entry by who wrote it: a note keeps its
+ * mentions and reactions, and a reply to the customer when they saw it.
+ */
+function byAuthor(message: Message, said: SaidFields): ThreadEntry {
   if (message.type === "note") {
     return {
       kind: "note",
-      id: message.id,
-      author,
-      at,
-      iso,
-      text,
-      authorId: message.author.id,
+      ...said,
       edited: Boolean(message.edited_at),
       mentions: message.mentions ?? [],
       reactions: message.reactions ?? [],
     };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", id: message.id, author, at, iso, text };
+    return { kind: "customer", ...said };
   }
   if (message.author.type === "agent") {
-    return { kind: "dimmi", id: message.id, author, at, iso, text, seenAt: message.read_at ?? null };
+    return { kind: "dimmi", ...said, seenAt: message.read_at ?? null };
   }
 
-  return {
-    kind: "teammate",
-    id: message.id,
-    author,
-    at,
-    iso,
-    seenAt: message.read_at ?? null,
-    text,
-    held: Boolean(message.scheduled_send_at),
-    authorId: message.author.id,
-  };
+  return { kind: "teammate", ...said, seenAt: message.read_at ?? null, held: Boolean(message.scheduled_send_at) };
 }

@@ -1,5 +1,6 @@
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { deliverEmail, rawEmail } from "./support/inbound";
+import { openAddress } from "./support/inbox";
 
 /*
  * suffixOf is the unique part of the person's address, so workspaces
@@ -20,6 +21,7 @@ it.describe("email settings", () => {
     await page.goto("/d/settings/email");
 
     await expect(page.getByRole("heading", { level: 1, name: "Email" })).toBeVisible();
+    await openAddress(page);
     const forwarding = page.getByTestId("forwarding-address").first();
     await expect(forwarding).toHaveText(/@inbound\.trydimmi\.com$/);
     await expect(page.getByText("Waiting for first email")).toBeVisible();
@@ -54,17 +56,17 @@ it.describe("email settings", () => {
   it("sends a forwarding test and connects another address", async ({ page, person, request }) => {
     await createAccount(request, person, `Test ${suffixOf(person)}`);
     await signIn(page, person);
-    await page.goto("/d/settings/email");
+    await openAddress(page);
 
     await page.getByRole("button", { name: "Send test email" }).click();
     await expect(page.getByText(/^Sent to .*It shows as receiving once it comes back\.$/)).toBeVisible();
 
     const added = `sales@acme-${suffixOf(person)}.test`;
+    await page.goto("/d/settings/email");
     await page.getByRole("textbox", { name: "New email address" }).fill(added);
     await page.getByRole("button", { name: "Add address" }).click();
-    await expect(page.getByRole("region", { name: added })).toBeVisible();
-    await expect(page.getByRole("region", { name: added }).getByTestId("forwarding-address")).toHaveText(
-      /\.sales@inbound\.trydimmi\.com$/,
-    );
+    await expect(page.getByRole("region", { name: "Addresses" }).getByRole("link", { name: added })).toBeVisible();
+    await openAddress(page, added);
+    await expect(page.getByTestId("forwarding-address")).toHaveText(/\.sales@inbound\.trydimmi\.com$/);
   });
 });

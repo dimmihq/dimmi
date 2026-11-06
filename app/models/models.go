@@ -90,6 +90,16 @@ type Company struct {
 	DeletedAt        *time.Time      `json:"deleted_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
+	Notes            *string         `json:"notes"`
+}
+
+type CompanyTag struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	CompanyID     ids.UUID  `json:"company_id"`
+	TagID         ids.UUID  `json:"tag_id"`
+	CreatedByType string    `json:"created_by_type"`
+	CreatedByID   *ids.UUID `json:"created_by_id"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Contact struct {
@@ -116,6 +126,38 @@ type Contact struct {
 	DeletedAt            *time.Time              `json:"deleted_at"`
 	CreatedAt            time.Time               `json:"created_at"`
 	UpdatedAt            time.Time               `json:"updated_at"`
+	Notes                *string                 `json:"notes"`
+	Placeholder          bool                    `json:"placeholder"`
+}
+
+type ContactErasure struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ContactID           ids.UUID        `json:"contact_id"`
+	Status              string          `json:"status"`
+	RequestedByMemberID *ids.UUID       `json:"requested_by_member_id"`
+	ScheduledFor        time.Time       `json:"scheduled_for"`
+	CompletedAt         *time.Time      `json:"completed_at"`
+	Counts              json.RawMessage `json:"counts"`
+	IdentitiesStash     []byte          `json:"identities_stash"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type ContactExport struct {
+	ID                  ids.UUID   `json:"id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	ContactID           ids.UUID   `json:"contact_id"`
+	RequestedByMemberID *ids.UUID  `json:"requested_by_member_id"`
+	Status              string     `json:"status"`
+	IncludeNotes        bool       `json:"include_notes"`
+	Disk                *string    `json:"disk"`
+	Path                *string    `json:"path"`
+	SizeBytes           *int64     `json:"size_bytes"`
+	Error               *string    `json:"error"`
+	ExpiresAt           *time.Time `json:"expires_at"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 type ContactIdentity struct {
@@ -127,6 +169,15 @@ type ContactIdentity struct {
 	Verified    bool      `json:"verified"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type ContactTag struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	ContactID     ids.UUID  `json:"contact_id"`
+	TagID         ids.UUID  `json:"tag_id"`
+	CreatedByType string    `json:"created_by_type"`
+	CreatedByID   *ids.UUID `json:"created_by_id"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Conversation struct {
@@ -205,6 +256,7 @@ type ConversationTag struct {
 	CreatedByType  string    `json:"created_by_type"`
 	CreatedByID    *ids.UUID `json:"created_by_id"`
 	CreatedAt      time.Time `json:"created_at"`
+	MessageID      *ids.UUID `json:"message_id"`
 }
 
 type ConversationView struct {
@@ -322,12 +374,13 @@ type EmailSendingStat struct {
 type EmailSignature struct {
 	ID                ids.UUID  `json:"id"`
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
-	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	WorkspaceMemberID *ids.UUID `json:"workspace_member_id"`
 	EmailAddressID    *ids.UUID `json:"email_address_id"`
 	Body              string    `json:"body"`
 	Enabled           bool      `json:"enabled"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	LogoAttachmentID  *ids.UUID `json:"logo_attachment_id"`
 }
 
 type EmailSuppression struct {
@@ -419,6 +472,15 @@ type Inbox struct {
 	DeletedAt     *time.Time      `json:"deleted_at"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
+	Access        string          `json:"access"`
+}
+
+type InboxAccess struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	InboxID     ids.UUID  `json:"inbox_id"`
+	TeamID      *ids.UUID `json:"team_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Invitation struct {
@@ -440,6 +502,7 @@ type Invitation struct {
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 	RemindedAt        *time.Time `json:"reminded_at"`
+	CustomRoleID      *ids.UUID  `json:"custom_role_id"`
 }
 
 type Maintenance struct {
@@ -473,6 +536,8 @@ type Message struct {
 	AuthorType          string                  `json:"author_type"`
 	AuthorID            *ids.UUID               `json:"author_id"`
 	Body                *string                 `json:"body"`
+	BodyFormat          string                  `json:"body_format"`
+	BodyFull            *string                 `json:"body_full"`
 	BodyHtml            *string                 `json:"body_html"`
 	Event               json.RawMessage         `json:"event"`
 	ChannelMessageID    *string                 `json:"channel_message_id"`
@@ -605,6 +670,21 @@ type Organization struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+type OrganizationDomain struct {
+	ID                ids.UUID   `json:"id"`
+	OrganizationID    ids.UUID   `json:"organization_id"`
+	Domain            string     `json:"domain"`
+	VerificationToken string     `json:"verification_token"`
+	Status            string     `json:"status"`
+	VerifiedAt        *time.Time `json:"verified_at"`
+	LastCheckedAt     *time.Time `json:"last_checked_at"`
+	VerifiedVia       *string    `json:"verified_via"`
+	SsoConnectionID   *ids.UUID  `json:"sso_connection_id"`
+	FailedSince       *time.Time `json:"failed_since"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
 type OutboundEmail struct {
 	ID                ids.UUID        `json:"id"`
 	WorkspaceID       ids.UUID        `json:"workspace_id"`
@@ -661,6 +741,53 @@ type PersonalAccessToken struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type RedactionRule struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Name        string    `json:"name"`
+	Pattern     string    `json:"pattern"`
+	Replacement string    `json:"replacement"`
+	Enabled     bool      `json:"enabled"`
+	Position    int32     `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type Role struct {
+	ID                ids.UUID  `json:"id"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	Name              string    `json:"name"`
+	Description       *string   `json:"description"`
+	BaseRole          string    `json:"base_role"`
+	Permissions       []string  `json:"permissions"`
+	CreatedByMemberID *ids.UUID `json:"created_by_member_id"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type SSOConnection struct {
+	ID                  ids.UUID          `json:"id"`
+	OrganizationID      ids.UUID          `json:"organization_id"`
+	Protocol            string            `json:"protocol"`
+	Name                string            `json:"name"`
+	Status              string            `json:"status"`
+	Config              json.RawMessage   `json:"config"`
+	SecretEncrypted     encryption.Sealed `json:"secret_encrypted"`
+	JitEnabled          bool              `json:"jit_enabled"`
+	DefaultRole         string            `json:"default_role"`
+	DefaultTeamIds      []ids.UUID        `json:"default_team_ids"`
+	GroupRoleMap        json.RawMessage   `json:"group_role_map"`
+	Enforced            bool              `json:"enforced"`
+	TestedAt            *time.Time        `json:"tested_at"`
+	LastLoginAt         *time.Time        `json:"last_login_at"`
+	MetadataRefreshedAt *time.Time        `json:"metadata_refreshed_at"`
+	MetadataError       *string           `json:"metadata_error"`
+	LastError           json.RawMessage   `json:"last_error"`
+	CreatedByUserID     *ids.UUID         `json:"created_by_user_id"`
+	CreatedAt           time.Time         `json:"created_at"`
+	UpdatedAt           time.Time         `json:"updated_at"`
+}
+
 type SavedReply struct {
 	ID            ids.UUID  `json:"id"`
 	WorkspaceID   ids.UUID  `json:"workspace_id"`
@@ -704,6 +831,8 @@ type Session struct {
 	ExpiresAt       time.Time       `json:"expires_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	SsoConnectionID *ids.UUID       `json:"sso_connection_id"`
+	AuthDomain      *string         `json:"auth_domain"`
 }
 
 type SnoozeList struct {
@@ -720,6 +849,7 @@ type Tag struct {
 	Color       *string   `json:"color"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	Icon        *string   `json:"icon"`
 }
 
 type Team struct {
@@ -748,23 +878,24 @@ type TeamMember struct {
 }
 
 type User struct {
-	ID                   ids.UUID        `json:"id"`
-	Name                 string          `json:"name"`
-	Email                string          `json:"email"`
-	EmailVerifiedAt      *time.Time      `json:"email_verified_at"`
-	PasswordHash         *string         `json:"password_hash"`
-	TwoFactorConfirmedAt *time.Time      `json:"two_factor_confirmed_at"`
-	AvatarPath           *string         `json:"avatar_path"`
-	Locale               *string         `json:"locale"`
-	Timezone             *string         `json:"timezone"`
-	LastSeenAt           *time.Time      `json:"last_seen_at"`
-	CreatedAt            time.Time       `json:"created_at"`
-	UpdatedAt            time.Time       `json:"updated_at"`
-	DeletedAt            *time.Time      `json:"deleted_at"`
-	PasswordChangedAt    *time.Time      `json:"password_changed_at"`
-	RiskFlags            []string        `json:"risk_flags"`
-	CreatedVia           *string         `json:"created_via"`
-	Preferences          json.RawMessage `json:"preferences"`
+	ID                      ids.UUID        `json:"id"`
+	Name                    string          `json:"name"`
+	Email                   string          `json:"email"`
+	EmailVerifiedAt         *time.Time      `json:"email_verified_at"`
+	PasswordHash            *string         `json:"password_hash"`
+	TwoFactorConfirmedAt    *time.Time      `json:"two_factor_confirmed_at"`
+	AvatarPath              *string         `json:"avatar_path"`
+	Locale                  *string         `json:"locale"`
+	Timezone                *string         `json:"timezone"`
+	LastSeenAt              *time.Time      `json:"last_seen_at"`
+	CreatedAt               time.Time       `json:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+	DeletedAt               *time.Time      `json:"deleted_at"`
+	PasswordChangedAt       *time.Time      `json:"password_changed_at"`
+	RiskFlags               []string        `json:"risk_flags"`
+	CreatedVia              *string         `json:"created_via"`
+	Preferences             json.RawMessage `json:"preferences"`
+	ManagedByOrganizationID *ids.UUID       `json:"managed_by_organization_id"`
 }
 
 type UserAuthFactor struct {
@@ -844,6 +975,7 @@ type WidgetSetting struct {
 	ChangelogTabEnabled     bool            `json:"changelog_tab_enabled"`
 	IntercomShim            bool            `json:"intercom_shim"`
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
+	HomeLinks               json.RawMessage `json:"home_links"`
 }
 
 type Workspace struct {
@@ -864,6 +996,9 @@ type Workspace struct {
 	DeletedByUserID        *ids.UUID       `json:"deleted_by_user_id"`
 	PurgeAfter             *time.Time      `json:"purge_after"`
 	SuspendedReason        *string         `json:"suspended_reason"`
+	OnboardingStep         string          `json:"onboarding_step"`
+	OnboardingCompletedAt  *time.Time      `json:"onboarding_completed_at"`
+	LogoPath               *string         `json:"logo_path"`
 }
 
 type WorkspaceMember struct {
@@ -890,4 +1025,5 @@ type WorkspaceMember struct {
 	CapacityByChannel            json.RawMessage `json:"capacity_by_channel"`
 	LastAssignedAt               *time.Time      `json:"last_assigned_at"`
 	UndoSendSeconds              *int16          `json:"undo_send_seconds"`
+	CustomRoleID                 *ids.UUID       `json:"custom_role_id"`
 }

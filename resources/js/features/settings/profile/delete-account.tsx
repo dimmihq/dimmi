@@ -102,8 +102,8 @@ export function DeleteAccount({ email, hasPassword }: { email: string; hasPasswo
             <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
-            <Button type="submit" variant="danger" disabled={blocked || !matches || remove.isPending}>
-              {remove.isPending ? "Deleting…" : "Delete account"}
+            <Button type="submit" variant="danger" loading={remove.isPending} disabled={blocked || !matches}>
+              Delete account
             </Button>
           </ModalFooter>
         </form>

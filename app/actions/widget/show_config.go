@@ -59,7 +59,7 @@ func (a *ShowWidgetConfig) Handle(ctx context.Context, in ShowWidgetConfigInput)
 	locale := a.Strings.Negotiate(widgetstrings.Request{
 		Requested: in.Locale, Forced: forcedLocale(widget), Default: "en",
 	})
-	key := fmt.Sprintf("%s:%d:%s:%s", widget.ID, widget.ConfigVersion, locale, in.BaseURL)
+	key := fmt.Sprintf("%s:%d:%s:%s:%s", widget.ID, widget.ConfigVersion, locale, in.BaseURL, companyKey(in.Resolved))
 
 	if config, ok := a.Directory.config(key); ok {
 		return config, nil
@@ -73,6 +73,33 @@ func (a *ShowWidgetConfig) Handle(ctx context.Context, in ShowWidgetConfigInput)
 	a.Directory.keepConfig(key, config)
 
 	return config, nil
+}
+
+/*
+company is who the messenger speaks for: the workspace's name and its
+logo, addressed on this server so a customer's site can load it.
+*/
+func company(r Resolved, baseURL string) ConfigCompany {
+	out := ConfigCompany{Name: r.Workspace.Name}
+	if logo := r.Workspace.LogoURL(); logo != nil {
+		url := baseURL + *logo
+		out.LogoURL = &url
+	}
+
+	return out
+}
+
+/*
+companyKey tells built configs apart when the workspace's name or logo
+changes, which does not move the widget's config version.
+*/
+func companyKey(r Resolved) string {
+	logo := ""
+	if r.Workspace.LogoPath != nil {
+		logo = *r.Workspace.LogoPath
+	}
+
+	return r.Workspace.Name + "|" + logo
 }
 
 /*
@@ -110,11 +137,11 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 
 	return Config{
 		Object: "widget_config", AppID: models.PublicID(models.PrefixWidget, widget.ID),
-		ConfigVersion: widget.ConfigVersion, Company: ConfigCompany{Name: r.Workspace.Name},
+		ConfigVersion: widget.ConfigVersion, Company: company(r, in.BaseURL),
 		Appearance: configAppearance(appearance), Texts: texts, Locale: locale, Dir: widgetstrings.Direction(locale),
 		Locales: a.Strings.Locales(), Tabs: configTabs(widget), OpenTo: "home",
 		ShowTeamAvatars: widget.ShowTeamAvatars, ShowAvailability: widget.ShowAvailability, CustomerStatus: true,
-		DelayNotice: true, HomeLinks: []ConfigHomeLink{}, Features: configFeatures(widget), Branding: branding,
+		DelayNotice: true, HomeLinks: HomeLinks(widget), Features: configFeatures(widget), Branding: branding,
 		Realtime: ConfigRealtime{
 			URL: in.BaseURL + "/connection/uni_sse", TokenURL: in.BaseURL + "/widget/v1/realtime-tokens",
 			PollingIntervalMS: a.PollingInterval,

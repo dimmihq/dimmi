@@ -7,23 +7,31 @@
  * says so in the console instead of failing quietly. Elements on the page
  * marked data-dimmi="open", "close" or "toggle" drive it without any code.
  *
- * The options start from the defaults and the content from a sample until
- * the server sends both; Dimmi("update", { ... }) merges changes over the
- * options and re-renders, keeping the panel open on the same tab and the
- * views that already loaded. Until the server is wired, content arrives
- * after a simulated latency, 700 ms unless the loader's data-latency says
- * otherwise; Dimmi("simulate", { latency }) changes it and loads every
- * view again, to preview loading states, and Dimmi("simulate", { message })
- * delivers a message from the team. On a real page the sample's message
- * arrives a few seconds after load, so the unread states can be seen.
+ * On a customer's page the messenger connects to its server: the widget's
+ * config is merged over the defaults before the launcher shows, and the
+ * views draw the visitor's real conversations. A widget the server does
+ * not serve here, such as a wrong app id or a site not allowed, shows
+ * nothing and says why in the console.
+ *
+ * A preview, marked data-preview on the snippet, has no server: it loads
+ * sample content as a chunk of its own, never fetched on a customer's
+ * page, and shows it after a simulated latency, 700 ms unless data-latency
+ * says otherwise, so the design can be judged. Dimmi("simulate", ...)
+ * changes the latency or delivers a message from the team there.
+ * Dimmi("update", { ... }) merges changes over the options and re-renders
+ * either way, keeping the panel open on the same tab. In a preview,
+ * Dimmi("configure", config) takes a config as the server would serve it,
+ * which is how the messenger settings show unsaved changes.
  */
-import { sample } from "./content";
+import type { Content } from "./content";
 import { ComposerController } from "./controllers/composer_controller";
 import { MessengerController } from "./controllers/messenger_controller";
 import { ScrollController } from "./controllers/scroll_controller";
 import { SearchController } from "./controllers/search_controller";
 import { VoiceController } from "./controllers/voice_controller";
 import { Application } from "./lib/controller";
+import { Live } from "./lib/live";
+import { type Config, fromConfig, links } from "./lib/map";
 import { report } from "./lib/report";
 import { defaults, merge, type Options, type OptionsUpdate } from "./options";
 import { render, style } from "./render";
@@ -33,6 +41,8 @@ import styles from "./styles/index.css?inline";
 export interface Widget {
   readonly messenger: MessengerController | undefined;
   readonly options: Options;
+  readonly live: Live | undefined;
+  readonly ready: Promise<void>;
   update(changes: OptionsUpdate): void;
 }
 
@@ -43,8 +53,27 @@ interface Simulation {
   message?: string;
 }
 
+/*
+ * blank is what a connected messenger draws before the server answers.
+ */
+const blank: Content = {
+  company: "",
+  reply_time: "",
+  team: [],
+  thread: [],
+  incoming: undefined,
+  conversations: [],
+  links: [],
+  collections: [],
+  articles: [],
+  popular: [],
+  changelog: [],
+  unread_changelog: 0,
+};
+
 export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefined {
-  if (!win.__dimmi) {
+  const settings = win.__dimmi;
+  if (!settings) {
     report("error", "loader_missing", "load the widget with /widget/v1/loader.js, not the core file.");
     return undefined;
   }
@@ -55,7 +84,6 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(styles);
   root.adoptedStyleSheets = [sheet];
-  doc.body.append(host);
 
   const app = new Application(root)
     .register("messenger", MessengerController)
@@ -65,7 +93,11 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     .register("scroll", ScrollController);
   const find = () => app.controller<MessengerController>(root.firstElementChild as HTMLElement, "messenger");
   let options = defaults;
-  let latency = win.__dimmi.latency ?? 700;
+  let latency = settings.preview ? (settings.latency ?? 700) : 0;
+  let live: Live | undefined;
+  let preview: typeof import("./preview") | undefined;
+  let sample: Content = blank;
+  let ready: Promise<void> = Promise.resolve();
 
   const draw = () => {
     const before = find();
@@ -75,8 +107,10 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     );
     app.stop();
     style(host, options);
-    root.innerHTML = render(options, sample);
-    (root.firstElementChild as HTMLElement).dataset.latency = String(latency);
+    root.innerHTML = render(options, live ? live.content() : sample);
+    const messenger = root.firstElementChild as HTMLElement;
+    messenger.dataset.latency = String(latency);
+    messenger.dataset.live = String(Boolean(live));
     for (const view of root.querySelectorAll<HTMLElement>(".view")) {
       if (loaded.includes(view.dataset.view)) {
         view.dataset.state = "ready";
@@ -97,6 +131,12 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     get options() {
       return options;
     },
+    get live() {
+      return live;
+    },
+    get ready() {
+      return ready;
+    },
     update(changes) {
       options = merge(options, changes);
       draw();
@@ -104,10 +144,14 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   /*
-   * simulate stands in for the server while it is not wired: a new latency
-   * loads every view again, and a message arrives as if the team sent it.
+   * simulate stands in for the server in a preview: a new latency loads
+   * every view again, and a message arrives as if the team sent it.
    */
   const simulate = ({ latency: next, message }: Simulation = {}) => {
+    if (live) {
+      report("warn", "simulate_live", 'Dimmi("simulate") works only in a preview.');
+      return;
+    }
     if (next !== undefined) {
       latency = Math.max(0, Number(next) || 0);
       for (const view of root.querySelectorAll<HTMLElement>(".view")) {
@@ -117,8 +161,26 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     }
     if (message) {
       const conversation = sample.conversations[0]?.number ?? 0;
-      find()?.receive({ conversation, from: "team", author: "Maya Kerr", body: message, at: "now" });
+      find()?.receive({ conversation, from: "team", author: preview?.teammate ?? "", body: message, at: "now" });
     }
+  };
+
+  /*
+   * configure shows a config as the server would serve it, in a preview:
+   * its look and words, and the company it speaks for.
+   */
+  const configure = (config: Config = {}) => {
+    if (live) {
+      report("warn", "configure_live", 'Dimmi("configure") works only in a preview.');
+      return;
+    }
+    sample = {
+      ...sample,
+      company: config.company?.name || sample.company,
+      logo: config.company?.logo_url ?? null,
+      links: config.home_links ? links(config) : sample.links,
+    };
+    widget.update(fromConfig(config, options.texts));
   };
 
   const run = ([name, argument]: Command) => {
@@ -129,30 +191,146 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       widget.update(argument as OptionsUpdate);
     } else if (name === "simulate") {
       simulate(argument as Simulation);
+    } else if (name === "configure") {
+      configure(argument as Config);
+    } else if (name === "shutdown" || name === "logout") {
+      void live?.session.signOut();
     } else {
       report("warn", "unknown_command", `Dimmi("${String(name)}") is not supported yet.`);
     }
   };
 
-  draw();
-  app.start();
-  root.addEventListener("dimmi:connect", () => app.connect(root));
-  const queued = win.Dimmi?.q ?? [];
-  const dimmi: Queue = (...command) => run(command);
-  win.Dimmi = dimmi;
-  queued.forEach(run);
+  const listen = () => {
+    root.addEventListener("dimmi:connect", () => app.connect(root));
+    root.addEventListener("dimmi:converse", (event) => {
+      void live?.openConversation((event as CustomEvent<{ conversation?: string }>).detail?.conversation);
+    });
+    root.addEventListener("dimmi:send", (event) => {
+      const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string }>).detail;
+      if (preview) {
+        preview.answer(root, sent);
+      } else {
+        void live?.send(sent.body, sent.files);
+      }
+    });
+    root.addEventListener("dimmi:typing", () => live?.typing(true));
+    root.addEventListener("submit", (event) => {
+      const form =
+        event.target instanceof HTMLFormElement && event.target.matches("[data-capture]") ? event.target : null;
+      if (form) {
+        event.preventDefault();
+        void live?.capture(String(new FormData(form).get("email") ?? ""));
+      }
+    });
+    doc.addEventListener("click", (event) => {
+      const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-dimmi]") : null;
+      if (trigger?.dataset.dimmi) {
+        run([trigger.dataset.dimmi]);
+      }
+    });
+  };
 
-  const incoming = sample.incoming;
-  if (win.__dimmi.demo && incoming) {
-    setTimeout(() => find()?.receive(incoming), 4000);
+  const mount = () => {
+    doc.body.append(host);
+    draw();
+    app.start();
+    listen();
+    const queued = win.Dimmi?.q ?? [];
+    const dimmi: Queue = (...command) => run(command);
+    win.Dimmi = dimmi;
+    queued.forEach(run);
+  };
+
+  if (settings.preview) {
+    ready = import("./preview").then((loaded) => {
+      preview = loaded;
+      sample = loaded.sample;
+      mount();
+    });
+    return widget;
   }
 
-  doc.addEventListener("click", (event) => {
-    const trigger = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-dimmi]") : null;
-    if (trigger?.dataset.dimmi) {
-      run([trigger.dataset.dimmi]);
+  live = new Live(
+    {
+      root,
+      options: () => options,
+      update: (changes) => widget.update(changes),
+      notify: ({ conversation, body, author }) => {
+        find()?.alert({ conversation, from: "team", author, body, at: "" });
+      },
+      showing: (conversation) => {
+        const messenger = find();
+        return Boolean(messenger?.isOpen && messenger.tab === "conversation" && live?.open === conversation);
+      },
+    },
+    browserOf(win),
+    settings.appId,
+    `${settings.apiBase}/widget/v1`,
+    blank,
+  );
+
+  ready = live.start().then((shown) => {
+    if (shown) {
+      mount();
     }
   });
 
   return widget;
+}
+
+/*
+ * browserOf gathers what the connection needs from the page.
+ */
+function browserOf(win: Window) {
+  const storage = {
+    get: (key: string) => {
+      try {
+        return win.localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    set: (key: string, value: string) => {
+      try {
+        win.localStorage.setItem(key, value);
+      } catch {
+        return;
+      }
+    },
+    remove: (key: string) => {
+      try {
+        win.localStorage.removeItem(key);
+      } catch {
+        return;
+      }
+    },
+  };
+
+  return {
+    fetch: win.fetch.bind(win),
+    storage,
+    eventSource: (url: string) => stream(url),
+    now: () => Date.now(),
+    uuid: () => win.crypto.randomUUID(),
+    setTimeout: (fn: () => void, ms: number) => win.setTimeout(fn, ms),
+    clearTimeout: (handle: unknown) => win.clearTimeout(handle as number),
+    setInterval: (fn: () => void, ms: number) => win.setInterval(fn, ms),
+    page: () => ({ url: win.location.href, title: win.document.title, referrer: win.document.referrer }),
+  };
+}
+
+/*
+ * stream opens an event source and hands on each event's data.
+ */
+function stream(url: string) {
+  const source = new EventSource(url);
+  const out: {
+    onmessage: ((event: { data: string }) => void) | null;
+    onerror: ((event: unknown) => void) | null;
+    close(): void;
+  } = { onmessage: null, onerror: null, close: () => source.close() };
+  source.onmessage = (event) => out.onmessage?.({ data: String(event.data) });
+  source.onerror = (event) => out.onerror?.(event);
+
+  return out;
 }

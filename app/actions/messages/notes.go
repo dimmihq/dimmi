@@ -9,9 +9,9 @@
 |
 | A developer relays what a customer wrote on a conversation of the API
 | channel, and only there. It reaches the team like any customer
-| message: a closed conversation opens again and a sleeping one wakes.
-| A dedupe key makes a relayed message count once however often it is
-| sent.
+| message: a closed conversation opens again and a sleeping one wakes,
+| unless it is marked as spam. A dedupe key makes a relayed message
+| count once on its conversation however often it is sent.
 |
 */
 
@@ -161,8 +161,10 @@ API channel.
 Rules:
   - The caller needs conversations:write.
   - Only conversations on an api channel take relayed messages.
-  - A closed conversation reopens and a snoozed one wakes.
-  - The same dedupe key returns the message already relayed.
+  - A closed conversation reopens and a snoozed one wakes, unless it is
+    marked as spam.
+  - The same dedupe key on the same conversation returns the message
+    already relayed; on another conversation it is a message of its own.
 
 Events: [appevents.MessageCreated], and the reopening or waking.
 
@@ -195,7 +197,7 @@ func (a *AddContactMessage) Handle(ctx context.Context, in ContactMessageInput) 
 
 		var key *string
 		if in.DedupeKey != nil {
-			key = new("api:" + *in.DedupeKey)
+			key = new("api:" + s.c.ID.String() + ":" + *in.DedupeKey)
 		}
 
 		if out, err = s.replay(ctx, key); err != nil || out.Replayed {
@@ -215,7 +217,8 @@ func (a *AddContactMessage) Handle(ctx context.Context, in ContactMessageInput) 
 }
 
 /*
-relay writes the message as the customer and wakes the conversation.
+relay writes the message as the customer and wakes the conversation,
+which one marked as spam never does.
 */
 func (s *session) relay(ctx context.Context, body string, key *string) error {
 	conn, err := conversations.Connection(ctx, s.w.Q, s.c)
@@ -240,7 +243,7 @@ func (s *session) relay(ctx context.Context, body string, key *string) error {
 		return err
 	}
 
-	if s.c.Status == string(enums.ConversationStatusOpen) {
+	if s.c.Status == string(enums.ConversationStatusOpen) || s.c.Spam {
 		return nil
 	}
 

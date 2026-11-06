@@ -26,27 +26,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/mail"
-	"github.com/dimmihq/dimmi/framework/ratelimit"
+	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/exceptions"
-	appmail "github.com/dimmihq/dimmi/app/mail"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
-
-/*
-warningInterval is the least time between two warnings to one account
-that strangers are guessing its password.
-*/
-const warningInterval = 24 * time.Hour
 
 /*
 AttemptLoginInput is what the person typed and where they typed it.
@@ -80,8 +72,9 @@ Rules:
   - With Reauth on a signed-in session, the password must belong to the
     session's user.
   - A user with a second factor gets a challenge instead of a session.
-  - The owner of an account locked against strangers is warned by mail,
-    at most once a day.
+  - A failure is recorded on its account, and the owner of an account
+    locked against strangers warned by mail at most once a day, by a
+    queued job that every failure gets alike.
 
 Errors: [exceptions.ErrInvalidCredentials],
 [exceptions.ErrTooManyAttempts], [exceptions.ErrReauthUserMismatch],
@@ -92,12 +85,9 @@ type AttemptLogin struct {
 	DB                  *database.DB
 	Hash                *hashing.Manager
 	Clock               clock.Clock
-	Mail                *mail.Manager
-	Limiter             *ratelimit.Limiter
-	Links               appauth.Links
+	Queue               *queue.Queue
 	LoginPolicy         appauth.LoginPolicyResolver
 	Lockout             *appauth.Lockout
-	SecurityLog         *appauth.SecurityLog
 	CompletePrimaryAuth *CompletePrimaryAuth
 	DummyHash           string
 }
@@ -116,7 +106,7 @@ type signInTry struct {
 Handle checks the credentials and starts a session.
 */
 func (a *AttemptLogin) Handle(ctx context.Context, in AttemptLoginInput) (SignedIn, error) {
-	email := strings.ToLower(strings.TrimSpace(in.Email))
+	email := mail.CanonicalAddress(in.Email)
 
 	if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, email, appauth.MethodPassword); err != nil {
 		return SignedIn{}, err
@@ -145,20 +135,19 @@ func (a *AttemptLogin) Handle(ctx context.Context, in AttemptLoginInput) (Signed
 /*
 begin finds the account the email names and describes the try for the
 lockout, telling whether this browser signed in as this account before.
+An email without an account asks the same, of no account.
 */
 func (a *AttemptLogin) begin(ctx context.Context, email string, client appauth.Client) (signInTry, error) {
 	try := signInTry{attempt: appauth.Attempt{IP: client.IP, Email: email}, client: client}
 
 	user, err := models.New(a.DB).FindUserByEmail(ctx, email)
-	if errors.Is(err, database.ErrNotFound) {
-		return try, nil
-	}
-
-	if err != nil {
+	if err != nil && !errors.Is(err, database.ErrNotFound) {
 		return try, fmt.Errorf("find user to sign in: %w", err)
 	}
 
-	try.account = &user
+	if err == nil {
+		try.account = &user
+	}
 
 	if client.DeviceID() == "" {
 		return try, nil
@@ -213,9 +202,8 @@ func (a *AttemptLogin) verify(ctx context.Context, try signInTry, password strin
 }
 
 /*
-fail counts the failure toward the lockout and logs it for an existing
-account, then returns the reason. A busy server counts nothing. When
-the failure locks the account against strangers, its owner is warned.
+fail counts the failure toward the lockout and hands it on to be
+recorded, then returns the reason. A busy server counts nothing.
 */
 func (a *AttemptLogin) fail(ctx context.Context, try signInTry, reason error) error {
 	if errors.Is(reason, exceptions.ErrAuthBusy) {
@@ -232,56 +220,22 @@ func (a *AttemptLogin) fail(ctx context.Context, try signInTry, reason error) er
 		event = appauth.EventLoginLocked
 	}
 
-	if err := a.log(ctx, try, event); err != nil {
+	if err := a.record(ctx, try, event, locks.Account); err != nil {
 		return err
-	}
-
-	if locks.Account {
-		if err := a.warn(ctx, try); err != nil {
-			return err
-		}
 	}
 
 	return reason
 }
 
 /*
-warn mails the owner of an account that strangers keep guessing its
-password, at most once a day. An email without an account has nobody to
-warn.
-*/
-func (a *AttemptLogin) warn(ctx context.Context, try signInTry) error {
-	if try.account == nil {
-		return nil
-	}
-
-	due, err := appauth.Within(ctx, a.Limiter, appauth.Rate{
-		Key: "mail:suspicious_sign_in:" + try.account.ID.String(), Limit: 1, Window: warningInterval,
-	})
-	if err != nil || !due {
-		return err
-	}
-
-	err = appmail.ToUser(a.Mail, *try.account).Queue(ctx, appmail.SuspiciousSignInAttemptsMail{
-		Name: try.account.Name, SecurityURL: a.Links.Security(),
-	})
-	if err != nil {
-		return fmt.Errorf("queue suspicious sign-in warning: %w", err)
-	}
-
-	return nil
-}
-
-/*
-refuse logs a locked attempt on an existing account and returns the
-refusal.
+refuse records a locked attempt and returns the refusal.
 */
 func (a *AttemptLogin) refuse(ctx context.Context, try signInTry, refusal error) error {
 	if !errors.Is(refusal, exceptions.ErrTooManyAttempts) {
 		return refusal
 	}
 
-	if err := a.log(ctx, try, appauth.EventLoginLocked); err != nil {
+	if err := a.record(ctx, try, appauth.EventLoginLocked, false); err != nil {
 		return err
 	}
 
@@ -289,30 +243,24 @@ func (a *AttemptLogin) refuse(ctx context.Context, try signInTry, refusal error)
 }
 
 /*
-log writes a failed or locked sign-in to the account's security log. A
-try at an email without an account has no log to write to, and a run
-of failures from one address writes one failure a minute, so guessing
-cannot flood the log.
+record queues the failure to be written to the security log of the
+account its email names, and its owner warned when the failure locked
+the account against strangers.
+
+SECURITY: Every failure queues the same job, account or not, and does
+nothing else that depends on the account, so the answer takes as long
+for an email with an account as for one without.
 */
-func (a *AttemptLogin) log(ctx context.Context, try signInTry, event string) error {
-	if try.account == nil {
-		return nil
-	}
-
-	if event == appauth.EventLoginFailed {
-		due, err := appauth.Within(ctx, a.Limiter, appauth.Rate{
-			Key: "security_event:login_failed:" + try.account.ID.String() + ":" + try.client.IP, Limit: 1,
-			Window: time.Minute,
-		})
-		if err != nil || !due {
-			return err
-		}
-	}
-
-	return a.SecurityLog.Record(ctx, appauth.Entry{
-		UserID: try.account.ID, Type: event, Client: try.client,
-		Metadata: map[string]any{"method": appauth.MethodPassword},
+func (a *AttemptLogin) record(ctx context.Context, try signInTry, event string, warn bool) error {
+	err := a.Queue.Push(ctx, jobs.RecordFailedSignInArgs{
+		Email: try.attempt.Email, Event: event, Method: appauth.MethodPassword, IP: try.client.IP,
+		UserAgent: try.client.UserAgent, Warn: warn,
 	})
+	if err != nil {
+		return fmt.Errorf("queue failed sign-in: %w", err)
+	}
+
+	return nil
 }
 
 /*

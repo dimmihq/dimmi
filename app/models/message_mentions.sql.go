@@ -53,10 +53,6 @@ WHERE mm.workspace_id = $1
   AND mm.workspace_member_id = $2
   AND c.deleted_at IS NULL
   AND NOT c.spam
-  AND dimmi_conversation_visible(
-      c.assignee_member_id, c.assignee_team_id, $3::text, $4::uuid,
-      $5::uuid[], $6::boolean
-  )
   AND mm.message_id > coalesce((
       SELECT r.last_read_message_id FROM conversation_reads r
       WHERE r.workspace_id = mm.workspace_id AND r.conversation_id = mm.conversation_id
@@ -65,25 +61,15 @@ WHERE mm.workspace_id = $1
 `
 
 type CountUnreadMentionsParams struct {
-	WorkspaceID      ids.UUID   `json:"workspace_id"`
-	MemberID         ids.UUID   `json:"member_id"`
-	AccessMode       string     `json:"access_mode"`
-	AccessViewer     *ids.UUID  `json:"access_viewer"`
-	AccessTeams      []ids.UUID `json:"access_teams"`
-	AccessUnassigned bool       `json:"access_unassigned"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	MemberID    ids.UUID `json:"member_id"`
 }
 
-// CountUnreadMentions counts the conversations the member may see whose
-// notes mention them after what they last read.
+// CountUnreadMentions counts the conversations whose notes mention the
+// member after what they last read. Being mentioned lets them read the
+// conversation, so no other access rule applies.
 func (q *Queries) CountUnreadMentions(ctx context.Context, arg CountUnreadMentionsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUnreadMentions,
-		arg.WorkspaceID,
-		arg.MemberID,
-		arg.AccessMode,
-		arg.AccessViewer,
-		arg.AccessTeams,
-		arg.AccessUnassigned,
-	)
+	row := q.db.QueryRow(ctx, countUnreadMentions, arg.WorkspaceID, arg.MemberID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err

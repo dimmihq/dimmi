@@ -7,7 +7,8 @@
 | the caller must be an active member of the workspace, through a
 | credential that holds the permission, and a conversation must be one
 | the member may see, by the same visibility rule the conversation lists
-| use. A refusal never says why, so a channel name cannot be used to
+| use, and a workspace's own rules must let them in as they would an API
+| request. A refusal never says why, so a channel name cannot be used to
 | probe whether a conversation or member exists elsewhere.
 |
 | The messenger widget never asks: the server subscribes a visitor to
@@ -50,12 +51,16 @@ type WidgetSession struct {
 
 /*
 Authorizers guard the product's channels. Resolve decides a caller's
-membership of a workspace exactly as for API requests.
+membership of a workspace exactly as for API requests, Policy what the
+workspace requires of them, and Live reads the caller as their session
+now stands.
 */
 type Authorizers struct {
 	DB      *database.DB
 	IDs     *ids.Registry
 	Resolve *workspaces.ResolveWorkspace
+	Policy  appauth.AccessPolicy
+	Live    *appauth.LiveCredentials
 }
 
 /*
@@ -126,9 +131,32 @@ func (a *Authorizers) Conversation(
 		return false, err
 	}
 
-	seen := conversation.DeletedAt == nil && m.ConversationScope().Contains(conversation)
+	if conversation.DeletedAt != nil || !m.Can(readConversations) {
+		return false, nil
+	}
 
-	return m.Can(readConversations) && seen, nil
+	return a.reads(ctx, m, conversation)
+}
+
+/*
+reads reports whether the member may read the conversation, a mention
+counting as much as their scope.
+*/
+func (a *Authorizers) reads(ctx context.Context, m authz.Membership, c models.Conversation) (bool, error) {
+	var reads bool
+
+	scoped := tenancy.With(ctx, c.WorkspaceID.String())
+	err := a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		reads, err = authz.Reads(ctx, models.New(tx), m.ConversationScope(), c)
+
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("check realtime conversation: %w", err)
+	}
+
+	return reads, nil
 }
 
 /*
@@ -190,7 +218,12 @@ func (a *Authorizers) membership(
 		return authz.Membership{}, false, fmt.Errorf("resolve realtime workspace: %w", err)
 	}
 
-	return m, true, nil
+	fresh, err := a.Live.Refreshed(ctx, caller)
+	if err != nil {
+		return authz.Membership{}, false, fmt.Errorf("refresh realtime caller: %w", err)
+	}
+
+	return m, a.Policy.Evaluate(ctx, fresh, m.Workspace, m.Principal.Role) == nil, nil
 }
 
 /*

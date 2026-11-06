@@ -33,7 +33,7 @@ it.describe("mentions", () => {
 
     await signIn(guest, ada);
     await expect(guest.locator('[data-realtime="connected"]')).toBeAttached();
-    const mentions = guest.getByRole("link", { name: /^Mentions/ });
+    const mentions = guest.getByRole("dialog", { name: "Views" }).getByRole("button", { name: /^Mentions/ });
 
     await page.goto(`/d/inbox/unassigned/${id}`);
     await openComposer(page, /^Note/);
@@ -48,6 +48,7 @@ it.describe("mentions", () => {
     const note = page.getByRole("article", { name: `Internal note from ${person.name}` });
     await expect(note).toContainText("Can you check @Ada Lovelace please");
 
+    await guest.locator("button[data-view-picker]").click();
     await expect(mentions).toContainText("1");
     await mentions.click();
     await expect(guest.getByRole("radio", { name: "Unread" })).toBeChecked();

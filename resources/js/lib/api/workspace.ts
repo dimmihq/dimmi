@@ -6,26 +6,42 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
+import type { LinkSafety } from "@/features/inbox/links/link-checks";
+
 import { request, requestFile } from "./client";
 
 export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  logo_url: string | null;
   timezone: string;
   locale: string;
   test_mode: boolean;
   require_two_factor: boolean;
+  link_safety?: LinkSafety;
+  retention?: Retention;
   seen_receipt_shows_name: boolean;
   customer_facing_name: string | null;
+  onboarding: WorkspaceOnboarding;
   deleted_at: string | null;
   purge_after: string | null;
+}
+
+/*
+ * WorkspaceOnboarding is how far a workspace's setup has come: the step
+ * its owners reached, and when they finished, null until then.
+ */
+export interface WorkspaceOnboarding {
+  step: string;
+  completed_at: string | null;
 }
 
 export interface Member {
   id: string;
   role: "owner" | "admin" | "member";
   status: "active" | "deactivated";
+  custom_role?: { id: string; name: string } | null;
   user: { id: string; name: string; email: string; email_verified: boolean; avatar_url: string | null };
   sign_in_locked: boolean | null;
   two_factor_enabled: boolean | null;
@@ -77,6 +93,8 @@ export interface WorkspaceChanges {
   timezone?: string;
   locale?: string;
   require_two_factor?: boolean;
+  link_safety?: Partial<LinkSafety>;
+  retention?: Partial<Retention>;
   seen_receipt_shows_name?: boolean;
   customer_facing_name?: string | null;
 }
@@ -84,6 +102,7 @@ export interface WorkspaceChanges {
 export interface MemberChanges {
   role?: Member["role"];
   status?: Member["status"];
+  custom_role_id?: string | null;
 }
 
 export function workspaceQuery(workspace: string) {
@@ -144,8 +163,47 @@ export function callerQuery(workspace: string) {
   });
 }
 
+/*
+ * createWorkspace makes a workspace the caller owns, such as their first
+ * one during onboarding.
+ */
+export function createWorkspace(name: string): Promise<Workspace> {
+  return request<Workspace>("POST", "/workspaces", { name });
+}
+
+/*
+ * updateOnboarding records the setup step the workspace reached, and
+ * finishes setup when completed is set.
+ */
+export function updateOnboarding(workspace: string, step: string, completed = false): Promise<Workspace> {
+  return request<Workspace>("PATCH", "/workspace/onboarding", { step, completed }, { workspace });
+}
+
+/*
+ * createTestConversations starts the five made-up conversations a new
+ * workspace practices on.
+ */
+export function createTestConversations(workspace: string): Promise<{ count: number }> {
+  return request<{ count: number }>("POST", "/workspace/onboarding/test-conversations", undefined, { workspace });
+}
+
 export function updateWorkspace(workspace: string, changes: WorkspaceChanges): Promise<Workspace> {
   return request<Workspace>("PATCH", "/workspace", changes, { workspace });
+}
+
+/*
+ * uploadLogo replaces the workspace's logo; the server keeps a small
+ * square redrawn from the file.
+ */
+export function uploadLogo(workspace: string, file: File): Promise<Workspace> {
+  const form = new FormData();
+  form.append("logo", file);
+
+  return request<Workspace>("PUT", "/workspace/logo", form, { workspace });
+}
+
+export function removeLogo(workspace: string): Promise<void> {
+  return request<void>("DELETE", "/workspace/logo", undefined, { workspace });
 }
 
 /*
@@ -221,4 +279,16 @@ export function importMembers(workspace: string, file: File, dryRun: boolean): P
   form.append("dry_run", String(dryRun));
 
   return request<MemberImport>("POST", "/member-imports", form, { workspace });
+}
+
+export interface Retention {
+  closed_conversation_days: number | null;
+  spam_days: number;
+  trash_days: number;
+  raw_email_days: number;
+  export_days: number;
+}
+
+export function previewRetention(workspace: string, days: number): Promise<{ count: number }> {
+  return request<{ count: number }>("POST", "/retention-previews", { closed_conversation_days: days }, { workspace });
 }

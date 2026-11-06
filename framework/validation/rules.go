@@ -58,6 +58,7 @@ func builtins() map[string]check {
 		"uuid":     text(isUUID),
 		"alpha":    text(func(s string) bool { return s != "" && strings.Trim(s, letters()) == "" }),
 		"alphanum": text(func(s string) bool { return s != "" && strings.Trim(s, letters()+digits()) == "" }),
+		"hexcolor": text(isHexColor),
 	}
 }
 
@@ -241,6 +242,18 @@ func isURL(s string) bool {
 	u, err := url.Parse(s)
 
 	return err == nil && u.Scheme != "" && (u.Host != "" || u.Opaque != "")
+}
+
+/*
+isHexColor reports whether the text is a CSS color in hexadecimal, in
+its short or full form.
+*/
+func isHexColor(s string) bool {
+	if len(s) != 4 && len(s) != 7 || s[0] != '#' {
+		return false
+	}
+
+	return strings.Trim(s[1:], digits()+"abcdefABCDEF") == ""
 }
 
 /*

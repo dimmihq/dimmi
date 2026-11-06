@@ -298,7 +298,7 @@ func (q *Queries) RevokeWidgetSession(ctx context.Context, arg RevokeWidgetSessi
 const revokeWidgetSessionsForContact = `-- name: RevokeWidgetSessionsForContact :many
 UPDATE widget_sessions SET revoked_at = $1::timestamptz, revoke_reason = $2::text, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND contact_id = $4 AND revoked_at IS NULL
-RETURNING id
+RETURNING id, contact_id
 `
 
 type RevokeWidgetSessionsForContactParams struct {
@@ -308,8 +308,13 @@ type RevokeWidgetSessionsForContactParams struct {
 	ContactID   ids.UUID  `json:"contact_id"`
 }
 
+type RevokeWidgetSessionsForContactRow struct {
+	ID        ids.UUID `json:"id"`
+	ContactID ids.UUID `json:"contact_id"`
+}
+
 // RevokeWidgetSessionsForContact ends every live session of the contact.
-func (q *Queries) RevokeWidgetSessionsForContact(ctx context.Context, arg RevokeWidgetSessionsForContactParams) ([]ids.UUID, error) {
+func (q *Queries) RevokeWidgetSessionsForContact(ctx context.Context, arg RevokeWidgetSessionsForContactParams) ([]RevokeWidgetSessionsForContactRow, error) {
 	rows, err := q.db.Query(ctx, revokeWidgetSessionsForContact,
 		arg.Now,
 		arg.Reason,
@@ -320,13 +325,13 @@ func (q *Queries) RevokeWidgetSessionsForContact(ctx context.Context, arg Revoke
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ids.UUID
+	var items []RevokeWidgetSessionsForContactRow
 	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i RevokeWidgetSessionsForContactRow
+		if err := rows.Scan(&i.ID, &i.ContactID); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -337,7 +342,7 @@ func (q *Queries) RevokeWidgetSessionsForContact(ctx context.Context, arg Revoke
 const revokeWidgetSessionsForWidget = `-- name: RevokeWidgetSessionsForWidget :many
 UPDATE widget_sessions SET revoked_at = $1::timestamptz, revoke_reason = $2::text, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND widget_settings_id = $4 AND revoked_at IS NULL
-RETURNING id
+RETURNING id, contact_id
 `
 
 type RevokeWidgetSessionsForWidgetParams struct {
@@ -347,8 +352,13 @@ type RevokeWidgetSessionsForWidgetParams struct {
 	WidgetSettingsID ids.UUID  `json:"widget_settings_id"`
 }
 
+type RevokeWidgetSessionsForWidgetRow struct {
+	ID        ids.UUID `json:"id"`
+	ContactID ids.UUID `json:"contact_id"`
+}
+
 // RevokeWidgetSessionsForWidget ends every live session of a deleted widget.
-func (q *Queries) RevokeWidgetSessionsForWidget(ctx context.Context, arg RevokeWidgetSessionsForWidgetParams) ([]ids.UUID, error) {
+func (q *Queries) RevokeWidgetSessionsForWidget(ctx context.Context, arg RevokeWidgetSessionsForWidgetParams) ([]RevokeWidgetSessionsForWidgetRow, error) {
 	rows, err := q.db.Query(ctx, revokeWidgetSessionsForWidget,
 		arg.Now,
 		arg.Reason,
@@ -359,13 +369,13 @@ func (q *Queries) RevokeWidgetSessionsForWidget(ctx context.Context, arg RevokeW
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ids.UUID
+	var items []RevokeWidgetSessionsForWidgetRow
 	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i RevokeWidgetSessionsForWidgetRow
+		if err := rows.Scan(&i.ID, &i.ContactID); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

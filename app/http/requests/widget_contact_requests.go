@@ -27,3 +27,16 @@ UpdateWidgetContactRequest is the input of PATCH /widget/v1/contact.
 type UpdateWidgetContactRequest struct {
 	Body UpdateWidgetContactBody
 }
+
+/*
+StoreWidgetPingRequest is the input of POST /widget/v1/pings: the page the
+visitor is on and context their page passes along.
+*/
+type StoreWidgetPingRequest struct {
+	Body struct {
+		_       struct{}        `additionalProperties:"true"`
+		Page    *WidgetPageBody `json:"page,omitempty"`
+		Context map[string]any  `json:"context,omitempty"`
+		Visible *bool           `json:"visible,omitempty"`
+	}
+}

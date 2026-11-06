@@ -53,8 +53,8 @@ export function ForgotPasswordForm() {
           isInvalid={Boolean(emailError)}
           errorMessage={emailError}
         />
-        <Button type="submit" className="w-full" disabled={send.isPending}>
-          {send.isPending ? "Sending…" : "Send reset link"}
+        <Button type="submit" className="w-full" loading={send.isPending}>
+          Send reset link
         </Button>
       </form>
       <AuthFooter>
@@ -151,8 +151,8 @@ export function ResetPasswordForm({ id, token, minLength, onSignedIn }: ResetPas
           isInvalid={Boolean(passwordError)}
           errorMessage={passwordError}
         />
-        <Button type="submit" className="w-full" disabled={reset.isPending}>
-          {reset.isPending ? "Saving…" : "Save password and sign in"}
+        <Button type="submit" className="w-full" loading={reset.isPending}>
+          Save password and sign in
         </Button>
       </form>
       <AuthFooter>
