@@ -42,20 +42,20 @@ func aiRoutes(r *routing.Router, a *app.App) {
 		IDs:             a.IDs,
 	}
 
-	routing.Get(r, "/ai/agent", "api.v1.ai.agent.show", c.Agent).Ability("ai:read")
-	routing.Patch(r, "/ai/agent", "api.v1.ai.agent.update", c.UpdateAgent).Ability("ai:write")
+	routing.Get(r, "/ai/agent", "ai.agent.show", c.Agent).Ability("ai:read")
+	routing.Patch(r, "/ai/agent", "ai.agent.update", c.UpdateAgent).Ability("ai:write")
 
-	routing.Get(r, "/ai/keys", "api.v1.ai.keys.index", c.Keys).Ability("ai:read")
-	routing.Post(r, "/ai/keys", "api.v1.ai.keys.store", c.StoreKey).Ability("ai:keys").
+	routing.Get(r, "/ai/keys", "ai.keys.index", c.Keys).Ability("ai:read")
+	routing.Post(r, "/ai/keys", "ai.keys.store", c.StoreKey).Ability("ai:keys").
 		Middleware("idempotent").Status(fhttp.StatusCreated)
-	routing.Patch(r, "/ai/keys/{key}", "api.v1.ai.keys.update", c.PatchKey).Ability("ai:keys")
-	routing.Delete(r, "/ai/keys/{key}", "api.v1.ai.keys.destroy", c.DeleteKey).Ability("ai:keys").
+	routing.Patch(r, "/ai/keys/{key}", "ai.keys.update", c.PatchKey).Ability("ai:keys")
+	routing.Delete(r, "/ai/keys/{key}", "ai.keys.destroy", c.DeleteKey).Ability("ai:keys").
 		Status(fhttp.StatusNoContent)
-	routing.Post(r, "/ai/keys/{key}/test", "api.v1.ai.keys.test.store", c.TestKey).Ability("ai:keys").
+	routing.Post(r, "/ai/keys/{key}/test", "ai.keys.test.store", c.TestKey).Ability("ai:keys").
 		Status(fhttp.StatusOK)
 
-	routing.Post(r, "/ai/chatgpt/connect", "api.v1.ai.chatgpt.connect.store", c.StartConnect).Ability("ai:keys")
-	routing.Post(r, "/ai/chatgpt/callback", "api.v1.ai.chatgpt.callback.store", c.CompleteConnect).Ability("ai:keys")
+	routing.Post(r, "/ai/chatgpt/connect", "ai.chatgpt.connect.store", c.StartConnect).Ability("ai:keys")
+	routing.Post(r, "/ai/chatgpt/callback", "ai.chatgpt.callback.store", c.CompleteConnect).Ability("ai:keys")
 
 	aiTraceRoutes(r, a)
 }
@@ -70,8 +70,8 @@ func aiTraceRoutes(r *routing.Router, a *app.App) {
 		IDs: a.IDs,
 	}
 
-	routing.Get(r, "/ai/usage", "api.v1.ai.usage.show", t.Usage).Ability("ai:read")
-	routing.Post(r, "/ai/playground", "api.v1.ai.playground.store", t.Ask).Ability("ai:write").Status(fhttp.StatusOK)
-	routing.Get(r, "/conversations/{conversation}/ai/runs", "api.v1.ai.runs.index", t.Runs).Ability("ai:read")
-	routing.Get(r, "/conversations/{conversation}/ai/runs/{run}", "api.v1.ai.runs.show", t.Run).Ability("ai:read")
+	routing.Get(r, "/ai/usage", "ai.usage.show", t.Usage).Ability("ai:read")
+	routing.Post(r, "/ai/playground", "ai.playground.store", t.Ask).Ability("ai:write").Status(fhttp.StatusOK)
+	routing.Get(r, "/conversations/{conversation}/ai/runs", "conversations.ai.runs.index", t.Runs).Ability("ai:read")
+	routing.Get(r, "/conversations/{conversation}/ai/runs/{run}", "conversations.ai.runs.show", t.Run).Ability("ai:read")
 }

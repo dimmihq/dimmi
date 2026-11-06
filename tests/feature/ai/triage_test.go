@@ -108,7 +108,6 @@ func TestAiTriage(t *testing.T) {
 	t.Run("never overrides a teammate's assignment", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.operator("ALTER TABLE ai_agents DROP CONSTRAINT IF EXISTS ai_agents_assigned_behavior_check")
 		h.operator("UPDATE ai_agents SET assigned_behavior = 'always' WHERE workspace_id = $1",
 			h.d.TC.Workspace.Workspace.ID)
 		h.team("Billing")

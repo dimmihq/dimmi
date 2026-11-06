@@ -76,7 +76,6 @@ func TestAiSafety(t *testing.T) {
 	t.Run("raises a security handoff when no person is offered", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.operator("ALTER TABLE ai_agents DROP CONSTRAINT IF EXISTS ai_agents_unknown_behavior_check")
 		h.operator("UPDATE ai_agents SET unknown_behavior = 'say_unknown' WHERE workspace_id = $1",
 			h.d.TC.Workspace.Workspace.ID)
 		h.llm.answer.Script(handoffCall("security"), reply("This is something I can't resolve here."))
