@@ -565,6 +565,39 @@ func (q *Queries) ListRunsForPayloadPrune(ctx context.Context, arg ListRunsForPa
 	return items, nil
 }
 
+const resolveLatestRunOutcome = `-- name: ResolveLatestRunOutcome :execrows
+UPDATE ai_runs AS ar SET outcome = $1, completed_at = $2
+WHERE ar.workspace_id = $3
+  AND ar.id = (
+      SELECT r.id FROM ai_runs r
+      WHERE r.workspace_id = ar.workspace_id AND r.conversation_id = $4
+        AND r.status = 'completed'
+      ORDER BY r.id DESC LIMIT 1
+  )
+`
+
+type ResolveLatestRunOutcomeParams struct {
+	Outcome        *string    `json:"outcome"`
+	Now            *time.Time `json:"now"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	ConversationID *ids.UUID  `json:"conversation_id"`
+}
+
+// ResolveLatestRunOutcome stamps a resolution outcome on the
+// conversation's newest finished run.
+func (q *Queries) ResolveLatestRunOutcome(ctx context.Context, arg ResolveLatestRunOutcomeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, resolveLatestRunOutcome,
+		arg.Outcome,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ConversationID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setRunFeedback = `-- name: SetRunFeedback :one
 UPDATE ai_runs SET feedback = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4

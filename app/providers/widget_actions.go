@@ -207,6 +207,8 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 		Disk:     disk,
 	}
 	acts.MarkRead = &widget.MarkWidgetConversationRead{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.ConfirmHelp = &widget.ConfirmAiHelp{DB: a.DB, Clock: a.Clock}
+	acts.RequestHandoff = &widget.RequestAiHandoff{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.Ping = &widget.RecordWidgetPing{DB: a.DB, Clock: a.Clock, Cache: a.Cache}
 	acts.Updates = &widget.ListWidgetUpdates{DB: a.DB, Clock: a.Clock, Read: acts.Conversations}
 

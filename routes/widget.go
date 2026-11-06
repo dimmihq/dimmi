@@ -101,7 +101,9 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Post(visitor, "/pings", "widget.pings.store", pings.Store)
 
 	conv := &widget.ConversationController{
-		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage, IDs: a.IDs, Clock: a.Clock,
+		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage,
+		Help: a.Actions.Widget.ConfirmHelp, HandoffAction: a.Actions.Widget.RequestHandoff,
+		IDs: a.IDs, Clock: a.Clock,
 		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
 	}
 	one := "/conversations/{conversation}"
@@ -115,6 +117,9 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	activity := &widget.ActivityController{Read: a.Actions.Widget.MarkRead, Tell: a.Actions.Widget.Typing, IDs: a.IDs}
 	routing.Patch(visitor, one+"/read-state", "widget.conversations.read-state.update", activity.ReadState)
 	routing.Post(visitor, one+"/typing-indicators", "widget.conversations.typing-indicators.store", activity.Typing)
+
+	routing.Post(visitor, one+"/ai/helped", "widget.conversations.ai.helped", conv.Helped)
+	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff)
 }
 
 /*

@@ -75,3 +75,15 @@ SELECT * FROM ai_runs
 WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id
 ORDER BY created_at DESC
 LIMIT @page_limit;
+
+-- name: ResolveLatestRunOutcome :execrows
+-- ResolveLatestRunOutcome stamps a resolution outcome on the
+-- conversation's newest finished run.
+UPDATE ai_runs AS ar SET outcome = @outcome, completed_at = @now
+WHERE ar.workspace_id = @workspace_id
+  AND ar.id = (
+      SELECT r.id FROM ai_runs r
+      WHERE r.workspace_id = ar.workspace_id AND r.conversation_id = @conversation_id
+        AND r.status = 'completed'
+      ORDER BY r.id DESC LIMIT 1
+  );

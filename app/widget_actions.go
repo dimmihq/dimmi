@@ -40,6 +40,8 @@ type WidgetActions struct {
 	Conversations *widget.ListWidgetConversations
 	PostMessage   *widget.PostWidgetMessage
 	MarkRead      *widget.MarkWidgetConversationRead
+	ConfirmHelp   *widget.ConfirmAiHelp
+	RequestHandoff *widget.RequestAiHandoff
 	Typing        *widget.BroadcastVisitorTyping
 	Ping          *widget.RecordWidgetPing
 	Realtime      *widget.Realtime
