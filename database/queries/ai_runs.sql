@@ -87,3 +87,9 @@ WHERE ar.workspace_id = @workspace_id
         AND r.status = 'completed'
       ORDER BY r.id DESC LIMIT 1
   );
+
+-- name: PruneAiRuns :execrows
+-- PruneAiRuns deletes up to a batch of runs older than the cutoff.
+DELETE FROM ai_runs WHERE id IN (
+    SELECT r.id FROM ai_runs AS r WHERE r.created_at < @cutoff ORDER BY r.created_at LIMIT @batch::bigint
+);

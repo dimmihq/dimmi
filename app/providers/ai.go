@@ -14,6 +14,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/events"
@@ -25,6 +26,7 @@ import (
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
@@ -75,7 +77,14 @@ func bootAI(a *app.App) error {
 		return enqueueAnswer(ctx, a, runner, e)
 	})
 
-	return queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner})
+	return errors.Join(
+		queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner}),
+		queue.Register(a.Queue, &jobs.PruneAiTraces{
+			DB: a.DB, Clock: a.Clock,
+			StepsRetentionDays: a.Config.AI.TracesRetentionDays,
+			RunsRetentionDays:  a.Config.AI.RunsRetentionDays,
+		}),
+	)
 }
 
 /*

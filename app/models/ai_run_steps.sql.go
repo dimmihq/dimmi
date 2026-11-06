@@ -231,3 +231,23 @@ func (q *Queries) NullRunStepPayloads(ctx context.Context, runID ids.UUID) error
 	_, err := q.db.Exec(ctx, nullRunStepPayloads, runID)
 	return err
 }
+
+const pruneAiRunSteps = `-- name: PruneAiRunSteps :execrows
+DELETE FROM ai_run_steps WHERE id IN (
+    SELECT s.id FROM ai_run_steps AS s WHERE s.created_at < $1 ORDER BY s.created_at LIMIT $2::bigint
+)
+`
+
+type PruneAiRunStepsParams struct {
+	Cutoff time.Time `json:"cutoff"`
+	Batch  int64     `json:"batch"`
+}
+
+// PruneAiRunSteps deletes up to a batch of steps older than the cutoff.
+func (q *Queries) PruneAiRunSteps(ctx context.Context, arg PruneAiRunStepsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneAiRunSteps, arg.Cutoff, arg.Batch)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

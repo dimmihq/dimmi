@@ -40,3 +40,9 @@ WHERE run_id IN (
 );
 UPDATE ai_runs SET query_original = NULL, query_rewritten = NULL
 WHERE conversation_id = ANY(@conversation_ids::uuid[]);
+
+-- name: PruneAiRunSteps :execrows
+-- PruneAiRunSteps deletes up to a batch of steps older than the cutoff.
+DELETE FROM ai_run_steps WHERE id IN (
+    SELECT s.id FROM ai_run_steps AS s WHERE s.created_at < @cutoff ORDER BY s.created_at LIMIT @batch::bigint
+);

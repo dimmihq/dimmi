@@ -565,6 +565,26 @@ func (q *Queries) ListRunsForPayloadPrune(ctx context.Context, arg ListRunsForPa
 	return items, nil
 }
 
+const pruneAiRuns = `-- name: PruneAiRuns :execrows
+DELETE FROM ai_runs WHERE id IN (
+    SELECT r.id FROM ai_runs AS r WHERE r.created_at < $1 ORDER BY r.created_at LIMIT $2::bigint
+)
+`
+
+type PruneAiRunsParams struct {
+	Cutoff time.Time `json:"cutoff"`
+	Batch  int64     `json:"batch"`
+}
+
+// PruneAiRuns deletes up to a batch of runs older than the cutoff.
+func (q *Queries) PruneAiRuns(ctx context.Context, arg PruneAiRunsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneAiRuns, arg.Cutoff, arg.Batch)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const resolveLatestRunOutcome = `-- name: ResolveLatestRunOutcome :execrows
 UPDATE ai_runs AS ar SET outcome = $1, completed_at = $2
 WHERE ar.workspace_id = $3
