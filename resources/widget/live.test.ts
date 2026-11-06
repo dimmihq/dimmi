@@ -231,6 +231,7 @@ describe("a connected messenger", () => {
       created_at: "2026-01-01T00:00:02Z",
       ai: {
         generated: true,
+        outcome: "answered",
         sources: [
           { title: "Invoices", url: "https://help.shop.example/invoices" },
           { title: "Unsafe", url: "javascript:alert(1)" },
@@ -311,6 +312,8 @@ describe("a connected messenger", () => {
       await settle();
     }
 
+    expect(root.querySelector('[data-ai="helped"]')).toBeNull();
+    expect(root.querySelector(".ai-actions")?.textContent).toContain("Talk to a person");
     root.querySelector<HTMLButtonElement>('[data-ai="handoff"]')?.click();
     await settle();
 

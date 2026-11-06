@@ -154,7 +154,7 @@ func TestAiWidgetControls(t *testing.T) {
 		_, err := d.TC.Operator().Exec(t.Context(), `
 			INSERT INTO messages (workspace_id, conversation_id, type, author_type, author_id, body, metadata)
 			VALUES ($1, $2, 'message', 'agent', $3, 'See the billing guide [1].', jsonb_build_object('ai',
-				jsonb_build_object('run_id', $4::text, 'generated', true,
+				jsonb_build_object('run_id', $4::text, 'generated', true, 'outcome', 'answered',
 					'sources', jsonb_build_array(jsonb_build_object('title', 'Billing', 'url', 'https://help.acme.com')))))`,
 			d.TC.Workspace.Workspace.ID, convID, agent, runID.String())
 		require.NoError(t, err)
@@ -163,6 +163,7 @@ func TestAiWidgetControls(t *testing.T) {
 		visible := v.client().GetJSON("/widget/v1/conversations/" + conv + "/messages").AssertOK()
 		visible.AssertJSONPath("data.#(author.type==\"agent\").ai.sources", source)
 		visible.AssertJSONMissing("data.#(author.type==\"agent\").ai.run_id")
+		visible.AssertJSONPath("data.#(author.type==\"agent\").ai.outcome", "answered")
 		visible.AssertJSONMissing("data.#(author.type==\"contact\").ai")
 
 		timeline := d.Owner.GetJSON("/api/v1/conversations/" + conv + "/messages").AssertOK()

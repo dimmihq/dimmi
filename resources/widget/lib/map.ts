@@ -167,12 +167,8 @@ export function toMessage(m: api.Message, now: number): Message {
   if (from !== "visitor" && m.author.name) {
     out.author = m.author.name;
   }
-  if (from === "agent" && m.author.avatar_url) {
-    out.avatar = m.author.avatar_url;
-  }
-  const sources = toSources(m.ai ?? m.metadata?.ai);
-  if (sources.length > 0) {
-    out.sources = sources;
+  if (from === "agent") {
+    Object.assign(out, agentParts(m));
   }
   if (m.body) {
     out.body = m.body;
@@ -188,6 +184,21 @@ export function toMessage(m: api.Message, now: number): Message {
   }
 
   return out;
+}
+
+/*
+ * agentParts is what an agent's reply carries besides its text: the
+ * agent's picture, the articles it cites and how its run ended.
+ */
+function agentParts(m: api.Message): Pick<Message, "avatar" | "sources" | "outcome"> {
+  const ai = m.ai ?? m.metadata?.ai;
+  const sources = toSources(ai);
+
+  return {
+    ...(m.author.avatar_url ? { avatar: m.author.avatar_url } : {}),
+    ...(sources.length > 0 ? { sources } : {}),
+    ...(ai?.outcome ? { outcome: ai.outcome } : {}),
+  };
 }
 
 /*

@@ -10,6 +10,7 @@
 import { raw } from "widget-jsx/jsx-runtime";
 
 import type { Attachment, Message, Source } from "../content";
+import { markdown } from "../lib/markdown";
 import { initials, levels } from "../text";
 import { BookIcon, CheckIcon, DownloadIcon, FileIcon, ImageIcon, Mark, PauseIcon, PersonIcon, PlayIcon } from "./icons";
 
@@ -151,8 +152,12 @@ function Bubble({ message }: { message: Message }) {
   return (
     <>
       {message.body ? (
-        <div className="bubble" data-key={`${key}:body`} data-state={message.state}>
-          {message.body}
+        <div
+          className={message.from === "visitor" ? "bubble" : "bubble rich"}
+          data-key={`${key}:body`}
+          data-state={message.state}
+        >
+          {message.from === "visitor" ? message.body : raw(markdown(message.body))}
           {sources.length > 0 && (
             <span className="sources">
               {sources.map((source) => (
@@ -250,11 +255,11 @@ export interface AiActionTexts {
 }
 
 /*
- * AiActions are the two quiet choices under the agent's latest answer:
- * that it helped, or to talk to a person instead. Once the visitor says
- * it helped, a thanks takes their place.
+ * AiActions are the quiet choices under the agent's latest reply: that
+ * it helped, offered only under a real answer, and to talk to a person
+ * instead. Once the visitor says it helped, a thanks takes their place.
  */
-export function AiActions({ texts, helped }: { texts: AiActionTexts; helped: boolean }) {
+export function AiActions({ texts, helped, answered }: { texts: AiActionTexts; helped: boolean; answered: boolean }) {
   if (helped) {
     return (
       <p className="ai-thanks" data-key="ai-actions">
@@ -266,10 +271,12 @@ export function AiActions({ texts, helped }: { texts: AiActionTexts; helped: boo
 
   return (
     <div className="ai-actions" data-key="ai-actions">
-      <button type="button" className="ai-action" data-ai="helped">
-        <CheckIcon />
-        {texts.helped}
-      </button>
+      {answered ? (
+        <button type="button" className="ai-action" data-ai="helped">
+          <CheckIcon />
+          {texts.helped}
+        </button>
+      ) : null}
       <button type="button" className="ai-action" data-ai="handoff">
         <PersonIcon />
         {texts.handoff}

@@ -31,6 +31,7 @@ export interface Attachment {
  */
 export interface AiAnswer {
   generated?: boolean;
+  outcome?: string;
   sources?: { title: string; url?: string | null }[];
 }
 

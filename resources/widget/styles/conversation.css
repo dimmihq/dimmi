@@ -713,3 +713,62 @@ a.source:hover {
   font-size: 12px;
   line-height: 16px;
 }
+
+/* A bubble from the team or the agent renders their Markdown: paragraphs
+ * spaced like chat, compact lists, code on a quiet panel, and links that
+ * look like links in both themes. */
+.bubble.rich {
+  white-space: normal;
+}
+
+.bubble.rich > :is(p, ul, ol, pre, blockquote) {
+  margin: 0;
+}
+
+.bubble.rich > :is(p, ul, ol, pre, blockquote) + :is(p, ul, ol, pre, blockquote) {
+  margin-block-start: 8px;
+}
+
+.bubble.rich :is(ul, ol) {
+  padding-inline-start: 20px;
+}
+
+.bubble.rich li + li {
+  margin-block-start: 2px;
+}
+
+.bubble.rich a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bubble.rich code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg-full);
+  font:
+    12px / 18px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+
+.bubble.rich pre {
+  overflow-x: auto;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-full);
+  white-space: pre;
+}
+
+.bubble.rich pre code {
+  padding: 0;
+  background: none;
+}
+
+.bubble.rich blockquote {
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--border-button);
+  color: var(--text-secondary);
+}

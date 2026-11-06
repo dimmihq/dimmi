@@ -514,10 +514,12 @@ export class Live {
   }
 
   /*
-   * aiActions offers the visitor the two actions under the agent's latest
-   * answer, while the agent still holds the conversation.
+   * aiActions offers the visitor the actions under the agent's latest
+   * reply while the agent still holds the conversation: That helped only
+   * under an answer, Talk to a person under any reply, and nothing once
+   * the conversation is with the team.
    */
-  private aiActions(last: { from: string; id?: string } | undefined): string {
+  private aiActions(last: { from: string; id?: string; outcome?: string } | undefined): string {
     const found = this.store.conversations.find((c) => c.id === this.open);
     if (last?.from !== "agent" || !last.id || found?.ai_state !== "active") {
       return "";
@@ -528,6 +530,7 @@ export class Live {
       AiActions({
         texts: { helped: texts.ai_helped, handoff: texts.talk_to_human, thanks: texts.ai_thanks },
         helped: this.helped.has(last.id),
+        answered: last.outcome === "answered" || last.outcome === "partial",
       }),
     );
   }

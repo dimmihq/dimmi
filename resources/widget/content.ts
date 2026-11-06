@@ -85,6 +85,7 @@ export interface Message {
   from: "visitor" | "team" | "agent";
   author?: string;
   avatar?: string;
+  outcome?: string;
   body?: string;
   attachment?: Attachment;
   sources?: Source[];

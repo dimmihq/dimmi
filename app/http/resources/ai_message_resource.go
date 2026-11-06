@@ -3,10 +3,10 @@
 | Agent Message Marks
 |--------------------------------------------------------------------------
 |
-| A reply the agent wrote says so, and shows the sources it was built
-| from, so a customer can check an answer and a teammate can open the
-| run behind it. Customers see the sources only; the run is for the
-| team.
+| A reply the agent wrote says so, says how it ended, and shows the
+| sources it was built from, so a customer can check an answer and a
+| teammate can open the run behind it. Customers see the outcome and
+| the sources only; the run is for the team.
 |
 */
 
@@ -21,11 +21,14 @@ import (
 )
 
 /*
-MessageAI marks a message the agent wrote: the sources it cites and,
-for the team, the public id of the run that wrote it.
+MessageAI marks a message the agent wrote: how its run ended, such as
+answered or handoff, so the messenger offers the right follow-ups; the
+sources it cites; and, for the team, the public id of the run that
+wrote it.
 */
 type MessageAI struct {
 	Generated bool              `json:"generated"`
+	Outcome   string            `json:"outcome,omitempty"`
 	RunID     *string           `json:"run_id,omitempty"`
 	Sources   []MessageAISource `json:"sources"`
 }
@@ -46,6 +49,7 @@ type storedAI struct {
 	AI *struct {
 		RunID     string            `json:"run_id"`
 		Generated bool              `json:"generated"`
+		Outcome   string            `json:"outcome"`
 		Sources   []MessageAISource `json:"sources"`
 	} `json:"ai"`
 }
@@ -79,5 +83,5 @@ func customerAIOf(metadata json.RawMessage) *MessageAI {
 		return nil
 	}
 
-	return &MessageAI{Generated: true, Sources: orEmpty(stored.AI.Sources)}
+	return &MessageAI{Generated: true, Outcome: stored.AI.Outcome, Sources: orEmpty(stored.AI.Sources)}
 }
