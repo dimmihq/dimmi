@@ -113,6 +113,18 @@ const statusWords: Record<string, string> = {
 };
 
 /*
+ * renamedTo returns the new subject an update event gave the
+ * conversation, if it changed the subject.
+ */
+function renamedTo(event: TimelineEvent): string | null {
+  const subject = event.changes?.subject?.[1];
+  if (event.name !== "conversation.updated" || typeof subject !== "string" || subject === "") {
+    return null;
+  }
+  return subject;
+}
+
+/*
  * eventText says in words what an event entry records.
  */
 export function eventText(event: TimelineEvent): string {
@@ -123,6 +135,11 @@ export function eventText(event: TimelineEvent): string {
   }
   if (event.name === "conversation.priority_changed") {
     return event.to === "none" ? `${actor} removed the priority` : `${actor} set the priority to ${event.to}`;
+  }
+
+  const renamed = renamedTo(event);
+  if (renamed) {
+    return `${actor} renamed the conversation to “${renamed}”`;
   }
 
   if (event.name === "conversation.tagged") {

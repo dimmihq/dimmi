@@ -229,8 +229,7 @@ func mapMessages(msgs []contracts.ChatMessage) []anth.MessageParam {
 	var out []anth.MessageParam
 	for i, msg := range msgs {
 		mapped := mapMessage(msg)
-		previousWasTool := i > 0 && msgs[i-1].Role == contracts.ChatRoleTool
-		if msg.Role == contracts.ChatRoleTool && previousWasTool {
+		if toolResult(msg) && i > 0 && toolResult(msgs[i-1]) {
 			last := &out[len(out)-1]
 			last.Content = append(last.Content, mapped.Content...)
 			continue
@@ -238,6 +237,18 @@ func mapMessages(msgs []contracts.ChatMessage) []anth.MessageParam {
 		out = append(out, mapped)
 	}
 	return out
+}
+
+/*
+toolResult reports whether the message carries a tool's result.
+*/
+func toolResult(msg contracts.ChatMessage) bool {
+	switch msg.Role {
+	case contracts.ChatRoleTool:
+		return true
+	default:
+		return false
+	}
 }
 
 /*
