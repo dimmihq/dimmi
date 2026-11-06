@@ -2,7 +2,9 @@
  * How the person likes to read threads: with events or without, and
  * times in their own zone or the customer's. Both are kept with their
  * inbox preferences, so every device reads threads the same way, and
- * change at once while the save goes out.
+ * change at once while the save goes out. A load of the preferences
+ * still under way is stopped first, so its older answer cannot land
+ * after the change and put the setting back.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -20,8 +22,9 @@ export function useThreadSettings(workspace: string) {
   const sidebar = data?.sidebar ?? {};
 
   const toggle = useCallback(
-    (setting: Setting) => {
+    async (setting: Setting) => {
       const key = realtimeKeys.preferences(workspace);
+      await client.cancelQueries({ queryKey: key });
       const current = client.getQueryData<InboxPreferences>(key);
       const next = { ...(current?.sidebar ?? {}), [setting]: !current?.sidebar[setting] };
       client.setQueryData<InboxPreferences>(key, (old) => ({
@@ -31,7 +34,7 @@ export function useThreadSettings(workspace: string) {
         ...old,
         sidebar: next,
       }));
-      void updatePreferences({ workspace, mutation: mutation() }, { sidebar: next }).catch(() =>
+      await updatePreferences({ workspace, mutation: mutation() }, { sidebar: next }).catch(() =>
         client.invalidateQueries({ queryKey: key }),
       );
     },
@@ -41,7 +44,7 @@ export function useThreadSettings(workspace: string) {
   return {
     hideEvents: sidebar.hide_events === true,
     customerTime: sidebar.customer_time === true,
-    toggleEvents: useCallback(() => toggle("hide_events"), [toggle]),
-    toggleCustomerTime: useCallback(() => toggle("customer_time"), [toggle]),
+    toggleEvents: useCallback(() => void toggle("hide_events"), [toggle]),
+    toggleCustomerTime: useCallback(() => void toggle("customer_time"), [toggle]),
   };
 }
