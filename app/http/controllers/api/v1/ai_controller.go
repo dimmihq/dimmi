@@ -13,11 +13,13 @@ package v1
 
 import (
 	"context"
+	"time"
 	"fmt"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
@@ -382,4 +384,49 @@ func (c *AIController) Run(ctx context.Context, in *requests.AIRunRequest) (*AIR
 	}
 
 	return &AIRunOutput{Body: fhttp.NewResource(out)}, nil
+}
+
+/*
+AIUsageOutput is the month's usage view.
+*/
+type AIUsageOutput struct {
+	Body fhttp.Resource[resources.AiUsage]
+}
+
+/*
+Usage answers the month's spend tallies.
+*/
+func (c *AIController) Usage(ctx context.Context, _ *requests.AIAgentRequest) (*AIUsageOutput, error) {
+	m := membership(ctx)
+
+	now := time.Now().UTC()
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	period, _ := models.New(c.DB).GetSpendPeriod(ctx, models.GetSpendPeriodParams{
+		WorkspaceID: m.Workspace.ID, PeriodStart: pgtype.Date{Time: start, Valid: true},
+	})
+	period.PeriodStart = pgtype.Date{Time: start, Valid: true}
+
+	daily, err := models.New(c.DB).ListDailySpend(ctx, models.ListDailySpendParams{
+		WorkspaceID: m.Workspace.ID, PeriodStart: start,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list daily spend: %w", err)
+	}
+	byModel, err := models.New(c.DB).ListSpendByModel(ctx, models.ListSpendByModelParams{
+		WorkspaceID: m.Workspace.ID, PeriodStart: start,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list model spend: %w", err)
+	}
+	byOutcome, err := models.New(c.DB).ListSpendByOutcome(ctx, models.ListSpendByOutcomeParams{
+		WorkspaceID: m.Workspace.ID, PeriodStart: start,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list outcome spend: %w", err)
+	}
+
+	return &AIUsageOutput{Body: fhttp.NewResource(
+		resources.NewAiUsage(period, daily, byModel, byOutcome),
+	)}, nil
 }

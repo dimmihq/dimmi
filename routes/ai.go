@@ -50,6 +50,7 @@ func aiRoutes(r *routing.Router, a *app.App) {
 	routing.Post(r, "/ai/chatgpt/connect", "api.v1.ai.chatgpt.connect.store", c.StartConnect).Ability("ai:keys")
 	routing.Post(r, "/ai/chatgpt/callback", "api.v1.ai.chatgpt.callback.store", c.CompleteConnect).Ability("ai:keys")
 
+	routing.Get(r, "/ai/usage", "api.v1.ai.usage.show", c.Usage).Ability("ai:read")
 	routing.Get(r, "/conversations/{conversation}/ai/runs", "api.v1.ai.runs.index", c.Runs).Ability("ai:read")
 	routing.Get(r, "/conversations/{conversation}/ai/runs/{run}", "api.v1.ai.runs.show", c.Run).Ability("ai:read")
 }
