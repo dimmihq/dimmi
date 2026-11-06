@@ -33,7 +33,7 @@ func (r *Runner) writeNote(ctx context.Context, tx *database.Tx, st *run, d *dec
 	e := st.env
 	note := plainSummary(st, d)
 	if st.handoff != nil && strings.TrimSpace(st.handoff.note) != "" {
-		note = strings.TrimSpace(st.handoff.note)
+		note = strings.TrimSpace(markerPattern().ReplaceAllString(st.handoff.note, ""))
 	}
 	if _, err := r.agentWriter(tx, e).AddNote(ctx, e.Conversation, note); err != nil {
 		return err
