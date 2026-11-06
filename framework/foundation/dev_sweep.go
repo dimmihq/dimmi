@@ -46,13 +46,14 @@ const (
 staleDatabases lists the test databases nobody is connected to that
 were created more than the given minutes ago. A database's version file
 is written when the database is created, so its time is the database's
-age.
+age. A database another run drops while the list is read has no file
+left, and is skipped rather than failing the list.
 */
 const staleDatabases = `
 SELECT d.datname::text FROM pg_database AS d
 WHERE d.datname ~ $1
   AND NOT EXISTS (SELECT 1 FROM pg_stat_activity AS a WHERE a.datid = d.oid)
-  AND (pg_stat_file('base/' || d.oid || '/PG_VERSION')).modification < now() - make_interval(mins => $2)
+  AND (pg_stat_file('base/' || d.oid || '/PG_VERSION', true)).modification < now() - make_interval(mins => $2)
 ORDER BY 1`
 
 /*
