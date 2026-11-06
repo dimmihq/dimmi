@@ -3,7 +3,7 @@
  * their inbox: the newest mail to an address whose subject has a word in
  * it, then a link or the code it carries.
  */
-const api = process.env.MAILPIT_API_URL ?? "http://localhost:18025";
+const api = process.env.MAILPIT_API_URL ?? "http://127.0.0.1:18025";
 
 interface Message {
   ID: string;

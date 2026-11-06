@@ -14,6 +14,6 @@ fi
 timeout 120 bash -c '
   until docker compose exec -T postgres pg_isready -q -h 127.0.0.1 -U postgres; do sleep 0.5; done
   until docker compose exec -T valkey valkey-cli ping | grep -q PONG; do sleep 0.5; done
-  until curl -s -o /dev/null http://localhost:18333/; do sleep 0.5; done
-  until curl -s -o /dev/null http://localhost:18025/; do sleep 0.5; done
+  until curl -s -o /dev/null http://127.0.0.1:18333/; do sleep 0.5; done
+  until curl -s -o /dev/null http://127.0.0.1:18025/; do sleep 0.5; done
 '
