@@ -33,6 +33,17 @@ change. When this page and those files disagree, this page wins and the disagree
   error mapping. Queries live in `database/queries/*.sql`; run `make sqlc` after editing them or a migration and
   commit the generated `app/models/*.sql.go`. Never edit generated files.
 
+## Migrations
+
+- Create one with `make gen ARGS="make:migration add_x_to_y"` (snake_case name); it stamps the next version
+  and the `-- migrate: phase=` header the linter requires.
+- Once a migration is merged it is append-only: never edit it. Goose applies only pending versions, so an
+  edited file silently drifts every database that already ran it — dev databases, staging, production and
+  self-hosted installs — and the failure lands as runtime SQL errors at query time, far from the change.
+  New columns, indexes or changed expressions ship as a new migration.
+- Only-add discipline: expand-phase changes land before the code that needs them; drops and renames go in a
+  contract-phase migration one release after the code stopped using them.
+
 ## Comments
 
 Every non-test Go file opens with a Laravel-style banner that states the business intent of the file: why it
