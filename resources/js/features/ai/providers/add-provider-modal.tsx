@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Modal, ModalBody, ModalHeader } from "@/components/base/modal/modal";
-import { type AiProviderDescriptor, deleteAiKey } from "@/lib/api/ai";
+import type { AiProviderDescriptor } from "@/lib/api/ai";
 import { cx } from "@/utils/cx";
 import { ProviderLogo } from "../logos";
 import { providerInfo, providerName } from "../provider-info";
@@ -69,8 +69,7 @@ function ProviderGrid({
 }
 
 /*
- * AddProviderModal is the whole flow. Closing it removes a key that was
- * saved but failed its check.
+ * AddProviderModal is the whole flow.
  */
 export function AddProviderModal({
   workspace,
@@ -84,24 +83,13 @@ export function AddProviderModal({
   onClose: () => void;
 }) {
   const [picked, setPicked] = useState<AiProviderDescriptor | null>(null);
-  const [draft, setDraft] = useState<string | null>(null);
   const choices = providers.filter((descriptor) => descriptor.id !== "dimmi");
 
   const close = () => {
-    if (draft) {
-      void deleteAiKey(workspace, draft).catch(() => undefined);
-    }
-    setDraft(null);
     setPicked(null);
     onClose();
   };
-  const back = () => {
-    if (draft) {
-      void deleteAiKey(workspace, draft).catch(() => undefined);
-    }
-    setDraft(null);
-    setPicked(null);
-  };
+  const back = () => setPicked(null);
 
   return (
     <Modal
@@ -146,19 +134,7 @@ export function AddProviderModal({
         />
       ) : null}
       {picked && picked.auth_type !== "oauth" ? (
-        <ProviderForm
-          key={picked.id}
-          workspace={workspace}
-          descriptor={picked}
-          draft={draft}
-          onDraft={setDraft}
-          onCancel={close}
-          onDone={() => {
-            setDraft(null);
-            setPicked(null);
-            onClose();
-          }}
-        />
+        <ProviderForm key={picked.id} workspace={workspace} descriptor={picked} onCancel={close} onDone={close} />
       ) : null}
     </Modal>
   );

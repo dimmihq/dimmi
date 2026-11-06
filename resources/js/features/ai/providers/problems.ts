@@ -16,6 +16,7 @@ const codeFields: Record<string, FieldName> = {
   name_required: "name",
   key_required: "api_key",
   base_url_required: "base_url",
+  provider_key_invalid: "api_key",
 };
 
 /*

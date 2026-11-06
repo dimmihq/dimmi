@@ -58,8 +58,9 @@ Rules:
   - The caller needs ai:keys; the provider must be connectable;
     an api_key connection needs a key.
   - A workspace holds at most 20 connections.
-  - The key validates live as it saves: its status says whether the
-    provider accepted it, with a reason safe to show.
+  - The key validates live as it saves. A key the provider refuses is
+    never kept; a provider that cannot be reached keeps the key with
+    a status and a reason safe to show, to check again later.
 
 Errors: [exceptions.ErrForbidden], or a [fault] error carrying the
 provider's failure, or a wrapped database error.
@@ -162,7 +163,23 @@ func (a *CreateProviderKey) create(ctx context.Context, tx *database.Tx, in Crea
 	if err != nil {
 		return key, fmt.Errorf("update key status: %w", err)
 	}
-	return key, nil
+	return key, refused(key)
+}
+
+/*
+refused fails a create whose key the provider turned down, so the
+transaction rolls back and nothing is kept; a provider that could not
+be reached keeps the key to check again later.
+*/
+func refused(key models.AiProviderKey) error {
+	if key.Status != "invalid" {
+		return nil
+	}
+	reason := "the provider refused this key"
+	if key.StatusReason != nil && *key.StatusReason != "" {
+		reason = *key.StatusReason
+	}
+	return fault.New(fault.Invalid, "provider_key_invalid", reason).OnField("api_key")
 }
 
 /*

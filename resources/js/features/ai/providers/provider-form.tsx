@@ -1,10 +1,10 @@
 /*
  * The second step of adding a provider: a name, the key and, for a
- * server that speaks OpenAI, its address. Test & save stores the key and
- * checks it with the provider in one go. When the provider refuses it,
- * the reason shows under the form and the saved draft is fixed in place
- * on the next try, so a typo never leaves a second connection behind;
- * closing the modal throws the failed draft away.
+ * server that speaks OpenAI, its address. Test & save checks the key with
+ * the provider as it stores it. A key the provider refuses is never
+ * kept: the reason shows under the key and the form stays as typed. A
+ * provider that cannot be reached right now still keeps the key, to be
+ * tested again from its row.
  */
 import { RiErrorWarningLine, RiExternalLinkLine } from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,14 +15,7 @@ import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { ModalBody, ModalFooter } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
-import {
-  type AiProviderDescriptor,
-  type AiProviderKey,
-  aiKey,
-  createAiKey,
-  testAiKey,
-  updateAiKey,
-} from "@/lib/api/ai";
+import { type AiProviderDescriptor, aiKey, createAiKey } from "@/lib/api/ai";
 
 import { keyStatus, modelCount } from "../format";
 import { ProviderLogo } from "../logos";
@@ -35,15 +28,11 @@ import { checkFields, type Problems, problemsOf } from "./problems";
 export function ProviderForm({
   workspace,
   descriptor,
-  draft,
-  onDraft,
   onCancel,
   onDone,
 }: {
   workspace: string;
   descriptor: AiProviderDescriptor;
-  draft: string | null;
-  onDraft: (id: string | null) => void;
   onCancel: () => void;
   onDone: () => void;
 }) {
@@ -57,22 +46,6 @@ export function ProviderForm({
   const [problems, setProblems] = useState<Problems>({});
   const [busy, setBusy] = useState(false);
 
-  const store = async (): Promise<AiProviderKey> => {
-    const body = {
-      name: name.trim(),
-      ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
-      ...(compatible ? { base_url: baseUrl.trim() } : {}),
-    };
-    if (draft) {
-      await updateAiKey(workspace, draft, body);
-      return testAiKey(workspace, draft);
-    }
-    const created = await createAiKey(workspace, { provider, ...body });
-    onDraft(created.id);
-
-    return created;
-  };
-
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const missing = checkFields(provider, { name, apiKey, baseUrl });
@@ -82,16 +55,20 @@ export function ProviderForm({
     }
     setBusy(true);
     try {
-      const saved = await store();
+      const saved = await createAiKey(workspace, {
+        provider,
+        name: name.trim(),
+        ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
+        ...(compatible ? { base_url: baseUrl.trim() } : {}),
+      });
       await client.invalidateQueries({ queryKey: aiKey(workspace) });
-      if (keyStatus(saved) !== "ok") {
-        setProblems({
-          form: `${providerName(provider)} refused the key${saved.status_reason ? `: ${saved.status_reason}` : "."}`,
+      if (keyStatus(saved) === "ok") {
+        toast.success(`${saved.name} connected`, { description: modelCount(saved) });
+      } else {
+        toast.info(`${saved.name} saved`, {
+          description: `${providerName(provider)} could not be reached just now. Test it again from its menu.`,
         });
-        return;
       }
-      onDraft(null);
-      toast.success(`${saved.name} connected`, { description: modelCount(saved) });
       onDone();
     } catch (error) {
       setProblems(problemsOf(error));

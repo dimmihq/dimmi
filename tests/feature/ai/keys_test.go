@@ -1,14 +1,18 @@
 package ai_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -81,19 +85,39 @@ func TestAiProviderKeys(t *testing.T) {
 		d.Owner.PostJSON("/api/v1/ai/keys/"+id+"/test", nil).AssertNotFound()
 	})
 
-	t.Run("records a refused key with a reason safe to show", func(t *testing.T) {
+	t.Run("keeps nothing of a key the provider refuses and says why on the key", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		refusing(d)
 
 		res := d.Owner.PostJSON("/api/v1/ai/keys", testkit.JSON{
 			"name": "Bad", "provider": "openai_compatible", "base_url": "https://llm.example.com/v1",
-		}).AssertCreated()
+			"api_key": "sk-ant-leak",
+		}).AssertStatus(422)
 
-		res.AssertJSONPath("data.status", "invalid")
-		res.AssertJSONPath("data.status_reason", "the provider rejected the key")
+		res.AssertJSONPath("code", "provider_key_invalid")
+		res.AssertJSONPath("errors.api_key.0", "the provider rejected the key")
 		assert.NotContains(t, string(res.Body), "internal.example.com")
 		assert.NotContains(t, string(res.Body), "sk-ant-leak")
+		d.Owner.GetJSON("/api/v1/ai/keys").AssertOK().AssertJSONPath("data.#", 0)
+	})
+
+	t.Run("keeps a key whose provider cannot be reached, to check again later", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		d.TC.App.LLM.Extend(enums.AIProviderOpenAICompatible, func(
+			_ context.Context, _ *managers.LLMManager, _ models.AiProviderKey, _ managers.Credentials,
+			_ *httpclient.Client,
+		) (contracts.LLM, error) {
+			return nil, &contracts.LLMError{Kind: contracts.LLMErrorNetwork, Message: "dial tcp: refused"}
+		})
+
+		res := d.Owner.PostJSON("/api/v1/ai/keys", testkit.JSON{
+			"name": "Down", "provider": "openai_compatible", "base_url": "https://llm.example.com/v1",
+		}).AssertCreated()
+
+		res.AssertJSONPath("data.status", "error")
+		d.Owner.GetJSON("/api/v1/ai/keys").AssertOK().AssertJSONPath("data.#", 1)
 	})
 
 	t.Run("refuses to delete a key the agent answers with", func(t *testing.T) {

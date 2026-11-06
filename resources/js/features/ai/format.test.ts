@@ -200,6 +200,13 @@ describe("ai format", () => {
     expect(problemsOf(new ApiError(422, "key_required", "an api key is required"))).toEqual({
       api_key: "an api key is required",
     });
+    expect(
+      problemsOf(
+        new ApiError(422, "provider_key_invalid", "the provider rejected the key", {
+          api_key: "the provider rejected the key",
+        }),
+      ),
+    ).toEqual({ api_key: "the provider rejected the key" });
     expect(problemsOf(new ApiError(403, "forbidden", "No"))).toEqual({ form: "Only admins can add providers." });
     expect(problemsOf(new Error("offline")).form).toContain("could not reach the server");
   });
