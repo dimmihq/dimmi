@@ -23,6 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sesv2 v1.79.5
 	github.com/aws/smithy-go v1.28.7
 	github.com/aymanbagabas/go-udiff v0.4.1
+	github.com/beevik/etree v1.7.0
 	github.com/bep/imagemeta v1.1.0
 	github.com/caddyserver/certmagic v0.25.6
 	github.com/cenkalti/backoff/v5 v5.0.3
@@ -32,6 +33,7 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/danielgtaylor/huma/v2 v2.40.0
+	github.com/emersion/go-imap/v2 v2.0.0-beta.8
 	github.com/emersion/go-message v0.18.2
 	github.com/emersion/go-msgauth v0.7.0
 	github.com/exaring/otelpgx v0.13.0
@@ -61,6 +63,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/olivere/vite v0.1.0
+	github.com/openai/openai-go/v3 v3.96.0
 	github.com/pgvector/pgvector-go v0.4.1
 	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.29.0
@@ -132,7 +135,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.6 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/beevik/etree v1.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/boyter/go-string v1.0.5 // indirect
@@ -153,7 +155,6 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
-	github.com/emersion/go-imap/v2 v2.0.0-beta.8 // indirect
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fatih/color v1.19.0 // indirect
