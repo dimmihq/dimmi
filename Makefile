@@ -73,17 +73,25 @@ test: test-go test-app-role test-cloud test-timing test-web test-dev
 SHARD ?=
 SHARD_PKGS = $(if $(SHARD),"$$(node scripts/test-shard.ts $(1) $(SHARD) $(2))",$(2))
 
+# The race passes build every test binary first with all the machine's
+# cores, running no test, then run the tests with whatever -p GOFLAGS sets:
+# CI runs one package at a time to stay inside a runner's memory, and
+# building one package at a time would triple the time.
+BUILD_JOBS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
+PREBUILD = go test -race -run '^$$' -p=$(BUILD_JOBS) $(1) $$pkgs > /dev/null &&
+
 test-go:
-	pkgs=$(call SHARD_PKGS,,./...) && $(WITH_ENV) go test -race -shuffle=on $$pkgs
+	pkgs=$(call SHARD_PKGS,,./...) && $(WITH_ENV) $(call PREBUILD) go test -race -shuffle=on $$pkgs
 
 # The feature tests again as the cloud's application role, where row level
 # security applies to every query.
 test-app-role:
-	pkgs=$(call SHARD_PKGS,,./tests/feature/...) && \
-		$(WITH_ENV) DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on $$pkgs
+	pkgs=$(call SHARD_PKGS,,./tests/feature/...) && $(WITH_ENV) $(call PREBUILD) \
+		DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on $$pkgs
 
 test-cloud:
-	pkgs=$(call SHARD_PKGS,-tags cloud,$(CLOUD_PKGS)) && $(WITH_ENV) go test -race -shuffle=on -tags cloud $$pkgs
+	pkgs=$(call SHARD_PKGS,-tags cloud,$(CLOUD_PKGS)) && $(WITH_ENV) $(call PREBUILD,-tags cloud) \
+		go test -race -shuffle=on -tags cloud $$pkgs
 
 # Timing comparisons skip themselves under the race detector, which distorts
 # them, so they get a pass of their own without it, one test at a time so no

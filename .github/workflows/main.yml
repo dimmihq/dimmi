@@ -98,10 +98,12 @@ jobs:
         name: Wait for services
         run: .github/wait-for-services.sh
       - id: check
-        run: ${{ matrix.run }}
+        run: |
+          if [ -n "$RACE_MEMORY_LIMIT" ]; then export GOMEMLIMIT="$RACE_MEMORY_LIMIT"; fi
+          ${{ matrix.run }}
         env:
           GOFLAGS: ${{ matrix.race && '-p=1 -count=1' || '-count=1' }}
-          GOMEMLIMIT: ${{ matrix.race && '2GiB' || '' }}
+          RACE_MEMORY_LIMIT: ${{ matrix.race && '2GiB' || '' }}
       - if: ${{ !cancelled() && matrix.cache && steps.check.outcome != 'skipped' }}
         uses: ./.github/actions/go-cache
         with:
