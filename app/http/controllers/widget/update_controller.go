@@ -13,11 +13,11 @@ package widget
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	actions "github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/http/resources"
@@ -109,17 +109,29 @@ func (c *UpdateController) Index(ctx context.Context, in *UpdatesRequest) (*Upda
 updateItem shapes one change the way the stream would have carried it.
 */
 func updateItem(u actions.Update) UpdateItem {
-	item := UpdateItem{Event: u.Event, ID: ids.Encode("evt", ids.New())}
-
 	if u.Message != nil {
-		conv := models.PublicID(models.PrefixConversation, u.Message.Message.ConversationID)
-		item.Payload = map[string]any{"conversation_id": conv, "message": resources.NewWidgetMessage(*u.Message)}
+		m := u.Message.Message
+		conv := models.PublicID(models.PrefixConversation, m.ConversationID)
 
-		return item
+		return UpdateItem{
+			Event: u.Event, ID: updateID(models.PublicID(models.PrefixMessage, m.ID), m.UpdatedAt),
+			Payload: map[string]any{"conversation_id": conv, "message": resources.NewWidgetMessage(*u.Message)},
+		}
 	}
 
 	widget := resources.NewWidgetConversation(actions.VisibleConversation{Conversation: *u.Conversation})
-	item.Payload = map[string]any{"conversation_id": widget.ID, "widget_id": widget.WidgetID, "conversation": widget}
 
-	return item
+	return UpdateItem{
+		Event: u.Event, ID: updateID(widget.ID, u.Conversation.UpdatedAt),
+		Payload: map[string]any{"conversation_id": widget.ID, "widget_id": widget.WidgetID, "conversation": widget},
+	}
+}
+
+/*
+updateID names a change by the record and the moment it changed, so a
+change that two overlapping polls both return carries the same id and the
+messenger keeps it once.
+*/
+func updateID(record string, at time.Time) string {
+	return "upd_" + record + "_" + strconv.FormatInt(at.UnixNano(), 10)
 }

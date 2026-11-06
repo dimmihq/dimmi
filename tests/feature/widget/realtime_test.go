@@ -216,6 +216,13 @@ func TestWidgetBroadcasts(t *testing.T) {
 	})
 }
 
+/*
+poll asks for what changed for the visitor after the cursor.
+*/
+func poll(v *visitor, cursor string) *testkit.Response {
+	return v.client().GetJSON("/widget/v1/updates?since=" + url.QueryEscape(cursor)).AssertOK()
+}
+
 func TestWidgetUpdates(t *testing.T) {
 	t.Parallel()
 
@@ -241,8 +248,28 @@ func TestWidgetUpdates(t *testing.T) {
 		res.AssertJSONPath("meta.has_more", false)
 		res.AssertJSONPath("meta.poll_after_ms", float64(tc.App.Config.Widget.PollingInterval.Milliseconds()))
 
-		again := v.client().GetJSON("/widget/v1/updates?since=" + url.QueryEscape(res.String("meta.cursor"))).AssertOK()
-		assert.NotContains(t, string(again.Body), "polled reply")
+		again := poll(v, res.String("meta.cursor"))
+		again.AssertJSONPath("data.0.id", res.String("data.0.id"))
+
+		tc.Clock.Travel(11 * time.Second)
+		later := poll(v, poll(v, again.String("meta.cursor")).String("meta.cursor"))
+		assert.NotContains(t, string(later.Body), "polled reply")
+	})
+
+	t.Run("polling still delivers a change stamped before the last poll that committed after it", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		cursor := v.client().GetJSON("/widget/v1/updates").AssertOK().String("meta.cursor")
+
+		tc.Clock.Travel(3 * time.Second)
+		cursor = poll(v, cursor).String("meta.cursor")
+		tc.Clock.Travel(-2 * time.Second)
+		reply(t, tc, id, "late commit")
+		tc.Clock.Travel(5 * time.Second)
+
+		assert.Contains(t, string(poll(v, cursor).Body), "late commit")
 	})
 
 	t.Run("a forged cursor is refused", func(t *testing.T) {
