@@ -14,6 +14,8 @@
 package aimodels
 
 import (
+	"slices"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 )
@@ -71,14 +73,14 @@ func claude(id, name string) Entry {
 }
 
 /*
-Anthropic lists the Claude models.
+Anthropic lists the Claude models dimmi supports. Every provider's list
+is deliberately short: only models that were tested with the agent are
+offered, cheapest first, so the first one is a sensible default.
 */
 func Anthropic() []Entry {
 	return []Entry{
-		claude("claude-sonnet-5-5", "Claude Sonnet 5.5"),
-		claude("claude-opus-5-5", "Claude Opus 5.5"),
 		claude("claude-haiku-5-5", "Claude Haiku 5.5"),
-		claude("claude-fable-5-1", "Claude Fable 5.1"),
+		claude("claude-sonnet-5-5", "Claude Sonnet 5.5"),
 	}
 }
 
@@ -93,15 +95,12 @@ func gpt(id, name string, contextTokens int) Entry {
 }
 
 /*
-OpenAI lists the GPT models of the API, which share a 1.05M-token
-window.
+OpenAI lists the GPT models of the API dimmi supports.
 */
 func OpenAI() []Entry {
 	return []Entry{
-		gpt("gpt-6.1-sol", "GPT-6.1 Sol", 1_050_000),
-		gpt("gpt-6.1-terra", "GPT-6.1 Terra", 1_050_000),
 		gpt("gpt-6-luna", "GPT-6 Luna", 1_050_000),
-		gpt("gpt-6-astra", "GPT-6 Astra", 1_050_000),
+		gpt("gpt-6.1-terra", "GPT-6.1 Terra", 1_050_000),
 	}
 }
 
@@ -118,16 +117,55 @@ func Engy() []Entry {
 }
 
 /*
-ChatGPT lists the models a ChatGPT plan offers, with the window a
-plan allows.
+ChatGPT lists the supported models a ChatGPT plan offers, with the
+window a plan allows.
 */
 func ChatGPT() []Entry {
 	return []Entry{
-		gpt("gpt-6.1-sol", "GPT-6.1 Sol", 272_000),
-		gpt("gpt-6-astra", "GPT-6 Astra", 272_000),
-		gpt("gpt-6.1-terra", "GPT-6.1 Terra", 500_000),
 		gpt("gpt-6-luna", "GPT-6 Luna", 272_000),
+		gpt("gpt-6.1-terra", "GPT-6.1 Terra", 500_000),
 	}
+}
+
+/*
+Supported lists the models dimmi offers on a provider. An
+OpenAI-compatible server runs whatever its operator installed, so it
+has no list and every model it reports is kept.
+*/
+func Supported(provider enums.AIProvider) ([]Entry, bool) {
+	switch provider {
+	case enums.AIProviderAnthropic:
+		return Anthropic(), true
+	case enums.AIProviderOpenAI:
+		return OpenAI(), true
+	case enums.AIProviderEngy:
+		return Engy(), true
+	case enums.AIProviderChatGPT:
+		return ChatGPT(), true
+	case enums.AIProviderDimmi:
+		return Managed(), true
+	default:
+		return nil, false
+	}
+}
+
+/*
+KeepSupported narrows the models a provider reported to the ones dimmi
+supports, in the catalog's order.
+*/
+func KeepSupported(provider enums.AIProvider, reported []string) []string {
+	catalog, limited := Supported(provider)
+	if !limited {
+		return reported
+	}
+
+	kept := []string{}
+	for _, e := range catalog {
+		if slices.Contains(reported, e.ID) {
+			kept = append(kept, e.ID)
+		}
+	}
+	return kept
 }
 
 /*

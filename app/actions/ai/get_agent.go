@@ -228,7 +228,7 @@ func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey) bool {
 		return false
 	}
 	if agent.AnswerKeyID == nil {
-		answer := "claude-sonnet-5-5"
+		answer := "claude-haiku-5-5"
 		agent.AnswerKeyID = &key.ID
 		agent.AnswerModel = &answer
 		return true

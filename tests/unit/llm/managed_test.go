@@ -51,6 +51,17 @@ func TestManagedDriver(t *testing.T) {
 
 		require.Len(t, offered, 1)
 		assert.Equal(t, "glm-5.3-flash", offered[0].ID)
-		assert.NotNil(t, aimodels.Find(aimodels.Anthropic(), "claude-fable-5-1"))
+		assert.NotNil(t, aimodels.Find(aimodels.Anthropic(), "claude-haiku-5-5"))
+		assert.Nil(t, aimodels.Find(aimodels.Anthropic(), "claude-opus-5-5"))
+	})
+
+	t.Run("keeps only the supported models a provider reports", func(t *testing.T) {
+		t.Parallel()
+
+		reported := []string{"gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna", "gpt-6-astra"}
+
+		assert.Equal(t, []string{"gpt-6-luna", "gpt-6.1-terra"}, aimodels.KeepSupported(enums.AIProviderOpenAI, reported))
+		assert.Equal(t, []string{"my-local-model"},
+			aimodels.KeepSupported(enums.AIProviderOpenAICompatible, []string{"my-local-model"}))
 	})
 }

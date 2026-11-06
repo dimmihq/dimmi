@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/aimodels"
 )
 
 /*
@@ -273,14 +274,15 @@ func validate(ctx context.Context, m *managers.LLMManager, key models.AiProvider
 		return keyCheck{status: failureStatus(listErr), reason: new(failureReason(listErr)), err: listErr}
 	}
 
-	modelList := []string{}
+	reported := []string{}
 	for _, mdl := range listed {
-		modelList = append(modelList, mdl.ID)
+		reported = append(reported, mdl.ID)
 	}
+	modelList := aimodels.KeepSupported(enums.AIProvider(key.Provider), reported)
 
 	return keyCheck{
 		status: "valid", reason: new("validated"), modelList: modelList,
-		info: map[string]any{"models_count": len(listed)},
+		info: map[string]any{"models_count": len(modelList)},
 	}
 }
 
