@@ -26,8 +26,10 @@ jobs:
   # own result. The slow Go test passes are split into shards by package
   # (scripts/test-shard.ts). Every job keeps its own Go build cache, saved
   # from main and restored by the next run, so only what changed compiles
-  # again. The race detector runs two packages at a time, since more ran a
-  # runner out of memory.
+  # again. Under the race detector one test binary of
+  # the heavy suites peaks near 11 GB on a 16 GB runner, so race jobs run one
+  # package at a time with a Go memory limit, which keeps that near 8 GB, and
+  # each pass is split six ways to stay fast.
   check:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
@@ -38,18 +40,24 @@ jobs:
         include:
           - { name: lint go, run: make lint-go GOLANGCI_LINT=./bin/golangci-lint, cache: lint, golangci: true }
           - { name: lint and test the browser app, run: make lint-web test-web, install: true }
-          - { name: go tests (1/4), run: make test-go SHARD=1/4, cache: race-1, services: true, race: true }
-          - { name: go tests (2/4), run: make test-go SHARD=2/4, cache: race-2, services: true, race: true }
-          - { name: go tests (3/4), run: make test-go SHARD=3/4, cache: race-3, services: true, race: true }
-          - { name: go tests (4/4), run: make test-go SHARD=4/4, cache: race-4, services: true, race: true }
-          - { name: go tests as the application role (1/4), run: make test-app-role SHARD=1/4, cache: role-1, services: true, race: true }
-          - { name: go tests as the application role (2/4), run: make test-app-role SHARD=2/4, cache: role-2, services: true, race: true }
-          - { name: go tests as the application role (3/4), run: make test-app-role SHARD=3/4, cache: role-3, services: true, race: true }
-          - { name: go tests as the application role (4/4), run: make test-app-role SHARD=4/4, cache: role-4, services: true, race: true }
-          - { name: go tests in the cloud edition (1/4), run: make test-cloud SHARD=1/4, cache: cloud-1, services: true, race: true }
-          - { name: go tests in the cloud edition (2/4), run: make test-cloud SHARD=2/4, cache: cloud-2, services: true, race: true }
-          - { name: go tests in the cloud edition (3/4), run: make test-cloud SHARD=3/4, cache: cloud-3, services: true, race: true }
-          - { name: go tests in the cloud edition (4/4), run: make test-cloud SHARD=4/4, cache: cloud-4, services: true, race: true }
+          - { name: go tests (1/6), run: make test-go SHARD=1/6, cache: race-1, services: true, race: true }
+          - { name: go tests (2/6), run: make test-go SHARD=2/6, cache: race-2, services: true, race: true }
+          - { name: go tests (3/6), run: make test-go SHARD=3/6, cache: race-3, services: true, race: true }
+          - { name: go tests (4/6), run: make test-go SHARD=4/6, cache: race-4, services: true, race: true }
+          - { name: go tests (5/6), run: make test-go SHARD=5/6, cache: race-5, services: true, race: true }
+          - { name: go tests (6/6), run: make test-go SHARD=6/6, cache: race-6, services: true, race: true }
+          - { name: go tests as the application role (1/6), run: make test-app-role SHARD=1/6, cache: role-1, services: true, race: true }
+          - { name: go tests as the application role (2/6), run: make test-app-role SHARD=2/6, cache: role-2, services: true, race: true }
+          - { name: go tests as the application role (3/6), run: make test-app-role SHARD=3/6, cache: role-3, services: true, race: true }
+          - { name: go tests as the application role (4/6), run: make test-app-role SHARD=4/6, cache: role-4, services: true, race: true }
+          - { name: go tests as the application role (5/6), run: make test-app-role SHARD=5/6, cache: role-5, services: true, race: true }
+          - { name: go tests as the application role (6/6), run: make test-app-role SHARD=6/6, cache: role-6, services: true, race: true }
+          - { name: go tests in the cloud edition (1/6), run: make test-cloud SHARD=1/6, cache: cloud-1, services: true, race: true }
+          - { name: go tests in the cloud edition (2/6), run: make test-cloud SHARD=2/6, cache: cloud-2, services: true, race: true }
+          - { name: go tests in the cloud edition (3/6), run: make test-cloud SHARD=3/6, cache: cloud-3, services: true, race: true }
+          - { name: go tests in the cloud edition (4/6), run: make test-cloud SHARD=4/6, cache: cloud-4, services: true, race: true }
+          - { name: go tests in the cloud edition (5/6), run: make test-cloud SHARD=5/6, cache: cloud-5, services: true, race: true }
+          - { name: go tests in the cloud edition (6/6), run: make test-cloud SHARD=6/6, cache: cloud-6, services: true, race: true }
           - { name: timing and dev build tests, run: make test-timing test-dev, cache: misc, services: true, race: true }
           - { name: infrastructure, run: make infra-check, cache: infra, pnpm: true }
     steps:
@@ -92,7 +100,8 @@ jobs:
       - id: check
         run: ${{ matrix.run }}
         env:
-          GOFLAGS: ${{ matrix.race && '-p=2 -count=1' || '-count=1' }}
+          GOFLAGS: ${{ matrix.race && '-p=1 -count=1' || '-count=1' }}
+          GOMEMLIMIT: ${{ matrix.race && '2GiB' || '' }}
       - if: ${{ !cancelled() && matrix.cache && steps.check.outcome != 'skipped' }}
         uses: ./.github/actions/go-cache
         with:
