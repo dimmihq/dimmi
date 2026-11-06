@@ -5,9 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -40,6 +43,30 @@ func TestConversationContext(t *testing.T) {
 			AssertJSONPath("data.past_conversations.data.#", 0).
 			AssertJSONPath("data.past_conversations.total_estimate", 0).
 			AssertJSONPath("data.duplicates_count", 0)
+	})
+
+	t.Run("keeps the source an object when a channel brings none", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		ws := d.TC.Workspace.Workspace.ID
+
+		_, err := d.TC.App.Actions.ProcessInboundEmail.Receiver.ReceiveInboundMessage(
+			tenancy.With(t.Context(), ws.String()),
+			contracts.InboundMessage{
+				ConnectionID: d.Inbox.API.ID, DedupeKey: "context-source",
+				Sender:  contracts.InboundSender{Name: "Ann", Email: "ann@example.com"},
+				Subject: "From email", Body: "Hi",
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = d.TC.Operator().Exec(
+			tenancy.With(t.Context(), ws.String()), "UPDATE conversations SET source = 'null'::jsonb",
+		)
+		require.NoError(t, err)
+
+		d.Owner.GetJSON("/api/v1/conversations/1/context").AssertOK().
+			AssertJSONPath("data.source", map[string]any{})
 	})
 
 	t.Run("shows the three newest other conversations and counts the rest", func(t *testing.T) {

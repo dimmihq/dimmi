@@ -55,7 +55,7 @@ NewConversationContext shapes the context.
 */
 func NewConversationContext(c conversations.Context) ConversationContext {
 	source := c.Source
-	if len(source) == 0 {
+	if len(source) == 0 || string(source) == "null" {
 		source = json.RawMessage(`{}`)
 	}
 

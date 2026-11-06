@@ -287,9 +287,15 @@ func (run *ingestRun) conversation(
 		return models.Conversation{}, false, fmt.Errorf("allocate conversation number: %w", err)
 	}
 
-	source, err := json.Marshal(run.msg.Source)
-	if err != nil {
-		return models.Conversation{}, false, fmt.Errorf("encode conversation source: %w", err)
+	source := json.RawMessage(`{}`)
+
+	if run.msg.Source != nil {
+		encoded, err := json.Marshal(run.msg.Source)
+		if err != nil {
+			return models.Conversation{}, false, fmt.Errorf("encode conversation source: %w", err)
+		}
+
+		source = encoded
 	}
 
 	subject := optional(run.msg.Subject)
