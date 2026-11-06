@@ -52,7 +52,7 @@ func conversationAllow() pagination.Allow {
 		Filters: []string{
 			"view", "status", "inbox", "assignee", "team", "contact", "company", "channel", "channel_connection",
 			"priority", "tag", "tag_any", "created_after", "created_before", "waiting", "unread",
-			"assignment_waiting",
+			"assignment_waiting", "ai",
 		},
 		Sorts:    []string{"last_message_at", "created_at", "waiting_since", "priority", "snoozed_until"},
 		Includes: []string{"viewers"},
@@ -92,7 +92,7 @@ func parseListQuery(registry *ids.Registry, query pagination.Query) (listQuery, 
 
 	lq.filters.Search = query.Search
 
-	for _, parse := range []func(*conversations.Filters) error{p.statuses, p.refs, p.narrowing, p.view} {
+	for _, parse := range []func(*conversations.Filters) error{p.statuses, p.refs, p.narrowing, p.ai, p.view} {
 		if err := parse(&lq.filters); err != nil {
 			return lq, err
 		}
@@ -240,6 +240,22 @@ func (p filterParser) statuses(f *conversations.Filters) error {
 			f.AnyStatus = true
 		case "open", "snoozed", "closed":
 			f.Statuses = append(f.Statuses, status)
+		default:
+			return pagination.ErrInvalidFilter
+		}
+	}
+
+	return nil
+}
+
+/*
+ai reads filter[ai]: handed_off, active or any agent involvement.
+*/
+func (p filterParser) ai(f *conversations.Filters) error {
+	for _, value := range p.filters["ai"] {
+		switch value {
+		case "handed_off", "active", "any":
+			f.Ai = append(f.Ai, value)
 		default:
 			return pagination.ErrInvalidFilter
 		}

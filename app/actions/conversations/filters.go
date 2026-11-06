@@ -73,6 +73,7 @@ type Filters struct {
 	Search        string
 
 	AssignmentWaiting bool
+	Ai                []string
 }
 
 /*
@@ -92,6 +93,10 @@ func listOf(m authz.Membership, f Filters, s querybuilder.Sort) (querybuilder.Co
 
 	if f.AssignmentWaiting {
 		l.Extra = append(l.Extra, assignmentWaiting)
+	}
+
+	if clause := aiClause(f.Ai); clause != "" {
+		l.Extra = append(l.Extra, func(int) (string, []any) { return clause, nil })
 	}
 
 	applyView(&l, m, f)
@@ -202,6 +207,25 @@ func access(m authz.Membership) querybuilder.Access {
 	return querybuilder.Access{
 		Mode: p.Mode, Viewer: p.Viewer, Teams: p.Teams, Unassigned: p.Unassigned, HiddenInboxes: p.HiddenInboxes,
 	}
+}
+
+/*
+aiClause maps the ai filter to its predicate: handed_off for the
+conversations with the team, active for those the agent still
+answers, and any for every conversation the agent touched.
+*/
+func aiClause(values []string) string {
+	for _, v := range values {
+		switch v {
+		case "handed_off":
+			return "c.ai_state = 'handed_off'"
+		case "active":
+			return "c.ai_state = 'active' AND c.ai_reply_count > 0"
+		case "any":
+			return "(c.ai_reply_count > 0 OR c.ai_state <> 'off')"
+		}
+	}
+	return ""
 }
 
 /*
