@@ -42,9 +42,10 @@ type Options struct {
 
 /*
 defaultMaxTokens bounds a reply when the request names no bound, as
-the API requires one.
+the API requires one. It is generous on purpose: thinking spends from
+the same budget, and a reply cut short is worse than a long one.
 */
-const defaultMaxTokens = 4096
+const defaultMaxTokens = 16000
 
 /*
 jsonInstruction asks for JSON, which the API has no simple mode for.
@@ -157,6 +158,9 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 		maxTokens = defaultMaxTokens
 	}
 	params := anth.MessageNewParams{Model: req.Model, MaxTokens: int64(maxTokens)}
+	if req.Effort != "" {
+		params.OutputConfig = anth.OutputConfigParam{Effort: anth.OutputConfigEffort(req.Effort)}
+	}
 
 	for _, block := range req.System {
 		sys := anth.TextBlockParam{Text: block.Text}
@@ -169,9 +173,7 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 		params.System = append(params.System, anth.TextBlockParam{Text: jsonInstruction})
 	}
 
-	for _, msg := range req.Messages {
-		params.Messages = append(params.Messages, mapMessage(msg))
-	}
+	params.Messages = mapMessages(req.Messages)
 
 	tools, err := mapTools(req.Tools)
 	if err != nil {
@@ -215,6 +217,27 @@ func mapTools(specs []contracts.ToolSpec) ([]anth.ToolUnionParam, error) {
 		tools = append(tools, anth.ToolUnionParam{OfTool: param})
 	}
 	return tools, nil
+}
+
+/*
+mapMessages maps the conversation to SDK params. The results of the
+tool calls one reply made go back together in a single user message:
+split across several, the model learns to stop calling tools in
+parallel.
+*/
+func mapMessages(msgs []contracts.ChatMessage) []anth.MessageParam {
+	var out []anth.MessageParam
+	for i, msg := range msgs {
+		mapped := mapMessage(msg)
+		previousWasTool := i > 0 && msgs[i-1].Role == contracts.ChatRoleTool
+		if msg.Role == contracts.ChatRoleTool && previousWasTool {
+			last := &out[len(out)-1]
+			last.Content = append(last.Content, mapped.Content...)
+			continue
+		}
+		out = append(out, mapped)
+	}
+	return out
 }
 
 /*

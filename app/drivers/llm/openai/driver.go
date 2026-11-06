@@ -217,6 +217,9 @@ func (d *Driver) completionParams(req contracts.ChatRequest) (oai.ChatCompletion
 	if req.MaxOutputTokens > 0 {
 		params.MaxCompletionTokens = oai.Int(int64(req.MaxOutputTokens))
 	}
+	if req.Effort != "" && reasons(req.Model) {
+		params.ReasoningEffort = shared.ReasoningEffort(req.Effort)
+	}
 	if req.Temperature != nil {
 		params.Temperature = oai.Float(*req.Temperature)
 	}
@@ -371,4 +374,13 @@ func MapFinish(reason string) contracts.StopReason {
 	default:
 		return contracts.StopReasonOther
 	}
+}
+
+/*
+reasons reports whether the model is one of OpenAI's reasoning models,
+the only ones that take a reasoning effort; open-weight models served
+through the same API reject it.
+*/
+func reasons(model string) bool {
+	return strings.HasPrefix(model, "gpt-") || strings.HasPrefix(model, "o")
 }

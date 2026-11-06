@@ -172,7 +172,7 @@ func TestAiRunRobustness(t *testing.T) {
 		assert.False(t, strings.Contains(body, "proj"))
 	})
 
-	t.Run("sends the agent's temperature, output cap and timeouts", func(t *testing.T) {
+	t.Run("sends the agent's temperature and timeouts at low effort with no output cap", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.operator("UPDATE ai_agents SET temperature = 0.2 WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
@@ -184,7 +184,8 @@ func TestAiRunRobustness(t *testing.T) {
 		req := h.llm.answer.Sent()[0]
 		require.NotNil(t, req.Temperature)
 		assert.InDelta(t, 0.2, *req.Temperature, 0.0001)
-		assert.Equal(t, 600, req.MaxOutputTokens)
+		assert.Zero(t, req.MaxOutputTokens)
+		assert.Equal(t, contracts.EffortLow, req.Effort)
 		assert.Positive(t, req.Timeout.Total)
 	})
 }

@@ -70,8 +70,9 @@ func markerPattern() *regexp.Regexp {
 
 /*
 citations strips every marker from the text and returns the supplied
-sources the valid ones cite, in first-cited order. A marker followed
-by "(" is a Markdown link and stays.
+sources the valid ones cite, in first-cited order, one per document:
+several chunks of one article are one source to the customer. A marker
+followed by "(" is a Markdown link and stays.
 */
 func citations(text string, sources []source) (string, []citation) {
 	var cited []citation
@@ -90,8 +91,9 @@ func citations(text string, sources []source) (string, []citation) {
 			if err != nil || n < 1 || n > len(sources) {
 				continue
 			}
-			if !slices.ContainsFunc(cited, func(c citation) bool { return c.N == n }) {
-				cited = append(cited, citationOf(sources[n-1]))
+			c := citationOf(sources[n-1])
+			if !slices.ContainsFunc(cited, func(o citation) bool { return o.DocumentID == c.DocumentID }) {
+				cited = append(cited, c)
 			}
 		}
 	}

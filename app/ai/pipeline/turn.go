@@ -132,7 +132,7 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 	model := strv(e.Agent.AnswerModel)
 	req := contracts.ChatRequest{
 		Model: model, System: []contracts.SystemBlock{{Text: lp.system, Cacheable: true}},
-		Messages: lp.messages, Tools: tools, MaxOutputTokens: int(e.Agent.MaxOutputTokens), CacheHint: true,
+		Messages: lp.messages, Tools: tools, CacheHint: true, Effort: contracts.EffortLow,
 		Temperature: temperature(e), Timeout: llmretry.StepTimeouts(r.Timeouts, llmretry.StepGenerate),
 	}
 	if e.Conversation.ID != (ids.UUID{}) {

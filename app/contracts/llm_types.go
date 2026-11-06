@@ -16,7 +16,8 @@ import "time"
 /*
 ChatRequest is one completion call. Static system blocks come first so
 providers that cache prompts can reuse them; dynamic context comes
-last.
+last. Effort asks a reasoning model to think less or more; empty
+leaves the provider's default, and models that do not reason ignore it.
 */
 type ChatRequest struct {
 	Model           string
@@ -31,7 +32,23 @@ type ChatRequest struct {
 	CacheHint       bool
 	Metadata        map[string]string
 	Timeout         StepTimeouts
+	Effort          Effort
 }
+
+/*
+Effort is how much a reasoning model thinks before it answers. Lower
+effort answers sooner and spends fewer tokens.
+*/
+type Effort string
+
+/*
+The effort levels a request can ask for.
+*/
+const (
+	EffortLow    Effort = "low"
+	EffortMedium Effort = "medium"
+	EffortHigh   Effort = "high"
+)
 
 /*
 SystemBlock is one system-prompt segment. Cacheable blocks hold only
