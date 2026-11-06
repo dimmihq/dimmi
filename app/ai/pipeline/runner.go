@@ -41,7 +41,9 @@ import (
 Runner runs the answer pipeline for one conversation. Timeouts bound
 each provider call; StorePayloads keeps request and response text on
 the run's steps. Publisher, when set, shows the customer the agent is
-typing while it writes.
+typing while it writes. Decider, when set, classifies messages, priced
+at DecisionPricePerMtok US dollars per million input tokens of
+DecisionModel; without it messages are routed without a model.
 */
 type Runner struct {
 	DB            *database.DB
@@ -55,18 +57,23 @@ type Runner struct {
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
 
+	Decider              contracts.Decider
+	DecisionModel        string
+	DecisionPricePerMtok float64
+
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
 }
 
 /*
 Args is what one run needs: the conversation and the customer message
-that triggered it.
+that triggered it, or for a playground question the member asking.
 */
 type Args struct {
 	WorkspaceID      ids.UUID
 	ConversationID   ids.UUID
 	TriggerMessageID ids.UUID
+	MemberID         *ids.UUID
 	Kind             string
 	QueuedAt         time.Time
 }

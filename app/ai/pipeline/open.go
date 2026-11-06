@@ -39,6 +39,7 @@ type run struct {
 	sources       []source
 	flags         []string
 	retrieval     json.RawMessage
+	query         string
 	skipRetrieval bool
 	noSources     bool
 }
@@ -149,13 +150,14 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	hashes := json.RawMessage("{}")
 	if r.Prompts != nil {
 		if fp, err := r.Prompts.Fingerprint(e.Version, r.family(e.AnswerKey, e.Agent.AnswerModel),
-			[]string{"answer.system.md", "classifier.system.md"}); err == nil {
+			[]string{"answer.system.md"}); err == nil {
 			hashes, _ = json.Marshal(fp.Hashes)
 		}
 	}
 
 	snapshot, _ := json.Marshal(map[string]any{
-		"answer_model": strv(e.Agent.AnswerModel), "classifier_model": r.classifierModel(e),
+		"answer_model": strv(e.Agent.AnswerModel), "decision_model": r.DecisionModel,
+		"decider": r.Decider != nil,
 		"tone": e.Agent.Tone, "grounding_mode": e.Agent.GroundingMode,
 		"require_citations": e.Agent.RequireCitations, "pii_redaction": e.Agent.PiiRedaction,
 		"unknown_behavior": e.Agent.UnknownBehavior, "max_ai_replies": e.Agent.MaxAiReplies,
@@ -165,11 +167,16 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	if kind == "" {
 		kind = "conversation"
 	}
+	conversation, trigger, actor := runSubject(e, kind)
+	actorType := "contact"
+	if kind == playgroundKind {
+		actorType, actor = "member", args.MemberID
+	}
 	now := r.Clock.Now()
 	return models.New(tx).CreateRun(ctx, models.CreateRunParams{
 		WorkspaceID: e.Workspace.ID, AgentID: e.Agent.ID, Kind: kind,
-		ConversationID: &e.Conversation.ID, TriggerMessageID: &e.Trigger.ID,
-		IncludedMessageIds: e.included(), ActorType: new("contact"), ActorID: &e.Conversation.ContactID,
+		ConversationID: conversation, TriggerMessageID: trigger,
+		IncludedMessageIds: e.included(), ActorType: &actorType, ActorID: actor,
 		ChannelType: new(e.ChannelType), Status: "running",
 		PromptVersion: e.Version, PromptHashes: hashes, ConfigSnapshot: snapshot,
 		StartedAt: &now, Now: now,

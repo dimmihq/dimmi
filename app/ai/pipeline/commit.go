@@ -199,6 +199,9 @@ func (r *Runner) writeHandoff(ctx context.Context, tx *database.Tx, st *run, d *
 	if err := r.post(ctx, tx, st, d); err != nil {
 		return err
 	}
+	if err := r.routeHandoff(ctx, tx, st, d); err != nil {
+		return err
+	}
 	now := r.Clock.Now()
 	if err := models.New(tx).HandoffConversationAi(ctx, models.HandoffConversationAiParams{
 		WorkspaceID: e.Conversation.WorkspaceID, ID: e.Conversation.ID,
@@ -215,11 +218,7 @@ post writes the decision's reply as the agent.
 func (r *Runner) post(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
 	e := st.env
 	text := r.reply(e, d)
-	writer := &conversations.Writer{
-		Q: models.New(tx), Tx: tx, Events: r.Events, Now: r.Clock.Now(),
-		Actor: conversations.Actor{Type: string(enums.AuthorTypeAgent), ID: e.Agent.ID, Name: e.Agent.Name},
-	}
-	msg, conv, err := writer.Append(ctx, e.Conversation, conversations.NewMessage{
+	msg, conv, err := r.agentWriter(tx, e).Append(ctx, e.Conversation, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: text, BodyFormat: new("markdown"),
 		Metadata: r.metadata(st, d), Automatic: !d.substantive,
 	})
@@ -242,9 +241,10 @@ func (r *Runner) reply(e *env, d *decision) string {
 }
 
 /*
-metadata is what every agent reply carries for the widget, the
-channels and the trace: the run, the outcome, the citations, and
-whether a person is offered or on the way.
+metadata is what every agent reply carries under "ai" for the widget,
+the channels and the trace: generated, the run, the outcome, the
+sources it cites as title and url, and whether a person is offered or
+on the way.
 */
 func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 	ai := map[string]any{
@@ -252,7 +252,11 @@ func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 		"model": strv(st.env.Agent.AnswerModel), "language": replyLanguage(st.env, st.c),
 	}
 	if len(d.citations) > 0 {
-		ai["citations"] = d.citations
+		sources := make([]map[string]any, 0, len(d.citations))
+		for _, c := range d.citations {
+			sources = append(sources, map[string]any{"n": c.N, "title": c.Title, "url": c.URL})
+		}
+		ai["sources"] = sources
 	}
 	if d.offerHandoff {
 		ai["actions"] = []string{"handoff"}

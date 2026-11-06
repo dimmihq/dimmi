@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/database"
+
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -19,7 +21,7 @@ func TestAiPipeline(t *testing.T) {
 	t.Run("answers a question with citations from the sources", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nThe Pro plan costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much is Pro per seat?")
@@ -39,7 +41,7 @@ func TestAiPipeline(t *testing.T) {
 		require.Len(t, replies, 1)
 		assert.Equal(t, "The Pro plan costs $12 per seat per month.", str(replies[0].Body))
 		assert.True(t, replies[0].Substantive)
-		citations, ok := aiMeta(t, replies[0])["citations"].([]any)
+		citations, ok := aiMeta(t, replies[0])["sources"].([]any)
 		require.True(t, ok)
 		require.Len(t, citations, 1)
 		first, _ := citations[0].(map[string]any)
@@ -57,8 +59,7 @@ func TestAiPipeline(t *testing.T) {
 	t.Run("answers the covered part of a partly covered question", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en",
-			"Is SAML single sign-on available and does it support SCIM?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nSAML single sign-on is on the Business plan [1]. " +
 			"The documentation does not cover SCIM, so a teammate can confirm that part."))
 
@@ -74,7 +75,8 @@ func TestAiPipeline(t *testing.T) {
 	t.Run("hands off when nothing answers the question and the agent is set to hand off", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, func(p *models.UpdateAgentParams) { p.UnknownBehavior = "handoff" })
-		h.llm.classifier.Script(classify("question", "en", "What is the weather in Paris tomorrow?"), summaryStep())
+		h.decider.Script(decide("question", "en"))
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("What's the weather in Paris tomorrow?")
 		res := h.run(conv, trigger)
@@ -94,9 +96,8 @@ func TestAiPipeline(t *testing.T) {
 
 	t.Run("offers a person when the model cannot answer", func(t *testing.T) {
 		t.Parallel()
-		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "Can I pay for the Business plan with PayPal?",
-			"Business plan price"))
+		h := newHarness(t, func(p *models.UpdateAgentParams) { p.MinSimilarity = database.NumericFloat(0.1) })
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: unknown\n\nThe documentation doesn't say whether PayPal works [1]. " +
 			"A teammate can help with that."))
 
@@ -117,7 +118,7 @@ func TestAiPipeline(t *testing.T) {
 	t.Run("hands off a second unknown in a row", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "What is the weather in Paris?"))
+		h.decider.Script(decide("question", "en"))
 
 		conv, trigger := h.conversation("What's the weather in Paris?")
 		require.Equal(t, "unknown", h.run(conv, trigger).Outcome)
@@ -131,7 +132,7 @@ func TestAiPipeline(t *testing.T) {
 	t.Run("treats an uncited answer as unknown when citations are required", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro is very affordable."))
 
 		conv, trigger := h.conversation("How much is Pro?")
@@ -145,12 +146,11 @@ func TestAiPipeline(t *testing.T) {
 
 	t.Run("passes the customer's language through", func(t *testing.T) {
 		t.Parallel()
-		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "de", "Wie viel kostet der Pro-Plan pro Nutzer?",
-			"Pro plan cost per seat"))
+		h := newHarness(t, func(p *models.UpdateAgentParams) { p.MinSimilarity = database.NumericFloat(0.1) })
+		h.decider.Script(decide("question", "de"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nDer Pro-Plan kostet 12 $ pro Nutzer und Monat [1]."))
 
-		conv, trigger := h.conversation("Was kostet Pro pro Nutzer?")
+		conv, trigger := h.conversation("Was kostet der Pro Plan pro Seat?")
 		res := h.run(conv, trigger)
 		require.Equal(t, "answered", res.Outcome)
 

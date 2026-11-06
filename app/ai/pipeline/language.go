@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | The answer prompt names the reply language in words ("German"), from
-| the classifier's detection when it is a language we know, else the
+| the decision model's detection when it is a language we know, else the
 | agent's default. The default lines a reply falls back to when the
 | model wrote none come from the prompt version's defaults file, and
 | the workspace can override each one in the agent's messages.

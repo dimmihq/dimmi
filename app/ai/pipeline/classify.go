@@ -3,13 +3,15 @@
 | Classify And Route
 |--------------------------------------------------------------------------
 |
-| A cheap model reads the conversation and labels the customer's
-| message: what they want, in which language, the standalone question
-| to search for, and whether they want a person, are frustrated or are
-| trying to steer the agent. Its answer only routes; it never reaches
-| the customer. When it fails or answers nonsense, the run falls back
-| to treating the message as a question, because the answer stage can
-| always say it does not know.
+| A decision model, not a language model, labels the customer's message:
+| what they want, which language they write in, and whether they want a
+| person, are frustrated or are trying to steer the agent. All of it is
+| one request of parallel questions answered with probabilities, so the
+| pipeline routes on confidence instead of parsing prose. Its answer
+| only routes; it never reaches the customer. Without a decision model,
+| or when it fails, the message is treated as a question in the agent's
+| default language, because the answer stage can always say it does
+| not know.
 |
 */
 
@@ -18,34 +20,34 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"slices"
-	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 )
 
 /*
-classification is the classifier's verdict.
+Confidence thresholds: an intent or language below its minimum
+confidence is not trusted, and a yes-or-no question counts as yes from
+noulTrue up.
 */
-type classification struct {
-	Intent             string   `json:"intent"`
-	Language           string   `json:"language"`
-	StandaloneQuery    string   `json:"standalone_query"`
-	SearchQueries      []string `json:"search_queries"`
-	WantsHuman         bool     `json:"wants_human"`
-	Frustrated         bool     `json:"frustrated"`
-	InjectionSuspected bool     `json:"injection_suspected"`
-}
+const (
+	intentMinConfidence   = 0.5
+	languageMinConfidence = 0.6
+	noulTrue              = 0.7
+)
 
 /*
-intents lists the labels the classifier may answer.
+classification is the run's routing verdict.
 */
-func intents() []string {
-	return []string{
-		"question", "followup", "acknowledgement", "greeting", "human_request", "feedback",
-		"spam", "abusive", "unsafe", "off_topic", "other",
-	}
+type classification struct {
+	Intent             string
+	Language           string
+	WantsHuman         bool
+	Frustrated         bool
+	InjectionSuspected bool
 }
 
 /*
@@ -53,51 +55,76 @@ classify fills the run's classification, falling back on any failure.
 */
 func (r *Runner) classify(ctx context.Context, st *run) {
 	e := st.env
-	st.c = classification{Intent: "question", StandaloneQuery: e.pendingText()}
-
-	llm, model, key := r.classifier(ctx, e)
-	if llm == nil {
-		st.flags = append(st.flags, "classifier_unavailable")
+	st.c = classification{Intent: "question"}
+	if r.Decider == nil {
+		st.flags = append(st.flags, "decider_unavailable")
 		return
 	}
 
-	system := r.render(e, "classifier.system.md", nil)
-	user := r.conversationBlock(e) + "\n" + r.customerBlock(e)
-	call := jsonCall{
-		kind: enums.AIRunStepKindClassify, llm: llm, key: key, model: model, system: system, user: user,
-		timeout: r.Timeouts.ClassifyTotal, maxTokens: 400, valid: validClassification,
+	req := contracts.DecisionRequest{
+		State: r.conversationBlock(e) + "\n" + r.customerBlock(e), Questions: decisionQuestions(),
 	}
+	callCtx, cancel := r.timeout(ctx, r.Timeouts.ClassifyTotal)
+	started := r.Clock.Now()
+	res, err := r.Decider.Decide(callCtx, req)
+	cancel()
 
-	var out classification
-	if !r.callJSON(ctx, st, call, &out) {
+	r.step(ctx, st, r.decisionStep(req, res, started, err))
+	if err != nil {
 		st.flags = append(st.flags, "classifier_fallback")
 		return
 	}
 
-	if out.StandaloneQuery == "" {
-		out.StandaloneQuery = st.c.StandaloneQuery
-	}
-	if len(out.SearchQueries) > 3 {
-		out.SearchQueries = out.SearchQueries[:3]
-	}
-	st.c = out
-	if out.InjectionSuspected {
+	st.c = verdictOf(res)
+	if st.c.InjectionSuspected {
 		st.flags = append(st.flags, "injection_suspected")
 	}
 }
 
 /*
-validClassification accepts a verdict with a known intent.
+decisionStep is the classify step's record, priced from the configured
+input price; output tokens are free.
 */
-func validClassification(v any) bool {
-	c, ok := v.(*classification)
-	return ok && slices.Contains(intents(), c.Intent)
+func (r *Runner) decisionStep(req contracts.DecisionRequest, res *contracts.DecisionResponse,
+	started time.Time, err error,
+) stepRecord {
+	rec := stepRecord{
+		kind: enums.AIRunStepKindClassify, provider: "typesafe", model: r.DecisionModel,
+		started: started, request: req.State, err: err,
+	}
+	if res == nil {
+		return rec
+	}
+	answers, _ := json.Marshal(res.Answers)
+	rec.response, rec.responseModel = string(answers), res.Model
+	rec.usage = contracts.LLMUsage{
+		InputTokens: res.Usage.InputTokens, OutputTokens: res.Usage.OutputTokens, Reported: true,
+	}
+	rec.cost = new(int64(math.Round(float64(res.Usage.InputTokens) * r.DecisionPricePerMtok)))
+	return rec
+}
+
+/*
+verdictOf reads the answers through the confidence thresholds.
+*/
+func verdictOf(res *contracts.DecisionResponse) classification {
+	c := classification{Intent: "question"}
+	if a := res.Answers["intent"]; a.Confidence >= intentMinConfidence && slices.Contains(intents(), a.Choice) {
+		c.Intent = a.Choice
+	}
+	if a := res.Answers["language"]; a.Confidence >= languageMinConfidence && a.Choice != "other" {
+		c.Language = a.Choice
+	}
+	c.WantsHuman = res.Answers["wants_human"].Noul >= noulTrue
+	c.Frustrated = res.Answers["frustrated"].Noul >= noulTrue
+	c.InjectionSuspected = res.Answers["injection_suspected"].Noul >= noulTrue
+	return c
 }
 
 /*
 route turns the verdict into a decision when no retrieval is needed:
-silence for thanks and spam, a person for whoever asks for one, a
-greeting or a refusal from the answer model with no sources.
+silence for thanks and spam, a person for whoever mainly asks for one,
+a greeting or a careful reply from the answer model with no sources.
 */
 func (r *Runner) route(st *run) *decision {
 	e, c := st.env, st.c
@@ -121,54 +148,4 @@ func (r *Runner) route(st *run) *decision {
 		return handoff("frustration", "", e.handoffKey())
 	}
 	return nil
-}
-
-/*
-classifier resolves the classifier's driver: its own connection and
-model when set, else a cheap model on the answer connection.
-*/
-func (r *Runner) classifier(ctx context.Context, e *env) (contracts.LLM, string, *keyRef) {
-	key := e.ClassifierKey
-	if key == nil || r.LLM == nil {
-		return nil, "", nil
-	}
-	llm, err := r.LLM.ForKey(ctx, *key)
-	if err != nil {
-		return nil, "", nil
-	}
-	return llm, r.classifierModel(e), &keyRef{id: key.ID, provider: key.Provider}
-}
-
-/*
-classifierModel is the configured classifier model, or the cheap model
-of the answer model's family when none is set.
-*/
-func (r *Runner) classifierModel(e *env) string {
-	if m := strv(e.Agent.ClassifierModel); m != "" && e.Agent.ClassifierKeyID != nil {
-		return m
-	}
-	switch r.family(e.AnswerKey, e.Agent.AnswerModel) {
-	case enums.AIModelFamilyAnthropic:
-		return "claude-haiku-5-5"
-	case enums.AIModelFamilyOpenAI:
-		return "gpt-6-luna"
-	case enums.AIModelFamilyOpenWeight:
-		if strings.HasPrefix(strv(e.Agent.AnswerModel), "glm") {
-			return "glm-5.3-flash"
-		}
-	}
-	return strv(e.Agent.AnswerModel)
-}
-
-/*
-decodeJSON reads the first JSON object in a model's text, tolerating a
-code fence or stray prose around it.
-*/
-func decodeJSON(text string, out any) bool {
-	start := strings.Index(text, "{")
-	end := strings.LastIndex(text, "}")
-	if start < 0 || end <= start {
-		return false
-	}
-	return json.Unmarshal([]byte(text[start:end+1]), out) == nil
 }

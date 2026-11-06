@@ -76,7 +76,9 @@ func eligibility(e *env) string {
 
 /*
 humanGate steps back when a teammate already answered the trigger or
-is working the conversation.
+is working the conversation: never when assigned, while the assignee
+is around by default, and only for the reply itself when the agent
+always answers.
 */
 func humanGate(e *env) string {
 	if e.ReplyAfter == string(enums.AuthorTypeMember) {
@@ -86,12 +88,13 @@ func humanGate(e *env) string {
 		return ""
 	}
 	switch e.Agent.AssignedBehavior {
+	case "always":
+		return ""
 	case "never_when_assigned":
 		return "assigned"
-	case "skip_when_human_active":
-		if e.Facts.assigneeActive {
-			return "human_active"
-		}
+	}
+	if e.Facts.assigneeActive {
+		return "human_active"
 	}
 	return ""
 }
@@ -138,7 +141,7 @@ func scheduleGate(e *env) string {
 /*
 availability is what the answer prompt is told about handing off:
 available, later when the team is offline, or unavailable when the
-workspace configured no human handoff.
+agent is set to say it does not know without offering a person.
 */
 func (e *env) availability() string {
 	switch e.Agent.UnknownBehavior {

@@ -21,7 +21,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
-	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -48,11 +47,7 @@ func (r *Runner) afterHandoff(ctx context.Context, st *run, d *decision) {
 
 	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		e := st.env
-		writer := &conversations.Writer{
-			Q: models.New(tx), Tx: tx, Events: r.Events, Now: r.Clock.Now(),
-			Actor: conversations.Actor{Type: string(enums.AuthorTypeAgent), ID: e.Agent.ID, Name: e.Agent.Name},
-		}
-		if _, err := writer.AddNote(ctx, e.Conversation, summary); err != nil {
+		if _, err := r.agentWriter(tx, e).AddNote(ctx, e.Conversation, summary); err != nil {
 			return err
 		}
 		if err := r.finishRun(ctx, tx, st, d); err != nil {
@@ -76,14 +71,14 @@ func (r *Runner) afterHandoff(ctx context.Context, st *run, d *decision) {
 }
 
 /*
-summarize asks the classifier model for the note, falling back to the
+summarize asks the answer provider's cheap model for the note, falling back to the
 plain one.
 */
 func (r *Runner) summarize(ctx context.Context, st *run, d *decision) string {
 	e := st.env
 	fallback := plainSummary(st, d)
 
-	llm, model, key := r.classifier(ctx, e)
+	llm, model, key := r.cheapLLM(ctx, e)
 	if llm == nil {
 		return fallback
 	}

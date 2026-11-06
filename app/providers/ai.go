@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
+	"github.com/dimmihq/dimmi/app/drivers/decision/typesafe"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
@@ -60,8 +61,9 @@ func bootAI(ctx context.Context, a *app.App) error {
 
 /*
 newRunner builds the pipeline runner: the knowledge index, the driver
-manager and the checked prompt tree. A broken prompt tree or an
-unreadable seed directory stops the boot.
+manager, the checked prompt tree and, when its key is configured, the
+decision model. A broken prompt tree or an unreadable seed directory
+stops the boot.
 */
 func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 	if a.Knowledge == nil {
@@ -82,11 +84,23 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		return nil, fmt.Errorf("load agent prompts: %w", err)
 	}
 
-	return &pipeline.Runner{
+	decisions := a.Config.AI.Decisions.TypeSafe
+	runner := &pipeline.Runner{
 		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge, Prompts: loader,
 		Prices: loadPrices(a), Events: a.Events, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
-	}, nil
+		DecisionModel: decisions.Model, DecisionPricePerMtok: decisions.InputPricePerMtok,
+	}
+	if decisions.APIKey != "" {
+		decider, err := typesafe.New(a.HTTP, a.Clock, typesafe.Config{
+			APIKey: decisions.APIKey, BaseURL: decisions.BaseURL, Model: decisions.Model, Timeout: decisions.Timeout,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("open decision model: %w", err)
+		}
+		runner.Decider = decider
+	}
+	return runner, nil
 }
 
 /*

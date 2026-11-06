@@ -15,7 +15,9 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -162,4 +164,49 @@ func (r *Runner) render(e *env, name string, vars prompts.Vars) string {
 		return ""
 	}
 	return file.Content
+}
+
+/*
+cheapLLM is the answer connection with its provider's cheap model, for
+the generative side tasks: the handoff note and the grounding check.
+*/
+func (r *Runner) cheapLLM(ctx context.Context, e *env) (contracts.LLM, string, *keyRef) {
+	key := e.AnswerKey
+	if key == nil || r.LLM == nil {
+		return nil, "", nil
+	}
+	llm, err := r.LLM.ForKey(ctx, *key)
+	if err != nil {
+		return nil, "", nil
+	}
+	return llm, cheapModel(strv(e.Agent.AnswerModel)), &keyRef{id: key.ID, provider: key.Provider}
+}
+
+/*
+cheapModel is the small model of an answer model's family, or the
+answer model itself when its family has none known.
+*/
+func cheapModel(answer string) string {
+	switch {
+	case strings.HasPrefix(answer, "claude"):
+		return "claude-haiku-5-5"
+	case strings.HasPrefix(answer, "gpt"):
+		return "gpt-6-luna"
+	case strings.HasPrefix(answer, "glm"):
+		return "glm-5.3-flash"
+	}
+	return answer
+}
+
+/*
+decodeJSON reads the first JSON object in a text, tolerating a code
+fence or stray prose around it.
+*/
+func decodeJSON(text string, out any) bool {
+	start := strings.Index(text, "{")
+	end := strings.LastIndex(text, "}")
+	if start < 0 || end <= start {
+		return false
+	}
+	return json.Unmarshal([]byte(text[start:end+1]), out) == nil
 }

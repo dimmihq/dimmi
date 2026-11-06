@@ -232,12 +232,12 @@ func validVerdict(v any) bool {
 }
 
 /*
-verify asks the classifier model whether the sources support every
+verify asks the answer provider's cheap model whether the sources support every
 claim of the draft. A verifier that fails to answer fails closed.
 */
 func (r *Runner) verify(ctx context.Context, st *run, draft string) bool {
 	e := st.env
-	llm, model, key := r.classifier(ctx, e)
+	llm, model, key := r.cheapLLM(ctx, e)
 	if llm == nil {
 		return false
 	}

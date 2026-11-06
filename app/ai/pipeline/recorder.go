@@ -63,12 +63,15 @@ func (r *Runner) newRecorder(row models.AiRun) *Recorder {
 
 /*
 stepRecord is one finished step: what ran, on which connection and
-model, its text both ways, its usage, and its error if it failed.
+model, its text both ways, its usage, and its error if it failed. A
+provider or cost set here wins over the driver's and the price table's.
 */
 type stepRecord struct {
 	kind          enums.AIRunStepKind
 	llm           contracts.LLM
 	key           *keyRef
+	provider      string
+	cost          *int64
 	model         string
 	responseModel string
 	requestID     string
@@ -96,6 +99,10 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 	}
 	provider := providerOf(in)
 	cost := rec.price(provider, in.model, usage)
+	if in.cost != nil {
+		cost = *in.cost
+		rec.costMicros += cost
+	}
 	if in.kind == enums.AIRunStepKindGenerate && in.firstToken > 0 && rec.firstToken == 0 {
 		rec.firstToken = in.firstToken
 	}
@@ -154,6 +161,9 @@ providerOf names whose price list a step is charged on: the driver's
 provider, which the price table is keyed by, else the connection's.
 */
 func providerOf(in stepRecord) string {
+	if in.provider != "" {
+		return in.provider
+	}
 	if in.llm != nil {
 		return string(in.llm.Provider())
 	}
@@ -215,7 +225,7 @@ func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *dec
 		Status: d.status(), Outcome: nilable(d.outcome), SkipReason: nilable(d.skipReason),
 		HandoffReason: nilable(d.handoffReason), Intent: nilable(st.c.Intent), Language: nilable(st.c.Language),
 		QueryOriginal:  nilable(r.redactFor(st.env, st.env.pendingText())),
-		QueryRewritten: nilable(r.redactFor(st.env, st.c.StandaloneQuery)),
+		QueryRewritten: nilable(r.redactFor(st.env, st.query)),
 		Retrieval:      retrieval, AnswerMessageID: d.answerID, Flags: flags,
 		InputTokens: rec.tokens.input, CachedInputTokens: rec.tokens.cached,
 		CacheWriteTokens: rec.tokens.write, OutputTokens: rec.tokens.output,

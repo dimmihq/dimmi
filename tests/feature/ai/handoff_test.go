@@ -23,7 +23,7 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off at once when the customer asks for a person", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(summaryStep())
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("I want to talk to a human please")
 		res := h.run(conv, trigger)
@@ -64,8 +64,7 @@ func TestAiHandoffs(t *testing.T) {
 		}
 
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "Can a staff member export a project to CSV?",
-			"CSV export"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nYes, any project exports to CSV [1]."))
 
 		conv, trigger := h.conversation("Can a staff member export a project to CSV?")
@@ -75,7 +74,8 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off when the classifier hears a request for a person", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("human_request", "en", ""), summaryStep())
+		h.decider.Script(decide("human_request", "en"))
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("Please let somebody from your company look at this")
 		res := h.run(conv, trigger)
@@ -87,7 +87,7 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off at the reply limit", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, func(p *models.UpdateAgentParams) { p.MaxAiReplies = 2 })
-		h.llm.classifier.Script(summaryStep())
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("How much is Pro?")
 		h.operator("UPDATE conversations SET ai_state = 'active', ai_reply_count = 2 WHERE id = $1", conv)
@@ -105,7 +105,7 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off a customer it was serving when the spend cap is reached", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, func(p *models.UpdateAgentParams) { p.MonthlySpendCapMicros = new(int64(1000)) })
-		h.llm.classifier.Script(summaryStep())
+		h.llm.cheap.Script(summaryStep())
 		h.operator(`INSERT INTO ai_spend_periods (workspace_id, period_start, cost_micros, updated_at)
 			VALUES ($1, date_trunc('month', $2::timestamptz AT TIME ZONE 'UTC')::date, 5000, now())`,
 			h.d.TC.Workspace.Workspace.ID, h.d.TC.App.Clock.Now())
@@ -140,7 +140,7 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("ignores a spend cap of zero", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, func(p *models.UpdateAgentParams) { p.MonthlySpendCapMicros = new(int64(0)) })
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much is Pro?")
@@ -150,7 +150,8 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off when the provider fails", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"), summaryStep())
+		h.decider.Script(decide("question", "en"))
+		h.llm.cheap.Script(summaryStep())
 		h.llm.answer.Script(fake.Step{Err: &contracts.LLMError{Kind: contracts.LLMErrorServer, HTTPStatus: 503}})
 
 		conv, trigger := h.conversation("How much is Pro?")
@@ -170,7 +171,7 @@ func TestAiHandoffs(t *testing.T) {
 	t.Run("hands off without a model while serving the customer", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, func(p *models.UpdateAgentParams) { p.AnswerModel = nil })
-		h.llm.classifier.Script(summaryStep())
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("How much is Pro?")
 		h.operator("UPDATE conversations SET ai_state = 'active' WHERE id = $1", conv)
@@ -186,7 +187,7 @@ func TestAiHandoffs(t *testing.T) {
 			p.Schedule = "inside_office_hours"
 			p.OfficeHours = json.RawMessage(`{"timezone":"UTC","days":{"sun":{"open":"00:00","close":"00:01"}}}`)
 		})
-		h.llm.classifier.Script(summaryStep())
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("How much is Pro?")
 		h.operator("UPDATE conversations SET ai_state = 'active' WHERE id = $1", conv)
@@ -200,10 +201,10 @@ func TestAiHandoffs(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.operator("ALTER TABLE ai_agents DROP CONSTRAINT IF EXISTS ai_agents_unknown_behavior_check")
-		h.operator("UPDATE ai_agents SET unknown_behavior = 'never' WHERE workspace_id = $1",
+		h.operator("UPDATE ai_agents SET unknown_behavior = 'say_unknown' WHERE workspace_id = $1",
 			h.d.TC.Workspace.Workspace.ID)
-		h.llm.classifier.Script(classify("question", "en", "Refund my annual plan", "refund annual plan"),
-			summaryStep())
+		h.decider.Script(decide("question", "en"))
+		h.llm.cheap.Script(summaryStep())
 		h.llm.answer.Script(reply("STATUS: handoff\n\nThis is something I can't resolve here."))
 
 		conv, trigger := h.conversation("Refund my annual plan now")
@@ -227,6 +228,6 @@ func TestAiHandoffs(t *testing.T) {
 		res := h.run(conv, trigger)
 		assert.Equal(t, "skipped", res.Outcome)
 		assert.Equal(t, "human_replied", res.SkipReason)
-		assert.Empty(t, h.llm.classifier.Sent())
+		assert.Empty(t, h.llm.cheap.Sent())
 	})
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -20,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
+	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
 	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -28,12 +30,10 @@ import (
 )
 
 /*
-The models the scripted agent uses: both priced, so cost is recorded.
+The answer model the scripted agent uses, priced so cost is recorded;
+its cheap sibling writes handoff notes and checks grounding.
 */
-const (
-	answerModel     = "claude-sonnet-5-5"
-	classifierModel = "claude-haiku-5-5"
-)
+const answerModel = "claude-sonnet-5-5"
 
 /*
 seedPath is the directory of seed articles, from this package.
@@ -42,15 +42,15 @@ const seedPath = "../../../database/seeders/knowledge"
 
 /*
 router is the scripted driver: answer-model calls go to one fake,
-classifier-model calls to another. Hook runs before an answer stream
-starts; stop overrides the answer stream's stop reason.
+cheap-model calls to another. Hook runs before an answer stream starts;
+stop overrides the answer stream's stop reason.
 */
 type router struct {
-	answer     *fake.LLM
-	classifier *fake.LLM
-	mu         sync.Mutex
-	hook       func()
-	stop       contracts.StopReason
+	answer *fake.LLM
+	cheap  *fake.LLM
+	mu     sync.Mutex
+	hook   func()
+	stop   contracts.StopReason
 }
 
 func (r *router) Provider() contracts.LLMProvider { return contracts.LLMProviderAnthropic }
@@ -59,7 +59,7 @@ func (r *router) pick(model string) *fake.LLM {
 	if model == answerModel {
 		return r.answer
 	}
-	return r.classifier
+	return r.cheap
 }
 
 func (r *router) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
@@ -106,12 +106,13 @@ func (s *stopStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 }
 
 /*
-harness is one test's desk with a scripted agent.
+harness is one test's desk with a scripted agent and decision model.
 */
 type harness struct {
-	t   *testing.T
-	d   tests.Desk
-	llm *router
+	t       *testing.T
+	d       tests.Desk
+	llm     *router
+	decider *decisionfake.Decider
 }
 
 /*
@@ -123,9 +124,12 @@ func newHarness(t *testing.T, change func(*models.UpdateAgentParams)) *harness {
 	t.Helper()
 
 	d := tests.NewDesk(t)
-	h := &harness{t: t, d: d, llm: &router{
-		answer: fake.New(contracts.LLMProviderAnthropic), classifier: fake.New(contracts.LLMProviderAnthropic),
+	decider, err := decisionfake.New(d.TC.App.Application.Config.App.Env == foundation.EnvTesting)
+	require.NoError(t, err)
+	h := &harness{t: t, d: d, decider: decider, llm: &router{
+		answer: fake.New(contracts.LLMProviderAnthropic), cheap: fake.New(contracts.LLMProviderAnthropic),
 	}}
+	d.TC.App.AI.Decider = decider
 
 	seed, err := knowledge.LoadSeed(t.Context(), d.TC.App.Storage, seedPath)
 	require.NoError(t, err)
@@ -164,7 +168,6 @@ func saveAgent(ctx context.Context, t *testing.T, d tests.Desk, change func(*mod
 		Name: "Ada", ProductName: new("Lovelace"), Enabled: true, Tone: "friendly", Guidance: "",
 		EnabledChannels: []string{"api"}, Schedule: "always", AssignedBehavior: "skip_when_human_active",
 		AnswerKeyID: &key.ID, AnswerModel: new(answerModel),
-		ClassifierKeyID: &key.ID, ClassifierModel: new(classifierModel),
 		ExcludedChannelConnectionIds: []ids.UUID{}, MaxOutputTokens: 600, MaxAiReplies: 5,
 		UnknownBehavior: "offer_handoff", GroundingMode: "citations", RequireCitations: true,
 		DefaultLanguage: "en", Languages: []string{}, ContactAttributeAllowlist: []string{},
@@ -195,17 +198,21 @@ func agentID(ctx context.Context, t *testing.T, d tests.Desk) ids.UUID {
 }
 
 /*
-classify is a scripted classifier verdict with optional search queries.
+decide is a scripted decision: a confident intent and language, and
+the named yes-or-no questions answered yes.
 */
-func classify(intent, language, query string, searches ...string) fake.Step {
-	if searches == nil {
-		searches = []string{}
+func decide(intent, language string, yes ...string) decisionfake.Step {
+	answers := map[string]contracts.DecisionAnswer{
+		"intent":   {Type: contracts.DecisionChoice, Choice: intent, Confidence: 0.92},
+		"language": {Type: contracts.DecisionChoice, Choice: language, Confidence: 0.95},
 	}
-	data, _ := json.Marshal(map[string]any{
-		"intent": intent, "language": language, "standalone_query": query, "search_queries": searches,
-		"wants_human": false, "frustrated": false, "injection_suspected": false,
-	})
-	return fake.Step{Text: string(data), Usage: contracts.LLMUsage{InputTokens: 300, OutputTokens: 40, Reported: true}}
+	for _, name := range []string{"wants_human", "frustrated", "injection_suspected"} {
+		answers[name] = contracts.DecisionAnswer{Type: contracts.DecisionNoul, Noul: 0.04}
+	}
+	for _, name := range yes {
+		answers[name] = contracts.DecisionAnswer{Type: contracts.DecisionNoul, Noul: 0.93}
+	}
+	return decisionfake.Step{Answers: answers, Usage: contracts.DecisionUsage{InputTokens: 2_000_000}}
 }
 
 /*

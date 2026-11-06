@@ -90,7 +90,6 @@ func Variables() map[string][]string {
 		"answer.system.md": {
 			"agent_name", "product_name", "tone", "language", "guidance", "channel", "handoff",
 		},
-		"classifier.system.md": {},
 		"summary.system.md":    {"language", "reason"},
 		"verify.system.md":     {},
 		"tone_friendly.md":     {},

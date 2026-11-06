@@ -262,11 +262,10 @@ included lists the ids of every message the run read.
 */
 func (e *env) included() []ids.UUID {
 	out := make([]ids.UUID, 0, len(e.History)+len(e.Pending))
-	for _, m := range e.History {
-		out = append(out, m.ID)
-	}
-	for _, m := range e.Pending {
-		out = append(out, m.ID)
+	for _, m := range append(append([]models.Message{}, e.History...), e.Pending...) {
+		if m.ID != (ids.UUID{}) {
+			out = append(out, m.ID)
+		}
 	}
 	return out
 }

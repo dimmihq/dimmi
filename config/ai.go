@@ -28,6 +28,7 @@ type AIConfig struct {
 	Retry     AIRetryConfig     `koanf:"retry"`
 	Breaker   AIBreakerConfig   `koanf:"breaker"`
 	Bootstrap AIBootstrapConfig `koanf:"bootstrap"`
+	Decisions AIDecisionsConfig `koanf:"decisions"`
 
 	TracesRetentionDays     int  `default:"30"  koanf:"traces_retention_days"`
 	RunsRetentionDays       int  `default:"400" koanf:"runs_retention_days"`

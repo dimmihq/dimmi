@@ -8,7 +8,7 @@
 | "real person", "operator" alone, and the same requests in the
 | languages customers write most. A sentence that merely mentions a
 | staff member or what the agent supports is a question, and goes to
-| the classifier, which catches the paraphrases.
+| the decision model, which catches the paraphrases.
 |
 */
 

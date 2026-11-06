@@ -1,6 +1,7 @@
 package ai_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
+	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
 )
 
 /*
@@ -20,10 +21,24 @@ messages arrive in bursts, teammates step in and jobs retry.
 func TestAiRunRobustness(t *testing.T) {
 	t.Parallel()
 
-	t.Run("falls back to a question when the classifier answers nonsense", func(t *testing.T) {
+	t.Run("treats an unsure intent as a question", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(fake.Step{Text: "I think this is a question about pricing."})
+		unsure := decide("spam", "en")
+		unsure.Answers["intent"] = contracts.DecisionAnswer{Type: contracts.DecisionChoice, Choice: "spam", Confidence: 0.3}
+		h.decider.Script(unsure)
+		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
+
+		conv, trigger := h.conversation("How much does the Pro plan cost per seat?")
+		res := h.run(conv, trigger)
+		assert.Equal(t, "answered", res.Outcome)
+		assert.Equal(t, "question", str(h.load(conv, res.RunID).run.Intent))
+	})
+
+	t.Run("falls back to a question when the decision model fails", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.decider.Script(decisionfake.Step{Err: errors.New("decision model down")})
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much does the Pro plan cost per seat?")
@@ -32,24 +47,73 @@ func TestAiRunRobustness(t *testing.T) {
 
 		s := h.load(conv, res.RunID)
 		assert.Contains(t, s.run.Flags, "classifier_fallback")
-		assert.Equal(t, "question", str(s.run.Intent))
-		assert.Equal(t, []string{"classify", "classify", "retrieve", "generate"}, s.stepKinds())
+		assert.Equal(t, []string{"classify", "retrieve", "generate"}, s.stepKinds())
+		assert.Equal(t, "error", s.steps[0].Status)
 	})
 
-	t.Run("falls back to a question when the classifier fails", func(t *testing.T) {
+	t.Run("routes without a model when no decision model is configured", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(fake.Step{Err: &contracts.LLMError{Kind: contracts.LLMErrorTimeout}})
+		h.d.TC.App.AI.Decider = nil
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
+		h.llm.cheap.Script(summaryStep())
 
 		conv, trigger := h.conversation("How much does the Pro plan cost per seat?")
-		assert.Equal(t, "answered", h.run(conv, trigger).Outcome)
+		res := h.run(conv, trigger)
+		assert.Equal(t, "answered", res.Outcome)
+
+		s := h.load(conv, res.RunID)
+		assert.Contains(t, s.run.Flags, "decider_unavailable")
+		assert.Equal(t, []string{"retrieve", "generate"}, s.stepKinds())
+		assert.Contains(t, sentText(h.llm.answer), "The workspace default language is English")
+
+		next := h.add(conv, "contact", "message", "ok let me talk to a human")
+		assert.Equal(t, "customer_requested", h.run(conv, next).HandoffReason)
+		assert.Empty(t, h.decider.Sent())
+	})
+
+	t.Run("prices each decision from its input tokens", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.decider.Script(decide("acknowledgement", "en"))
+
+		conv, trigger := h.conversation("thanks")
+		res := h.run(conv, trigger)
+		s := h.load(conv, res.RunID)
+		require.Equal(t, []string{"classify"}, s.stepKinds())
+		assert.Equal(t, int64(84_000), s.steps[0].CostMicros)
+		assert.Equal(t, "typesafe", str(s.steps[0].Provider))
+		assert.Equal(t, int64(84_000), s.run.CostMicros)
+
+		asked := h.decider.Sent()[0]
+		assert.Contains(t, asked.State, "<customer_message>thanks</customer_message>")
+		for _, name := range []string{"intent", "language", "wants_human", "frustrated", "injection_suspected"} {
+			assert.Contains(t, asked.Questions, name)
+		}
+	})
+
+	t.Run("searches with the previous message on a followup", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.decider.Script(decide("question", "en"), decide("followup", "en"))
+		h.llm.answer.Script(
+			reply("STATUS: answered\n\nSAML single sign-on is on the Business plan [1]."),
+			reply("STATUS: answered\n\nIt works with Okta [1]."),
+		)
+
+		conv, trigger := h.conversation("Do you support SAML single sign-on?")
+		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+		res := h.run(conv, h.add(conv, "contact", "message", "and with okta?"))
+		require.Equal(t, "answered", res.Outcome)
+
+		s := h.load(conv, res.RunID)
+		assert.Equal(t, "Do you support SAML single sign-on?\n\nand with okta?", str(s.run.QueryRewritten))
 	})
 
 	t.Run("retries once when the answer ignores the output protocol", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(
 			reply("Pro costs $12 per seat per month [1]."),
 			reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."),
@@ -69,7 +133,8 @@ func TestAiRunRobustness(t *testing.T) {
 	t.Run("hands off when the answer ignores the protocol twice", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"), summaryStep())
+		h.decider.Script(decide("question", "en"))
+		h.llm.cheap.Script(summaryStep())
 		h.llm.answer.Script(reply("Sure! Pro is cheap."))
 
 		conv, trigger := h.conversation("How much is Pro?")
@@ -87,7 +152,7 @@ func TestAiRunRobustness(t *testing.T) {
 	t.Run("never shows the model internal notes", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, first := h.conversation("Hi there")
@@ -97,7 +162,7 @@ func TestAiRunRobustness(t *testing.T) {
 		require.NotEqual(t, first, trigger)
 
 		assert.Equal(t, "answered", h.run(conv, trigger).Outcome)
-		sent := sentText(h.llm.answer, h.llm.classifier)
+		sent := sentText(h.llm.answer, h.llm.cheap)
 		assert.NotContains(t, sent, "NOTE-7731")
 		assert.Contains(t, sent, `<turn role="teammate">Hello! How can I help?</turn>`)
 		assert.Contains(t, sent, `<turn role="customer">Hi there</turn>`)
@@ -106,7 +171,7 @@ func TestAiRunRobustness(t *testing.T) {
 	t.Run("discards the answer when a teammate replies while the model writes", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much is Pro?")
@@ -124,7 +189,7 @@ func TestAiRunRobustness(t *testing.T) {
 	t.Run("answers a burst of three messages once", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, first := h.conversation("hi")
@@ -146,7 +211,7 @@ func TestAiRunRobustness(t *testing.T) {
 	t.Run("never answers twice when the job retries", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much is Pro?")
@@ -175,7 +240,7 @@ func TestAiRunRobustness(t *testing.T) {
 	t.Run("trims an answer cut off by the token limit to its last full sentence", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]. It adds unlimited proj"))
 		h.llm.stop = contracts.StopReasonMaxTokens
 
@@ -192,7 +257,7 @@ func TestAiRunRobustness(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.operator("UPDATE ai_agents SET temperature = 0.2 WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
-		h.llm.classifier.Script(classify("question", "en", "How much does the Pro plan cost per seat?"))
+		h.decider.Script(decide("question", "en"))
 		h.llm.answer.Script(reply("STATUS: answered\n\nPro costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much is Pro?")
