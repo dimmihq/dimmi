@@ -26,7 +26,11 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/netip"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -183,6 +187,37 @@ func (c *Client) CheckAddress(address string) error {
 	}
 
 	return nil
+}
+
+/*
+AllowsPlaintext reports whether the configuration trusts a host:port
+enough to be reached without TLS: the operator listed it in
+AllowHosts, or allowed private networks and the address is localhost
+or a private or loopback literal. Every other host must be reached
+over https, since a credential sent in the clear can be read on the
+way.
+*/
+func (c *Client) AllowsPlaintext(address string) bool {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return false
+	}
+
+	if slices.ContainsFunc(c.cfg.AllowHosts, func(allowed string) bool { return strings.EqualFold(allowed, address) }) {
+		return true
+	}
+
+	if !c.cfg.AllowPrivateNetworks {
+		return false
+	}
+
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	addr, err := netip.ParseAddr(host)
+
+	return err == nil && (addr.IsLoopback() || addr.IsPrivate())
 }
 
 /*

@@ -258,10 +258,21 @@ func (tx *Tx) runHooks(ctx context.Context, hooks []Hook) {
 	}
 }
 
+/*
+Detach returns a context that keeps the values of ctx, its tenant
+included, but neither its transaction nor its cancellation. Work that
+must outlive the caller's transaction, such as saving a renewed
+credential the caller may still roll back, opens its own transaction
+with it.
+*/
+func Detach(ctx context.Context) context.Context {
+	return context.WithValue(context.WithoutCancel(ctx), txKey{}, (*Tx)(nil))
+}
+
 func (db *DB) txFrom(ctx context.Context) (*Tx, bool) {
 	tx, ok := ctx.Value(txKey{}).(*Tx)
 
-	return tx, ok && tx.db == db
+	return tx, ok && tx != nil && tx.db == db
 }
 
 /*

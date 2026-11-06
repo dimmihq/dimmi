@@ -211,6 +211,22 @@ func TestConfig(t *testing.T) {
 		assert.PanicsWithValue(t, httpclient.ErrFakesNotAllowed, func() { httpclienttest.New(client) })
 	})
 
+	t.Run("trusts plaintext only for listed hosts or private addresses", func(t *testing.T) {
+		t.Parallel()
+		listed, err := httpclient.New(httpclient.Config{AllowHosts: []string{"ollama.lan:11434"}})
+		require.NoError(t, err)
+		private, err := httpclient.New(httpclient.Config{AllowPrivateNetworks: true})
+		require.NoError(t, err)
+
+		assert.True(t, listed.AllowsPlaintext("ollama.lan:11434"))
+		assert.False(t, listed.AllowsPlaintext("localhost:11434"))
+		assert.False(t, listed.AllowsPlaintext("ollama.lan"))
+		assert.True(t, private.AllowsPlaintext("localhost:11434"))
+		assert.True(t, private.AllowsPlaintext("10.0.0.4:8000"))
+		assert.True(t, private.AllowsPlaintext("[::1]:8000"))
+		assert.False(t, private.AllowsPlaintext("example.com:80"))
+	})
+
 	t.Run("rejects an allowed host without a port", func(t *testing.T) {
 		t.Parallel()
 

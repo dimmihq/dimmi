@@ -74,6 +74,36 @@ func TestFake(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, resp.Status)
 	})
 
+	t.Run("answers a sequence in turn and repeats its last response", func(t *testing.T) {
+		t.Parallel()
+		client := newClient(t, httpclient.Config{})
+		fake := httpclienttest.New(client).StubSequence("POST https://api.example.test/poll",
+			httpclient.Response{Status: http.StatusForbidden},
+			httpclient.Response{Status: http.StatusOK, Body: []byte("done")},
+		)
+
+		var statuses []int
+		for range 3 {
+			resp, err := client.New().Post(t.Context(), "https://api.example.test/poll", "x")
+			require.NoError(t, err)
+			statuses = append(statuses, resp.Status)
+		}
+
+		assert.Equal(t, []int{http.StatusForbidden, http.StatusOK, http.StatusOK}, statuses)
+		assert.Len(t, fake.Sent(), 3)
+	})
+
+	t.Run("answers an empty sequence with an empty response", func(t *testing.T) {
+		t.Parallel()
+		client := newClient(t, httpclient.Config{})
+		httpclienttest.New(client).StubSequence("https://api.example.test/*")
+
+		resp, err := client.New().Get(t.Context(), "https://api.example.test/x")
+
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.Status)
+	})
+
 	t.Run("fails the assertion when nothing matches", func(t *testing.T) {
 		t.Parallel()
 		recorder := &testing.T{}

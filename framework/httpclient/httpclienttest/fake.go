@@ -91,6 +91,19 @@ is a URL where * matches anything, optionally led by a method:
 were added.
 */
 func (f *Fake) Stub(pattern string, resp httpclient.Response) *Fake {
+	methods, glob := splitPattern(pattern)
+	for _, method := range methods {
+		f.mock.RegisterRegexpResponder(method, glob, responder(resp))
+	}
+
+	return f
+}
+
+/*
+splitPattern reads a stub pattern into the methods it covers and the
+URL expression it matches.
+*/
+func splitPattern(pattern string) ([]string, *regexp.Regexp) {
 	methods := []string{
 		http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut,
 		http.MethodPatch, http.MethodDelete, http.MethodOptions,
@@ -101,11 +114,47 @@ func (f *Fake) Stub(pattern string, resp httpclient.Response) *Fake {
 	}
 
 	glob := strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, ".*")
+
+	return methods, regexp.MustCompile("^" + glob + "$")
+}
+
+/*
+StubSequence answers requests matching the pattern with the responses
+in turn, repeating the last one once they run out, so a test can
+script a provider that fails before it succeeds or a poll that waits
+before it answers.
+*/
+func (f *Fake) StubSequence(pattern string, resps ...httpclient.Response) *Fake {
+	if len(resps) == 0 {
+		return f.Stub(pattern, httpclient.Response{})
+	}
+
+	var mu sync.Mutex
+	next := 0
+
+	methods, glob := splitPattern(pattern)
 	for _, method := range methods {
-		f.mock.RegisterRegexpResponder(method, regexp.MustCompile("^"+glob+"$"), responder(resp))
+		f.mock.RegisterRegexpResponder(method, glob, func(req *http.Request) (*http.Response, error) {
+			mu.Lock()
+			resp := resps[min(next, len(resps)-1)]
+			next++
+			mu.Unlock()
+
+			return responder(resp)(req)
+		})
 	}
 
 	return f
+}
+
+/*
+Sent returns every request the fake received, oldest first.
+*/
+func (f *Fake) Sent() []SentRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return slices.Clone(f.sent)
 }
 
 /*

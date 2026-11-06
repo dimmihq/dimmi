@@ -57,6 +57,27 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(t, 0, countItems(t.Context(), t, db))
 	})
 
+	t.Run("commits a detached transaction even when the caller rolls back", func(t *testing.T) {
+		t.Parallel()
+		db := open(t)
+
+		err := db.Transaction(t.Context(), func(ctx context.Context, tx *database.Tx) error {
+			mustExecTx(ctx, t, tx, "INSERT INTO items VALUES (1, 'a')")
+
+			detached := database.Detach(ctx)
+			require.NoError(t, db.Transaction(detached, func(ctx context.Context, tx *database.Tx) error {
+				_, err := tx.Exec(ctx, "INSERT INTO items VALUES (2, 'b')")
+
+				return err
+			}))
+
+			return errStop
+		})
+
+		require.ErrorIs(t, err, errStop)
+		assert.Equal(t, 1, countItems(t.Context(), t, db))
+	})
+
 	t.Run("routes db calls made with its context into the transaction", func(t *testing.T) {
 		t.Parallel()
 		db := open(t)
