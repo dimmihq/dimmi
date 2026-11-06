@@ -150,6 +150,8 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
+	bootAI(a)
+
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
 }
 

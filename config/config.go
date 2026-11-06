@@ -48,6 +48,7 @@ type Config struct {
 	SecurityEvents SecurityEventsConfig `koanf:"security_events"`
 	Channels       ChannelsConfig       `koanf:"channels"`
 	Inbox          InboxConfig          `koanf:"inbox"`
+	AI             AIConfig             `koanf:"ai"`
 }
 
 /*

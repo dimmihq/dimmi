@@ -114,6 +114,7 @@ type App struct {
 	Retention             contracts.RetentionGuard
 	Entitlements          contracts.Entitlements
 	BillingStatus         contracts.BillingStatus
+	Knowledge             contracts.Knowledge
 	EmailChannel          *email.Channel
 	EmailDomains          *emailactions.Domains
 

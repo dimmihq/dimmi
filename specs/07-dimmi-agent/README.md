@@ -881,3 +881,15 @@ Canonical: `contracts.Knowledge` in `app/contracts/knowledge.go`, defined in `sp
 4. Greeting reply on first "hi" in widget: **reply, non-substantive**. Productlane stays silent; we judge empty-feeling widget worse.
 5. Should "knowledge empty" hard-block enabling: **yes**.
 6. `RecordAiSpend` for 08 ingestion embeddings counts toward AI cap: **yes, same money**. Cap reached blocks ingestion embeddings too (08 falls back to FTS-only indexing and retries next period).
+
+## Provider sources delta (2026-11-06, decided)
+
+BYOK is no longer the only way in. A connection (`ai_provider_keys`) now covers three sources:
+
+| Source | provider | auth_type | Notes |
+|---|---|---|---|
+| Managed dimmi | `dimmi` | `managed` | Default for every workspace. No secret on the row; upstream creds live in instance config `ai.managed.{anthropic,openai,openweight}`. Driver multiplexes model -> family -> upstream driver. Cloud: Dimmi's keys (billed at cost, invoicing rides 12). Self-host: operator's keys, else provider hidden. |
+| ChatGPT subscription | `chatgpt` | `oauth` | Sealed OAuth token set; refreshes + re-seals on rotation. Official Sign-in-with-ChatGPT Responses API at `api.openai.com/v1/responses` only (never `backend-api/codex`). Self-host: dynamic client registration; cloud: interest-form client, flag `ai.chatgpt.enabled`. |
+| BYOK | `anthropic`, `openai`, `engy`, `openai_compatible` | `api_key`/`none` | Launch set. engy = OpenAI-compatible at api.engy.ai; reports real cost via `X-Engy-Charged-Micro`. gemini/bedrock/openrouter/voyage deferred; driver registry stays `Extend`-able. |
+
+Prompt files gain a family layer: `resources/prompts/agent/<v>/{common,anthropic,openai,openweight}/`, per-file override falling back to `common`. `ai_runs.config_snapshot` records `model_family`. Usage API reports `by_source`.
