@@ -275,8 +275,8 @@ func connect(t *testing.T, n *node, token string) *wsClient {
 }
 
 /*
-command sends a command and returns its reply, queueing pushes that
-arrive first.
+command sends a command and returns its reply, wherever it sits among the
+frames read so far, keeping the pushes queued in the order they came.
 */
 func (c *wsClient) command(cmd map[string]any) frame {
 	c.t.Helper()
@@ -293,12 +293,15 @@ func (c *wsClient) command(cmd map[string]any) frame {
 	require.NoError(c.t, c.conn.Write(ctx, websocket.MessageText, data))
 
 	for {
-		f := c.next()
-		if f.ID == c.id {
-			return f
+		for i, f := range c.queue {
+			if f.ID == c.id {
+				c.queue = append(c.queue[:i], c.queue[i+1:]...)
+
+				return f
+			}
 		}
 
-		c.queue = append(c.queue, f)
+		c.read()
 	}
 }
 
@@ -344,12 +347,14 @@ func (c *wsClient) push() push {
 	c.t.Helper()
 
 	for {
-		var f frame
-		if len(c.queue) > 0 {
-			f, c.queue = c.queue[0], c.queue[1:]
-		} else {
-			f = c.next()
+		if len(c.queue) == 0 {
+			c.read()
+
+			continue
 		}
+
+		f := c.queue[0]
+		c.queue = c.queue[1:]
 
 		if f.Push != nil {
 			return *f.Push
@@ -398,9 +403,10 @@ func (c *wsClient) unsubscribed() string {
 }
 
 /*
-next reads one frame, splitting a message that carries several.
+read reads one message and queues its frames in order. The server may
+batch several frames in one message, so a reply can arrive behind a push.
 */
-func (c *wsClient) next() frame {
+func (c *wsClient) read() {
 	c.t.Helper()
 
 	ctx, cancel := context.WithTimeout(c.t.Context(), waitFor)
@@ -409,16 +415,11 @@ func (c *wsClient) next() frame {
 	_, data, err := c.conn.Read(ctx)
 	require.NoError(c.t, err)
 
-	lines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
-	frames := make([]frame, len(lines))
-
-	for i, line := range lines {
-		require.NoError(c.t, json.Unmarshal(line, &frames[i]))
+	for line := range bytes.SplitSeq(bytes.TrimSpace(data), []byte("\n")) {
+		var f frame
+		require.NoError(c.t, json.Unmarshal(line, &f))
+		c.queue = append(c.queue, f)
 	}
-
-	c.queue = append(c.queue, frames[1:]...)
-
-	return frames[0]
 }
 
 /*

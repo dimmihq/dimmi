@@ -60,9 +60,16 @@ func TestConversationBroadcasts(t *testing.T) {
 		}
 		dispatch(t, tc, event)
 
-		list, open := c.Publication(), c.Publication()
-		assert.Equal(t, appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID), list.Channel)
-		assert.Equal(t, appbroadcasting.ConversationChannel(s.conversation.ID), open.Channel)
+		byChannel := map[string]testkit.RealtimePublication{}
+		for range 2 {
+			p := c.Publication()
+			byChannel[p.Channel] = p
+		}
+
+		list := byChannel[appbroadcasting.WorkspaceConversationsChannel(tc.Workspace.Workspace.ID)]
+		open := byChannel[appbroadcasting.ConversationChannel(s.conversation.ID)]
+		require.NotEmpty(t, list.ID, "no publication on the workspace's list")
+		require.NotEmpty(t, open.ID, "no publication on the conversation")
 
 		for _, p := range []testkit.RealtimePublication{list, open} {
 			assert.Equal(t, "conversation.assigned", p.Event)
