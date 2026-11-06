@@ -7,7 +7,10 @@
 # Before saving, entries no Go command used in the last 90 minutes are
 # dropped, so the cache holds what the current code needs instead of
 # growing with every run. Go refreshes an entry's time when it uses one
-# older than an hour. Pull requests restore but never save.
+# older than an hour. A build cache is named after the code it was built
+# from, so a run of code that was already built, such as a re-run, saves
+# nothing new and the repository stays under GitHub's cache limit, where
+# older caches would be evicted. Pull requests restore but never save.
 name: Go cache
 description: Restores or saves the Go module and build caches.
 inputs:
@@ -35,7 +38,7 @@ runs:
         path: |
           ~/.cache/go-build
           ~/.cache/golangci-lint
-        key: go-build-${{ runner.os }}-${{ inputs.name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        key: go-build-${{ runner.os }}-${{ inputs.name }}-${{ hashFiles('go.sum', '**/*.go') }}
         restore-keys: go-build-${{ runner.os }}-${{ inputs.name }}-
 
     - if: inputs.mode == 'save' && github.event_name != 'pull_request'
@@ -49,7 +52,7 @@ runs:
         path: |
           ~/.cache/go-build
           ~/.cache/golangci-lint
-        key: go-build-${{ runner.os }}-${{ inputs.name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        key: go-build-${{ runner.os }}-${{ inputs.name }}-${{ hashFiles('go.sum', '**/*.go') }}
     - if: inputs.mode == 'save' && inputs.save-modules == 'true' && github.event_name != 'pull_request'
       id: modules
       uses: actions/cache/restore@v4
