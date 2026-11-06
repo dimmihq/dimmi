@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"os"
 	"runtime/debug"
 	"testing"
 	"testing/fstest"
@@ -174,8 +175,26 @@ func TestDrivers(t *testing.T) {
 	})
 }
 
+/*
+withoutMemoryLimitEnv removes GOMEMLIMIT for the test and puts it back
+after, since a limit set from outside wins over the one configured, as it
+does when CI caps the tests' memory.
+*/
+func withoutMemoryLimitEnv(t *testing.T) {
+	t.Helper()
+
+	value, ok := os.LookupEnv("GOMEMLIMIT")
+	if !ok {
+		return
+	}
+
+	t.Setenv("GOMEMLIMIT", value)
+	require.NoError(t, os.Unsetenv("GOMEMLIMIT"))
+}
+
 func TestRuntime(t *testing.T) {
 	t.Run("sets the memory limit it is given and reads the container's on auto", func(t *testing.T) {
+		withoutMemoryLimitEnv(t)
 		previous := debug.SetMemoryLimit(-1)
 		t.Cleanup(func() { debug.SetMemoryLimit(previous) })
 
