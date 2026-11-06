@@ -24,7 +24,9 @@ export const Route = createFileRoute("/d")({
     if (stale) {
       showSlug(current.slug);
     }
-    const workspace = await context.queryClient.ensureQueryData(workspaceQuery(current.id)).catch(() => null);
+    const workspace = await context.queryClient
+      .query({ ...workspaceQuery(current.id), staleTime: 60_000 })
+      .catch(() => null);
     if (workspace && !workspace.onboarding.completed_at) {
       throw redirect({ to: "/onboarding" });
     }
