@@ -47,7 +47,7 @@ func unscopedQueries() map[string]string {
 		"FindLatestContactConversationSpam": "inbound mail checks the sender's last verdict: no member is asking",
 		"ListWidgetConversationChanges":     "a widget visitor's own conversations: the customer asks, not a member",
 		"ListWidgetMessageChanges":          "a widget visitor's own messages: the customer asks, not a member",
-		"CountUnreadMentions":               "the member's own mentions: being mentioned lets them read the conversation",
+		"CountUnreadMentions":               "the member's own mentions: a mention lets them read the conversation",
 	}
 }
 
