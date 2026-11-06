@@ -1,0 +1,71 @@
+version: "2026-11-06"
+currency: USD
+# price per 1M tokens in USD == micro-USD per token
+models:
+  - provider: anthropic
+    match: exact
+    model: claude-sonnet-5-5
+    input_per_mtok: "3.00"
+    cached_input_per_mtok: "0.30"
+    cache_write_per_mtok: "3.75"
+    output_per_mtok: "15.00"
+    roles: [answer]
+  - provider: anthropic
+    match: exact
+    model: claude-haiku-5-5
+    input_per_mtok: "1.00"
+    cached_input_per_mtok: "0.10"
+    cache_write_per_mtok: "1.25"
+    output_per_mtok: "5.00"
+    roles: [classifier]
+  - provider: openai
+    match: exact
+    model: gpt-5.2
+    input_per_mtok: "1.75"
+    cached_input_per_mtok: "0.175"
+    output_per_mtok: "14.00"
+    roles: [answer]
+  - provider: openai
+    match: exact
+    model: gpt-5-mini
+    input_per_mtok: "0.25"
+    cached_input_per_mtok: "0.025"
+    output_per_mtok: "2.00"
+    roles: [classifier]
+  - provider: engy
+    match: prefix
+    model: ""
+    input_per_mtok: "0.60"
+    cached_input_per_mtok: "0.60"
+    output_per_mtok: "2.50"
+    roles: [answer]
+  - provider: dimmi
+    match: prefix
+    model: "claude-sonnet"
+    input_per_mtok: "3.00"
+    cached_input_per_mtok: "0.30"
+    output_per_mtok: "15.00"
+  - provider: dimmi
+    match: prefix
+    model: "claude-haiku"
+    input_per_mtok: "1.00"
+    cached_input_per_mtok: "0.10"
+    output_per_mtok: "5.00"
+  - provider: dimmi
+    match: prefix
+    model: "gpt-5"
+    input_per_mtok: "1.75"
+    cached_input_per_mtok: "0.175"
+    output_per_mtok: "14.00"
+  - provider: dimmi
+    match: prefix
+    model: ""
+    input_per_mtok: "0.60"
+    cached_input_per_mtok: "0.60"
+    output_per_mtok: "2.50"
+  - provider: chatgpt
+    match: prefix
+    model: ""
+    input_per_mtok: "0"
+    cached_input_per_mtok: "0"
+    output_per_mtok: "0"
