@@ -42,9 +42,10 @@ jobs:
           - { name: go tests (2/4), run: make test-go SHARD=2/4, cache: race-2, services: true, race: true }
           - { name: go tests (3/4), run: make test-go SHARD=3/4, cache: race-3, services: true, race: true }
           - { name: go tests (4/4), run: make test-go SHARD=4/4, cache: race-4, services: true, race: true }
-          - { name: go tests as the application role (1/3), run: make test-app-role SHARD=1/3, cache: role-1, services: true, race: true }
-          - { name: go tests as the application role (2/3), run: make test-app-role SHARD=2/3, cache: role-2, services: true, race: true }
-          - { name: go tests as the application role (3/3), run: make test-app-role SHARD=3/3, cache: role-3, services: true, race: true }
+          - { name: go tests as the application role (1/4), run: make test-app-role SHARD=1/4, cache: role-1, services: true, race: true }
+          - { name: go tests as the application role (2/4), run: make test-app-role SHARD=2/4, cache: role-2, services: true, race: true }
+          - { name: go tests as the application role (3/4), run: make test-app-role SHARD=3/4, cache: role-3, services: true, race: true }
+          - { name: go tests as the application role (4/4), run: make test-app-role SHARD=4/4, cache: role-4, services: true, race: true }
           - { name: go tests in the cloud edition (1/4), run: make test-cloud SHARD=1/4, cache: cloud-1, services: true, race: true }
           - { name: go tests in the cloud edition (2/4), run: make test-cloud SHARD=2/4, cache: cloud-2, services: true, race: true }
           - { name: go tests in the cloud edition (3/4), run: make test-cloud SHARD=3/4, cache: cloud-3, services: true, race: true }
@@ -133,6 +134,12 @@ jobs:
         run: .github/wait-for-services.sh
       - id: check
         run: make e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
+      - if: ${{ failure() && steps.check.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
       - if: ${{ !cancelled() && matrix.shard == 1 && steps.check.outcome != 'skipped' }}
         uses: ./.github/actions/go-cache
         with:
