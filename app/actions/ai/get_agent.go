@@ -40,7 +40,7 @@ AgentView is the agent with everything the settings page needs:
 type AgentView struct {
 	Agent         models.AiAgent
 	Keys          []models.AiProviderKey
-	Providers     []Provider
+	Providers     []ProviderDescriptor
 	Catalog       map[string][]CatalogEntry
 	Ready         bool
 	ReadinessErrs []string
@@ -209,11 +209,11 @@ func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey) bool {
 providers lists the connectable providers, marking which the install
 can actually serve.
 */
-func providers(cfg config.AIConfig) []Provider {
+func providers(cfg config.AIConfig) []ProviderDescriptor {
 	managed := cfg.Managed
 	managedUp := managed.Anthropic.APIKey != "" || managed.OpenAI.APIKey != "" || managed.OpenWeight.APIKey != ""
 
-	return []Provider{
+	return []ProviderDescriptor{
 		{ID: enums.AIProviderDimmi, Name: "Dimmi (built-in)", AuthType: "managed", KeyRequired: false, Available: managedUp},
 		{ID: enums.AIProviderAnthropic, Name: "Anthropic", AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://console.anthropic.com/settings/keys"},
 		{ID: enums.AIProviderOpenAI, Name: "OpenAI", AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://platform.openai.com/api-keys"},

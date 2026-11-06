@@ -26,14 +26,13 @@ func Capabilities(model string) contracts.LLMCapabilities {
 		SystemPrompt:    true,
 		JSONMode:        true,
 		PromptCache:     true,
-		ContextTokens:   400_000,
+		ContextTokens:   1_050_000,
 		MaxOutputTokens: 128_000,
 	}
 
 	lower := strings.ToLower(model)
 	if strings.HasPrefix(lower, "gpt-3") || strings.HasPrefix(lower, "gpt-4-turbo") {
-		caps.ContextTokens = 128_000
-		caps.MaxOutputTokens = 4_096
+		caps.ContextTokens = 272_000
 		caps.PromptCache = false
 	}
 

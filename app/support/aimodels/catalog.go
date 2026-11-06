@@ -33,13 +33,37 @@ Managed lists the curated models the built-in provider offers,
 spanning every family so a workspace needs no key at all.
 */
 func Managed() []Entry {
+	return append(append(Anthropic(), OpenAI()...), Engy()...)
+}
+
+/*
+Anthropic lists the Claude models.
+*/
+func Anthropic() []Entry {
 	return []Entry{
-		{ID: "claude-sonnet-5-5", DisplayName: "Claude Sonnet 5.5", Family: enums.AIModelFamilyAnthropic, ContextTokens: 200_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
-		{ID: "claude-haiku-5-5", DisplayName: "Claude Haiku 5.5", Family: enums.AIModelFamilyAnthropic, ContextTokens: 200_000, Suggested: []enums.AIModelRole{enums.AIModelRoleClassifier}},
-		{ID: "gpt-5.2", DisplayName: "GPT-5.2", Family: enums.AIModelFamilyOpenAI, ContextTokens: 400_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
-		{ID: "gpt-5-mini", DisplayName: "GPT-5 mini", Family: enums.AIModelFamilyOpenAI, ContextTokens: 400_000, Suggested: []enums.AIModelRole{enums.AIModelRoleClassifier}},
-		{ID: "glm-5.2", DisplayName: "GLM 5.2", Family: enums.AIModelFamilyOpenWeight, ContextTokens: 200_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
-		{ID: "kimi-k3", DisplayName: "Kimi K3", Family: enums.AIModelFamilyOpenWeight, ContextTokens: 1_000_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
+		{ID: "claude-sonnet-5-5", DisplayName: "Claude Sonnet 5.5", Family: enums.AIModelFamilyAnthropic, ContextTokens: 1_000_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
+		{ID: "claude-opus-5-5", DisplayName: "Claude Opus 5.5", Family: enums.AIModelFamilyAnthropic, ContextTokens: 1_000_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
+		{ID: "claude-haiku-5-5", DisplayName: "Claude Haiku 5.5", Family: enums.AIModelFamilyAnthropic, ContextTokens: 1_000_000, Suggested: []enums.AIModelRole{enums.AIModelRoleClassifier}},
+	}
+}
+
+/*
+OpenAI lists the GPT models.
+*/
+func OpenAI() []Entry {
+	return []Entry{
+		{ID: "gpt-6.1-sol", DisplayName: "GPT-6.1 Sol", Family: enums.AIModelFamilyOpenAI, ContextTokens: 1_050_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
+		{ID: "gpt-6.1-terra", DisplayName: "GPT-6.1 Terra", Family: enums.AIModelFamilyOpenAI, ContextTokens: 1_050_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
+		{ID: "gpt-6-luna", DisplayName: "GPT-6 Luna", Family: enums.AIModelFamilyOpenAI, ContextTokens: 1_050_000, Suggested: []enums.AIModelRole{enums.AIModelRoleClassifier}},
+	}
+}
+
+/*
+Engy lists the open-weight models.
+*/
+func Engy() []Entry {
+	return []Entry{
+		{ID: "glm-5.3-flash", DisplayName: "GLM 5.3 Flash", Family: enums.AIModelFamilyOpenWeight, ContextTokens: 327_680, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
 	}
 }
 
@@ -48,10 +72,7 @@ ChatGPT lists the models a subscription connection typically offers;
 the live list still comes from the account where possible.
 */
 func ChatGPT() []Entry {
-	return []Entry{
-		{ID: "gpt-5.2", DisplayName: "GPT-5.2", Family: enums.AIModelFamilyOpenAI, ContextTokens: 400_000, Suggested: []enums.AIModelRole{enums.AIModelRoleAnswer}},
-		{ID: "gpt-5-mini", DisplayName: "GPT-5 mini", Family: enums.AIModelFamilyOpenAI, ContextTokens: 400_000, Suggested: []enums.AIModelRole{enums.AIModelRoleClassifier}},
-	}
+	return OpenAI()
 }
 
 /*

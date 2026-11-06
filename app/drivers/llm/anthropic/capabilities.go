@@ -23,7 +23,7 @@ func Capabilities(model string) contracts.LLMCapabilities {
 		SystemPrompt:    true,
 		JSONMode:        false,
 		PromptCache:     true,
-		ContextTokens:   200_000,
-		MaxOutputTokens: 64_000,
+		ContextTokens:   1_000_000,
+		MaxOutputTokens: 128_000,
 	}
 }
