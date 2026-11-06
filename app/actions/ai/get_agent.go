@@ -13,6 +13,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -79,9 +80,14 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 			return err
 		}
 
-		managedKey, err := ensureManagedKey(ctx, tx, in.Membership.Workspace.ID)
+		managedKey, err := ensureManagedKey(ctx, a.Config, a.Clock, tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
+		}
+		if managedKey != nil && defaultRoles(&agent, managedKey) {
+			if agent, err = models.New(tx).UpdateAgent(ctx, updateParams(&agent, a.Clock.Now())); err != nil {
+				return fmt.Errorf("save default roles: %w", err)
+			}
 		}
 
 		keys, err := models.New(tx).ListProviderKeys(ctx, in.Membership.Workspace.ID)
@@ -128,11 +134,75 @@ func ensureAgent(ctx context.Context, clk clock.Clock, cfg config.AIConfig, tx *
 }
 
 /*
-ensureManagedKey returns the built-in connection, creating it when
-the install has managed credentials to offer.
+ensureManagedKey returns the built-in connection, creating it and
+pointing the agent's roles at the default models when the install has
+managed credentials to offer.
 */
-func ensureManagedKey(ctx context.Context, tx *database.Tx, workspaceID ids.UUID) (*models.AiProviderKey, error) {
-	return nil, nil
+func ensureManagedKey(ctx context.Context, cfg config.AIConfig, clk clock.Clock, tx *database.Tx, workspaceID ids.UUID) (*models.AiProviderKey, error) {
+	if !managedConfigured(cfg) {
+		return nil, nil
+	}
+
+	key, err := models.New(tx).FindManagedProviderKey(ctx, workspaceID)
+	if err == nil {
+		return &key, nil
+	}
+
+	modelsJSON, _ := json.Marshal(managedModelIDs())
+	created, err := models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
+		WorkspaceID: workspaceID, Name: "Dimmi (built-in)", Provider: "dimmi",
+		AuthType: "managed", Status: "valid", StatusReason: str("built-in provider"),
+		Models: modelsJSON, ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
+		Source: "system", Now: clk.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create managed key: %w", err)
+	}
+	return &created, nil
+}
+
+/*
+managedConfigured reports whether the install offers the built-in
+provider.
+*/
+func managedConfigured(cfg config.AIConfig) bool {
+	m := cfg.Managed
+	return m.Anthropic.APIKey != "" || m.OpenAI.APIKey != "" || m.OpenWeight.APIKey != ""
+}
+
+/*
+managedModelIDs lists the catalog ids the managed connection offers
+for its configured families.
+*/
+func managedModelIDs() []string {
+	var out []string
+	for _, e := range aimodels.Managed() {
+		out = append(out, e.ID)
+	}
+	return out
+}
+
+/*
+defaultRoles points an unconfigured agent's roles at the managed
+connection's defaults.
+*/
+func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey) bool {
+	if key == nil {
+		return false
+	}
+	changed := false
+	answer, classifier := "claude-sonnet-5-5", "claude-haiku-5-5"
+	if agent.AnswerKeyID == nil {
+		agent.AnswerKeyID = &key.ID
+		agent.AnswerModel = &answer
+		changed = true
+	}
+	if agent.ClassifierKeyID == nil {
+		agent.ClassifierKeyID = &key.ID
+		agent.ClassifierModel = &classifier
+		changed = true
+	}
+	return changed
 }
 
 /*
