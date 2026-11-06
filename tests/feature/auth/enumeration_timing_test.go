@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/dimmihq/dimmi/framework/clock"
 
 	"github.com/dimmihq/dimmi/tests"
@@ -31,7 +29,7 @@ func TestEnumerationTiming(t *testing.T) {
 
 		unknown, wrong := timings(t, tc, "nobody@example.com", tc.Owner.Email)
 
-		assert.Less(t, (unknown - wrong).Abs(), 10*time.Millisecond, "unknown %s, wrong password %s", unknown, wrong)
+		tests.AssertSameTiming(t, unknown, wrong, "unknown email", "wrong password")
 	})
 }
 

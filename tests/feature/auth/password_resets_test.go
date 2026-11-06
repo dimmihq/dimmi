@@ -310,7 +310,7 @@ func TestPasswordResetUpdate(t *testing.T) {
 
 		unknown, wrong := resetTimings(t, tc)
 
-		assert.Less(t, (unknown - wrong).Abs(), 10*time.Millisecond, "unknown %s, wrong token %s", unknown, wrong)
+		tests.AssertSameTiming(t, unknown, wrong, "unknown id", "wrong token")
 	})
 }
 
