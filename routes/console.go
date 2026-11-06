@@ -36,6 +36,8 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.SendWorkspaceDeletionRemindersArgs{}).DailyAt("09:00")
 	a.Schedule.Job(jobs.NotifyExpiringTokensArgs{}).DailyAt("09:05")
 	a.Schedule.Job(jobs.RecheckOrganizationDomainsArgs{}).DailyAt("05:00")
+	a.Schedule.Job(jobs.RefreshSSOMetadataArgs{}).DailyAt("05:10")
+	a.Schedule.Job(jobs.WarnExpiringSSOCertificatesArgs{}).DailyAt("09:15")
 	a.Schedule.Job(jobs.SweepAssignmentQueuesArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.RemindInvitersArgs{}).DailyAt("09:10")
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()

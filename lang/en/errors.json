@@ -84,5 +84,8 @@
   "password_too_short": "The password is shorter than this server allows.",
   "captcha_failed": "Prove you are not a robot, then try again.",
   "captcha_unavailable": "We cannot check you are not a robot right now. Try again in a minute.",
-  "disposable_email": "Use an address you keep; throwaway mailboxes cannot sign up."
+  "disposable_email": "Use an address you keep; throwaway mailboxes cannot sign up.",
+  "sso_failed": "Single sign-on did not complete. Try again or ask your administrator.",
+  "sso_no_access": "Your company's identity provider does not give you access to this workspace.",
+  "sso_email_domain_not_verified": "Your address is not under a domain your company verified for single sign-on."
 }

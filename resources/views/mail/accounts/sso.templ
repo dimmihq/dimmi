@@ -15,3 +15,31 @@ templ DomainVerificationLost(name, domain, settingsURL string) {
 		@button(settingsURL, i18n.T(ctx, "mail.domain_verification_lost.action", nil))
 	}
 }
+
+/*
+SSOBypassUsed tells every owner that one of them signed in without the
+company's identity provider, which they may do for an hour when it is
+down, and where to check the sign-in rules.
+*/
+
+templ SSOBypassUsed(name, owner, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.sso_bypass_used.subject", nil)) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.sso_bypass_used.intro", i18n.Args{"owner": owner}) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.sso_bypass_used.action", nil))
+	}
+}
+
+/*
+SSOCertificateExpiring tells an owner that the certificate their
+identity provider signs with expires soon, after which nobody can sign
+in through it until the new one is added.
+*/
+
+templ SSOCertificateExpiring(name, connection, date, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.sso_certificate_expiring.subject", i18n.Args{"connection": connection})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.sso_certificate_expiring.intro", i18n.Args{"connection": connection, "date": date}) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.sso_certificate_expiring.action", nil))
+	}
+}

@@ -148,3 +148,16 @@ what either role may do.
 func RoleChanged(from, to string) bool {
 	return from != to
 }
+
+/*
+RoleOutranks reports whether the built-in role gives more than the
+other: owner over admin over member, so the strongest of several roles
+a member is handed wins.
+*/
+func RoleOutranks(role, other enums.Role) bool {
+	rank := func(r enums.Role) int {
+		return slices.Index([]enums.Role{enums.RoleMember, enums.RoleAdmin, enums.RoleOwner}, r)
+	}
+
+	return rank(role) > rank(other)
+}

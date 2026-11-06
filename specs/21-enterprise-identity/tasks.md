@@ -22,7 +22,7 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 
 ## M3. Domains and connections (track 08 enterprise-identity)
 
-- [ ] Migrations 080001, 080002, 080003, 080005, 080011. Prefixes `ssoc_`, `odom_` registered (`app/models/public_ids.go`). Lint annotations.
+- [x] Migrations 080001, 080002, 080003, 080005, 080011 (owners function; lookup functions follow in M4), 080012 (default custom role). Prefixes `ssoc_`, `odom_` registered (`app/models/public_ids.go`). Lint annotations.
 - [x] Domain actions + API. DNS via `framework/dns` with test resolver fake (boundary). Freemail list embed. `RecheckOrganizationDomains`, `sso:verify-domain`.
 - [x] Connection CRUD, state machine, secret sealing (`Scope{Kind: "organization"}`), settings mirrors in same tx. Audit events.
 - [x] Permissions `sso:manage`, `scim:manage` in catalog + `roles.go`; label keys.
@@ -32,16 +32,16 @@ Style: caveman. Order matters. Every task merged with tests. App logic: integrat
 
 - [x] First: add gosaml2 + goxmldsig v1.6.1 floor, one `framework/saml` call; `tests/arch` and binary size check pass. Fails: stop, report.
 - [x] `framework/saml` wrapper + `samltest`. Tests list in saml.md. 90% coverage. `doc.go`, no product words.
-- [ ] Web routes redirect, ACS (CSRF off for this route only), metadata. Attempt store on Valkey, `__Host-dimmi_sso` cookie, replay guard, IdP-initiated restart.
-- [ ] `CompleteSSOLogin`, `ResolveSSOUser`, `ApplyGroupRoles`, JIT. `OrganizationLoginPolicy` replaces `AllowAll` in provider; `CheckLoginPolicy` path for password, magic link, email code, reset, register, OAuth.
-- [ ] `POST /sso-lookups`. Login page "Continue with SSO". `POST /sessions {sso_bypass}` + `SSOBypassUsedMail`.
-- [ ] Metadata refresh + certificate warning jobs. `connection-dialog`, test flow polling `tested_at`, `attribute-map`, `group-roles`, `enforce-dialog`.
+- [x] Web routes redirect, ACS (CSRF off for this route only), metadata. Attempt store on Valkey, `__Host-dimmi_sso` cookie, replay guard, IdP-initiated restart.
+- [x] `CompleteSSOLogin`, `ResolveSSOUser`, `ApplyGroupRoles`, JIT. `OrganizationLoginPolicy` replaces `AllowAll` in provider; `CheckLoginPolicy` path for password, magic link, email code, reset, register, OAuth.
+- [x] `POST /sso-lookups`. Login page "Continue with SSO". `POST /sessions {sso_bypass}` + `SSOBypassUsedMail`.
+- [x] Metadata refresh + certificate warning jobs. `connection-dialog`, test flow polling `tested_at`, `attribute-map`, `group-roles`, `enforce-dialog`.
 - [ ] Tests `tests/feature/identity/saml_test.go`; e2e `single-sign-on.spec.ts`: "an owner connects a saml idp, tests it and signs in through it", "enforcing sends a password sign-in to the idp", "the owner bypass signs in and warns the other owners". Local IdP started from `tests/e2e/server.ts`.
 
 ## M5. Enterprise OIDC (track 08 enterprise-identity)
 
-- [ ] `oidc_provider.go` per-connection `oidc.New`, cache by id + `updated_at`. Callback route. Client secret write-only.
-- [ ] Shared core tests re-run for OIDC via table. Dialog protocol step offers OIDC. E2e: "an owner connects an openid provider".
+- [x] `oidc_provider.go` per-connection `oidc.New`, cache by id + `updated_at`. Callback route. Client secret write-only.
+- [x] Shared core tests re-run for OIDC via table. Dialog protocol step offers OIDC. E2e: "an owner connects an openid provider".
 
 ## M6. SCIM (track 08 enterprise-identity)
 

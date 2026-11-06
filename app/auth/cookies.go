@@ -35,6 +35,12 @@ oauthCookie is the name of the attempt cookie, before its prefix.
 const oauthCookie = "dimmi_oauth"
 
 /*
+ssoCookie is the name of the single sign-on attempt cookie, before its
+prefix.
+*/
+const ssoCookie = "dimmi_sso"
+
+/*
 twoFactorCookie is the name of the challenge cookie, before its prefix.
 */
 const twoFactorCookie = "dimmi_2fa"
@@ -82,6 +88,38 @@ func (c Cookies) OAuthCookie(value string, lifetime time.Duration) fhttp.Cookie 
 		Secure:   c.Secure,
 		HttpOnly: true,
 		SameSite: fhttp.SameSiteLaxMode,
+	}
+}
+
+/*
+SSOName returns the name of the single sign-on attempt cookie, with its
+prefix.
+*/
+func (c Cookies) SSOName() string {
+	return c.prefixed(ssoCookie)
+}
+
+/*
+SSOCookie returns the cookie that ties a single sign-on attempt to the
+browser that started it, or deletes it with a zero lifetime. A SAML
+identity provider posts its answer from its own site, so over HTTPS the
+cookie goes along on that cross-site post; the attempt it names is only
+good once.
+*/
+func (c Cookies) SSOCookie(value string, lifetime time.Duration) fhttp.Cookie {
+	maxAge := int(lifetime.Seconds())
+	if lifetime <= 0 {
+		maxAge = -1
+	}
+
+	sameSite := fhttp.SameSiteLaxMode
+	if c.Secure {
+		sameSite = fhttp.SameSiteNoneMode
+	}
+
+	return fhttp.Cookie{
+		Name: c.SSOName(), Value: value, Path: "/", MaxAge: maxAge, Secure: c.Secure, HttpOnly: true,
+		SameSite: sameSite,
 	}
 }
 

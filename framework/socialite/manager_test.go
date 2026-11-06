@@ -160,6 +160,23 @@ func TestRedirect(t *testing.T) {
 		require.ErrorIs(t, err, socialite.ErrProvider)
 	})
 
+	t.Run("builds a provider from settings kept as data", func(t *testing.T) {
+		t.Parallel()
+		client, err := httpclient.New(httpclient.Config{AllowPrivateNetworks: true})
+		require.NoError(t, err)
+		m := socialite.NewManager(socialite.Config{}, newStore(t))
+		m.Extend("oidc", oidc.Factory(client, clock.System()))
+
+		provider, err := m.Build("tenant", config.Section{"driver": "oidc", "issuer": "http://127.0.0.1:1", "client_id": "c"})
+		require.NoError(t, err)
+
+		_, err = provider.AuthURL(t.Context(), socialite.Attempt{State: "s", RedirectURL: callbackURL})
+		require.Error(t, err)
+
+		_, err = m.Build("tenant", config.Section{"driver": "oidc"})
+		require.ErrorIs(t, err, socialite.ErrMisconfigured)
+	})
+
 	t.Run("fails when the store cannot keep the attempt", func(t *testing.T) {
 		t.Parallel()
 		m, _ := newManager(t)

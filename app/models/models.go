@@ -654,18 +654,19 @@ type OauthGrant struct {
 }
 
 type OauthIdentity struct {
-	ID             ids.UUID   `json:"id"`
-	UserID         ids.UUID   `json:"user_id"`
-	Provider       string     `json:"provider"`
-	ProviderUserID string     `json:"provider_user_id"`
-	Email          *string    `json:"email"`
-	EmailVerified  bool       `json:"email_verified"`
-	Username       *string    `json:"username"`
-	AvatarUrl      *string    `json:"avatar_url"`
-	HostedDomain   *string    `json:"hosted_domain"`
-	LastLoginAt    *time.Time `json:"last_login_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID              ids.UUID   `json:"id"`
+	UserID          ids.UUID   `json:"user_id"`
+	Provider        string     `json:"provider"`
+	ProviderUserID  string     `json:"provider_user_id"`
+	Email           *string    `json:"email"`
+	EmailVerified   bool       `json:"email_verified"`
+	Username        *string    `json:"username"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	HostedDomain    *string    `json:"hosted_domain"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	SsoConnectionID *ids.UUID  `json:"sso_connection_id"`
 }
 
 type OauthToken struct {
@@ -823,6 +824,7 @@ type SSOConnection struct {
 	CreatedByUserID     *ids.UUID         `json:"created_by_user_id"`
 	CreatedAt           time.Time         `json:"created_at"`
 	UpdatedAt           time.Time         `json:"updated_at"`
+	DefaultCustomRoleID *ids.UUID         `json:"default_custom_role_id"`
 }
 
 type SavedReply struct {

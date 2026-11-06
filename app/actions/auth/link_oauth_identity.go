@@ -141,9 +141,9 @@ func (a *LinkOAuthIdentity) Create(
 	})
 
 	switch {
-	case database.IsUniqueViolation(err, "oauth_identities_provider_provider_user_id_key"):
+	case database.IsUniqueViolation(err, "oauth_identities_provider_connection_subject_key"):
 		return exceptions.ErrIdentityTaken
-	case database.IsUniqueViolation(err, "oauth_identities_user_id_provider_key"):
+	case database.IsUniqueViolation(err, "oauth_identities_user_provider_connection_key"):
 		return exceptions.ErrProviderAlreadyLinked
 	case err != nil:
 		return fmt.Errorf("create identity: %w", err)

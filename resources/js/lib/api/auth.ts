@@ -32,6 +32,7 @@ export interface AuthConfig {
   providers: Provider[];
   locales: Locale[];
   captcha?: Captcha | null;
+  sso_available?: boolean;
 }
 
 /*
@@ -42,6 +43,20 @@ export interface AuthConfig {
 export interface Captcha {
   provider: "turnstile";
   site_key: string;
+}
+
+/*
+ * SSOLookup is where an address signs in: its company's connection and
+ * where it starts, null for none, and whether the company requires it.
+ */
+export interface SSOLookup {
+  redirect_url: string | null;
+  name: string | null;
+  enforced: boolean;
+}
+
+export function lookupSSO(email: string): Promise<SSOLookup> {
+  return request<SSOLookup>("POST", "/sso-lookups", { email });
 }
 
 /*
@@ -145,8 +160,14 @@ export const meQuery = queryOptions({
   retry: false,
 });
 
-export function signIn(email: string, password: string, reauth?: boolean): Promise<SignInResult> {
-  return request<SignInResult>("POST", "/sessions", { grant: "password", email, password, reauth });
+export function signIn(email: string, password: string, reauth?: boolean, ssoBypass?: boolean): Promise<SignInResult> {
+  return request<SignInResult>("POST", "/sessions", {
+    grant: "password",
+    email,
+    password,
+    reauth,
+    sso_bypass: ssoBypass || undefined,
+  });
 }
 
 export function signInWithLink(token: string): Promise<SignInResult> {

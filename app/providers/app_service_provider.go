@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/sso"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	appauth "github.com/dimmihq/dimmi/app/auth"
@@ -113,6 +114,8 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
+	bootLoginPolicy(a)
+
 	a.Actions = &app.Actions{
 		CreateUser: &users.CreateUser{DB: a.DB, Clock: a.Clock},
 		CreateWorkspace: &workspaces.CreateWorkspace{
@@ -148,6 +151,16 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	}
 
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
+}
+
+/*
+bootLoginPolicy makes sign-in follow each company's identity provider
+rules, unless something else already set a stricter policy.
+*/
+func bootLoginPolicy(a *app.App) {
+	if _, plain := a.LoginPolicy.(appauth.AllowAll); plain {
+		a.LoginPolicy = appauth.OrganizationLoginPolicy{DB: a.DB}
+	}
 }
 
 /*
@@ -199,8 +212,8 @@ func bootSignIn(a *app.App, dummy string, risk *appauth.SignupRisk) {
 	}
 
 	acts.AttemptLogin = &auth.AttemptLogin{
-		DB: a.DB, Hash: a.Hash, Clock: a.Clock, Queue: a.Queue, LoginPolicy: a.LoginPolicy, Lockout: a.Lockout,
-		CompletePrimaryAuth: acts.CompletePrimaryAuth, DummyHash: dummy,
+		DB: a.DB, Hash: a.Hash, Clock: a.Clock, Queue: a.Queue, Mail: a.Mail, Links: a.Links,
+		LoginPolicy: a.LoginPolicy, Lockout: a.Lockout, CompletePrimaryAuth: acts.CompletePrimaryAuth, DummyHash: dummy,
 	}
 
 	acts.RegisterUser = &auth.RegisterUser{
@@ -238,6 +251,7 @@ func bootMailedSecrets(a *app.App) {
 
 	acts.SendPasswordResetLink = &auth.SendPasswordResetLink{
 		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Limiter: a.Limiter, Lockout: a.Lockout, Links: a.Links,
+		Policy: a.LoginPolicy,
 	}
 
 	acts.ResetPassword = &auth.ResetPassword{
@@ -329,6 +343,12 @@ func registerJobs(a *app.App) error {
 		queue.Register(a.Queue, &jobs.RecordFailedReset{DB: a.DB}),
 		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
 		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
+		queue.Register(a.Queue, &jobs.RefreshSSOMetadata{
+			DB: a.DB, Refresh: &sso.RefreshMetadata{DB: a.DB, HTTP: a.HTTP, Clock: a.Clock},
+		}),
+		queue.Register(a.Queue, &jobs.WarnExpiringSSOCertificates{
+			DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links,
+		}),
 		queue.Register(a.Queue, &jobs.RecheckOrganizationDomains{
 			DB: a.DB, Clock: a.Clock, DNS: a.DNS, Mail: a.Mail, Events: a.Events, Links: a.Links,
 		}),

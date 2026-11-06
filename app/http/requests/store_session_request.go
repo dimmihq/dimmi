@@ -33,7 +33,9 @@ const (
 
 /*
 StoreSessionRequest is the input of POST /sessions. Reauth asks for a
-fresh sign-in of the session's own user. Credential is the answer a
+fresh sign-in of the session's own user. SSOBypass asks an owner's
+password sign-in to go around their company's identity
+provider. Credential is the answer a
 device signed for a passkey, sent instead of a code.
 */
 type StoreSessionRequest struct {
@@ -45,6 +47,8 @@ type StoreSessionRequest struct {
 		Code     string `json:"code,omitempty"     validate:"omitempty,max=20"`
 		Method   string `json:"method,omitempty"   validate:"omitempty,max=40"`
 		Reauth   bool   `json:"reauth,omitempty"`
+
+		SSOBypass bool `json:"sso_bypass,omitempty"`
 
 		Credential json.RawMessage `json:"credential,omitempty"`
 	}

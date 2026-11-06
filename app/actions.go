@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/sso"
+	"github.com/dimmihq/dimmi/app/actions/ssologin"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
@@ -116,6 +117,13 @@ type Actions struct {
 	DeleteSSOConnection        *sso.DeleteConnection
 	OrganizationDomains        *sso.Domains
 	SSOOperator                *sso.Operator
+	StartSSOSignIn             *ssologin.StartSignIn
+	ConsumeSAML                *ssologin.ConsumeSAML
+	ConsumeOIDC                *ssologin.ConsumeOIDC
+	CompleteSSOLogin           *ssologin.CompleteSSOLogin
+	SSOMetadata                *ssologin.Metadata
+	StartSSOTest               *ssologin.StartTest
+	LookupSSO                  *ssologin.Lookup
 	ListAuthFactors            *factors.ListAuthFactors
 	AddAuthFactor              *factors.AddAuthFactor
 	ActivateAuthFactor         *factors.ActivateAuthFactor

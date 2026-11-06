@@ -47,9 +47,20 @@ type UpdateSSOConnectionRequest struct {
 
 		JITEnabled     *bool           `json:"jit_enabled,omitempty"`
 		DefaultRole    *string         `json:"default_role,omitempty"   validate:"omitempty,oneof=admin member"`
+		DefaultCustom  *string         `json:"default_custom_role_id,omitempty"`
 		DefaultTeamIDs *[]string       `json:"default_team_ids,omitempty"`
 		GroupRoleMap   *[]SSOGroupRole `json:"group_role_map,omitempty" validate:"omitempty,max=50,dive"`
 
 		ConfirmOwnersCanSignIn bool `json:"confirm_owners_can_sign_in,omitempty"`
+	}
+	RawBody []byte
+}
+
+/*
+StoreSSOLookupRequest is the input of POST /sso-lookups.
+*/
+type StoreSSOLookupRequest struct {
+	Body struct {
+		Email string `json:"email" validate:"required,email,max=254"`
 	}
 }

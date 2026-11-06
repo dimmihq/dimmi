@@ -55,7 +55,7 @@ func dataExportRoutes(r *routing.Router, a *app.App) {
 		Status(http.StatusAccepted)
 	routing.Get(r, "/data-exports", "data-exports.index", c.Index).Ability("conversations:read")
 	routing.Get(r, path, "data-exports.show", c.Get).Ability("conversations:read")
-	routing.Get(r, path+"/download", "data-exports.download", c.File).Ability("conversations:read")
+	routing.Get(r, path+"/download", "data-exports.download.show", c.File).Ability("conversations:read")
 	routing.Delete(r, path, "data-exports.destroy", c.Destroy).Ability("conversations:read").
 		Status(http.StatusNoContent)
 }

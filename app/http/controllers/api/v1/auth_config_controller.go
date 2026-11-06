@@ -39,13 +39,20 @@ type AuthConfigController struct {
 	Factors   []string
 	Providers providers.ProviderResolver
 	Server    Server
+	SSO       appauth.OrganizationLoginPolicy
 }
 
 /*
 Show answers with the sign-in options.
 */
 func (c *AuthConfigController) Show(ctx context.Context, _ *requests.NoInput) (*AuthConfigOutput, error) {
+	sso, err := c.SSO.Available(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &AuthConfigOutput{Body: fhttp.NewResource(resources.AuthConfig{
+		SSOAvailable:      sso,
 		Object:            "auth_config",
 		Edition:           c.Server.Edition,
 		ServerVersion:     c.Server.Version,

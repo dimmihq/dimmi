@@ -30,6 +30,9 @@ interface Fields {
   issuer: string;
   clientID: string;
   clientSecret: string;
+  emailAttribute: string;
+  nameAttribute: string;
+  groupsAttribute: string;
 }
 
 const empty: Fields = {
@@ -41,6 +44,9 @@ const empty: Fields = {
   issuer: "",
   clientID: "",
   clientSecret: "",
+  emailAttribute: "email",
+  nameAttribute: "",
+  groupsAttribute: "",
 };
 
 /*
@@ -67,6 +73,11 @@ function draftOf(protocol: ConnectionDraft["protocol"], f: Fields): ConnectionDr
       idp_sso_url: f.ssoURL.trim() || undefined,
       idp_certificates: certificate ? [certificate] : undefined,
       idp_metadata_url: f.metadataURL.trim() || undefined,
+      attribute_map: {
+        email: f.emailAttribute.trim() || undefined,
+        display_name: f.nameAttribute.trim() || undefined,
+        groups: f.groupsAttribute.trim() || undefined,
+      },
     },
   };
 }
@@ -88,6 +99,18 @@ function SAMLFields({ fields, set }: { fields: Fields; set: (change: Partial<Fie
         placeholder="-----BEGIN CERTIFICATE-----"
         value={fields.certificate}
         onChange={(certificate) => set({ certificate })}
+      />
+      <Input
+        label="Email attribute"
+        hint="Leave empty when the name id is the email address."
+        value={fields.emailAttribute}
+        onChange={(emailAttribute) => set({ emailAttribute })}
+      />
+      <Input label="Name attribute" value={fields.nameAttribute} onChange={(nameAttribute) => set({ nameAttribute })} />
+      <Input
+        label="Groups attribute"
+        value={fields.groupsAttribute}
+        onChange={(groupsAttribute) => set({ groupsAttribute })}
       />
     </>
   );

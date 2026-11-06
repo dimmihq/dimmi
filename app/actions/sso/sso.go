@@ -125,9 +125,9 @@ type Secret struct {
 }
 
 /*
-decode reads a connection's stored settings.
+Decode reads a connection's stored settings.
 */
-func decode(row models.SSOConnection) (Connection, error) {
+func Decode(row models.SSOConnection) (Connection, error) {
 	c := Connection{Connection: row}
 
 	if err := unmarshal(row.Config, &c.Config); err != nil {

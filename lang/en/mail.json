@@ -176,5 +176,15 @@
     "intro": "You used the link your admin sent you, so your account no longer asks for a second factor. Every browser and app was signed out.",
     "advice": "Sign in and set up a new authenticator. If this was not you, change your password now.",
     "action": "Review your security settings"
+  },
+  "sso_bypass_used": {
+    "subject": "An owner signed in without single sign-on",
+    "intro": "{{.owner}} signed in to your company's workspace without its identity provider, as owners may for an hour when it is down. If this was not expected, check the sign-in rules now.",
+    "action": "Open single sign-on"
+  },
+  "sso_certificate_expiring": {
+    "subject": "The {{.connection}} certificate expires soon",
+    "intro": "The certificate your identity provider signs with for {{.connection}} expires on {{.date}}. Add the new certificate before then, or nobody can sign in through it.",
+    "action": "Open single sign-on"
   }
 }

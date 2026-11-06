@@ -21,7 +21,7 @@ VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $10
 )
-RETURNING id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at
+RETURNING id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id
 `
 
 type CreateOAuthIdentityParams struct {
@@ -67,6 +67,52 @@ func (q *Queries) CreateOAuthIdentity(ctx context.Context, arg CreateOAuthIdenti
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SsoConnectionID,
+	)
+	return i, err
+}
+
+const createSSOIdentity = `-- name: CreateSSOIdentity :one
+INSERT INTO oauth_identities (
+    user_id, provider, provider_user_id, sso_connection_id, email, email_verified, last_login_at, created_at,
+    updated_at
+)
+VALUES ($1, 'sso', $2, $3, $4, true, $5, $5, $5)
+RETURNING id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id
+`
+
+type CreateSSOIdentityParams struct {
+	UserID          ids.UUID   `json:"user_id"`
+	Subject         string     `json:"subject"`
+	SsoConnectionID *ids.UUID  `json:"sso_connection_id"`
+	Email           *string    `json:"email"`
+	Now             *time.Time `json:"now"`
+}
+
+// CreateSSOIdentity links a connection's subject to the user.
+func (q *Queries) CreateSSOIdentity(ctx context.Context, arg CreateSSOIdentityParams) (OauthIdentity, error) {
+	row := q.db.QueryRow(ctx, createSSOIdentity,
+		arg.UserID,
+		arg.Subject,
+		arg.SsoConnectionID,
+		arg.Email,
+		arg.Now,
+	)
+	var i OauthIdentity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.Email,
+		&i.EmailVerified,
+		&i.Username,
+		&i.AvatarUrl,
+		&i.HostedDomain,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SsoConnectionID,
 	)
 	return i, err
 }
@@ -106,7 +152,7 @@ func (q *Queries) DeleteUserOAuthIdentities(ctx context.Context, userID ids.UUID
 }
 
 const findOAuthIdentity = `-- name: FindOAuthIdentity :one
-SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE provider = $1 AND provider_user_id = $2
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities WHERE provider = $1 AND provider_user_id = $2
 `
 
 type FindOAuthIdentityParams struct {
@@ -132,12 +178,46 @@ func (q *Queries) FindOAuthIdentity(ctx context.Context, arg FindOAuthIdentityPa
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SsoConnectionID,
+	)
+	return i, err
+}
+
+const findSSOIdentity = `-- name: FindSSOIdentity :one
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities
+WHERE provider = 'sso' AND sso_connection_id = $1 AND provider_user_id = $2
+`
+
+type FindSSOIdentityParams struct {
+	SsoConnectionID *ids.UUID `json:"sso_connection_id"`
+	Subject         string    `json:"subject"`
+}
+
+// FindSSOIdentity returns the identity a connection's subject links,
+// whichever user it links.
+func (q *Queries) FindSSOIdentity(ctx context.Context, arg FindSSOIdentityParams) (OauthIdentity, error) {
+	row := q.db.QueryRow(ctx, findSSOIdentity, arg.SsoConnectionID, arg.Subject)
+	var i OauthIdentity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.Email,
+		&i.EmailVerified,
+		&i.Username,
+		&i.AvatarUrl,
+		&i.HostedDomain,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SsoConnectionID,
 	)
 	return i, err
 }
 
 const findUserOAuthIdentity = `-- name: FindUserOAuthIdentity :one
-SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE id = $1 AND user_id = $2
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities WHERE id = $1 AND user_id = $2
 `
 
 type FindUserOAuthIdentityParams struct {
@@ -163,12 +243,13 @@ func (q *Queries) FindUserOAuthIdentity(ctx context.Context, arg FindUserOAuthId
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SsoConnectionID,
 	)
 	return i, err
 }
 
 const listUserOAuthIdentities = `-- name: ListUserOAuthIdentities :many
-SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at FROM oauth_identities WHERE user_id = $1 ORDER BY created_at, id
+SELECT id, user_id, provider, provider_user_id, email, email_verified, username, avatar_url, hosted_domain, last_login_at, created_at, updated_at, sso_connection_id FROM oauth_identities WHERE user_id = $1 ORDER BY created_at, id
 `
 
 // ListUserOAuthIdentities returns the user's identities, oldest first.
@@ -194,6 +275,7 @@ func (q *Queries) ListUserOAuthIdentities(ctx context.Context, userID ids.UUID) 
 			&i.LastLoginAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SsoConnectionID,
 		); err != nil {
 			return nil, err
 		}
@@ -237,5 +319,22 @@ func (q *Queries) TouchOAuthIdentity(ctx context.Context, arg TouchOAuthIdentity
 		arg.Now,
 		arg.ID,
 	)
+	return err
+}
+
+const touchSSOIdentity = `-- name: TouchSSOIdentity :exec
+UPDATE oauth_identities SET email = $1, last_login_at = $2, updated_at = $2 WHERE id = $3
+`
+
+type TouchSSOIdentityParams struct {
+	Email *string    `json:"email"`
+	Now   *time.Time `json:"now"`
+	ID    ids.UUID   `json:"id"`
+}
+
+// TouchSSOIdentity records a sign-in through the identity and the
+// address the identity provider now reports.
+func (q *Queries) TouchSSOIdentity(ctx context.Context, arg TouchSSOIdentityParams) error {
+	_, err := q.db.Exec(ctx, touchSSOIdentity, arg.Email, arg.Now, arg.ID)
 	return err
 }

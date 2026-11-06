@@ -582,6 +582,15 @@ C=$B/sso-connections; D=$B/organization-domains
 | Same domain elsewhere | another organization adds and proves `acme.com` | 409 `domain_taken` on proof |
 | Members cannot see it | a member's `GET $C` | 403 `forbidden` |
 | Operator off switch | `./bin/dimmi sso:disable <slug>` | every connection of the workspace's organization is `disabled` and unenforced |
+| Test sign-in | `POST $C/$SSO/tests` | 201 `sso_connection_test` with the identity provider `url`, and the `__Host-dimmi_sso` cookie; signing in there marks the connection `tested` and lands on `/d/settings/single-sign-on?tested=1` without a session |
+| SP metadata | `curl $W/auth/saml/$SSO/metadata` | 200 `application/samlmetadata+xml` naming the ACS and signing certificate |
+| Sign in | `$W/auth/sso/$SSO/redirect` in a browser, sign in at the identity provider | lands on `/d` signed in; a new person under the verified domain joins with the default role when `jit_enabled`, else `/login?error=sso_no_access` |
+| Replay | post the same `SAMLResponse` again | `/login?error=sso_failed`; the connection's `last_error.code` says why |
+| Lookup | `r sl -X POST -H "$J" $B/sso-lookups -d '{"email":"ada@acme.com"}'` | 200 with `redirect_url`, `name`, `enforced`; another domain gives `redirect_url: null` |
+| Enforced | `PATCH $C/$SSO -d '{"enforced":true,"confirm_owners_can_sign_in":true}'`, then password sign-in for an address under the domain | 409 `sso_required` with `redirect_url`; magic links answer the same; reset requests send no mail |
+| Owner bypass | `POST /sessions {"grant":"password","sso_bypass":true,...}` as an owner at the domain | 201; the session works for one hour, then `sso_required`; every owner gets "An owner signed in without single sign-on". A non-owner gets `invalid_credentials` |
+| Metadata refresh | set `config.idp_metadata_url`, run the daily `refresh_sso_metadata` job | certificates follow the published metadata; a failing address sets `metadata_error` and keeps the old settings |
+| OpenID Connect | create `{"protocol":"oidc","name":"Entra","client_secret":"…","config":{"issuer":"https://login.microsoftonline.com/<tenant>/v2.0","client_id":"…"}}`, register `sp.redirect_uri` at the issuer, then test and sign in | the secret never comes back (`has_secret: true`); the callback signs in like SAML; a callback without the attempt cookie lands on `/login?error=sso_failed` |
 | In a browser | `$W/d/settings/single-sign-on`, "New connection", then "Add domain" and the operator command | the connection is listed as "Draft" with its reply URL under "Details"; after a reload the domain shows "Verified by the operator" with a connection picker |
 
 ### Browser pages

@@ -11,6 +11,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
 
@@ -229,5 +230,32 @@ func TestConnections(t *testing.T) {
 		in(tc, tc.Owner).GetJSON(connectionsPath + "/" + foreign).AssertNotFound()
 		in(tc, tc.Owner).PatchJSON(connectionsPath+"/"+foreign, testkit.JSON{"name": "x"}).AssertNotFound()
 		in(tc, tc.Owner).Delete(connectionsPath + "/" + foreign).AssertNotFound()
+	})
+
+	t.Run("new members may start with one of the workspace's custom roles, never another's", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := secure(t)
+		other, _ := secure(t)
+		owner := in(tc, tc.Owner)
+		id := samlConnection(tc)
+		mine, err := factories.Role(t.Context(), tc.App, factories.RoleOf{
+			Workspace: tc.Workspace.Workspace, Name: "Support", BaseRole: enums.RoleMember,
+			Permissions: []string{"members:read"},
+		})
+		require.NoError(t, err)
+		theirs, err := factories.Role(t.Context(), other.App, factories.RoleOf{
+			Workspace: other.Workspace.Workspace, Name: "Support", BaseRole: enums.RoleMember,
+			Permissions: []string{"members:read"},
+		})
+		require.NoError(t, err)
+		public := models.PublicID(models.PrefixRole, mine.ID)
+
+		owner.PatchJSON(connectionsPath+"/"+id, testkit.JSON{"default_custom_role_id": public}).AssertOK().
+			AssertJSONPath("data.default_custom_role_id", public)
+		owner.PatchJSON(connectionsPath+"/"+id, testkit.JSON{
+			"default_custom_role_id": models.PublicID(models.PrefixRole, theirs.ID),
+		}).AssertNotFound()
+		owner.PatchJSON(connectionsPath+"/"+id, testkit.JSON{"default_custom_role_id": nil}).AssertOK().
+			AssertJSONPath("data.default_custom_role_id", nil)
 	})
 }

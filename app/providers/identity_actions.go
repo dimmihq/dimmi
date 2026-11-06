@@ -17,6 +17,8 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/sso"
+	"github.com/dimmihq/dimmi/app/actions/ssologin"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 )
 
 /*
@@ -70,4 +72,32 @@ func bootSSO(a *app.App) {
 	acts.DeleteSSOConnection = &sso.DeleteConnection{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.OrganizationDomains = &sso.Domains{DB: a.DB, Events: a.Events, Clock: a.Clock, DNS: a.DNS}
 	acts.SSOOperator = &sso.Operator{DB: a.DB, Events: a.Events, Clock: a.Clock}
+
+	bootSSOLogin(a)
+}
+
+/*
+bootSSOLogin builds the actions that sign people in through their
+company's identity provider.
+*/
+func bootSSOLogin(a *app.App) {
+	acts := a.Actions
+	attempts := appauth.SSOAttempts{Cache: a.Cache}
+	providers := sso.SAMLProviders{Keys: a.Keys, Links: a.Links, Clock: a.Clock}
+	issuers := ssologin.OIDCProviders{Keys: a.Keys, Links: a.Links, Social: a.Social}
+
+	acts.StartSSOSignIn = &ssologin.StartSignIn{DB: a.DB, Attempts: attempts, SAML: providers, OIDC: issuers}
+	acts.CompleteSSOLogin = &ssologin.CompleteSSOLogin{
+		DB: a.DB, Clock: a.Clock, Events: a.Events, CreateUser: acts.CreateUser,
+		ClaimAccount: acts.ConsumeMagicLink.ClaimAccount, CompletePrimaryAuth: acts.CompletePrimaryAuth,
+	}
+	acts.SSOMetadata = &ssologin.Metadata{DB: a.DB, SAML: providers}
+	acts.LookupSSO = &ssologin.Lookup{Policy: appauth.OrganizationLoginPolicy{DB: a.DB}, Limiter: a.Limiter}
+	acts.StartSSOTest = &ssologin.StartTest{DB: a.DB, Start: acts.StartSSOSignIn}
+	acts.ConsumeOIDC = &ssologin.ConsumeOIDC{
+		DB: a.DB, Clock: a.Clock, Attempts: attempts, OIDC: issuers, Complete: acts.CompleteSSOLogin,
+	}
+	acts.ConsumeSAML = &ssologin.ConsumeSAML{
+		DB: a.DB, Clock: a.Clock, Attempts: attempts, SAML: providers, Complete: acts.CompleteSSOLogin,
+	}
 }

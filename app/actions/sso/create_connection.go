@@ -149,13 +149,14 @@ func (a *CreateConnection) complete(
 		OrganizationID: row.OrganizationID, ID: row.ID, Name: row.Name, Status: row.Status, Config: raw,
 		SecretEncrypted: sealed, JitEnabled: row.JitEnabled, DefaultRole: row.DefaultRole,
 		DefaultTeamIds: row.DefaultTeamIds, GroupRoleMap: row.GroupRoleMap, Enforced: row.Enforced,
-		Now: a.Clock.Now(),
+		DefaultCustomRoleID: row.DefaultCustomRoleID,
+		Now:                 a.Clock.Now(),
 	})
 	if err != nil {
 		return Connection{}, fmt.Errorf("complete connection: %w", err)
 	}
 
-	return decode(updated)
+	return Decode(updated)
 }
 
 /*

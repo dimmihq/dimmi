@@ -381,3 +381,29 @@ func TestRequestsAndMetadata(t *testing.T) {
 		require.ErrorIs(t, err, saml.ErrInvalidKey)
 	})
 }
+
+func TestRequestReading(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reads the request id and relay state back from the redirect", func(t *testing.T) {
+		t.Parallel()
+		s := newSetup(t)
+
+		address, id, err := s.provider.AuthURL("relay-1")
+		require.NoError(t, err)
+
+		gotID, relay, err := samltest.Request(address)
+		require.NoError(t, err)
+		assert.Equal(t, id, gotID)
+		assert.Equal(t, "relay-1", relay)
+	})
+
+	t.Run("refuses an address without a request", func(t *testing.T) {
+		t.Parallel()
+
+		for _, address := range []string{"https://idp.example/sso", "https://idp.example/sso?SAMLRequest=%%%", "::"} {
+			_, _, err := samltest.Request(address)
+			require.ErrorIs(t, err, samltest.ErrNoRequest)
+		}
+	})
+}

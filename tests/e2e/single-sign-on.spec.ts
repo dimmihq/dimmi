@@ -13,7 +13,7 @@ it.describe("single sign-on", () => {
     await connections.getByRole("button", { name: "New connection" }).click();
 
     const dialog = page.getByRole("dialog", { name: "New connection" });
-    await dialog.getByLabel("Name").fill("Okta");
+    await dialog.getByLabel("Name", { exact: true }).fill("Okta");
     await dialog.getByLabel("Identity provider entity ID").fill("http://www.okta.com/exk1example");
     await dialog.getByLabel("Sign-in URL").fill("https://acme.okta.com/app/sso/saml");
     await dialog.getByRole("button", { name: "Create connection" }).click();

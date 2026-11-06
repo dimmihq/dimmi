@@ -46,3 +46,58 @@ func (m DomainVerificationLostMail) Content(ctx context.Context) (mail.Content, 
 
 	return c, nil
 }
+
+/*
+SSOBypassUsedMail tells an owner that Owner signed in without the
+company's identity provider.
+*/
+type SSOBypassUsedMail struct {
+	Name        string `json:"name"`
+	Owner       string `json:"owner"`
+	SettingsURL string `json:"settings_url"`
+}
+
+/*
+Envelope leaves the subject to the content, which translates it.
+*/
+func (SSOBypassUsedMail) Envelope() mail.Envelope {
+	return mail.Envelope{}
+}
+
+/*
+Content renders the mail.
+*/
+func (m SSOBypassUsedMail) Content(ctx context.Context) (mail.Content, error) {
+	c := mail.View(accounts.SSOBypassUsed(m.Name, m.Owner, m.SettingsURL))
+	c.Subject = i18n.T(ctx, "mail.sso_bypass_used.subject", nil)
+
+	return c, nil
+}
+
+/*
+SSOCertificateExpiringMail tells an owner the identity provider
+certificate of Connection expires on Date.
+*/
+type SSOCertificateExpiringMail struct {
+	Name        string `json:"name"`
+	Connection  string `json:"connection"`
+	Date        string `json:"date"`
+	SettingsURL string `json:"settings_url"`
+}
+
+/*
+Envelope leaves the subject to the content, which translates it.
+*/
+func (SSOCertificateExpiringMail) Envelope() mail.Envelope {
+	return mail.Envelope{}
+}
+
+/*
+Content renders the mail, its subject naming the connection.
+*/
+func (m SSOCertificateExpiringMail) Content(ctx context.Context) (mail.Content, error) {
+	c := mail.View(accounts.SSOCertificateExpiring(m.Name, m.Connection, m.Date, m.SettingsURL))
+	c.Subject = i18n.T(ctx, "mail.sso_certificate_expiring.subject", i18n.Args{"connection": m.Connection})
+
+	return c, nil
+}

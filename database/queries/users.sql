@@ -122,3 +122,12 @@ ORDER BY u.created_at, u.id;
 UPDATE users
 SET risk_flags = ARRAY(SELECT DISTINCT unnest(risk_flags || @flags::text[]) ORDER BY 1), updated_at = @now
 WHERE id = @id;
+
+-- name: SetUserManagedBy :one
+-- SetUserManagedBy hands the account to the organization whose identity
+-- provider vouches for it, and takes the name it reports when it sent
+-- one.
+UPDATE users
+SET managed_by_organization_id = @organization_id, name = COALESCE(sqlc.narg('name'), name), updated_at = @now
+WHERE id = @id
+RETURNING *;

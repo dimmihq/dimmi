@@ -76,7 +76,8 @@ func (c *SessionController) signIn(ctx context.Context, in *requests.StoreSessio
 	switch in.Body.Grant {
 	case requests.GrantPassword:
 		return c.AttemptLogin.Handle(ctx, auth.AttemptLoginInput{
-			Email: in.Body.Email, Password: in.Body.Password, Reauth: in.Body.Reauth, Client: client,
+			Email: in.Body.Email, Password: in.Body.Password, Reauth: in.Body.Reauth, SSOBypass: in.Body.SSOBypass,
+			Client: client,
 		})
 	case requests.GrantMagicLink:
 		return c.ConsumeMagicLink.Handle(ctx, auth.ConsumeMagicLinkInput{

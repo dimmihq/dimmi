@@ -45,3 +45,23 @@ DELETE FROM oauth_identities WHERE id = @id AND user_id = @user_id;
 -- returns how many there were, when the owner of the inbox takes back
 -- an account whose links a stranger may have made.
 DELETE FROM oauth_identities WHERE user_id = @user_id;
+
+-- name: FindSSOIdentity :one
+-- FindSSOIdentity returns the identity a connection's subject links,
+-- whichever user it links.
+SELECT * FROM oauth_identities
+WHERE provider = 'sso' AND sso_connection_id = @sso_connection_id AND provider_user_id = @subject;
+
+-- name: CreateSSOIdentity :one
+-- CreateSSOIdentity links a connection's subject to the user.
+INSERT INTO oauth_identities (
+    user_id, provider, provider_user_id, sso_connection_id, email, email_verified, last_login_at, created_at,
+    updated_at
+)
+VALUES (@user_id, 'sso', @subject, @sso_connection_id, @email, true, @now, @now, @now)
+RETURNING *;
+
+-- name: TouchSSOIdentity :exec
+-- TouchSSOIdentity records a sign-in through the identity and the
+-- address the identity provider now reports.
+UPDATE oauth_identities SET email = @email, last_login_at = @now, updated_at = @now WHERE id = @id;
