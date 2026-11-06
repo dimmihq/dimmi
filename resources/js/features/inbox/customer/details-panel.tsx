@@ -16,6 +16,7 @@ import type { Conversation } from "@/lib/api/inbox";
 import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
 import type { CaseControls } from "../case";
+import { CustomerSkeleton } from "../skeletons";
 import { Actions, CaseFields, CaseTags, Refusal } from "./case-section";
 import { CompanySection } from "./company-section";
 import { ContactSection } from "./contact-section";
@@ -32,8 +33,12 @@ const section = { customer: "customer", company: "company", past: "past" } as co
 function Customer({ workspace, conversation }: { workspace: string; conversation: Conversation }) {
   const { data: context, isPending } = useQuery(contextQuery(workspace, conversation.id));
 
+  if (isPending) {
+    return <CustomerSkeleton />;
+  }
+
   if (!context) {
-    return <Nothing>{isPending ? "Loading the customer…" : "The customer could not be loaded."}</Nothing>;
+    return <Nothing>The customer could not be loaded.</Nothing>;
   }
 
   return (

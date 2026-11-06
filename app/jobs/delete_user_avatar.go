@@ -3,8 +3,8 @@
 | Delete User Avatar
 |--------------------------------------------------------------------------
 |
-| A picture someone replaced or took down, or that belonged to a deleted
-| account, must really go from storage. The job is queued with the change
+| A picture someone replaced or took down, a workspace logo among them,
+| or one that belonged to a deleted account, must really go from storage. The job is queued with the change
 | itself, so the file goes exactly when the change commits, and storage
 | being down only delays it.
 |
@@ -18,21 +18,15 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/queue"
+
+	"github.com/dimmihq/dimmi/app/support/pictures"
 )
 
 /*
-DeleteUserAvatarArgs names the file to remove.
+DeleteUserAvatarArgs names the picture to remove, a person's or a
+workspace's logo.
 */
-type DeleteUserAvatarArgs struct {
-	Path string `json:"path"`
-}
-
-/*
-Kind names the job.
-*/
-func (DeleteUserAvatarArgs) Kind() string {
-	return "delete_user_avatar"
-}
+type DeleteUserAvatarArgs = pictures.DeleteArgs
 
 /*
 DeleteUserAvatar removes a picture from storage.

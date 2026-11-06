@@ -221,6 +221,16 @@ func TestWidgetMessages(t *testing.T) {
 			first.String("meta.next_cursor")).AssertOK()
 		older.AssertJSONPath("data.0.body", "m0")
 		older.AssertJSONPath("data.1.body", "m1")
+
+		held := first.String("data.0.id")
+		newer := v.client().GetJSON("/widget/v1/conversations/" + id + "/messages?after=" + held).AssertOK()
+		newer.AssertJSONPath("data.0.body", "m3")
+		newer.AssertJSONMissing("data.1")
+
+		base := "/widget/v1/conversations/" + id + "/messages?"
+		v.client().GetJSON(base + "after=nonsense").AssertStatus(fhttp.StatusBadRequest)
+		v.client().GetJSON(base + "before=nonsense").AssertStatus(fhttp.StatusBadRequest)
+		v.client().GetJSON(base + "after=msg_01m6m7d1yjenvsa0zrhb0vv39z").AssertNotFound()
 	})
 }
 

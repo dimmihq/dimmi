@@ -47,6 +47,12 @@ func Widget(a *app.App) {
 		api.Group("", func(visitor *routing.Router) {
 			visitor.Middleware("widget.session", "widget.origin")
 			widgetSessionRoutes(visitor, a)
+			widgetAttachmentRoutes(visitor, a)
+		})
+		api.Group("", func(leaving *routing.Router) {
+			leaving.Middleware("widget.session:ending", "widget.origin")
+			routing.Delete(leaving, "/session", "widget.session.destroy", sessionController(a).Destroy).
+				Status(fhttp.StatusNoContent)
 		})
 	})
 }
@@ -77,11 +83,22 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	sessions := sessionController(a)
 
 	routing.Get(visitor, "/session", "widget.session.show", sessions.Show)
-	routing.Delete(visitor, "/session", "widget.session.destroy", sessions.Destroy).Status(fhttp.StatusNoContent)
 
 	contact := &widget.ContactController{DB: a.DB, Update: a.Actions.Widget.UpdateContact}
 	routing.Get(visitor, "/contact", "widget.contact.show", contact.Show)
 	routing.Patch(visitor, "/contact", "widget.contact.update", contact.Patch)
+
+	tokens := &widget.RealtimeTokenController{Realtime: a.Actions.Widget.Realtime, BaseURL: baseURLOf(a)}
+	routing.Post(visitor, "/realtime-tokens", "widget.realtime-tokens.store", tokens.Store)
+
+	updates := &widget.UpdateController{
+		List: a.Actions.Widget.Updates, Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Clock: a.Clock,
+		Interval: a.Config.Widget.PollingInterval,
+	}
+	routing.Get(visitor, "/updates", "widget.updates.index", updates.Index)
+
+	pings := &widget.PingController{Record: a.Actions.Widget.Ping}
+	routing.Post(visitor, "/pings", "widget.pings.store", pings.Store)
 
 	conv := &widget.ConversationController{
 		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage, IDs: a.IDs, Clock: a.Clock,
@@ -94,6 +111,10 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
 	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
 	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")
+
+	activity := &widget.ActivityController{Read: a.Actions.Widget.MarkRead, Tell: a.Actions.Widget.Typing, IDs: a.IDs}
+	routing.Patch(visitor, one+"/read-state", "widget.conversations.read-state.update", activity.ReadState)
+	routing.Post(visitor, one+"/typing-indicators", "widget.conversations.typing-indicators.store", activity.Typing)
 }
 
 /*
@@ -106,6 +127,23 @@ func sessionController(a *app.App) *widget.SessionController {
 		Start: acts.StartSession, Describe: acts.ShowSession, Revoke: acts.RevokeSession, Clock: a.Clock,
 		BaseURL: baseURLOf(a),
 	}
+}
+
+/*
+widgetAttachmentRoutes declares the three steps of a visitor's upload. The
+bytes route is a plain handler, so the body streams to the disk.
+*/
+func widgetAttachmentRoutes(visitor *routing.Router, a *app.App) {
+	files := &widget.AttachmentController{
+		Uploads: a.Actions.Widget.Uploads, IDs: a.IDs, Errors: a.Errors, BaseURL: baseURLOf(a),
+	}
+	one := "/attachments/{attachment}"
+
+	routing.Post(visitor, "/attachments", "widget.attachments.store", files.Store).Status(fhttp.StatusCreated)
+	routing.Patch(visitor, one, "widget.attachments.update", files.Update)
+
+	content := fhttp.HandlerFunc(files.Content)
+	visitor.Handle(fhttp.MethodPut, one+"/content", "widget.attachments.content.update", content)
 }
 
 /*

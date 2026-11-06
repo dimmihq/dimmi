@@ -83,6 +83,19 @@ templ InvitationAccepted(name, workspace, member, membersURL string) {
 }
 
 /*
+AccessPolicyChanged tells an owner that someone changed who may work in
+their workspace, and where to see what the rules are now.
+*/
+
+templ AccessPolicyChanged(name, workspace, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.access_policy_changed.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.access_policy_changed.intro", i18n.Args{"workspace": workspace}) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.access_policy_changed.action", nil))
+	}
+}
+
+/*
 InvitationPending reminds whoever sent an invitation that it has waited
 days without an answer, so they can nudge the person or copy the link.
 */

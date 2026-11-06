@@ -215,3 +215,34 @@ func TestBrokenHeaders(t *testing.T) {
 		assert.Empty(t, got.Text)
 	})
 }
+
+func TestOriginalSender(t *testing.T) {
+	t.Parallel()
+
+	t.Run("reads the author a group names when it sends mail on", func(t *testing.T) {
+		t.Parallel()
+
+		got := parsed(t, []byte("From: 'Jane Roe' via Support <support@acme.example>\r\n"+
+			"X-Original-Sender: jane@customer.example\r\n"+
+			"X-Original-From: Jane Roe <jane@customer.example>\r\nSubject: s\r\n\r\nbody"), parse.Limits{})
+
+		assert.Equal(t, mail.Address{Name: "Jane Roe", Email: "jane@customer.example"}, got.OriginalSender)
+	})
+
+	t.Run("falls back to the original sender field", func(t *testing.T) {
+		t.Parallel()
+
+		got := parsed(t, []byte("From: support@acme.example\r\nX-Original-Sender: jane@customer.example\r\n"+
+			"Subject: s\r\n\r\nbody"), parse.Limits{})
+
+		assert.Equal(t, "jane@customer.example", got.OriginalSender.Email)
+	})
+
+	t.Run("names nobody when the mail names no original author", func(t *testing.T) {
+		t.Parallel()
+
+		got := parsed(t, []byte("From: a@x.example\r\nSubject: s\r\n\r\nbody"), parse.Limits{})
+
+		assert.Empty(t, got.OriginalSender.Email)
+	})
+}

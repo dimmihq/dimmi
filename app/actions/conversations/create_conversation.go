@@ -169,6 +169,10 @@ func (a *CreateConversation) plan(ctx context.Context, w *Writer, in CreateConve
 		return o, err
 	}
 
+	if !VisibleScope(in.Membership).OpensInbox(o.conn.InboxID) {
+		return o, exceptions.ErrInboxNotFound
+	}
+
 	ref := in.Contact
 	ref.WorkspaceID = ws
 

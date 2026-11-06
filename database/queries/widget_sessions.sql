@@ -34,13 +34,13 @@ WHERE workspace_id = @workspace_id AND id = @id AND revoked_at IS NULL;
 -- RevokeWidgetSessionsForContact ends every live session of the contact.
 UPDATE widget_sessions SET revoked_at = @now::timestamptz, revoke_reason = @reason::text, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND revoked_at IS NULL
-RETURNING id;
+RETURNING id, contact_id;
 
 -- name: RevokeWidgetSessionsForWidget :many
 -- RevokeWidgetSessionsForWidget ends every live session of a deleted widget.
 UPDATE widget_sessions SET revoked_at = @now::timestamptz, revoke_reason = @reason::text, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND widget_settings_id = @widget_settings_id AND revoked_at IS NULL
-RETURNING id;
+RETURNING id, contact_id;
 
 -- name: RepointWidgetSessions :exec
 -- RepointWidgetSessions moves a merged lead's live sessions to the contact

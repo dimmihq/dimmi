@@ -48,6 +48,7 @@ refuses a reply in a conversation marked as spam. ErrChannelNotAPI
 refuses a customer message through the API on a conversation of another
 channel. ErrMessageNotInConversation refuses a read marker on a message
 of another conversation. ErrBodyRequired refuses an empty message.
+ErrMessageNotFailed refuses to send again a message that did not fail.
 */
 var (
 	ErrNewMessagesSince = fault.New(fault.Conflict, "new_messages_since",
@@ -58,7 +59,9 @@ var (
 		"Customer messages can only be added through the API to API conversations.")
 	ErrMessageNotInConversation = fault.New(fault.Invalid, "message_not_in_conversation",
 		"This message is not part of the conversation.").OnField("last_read_message_id")
-	ErrBodyRequired = fault.New(fault.Invalid, "body_required", "Write a message first.").OnField("body")
+	ErrBodyRequired     = fault.New(fault.Invalid, "body_required", "Write a message first.").OnField("body")
+	ErrMessageNotFailed = fault.New(fault.Conflict, "message_not_failed",
+		"Only a reply that was not delivered can be sent again.")
 )
 
 /*
@@ -86,7 +89,8 @@ var (
 Contact failures.
 
 ErrContactExists refuses a new contact with an external id another
-contact holds. ErrContactKeyRequired refuses to start a conversation
+contact holds. ErrContactEmailTaken refuses an address another contact
+receives mail at. ErrContactKeyRequired refuses to start a conversation
 without saying who the customer is. ErrInvalidAttributes refuses custom
 attributes with a key that is not a short snake_case name, a value that
 is not text, a number or a boolean, text over 1,024 characters, or more
@@ -98,6 +102,8 @@ var (
 		OnField("custom_attributes")
 	ErrContactExists = fault.New(fault.Conflict, "contact_exists",
 		"Another contact already has this external id.").OnField("external_id")
+	ErrContactEmailTaken = fault.New(fault.Conflict, "contact_email_exists",
+		"Another contact already receives mail at this address.").OnField("email")
 	ErrContactKeyRequired = fault.New(fault.Invalid, "contact_required",
 		"Name the customer by id, external id or email.").OnField("contact")
 )

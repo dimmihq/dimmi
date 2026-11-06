@@ -38,6 +38,9 @@
   --brand-top: oklch(from var(--brand) calc(l + 0.06) c h);
   --brand-hover: oklch(from var(--brand) calc(l + 0.12) c h);
   --brand-deep: oklch(from var(--brand) calc(l - 0.06) c h);
+  --button-top: oklch(from var(--button, var(--brand)) calc(l + 0.06) c h);
+  --button-hover: oklch(from var(--button, var(--brand)) calc(l + 0.12) c h);
+  --button-deep: oklch(from var(--button, var(--brand)) calc(l - 0.06) c h);
   --modal: cubic-bezier(0.32, 0.72, 0, 1);
   --out: cubic-bezier(0.22, 1, 0.36, 1);
   --press: cubic-bezier(0.4, 0, 0.2, 1);
@@ -78,6 +81,18 @@
     Roboto,
     sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * The messenger's box spans the closed panel's room too, so the box
+ * itself lets clicks through to the page; only its parts take them.
+ */
+.messenger {
+  pointer-events: none;
+}
+
+.messenger > * {
+  pointer-events: auto;
 }
 
 .messenger[data-font="inherit"] {

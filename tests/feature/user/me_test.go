@@ -82,7 +82,7 @@ func TestMeShow(t *testing.T) {
 			AssertJSONPath("data.auth.type", "personal_access_token").
 			AssertJSONPath("data.auth.abilities", []string{"conversations:read"}).
 			AssertJSONPath("data.auth.effective_abilities", []string{"conversations:read"}).
-			AssertJSONPath("data.member.permissions", []string{"conversations:read"}).
+			AssertJSONPath("data.member.permissions", []string{"conversations:export", "conversations:read"}).
 			AssertJSONPath("data.workspace.id", workspaceID(tc)).
 			AssertJSONPath("data.workspaces", nil).
 			AssertJSONMissing("data.auth.auth_methods").

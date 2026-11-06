@@ -6,7 +6,8 @@
 | What a channel driver is handed for a reply: the conversation and its
 | thread, the body as written in Markdown and also as plain text and
 | safe HTML for channels that render one of those, the customer by the
-| address the channel reaches them at, and the teammate who wrote it by
+| address the channel reaches them at, everyone else on the thread as a
+| copy, the way a reply to all would, and the teammate who wrote it by
 | name. The driver never reads the database to learn any of it.
 |
 */
@@ -15,7 +16,9 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/markdown"
@@ -25,6 +28,12 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
+
+/*
+errFileNotCleared holds a reply back while one of its files waits on the
+malware scan; the job tries again.
+*/
+var errFileNotCleared = errors.New("reply file not cleared by the malware scan")
 
 /*
 outbound puts together what the driver is handed for the message.
@@ -61,20 +70,98 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 
 	message, err := outboundMessage(c, msg, contact)
 	message.Author = author
+	if err != nil {
+		return outbound{}, err
+	}
+
+	if message.CC, err = copiesOf(ctx, q, c); err != nil {
+		return outbound{}, err
+	}
+
+	message.Attachments, err = w.filesOf(ctx, q, msg)
 
 	return outbound{conn: conn, driver: driver, message: message}, err
 }
 
 /*
+filesOf returns the files a teammate attached to the reply, each opened
+from its own disk when the driver reads it. A file the malware scan has
+not cleared is held back: the send waits for the scan instead.
+*/
+func (w *SendChannelMessage) filesOf(
+	ctx context.Context, q *models.Queries, msg models.Message,
+) ([]contracts.OutboundAttachment, error) {
+	rows, err := q.ListMessageAttachments(ctx, models.ListMessageAttachmentsParams{
+		WorkspaceID: msg.WorkspaceID, MessageIds: []ids.UUID{msg.ID},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list reply files: %w", err)
+	}
+
+	out := make([]contracts.OutboundAttachment, 0, len(rows))
+	for _, row := range rows {
+		if row.ScanStatus != "clean" && row.ScanStatus != "skipped" {
+			return nil, fmt.Errorf("reply file %s is %s: %w", row.ID, row.ScanStatus, errFileNotCleared)
+		}
+
+		out = append(out, w.outboundFile(row))
+	}
+
+	return out, nil
+}
+
+/*
+outboundFile names a stored file for a driver and opens it on demand.
+*/
+func (w *SendChannelMessage) outboundFile(row models.Attachment) contracts.OutboundAttachment {
+	return contracts.OutboundAttachment{
+		ID: row.ID, Filename: row.Filename, ContentType: row.ContentType, SizeBytes: row.SizeBytes,
+		SHA256: deref(row.Sha256), Inline: row.Inline, ContentID: deref(row.ContentID),
+		Open: func(ctx context.Context) (io.ReadCloser, error) {
+			disk, err := w.Disks.Disk(row.Disk)
+			if err != nil {
+				return nil, fmt.Errorf("find disk %s: %w", row.Disk, err)
+			}
+
+			return disk.Open(ctx, row.Path)
+		},
+	}
+}
+
+/*
+copiesOf returns everyone on the conversation besides its customer, by
+email, to copy on the reply.
+*/
+func copiesOf(ctx context.Context, q *models.Queries, c models.Conversation) ([]contracts.Recipient, error) {
+	rows, err := q.ListConversationCopies(ctx, models.ListConversationCopiesParams{
+		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ContactID: c.ContactID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list conversation copies: %w", err)
+	}
+
+	out := make([]contracts.Recipient, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, contracts.Recipient{
+			ContactID: row.ID, Name: deref(row.Name), IdentityType: enums.IdentityTypeEmail, IdentityValue: row.Email,
+		})
+	}
+
+	return out, nil
+}
+
+/*
 outboundMessage shapes the reply for its driver, its body rendered from
-the Markdown it was written in.
+the Markdown it was written in: every line break the teammate typed is
+kept, and the plain version keeps links' addresses and list numbers, so
+the customer reads what the thread shows.
 */
 func outboundMessage(
 	c models.Conversation, msg models.Message, contact models.Contact,
 ) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
-	rendered, err := markdown.New(markdown.Options{GFM: true}).HTML([]byte(body))
+	rendered, err := markdown.New(markdown.Options{GFM: true, HardWraps: true}).HTML([]byte(body))
 	if err != nil {
 		return contracts.OutboundMessage{}, fmt.Errorf("render reply: %w", err)
 	}
@@ -82,7 +169,7 @@ func outboundMessage(
 	return contracts.OutboundMessage{
 		WorkspaceID: c.WorkspaceID, ConversationID: c.ID, ConversationNumber: c.Number, MessageID: msg.ID,
 		IdempotencyKey: models.PublicID(models.PrefixMessage, msg.ID), ExternalThreadKey: deref(c.ExternalThreadKey),
-		Subject: deref(c.Subject), BodyMarkdown: body, BodyText: markdown.PlainText([]byte(body)),
+		Subject: deref(c.Subject), BodyMarkdown: body, BodyText: markdown.ReadableText([]byte(body)),
 		BodyHTML: rendered.HTML, Recipient: recipientOf(contact),
 	}, nil
 }

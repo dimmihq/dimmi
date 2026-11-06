@@ -10,7 +10,7 @@ import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
 import { ActionsSettings, AgentSettings, ProvidersSettings } from "./pages/ai";
 import { AuditLogSettings } from "./pages/audit-log";
-import { ConnectionsSettings, MessengerSettings } from "./pages/channels";
+import { ConnectionsSettings } from "./pages/channels";
 import {
   ChangelogSettings,
   EngageSettings,
@@ -24,6 +24,9 @@ import { EmailSettings } from "./pages/email";
 import { ExportsSettings } from "./pages/exports";
 import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
+import { MessengersSettings } from "./pages/messengers";
+import { RolesSettings } from "./pages/roles";
+import { SingleSignOnSettings } from "./pages/single-sign-on";
 import { TagsSettings } from "./pages/tags";
 import { TeamsSettings } from "./pages/teams";
 import { TokensSettings } from "./pages/tokens";
@@ -39,7 +42,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   tags: TagsSettings,
   "saved-replies": SavedRepliesSettings,
   "conversation-safety": ConversationSafetySettings,
-  messenger: MessengerSettings,
+  messenger: MessengersSettings,
   email: EmailSettings,
   connections: ConnectionsSettings,
   agent: AgentSettings,
@@ -57,7 +60,9 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   workspace: WorkspaceSettings,
   members: MembersSettings,
   teams: TeamsSettings,
+  roles: RolesSettings,
   "workspace-security": WorkspaceSecuritySettings,
+  "single-sign-on": SingleSignOnSettings,
   "audit-log": AuditLogSettings,
   import: ImportSettings,
   billing: BillingSettings,

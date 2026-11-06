@@ -19,8 +19,10 @@ package dom
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html"
 )
 
 /*
@@ -136,6 +138,65 @@ func (s Selection) HTML() string {
 	out, _ := s.sel.Html()
 
 	return out
+}
+
+/*
+Is reports whether any selected element matches a CSS selector.
+*/
+func (s Selection) Is(selector string) bool {
+	return s.sel.Is(selector)
+}
+
+/*
+Inside reports whether the first selected element has an ancestor that
+matches a CSS selector.
+*/
+func (s Selection) Inside(selector string) bool {
+	return s.sel.First().ParentsFiltered(selector).Length() > 0
+}
+
+/*
+TextAfter returns the text that follows the first selected element
+among its siblings, bare text included, leaving out sibling elements
+that match a CSS selector or hold such an element. An empty selector
+leaves nothing out.
+*/
+func (s Selection) TextAfter(skip string) string {
+	if s.sel.Length() == 0 {
+		return ""
+	}
+
+	var out strings.Builder
+
+	for n := s.sel.Nodes[0].NextSibling; n != nil; n = n.NextSibling {
+		if n.Type == html.TextNode {
+			out.WriteString(n.Data)
+
+			continue
+		}
+
+		sibling := goquery.NewDocumentFromNode(n).Selection
+		if skip == "" || (!sibling.Is(skip) && sibling.Find(skip).Length() == 0) {
+			out.WriteString(sibling.Text())
+		}
+	}
+
+	return out.String()
+}
+
+/*
+ReplaceWithHTML puts markup in place of the selected elements.
+*/
+func (s Selection) ReplaceWithHTML(markup string) {
+	s.sel.ReplaceWithHtml(markup)
+}
+
+/*
+ReplaceWithText puts plain text in place of the selected elements. The
+text is never read as markup.
+*/
+func (s Selection) ReplaceWithText(text string) {
+	s.sel.ReplaceWithNodes(&html.Node{Type: html.TextNode, Data: text})
 }
 
 /*

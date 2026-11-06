@@ -64,12 +64,28 @@ func TestConversations(t *testing.T) {
 		assert.Equal(t, int64(1000), countArgs[len(countArgs)-1])
 	})
 
+	t.Run("checks mentions and hidden inboxes only for a reader who may not see everything", func(t *testing.T) {
+		t.Parallel()
+
+		open, _ := querybuilder.Conversations{
+			WorkspaceID: id, Access: querybuilder.Access{Mode: "all", Viewer: &other},
+		}.IDs()
+		assert.Contains(t, open, "c.inbox_id, $")
+		assert.NotContains(t, open, "message_mentions")
+
+		narrow, args := querybuilder.Conversations{
+			WorkspaceID: id, Access: querybuilder.Access{Mode: "all", Viewer: &other, HiddenInboxes: []ids.UUID{id}},
+		}.IDs()
+		assert.Contains(t, narrow, "OR EXISTS (SELECT 1 FROM message_mentions mm")
+		assert.Contains(t, args, []ids.UUID{id})
+	})
+
 	t.Run("lists one status by equality and the trash without the spam flag", func(t *testing.T) {
 		t.Parallel()
 
 		sql, _ := querybuilder.Conversations{WorkspaceID: id, Statuses: []string{"closed"}, Deleted: true}.IDs()
 
-		assert.Contains(t, sql, "c.status = $6")
+		assert.Contains(t, sql, "c.status = $7")
 		assert.Contains(t, sql, "c.deleted_at IS NOT NULL")
 		assert.NotContains(t, sql, "c.spam")
 	})
@@ -100,22 +116,22 @@ func TestConversations(t *testing.T) {
 			After: &querybuilder.Keyset{Priority: 2, At: &at, ID: id},
 		}.IDs()
 		assert.Contains(t, sql,
-			"c.priority < $8 OR (c.priority = $8 AND (c.waiting_since > $7 OR c.waiting_since IS NULL")
+			"c.priority < $9 OR (c.priority = $9 AND (c.waiting_since > $8 OR c.waiting_since IS NULL")
 
 		sql, _ = querybuilder.Conversations{
 			WorkspaceID: id, Sort: querybuilder.SortLatest, After: &querybuilder.Keyset{ID: id},
 		}.IDs()
-		assert.Contains(t, sql, "c.last_message_at IS NOT NULL OR (c.last_message_at IS NULL AND (c.id < $6))")
+		assert.Contains(t, sql, "c.last_message_at IS NOT NULL OR (c.last_message_at IS NULL AND (c.id < $7))")
 
 		sql, _ = querybuilder.Conversations{
 			WorkspaceID: id, Sort: querybuilder.SortWaiting, After: &querybuilder.Keyset{ID: id},
 		}.IDs()
-		assert.Contains(t, sql, "c.waiting_since IS NULL AND (c.id > $6)")
+		assert.Contains(t, sql, "c.waiting_since IS NULL AND (c.id > $7)")
 
 		sql, _ = querybuilder.Conversations{
 			WorkspaceID: id, Sort: querybuilder.SortOldest, After: &querybuilder.Keyset{At: &at, ID: id},
 		}.IDs()
-		assert.Contains(t, sql, "(c.last_message_at, c.id) > ($6, $7) OR c.last_message_at IS NULL")
+		assert.Contains(t, sql, "(c.last_message_at, c.id) > ($7, $8) OR c.last_message_at IS NULL")
 	})
 
 	t.Run("reads the time each sort orders by", func(t *testing.T) {

@@ -36,7 +36,7 @@ export function load(win: Window & DimmiWindow, doc: Document, script: HTMLScrip
     apiBase: data.apiBase ?? base,
     identityUrl: data.identityUrl,
     latency: data.latency === undefined ? undefined : Number(data.latency),
-    demo: data.demo !== "off",
+    preview: data.preview === "true" || data.preview === "",
   };
 
   const mount = () => {

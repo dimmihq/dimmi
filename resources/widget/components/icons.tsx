@@ -132,6 +132,57 @@ export function CalendarIcon() {
   );
 }
 
+export function LinkIcon() {
+  return (
+    <Icon>
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+    </Icon>
+  );
+}
+
+export function MailIcon() {
+  return (
+    <Icon>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+      <path d="m4.5 7.5 7.5 5.5 7.5-5.5" />
+    </Icon>
+  );
+}
+
+export function PhoneIcon() {
+  return (
+    <Icon>
+      <path d="M7 4h2.5l1.5 4-2 1.5a10.5 10.5 0 0 0 5.5 5.5l1.5-2 4 1.5V17a2 2 0 0 1-2 2A15 15 0 0 1 5 6a2 2 0 0 1 2-2Z" />
+    </Icon>
+  );
+}
+
+export function ChatIcon() {
+  return (
+    <Icon>
+      <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-8l-4.5 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 16V7A1.5 1.5 0 0 1 5 5.5Z" />
+    </Icon>
+  );
+}
+
+export function VideoIcon() {
+  return (
+    <Icon>
+      <rect x="3.5" y="6.5" width="12" height="11" rx="2.5" />
+      <path d="m15.5 10.5 5-3v9l-5-3" />
+    </Icon>
+  );
+}
+
+export function QuestionIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9.8 9.5a2.3 2.3 0 1 1 3.2 2.1c-.6.3-1 .8-1 1.4v.5M12 16.5v.01" />
+    </Icon>
+  );
+}
+
 export function PaperclipIcon() {
   return (
     <Icon>

@@ -38,12 +38,14 @@ const (
 
 /*
 reservedSlug reports whether the slug would read as part of the
-product.
+product, such as a page of the dashboard, whose addresses start with
+the workspace's slug.
 */
 func reservedSlug(slug string) bool {
 	return slices.Contains([]string{
 		"api", "app", "www", "admin", "help", "docs", "status", "mail", "support", "dimmi", "auth", "login",
-		"setup", "static", "assets", "cdn", "widget", "mcp", "oauth", "billing",
+		"setup", "static", "assets", "cdn", "widget", "mcp", "oauth", "billing", "inbox", "settings", "customers",
+		"notifications", "agent", "feedback", "announcements", "changelog", "shortcuts", "procedures", "workflows",
 	}, slug)
 }
 

@@ -63,3 +63,10 @@ LIMIT @row_limit;
 -- name: DeleteAttachment :exec
 -- DeleteAttachment removes an attachment's row once its file is gone.
 DELETE FROM attachments WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListFinishedUploads :many
+-- ListFinishedUploads returns the uploader's finished uploads with the
+-- ids that no message took yet, so a message can be sent with them.
+SELECT * FROM attachments
+WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]) AND uploaded_by_type = @uploaded_by_type
+  AND uploaded_by_id = @uploaded_by_id AND message_id IS NULL AND uploaded_at IS NOT NULL;

@@ -18,6 +18,11 @@ func TestDigests(t *testing.T) {
 
 		assert.Equal(t, want, hashing.SHA256Hex([]byte("abc")))
 		assert.Equal(t, want, hex.EncodeToString(hashing.SHA256([]byte("abc"))))
+
+		stream := hashing.NewSHA256()
+		_, _ = stream.Write([]byte("a"))
+		_, _ = stream.Write([]byte("bc"))
+		assert.Equal(t, want, hex.EncodeToString(stream.Sum(nil)))
 	})
 
 	t.Run("computes hmac-sha256 per rfc 4231", func(t *testing.T) {

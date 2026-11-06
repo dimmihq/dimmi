@@ -37,11 +37,12 @@ import (
 
 /*
 The audit events of workspaces and their members, of the ways in, such
-as access tokens and invitations, and of teams.
+as access tokens and invitations, of teams and of custom roles.
 */
 const (
 	EventWorkspaceCreated     = "workspace.created"
 	EventWorkspaceUpdated     = "workspace.updated"
+	EventAccessPolicyChanged  = "workspace.access_policy_changed"
 	EventMemberJoined         = "member.joined"
 	EventMemberRoleChanged    = "member.role_changed"
 	EventMemberDeactivated    = "member.deactivated"
@@ -62,8 +63,13 @@ const (
 	EventTeamDeleted          = "team.deleted"
 	EventTeamMemberAdded      = "team.member_added"
 	EventTeamMemberRemoved    = "team.member_removed"
+	EventRoleCreated          = "role.created"
+	EventRoleUpdated          = "role.updated"
+	EventRoleDeleted          = "role.deleted"
+	EventMemberCustomRole     = "member.custom_role_changed"
 
 	EventWidgetSettingsUpdated = "widget.settings_updated"
+	EventInboxAccessChanged    = "inbox.access_changed"
 	EventWidgetDeleted         = "widget.deleted"
 	EventTwoFactorResetAsked   = "member.two_factor_reset_requested"
 	EventTwoFactorResetDone    = "member.two_factor_reset_completed"
@@ -82,6 +88,16 @@ const (
 	EventDataExportRequested = "data_export.requested"
 	EventDataExportReady     = "data_export.ready"
 	EventDataExportDeleted   = "data_export.deleted"
+)
+
+/*
+EventSSOConnection and EventOrganizationDomain prefix the audit events of
+a company's connections and domains, followed by what happened to them,
+such as sso_connection.enforced or organization_domain.verified.
+*/
+const (
+	EventSSOConnection      = "sso_connection."
+	EventOrganizationDomain = "organization_domain."
 )
 
 /*

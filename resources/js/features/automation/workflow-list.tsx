@@ -26,7 +26,7 @@ export function WorkflowList() {
       title="Workflows"
       description="Route conversations, ask the right questions and decide when Dimmi takes a conversation."
       action={
-        <Button size="xs" leadingIcon={RiAddLine} onClick={() => setPicking(true)}>
+        <Button size="small" leadingIcon={RiAddLine} onClick={() => setPicking(true)}>
           New workflow
         </Button>
       }
@@ -61,7 +61,7 @@ export function WorkflowList() {
             title={template.name}
             detail={template.detail}
           >
-            <Action size="xs">Use template</Action>
+            <Action>Use template</Action>
           </Item>
         ))}
       </Section>

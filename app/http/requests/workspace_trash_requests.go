@@ -20,6 +20,26 @@ import (
 )
 
 /*
+StoreWorkspaceRequest is the input of POST /workspaces.
+*/
+type StoreWorkspaceRequest struct {
+	Body struct {
+		Name string `json:"name" validate:"required,max=80"`
+	}
+}
+
+/*
+UpdateOnboardingRequest is the input of PATCH /workspace/onboarding: the
+setup step reached and whether setup is finished.
+*/
+type UpdateOnboardingRequest struct {
+	Body struct {
+		Step      string `json:"step"      validate:"required,max=40"`
+		Completed bool   `json:"completed,omitempty"`
+	}
+}
+
+/*
 DestroyCurrentWorkspaceRequest is the input of DELETE /workspace.
 */
 type DestroyCurrentWorkspaceRequest struct {

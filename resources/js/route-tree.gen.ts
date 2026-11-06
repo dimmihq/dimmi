@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as Char91__gateChar93RouteImport } from './routes/[__gate]'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DRouteRouteImport } from './routes/d/route'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthInvitationRouteImport } from './routes/_auth/invitation'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -34,6 +36,7 @@ import { Route as DCustomersIndexRouteImport } from './routes/d/customers/index'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
 import { Route as DCustomersBlockedRouteImport } from './routes/d/customers/blocked'
 import { Route as DCustomersErasuresRouteImport } from './routes/d/customers/erasures'
+import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
@@ -47,9 +50,16 @@ import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/custo
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
+import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
+import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
+const Char91__gateChar93Route = Char91__gateChar93RouteImport.update({
+  id: '/__gate',
+  path: '/__gate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -57,6 +67,11 @@ const AuthRoute = AuthRouteImport.update({
 const DRouteRoute = DRouteRouteImport.update({
   id: '/d',
   path: '/d',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
@@ -174,6 +189,11 @@ const DCustomersErasuresRoute = DCustomersErasuresRouteImport.update({
   path: '/erasures',
   getParentRoute: () => DCustomersRoute,
 } as any)
+const DInboxIndexRoute = DInboxIndexRouteImport.update({
+  id: '/inbox/',
+  path: '/inbox/',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   id: '/inbox/$view',
   path: '/inbox/$view',
@@ -241,11 +261,23 @@ const DSettingsInboxesInboxRoute = DSettingsInboxesInboxRouteImport.update({
   path: '/settings/inboxes/$inbox',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsMessengerWidgetRoute =
+  DSettingsMessengerWidgetRouteImport.update({
+    id: '/settings/messenger/$widget',
+    path: '/settings/messenger/$widget',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   id: '/settings/teams/$team',
   path: '/settings/teams/$team',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsEmailAddressesAddressRoute =
+  DSettingsEmailAddressesAddressRouteImport.update({
+    id: '/settings/email/addresses/$address',
+    path: '/settings/email/addresses/$address',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsEmailDomainsDomainRoute =
   DSettingsEmailDomainsDomainRouteImport.update({
     id: '/settings/email/domains/$domain',
@@ -255,7 +287,9 @@ const DSettingsEmailDomainsDomainRoute =
 
 export interface FileRoutesByFullPath {
   '/d': typeof DRouteRouteWithChildren
+  '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
   '/login': typeof AuthLoginRoute
@@ -284,19 +318,24 @@ export interface FileRoutesByFullPath {
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers/': typeof DCustomersIndexRoute
+  '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
+  '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesByTo {
+  '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
   '/login': typeof AuthLoginRoute
@@ -323,21 +362,26 @@ export interface FileRoutesByTo {
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers': typeof DCustomersIndexRoute
+  '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
+  '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/d': typeof DRouteRouteWithChildren
+  '/__gate': typeof Char91__gateChar93Route
   '/_auth': typeof AuthRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/invitation': typeof AuthInvitationRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -366,22 +410,27 @@ export interface FileRoutesById {
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers/': typeof DCustomersIndexRoute
+  '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
+  '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/d'
+    | '/__gate'
     | '/'
+    | '/onboarding'
     | '/forgot-password'
     | '/invitation'
     | '/login'
@@ -410,19 +459,24 @@ export interface FileRouteTypes {
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
     | '/d/customers/'
+    | '/d/inbox/'
     | '/d/procedures/'
     | '/d/settings/'
     | '/d/workflows/'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/inboxes/$inbox'
+    | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
+    | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/__gate'
     | '/'
+    | '/onboarding'
     | '/forgot-password'
     | '/invitation'
     | '/login'
@@ -449,20 +503,25 @@ export interface FileRouteTypes {
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
     | '/d/customers'
+    | '/d/inbox'
     | '/d/procedures'
     | '/d/settings'
     | '/d/workflows'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/inboxes/$inbox'
+    | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
     | '/d/customers/companies'
     | '/d/inbox/$view'
+    | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
   id:
     | '__root__'
     | '/d'
+    | '/__gate'
     | '/_auth'
+    | '/onboarding'
     | '/_auth/forgot-password'
     | '/_auth/invitation'
     | '/_auth/login'
@@ -491,25 +550,37 @@ export interface FileRouteTypes {
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
     | '/d/customers/'
+    | '/d/inbox/'
     | '/d/procedures/'
     | '/d/settings/'
     | '/d/workflows/'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/inboxes/$inbox'
+    | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
+    | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   DRouteRoute: typeof DRouteRouteWithChildren
+  Char91__gateChar93Route: typeof Char91__gateChar93Route
   AuthRoute: typeof AuthRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/__gate': {
+      id: '/__gate'
+      path: '/__gate'
+      fullPath: '/__gate'
+      preLoaderRoute: typeof Char91__gateChar93RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -522,6 +593,13 @@ declare module '@tanstack/react-router' {
       path: '/d'
       fullPath: '/d'
       preLoaderRoute: typeof DRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/forgot-password': {
@@ -685,6 +763,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersErasuresRouteImport
       parentRoute: typeof DCustomersRoute
     }
+    '/d/inbox/': {
+      id: '/d/inbox/'
+      path: '/inbox'
+      fullPath: '/d/inbox/'
+      preLoaderRoute: typeof DInboxIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/inbox/$view': {
       id: '/d/inbox/$view'
       path: '/inbox/$view'
@@ -776,11 +861,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsInboxesInboxRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/messenger/$widget': {
+      id: '/d/settings/messenger/$widget'
+      path: '/settings/messenger/$widget'
+      fullPath: '/d/settings/messenger/$widget'
+      preLoaderRoute: typeof DSettingsMessengerWidgetRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/teams/$team': {
       id: '/d/settings/teams/$team'
       path: '/settings/teams/$team'
       fullPath: '/d/settings/teams/$team'
       preLoaderRoute: typeof DSettingsTeamsTeamRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/email/addresses/$address': {
+      id: '/d/settings/email/addresses/$address'
+      path: '/settings/email/addresses/$address'
+      fullPath: '/d/settings/email/addresses/$address'
+      preLoaderRoute: typeof DSettingsEmailAddressesAddressRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/settings/email/domains/$domain': {
@@ -844,11 +943,14 @@ interface DRouteRouteChildren {
   DSettingsSectionRoute: typeof DSettingsSectionRoute
   DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
   DWorkflowsNewRoute: typeof DWorkflowsNewRoute
+  DInboxIndexRoute: typeof DInboxIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
+  DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
 }
 
@@ -867,11 +969,14 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsSectionRoute: DSettingsSectionRoute,
   DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
   DWorkflowsNewRoute: DWorkflowsNewRoute,
+  DInboxIndexRoute: DInboxIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
+  DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
 }
 
@@ -908,7 +1013,9 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   DRouteRoute: DRouteRouteWithChildren,
+  Char91__gateChar93Route: Char91__gateChar93Route,
   AuthRoute: AuthRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

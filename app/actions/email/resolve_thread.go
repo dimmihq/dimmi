@@ -55,11 +55,14 @@ const (
 
 /*
 threadHit is the conversation a received email continues, and how it
-was found; Conversation is nil for a new thread.
+was found; Conversation is nil for a new thread. Reused marks a new
+thread whose Message-ID another conversation's mail already carries,
+as careless scripts send every mail under one id.
 */
 type threadHit struct {
 	conversation *models.Conversation
 	method       string
+	reused       bool
 }
 
 /*
@@ -101,7 +104,16 @@ func (a *ProcessInboundEmail) resolveThread(
 		}
 	}
 
-	return threadHit{method: methodNew}, nil
+	if mail.parsed.MessageID == "" {
+		return threadHit{method: methodNew}, nil
+	}
+
+	reused, err := byRefs(ctx, q, refsOf(mail, []string{mail.parsed.MessageID}))
+	if err != nil {
+		return threadHit{}, err
+	}
+
+	return threadHit{method: methodNew, reused: reused != nil}, nil
 }
 
 /*

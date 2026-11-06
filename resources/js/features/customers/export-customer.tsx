@@ -51,7 +51,7 @@ export function ExportCustomer({ contact }: { contact: Contact }) {
         variant="secondary"
         size="small"
         leadingIcon={RiDownload2Line}
-        disabled={download.isPending}
+        loading={download.isPending}
         onClick={() => download.mutate()}
       >
         Download export

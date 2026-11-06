@@ -19,27 +19,12 @@ import (
 )
 
 /*
-securitySettings is the security area of a workspace's settings.
-*/
-type securitySettings struct {
-	RequireTwoFactor bool `json:"require_two_factor"`
-}
-
-/*
 RequiresTwoFactor reports whether every member must protect their
 account with a second factor to work in the workspace. Settings that do
 not read as a document require nothing.
 */
 func (w Workspace) RequiresTwoFactor() bool {
-	var settings struct {
-		Security securitySettings `json:"security"`
-	}
-
-	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
-		return false
-	}
-
-	return settings.Security.RequireTwoFactor
+	return w.Security().RequireTwoFactor
 }
 
 /*
@@ -47,7 +32,7 @@ WithTwoFactorRequired returns the settings document with the
 requirement of a second factor set to on, keeping every other key.
 */
 func WithTwoFactorRequired(settings json.RawMessage, on bool) (json.RawMessage, error) {
-	return WithSetting(settings, "security", "require_two_factor", on)
+	return withSecurityKeys(settings, map[string]any{"require_two_factor": on})
 }
 
 /*
@@ -238,4 +223,18 @@ func (w Workspace) UndoSendSeconds() int {
 	}
 
 	return *settings.Inbox.UndoSendSeconds
+}
+
+/*
+LogoURL returns the address of the workspace's logo on this server, or
+nil when it has none.
+*/
+func (w Workspace) LogoURL() *string {
+	if w.LogoPath == nil {
+		return nil
+	}
+
+	url := "/" + *w.LogoPath
+
+	return &url
 }

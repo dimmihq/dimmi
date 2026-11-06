@@ -92,8 +92,8 @@ export function DeleteWorkspace({ id, name, slug }: { id: string; name: string; 
             <Button variant="secondary" onClick={close}>
               Cancel
             </Button>
-            <Button type="submit" variant="danger" disabled={typed !== slug || remove.isPending}>
-              {remove.isPending ? "Deleting…" : "Delete workspace"}
+            <Button type="submit" variant="danger" loading={remove.isPending} disabled={typed !== slug}>
+              Delete workspace
             </Button>
           </ModalFooter>
         </form>

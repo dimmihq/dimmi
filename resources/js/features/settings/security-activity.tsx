@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { securityEventsQuery } from "@/lib/api/audit";
 
-import { Empty, Glyph, Item, Section } from "./layout";
+import { Empty, Glyph, Item, RowsSkeleton, Section } from "./layout";
 import { formatTime, securityEventLabel } from "./log-labels";
 import { useAccount } from "./use-account";
 
@@ -21,6 +21,7 @@ export function RecentSecurityActivity() {
   return (
     <Section title="Recent security activity" description="Sign-ins and changes to your account.">
       {error ? <Empty>{error.message}</Empty> : null}
+      {isPending ? <RowsSkeleton rows={3} /> : null}
       {!(error || isPending) && events.length === 0 ? <Empty>Nothing yet</Empty> : null}
       {events.map((event) => (
         <Item

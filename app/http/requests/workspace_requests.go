@@ -16,6 +16,7 @@ package requests
 import (
 	"context"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/support/str"
 	"github.com/dimmihq/dimmi/framework/validation"
 )
@@ -91,4 +92,12 @@ DestroyMembershipRequest is the input of DELETE
 */
 type DestroyMembershipRequest struct {
 	Membership string `path:"membership"`
+}
+
+/*
+UpdateWorkspaceLogoRequest is the input of PUT /workspace/logo: a
+multipart form with the picture in the logo field.
+*/
+type UpdateWorkspaceLogoRequest struct {
+	RawBody fhttp.MultipartForm
 }

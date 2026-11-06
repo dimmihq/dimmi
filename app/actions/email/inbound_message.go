@@ -57,7 +57,9 @@ type skippedFile struct {
 }
 
 /*
-message builds the inbound message of the email.
+message builds the inbound message of the email. Mail that answers
+nothing starts a conversation of its own, even when an earlier mail
+reused its Message-ID.
 */
 func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessage {
 	mail, insp := d.mail, d.insp
@@ -71,7 +73,9 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 		Sender:            inboundSender(d.who),
 		Participants:      a.participants(d),
 		Subject:           inbound.DisplaySubject(mail.parsed.Subject),
-		Body:              insp.body.Markdown,
+		Body:              insp.body.Visible,
+		BodyFormat:        insp.body.Format,
+		BodyFull:          insp.body.Full,
 		BodyHTML:          insp.body.HTML,
 		Attachments:       files,
 		ChannelMessageID:  mail.parsed.MessageID,
@@ -92,14 +96,34 @@ func (a *ProcessInboundEmail) message(d decision, p plan) contracts.InboundMessa
 	}
 
 	if insp.forward != nil {
-		msg.Body, msg.BodyHTML = insp.forward.Body, ""
+		msg.Body, msg.BodyFormat, msg.BodyHTML = insp.forward.Body, enums.BodyFormatPlain, ""
 		msg.Subject = inbound.DisplaySubject(cmp.Or(insp.forward.Subject, mail.parsed.Subject))
 	}
 
+	ownSide(&msg, d)
+
 	a.continueThread(&msg, d.hit, ownID)
+	if d.hit.reused {
+		msg.ExternalThreadKey = msg.DedupeKey
+	}
 	msg.AfterPersist = a.afterPersist(persisting{mail: mail, insp: insp, plan: p, ownID: ownID})
 
 	return msg
+}
+
+/*
+ownSide marks mail the workspace's own people sent: from one of its
+addresses outside dimmi, or a teammate answering by email.
+*/
+func ownSide(msg *contracts.InboundMessage, d decision) {
+	if d.who.fromWorkspace {
+		msg.FromWorkspace = true
+		msg.Body = "Sent from " + d.mail.from + " outside dimmi:\n\n" + msg.Body
+	}
+
+	if d.who.member != nil {
+		msg.FromMemberID, msg.FromMemberName = &d.who.member.ID, d.who.member.Name
+	}
 }
 
 /*
@@ -147,6 +171,8 @@ func metadata(d decision, p plan, skipped []skippedFile) map[string]any {
 			"quote": insp.body.Quote, "signature": insp.body.Signature, "fallback": insp.body.Fallback,
 		},
 		"truncated":           insp.body.Truncated || mail.parsed.Truncated,
+		"full_truncated":      insp.body.FullTruncated || mail.parsed.Truncated,
+		"html_too_large":      insp.body.HTMLTooLarge,
 		"skipped_attachments": skipped,
 		"form_relay":          optional(insp.relay),
 		"bcc":                 bcc(mail),
@@ -289,7 +315,7 @@ identityOf returns what identifies the email when it arrives again.
 func identityOf(mail *received, insp inspection) inbound.Identity {
 	return inbound.Identity{
 		MessageID: mail.parsed.MessageID, From: mail.from, Date: mail.parsed.Header.Get("Date"),
-		Subject: mail.parsed.Subject, Body: insp.body.Markdown,
+		Subject: mail.parsed.Subject, Body: insp.body.Visible,
 	}
 }
 

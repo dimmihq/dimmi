@@ -2,12 +2,15 @@ package broadcasting_test
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/broadcasting"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
 
@@ -79,5 +82,43 @@ func TestUniSSE(t *testing.T) {
 			resp := openSSE(t, n, connect)
 			assert.Equal(t, http.StatusBadRequest, resp.Status)
 		}
+	})
+}
+
+func TestUniSSEOrigins(t *testing.T) {
+	t.Parallel()
+
+	n := newNode(t, testkit.NewValkey(t))
+	client, err := httpclient.New(httpclient.Config{AllowPrivateNetworks: true})
+	require.NoError(t, err)
+
+	open := func(t *testing.T, connect string) *httpclient.Response {
+		t.Helper()
+
+		target := n.url + broadcasting.PathUniSSE + "?cf_connect=" + url.QueryEscape(connect)
+		resp, err := client.New().Stream().Timeout(waitFor).WithHeader("Origin", "https://shop.example").
+			Get(t.Context(), target)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = resp.Close() })
+
+		return resp
+	}
+
+	t.Run("a stream with a token may be read from any site, without credentials", func(t *testing.T) {
+		t.Parallel()
+
+		resp := open(t, `{"token":"u1"}`)
+
+		assert.Equal(t, "https://shop.example", resp.Header.Get("Access-Control-Allow-Origin"))
+		assert.Empty(t, resp.Header.Get("Access-Control-Allow-Credentials"))
+		assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"))
+	})
+
+	t.Run("a stream without a token stays on its own site", func(t *testing.T) {
+		t.Parallel()
+
+		resp := open(t, `{}`)
+
+		assert.Empty(t, resp.Header.Get("Access-Control-Allow-Origin"))
 	})
 }

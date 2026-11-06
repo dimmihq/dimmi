@@ -23,7 +23,7 @@ Channels declares the realtime channel authorizers.
 func Channels(a *app.App) {
 	channels := a.Broadcast.Channels()
 	authorize := &appbroadcasting.Authorizers{
-		DB: a.DB, IDs: a.IDs, Resolve: a.Actions.ResolveWorkspace,
+		DB: a.DB, IDs: a.IDs, Resolve: a.Actions.ResolveWorkspace, Policy: a.AccessPolicy, Live: a.Realtime.Live,
 	}
 
 	channels.MustAuthorize(appbroadcasting.WorkspacePattern, appbroadcasting.WorkspaceOptions(), authorize.Workspace)

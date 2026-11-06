@@ -12,7 +12,7 @@ import (
 )
 
 const listMembersWithoutTwoFactor = `-- name: ListMembersWithoutTwoFactor :many
-SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences
+SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
@@ -56,6 +56,7 @@ func (q *Queries) ListMembersWithoutTwoFactor(ctx context.Context, workspaceID i
 			&i.User.RiskFlags,
 			&i.User.CreatedVia,
 			&i.User.Preferences,
+			&i.User.ManagedByOrganizationID,
 		); err != nil {
 			return nil, err
 		}

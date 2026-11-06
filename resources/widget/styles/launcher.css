@@ -11,7 +11,7 @@
   padding: 0;
   border: 0;
   border-radius: 28px;
-  background-image: linear-gradient(180deg, var(--brand-top), var(--brand));
+  background-image: linear-gradient(180deg, var(--button-top), var(--button, var(--brand)));
   color: var(--on-brand);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.12),
@@ -89,4 +89,24 @@
 .label {
   font-size: 15px;
   font-weight: 600;
+}
+
+/*
+ * The tab launcher sits flat against the page's side edge, its label read
+ * along the edge.
+ */
+.launcher[data-style="tab"] {
+  block-size: auto;
+  min-inline-size: 0;
+  padding: 16px 10px;
+  border-radius: 12px 0 0 12px;
+  writing-mode: vertical-rl;
+}
+
+[data-side="left"] .launcher[data-style="tab"] {
+  border-radius: 0 12px 12px 0;
+}
+
+.launcher[data-style="tab"] .icons {
+  rotate: 90deg;
 }

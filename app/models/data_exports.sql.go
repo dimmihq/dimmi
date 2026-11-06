@@ -267,7 +267,7 @@ func (q *Queries) FinishDataExport(ctx context.Context, arg FinishDataExportPara
 }
 
 const listDataExportMessages = `-- name: ListDataExportMessages :many
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages
 WHERE workspace_id = $1 AND conversation_id = ANY ($2::uuid[]) AND type <> 'event'
   AND undone_at IS NULL AND deleted_at IS NULL
   AND (type = 'message' OR $3::boolean)
@@ -300,6 +300,8 @@ func (q *Queries) ListDataExportMessages(ctx context.Context, arg ListDataExport
 			&i.AuthorType,
 			&i.AuthorID,
 			&i.Body,
+			&i.BodyFormat,
+			&i.BodyFull,
 			&i.BodyHtml,
 			&i.Event,
 			&i.ChannelMessageID,

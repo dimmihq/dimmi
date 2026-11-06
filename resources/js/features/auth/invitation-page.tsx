@@ -143,8 +143,8 @@ function OtherAccount({ me, preview }: { me: Me; preview: InvitationPreview }) {
       title="This invitation is for another address"
       description={`You are signed in as ${me.user.email}, but the invitation was sent to ${preview.email_masked}. Sign out, then sign in with that address.`}
     >
-      <Button className="mt-6 w-full" disabled={out.isPending} onClick={() => out.mutate()}>
-        {out.isPending ? "Signing out…" : "Sign out"}
+      <Button className="mt-6 w-full" loading={out.isPending} onClick={() => out.mutate()}>
+        Sign out
       </Button>
     </AuthStatus>
   );
@@ -174,8 +174,13 @@ function AcceptStep({ token, me, preview }: { token: string; me: Me; preview: In
       <p className="mt-6 text-body-regular text-text-secondary">
         Signed in as <span className="text-body-medium text-text-primary">{me.user.email}</span>
       </p>
-      <Button className="mt-4 w-full" disabled={accept.isPending || accept.isSuccess} onClick={() => accept.mutate()}>
-        {accept.isPending ? "Joining…" : "Accept invitation"}
+      <Button
+        className="mt-4 w-full"
+        loading={accept.isPending}
+        disabled={accept.isSuccess}
+        onClick={() => accept.mutate()}
+      >
+        Accept invitation
       </Button>
       {failure ? (
         <HintText isInvalid role="alert" className="mt-2">
@@ -306,8 +311,8 @@ function SignupStep({
           isInvalid={Boolean(errorFor("password"))}
           errorMessage={errorFor("password")}
         />
-        <Button type="submit" className="w-full" disabled={register.isPending || register.isSuccess}>
-          {register.isPending ? "Creating account…" : "Create account"}
+        <Button type="submit" className="w-full" loading={register.isPending} disabled={register.isSuccess}>
+          Create account
         </Button>
         <p className="text-caption-1-regular text-text-tertiary">
           By creating an account you agree to our Terms of Service and Privacy Policy.

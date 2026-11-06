@@ -6,7 +6,7 @@ it.describe("signing in with a password", () => {
     person,
     request,
   }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
 
     await page.goto("/d");
     await expect(page).toHaveURL(/\/login\?redirect=%2Fd$/);
@@ -19,7 +19,7 @@ it.describe("signing in with a password", () => {
   });
 
   it("refuses a wrong password under the email field", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
 
     await page.goto("/login");
     await page.getByLabel("Email").fill(person.email);
@@ -31,7 +31,7 @@ it.describe("signing in with a password", () => {
   });
 
   it("signs out, and the app asks to sign in again", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
 
     await signOut(page, person);
@@ -42,7 +42,7 @@ it.describe("signing in with a password", () => {
   });
 
   it("sends someone already signed in past the sign-in pages", async ({ page, person, request }) => {
-    await createAccount(request, person);
+    await createAccount(request, person, `${person.name}'s workspace`);
     await signIn(page, person);
 
     await page.goto("/login");

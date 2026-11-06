@@ -19,13 +19,14 @@ import (
 )
 
 /*
-InvitationInput is one address of a batch, the role it is offered and
-the teams it joins on accepting.
+InvitationInput is one address of a batch, the role it is offered, the
+custom role it starts with, if any, and the teams it joins on accepting.
 */
 type InvitationInput struct {
-	Email   string   `json:"email"`
-	Role    string   `json:"role"               validate:"required,oneof=admin member"`
-	TeamIDs []string `json:"team_ids,omitempty" validate:"max=50"`
+	Email        string   `json:"email"`
+	Role         string   `json:"role"                     validate:"required,oneof=admin member"`
+	CustomRoleID *string  `json:"custom_role_id,omitempty"`
+	TeamIDs      []string `json:"team_ids,omitempty"       validate:"max=50"`
 }
 
 /*

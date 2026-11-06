@@ -4,45 +4,52 @@
  * the line, and send stays disabled until there is something to send.
  * Attached files wait as chips above the text and go out as file bubbles.
  * The microphone switches the composer to a recording bar with a running
- * timer; finishing sends a voice note, the bin throws it away.
+ * timer whose bars follow the visitor's voice; finishing sends the voice
+ * note as an audio file, the bin throws it away. A connected messenger
+ * records from the real microphone and says so when it is refused; a
+ * preview only plays the motions. Where the page cannot record, the
+ * microphone button is not offered.
  *
- * Nothing reaches a server yet: sent messages land in the thread, and a
- * typing indicator followed by a placeholder reply shows how the other
- * side will answer once the backend is wired.
+ * Sending hands the text, files or voice note on through a "dimmi:send"
+ * event: a connected messenger shows the message at once and sends it, a
+ * preview shows it and answers with a placeholder reply. Typing tells a
+ * connected messenger at most every few seconds through "dimmi:typing".
  */
 
 import { Chip } from "../components/composer";
-import { Said, Typing } from "../components/thread";
-import type { Message } from "../content";
 import { Controller } from "../lib/controller";
+import { canRecord, maxSeconds, Recorder } from "../lib/recorder";
 
-const reply = "Thanks for the details. A teammate will pick this up here in a moment.";
-
-function size(bytes: number): string {
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
+/*
+ * typingEvery is the shortest time between two typing notices.
+ */
+const typingEvery = 2000;
 
 function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-function now(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
 export class ComposerController extends Controller {
   #files: File[] = [];
   #seconds = 0;
+  #typedAt = 0;
   #timer: ReturnType<typeof setInterval> | undefined;
+  #meter: ReturnType<typeof setInterval> | undefined;
+  #recorder: Recorder | undefined;
 
   connect(): void {
     for (const bar of this.element.querySelectorAll<HTMLElement>(".live i")) {
       bar.style.height = `${bar.dataset.height ?? 8}px`;
     }
+    if (this.#live && !canRecord()) {
+      this.element.querySelector<HTMLElement>('[data-action="click->record"]')?.setAttribute("hidden", "");
+    }
   }
 
   disconnect(): void {
     clearInterval(this.#timer);
+    clearInterval(this.#meter);
+    this.#recorder?.cancel();
   }
 
   get #form(): HTMLFormElement {
@@ -58,6 +65,14 @@ export class ComposerController extends Controller {
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     this.#ready();
+    if (this.#live && input.value.trim() && Date.now() - this.#typedAt > typingEvery) {
+      this.#typedAt = Date.now();
+      this.dispatch("typing", { started: true });
+    }
+  }
+
+  get #live(): boolean {
+    return this.element.closest<HTMLElement>(".messenger")?.dataset.live === "true";
   }
 
   enter(event: KeyboardEvent): void {
@@ -83,44 +98,96 @@ export class ComposerController extends Controller {
   send(event: SubmitEvent): void {
     event.preventDefault();
     const body = this.#input.value.trim();
-    const messages: Message[] = this.#files.map((file) => ({
-      from: "visitor",
-      attachment: { kind: file.type.startsWith("image/") ? "image" : "file", name: file.name, size: size(file.size) },
-      at: now(),
-    }));
-    if (body) {
-      messages.unshift({ from: "visitor", body, at: now() });
-    }
-    if (!messages.length) {
+    if (!body && !this.#files.length) {
       return;
     }
 
+    this.dispatch("send", { body, files: this.#files });
+    this.#typedAt = 0;
     this.#input.value = "";
     this.#files = [];
     this.#chips();
     this.resize();
-    this.#post(messages);
   }
 
-  record(): void {
+  async record(): Promise<void> {
+    this.#say("");
+    if (this.#live) {
+      const recorder = new Recorder();
+      try {
+        await recorder.start();
+      } catch {
+        this.#say("Allow the microphone to record a voice note.");
+        return;
+      }
+      this.#recorder = recorder;
+      this.#follow(recorder);
+    }
     this.element.dataset.recording = "true";
     this.#seconds = 0;
     this.#tick();
     this.#timer = setInterval(() => {
       this.#seconds += 1;
       this.#tick();
+      if (this.#seconds >= maxSeconds) {
+        void this.finish();
+      }
     }, 1000);
   }
 
   discard(): void {
-    clearInterval(this.#timer);
-    delete this.element.dataset.recording;
+    this.#recorder?.cancel();
+    this.#stop();
   }
 
-  finish(): void {
+  async finish(): Promise<void> {
     const duration = clock(Math.max(this.#seconds, 1));
-    this.discard();
-    this.#post([{ from: "visitor", attachment: { kind: "voice", name: "Voice note", duration }, at: now() }]);
+    const recorder = this.#recorder;
+    this.#stop();
+    if (!recorder) {
+      this.dispatch("send", { body: "", files: [], voice: duration });
+      return;
+    }
+    try {
+      const note = await recorder.stop();
+      this.dispatch("send", { body: "", files: [note], voice: duration });
+    } catch {
+      this.#say("The voice note could not be saved. Try again.");
+    }
+  }
+
+  #stop(): void {
+    clearInterval(this.#timer);
+    clearInterval(this.#meter);
+    this.#recorder = undefined;
+    delete this.element.dataset.recording;
+    delete this.element.dataset.listening;
+  }
+
+  /*
+   * follow moves the recording bar with the microphone's level, newest on
+   * the right.
+   */
+  #follow(recorder: Recorder): void {
+    const bars = [...this.element.querySelectorAll<HTMLElement>(".live i")];
+    this.element.dataset.listening = "true";
+    this.#meter = setInterval(() => {
+      for (let i = 0; i < bars.length - 1; i++) {
+        (bars[i] as HTMLElement).style.height = (bars[i + 1] as HTMLElement).style.height;
+      }
+      const last = bars.at(-1);
+      if (last) {
+        last.style.height = `${4 + Math.round(recorder.level() * 18)}px`;
+      }
+    }, 80);
+  }
+
+  #say(message: string): void {
+    const note = this.target("note");
+    if (note) {
+      note.textContent = message;
+      note.hidden = message === "";
+    }
   }
 
   #tick(): void {
@@ -140,33 +207,5 @@ export class ComposerController extends Controller {
       chips.innerHTML = this.#files.map((file, index) => String(Chip({ name: file.name, index }))).join("");
     }
     this.#ready();
-  }
-
-  /*
-   * post adds the visitor's messages to the thread, then shows the other
-   * side typing and their placeholder reply.
-   */
-  #post(messages: Message[]): void {
-    const thread = this.element.parentElement?.querySelector<HTMLElement>(".thread");
-    const list = thread?.querySelector<HTMLElement>(".loaded") ?? thread;
-    if (!thread || !list) {
-      return;
-    }
-
-    list.querySelector(".seen")?.remove();
-    list.insertAdjacentHTML("beforeend", String(Said({ messages })) + String(Typing()));
-    this.#scroll(thread);
-    setTimeout(() => {
-      list.querySelector("[data-typing]")?.remove();
-      const answer: Message = { from: "team", author: "Maya Kerr", body: reply, at: now() };
-      list.insertAdjacentHTML("beforeend", String(Said({ messages: [answer] })));
-      this.dispatch("connect", thread);
-      this.#scroll(thread);
-    }, 1600);
-    this.dispatch("connect", thread);
-  }
-
-  #scroll(thread: HTMLElement): void {
-    thread.scrollTop = thread.scrollHeight;
   }
 }

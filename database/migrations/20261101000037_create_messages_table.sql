@@ -5,7 +5,10 @@
 -- agent depending on the author type, so it has no foreign key. A
 -- channel retrying the same inbound message carries the same dedupe key,
 -- which the workspace accepts once. A deleted message keeps its row with
--- the body cleared, so the timeline keeps its shape.
+-- the body cleared, so the timeline keeps its shape. The body is Markdown
+-- unless the format says it is plain text, as a customer's mail client
+-- wrote it. Mail also keeps its whole text, quoted thread included, and
+-- its sanitized HTML, for reading beyond the visible body.
 
 -- +goose Up
 CREATE TABLE messages (
@@ -16,6 +19,8 @@ CREATE TABLE messages (
     author_type text NOT NULL CHECK (author_type IN ('contact', 'member', 'agent', 'system', 'integration')),
     author_id uuid,
     body text,
+    body_format text NOT NULL DEFAULT 'markdown' CHECK (body_format IN ('markdown', 'plain')),
+    body_full text,
     body_html text,
     event jsonb,
     channel_message_id text,

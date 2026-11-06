@@ -149,7 +149,7 @@ func (q *Queries) FailEmailMessageDelivery(ctx context.Context, arg FailEmailMes
 }
 
 const findEmailMessage = `-- name: FindEmailMessage :one
-SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, conversation_id, type, author_type, author_id, body, body_format, body_full, body_html, event, channel_message_id, dedupe_key, delivery_status, delivery_error, substantive, metadata, edited_at, sent_at, read_at, deleted_at, created_at, updated_at, search, channel_connection_id, scheduled_send_at, undone_at FROM messages WHERE workspace_id = $1 AND id = $2
 `
 
 type FindEmailMessageParams struct {
@@ -169,6 +169,8 @@ func (q *Queries) FindEmailMessage(ctx context.Context, arg FindEmailMessagePara
 		&i.AuthorType,
 		&i.AuthorID,
 		&i.Body,
+		&i.BodyFormat,
+		&i.BodyFull,
 		&i.BodyHtml,
 		&i.Event,
 		&i.ChannelMessageID,
@@ -216,6 +218,27 @@ func (q *Queries) FindEmailSenderMember(ctx context.Context, arg FindEmailSender
 	var i FindEmailSenderMemberRow
 	err := row.Scan(&i.ID, &i.Name)
 	return i, err
+}
+
+const findLatestContactConversationSpam = `-- name: FindLatestContactConversationSpam :one
+SELECT spam FROM conversations
+WHERE workspace_id = $1 AND contact_id = $2 AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type FindLatestContactConversationSpamParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// FindLatestContactConversationSpam reports whether the contact's newest
+// live conversation is set aside as spam.
+func (q *Queries) FindLatestContactConversationSpam(ctx context.Context, arg FindLatestContactConversationSpamParams) (bool, error) {
+	row := q.db.QueryRow(ctx, findLatestContactConversationSpam, arg.WorkspaceID, arg.ContactID)
+	var spam bool
+	err := row.Scan(&spam)
+	return spam, err
 }
 
 const findLatestThreadConversation = `-- name: FindLatestThreadConversation :one

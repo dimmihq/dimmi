@@ -24,14 +24,16 @@ import (
 /*
 Membership is the workspace a request works in and the caller's active
 membership of it, with Principal holding the caller's effective
-permissions there and AccessTeams the teams their conversation access
-names, read only for a mode that uses them.
+permissions there, AccessTeams the teams their conversation access
+names, read only for a mode that uses them, and HiddenInboxes the
+restricted inboxes they may not open.
 */
 type Membership struct {
-	Workspace   models.Workspace
-	Member      models.WorkspaceMember
-	Principal   Principal
-	AccessTeams []ids.UUID
+	Workspace     models.Workspace
+	Member        models.WorkspaceMember
+	Principal     Principal
+	AccessTeams   []ids.UUID
+	HiddenInboxes []ids.UUID
 }
 
 /*

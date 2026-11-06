@@ -34,6 +34,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/session"
 
@@ -184,7 +185,7 @@ func (a *ConsumeMagicLink) check(ctx context.Context, in ConsumeMagicLinkInput) 
 
 	if in.Token == "" {
 		p.method = appauth.MethodEmailCode
-		email := strings.ToLower(strings.TrimSpace(in.Email))
+		email := mail.CanonicalAddress(in.Email)
 
 		if err := appauth.CheckLoginPolicy(ctx, a.LoginPolicy, email, p.method); err != nil {
 			return proof{}, err

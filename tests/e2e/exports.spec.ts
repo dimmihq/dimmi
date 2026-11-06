@@ -25,7 +25,7 @@ it.describe("data exports", () => {
     await expect(dialog.getByText("Export started")).toBeVisible();
     await dialog.getByRole("link", { name: "Go to Exports" }).click();
 
-    await expect(page).toHaveURL(/\/d\/settings\/exports$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/exports$/);
     const download = page.getByRole("button", { name: "Download" });
     await expect(download).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Spreadsheet of conversations, 1 row/)).toBeVisible();

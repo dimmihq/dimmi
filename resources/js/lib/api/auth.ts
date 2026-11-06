@@ -54,6 +54,7 @@ export interface WorkspaceSummary {
   name: string;
   slug: string;
   role: string;
+  previous_slugs?: { slug: string; until: string }[];
 }
 
 export interface Instance {
@@ -133,8 +134,8 @@ export const meQuery = queryOptions({
   retry: false,
 });
 
-export function signIn(email: string, password: string): Promise<SignInResult> {
-  return request<SignInResult>("POST", "/sessions", { grant: "password", email, password });
+export function signIn(email: string, password: string, reauth?: boolean): Promise<SignInResult> {
+  return request<SignInResult>("POST", "/sessions", { grant: "password", email, password, reauth });
 }
 
 export function signInWithLink(token: string): Promise<SignInResult> {

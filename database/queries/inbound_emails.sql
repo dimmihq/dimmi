@@ -62,6 +62,10 @@ WHERE workspace_id = @workspace_id
 ORDER BY received_at DESC, id DESC
 LIMIT @row_limit::bigint;
 
+-- name: FindMessageInboundEmail :one
+-- FindMessageInboundEmail returns the received email a message came from.
+SELECT * FROM inbound_emails WHERE workspace_id = @workspace_id AND message_id = @message_id LIMIT 1;
+
 -- name: LatestInboundEmails :many
 -- LatestInboundEmails returns when each source last delivered mail,
 -- across every workspace, for the operator's health check.

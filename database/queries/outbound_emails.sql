@@ -61,10 +61,22 @@ RETURNING *;
 -- name: FindQuotableMessage :one
 -- FindQuotableMessage returns the customer's latest message in the
 -- conversation, with who wrote it, for quoting below a reply.
-SELECT m.body, m.created_at, c.name, c.email
+SELECT m.body, m.body_format, m.created_at, c.name, c.email
 FROM messages AS m
 JOIN contacts AS c ON c.id = m.author_id AND c.workspace_id = m.workspace_id
 WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id AND m.type = 'message'
   AND m.author_type = 'contact' AND m.deleted_at IS NULL
 ORDER BY m.created_at DESC
+LIMIT 1;
+
+-- name: FindContactReplyTo :one
+-- FindContactReplyTo returns the address the customer's latest ordinary
+-- email in the conversation asked replies to go to, empty when it asked
+-- for none.
+SELECT coalesce(metadata -> 'email' ->> 'reply_to', '')::text AS reply_to
+FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND author_type = 'contact' AND author_id = @contact_id AND deleted_at IS NULL
+  AND metadata -> 'email' ->> 'classification' = 'normal'
+ORDER BY created_at DESC, id DESC
 LIMIT 1;

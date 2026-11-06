@@ -44,8 +44,8 @@ export function LeaveWorkspace({ id, name }: { id: string; name: string }) {
           <Button variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button variant="danger" disabled={leave.isPending} onClick={() => leave.mutate()}>
-            {leave.isPending ? "Leaving…" : "Leave workspace"}
+          <Button variant="danger" loading={leave.isPending} onClick={() => leave.mutate()}>
+            Leave workspace
           </Button>
         </ModalFooter>
       </Modal>

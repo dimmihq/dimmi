@@ -68,7 +68,7 @@ export function DNSSetup({
           label="Automatic setup"
           description={`${domain.dns_setup.host_name} can add every record for you after you approve it there.`}
         >
-          <Button size="small" disabled={start.isPending} onClick={() => start.mutate()}>
+          <Button size="small" loading={start.isPending} onClick={() => start.mutate()}>
             {`Set up automatically at ${domain.dns_setup.host_name}`}
           </Button>
         </Row>

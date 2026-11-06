@@ -17,6 +17,10 @@ export function Waveform({ className = "wave" }: { className?: string }) {
   return <span className={className}>{raw(levels.map((level) => `<i data-height="${level}"></i>`).join(""))}</span>;
 }
 
+/*
+ * VoiceBubble is a voice note's player, playing the recording once it has
+ * an address. A click on the waveform jumps to that point.
+ */
 function VoiceBubble({ attachment }: { attachment: Attachment }) {
   return (
     <div className="bubble voice" data-controller="voice" data-length={attachment.duration ?? "0:05"}>
@@ -24,19 +28,54 @@ function VoiceBubble({ attachment }: { attachment: Attachment }) {
         <PlayIcon />
         <PauseIcon />
       </button>
-      <Waveform />
-      <time>{attachment.duration}</time>
+      <span className="wave-hit" data-action="click->seek">
+        <Waveform />
+      </span>
+      <time>{attachment.duration ?? "0:00"}</time>
+      {attachment.url ? (
+        <audio src={attachment.url} preload="metadata">
+          <track kind="captions" />
+        </audio>
+      ) : null}
     </div>
   );
 }
 
+/*
+ * ImageBubble shows the picture itself once it has an address, sized from
+ * its stored dimensions so the thread does not jump when it loads, and
+ * opens it across the messenger when clicked. Until then, and in a preview, it shows
+ * the placeholder.
+ */
 function ImageBubble({ attachment }: { attachment: Attachment }) {
+  if (!attachment.url) {
+    return (
+      <figure className="bubble photo">
+        <span className="shot">
+          <ImageIcon />
+        </span>
+        <figcaption>{attachment.name}</figcaption>
+      </figure>
+    );
+  }
+
   return (
     <figure className="bubble photo">
-      <span className="shot">
-        <ImageIcon />
-      </span>
-      <figcaption>{attachment.name}</figcaption>
+      <a
+        className="shot picture"
+        href={attachment.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-action="click->view"
+      >
+        <img
+          src={attachment.url}
+          alt={attachment.name}
+          loading="lazy"
+          width={attachment.width}
+          height={attachment.height}
+        />
+      </a>
     </figure>
   );
 }
@@ -51,9 +90,18 @@ function FileBubble({ attachment }: { attachment: Attachment }) {
         <strong>{attachment.name}</strong>
         <small>{attachment.size}</small>
       </span>
-      <button className="icon-button" type="button" aria-label={`Download ${attachment.name}`}>
-        <DownloadIcon />
-      </button>
+      {attachment.url ? (
+        <a
+          className="icon-button"
+          href={attachment.url}
+          download={attachment.name}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Download ${attachment.name}`}
+        >
+          <DownloadIcon />
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -66,13 +114,22 @@ function AttachmentBubble({ attachment }: { attachment: Attachment }) {
   return attachment.kind === "image" ? <ImageBubble attachment={attachment} /> : <FileBubble attachment={attachment} />;
 }
 
+/*
+ * keyOf names a message for the patch that keeps unchanged messages in
+ * place.
+ */
+function keyOf(message: Message): string {
+  return message.key ?? message.id ?? `${message.at}-${message.body ?? message.attachment?.name ?? ""}`;
+}
+
 function Bubble({ message }: { message: Message }) {
   const sources = message.sources ?? [];
+  const key = keyOf(message);
 
   return (
     <>
       {message.body ? (
-        <div className="bubble">
+        <div className="bubble" data-key={`${key}:body`} data-state={message.state}>
           {message.body}
           {sources.length > 0 && (
             <span className="sources">
@@ -86,7 +143,11 @@ function Bubble({ message }: { message: Message }) {
           )}
         </div>
       ) : null}
-      {message.attachment ? <AttachmentBubble attachment={message.attachment} /> : null}
+      {message.attachment ? (
+        <div className="bubble-wrap" data-key={`${key}:file`}>
+          <AttachmentBubble attachment={message.attachment} />
+        </div>
+      ) : null}
     </>
   );
 }
@@ -111,7 +172,7 @@ export function Said({ messages }: { messages: Message[] }) {
   }
 
   return (
-    <div className="said" data-from={first.from}>
+    <div className="said" data-from={first.from} data-key={`said:${keyOf(first)}`}>
       {first.from !== "visitor" && <Who message={first} />}
       <div className="bubbles">
         {messages.map((message) => (
@@ -153,7 +214,7 @@ export function Thread({ messages }: { messages: Message[] }) {
 
 export function Typing() {
   return (
-    <div className="said" data-from="team" data-typing>
+    <div className="said" data-from="team" data-typing data-key="typing">
       <div className="bubbles">
         <div className="bubble dots" role="status" aria-label="Typing">
           <i />

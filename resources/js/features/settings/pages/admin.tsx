@@ -11,12 +11,18 @@ import { Action, Field } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
 import { RequireTwoFactorSection } from "../require-two-factor";
 import { useAccount } from "../use-account";
+import { IPAllowlistSections } from "../workspace-security/ip-allowlists";
+import { SessionLengthSection } from "../workspace-security/session-length";
+import { SignInRulesSection } from "../workspace-security/sign-in-rules";
 
 export function WorkspaceSecuritySettings() {
   const me = useAccount();
 
   return (
     <SettingsPage title="Security" description="Rules every member of the workspace signs in under.">
+      <SignInRulesSection />
+      <SessionLengthSection />
+      <IPAllowlistSections />
       <RequireTwoFactorSection workspace={me.workspace.id} hasPassword={me.hasPassword} title="Authentication" />
     </SettingsPage>
   );

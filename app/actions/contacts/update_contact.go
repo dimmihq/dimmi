@@ -164,6 +164,11 @@ func (u *update) write(ctx context.Context, q *models.Queries) (models.Contact, 
 	}
 
 	u.text("email", &u.params.Email, sent(NormalizeEmail(f.Email), u.in.ClearEmail))
+
+	if err := moveEmail(ctx, q, u); err != nil {
+		return b, err
+	}
+
 	u.text("name", &u.params.Name, sent(f.Name, u.in.ClearName))
 	u.text("phone", &u.params.Phone, sent(NormalizePhone(f.Phone), u.in.ClearPhone))
 	u.text("notes", &u.params.Notes, sent(u.in.Notes, u.in.ClearNotes))

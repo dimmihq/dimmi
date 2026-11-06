@@ -34,7 +34,7 @@ it.describe("the command menu", () => {
 
     await search.fill("#1");
     await menu.getByRole("menuitem", { name: /#1/ }).first().click();
-    await expect(page).toHaveURL(/\/d\/inbox\/all\/conv_/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/all\/conv_/);
     await expect(page.getByRole("heading", { name: "Can't log in", level: 1 })).toBeVisible();
   });
 

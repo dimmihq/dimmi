@@ -18,6 +18,7 @@ import { Copyable, Nothing, Row } from "@/features/inbox/customer/rows";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { TagPicker } from "@/features/inbox/tags/tag-picker";
 import { EmptyState } from "@/features/shell/page";
+import { TableSkeleton } from "@/features/shell/table-skeleton";
 import { ApiError } from "@/lib/api/client";
 import {
   type Company,
@@ -28,7 +29,6 @@ import {
   createCompany,
   updateCompany,
 } from "@/lib/api/customers";
-
 import { CustomersFrame } from "./frame";
 import { personName, useWorkspace } from "./names";
 import { RecordConversations } from "./record-conversations";
@@ -113,7 +113,13 @@ export function CompaniesPage() {
           </TableHeader>
           <TableBody
             items={companies}
-            renderEmptyState={() => <p className="py-2 text-body-2-regular text-text-tertiary">No companies yet.</p>}
+            renderEmptyState={() =>
+              list.isPending ? (
+                <TableSkeleton />
+              ) : (
+                <p className="py-2 text-body-2-regular text-text-tertiary">No companies yet.</p>
+              )
+            }
           >
             {(company) => (
               <TableRow id={company.id}>
@@ -134,7 +140,7 @@ export function CompaniesPage() {
                 <TableCell>
                   <span className="flex flex-wrap gap-1">
                     {company.tags.map((tag) => (
-                      <TagChip key={tag.id} tag={tag} />
+                      <TagChip key={tag.id} tag={tag} size="small" />
                     ))}
                   </span>
                 </TableCell>

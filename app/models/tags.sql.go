@@ -79,25 +79,31 @@ func (q *Queries) CountWorkspaceTags(ctx context.Context, workspaceID ids.UUID) 
 }
 
 const createTag = `-- name: CreateTag :one
-INSERT INTO tags (workspace_id, name, color, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $4)
-RETURNING id, workspace_id, name, color, created_at, updated_at
+INSERT INTO tags (workspace_id, name, color, icon, created_at, updated_at)
+VALUES (
+    $1, $2::text, coalesce($3, dimmi_next_tag_color($1, $2::text)), $4,
+    $5, $5
+)
+RETURNING id, workspace_id, name, color, created_at, updated_at, icon
 `
 
 type CreateTagParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	Name        string    `json:"name"`
-	Color       *string   `json:"color"`
-	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID    `json:"workspace_id"`
+	Name        string      `json:"name"`
+	Color       interface{} `json:"color"`
+	Icon        *string     `json:"icon"`
+	Now         time.Time   `json:"now"`
 }
 
-// CreateTag stores a tag in the workspace. A name another tag holds, in
+// CreateTag stores a tag in the workspace, with the icon given, in the
+// color given or else the palette color the workspace uses least. A name another tag holds, in
 // any case, fails on tags_workspace_id_name_key.
 func (q *Queries) CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error) {
 	row := q.db.QueryRow(ctx, createTag,
 		arg.WorkspaceID,
 		arg.Name,
 		arg.Color,
+		arg.Icon,
 		arg.Now,
 	)
 	var i Tag
@@ -108,6 +114,7 @@ func (q *Queries) CreateTag(ctx context.Context, arg CreateTagParams) (Tag, erro
 		&i.Color,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Icon,
 	)
 	return i, err
 }
@@ -136,14 +143,14 @@ WITH wanted AS (
     SELECT DISTINCT unnest($1::text[])::citext AS name
 ),
 created AS (
-    INSERT INTO tags (workspace_id, name, created_at, updated_at)
-    SELECT $2, name, $3, $3 FROM wanted
+    INSERT INTO tags (workspace_id, name, color, created_at, updated_at)
+    SELECT $2, name, dimmi_next_tag_color($2, name::text), $3, $3 FROM wanted
     ON CONFLICT (workspace_id, name) DO NOTHING
-    RETURNING id, workspace_id, name, color, created_at, updated_at
+    RETURNING id, workspace_id, name, color, created_at, updated_at, icon
 )
-SELECT id, workspace_id, name, color, created_at, updated_at FROM created
+SELECT id, workspace_id, name, color, created_at, updated_at, icon FROM created
 UNION ALL
-SELECT t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at FROM tags AS t
+SELECT t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at, t.icon FROM tags AS t
 JOIN wanted AS w ON w.name = t.name
 WHERE t.workspace_id = $2
 ORDER BY name
@@ -162,10 +169,11 @@ type EnsureTagsRow struct {
 	Color       *string   `json:"color"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	Icon        *string   `json:"icon"`
 }
 
 // EnsureTags returns the workspace's tags with the names, creating those
-// that do not exist yet, by name. Names are matched without regard to
+// that do not exist yet, by name, each in a palette color. Names are matched without regard to
 // case, so Billing finds billing and a name given twice is one tag. A
 // tag another transaction creates at the same moment is left out, so a
 // caller that needs every name compares the count and asks again.
@@ -185,6 +193,7 @@ func (q *Queries) EnsureTags(ctx context.Context, arg EnsureTagsParams) ([]Ensur
 			&i.Color,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Icon,
 		); err != nil {
 			return nil, err
 		}
@@ -197,7 +206,7 @@ func (q *Queries) EnsureTags(ctx context.Context, arg EnsureTagsParams) ([]Ensur
 }
 
 const findTag = `-- name: FindTag :one
-SELECT id, workspace_id, name, color, created_at, updated_at FROM tags WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, name, color, created_at, updated_at, icon FROM tags WHERE workspace_id = $1 AND id = $2
 `
 
 type FindTagParams struct {
@@ -216,12 +225,13 @@ func (q *Queries) FindTag(ctx context.Context, arg FindTagParams) (Tag, error) {
 		&i.Color,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Icon,
 	)
 	return i, err
 }
 
 const listConversationTags = `-- name: ListConversationTags :many
-SELECT ct.conversation_id, t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at FROM conversation_tag AS ct
+SELECT ct.conversation_id, t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at, t.icon FROM conversation_tag AS ct
 JOIN tags AS t ON t.id = ct.tag_id AND t.workspace_id = ct.workspace_id
 WHERE ct.workspace_id = $1 AND ct.conversation_id = ANY ($2::uuid[])
 ORDER BY ct.conversation_id, t.name, t.id
@@ -257,6 +267,7 @@ func (q *Queries) ListConversationTags(ctx context.Context, arg ListConversation
 			&i.Tag.Color,
 			&i.Tag.CreatedAt,
 			&i.Tag.UpdatedAt,
+			&i.Tag.Icon,
 		); err != nil {
 			return nil, err
 		}
@@ -269,7 +280,7 @@ func (q *Queries) ListConversationTags(ctx context.Context, arg ListConversation
 }
 
 const listTags = `-- name: ListTags :many
-SELECT id, workspace_id, name, color, created_at, updated_at FROM tags
+SELECT id, workspace_id, name, color, created_at, updated_at, icon FROM tags
 WHERE workspace_id = $1
   AND ($2::text IS NULL OR starts_with(lower(name::text), lower($2::text)))
 ORDER BY name, id
@@ -298,6 +309,7 @@ func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]Tag, erro
 			&i.Color,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Icon,
 		); err != nil {
 			return nil, err
 		}
@@ -363,7 +375,7 @@ func (q *Queries) TagConversation(ctx context.Context, arg TagConversationParams
 }
 
 const tagsByIDs = `-- name: TagsByIDs :many
-SELECT id, workspace_id, name, color, created_at, updated_at FROM tags
+SELECT id, workspace_id, name, color, created_at, updated_at, icon FROM tags
 WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 ORDER BY name, id
 `
@@ -390,6 +402,7 @@ func (q *Queries) TagsByIDs(ctx context.Context, arg TagsByIDsParams) ([]Tag, er
 			&i.Color,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Icon,
 		); err != nil {
 			return nil, err
 		}
@@ -402,7 +415,7 @@ func (q *Queries) TagsByIDs(ctx context.Context, arg TagsByIDsParams) ([]Tag, er
 }
 
 const tagsByNames = `-- name: TagsByNames :many
-SELECT id, workspace_id, name, color, created_at, updated_at FROM tags
+SELECT id, workspace_id, name, color, created_at, updated_at, icon FROM tags
 WHERE workspace_id = $1 AND name = ANY ($2::citext[])
 ORDER BY name
 `
@@ -430,6 +443,7 @@ func (q *Queries) TagsByNames(ctx context.Context, arg TagsByNamesParams) ([]Tag
 			&i.Color,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Icon,
 		); err != nil {
 			return nil, err
 		}
@@ -497,25 +511,27 @@ func (q *Queries) UntagConversationMany(ctx context.Context, arg UntagConversati
 }
 
 const updateTag = `-- name: UpdateTag :one
-UPDATE tags SET name = $1, color = $2, updated_at = $3
-WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, name, color, created_at, updated_at
+UPDATE tags SET name = $1, color = $2, icon = $3, updated_at = $4
+WHERE workspace_id = $5 AND id = $6
+RETURNING id, workspace_id, name, color, created_at, updated_at, icon
 `
 
 type UpdateTagParams struct {
 	Name        string    `json:"name"`
 	Color       *string   `json:"color"`
+	Icon        *string   `json:"icon"`
 	Now         time.Time `json:"now"`
 	WorkspaceID ids.UUID  `json:"workspace_id"`
 	ID          ids.UUID  `json:"id"`
 }
 
-// UpdateTag renames or recolors a tag. A name another tag holds fails on
-// tags_workspace_id_name_key.
+// UpdateTag renames a tag or changes its color or icon. A name another
+// tag holds fails on tags_workspace_id_name_key.
 func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error) {
 	row := q.db.QueryRow(ctx, updateTag,
 		arg.Name,
 		arg.Color,
+		arg.Icon,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -528,6 +544,7 @@ func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, erro
 		&i.Color,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Icon,
 	)
 	return i, err
 }

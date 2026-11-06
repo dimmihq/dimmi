@@ -1,8 +1,8 @@
 /*
  * What the header of a list offers about its view: any list can be saved
  * as a view, keeping its status and sort; a saved view can be edited,
- * copied, and pinned so the sidebar counts its open conversations. The
- * editor also opens from the sidebar's new view action.
+ * copied, and pinned so the view picker counts its open conversations. The
+ * editor also opens from the view picker's new view action.
  */
 import { RiFileCopyLine, RiFilter3Line, RiPencilLine, RiPushpin2Fill, RiPushpin2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

@@ -97,7 +97,7 @@ Store adds a tag and answers with it.
 */
 func (c *TagController) Store(ctx context.Context, in *requests.StoreTagRequest) (*TagOutput, error) {
 	tag, err := c.Create.Handle(ctx, tags.CreateTagInput{
-		Membership: membership(ctx), Name: in.Body.Name, Color: in.Body.Color,
+		Membership: membership(ctx), Name: in.Body.Name, Color: in.Body.Color, Icon: in.Body.Icon,
 	})
 	if err != nil {
 		return nil, err
@@ -107,7 +107,8 @@ func (c *TagController) Store(ctx context.Context, in *requests.StoreTagRequest)
 }
 
 /*
-Update renames or recolors a tag and answers with it as it now is.
+Update renames a tag or changes its color or icon, and answers with it
+as it now is.
 */
 func (c *TagController) Update(ctx context.Context, in *requests.UpdateTagRequest) (*TagOutput, error) {
 	id, err := c.IDs.Decode(string(models.PrefixTag), in.Tag)
@@ -115,9 +116,11 @@ func (c *TagController) Update(ctx context.Context, in *requests.UpdateTagReques
 		return nil, exceptions.ErrNotFound
 	}
 
+	nulls := requests.Nulls(in.RawBody)
+
 	tag, err := c.Change.Handle(ctx, tags.UpdateTagInput{
 		Membership: membership(ctx), TagID: id, Name: in.Body.Name, Color: in.Body.Color,
-		ClearColor: requests.Nulls(in.RawBody)["color"],
+		ClearColor: nulls["color"], Icon: in.Body.Icon, ClearIcon: nulls["icon"],
 	})
 	if err != nil {
 		return nil, err

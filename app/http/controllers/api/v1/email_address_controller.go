@@ -169,6 +169,18 @@ func (c *EmailAddressController) Update(
 	if b.Settings != nil {
 		update.QuotePrevious = b.Settings.QuotePrevious
 		update.BulkMailHandling = (*enums.BulkMailHandling)(b.Settings.BulkMailHandling)
+		update.Style = replyStyle(b.Settings.ReplyStyle)
+	}
+
+	update.IsDefault = b.IsDefault
+
+	if b.InboxID != nil {
+		inbox, err := c.IDs.Decode(string(models.PrefixInbox), *b.InboxID)
+		if err != nil {
+			return nil, exceptions.ErrInboxNotFound
+		}
+
+		update.InboxID = &inbox
 	}
 
 	row, err := c.Change.Handle(ctx, update)
