@@ -72,13 +72,6 @@ func (d *Driver) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 }
 
 /*
-Probe routes to the model's family driver.
-*/
-func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	return d.forModel(model).Probe(ctx, model)
-}
-
-/*
 Capabilities delegates to the model's family driver.
 */
 func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {

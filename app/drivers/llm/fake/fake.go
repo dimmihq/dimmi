@@ -48,7 +48,6 @@ type LLM struct {
 	sent     []contracts.ChatRequest
 	models   []contracts.LLMModel
 	caps     contracts.LLMCapabilities
-	probeErr error
 	listErr  error
 }
 
@@ -182,16 +181,6 @@ func (l *LLM) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 		return nil, l.listErr
 	}
 	return l.models, nil
-}
-
-/*
-Probe answers a tiny successful response.
-*/
-func (l *LLM) Probe(_ context.Context, model string) (*contracts.ProbeResult, error) {
-	if l.probeErr != nil {
-		return nil, l.probeErr
-	}
-	return &contracts.ProbeResult{Model: model, Usage: contracts.LLMUsage{OutputTokens: 2, Reported: true}}, nil
 }
 
 /*

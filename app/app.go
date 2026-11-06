@@ -19,8 +19,6 @@
 package app
 
 import (
-	"github.com/dimmihq/dimmi/app/ai/pipeline"
-	"github.com/dimmihq/dimmi/app/managers"
 	"cmp"
 	"io/fs"
 	"maps"
@@ -37,6 +35,7 @@ import (
 	emailactions "github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
+	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/factors"
 	"github.com/dimmihq/dimmi/app/auth/providers"
@@ -45,6 +44,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/integrations/email"
 	"github.com/dimmihq/dimmi/app/jobs"
+	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/app/support/retention"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"

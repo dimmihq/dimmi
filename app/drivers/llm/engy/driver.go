@@ -42,12 +42,15 @@ type Driver struct {
 New builds an Engy driver for a key.
 */
 func New(apiKey string, httpClient *httpclient.StdClient, clk clock.Clock) *Driver {
-	return &Driver{clk: clk, inner: openaicompat.New(BaseURL, apiKey, nil, httpClient, openaicompat.Config{
-		MaxTokensField:      "max_tokens",
-		SupportsTools:       true,
-		SupportsStreamUsage: true,
-		JSONMode:            true,
-		ContextTokens:       200_000,
+	return &Driver{clk: clk, inner: openaicompat.New(openaicompat.Options{
+		BaseURL: BaseURL, APIKey: apiKey, HTTP: httpClient,
+		Config: openaicompat.Config{
+			MaxTokensField:      "max_tokens",
+			SupportsTools:       true,
+			SupportsStreamUsage: true,
+			JSONMode:            true,
+			ContextTokens:       200_000,
+		},
 	})}
 }
 
@@ -75,13 +78,6 @@ ListModels returns Engy's model catalog.
 */
 func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
 	return d.inner.ListModels(ctx)
-}
-
-/*
-Probe sends the smallest request to a model.
-*/
-func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	return d.inner.Probe(ctx, model)
 }
 
 /*

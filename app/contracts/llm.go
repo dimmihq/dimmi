@@ -15,7 +15,6 @@ package contracts
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 )
 
@@ -68,138 +67,11 @@ type LLM interface {
 	ListModels(ctx context.Context) ([]LLMModel, error)
 
 	/*
-		Probe sends the smallest possible request to a model. It costs
-		a few real tokens; it powers the test button and the
-		validation fallback.
-	*/
-	Probe(ctx context.Context, model string) (*ProbeResult, error)
-
-	/*
 		Capabilities answers what a model can do from the driver's
 		static table plus connection overrides, never from the
 		network.
 	*/
 	Capabilities(model string) LLMCapabilities
-}
-
-/*
-ChatRequest is one completion call. Static system blocks come first so
-providers that cache prompts can reuse them; dynamic context comes
-last.
-*/
-type ChatRequest struct {
-	Model           string
-	System          []SystemBlock
-	Messages        []ChatMessage
-	Tools           []ToolSpec
-	ToolChoice      ToolChoice
-	MaxOutputTokens int
-	Temperature     *float64
-	StopSequences   []string
-	ResponseFormat  ResponseFormat
-	CacheHint       bool
-	Metadata        map[string]string
-	Timeout         StepTimeouts
-}
-
-/*
-SystemBlock is one system-prompt segment. Cacheable blocks hold only
-typed, Dimmi-controlled text so they can be marked for prompt caching.
-*/
-type SystemBlock struct {
-	Text      string
-	Cacheable bool
-}
-
-/*
-ChatRole names who produced a message part.
-*/
-type ChatRole string
-
-/*
-The roles a message can carry.
-*/
-const (
-	ChatRoleUser      ChatRole = "user"
-	ChatRoleAssistant ChatRole = "assistant"
-	ChatRoleTool      ChatRole = "tool"
-)
-
-/*
-ChatMessage is one turn of a conversation. Customer messages carry the
-user role; teammate and agent messages carry the assistant role with a
-name prefix; tool results carry the tool role.
-*/
-type ChatMessage struct {
-	Role       ChatRole
-	Parts      []ContentPart
-	ToolCalls  []ToolCall
-	ToolCallID string
-	ToolError  bool
-}
-
-/*
-ContentPart is one piece of a message's body. Text is the only kind at
-this stage.
-*/
-type ContentPart struct {
-	Text string
-}
-
-/*
-ToolSpec describes one tool the model may call. Names match the agent
-tool rules so they stay valid for every provider.
-*/
-type ToolSpec struct {
-	Name        string
-	Description string
-	Schema      json.RawMessage
-}
-
-/*
-ToolCall is one invocation the model asked for.
-*/
-type ToolCall struct {
-	ID        string
-	Name      string
-	Arguments json.RawMessage
-}
-
-/*
-ToolChoice tells the model how it may use tools.
-*/
-type ToolChoice string
-
-/*
-The tool choices. Forced tool use is never sent: some models reject it.
-*/
-const (
-	ToolChoiceAuto ToolChoice = "auto"
-	ToolChoiceNone ToolChoice = "none"
-)
-
-/*
-ResponseFormat names the answer shape the caller needs.
-*/
-type ResponseFormat string
-
-/*
-The answer shapes. JSON is used by the classifier; drivers map it to
-the native mode or a prompt suffix where none exists.
-*/
-const (
-	ResponseFormatText ResponseFormat = "text"
-	ResponseFormatJSON ResponseFormat = "json"
-)
-
-/*
-StepTimeouts bound one provider call: time to the first token, idle
-time between stream events, and the whole call.
-*/
-type StepTimeouts struct {
-	FirstToken time.Duration
-	Idle       time.Duration
-	Total      time.Duration
 }
 
 /*
@@ -237,7 +109,16 @@ ChatStream is a live completion. Next blocks for the next event and
 returns io.EOF after the final done event.
 */
 type ChatStream interface {
+	/*
+		Next blocks for the next event and returns io.EOF after the
+		final done event.
+	*/
 	Next(ctx context.Context) (StreamEvent, error)
+
+	/*
+		Close releases the connection early; it is safe to call more
+		than once.
+	*/
 	Close() error
 }
 
@@ -289,16 +170,6 @@ type LLMModel struct {
 	DisplayName   string
 	ContextTokens int
 	Deprecated    bool
-}
-
-/*
-ProbeResult is what a tiny request answered: the model reached and its
-cost in latency and tokens.
-*/
-type ProbeResult struct {
-	Model   string
-	Latency time.Duration
-	Usage   LLMUsage
 }
 
 /*

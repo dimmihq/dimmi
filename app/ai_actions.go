@@ -20,11 +20,11 @@ type AIActions struct {
 	GetAgent    *ai.GetAiAgent
 	UpdateAgent *ai.UpdateAiAgent
 
-	ListProviderKeys   *ai.ListProviderKeys
-	CreateProviderKey  *ai.CreateProviderKey
-	UpdateProviderKey  *ai.UpdateProviderKey
-	DeleteProviderKey  *ai.DeleteProviderKey
-	TestProviderKey    *ai.TestProviderKey
+	ListProviderKeys  *ai.ListProviderKeys
+	CreateProviderKey *ai.CreateProviderKey
+	UpdateProviderKey *ai.UpdateProviderKey
+	DeleteProviderKey *ai.DeleteProviderKey
+	TestProviderKey   *ai.TestProviderKey
 
 	StartChatGPTConnect    *ai.StartChatGPTConnect
 	CompleteChatGPTConnect *ai.CompleteChatGPTConnect

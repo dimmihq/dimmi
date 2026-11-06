@@ -29,13 +29,15 @@ type Knowledge interface {
 		Search returns ranked chunks inside one workspace. With no
 		embeddings the answer is keyword search, never an error.
 	*/
-	Search(ctx context.Context, workspaceID ids.UUID, query string, opts KnowledgeSearchOptions) (KnowledgeSearchResult, error)
+	Search(ctx context.Context, workspaceID ids.UUID, query string,
+		opts KnowledgeSearchOptions) (KnowledgeSearchResult, error)
 
 	/*
 		Document returns the full normalized Markdown of one document,
 		filtered by the same visibility rule as Search.
 	*/
-	Document(ctx context.Context, workspaceID, documentID ids.UUID, visibility []KnowledgeVisibility) (KnowledgeDocument, error)
+	Document(ctx context.Context, workspaceID, documentID ids.UUID,
+		visibility []KnowledgeVisibility) (KnowledgeDocument, error)
 
 	/*
 		Status reports whether the workspace has searchable content;

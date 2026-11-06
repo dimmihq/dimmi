@@ -138,17 +138,11 @@ func (r *Runner) generate(ctx context.Context, f *flow) (*answer, error) {
 
 	started := r.Clock.Now()
 
-	stream, err := llm.Stream(ctx, contracts.ChatRequest{
-		Model:  model,
-		System: []contracts.SystemBlock{{Text: system, Cacheable: true}},
-		Messages: []contracts.ChatMessage{
-			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: sources}}},
-		},
-		MaxOutputTokens: int(f.env.Agent.MaxOutputTokens),
-		CacheHint:       true,
-	})
+	stream, err := llm.Stream(ctx, r.answerRequest(f.env, model, system, sources))
 	if err != nil {
-		r.stepErr(ctx, f, stepError{kind: enums.AIRunStepKindGenerate, model: model, started: started, err: err})
+		r.stepErr(ctx, f, stepError{
+			kind: enums.AIRunStepKindGenerate, model: model, started: started, err: err,
+		})
 		return nil, fmt.Errorf("generate: %w", err)
 	}
 	defer func() { _ = stream.Close() }()
@@ -166,7 +160,8 @@ func (r *Runner) generate(ctx context.Context, f *flow) (*answer, error) {
 		ProviderKeyID: keyID(f.env.AnswerKey), Model: model, Status: "ok",
 		Usage: usage, Latency: latency, FirstToken: firstToken,
 		StartedAt: started, CompletedAt: r.Clock.Now(),
-		RequestPayload: r.payload(f.env, sources), ResponsePayload: r.payload(f.env, text),
+		RequestPayload:  r.payload(f.env, sources),
+		ResponsePayload: r.payload(f.env, text),
 	}); err != nil {
 		return nil, fmt.Errorf("record generate step: %w", err)
 	}
@@ -178,6 +173,21 @@ func (r *Runner) generate(ctx context.Context, f *flow) (*answer, error) {
 	}
 
 	return out, nil
+}
+
+/*
+answerRequest is the single-turn request the answer model gets.
+*/
+func (r *Runner) answerRequest(env *env, model, system, sources string) contracts.ChatRequest {
+	return contracts.ChatRequest{
+		Model:  model,
+		System: []contracts.SystemBlock{{Text: system, Cacheable: true}},
+		Messages: []contracts.ChatMessage{
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: sources}}},
+		},
+		MaxOutputTokens: int(env.Agent.MaxOutputTokens),
+		CacheHint:       true,
+	}
 }
 
 /*

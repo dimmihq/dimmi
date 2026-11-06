@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/httpclient"
+	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
+	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -17,13 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/framework/httpclient"
-	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/dimmihq/dimmi/framework/tenancy"
-	"github.com/dimmihq/dimmi/framework/testkit"
 	"github.com/dimmihq/dimmi/tests"
-	"github.com/jackc/pgx/v5/pgtype"
-	
 )
 
 /*
@@ -38,15 +36,17 @@ func TestAiPipeline(t *testing.T) {
 
 		d := tests.NewDesk(t)
 		setup(t, d, fake.New(contracts.LLMProviderAnthropic).Script(
-			fake.Step{Text: "You can change your billing email in Settings > Billing. [1]",
-				Usage: contracts.LLMUsage{InputTokens: 120, OutputTokens: 42, Reported: true}},
+			fake.Step{
+				Text:  "You can change your billing email in Settings > Billing. [1]",
+				Usage: contracts.LLMUsage{InputTokens: 120, OutputTokens: 42, Reported: true},
+			},
 		))
 
 		conv, trigger := conversation(t, d, "billing email")
 		ctx := tenancy.With(t.Context(), d.TC.Workspace.Workspace.ID.String())
 		res, err := d.TC.App.AI.Run(ctx, pipeline.Args{
 			WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv,
-			TriggerMessageID: trigger, Kind: "conversation", QueuedAt: time.Now(),
+			TriggerMessageID: trigger, Kind: "conversation", QueuedAt: d.TC.App.Clock.Now(),
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "answered", res.Outcome)
@@ -56,7 +56,8 @@ func TestAiPipeline(t *testing.T) {
 				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: res.RunID,
 			})
 			require.NoError(t, err)
-			t.Logf("run: status=%s outcome=%v err=%v msg=%v", run.Status, run.Outcome, str(run.ErrorCode), str(run.ErrorMessage))
+			t.Logf("run: status=%s outcome=%v err=%v msg=%v",
+				run.Status, run.Outcome, str(run.ErrorCode), str(run.ErrorMessage))
 			assert.Equal(t, "completed", run.Status)
 			assert.Equal(t, "answered", str(run.Outcome))
 			assert.Greater(t, run.OutputTokens, int64(0))
@@ -71,7 +72,8 @@ func TestAiPipeline(t *testing.T) {
 				WorkspaceID: d.TC.Workspace.Workspace.ID, ID: conv,
 			})
 			require.NoError(t, err)
-			t.Logf("conv: state=%s replies=%d cost=%d lang=%v", conv.AiState, conv.AiReplyCount, conv.AiCostMicros, conv.AiLanguage)
+			t.Logf("conv: state=%s replies=%d cost=%d lang=%v",
+				conv.AiState, conv.AiReplyCount, conv.AiCostMicros, conv.AiLanguage)
 			msgs, _ := models.New(d.TC.App.DB).ListMessages(ctx, models.ListMessagesParams{
 				WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv.ID, RowLimit: 20,
 			})
@@ -93,7 +95,7 @@ func TestAiPipeline(t *testing.T) {
 		ctx := tenancy.With(t.Context(), d.TC.Workspace.Workspace.ID.String())
 		res, err := d.TC.App.AI.Run(ctx, pipeline.Args{
 			WorkspaceID: d.TC.Workspace.Workspace.ID, ConversationID: conv,
-			TriggerMessageID: trigger, Kind: "conversation", QueuedAt: time.Now(),
+			TriggerMessageID: trigger, Kind: "conversation", QueuedAt: d.TC.App.Clock.Now(),
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "handoff", res.Outcome)
@@ -136,9 +138,9 @@ func setup(t *testing.T, d tests.Desk, llm *fake.LLM) {
 		}
 
 		answer, classifier := "fake-answer", "fake-classifier"
-		minSim := pgtype.Numeric{Int: big.NewInt(35), Exp: -2, Valid: true}
+		minSim := database.NumericFloat(0.35)
 		_, err = models.New(d.TC.App.DB).UpdateAgent(ctx, models.UpdateAgentParams{
-			WorkspaceID: d.TC.Workspace.Workspace.ID, ID: agentID(t, d),
+			WorkspaceID: d.TC.Workspace.Workspace.ID, ID: agentID(ctx, t, d),
 			Name: "Dimmi", Enabled: true, Tone: "friendly", Guidance: "",
 			EnabledChannels: []string{"api"}, Schedule: "always",
 			AssignedBehavior: "skip_when_human_active",
@@ -161,23 +163,16 @@ func setup(t *testing.T, d tests.Desk, llm *fake.LLM) {
 /*
 agentID returns the workspace's agent id, creating the row if needed.
 */
-func agentID(t *testing.T, d tests.Desk) ids.UUID {
+func agentID(ctx context.Context, t *testing.T, d tests.Desk) ids.UUID {
 	t.Helper()
-	var id ids.UUID
-	d.TC.InWorkspace(func(ctx context.Context) error {
-		agent, err := models.New(d.TC.App.DB).FindAgent(ctx, d.TC.Workspace.Workspace.ID)
-		if err != nil {
-			agent, err = models.New(d.TC.App.DB).CreateAgent(ctx, models.CreateAgentParams{
-				WorkspaceID: d.TC.Workspace.Workspace.ID, Now: d.TC.App.Clock.Now(),
-			})
-			if err != nil {
-				return err
-			}
-		}
-		id = agent.ID
-		return nil
-	})
-	return id
+	agent, err := models.New(d.TC.App.DB).FindAgent(ctx, d.TC.Workspace.Workspace.ID)
+	if err != nil {
+		agent, err = models.New(d.TC.App.DB).CreateAgent(ctx, models.CreateAgentParams{
+			WorkspaceID: d.TC.Workspace.Workspace.ID, Now: d.TC.App.Clock.Now(),
+		})
+		require.NoError(t, err)
+	}
+	return agent.ID
 }
 
 /*

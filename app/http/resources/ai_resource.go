@@ -14,8 +14,9 @@ package resources
 import (
 	"encoding/json"
 
-	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*

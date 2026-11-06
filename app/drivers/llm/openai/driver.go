@@ -134,26 +134,6 @@ func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
 }
 
 /*
-Probe sends the smallest possible request to a model.
-*/
-func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	started := d.clock().Now()
-
-	res, err := d.Chat(ctx, contracts.ChatRequest{
-		Model: model,
-		Messages: []contracts.ChatMessage{
-			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}},
-		},
-		MaxOutputTokens: 8,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &contracts.ProbeResult{Model: res.Model, Latency: d.clock().Since(started), Usage: res.Usage}, nil
-}
-
-/*
 Capabilities answers what a model supports from the static table.
 */
 func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {

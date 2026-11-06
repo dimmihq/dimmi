@@ -46,14 +46,29 @@ type Driver struct {
 /*
 New builds a compatible driver for the endpoint.
 */
-func New(baseURL, apiKey string, headers map[string]string,
-	httpClient *httpclient.StdClient, cfg Config,
-) *Driver {
+/*
+Options configures the compatible endpoint.
+*/
+
+/*
+Options configures the compatible endpoint.
+*/
+type Options struct {
+	BaseURL, APIKey string
+	Headers         map[string]string
+	HTTP            *httpclient.StdClient
+	Config          Config
+}
+
+/*
+New builds the compatible driver.
+*/
+func New(o Options) *Driver {
 	return &Driver{
 		inner: openai.New(openai.Options{
-			BaseURL: baseURL, APIKey: apiKey, Headers: headers, HTTP: httpClient, Clock: cfg.Clock,
+			BaseURL: o.BaseURL, APIKey: o.APIKey, Headers: o.Headers, HTTP: o.HTTP, Clock: o.Config.Clock,
 		}),
-		cfg: cfg,
+		cfg: o.Config,
 	}
 }
 
@@ -81,13 +96,6 @@ ListModels returns the endpoint's models.
 */
 func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
 	return d.inner.ListModels(ctx)
-}
-
-/*
-Probe sends the smallest request to a model.
-*/
-func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	return d.inner.Probe(ctx, model)
 }
 
 /*

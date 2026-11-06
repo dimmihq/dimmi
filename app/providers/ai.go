@@ -16,6 +16,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/queue"
+
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
@@ -25,8 +28,6 @@ import (
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
-	"github.com/dimmihq/dimmi/framework/events"
-	"github.com/dimmihq/dimmi/framework/queue"
 	airesources "github.com/dimmihq/dimmi/resources/ai"
 )
 
@@ -71,7 +72,7 @@ func bootAI(a *app.App) error {
 	}
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
-		return enqueueAnswer(a, runner, e)
+		return enqueueAnswer(ctx, a, runner, e)
 	})
 
 	return queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner})
@@ -81,7 +82,9 @@ func bootAI(a *app.App) error {
 enqueueAnswer dispatches the answer job for a substantive customer
 message, a debounce after it landed so rapid typing gathers.
 */
-func enqueueAnswer(a *app.App, _ *pipeline.Runner, e appevents.MessageCreated) error {
+func enqueueAnswer(ctx context.Context, a *app.App, _ *pipeline.Runner,
+	e appevents.MessageCreated,
+) error {
 	if e.Type != "message" || e.AuthorType != "contact" || !e.Substantive {
 		return nil
 	}
@@ -91,7 +94,7 @@ func enqueueAnswer(a *app.App, _ *pipeline.Runner, e appevents.MessageCreated) e
 
 	debounce := debounceFor(a, e.ChannelType)
 
-	return a.Queue.Push(context.Background(), aijobs.AnswerWithAIArgs{
+	return a.Queue.Push(context.WithoutCancel(ctx), aijobs.AnswerWithAIArgs{
 		WorkspaceID:      e.WorkspaceID,
 		ConversationID:   e.ConversationID,
 		TriggerMessageID: e.MessageID,
@@ -118,7 +121,7 @@ func debounceFor(a *app.App, channelType string) int {
 /*
 loadPrices reads the shipped price table.
 */
-func loadPrices(a *app.App) *aiprices.Table {
+func loadPrices(_ *app.App) *aiprices.Table {
 	data, err := airesources.Files.ReadFile("prices.json")
 	if err != nil {
 		return nil

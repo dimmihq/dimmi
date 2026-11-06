@@ -63,7 +63,7 @@ func (a *UpdateAiAgent) Handle(ctx context.Context, in UpdateAgentInput) (*model
 	var out models.AiAgent
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		existing, err := ensureAgent(ctx, a.Clock, a.Config, tx, in.Membership.Workspace.ID)
+		existing, err := ensureAgent(ctx, seedDeps{clock: a.Clock, config: a.Config}, tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
 		}

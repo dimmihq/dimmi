@@ -14,33 +14,34 @@ package resources
 import (
 	"encoding/json"
 
-	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
 AiRun is one run of the agent.
 */
 type AiRun struct {
-	ID              string            `json:"id"`
-	ConversationID  *string           `json:"conversation_id"`
-	Kind            string            `json:"kind"`
-	Status          string            `json:"status"`
-	Outcome         *string           `json:"outcome"`
-	SkipReason      *string           `json:"skip_reason"`
-	HandoffReason   *string           `json:"handoff_reason"`
-	Language        *string           `json:"language"`
-	AnswerMessageID *string           `json:"answer_message_id"`
-	InputTokens     int64             `json:"input_tokens"`
-	OutputTokens    int64             `json:"output_tokens"`
-	CostMicros      int64             `json:"cost_micros"`
-	LatencyMs       *int32            `json:"latency_ms"`
-	FirstTokenMs    *int32            `json:"first_token_ms"`
-	PromptVersion   string            `json:"prompt_version"`
-	Flags           []string          `json:"flags"`
-	Error           any               `json:"error"`
-	Steps           []AiRunStep       `json:"steps,omitempty"`
-	CreatedAt       any               `json:"created_at"`
+	ID              string      `json:"id"`
+	ConversationID  *string     `json:"conversation_id"`
+	Kind            string      `json:"kind"`
+	Status          string      `json:"status"`
+	Outcome         *string     `json:"outcome"`
+	SkipReason      *string     `json:"skip_reason"`
+	HandoffReason   *string     `json:"handoff_reason"`
+	Language        *string     `json:"language"`
+	AnswerMessageID *string     `json:"answer_message_id"`
+	InputTokens     int64       `json:"input_tokens"`
+	OutputTokens    int64       `json:"output_tokens"`
+	CostMicros      int64       `json:"cost_micros"`
+	LatencyMs       *int32      `json:"latency_ms"`
+	FirstTokenMs    *int32      `json:"first_token_ms"`
+	PromptVersion   string      `json:"prompt_version"`
+	Flags           []string    `json:"flags"`
+	Error           any         `json:"error"`
+	Steps           []AiRunStep `json:"steps,omitempty"`
+	CreatedAt       any         `json:"created_at"`
 }
 
 /*
@@ -120,4 +121,3 @@ func publicPtr(prefix models.Prefix, id *ids.UUID) *string {
 	s := models.PublicID(prefix, *id)
 	return &s
 }
-

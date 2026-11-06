@@ -36,6 +36,7 @@ func aiRoutes(r *routing.Router, a *app.App) {
 		CompleteChatGPT: a.Actions.AI.CompleteChatGPTConnect,
 		IDs:             a.IDs,
 		URL:             a.Application.Config.App.URL,
+		Clock:           a.Clock,
 	}
 
 	routing.Get(r, "/ai/agent", "api.v1.ai.agent.show", c.Agent).Ability("ai:read")

@@ -126,13 +126,6 @@ func (w *Wrapper) ListModels(ctx context.Context) ([]contracts.LLMModel, error) 
 }
 
 /*
-Probe is not retried.
-*/
-func (w *Wrapper) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	return w.inner.Probe(ctx, model)
-}
-
-/*
 Capabilities is not retried.
 */
 func (w *Wrapper) Capabilities(model string) contracts.LLMCapabilities {

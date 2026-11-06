@@ -78,12 +78,14 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 
-		agent, err := ensureAgent(ctx, a.Clock, a.Config, tx, in.Membership.Workspace.ID)
+		agent, err := ensureAgent(ctx, seedDeps{clock: a.Clock, config: a.Config},
+			tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
 		}
 
-		managedKey, err := ensureManagedKey(ctx, a.Config, a.Clock, tx, in.Membership.Workspace.ID)
+		managedKey, err := ensureManagedKey(ctx, seedDeps{clock: a.Clock, config: a.Config},
+			tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
 		}
@@ -117,18 +119,26 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 }
 
 /*
+seedDeps are the two things the provisioning helpers both need.
+*/
+type seedDeps struct {
+	clock  clock.Clock
+	config config.AIConfig
+}
+
+/*
 ensureAgent returns the workspace's agent, creating it at defaults
 when missing.
 */
-func ensureAgent(ctx context.Context, clk clock.Clock, cfg config.AIConfig, tx *database.Tx, workspaceID ids.UUID) (models.AiAgent, error) {
+func ensureAgent(ctx context.Context, d seedDeps, tx *database.Tx, workspaceID ids.UUID) (models.AiAgent, error) {
 	agent, err := models.New(tx).FindAgent(ctx, workspaceID)
 	if err == nil {
 		return agent, nil
 	}
 
-	capMicros := int64(cfg.DefaultMonthlyCapUSD * 1_000_000)
+	capMicros := int64(d.config.DefaultMonthlyCapUSD * 1_000_000)
 	agent, err = models.New(tx).CreateAgent(ctx, models.CreateAgentParams{
-		WorkspaceID: workspaceID, MonthlySpendCapMicros: &capMicros, Now: clk.Now(),
+		WorkspaceID: workspaceID, MonthlySpendCapMicros: &capMicros, Now: d.clock.Now(),
 	})
 	if err != nil {
 		return models.AiAgent{}, fmt.Errorf("create ai agent: %w", err)
@@ -141,8 +151,10 @@ ensureManagedKey returns the built-in connection, creating it and
 pointing the agent's roles at the default models when the install has
 managed credentials to offer.
 */
-func ensureManagedKey(ctx context.Context, cfg config.AIConfig, clk clock.Clock, tx *database.Tx, workspaceID ids.UUID) (*models.AiProviderKey, error) {
-	if !managedConfigured(cfg) {
+func ensureManagedKey(ctx context.Context, d seedDeps, tx *database.Tx,
+	workspaceID ids.UUID,
+) (*models.AiProviderKey, error) {
+	if !managedConfigured(d.config) {
 		return nil, nil
 	}
 
@@ -156,7 +168,7 @@ func ensureManagedKey(ctx context.Context, cfg config.AIConfig, clk clock.Clock,
 		WorkspaceID: workspaceID, Name: "Dimmi (built-in)", Provider: "dimmi",
 		AuthType: "managed", Status: "valid", StatusReason: new("built-in provider"),
 		Models: modelsJSON, ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
-		Source: "system", Now: clk.Now(),
+		Source: "system", Now: d.clock.Now(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create managed key: %w", err)

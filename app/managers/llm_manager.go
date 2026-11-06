@@ -145,7 +145,7 @@ func (m *LLMManager) registerKeyDriven() {
 	})
 
 	m.Extend(enums.AIProviderEngy, func(
-		_ context.Context, _ *LLMManager, key models.AiProviderKey,
+		_ context.Context, _ *LLMManager, _ models.AiProviderKey,
 		creds Credentials, httpClient *httpclient.Client,
 	) (contracts.LLM, error) {
 		return engy.New(creds.APIKey, httpClient.StdClient(), m.clock), nil

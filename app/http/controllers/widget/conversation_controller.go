@@ -336,7 +336,9 @@ func (c *ConversationController) Handoff(
 		return nil, err
 	}
 
-	if err := c.HandoffAction.Handle(ctx, actions.HandoffInput{Auth: authenticated(ctx), Conversation: id}); err != nil {
+	if err := c.HandoffAction.Handle(ctx, actions.HandoffInput{
+		Auth: authenticated(ctx), Conversation: id,
+	}); err != nil {
 		return nil, err
 	}
 

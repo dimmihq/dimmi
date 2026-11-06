@@ -70,6 +70,9 @@ func (e *LLMError) Retryable() bool {
 	switch e.Kind {
 	case LLMErrorRateLimited, LLMErrorOverloaded, LLMErrorServer, LLMErrorTimeout, LLMErrorNetwork:
 		return true
+	case LLMErrorAuth, LLMErrorPermission, LLMErrorQuota, LLMErrorInvalidRequest,
+		LLMErrorModelNotFound, LLMErrorContentFiltered, LLMErrorBlockedHost, LLMErrorCanceled:
+		return false
 	}
 	return false
 }

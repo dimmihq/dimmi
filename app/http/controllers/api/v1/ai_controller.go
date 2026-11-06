@@ -14,12 +14,13 @@ package v1
 import (
 	"context"
 	"encoding/json"
-	"time"
 	"fmt"
+	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
-	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
@@ -29,41 +30,6 @@ import (
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
 )
-
-/*
-AIAgentOutput is the agent view for the settings page.
-*/
-type AIAgentOutput struct {
-	Body fhttp.Resource[ai.AgentView]
-}
-
-/*
-AIKeysOutput is the connection list.
-*/
-type AIKeysOutput struct {
-	Body fhttp.Collection[resources.AIProviderKey]
-}
-
-/*
-AIKeyOutput is one connection.
-*/
-type AIKeyOutput struct {
-	Body fhttp.Resource[resources.AIProviderKey]
-}
-
-/*
-AIConnectOutput is the authorize answer.
-*/
-type AIConnectOutput struct {
-	Body fhttp.Resource[ai.StartAnswer]
-}
-
-/*
-AIConnectDoneOutput is the completed connection.
-*/
-type AIConnectDoneOutput struct {
-	Body fhttp.Resource[ai.CompleteAnswer]
-}
 
 /*
 AIController serves the agent's settings.
@@ -80,6 +46,7 @@ type AIController struct {
 	CompleteChatGPT *ai.CompleteChatGPTConnect
 	IDs             *ids.Registry
 	DB              *database.DB
+	Clock           clock.Clock
 	URL             string
 }
 
@@ -106,110 +73,137 @@ func (c *AIController) UpdateAgent(ctx context.Context, in *requests.AIUpdateAge
 	}
 
 	agent := current.Agent
-	b := in.Body
-	if b.Name != nil {
-		agent.Name = *b.Name
-	}
-	if b.Enabled != nil {
-		agent.Enabled = *b.Enabled
-	}
-	if b.Tone != nil {
-		agent.Tone = *b.Tone
-	}
-	if b.Guidance != nil {
-		agent.Guidance = *b.Guidance
-	}
-	if b.ProductName != nil {
-		agent.ProductName = b.ProductName
-	}
-	if b.EnabledChannels != nil {
-		agent.EnabledChannels = *b.EnabledChannels
-	}
-	if b.Schedule != nil {
-		agent.Schedule = *b.Schedule
-	}
-	if b.AnswerKeyID != nil {
-		id, err := c.keyID(*b.AnswerKeyID)
-		if err != nil {
-			return nil, err
-		}
-		agent.AnswerKeyID = &id
-	}
-	if b.AnswerModel != nil {
-		agent.AnswerModel = b.AnswerModel
-	}
-	if b.ClassifierKeyID != nil {
-		id, err := c.keyID(*b.ClassifierKeyID)
-		if err != nil {
-			return nil, err
-		}
-		agent.ClassifierKeyID = &id
-	}
-	if b.ClassifierModel != nil {
-		agent.ClassifierModel = b.ClassifierModel
-	}
-	if b.FallbackKeyID != nil {
-		id, err := c.keyID(*b.FallbackKeyID)
-		if err != nil {
-			return nil, err
-		}
-		agent.FallbackKeyID = &id
-	}
-	if b.FallbackModel != nil {
-		agent.FallbackModel = b.FallbackModel
-	}
-	if b.MonthlyCapUSD != nil {
-		micros := int64(*b.MonthlyCapUSD * 1_000_000)
-		agent.MonthlySpendCapMicros = &micros
-	}
-	if b.MaxAiReplies != nil {
-		agent.MaxAiReplies = int32(*b.MaxAiReplies)
-	}
-	if b.RequireCitations != nil {
-		agent.RequireCitations = *b.RequireCitations
-	}
-	if b.PiiRedaction != nil {
-		agent.PiiRedaction = *b.PiiRedaction
-	}
-	if b.Languages != nil {
-		agent.Languages = *b.Languages
-	}
-	if b.DefaultLanguage != nil {
-		agent.DefaultLanguage = *b.DefaultLanguage
-	}
-	if b.UnknownBehavior != nil {
-		agent.UnknownBehavior = *b.UnknownBehavior
-	}
-	if b.AssignedBehavior != nil {
-		agent.AssignedBehavior = *b.AssignedBehavior
-	}
-	if b.Streaming != nil {
-		agent.Streaming = *b.Streaming
-	}
-	if b.IncludeContact != nil {
-		agent.IncludeContactContext = *b.IncludeContact
-	}
-	if b.HandoffTeamID != nil || b.RaisePriority != nil {
-		handoff := map[string]any{}
-		_ = json.Unmarshal(agent.Handoff, &handoff)
-		if b.HandoffTeamID != nil {
-			if *b.HandoffTeamID == "" {
-				delete(handoff, "target_team_id")
-			} else {
-				handoff["target_team_id"] = *b.HandoffTeamID
-			}
-		}
-		if b.RaisePriority != nil {
-			handoff["raise_priority"] = *b.RaisePriority
-		}
-		raw, _ := json.Marshal(handoff)
-		agent.Handoff = raw
+	if err := c.mergeAgent(&agent, in); err != nil {
+		return nil, err
 	}
 
 	if _, err := c.Update.Handle(ctx, ai.UpdateAgentInput{Membership: m, Agent: &agent}); err != nil {
 		return nil, err
 	}
 	return c.Agent(ctx, &requests.AIAgentRequest{})
+}
+
+/*
+mergeAgent folds every patch field the request carried into the agent
+row.
+*/
+func (c *AIController) mergeAgent(agent *models.AiAgent, in *requests.AIUpdateAgentRequest) error {
+	if err := c.mergeIdentity(agent, in); err != nil {
+		return err
+	}
+	c.mergeBehavior(agent, in)
+	return nil
+}
+
+/*
+mergeIdentity applies the fields that name and route the agent: its
+profile, channels, schedule, models and connections.
+*/
+func (c *AIController) mergeIdentity(agent *models.AiAgent, in *requests.AIUpdateAgentRequest) error {
+	b := in.Body
+	assign(&agent.Name, b.Name)
+	assign(&agent.Enabled, b.Enabled)
+	assign(&agent.Tone, b.Tone)
+	assign(&agent.Guidance, b.Guidance)
+	assignPtr(&agent.ProductName, b.ProductName)
+	assign(&agent.EnabledChannels, b.EnabledChannels)
+	assign(&agent.Schedule, b.Schedule)
+	answerID, err := c.keyPtr(b.AnswerKeyID)
+	if err != nil {
+		return err
+	}
+	agent.AnswerKeyID = answerID
+	assignPtr(&agent.AnswerModel, b.AnswerModel)
+	classifierID, err := c.keyPtr(b.ClassifierKeyID)
+	if err != nil {
+		return err
+	}
+	agent.ClassifierKeyID = classifierID
+	assignPtr(&agent.ClassifierModel, b.ClassifierModel)
+	fallbackID, err := c.keyPtr(b.FallbackKeyID)
+	if err != nil {
+		return err
+	}
+	agent.FallbackKeyID = fallbackID
+	assignPtr(&agent.FallbackModel, b.FallbackModel)
+	return nil
+}
+
+/*
+mergeBehavior applies the fields that govern how the agent answers:
+caps, citations, languages and the handoff shape.
+*/
+func (c *AIController) mergeBehavior(agent *models.AiAgent, in *requests.AIUpdateAgentRequest) {
+	b := in.Body
+	if b.MonthlyCapUSD != nil {
+		micros := int64(*b.MonthlyCapUSD * 1_000_000)
+		agent.MonthlySpendCapMicros = &micros
+	}
+	if b.MaxAiReplies != nil {
+		agent.MaxAiReplies = int32(max(0, min(*b.MaxAiReplies, 1000)))
+	}
+	assign(&agent.RequireCitations, b.RequireCitations)
+	assign(&agent.PiiRedaction, b.PiiRedaction)
+	assign(&agent.Languages, b.Languages)
+	assign(&agent.DefaultLanguage, b.DefaultLanguage)
+	assign(&agent.UnknownBehavior, b.UnknownBehavior)
+	assign(&agent.AssignedBehavior, b.AssignedBehavior)
+	assign(&agent.Streaming, b.Streaming)
+	assign(&agent.IncludeContactContext, b.IncludeContact)
+	mergeHandoff(agent, b.HandoffTeamID, b.RaisePriority)
+}
+
+/*
+assign applies a patch field when the request carried it.
+*/
+func assign[T any](dst, src *T) {
+	if src != nil {
+		*dst = *src
+	}
+}
+
+/*
+assignPtr applies a pointer patch field when the request carried it.
+*/
+func assignPtr[T any](dst **T, src *T) {
+	if src != nil {
+		*dst = src
+	}
+}
+
+/*
+keyPtr resolves a connection's id when the request carried one.
+*/
+func (c *AIController) keyPtr(s *string) (*ids.UUID, error) {
+	if s == nil {
+		return nil, nil
+	}
+	id, err := c.keyID(*s)
+	if err != nil {
+		return nil, err
+	}
+	return &id, nil
+}
+
+/*
+mergeHandoff folds the handoff patch fields into the agent's jsonb.
+*/
+func mergeHandoff(agent *models.AiAgent, teamID *string, raisePriority *bool) {
+	if teamID == nil && raisePriority == nil {
+		return
+	}
+	handoff := map[string]any{}
+	_ = json.Unmarshal(agent.Handoff, &handoff)
+	if teamID != nil && *teamID == "" {
+		delete(handoff, "target_team_id")
+	} else if teamID != nil {
+		handoff["target_team_id"] = *teamID
+	}
+	if raisePriority != nil {
+		handoff["raise_priority"] = *raisePriority
+	}
+	raw, _ := json.Marshal(handoff)
+	agent.Handoff = raw
 }
 
 /*
@@ -315,7 +309,9 @@ func (c *AIController) StartConnect(ctx context.Context, _ *requests.AIChatGPTSt
 /*
 CompleteConnect finishes the sign-in.
 */
-func (c *AIController) CompleteConnect(ctx context.Context, in *requests.AIChatGPTCompleteRequest) (*AIConnectDoneOutput, error) {
+func (c *AIController) CompleteConnect(ctx context.Context,
+	in *requests.AIChatGPTCompleteRequest,
+) (*AIConnectDoneOutput, error) {
 	out, err := c.CompleteChatGPT.Handle(ctx, ai.CompleteInput{
 		Membership: membership(ctx), State: in.Body.State, Code: in.Body.Code,
 		RedirectURI: c.URL + "/d/settings/ai/chatgpt/callback",
@@ -340,20 +336,6 @@ func (c *AIController) keyID(public string) (ids.UUID, error) {
 var _ = models.AiAgent{}
 
 /*
-AIRunsOutput is a conversation's run list.
-*/
-type AIRunsOutput struct {
-	Body fhttp.Collection[resources.AiRun]
-}
-
-/*
-AIRunOutput is one run with its steps.
-*/
-type AIRunOutput struct {
-	Body fhttp.Resource[resources.AiRun]
-}
-
-/*
 Runs lists a conversation's agent runs, newest first.
 */
 func (c *AIController) Runs(ctx context.Context, in *requests.AIRunsRequest) (*AIRunsOutput, error) {
@@ -375,7 +357,7 @@ func (c *AIController) Runs(ctx context.Context, in *requests.AIRunsRequest) (*A
 	for i, r := range runs {
 		out[i] = resources.NewAiRun(r)
 	}
-		return &AIRunsOutput{Body: fhttp.NewCollection(pagination.Page[resources.AiRun]{Items: out, Limit: 100})}, nil
+	return &AIRunsOutput{Body: fhttp.NewCollection(pagination.Page[resources.AiRun]{Items: out, Limit: 100})}, nil
 }
 
 /*
@@ -415,19 +397,12 @@ func (c *AIController) Run(ctx context.Context, in *requests.AIRunRequest) (*AIR
 }
 
 /*
-AIUsageOutput is the month's usage view.
-*/
-type AIUsageOutput struct {
-	Body fhttp.Resource[resources.AiUsage]
-}
-
-/*
 Usage answers the month's spend tallies.
 */
 func (c *AIController) Usage(ctx context.Context, _ *requests.AIAgentRequest) (*AIUsageOutput, error) {
 	m := membership(ctx)
 
-	now := time.Now().UTC()
+	now := c.Clock.Now().UTC()
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	period, _ := models.New(c.DB).GetSpendPeriod(ctx, models.GetSpendPeriodParams{

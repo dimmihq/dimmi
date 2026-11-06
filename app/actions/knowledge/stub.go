@@ -11,14 +11,18 @@
 |
 */
 
+/*
+Package knowledge is the dev stub of the knowledge index.
+*/
 package knowledge
 
 import (
 	"context"
 	"time"
 
-	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/contracts"
 )
 
 /*
@@ -40,7 +44,9 @@ func NewStub() *Stub {
 Search returns the canned chunks ranked in order, capped at the
 requested limit.
 */
-func (s *Stub) Search(_ context.Context, _ ids.UUID, _ string, opts contracts.KnowledgeSearchOptions) (contracts.KnowledgeSearchResult, error) {
+func (s *Stub) Search(_ context.Context, _ ids.UUID, _ string,
+	opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
 	limit := opts.Limit
 	if limit <= 0 || limit > len(s.chunks) {
 		limit = min(max(limit, 0), len(s.chunks))
@@ -58,7 +64,9 @@ func (s *Stub) Search(_ context.Context, _ ids.UUID, _ string, opts contracts.Kn
 /*
 Document returns the canned document text.
 */
-func (s *Stub) Document(_ context.Context, _, documentID ids.UUID, _ []contracts.KnowledgeVisibility) (contracts.KnowledgeDocument, error) {
+func (s *Stub) Document(_ context.Context, _, documentID ids.UUID,
+	_ []contracts.KnowledgeVisibility,
+) (contracts.KnowledgeDocument, error) {
 	for _, chunk := range s.chunks {
 		if chunk.DocumentID == documentID {
 			return contracts.KnowledgeDocument{
@@ -78,7 +86,9 @@ func (s *Stub) Document(_ context.Context, _, documentID ids.UUID, _ []contracts
 Status reports content ready so the agent's readiness check passes.
 */
 func (s *Stub) Status(_ context.Context, _ ids.UUID) (contracts.KnowledgeStatus, error) {
-	return contracts.KnowledgeStatus{HasContent: true, DocumentCount: int64(len(s.chunks)), ChunkCount: int64(len(s.chunks))}, nil
+	return contracts.KnowledgeStatus{
+		HasContent: true, DocumentCount: int64(len(s.chunks)), ChunkCount: int64(len(s.chunks)),
+	}, nil
 }
 
 /*
@@ -110,7 +120,8 @@ func cannedChunks() []contracts.KnowledgeChunk {
 			SourceType: "article",
 			Title:      "Change your billing details",
 			URL:        "https://help.example.com/billing",
-			Text:       "Open Settings > Billing. There you can update the billing email, card and invoice address. Changes apply to the next invoice.",
+			Text: "Open Settings > Billing. There you can update the billing email, " +
+				"card and invoice address. Changes apply to the next invoice.",
 			Similarity: &sim,
 			Score:      1,
 			Rank:       1,
@@ -125,7 +136,8 @@ func cannedChunks() []contracts.KnowledgeChunk {
 			SourceType: "article",
 			Title:      "Cancel your subscription",
 			URL:        "https://help.example.com/cancel",
-			Text:       "You can cancel any time from Settings > Billing > Cancel plan. The plan stays active until the end of the paid period.",
+			Text: "You can cancel any time from Settings > Billing > Cancel plan. " +
+				"The plan stays active until the end of the paid period.",
 			Similarity: &sim,
 			Score:      0.9,
 			Rank:       2,

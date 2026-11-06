@@ -145,24 +145,6 @@ func (d *Driver) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 }
 
 /*
-Probe sends the smallest request to a model.
-*/
-func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	started := d.clock().Now()
-	res, err := d.Chat(ctx, contracts.ChatRequest{
-		Model: model,
-		Messages: []contracts.ChatMessage{
-			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}},
-		},
-		MaxOutputTokens: 8,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &contracts.ProbeResult{Model: res.Model, Latency: d.clock().Since(started), Usage: res.Usage}, nil
-}
-
-/*
 Capabilities answers what a plan model supports.
 */
 func (d *Driver) Capabilities(_ string) contracts.LLMCapabilities {
@@ -288,14 +270,4 @@ func asError(err error, target **oai.Error) bool {
 		err = u.Unwrap()
 	}
 	return false
-}
-
-/*
-clock returns the driver's clock, the system one when unset.
-*/
-func (d *Driver) clock() clock.Clock {
-	if d.clk != nil {
-		return d.clk
-	}
-	return clock.System()
 }

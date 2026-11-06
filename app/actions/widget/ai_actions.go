@@ -17,13 +17,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dimmihq/dimmi/app/actions/conversations"
-	appevents "github.com/dimmihq/dimmi/app/events"
-	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/actions/conversations"
+	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -61,7 +62,7 @@ func (a *ConfirmAiHelp) Handle(ctx context.Context, in HelpInput) error {
 		now := a.Clock.Now()
 		_, err = models.New(tx).ResolveLatestRunOutcome(ctx, models.ResolveLatestRunOutcomeParams{
 			WorkspaceID: found.Conversation.WorkspaceID, ConversationID: &found.Conversation.ID,
-			Outcome: strPtr("resolved_confirmed"), Now: &now,
+			Outcome: new("resolved_confirmed"), Now: &now,
 		})
 		if err != nil {
 			return fmt.Errorf("resolve run: %w", err)
@@ -104,19 +105,6 @@ func (a *RequestAiHandoff) Handle(ctx context.Context, in HandoffInput) error {
 			return errNotFound
 		}
 
-		line := "I'm bringing in someone from the team."
-		var msgs map[string]any
-		if err := json.Unmarshal(agent.Messages, &msgs); err == nil {
-			if v, ok := msgs["handoff_line"].(string); ok && v != "" {
-				line = v
-			}
-		}
-
-		writer := &conversations.Writer{
-			Q: models.New(tx), Tx: tx, Events: a.Events, Now: a.Clock.Now(),
-			Actor: conversations.Actor{Type: "agent", ID: agent.ID, Name: agent.Name},
-		}
-
 		conv, err := models.New(tx).FindConversation(ctx, models.FindConversationParams{
 			WorkspaceID: found.Conversation.WorkspaceID, ID: found.Conversation.ID,
 		})
@@ -124,8 +112,12 @@ func (a *RequestAiHandoff) Handle(ctx context.Context, in HandoffInput) error {
 			return errNotFound
 		}
 
+		writer := &conversations.Writer{
+			Q: models.New(tx), Tx: tx, Events: a.Events, Now: a.Clock.Now(),
+			Actor: conversations.Actor{Type: "agent", ID: agent.ID, Name: agent.Name},
+		}
 		if _, _, err := writer.Append(ctx, conv, conversations.NewMessage{
-			Type: "message", Body: line,
+			Type: "message", Body: handoffLine(agent.Messages),
 		}); err != nil {
 			return fmt.Errorf("write handoff line: %w", err)
 		}
@@ -133,7 +125,7 @@ func (a *RequestAiHandoff) Handle(ctx context.Context, in HandoffInput) error {
 		now := a.Clock.Now()
 		if err := models.New(tx).HandoffConversationAi(ctx, models.HandoffConversationAiParams{
 			WorkspaceID: found.Conversation.WorkspaceID, ID: found.Conversation.ID,
-			Reason: strPtr("customer_requested"), Now: &now,
+			Reason: new("customer_requested"), Now: &now,
 		}); err != nil {
 			return fmt.Errorf("handoff conversation: %w", err)
 		}
@@ -150,6 +142,15 @@ func (a *RequestAiHandoff) Handle(ctx context.Context, in HandoffInput) error {
 }
 
 /*
-strPtr is a string pointer.
+handoffLine reads the agent's configured line, with its default.
 */
-func strPtr(s string) *string { return &s }
+func handoffLine(raw json.RawMessage) string {
+	line := "I'm bringing in someone from the team."
+	var msgs map[string]any
+	if err := json.Unmarshal(raw, &msgs); err == nil {
+		if v, ok := msgs["handoff_line"].(string); ok && v != "" {
+			return v
+		}
+	}
+	return line
+}

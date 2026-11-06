@@ -146,15 +146,22 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
-	if err := bootChannels(ctx, a); err != nil {
-		return err
-	}
-
-	if err := bootAI(a); err != nil {
+	if err := bootSurfaces(ctx, a); err != nil {
 		return err
 	}
 
 	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
+}
+
+/*
+bootSurfaces starts every customer-facing piece in order: channels
+first, the agent after them.
+*/
+func bootSurfaces(ctx context.Context, a *app.App) error {
+	if err := bootChannels(ctx, a); err != nil {
+		return err
+	}
+	return bootAI(a)
 }
 
 /*
