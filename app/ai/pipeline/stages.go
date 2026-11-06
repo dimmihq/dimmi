@@ -27,10 +27,7 @@ import (
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/linkguard"
-	"github.com/dimmihq/dimmi/app/support/pii"
-	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
@@ -45,8 +42,6 @@ type classification struct {
 	QueryRewritten string `json:"query_rewritten"`
 	Safety         string `json:"safety"`
 	Summary        string `json:"summary"`
-	handoff        string
-	silent         bool
 }
 
 /*
@@ -81,7 +76,7 @@ func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 
 	started := r.Clock.Now()
-	res, err := r.Knowledge.Search(ctx, env.Workspace.ID, pii.Redact(query, env.Agent.PiiRedaction),
+	res, err := r.Knowledge.Search(ctx, env.Workspace.ID, env.redactor.Redact(query, env.Agent.PiiRedaction),
 		contracts.KnowledgeSearchOptions{
 			Limit:      6,
 			Visibility: []contracts.KnowledgeVisibility{contracts.KnowledgeVisibilityPublic},
@@ -153,7 +148,7 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 		r.stepErr(ctx, env, recorder, enums.AIRunStepKindGenerate, model, started, err)
 		return nil, fmt.Errorf("generate: %w", err)
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	for {
 		ev, err := stream.Next(ctx)
@@ -597,7 +592,7 @@ func transcriptForLLM(env *env, max int) string {
 			who = "System"
 		}
 		text := triggerText(m)
-		text = pii.Redact(text, env.Agent.PiiRedaction)
+		text = env.redactor.Redact(text, env.Agent.PiiRedaction)
 		if len(text) > 2000 {
 			text = text[:2000]
 		}
@@ -606,29 +601,3 @@ func transcriptForLLM(env *env, max int) string {
 	return b.String()
 }
 
-/*
-jsonObject extracts the first JSON object from a reply.
-*/
-func jsonObject(text string) string {
-	start := strings.Index(text, "{")
-	end := strings.LastIndex(text, "}")
-	if start < 0 || end <= start {
-		return "{}"
-	}
-	return text[start : end+1]
-}
-
-/*
-contains reports membership.
-*/
-func contains(list []string, v string) bool {
-	for _, s := range list {
-		if s == v {
-			return true
-		}
-	}
-	return false
-}
-
-var _ = aimodels.FamilyOf
-var _ = database.DB{}

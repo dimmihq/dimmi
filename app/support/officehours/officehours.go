@@ -52,8 +52,6 @@ func Within(raw json.RawMessage, t time.Time) bool {
 	}
 	local := t.In(loc)
 
-	day := local.Weekday().String()[:3]
-	day = string(day[0]) + string(day[1]) + string(day[2])
 
 	span, ok := hours.Days[weekday(local.Weekday())]
 	if !ok {
@@ -81,6 +79,8 @@ func weekday(d time.Weekday) string {
 		return "fri"
 	case time.Saturday:
 		return "sat"
+	case time.Sunday:
+		return "sun"
 	}
 	return "sun"
 }
@@ -151,8 +151,8 @@ func atoi(s string) int {
 /*
 errBadTime marks a malformed span.
 */
-var errBadTime = &badTime{"bad office-hours time"}
+var errBadTime = &badTimeError{"bad office-hours time"}
 
-type badTime struct{ s string }
+type badTimeError struct{ s string }
 
-func (e *badTime) Error() string { return e.s }
+func (e *badTimeError) Error() string { return e.s }

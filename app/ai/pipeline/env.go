@@ -14,27 +14,32 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
-	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/pii"
 )
 
 /*
 env is the run's loaded world.
 */
 type env struct {
-	tx           *database.Tx
-	Workspace    models.Workspace
-	Agent        *models.AiAgent
-	Conversation models.Conversation
-	Trigger      models.Message
-	Messages     []models.Message
-	ChannelType  string
-	AnswerKey    *models.AiProviderKey
+	patterns  patterns
+	redactor  *pii.Redactor
+	tx             *database.Tx
+	Workspace      models.Workspace
+	Agent          *models.AiAgent
+	Conversation   models.Conversation
+	Trigger        models.Message
+	Messages       []models.Message
+	ChannelType    string
+	AnswerKey      *models.AiProviderKey
 	pendingConfirm bool
-	now          time.Time
+	now            time.Time
 }
 
 /*
@@ -60,16 +65,16 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, workspaceID, conv
 		return nil, fmt.Errorf("list messages: %w", err)
 	}
 
-	env := &env{tx: tx, Workspace: ws, Conversation: conv, Messages: msgs, now: r.Clock.Now()}
+	env := &env{tx: tx, Workspace: ws, Conversation: conv, Messages: msgs, patterns: newPatterns(), redactor: pii.New(), now: r.Clock.Now()}
 	if agent, err := models.New(tx).FindAgent(ctx, conv.WorkspaceID); err == nil {
 		env.Agent = &agent
 	}
 
 	if len(msgs) > 0 {
 		env.Trigger = msgs[len(msgs)-1]
-		for i := len(msgs) - 1; i >= 0; i-- {
-			if msgs[i].AuthorType == "contact" {
-				env.Trigger = msgs[i]
+		for _, msg := range slices.Backward(msgs) {
+			if msg.AuthorType == "contact" {
+				env.Trigger = msg
 				break
 			}
 		}

@@ -14,12 +14,13 @@
 package prompts
 
 import (
-	"github.com/dimmihq/dimmi/framework/hashing"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"strings"
 	"sync"
+
+	"github.com/dimmihq/dimmi/framework/hashing"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	resprompts "github.com/dimmihq/dimmi/resources/prompts"

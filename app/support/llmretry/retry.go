@@ -16,11 +16,12 @@ package llmretry
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/framework/clock"
 )
 
 /*
@@ -165,7 +166,8 @@ wait decides whether to retry: only retryable kinds, waits the
 provider's hint or a short backoff, and feeds the breaker.
 */
 func (w *Wrapper) wait(ctx context.Context, err error, attempt int) bool {
-	llmErr, ok := err.(*contracts.LLMError)
+	llmErr := &contracts.LLMError{}
+	ok := errors.As(err, &llmErr)
 	if !ok || !llmErr.Retryable() {
 		return false
 	}
@@ -184,7 +186,7 @@ func (w *Wrapper) wait(ctx context.Context, err error, attempt int) bool {
 	select {
 	case <-ctx.Done():
 		return false
-	case <-time.After(delay):
+	case <-w.opts.Clock.After(delay):
 		return true
 	}
 }
@@ -212,7 +214,8 @@ func fallbackOr[T any](w *Wrapper, _ context.Context, err error, call func(contr
 		return zero, err
 	}
 
-	llmErr, ok := err.(*contracts.LLMError)
+	llmErr := &contracts.LLMError{}
+	ok := errors.As(err, &llmErr)
 	if !ok || !fallbackable(llmErr.Kind) {
 		return zero, err
 	}
@@ -228,6 +231,7 @@ func fallbackable(kind contracts.LLMErrorKind) bool {
 	case contracts.LLMErrorRateLimited, contracts.LLMErrorOverloaded,
 		contracts.LLMErrorServer, contracts.LLMErrorTimeout:
 		return true
+	default:
+		return false
 	}
-	return false
 }

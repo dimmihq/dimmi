@@ -13,9 +13,11 @@
 package openaicompat
 
 import (
-	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
-	
+
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/httpclient"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 )
@@ -25,6 +27,7 @@ Config carries the connection's quirks: which max-tokens field the
 server honors, whether tools work, and whether stream usage arrives.
 */
 type Config struct {
+	Clock               clock.Clock
 	MaxTokensField      string
 	SupportsTools       bool
 	SupportsStreamUsage bool
@@ -45,7 +48,7 @@ New builds a compatible driver for the endpoint.
 */
 func New(baseURL, apiKey string, headers map[string]string, httpClient *httpclient.StdClient, cfg Config) *Driver {
 	return &Driver{
-		inner: openai.New(openai.Options{BaseURL: baseURL, APIKey: apiKey, Headers: headers, HTTP: httpClient}),
+		inner: openai.New(openai.Options{BaseURL: baseURL, APIKey: apiKey, Headers: headers, HTTP: httpClient, Clock: cfg.Clock}),
 		cfg:   cfg,
 	}
 }
@@ -94,3 +97,4 @@ func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
 	}
 	return caps
 }
+

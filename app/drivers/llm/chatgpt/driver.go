@@ -13,16 +13,20 @@
 package chatgpt
 
 import (
-	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
 	"encoding/json"
-		"strings"
+	"errors"
+	"strings"
 	"time"
 
 	oai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 	"github.com/openai/openai-go/v3/shared"
+
+	"github.com/dimmihq/dimmi/framework/clock"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 )
@@ -53,6 +57,7 @@ type Tokens struct {
 Driver is a contracts.LLM over the subscription Responses API.
 */
 type Driver struct {
+	clk     clock.Clock
 	baseURL string
 	http    *httpclient.StdClient
 	source  TokenSource
@@ -61,11 +66,11 @@ type Driver struct {
 /*
 New builds the driver for one connection.
 */
-func New(baseURL string, httpClient *httpclient.StdClient, source TokenSource) *Driver {
+func New(baseURL string, httpClient *httpclient.StdClient, source TokenSource, clk clock.Clock) *Driver {
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
 	}
-	return &Driver{baseURL: baseURL, http: httpClient, source: source}
+	return &Driver{clk: clk, baseURL: baseURL, http: httpClient, source: source}
 }
 
 /*
@@ -82,7 +87,7 @@ func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contract
 	if err != nil {
 		return nil, err
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	out := &contracts.ChatResponse{Model: req.Model}
 	for {
@@ -144,7 +149,7 @@ func (d *Driver) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 Probe sends the smallest request to a model.
 */
 func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	started := time.Now()
+	started := d.clock().Now()
 	res, err := d.Chat(ctx, contracts.ChatRequest{
 		Model:           model,
 		Messages:        []contracts.ChatMessage{{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}}},
@@ -153,7 +158,7 @@ func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResul
 	if err != nil {
 		return nil, err
 	}
-	return &contracts.ProbeResult{Model: res.Model, Latency: time.Since(started), Usage: res.Usage}, nil
+	return &contracts.ProbeResult{Model: res.Model, Latency: d.clock().Since(started), Usage: res.Usage}, nil
 }
 
 /*
@@ -219,9 +224,9 @@ func responseParams(req contracts.ChatRequest) (responses.ResponseNewParams, err
 inputItem maps one message to a Responses input item.
 */
 func inputItem(msg contracts.ChatMessage) responses.ResponseInputItemUnionParam {
-	text := ""
+	var text strings.Builder
 	for _, part := range msg.Parts {
-		text += part.Text
+		text.WriteString(part.Text)
 	}
 
 	role := responses.EasyInputMessageRoleUser
@@ -233,7 +238,7 @@ func inputItem(msg contracts.ChatMessage) responses.ResponseInputItemUnionParam 
 		OfMessage: &responses.EasyInputMessageParam{
 			Role: role,
 			Content: responses.EasyInputMessageContentUnionParam{
-				OfString: oai.String(text),
+				OfString: oai.String(text.String()),
 			},
 		},
 	}
@@ -247,19 +252,19 @@ func mapError(err error) error {
 	if asError(err, &apiErr) {
 		kind := contracts.LLMErrorServer
 		switch apiErr.StatusCode {
-		case 401:
+		case fhttp.StatusUnauthorized:
 			kind = contracts.LLMErrorAuth
-		case 403:
+		case fhttp.StatusForbidden:
 			kind = contracts.LLMErrorPermission
-		case 404:
+		case fhttp.StatusNotFound:
 			kind = contracts.LLMErrorModelNotFound
-		case 400, 422:
+		case fhttp.StatusBadRequest, fhttp.StatusUnprocessableEntity:
 			kind = contracts.LLMErrorInvalidRequest
-		case 402:
+		case fhttp.StatusPaymentRequired:
 			kind = contracts.LLMErrorQuota
-		case 429:
+		case fhttp.StatusTooManyRequests:
 			kind = contracts.LLMErrorRateLimited
-		case 503:
+		case fhttp.StatusServiceUnavailable:
 			kind = contracts.LLMErrorOverloaded
 		}
 		return &contracts.LLMError{Kind: kind, HTTPStatus: apiErr.StatusCode, Message: apiErr.Error()}
@@ -269,7 +274,8 @@ func mapError(err error) error {
 
 func asError(err error, target **oai.Error) bool {
 	for err != nil {
-		if e, ok := err.(*oai.Error); ok {
+		e := &oai.Error{}
+		if errors.As(err, &e) {
 			*target = e
 			return true
 		}
@@ -281,4 +287,14 @@ func asError(err error, target **oai.Error) bool {
 		err = u.Unwrap()
 	}
 	return false
+}
+
+/*
+clock returns the driver's clock, the system one when unset.
+*/
+func (d *Driver) clock() clock.Clock {
+	if d.clk != nil {
+		return d.clk
+	}
+	return clock.System()
 }

@@ -21,7 +21,13 @@ import (
 	"sync"
 	"time"
 
-		"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/httpclient"
+	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/anthropic"
 	"github.com/dimmihq/dimmi/app/drivers/llm/chatgpt"
 	"github.com/dimmihq/dimmi/app/drivers/llm/engy"
@@ -31,11 +37,6 @@ import (
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/config"
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/encryption"
-	"github.com/dimmihq/dimmi/framework/httpclient"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -101,7 +102,7 @@ type LLMDeps struct {
 func NewLLMManager(deps LLMDeps) *LLMManager {
 	m := &LLMManager{
 		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: deps.Clock, db: deps.DB,
-		factories: map[enums.AIProvider]DriverFactory{}, cache: map[string]cachedDriver{},
+		factories: make(map[enums.AIProvider]DriverFactory), cache: map[string]cachedDriver{},
 	}
 	m.registerBuiltins()
 	return m
@@ -120,24 +121,26 @@ func (m *LLMManager) registerBuiltins() {
 
 	m.Extend(enums.AIProviderOpenAI, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
 		return openai.New(openai.Options{
+			Clock:   m.clock,
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
 			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
 		}), nil
 	})
 
 	m.Extend(enums.AIProviderEngy, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
-		return engy.New(creds.APIKey, httpClient.StdClient()), nil
+		return engy.New(creds.APIKey, httpClient.StdClient(), m.clock), nil
 	})
 
 	m.Extend(enums.AIProviderOpenAICompatible, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
 		return openai.New(openai.Options{
+			Clock:   m.clock,
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
 			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
 		}), nil
 	})
 
 	m.Extend(enums.AIProviderChatGPT, func(_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
-		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient.StdClient(), &oauthSource{m: m, key: key, creds: creds}), nil
+		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient.StdClient(), &oauthSource{m: m, key: key, creds: creds}, m.clock), nil
 	})
 
 	m.Extend(enums.AIProviderDimmi, func(_ context.Context, m *LLMManager, _ models.AiProviderKey, _ Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
@@ -187,7 +190,7 @@ func (m *LLMManager) ForKey(ctx context.Context, key models.AiProviderKey) (cont
 		delete(m.cache, m.order[0])
 		m.order = m.order[1:]
 	}
-	m.cache[cacheKey] = cachedDriver{llm: drv, at: time.Now()}
+	m.cache[cacheKey] = cachedDriver{llm: drv, at: m.clock.Now()}
 	m.order = append(m.order, cacheKey)
 	m.mu.Unlock()
 
@@ -224,7 +227,7 @@ credentials.
 */
 func (m *LLMManager) managedDriver(httpClient *httpclient.Client) (contracts.LLM, error) {
 	cfg := m.config.Managed
-	families := map[enums.AIModelFamily]contracts.LLM{}
+	families := make(map[enums.AIModelFamily]contracts.LLM)
 
 	if cfg.Anthropic.APIKey != "" {
 		families[enums.AIModelFamilyAnthropic] = anthropic.New(anthropic.Options{
@@ -233,11 +236,12 @@ func (m *LLMManager) managedDriver(httpClient *httpclient.Client) (contracts.LLM
 	}
 	if cfg.OpenAI.APIKey != "" {
 		families[enums.AIModelFamilyOpenAI] = openai.New(openai.Options{
+			Clock:   m.clock,
 			BaseURL: cfg.OpenAI.BaseURL, APIKey: cfg.OpenAI.APIKey, HTTP: httpClient.StdClient(),
 		})
 	}
 	if cfg.OpenWeight.APIKey != "" {
-		families[enums.AIModelFamilyOpenWeight] = engy.New(cfg.OpenWeight.APIKey, httpClient.StdClient())
+		families[enums.AIModelFamilyOpenWeight] = engy.New(cfg.OpenWeight.APIKey, httpClient.StdClient(), m.clock)
 	}
 
 	if len(families) == 0 {
@@ -267,7 +271,7 @@ type oauthSource struct {
 Token returns the access token, refreshing it when near expiry.
 */
 func (s *oauthSource) Token(ctx context.Context) (string, error) {
-	if s.creds.AccessToken != "" && time.Now().Before(s.creds.ExpiresAt.Add(-2*time.Minute)) {
+	if s.creds.AccessToken != "" && s.m.clock.Now().Before(s.creds.ExpiresAt.Add(-2*time.Minute)) {
 		return s.creds.AccessToken, nil
 	}
 	return s.refresh(ctx)
@@ -310,7 +314,7 @@ func (s *oauthSource) refresh(ctx context.Context) (string, error) {
 
 	s.creds.AccessToken = tokens.AccessToken
 	s.creds.RefreshToken = tokens.RefreshToken
-	s.creds.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	s.creds.ExpiresAt = s.m.clock.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
 
 	sealed, err := encryption.Seal(ctx, s.m.keys,
 		encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: s.key.WorkspaceID.String()}},

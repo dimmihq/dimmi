@@ -19,31 +19,32 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	fevents "github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
-	fevents "github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
 Runner runs the answer pipeline for one conversation.
 */
 type Runner struct {
-	DB       *database.DB
-	Clock    clock.Clock
-	LLM      *managers.LLMManager
+	DB        *database.DB
+	Clock     clock.Clock
+	LLM       *managers.LLMManager
 	Knowledge contracts.Knowledge
-	Prompts  *prompts.Loader
-	Prices   *aiprices.Table
-	Config   pipelineConfig
-	Events   *fevents.Dispatcher
+	Prompts   *prompts.Loader
+	Prices    *aiprices.Table
+	Config    pipelineConfig
+	Events    *fevents.Dispatcher
 }
 
 /*
@@ -59,11 +60,11 @@ type pipelineConfig interface {
 Args is what one run needs.
 */
 type Args struct {
-	WorkspaceID    ids.UUID
-	ConversationID ids.UUID
+	WorkspaceID      ids.UUID
+	ConversationID   ids.UUID
 	TriggerMessageID ids.UUID
-	Kind           string
-	QueuedAt       time.Time
+	Kind             string
+	QueuedAt         time.Time
 }
 
 /*
@@ -85,10 +86,7 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 		r.Clock = clock.System()
 	}
 
-	queueWait := int(r.Clock.Now().Sub(args.QueuedAt).Milliseconds())
-	if queueWait < 0 {
-		queueWait = 0
-	}
+	queueWait := max(int(r.Clock.Now().Sub(args.QueuedAt).Milliseconds()), 0)
 
 	var result *Result
 
@@ -118,11 +116,13 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 				return fmt.Errorf("finish run: %w", ferr)
 			}
 			result = &Result{Outcome: "error", RunID: run.ID}
+			r.recordSpend(ctx, tx, env, recorder, "error")
 			return nil
 		}
 
 		if outcome.AnswerID != nil {
 			_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
+			r.recordSpend(ctx, tx, env, recorder, outcome.name)
 			result = &Result{
 				Outcome: outcome.name, SkipReason: outcome.skipReason,
 				HandoffReason: outcome.handoffReason, AnswerID: outcome.AnswerID, RunID: run.ID,
@@ -131,6 +131,7 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 		}
 
 		_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
+		r.recordSpend(ctx, tx, env, recorder, outcome.name)
 		result = &Result{
 			Outcome: outcome.name, SkipReason: outcome.skipReason,
 			HandoffReason: outcome.handoffReason, RunID: run.ID,
@@ -176,8 +177,8 @@ func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args A
 	return models.New(tx).CreateRun(ctx, models.CreateRunParams{
 		WorkspaceID: env.Workspace.ID, AgentID: env.Agent.ID, Kind: args.Kind,
 		ConversationID: &args.ConversationID, TriggerMessageID: &args.TriggerMessageID,
-		IncludedMessageIds: messageIDs(env.Messages), ActorType: str("contact"),
-		ChannelType: str(env.ChannelType), Status: "running",
+		IncludedMessageIds: messageIDs(env.Messages), ActorType: new("contact"),
+		ChannelType: new(env.ChannelType), Status: "running",
 		PromptVersion: version, PromptHashes: hashes, ConfigSnapshot: snapshot,
 		StartedAt: &now, Now: now,
 	})
@@ -193,7 +194,7 @@ func (r *Runner) execute(ctx context.Context, env *env, recorder *Recorder, args
 
 	text := triggerText(env.Trigger)
 
-	if outcome, reason := fastPath(text, env.pendingConfirm); outcome != "" {
+	if outcome, reason := env.patterns.fastPath(text, env.pendingConfirm); outcome != "" {
 		return r.commitFastPath(ctx, env, recorder, outcome, reason)
 	}
 
@@ -287,10 +288,6 @@ func strv(s *string) string {
 	return *s
 }
 
-/*
-str is a string pointer.
-*/
-func str(s string) *string { return &s }
 
 /*
 errorCode folds an error to a short code.
@@ -314,7 +311,7 @@ func (r *Runner) recordSpend(ctx context.Context, tx *database.Tx, env *env, rec
 		WorkspaceID: env.Workspace.ID, PeriodStart: database.Date(start),
 		CostMicros: recorder.Cost(), InputTokens: recorder.tokens.input,
 		CachedInputTokens: recorder.tokens.cached, OutputTokens: recorder.tokens.output,
-		RunsCount: 1,
+		RunsCount:     1,
 		AnsweredCount: counts["answered"], UnknownCount: counts["unknown"],
 		HandoffCount: counts["handoff"], SilentCount: counts["silent"], Now: nowT,
 	})
@@ -334,7 +331,7 @@ func (r *Runner) checkThresholds(ctx context.Context, tx *database.Tx, env *env,
 		return
 	}
 	cap := *env.Agent.MonthlySpendCapMicros
-	pct := int32(period.CostMicros * 100 / cap)
+	pct := sat32(period.CostMicros * 100 / cap)
 
 	for _, threshold := range []int32{50, 80, 100} {
 		if pct >= threshold {
@@ -364,4 +361,7 @@ func familyForKey(key *models.AiProviderKey, model string) enums.AIModelFamily {
 	return aimodels.FamilyOf(provider, model)
 }
 
-
+/*
+str returns a string pointer.
+*/
+func str(s string) *string { return &s }

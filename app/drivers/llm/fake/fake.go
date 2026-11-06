@@ -15,8 +15,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"slices"
 	"sync"
 	"time"
+
+	"github.com/dimmihq/dimmi/framework/clock"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 )
@@ -99,12 +102,7 @@ AssertSent reports whether at least one received request satisfies
 the predicate.
 */
 func (l *LLM) AssertSent(fn func(contracts.ChatRequest) bool) bool {
-	for _, req := range l.Sent() {
-		if fn(req) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(l.Sent(), fn)
 }
 
 /*
@@ -228,7 +226,7 @@ func sleep(ctx context.Context, d time.Duration) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case <-time.After(d):
+	case <-clock.System().After(d):
 		return nil
 	}
 }

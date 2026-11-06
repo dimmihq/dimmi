@@ -16,15 +16,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/config"
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -153,7 +154,7 @@ func ensureManagedKey(ctx context.Context, cfg config.AIConfig, clk clock.Clock,
 	modelsJSON, _ := json.Marshal(managedModelIDs())
 	created, err := models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
 		WorkspaceID: workspaceID, Name: "Dimmi (built-in)", Provider: "dimmi",
-		AuthType: "managed", Status: "valid", StatusReason: strPtr("built-in provider"),
+		AuthType: "managed", Status: "valid", StatusReason: new("built-in provider"),
 		Models: modelsJSON, ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"),
 		Source: "system", Now: clk.Now(),
 	})

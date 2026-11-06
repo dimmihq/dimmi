@@ -13,11 +13,13 @@
 package engy
 
 import (
+	"context"
+	"strconv"
+	"strings"
+
+	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
-	"context"
-		"strconv"
-	"strings"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openaicompat"
@@ -32,14 +34,15 @@ const BaseURL = "https://api.engy.ai/v1"
 Driver is a contracts.LLM over Engy.
 */
 type Driver struct {
+	clk   clock.Clock
 	inner *openaicompat.Driver
 }
 
 /*
 New builds an Engy driver for a key.
 */
-func New(apiKey string, httpClient *httpclient.StdClient) *Driver {
-	return &Driver{inner: openaicompat.New(BaseURL, apiKey, nil, httpClient, openaicompat.Config{
+func New(apiKey string, httpClient *httpclient.StdClient, clk clock.Clock) *Driver {
+	return &Driver{clk: clk, inner: openaicompat.New(BaseURL, apiKey, nil, httpClient, openaicompat.Config{
 		MaxTokensField:      "max_tokens",
 		SupportsTools:       true,
 		SupportsStreamUsage: true,
@@ -98,8 +101,8 @@ func ChargedMicros(headers fhttp.Header, body string) int64 {
 			return n
 		}
 	}
-	if i := strings.Index(body, `"charged_micro":`); i >= 0 {
-		rest := body[i+16:]
+	if _, after, ok := strings.Cut(body, `"charged_micro":`); ok {
+		rest := after
 		end := strings.IndexAny(rest, ",}")
 		if end > 0 {
 			if n, err := strconv.ParseInt(strings.TrimSpace(rest[:end]), 10, 64); err == nil {
@@ -109,3 +112,4 @@ func ChargedMicros(headers fhttp.Header, body string) int64 {
 	}
 	return 0
 }
+

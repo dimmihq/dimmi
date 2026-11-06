@@ -15,10 +15,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
+
+	"github.com/dimmihq/dimmi/app/ai/pipeline"
 )
 
 /*

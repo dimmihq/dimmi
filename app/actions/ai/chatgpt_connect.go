@@ -14,9 +14,6 @@ package ai
 
 import (
 	"context"
-	"github.com/dimmihq/dimmi/framework/hashing"
-	"github.com/dimmihq/dimmi/framework/support/str"
-	
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -24,18 +21,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/cache"
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/fault"
+	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/httpclient"
+	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/support/str"
+
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/config"
-	"github.com/dimmihq/dimmi/framework/cache"
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/httpclient"
-	"github.com/dimmihq/dimmi/framework/encryption"
-	"github.com/dimmihq/dimmi/framework/fault"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -185,7 +185,7 @@ func (a *CompleteChatGPTConnect) Handle(ctx context.Context, in CompleteInput) (
 	if err != nil {
 		return nil, fault.New(fault.Invalid, "oauth_state_invalid", "the connect expired, start again")
 	}
-	a.Cache.Delete(ctx, "ai:oauth:"+in.State)
+	_ = a.Cache.Delete(ctx, "ai:oauth:"+in.State)
 
 	var parked oauthState
 	if err := json.Unmarshal(payload, &parked); err != nil || parked.WorkspaceID != in.Membership.Workspace.ID.String() {
@@ -206,7 +206,7 @@ func (a *CompleteChatGPTConnect) Handle(ctx context.Context, in CompleteInput) (
 		key, err = models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
 			WorkspaceID: in.Membership.Workspace.ID, Name: "ChatGPT subscription",
 			Provider: string(enums.AIProviderChatGPT), AuthType: "oauth", Status: "valid",
-			StatusReason: strPtr("connected"), Models: json.RawMessage("[]"),
+			StatusReason: new("connected"), Models: json.RawMessage("[]"),
 			ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"), Source: "dashboard",
 			CreatedByMemberID: &memberID, Now: a.Clock.Now(),
 		})
@@ -274,5 +274,7 @@ func randomURL(n int) string {
 	return str.Random(n)
 }
 
-var _ = strings.TrimSpace
-var _ = managers.Credentials{}
+var (
+	_ = strings.TrimSpace
+	_ = managers.Credentials{}
+)

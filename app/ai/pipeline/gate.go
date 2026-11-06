@@ -13,10 +13,11 @@
 package pipeline
 
 import (
-	"github.com/dimmihq/dimmi/framework/database"
 	"context"
 	"slices"
 	"time"
+
+	"github.com/dimmihq/dimmi/framework/database"
 
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/officehours"
@@ -131,4 +132,3 @@ func (r *Runner) readinessGate(env *env) string {
 	}
 	return ""
 }
-

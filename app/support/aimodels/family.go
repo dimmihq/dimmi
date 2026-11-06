@@ -36,6 +36,8 @@ func FamilyOf(provider enums.AIProvider, model string) enums.AIModelFamily {
 		return enums.AIModelFamilyAnthropic
 	case enums.AIProviderOpenAI, enums.AIProviderChatGPT:
 		return enums.AIModelFamilyOpenAI
+	case enums.AIProviderDimmi:
+		return familyOfManaged(model)
 	case enums.AIProviderEngy, enums.AIProviderOpenAICompatible:
 		return familyOfManaged(model)
 	}

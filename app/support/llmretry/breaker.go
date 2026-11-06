@@ -16,8 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/framework/clock"
+
+	"github.com/dimmihq/dimmi/app/contracts"
 )
 
 /*

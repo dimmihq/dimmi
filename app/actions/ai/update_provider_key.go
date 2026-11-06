@@ -16,14 +16,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dimmihq/dimmi/app/auth/authz"
-	"github.com/dimmihq/dimmi/app/exceptions"
-	"github.com/dimmihq/dimmi/app/managers"
-	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/managers"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*

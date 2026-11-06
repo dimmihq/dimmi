@@ -15,20 +15,23 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"slices"
 	"time"
 
-	"github.com/dimmihq/dimmi/app/auth/authz"
-	"github.com/dimmihq/dimmi/app/enums"
-	"github.com/dimmihq/dimmi/app/exceptions"
-	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/managers"
-	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/managers"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -100,7 +103,7 @@ func (a *CreateProviderKey) Handle(ctx context.Context, in CreateKeyInput) (*mod
 		key, err = models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
 			WorkspaceID: in.Membership.Workspace.ID, Name: in.Name, Provider: string(in.Provider),
 			BaseUrl: nullable(in.BaseURL), AuthType: authType, Status: "unverified",
-			StatusReason: strPtr("never validated"), Models: json.RawMessage("[]"),
+			StatusReason: new("never validated"), Models: json.RawMessage("[]"),
 			ProviderInfo: json.RawMessage("{}"), Config: cfg, Source: "dashboard",
 			CreatedByMemberID: &memberID, Now: a.Clock.Now(),
 		})
@@ -270,12 +273,7 @@ func (a *TestProviderKey) Handle(ctx context.Context, in TestKeyInput) (*models.
 supportedProvider reports whether the provider may be created.
 */
 func supportedProvider(p enums.AIProvider) bool {
-	for _, allowed := range enums.AIProviders() {
-		if p == allowed {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(enums.AIProviders(), p)
 }
 
 /*
@@ -284,27 +282,27 @@ where offered, a probe where not, and returns the status answer.
 */
 func validate(ctx context.Context, m *managers.LLMManager, key models.AiProviderKey) (status string, reason *string, modelList []string, info map[string]any, err error) {
 	if m == nil {
-		return "unverified", strPtr("not validated"), nil, nil, nil
+		return "unverified", new("not validated"), nil, nil, nil
 	}
 
 	driver, err := m.ForKey(ctx, key)
 	if err != nil {
-		return "error", strPtr(err.Error()), nil, nil, err
+		return "error", new(err.Error()), nil, nil, err
 	}
 
 	models, listErr := driver.ListModels(ctx)
-	if listErr != nil && listErr != errLLMNotSupported() {
-		return "invalid", strPtr(listErr.Error()), nil, nil, listErr
+	if listErr != nil && !errors.Is(listErr, errLLMNotSupported()) {
+		return "invalid", new(listErr.Error()), nil, nil, listErr
 	}
 
 	if len(models) > 0 {
 		for _, mdl := range models {
 			modelList = append(modelList, mdl.ID)
 		}
-		return "valid", strPtr("validated"), modelList, map[string]any{"models_count": len(models)}, nil
+		return "valid", new("validated"), modelList, map[string]any{"models_count": len(models)}, nil
 	}
 
-	return "valid", strPtr("validated"), nil, nil, nil
+	return "valid", new("validated"), nil, nil, nil
 }
 
 /*
@@ -328,10 +326,6 @@ func nullable(s string) *string {
 	return &s
 }
 
-/*
-str returns a string pointer.
-*/
-func strPtr(s string) *string { return &s }
 
 /*
 keyHint stores the key's last four, never more.

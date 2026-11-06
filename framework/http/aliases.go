@@ -107,6 +107,10 @@ const (
 	StatusRequestEntityTooLarge = http.StatusRequestEntityTooLarge
 	StatusUnprocessableEntity   = http.StatusUnprocessableEntity
 	StatusUpgradeRequired       = http.StatusUpgradeRequired
+	StatusPaymentRequired       = http.StatusPaymentRequired
+	StatusRequestTimeout        = http.StatusRequestTimeout
+	StatusBadGateway            = http.StatusBadGateway
+	StatusGatewayTimeout        = http.StatusGatewayTimeout
 	StatusTooManyRequests       = http.StatusTooManyRequests
 	StatusInternalServerError   = http.StatusInternalServerError
 	StatusServiceUnavailable    = http.StatusServiceUnavailable

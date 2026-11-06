@@ -17,13 +17,14 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -79,19 +80,19 @@ func (r *Recorder) Step(ctx context.Context, tx *database.Tx, in StepInput) (mod
 
 	var latency, firstToken *int32
 	if in.Latency > 0 {
-		v := int32(in.Latency.Milliseconds())
+		v := sat32(in.Latency.Milliseconds())
 		latency = &v
 	}
 	if in.FirstToken > 0 {
-		v := int32(in.FirstToken.Milliseconds())
+		v := sat32(in.FirstToken.Milliseconds())
 		firstToken = &v
 	}
 
 	step, err := models.New(tx).CreateRunStep(ctx, models.CreateRunStepParams{
-		WorkspaceID: r.Run.WorkspaceID, RunID: r.Run.ID, Seq: int32(r.step),
+		WorkspaceID: r.Run.WorkspaceID, RunID: r.Run.ID, Seq: sat32(int64(r.step)),
 		Kind: string(in.Kind), Provider: nilable(in.Provider), ProviderKeyID: in.ProviderKeyID,
-		Model: nilable(in.Model), ResponseModel: nilable(in.ResponseModel), Attempt: int32(in.Attempt),
-		Status: string(in.Status), ErrorKind: nilable(in.ErrorKind), HttpStatus: nilableInt(in.HTTPStatus),
+		Model: nilable(in.Model), ResponseModel: nilable(in.ResponseModel), Attempt: sat32(int64(in.Attempt)),
+		Status: in.Status, ErrorKind: nilable(in.ErrorKind), HttpStatus: nilableInt(in.HTTPStatus),
 		ProviderRequestID: nilable(in.RequestID), Request: in.RequestPayload, Response: in.ResponsePayload,
 		InputTokens: in.Usage.InputTokens, CachedInputTokens: in.Usage.CachedInputTokens,
 		CacheWriteTokens: in.Usage.CacheWriteTokens, OutputTokens: in.Usage.OutputTokens,
@@ -149,7 +150,7 @@ func (r *Recorder) Finish(ctx context.Context, tx *database.Tx, in FinishInput) 
 
 	var firstToken *int32
 	if in.FirstToken > 0 {
-		v := int32(in.FirstToken.Milliseconds())
+		v := sat32(in.FirstToken.Milliseconds())
 		firstToken = &v
 	}
 	lat := int32(latency.Milliseconds())
@@ -236,4 +237,17 @@ func nilableTime(t time.Time) *time.Time {
 		return nil
 	}
 	return &t
+}
+
+/*
+sat32 clamps a count into int32 for the columns that take one.
+*/
+func sat32(n int64) int32 {
+	if n > 2147483647 {
+		return 2147483647
+	}
+	if n < -2147483648 {
+		return -2147483648
+	}
+	return int32(n)
 }

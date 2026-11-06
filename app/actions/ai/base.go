@@ -15,14 +15,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
-	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -125,15 +126,16 @@ func keyInUse(agent models.AiAgent, keyID ids.UUID) []string {
 catalogEntry maps a catalog row for the API.
 */
 func catalogEntry(e aimodels.Entry, prices *aiprices.Table) CatalogEntry {
-	out := CatalogEntry{ID: e.ID, DisplayName: e.DisplayName, Family: e.Family,
-		Suggested: e.Suggested, ContextTokens: e.ContextTokens}
+	out := CatalogEntry{
+		ID: e.ID, DisplayName: e.DisplayName, Family: e.Family,
+		Suggested: e.Suggested, ContextTokens: e.ContextTokens,
+	}
 	if prices != nil {
 		if p := prices.Find(string(enums.AIProviderDimmi), e.ID); p != nil {
-			out.InputPerMtok = strPtr(p.InputPerMtok)
-			out.OutputPerMtok = strPtr(p.OutputPerMtok)
-			out.CachedInputPerMtok = strPtr(p.CachedInputPerMtok)
+			out.InputPerMtok = new(p.InputPerMtok)
+			out.OutputPerMtok = new(p.OutputPerMtok)
+			out.CachedInputPerMtok = new(p.CachedInputPerMtok)
 		}
 	}
 	return out
 }
-

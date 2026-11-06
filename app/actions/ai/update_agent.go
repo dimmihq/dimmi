@@ -16,12 +16,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/fault"
+
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/config"
-	"github.com/dimmihq/dimmi/framework/clock"
-	"github.com/dimmihq/dimmi/framework/fault"
 )
 
 /*

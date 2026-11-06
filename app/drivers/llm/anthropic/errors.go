@@ -17,6 +17,8 @@ import (
 
 	anth "github.com/anthropics/anthropic-sdk-go"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 )
 
@@ -28,8 +30,7 @@ func MapError(err error) error {
 		return nil
 	}
 
-	var apiErr *anth.Error
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[*anth.Error](err); ok {
 		return mapAPIError(apiErr)
 	}
 	if errors.Is(err, context.Canceled) {
@@ -48,31 +49,31 @@ func mapAPIError(err *anth.Error) error {
 	kind := contracts.LLMErrorServer
 
 	switch err.StatusCode {
-	case 401:
+	case fhttp.StatusUnauthorized:
 		kind = contracts.LLMErrorAuth
-	case 403:
+	case fhttp.StatusForbidden:
 		kind = contracts.LLMErrorPermission
-	case 404:
+	case fhttp.StatusNotFound:
 		kind = contracts.LLMErrorModelNotFound
-	case 400, 422:
+	case fhttp.StatusBadRequest, fhttp.StatusUnprocessableEntity:
 		kind = contracts.LLMErrorInvalidRequest
-	case 402:
+	case fhttp.StatusPaymentRequired:
 		kind = contracts.LLMErrorQuota
-	case 429:
+	case fhttp.StatusTooManyRequests:
 		kind = contracts.LLMErrorRateLimited
-	case 408:
+	case fhttp.StatusRequestTimeout:
 		kind = contracts.LLMErrorTimeout
-	case 500, 502, 504:
+	case fhttp.StatusInternalServerError, fhttp.StatusBadGateway, fhttp.StatusGatewayTimeout:
 		kind = contracts.LLMErrorServer
 	case 529:
 		kind = contracts.LLMErrorOverloaded
 	}
 
 	return &contracts.LLMError{
-		Kind:         kind,
-		HTTPStatus:   err.StatusCode,
-		RetryAfter:   retryAfter(err),
-		Message:      err.Error(),
+		Kind:       kind,
+		HTTPStatus: err.StatusCode,
+		RetryAfter: retryAfter(err),
+		Message:    err.Error(),
 	}
 }
 

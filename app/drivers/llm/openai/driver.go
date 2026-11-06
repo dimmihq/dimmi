@@ -13,14 +13,17 @@
 package openai
 
 import (
-	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
 	"encoding/json"
-		"time"
+	"strings"
+	"time"
 
 	oai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/shared"
+
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 )
@@ -35,6 +38,7 @@ type Options struct {
 	APIKey      string
 	Headers     map[string]string
 	HTTP        *httpclient.StdClient
+	Clock       clock.Clock
 	Context     map[string]string
 	ModelParams func(model string) []option.RequestOption
 }
@@ -44,6 +48,7 @@ Driver is a contracts.LLM over the OpenAI chat-completions surface.
 */
 type Driver struct {
 	client  oai.Client
+	clk     clock.Clock
 	options Options
 }
 
@@ -79,7 +84,7 @@ func (d *Driver) Provider() contracts.LLMProvider { return contracts.LLMProvider
 Chat runs one non-streaming completion.
 */
 func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
-	started := time.Now()
+	started := d.clock().Now()
 
 	params, err := completionParams(req)
 	if err != nil {
@@ -91,7 +96,7 @@ func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contract
 		return nil, MapError(err)
 	}
 
-	return mapResponse(res, req.Model, time.Since(started)), nil
+	return mapResponse(res, req.Model, d.clock().Since(started)), nil
 }
 
 /*
@@ -132,7 +137,7 @@ func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
 Probe sends the smallest possible request to a model.
 */
 func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	started := time.Now()
+	started := d.clock().Now()
 
 	res, err := d.Chat(ctx, contracts.ChatRequest{
 		Model:           model,
@@ -143,7 +148,7 @@ func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResul
 		return nil, err
 	}
 
-	return &contracts.ProbeResult{Model: res.Model, Latency: time.Since(started), Usage: res.Usage}, nil
+	return &contracts.ProbeResult{Model: res.Model, Latency: d.clock().Since(started), Usage: res.Usage}, nil
 }
 
 /*
@@ -165,11 +170,7 @@ func completionParams(req contracts.ChatRequest) (oai.ChatCompletionNewParams, e
 		params.Messages = append(params.Messages, oai.SystemMessage(block.Text))
 	}
 	for _, msg := range req.Messages {
-		mapped, err := mapMessage(msg)
-		if err != nil {
-			return params, err
-		}
-		params.Messages = append(params.Messages, mapped...)
+		params.Messages = append(params.Messages, mapMessage(msg)...)
 	}
 
 	for _, tool := range req.Tools {
@@ -215,21 +216,21 @@ func openaiStreamOptions() oai.ChatCompletionStreamOptionsParam {
 /*
 mapMessage maps one message to the SDK params.
 */
-func mapMessage(msg contracts.ChatMessage) ([]oai.ChatCompletionMessageParamUnion, error) {
+func mapMessage(msg contracts.ChatMessage) []oai.ChatCompletionMessageParamUnion {
 	var out []oai.ChatCompletionMessageParamUnion
 
-	text := ""
+	var text strings.Builder
 	for _, part := range msg.Parts {
-		text += part.Text
+		text.WriteString(part.Text)
 	}
 
 	switch msg.Role {
 	case contracts.ChatRoleUser:
-		out = append(out, oai.UserMessage(text))
+		out = append(out, oai.UserMessage(text.String()))
 	case contracts.ChatRoleAssistant:
 		assistant := oai.ChatCompletionAssistantMessageParam{}
-		if text != "" {
-			assistant.Content = oai.ChatCompletionAssistantMessageParamContentUnion{OfString: oai.String(text)}
+		if text.String() != "" {
+			assistant.Content = oai.ChatCompletionAssistantMessageParamContentUnion{OfString: oai.String(text.String())}
 		}
 		for _, call := range msg.ToolCalls {
 			var args map[string]any
@@ -248,10 +249,10 @@ func mapMessage(msg contracts.ChatMessage) ([]oai.ChatCompletionMessageParamUnio
 		}
 		out = append(out, oai.ChatCompletionMessageParamUnion{OfAssistant: &assistant})
 	case contracts.ChatRoleTool:
-		out = append(out, oai.ToolMessage(text, msg.ToolCallID))
+		out = append(out, oai.ToolMessage(text.String(), msg.ToolCallID))
 	}
 
-	return out, nil
+	return out
 }
 
 /*
@@ -309,4 +310,14 @@ func mapFinish(reason string) contracts.StopReason {
 	default:
 		return contracts.StopReasonOther
 	}
+}
+
+/*
+clock returns the driver's clock, the system one when unset.
+*/
+func (d *Driver) clock() clock.Clock {
+	if d.clk != nil {
+		return d.clk
+	}
+	return clock.System()
 }

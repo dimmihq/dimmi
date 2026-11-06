@@ -12,13 +12,16 @@
 package anthropic
 
 import (
-	"github.com/dimmihq/dimmi/framework/httpclient"
 	"context"
 	"encoding/json"
-		"time"
+	"strings"
+	"time"
 
 	anth "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
+
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 )
@@ -31,6 +34,7 @@ type Options struct {
 	APIKey  string
 	Version string
 	HTTP    *httpclient.StdClient
+	Clock   clock.Clock
 }
 
 /*
@@ -38,6 +42,7 @@ Driver is a contracts.LLM over the Messages API.
 */
 type Driver struct {
 	client anth.Client
+	clk    clock.Clock
 }
 
 /*
@@ -69,7 +74,7 @@ func (d *Driver) Provider() contracts.LLMProvider { return contracts.LLMProvider
 Chat runs one non-streaming completion.
 */
 func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
-	started := time.Now()
+	started := d.clock().Now()
 
 	params, err := messageParams(req)
 	if err != nil {
@@ -81,7 +86,7 @@ func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contract
 		return nil, MapError(err)
 	}
 
-	return mapResponse(res, time.Since(started)), nil
+	return mapResponse(res, d.clock().Since(started)), nil
 }
 
 /*
@@ -115,7 +120,7 @@ func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
 Probe sends the smallest possible request to a model.
 */
 func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
-	started := time.Now()
+	started := d.clock().Now()
 
 	res, err := d.Chat(ctx, contracts.ChatRequest{
 		Model:           model,
@@ -125,7 +130,7 @@ func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResul
 	if err != nil {
 		return nil, err
 	}
-	return &contracts.ProbeResult{Model: res.Model, Latency: time.Since(started), Usage: res.Usage}, nil
+	return &contracts.ProbeResult{Model: res.Model, Latency: d.clock().Since(started), Usage: res.Usage}, nil
 }
 
 /*
@@ -153,11 +158,7 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 	}
 
 	for _, msg := range req.Messages {
-		mapped, err := mapMessage(msg)
-		if err != nil {
-			return params, err
-		}
-		params.Messages = append(params.Messages, mapped)
+		params.Messages = append(params.Messages, mapMessage(msg))
 	}
 
 	for _, tool := range req.Tools {
@@ -190,19 +191,19 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 /*
 mapMessage maps one message to SDK params.
 */
-func mapMessage(msg contracts.ChatMessage) (anth.MessageParam, error) {
-	text := ""
+func mapMessage(msg contracts.ChatMessage) anth.MessageParam {
+	var text strings.Builder
 	for _, part := range msg.Parts {
-		text += part.Text
+		text.WriteString(part.Text)
 	}
 
 	switch msg.Role {
 	case contracts.ChatRoleUser:
-		return anth.NewUserMessage(anth.NewTextBlock(text)), nil
+		return anth.NewUserMessage(anth.NewTextBlock(text.String()))
 	case contracts.ChatRoleAssistant:
 		blocks := []anth.ContentBlockParamUnion{}
-		if text != "" {
-			blocks = append(blocks, anth.NewTextBlock(text))
+		if text.String() != "" {
+			blocks = append(blocks, anth.NewTextBlock(text.String()))
 		}
 		for _, call := range msg.ToolCalls {
 			var input any
@@ -211,12 +212,12 @@ func mapMessage(msg contracts.ChatMessage) (anth.MessageParam, error) {
 			}
 			blocks = append(blocks, anth.NewToolUseBlock(call.ID, input, call.Name))
 		}
-		return anth.NewAssistantMessage(blocks...), nil
+		return anth.NewAssistantMessage(blocks...)
 	case contracts.ChatRoleTool:
-		return anth.NewUserMessage(anth.NewToolResultBlock(msg.ToolCallID, text, msg.ToolError)), nil
+		return anth.NewUserMessage(anth.NewToolResultBlock(msg.ToolCallID, text.String(), msg.ToolError))
 	}
 
-	return anth.NewUserMessage(anth.NewTextBlock(text)), nil
+	return anth.NewUserMessage(anth.NewTextBlock(text.String()))
 }
 
 /*
@@ -264,7 +265,19 @@ func mapStop(reason anth.StopReason) contracts.StopReason {
 		return contracts.StopReasonToolUse
 	case anth.StopReasonRefusal:
 		return contracts.StopReasonContentFilter
+	case anth.StopReasonPauseTurn, anth.StopReasonModelContextWindowExceeded:
+		return contracts.StopReasonEnd
 	default:
 		return contracts.StopReasonOther
 	}
+}
+
+/*
+clock returns the driver's clock, the system one when unset.
+*/
+func (d *Driver) clock() clock.Clock {
+	if d.clk != nil {
+		return d.clk
+	}
+	return clock.System()
 }

@@ -17,12 +17,13 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 	"github.com/dimmihq/dimmi/tests"
 	"github.com/jackc/pgx/v5/pgtype"
-	"net/http"
+	
 )
 
 /*
@@ -117,7 +118,7 @@ func setup(t *testing.T, d tests.Desk, llm *fake.LLM) {
 	t.Helper()
 
 	d.TC.App.LLM.Extend(enums.AIProvider("fake"), func(
-		_ context.Context, _ *managers.LLMManager, _ models.AiProviderKey, _ managers.Credentials, _ *http.Client,
+		_ context.Context, _ *managers.LLMManager, _ models.AiProviderKey, _ managers.Credentials, _ *httpclient.Client,
 	) (contracts.LLM, error) {
 		return llm, nil
 	})

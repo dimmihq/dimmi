@@ -57,7 +57,7 @@ func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 		chunk := s.stream.Current()
 		s.acc.AddChunk(chunk)
 
-		if len(chunk.Choices) > 0 && len(chunk.Choices[0].Delta.Content) > 0 {
+		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
 			s.pend = append(s.pend, contracts.StreamEvent{
 				Kind: contracts.StreamEventTextDelta, Text: chunk.Choices[0].Delta.Content,
 			})

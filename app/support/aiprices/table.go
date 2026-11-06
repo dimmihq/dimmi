@@ -13,10 +13,9 @@
 package aiprices
 
 import (
+	"encoding/json"
 	"math/big"
 	"strings"
-
-	"encoding/json"
 )
 
 /*
@@ -71,12 +70,7 @@ func Parse(data []byte) (*Table, error) {
 
 	t := &Table{Version: f.Version}
 	for _, m := range f.Models {
-		t.Models = append(t.Models, ModelPrice{
-			Provider: m.Provider, Match: m.Match, Model: m.Model,
-			InputPerMtok: m.InputPerMtok, CachedInputPerMtok: m.CachedInputPerMtok,
-			CacheWritePerMtok: m.CacheWritePerMtok, OutputPerMtok: m.OutputPerMtok,
-			Roles: m.Roles,
-		})
+		t.Models = append(t.Models, ModelPrice(m))
 	}
 	return t, nil
 }
