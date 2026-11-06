@@ -3,6 +3,7 @@ package broadcasting
 import (
 	"crypto/tls"
 	"testing"
+	"time"
 
 	"github.com/centrifugal/centrifuge"
 	"github.com/redis/rueidis"
@@ -31,6 +32,16 @@ func TestShardConfig(t *testing.T) {
 		assert.Equal(t, "app", cfg.User)
 		assert.Equal(t, "pw", cfg.Password)
 		assert.Same(t, tlsConfig, cfg.TLSConfig)
+	})
+
+	t.Run("takes as long to connect as the shared client", func(t *testing.T) {
+		t.Parallel()
+
+		slow := base
+		slow.Dialer.Timeout = 9 * time.Second
+
+		assert.Equal(t, rueidis.DefaultDialTimeout, shardConfig(base, rueidis.ClientModeStandalone).ConnectTimeout)
+		assert.Equal(t, 9*time.Second, shardConfig(slow, rueidis.ClientModeStandalone).ConnectTimeout)
 	})
 
 	t.Run("follows a cluster from its seeds", func(t *testing.T) {

@@ -188,15 +188,22 @@ func (s *Server) useValkey(client *redis.Client, keyspace string) error {
 /*
 shardConfig rebuilds the shared client's connection for the realtime
 node: the sentinels and the primary they watch, the cluster seeds, or
-the one server, with the same credentials, TLS and database.
+the one server, with the same credentials, TLS, database and time to
+connect, so a slow server starts the node when it starts the client.
 */
 func shardConfig(option rueidis.ClientOption, mode rueidis.ClientMode) centrifuge.RedisShardConfig {
+	connect := option.Dialer.Timeout
+	if connect == 0 {
+		connect = rueidis.DefaultDialTimeout
+	}
+
 	cfg := centrifuge.RedisShardConfig{
-		DB:         option.SelectDB,
-		User:       option.Username,
-		Password:   option.Password,
-		ClientName: option.ClientName,
-		TLSConfig:  option.TLSConfig,
+		DB:             option.SelectDB,
+		User:           option.Username,
+		Password:       option.Password,
+		ClientName:     option.ClientName,
+		TLSConfig:      option.TLSConfig,
+		ConnectTimeout: connect,
 	}
 
 	switch {
