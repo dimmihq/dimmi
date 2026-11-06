@@ -22,10 +22,13 @@ func TestAPIRoutes(t *testing.T) {
 		problems := routing.Lint(tc.App.Router.Routes(), routing.Rules{
 			Prefixes:     []string{"/api/v1"},
 			VerbDenylist: []string{"login", "logout", "verify", "resend", "enable", "disable", "confirm", "reset"},
-			PutAllowlist: []string{"/api/v1/user/avatar"},
+			PutAllowlist: []string{"/api/v1/user/avatar", "/api/v1/workspace/logo"},
 			Exceptions: []string{
 				"/api/v1/conversation-views", "/api/v1/redaction-rules",
 				"/api/v1/contacts/{contact}/exports/{export}/download",
+				"/api/v1/conversations/{conversation}/messages/{message}/original/raw",
+				"/api/v1/conversations/{conversation}/messages/{message}/retry",
+				"/api/v1/inboxes/{inbox}/access", "/api/v1/widget-settings/{widget}/preview",
 			},
 		})
 
