@@ -17,7 +17,10 @@ import (
 /*
 TestAppBoundaries leaves app/models out of the import rule: sqlc
 generates its queries on the database driver. The lint's import rules
-still hold every hand-written file there. Views are compiled by templ
+still hold every hand-written file there. The LLM drivers under
+app/drivers/llm are the one place the providers' SDKs may be imported:
+each driver translates its SDK into the LLM contract and nothing above
+it sees a provider type. Views are compiled by templ
 onto its own runtime, so they may import templ, the framework and
 each other, and nothing else. Packages are read as the default,
 self-hosted build sees them, so files built only for the cloud are
@@ -33,7 +36,7 @@ func TestAppBoundaries(t *testing.T) {
 		t.Parallel()
 
 		m.Expect("app/...", "routes/...", "config/...", "bootstrap/...", "lang/...", "resources/...").
-			Except("app/models", "resources/views/...").
+			Except("app/models", "app/drivers/llm/...", "resources/views/...").
 			IgnoringTests().
 			ToOnlyImport(arch.Std, "framework/...", "app/...", "config/...", "routes/...", "database/migrations",
 				"lang/...", "resources/...", "public")
