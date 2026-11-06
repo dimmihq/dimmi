@@ -40,7 +40,6 @@ func aiRoutes(r *routing.Router, a *app.App) {
 		StartChatGPT:    acts.StartChatGPTConnect,
 		CompleteChatGPT: acts.CompleteChatGPTConnect,
 		IDs:             a.IDs,
-		URL:             a.Application.Config.App.URL,
 	}
 
 	routing.Get(r, "/ai/agent", "api.v1.ai.agent.show", c.Agent).Ability("ai:read")

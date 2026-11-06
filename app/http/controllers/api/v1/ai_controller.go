@@ -43,7 +43,6 @@ type AIController struct {
 	StartChatGPT    *ai.StartChatGPTConnect
 	CompleteChatGPT *ai.CompleteChatGPTConnect
 	IDs             *ids.Registry
-	URL             string
 }
 
 /*
@@ -231,10 +230,8 @@ func (c *AIController) TestKey(ctx context.Context, in *requests.AIKeyRequest) (
 /*
 StartConnect answers with the authorize URL.
 */
-func (c *AIController) StartConnect(ctx context.Context, _ *requests.AIChatGPTStartRequest) (*AIConnectOutput, error) {
-	out, err := c.StartChatGPT.Handle(ctx, ai.StartInput{
-		Membership: membership(ctx), RedirectURI: c.URL + "/d/settings/ai/chatgpt/callback",
-	})
+func (c *AIController) StartConnect(ctx context.Context, in *requests.AIChatGPTStartRequest) (*AIConnectOutput, error) {
+	out, err := c.StartChatGPT.Handle(ctx, ai.StartInput{Membership: membership(ctx), Method: in.Body.Method})
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +246,6 @@ func (c *AIController) CompleteConnect(ctx context.Context,
 ) (*AIConnectDoneOutput, error) {
 	out, err := c.CompleteChatGPT.Handle(ctx, ai.CompleteInput{
 		Membership: membership(ctx), State: in.Body.State, Code: in.Body.Code,
-		RedirectURI: c.URL + "/d/settings/ai/chatgpt/callback",
 	})
 	if err != nil {
 		return nil, err

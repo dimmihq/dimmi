@@ -153,19 +153,26 @@ type AIAgentView struct {
 }
 
 /*
-AIChatGPTConnection is the connection a finished subscription sign-in
-created, named by its public id.
+AIChatGPTConnection is where a subscription sign-in stands: pending,
+with how long to wait before asking again, or connected, with the new
+connection's public id and the plan account.
 */
 type AIChatGPTConnection struct {
-	KeyID     string `json:"key_id"`
-	AccountID string `json:"account_id"`
+	Status          string `json:"status"`
+	IntervalSeconds int    `json:"interval_seconds,omitempty"`
+	KeyID           string `json:"key_id,omitempty"`
+	AccountID       string `json:"account_id,omitempty"`
 }
 
 /*
-NewAIChatGPTConnection shapes a finished sign-in for the API.
+NewAIChatGPTConnection shapes a sign-in's progress for the API.
 */
 func NewAIChatGPTConnection(c ai.CompleteAnswer) AIChatGPTConnection {
-	return AIChatGPTConnection{KeyID: models.PublicID(models.PrefixAiProviderKey, c.KeyID), AccountID: c.AccountID}
+	out := AIChatGPTConnection{Status: c.Status, IntervalSeconds: c.IntervalSeconds, AccountID: c.AccountID}
+	if c.Status == ai.ConnectStatusConnected {
+		out.KeyID = models.PublicID(models.PrefixAiProviderKey, c.KeyID)
+	}
+	return out
 }
 
 /*
