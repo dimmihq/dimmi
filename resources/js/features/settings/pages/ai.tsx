@@ -8,9 +8,9 @@
 import { RiAnthropicFill, RiFlashlightLine, RiLink, RiOpenaiFill } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { toast } from "@/components/base/toast/toast";
 import {
   type AgentPatch,
   type AgentView,
@@ -95,7 +95,11 @@ export function AgentSettings() {
 
   const save = useMutation({
     mutationFn: (patch: AgentPatch) => updateAgent(workspace, patch),
-    onSuccess: () => client.invalidateQueries({ queryKey: aiKey(workspace) }),
+    onSuccess: () => {
+      toast.success("Saved");
+      client.invalidateQueries({ queryKey: aiKey(workspace) });
+    },
+    onError: () => toast.error("Could not save. Try again."),
   });
 
   if (!view.data) {
@@ -326,10 +330,28 @@ export function ProvidersSettings() {
   const add = useMutation({
     mutationFn: (input: { provider: string; name: string; api_key: string; base_url?: string }) =>
       createAiKey(workspace, input),
-    onSuccess: refresh,
+    onSuccess: () => {
+      toast.success("Key added");
+      refresh();
+    },
+    onError: () => toast.error("Could not add the key."),
   });
-  const remove = useMutation({ mutationFn: (id: string) => deleteAiKey(workspace, id), onSuccess: refresh });
-  const test = useMutation({ mutationFn: (id: string) => testAiKey(workspace, id), onSuccess: refresh });
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteAiKey(workspace, id),
+    onSuccess: () => {
+      toast.success("Key removed");
+      refresh();
+    },
+    onError: () => toast.error("Could not remove the key."),
+  });
+  const test = useMutation({
+    mutationFn: (id: string) => testAiKey(workspace, id),
+    onSuccess: () => {
+      toast.success("Key checked");
+      refresh();
+    },
+    onError: () => toast.error("The key failed its check."),
+  });
 
   const keys = view.data?.keys ?? [];
   const providers = view.data?.providers ?? [];

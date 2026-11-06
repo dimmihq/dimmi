@@ -40,13 +40,13 @@ AgentView is the agent with everything the settings page needs:
 | readiness, keys, the providers it could connect and the catalog.
 */
 type AgentView struct {
-	Agent         models.AiAgent
-	Keys          []models.AiProviderKey
-	Providers     []ProviderDescriptor
-	Catalog       map[string][]CatalogEntry
-	Ready         bool
-	ReadinessErrs []string
-	Managed       bool
+	Agent         models.AiAgent            `json:"agent"`
+	Keys          []models.AiProviderKey    `json:"keys"`
+	Providers     []ProviderDescriptor      `json:"providers"`
+	Catalog       map[string][]CatalogEntry `json:"catalog"`
+	Ready         bool                      `json:"ready"`
+	ReadinessErrs []string                  `json:"readiness_errors"`
+	Managed       bool                      `json:"managed"`
 }
 
 /*
@@ -107,7 +107,14 @@ func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, 
 			Catalog:   catalog(a.Prices),
 			Managed:   managedKey != nil,
 		}
-		view.Ready, view.ReadinessErrs = readiness(agent, keys)
+		ready, errs := readiness(agent, keys)
+		view.Ready, view.ReadinessErrs = ready, errs
+		if view.Keys == nil {
+			view.Keys = []models.AiProviderKey{}
+		}
+		if view.ReadinessErrs == nil {
+			view.ReadinessErrs = []string{}
+		}
 
 		return nil
 	})
@@ -281,9 +288,6 @@ func readiness(agent models.AiAgent, keys []models.AiProviderKey) (bool, []strin
 
 	if agent.AnswerKeyID == nil || agent.AnswerModel == nil || !usable[*agent.AnswerKeyID] {
 		errs = append(errs, "answer model not configured")
-	}
-	if agent.ClassifierKeyID == nil || agent.ClassifierModel == nil || !usable[*agent.ClassifierKeyID] {
-		errs = append(errs, "classifier model not configured")
 	}
 	if len(agent.EnabledChannels) == 0 {
 		errs = append(errs, "no channels enabled")

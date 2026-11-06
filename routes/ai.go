@@ -34,6 +34,7 @@ func aiRoutes(r *routing.Router, a *app.App) {
 		ValidateKey:     a.Actions.AI.TestProviderKey,
 		StartChatGPT:    a.Actions.AI.StartChatGPTConnect,
 		CompleteChatGPT: a.Actions.AI.CompleteChatGPTConnect,
+		DB:              a.DB,
 		IDs:             a.IDs,
 		URL:             a.Application.Config.App.URL,
 		Clock:           a.Clock,

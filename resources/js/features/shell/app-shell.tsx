@@ -35,6 +35,7 @@ import {
 } from "@/components/application/dashboard/dashboard-user-menu";
 import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
+import { Toaster } from "@/components/base/toast/toast";
 import { ActionProvider } from "@/features/inbox/actions/action-provider";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
@@ -275,6 +276,7 @@ function SignedInShell({
         </main>
       </div>
       <ConnectionIndicator className="fixed end-4 bottom-4 z-50" />
+      <Toaster />
     </RealtimeProvider>
   );
 }
