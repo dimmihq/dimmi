@@ -89,69 +89,67 @@ func (a *CreateProviderKey) Handle(ctx context.Context, in CreateKeyInput) (*mod
 	}
 
 	var key models.AiProviderKey
-	var errs []string
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		cfg, _ := json.Marshal(in.Config)
-		authType := "api_key"
-		if in.Provider == enums.AIProviderOpenAICompatible && in.APIKey == "" {
-			authType = "none"
-		}
-
-		var err error
-		memberID := in.Membership.Member.ID
-		key, err = models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
-			WorkspaceID: in.Membership.Workspace.ID, Name: in.Name, Provider: string(in.Provider),
-			BaseUrl: nullable(in.BaseURL), AuthType: authType, Status: "unverified",
-			StatusReason: new("never validated"), Models: json.RawMessage("[]"),
-			ProviderInfo: json.RawMessage("{}"), Config: cfg, Source: "dashboard",
-			CreatedByMemberID: &memberID, Now: a.Clock.Now(),
-		})
-		if err != nil {
-			return fmt.Errorf("create provider key: %w", err)
-		}
-
-		if in.APIKey != "" {
-			sealed, err := encryption.Seal(ctx, a.Keys,
-				encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: in.Membership.Workspace.ID.String()}},
-				managers.Credentials{APIKey: in.APIKey})
-			if err != nil {
-				return fmt.Errorf("seal credentials: %w", err)
-			}
-			key.CredentialsEncrypted = sealed
-		}
-
-		status, reason, modelsList, info, verr := validate(ctx, a.LLM, key)
-		if verr != nil {
-			errs = append(errs, verr.Error())
-		}
-
-		modelsJSON, _ := json.Marshal(modelsList)
-		infoJSON, _ := json.Marshal(info)
-		key, err = models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
-			WorkspaceID: key.WorkspaceID, ID: key.ID, Name: key.Name, BaseUrl: key.BaseUrl,
-			Region: key.Region, AuthType: key.AuthType, CredentialsEncrypted: key.CredentialsEncrypted,
-			KeyHint: nullable(keyHint(in.APIKey)), Config: key.Config, Now: a.Clock.Now(),
-		})
-		if err != nil {
-			return fmt.Errorf("update provider key: %w", err)
-		}
-
-		key, err = models.New(tx).UpdateProviderKeyStatus(ctx, models.UpdateProviderKeyStatusParams{
-			WorkspaceID: key.WorkspaceID, ID: key.ID, Status: status, StatusReason: reason,
-			LastError: nil, LastValidatedAt: timenow(a.Clock), LastErrorAt: nil,
-			Models: modelsJSON, ProviderInfo: infoJSON, Now: a.Clock.Now(),
-		})
-		if err != nil {
-			return fmt.Errorf("update key status: %w", err)
-		}
-		return nil
+		out, err := a.create(ctx, tx, in)
+		key = out
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &key, nil
+}
+
+/*
+create inserts the key, seals its credential, validates it and
+records the outcome, in the key's transaction.
+*/
+func (a *CreateProviderKey) create(ctx context.Context, tx *database.Tx, in CreateKeyInput,
+) (models.AiProviderKey, error) {
+	cfg, _ := json.Marshal(in.Config)
+	authType := "api_key"
+	if in.Provider == enums.AIProviderOpenAICompatible && in.APIKey == "" {
+		authType = "none"
+	}
+
+	memberID := in.Membership.Member.ID
+	key, err := models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
+		WorkspaceID: in.Membership.Workspace.ID, Name: in.Name, Provider: string(in.Provider),
+		BaseUrl: nullable(in.BaseURL), AuthType: authType, Status: "unverified",
+		StatusReason: new("never validated"), Models: json.RawMessage("[]"),
+		ProviderInfo: json.RawMessage("{}"), Config: cfg, Source: "dashboard",
+		CreatedByMemberID: &memberID, Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return key, fmt.Errorf("create provider key: %w", err)
+	}
+
+	if in.APIKey != "" {
+		sealed, err := encryption.Seal(ctx, a.Keys,
+			encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: in.Membership.Workspace.ID.String()}},
+			managers.Credentials{APIKey: in.APIKey})
+		if err != nil {
+			return key, fmt.Errorf("seal credentials: %w", err)
+		}
+		key.CredentialsEncrypted = sealed
+	}
+
+	key, err = models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
+		WorkspaceID: key.WorkspaceID, ID: key.ID, Name: key.Name, BaseUrl: key.BaseUrl,
+		Region: key.Region, AuthType: key.AuthType, CredentialsEncrypted: key.CredentialsEncrypted,
+		KeyHint: nullable(keyHint(in.APIKey)), Config: key.Config, Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return key, fmt.Errorf("update provider key: %w", err)
+	}
+
+	key, err = recordValidation(ctx, tx, a.LLM, a.Clock, key)
+	if err != nil {
+		return key, fmt.Errorf("update key status: %w", err)
+	}
+	return key, nil
 }
 
 /*
@@ -290,16 +288,16 @@ func validate(ctx context.Context, m *managers.LLMManager, key models.AiProvider
 		return "error", new(err.Error()), nil, nil, err
 	}
 
-	models, listErr := driver.ListModels(ctx)
+	listed, listErr := driver.ListModels(ctx)
 	if listErr != nil && !errors.Is(listErr, errLLMNotSupported()) {
 		return "invalid", new(listErr.Error()), nil, nil, listErr
 	}
 
-	if len(models) > 0 {
-		for _, mdl := range models {
+	if len(listed) > 0 {
+		for _, mdl := range listed {
 			modelList = append(modelList, mdl.ID)
 		}
-		return "valid", new("validated"), modelList, map[string]any{"models_count": len(models)}, nil
+		return "valid", new("validated"), modelList, map[string]any{"models_count": len(listed)}, nil
 	}
 
 	return "valid", new("validated"), nil, nil, nil
@@ -326,7 +324,6 @@ func nullable(s string) *string {
 	return &s
 }
 
-
 /*
 keyHint stores the key's last four, never more.
 */
@@ -346,3 +343,20 @@ func timenow(clk clock.Clock) *time.Time {
 }
 
 var _ = exceptions.ErrNotFound
+
+/*
+recordValidation validates the key against its provider and stores
+the status, models and info it returned.
+*/
+func recordValidation(ctx context.Context, tx *database.Tx, llm *managers.LLMManager,
+	clk clock.Clock, key models.AiProviderKey,
+) (models.AiProviderKey, error) {
+	status, reason, modelsList, info, _ := validate(ctx, llm, key)
+	modelsJSON, _ := json.Marshal(modelsList)
+	infoJSON, _ := json.Marshal(info)
+	return models.New(tx).UpdateProviderKeyStatus(ctx, models.UpdateProviderKeyStatusParams{
+		WorkspaceID: key.WorkspaceID, ID: key.ID, Status: status, StatusReason: reason,
+		LastError: nil, LastValidatedAt: timenow(clk), LastErrorAt: nil,
+		Models: modelsJSON, ProviderInfo: infoJSON, Now: clk.Now(),
+	})
+}

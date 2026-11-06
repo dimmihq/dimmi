@@ -67,7 +67,7 @@ func RequireUsage(m authz.Membership) error {
 }
 
 /*
-Provider describes one connectable provider for the picker.
+ProviderDescriptor describes one connectable provider for the picker.
 */
 type ProviderDescriptor struct {
 	ID          enums.AIProvider `json:"id"`

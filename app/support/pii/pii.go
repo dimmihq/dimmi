@@ -38,8 +38,8 @@ func New() *Redactor {
 /*
 Redact masks PII-shaped text when the agent's setting asks for it.
 */
-func (r *Redactor) Redact(text string, enabled bool) string {
-	if !enabled || text == "" {
+func (r *Redactor) Redact(text string) string {
+	if text == "" {
 		return text
 	}
 	out := text

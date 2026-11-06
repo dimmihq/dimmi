@@ -91,52 +91,9 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 	var result *Result
 
 	err := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		env, err := r.loadEnv(ctx, tx, args.WorkspaceID, args.ConversationID)
-		if err != nil {
-			return err
-		}
-
-		if env.Agent == nil {
-			result = &Result{Outcome: "skipped", SkipReason: "agent_missing"}
-			return nil
-		}
-
-		run, err := r.startRun(ctx, tx, env, args, queueWait)
-		if err != nil {
-			return err
-		}
-		recorder := newRecorder(ctx, r.DB, r.Clock, r.Prices, run)
-
-		outcome, err := r.execute(ctx, env, recorder, args)
-		if err != nil {
-			if ferr := recorder.Finish(ctx, tx, FinishInput{
-				Status: "failed", Outcome: "error",
-				ErrorCode: errorCode(err), ErrorMessage: err.Error(), QueueWaitMS: queueWait,
-			}); ferr != nil {
-				return fmt.Errorf("finish run: %w", ferr)
-			}
-			result = &Result{Outcome: "error", RunID: run.ID}
-			r.recordSpend(ctx, tx, env, recorder, "error")
-			return nil
-		}
-
-		if outcome.AnswerID != nil {
-			_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
-			r.recordSpend(ctx, tx, env, recorder, outcome.name)
-			result = &Result{
-				Outcome: outcome.name, SkipReason: outcome.skipReason,
-				HandoffReason: outcome.handoffReason, AnswerID: outcome.AnswerID, RunID: run.ID,
-			}
-			return nil
-		}
-
-		_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
-		r.recordSpend(ctx, tx, env, recorder, outcome.name)
-		result = &Result{
-			Outcome: outcome.name, SkipReason: outcome.skipReason,
-			HandoffReason: outcome.handoffReason, RunID: run.ID,
-		}
-		return nil
+		out, err := r.runTx(ctx, tx, args, queueWait)
+		result = out
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("pipeline: %w", err)
@@ -146,10 +103,49 @@ func (r *Runner) Run(ctx context.Context, args Args) (*Result, error) {
 }
 
 /*
+runTx is the run's body inside its transaction.
+*/
+func (r *Runner) runTx(ctx context.Context, tx *database.Tx, args Args, queueWait int) (*Result, error) {
+	env, err := r.loadEnv(ctx, tx, args.WorkspaceID, args.ConversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if env.Agent == nil {
+		return &Result{Outcome: "skipped", SkipReason: "agent_missing"}, nil
+	}
+
+	run, err := r.startRun(ctx, tx, env, args, queueWait)
+	if err != nil {
+		return nil, err
+	}
+	recorder := newRecorder(ctx, r.DB, r.Clock, r.Prices, run)
+
+	outcome, err := r.execute(ctx, env, recorder, args)
+	if err != nil {
+		if ferr := recorder.Finish(ctx, tx, FinishInput{
+			Status: "failed", Outcome: "error",
+			ErrorCode: errorCode(err), ErrorMessage: err.Error(), QueueWaitMS: queueWait,
+		}); ferr != nil {
+			return nil, fmt.Errorf("finish run: %w", ferr)
+		}
+		r.recordSpend(ctx, tx, env, recorder, "error")
+		return &Result{Outcome: "error", RunID: run.ID}, nil
+	}
+
+	_ = recorder.Finish(ctx, tx, outcome.finish(queueWait))
+	r.recordSpend(ctx, tx, env, recorder, outcome.name)
+	return &Result{
+		Outcome: outcome.name, SkipReason: outcome.skipReason,
+		HandoffReason: outcome.handoffReason, AnswerID: outcome.AnswerID, RunID: run.ID,
+	}, nil
+}
+
+/*
 startRun opens the run row with the prompt fingerprint and a config
 snapshot.
 */
-func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args Args, queueWait int) (models.AiRun, error) {
+func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args Args, _ int) (models.AiRun, error) {
 	family := enums.AIModelFamilyOpenWeight
 	if env.Agent.AnswerModel != nil {
 		family = familyForKey(env.AnswerKey, *env.Agent.AnswerModel)
@@ -187,7 +183,7 @@ func (r *Runner) startRun(ctx context.Context, tx *database.Tx, env *env, args A
 /*
 execute walks the stages.
 */
-func (r *Runner) execute(ctx context.Context, env *env, recorder *Recorder, args Args) (*decision, error) {
+func (r *Runner) execute(ctx context.Context, env *env, recorder *Recorder, _ Args) (*decision, error) {
 	if s := r.gate(ctx, env); s != nil {
 		return &decision{name: "skipped", skipReason: s.Reason}, nil
 	}
@@ -288,11 +284,10 @@ func strv(s *string) string {
 	return *s
 }
 
-
 /*
 errorCode folds an error to a short code.
 */
-func errorCode(err error) string {
+func errorCode(_ error) string {
 	return "pipeline_error"
 }
 
@@ -330,8 +325,8 @@ func (r *Runner) checkThresholds(ctx context.Context, tx *database.Tx, env *env,
 	if env.Agent.MonthlySpendCapMicros == nil || *env.Agent.MonthlySpendCapMicros <= 0 {
 		return
 	}
-	cap := *env.Agent.MonthlySpendCapMicros
-	pct := sat32(period.CostMicros * 100 / cap)
+	capMicros := *env.Agent.MonthlySpendCapMicros
+	pct := sat32(period.CostMicros * 100 / capMicros)
 
 	for _, threshold := range []int32{50, 80, 100} {
 		if pct >= threshold {
@@ -360,8 +355,3 @@ func familyForKey(key *models.AiProviderKey, model string) enums.AIModelFamily {
 	}
 	return aimodels.FamilyOf(provider, model)
 }
-
-/*
-str returns a string pointer.
-*/
-func str(s string) *string { return &s }

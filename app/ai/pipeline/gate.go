@@ -41,23 +41,11 @@ func (r *Runner) gate(ctx context.Context, env *env) *skip {
 	if !env.Agent.Enabled {
 		return &skip{Reason: "agent_disabled"}
 	}
-	if len(env.Agent.EnabledChannels) > 0 && !slices.Contains(env.Agent.EnabledChannels, env.ChannelType) {
-		return &skip{Reason: "channel_excluded"}
+	if reason := channelGate(env); reason != "" {
+		return &skip{Reason: reason}
 	}
-	if slices.Contains(env.Agent.ExcludedChannelConnectionIds, env.Conversation.ChannelConnectionID) {
-		return &skip{Reason: "connection_excluded"}
-	}
-	if env.Conversation.AiState != "active" && env.Conversation.AiState != "off" {
-		return &skip{Reason: "ai_handed_off"}
-	}
-	if env.Conversation.DeletedAt != nil {
-		return &skip{Reason: "conversation_deleted"}
-	}
-	if env.Conversation.Spam {
-		return &skip{Reason: "conversation_spam"}
-	}
-	if env.Conversation.Status == "closed" {
-		return &skip{Reason: "conversation_closed"}
+	if reason := conversationGate(env); reason != "" {
+		return &skip{Reason: reason}
 	}
 	if env.Conversation.AiReplyCount >= env.Agent.MaxAiReplies {
 		return &skip{Reason: "max_ai_replies"}
@@ -76,6 +64,38 @@ func (r *Runner) gate(ctx context.Context, env *env) *skip {
 		return &skip{Reason: reason}
 	}
 	return nil
+}
+
+/*
+channelGate applies the channel allow- and block-lists.
+*/
+func channelGate(env *env) string {
+	if len(env.Agent.EnabledChannels) > 0 && !slices.Contains(env.Agent.EnabledChannels, env.ChannelType) {
+		return "channel_excluded"
+	}
+	if slices.Contains(env.Agent.ExcludedChannelConnectionIds, env.Conversation.ChannelConnectionID) {
+		return "connection_excluded"
+	}
+	return ""
+}
+
+/*
+conversationGate refuses conversations the agent must not touch.
+*/
+func conversationGate(env *env) string {
+	if env.Conversation.AiState != "active" && env.Conversation.AiState != "off" {
+		return "ai_handed_off"
+	}
+	if env.Conversation.DeletedAt != nil {
+		return "conversation_deleted"
+	}
+	if env.Conversation.Spam {
+		return "conversation_spam"
+	}
+	if env.Conversation.Status == "closed" {
+		return "conversation_closed"
+	}
+	return ""
 }
 
 /*

@@ -188,7 +188,8 @@ func (a *CompleteChatGPTConnect) Handle(ctx context.Context, in CompleteInput) (
 	_ = a.Cache.Delete(ctx, "ai:oauth:"+in.State)
 
 	var parked oauthState
-	if err := json.Unmarshal(payload, &parked); err != nil || parked.WorkspaceID != in.Membership.Workspace.ID.String() {
+	if err := json.Unmarshal(payload, &parked); err != nil ||
+		parked.WorkspaceID != in.Membership.Workspace.ID.String() {
 		return nil, fault.New(fault.Invalid, "oauth_state_invalid", "the connect expired, start again")
 	}
 
@@ -198,38 +199,10 @@ func (a *CompleteChatGPTConnect) Handle(ctx context.Context, in CompleteInput) (
 	}
 
 	var key models.AiProviderKey
-	memberID := in.Membership.Member.ID
 
 	err = a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-
-		key, err = models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
-			WorkspaceID: in.Membership.Workspace.ID, Name: "ChatGPT subscription",
-			Provider: string(enums.AIProviderChatGPT), AuthType: "oauth", Status: "valid",
-			StatusReason: new("connected"), Models: json.RawMessage("[]"),
-			ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"), Source: "dashboard",
-			CreatedByMemberID: &memberID, Now: a.Clock.Now(),
-		})
-		if err != nil {
-			return fmt.Errorf("create provider key: %w", err)
-		}
-
-		sealed, err := encryption.Seal(ctx, a.Keys,
-			encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: in.Membership.Workspace.ID.String()}},
-			managers.Credentials{
-				AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken,
-				ExpiresAt: a.Clock.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second),
-				Scopes:    []string{"openid", "profile", "email", "offline_access"},
-			})
-		if err != nil {
-			return fmt.Errorf("seal credentials: %w", err)
-		}
-
-		key, err = models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
-			WorkspaceID: key.WorkspaceID, ID: key.ID, Name: key.Name, BaseUrl: key.BaseUrl,
-			Region: key.Region, AuthType: key.AuthType, CredentialsEncrypted: sealed,
-			KeyHint: nil, Config: key.Config, Now: a.Clock.Now(),
-		})
+		out, err := a.store(ctx, tx, in.Membership, tokens)
+		key = out
 		return err
 	})
 	if err != nil {
@@ -240,9 +213,47 @@ func (a *CompleteChatGPTConnect) Handle(ctx context.Context, in CompleteInput) (
 }
 
 /*
+store writes the connection with its sealed token set.
+*/
+func (a *CompleteChatGPTConnect) store(ctx context.Context, tx *database.Tx,
+	m authz.Membership, tokens *tokenAnswer,
+) (models.AiProviderKey, error) {
+	memberID := m.Member.ID
+	key, err := models.New(tx).CreateProviderKey(ctx, models.CreateProviderKeyParams{
+		WorkspaceID: m.Workspace.ID, Name: "ChatGPT subscription",
+		Provider: string(enums.AIProviderChatGPT), AuthType: "oauth", Status: "valid",
+		StatusReason: new("connected"), Models: json.RawMessage("[]"),
+		ProviderInfo: json.RawMessage("{}"), Config: json.RawMessage("{}"), Source: "dashboard",
+		CreatedByMemberID: &memberID, Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return key, fmt.Errorf("create provider key: %w", err)
+	}
+
+	sealed, err := encryption.Seal(ctx, a.Keys,
+		encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: m.Workspace.ID.String()}},
+		managers.Credentials{
+			AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken,
+			ExpiresAt: a.Clock.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second),
+			Scopes:    []string{"openid", "profile", "email", "offline_access"},
+		})
+	if err != nil {
+		return key, fmt.Errorf("seal credentials: %w", err)
+	}
+
+	return models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
+		WorkspaceID: key.WorkspaceID, ID: key.ID, Name: key.Name, BaseUrl: key.BaseUrl,
+		Region: key.Region, AuthType: key.AuthType, CredentialsEncrypted: sealed,
+		KeyHint: nil, Config: key.Config, Now: a.Clock.Now(),
+	})
+}
+
+/*
 exchange trades the code and verifier for tokens.
 */
-func (a *CompleteChatGPTConnect) exchange(ctx context.Context, code, verifier, redirectURI string) (*tokenAnswer, error) {
+func (a *CompleteChatGPTConnect) exchange(ctx context.Context,
+	code, verifier, redirectURI string,
+) (*tokenAnswer, error) {
 	cfg := a.Config.ChatGPT
 
 	form := url.Values{

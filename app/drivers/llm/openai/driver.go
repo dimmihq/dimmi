@@ -140,8 +140,10 @@ func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResul
 	started := d.clock().Now()
 
 	res, err := d.Chat(ctx, contracts.ChatRequest{
-		Model:           model,
-		Messages:        []contracts.ChatMessage{{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}}},
+		Model: model,
+		Messages: []contracts.ChatMessage{
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}},
+		},
 		MaxOutputTokens: 8,
 	})
 	if err != nil {
@@ -163,7 +165,7 @@ completionParams maps our request to the SDK's params.
 */
 func completionParams(req contracts.ChatRequest) (oai.ChatCompletionNewParams, error) {
 	params := oai.ChatCompletionNewParams{
-		Model: shared.ChatModel(req.Model),
+		Model: req.Model,
 	}
 
 	for _, block := range req.System {
@@ -258,7 +260,7 @@ func mapMessage(msg contracts.ChatMessage) []oai.ChatCompletionMessageParamUnion
 /*
 mapResponse maps the SDK response to ours.
 */
-func mapResponse(res *oai.ChatCompletion, requested string, latency time.Duration) *contracts.ChatResponse {
+func mapResponse(res *oai.ChatCompletion, _ string, latency time.Duration) *contracts.ChatResponse {
 	out := &contracts.ChatResponse{
 		Model:   res.Model,
 		Latency: latency,

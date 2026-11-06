@@ -44,7 +44,7 @@ func newChatStream(stream *ssestream.Stream[anth.MessageStreamEventUnion]) *chat
 /*
 Next blocks for the next event, ending with io.EOF.
 */
-func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
+func (s *chatStream) Next(_ context.Context) (contracts.StreamEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -57,29 +57,7 @@ func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 		}
 
 		for s.stream.Next() {
-			event := s.stream.Current()
-			if err := s.msg.Accumulate(event); err != nil {
-				continue
-			}
-
-			switch ev := event.AsAny().(type) {
-			case anth.ContentBlockDeltaEvent:
-				if delta, ok := ev.Delta.AsAny().(anth.TextDelta); ok && delta.Text != "" {
-					s.pend = append(s.pend, contracts.StreamEvent{
-						Kind: contracts.StreamEventTextDelta, Text: delta.Text,
-					})
-				}
-			case anth.MessageDeltaEvent:
-				if ev.Usage.OutputTokens > 0 {
-					usage := s.usage()
-					s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: usage})
-				}
-			case anth.MessageStopEvent:
-				s.finishPending()
-				s.pend = append(s.pend, contracts.StreamEvent{
-					Kind: contracts.StreamEventDone, StopReason: mapStop(s.msg.StopReason),
-				})
-			}
+			s.handleEvent(s.stream.Current())
 		}
 
 		if err := s.stream.Err(); err != nil {
@@ -89,6 +67,34 @@ func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 		if len(s.pend) == 0 {
 			s.done = true
 		}
+	}
+}
+
+/*
+handleEvent accumulates one SDK event and queues ours.
+*/
+func (s *chatStream) handleEvent(event anth.MessageStreamEventUnion) {
+	if err := s.msg.Accumulate(event); err != nil {
+		return
+	}
+
+	switch ev := event.AsAny().(type) {
+	case anth.ContentBlockDeltaEvent:
+		if delta, ok := ev.Delta.AsAny().(anth.TextDelta); ok && delta.Text != "" {
+			s.pend = append(s.pend, contracts.StreamEvent{
+				Kind: contracts.StreamEventTextDelta, Text: delta.Text,
+			})
+		}
+	case anth.MessageDeltaEvent:
+		if ev.Usage.OutputTokens > 0 {
+			usage := s.usage()
+			s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: usage})
+		}
+	case anth.MessageStopEvent:
+		s.finishPending()
+		s.pend = append(s.pend, contracts.StreamEvent{
+			Kind: contracts.StreamEventDone, StopReason: mapStop(s.msg.StopReason),
+		})
 	}
 }
 

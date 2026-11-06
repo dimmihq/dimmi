@@ -52,7 +52,6 @@ func Within(raw json.RawMessage, t time.Time) bool {
 	}
 	local := t.In(loc)
 
-
 	span, ok := hours.Days[weekday(local.Weekday())]
 	if !ok {
 		return false

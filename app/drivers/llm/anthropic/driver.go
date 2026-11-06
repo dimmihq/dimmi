@@ -108,7 +108,7 @@ func (d *Driver) ListModels(ctx context.Context) ([]contracts.LLMModel, error) {
 	var models []contracts.LLMModel
 	for pager.Next() {
 		m := pager.Current()
-		models = append(models, contracts.LLMModel{ID: m.ID, DisplayName: string(m.DisplayName)})
+		models = append(models, contracts.LLMModel{ID: m.ID, DisplayName: m.DisplayName})
 	}
 	if err := pager.Err(); err != nil {
 		return nil, MapError(err)
@@ -123,8 +123,10 @@ func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResul
 	started := d.clock().Now()
 
 	res, err := d.Chat(ctx, contracts.ChatRequest{
-		Model:           model,
-		Messages:        []contracts.ChatMessage{{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}}},
+		Model: model,
+		Messages: []contracts.ChatMessage{
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}},
+		},
 		MaxOutputTokens: 8,
 	})
 	if err != nil {
@@ -145,7 +147,7 @@ messageParams maps our request to the SDK's params.
 */
 func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 	params := anth.MessageNewParams{
-		Model:     anth.Model(req.Model),
+		Model:     req.Model,
 		MaxTokens: int64(req.MaxOutputTokens),
 	}
 
@@ -170,7 +172,9 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 			OfTool: &anth.ToolParam{
 				Name:        tool.Name,
 				Description: anth.String(tool.Description),
-				InputSchema: anth.ToolInputSchemaParam{Properties: schema["properties"], Required: nil, ExtraFields: schema},
+				InputSchema: anth.ToolInputSchemaParam{
+					Properties: schema["properties"], ExtraFields: schema,
+				},
 			},
 		})
 	}
@@ -225,7 +229,7 @@ mapResponse maps the SDK response to ours.
 */
 func mapResponse(res *anth.Message, latency time.Duration) *contracts.ChatResponse {
 	out := &contracts.ChatResponse{
-		Model:   string(res.Model),
+		Model:   res.Model,
 		Latency: latency,
 		Usage: contracts.LLMUsage{
 			InputTokens:       res.Usage.InputTokens,

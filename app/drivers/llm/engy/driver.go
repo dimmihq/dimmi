@@ -112,4 +112,3 @@ func ChargedMicros(headers fhttp.Header, body string) int64 {
 	}
 	return 0
 }
-

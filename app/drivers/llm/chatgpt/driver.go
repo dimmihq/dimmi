@@ -22,7 +22,6 @@ import (
 	oai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
-	"github.com/openai/openai-go/v3/shared"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
@@ -151,8 +150,10 @@ Probe sends the smallest request to a model.
 func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResult, error) {
 	started := d.clock().Now()
 	res, err := d.Chat(ctx, contracts.ChatRequest{
-		Model:           model,
-		Messages:        []contracts.ChatMessage{{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}}},
+		Model: model,
+		Messages: []contracts.ChatMessage{
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "Say OK"}}},
+		},
 		MaxOutputTokens: 8,
 	})
 	if err != nil {
@@ -164,7 +165,7 @@ func (d *Driver) Probe(ctx context.Context, model string) (*contracts.ProbeResul
 /*
 Capabilities answers what a plan model supports.
 */
-func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
+func (d *Driver) Capabilities(_ string) contracts.LLMCapabilities {
 	return contracts.LLMCapabilities{
 		Tools:           true,
 		Streaming:       true,
@@ -183,7 +184,7 @@ false, stream always on.
 */
 func responseParams(req contracts.ChatRequest) (responses.ResponseNewParams, error) {
 	params := responses.ResponseNewParams{
-		Model:           shared.ResponsesModel(req.Model),
+		Model:           req.Model,
 		Store:           oai.Bool(false),
 		MaxOutputTokens: oai.Int(int64(req.MaxOutputTokens)),
 	}

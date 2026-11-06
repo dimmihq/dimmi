@@ -65,7 +65,7 @@ func (w *Wrapper) Chat(ctx context.Context, req contracts.ChatRequest) (*contrac
 
 	for attempt := 1; attempt <= w.opts.MaxAttempts; attempt++ {
 		if err := w.allow(ctx); err != nil {
-			return fallbackOr(w, ctx, err, func(d contracts.LLM) (*contracts.ChatResponse, error) {
+			return fallbackOr(w, err, func(d contracts.LLM) (*contracts.ChatResponse, error) {
 				return d.Chat(ctx, req)
 			})
 		}
@@ -82,7 +82,7 @@ func (w *Wrapper) Chat(ctx context.Context, req contracts.ChatRequest) (*contrac
 		}
 	}
 
-	return fallbackOr(w, ctx, last, func(d contracts.LLM) (*contracts.ChatResponse, error) {
+	return fallbackOr(w, last, func(d contracts.LLM) (*contracts.ChatResponse, error) {
 		return d.Chat(ctx, req)
 	})
 }
@@ -96,7 +96,7 @@ func (w *Wrapper) Stream(ctx context.Context, req contracts.ChatRequest) (contra
 
 	for attempt := 1; attempt <= w.opts.MaxAttempts; attempt++ {
 		if err := w.allow(ctx); err != nil {
-			return fallbackOr(w, ctx, err, func(d contracts.LLM) (contracts.ChatStream, error) {
+			return fallbackOr(w, err, func(d contracts.LLM) (contracts.ChatStream, error) {
 				return d.Stream(ctx, req)
 			})
 		}
@@ -113,7 +113,7 @@ func (w *Wrapper) Stream(ctx context.Context, req contracts.ChatRequest) (contra
 		}
 	}
 
-	return fallbackOr(w, ctx, last, func(d contracts.LLM) (contracts.ChatStream, error) {
+	return fallbackOr(w, last, func(d contracts.LLM) (contracts.ChatStream, error) {
 		return d.Stream(ctx, req)
 	})
 }
@@ -207,7 +207,7 @@ func backoffDelay(attempt int) time.Duration {
 fallbackOr hands the call to the configured spare when the failure
 kind allows a fallback; otherwise the original error stands.
 */
-func fallbackOr[T any](w *Wrapper, _ context.Context, err error, call func(contracts.LLM) (T, error)) (T, error) {
+func fallbackOr[T any](w *Wrapper, err error, call func(contracts.LLM) (T, error)) (T, error) {
 	var zero T
 
 	if w.opts.Fallback == nil {
@@ -231,7 +231,11 @@ func fallbackable(kind contracts.LLMErrorKind) bool {
 	case contracts.LLMErrorRateLimited, contracts.LLMErrorOverloaded,
 		contracts.LLMErrorServer, contracts.LLMErrorTimeout:
 		return true
-	default:
+	case contracts.LLMErrorAuth, contracts.LLMErrorPermission, contracts.LLMErrorQuota,
+		contracts.LLMErrorInvalidRequest, contracts.LLMErrorModelNotFound,
+		contracts.LLMErrorContentFiltered, contracts.LLMErrorNetwork,
+		contracts.LLMErrorBlockedHost, contracts.LLMErrorCanceled:
 		return false
 	}
+	return false
 }

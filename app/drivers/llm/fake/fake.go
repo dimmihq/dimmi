@@ -141,7 +141,7 @@ func (l *LLM) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.C
 /*
 Stream serves the next step as a stream of deltas.
 */
-func (l *LLM) Stream(ctx context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
+func (l *LLM) Stream(_ context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
 	step := l.next(req)
 
 	if step.Err != nil {

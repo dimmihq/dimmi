@@ -45,7 +45,7 @@ func newChatStream(stream *ssestream.Stream[oai.ChatCompletionChunk], model stri
 /*
 Next blocks for the next event, ending with io.EOF after done.
 */
-func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
+func (s *chatStream) Next(_ context.Context) (contracts.StreamEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

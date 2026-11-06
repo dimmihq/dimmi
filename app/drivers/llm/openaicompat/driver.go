@@ -46,10 +46,14 @@ type Driver struct {
 /*
 New builds a compatible driver for the endpoint.
 */
-func New(baseURL, apiKey string, headers map[string]string, httpClient *httpclient.StdClient, cfg Config) *Driver {
+func New(baseURL, apiKey string, headers map[string]string,
+	httpClient *httpclient.StdClient, cfg Config,
+) *Driver {
 	return &Driver{
-		inner: openai.New(openai.Options{BaseURL: baseURL, APIKey: apiKey, Headers: headers, HTTP: httpClient, Clock: cfg.Clock}),
-		cfg:   cfg,
+		inner: openai.New(openai.Options{
+			BaseURL: baseURL, APIKey: apiKey, Headers: headers, HTTP: httpClient, Clock: cfg.Clock,
+		}),
+		cfg: cfg,
 	}
 }
 
@@ -97,4 +101,3 @@ func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
 	}
 	return caps
 }
-

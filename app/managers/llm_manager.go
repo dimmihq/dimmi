@@ -43,7 +43,10 @@ import (
 DriverFactory builds a driver for one key row with the decrypted
 credentials and the per-key HTTP client.
 */
-type DriverFactory func(ctx context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error)
+type DriverFactory func(
+	ctx context.Context, m *LLMManager, key models.AiProviderKey,
+	creds Credentials, httpClient *httpclient.Client,
+) (contracts.LLM, error)
 
 /*
 Credentials is a connection's opened secret shape.
@@ -53,7 +56,7 @@ type Credentials struct {
 	AccessToken  string            `json:"access_token,omitempty"`
 	RefreshToken string            `json:"refresh_token,omitempty"`
 	AccountID    string            `json:"account_id,omitempty"`
-	ExpiresAt    time.Time         `json:"expires_at,omitempty"`
+	ExpiresAt    time.Time         `json:"expires_at,omitzero"`
 	Scopes       []string          `json:"scopes,omitempty"`
 	ExtraHeaders map[string]string `json:"extra_headers,omitempty"`
 }
@@ -85,10 +88,6 @@ type cachedDriver struct {
 const cacheLimit = 256
 
 /*
-NewLLMManager builds the manager with the drivers of today
-registered.
-*/
-/*
 LLMDeps are what the manager needs from the application.
 */
 type LLMDeps struct {
@@ -99,6 +98,10 @@ type LLMDeps struct {
 	DB     *database.DB
 }
 
+/*
+NewLLMManager builds the manager with the drivers of today
+registered.
+*/
 func NewLLMManager(deps LLMDeps) *LLMManager {
 	m := &LLMManager{
 		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: deps.Clock, db: deps.DB,
@@ -112,14 +115,28 @@ func NewLLMManager(deps LLMDeps) *LLMManager {
 registerBuiltins registers the drivers of the launch set.
 */
 func (m *LLMManager) registerBuiltins() {
-	m.Extend(enums.AIProviderAnthropic, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+	m.registerKeyDriven()
+	m.registerSources()
+}
+
+/*
+registerKeyDriven registers the providers that run on key rows.
+*/
+func (m *LLMManager) registerKeyDriven() {
+	m.Extend(enums.AIProviderAnthropic, func(
+		_ context.Context, _ *LLMManager, key models.AiProviderKey,
+		creds Credentials, httpClient *httpclient.Client,
+	) (contracts.LLM, error) {
 		return anthropic.New(anthropic.Options{
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
 			Version: configString(key.Config, "anthropic_version"), HTTP: httpClient.StdClient(),
 		}), nil
 	})
 
-	m.Extend(enums.AIProviderOpenAI, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderOpenAI, func(
+		_ context.Context, _ *LLMManager, key models.AiProviderKey,
+		creds Credentials, httpClient *httpclient.Client,
+	) (contracts.LLM, error) {
 		return openai.New(openai.Options{
 			Clock:   m.clock,
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
@@ -127,23 +144,41 @@ func (m *LLMManager) registerBuiltins() {
 		}), nil
 	})
 
-	m.Extend(enums.AIProviderEngy, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderEngy, func(
+		_ context.Context, _ *LLMManager, key models.AiProviderKey,
+		creds Credentials, httpClient *httpclient.Client,
+	) (contracts.LLM, error) {
 		return engy.New(creds.APIKey, httpClient.StdClient(), m.clock), nil
 	})
 
-	m.Extend(enums.AIProviderOpenAICompatible, func(_ context.Context, _ *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderOpenAICompatible, func(
+		_ context.Context, _ *LLMManager, key models.AiProviderKey,
+		creds Credentials, httpClient *httpclient.Client,
+	) (contracts.LLM, error) {
 		return openai.New(openai.Options{
 			Clock:   m.clock,
 			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey,
 			Headers: creds.ExtraHeaders, HTTP: httpClient.StdClient(),
 		}), nil
 	})
+}
 
-	m.Extend(enums.AIProviderChatGPT, func(_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
-		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient.StdClient(), &oauthSource{m: m, key: key, creds: creds}, m.clock), nil
+/*
+registerSources registers the providers that hold no user key.
+*/
+func (m *LLMManager) registerSources() {
+	m.Extend(enums.AIProviderChatGPT, func(
+		_ context.Context, m *LLMManager, key models.AiProviderKey,
+		creds Credentials, httpClient *httpclient.Client,
+	) (contracts.LLM, error) {
+		source := &oauthSource{m: m, key: key, creds: creds}
+		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient.StdClient(), source, m.clock), nil
 	})
 
-	m.Extend(enums.AIProviderDimmi, func(_ context.Context, m *LLMManager, _ models.AiProviderKey, _ Credentials, httpClient *httpclient.Client) (contracts.LLM, error) {
+	m.Extend(enums.AIProviderDimmi, func(
+		_ context.Context, m *LLMManager, _ models.AiProviderKey,
+		_ Credentials, httpClient *httpclient.Client,
+	) (contracts.LLM, error) {
 		return m.managedDriver(httpClient)
 	})
 }
@@ -248,14 +283,16 @@ func (m *LLMManager) managedDriver(httpClient *httpclient.Client) (contracts.LLM
 		return nil, fmt.Errorf("managed provider not configured")
 	}
 
-	models := []contracts.LLMModel{}
+	modelList := []contracts.LLMModel{}
 	for _, e := range aimodels.Managed() {
 		if _, ok := families[e.Family]; ok {
-			models = append(models, contracts.LLMModel{ID: e.ID, DisplayName: e.DisplayName, ContextTokens: e.ContextTokens})
+			modelList = append(modelList, contracts.LLMModel{
+				ID: e.ID, DisplayName: e.DisplayName, ContextTokens: e.ContextTokens,
+			})
 		}
 	}
 
-	return managed.New(families, models), nil
+	return managed.New(families, modelList), nil
 }
 
 /*

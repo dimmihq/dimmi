@@ -28,7 +28,7 @@ type Breaker struct {
 	mu       sync.Mutex
 	clock    clock.Clock
 	failures int
-	max      int
+	limit      int
 	window   time.Duration
 	openFor  time.Duration
 	first    time.Time
@@ -37,11 +37,11 @@ type Breaker struct {
 }
 
 /*
-NewBreaker builds a breaker: it opens after max failures inside the
+NewBreaker builds a breaker: it opens after limit failures inside the
 window and stays open for openFor.
 */
-func NewBreaker(clk clock.Clock, max int, window, openFor time.Duration) *Breaker {
-	return &Breaker{clock: clk, max: max, window: window, openFor: openFor}
+func NewBreaker(clk clock.Clock, limit int, window, openFor time.Duration) *Breaker {
+	return &Breaker{clock: clk, limit: limit, window: window, openFor: openFor}
 }
 
 /*
@@ -92,7 +92,7 @@ func (b *Breaker) Failure() {
 	}
 
 	b.failures++
-	if b.failures >= b.max {
+	if b.failures >= b.limit {
 		b.openedAt = now
 		b.probing = false
 	}

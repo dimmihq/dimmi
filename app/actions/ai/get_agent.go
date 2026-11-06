@@ -211,12 +211,32 @@ func providers(cfg config.AIConfig) []ProviderDescriptor {
 	managedUp := managed.Anthropic.APIKey != "" || managed.OpenAI.APIKey != "" || managed.OpenWeight.APIKey != ""
 
 	return []ProviderDescriptor{
-		{ID: enums.AIProviderDimmi, Name: "Dimmi (built-in)", AuthType: "managed", KeyRequired: false, Available: managedUp},
-		{ID: enums.AIProviderAnthropic, Name: "Anthropic", AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://console.anthropic.com/settings/keys"},
-		{ID: enums.AIProviderOpenAI, Name: "OpenAI", AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://platform.openai.com/api-keys"},
-		{ID: enums.AIProviderChatGPT, Name: "ChatGPT subscription", AuthType: "oauth", KeyRequired: false, Available: cfg.ChatGPT.Enabled},
-		{ID: enums.AIProviderEngy, Name: "Engy (open weight)", AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://engy.ai"},
-		{ID: enums.AIProviderOpenAICompatible, Name: "OpenAI-compatible", AuthType: "api_key", KeyRequired: false, Available: true},
+		{
+			ID: enums.AIProviderDimmi, Name: "Dimmi (built-in)",
+			AuthType: "managed", Available: managedUp,
+		},
+		{
+			ID: enums.AIProviderAnthropic, Name: "Anthropic",
+			AuthType: "api_key", KeyRequired: true, Available: true,
+			DocsURL: "https://console.anthropic.com/settings/keys",
+		},
+		{
+			ID: enums.AIProviderOpenAI, Name: "OpenAI",
+			AuthType: "api_key", KeyRequired: true, Available: true,
+			DocsURL: "https://platform.openai.com/api-keys",
+		},
+		{
+			ID: enums.AIProviderChatGPT, Name: "ChatGPT subscription",
+			AuthType: "oauth", Available: cfg.ChatGPT.Enabled,
+		},
+		{
+			ID: enums.AIProviderEngy, Name: "Engy (open weight)",
+			AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://engy.ai",
+		},
+		{
+			ID: enums.AIProviderOpenAICompatible, Name: "OpenAI-compatible",
+			AuthType: "api_key", Available: true,
+		},
 	}
 }
 

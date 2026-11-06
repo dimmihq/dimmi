@@ -1,7 +1,4 @@
 /*
-Package prompts loads, renders and fingerprints the agent's prompt
-files: one tree per version, a family folder overriding the common
-one, and a constrained {{var}} substitution that can never execute
-anything.
+Package prompts loads the family prompt templates and renders them per run.
 */
 package prompts

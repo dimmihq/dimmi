@@ -53,7 +53,7 @@ type tokens struct {
 /*
 newRecorder creates the run row.
 */
-func newRecorder(ctx context.Context, db *database.DB, clk clock.Clock, prices *aiprices.Table, run models.AiRun) *Recorder {
+func newRecorder(_ context.Context, db *database.DB, clk clock.Clock, prices *aiprices.Table, run models.AiRun) *Recorder {
 	return &Recorder{db: db, clock: clk, prices: prices, Run: run}
 }
 
@@ -153,7 +153,7 @@ func (r *Recorder) Finish(ctx context.Context, tx *database.Tx, in FinishInput) 
 		v := sat32(in.FirstToken.Milliseconds())
 		firstToken = &v
 	}
-	lat := int32(latency.Milliseconds())
+	lat := sat32(latency.Milliseconds())
 
 	_, err := models.New(tx).FinishRun(ctx, models.FinishRunParams{
 		WorkspaceID: r.Run.WorkspaceID, ID: r.Run.ID,
@@ -166,7 +166,7 @@ func (r *Recorder) Finish(ctx context.Context, tx *database.Tx, in FinishInput) 
 		CostMicros: r.costMicros, PriceTableVersion: nilable(r.priceVersion()),
 		FirstTokenMs: firstToken, LatencyMs: &lat, QueueWaitMs: nilableInt(in.QueueWaitMS),
 		ErrorCode: nilable(in.ErrorCode), ErrorMessage: nilable(in.ErrorMessage),
-		ActionCallsCount: int32(in.ActionCalls), CompletedAt: &now, Now: now,
+		ActionCallsCount: sat32(int64(in.ActionCalls)), CompletedAt: &now, Now: now,
 	})
 	return err
 }
@@ -225,7 +225,7 @@ func nilableInt(v int) *int32 {
 	if v == 0 {
 		return nil
 	}
-	i := int32(v)
+	i := sat32(int64(v))
 	return &i
 }
 

@@ -17,18 +17,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
-	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/enums"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/linkguard"
-	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -58,8 +59,6 @@ answer is the generated reply.
 */
 type answer struct {
 	Text       string
-	Unknown    bool
-	Handoff    string
 	handoff    string
 	unknown    bool
 	FirstToken time.Duration
@@ -76,7 +75,7 @@ func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 
 	started := r.Clock.Now()
-	res, err := r.Knowledge.Search(ctx, env.Workspace.ID, env.redactor.Redact(query, env.Agent.PiiRedaction),
+	res, err := r.Knowledge.Search(ctx, env.Workspace.ID, env.redact(query),
 		contracts.KnowledgeSearchOptions{
 			Limit:      6,
 			Visibility: []contracts.KnowledgeVisibility{contracts.KnowledgeVisibilityPublic},
@@ -90,10 +89,10 @@ func (r *Runner) retrieve(ctx context.Context, env *env, recorder *Recorder, c *
 	chunks := res.Chunks
 	answerable := len(chunks) > 0
 	if f8, err := env.Agent.MinSimilarity.Float64Value(); err == nil && f8.Valid {
-		min := f8.Float64
+		threshold := f8.Float64
 		answerable = false
 		for _, ch := range chunks {
-			if ch.Similarity == nil || *ch.Similarity >= min {
+			if ch.Similarity == nil || *ch.Similarity >= threshold {
 				answerable = true
 				break
 			}
@@ -129,11 +128,6 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 
 	started := r.Clock.Now()
-	var buf strings.Builder
-	var firstToken time.Duration
-	var usage contracts.LLMUsage
-	var stopReason contracts.StopReason
-	var calls []contracts.ToolCall
 
 	stream, err := llm.Stream(ctx, contracts.ChatRequest{
 		Model:  model,
@@ -150,36 +144,12 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 	defer func() { _ = stream.Close() }()
 
-	for {
-		ev, err := stream.Next(ctx)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			r.stepErr(ctx, env, recorder, enums.AIRunStepKindGenerate, model, started, err)
-			return nil, fmt.Errorf("generate stream: %w", err)
-		}
-		switch ev.Kind {
-		case contracts.StreamEventTextDelta:
-			if firstToken == 0 {
-				firstToken = r.Clock.Now().Sub(started)
-			}
-			buf.WriteString(ev.Text)
-		case contracts.StreamEventToolCallDone:
-			if ev.ToolCall != nil {
-				calls = append(calls, *ev.ToolCall)
-			}
-		case contracts.StreamEventUsage:
-			if ev.Usage != nil {
-				usage = *ev.Usage
-			}
-		case contracts.StreamEventDone:
-			stopReason = ev.StopReason
-		}
+	text, usage, firstToken, err := r.streamAnswer(ctx, stream, started)
+	if err != nil {
+		r.stepErr(ctx, env, recorder, enums.AIRunStepKindGenerate, model, started, err)
+		return nil, fmt.Errorf("generate stream: %w", err)
 	}
-
 	latency := r.Clock.Now().Sub(started)
-	text := strings.TrimSpace(buf.String())
 
 	if _, err := recorder.Step(ctx, env.tx, StepInput{
 		Kind: enums.AIRunStepKindGenerate, Provider: string(llm.Provider()),
@@ -192,8 +162,6 @@ func (r *Runner) generate(ctx context.Context, env *env, recorder *Recorder, c *
 	}
 
 	out := &answer{Text: text, FirstToken: firstToken, Latency: latency}
-	_ = stopReason
-	_ = calls
 
 	if saysUnknown(text) {
 		out.unknown = true
@@ -245,7 +213,7 @@ func (r *Runner) commitAnswer(ctx context.Context, env *env, recorder *Recorder,
 
 	writer := r.writer(env)
 	msg, _, err := writer.Append(ctx, env.Conversation, conversations.NewMessage{
-		Type: "message", Body: text, BodyFormat: str("markdown"),
+		Type: "message", Body: text, BodyFormat: new("markdown"),
 		Metadata: aiMeta(recorder, found, c),
 	})
 	if err != nil {
@@ -266,7 +234,9 @@ func (r *Runner) commitAnswer(ctx context.Context, env *env, recorder *Recorder,
 commitUnknown writes the honest no-answer and, when the setting asks,
 hands off.
 */
-func (r *Runner) commitUnknown(ctx context.Context, env *env, recorder *Recorder, c *classification) (*decision, error) {
+func (r *Runner) commitUnknown(ctx context.Context, env *env, recorder *Recorder,
+	c *classification,
+) (*decision, error) {
 	if reason := superseded(env); reason != "" {
 		return &decision{name: "superseded", skipReason: reason}, nil
 	}
@@ -370,10 +340,14 @@ func (r *Runner) handoffSummary(ctx context.Context, env *env, recorder *Recorde
 	res, err := llm.Chat(ctx, contracts.ChatRequest{
 		Model: model,
 		Messages: []contracts.ChatMessage{
-			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text:
-				"Summarize this conversation for a teammate in two or three sentences: " +
-				"what the customer wants, what the assistant already said, and that it was " +
-				"handed over for: " + reason + ".\n\n" + transcriptForLLM(env, 10)}}},
+			{
+				Role: contracts.ChatRoleUser,
+				Parts: []contracts.ContentPart{{
+					Text: "Summarize this conversation for a teammate in two or three sentences: " +
+						"what the customer wants, what the assistant already said, and that it was " +
+						"handed over for: " + reason + ".\n\n" + transcriptForLLM(env, 10),
+				}},
+			},
 		},
 		MaxOutputTokens: 300,
 	})
@@ -399,7 +373,7 @@ func (r *Runner) handoffSummary(ctx context.Context, env *env, recorder *Recorde
 postProcess applies the deterministic rewrites: link allowlist and
 the citation requirement.
 */
-func postProcess(env *env, text string, found *retrieval) string {
+func postProcess(env *env, text string, _ *retrieval) string {
 	allowed := linkHosts(env)
 	text = linkguard.Filter(text, allowed)
 	return text
@@ -416,7 +390,7 @@ func linkHosts(env *env) []string {
 /*
 aiMeta is the message metadata every AI reply carries.
 */
-func aiMeta(recorder *Recorder, found *retrieval, c *classification) []byte {
+func aiMeta(recorder *Recorder, found *retrieval, _ *classification) []byte {
 	meta := map[string]any{"ai": map[string]any{
 		"run_id":    recorder.Run.ID.String(),
 		"generated": true,
@@ -428,9 +402,14 @@ func aiMeta(recorder *Recorder, found *retrieval, c *classification) []byte {
 				"title": ch.Title, "url": ch.URL,
 			})
 		}
-		meta["ai"].(map[string]any)["sources"] = sources
+		if ai, ok := meta["ai"].(map[string]any); ok {
+			ai["sources"] = sources
+		}
 	}
-	out, _ := json.Marshal(meta)
+	out, err := json.Marshal(meta)
+	if err != nil {
+		return nil
+	}
 	return out
 }
 
@@ -485,7 +464,7 @@ func (r *Runner) stepErr(ctx context.Context, env *env, recorder *Recorder, kind
 	status := "error"
 	code := ""
 	httpStatus := 0
-	if llmErr, ok := err.(*contracts.LLMError); ok {
+	if llmErr, ok := errors.AsType[*contracts.LLMError](err); ok {
 		code = string(llmErr.Kind)
 		httpStatus = llmErr.HTTPStatus
 	}
@@ -498,7 +477,7 @@ func (r *Runner) stepErr(ctx context.Context, env *env, recorder *Recorder, kind
 /*
 payload trims a stored request/response payload.
 */
-func (r *Runner) payload(env *env, text string) []byte {
+func (r *Runner) payload(_ *env, text string) []byte {
 	if len(text) > 64_000 {
 		text = text[:64_000]
 	}
@@ -574,10 +553,10 @@ func saysUnknown(text string) bool {
 /*
 transcriptForLLM renders the tail of the conversation.
 */
-func transcriptForLLM(env *env, max int) string {
+func transcriptForLLM(env *env, count int) string {
 	msgs := env.Messages
-	if len(msgs) > max {
-		msgs = msgs[len(msgs)-max:]
+	if len(msgs) > count {
+		msgs = msgs[len(msgs)-count:]
 	}
 
 	var b strings.Builder
@@ -592,7 +571,7 @@ func transcriptForLLM(env *env, max int) string {
 			who = "System"
 		}
 		text := triggerText(m)
-		text = env.redactor.Redact(text, env.Agent.PiiRedaction)
+		text = env.redact(text)
 		if len(text) > 2000 {
 			text = text[:2000]
 		}
@@ -601,3 +580,34 @@ func transcriptForLLM(env *env, max int) string {
 	return b.String()
 }
 
+/*
+streamAnswer consumes the generate stream into text and usage.
+*/
+func (r *Runner) streamAnswer(ctx context.Context, stream contracts.ChatStream, started time.Time) (string, contracts.LLMUsage, time.Duration, error) {
+	var buf strings.Builder
+	var firstToken time.Duration
+	var usage contracts.LLMUsage
+
+	for {
+		ev, err := stream.Next(ctx)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return "", usage, firstToken, err
+		}
+		switch ev.Kind {
+		case contracts.StreamEventTextDelta:
+			if firstToken == 0 {
+				firstToken = r.Clock.Now().Sub(started)
+			}
+			buf.WriteString(ev.Text)
+		case contracts.StreamEventUsage:
+			if ev.Usage != nil {
+				usage = *ev.Usage
+			}
+		case contracts.StreamEventToolCallDone, contracts.StreamEventDone:
+		}
+	}
+	return strings.TrimSpace(buf.String()), usage, firstToken, nil
+}

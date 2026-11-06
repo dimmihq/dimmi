@@ -28,18 +28,24 @@ newPatterns compiles the matchers.
 func newPatterns() patterns {
 	return patterns{
 		human: []*regexp.Regexp{
-			regexp.MustCompile(`\b(human|agent|person|operator|staff|representative|real person|support person|someone real)\b`),
-			regexp.MustCompile(`\b(talk|speak|connect|transfer|escalate).{0,20}\b(someone|somebody|anyone|person|agent|human|team)\b`),
+			regexp.MustCompile(`\b(human|agent|person|operator|staff|representative` +
+				`|real person|support person|someone real)\b`),
+			regexp.MustCompile(`\b(talk|speak|connect|transfer|escalate).{0,20}` +
+				`\b(someone|somebody|anyone|person|agent|human|team)\b`),
 			regexp.MustCompile(`\bget me (a|an|the)? ?(human|agent|person)\b`),
 		},
 		ack: []*regexp.Regexp{
-			regexp.MustCompile(`^(thanks?|thank you|thx|ty|ok|okay|got it|perfect|great|cool|nice|awesome|understood|makes sense|that helps?|helpful|solved|done|never ?mind|no worries|all good|👍|🙏|✅)[\s!.]*$`),
+			regexp.MustCompile(`^(thanks?|thank you|thx|ty|ok|okay|got it|perfect|great|cool|nice` +
+				`|awesome|understood|makes sense|that helps?|helpful|solved|done|never ?mind` +
+				`|no worries|all good|👍|🙏|✅)[\s!.]*$`),
 		},
 		abuse: []*regexp.Regexp{
-			regexp.MustCompile(`\b(shut up|fuck you|fuck off|stupid bot|dumb bot|useless bot|hate you|kill yourself)\b`),
+			regexp.MustCompile(`\b(shut up|fuck you|fuck off|stupid bot|dumb bot|useless bot` +
+				`|hate you|kill yourself)\b`),
 		},
 		confirm: []*regexp.Regexp{
-			regexp.MustCompile(`^(yes|yeah|yep|yup|sure|confirm|confirmed|do it|go ahead|ok|okay|please do|correct|that's right|right|y)[\s!.]*$`),
+			regexp.MustCompile(`^(yes|yeah|yep|yup|sure|confirm|confirmed|do it|go ahead|ok|okay` +
+				`|please do|correct|that's right|right|y)[\s!.]*$`),
 		},
 		cancel: []*regexp.Regexp{
 			regexp.MustCompile(`^(no|nope|cancel|canceled|don't|do not|stop|not now|never mind|n)[\s!.]*$`),

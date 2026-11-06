@@ -42,7 +42,7 @@ func newChatStream(stream *ssestream.Stream[responses.ResponseStreamEventUnion],
 /*
 Next blocks for the next event, ending with io.EOF.
 */
-func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
+func (s *chatStream) Next(_ context.Context) (contracts.StreamEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -57,29 +57,7 @@ func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 		}
 
 		for s.stream.Next() {
-			event := s.stream.Current()
-
-			switch ev := event.AsAny().(type) {
-			case responses.ResponseTextDeltaEvent:
-				if ev.Delta != "" {
-					s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventTextDelta, Text: ev.Delta})
-				}
-			case responses.ResponseFunctionCallArgumentsDoneEvent:
-				call := contracts.ToolCall{ID: ev.ItemID, Name: "", Arguments: json.RawMessage(ev.Arguments)}
-				s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventToolCallDone, ToolCall: &call})
-			case responses.ResponseCompletedEvent:
-				if u := ev.Response.Usage; u.InputTokens > 0 || u.OutputTokens > 0 {
-					usage := &contracts.LLMUsage{
-						InputTokens:       u.InputTokens,
-						CachedInputTokens: u.InputTokensDetails.CachedTokens,
-						OutputTokens:      u.OutputTokens,
-						ReasoningTokens:   u.OutputTokensDetails.ReasoningTokens,
-						Reported:          true,
-					}
-					s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: usage})
-				}
-				s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventDone, StopReason: contracts.StopReasonEnd})
-			}
+			s.handleEvent(s.stream.Current())
 		}
 
 		if err := s.stream.Err(); err != nil {
@@ -87,6 +65,34 @@ func (s *chatStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 		}
 
 		s.done = len(s.pend) == 0
+	}
+}
+
+/*
+handleEvent queues one SDK event as ours.
+*/
+func (s *chatStream) handleEvent(event responses.ResponseStreamEventUnion) {
+	switch ev := event.AsAny().(type) {
+	case responses.ResponseTextDeltaEvent:
+		if ev.Delta != "" {
+			s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventTextDelta, Text: ev.Delta})
+		}
+	case responses.ResponseFunctionCallArgumentsDoneEvent:
+		call := contracts.ToolCall{ID: ev.ItemID, Name: "", Arguments: json.RawMessage(ev.Arguments)}
+		s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventToolCallDone, ToolCall: &call})
+	case responses.ResponseCompletedEvent:
+		if u := ev.Response.Usage; u.InputTokens > 0 || u.OutputTokens > 0 {
+			s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: &contracts.LLMUsage{
+				InputTokens:       u.InputTokens,
+				CachedInputTokens: u.InputTokensDetails.CachedTokens,
+				OutputTokens:      u.OutputTokens,
+				ReasoningTokens:   u.OutputTokensDetails.ReasoningTokens,
+				Reported:          true,
+			}})
+		}
+		s.pend = append(s.pend, contracts.StreamEvent{
+			Kind: contracts.StreamEventDone, StopReason: contracts.StopReasonEnd,
+		})
 	}
 }
 

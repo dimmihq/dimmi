@@ -28,8 +28,8 @@ import (
 env is the run's loaded world.
 */
 type env struct {
-	patterns  patterns
-	redactor  *pii.Redactor
+	patterns       patterns
+	redactor       *pii.Redactor
 	tx             *database.Tx
 	Workspace      models.Workspace
 	Agent          *models.AiAgent
@@ -65,7 +65,10 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, workspaceID, conv
 		return nil, fmt.Errorf("list messages: %w", err)
 	}
 
-	env := &env{tx: tx, Workspace: ws, Conversation: conv, Messages: msgs, patterns: newPatterns(), redactor: pii.New(), now: r.Clock.Now()}
+	env := &env{
+		tx: tx, Workspace: ws, Conversation: conv, Messages: msgs,
+		patterns: newPatterns(), redactor: pii.New(), now: r.Clock.Now(),
+	}
 	if agent, err := models.New(tx).FindAgent(ctx, conv.WorkspaceID); err == nil {
 		env.Agent = &agent
 	}
@@ -116,4 +119,14 @@ func channelTypeOf(ctx context.Context, tx *database.Tx, conv models.Conversatio
 		return "widget"
 	}
 	return conn.Type
+}
+
+/*
+redact masks the text when the agent's setting asks for it.
+*/
+func (e *env) redact(text string) string {
+	if e.Agent == nil || !e.Agent.PiiRedaction {
+		return text
+	}
+	return e.redactor.Redact(text)
 }

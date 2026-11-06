@@ -16,7 +16,7 @@ import (
 /*
 Capabilities answers what a model supports without a network call.
 */
-func Capabilities(model string) contracts.LLMCapabilities {
+func Capabilities(_ string) contracts.LLMCapabilities {
 	return contracts.LLMCapabilities{
 		Tools:           true,
 		Streaming:       true,
