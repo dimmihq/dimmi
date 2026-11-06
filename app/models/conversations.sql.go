@@ -29,6 +29,37 @@ func (q *Queries) AllocateConversationNumber(ctx context.Context, workspaceID id
 	return number, err
 }
 
+const bumpConversationAiAnswer = `-- name: BumpConversationAiAnswer :exec
+UPDATE conversations SET
+    ai_reply_count = ai_reply_count + 1,
+    ai_cost_micros = ai_cost_micros + $1,
+    ai_language = COALESCE($2, ai_language),
+    ai_state = 'active',
+    updated_at = $3
+WHERE workspace_id = $4 AND id = $5
+`
+
+type BumpConversationAiAnswerParams struct {
+	CostMicros  int64     `json:"cost_micros"`
+	Language    *string   `json:"language"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// BumpConversationAiAnswer adds one agent reply's cost and count to the
+// conversation.
+func (q *Queries) BumpConversationAiAnswer(ctx context.Context, arg BumpConversationAiAnswerParams) error {
+	_, err := q.db.Exec(ctx, bumpConversationAiAnswer,
+		arg.CostMicros,
+		arg.Language,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
 const createConversation = `-- name: CreateConversation :one
 INSERT INTO conversations (
     workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, external_thread_key,
@@ -169,6 +200,33 @@ func (q *Queries) FindConversation(ctx context.Context, arg FindConversationPara
 		&i.Priority,
 	)
 	return i, err
+}
+
+const handoffConversationAi = `-- name: HandoffConversationAi :exec
+UPDATE conversations SET
+    ai_state = 'handed_off',
+    ai_handed_off_at = $1,
+    ai_handoff_reason = $2,
+    updated_at = $1
+WHERE workspace_id = $3 AND id = $4
+`
+
+type HandoffConversationAiParams struct {
+	Now         *time.Time `json:"now"`
+	Reason      *string    `json:"reason"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	ID          ids.UUID   `json:"id"`
+}
+
+// HandoffConversationAi stops the agent in a conversation, naming why.
+func (q *Queries) HandoffConversationAi(ctx context.Context, arg HandoffConversationAiParams) error {
+	_, err := q.db.Exec(ctx, handoffConversationAi,
+		arg.Now,
+		arg.Reason,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
 }
 
 const listConversations = `-- name: ListConversations :many
@@ -347,6 +405,27 @@ type MarkConversationAsTestParams struct {
 // billed and never reaches a real customer.
 func (q *Queries) MarkConversationAsTest(ctx context.Context, arg MarkConversationAsTestParams) error {
 	_, err := q.db.Exec(ctx, markConversationAsTest, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const reactivateConversationAi = `-- name: ReactivateConversationAi :exec
+UPDATE conversations SET
+    ai_state = 'active',
+    ai_handed_off_at = NULL,
+    ai_handoff_reason = NULL,
+    updated_at = $1
+WHERE workspace_id = $2 AND id = $3
+`
+
+type ReactivateConversationAiParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// ReactivateConversationAi hands a conversation back to the agent.
+func (q *Queries) ReactivateConversationAi(ctx context.Context, arg ReactivateConversationAiParams) error {
+	_, err := q.db.Exec(ctx, reactivateConversationAi, arg.Now, arg.WorkspaceID, arg.ID)
 	return err
 }
 

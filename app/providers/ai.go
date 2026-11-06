@@ -5,23 +5,35 @@
 |
 | The agent's wiring: the knowledge contract starts on its stand-in
 | while the index is built, the manager resolves connections to
-| drivers, and every AI action lands on the registry.
+| drivers, the runner carries a customer's message through the
+| pipeline, and every AI action lands on the registry.
 |
 */
 
 package providers
 
 import (
+	"context"
+	"time"
+
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
+	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
+	"github.com/dimmihq/dimmi/app/ai/pipeline"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
+	"github.com/dimmihq/dimmi/app/support/aiprices"
+	"github.com/dimmihq/dimmi/app/support/prompts"
+	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/queue"
+	airesources "github.com/dimmihq/dimmi/resources/ai"
 )
 
 /*
-bootAI wires the agent's services and actions.
+bootAI wires the agent's services, actions, listener and job.
 */
-func bootAI(a *app.App) {
+func bootAI(a *app.App) error {
 	if a.Knowledge == nil {
 		a.Knowledge = knowledge.NewStub()
 	}
@@ -30,6 +42,14 @@ func bootAI(a *app.App) {
 			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock,
 		})
 	}
+
+	runner := &pipeline.Runner{
+		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge,
+		Prompts: prompts.NewLoader(a.Config.AI.Prompts.Version, a.Config.AI.Prompts.Path),
+		Prices:  loadPrices(a),
+		Events:  a.Events,
+	}
+	a.AI = runner
 
 	a.Actions.AI = &app.AIActions{
 		GetAgent:    &ai.GetAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
@@ -49,4 +69,63 @@ func bootAI(a *app.App) {
 			Keys: a.Keys, HTTP: a.HTTP,
 		},
 	}
+
+	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
+		return enqueueAnswer(a, runner, e)
+	})
+
+	return queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner})
+}
+
+/*
+enqueueAnswer dispatches the answer job for a substantive customer
+message, a debounce after it landed so rapid typing gathers.
+*/
+func enqueueAnswer(a *app.App, _ *pipeline.Runner, e appevents.MessageCreated) error {
+	if e.Type != "message" || e.AuthorType != "contact" || !e.Substantive {
+		return nil
+	}
+	if !a.Config.AI.Enabled {
+		return nil
+	}
+
+	debounce := debounceFor(a, e.ChannelType)
+
+	return a.Queue.Push(context.Background(), aijobs.AnswerWithAIArgs{
+		WorkspaceID:      e.WorkspaceID,
+		ConversationID:   e.ConversationID,
+		TriggerMessageID: e.MessageID,
+		RunKind:          "conversation",
+		QueuedAt:         a.Clock.Now().Unix(),
+	}, queue.At(a.Clock.Now().Add(time.Duration(debounce)*time.Millisecond)),
+		queue.Unique(queue.UniqueOpts{ByArgs: true}))
+}
+
+/*
+debounceFor picks the channel's gather window.
+*/
+func debounceFor(a *app.App, channelType string) int {
+	switch channelType {
+	case "widget":
+		return a.Config.AI.DebounceWidgetMS
+	case "email":
+		return a.Config.AI.DebounceEmailMS
+	default:
+		return a.Config.AI.DebounceChatMS
+	}
+}
+
+/*
+loadPrices reads the shipped price table.
+*/
+func loadPrices(a *app.App) *aiprices.Table {
+	data, err := airesources.Files.ReadFile("prices.yaml")
+	if err != nil {
+		return nil
+	}
+	table, err := aiprices.Parse(data)
+	if err != nil {
+		return nil
+	}
+	return table
 }

@@ -57,3 +57,32 @@ LIMIT @row_limit;
 -- the practice conversations a new workspace starts with: it is never
 -- billed and never reaches a real customer.
 UPDATE conversations SET is_test = true WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: BumpConversationAiAnswer :exec
+-- BumpConversationAiAnswer adds one agent reply's cost and count to the
+-- conversation.
+UPDATE conversations SET
+    ai_reply_count = ai_reply_count + 1,
+    ai_cost_micros = ai_cost_micros + @cost_micros,
+    ai_language = COALESCE(@language, ai_language),
+    ai_state = 'active',
+    updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: HandoffConversationAi :exec
+-- HandoffConversationAi stops the agent in a conversation, naming why.
+UPDATE conversations SET
+    ai_state = 'handed_off',
+    ai_handed_off_at = @now,
+    ai_handoff_reason = @reason,
+    updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ReactivateConversationAi :exec
+-- ReactivateConversationAi hands a conversation back to the agent.
+UPDATE conversations SET
+    ai_state = 'active',
+    ai_handed_off_at = NULL,
+    ai_handoff_reason = NULL,
+    updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;
