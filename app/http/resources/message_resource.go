@@ -71,6 +71,7 @@ type TimelineEntry struct {
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 	Attachments     []Attachment    `json:"attachments"`
+	AI              *MessageAI      `json:"ai"`
 
 	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
@@ -179,8 +180,9 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		out.Mentions, out.Reactions = mentionsOf(m.Metadata), reactionsOf(m.Metadata)
 	}
 
+	out.AI = teamAIOf(m.Metadata)
 	if m.DeletedAt != nil {
-		out.Body, out.HasOriginal, out.Truncated = nil, false, false
+		out.Body, out.HasOriginal, out.Truncated, out.AI = nil, false, false, nil
 		out.DeletedBy = removerOf(m.Metadata)
 	}
 

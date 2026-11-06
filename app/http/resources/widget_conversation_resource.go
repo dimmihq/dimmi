@@ -49,7 +49,8 @@ type WidgetAttachment struct {
 
 /*
 WidgetMessage is a message as a visitor sees it. A deleted message keeps
-its place with no body.
+its place with no body. AI marks a reply the agent wrote, with the
+sources it cites.
 */
 type WidgetMessage struct {
 	ID             string             `json:"id"`
@@ -62,6 +63,7 @@ type WidgetMessage struct {
 	Attachments    []WidgetAttachment `json:"attachments"`
 	CreatedAt      time.Time          `json:"created_at"`
 	ReadAt         *time.Time         `json:"read_at"`
+	AI             *MessageAI         `json:"ai,omitempty"`
 }
 
 /*
@@ -171,11 +173,11 @@ func NewWidgetMessage(v widget.VisibleMessage) WidgetMessage {
 		ID: models.PublicID(models.PrefixMessage, m.ID), Object: "message",
 		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID), ClientID: clientID(m.Metadata),
 		Author: v.Author, Body: m.Body, Attachments: []WidgetAttachment{}, CreatedAt: m.CreatedAt.UTC(),
-		ReadAt: m.ReadAt,
+		ReadAt: m.ReadAt, AI: customerAIOf(m.Metadata),
 	}
 
 	if m.DeletedAt != nil {
-		out.Body, out.Deleted, out.Attachments = nil, true, []WidgetAttachment{}
+		out.Body, out.Deleted, out.Attachments, out.AI = nil, true, []WidgetAttachment{}, nil
 
 		return out
 	}
