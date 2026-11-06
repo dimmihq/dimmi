@@ -214,6 +214,13 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
+    root.addEventListener("click", (event) => {
+      const action = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-ai]") : null;
+      const kind = action?.dataset.ai;
+      if (kind === "helped" || kind === "handoff") {
+        void live?.aiAction(kind);
+      }
+    });
     root.addEventListener("submit", (event) => {
       const form =
         event.target instanceof HTMLFormElement && event.target.matches("[data-capture]") ? event.target : null;

@@ -219,6 +219,106 @@ describe("a connected messenger", () => {
     expect(root.querySelector("form[data-capture]")).toBeNull();
   });
 
+  it("shows the agent's answer with its sources and the two actions under it", async () => {
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    const answering = { ...conversation, ai_state: "active" };
+    const answer = {
+      id: "msg_2",
+      conversation_id: "conv_1",
+      author: { type: "agent", name: "Ada", avatar_url: null },
+      body: "Open Settings, then Billing, and choose Download.",
+      attachments: [],
+      created_at: "2026-01-01T00:00:02Z",
+      ai: {
+        generated: true,
+        sources: [
+          { title: "Invoices", url: "https://help.shop.example/invoices" },
+          { title: "Unsafe", url: "javascript:alert(1)" },
+        ],
+      },
+    };
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [answering] } }),
+      "GET /conversations/conv_1/messages": () => ({ status: 200, body: { data: [answer] } }),
+      "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
+      "POST /conversations/conv_1/ai/helped": () => ({ status: 202 }),
+      "POST /conversations/conv_1/ai/handoff": () => ({ status: 202 }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
+    });
+
+    boot(win, document);
+    await settle();
+    await settle();
+    const root = shadow() as ShadowRoot;
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: { conversation: "conv_1" } }));
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+
+    const thread = root.querySelector(".thread") as HTMLElement;
+    expect(thread.querySelector(".who")?.textContent).toContain("AI");
+    const link = thread.querySelector<HTMLAnchorElement>("a.source");
+    expect(link?.href).toBe("https://help.shop.example/invoices");
+    expect(link?.target).toBe("_blank");
+    expect(thread.querySelectorAll("a.source")).toHaveLength(1);
+    expect(thread.querySelector(".ai-actions")?.textContent).toContain("That helped");
+
+    thread.querySelector<HTMLButtonElement>('[data-ai="helped"]')?.click();
+    await settle();
+    expect(calls).toContain("POST /conversations/conv_1/ai/helped");
+    expect(thread.querySelector(".ai-actions")).toBeNull();
+    expect(thread.querySelector(".ai-thanks")?.textContent).toContain("Glad it helped.");
+  });
+
+  it("hands the conversation to the team when the visitor asks for a person", async () => {
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [{ ...conversation, ai_state: "active" }] } }),
+      "GET /conversations/conv_1/messages": () => ({
+        status: 200,
+        body: {
+          data: [
+            {
+              id: "msg_2",
+              conversation_id: "conv_1",
+              author: { type: "agent", name: "Ada", avatar_url: null },
+              body: "I am not sure about that one.",
+              attachments: [],
+              created_at: "2026-01-01T00:00:02Z",
+            },
+          ],
+        },
+      }),
+      "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
+      "POST /conversations/conv_1/ai/handoff": () => ({ status: 202 }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
+    });
+
+    const widget = boot(win, document);
+    await settle();
+    await settle();
+    const root = shadow() as ShadowRoot;
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: { conversation: "conv_1" } }));
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+
+    root.querySelector<HTMLButtonElement>('[data-ai="handoff"]')?.click();
+    await settle();
+
+    expect(calls).toContain("POST /conversations/conv_1/ai/handoff");
+    expect(widget?.live?.store.conversations[0]?.ai_state).toBe("handed_off");
+    expect(root.querySelector(".ai-actions")).toBeNull();
+  });
+
   it("tells the server when a single-page app moves to another route", async () => {
     localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
     const pings: unknown[] = [];

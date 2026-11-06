@@ -106,6 +106,23 @@ export function SparkleIcon() {
   );
 }
 
+export function CheckIcon() {
+  return (
+    <Icon>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}
+
+export function PersonIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 19.5a7 7 0 0 1 14 0" />
+    </Icon>
+  );
+}
+
 export function SearchIcon() {
   return (
     <Icon>

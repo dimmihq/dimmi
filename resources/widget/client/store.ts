@@ -25,6 +25,15 @@ export interface Attachment {
   height: number | null;
 }
 
+/*
+ * AiAnswer is what an answer from the agent carries besides its text:
+ * that the agent wrote it, and the articles it drew on.
+ */
+export interface AiAnswer {
+  generated?: boolean;
+  sources?: { title: string; url?: string | null }[];
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -35,6 +44,8 @@ export interface Message {
   deleted?: boolean;
   created_at: string;
   read_at?: string | null;
+  ai?: AiAnswer | null;
+  metadata?: { ai?: AiAnswer | null } | null;
   sending?: boolean;
   failed?: string;
 }

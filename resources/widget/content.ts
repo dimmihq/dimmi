@@ -75,6 +75,7 @@ export interface Attachment {
 
 export interface Source {
   title: string;
+  url?: string;
 }
 
 export interface Message {
@@ -83,6 +84,7 @@ export interface Message {
   state?: "sending" | "failed";
   from: "visitor" | "team" | "agent";
   author?: string;
+  avatar?: string;
   body?: string;
   attachment?: Attachment;
   sources?: Source[];

@@ -7,7 +7,7 @@
  */
 
 import type * as api from "../client/store";
-import type { Attachment, Content, Conversation, Link, Member, Message } from "../content";
+import type { Attachment, Content, Conversation, Link, Member, Message, Source } from "../content";
 import type { Appearance, OptionsUpdate, Tab, Texts } from "../options";
 
 export interface Config {
@@ -167,6 +167,13 @@ export function toMessage(m: api.Message, now: number): Message {
   if (from !== "visitor" && m.author.name) {
     out.author = m.author.name;
   }
+  if (from === "agent" && m.author.avatar_url) {
+    out.avatar = m.author.avatar_url;
+  }
+  const sources = toSources(m.ai ?? m.metadata?.ai);
+  if (sources.length > 0) {
+    out.sources = sources;
+  }
   if (m.body) {
     out.body = m.body;
   }
@@ -181,6 +188,21 @@ export function toMessage(m: api.Message, now: number): Message {
   }
 
   return out;
+}
+
+/*
+ * toSources keeps the articles an answer cites that have a title, and
+ * their addresses only when they are plain web links.
+ */
+export function toSources(ai: api.AiAnswer | null | undefined): Source[] {
+  return (ai?.sources ?? []).flatMap((source): Source[] => {
+    if (!source.title) {
+      return [];
+    }
+    const url = source.url && /^https?:\/\//.test(source.url) ? source.url : undefined;
+
+    return [url ? { title: source.title, url } : { title: source.title }];
+  });
 }
 
 function toAttachment(file: api.Attachment): Attachment {

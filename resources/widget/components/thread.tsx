@@ -9,9 +9,9 @@
  */
 import { raw } from "widget-jsx/jsx-runtime";
 
-import type { Attachment, Message } from "../content";
+import type { Attachment, Message, Source } from "../content";
 import { initials, levels } from "../text";
-import { BookIcon, DownloadIcon, FileIcon, ImageIcon, Mark, PauseIcon, PlayIcon } from "./icons";
+import { BookIcon, CheckIcon, DownloadIcon, FileIcon, ImageIcon, Mark, PauseIcon, PersonIcon, PlayIcon } from "./icons";
 
 export function Waveform({ className = "wave" }: { className?: string }) {
   return <span className={className}>{raw(levels.map((level) => `<i data-height="${level}"></i>`).join(""))}</span>;
@@ -122,6 +122,28 @@ function keyOf(message: Message): string {
   return message.key ?? message.id ?? `${message.at}-${message.body ?? message.attachment?.name ?? ""}`;
 }
 
+/*
+ * SourceChip is an article an answer cites, opening it in a new tab when
+ * it has an address.
+ */
+function SourceChip({ source }: { source: Source }) {
+  if (!source.url) {
+    return (
+      <span className="source">
+        <BookIcon />
+        <span className="source-title">{source.title}</span>
+      </span>
+    );
+  }
+
+  return (
+    <a className="source" href={source.url} target="_blank" rel="noopener noreferrer">
+      <BookIcon />
+      <span className="source-title">{source.title}</span>
+    </a>
+  );
+}
+
 function Bubble({ message }: { message: Message }) {
   const sources = message.sources ?? [];
   const key = keyOf(message);
@@ -134,10 +156,7 @@ function Bubble({ message }: { message: Message }) {
           {sources.length > 0 && (
             <span className="sources">
               {sources.map((source) => (
-                <span className="source" key={source.title}>
-                  <BookIcon />
-                  {source.title}
-                </span>
+                <SourceChip source={source} key={source.title} />
               ))}
             </span>
           )}
@@ -157,7 +176,15 @@ function Who({ message }: { message: Message }) {
 
   return (
     <div className="who">
-      <span className="face">{agent ? <Mark /> : initials(message.author ?? "")}</span>
+      <span className="face">
+        {agent && message.avatar ? (
+          <img src={message.avatar} alt="" />
+        ) : agent ? (
+          <Mark />
+        ) : (
+          initials(message.author ?? "")
+        )}
+      </span>
       <span>{message.author}</span>
       {agent ? <em className="badge">AI</em> : null}
     </div>
@@ -209,6 +236,45 @@ export function Thread({ messages }: { messages: Message[] }) {
         <Said messages={run} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
       ))}
     </>
+  );
+}
+
+/*
+ * AiActionTexts are the words of the two actions under an answer from
+ * the agent, and the thanks once the visitor said it helped.
+ */
+export interface AiActionTexts {
+  helped: string;
+  handoff: string;
+  thanks: string;
+}
+
+/*
+ * AiActions are the two quiet choices under the agent's latest answer:
+ * that it helped, or to talk to a person instead. Once the visitor says
+ * it helped, a thanks takes their place.
+ */
+export function AiActions({ texts, helped }: { texts: AiActionTexts; helped: boolean }) {
+  if (helped) {
+    return (
+      <p className="ai-thanks" data-key="ai-actions">
+        <CheckIcon />
+        {texts.thanks}
+      </p>
+    );
+  }
+
+  return (
+    <div className="ai-actions" data-key="ai-actions">
+      <button type="button" className="ai-action" data-ai="helped">
+        <CheckIcon />
+        {texts.helped}
+      </button>
+      <button type="button" className="ai-action" data-ai="handoff">
+        <PersonIcon />
+        {texts.handoff}
+      </button>
+    </div>
   );
 }
 

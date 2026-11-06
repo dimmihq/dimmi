@@ -78,7 +78,7 @@ export const sample: Content = {
     { from: "visitor", attachment: { kind: "file", name: "sync-error.log", size: "12 KB" }, at: "10:03" },
     {
       from: "agent",
-      author: "Dimmi agent",
+      author: "dimmi agent",
       body: "That usually means the webhook was not created. Open Settings, then GitHub, and choose Reconnect.",
       sources: [{ title: "GitHub integration guide" }],
       at: "10:03",

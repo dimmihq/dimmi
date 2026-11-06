@@ -6,7 +6,8 @@
  *
  * The views ask through events: "dimmi:converse" to show a conversation, or a
  * new one when none is named, and "dimmi:send" to send what the composer
- * holds. Answers land in the store, and only the parts of the panel that
+ * holds. Under the agent's latest answer the visitor can say it helped or
+ * ask for a person; either shows at once and is sent in the background. Answers land in the store, and only the parts of the panel that
  * changed are drawn again, so a half-written message, the scroll position
  * and the open tab survive every update.
  */
@@ -17,7 +18,7 @@ import { Realtime } from "../client/realtime";
 import { Session, type Storage } from "../client/session";
 import { type Conversation as ApiConversation, type Message as ApiMessage, Store } from "../client/store";
 import { ConversationRow } from "../components/rows";
-import { Thread, Typing } from "../components/thread";
+import { AiActions, Thread, Typing } from "../components/thread";
 import { Whoami } from "../components/whoami";
 import type { Content } from "../content";
 import type { Options, OptionsUpdate } from "../options";
@@ -131,6 +132,7 @@ export class Live {
   config: Config = {};
   availability: Availability | undefined;
   open: string | undefined;
+  private readonly helped = new Set<string>();
 
   constructor(
     private readonly host: Host,
@@ -490,6 +492,8 @@ export class Live {
 
     if (typing) {
       parts.push(String(Typing()));
+    } else {
+      parts.push(this.aiActions(last));
     }
     if (seen && last?.from === "visitor" && !last.state) {
       parts.push(`<p class="seen">${escapeHtml(texts.seen)}</p>`);
@@ -507,6 +511,63 @@ export class Live {
 
     place({ thread, loaded, open: open ?? "", shown: messages.length }, parts.join(""));
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
+  }
+
+  /*
+   * aiActions offers the visitor the two actions under the agent's latest
+   * answer, while the agent still holds the conversation.
+   */
+  private aiActions(last: { from: string; id?: string } | undefined): string {
+    const found = this.store.conversations.find((c) => c.id === this.open);
+    if (last?.from !== "agent" || !last.id || found?.ai_state !== "active") {
+      return "";
+    }
+    const texts = this.host.options().texts;
+
+    return String(
+      AiActions({
+        texts: { helped: texts.ai_helped, handoff: texts.talk_to_human, thanks: texts.ai_thanks },
+        helped: this.helped.has(last.id),
+      }),
+    );
+  }
+
+  /*
+   * aiAction tells the server the agent's answer helped, or hands the
+   * conversation to the team. The thread changes at once; a refusal puts
+   * it back.
+   */
+  async aiAction(kind: "helped" | "handoff") {
+    const open = this.open;
+    const found = this.store.conversations.find((c) => c.id === open);
+    const last = this.content().thread.at(-1);
+    if (!open || open === draftId || !found || !last?.id) {
+      return;
+    }
+    const answer = last.id;
+    if (kind === "helped") {
+      this.helped.add(answer);
+      this.drawThread();
+    } else {
+      this.store.upsertConversation({ ...found, ai_state: "handed_off" });
+      this.drawThread();
+    }
+
+    try {
+      await this.http.post(`/conversations/${open}/ai/${kind}`);
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "network";
+      report(
+        "warn",
+        code,
+        kind === "helped" ? "the answer could not be marked helpful." : "the team could not be asked.",
+      );
+      this.helped.delete(answer);
+      if (kind === "handoff") {
+        this.store.upsertConversation(found);
+      }
+      this.drawThread();
+    }
   }
 
   /*
