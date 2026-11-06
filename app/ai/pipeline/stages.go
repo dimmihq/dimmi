@@ -24,6 +24,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
@@ -308,11 +309,25 @@ func (r *Runner) commitHandoff(ctx context.Context, env *env, recorder *Recorder
 		return nil, fmt.Errorf("write handoff line: %w", err)
 	}
 
+	summary := r.handoffSummary(ctx, env, recorder, reason)
+
 	if err := models.New(env.tx).HandoffConversationAi(ctx, models.HandoffConversationAiParams{
 		WorkspaceID: env.Workspace.ID, ID: env.Conversation.ID,
 		Reason: nilable(reason), Now: nilableTime(r.Clock.Now()),
 	}); err != nil {
 		return nil, fmt.Errorf("handoff conversation: %w", err)
+	}
+
+	if r.Events != nil {
+		_ = r.Events.Dispatch(ctx, env.tx, appevents.AiHandoffRequested{
+			Base: appevents.Base{
+				ID: ids.New(), WorkspaceID: env.Workspace.ID,
+				OccurredAt: r.Clock.Now(), Actor: appevents.Actor{Type: "agent", ID: env.Agent.ID},
+			},
+			ConversationRef: appevents.ConversationRef{ConversationID: env.Conversation.ID},
+			Reason:          reason,
+			Summary:         summary,
+		})
 	}
 
 	return &decision{name: "handoff", handoffReason: reason}, nil
@@ -342,6 +357,47 @@ func superseded(env *env) string {
 		}
 	}
 	return ""
+}
+
+/*
+handoffSummary asks the answer model for the one-paragraph brief a
+teammate reads first: what the customer wants, what was said, why it
+was handed over. Its failure degrades to a reason-only handoff.
+*/
+func (r *Runner) handoffSummary(ctx context.Context, env *env, recorder *Recorder, reason string) string {
+	llm, err := r.driverFor(ctx, env.AnswerKey, env.Agent.AnswerModel)
+	if err != nil {
+		return ""
+	}
+	model := strv(env.Agent.AnswerModel)
+
+	started := r.Clock.Now()
+	res, err := llm.Chat(ctx, contracts.ChatRequest{
+		Model: model,
+		Messages: []contracts.ChatMessage{
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text:
+				"Summarize this conversation for a teammate in two or three sentences: " +
+				"what the customer wants, what the assistant already said, and that it was " +
+				"handed over for: " + reason + ".\n\n" + transcriptForLLM(env, 10)}}},
+		},
+		MaxOutputTokens: 300,
+	})
+	if err != nil {
+		r.stepErr(ctx, env, recorder, enums.AIRunStepKindSummarize, model, started, err)
+		return ""
+	}
+
+	text := strings.TrimSpace(res.Text)
+	if _, err := recorder.Step(ctx, env.tx, StepInput{
+		Kind: enums.AIRunStepKindSummarize, Provider: string(llm.Provider()),
+		ProviderKeyID: keyID(env.AnswerKey), Model: model, Status: "ok",
+		Usage: res.Usage, Latency: r.Clock.Now().Sub(started),
+		StartedAt: started, CompletedAt: r.Clock.Now(),
+		ResponsePayload: r.payload(env, text),
+	}); err != nil {
+		return ""
+	}
+	return text
 }
 
 /*
