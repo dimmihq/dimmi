@@ -91,6 +91,7 @@ func API(a *app.App) {
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
+		api.Group("", func(ai *routing.Router) { aiRoutes(ai, a) })
 		identityRoutes(api, a)
 		roleRoutes(api, a)
 		accountRoutes(api, a)

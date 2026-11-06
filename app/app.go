@@ -19,6 +19,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/managers"
 	"cmp"
 	"io/fs"
 	"maps"
@@ -115,6 +116,7 @@ type App struct {
 	Entitlements          contracts.Entitlements
 	BillingStatus         contracts.BillingStatus
 	Knowledge             contracts.Knowledge
+	LLM                   *managers.LLMManager
 	EmailChannel          *email.Channel
 	EmailDomains          *emailactions.Domains
 

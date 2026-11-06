@@ -159,6 +159,7 @@ type Actions struct {
 	ListTokenAbilities        *tokens.ListTokenAbilities
 
 	Inbox *InboxActions
+	AI    *AIActions
 
 	Assignment       *assignment.Assigner
 	AssignmentStatus *assignment.ShowAssignmentStatus

@@ -21,8 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dimmihq/dimmi/app"
-	"github.com/dimmihq/dimmi/app/contracts"
+		"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/anthropic"
 	"github.com/dimmihq/dimmi/app/drivers/llm/chatgpt"
 	"github.com/dimmihq/dimmi/app/drivers/llm/engy"
@@ -31,7 +30,10 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
+	"github.com/dimmihq/dimmi/config"
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
@@ -59,7 +61,10 @@ LLMManager resolves and caches drivers. The cache key is the key id
 with its updated_at, so a rotation or re-seal retires the old driver.
 */
 type LLMManager struct {
-	app       *app.App
+	keys      *encryption.Keys
+	http      *httpclient.Client
+	config    config.AIConfig
+	clock     clock.Clock
 	factories map[enums.AIProvider]DriverFactory
 	mu        sync.Mutex
 	cache     map[string]cachedDriver
@@ -80,8 +85,21 @@ const cacheLimit = 256
 NewLLMManager builds the manager with the drivers of today
 registered.
 */
-func NewLLMManager(a *app.App) *LLMManager {
-	m := &LLMManager{app: a, factories: map[enums.AIProvider]DriverFactory{}, cache: map[string]cachedDriver{}}
+/*
+LLMDeps are what the manager needs from the application.
+*/
+type LLMDeps struct {
+	Keys   *encryption.Keys
+	HTTP   *httpclient.Client
+	Config config.AIConfig
+	Clock  clock.Clock
+}
+
+func NewLLMManager(deps LLMDeps) *LLMManager {
+	m := &LLMManager{
+		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: deps.Clock,
+		factories: map[enums.AIProvider]DriverFactory{}, cache: map[string]cachedDriver{},
+	}
 	m.registerBuiltins()
 	return m
 }
@@ -116,7 +134,7 @@ func (m *LLMManager) registerBuiltins() {
 	})
 
 	m.Extend(enums.AIProviderChatGPT, func(_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, httpClient *http.Client) (contracts.LLM, error) {
-		return chatgpt.New(m.app.Config.AI.ChatGPT.APIBaseURL, httpClient, &oauthSource{m: m, key: key, creds: creds}), nil
+		return chatgpt.New(m.config.ChatGPT.APIBaseURL, httpClient, &oauthSource{m: m, key: key, creds: creds}), nil
 	})
 
 	m.Extend(enums.AIProviderDimmi, func(_ context.Context, m *LLMManager, _ models.AiProviderKey, _ Credentials, httpClient *http.Client) (contracts.LLM, error) {
@@ -182,7 +200,7 @@ func (m *LLMManager) openCredentials(ctx context.Context, key models.AiProviderK
 		return Credentials{}, nil
 	}
 
-	creds, err := encryption.Open[Credentials](ctx, m.app.Keys, key.CredentialsEncrypted, []byte(key.ID.String()))
+	creds, err := encryption.Open[Credentials](ctx, m.keys, key.CredentialsEncrypted, []byte(key.ID.String()))
 	if err != nil {
 		return Credentials{}, fmt.Errorf("open provider credentials: %w", err)
 	}
@@ -194,7 +212,7 @@ func (m *LLMManager) openCredentials(ctx context.Context, key models.AiProviderK
 httpForKey returns the egress-guarded client the driver uses.
 */
 func (m *LLMManager) httpForKey(_ models.AiProviderKey) *http.Client {
-	return m.app.HTTP.StdClient()
+	return m.http.StdClient()
 }
 
 /*
@@ -202,7 +220,7 @@ managedDriver builds the multiplexer from the instance's managed
 credentials.
 */
 func (m *LLMManager) managedDriver(httpClient *http.Client) (contracts.LLM, error) {
-	cfg := m.app.Config.AI.Managed
+	cfg := m.config.Managed
 	families := map[enums.AIModelFamily]contracts.LLM{}
 
 	if cfg.Anthropic.APIKey != "" {

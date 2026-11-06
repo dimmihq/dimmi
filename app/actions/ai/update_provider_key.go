@@ -1,0 +1,165 @@
+/*
+|--------------------------------------------------------------------------
+| Update Provider Key
+|--------------------------------------------------------------------------
+|
+| A connection's mutable bits: its name, endpoint and config, and
+| optionally a rotated secret. Any credential change bumps
+| updated_at, which retires the cached driver on its own.
+|
+*/
+
+package ai
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/managers"
+	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/ids"
+)
+
+/*
+UpdateKeyInput is a key's editable fields; empty keeps stored values.
+*/
+type UpdateKeyInput struct {
+	Membership authz.Membership
+	KeyID      ids.UUID
+	Name       string
+	BaseURL    *string
+	APIKey     *string
+	Config     map[string]any
+}
+
+/*
+UpdateProviderKey saves a connection's fields.
+
+Rules:
+  - The caller needs ai:keys:write.
+  - A new secret seals before it saves and revalidates.
+
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
+wrapped database error.
+*/
+type UpdateProviderKey struct {
+	DB    *database.DB
+	Clock clock.Clock
+	Keys  *encryption.Keys
+	LLM   *managers.LLMManager
+}
+
+/*
+Handle saves and returns the key.
+*/
+func (a *UpdateProviderKey) Handle(ctx context.Context, in UpdateKeyInput) (*models.AiProviderKey, error) {
+	if err := RequireAgentKeys(in.Membership); err != nil {
+		return nil, err
+	}
+
+	var key models.AiProviderKey
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		key, err = findKey(ctx, tx, in.Membership.Workspace.ID, in.KeyID)
+		if err != nil {
+			return err
+		}
+
+		if in.Name != "" {
+			key.Name = in.Name
+		}
+		if in.BaseURL != nil {
+			key.BaseUrl = in.BaseURL
+		}
+		if in.Config != nil {
+			key.Config, _ = json.Marshal(in.Config)
+		}
+
+		if in.APIKey != nil && *in.APIKey != "" {
+			sealed, err := encryption.Seal(ctx, a.Keys,
+				encryption.Slot{Scope: encryption.Scope{Kind: "workspace", ID: key.WorkspaceID.String()}},
+				managers.Credentials{APIKey: *in.APIKey})
+			if err != nil {
+				return fmt.Errorf("seal credentials: %w", err)
+			}
+			key.CredentialsEncrypted = sealed
+			key.KeyHint = nullable(keyHint(*in.APIKey))
+		}
+
+		key, err = models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
+			WorkspaceID: key.WorkspaceID, ID: key.ID, Name: key.Name, BaseUrl: key.BaseUrl,
+			Region: key.Region, AuthType: key.AuthType, CredentialsEncrypted: key.CredentialsEncrypted,
+			KeyHint: key.KeyHint, Config: key.Config, Now: a.Clock.Now(),
+		})
+		if err != nil {
+			return fmt.Errorf("update provider key: %w", err)
+		}
+
+		if in.APIKey != nil && *in.APIKey != "" {
+			status, reason, modelsList, info, _ := validate(ctx, a.LLM, key)
+			modelsJSON, _ := json.Marshal(modelsList)
+			infoJSON, _ := json.Marshal(info)
+			key, err = models.New(tx).UpdateProviderKeyStatus(ctx, models.UpdateProviderKeyStatusParams{
+				WorkspaceID: key.WorkspaceID, ID: key.ID, Status: status, StatusReason: reason,
+				LastError: nil, LastValidatedAt: timenow(a.Clock), LastErrorAt: nil,
+				Models: modelsJSON, ProviderInfo: infoJSON, Now: a.Clock.Now(),
+			})
+			if err != nil {
+				return fmt.Errorf("update key status: %w", err)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &key, nil
+}
+
+/*
+ListKeysInput is who asks.
+*/
+type ListKeysInput struct {
+	Membership authz.Membership
+}
+
+/*
+ListProviderKeys returns the workspace's connections.
+
+Rules:
+  - The caller needs ai:keys:read or ai:read.
+
+Errors: [exceptions.ErrForbidden], or a wrapped database error.
+*/
+type ListProviderKeys struct {
+	DB *database.DB
+}
+
+/*
+Handle lists the keys.
+*/
+func (a *ListProviderKeys) Handle(ctx context.Context, in ListKeysInput) ([]models.AiProviderKey, error) {
+	if !in.Membership.Can("ai:keys:read") && !in.Membership.Can("ai:read") {
+		return nil, exceptions.ErrForbidden
+	}
+
+	var keys []models.AiProviderKey
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		keys, err = models.New(tx).ListProviderKeys(ctx, in.Membership.Workspace.ID)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list provider keys: %w", err)
+	}
+	return keys, nil
+}
