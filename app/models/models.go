@@ -15,6 +15,170 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AiAgent struct {
+	ID                           ids.UUID        `json:"id"`
+	WorkspaceID                  ids.UUID        `json:"workspace_id"`
+	Name                         string          `json:"name"`
+	AvatarAttachmentID           *ids.UUID       `json:"avatar_attachment_id"`
+	Enabled                      bool            `json:"enabled"`
+	ProductName                  *string         `json:"product_name"`
+	Tone                         string          `json:"tone"`
+	Guidance                     string          `json:"guidance"`
+	EnabledChannels              []string        `json:"enabled_channels"`
+	ExcludedChannelConnectionIds []ids.UUID      `json:"excluded_channel_connection_ids"`
+	Schedule                     string          `json:"schedule"`
+	OfficeHours                  json.RawMessage `json:"office_hours"`
+	AssignedBehavior             string          `json:"assigned_behavior"`
+	AnswerKeyID                  *ids.UUID       `json:"answer_key_id"`
+	AnswerModel                  *string         `json:"answer_model"`
+	ClassifierKeyID              *ids.UUID       `json:"classifier_key_id"`
+	ClassifierModel              *string         `json:"classifier_model"`
+	FallbackKeyID                *ids.UUID       `json:"fallback_key_id"`
+	FallbackModel                *string         `json:"fallback_model"`
+	Temperature                  pgtype.Numeric  `json:"temperature"`
+	MaxOutputTokens              int32           `json:"max_output_tokens"`
+	MaxAiReplies                 int32           `json:"max_ai_replies"`
+	UnknownBehavior              string          `json:"unknown_behavior"`
+	GroundingMode                string          `json:"grounding_mode"`
+	RequireCitations             bool            `json:"require_citations"`
+	MinSimilarity                pgtype.Numeric  `json:"min_similarity"`
+	Languages                    []string        `json:"languages"`
+	DefaultLanguage              string          `json:"default_language"`
+	Streaming                    bool            `json:"streaming"`
+	IncludeContactContext        string          `json:"include_contact_context"`
+	ContactAttributeAllowlist    []string        `json:"contact_attribute_allowlist"`
+	PiiRedaction                 bool            `json:"pii_redaction"`
+	LinkAllowlist                []string        `json:"link_allowlist"`
+	Handoff                      json.RawMessage `json:"handoff"`
+	Messages                     json.RawMessage `json:"messages"`
+	PromptVersion                *string         `json:"prompt_version"`
+	MonthlySpendCapMicros        *int64          `json:"monthly_spend_cap_micros"`
+	ActionsEnabled               bool            `json:"actions_enabled"`
+	CreatedAt                    time.Time       `json:"created_at"`
+	UpdatedAt                    time.Time       `json:"updated_at"`
+	DeletedAt                    *time.Time      `json:"deleted_at"`
+}
+
+type AiProviderKey struct {
+	ID                   ids.UUID          `json:"id"`
+	WorkspaceID          ids.UUID          `json:"workspace_id"`
+	Name                 string            `json:"name"`
+	Provider             string            `json:"provider"`
+	BaseUrl              *string           `json:"base_url"`
+	Region               *string           `json:"region"`
+	AuthType             string            `json:"auth_type"`
+	CredentialsEncrypted encryption.Sealed `json:"credentials_encrypted"`
+	KeyHint              *string           `json:"key_hint"`
+	Status               string            `json:"status"`
+	StatusReason         *string           `json:"status_reason"`
+	LastError            *string           `json:"last_error"`
+	LastValidatedAt      *time.Time        `json:"last_validated_at"`
+	LastErrorAt          *time.Time        `json:"last_error_at"`
+	LastUsedAt           *time.Time        `json:"last_used_at"`
+	Models               json.RawMessage   `json:"models"`
+	ProviderInfo         json.RawMessage   `json:"provider_info"`
+	Config               json.RawMessage   `json:"config"`
+	Source               string            `json:"source"`
+	CreatedByMemberID    *ids.UUID         `json:"created_by_member_id"`
+	DeletedAt            *time.Time        `json:"deleted_at"`
+	CreatedAt            time.Time         `json:"created_at"`
+	UpdatedAt            time.Time         `json:"updated_at"`
+}
+
+type AiRun struct {
+	ID                 ids.UUID        `json:"id"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	AgentID            ids.UUID        `json:"agent_id"`
+	Kind               string          `json:"kind"`
+	ConversationID     *ids.UUID       `json:"conversation_id"`
+	TriggerMessageID   *ids.UUID       `json:"trigger_message_id"`
+	IncludedMessageIds []ids.UUID      `json:"included_message_ids"`
+	ActorType          *string         `json:"actor_type"`
+	ActorID            *ids.UUID       `json:"actor_id"`
+	ChannelType        *string         `json:"channel_type"`
+	Status             string          `json:"status"`
+	Outcome            *string         `json:"outcome"`
+	SkipReason         *string         `json:"skip_reason"`
+	HandoffReason      *string         `json:"handoff_reason"`
+	Intent             *string         `json:"intent"`
+	Language           *string         `json:"language"`
+	QueryOriginal      *string         `json:"query_original"`
+	QueryRewritten     *string         `json:"query_rewritten"`
+	Retrieval          json.RawMessage `json:"retrieval"`
+	AnswerMessageID    *ids.UUID       `json:"answer_message_id"`
+	PromptVersion      string          `json:"prompt_version"`
+	PromptHashes       json.RawMessage `json:"prompt_hashes"`
+	ConfigSnapshot     json.RawMessage `json:"config_snapshot"`
+	Flags              []string        `json:"flags"`
+	InputTokens        int64           `json:"input_tokens"`
+	CachedInputTokens  int64           `json:"cached_input_tokens"`
+	CacheWriteTokens   int64           `json:"cache_write_tokens"`
+	OutputTokens       int64           `json:"output_tokens"`
+	CostMicros         int64           `json:"cost_micros"`
+	PriceTableVersion  *string         `json:"price_table_version"`
+	FirstTokenMs       *int32          `json:"first_token_ms"`
+	LatencyMs          *int32          `json:"latency_ms"`
+	QueueWaitMs        *int32          `json:"queue_wait_ms"`
+	ErrorCode          *string         `json:"error_code"`
+	ErrorMessage       *string         `json:"error_message"`
+	Feedback           *string         `json:"feedback"`
+	ActionCallsCount   int32           `json:"action_calls_count"`
+	StartedAt          *time.Time      `json:"started_at"`
+	CompletedAt        *time.Time      `json:"completed_at"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+}
+
+type AiRunStep struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	RunID             ids.UUID        `json:"run_id"`
+	Seq               int32           `json:"seq"`
+	Kind              string          `json:"kind"`
+	Provider          *string         `json:"provider"`
+	ProviderKeyID     *ids.UUID       `json:"provider_key_id"`
+	Model             *string         `json:"model"`
+	ResponseModel     *string         `json:"response_model"`
+	Attempt           int32           `json:"attempt"`
+	RetryOfStepID     *ids.UUID       `json:"retry_of_step_id"`
+	Status            string          `json:"status"`
+	ErrorKind         *string         `json:"error_kind"`
+	ProviderErrorCode *string         `json:"provider_error_code"`
+	HttpStatus        *int32          `json:"http_status"`
+	ProviderRequestID *string         `json:"provider_request_id"`
+	Request           json.RawMessage `json:"request"`
+	Response          json.RawMessage `json:"response"`
+	InputTokens       int64           `json:"input_tokens"`
+	CachedInputTokens int64           `json:"cached_input_tokens"`
+	CacheWriteTokens  int64           `json:"cache_write_tokens"`
+	OutputTokens      int64           `json:"output_tokens"`
+	ReasoningTokens   int64           `json:"reasoning_tokens"`
+	UsageEstimated    bool            `json:"usage_estimated"`
+	CostMicros        int64           `json:"cost_micros"`
+	LatencyMs         *int32          `json:"latency_ms"`
+	FirstTokenMs      *int32          `json:"first_token_ms"`
+	StartedAt         *time.Time      `json:"started_at"`
+	CompletedAt       *time.Time      `json:"completed_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+}
+
+type AiSpendPeriod struct {
+	WorkspaceID        ids.UUID    `json:"workspace_id"`
+	PeriodStart        pgtype.Date `json:"period_start"`
+	CostMicros         int64       `json:"cost_micros"`
+	InputTokens        int64       `json:"input_tokens"`
+	CachedInputTokens  int64       `json:"cached_input_tokens"`
+	OutputTokens       int64       `json:"output_tokens"`
+	RunsCount          int32       `json:"runs_count"`
+	AnsweredCount      int32       `json:"answered_count"`
+	UnknownCount       int32       `json:"unknown_count"`
+	HandoffCount       int32       `json:"handoff_count"`
+	SilentCount        int32       `json:"silent_count"`
+	ThresholdsNotified []int32     `json:"thresholds_notified"`
+	CappedAt           *time.Time  `json:"capped_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+}
+
 type Attachment struct {
 	ID             ids.UUID   `json:"id"`
 	WorkspaceID    ids.UUID   `json:"workspace_id"`
@@ -206,6 +370,11 @@ type Conversation struct {
 	DeletedAt              *time.Time              `json:"deleted_at"`
 	CreatedAt              time.Time               `json:"created_at"`
 	UpdatedAt              time.Time               `json:"updated_at"`
+	AiReplyCount           int32                   `json:"ai_reply_count"`
+	AiCostMicros           int64                   `json:"ai_cost_micros"`
+	AiLanguage             *string                 `json:"ai_language"`
+	AiHandedOffAt          *time.Time              `json:"ai_handed_off_at"`
+	AiHandoffReason        *string                 `json:"ai_handoff_reason"`
 	IsTest                 bool                    `json:"is_test"`
 	PreviousConversationID *ids.UUID               `json:"previous_conversation_id"`
 	AssignmentWaitReason   *string                 `json:"assignment_wait_reason"`

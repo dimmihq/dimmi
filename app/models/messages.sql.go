@@ -376,7 +376,7 @@ SET status = $1::text,
     closed_at = CASE WHEN $1::text = 'closed' THEN coalesce(closed_at, $3::timestamptz) END,
     assignee_member_id = $4::uuid, updated_at = $3::timestamptz
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority
 `
 
 type RestoreConversationStateParams struct {
@@ -426,6 +426,11 @@ func (q *Queries) RestoreConversationState(ctx context.Context, arg RestoreConve
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiReplyCount,
+		&i.AiCostMicros,
+		&i.AiLanguage,
+		&i.AiHandedOffAt,
+		&i.AiHandoffReason,
 		&i.IsTest,
 		&i.PreviousConversationID,
 		&i.AssignmentWaitReason,
@@ -520,7 +525,7 @@ FROM (
     ) AS created_at
 ) AS latest
 WHERE c.workspace_id = $5 AND c.id = $6::uuid
-RETURNING c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority
+RETURNING c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority
 `
 
 type UncountConversationMessageParams struct {
@@ -571,6 +576,11 @@ func (q *Queries) UncountConversationMessage(ctx context.Context, arg UncountCon
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiReplyCount,
+		&i.AiCostMicros,
+		&i.AiLanguage,
+		&i.AiHandedOffAt,
+		&i.AiHandoffReason,
 		&i.IsTest,
 		&i.PreviousConversationID,
 		&i.AssignmentWaitReason,
@@ -601,7 +611,7 @@ SET message_count = greatest(c.message_count - 1, 0),
     ),
     updated_at = $1::timestamptz
 WHERE c.workspace_id = $2 AND c.id = $3
-RETURNING c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority
+RETURNING c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority
 `
 
 type UncountDeletedMessageParams struct {
@@ -641,6 +651,11 @@ func (q *Queries) UncountDeletedMessage(ctx context.Context, arg UncountDeletedM
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiReplyCount,
+		&i.AiCostMicros,
+		&i.AiLanguage,
+		&i.AiHandedOffAt,
+		&i.AiHandoffReason,
 		&i.IsTest,
 		&i.PreviousConversationID,
 		&i.AssignmentWaitReason,
