@@ -50,6 +50,9 @@ type Conversation struct {
 	Assignee               *MemberSummary                   `json:"assignee"`
 	Team                   *Named                           `json:"team"`
 	AssignmentWait         *AssignmentWait                  `json:"assignment_wait"`
+	AiState                string                           `json:"ai_state"`
+	AiReplyCount           int32                            `json:"ai_reply_count"`
+	AiHandoffReason        *string                          `json:"ai_handoff_reason"`
 	LastMessage            *MessageSummary                  `json:"last_message"`
 	Tags                   []Tag                            `json:"tags"`
 	Viewers                *[]appbroadcasting.ViewerPayload `json:"viewers,omitempty"`
@@ -100,6 +103,9 @@ func NewConversation(l conversations.Loaded) Conversation {
 		Priority:     string(enums.ConversationPriorityOf(c.Priority)),
 		WaitingSince: c.WaitingSince, SnoozedUntil: c.SnoozedUntil, LastMessageAt: c.LastMessageAt,
 		LastActivityAt:         c.LastActivityAt,
+		AiState:        c.AiState,
+		AiReplyCount:   c.AiReplyCount,
+		AiHandoffReason: c.AiHandoffReason,
 		FirstCustomerMessageAt: c.FirstCustomerMessageAt, FirstReplyAt: c.FirstReplyAt, ClosedAt: c.ClosedAt,
 		MessageCount: c.MessageCount, Channel: NewChannel(l.Connection),
 		Inbox:   Named{ID: models.PublicID(models.PrefixInbox, l.Inbox.ID), Object: "inbox", Name: l.Inbox.Name},
