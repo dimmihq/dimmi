@@ -75,8 +75,10 @@ func NewAIProviderKeys(keys []models.AiProviderKey) []AIProviderKey {
 }
 
 /*
-AIAgent is the agent's editable shape. Connection and team ids are
+AIAgent is the agent's editable shape. Connection, team and tag ids are
 public ids; MonthlySpendCapMicros is null when there is no cap.
+HandoffMode is full or triage_only; AlwaysHandoffTagIDs are the tags
+that always send a conversation to the team.
 */
 type AIAgent struct {
 	ID                    string          `json:"id"`
@@ -107,6 +109,8 @@ type AIAgent struct {
 	LinkAllowlist         []string        `json:"link_allowlist"`
 	HandoffTeamID         *string         `json:"handoff_team_id"`
 	RaisePriority         bool            `json:"raise_priority_on_handoff"`
+	HandoffMode           string          `json:"handoff_mode"`
+	AlwaysHandoffTagIDs   []string        `json:"always_handoff_tag_ids"`
 	MonthlySpendCapMicros *int64          `json:"monthly_spend_cap_micros"`
 	ActionsEnabled        bool            `json:"actions_enabled"`
 	UpdatedAt             time.Time       `json:"updated_at"`
@@ -131,6 +135,7 @@ func NewAIAgent(a models.AiAgent) AIAgent {
 		IncludeContactContext: a.IncludeContactContext, PiiRedaction: a.PiiRedaction,
 		LinkAllowlist: orEmpty(a.LinkAllowlist),
 		HandoffTeamID: publicPtr(models.PrefixTeam, handoff.TargetTeamID), RaisePriority: handoff.RaisePriority,
+		HandoffMode: string(handoff.Mode), AlwaysHandoffTagIDs: publicIDs(models.PrefixTag, handoff.AlwaysTags),
 		MonthlySpendCapMicros: a.MonthlySpendCapMicros, ActionsEnabled: a.ActionsEnabled, UpdatedAt: a.UpdatedAt,
 	}
 }

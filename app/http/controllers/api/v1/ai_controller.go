@@ -89,7 +89,14 @@ func (c *AIController) agentPatch(b requests.AIUpdateAgentBody, sent map[string]
 		FallbackModel:    ai.Optional[string]{Set: sent["fallback_model"], Value: b.FallbackModel},
 		MonthlyCapMicros: capMicros(sent, b.MonthlyCapUSD),
 		MaxAiReplies:     b.MaxAiReplies,
+		HandoffMode:      handoffMode(b.HandoffMode),
 	}
+
+	tags, err := c.tagIDs(sent, b.AlwaysHandoffTag)
+	if err != nil {
+		return p, err
+	}
+	p.AlwaysHandoffTags = tags
 
 	refs := []struct {
 		field  string
@@ -131,6 +138,41 @@ func (c *AIController) optionalID(sent map[string]bool, field string, prefix mod
 		return ai.Optional[ids.UUID]{}, fault.New(fault.Invalid, "invalid_id", "the id is not valid").OnField(field)
 	}
 	return ai.Optional[ids.UUID]{Set: true, Value: &id}, nil
+}
+
+/*
+handoffMode maps the agent's role the request sent, if any.
+*/
+func handoffMode(mode *string) *enums.AIHandoffMode {
+	if mode == nil {
+		return nil
+	}
+	m := enums.AIHandoffMode(*mode)
+	return &m
+}
+
+/*
+tagIDs decodes the public tag ids that always hand off; a list sent as
+null clears it.
+*/
+func (c *AIController) tagIDs(sent map[string]bool, list *[]string) (*[]ids.UUID, error) {
+	const field = "always_handoff_tag_ids"
+	if !sent[field] {
+		return nil, nil
+	}
+
+	out := []ids.UUID{}
+	if list == nil {
+		return &out, nil
+	}
+	for _, v := range *list {
+		id, err := c.IDs.Decode(string(models.PrefixTag), v)
+		if err != nil {
+			return nil, fault.New(fault.Invalid, "invalid_id", "the id is not valid").OnField(field)
+		}
+		out = append(out, id)
+	}
+	return &out, nil
 }
 
 /*

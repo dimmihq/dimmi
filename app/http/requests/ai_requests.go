@@ -31,8 +31,8 @@ AIAgentRequest names the agent implicitly: the workspace has one.
 type AIAgentRequest struct{}
 
 /*
-AIUpdateAgentBody is the body of PATCH /ai/agent. Key and team ids are
-public ids; monthly_cap_usd of 0 means no cap.
+AIUpdateAgentBody is the body of PATCH /ai/agent. Key, team and tag ids
+are public ids; monthly_cap_usd of 0 means no cap.
 */
 type AIUpdateAgentBody struct {
 	Name             *string   `json:"name,omitempty"                      validate:"omitempty,min=1,max=60"`
@@ -59,6 +59,8 @@ type AIUpdateAgentBody struct {
 	LinkAllowlist    *[]string `json:"link_allowlist,omitempty"            validate:"omitempty,max=100"`
 	HandoffTeamID    *string   `json:"handoff_team_id,omitempty"           validate:"omitempty,max=64"`
 	RaisePriority    *bool     `json:"raise_priority_on_handoff,omitempty"`
+	HandoffMode      *string   `json:"handoff_mode,omitempty"`
+	AlwaysHandoffTag *[]string `json:"always_handoff_tag_ids,omitempty"    validate:"omitempty,max=50,dive,max=64"`
 }
 
 /*
@@ -86,6 +88,7 @@ func (r *AIUpdateAgentRequest) Validate(ctx context.Context, _ *validation.Facto
 		{"assigned_behavior", b.AssignedBehavior, AIAssignedBehaviors()},
 		{"unknown_behavior", b.UnknownBehavior, AIUnknownBehaviors()},
 		{"include_contact_context", b.IncludeContact, AIContactContexts()},
+		{"handoff_mode", b.HandoffMode, AIHandoffModes()},
 	}
 	for _, e := range enumsByField {
 		if e.value != nil && !slices.Contains(e.allowed, *e.value) {
@@ -115,6 +118,17 @@ func AITones() []string {
 	out := []string{}
 	for _, tone := range enums.AITones() {
 		out = append(out, string(tone))
+	}
+	return out
+}
+
+/*
+AIHandoffModes lists the agent's roles in a conversation.
+*/
+func AIHandoffModes() []string {
+	out := []string{}
+	for _, mode := range enums.AIHandoffModes() {
+		out = append(out, string(mode))
 	}
 	return out
 }

@@ -8,12 +8,14 @@ import {
   AI_ASSIGNED_BEHAVIORS,
   AI_CHANNELS,
   AI_CONTACT_CONTEXTS,
+  AI_HANDOFF_MODES,
   AI_SCHEDULES,
   AI_TONES,
   AI_UNKNOWN_BEHAVIORS,
   type AiAssignedBehavior,
   type AiChannel,
   type AiContactContext,
+  type AiHandoffMode,
   type AiModelEntry,
   type AiSchedule,
   type AiTone,
@@ -62,6 +64,14 @@ export const unknownBehaviors = choices<AiUnknownBehavior>(AI_UNKNOWN_BEHAVIORS,
   offer_handoff: ["Offer a teammate", ""],
   handoff: ["Hand over straight away", ""],
   say_unknown: ["Just say it doesn't know", ""],
+});
+
+export const handoffModes = choices<AiHandoffMode>(AI_HANDOFF_MODES, {
+  full: ["Answer and resolve", "Answers from your knowledge and hands over what it can't solve."],
+  triage_only: [
+    "Triage only",
+    "Understands the request, titles, tags and routes it, then hands it to your team. It never answers.",
+  ],
 });
 
 export const contactContexts = choices<AiContactContext>(AI_CONTACT_CONTEXTS, {

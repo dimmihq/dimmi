@@ -2,7 +2,7 @@
  * The agent's API: the agent's settings, the provider connections it
  * runs on, the month's usage, a conversation's runs and the playground.
  * Every call names the workspace in the Dimmi-Workspace header, and
- * every id is a public one (aia_, aik_, team_, conv_, air_, ais_).
+ * every id is a public one (aia_, aik_, team_, tag_, conv_, air_, ais_).
  */
 import { queryOptions } from "@tanstack/react-query";
 
@@ -15,6 +15,7 @@ export const AI_ASSIGNED_BEHAVIORS = ["skip_when_human_active", "never_when_assi
 export const AI_UNKNOWN_BEHAVIORS = ["offer_handoff", "handoff", "say_unknown"] as const;
 export const AI_CONTACT_CONTEXTS = ["none", "basic"] as const;
 export const AI_CHANNELS = ["widget", "email", "api"] as const;
+export const AI_HANDOFF_MODES = ["full", "triage_only"] as const;
 
 export type AiTone = (typeof AI_TONES)[number];
 export type AiSchedule = (typeof AI_SCHEDULES)[number];
@@ -22,6 +23,7 @@ export type AiAssignedBehavior = (typeof AI_ASSIGNED_BEHAVIORS)[number];
 export type AiUnknownBehavior = (typeof AI_UNKNOWN_BEHAVIORS)[number];
 export type AiContactContext = (typeof AI_CONTACT_CONTEXTS)[number];
 export type AiChannel = (typeof AI_CHANNELS)[number];
+export type AiHandoffMode = (typeof AI_HANDOFF_MODES)[number];
 
 export interface AiModelEntry {
   id: string;
@@ -72,6 +74,10 @@ export interface AiAgent {
   link_allowlist: string[];
   handoff_team_id: string | null;
   raise_priority_on_handoff: boolean;
+  /* full answers and resolves; triage_only sorts the request and hands it to the team. */
+  handoff_mode: AiHandoffMode;
+  /* Public tag ids: a conversation tagged with one always goes to the team. */
+  always_handoff_tag_ids: string[];
   monthly_spend_cap_micros: number | null;
   actions_enabled: boolean;
   updated_at: string;
@@ -252,6 +258,9 @@ export interface AgentPatch {
   link_allowlist?: string[];
   handoff_team_id?: string | null;
   raise_priority_on_handoff?: boolean;
+  handoff_mode?: AiHandoffMode;
+  /* Replaces the whole list; at most 50 of the workspace's tags. */
+  always_handoff_tag_ids?: string[];
 }
 
 export function updateAgent(workspace: string, body: AgentPatch) {

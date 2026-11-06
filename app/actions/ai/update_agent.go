@@ -16,7 +16,6 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -28,6 +27,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/config"
 )
@@ -47,7 +47,9 @@ non-nil and cannot be cleared; Optional fields may also be cleared.
 EnabledChannels, Languages and LinkAllowlist replace their lists
 whole; link hosts are stored lowercase.
 MonthlyCapMicros cleared means no cap. HandoffTeamID names the team a
-handed-off conversation goes to.
+handed-off conversation goes to, HandoffMode the agent's role and
+AlwaysHandoffTags the tags that always send a conversation to a
+person; that list replaces the stored one whole.
 */
 type AgentPatch struct {
 	Name, Tone, Guidance, Schedule     *string
@@ -61,6 +63,8 @@ type AgentPatch struct {
 	ProductName, AnswerModel           Optional[string]
 	FallbackModel                      Optional[string]
 	AnswerKeyID, FallbackKeyID         Optional[ids.UUID]
+	HandoffMode                        *enums.AIHandoffMode
+	AlwaysHandoffTags                  *[]ids.UUID
 	HandoffTeamID                      Optional[ids.UUID]
 	MonthlyCapMicros                   Optional[int64]
 }
@@ -78,8 +82,8 @@ UpdateAiAgent saves the agent's settings.
 
 Rules:
   - The caller needs ai_agent:manage.
-  - Connections named for a role and the handoff team must be live
-    rows of the workspace.
+  - Connections named for a role, the handoff team and the tags that
+    always hand off must be live rows of the workspace.
   - Switching the agent on needs a usable answer model and a channel.
   - Changing the cap lifts a pause the old cap caused, when the month's
     spend is below the new one.
@@ -192,7 +196,7 @@ func applyPatch(agent *models.AiAgent, p AgentPatch) {
 	setOptional(&agent.AnswerKeyID, p.AnswerKeyID)
 	setOptional(&agent.FallbackKeyID, p.FallbackKeyID)
 	setOptional(&agent.MonthlySpendCapMicros, capMicros(p.MonthlyCapMicros))
-	agent.Handoff = mergeHandoff(agent.Handoff, p.HandoffTeamID, p.RaisePrio)
+	agent.Handoff = mergeHandoff(agent.Handoff, p)
 }
 
 /*
@@ -250,45 +254,6 @@ func capMicros(c Optional[int64]) Optional[int64] {
 }
 
 /*
-Handoff is the agent's handoff settings as stored: the team a
-handed-off conversation goes to and whether its priority rises.
-*/
-type Handoff struct {
-	TargetTeamID  *ids.UUID `json:"target_team_id,omitempty"`
-	RaisePriority bool      `json:"raise_priority,omitempty"`
-}
-
-/*
-ReadHandoff reads the stored handoff settings; a value it cannot read
-counts as none.
-*/
-func ReadHandoff(raw json.RawMessage) Handoff {
-	var h Handoff
-	_ = json.Unmarshal(raw, &h)
-	return h
-}
-
-/*
-mergeHandoff folds the handoff fields the caller sent into the stored
-settings.
-*/
-func mergeHandoff(raw json.RawMessage, team Optional[ids.UUID], raise *bool) json.RawMessage {
-	if !team.Set && raise == nil {
-		return raw
-	}
-
-	h := ReadHandoff(raw)
-	setOptional(&h.TargetTeamID, team)
-	set(&h.RaisePriority, raise)
-
-	out, err := json.Marshal(h)
-	if err != nil {
-		return raw
-	}
-	return out
-}
-
-/*
 checkPatch refuses a save that names rows outside the workspace or
 switches on an agent that could not answer.
 */
@@ -308,6 +273,10 @@ func checkPatch(ctx context.Context, tx *database.Tx, agent models.AiAgent, p Ag
 	}
 
 	if err := checkTeam(ctx, tx, agent.WorkspaceID, p.HandoffTeamID); err != nil {
+		return err
+	}
+
+	if err := checkTags(ctx, tx, agent.WorkspaceID, p.AlwaysHandoffTags); err != nil {
 		return err
 	}
 

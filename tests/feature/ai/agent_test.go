@@ -169,6 +169,63 @@ func TestAiAgent(t *testing.T) {
 			AssertJSONPath("data.agent.raise_priority_on_handoff", true)
 	})
 
+	t.Run("saves the agent's role and the tags that always hand off", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		legal := d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "Legal"}).AssertCreated().String("data.id")
+		refunds := d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "Refunds"}).AssertCreated().String("data.id")
+
+		d.Owner.GetJSON("/api/v1/ai/agent").AssertOK().
+			AssertJSONPath("data.agent.handoff_mode", "full").
+			AssertJSONPath("data.agent.always_handoff_tag_ids", []string{})
+
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{
+			"handoff_mode": "triage_only", "always_handoff_tag_ids": []string{legal, refunds, legal},
+		}).AssertOK().
+			AssertJSONPath("data.agent.handoff_mode", "triage_only").
+			AssertJSONPath("data.agent.always_handoff_tag_ids", []string{legal, refunds})
+
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"name": "Ada", "raise_priority_on_handoff": true}).
+			AssertOK()
+		d.Owner.GetJSON("/api/v1/ai/agent").AssertOK().
+			AssertJSONPath("data.agent.handoff_mode", "triage_only").
+			AssertJSONPath("data.agent.always_handoff_tag_ids", []string{legal, refunds}).
+			AssertJSONPath("data.agent.raise_priority_on_handoff", true)
+
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{
+			"handoff_mode": "full", "always_handoff_tag_ids": []string{refunds},
+		}).AssertOK().
+			AssertJSONPath("data.agent.handoff_mode", "full").
+			AssertJSONPath("data.agent.always_handoff_tag_ids", []string{refunds})
+
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"always_handoff_tag_ids": nil}).AssertOK().
+			AssertJSONPath("data.agent.always_handoff_tag_ids", []string{})
+	})
+
+	t.Run("refuses a role or a tag the workspace does not have", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		legal := d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "Legal"}).AssertCreated().String("data.id")
+		other := models.PublicID(models.PrefixTag, ids.New())
+		team := models.PublicID(models.PrefixTeam, ids.New())
+
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"handoff_mode": "answer_everything"}).
+			AssertValidationError("handoff_mode")
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"always_handoff_tag_ids": []string{legal, other}}).
+			AssertValidationError("always_handoff_tag_ids")
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"always_handoff_tag_ids": []string{team}}).
+			AssertValidationError("always_handoff_tag_ids")
+		tooMany := make([]string, 51)
+		for i := range tooMany {
+			tooMany[i] = legal
+		}
+		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"always_handoff_tag_ids": tooMany}).
+			AssertValidationError("always_handoff_tag_ids")
+
+		d.Owner.GetJSON("/api/v1/ai/agent").AssertOK().
+			AssertJSONPath("data.agent.always_handoff_tag_ids", []string{})
+	})
+
 	t.Run("switches on only an agent that could answer", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)

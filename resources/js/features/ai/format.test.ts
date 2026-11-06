@@ -44,6 +44,8 @@ const agent: AiAgent = {
   link_allowlist: [],
   handoff_team_id: null,
   raise_priority_on_handoff: false,
+  handoff_mode: "full",
+  always_handoff_tag_ids: [],
   monthly_spend_cap_micros: 25_000_000,
   actions_enabled: true,
   include_contact_context: "basic",
@@ -133,6 +135,8 @@ describe("ai format", () => {
     expect(applyChange(agent, { handoff_team_id: "team_1" }).handoff_team_id).toBe("team_1");
     expect(applyChange({ ...agent, handoff_team_id: "team_1" }, { handoff_team_id: null }).handoff_team_id).toBeNull();
     expect(applyChange(agent, { tone: "concise" }).tone).toBe("concise");
+    expect(applyChange(agent, { handoff_mode: "triage_only" }).handoff_mode).toBe("triage_only");
+    expect(applyChange(agent, { always_handoff_tag_ids: ["tag_1"] }).always_handoff_tag_ids).toEqual(["tag_1"]);
   });
 
   it("prices models from the catalog, and lists bare ids it does not know", () => {

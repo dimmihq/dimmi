@@ -21,11 +21,13 @@
 package pipeline
 
 import (
-	"encoding/json"
 	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/actions/ai"
+	"github.com/dimmihq/dimmi/app/enums"
 )
 
 /*
@@ -33,8 +35,8 @@ The turn modes: full answers from the knowledge, triage only sorts the
 conversation and hands it to a person.
 */
 const (
-	ModeFull       = "full"
-	ModeTriageOnly = "triage_only"
+	ModeFull       = string(enums.AIHandoffModeFull)
+	ModeTriageOnly = string(enums.AIHandoffModeTriageOnly)
 )
 
 /*
@@ -70,29 +72,18 @@ type WorkflowControl struct {
 }
 
 /*
-handoffSettings is the agent's stored handoff routing and rules.
-*/
-type handoffSettings struct {
-	TargetTeamID  *ids.UUID  `json:"target_team_id"`
-	RaisePriority bool       `json:"raise_priority"`
-	Mode          string     `json:"mode"`
-	AlwaysTags    []ids.UUID `json:"always_tags"`
-}
-
-/*
 settingsFor builds a turn's settings from the agent's own: its mode and
 the tools it allows, its reply limit, and its handoff routing and rules.
 */
 func settingsFor(e *env) *TurnSettings {
-	var h handoffSettings
-	_ = json.Unmarshal(e.Agent.Handoff, &h)
+	h := ai.ReadHandoff(e.Agent.Handoff)
 
 	s := &TurnSettings{
 		Mode: ModeFull, Tools: []string{toolSearchKnowledge, toolHandoff, toolTriage},
 		AlwaysHandoffTags: h.AlwaysTags, HandoffTeamID: h.TargetTeamID, RaisePriority: h.RaisePriority,
 		MaxReplies: e.Agent.MaxAiReplies,
 	}
-	if h.Mode == ModeTriageOnly {
+	if h.Mode == enums.AIHandoffModeTriageOnly {
 		s.Mode, s.Tools = ModeTriageOnly, []string{toolHandoff, toolTriage}
 	}
 	return s
