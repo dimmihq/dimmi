@@ -2,7 +2,10 @@
  * What every way of signing in does once the server answered: remember
  * who is signed in and go where the person was headed, or, when the
  * account asks for a second factor, keep the challenge and open the page
- * that answers it, still headed to the same place.
+ * that answers it, still headed to the same place. A check of who is
+ * signed in that started before the answer is stopped first, so its
+ * older "nobody" cannot land afterwards and send the person back to the
+ * sign-in page.
  */
 import { queryOptions, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
@@ -33,7 +36,7 @@ export function useSignedIn(redirect: string) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  return (result: SignInResult) => {
+  return async (result: SignInResult) => {
     if (isChallenge(result)) {
       queryClient.setQueryData(challengeQuery.queryKey, result);
       router.history.push(challengePath(redirect));
@@ -41,6 +44,7 @@ export function useSignedIn(redirect: string) {
       return;
     }
 
+    await queryClient.cancelQueries({ queryKey: meQuery.queryKey });
     queryClient.setQueryData(meQuery.queryKey, result as Me);
     router.history.push(redirect);
   };
