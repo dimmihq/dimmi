@@ -15,6 +15,7 @@ import { Panel as Pane } from "react-resizable-panels";
 
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { ExportButton } from "@/features/exports/export-button";
 import { PageOutlet } from "@/features/layout/page-outlet";
 import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
@@ -152,6 +153,15 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
           workspace={workspace}
           view={view}
           start={{ sort: settings.sort, status: settings.params.status ? undefined : settings.status }}
+        />
+        <ExportButton
+          compact
+          workspace={workspace}
+          kind="conversations"
+          selection={{
+            filter: { view: settings.params.filter, status: settings.status },
+            q: query.trim() || undefined,
+          }}
         />
       </PageHeader>
       <div className="shrink-0 px-[7px] pb-2">

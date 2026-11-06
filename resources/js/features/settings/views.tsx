@@ -21,6 +21,7 @@ import {
 import { ConversationSafetySettings } from "./pages/conversation-safety";
 import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
+import { ExportsSettings } from "./pages/exports";
 import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
 import { MessengersSettings } from "./pages/messengers";
@@ -36,6 +37,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   preferences: PreferencesSettings,
   security: SecuritySettings,
   tokens: TokensSettings,
+  exports: ExportsSettings,
   inboxes: InboxesSettings,
   tags: TagsSettings,
   "saved-replies": SavedRepliesSettings,

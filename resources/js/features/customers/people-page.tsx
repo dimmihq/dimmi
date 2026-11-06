@@ -14,9 +14,10 @@ import { useDeferredValue, useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
+import { ExportButton } from "@/features/exports/export-button";
 import { EmptyState } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
-import { createContact, customerKeys, type PeopleFilters, peopleQuery } from "@/lib/api/customers";
+import { createContact, customerKeys, type PeopleFilters, peopleQuery, peopleSelection } from "@/lib/api/customers";
 
 import { CustomersFrame } from "./frame";
 import { useWorkspace } from "./names";
@@ -108,6 +109,11 @@ export function PeoplePage({ blocked = false }: { blocked?: boolean }) {
           />
           <PeopleFiltersBar filters={filters} onChange={setFilters} />
           <ColumnsChooser />
+          <ExportButton
+            workspace={workspace}
+            kind="contacts"
+            selection={peopleSelection({ ...filters, q: q || undefined, blocked })}
+          />
         </div>
         {list.isError ? (
           <EmptyState icon={RiUser3Line} title="People could not be loaded" description={list.error.message} />

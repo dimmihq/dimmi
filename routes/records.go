@@ -36,6 +36,28 @@ func recordRoutes(r *routing.Router, a *app.App) {
 	contactDetailRoutes(r, a)
 	companyRoutes(r, a)
 	redactionRoutes(r, a)
+	dataExportRoutes(r, a)
+}
+
+/*
+dataExportRoutes declares the routes on members' data exports. Each
+export belongs to the member who asked for it.
+*/
+func dataExportRoutes(r *routing.Router, a *app.App) {
+	acts := a.Actions.Inbox
+	c := &v1.DataExportController{
+		Request: acts.RequestDataExport, List: acts.ListDataExports, Show: acts.ShowDataExport,
+		Download: acts.DownloadDataExport, Remove: acts.DeleteDataExport, IDs: a.IDs,
+	}
+	path := "/data-exports/{data_export}"
+
+	routing.Post(r, "/data-exports", "data-exports.store", c.Store).Ability("conversations:read").
+		Status(http.StatusAccepted)
+	routing.Get(r, "/data-exports", "data-exports.index", c.Index).Ability("conversations:read")
+	routing.Get(r, path, "data-exports.show", c.Get).Ability("conversations:read")
+	routing.Get(r, path+"/download", "data-exports.download", c.File).Ability("conversations:read")
+	routing.Delete(r, path, "data-exports.destroy", c.Destroy).Ability("conversations:read").
+		Status(http.StatusNoContent)
 }
 
 /*

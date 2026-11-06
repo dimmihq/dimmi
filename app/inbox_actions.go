@@ -18,6 +18,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/dataexports"
 	"github.com/dimmihq/dimmi/app/actions/drafts"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
@@ -127,4 +128,12 @@ type InboxActions struct {
 
 	ApplyRetention   *retention.ApplyConversationRetention
 	PreviewRetention *retention.PreviewRetention
+
+	RequestDataExport  *dataexports.RequestDataExport
+	ListDataExports    *dataexports.ListDataExports
+	ShowDataExport     *dataexports.ShowDataExport
+	DownloadDataExport *dataexports.DownloadDataExport
+	DeleteDataExport   *dataexports.DeleteDataExport
+	BuildDataExport    *dataexports.BuildDataExport
+	ExpireDataExports  *dataexports.ExpireDataExports
 }

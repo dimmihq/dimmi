@@ -200,9 +200,12 @@ function queryString(entries: [string, string | undefined][]): string {
   return params.toString();
 }
 
-function peoplePath(filters: PeopleFilters, cursor: string | null): string {
-  const entries: [string, string | undefined][] = [
-    ["q", filters.q],
+/*
+ * peopleFilters writes the directory's filters as the list reads them,
+ * with no value for those not set.
+ */
+function peopleFilters(filters: PeopleFilters): [string, string | undefined][] {
+  return [
     ["filter[kind]", filters.kind],
     ["filter[tag]", filters.tag],
     ["filter[company]", filters.company],
@@ -210,12 +213,34 @@ function peoplePath(filters: PeopleFilters, cursor: string | null): string {
     windowFilter("last_seen", filters.seen, Date.now()),
     windowFilter("created", filters.created, Date.now()),
     [`filter[custom.${filters.attribute?.key ?? ""}]`, filters.attribute?.value],
+  ];
+}
+
+function peoplePath(filters: PeopleFilters, cursor: string | null): string {
+  const entries: [string, string | undefined][] = [
+    ["q", filters.q],
+    ...peopleFilters(filters),
     ["sort", filters.sort],
     ["cursor", cursor ?? undefined],
   ];
   const query = queryString(entries);
 
   return `/contacts${query ? `?${query}` : ""}`;
+}
+
+/*
+ * peopleSelection is what an export of the directory's current list
+ * covers: its filters and search.
+ */
+export function peopleSelection(filters: PeopleFilters): { filter: Record<string, string>; q?: string } {
+  const filter: Record<string, string> = {};
+  for (const [key, value] of peopleFilters(filters)) {
+    if (value) {
+      filter[key.slice("filter[".length, -1)] = value;
+    }
+  }
+
+  return filters.q ? { filter, q: filters.q } : { filter };
 }
 
 export function peopleQuery(workspace: string, filters: PeopleFilters) {

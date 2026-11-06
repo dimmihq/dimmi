@@ -186,6 +186,13 @@ export const settingsPages = {
     "/d/settings/tokens",
     "Tokens for scripts, the CLI and coding agents.",
   ),
+  exports: page(
+    "settings-exports",
+    "Exports",
+    RiDownload2Line,
+    "/d/settings/exports",
+    "Files of conversations and customers you exported.",
+  ),
   inboxes: page(
     "settings-inboxes",
     "Inboxes",
@@ -434,7 +441,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "account",
       label: "Account",
-      items: [pages.profile, pages.preferences, pages.security, pages.tokens],
+      items: [pages.profile, pages.preferences, pages.security, pages.tokens, pages.exports],
     },
     {
       key: "inbox",
