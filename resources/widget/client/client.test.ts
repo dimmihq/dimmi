@@ -449,6 +449,27 @@ describe("store", () => {
     expect(changes).toContain("seen");
   });
 
+  it("counts a reply once when the stream and a poll both bring it", () => {
+    const store = new Store(() => 0);
+    store.setConversations([conversation]);
+    const reply = {
+      message: {
+        id: "msg_3",
+        conversation_id: "conv_1",
+        author,
+        body: "hello",
+        attachments: [],
+        created_at: "2026-01-01T00:00:02Z",
+      },
+    };
+
+    store.apply("message.created", reply);
+    store.apply("message.created", reply);
+
+    expect(store.unread).toBe(1);
+    expect(store.messages.get("conv_1")?.map((m) => m.id)).toEqual(["msg_3"]);
+  });
+
   it("takes conversation events and moves pending messages to a new conversation", () => {
     const store = new Store(() => 0);
     store.apply("conversation.closed", { conversation: { ...conversation, status: "closed" } });

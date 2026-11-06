@@ -70,13 +70,14 @@ type ListWidgetUpdates struct {
 }
 
 /*
-Handle returns what changed for the visitor after the cursor; a first poll,
-with no cursor, starts from now.
+Handle returns what changed for the visitor after the cursor. A first poll,
+with no cursor, starts the overlap before now, so what changed while the
+messenger loaded and gave up on its stream still arrives.
 */
 func (a *ListWidgetUpdates) Handle(ctx context.Context, auth Authenticated, since *Cursor) (UpdatePage, error) {
 	now := a.Clock.Now()
 	if since == nil {
-		return UpdatePage{Items: []Update{}, Next: Cursor{At: now, ID: lastID()}}, nil
+		return UpdatePage{Items: []Update{}, Next: Cursor{At: now.Add(-pollOverlap), ID: lastID()}}, nil
 	}
 
 	var out UpdatePage

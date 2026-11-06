@@ -256,6 +256,20 @@ func TestWidgetUpdates(t *testing.T) {
 		assert.NotContains(t, string(later.Body), "polled reply")
 	})
 
+	t.Run("polling delivers a reply sent just before the first poll", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		reply(t, tc, id, "before polling")
+		tc.Clock.Travel(time.Second)
+
+		cursor := v.client().GetJSON("/widget/v1/updates").AssertOK().String("meta.cursor")
+		tc.Clock.Travel(5 * time.Second)
+
+		assert.Contains(t, string(poll(v, cursor).Body), "before polling")
+	})
+
 	t.Run("polling still delivers a change stamped before the last poll that committed after it", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

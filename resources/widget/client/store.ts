@@ -159,19 +159,22 @@ export class Store {
 
   /*
    * putMessage adds or replaces a message the server sent, matching the
-   * visitor's own pending copy by client id.
+   * visitor's own pending copy by client id, and says whether the message
+   * was new to the conversation rather than one it already showed.
    */
-  putMessage(message: Message) {
+  putMessage(message: Message): boolean {
     const conversation = message.conversation_id;
-    const list = (this.messages.get(conversation) ?? []).filter(
-      (m) => m.id !== message.id && !(message.client_id && m.client_id === message.client_id),
-    );
+    const before = this.messages.get(conversation) ?? [];
+    const known = before.some((m) => m.id === message.id);
+    const list = before.filter((m) => m.id !== message.id && !(message.client_id && m.client_id === message.client_id));
     this.messages.set(conversation, mergeMessages(list, [message]));
     if (message.author.type !== "contact") {
       this.typing.delete(conversation);
       this.emit("typing", conversation);
     }
     this.emit("messages", conversation);
+
+    return !known;
   }
 
   setTyping(conversation: string, typing: Typing | undefined) {
@@ -244,14 +247,14 @@ export class Store {
     if (!message) {
       return;
     }
-    this.putMessage(message);
+    const added = this.putMessage(message);
 
     const found = this.conversations.find((c) => c.id === message.conversation_id);
     if (!found) {
       return;
     }
     const fromTeam = message.author.type !== "contact";
-    const fresh = event === "message.created" && fromTeam;
+    const fresh = event === "message.created" && fromTeam && added;
     this.upsertConversation({
       ...found,
       customer_status: typeof data.customer_status === "string" ? data.customer_status : found.customer_status,
