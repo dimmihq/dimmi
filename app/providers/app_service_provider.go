@@ -195,6 +195,10 @@ func bootChannels(ctx context.Context, a *app.App) error {
 		return err
 	}
 
+	if err := bootNotifications(a); err != nil {
+		return err
+	}
+
 	return bootEmailSending(a)
 }
 

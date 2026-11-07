@@ -58,6 +58,8 @@ const (
 	PrefixRole               Prefix = "rol"
 	PrefixUserDevice         Prefix = "dev"
 	PrefixIdentitySecret     Prefix = "isk"
+	PrefixNotification       Prefix = "ntf"
+	PrefixPushSubscription   Prefix = "psub"
 )
 
 /*
@@ -212,8 +214,8 @@ func channelPublicIDs() []PublicIDEntry {
 		{"cml", "channel_member_links"},
 		{"cie", "channel_inbound_events"},
 		{"wtp", "whatsapp_templates"},
-		{"ntf", "notifications"},
-		{"psub", "push_subscriptions"},
+		{PrefixNotification, "notifications"},
+		{PrefixPushSubscription, "push_subscriptions"},
 		{"ndst", "notification_destinations"},
 		{"ndlv", "notification_deliveries"},
 	}

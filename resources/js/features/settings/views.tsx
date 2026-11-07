@@ -28,6 +28,7 @@ import { IdentitySettings } from "./pages/identity";
 import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
 import { MessengersSettings } from "./pages/messengers";
+import { NotificationsSettings } from "./pages/notifications";
 import { RolesSettings } from "./pages/roles";
 import { SingleSignOnSettings } from "./pages/single-sign-on";
 import { TagsSettings } from "./pages/tags";
@@ -38,6 +39,7 @@ import { MembersSettings, WorkspaceSettings } from "./pages/workspace";
 export const settingsViews: Record<SettingsSection, ComponentType> = {
   profile: ProfileSettings,
   preferences: PreferencesSettings,
+  notifications: NotificationsSettings,
   security: SecuritySettings,
   tokens: TokensSettings,
   exports: ExportsSettings,

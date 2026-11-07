@@ -932,6 +932,22 @@ claims `{"sub":"SUB","iat":now,"exp":now+600}`, key the whole `dmi_idsec_` strin
 | Messenger | page with `data-identity-url` answering `{"token":"<jwt>"}` for a signed-in user | the messenger signs in on load; signing out on the site sends `DELETE /widget/v1/session` on the next load and shows none of the previous conversations |
 | Agent actions | a published action binding `{contact.external_id}` on the widget channel; ask the signed-in messenger about the account | the action runs with the token's `sub`, never a value the model chose |
 
+## Teammate notifications
+
+`a.jar` is the owner, `$WS` the workspace id; a customer writes through the messenger (`$W/widget/v1/...`). Waiting email and push run about a minute later.
+
+| Flow | Command | Expect |
+|---|---|---|
+| New conversation | customer starts a conversation | owner's `GET $B/notifications` has `new_conversation` with the excerpt; mail "… started a conversation" a minute later |
+| Replies fold | customer writes twice more | one unread `customer_replied` row with `count` 2; no email if the owner read the conversation meanwhile |
+| Read follows the inbox | `PATCH $B/conversations/<conv_>/read-state` | that conversation's notifications read; `unread_count` drops live |
+| Assignment and mentions | assign to a teammate; mention them in a note | they get `conversation_assigned` / `mentioned`; the actor never does |
+| Approvals | agent asks to run an action needing approval | approvers' bells show it with Approve/Decline; after a decision every row is read with `resolved` |
+| Choices | turn email off for a trigger; pause; quiet hours | email skipped, bell still filled |
+| Push | enable on a browser at `/d/settings/notifications`, send a customer message | system notification within about 10 s; a 410 from the push service removes the device |
+| Focus | keep the conversation open in a visible tab | no push or email about it |
+| Test | `POST $B/notification-tests {"channel":"email"}` | 204 and a test mail; push without a device: 422 `channel_unreachable` |
+
 ## Reporting
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in

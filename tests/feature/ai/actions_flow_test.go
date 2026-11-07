@@ -175,6 +175,32 @@ func TestAiActionApprovals(t *testing.T) {
 			AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "action_call_not_pending")
 	})
 
+	t.Run("asks approvers in their bell and takes the request away once decided", func(t *testing.T) {
+		t.Parallel()
+		a := newActionDesk(t, nil)
+		a.api.Stub("POST "+shopURL+"/orders/1042/refunds",
+			httpclient.Response{Status: 200, Body: []byte(`{"id":"re_78"}`)})
+		a.action(a.connection(), refund("none", "teammate"))
+		conv, trigger := a.conversation("Refund order 1042 please.")
+		a.signIn(conv)
+		a.llm.answer.Script(tools(call("refund_order", `{"order_id":"1042","amount_cents":2000}`)),
+			reply("I've asked the team to approve it."))
+		a.run(conv, trigger)
+		a.drain()
+
+		c := a.onlyCall(conv)
+		bell := a.d.Owner.GetJSON("/api/v1/notifications?filter[trigger]=ai_action_approval_requested").AssertOK()
+		bell.AssertJSONPath("data.0.action_call_id", publicCall(c)).AssertJSONPath("data.0.read", false)
+		assert.Contains(t, bell.String("data.0.title"), "Refund order")
+
+		member, _ := a.d.Join(t, enums.RoleMember)
+		member.PatchJSON("/api/v1/ai/action-calls/"+publicCall(c), testkit.JSON{"status": "approved"}).AssertOK()
+		a.llm.answer.Script(reply("Approved."))
+		a.drain()
+		a.d.Owner.GetJSON("/api/v1/notifications?filter[trigger]=ai_action_approval_requested").AssertOK().
+			AssertJSONPath("data.0.read", true).AssertJSONPath("data.0.resolved", "approved")
+	})
+
 	t.Run("counts calls waiting for approval on the conversation and its list row", func(t *testing.T) {
 		t.Parallel()
 		a := newActionDesk(t, nil)

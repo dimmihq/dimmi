@@ -1,0 +1,14 @@
+{
+  "new_conversation": "{{.name}} started a conversation",
+  "conversation_assigned": "{{.actor}} assigned you a conversation with {{.name}}",
+  "conversation_assigned_system": "You were assigned a conversation with {{.name}}",
+  "customer_replied": "{{.name}} replied",
+  "mentioned": "{{.actor}} mentioned you in a note",
+  "ai_handoff_requested": "The agent handed over {{.name}}'s conversation",
+  "ai_action_approval_requested": "Approve {{.action}} for {{.name}}?",
+  "snooze_expired": "{{.name}}'s conversation is back from snooze",
+  "team_joined": "{{.actor}} added you to {{.team}}",
+  "someone": "Someone",
+  "a_customer": "A customer",
+  "test": "Notifications work on this device"
+}

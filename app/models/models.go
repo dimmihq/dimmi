@@ -919,6 +919,49 @@ type MessageReaction struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Notification struct {
+	ID             ids.UUID        `json:"id"`
+	NotifiableType string          `json:"notifiable_type"`
+	NotifiableID   string          `json:"notifiable_id"`
+	Type           string          `json:"type"`
+	Data           json.RawMessage `json:"data"`
+	ReadAt         *time.Time      `json:"read_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	TenantID       *string         `json:"tenant_id"`
+	GroupKey       *string         `json:"group_key"`
+	Count          int32           `json:"count"`
+	LastDeliveryID *string         `json:"last_delivery_id"`
+	SeenAt         *time.Time      `json:"seen_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+}
+
+type NotificationPreference struct {
+	ID                ids.UUID  `json:"id"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
+	Trigger           string    `json:"trigger"`
+	Channel           string    `json:"channel"`
+	Enabled           bool      `json:"enabled"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type NotificationSetting struct {
+	WorkspaceMemberID ids.UUID   `json:"workspace_member_id"`
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	Timezone          *string    `json:"timezone"`
+	QuietHoursEnabled bool       `json:"quiet_hours_enabled"`
+	QuietHoursStart   string     `json:"quiet_hours_start"`
+	QuietHoursEnd     string     `json:"quiet_hours_end"`
+	QuietHoursDays    int16      `json:"quiet_hours_days"`
+	QuietHoursBypass  []string   `json:"quiet_hours_bypass"`
+	PausedUntil       *time.Time `json:"paused_until"`
+	ShowPreviews      bool       `json:"show_previews"`
+	IncludeAiHandled  bool       `json:"include_ai_handled"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
 type OauthAuthorizationCode struct {
 	ID            ids.UUID   `json:"id"`
 	CodeHash      []byte     `json:"code_hash"`
@@ -1084,6 +1127,25 @@ type PersonalAccessToken struct {
 	RevokedByMemberID *ids.UUID  `json:"revoked_by_member_id"`
 	MintedAsRole      *string    `json:"minted_as_role"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type PushSubscription struct {
+	ID                  ids.UUID          `json:"id"`
+	UserID              ids.UUID          `json:"user_id"`
+	SessionID           *ids.UUID         `json:"session_id"`
+	Endpoint            string            `json:"endpoint"`
+	EndpointHash        []byte            `json:"endpoint_hash"`
+	P256dh              string            `json:"p256dh"`
+	AuthSecretEncrypted encryption.Sealed `json:"auth_secret_encrypted"`
+	VapidKeyID          string            `json:"vapid_key_id"`
+	Platform            string            `json:"platform"`
+	UserAgent           *string           `json:"user_agent"`
+	DeviceLabel         *string           `json:"device_label"`
+	LastSuccessAt       *time.Time        `json:"last_success_at"`
+	LastFailureAt       *time.Time        `json:"last_failure_at"`
+	ConsecutiveFailures int32             `json:"consecutive_failures"`
+	CreatedAt           time.Time         `json:"created_at"`
+	UpdatedAt           time.Time         `json:"updated_at"`
 }
 
 type RedactionRule struct {

@@ -90,6 +90,13 @@ func (r RestrictedMember) scope() authz.ConversationScope {
 }
 
 /*
+Sees reports whether the member may see a conversation held as given.
+*/
+func (r RestrictedMember) Sees(h Holding) bool {
+	return r.scope().Sees(h.Inbox, h.Member, h.Team)
+}
+
+/*
 Holding is where a conversation sits and who holds it: a member, a
 team, both or nobody.
 */

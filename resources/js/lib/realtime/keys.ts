@@ -15,6 +15,7 @@ export const realtimeKeys = {
   preferences: (workspace: string) => ["workspace", workspace, "inbox-preferences"] as const,
   views: (workspace: string) => ["workspace", workspace, "conversation-views"] as const,
   drafts: (workspace: string) => ["workspace", workspace, "drafts"] as const,
+  notifications: (workspace: string) => ["workspace", workspace, "notifications"] as const,
   me: () => ["me"] as const,
 };
 

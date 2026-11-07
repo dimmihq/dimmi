@@ -37,9 +37,11 @@ import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
 import { Toaster } from "@/components/base/toast/toast";
 import { ActionProvider } from "@/features/inbox/actions/action-provider";
+import { useNotificationFocus } from "@/features/notifications/use-notification-focus";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
 import { countsQuery } from "@/lib/api/inbox";
+import { notificationCountsQuery } from "@/lib/api/notifications";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 
 import { useAvailability } from "./availability";
@@ -221,9 +223,14 @@ function SignedInShell({
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const { data: counts } = useQuery({ ...countsQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
+  const { data: bell } = useQuery({
+    ...notificationCountsQuery(workspace?.id ?? ""),
+    enabled: Boolean(workspace),
+  });
+  useNotificationFocus(workspace?.id ?? null, path);
   const sections = inSettings
     ? settingsSections(me.instance?.edition === "cloud")
-    : appSections(counts?.views.mine.open);
+    : appSections(counts?.views.mine.open, bell?.unseen_count);
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (

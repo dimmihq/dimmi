@@ -70,7 +70,7 @@ func Web(a *app.App) {
 	a.Router.Handle(fhttp.MethodGet, "/build/*", "build",
 		static.Handler(a.Frontend, static.Options{Immutable: true, Prefix: "/build"}))
 
-	widgetAssets(a)
+	browserFiles(a)
 
 	a.Router.Group("", func(browser *routing.Router) {
 		browser.Middleware("csp", "session")
@@ -82,6 +82,15 @@ func Web(a *app.App) {
 	})
 
 	ssoPages(a)
+}
+
+/*
+browserFiles declares the files browsers load outside the app's build:
+the messenger's, and the dashboard's service worker.
+*/
+func browserFiles(a *app.App) {
+	widgetAssets(a)
+	a.Router.Handle(fhttp.MethodGet, "/sw.js", "service-worker", fhttp.HandlerFunc(web.ServiceWorker))
 }
 
 /*

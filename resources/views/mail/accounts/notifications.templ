@@ -1,0 +1,23 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+MemberNotification tells a teammate about conversation activity: what
+happened, the customer's words when previews are on, a link straight to
+it, and a link to change which notifications reach them.
+*/
+
+templ MemberNotification(title, body, workspace, url, manageURL string) {
+	@layout(title) {
+		<p style="font-weight:600;">{ title }</p>
+		if body != "" {
+			<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #d7d7dc;background:#ffffff;color:#3b3b42;">{ body }</blockquote>
+		}
+		@button(url, i18n.T(ctx, "mail.notification.action", nil))
+		<p style="font-size:13px;color:#6b6b76;">
+			{ i18n.T(ctx, "mail.notification.why", i18n.Args{"workspace": workspace}) }
+			<a href={ templ.SafeURL(manageURL) } style="color:#6b6b76;">{ i18n.T(ctx, "mail.notification.manage", nil) }</a>
+		</p>
+	}
+}

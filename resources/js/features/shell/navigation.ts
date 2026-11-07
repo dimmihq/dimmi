@@ -172,6 +172,13 @@ export const settingsPages = {
     "/d/settings/preferences",
     "Time zone and theme: how dimmi looks for you.",
   ),
+  notifications: page(
+    "settings-notifications",
+    "Notifications",
+    RiNotification3Line,
+    "/d/settings/notifications",
+    "What reaches you, where, and when to stay quiet.",
+  ),
   security: page(
     "settings-security",
     "Security & access",
@@ -398,9 +405,16 @@ export const inboxLink = page("inbox", "Inbox", RiInbox2Line, "/d/inbox", "Every
  * appSections lists the workspace's pages in the sidebar, the inbox
  * showing how many open conversations are assigned to the person.
  */
-export function appSections(inboxBadge?: number): DashboardNavSection[] {
+export function appSections(inboxBadge?: number, notificationBadge?: number): DashboardNavSection[] {
+  const unseen = notificationBadge && notificationBadge >= 100 ? "99+" : notificationBadge || undefined;
   return [
-    { key: "you", items: [workspacePages.notifications, { ...inboxLink, badge: inboxBadge || undefined }] },
+    {
+      key: "you",
+      items: [
+        { ...workspacePages.notifications, badge: unseen },
+        { ...inboxLink, badge: inboxBadge || undefined },
+      ],
+    },
     { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },
     {
       key: "workspace",
@@ -441,7 +455,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "account",
       label: "Account",
-      items: [pages.profile, pages.preferences, pages.security, pages.tokens, pages.exports],
+      items: [pages.profile, pages.preferences, pages.notifications, pages.security, pages.tokens, pages.exports],
     },
     {
       key: "inbox",

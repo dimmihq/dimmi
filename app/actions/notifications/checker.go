@@ -1,0 +1,252 @@
+/*
+|--------------------------------------------------------------------------
+| Does It Still Matter
+|--------------------------------------------------------------------------
+|
+| An email or a push that waited asks once more before it goes. Not if
+| the member turned that channel off meanwhile, paused, or is in quiet
+| hours. Not if the conversation is gone, marked spam, or out of their
+| sight. Not if someone already did what it asks: picked up the new
+| conversation, answered the customer, decided the action. Not if the
+| member read it already, or is looking at it right now. And a customer
+| who keeps writing gets one push for the burst, not one per message.
+| The bell is never held back: it is the record of what happened.
+|
+*/
+
+package notifications
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"time"
+
+	"github.com/dimmihq/dimmi/framework/cache"
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
+	fnotify "github.com/dimmihq/dimmi/framework/notifications"
+	"github.com/dimmihq/dimmi/framework/tenancy"
+
+	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
+	"github.com/dimmihq/dimmi/app/models"
+)
+
+/*
+pushCooldown is how long a push about the same thing holds back the
+next one.
+*/
+const pushCooldown = 30 * time.Second
+
+/*
+Checker decides whether a waiting alert still goes out. Fanout knows
+who may see what; Cache holds the focus heartbeats and push cooldowns.
+*/
+type Checker struct {
+	DB     *database.DB
+	Cache  *cache.Store
+	Clock  clock.Clock
+	Fanout *appbroadcasting.Fanout
+}
+
+/*
+Allow reports whether the delivery goes out.
+*/
+func (c *Checker) Allow(ctx context.Context, a *Alert, d fnotify.Delivery) (bool, error) {
+	channel := appChannel(d.Channel)
+	if channel == ChannelInApp {
+		return true, nil
+	}
+	r, ok := d.Notifiable.(Recipient)
+	if !ok {
+		return false, nil
+	}
+	allowed := true
+	target := delivery{alert: a, to: r, channel: channel}
+	scoped := tenancy.With(ctx, a.WorkspaceID.String())
+	err := c.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		allowed, err = c.still(ctx, models.New(tx), target)
+		return err
+	})
+	if err != nil || !allowed {
+		return false, err
+	}
+	return c.unwatched(ctx, a, r, channel)
+}
+
+/*
+delivery is one alert on its way to one member on one channel.
+*/
+type delivery struct {
+	alert   *Alert
+	to      Recipient
+	channel string
+}
+
+/*
+still checks what the database says: the member's choices, the
+conversation and the action call.
+*/
+func (c *Checker) still(ctx context.Context, q *models.Queries, d delivery) (bool, error) {
+	a, r, channel := d.alert, d.to, d.channel
+	t, ok := FindTrigger(a.Trigger)
+	if !ok {
+		return false, nil
+	}
+	choices, err := LoadChoices(ctx, q, a.WorkspaceID, r.MemberID)
+	if err != nil {
+		return false, err
+	}
+	if !choices.Enabled(t, channel) || choices.Quiet(c.Clock.Now(), t.Key, r.Timezone) {
+		return false, nil
+	}
+	if a.CallID != nil {
+		return c.callPending(ctx, q, a)
+	}
+	if a.ConversationID == nil {
+		return true, nil
+	}
+	return c.conversationStill(ctx, q, d, choices)
+}
+
+/*
+callPending reports whether the action call still waits for a decision.
+*/
+func (c *Checker) callPending(ctx context.Context, q *models.Queries, a *Alert) (bool, error) {
+	call, err := q.FindActionCall(ctx, models.FindActionCallParams{WorkspaceID: a.WorkspaceID, ID: *a.CallID})
+	if errors.Is(err, database.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("load action call: %w", err)
+	}
+	return call.State == "pending_approval", nil
+}
+
+/*
+conversationStill checks the conversation the alert is about.
+*/
+func (c *Checker) conversationStill(ctx context.Context, q *models.Queries, d delivery, choices Choices,
+) (bool, error) {
+	a, r, channel := d.alert, d.to, d.channel
+	s, err := q.NotificationConversationState(ctx, models.NotificationConversationStateParams{
+		WorkspaceID: a.WorkspaceID, ConversationID: *a.ConversationID, MemberID: r.MemberID, Since: a.OccurredAt,
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("load conversation state: %w", err)
+	}
+	if s.DeletedAt != nil || s.Spam {
+		return false, nil
+	}
+	if channel == ChannelEmail && !s.LastReadAt.Before(a.OccurredAt) {
+		return false, nil
+	}
+	if !matters(a.Trigger, s, r, choices.Settings.IncludeAiHandled) {
+		return false, nil
+	}
+	held := appbroadcasting.Holding{Inbox: s.InboxID, Member: s.AssigneeMemberID, Team: s.AssigneeTeamID}
+	return c.sees(ctx, a, r, held)
+}
+
+/*
+matters applies each trigger's own condition: whether what it asks is
+still undone.
+*/
+func matters(trigger string, s models.NotificationConversationStateRow, r Recipient, includeAI bool) bool {
+	aiBusy := s.AiState == "active" && !includeAI
+	switch trigger {
+	case TriggerNewConversation:
+		return s.AssigneeMemberID == nil && !s.AnsweredSince && !aiBusy
+	case TriggerCustomerReplied:
+		return !s.CustomerWroteSince && !s.AnsweredSince && !aiBusy
+	case TriggerAssigned:
+		return s.AssigneeMemberID != nil && *s.AssigneeMemberID == r.MemberID
+	case TriggerHandoff:
+		return !s.AnsweredSince
+	case TriggerSnoozeExpired:
+		return s.Status == "open"
+	}
+	return true
+}
+
+/*
+sees reports whether the member may see the conversation as it is held
+now. Most members see everything; only restricted ones are checked.
+*/
+func (c *Checker) sees(ctx context.Context, a *Alert, r Recipient, h appbroadcasting.Holding) (bool, error) {
+	if c.Fanout == nil {
+		return true, nil
+	}
+	restricted, err := c.Fanout.Restricted(ctx, a.WorkspaceID)
+	if err != nil {
+		return false, fmt.Errorf("load restricted members: %w", err)
+	}
+	i := slices.IndexFunc(restricted, func(m appbroadcasting.RestrictedMember) bool { return m.MemberID == r.MemberID })
+	return i < 0 || restricted[i].Sees(h), nil
+}
+
+/*
+unwatched checks what only the cache knows: whether the member is
+looking at the conversation now, and whether a push about the same
+thing just went out.
+*/
+func (c *Checker) unwatched(ctx context.Context, a *Alert, r Recipient, channel string) (bool, error) {
+	if c.Cache == nil {
+		return true, nil
+	}
+	focus, err := c.Cache.Get(ctx, FocusKey(r.WorkspaceID, r.MemberID))
+	if err == nil && watching(a, string(focus)) {
+		return false, nil
+	}
+	if channel != ChannelPush {
+		return true, nil
+	}
+	key := "ntf:cooldown:" + r.MemberID.String() + ":" + a.GroupKey(fnotify.Delivery{}) + ":" + a.TitleKey
+	added, err := c.Cache.Add(ctx, key, []byte("1"), pushCooldown)
+	return added || err != nil, nil
+}
+
+/*
+watching reports whether what the member's dashboard shows covers the
+alert: the conversation itself, or, for a new conversation, the
+dashboard at all.
+*/
+func watching(a *Alert, focus string) bool {
+	if focus == "" {
+		return false
+	}
+	if a.Trigger == TriggerNewConversation {
+		return true
+	}
+	return a.ConversationID != nil && focus == a.ConversationID.String()
+}
+
+/*
+FocusKey is where a member's focus heartbeat is kept.
+*/
+func FocusKey(ws, member fmtStringer) string {
+	return "ntf:focus:" + ws.String() + ":" + member.String()
+}
+
+/*
+fmtStringer is anything with a String method, such as an id.
+*/
+type fmtStringer interface{ String() string }
+
+/*
+appChannel maps a framework channel to the member's channel.
+*/
+func appChannel(channel string) string {
+	switch channel {
+	case "mail":
+		return ChannelEmail
+	case "webpush":
+		return ChannelPush
+	}
+	return ChannelInApp
+}

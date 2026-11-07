@@ -127,6 +127,8 @@ export class Bridge {
       this.refetch(realtimeKeys.me());
     } else if (envelope.event.startsWith("member.")) {
       this.refetch(realtimeKeys.members(workspace), realtimeKeys.caller(workspace));
+    } else if (envelope.event === "notification.created" || envelope.event === "notifications.read") {
+      this.refetch(realtimeKeys.notifications(workspace));
     } else if (envelope.event === "conversation.hidden") {
       this.hide(workspace, envelope.data);
     } else if (envelope.event === "user.updated") {
@@ -150,6 +152,7 @@ export class Bridge {
       realtimeKeys.conversations(workspace),
       ["workspace", workspace, "conversation"],
       realtimeKeys.counts(workspace),
+      realtimeKeys.notifications(workspace),
     );
   }
 

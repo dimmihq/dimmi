@@ -186,5 +186,10 @@
     "subject": "The {{.connection}} certificate expires soon",
     "intro": "The certificate your identity provider signs with for {{.connection}} expires on {{.date}}. Add the new certificate before then, or nobody can sign in through it.",
     "action": "Open single sign-on"
+  },
+  "notification": {
+    "action": "Open in dimmi",
+    "why": "You get this because of your notification settings in {workspace}.",
+    "manage": "Change notifications"
   }
 }

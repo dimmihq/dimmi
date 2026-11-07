@@ -65,19 +65,20 @@ func Application() (*app.App, foundation.Options) {
 	application.Widget = public.Widget()
 
 	return application, foundation.Options{
-		Name:       Name,
-		Version:    Version,
-		EnvPrefix:  "DIMMI",
-		Config:     application.Config,
-		Configure:  application.ConfigureFramework,
-		Migrations: migrations.Files(),
-		Language:   lang.Files(),
-		Providers:  providers.All(application, routes.Register),
-		Broadcast:  application.ResolveRealtime,
-		Commands:   commands.All(application),
-		Module:     Module,
-		GateExcept: gateExcept(),
-		GatePage:   true,
+		Name:        Name,
+		Version:     Version,
+		EnvPrefix:   "DIMMI",
+		Config:      application.Config,
+		Configure:   application.ConfigureFramework,
+		Migrations:  migrations.Files(),
+		Language:    lang.Files(),
+		Providers:   providers.All(application, routes.Register),
+		Broadcast:   application.ResolveRealtime,
+		WebPushGone: application.PushGone,
+		Commands:    commands.All(application),
+		Module:      Module,
+		GateExcept:  gateExcept(),
+		GatePage:    true,
 	}
 }
 

@@ -12,6 +12,17 @@ Files: [README.md](README.md) (this), [delivery.md](delivery.md) (per-channel pa
 | T-03 | "Settings page and notifications page" below | M9, M10 |
 | X10 team-joined | Triggers `team_joined` | M9 |
 
+## Decisions 2026-11-07 (built)
+
+Owner left these to research; Intercom first. What shipped and where it differs from the text below:
+
+- **Channels at launch:** in-app bell, email, Web Push. Slack, destinations and the Slack app wait for the integrations work; their tables are not created yet.
+- **Waits, from Intercom:** customer replies push after a 10 s quiet window (one push per burst) and email after 3 min, both skipped if the member read or answered meanwhile. New conversations, assignments and mentions email after 1 min. Handoffs and approval requests go at once.
+- **Framework table, extended not forked:** `framework/notifications` database channel gained `tenant_id`, `group_key`, `count`, `seen_at`, `updated_at`, grouped upserts (one unread row per group) and `MarkSeen`; the app adds RLS on `tenant_id` and indexes. `RegisterWith` lets queued notifications carry services for send-time checks. Product data (trigger, conversation, call) lives in the row's `data`.
+- **Push keys:** derived from the install key when none are configured (`webpush.DeriveKeys`), so self-hosted push needs no setup. Subscriptions are sealed in the system key scope and tied to the browser session.
+- **Approvals:** the bell carries Approve and Decline on `ai_action_approval_requested`; once decided every member's row is read and shows how it ended. Push and email open the conversation.
+- **Not yet built:** `notification_deliveries` log, digests, burst thresholds beyond the per-conversation push cooldown, quiet-hours summary mail, RFC 8058 one-click unsubscribe (mail links to settings), system-stream feedback, MCP tools. Deep links use `/d/{slug}/...`, which the router resolves.
+
 ## Goal
 
 Tell workspace members (not customers) about conversation activity where they live: in-app bell, email, web push (desktop + installed PWA incl. iOS), Slack. Under 10 seconds, never spammy, never to wrong person.

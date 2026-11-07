@@ -139,6 +139,21 @@ export async function request<T>(
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<T> {
+  const json = await requestBody<{ data: T } | undefined>(method, path, body, options);
+
+  return json === undefined ? (undefined as T) : (json as { data: T }).data;
+}
+
+/*
+ * requestBody sends one API call and returns the whole body of the
+ * response, for endpoints that put counts or cursors beside the data.
+ */
+export async function requestBody<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options: RequestOptions = {},
+): Promise<T> {
   const headers: Record<string, string> = {
     ...options.headers,
     Accept: "application/json",
@@ -171,7 +186,7 @@ export async function request<T>(
     throw toApiError(response.status, json as ErrorBody | null);
   }
 
-  return (json as { data: T }).data;
+  return json as T;
 }
 
 /*
