@@ -252,15 +252,25 @@ const (
 )
 
 /*
+The prefixes of the help center's tables.
+*/
+const (
+	PrefixHelpCenter     Prefix = "hc"
+	PrefixCollection     Prefix = "col"
+	PrefixArticle        Prefix = "art"
+	PrefixArticleVersion Prefix = "artv"
+)
+
+/*
 helpCenterPublicIDs lists the prefixes of the help center, its
 knowledge sources and the documentation sync.
 */
 func helpCenterPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
-		{"hc", "help_centers"},
-		{"col", "collections"},
-		{"art", "articles"},
-		{"artv", "article_versions"},
+		{PrefixHelpCenter, "help_centers"},
+		{PrefixCollection, "collections"},
+		{PrefixArticle, "articles"},
+		{PrefixArticleVersion, "article_versions"},
 		{"sug", "article_suggestions"},
 		{"sugb", "article_suggestion_batches"},
 		{"hcd", "help_center_domains"},

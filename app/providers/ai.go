@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
@@ -71,7 +72,8 @@ func bootAI(ctx context.Context, a *app.App) error {
 }
 
 /*
-newRunner builds the pipeline runner: the knowledge index, the driver
+newRunner builds the pipeline runner: the knowledge index over the
+workspace's published articles, falling back to the seed, the driver
 manager and the checked prompt tree. A broken prompt tree or an
 unreadable seed directory stops the boot.
 */
@@ -81,7 +83,11 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		if err != nil {
 			return nil, err
 		}
-		a.Knowledge = seed
+		a.Knowledge = &helpcenters.Knowledge{
+			DB: a.DB, Fallback: seed, Addresses: helpcenters.Addresses{
+				BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
+			},
+		}
 	}
 	if a.LLM == nil {
 		a.LLM = managers.NewLLMManager(managers.LLMDeps{

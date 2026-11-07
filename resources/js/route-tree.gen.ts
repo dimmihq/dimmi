@@ -36,6 +36,8 @@ import { Route as DCustomersIndexRouteImport } from './routes/d/customers/index'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
 import { Route as DCustomersBlockedRouteImport } from './routes/d/customers/blocked'
 import { Route as DCustomersErasuresRouteImport } from './routes/d/customers/erasures'
+import { Route as DDocsIndexRouteImport } from './routes/d/docs/index'
+import { Route as DDocsArticleRouteImport } from './routes/d/docs/$article'
 import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
@@ -190,6 +192,16 @@ const DCustomersErasuresRoute = DCustomersErasuresRouteImport.update({
   path: '/erasures',
   getParentRoute: () => DCustomersRoute,
 } as any)
+const DDocsIndexRoute = DDocsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DDocsRoute,
+} as any)
+const DDocsArticleRoute = DDocsArticleRouteImport.update({
+  id: '/$article',
+  path: '/$article',
+  getParentRoute: () => DDocsRoute,
+} as any)
 const DInboxIndexRoute = DInboxIndexRouteImport.update({
   id: '/inbox/',
   path: '/inbox/',
@@ -307,7 +319,7 @@ export interface FileRoutesByFullPath {
   '/d/announcements': typeof DAnnouncementsRoute
   '/d/changelog': typeof DChangelogRoute
   '/d/customers': typeof DCustomersRouteWithChildren
-  '/d/docs': typeof DDocsRoute
+  '/d/docs': typeof DDocsRouteWithChildren
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/shortcuts': typeof DShortcutsRoute
@@ -319,11 +331,13 @@ export interface FileRoutesByFullPath {
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/blocked': typeof DCustomersBlockedRoute
   '/d/customers/erasures': typeof DCustomersErasuresRoute
+  '/d/docs/$article': typeof DDocsArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers/': typeof DCustomersIndexRoute
+  '/d/docs/': typeof DDocsIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
@@ -353,7 +367,6 @@ export interface FileRoutesByTo {
   '/d/agent': typeof DAgentRoute
   '/d/announcements': typeof DAnnouncementsRoute
   '/d/changelog': typeof DChangelogRoute
-  '/d/docs': typeof DDocsRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/shortcuts': typeof DShortcutsRoute
@@ -364,11 +377,13 @@ export interface FileRoutesByTo {
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/blocked': typeof DCustomersBlockedRoute
   '/d/customers/erasures': typeof DCustomersErasuresRoute
+  '/d/docs/$article': typeof DDocsArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers': typeof DCustomersIndexRoute
+  '/d/docs': typeof DDocsIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
@@ -401,7 +416,7 @@ export interface FileRoutesById {
   '/d/announcements': typeof DAnnouncementsRoute
   '/d/changelog': typeof DChangelogRoute
   '/d/customers': typeof DCustomersRouteWithChildren
-  '/d/docs': typeof DDocsRoute
+  '/d/docs': typeof DDocsRouteWithChildren
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/shortcuts': typeof DShortcutsRoute
@@ -413,11 +428,13 @@ export interface FileRoutesById {
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/blocked': typeof DCustomersBlockedRoute
   '/d/customers/erasures': typeof DCustomersErasuresRoute
+  '/d/docs/$article': typeof DDocsArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers/': typeof DCustomersIndexRoute
+  '/d/docs/': typeof DDocsIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
@@ -463,11 +480,13 @@ export interface FileRouteTypes {
     | '/d/customers/$contact'
     | '/d/customers/blocked'
     | '/d/customers/erasures'
+    | '/d/docs/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
     | '/d/customers/'
+    | '/d/docs/'
     | '/d/inbox/'
     | '/d/procedures/'
     | '/d/settings/'
@@ -497,7 +516,6 @@ export interface FileRouteTypes {
     | '/d/agent'
     | '/d/announcements'
     | '/d/changelog'
-    | '/d/docs'
     | '/d/feedback'
     | '/d/notifications'
     | '/d/shortcuts'
@@ -508,11 +526,13 @@ export interface FileRouteTypes {
     | '/d/customers/$contact'
     | '/d/customers/blocked'
     | '/d/customers/erasures'
+    | '/d/docs/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
     | '/d/customers'
+    | '/d/docs'
     | '/d/inbox'
     | '/d/procedures'
     | '/d/settings'
@@ -556,11 +576,13 @@ export interface FileRouteTypes {
     | '/d/customers/$contact'
     | '/d/customers/blocked'
     | '/d/customers/erasures'
+    | '/d/docs/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/workflows/new'
     | '/d/customers/'
+    | '/d/docs/'
     | '/d/inbox/'
     | '/d/procedures/'
     | '/d/settings/'
@@ -775,6 +797,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersErasuresRouteImport
       parentRoute: typeof DCustomersRoute
     }
+    '/d/docs/': {
+      id: '/d/docs/'
+      path: '/'
+      fullPath: '/d/docs/'
+      preLoaderRoute: typeof DDocsIndexRouteImport
+      parentRoute: typeof DDocsRoute
+    }
+    '/d/docs/$article': {
+      id: '/d/docs/$article'
+      path: '/$article'
+      fullPath: '/d/docs/$article'
+      preLoaderRoute: typeof DDocsArticleRouteImport
+      parentRoute: typeof DDocsRoute
+    }
     '/d/inbox/': {
       id: '/d/inbox/'
       path: '/inbox'
@@ -933,6 +969,18 @@ const DCustomersRouteWithChildren = DCustomersRoute._addFileChildren(
   DCustomersRouteChildren,
 )
 
+interface DDocsRouteChildren {
+  DDocsArticleRoute: typeof DDocsArticleRoute
+  DDocsIndexRoute: typeof DDocsIndexRoute
+}
+
+const DDocsRouteChildren: DDocsRouteChildren = {
+  DDocsArticleRoute: DDocsArticleRoute,
+  DDocsIndexRoute: DDocsIndexRoute,
+}
+
+const DDocsRouteWithChildren = DDocsRoute._addFileChildren(DDocsRouteChildren)
+
 interface DInboxViewRouteRouteChildren {
   DInboxViewConversationRoute: typeof DInboxViewConversationRoute
   DInboxViewIndexRoute: typeof DInboxViewIndexRoute
@@ -952,7 +1000,7 @@ interface DRouteRouteChildren {
   DAnnouncementsRoute: typeof DAnnouncementsRoute
   DChangelogRoute: typeof DChangelogRoute
   DCustomersRoute: typeof DCustomersRouteWithChildren
-  DDocsRoute: typeof DDocsRoute
+  DDocsRoute: typeof DDocsRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRoute
   DNotificationsRoute: typeof DNotificationsRoute
   DShortcutsRoute: typeof DShortcutsRoute
@@ -979,7 +1027,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DAnnouncementsRoute: DAnnouncementsRoute,
   DChangelogRoute: DChangelogRoute,
   DCustomersRoute: DCustomersRouteWithChildren,
-  DDocsRoute: DDocsRoute,
+  DDocsRoute: DDocsRouteWithChildren,
   DFeedbackRoute: DFeedbackRoute,
   DNotificationsRoute: DNotificationsRoute,
   DShortcutsRoute: DShortcutsRoute,

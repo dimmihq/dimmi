@@ -3,70 +3,14 @@
  * knowledge Dimmi reads, the changelog, the feedback portal, and how
  * often announcements and surveys may interrupt customers.
  */
-import { RiBookOpenLine, RiFileTextLine, RiGitRepositoryLine, RiGlobalLine } from "@remixicon/react";
+import { RiFileTextLine, RiGitRepositoryLine, RiGlobalLine } from "@remixicon/react";
 
 import { Chip } from "@/components/base/badges/chip";
 
-import { Action, Choice, Colour, Danger, Field, Toggle } from "../controls";
+import { Action, Choice, Field, Toggle } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
-import { useAccount } from "../use-account";
 
-export function HelpCentersSettings() {
-  const me = useAccount();
-
-  return (
-    <SettingsPage title="Help centers" description="Public docs with their own address. Up to 3 on cloud.">
-      <Section title="Help centers" action={<Action>New help center</Action>}>
-        <Item
-          mark={<Glyph icon={RiBookOpenLine} />}
-          title={`${me.workspace.name} Help`}
-          detail={`${me.workspace.slug}.dimmi.site · English`}
-        >
-          <Chip variant="caption" color="neutral">
-            Default
-          </Chip>
-        </Item>
-      </Section>
-      <Section title={`${me.workspace.name} Help`}>
-        <Row label="Address">
-          <Field label="Subdomain" value={me.workspace.slug} width="w-40" />
-          <span className="text-body-2-regular text-text-tertiary">.dimmi.site</span>
-        </Row>
-        <Row label="Custom domain" description="Serve it from help.yourdomain.com.">
-          <Action>Add domain</Action>
-        </Row>
-        <Row label="Appearance">
-          <Choice label="Help center appearance" options={["Auto", "Light", "Dark"]} />
-        </Row>
-        <Row label="Brand colour" description="Links, buttons and the header.">
-          <Colour label="Help center colour" value="#10b981" />
-        </Row>
-        <Row label="Logo" description="SVG or PNG, shown in the header.">
-          <Action>Upload</Action>
-        </Row>
-      </Section>
-      <Section title="Features">
-        <Row label="Ask AI" description="Let readers ask a question and get an answer from your articles.">
-          <Toggle label="Ask AI" on />
-        </Row>
-        <Row label="Search engines" description="Let Google and others index your articles.">
-          <Toggle label="Search engines" on />
-        </Row>
-        <Row label="Public MCP server" description="Let AI tools read your docs.">
-          <Toggle label="Public MCP server" on />
-        </Row>
-        <Row label="Flag stale articles" description="Ask for a review after an article goes unchanged this long.">
-          <Choice label="Flag stale articles" options={["After 180 days", "After 90 days", "After a year", "Never"]} />
-        </Row>
-      </Section>
-      <Section title="Danger zone">
-        <Row label="Delete this help center" description="Owners only. Its address stops working.">
-          <Danger>Delete help center</Danger>
-        </Row>
-      </Section>
-    </SettingsPage>
-  );
-}
+export { HelpCentersSettings } from "../help-center-settings";
 
 export function KnowledgeSettings() {
   return (

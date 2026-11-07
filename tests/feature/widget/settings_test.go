@@ -312,8 +312,8 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		"collect email": {testkit.JSON{"collect_email": "x"}, "collect_email"},
 		"attachment":    {testkit.JSON{"max_attachment_mb": 26}, "max_attachment_mb"},
 		"locale":        {testkit.JSON{"locale": "not a tag"}, "locale"},
-		"help tab":      {testkit.JSON{"help_tab_enabled": true}, "help_tab_enabled"},
-		"changelog tab": {testkit.JSON{"changelog_tab_enabled": true}, "changelog_tab_enabled"},
+		"help tab":      {testkit.JSON{"help_center_id": nil, "help_tab_enabled": true}, "help_tab_enabled"},
+		"changelog tab": {testkit.JSON{"help_center_id": nil, "changelog_tab_enabled": true}, "changelog_tab_enabled"},
 	} {
 		t.Run("refuses a bad "+name, func(t *testing.T) {
 			t.Parallel()

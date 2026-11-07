@@ -3,11 +3,13 @@
 | Help Center Controller
 |--------------------------------------------------------------------------
 |
-| The public help center under the app's /hc/{center} path: its home,
-| collections, articles, search and the Markdown twin of every article.
-| Pages read the sample help center for now, and a help center or page
-| that does not exist answers with the help center's own not found page,
-| never with anything that reveals what else exists.
+| The public help center under the app's /hc/{center} path, or on its
+| own subdomain of the help domain: its home, collections, articles,
+| search and the Markdown twin of every article. Pages read the
+| workspace's published articles; the sample help center answers only
+| where no real one exists, as a demo. A help center or page that does
+| not exist answers with the help center's own not found page, never
+| with anything that reveals what else exists.
 |
 | The plain forms on articles post here too. With nothing stored yet,
 | they send the visitor back to the page they came from in its answered
@@ -18,12 +20,14 @@
 package web
 
 import (
+	"errors"
 	"strings"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/view"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/resources/views/helpcenter"
 )
@@ -40,6 +44,7 @@ serves the images they show.
 */
 type HelpCenterController struct {
 	Library *helpsample.Library
+	Public  *helpcenters.Public
 	Assets  fhttp.Handler
 	Vite    *vite.Bundle
 	Errors  fhttp.Errors
@@ -49,13 +54,13 @@ type HelpCenterController struct {
 Home shows the help center's front page.
 */
 func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
-	center, ok := c.center(w, r)
+	center, lib, ok := c.site(w, r)
 	if !ok {
 		return
 	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.Home(
-		center, c.Library.Collections(), c.Library.Popular(), c.Library.Updates(3), c.styles(),
+		center, lib.Collections(), lib.Popular(), lib.Updates(3), c.styles(),
 	))
 }
 
@@ -63,33 +68,33 @@ func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
 Collection shows a collection and its articles.
 */
 func (c *HelpCenterController) Collection(w fhttp.ResponseWriter, r *fhttp.Request) {
-	center, ok := c.center(w, r)
+	center, lib, ok := c.site(w, r)
 	if !ok {
 		return
 	}
 
-	col, trail, found := c.Library.Collection(r.PathValue("slug"))
+	col, trail, found := lib.Collection(r.PathValue("slug"))
 	if !found {
-		c.NotFound(w, r)
+		c.missing(w, r, center, lib)
 
 		return
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, c.Library.Collections(), col, trail, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail, c.styles()))
 }
 
 /*
 Article shows an article, or its Markdown when the path ends in .md.
 */
 func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request) {
-	center, ok := c.center(w, r)
+	center, lib, ok := c.site(w, r)
 	if !ok {
 		return
 	}
 
 	slug, markdown := strings.CutSuffix(r.PathValue("slug"), ".md")
 
-	article, found, err := c.Library.Article(center, slug)
+	article, found, err := lib.Article(center, slug)
 	if err != nil {
 		c.Errors.Render(w, r, err)
 
@@ -97,20 +102,20 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 	}
 
 	if !found {
-		c.NotFound(w, r)
+		c.missing(w, r, center, lib)
 
 		return
 	}
 
 	if markdown {
-		source, _ := c.Library.Markdown(slug)
+		source, _ := lib.Markdown(slug)
 		writeMarkdown(w, "# "+article.Title+"\n\n> "+article.Description+"\n\n"+source)
 
 		return
 	}
 
 	page := helpcenter.ArticlePage(
-		center, c.Library.Collections(), article, r.URL.Query().Get("helpful"), c.styles(),
+		center, lib.Collections(), article, r.URL.Query().Get("helpful"), c.styles(),
 	)
 	c.respond(w, r, fhttp.StatusOK, page)
 }
@@ -132,13 +137,13 @@ func (c *HelpCenterController) Rate(w fhttp.ResponseWriter, r *fhttp.Request) {
 Search shows the articles matching the query.
 */
 func (c *HelpCenterController) Search(w fhttp.ResponseWriter, r *fhttp.Request) {
-	center, ok := c.center(w, r)
+	center, lib, ok := c.site(w, r)
 	if !ok {
 		return
 	}
 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	page := helpcenter.SearchPage(center, c.Library.Collections(), query, c.Library.Search(query), c.styles())
+	page := helpcenter.SearchPage(center, lib.Collections(), query, lib.Search(query), c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -160,13 +165,66 @@ func (c *HelpCenterController) Asset(w fhttp.ResponseWriter, r *fhttp.Request) {
 NotFound answers a path the help center has nothing at.
 */
 func (c *HelpCenterController) NotFound(w fhttp.ResponseWriter, r *fhttp.Request) {
-	center, ok := c.center(w, r)
+	center, lib, ok := c.site(w, r)
 	if !ok {
 		return
 	}
 
-	page := helpcenter.NotFoundPage(center, c.Library.Collections(), c.Library.Popular(), c.styles())
+	c.missing(w, r, center, lib)
+}
+
+/*
+missing answers with the help center's not found page.
+*/
+func (c *HelpCenterController) missing(w fhttp.ResponseWriter, r *fhttp.Request, center helpcenter.Center,
+	lib HelpLibrary,
+) {
+	if s, ok := lib.(*site); ok {
+		rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
+		if to, found := c.Public.Redirect(r.Context(), s.snap.HelpCenter, rest); found {
+			if strings.HasPrefix(to, "/") {
+				to = center.Base + to
+			}
+			w.Header().Set("Location", to)
+			w.WriteHeader(fhttp.StatusMovedPermanently)
+			return
+		}
+	}
+	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular(), c.styles())
 	c.respond(w, r, fhttp.StatusNotFound, page)
+}
+
+/*
+site finds the help center the request names and what its pages read:
+a real help center when one answers the name, else the sample's demo.
+*/
+func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
+) (helpcenter.Center, HelpLibrary, bool) {
+	slug, base := r.PathValue("center"), "/hc/"+r.PathValue("center")
+	if hostedHere(r.Context()) {
+		base = ""
+	}
+	if c.Public != nil {
+		snap, err := c.Public.Load(r.Context(), slug)
+		if err == nil {
+			center := centerOf(snap.HelpCenter, base)
+			center.Origin = origin(r)
+			return center, newSite(r.Context(), c.Public, snap), true
+		}
+		if !errors.Is(err, helpcenters.ErrNoHelpCenter) {
+			c.Errors.Render(w, r, err)
+			return helpcenter.Center{}, nil, false
+		}
+	}
+	center, ok := c.center(w, r)
+	return center, c.Library, ok
+}
+
+func origin(r *fhttp.Request) string {
+	if r.TLS != nil {
+		return "https://" + r.Host
+	}
+	return "http://" + r.Host
 }
 
 /*

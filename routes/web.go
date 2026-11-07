@@ -137,8 +137,9 @@ conversations, and the files their pages show.
 */
 func helpCenter(pages *routing.Router, a *app.App) {
 	hc := &web.HelpCenterController{
-		Library: a.HelpSample, Errors: a.Errors, Assets: static.Handler(helpsample.Assets(), static.Options{}),
-		Vite: vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
+		Library: a.HelpSample, Public: a.Actions.HelpPublic, Errors: a.Errors,
+		Assets: static.Handler(helpsample.Assets(), static.Options{}),
+		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	get := func(path, name string, h fhttp.HandlerFunc) {

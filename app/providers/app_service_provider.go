@@ -82,6 +82,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 
 	registerEmail(p.App, fa)
 	registerWidget(p.App, fa)
+	registerHelpCenters(p.App, fa)
 
 	errs := []error{models.RegisterPublicIDs(fa.IDs)}
 
@@ -142,6 +143,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootOperator(a)
 	bootTokens(a)
 	bootIdentity(a)
+	bootHelpCenters(a)
 
 	if err := bootAccountAndAudit(a); err != nil {
 		return err

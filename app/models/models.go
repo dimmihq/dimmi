@@ -299,6 +299,58 @@ type AiSpendPeriod struct {
 	UpdatedAt          time.Time   `json:"updated_at"`
 }
 
+type Article struct {
+	ID                    ids.UUID        `json:"id"`
+	WorkspaceID           ids.UUID        `json:"workspace_id"`
+	HelpCenterID          ids.UUID        `json:"help_center_id"`
+	CollectionID          *ids.UUID       `json:"collection_id"`
+	Title                 string          `json:"title"`
+	Slug                  string          `json:"slug"`
+	Description           *string         `json:"description"`
+	BodyMarkdown          string          `json:"body_markdown"`
+	Status                string          `json:"status"`
+	Visibility            string          `json:"visibility"`
+	PublishedVersionID    *ids.UUID       `json:"published_version_id"`
+	HasUnpublishedChanges bool            `json:"has_unpublished_changes"`
+	ContentHash           string          `json:"content_hash"`
+	Position              int32           `json:"position"`
+	Seo                   json.RawMessage `json:"seo"`
+	AuthorMemberID        *ids.UUID       `json:"author_member_id"`
+	LastEditedByType      *string         `json:"last_edited_by_type"`
+	LastEditedByID        *ids.UUID       `json:"last_edited_by_id"`
+	LockVersion           int32           `json:"lock_version"`
+	WordCount             int32           `json:"word_count"`
+	PublishedAt           *time.Time      `json:"published_at"`
+	FirstPublishedAt      *time.Time      `json:"first_published_at"`
+	ArchivedAt            *time.Time      `json:"archived_at"`
+	DeletedAt             *time.Time      `json:"deleted_at"`
+	CreatedAt             time.Time       `json:"created_at"`
+	UpdatedAt             time.Time       `json:"updated_at"`
+	TitleTrgm             *string         `json:"title_trgm"`
+}
+
+type ArticleVersion struct {
+	ID              ids.UUID                `json:"id"`
+	WorkspaceID     ids.UUID                `json:"workspace_id"`
+	ArticleID       ids.UUID                `json:"article_id"`
+	Number          int32                   `json:"number"`
+	Kind            string                  `json:"kind"`
+	Title           string                  `json:"title"`
+	Slug            string                  `json:"slug"`
+	Description     *string                 `json:"description"`
+	BodyMarkdown    string                  `json:"body_markdown"`
+	BodyHtml        string                  `json:"body_html"`
+	Toc             json.RawMessage         `json:"toc"`
+	Visibility      string                  `json:"visibility"`
+	CollectionID    *ids.UUID               `json:"collection_id"`
+	ContentHash     string                  `json:"content_hash"`
+	CreatedByType   string                  `json:"created_by_type"`
+	CreatedByID     *ids.UUID               `json:"created_by_id"`
+	RendererVersion int16                   `json:"renderer_version"`
+	CreatedAt       time.Time               `json:"created_at"`
+	SearchDocument  database.SearchDocument `json:"search_document"`
+}
+
 type Attachment struct {
 	ID             ids.UUID   `json:"id"`
 	WorkspaceID    ids.UUID   `json:"workspace_id"`
@@ -362,6 +414,21 @@ type ChannelConnection struct {
 	DeletedAt            *time.Time        `json:"deleted_at"`
 	CreatedAt            time.Time         `json:"created_at"`
 	UpdatedAt            time.Time         `json:"updated_at"`
+}
+
+type Collection struct {
+	ID           ids.UUID   `json:"id"`
+	WorkspaceID  ids.UUID   `json:"workspace_id"`
+	HelpCenterID ids.UUID   `json:"help_center_id"`
+	ParentID     *ids.UUID  `json:"parent_id"`
+	Name         string     `json:"name"`
+	Slug         string     `json:"slug"`
+	Description  *string    `json:"description"`
+	Icon         *string    `json:"icon"`
+	Position     int32      `json:"position"`
+	DeletedAt    *time.Time `json:"deleted_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 type Company struct {
@@ -744,6 +811,39 @@ type EncryptionKey struct {
 	Wrapped   []byte    `json:"wrapped"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type HelpCenter struct {
+	ID              ids.UUID        `json:"id"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	Name            string          `json:"name"`
+	Subdomain       string          `json:"subdomain"`
+	Locale          string          `json:"locale"`
+	IsDefault       bool            `json:"is_default"`
+	Status          string          `json:"status"`
+	Settings        json.RawMessage `json:"settings"`
+	IndexingEnabled bool            `json:"indexing_enabled"`
+	AskAiEnabled    bool            `json:"ask_ai_enabled"`
+	CacheVersion    int64           `json:"cache_version"`
+	DeletedAt       *time.Time      `json:"deleted_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type HelpCenterRedirect struct {
+	ID                 ids.UUID   `json:"id"`
+	WorkspaceID        ids.UUID   `json:"workspace_id"`
+	HelpCenterID       ids.UUID   `json:"help_center_id"`
+	FromPath           string     `json:"from_path"`
+	TargetType         string     `json:"target_type"`
+	TargetArticleID    *ids.UUID  `json:"target_article_id"`
+	TargetCollectionID *ids.UUID  `json:"target_collection_id"`
+	TargetUrl          *string    `json:"target_url"`
+	Source             string     `json:"source"`
+	Hits               int64      `json:"hits"`
+	LastHitAt          *time.Time `json:"last_hit_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 type IdempotencyKey struct {

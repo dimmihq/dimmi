@@ -75,6 +75,8 @@ func widgetAppRoutes(public *routing.Router, a *app.App) {
 
 	routing.Get(public, "/apps/{app}/config", "widget.apps.config.show", config.Invoke)
 	routing.Get(public, "/apps/{app}/availability", "widget.apps.availability.show", availability.Invoke)
+	help := &widget.HelpController{Public: a.Actions.HelpPublic}
+	routing.Get(public, "/apps/{app}/help", "widget.apps.help.show", help.Show)
 
 	sessions := sessionController(a)
 	routing.Post(public, "/sessions", "widget.sessions.store", sessions.Store)

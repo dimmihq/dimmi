@@ -70,6 +70,30 @@
         ],
         "type": "object"
       },
+      "Block": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
       "Branding": {
         "additionalProperties": false,
         "properties": {
@@ -680,6 +704,121 @@
           "object",
           "email",
           "verified_at"
+        ],
+        "type": "object"
+      },
+      "HelpArticle": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "updated",
+          "body"
+        ],
+        "type": "object"
+      },
+      "HelpCollection": {
+        "additionalProperties": false,
+        "properties": {
+          "articles": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "description",
+          "articles"
+        ],
+        "type": "object"
+      },
+      "HelpIndex": {
+        "additionalProperties": false,
+        "properties": {
+          "articles": {
+            "items": {
+              "$ref": "#/components/schemas/HelpArticle"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "collections": {
+            "items": {
+              "$ref": "#/components/schemas/HelpCollection"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "popular": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "collections",
+          "articles",
+          "popular"
+        ],
+        "type": "object"
+      },
+      "HelpOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HelpIndex"
+          }
+        },
+        "required": [
+          "data"
         ],
         "type": "object"
       },
@@ -2164,6 +2303,33 @@
                 }
               }
             }
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/apps/{app}/help": {
+      "get": {
+        "operationId": "widget.apps.help.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpOutputBody"
+                }
+              }
+            },
+            "description": "OK"
           },
           "default": {
             "content": {

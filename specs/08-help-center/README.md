@@ -1241,3 +1241,17 @@ Provided to other specs (applied in this sweep):
 4. Voyage provider for Anthropic-only BYOK users: needs 07 key type. Default: add in 07 MVP (small driver).
 5. Default `public_mcp_enabled` true? Default: true (content already public; rate limited). Owner can disable.
 6. Docs sync open questions (PAT prefill URL, `not_affected` advancing freshness baseline, `push` trigger default, cloud runs/day): docs-sync.md section 17. Roadmap item 16 bar lines deferred (`conversation-drafts`, `docs-as-code-pr`): PO confirm.
+
+## Decisions 2026-11-07
+
+Built in this round (MVP slice), with these changes from the plan above:
+
+- Hosted address: `{subdomain}.dimmi.help` on cloud (`help_centers.base_domain` config, settled per edition). Competitors use a separate domain for user content (`intercom.help`, `crisp.help`, `helpscoutdocs.com`), which keeps help pages off the app's cookies; `dimmi.site` is registered by someone else, `dimmi.help` was free on 2026-11-07. Self-host without a base domain serves `{app_url}/hc/{subdomain}`; with one, a kernel middleware answers `<sub>.<base>` as the `/hc/<sub>` pages with root-relative links. The owner must register `dimmi.help` and point a wildcard at the load balancer.
+- Migrations renumbered to `20261209010001`..`05` (help_centers, collections, articles, article_versions, help_center_redirects) so fresh databases create them after the search configuration they use. Columns that reference unbuilt tables (assets, domains, audiences) are left out and come with those tables.
+- Default help center: created by a workspace initializer (after the default widget, which it links) and lazily on the first `GET /help-centers` for workspaces made before. Subdomain = workspace slug, with a 4-letter suffix when taken or reserved.
+- Public pages reuse the existing templ views: a per-request library reads a snapshot (collections + published public articles) cached in memory per `cache_version`. The sample help center answers only names no real help center holds (the `dimmi` demo, a reserved subdomain).
+- Search: Postgres FTS on `article_versions.search_document` (generated, `dimmi_search` config) with `ts_headline` excerpts. No embeddings yet.
+- Agent knowledge: `helpcenters.Knowledge` implements `contracts.Knowledge` over published articles (public and agent-only, never drafts): FTS picks up to 12 candidate articles matching any query word, then the existing BM25 section ranker picks passages with the article's public URL. Workspaces without published articles fall back to the seed index.
+- Messenger Help tab: `GET /widget/v1/apps/{app}/help` returns collections and up to 200 articles with bodies as plain blocks (no HTML reaches the host page).
+- Redirects: published slug changes (article or collection) answer 301 from the old path.
+- Later: custom domains + TLS, assets/logo upload, Ask AI page, llms.txt / sitemap / `.md` negotiation beyond the article twin, analytics, review queue, knowledge sources, embeddings, docs sync, version diff/restore UI, multiple help centers in the dashboard.

@@ -24,6 +24,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/filesystem"
@@ -33,12 +34,19 @@ import (
 )
 
 /*
-Article is one seed document: a title, its public URL and Markdown.
+Article is one document to index: a title, its public URL and Markdown.
+Documents from a help center also carry their article, help center and
+who may see them; seed documents leave those empty and are public.
 */
 type Article struct {
-	Title string
-	URL   string
-	Body  string
+	Title        string
+	URL          string
+	Body         string
+	DocumentID   ids.UUID
+	ArticleID    *ids.UUID
+	HelpCenterID *ids.UUID
+	Visibility   contracts.KnowledgeVisibility
+	UpdatedAt    time.Time
 }
 
 /*
@@ -112,7 +120,10 @@ NewSeed indexes the articles.
 func NewSeed(articles []Article) *Seed {
 	s := &Seed{}
 	for _, a := range articles {
-		doc := ids.New()
+		doc := a.DocumentID
+		if doc == (ids.UUID{}) {
+			doc = ids.New()
+		}
 		for _, c := range chunkArticle(a) {
 			c.DocumentID = doc
 			s.chunks = append(s.chunks, index(c))

@@ -97,6 +97,43 @@ describe("a connected messenger", () => {
     expect(calls).toEqual(["GET /apps/wgt_1/config", "GET /apps/wgt_1/availability"]);
   });
 
+  it("fills the Help tab from the linked help center", async () => {
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({
+        status: 200,
+        body: { data: { ...config.data, tabs: ["home", "messages", "help"] } },
+      }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /apps/wgt_1/help": () => ({
+        status: 200,
+        body: {
+          data: {
+            collections: [{ slug: "start", title: "Getting started", description: "", articles: ["invite"] }],
+            popular: ["invite"],
+            articles: [
+              {
+                slug: "invite",
+                title: "Invite your team",
+                summary: "",
+                updated: "2026-01-01T00:00:00Z",
+                body: [{ kind: "p", text: "Open settings." }],
+              },
+            ],
+          },
+        },
+      }),
+    });
+
+    boot(win, document);
+    await settle();
+    await settle();
+    await settle();
+
+    expect(calls).toContain("GET /apps/wgt_1/help");
+    expect(shadow()?.textContent).toContain("Getting started");
+    expect(shadow()?.textContent).toContain("Invite your team");
+  });
+
   it("shows nothing and says why when the server does not serve the app here", async () => {
     serve({ "GET /apps/wgt_1/config": () => ({ status: 403, body: { code: "origin_not_allowed" } }) });
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);

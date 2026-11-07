@@ -24,7 +24,17 @@ import { type Conversation as ApiConversation, type Message as ApiMessage, Store
 import { ConversationRow } from "../components/rows";
 import { AiActions, Thread, Typing } from "../components/thread";
 import { Whoami } from "../components/whoami";
-import type { Content, Message, VerifyStep } from "../content";
+import type { Block, Collection, Content, Message, VerifyStep } from "../content";
+
+/*
+ * HelpIndex is what the server answers for the Help tab.
+ */
+interface HelpIndex {
+  collections: Collection[];
+  popular: string[];
+  articles: { slug: string; title: string; summary: string; updated: string; body: Block[] }[];
+}
+
 import type { Options, OptionsUpdate } from "../options";
 import type { ActionTexts } from "../text";
 import { type Availability, type Config, content, fromConfig } from "./map";
@@ -167,6 +177,7 @@ export class Live {
   private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
   private readonly verifying = new Map<string, VerifyStep>();
+  private help: Pick<Content, "collections" | "articles" | "popular"> | undefined;
   private callTimer: unknown;
   private identity: Source | undefined;
   private checking: Promise<void> | undefined;
@@ -234,6 +245,9 @@ export class Live {
 
     this.host.update(fromConfig(this.config, this.host.options().texts));
     void this.loadAvailability();
+    if (this.config.tabs?.includes("help")) {
+      void this.loadHelp();
+    }
 
     const session = await this.handshake().catch(() => undefined);
     if (mode === "required" && !this.session.signedIn) {
@@ -362,7 +376,35 @@ export class Live {
    * content is what the views draw now.
    */
   content(): Content {
-    return content(this.base, this.config, this.availability, this.store, this.open, this.browser.now());
+    const out = content(this.base, this.config, this.availability, this.store, this.open, this.browser.now());
+
+    return this.help ? { ...out, ...this.help } : out;
+  }
+
+  /*
+   * loadHelp reads the help center the messenger links to: its
+   * collections and published articles, each body as plain blocks, and
+   * draws the Help tab with them. Without it the tab stays empty.
+   */
+  private async loadHelp() {
+    try {
+      const res = await this.http.get<{ data: HelpIndex }>(`/apps/${this.appId}/help`);
+      this.help = {
+        collections: res.data.collections,
+        popular: res.data.popular,
+        articles: res.data.articles.map((a) => ({
+          slug: a.slug,
+          title: a.title,
+          summary: a.summary,
+          author: "",
+          updated: new Date(a.updated).toLocaleDateString(),
+          body: a.body,
+        })),
+      };
+      this.host.update({});
+    } catch {
+      this.help = undefined;
+    }
   }
 
   /*

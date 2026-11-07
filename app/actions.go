@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/factors"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
@@ -110,6 +111,11 @@ type Actions struct {
 	IdentitySetup              *identity.Setup
 	IdentityChecker            *identity.Checker
 	IdentityStats              *identity.Stats
+	HelpCenters                *helpcenters.HelpCenters
+	Collections                *helpcenters.Collections
+	Articles                   *helpcenters.Articles
+	HelpCenterAddresses        helpcenters.Addresses
+	HelpPublic                 *helpcenters.Public
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
 	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy

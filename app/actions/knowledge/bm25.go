@@ -151,9 +151,14 @@ func newChunk(a Article, heading, text string) contracts.KnowledgeChunk {
 	if heading != "" {
 		path = append(path, heading)
 	}
+	visibility := a.Visibility
+	if visibility == "" {
+		visibility = contracts.KnowledgeVisibilityPublic
+	}
 	return contracts.KnowledgeChunk{
-		ID: ids.New(), SourceType: "article", Title: a.Title, HeadingPath: path,
-		URL: a.URL, Text: text, Visibility: contracts.KnowledgeVisibilityPublic, Locale: "en",
+		ID: ids.New(), SourceType: "article", Title: a.Title, HeadingPath: path, ArticleID: a.ArticleID,
+		HelpCenterID: a.HelpCenterID, URL: a.URL, Text: text, Visibility: visibility, Locale: "en",
+		UpdatedAt: a.UpdatedAt,
 	}
 }
 

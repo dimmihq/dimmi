@@ -975,3 +975,16 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Limits shown | `r ent -b a.jar -H "$O" -H "Dimmi-Workspace: $WS" $B/workspace/entitlements` | 200 `api.token_per_minute` 12; the tokens page says "12 requests a minute per token, 4 for the workspace's tokens together." |
 | Metric | scrape `/metrics` on the admin address | `dimmi_api_throttled_total{scope="burst"}` counts the refusals |
 
+
+
+## Help center
+
+| Flow | How | Expect |
+|---|---|---|
+| Default help center | `GET $B/help-centers` on any workspace | 200 with one `is_default` help center at the workspace slug; the messenger's `help_center_id` points at it |
+| Write and publish | `POST $B/help-centers/$HC/articles` `{"title":"Invite your team","body_markdown":"## Steps\n\n..."}`, then `POST $B/articles/$ART/publications` | 201 draft, then 200 `published`; `$W/hc/<subdomain>/articles/invite-your-team` (or `https://<subdomain>.dimmi.help/...` on cloud) renders it; `.md` returns the Markdown |
+| Search | `$W/hc/<subdomain>/search?q=invite` | the article with a highlighted excerpt; agent-only and draft articles never appear |
+| Rename | change the slug and publish again | the old address answers 301 to the new one |
+| Conflict | two `PATCH $B/articles/$ART` with the same `lock_version` | the second answers 409 `article_changed` |
+| Messenger Help tab | `GET $W/widget/v1/apps/$APP/help` | collections and articles with plain-block bodies |
+| Agent | publish an article, ask the messenger a question it answers | the agent cites the article's public address |

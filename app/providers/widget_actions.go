@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/attachments"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -39,10 +40,12 @@ import (
 
 /*
 registerWidget names the messenger's route middleware and registers the
-default widget's setup step, which runs after the default inbox's.
+default widget's setup step, which runs after the default inbox's, then
+the default help center's, which the widget then shows.
 */
 func registerWidget(a *app.App, fa *foundation.Application) {
 	a.WorkspaceInitializers.Register(&widget.EnsureDefaultWidget{Clock: fa.Clock, Events: fa.Events})
+	a.WorkspaceInitializers.Register(&helpcenters.HelpCenters{Clock: fa.Clock})
 
 	fa.Kernel.Alias("widget.cors", func(...string) (fhttp.Middleware, error) {
 		enabled := func() bool { return a.Config.Widget.Enabled }
