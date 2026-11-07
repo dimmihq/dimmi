@@ -25,7 +25,8 @@ import (
 /*
 Conversation is one conversation with what is shown beside it. Viewers
 are the teammates viewing it, present only when the list asked for them
-and they arrived in time.
+and they arrived in time. AiPendingApprovals counts the agent's calls in
+it waiting for a teammate's approval.
 */
 type Conversation struct {
 	ID                     string                           `json:"id"`
@@ -53,6 +54,7 @@ type Conversation struct {
 	AiState                string                           `json:"ai_state"`
 	AiReplyCount           int32                            `json:"ai_reply_count"`
 	AiHandoffReason        *string                          `json:"ai_handoff_reason"`
+	AiPendingApprovals     int32                            `json:"ai_pending_approvals"`
 	LastMessage            *MessageSummary                  `json:"last_message"`
 	Tags                   []Tag                            `json:"tags"`
 	Viewers                *[]appbroadcasting.ViewerPayload `json:"viewers,omitempty"`
@@ -106,6 +108,7 @@ func NewConversation(l conversations.Loaded) Conversation {
 		AiState:                c.AiState,
 		AiReplyCount:           c.AiReplyCount,
 		AiHandoffReason:        c.AiHandoffReason,
+		AiPendingApprovals:     l.PendingApprovals,
 		FirstCustomerMessageAt: c.FirstCustomerMessageAt, FirstReplyAt: c.FirstReplyAt, ClosedAt: c.ClosedAt,
 		MessageCount: c.MessageCount, Channel: NewChannel(l.Connection),
 		Inbox:   Named{ID: models.PublicID(models.PrefixInbox, l.Inbox.ID), Object: "inbox", Name: l.Inbox.Name},

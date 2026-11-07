@@ -143,3 +143,13 @@ UPDATE messages SET
     metadata = jsonb_set(metadata, '{ai,action_call}', (metadata -> 'ai' -> 'action_call') || @patch::jsonb),
     updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND metadata -> 'ai' -> 'action_call' ->> 'id' = @call_id::text;
+
+-- name: CountPendingApprovals :many
+-- CountPendingApprovals counts, for each conversation of a page, the
+-- live calls waiting for a teammate's approval, so a list row can show
+-- them without a query per row.
+SELECT conversation_id::uuid AS conversation_id, count(*)::int AS pending
+FROM ai_action_calls
+WHERE workspace_id = @workspace_id AND state = 'pending_approval' AND mode = 'live'
+    AND conversation_id = ANY (@conversation_ids::uuid[])
+GROUP BY conversation_id;

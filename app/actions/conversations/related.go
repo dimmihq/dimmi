@@ -31,6 +31,7 @@ type relatedRows struct {
 	last        map[ids.UUID]models.Message
 	tags        map[ids.UUID][]models.Tag
 	unread      map[ids.UUID]bool
+	approvals   map[ids.UUID]int32
 }
 
 /*
@@ -101,6 +102,10 @@ func related(
 	}
 
 	if err := r.readTags(ctx, q, p); err != nil {
+		return r, err
+	}
+
+	if err := r.readApprovals(ctx, q, p); err != nil {
 		return r, err
 	}
 
@@ -184,12 +189,33 @@ func (r *relatedRows) readTags(ctx context.Context, q *models.Queries, p pageIDs
 }
 
 /*
+readApprovals counts the agent's calls waiting for a teammate's approval
+in each conversation, in one query for the page.
+*/
+func (r *relatedRows) readApprovals(ctx context.Context, q *models.Queries, p pageIDs) error {
+	rows, err := q.CountPendingApprovals(ctx, models.CountPendingApprovalsParams{
+		WorkspaceID: p.workspace, ConversationIds: p.conversations,
+	})
+	if err != nil {
+		return err
+	}
+
+	r.approvals = make(map[ids.UUID]int32, len(rows))
+	for _, row := range rows {
+		r.approvals[row.ConversationID] = row.Pending
+	}
+
+	return nil
+}
+
+/*
 loaded puts the conversation together with its rows.
 */
 func (r *relatedRows) loaded(c models.Conversation) Loaded {
 	l := Loaded{
 		Conversation: c, Contact: r.contacts[c.ContactID], Inbox: r.inboxes[c.InboxID],
 		Connection: r.connections[c.ChannelConnectionID], Unread: r.unread[c.ID], Tags: r.tags[c.ID],
+		PendingApprovals: r.approvals[c.ID],
 	}
 
 	if c.AssigneeMemberID != nil {

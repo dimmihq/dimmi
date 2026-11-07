@@ -45,7 +45,8 @@ type Member struct {
 Loaded is a conversation with everything shown beside it. Assignee,
 Team and LastMessage are nil when there is none, and LastAuthor when a
 member did not write the latest message; Unread is judged for the
-member who loaded it.
+member who loaded it. PendingApprovals counts the agent's calls waiting
+for a teammate to approve them.
 */
 type Loaded struct {
 	Conversation models.Conversation
@@ -58,6 +59,8 @@ type Loaded struct {
 	LastAuthor   *Member
 	Tags         []models.Tag
 	Unread       bool
+
+	PendingApprovals int32
 }
 
 /*

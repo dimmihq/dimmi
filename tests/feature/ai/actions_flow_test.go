@@ -175,6 +175,28 @@ func TestAiActionApprovals(t *testing.T) {
 			AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "action_call_not_pending")
 	})
 
+	t.Run("counts calls waiting for approval on the conversation and its list row", func(t *testing.T) {
+		t.Parallel()
+		a := newActionDesk(t, nil)
+		a.action(a.connection(), refund("none", "teammate"))
+		conv, trigger := a.conversation("Refund order 1042 please.")
+		a.signIn(conv)
+		a.llm.answer.Script(tools(call("refund_order", `{"order_id":"1042","amount_cents":2000}`)),
+			reply("I've asked the team to approve it."))
+		a.run(conv, trigger)
+		public := models.PublicID(models.PrefixConversation, conv)
+
+		a.d.Owner.GetJSON("/api/v1/conversations/"+public).AssertOK().AssertJSONPath("data.ai_pending_approvals", 1)
+		a.d.Owner.GetJSON("/api/v1/conversations?filter[view]=all").AssertOK().
+			AssertJSONPath("data.0.id", public).AssertJSONPath("data.0.ai_pending_approvals", 1)
+
+		a.d.Owner.PatchJSON("/api/v1/ai/action-calls/"+publicCall(a.onlyCall(conv)), testkit.JSON{
+			"status": "declined", "reason": "not eligible",
+		}).AssertOK()
+
+		a.d.Owner.GetJSON("/api/v1/conversations/"+public).AssertOK().AssertJSONPath("data.ai_pending_approvals", 0)
+	})
+
 	t.Run("passes a decline on to the customer without the internal reason", func(t *testing.T) {
 		t.Parallel()
 		a := newActionDesk(t, nil)

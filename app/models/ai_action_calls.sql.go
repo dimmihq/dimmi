@@ -277,6 +277,47 @@ func (q *Queries) ConfirmActionCall(ctx context.Context, arg ConfirmActionCallPa
 	return i, err
 }
 
+const countPendingApprovals = `-- name: CountPendingApprovals :many
+SELECT conversation_id::uuid AS conversation_id, count(*)::int AS pending
+FROM ai_action_calls
+WHERE workspace_id = $1 AND state = 'pending_approval' AND mode = 'live'
+    AND conversation_id = ANY ($2::uuid[])
+GROUP BY conversation_id
+`
+
+type CountPendingApprovalsParams struct {
+	WorkspaceID     ids.UUID   `json:"workspace_id"`
+	ConversationIds []ids.UUID `json:"conversation_ids"`
+}
+
+type CountPendingApprovalsRow struct {
+	ConversationID ids.UUID `json:"conversation_id"`
+	Pending        int32    `json:"pending"`
+}
+
+// CountPendingApprovals counts, for each conversation of a page, the
+// live calls waiting for a teammate's approval, so a list row can show
+// them without a query per row.
+func (q *Queries) CountPendingApprovals(ctx context.Context, arg CountPendingApprovalsParams) ([]CountPendingApprovalsRow, error) {
+	rows, err := q.db.Query(ctx, countPendingApprovals, arg.WorkspaceID, arg.ConversationIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountPendingApprovalsRow
+	for rows.Next() {
+		var i CountPendingApprovalsRow
+		if err := rows.Scan(&i.ConversationID, &i.Pending); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countRunActionCall = `-- name: CountRunActionCall :exec
 UPDATE ai_runs SET action_calls_count = action_calls_count + 1, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3
