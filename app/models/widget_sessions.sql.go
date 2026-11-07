@@ -22,7 +22,7 @@ INSERT INTO widget_sessions (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
     $10, $11, $12, $13, $14, $15, $16, $17, $18, $18, $18
 )
-RETURNING id, workspace_id, widget_settings_id, contact_id, token_hash, kind, test, identity_secret_id, external_id, verified_at, expires_at, revoked_at, revoke_reason, bot_score, pow_solved_at, origin, user_agent, ip_prefix, country, locale, timezone, current_page, recent_pages, context, last_seen_at, created_at, updated_at
+RETURNING id, workspace_id, widget_settings_id, contact_id, token_hash, kind, test, identity_secret_id, external_id, verified_at, expires_at, revoked_at, revoke_reason, bot_score, pow_solved_at, origin, user_agent, ip_prefix, country, locale, timezone, current_page, recent_pages, context, last_seen_at, created_at, updated_at, verified_email, email_verified_at
 `
 
 type CreateWidgetSessionParams struct {
@@ -97,6 +97,8 @@ func (q *Queries) CreateWidgetSession(ctx context.Context, arg CreateWidgetSessi
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VerifiedEmail,
+		&i.EmailVerifiedAt,
 	)
 	return i, err
 }
@@ -120,7 +122,7 @@ func (q *Queries) DeleteWidgetSessions(ctx context.Context, arg DeleteWidgetSess
 }
 
 const findWidgetSession = `-- name: FindWidgetSession :one
-SELECT id, workspace_id, widget_settings_id, contact_id, token_hash, kind, test, identity_secret_id, external_id, verified_at, expires_at, revoked_at, revoke_reason, bot_score, pow_solved_at, origin, user_agent, ip_prefix, country, locale, timezone, current_page, recent_pages, context, last_seen_at, created_at, updated_at FROM widget_sessions WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, widget_settings_id, contact_id, token_hash, kind, test, identity_secret_id, external_id, verified_at, expires_at, revoked_at, revoke_reason, bot_score, pow_solved_at, origin, user_agent, ip_prefix, country, locale, timezone, current_page, recent_pages, context, last_seen_at, created_at, updated_at, verified_email, email_verified_at FROM widget_sessions WHERE workspace_id = $1 AND id = $2
 `
 
 type FindWidgetSessionParams struct {
@@ -160,6 +162,8 @@ func (q *Queries) FindWidgetSession(ctx context.Context, arg FindWidgetSessionPa
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VerifiedEmail,
+		&i.EmailVerifiedAt,
 	)
 	return i, err
 }

@@ -1,0 +1,47 @@
+{
+  "name": "@dimmi/server",
+  "version": "0.1.0",
+  "description": "Sign dimmi identity tokens on your server, so your signed-in users are verified in the messenger.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./express": {
+      "types": "./dist/express.d.ts",
+      "default": "./dist/express.js"
+    },
+    "./hono": {
+      "types": "./dist/hono.d.ts",
+      "default": "./dist/hono.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "keywords": [
+    "dimmi",
+    "identity",
+    "jwt",
+    "messenger",
+    "customer-support"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimmihq/dimmi",
+    "directory": "sdk/server"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

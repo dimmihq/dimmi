@@ -42,6 +42,7 @@ The algorithms a secret may use.
 const (
 	AlgorithmHS256 = "HS256"
 	AlgorithmRS256 = "RS256"
+	AlgorithmES256 = "ES256"
 	AlgorithmEdDSA = "EdDSA"
 )
 
@@ -122,7 +123,7 @@ func parsePublicKey(algorithm, pemText string) (parsedKey, error) {
 
 func invalidKey() error {
 	return fault.New(fault.Invalid, "public_key_invalid",
-		"The public key must be PEM text matching the algorithm: RSA for RS256, Ed25519 for EdDSA.").
+		"The public key must be PEM text matching the algorithm: RSA for RS256, P-256 for ES256, Ed25519 for EdDSA.").
 		OnField("public_key")
 }
 

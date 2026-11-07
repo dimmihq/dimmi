@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | The inputs of the identity secret endpoints. A shared secret is never
-| sent here: the server makes it. A public key arrives as PEM text, and
-| fields left out of an update stay as they are.
+| sent here: the server makes it. A public key arrives as PEM text, a
+| provider's key set as its https address, and fields left out of an
+| update stay as they are.
 |
 */
 
@@ -23,8 +24,11 @@ StoreIdentitySecretBody is the body of POST /identity-secrets.
 */
 type StoreIdentitySecretBody struct {
 	Name      string `json:"name,omitempty"       maxLength:"60"`
-	Algorithm string `json:"algorithm"            enum:"HS256,RS256,EdDSA"`
+	Algorithm string `json:"algorithm"            enum:"HS256,RS256,ES256,EdDSA"`
 	PublicKey string `json:"public_key,omitempty" maxLength:"16384"`
+	JWKSURL   string `json:"jwks_url,omitempty"   maxLength:"2048"`
+	Issuer    string `json:"issuer,omitempty"     maxLength:"200"`
+	Audience  string `json:"audience,omitempty"   maxLength:"200"`
 }
 
 /*

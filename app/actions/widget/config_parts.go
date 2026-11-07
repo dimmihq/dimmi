@@ -55,6 +55,7 @@ type ConfigFeatures struct {
 	CollectEmail            string           `json:"collect_email"`
 	RequireEmailWhenOffline bool             `json:"require_email_when_offline"`
 	AllowAnonymous          bool             `json:"allow_anonymous"`
+	IdentityMode            string           `json:"identity_mode"`
 	IntercomShim            bool             `json:"intercom_shim"`
 	DevContext              ConfigDevContext `json:"dev_context"`
 }

@@ -42,6 +42,13 @@ func (a *ForgetWorkspaceWidgets) Handle(ctx context.Context, workspace ids.UUID,
 		return nil
 	}
 
+	return a.ForgetAll(ctx, workspace)
+}
+
+/*
+ForgetAll forgets every widget of the workspace, whatever changed.
+*/
+func (a *ForgetWorkspaceWidgets) ForgetAll(ctx context.Context, workspace ids.UUID) error {
 	var widgets []models.WidgetSetting
 
 	ctx = tenancy.With(ctx, workspace.String())

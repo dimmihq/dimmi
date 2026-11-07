@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "pnpm typecheck && vite build && touch public/build/.gitkeep && pnpm widget:build",
     "widget:build": "node scripts/build-widget.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json && tsc --noEmit -p tsconfig.sdk.json",
     "lint": "biome ci --error-on-warnings",
     "format": "biome check --write",
     "test": "vitest run",

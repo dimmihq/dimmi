@@ -103,6 +103,17 @@ func TestWidgetEdges(t *testing.T) {
 		assert.Equal(t, "A", recent[0].Title)
 	})
 
+	t.Run("a visitor's profile change keeps the team's notes on them", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+
+		owner(tc).PatchJSON("/api/v1/contacts/"+v.contact, testkit.JSON{"notes": "Prefers email."}).AssertOK()
+		v.client().PatchJSON("/widget/v1/contact", testkit.JSON{"name": "Grace"}).AssertOK()
+		owner(tc).GetJSON("/api/v1/contacts/"+v.contact).AssertOK().
+			AssertJSONPath("data.name", "Grace").AssertJSONPath("data.notes", "Prefers email.")
+	})
+
 	t.Run("a profile change of nothing changes nothing and too many attributes are refused", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

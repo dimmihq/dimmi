@@ -27,3 +27,6 @@ coverage-app.filtered.out
 /lang/en-XA/
 /resources/js/lang/en-XA/
 .env.*
+
+# SDK package builds
+sdk/*/dist/

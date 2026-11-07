@@ -457,6 +457,9 @@
           "help_tab": {
             "type": "boolean"
           },
+          "identity_mode": {
+            "type": "string"
+          },
           "intercom_shim": {
             "type": "boolean"
           },
@@ -476,6 +479,7 @@
           "collect_email",
           "require_email_when_offline",
           "allow_anonymous",
+          "identity_mode",
           "intercom_shim",
           "dev_context"
         ],

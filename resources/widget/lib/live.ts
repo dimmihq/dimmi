@@ -24,7 +24,7 @@ import { type Conversation as ApiConversation, type Message as ApiMessage, Store
 import { ConversationRow } from "../components/rows";
 import { AiActions, Thread, Typing } from "../components/thread";
 import { Whoami } from "../components/whoami";
-import type { Content, Message } from "../content";
+import type { Content, Message, VerifyStep } from "../content";
 import type { Options, OptionsUpdate } from "../options";
 import type { ActionTexts } from "../text";
 import { type Availability, type Config, content, fromConfig } from "./map";
@@ -166,6 +166,7 @@ export class Live {
   open: string | undefined;
   private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
+  private readonly verifying = new Map<string, VerifyStep>();
   private callTimer: unknown;
   private identity: Source | undefined;
   private checking: Promise<void> | undefined;
@@ -212,7 +213,9 @@ export class Live {
 
   /*
    * start loads what the panel needs and answers false when the messenger
-   * must stay hidden on this page.
+   * must stay hidden on this page: when the workspace requires signed-in
+   * visitors and this one is not. When sign-in is off, the page's
+   * identity token is not even asked for.
    */
   async start(): Promise<boolean> {
     try {
@@ -223,10 +226,20 @@ export class Live {
       return false;
     }
 
+    const mode = this.config.features?.identity_mode;
+    if (mode === "off" && this.identity) {
+      report("warn", "identity_mode_off", "sign-in is off for this workspace, so the identity token is ignored.");
+      this.identity = undefined;
+    }
+
     this.host.update(fromConfig(this.config, this.host.options().texts));
     void this.loadAvailability();
 
     const session = await this.handshake().catch(() => undefined);
+    if (mode === "required" && !this.session.signedIn) {
+      report("warn", "identity_required", "this messenger is only shown to signed-in customers.");
+      return false;
+    }
     if (session) {
       await this.reload();
       this.streaming();
@@ -705,11 +718,65 @@ export class Live {
    */
   private withDecision(message: Message): Message {
     const action = message.action;
+    if (action?.state === "verify") {
+      const email = this.session.current?.contact.email ?? "";
+      return { ...message, action: { ...action, verify: this.verifying.get(action.id) ?? { step: "email", email } } };
+    }
     if (!action || !this.deciding.has(action.id)) {
       return message;
     }
 
     return { ...message, action: { ...action, state: "sending" } };
+  }
+
+  /*
+   * verifyEmail takes one step of confirming the visitor's email for an
+   * action: sending a code to the address, or checking the code typed.
+   * Once the code checks, the server moves the action on and the card
+   * shows where it stands. The code is posted from the card's form only,
+   * never as a message.
+   */
+  async verifyEmail(call: string, step: "email" | "code", value: string) {
+    const open = this.open;
+    const current = this.verifying.get(call) ?? { step: "email", email: "" };
+    if (!open || current.busy) {
+      return;
+    }
+    this.verifying.set(call, { ...current, busy: true, error: undefined });
+    this.drawThread();
+    try {
+      if (step === "email") {
+        const res = await this.http.post<{ data: { email: string } }>("/email-verifications", { email: value.trim() });
+        this.verifying.set(call, { step: "code", email: value.trim(), masked: res.data.email });
+      } else {
+        await this.http.post("/email-verifications/checks", { code: value.replace(/\D/g, "") });
+        this.verifying.delete(call);
+        await this.session.resume();
+        await this.refreshCall(open, call);
+      }
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Something went wrong. Try again.";
+      const restart = error instanceof ApiError && ["email_code_expired", "email_code_locked"].includes(error.code);
+      this.verifying.set(call, { ...current, ...(restart ? { step: "email" } : {}), busy: false, error: message });
+    }
+    this.drawThread();
+  }
+
+  /*
+   * verifyAgain sends a new code to the same address, or goes back to
+   * typing another one.
+   */
+  verifyAgain(call: string, how: "resend" | "other") {
+    const current = this.verifying.get(call);
+    if (!current) {
+      return;
+    }
+    if (how === "resend") {
+      void this.verifyEmail(call, "email", current.email);
+      return;
+    }
+    this.verifying.set(call, { step: "email", email: current.email });
+    this.drawThread();
   }
 
   private actionTexts(): ActionTexts {
@@ -718,6 +785,14 @@ export class Live {
     return {
       confirm: t.action_confirm,
       cancel: t.action_cancel,
+      verifyIntro: t.verify_intro,
+      verifyEmail: t.verify_email,
+      verifySend: t.verify_send,
+      verifySent: t.verify_sent,
+      verifyCode: t.verify_code,
+      verifySubmit: t.verify_submit,
+      verifyResend: t.verify_resend,
+      verifyOther: t.verify_other,
       waiting: t.action_waiting,
       done: t.action_done,
       declined: t.action_declined,

@@ -931,6 +931,12 @@ claims `{"sub":"SUB","iat":now,"exp":now+600}`, key the whole `dmi_idsec_` strin
 | Revoke | `PATCH $B/identity-secrets/$KID` with `{"status":"revoked"}` | 200; every session it signed in answers 401 `session_revoked` |
 | Messenger | page with `data-identity-url` answering `{"token":"<jwt>"}` for a signed-in user | the messenger signs in on load; signing out on the site sends `DELETE /widget/v1/session` on the next load and shows none of the previous conversations |
 | Agent actions | a published action binding `{contact.external_id}` on the widget channel; ask the signed-in messenger about the account | the action runs with the token's `sub`, never a value the model chose |
+| Provider key set | `POST $B/identity-secrets` with `{"algorithm":"RS256","jwks_url":"https://<your-app>.clerk.accounts.dev/.well-known/jwks.json"}`; sign in with a Clerk session token | 201 `source` `jwks` and no `kid`; the session token signs in `user_…`; a token from another issuer answers 401 `token_issuer_mismatch` |
+| Token checker | `POST $B/identity-verification/validations` with `{"token":"<token signed with the secret plus a newline>"}` | 200 `valid` false, `mistake.code` `secret_trailing_newline`; a good token answers `valid` true and `contact_preview` without using its nonce |
+| Required mode | `PATCH $B/identity-verification/settings` with `{"mode":"required"}` on a fresh workspace | 409 `rollout_guard` with the counts; with `"force":true` 200, then an anonymous `POST $W/widget/v1/sessions` answers 403 `identity_required` and the config says `identity_mode` `required` |
+| Off mode | `{"mode":"off"}`, then sign in with a good token | 201 `kind` `anonymous`; the messenger warns `identity_mode_off` and never fetches the identity URL |
+| Counts | `GET $B/identity-verification/stats?days=7` a minute after some starts | totals by outcome and `verified_share`, no per-person data |
+| Sign out everywhere | `DELETE $B/contacts/$CONTACT/widget-sessions` | 200 `sessions_revoked`; each of the customer's messengers answers 401 on its next request |
 
 ## Teammate notifications
 

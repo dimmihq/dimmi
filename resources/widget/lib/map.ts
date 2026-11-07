@@ -18,7 +18,7 @@ export interface Config {
   texts?: Record<string, string>;
   tabs?: string[];
   branding?: { show?: boolean; url?: string };
-  features?: { attachments?: boolean; max_attachment_mb?: number };
+  features?: { attachments?: boolean; max_attachment_mb?: number; identity_mode?: string };
   realtime?: { url?: string; token_url?: string; polling_interval_ms?: number };
   honeypot_field?: string;
   customer_status?: boolean;
@@ -204,6 +204,7 @@ function agentParts(m: api.Message): Pick<Message, "avatar" | "sources" | "outco
 }
 
 const actionStates: Record<string, ActionCard["state"]> = {
+  awaiting_verification: "verify",
   awaiting_confirmation: "ask",
   pending_confirmation: "ask",
   pending_approval: "waiting",

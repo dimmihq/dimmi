@@ -65,6 +65,12 @@ var (
 	ErrReplayed = tokenError("token_replayed",
 		"This token's nonce was already used.",
 		"Generate a new nonce for every token, or leave nonce out.")
+	ErrJWKSUnavailable = tokenError("token_jwks_unavailable",
+		"Your auth provider's keys could not be fetched for over a day.",
+		"Check the key set address in Settings > Identity verification answers.")
+	ErrIssuer = tokenError("token_issuer_mismatch",
+		"The token's iss is not the issuer this key set expects.",
+		"Set the issuer in Settings > Identity verification to your provider's iss.")
 	ErrNonceUnavailable = fault.New(fault.Unavailable, "identity_unavailable",
 		"Tokens with a nonce cannot be checked right now; try again shortly.")
 )
@@ -80,7 +86,7 @@ func tooLarge(size, limit int) *fault.Error {
 
 func algNotAllowed(alg string) *fault.Error {
 	return tokenError("token_alg_not_allowed", fmt.Sprintf("Algorithm %q is not accepted.", alg),
-		"Use HS256, or RS256 or EdDSA with a public key uploaded in Settings.")
+		"Use HS256, RS256, ES256 or EdDSA.")
 }
 
 func kidUnknown(kid string) *fault.Error {

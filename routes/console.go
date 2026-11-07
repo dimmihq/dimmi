@@ -12,7 +12,9 @@
 | their payloads and old runs, all a few minutes apart so they never
 | compete, and every workspace is checked for an active owner.
 | In the morning owners of workspaces about to be purged are reminded,
-| and owners of access tokens about to expire are warned.
+| and owners of access tokens about to expire are warned. Every hour the
+| auth provider key sets visitors sign in with are fetched again when
+| their copy is six hours old.
 |
 */
 
@@ -46,4 +48,6 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.ExpireDataExportsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
 	a.Schedule.Job(jobs.PruneAiTracesArgs{}).DailyAt("03:50")
+	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
+	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 }

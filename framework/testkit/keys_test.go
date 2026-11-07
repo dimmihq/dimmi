@@ -21,6 +21,16 @@ func TestEd25519(t *testing.T) {
 		assert.NotEqual(t, a.PublicPEM, b.PublicPEM)
 	})
 
+	t.Run("makes a p-256 pair and publishes keys in a key set", func(t *testing.T) {
+		t.Parallel()
+		ec, ed := testkit.P256(t), testkit.Ed25519(t)
+		assert.True(t, strings.HasPrefix(ec.PublicPEM, "-----BEGIN PUBLIC KEY-----"))
+		assert.Equal(t, "P-256", ec.JWK["crv"])
+		set := string(testkit.JWKS(t, map[string]testkit.KeyPair{"ec": ec, "ed": ed}))
+		assert.Contains(t, set, `"kid":"ec"`)
+		assert.Contains(t, set, `"crv":"Ed25519"`)
+	})
+
 	t.Run("makes browser push keys of the sizes browsers send", func(t *testing.T) {
 		t.Parallel()
 		k := testkit.BrowserPushKeys(t)

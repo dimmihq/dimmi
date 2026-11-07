@@ -9,6 +9,8 @@
     "includes": [
       "resources/js/**",
       "resources/widget/**",
+      "sdk/**",
+      "!sdk/*/dist",
       "scripts/**",
       "!resources/js/route-tree.gen.ts",
       "!resources/js/components",

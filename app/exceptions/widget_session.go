@@ -32,6 +32,8 @@ var (
 		"A signed-in customer's profile comes from your app, not the messenger.")
 	ErrIdentityNotConfigured = fault.New(fault.Unauthenticated, "identity_not_configured",
 		"This messenger does not verify signed-in customers yet.")
+	ErrIdentityRequired = fault.New(fault.Forbidden, "identity_required",
+		"This messenger is only for signed-in customers; send an identity token.")
 )
 
 /*

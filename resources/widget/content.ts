@@ -90,7 +90,20 @@ export interface ActionCard {
   title: string;
   text: string;
   details: { label: string; value: string }[];
-  state: "ask" | "sending" | "waiting" | "done" | "declined" | "canceled" | "expired" | "failed";
+  state: "ask" | "verify" | "sending" | "waiting" | "done" | "declined" | "canceled" | "expired" | "failed";
+  verify?: VerifyStep;
+}
+
+/*
+ * VerifyStep is where a visitor stands in confirming their email for an
+ * action: typing the address, or the code mailed to it.
+ */
+export interface VerifyStep {
+  step: "email" | "code";
+  email: string;
+  masked?: string;
+  error?: string;
+  busy?: boolean;
 }
 
 export interface Message {

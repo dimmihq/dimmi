@@ -106,6 +106,10 @@ type Actions struct {
 	NotificationPresence       *notifications.Presence
 	PushDevices                *notifications.Devices
 	IdentityVerifier           *identity.Verifier
+	IdentityKeySets            *identity.KeySets
+	IdentitySetup              *identity.Setup
+	IdentityChecker            *identity.Checker
+	IdentityStats              *identity.Stats
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
 	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy

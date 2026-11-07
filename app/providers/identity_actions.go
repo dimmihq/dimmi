@@ -114,14 +114,18 @@ func bootIdentityVerifier(a *app.App) *identity.Verifier {
 		return a.Actions.IdentityVerifier
 	}
 	cfg := a.Config.Identity
+	keySets := &identity.KeySets{DB: a.DB, HTTP: a.HTTP, Clock: a.Clock}
+	a.Actions.IdentityKeySets = keySets
 	a.Actions.IdentityVerifier = &identity.Verifier{
-		DB: a.DB, Clock: a.Clock, Keys: a.Keys, Cache: a.Cache, Leeway: cfg.ClockLeeway,
+		DB: a.DB, Clock: a.Clock, Keys: a.Keys, Cache: a.Cache, KeySets: keySets, Leeway: cfg.ClockLeeway,
 		MaxLifetime: cfg.MaxTokenLifetime,
 	}
 	a.Actions.IdentitySecrets = &identity.Secrets{
-		DB: a.DB, Clock: a.Clock, Keys: a.Keys,
+		DB: a.DB, Clock: a.Clock, Keys: a.Keys, KeySets: keySets,
 		Streams:   widget.IdentityStreams{Streams: widget.BroadcastStreams{Server: a.Broadcast}},
 		MaxActive: cfg.MaxActiveSecrets, RetireDefault: cfg.RetireDefault, RetireMax: cfg.RetireMax,
 	}
+	a.Actions.IdentityChecker = &identity.Checker{Verifier: a.Actions.IdentityVerifier, IDs: a.IDs}
+	a.Actions.IdentityStats = identity.NewStats(a.DB, a.Clock)
 	return a.Actions.IdentityVerifier
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/pubsub"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -48,12 +49,14 @@ const (
 
 /*
 Resolved is a widget with what a visitor's request needs beside it: its
-workspace and the inbox its new conversations land in.
+workspace, the inbox its new conversations land in and how strict the
+workspace is about signing visitors in.
 */
 type Resolved struct {
-	Widget    models.WidgetSetting
-	Workspace models.Workspace
-	InboxID   ids.UUID
+	Widget       models.WidgetSetting
+	Workspace    models.Workspace
+	InboxID      ids.UUID
+	IdentityMode string
 }
 
 /*
@@ -173,7 +176,10 @@ func (d *Directory) load(ctx context.Context, id ids.UUID) (Resolved, error) {
 
 		out.InboxID = conn.InboxID
 
-		return nil
+		settings, err := identity.LoadSettings(ctx, q, row.WorkspaceID)
+		out.IdentityMode = settings.Mode
+
+		return err
 	})
 
 	return out, err

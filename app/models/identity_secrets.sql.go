@@ -90,12 +90,12 @@ func (q *Queries) CountLiveIdentitySecrets(ctx context.Context, workspaceID ids.
 const createIdentitySecret = `-- name: CreateIdentitySecret :one
 INSERT INTO identity_secrets (
     id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, created_by_member_id,
-    created_at, updated_at
+    jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
-    $9, $9
+    $9, $10, $11, $12, $13, $14, $14
 )
-RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at
+RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error
 `
 
 type CreateIdentitySecretParams struct {
@@ -107,6 +107,11 @@ type CreateIdentitySecretParams struct {
 	PublicKeyJwk      json.RawMessage   `json:"public_key_jwk"`
 	Fingerprint       string            `json:"fingerprint"`
 	CreatedByMemberID *ids.UUID         `json:"created_by_member_id"`
+	JwksUrl           *string           `json:"jwks_url"`
+	JwksIssuer        *string           `json:"jwks_issuer"`
+	Audience          *string           `json:"audience"`
+	JwksCache         json.RawMessage   `json:"jwks_cache"`
+	JwksFetchedAt     *time.Time        `json:"jwks_fetched_at"`
 	Now               time.Time         `json:"now"`
 }
 
@@ -121,6 +126,11 @@ func (q *Queries) CreateIdentitySecret(ctx context.Context, arg CreateIdentitySe
 		arg.PublicKeyJwk,
 		arg.Fingerprint,
 		arg.CreatedByMemberID,
+		arg.JwksUrl,
+		arg.JwksIssuer,
+		arg.Audience,
+		arg.JwksCache,
+		arg.JwksFetchedAt,
 		arg.Now,
 	)
 	var i IdentitySecret
@@ -140,12 +150,18 @@ func (q *Queries) CreateIdentitySecret(ctx context.Context, arg CreateIdentitySe
 		&i.LastUsedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
 	)
 	return i, err
 }
 
 const findIdentitySecret = `-- name: FindIdentitySecret :one
-SELECT id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at FROM identity_secrets WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error FROM identity_secrets WHERE workspace_id = $1 AND id = $2
 `
 
 type FindIdentitySecretParams struct {
@@ -173,12 +189,68 @@ func (q *Queries) FindIdentitySecret(ctx context.Context, arg FindIdentitySecret
 		&i.LastUsedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
 	)
 	return i, err
 }
 
+const identitySecretExists = `-- name: IdentitySecretExists :one
+SELECT identity_secret_exists($1::uuid)::boolean AS found
+`
+
+// IdentitySecretExists reports whether any workspace holds a secret with
+// the id.
+func (q *Queries) IdentitySecretExists(ctx context.Context, id ids.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, identitySecretExists, id)
+	var found bool
+	err := row.Scan(&found)
+	return found, err
+}
+
+const listIdentityJWKSDue = `-- name: ListIdentityJWKSDue :many
+SELECT d.workspace_id::uuid AS workspace_id, d.id::uuid AS id
+FROM identity_jwks_due($1::timestamptz, $2::integer) AS d
+`
+
+type ListIdentityJWKSDueParams struct {
+	StaleBefore time.Time `json:"stale_before"`
+	MaxRows     int32     `json:"max_rows"`
+}
+
+type ListIdentityJWKSDueRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ListIdentityJWKSDue returns provider key sets of every workspace
+// whose cached copy is older than stale_before.
+func (q *Queries) ListIdentityJWKSDue(ctx context.Context, arg ListIdentityJWKSDueParams) ([]ListIdentityJWKSDueRow, error) {
+	rows, err := q.db.Query(ctx, listIdentityJWKSDue, arg.StaleBefore, arg.MaxRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListIdentityJWKSDueRow
+	for rows.Next() {
+		var i ListIdentityJWKSDueRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listIdentitySecrets = `-- name: ListIdentitySecrets :many
-SELECT id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at FROM identity_secrets WHERE workspace_id = $1 ORDER BY created_at DESC, id DESC
+SELECT id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error FROM identity_secrets WHERE workspace_id = $1 ORDER BY created_at DESC, id DESC
 `
 
 // ListIdentitySecrets returns the workspace's secrets, newest first,
@@ -208,6 +280,12 @@ func (q *Queries) ListIdentitySecrets(ctx context.Context, workspaceID ids.UUID)
 			&i.LastUsedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.JwksUrl,
+			&i.JwksIssuer,
+			&i.Audience,
+			&i.JwksCache,
+			&i.JwksFetchedAt,
+			&i.JwksError,
 		); err != nil {
 			return nil, err
 		}
@@ -236,7 +314,7 @@ func (q *Queries) LockContactExternalID(ctx context.Context, arg LockContactExte
 }
 
 const lockIdentitySecret = `-- name: LockIdentitySecret :one
-SELECT id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at FROM identity_secrets WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error FROM identity_secrets WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockIdentitySecretParams struct {
@@ -265,6 +343,12 @@ func (q *Queries) LockIdentitySecret(ctx context.Context, arg LockIdentitySecret
 		&i.LastUsedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
 	)
 	return i, err
 }
@@ -357,10 +441,34 @@ func (q *Queries) MoveLeadParticipations(ctx context.Context, arg MoveLeadPartic
 	return err
 }
 
+const noteIdentityJWKSError = `-- name: NoteIdentityJWKSError :exec
+UPDATE identity_secrets SET jwks_error = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type NoteIdentityJWKSErrorParams struct {
+	JwksError   *string   `json:"jwks_error"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// NoteIdentityJWKSError records why the provider key set could not be
+// fetched, keeping the copy already cached.
+func (q *Queries) NoteIdentityJWKSError(ctx context.Context, arg NoteIdentityJWKSErrorParams) error {
+	_, err := q.db.Exec(ctx, noteIdentityJWKSError,
+		arg.JwksError,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
 const renameIdentitySecret = `-- name: RenameIdentitySecret :one
 UPDATE identity_secrets SET name = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at
+RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error
 `
 
 type RenameIdentitySecretParams struct {
@@ -395,6 +503,12 @@ func (q *Queries) RenameIdentitySecret(ctx context.Context, arg RenameIdentitySe
 		&i.LastUsedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
 	)
 	return i, err
 }
@@ -402,7 +516,7 @@ func (q *Queries) RenameIdentitySecret(ctx context.Context, arg RenameIdentitySe
 const retireIdentitySecret = `-- name: RetireIdentitySecret :one
 UPDATE identity_secrets SET status = 'retiring', retires_at = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at
+RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error
 `
 
 type RetireIdentitySecretParams struct {
@@ -437,8 +551,52 @@ func (q *Queries) RetireIdentitySecret(ctx context.Context, arg RetireIdentitySe
 		&i.LastUsedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
 	)
 	return i, err
+}
+
+const revokeContactWidgetSessions = `-- name: RevokeContactWidgetSessions :many
+UPDATE widget_sessions SET revoked_at = $1::timestamptz, revoke_reason = 'admin', updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND contact_id = $3 AND revoked_at IS NULL
+RETURNING id, contact_id
+`
+
+type RevokeContactWidgetSessionsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+}
+
+type RevokeContactWidgetSessionsRow struct {
+	ID        ids.UUID `json:"id"`
+	ContactID ids.UUID `json:"contact_id"`
+}
+
+// RevokeContactWidgetSessions ends every live session of the contact.
+func (q *Queries) RevokeContactWidgetSessions(ctx context.Context, arg RevokeContactWidgetSessionsParams) ([]RevokeContactWidgetSessionsRow, error) {
+	rows, err := q.db.Query(ctx, revokeContactWidgetSessions, arg.Now, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RevokeContactWidgetSessionsRow
+	for rows.Next() {
+		var i RevokeContactWidgetSessionsRow
+		if err := rows.Scan(&i.ID, &i.ContactID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const revokeIdentitySecret = `-- name: RevokeIdentitySecret :one
@@ -446,7 +604,7 @@ UPDATE identity_secrets SET
     status = 'revoked', retires_at = NULL, revoked_at = $1::timestamptz, revoked_reason = $2::text,
     updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at
+RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error
 `
 
 type RevokeIdentitySecretParams struct {
@@ -481,6 +639,12 @@ func (q *Queries) RevokeIdentitySecret(ctx context.Context, arg RevokeIdentitySe
 		&i.LastUsedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
 	)
 	return i, err
 }
@@ -523,6 +687,55 @@ func (q *Queries) RevokeWidgetSessionsForSecret(ctx context.Context, arg RevokeW
 		return nil, err
 	}
 	return items, nil
+}
+
+const storeIdentityJWKS = `-- name: StoreIdentityJWKS :one
+UPDATE identity_secrets SET jwks_cache = $1, jwks_fetched_at = $2, jwks_error = NULL, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+RETURNING id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, status, retires_at, revoked_at, revoked_reason, created_by_member_id, last_used_at, created_at, updated_at, jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, jwks_error
+`
+
+type StoreIdentityJWKSParams struct {
+	JwksCache   json.RawMessage `json:"jwks_cache"`
+	Now         *time.Time      `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// StoreIdentityJWKS caches a freshly fetched provider key set on the
+// secret, so every replica verifies with the same copy.
+func (q *Queries) StoreIdentityJWKS(ctx context.Context, arg StoreIdentityJWKSParams) (IdentitySecret, error) {
+	row := q.db.QueryRow(ctx, storeIdentityJWKS,
+		arg.JwksCache,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i IdentitySecret
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Algorithm,
+		&i.SecretEncrypted,
+		&i.PublicKeyJwk,
+		&i.Fingerprint,
+		&i.Status,
+		&i.RetiresAt,
+		&i.RevokedAt,
+		&i.RevokedReason,
+		&i.CreatedByMemberID,
+		&i.LastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.JwksUrl,
+		&i.JwksIssuer,
+		&i.Audience,
+		&i.JwksCache,
+		&i.JwksFetchedAt,
+		&i.JwksError,
+	)
+	return i, err
 }
 
 const touchIdentitySecret = `-- name: TouchIdentitySecret :exec
@@ -583,7 +796,7 @@ UPDATE widget_sessions SET
     verified_at = $3::timestamptz, expires_at = $4, last_seen_at = $3::timestamptz,
     updated_at = $3::timestamptz
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, widget_settings_id, contact_id, token_hash, kind, test, identity_secret_id, external_id, verified_at, expires_at, revoked_at, revoke_reason, bot_score, pow_solved_at, origin, user_agent, ip_prefix, country, locale, timezone, current_page, recent_pages, context, last_seen_at, created_at, updated_at
+RETURNING id, workspace_id, widget_settings_id, contact_id, token_hash, kind, test, identity_secret_id, external_id, verified_at, expires_at, revoked_at, revoke_reason, bot_score, pow_solved_at, origin, user_agent, ip_prefix, country, locale, timezone, current_page, recent_pages, context, last_seen_at, created_at, updated_at, verified_email, email_verified_at
 `
 
 type VerifyWidgetSessionParams struct {
@@ -635,6 +848,8 @@ func (q *Queries) VerifyWidgetSession(ctx context.Context, arg VerifyWidgetSessi
 		&i.LastSeenAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VerifiedEmail,
+		&i.EmailVerifiedAt,
 	)
 	return i, err
 }

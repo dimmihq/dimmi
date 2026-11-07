@@ -53,5 +53,13 @@
   "talk_to_human": "Talk to a person",
   "team_intro": "",
   "update_feedback": "What do you think of this update?",
+  "verify_code": "Code",
+  "verify_email": "Email",
+  "verify_intro": "Confirm your email to continue",
+  "verify_other": "Use another email",
+  "verify_resend": "Send a new code",
+  "verify_send": "Send code",
+  "verify_sent": "Enter the 6-digit code we sent to {email}",
+  "verify_submit": "Verify",
   "welcome_message": ""
 }

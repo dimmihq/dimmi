@@ -21,15 +21,18 @@ package widget
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/i18n"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -77,8 +80,11 @@ type StartedSession struct {
 StartWidgetSession starts visitors' sessions. AnonymousTTL is how long an
 anonymous session lives after the last visit and IdentifiedTTL how long a
 signed-in one lives after its last verified token. Identity checks
-identity tokens, nil when the install verifies none, and Streams closes
-what sessions that ended had open.
+identity tokens, nil when the install verifies none, Streams closes
+what sessions that ended had open and Outcomes counts how starts went.
+
+The workspace's sign-in mode decides what a token does: off ignores it
+and starts an anonymous session, required refuses a start without one.
 
 Events: [appevents.ContactCreated], [appevents.ContactUpdated].
 */
@@ -90,14 +96,47 @@ type StartWidgetSession struct {
 	IdentifiedTTL time.Duration
 	Identity      IdentityVerifier
 	Streams       SessionCloser
+	Outcomes      OutcomeRecorder
+}
+
+/*
+OutcomeRecorder counts how session starts went.
+*/
+type OutcomeRecorder interface {
+	/*
+		Record counts one outcome of the workspace.
+	*/
+	Record(workspaceID ids.UUID, outcome string)
 }
 
 /*
 Handle starts the session the input asks for.
 */
 func (a *StartWidgetSession) Handle(ctx context.Context, in StartWidgetSessionInput) (StartedSession, error) {
-	if in.UserJWT != "" {
+	out, err := a.start(ctx, in)
+	a.record(in.Resolved.Workspace.ID, signsIn(in), err)
+
+	return out, err
+}
+
+/*
+signsIn reports whether the start signs a customer in: a token was sent
+and the workspace reads tokens.
+*/
+func signsIn(in StartWidgetSessionInput) bool {
+	return in.UserJWT != "" && in.Resolved.IdentityMode != identity.ModeOff
+}
+
+/*
+start starts the session the mode and input ask for.
+*/
+func (a *StartWidgetSession) start(ctx context.Context, in StartWidgetSessionInput) (StartedSession, error) {
+	if signsIn(in) {
 		return a.identified(ctx, in)
+	}
+
+	if in.Resolved.IdentityMode == identity.ModeRequired {
+		return StartedSession{}, exceptions.ErrIdentityRequired
 	}
 
 	if !in.Resolved.Widget.AllowAnonymous {
@@ -105,6 +144,27 @@ func (a *StartWidgetSession) Handle(ctx context.Context, in StartWidgetSessionIn
 	}
 
 	return a.anonymous(ctx, in)
+}
+
+/*
+record counts the start: signed in, anonymous, or the code it was
+refused with.
+*/
+func (a *StartWidgetSession) record(workspaceID ids.UUID, signingIn bool, err error) {
+	if a.Outcomes == nil {
+		return
+	}
+
+	var f *fault.Error
+
+	switch {
+	case err == nil && signingIn:
+		a.Outcomes.Record(workspaceID, identity.OutcomeVerified)
+	case err == nil:
+		a.Outcomes.Record(workspaceID, identity.OutcomeAnonymous)
+	case errors.As(err, &f):
+		a.Outcomes.Record(workspaceID, f.Code())
+	}
 }
 
 /*

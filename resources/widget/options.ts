@@ -70,6 +70,14 @@ export interface Texts {
   action_canceled: string;
   action_expired: string;
   action_failed: string;
+  verify_intro: string;
+  verify_email: string;
+  verify_send: string;
+  verify_sent: string;
+  verify_code: string;
+  verify_submit: string;
+  verify_resend: string;
+  verify_other: string;
 }
 
 export interface Options {
@@ -138,6 +146,14 @@ export const defaults: Options = {
     action_canceled: "Canceled",
     action_expired: "This request expired",
     action_failed: "This didn't go through",
+    verify_intro: "Confirm your email to continue",
+    verify_email: "Email",
+    verify_send: "Send code",
+    verify_sent: "Enter the 6-digit code we sent to {email}",
+    verify_code: "Code",
+    verify_submit: "Verify",
+    verify_resend: "Send a new code",
+    verify_other: "Use another email",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,

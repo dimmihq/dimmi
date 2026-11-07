@@ -81,6 +81,11 @@ export default defineConfig(({ command }) => ({
         test: { name: "app", environment: "jsdom", globals: true, include: ["resources/js/**/*.test.{ts,tsx}"] },
       },
       "./vite.widget.config.ts",
+      {
+        extends: true,
+        resolve: { alias: { "@dimmi/server": fileURLToPath(new URL("./sdk/server/src/index.ts", import.meta.url)) } },
+        test: { name: "sdk", environment: "node", globals: true, include: ["sdk/*/src/**/*.test.ts"] },
+      },
     ],
   },
 }));

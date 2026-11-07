@@ -20,10 +20,10 @@ SELECT count(*) FROM identity_secrets WHERE workspace_id = @workspace_id AND sta
 -- CreateIdentitySecret stores a new active secret.
 INSERT INTO identity_secrets (
     id, workspace_id, name, algorithm, secret_encrypted, public_key_jwk, fingerprint, created_by_member_id,
-    created_at, updated_at
+    jwks_url, jwks_issuer, audience, jwks_cache, jwks_fetched_at, created_at, updated_at
 ) VALUES (
     @id, @workspace_id, @name, @algorithm, @secret_encrypted, @public_key_jwk, @fingerprint, @created_by_member_id,
-    @now, @now
+    @jwks_url, @jwks_issuer, @audience, @jwks_cache, @jwks_fetched_at, @now, @now
 )
 RETURNING *;
 
@@ -122,3 +122,33 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- LockContactExternalID serializes first sign-ins of one customer, so two
 -- tabs signing in at once make one contact.
 SELECT pg_advisory_xact_lock(hashtext(@workspace_id::text || ':' || @external_id::text));
+
+-- name: StoreIdentityJWKS :one
+-- StoreIdentityJWKS caches a freshly fetched provider key set on the
+-- secret, so every replica verifies with the same copy.
+UPDATE identity_secrets SET jwks_cache = @jwks_cache, jwks_fetched_at = @now, jwks_error = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
+-- name: NoteIdentityJWKSError :exec
+-- NoteIdentityJWKSError records why the provider key set could not be
+-- fetched, keeping the copy already cached.
+UPDATE identity_secrets SET jwks_error = @jwks_error, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListIdentityJWKSDue :many
+-- ListIdentityJWKSDue returns provider key sets of every workspace
+-- whose cached copy is older than stale_before.
+SELECT d.workspace_id::uuid AS workspace_id, d.id::uuid AS id
+FROM identity_jwks_due(@stale_before::timestamptz, @max_rows::integer) AS d;
+
+-- name: IdentitySecretExists :one
+-- IdentitySecretExists reports whether any workspace holds a secret with
+-- the id.
+SELECT identity_secret_exists(@id::uuid)::boolean AS found;
+
+-- name: RevokeContactWidgetSessions :many
+-- RevokeContactWidgetSessions ends every live session of the contact.
+UPDATE widget_sessions SET revoked_at = @now::timestamptz, revoke_reason = 'admin', updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND revoked_at IS NULL
+RETURNING id, contact_id;

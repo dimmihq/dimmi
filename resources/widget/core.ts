@@ -224,6 +224,34 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     }
   };
 
+  /*
+   * verifyClick handles the links of an email code card: send a new code,
+   * or use another address.
+   */
+  const verifyClick = (target: Element | null) => {
+    const again = target?.closest<HTMLElement>("[data-verify-again]");
+    const how = again?.dataset.verifyAgain;
+    if (again?.dataset.verifyCall && (how === "resend" || how === "other")) {
+      live?.verifyAgain(again.dataset.verifyCall, how);
+    }
+  };
+
+  /*
+   * verifySubmit sends an email code card's form, reporting whether the
+   * event was one.
+   */
+  const verifySubmit = (event: Event): boolean => {
+    const form =
+      event.target instanceof HTMLFormElement && event.target.matches("[data-verify-call]") ? event.target : null;
+    const step = form?.dataset.verifyStep;
+    if (!form?.dataset.verifyCall || (step !== "email" && step !== "code")) {
+      return false;
+    }
+    event.preventDefault();
+    void live?.verifyEmail(form.dataset.verifyCall, step, String(new FormData(form).get("value") ?? ""));
+    return true;
+  };
+
   const listen = () => {
     root.addEventListener("dimmi:connect", () => app.connect(root));
     root.addEventListener("dimmi:converse", (event) => {
@@ -244,6 +272,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       if (kind === "helped" || kind === "handoff") {
         void live?.aiAction(kind);
       }
+      verifyClick(target);
       const card = target?.closest<HTMLElement>("[data-call]");
       const decision = card?.dataset.decision;
       if (card?.dataset.call && (decision === "confirmed" || decision === "canceled")) {
@@ -251,6 +280,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
     });
     root.addEventListener("submit", (event) => {
+      if (verifySubmit(event)) {
+        return;
+      }
       const form =
         event.target instanceof HTMLFormElement && event.target.matches("[data-capture]") ? event.target : null;
       if (form) {

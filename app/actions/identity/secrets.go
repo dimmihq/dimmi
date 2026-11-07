@@ -10,6 +10,9 @@
 | secret and lets the old one keep working for a grace period, so a deploy
 | can switch keys without a single failed sign-in. Revoking is final and,
 | unless asked otherwise, signs out every visitor the secret verified.
+| A secret pointing at an auth provider's key set is checked by fetching
+| the set once when it is made, so a typo is caught in the dashboard and
+| not by the first customer who signs in.
 |
 */
 
@@ -26,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/fault"
+	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -62,6 +66,7 @@ type Secrets struct {
 	DB            *database.DB
 	Clock         clock.Clock
 	Keys          *encryption.Keys
+	KeySets       *KeySets
 	Streams       SessionCloser
 	MaxActive     int64
 	RetireDefault time.Duration
@@ -69,14 +74,19 @@ type Secrets struct {
 }
 
 /*
-NewSecret is a secret to create: its name and algorithm, with the PEM
-public key for RS256 and EdDSA.
+NewSecret is a secret to create: its name and algorithm, with either the
+PEM public key or the address of a provider's key set for RS256, ES256
+and EdDSA. Issuer is the iss a provider's tokens carry, needed when it
+cannot be read off the address, and Audience an extra aud to accept.
 */
 type NewSecret struct {
 	Membership authz.Membership
 	Name       string
 	Algorithm  string
 	PublicKey  string
+	JWKSURL    string
+	Issuer     string
+	Audience   string
 }
 
 /*
@@ -115,6 +125,10 @@ var (
 		"A revoked secret stays revoked, and a retiring one goes back to active only by rotating.")
 	ErrSecretNotActive = fault.New(fault.Conflict, "secret_not_active",
 		"Only an active secret can be rotated.")
+	ErrProviderRotates = fault.New(fault.Conflict, "secret_rotates_at_provider",
+		"Your auth provider rotates its own keys; dimmi picks new ones up from the key set.")
+	ErrIssuerRequired = fault.New(fault.Invalid, "issuer_required",
+		"Type the iss your provider's tokens carry; it cannot be read off this address.").OnField("issuer")
 )
 
 /*
@@ -207,6 +221,9 @@ func (s *Secrets) Rotate(ctx context.Context, m authz.Membership, id ids.UUID, p
 		if old.Status != "active" {
 			return ErrSecretNotActive
 		}
+		if old.JwksUrl != nil {
+			return ErrProviderRotates
+		}
 		now := s.Clock.Now()
 		if _, err := q.RetireIdentitySecret(ctx, models.RetireIdentitySecretParams{
 			RetiresAt: new(now.Add(s.RetireDefault)), Now: now, WorkspaceID: old.WorkspaceID, ID: old.ID,
@@ -272,28 +289,79 @@ func (s *Secrets) insert(ctx context.Context, tx *database.Tx, in NewSecret) (Cr
 		ID: ids.NewV7At(now), WorkspaceID: ws, Name: name, Algorithm: in.Algorithm,
 		CreatedByMemberID: memberID(in.Membership), Now: now,
 	}
+	if params.Audience, err = optionalText(in.Audience, "audience"); err != nil {
+		return Created{}, err
+	}
 	out := Created{}
-	switch in.Algorithm {
-	case AlgorithmHS256:
-		out.Value = newSharedSecret()
-		if params.SecretEncrypted, err = sealSecret(ctx, s.Keys, secretSlot(ws, params.ID), out.Value); err != nil {
-			return Created{}, err
-		}
-		params.Fingerprint = out.Value[len(out.Value)-4:]
-	case AlgorithmRS256, AlgorithmEdDSA:
-		key, err := parsePublicKey(in.Algorithm, in.PublicKey)
-		if err != nil {
-			return Created{}, err
-		}
-		params.PublicKeyJwk, params.Fingerprint = key.stored, key.fingerprint
-	default:
-		return Created{}, fault.New(fault.Invalid, "algorithm_invalid", "The algorithm is HS256, RS256 or EdDSA.").
-			OnField("algorithm")
+	if out.Value, err = s.material(ctx, in, &params); err != nil {
+		return Created{}, err
 	}
 	if out.Secret, err = q.CreateIdentitySecret(ctx, params); err != nil {
 		return Created{}, fmt.Errorf("create identity secret: %w", err)
 	}
 	return out, nil
+}
+
+/*
+material fills in what the secret verifies with: a fresh shared secret,
+returned to show once, an uploaded public key, or a provider's key set.
+*/
+func (s *Secrets) material(ctx context.Context, in NewSecret, params *models.CreateIdentitySecretParams,
+) (string, error) {
+	switch in.Algorithm {
+	case AlgorithmHS256:
+		value := newSharedSecret()
+		sealed, err := sealSecret(ctx, s.Keys, secretSlot(params.WorkspaceID, params.ID), value)
+		params.SecretEncrypted, params.Fingerprint = sealed, value[len(value)-4:]
+		return value, err
+	case AlgorithmRS256, AlgorithmES256, AlgorithmEdDSA:
+		if strings.TrimSpace(in.JWKSURL) != "" {
+			return "", s.provider(ctx, in, params)
+		}
+		key, err := parsePublicKey(in.Algorithm, in.PublicKey)
+		params.PublicKeyJwk, params.Fingerprint = key.stored, key.fingerprint
+		return "", err
+	}
+	return "", fault.New(fault.Invalid, "algorithm_invalid", "The algorithm is HS256, RS256, ES256 or EdDSA.").
+		OnField("algorithm")
+}
+
+/*
+provider fetches a provider's key set once and keeps the first copy.
+*/
+func (s *Secrets) provider(ctx context.Context, in NewSecret, params *models.CreateIdentitySecretParams) error {
+	address := strings.TrimSpace(in.JWKSURL)
+	issuer, err := optionalText(in.Issuer, "issuer")
+	if err != nil {
+		return err
+	}
+	draft := models.IdentitySecret{JwksUrl: &address, JwksIssuer: issuer}
+	if expectedIssuer(draft) == "" {
+		return ErrIssuerRequired
+	}
+	body, err := s.KeySets.fetch(ctx, address, in.Algorithm)
+	if err != nil {
+		return err
+	}
+	now := s.Clock.Now()
+	params.JwksUrl, params.JwksIssuer, params.JwksCache, params.JwksFetchedAt = &address, issuer, body, &now
+	params.Fingerprint = hashing.SHA256Hex([]byte(address))[:16]
+	return nil
+}
+
+/*
+optionalText trims an optional setting, nil when empty, refusing one over
+200 characters.
+*/
+func optionalText(value, field string) (*string, error) {
+	clean := strings.TrimSpace(value)
+	if clean == "" {
+		return nil, nil
+	}
+	if len(clean) > 200 {
+		return nil, fault.New(fault.Invalid, field+"_too_long", "At most 200 characters.").OnField(field)
+	}
+	return &clean, nil
 }
 
 /*

@@ -774,6 +774,28 @@ type IdentitySecret struct {
 	LastUsedAt        *time.Time        `json:"last_used_at"`
 	CreatedAt         time.Time         `json:"created_at"`
 	UpdatedAt         time.Time         `json:"updated_at"`
+	JwksUrl           *string           `json:"jwks_url"`
+	JwksIssuer        *string           `json:"jwks_issuer"`
+	Audience          *string           `json:"audience"`
+	JwksCache         json.RawMessage   `json:"jwks_cache"`
+	JwksFetchedAt     *time.Time        `json:"jwks_fetched_at"`
+	JwksError         *string           `json:"jwks_error"`
+}
+
+type IdentitySetting struct {
+	WorkspaceID              ids.UUID  `json:"workspace_id"`
+	Mode                     string    `json:"mode"`
+	ClientWritableAttributes []string  `json:"client_writable_attributes"`
+	UpdatedByMemberID        *ids.UUID `json:"updated_by_member_id"`
+	CreatedAt                time.Time `json:"created_at"`
+	UpdatedAt                time.Time `json:"updated_at"`
+}
+
+type IdentityVerificationStat struct {
+	WorkspaceID ids.UUID    `json:"workspace_id"`
+	Day         pgtype.Date `json:"day"`
+	Outcome     string      `json:"outcome"`
+	Count       int64       `json:"count"`
 }
 
 type InboundEmail struct {
@@ -1351,6 +1373,8 @@ type WidgetSession struct {
 	LastSeenAt       time.Time       `json:"last_seen_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
+	VerifiedEmail    *string         `json:"verified_email"`
+	EmailVerifiedAt  *time.Time      `json:"email_verified_at"`
 }
 
 type WidgetSetting struct {

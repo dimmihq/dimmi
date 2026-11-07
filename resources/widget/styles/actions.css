@@ -140,3 +140,49 @@
     animation-duration: 0s;
   }
 }
+
+.action-card.verify .verify-form {
+  display: grid;
+  gap: 8px;
+}
+
+.verify-intro {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.verify-form .row {
+  display: flex;
+  gap: 8px;
+}
+
+.verify-form .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.verify-form input[name="value"][inputmode="numeric"] {
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
+
+.verify-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.verify-links > .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.verify-error {
+  margin: 0;
+  color: var(--text-error, #d92d20);
+}

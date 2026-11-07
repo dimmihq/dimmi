@@ -20,20 +20,29 @@ import (
 
 /*
 IdentitySecret is one secret without its material. Kid is the value a
-token's kid header names it by.
+token's kid header names it by, empty for a provider's key set, whose
+tokens carry the provider's own key ids. Source says what it verifies
+with: a shared secret, a public key or a key set, the last with its
+address, issuer and when it was last fetched or why it failed.
 */
 type IdentitySecret struct {
-	ID          string     `json:"id"`
-	Object      string     `json:"object"`
-	Name        string     `json:"name"`
-	Algorithm   string     `json:"algorithm"`
-	Kid         string     `json:"kid"`
-	Fingerprint string     `json:"fingerprint"`
-	Status      string     `json:"status"`
-	RetiresAt   *time.Time `json:"retires_at"`
-	RevokedAt   *time.Time `json:"revoked_at"`
-	LastUsedAt  *time.Time `json:"last_used_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID            string     `json:"id"`
+	Object        string     `json:"object"`
+	Name          string     `json:"name"`
+	Algorithm     string     `json:"algorithm"`
+	Source        string     `json:"source"`
+	Kid           string     `json:"kid"`
+	JWKSURL       *string    `json:"jwks_url"`
+	Issuer        *string    `json:"issuer"`
+	Audience      *string    `json:"audience"`
+	JWKSFetchedAt *time.Time `json:"jwks_fetched_at"`
+	JWKSError     *string    `json:"jwks_error"`
+	Fingerprint   string     `json:"fingerprint"`
+	Status        string     `json:"status"`
+	RetiresAt     *time.Time `json:"retires_at"`
+	RevokedAt     *time.Time `json:"revoked_at"`
+	LastUsedAt    *time.Time `json:"last_used_at"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 /*
@@ -41,11 +50,19 @@ NewIdentitySecret shapes a secret for the API.
 */
 func NewIdentitySecret(s models.IdentitySecret) IdentitySecret {
 	id := models.PublicID(models.PrefixIdentitySecret, s.ID)
-	return IdentitySecret{
-		ID: id, Object: "identity_secret", Name: s.Name, Algorithm: s.Algorithm, Kid: id,
-		Fingerprint: s.Fingerprint, Status: s.Status, RetiresAt: s.RetiresAt, RevokedAt: s.RevokedAt,
-		LastUsedAt: s.LastUsedAt, CreatedAt: s.CreatedAt,
+	out := IdentitySecret{
+		ID: id, Object: "identity_secret", Name: s.Name, Algorithm: s.Algorithm, Source: "shared_secret", Kid: id,
+		Audience: s.Audience, Fingerprint: s.Fingerprint, Status: s.Status, RetiresAt: s.RetiresAt,
+		RevokedAt: s.RevokedAt, LastUsedAt: s.LastUsedAt, CreatedAt: s.CreatedAt,
 	}
+	switch {
+	case s.JwksUrl != nil:
+		out.Source, out.Kid, out.JWKSURL, out.Issuer = "jwks", "", s.JwksUrl, s.JwksIssuer
+		out.JWKSFetchedAt, out.JWKSError = s.JwksFetchedAt, s.JwksError
+	case s.PublicKeyJwk != nil:
+		out.Source = "public_key"
+	}
+	return out
 }
 
 /*

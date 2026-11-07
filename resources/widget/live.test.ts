@@ -108,6 +108,44 @@ describe("a connected messenger", () => {
     expect(error.mock.calls.flat().join(" ")).toContain("origin_not_allowed");
   });
 
+  it("stays hidden from visitors who are not signed in when sign-in is required", async () => {
+    serve({
+      "GET /apps/wgt_1/config": () => ({
+        status: 200,
+        body: { data: { ...config.data, features: { identity_mode: "required" } } },
+      }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    boot(win, document);
+    await settle();
+    await settle();
+
+    expect(shadow()).toBeUndefined();
+    expect(warn.mock.calls.flat().join(" ")).toContain("identity_required");
+  });
+
+  it("does not ask who is signed in when sign-in is off", async () => {
+    win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", identityUrl: "/me/dimmi-token" };
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({
+        status: 200,
+        body: { data: { ...config.data, features: { identity_mode: "off" } } },
+      }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    boot(win, document);
+    await settle();
+    await settle();
+
+    expect(shadow()?.textContent).toContain("Ask us anything");
+    expect(calls.some((call) => call.includes("dimmi-token"))).toBe(false);
+    expect(warn.mock.calls.flat().join(" ")).toContain("identity_mode_off");
+  });
+
   it("starts the session and the conversation with the first message, then lists it", async () => {
     const sent: unknown[] = [];
     serve({
@@ -391,6 +429,86 @@ describe("a connected messenger", () => {
     await vi.advanceTimersByTimeAsync(15000);
     expect(calls.filter((c) => c === "GET /conversations/conv_1/action-calls/aax_1")).toHaveLength(checks);
     vi.useRealTimers();
+  });
+
+  it("confirms the visitor's email with a code before an action runs, never as a message", async () => {
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    let state = "awaiting_verification";
+    const sent: Record<string, unknown> = {};
+    const card = {
+      id: "msg_2",
+      conversation_id: "conv_1",
+      author: { type: "agent", name: "Ada", avatar_url: null },
+      body: "I can look that order up once you confirm your email.",
+      attachments: [],
+      created_at: "2026-01-01T00:00:02Z",
+      ai: {
+        generated: true,
+        confirmation: {
+          action_call_id: "aax_1",
+          title: "Look up an order",
+          text: "Look up an order?",
+          status: "awaiting_verification",
+          details: [],
+        },
+      },
+    };
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [{ ...conversation, ai_state: "active" }] } }),
+      "GET /conversations/conv_1/messages": () => ({ status: 200, body: { data: [card] } }),
+      "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
+      "POST /email-verifications": (body) => {
+        sent.email = body;
+        return { status: 202, body: { data: { email: "a***@acme.test" } } };
+      },
+      "POST /email-verifications/checks": (body) => {
+        sent.code = body;
+        state = "awaiting_confirmation";
+        return { status: 200, body: session };
+      },
+      "GET /conversations/conv_1/action-calls/aax_1": () => ({
+        status: 200,
+        body: { data: { id: "aax_1", title: "Look up", summary: "", state, status: state } },
+      }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 60000 } } }),
+    });
+
+    boot(win, document);
+    await settle();
+    await settle();
+    const root = shadow() as ShadowRoot;
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: { conversation: "conv_1" } }));
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+
+    const emailForm = root.querySelector<HTMLFormElement>('[data-verify-step="email"]');
+    const emailInput = emailForm?.querySelector<HTMLInputElement>("input");
+    if (emailInput) {
+      emailInput.value = "ada@acme.test";
+    }
+    emailForm?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle();
+    await settle();
+    expect(sent.email).toEqual({ email: "ada@acme.test" });
+    expect(root.textContent).toContain("a***@acme.test");
+
+    const codeForm = root.querySelector<HTMLFormElement>('[data-verify-step="code"]');
+    const codeInput = codeForm?.querySelector<HTMLInputElement>("input");
+    if (codeInput) {
+      codeInput.value = "123456";
+    }
+    codeForm?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+    expect(sent.code).toEqual({ code: "123456" });
+    expect(calls.filter((c) => c.startsWith("POST /conversations/conv_1/messages"))).toHaveLength(0);
+    expect(root.querySelector('[data-decision="confirmed"]')).not.toBeNull();
   });
 
   it("tells the server when a single-page app moves to another route", async () => {

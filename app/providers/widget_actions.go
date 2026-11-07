@@ -13,6 +13,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/attachments"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/contracts"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -161,9 +163,14 @@ func bootWidgetSessions(a *app.App) {
 	acts.Authenticate = &widget.AuthenticateWidgetSession{
 		DB: a.DB, Clock: a.Clock, Directory: acts.Directory, AnonymousTTL: cfg.AnonymousSessionTTL,
 	}
+	verifier := bootIdentityVerifier(a)
 	acts.StartSession = &widget.StartWidgetSession{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, AnonymousTTL: cfg.AnonymousSessionTTL,
-		IdentifiedTTL: a.Config.Identity.SessionTTL, Identity: bootIdentityVerifier(a), Streams: streams,
+		IdentifiedTTL: a.Config.Identity.SessionTTL, Identity: verifier, Streams: streams,
+		Outcomes: a.Actions.IdentityStats,
+	}
+	a.Actions.IdentitySetup = &identity.Setup{
+		DB: a.DB, Clock: a.Clock, Widgets: &widget.ForgetWorkspaceWidgets{DB: a.DB, Bust: acts.Directory},
 	}
 	acts.ShowSession = &widget.ShowWidgetSession{DB: a.DB}
 	acts.RevokeSession = &widget.RevokeWidgetSession{DB: a.DB, Clock: a.Clock, Streams: streams}
@@ -242,7 +249,8 @@ func forgetOnWorkspaceChange(a *app.App) {
 
 /*
 startWidget starts hearing other replicas' widget changes and flushing what
-the install tracker saw, and stops both, flushing once more, on shutdown.
+the install tracker and the sign-in counts saw, and stops them, flushing
+once more, on shutdown.
 */
 func startWidget(ctx context.Context, a *app.App) error {
 	acts := a.Actions.Widget
@@ -253,11 +261,12 @@ func startWidget(ctx context.Context, a *app.App) error {
 	}
 
 	stop := acts.Install.Start(context.WithoutCancel(ctx), a.Config.Widget.InstallFlushInterval)
+	stopStats := a.Actions.IdentityStats.Start(context.WithoutCancel(ctx), a.Config.Widget.InstallFlushInterval)
 
 	a.OnShutdown("widget directory", func(ctx context.Context) error {
 		unsubscribe()
 
-		return stop(ctx)
+		return errors.Join(stop(ctx), stopStats(ctx))
 	})
 
 	return nil

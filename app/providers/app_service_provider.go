@@ -27,6 +27,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/sso"
@@ -69,8 +70,8 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	appmail.Register(fa.Mail)
 	p.App.WorkspaceInitializers.Register(&inboxes.EnsureDefaultInbox{Clock: fa.Clock})
 
-	identity := p.App.IdentityProviders
-	if err := identity.Register(idp.Google(fa.Social), idp.GitHub(fa.Social)); err != nil {
+	signIn := p.App.IdentityProviders
+	if err := signIn.Register(idp.Google(fa.Social), idp.GitHub(fa.Social)); err != nil {
 		return err
 	}
 
@@ -87,7 +88,7 @@ func (p AppServiceProvider) Register(fa *foundation.Application) error {
 	for _, rule := range []validation.Rule{
 		rules.PasswordLength{Min: p.App.Config.Auth.Passwords.MinLength},
 		rules.UncommonPassword{Common: common},
-		rules.Registered{Registries: appauth.Registries(identity.Keys())},
+		rules.Registered{Registries: appauth.Registries(signIn.Keys())},
 		rules.Slug{},
 		rules.Timezone{},
 		rules.Locale{Supported: fa.Lang.Locales()},
@@ -361,6 +362,10 @@ func registerJobs(a *app.App) error {
 		queue.Register(a.Queue, &jobs.RefreshSSOMetadata{
 			DB: a.DB, Refresh: &sso.RefreshMetadata{DB: a.DB, HTTP: a.HTTP, Clock: a.Clock},
 		}),
+		queue.Register(a.Queue, &jobs.RefreshIdentityKeySets{
+			Sets: &identity.KeySets{DB: a.DB, HTTP: a.HTTP, Clock: a.Clock},
+		}),
+		queue.Register(a.Queue, &jobs.PruneIdentityStats{Stats: identity.NewStats(a.DB, a.Clock)}),
 		queue.Register(a.Queue, &jobs.WarnExpiringSSOCertificates{
 			DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links,
 		}),

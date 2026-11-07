@@ -111,3 +111,17 @@ Registry key `identity.client_writable_attributes` (workspace, array of attribut
 | Advanced | client-writable attributes list | settings |
 
 e2e `tests/e2e/identity-settings.spec.ts`, light and dark.
+
+## Decisions 2026-11-07
+
+Built in this round, with these changes from the plan above:
+
+- One migration, `20261201090002_add_identity_setup.sql`: JWKS columns plus `audience`, ES256, the one-key CHECK, `identity_settings` (a table, not a settings registry key: mode and client-writable attributes), `identity_verification_stats`, and the security definer helpers `identity_secret_exists`, `identity_jwks_due`, `identity_stats_prune`. `20261201090001` is the secrets table itself.
+- Every mode change needs a recent password, not only `force` and `off`: one rule is simpler to explain and required can lock everyone out.
+- JWKS issuer: optional when it can be read off the address (everything before `/.well-known/`, which is Clerk's and Supabase's iss); otherwise `issuer_required`. Shared key sets such as Firebase's must name the issuer. Issuers compare without a trailing slash (Auth0). A key set without its own `audience` accepts any aud, since the issuer pins it.
+- Refresh: hourly round fetches copies older than 6 h (500 per round); an unknown kid refetches at most every 5 min; a copy over 24 h old that cannot be refreshed fails closed with `token_jwks_unavailable`. Fetch failures are stored as the plain message in `jwks_error`, shown on the dashboard.
+- Mistake detector: all rows except `exp_iso_string` on the session route (validator only) and `identity_endpoint_cached` (not built: needs a Valkey HyperLogLog per token; revisit with abuse data). Session 401s keep their static hints; the validator names the mistake.
+- Stats are kept in memory per replica and flushed every minute with the install tracker's interval; days travel as UTC `YYYY-MM-DD`.
+- Client-writable attributes are enforced on `PATCH /widget/v1/contact` for signed-in customers; name, email and phone stay locked.
+- Sign out everywhere ships as the API route; the contact panel button waits for the panel.
+- Packages: `sdk/server` (`@dimmi/server`: `createIdentityHandler`, `signIdentityToken`, `/express`, `/hono`, Web Crypto only, no dependencies) and `sdk/nextjs` (`@dimmi/nextjs`: `<Dimmi>`, `/config`, `/server`, adapters `clerk`, `authjs`, `supabase`, `better-auth`). Publishing to npm under the `@dimmi` scope is a manual step for the owner. Fastify, Supabase Edge, SvelteKit and portal SSO helpers come later.

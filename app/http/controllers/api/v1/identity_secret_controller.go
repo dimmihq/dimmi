@@ -92,6 +92,7 @@ func (c *IdentitySecretController) Store(ctx context.Context, in *requests.Store
 ) (*CreatedIdentitySecretOutput, error) {
 	created, err := c.Secrets.Create(ctx, identity.NewSecret{
 		Membership: membership(ctx), Name: in.Body.Name, Algorithm: in.Body.Algorithm, PublicKey: in.Body.PublicKey,
+		JWKSURL: in.Body.JWKSURL, Issuer: in.Body.Issuer, Audience: in.Body.Audience,
 	})
 	if err != nil {
 		return nil, err

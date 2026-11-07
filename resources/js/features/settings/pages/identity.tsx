@@ -4,8 +4,10 @@
  * once, in the dialog that made it, with its key id; rotating makes a
  * new one and keeps the old one working for 7 days, so a deploy can
  * switch without failed sign-ins. Revoking stops a secret at once and
- * signs out every visitor it verified. Tokens are always verified;
- * there is no switch to turn that off.
+ * signs out every visitor it verified. A secret can also point at an
+ * auth provider's key set, so the provider's own tokens sign customers
+ * in. Above the secrets sits how strict sign-in is; below, a checker
+ * that explains a pasted token.
  */
 import { RiCheckLine, RiFileCopyLine, RiFingerprintLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +32,9 @@ import {
 } from "@/lib/api/identity";
 
 import { Action, Choice } from "../controls";
+import { IdentityChecker } from "../identity-checker";
 import { type SnippetLanguage, secretDetail, secretState, signingSnippet, snippetLanguages } from "../identity-format";
+import { IdentityModeSection } from "../identity-mode";
 import { Empty, Glyph, Item, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { Snippet } from "../snippet";
 import { useAccount } from "../use-account";
@@ -44,8 +48,12 @@ type Dialog =
 const algorithms: Record<string, IdentityAlgorithm> = {
   "Shared secret (HS256)": "HS256",
   "RSA public key (RS256)": "RS256",
+  "P-256 public key (ES256)": "ES256",
   "Ed25519 public key (EdDSA)": "EdDSA",
+  "Auth provider key set (JWKS)": "RS256",
 };
+
+const providerAlgorithms: IdentityAlgorithm[] = ["RS256", "ES256", "EdDSA"];
 
 export function IdentitySettings() {
   const me = useAccount();
@@ -54,7 +62,7 @@ export function IdentitySettings() {
   const inWorkspace = workspace !== "";
   const { data: secrets = [], isPending } = useQuery({ ...identitySecretsQuery(workspace), enabled: inWorkspace });
   const [dialog, setDialog] = useState<Dialog>(null);
-  const [language, setLanguage] = useState<SnippetLanguage>("Node.js");
+  const [language, setLanguage] = useState<SnippetLanguage>("Next.js");
   const refresh = () => queryClient.invalidateQueries({ queryKey: identitySecretsQuery(workspace).queryKey });
   const rotate = useMutation({
     mutationFn: (id: string) => rotateIdentitySecret(workspace, id),
@@ -74,6 +82,7 @@ export function IdentitySettings() {
       title="Identity verification"
       description="Your server signs a token for each signed-in user, so nobody can pose as one of your customers."
     >
+      {inWorkspace ? <IdentityModeSection workspace={workspace} hasPassword={me.hasPassword} /> : null}
       <Section
         title="Secrets"
         description="Up to 5 at once. A rotated secret keeps working for 7 days."
@@ -120,6 +129,7 @@ export function IdentitySettings() {
           />
         </div>
       </Section>
+      {inWorkspace ? <IdentityChecker workspace={workspace} /> : null}
 
       {dialog?.kind === "create" ? (
         <CreateSecretDialog
@@ -168,6 +178,11 @@ function SecretRow({
           {state}
         </Chip>
       ) : null}
+      {secret.jwks_error && secret.status !== "revoked" ? (
+        <Chip variant="caption" color="orange">
+          Key set unreachable
+        </Chip>
+      ) : null}
       {secret.status === "active" && secret.algorithm === "HS256" ? (
         <Action onPress={onRotate} loading={rotating}>
           Rotate
@@ -190,19 +205,28 @@ function CreateSecretDialog({
   const [name, setName] = useState("Production");
   const [kind, setKind] = useState("Shared secret (HS256)");
   const [publicKey, setPublicKey] = useState("");
+  const [jwksUrl, setJwksUrl] = useState("");
+  const [issuer, setIssuer] = useState("");
+  const [providerAlgorithm, setProviderAlgorithm] = useState<IdentityAlgorithm>("RS256");
   const [failure, setFailure] = useState<Error | null>(null);
   const [pending, setPending] = useState(false);
-  const algorithm = algorithms[kind] ?? "HS256";
+  const provider = kind === "Auth provider key set (JWKS)";
+  const algorithm = provider ? providerAlgorithm : (algorithms[kind] ?? "HS256");
   const shared = algorithm === "HS256";
+  const material = () => {
+    if (provider) {
+      return { jwks_url: jwksUrl.trim(), ...(issuer.trim() ? { issuer: issuer.trim() } : {}) };
+    }
+    return shared ? {} : { public_key: publicKey };
+  };
+  const missing = provider ? jwksUrl.trim() === "" : !shared && publicKey.trim() === "";
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFailure(null);
     setPending(true);
     try {
-      onCreated(
-        await createIdentitySecret(workspace, { name, algorithm, ...(shared ? {} : { public_key: publicKey }) }),
-      );
+      onCreated(await createIdentitySecret(workspace, { name, algorithm, ...material() }));
     } catch (error) {
       setFailure(error instanceof Error ? error : new Error("Something went wrong. Try again."));
     } finally {
@@ -211,7 +235,8 @@ function CreateSecretDialog({
   };
 
   const fields = failure instanceof ApiError ? failure.fields : {};
-  const general = failure && !fields.name && !fields.public_key ? failure.message : null;
+  const general =
+    failure && !fields.name && !fields.public_key && !fields.jwks_url && !fields.issuer ? failure.message : null;
 
   return (
     <Modal isOpen size="lg" onOpenChange={(open) => !open && onClose()}>
@@ -238,7 +263,18 @@ function CreateSecretDialog({
             <span className="text-body-medium text-text-secondary">Kind</span>
             <Choice label="Kind" options={Object.keys(algorithms)} value={kind} onChange={setKind} />
           </div>
-          {shared ? null : (
+          {provider ? (
+            <ProviderFields
+              algorithm={providerAlgorithm}
+              onAlgorithm={setProviderAlgorithm}
+              jwksUrl={jwksUrl}
+              onJwksUrl={setJwksUrl}
+              issuer={issuer}
+              onIssuer={setIssuer}
+              fields={fields}
+            />
+          ) : null}
+          {shared || provider ? null : (
             <Textarea
               label="Public key"
               placeholder="-----BEGIN PUBLIC KEY-----"
@@ -256,7 +292,7 @@ function CreateSecretDialog({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending || name.trim() === "" || (!shared && publicKey.trim() === "")}>
+          <Button type="submit" disabled={pending || name.trim() === "" || missing}>
             {pending ? "Creating…" : "Create secret"}
           </Button>
         </ModalFooter>
@@ -265,22 +301,71 @@ function CreateSecretDialog({
   );
 }
 
+function ProviderFields({
+  algorithm,
+  onAlgorithm,
+  jwksUrl,
+  onJwksUrl,
+  issuer,
+  onIssuer,
+  fields,
+}: {
+  algorithm: IdentityAlgorithm;
+  onAlgorithm: (algorithm: IdentityAlgorithm) => void;
+  jwksUrl: string;
+  onJwksUrl: (value: string) => void;
+  issuer: string;
+  onIssuer: (value: string) => void;
+  fields: Record<string, string>;
+}) {
+  return (
+    <>
+      <Input
+        label="Key set address"
+        placeholder="https://your-app.clerk.accounts.dev/.well-known/jwks.json"
+        value={jwksUrl}
+        onChange={onJwksUrl}
+        isRequired
+        inputDir="ltr"
+        isInvalid={Boolean(fields.jwks_url)}
+        errorMessage={fields.jwks_url}
+        hint="Clerk, Auth0, Supabase and most providers publish one."
+      />
+      <Input
+        label="Issuer"
+        placeholder="Read from the address when left empty"
+        value={issuer}
+        onChange={onIssuer}
+        inputDir="ltr"
+        isInvalid={Boolean(fields.issuer)}
+        errorMessage={fields.issuer}
+        hint="The iss claim of your provider's tokens."
+      />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-body-medium text-text-secondary">Algorithm</span>
+        <Choice
+          label="Algorithm"
+          options={providerAlgorithms}
+          value={algorithm}
+          onChange={(v) => onAlgorithm(v as IdentityAlgorithm)}
+        />
+      </div>
+    </>
+  );
+}
+
 function CreatedDialog({ secret, onClose }: { secret: CreatedIdentitySecret; onClose: () => void }) {
   return (
     <Modal isOpen isDismissable={false} onOpenChange={(open) => !open && onClose()}>
       <ModalHeader
         icon={RiFingerprintLine}
-        title={secret.secret ? "Copy your new secret" : "Public key added"}
-        description={
-          secret.secret
-            ? "It shows only now. Put it in your server's environment as DIMMI_IDENTITY_SECRET."
-            : "Sign tokens with your private key and this key id."
-        }
+        title={createdTitle(secret)}
+        description={createdDescription(secret)}
         showCloseButton={false}
       />
       <ModalBody className="flex flex-col gap-4">
         {secret.secret ? <CopyField label="Secret" value={secret.secret} /> : null}
-        <CopyField label="Key id (kid header)" value={secret.kid} />
+        {secret.kid ? <CopyField label="Key id (kid header)" value={secret.kid} /> : null}
       </ModalBody>
       <ModalFooter>
         <Button onClick={onClose}>Done</Button>
@@ -313,4 +398,21 @@ function CopyField({ label, value }: { label: string; value: string }) {
       />
     </div>
   );
+}
+
+function createdTitle(secret: CreatedIdentitySecret): string {
+  if (secret.secret) {
+    return "Copy your new secret";
+  }
+  return secret.source === "jwks" ? "Key set connected" : "Public key added";
+}
+
+function createdDescription(secret: CreatedIdentitySecret): string {
+  if (secret.secret) {
+    return "It shows only now. Put it in your server's environment as DIMMI_IDENTITY_SECRET.";
+  }
+  if (secret.source === "jwks") {
+    return "Pass your provider's session token to the messenger as is; dimmi checks it against the key set.";
+  }
+  return "Sign tokens with your private key and this key id.";
 }

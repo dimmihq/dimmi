@@ -160,7 +160,8 @@ function SourceChip({ source }: { source: Source }) {
 }
 
 function StateLine({ action, texts }: { action: ActionCard; texts: ActionTexts }) {
-  const label = action.state === "ask" || action.state === "sending" ? "" : texts[action.state];
+  const label =
+    action.state === "ask" || action.state === "sending" || action.state === "verify" ? "" : texts[action.state];
   const icon = action.state === "waiting" ? <ClockIcon /> : action.state === "done" ? <CheckIcon /> : <CloseIcon />;
 
   return (
@@ -177,6 +178,9 @@ function StateLine({ action, texts }: { action: ActionCard; texts: ActionTexts }
  * both buttons wait and the pressed one spins.
  */
 export function ActionBlock({ action, texts }: { action: ActionCard; texts: ActionTexts }) {
+  if (action.state === "verify") {
+    return <VerifyBlock action={action} texts={texts} />;
+  }
   const asking = action.state === "ask" || action.state === "sending";
   const busy = action.state === "sending";
   if (!action.card) {
@@ -215,6 +219,84 @@ export function ActionBlock({ action, texts }: { action: ActionCard; texts: Acti
       ) : (
         <StateLine action={action} texts={texts} />
       )}
+    </div>
+  );
+}
+
+/*
+ * VerifyBlock asks the visitor to confirm their email before an action
+ * bound to it runs: the address first, then the code mailed to it. The
+ * code goes to the server from this form, never as a chat message, so
+ * it is never in the transcript or in front of the agent.
+ */
+function VerifyBlock({ action, texts }: { action: ActionCard; texts: ActionTexts }) {
+  const step = action.verify ?? { step: "email", email: "" };
+  const busy = step.busy === true;
+
+  return (
+    <div className="action-card verify" data-key={`action:${action.id}`} data-state="verify" aria-busy={busy}>
+      {action.title ? <p className="action-text">{action.title}</p> : null}
+      {step.step === "email" ? (
+        <form className="verify-form" data-verify-call={action.id} data-verify-step="email">
+          <p className="verify-intro">{texts.verifyIntro}</p>
+          <span className="row">
+            <label className="field">
+              <input
+                type="email"
+                name="value"
+                required
+                autoComplete="email"
+                aria-label={texts.verifyEmail}
+                value={step.email}
+              />
+            </label>
+            <button className="button primary" type="submit" disabled={busy}>
+              {busy ? <span className="spinner" aria-hidden="true" /> : null}
+              {texts.verifySend}
+            </button>
+          </span>
+        </form>
+      ) : (
+        <form className="verify-form" data-verify-call={action.id} data-verify-step="code">
+          <p className="verify-intro">{texts.verifySent.replace("{email}", step.masked ?? step.email)}</p>
+          <span className="row">
+            <label className="field">
+              <input
+                type="text"
+                name="value"
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                aria-label={texts.verifyCode}
+              />
+            </label>
+            <button className="button primary" type="submit" disabled={busy}>
+              {busy ? <span className="spinner" aria-hidden="true" /> : null}
+              {texts.verifySubmit}
+            </button>
+          </span>
+          <span className="verify-links">
+            <button type="button" className="link" data-verify-call={action.id} data-verify-again="resend">
+              {texts.verifyResend}
+            </button>
+            <button type="button" className="link" data-verify-call={action.id} data-verify-again="other">
+              {texts.verifyOther}
+            </button>
+          </span>
+        </form>
+      )}
+      {step.error ? (
+        <p className="verify-error" role="alert">
+          {step.error}
+        </p>
+      ) : null}
+      <span className="action-buttons">
+        <button type="button" className="button quiet" data-call={action.id} data-decision="canceled" disabled={busy}>
+          {texts.cancel}
+        </button>
+      </span>
     </div>
   );
 }

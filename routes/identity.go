@@ -73,6 +73,45 @@ func identitySecretRoutes(api *routing.Router, a *app.App) {
 		routing.Post(r, one+"/rotations", "identity-secrets.rotations.store", c.Rotate).
 			Ability("settings:write").Status(fhttp.StatusCreated)
 	})
+
+	identityVerificationRoutes(api, a)
+}
+
+/*
+identityVerificationRoutes declares the routes of visitor sign-in
+settings, counts and the token checker. Changing the mode takes the
+person themselves, having just proven who they are: required can lock
+every customer out, and off stops trusting signed-in history. A pasted
+token is checked with no idempotency key, so it is never kept.
+*/
+func identityVerificationRoutes(api *routing.Router, a *app.App) {
+	acts := a.Actions
+	c := &v1.IdentityVerificationController{
+		Setup: acts.IdentitySetup, Stats: acts.IdentityStats, Checker: acts.IdentityChecker,
+		Secrets: acts.IdentitySecrets, IDs: a.IDs,
+	}
+
+	api.Group("", func(r *routing.Router) {
+		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+
+		routing.Get(r, "/identity-verification/settings", "identity-verification.settings.show", c.ShowSettings).
+			Ability("settings:read")
+		routing.Get(r, "/identity-verification/stats", "identity-verification.stats.show", c.ShowStats).
+			Ability("settings:read")
+		routing.Post(r, "/identity-verification/validations", "identity-verification.validations.store", c.Check).
+			Ability("settings:read").Status(fhttp.StatusOK)
+		routing.Delete(r, "/contacts/{contact}/widget-sessions", "contacts.widget-sessions.destroy", c.SignOut).
+			Ability("settings:write").Status(fhttp.StatusOK)
+	})
+
+	api.Group("", func(confirmed *routing.Router) {
+		confirmed.Middleware(
+			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
+		)
+
+		routing.Patch(confirmed, "/identity-verification/settings", "identity-verification.settings.update",
+			c.UpdateSettings)
+	})
 }
 
 /*

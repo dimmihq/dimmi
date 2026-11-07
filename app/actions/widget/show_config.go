@@ -20,6 +20,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/widgetstrings"
 )
@@ -141,7 +142,7 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 		Appearance: configAppearance(appearance), Texts: texts, Locale: locale, Dir: widgetstrings.Direction(locale),
 		Locales: a.Strings.Locales(), Tabs: configTabs(widget), OpenTo: "home",
 		ShowTeamAvatars: widget.ShowTeamAvatars, ShowAvailability: widget.ShowAvailability, CustomerStatus: true,
-		DelayNotice: true, HomeLinks: HomeLinks(widget), Features: configFeatures(widget), Branding: branding,
+		DelayNotice: true, HomeLinks: HomeLinks(widget), Features: configFeatures(in.Resolved), Branding: branding,
 		Realtime: ConfigRealtime{
 			URL: in.BaseURL + "/connection/uni_sse", TokenURL: in.BaseURL + "/widget/v1/realtime-tokens",
 			PollingIntervalMS: a.PollingInterval,
@@ -167,14 +168,18 @@ func configTabs(widget models.WidgetSetting) []string {
 }
 
 /*
-configFeatures says what the widget can do.
+configFeatures says what the widget can do. Anonymous visitors are
+allowed only when the widget allows them and sign-in is not required.
 */
-func configFeatures(widget models.WidgetSetting) ConfigFeatures {
+func configFeatures(resolved Resolved) ConfigFeatures {
+	widget := resolved.Widget
+
 	return ConfigFeatures{
 		Attachments: widget.AttachmentsEnabled, MaxAttachmentMB: widget.MaxAttachmentMb,
 		HelpTab:      widget.HelpTabEnabled && widget.HelpCenterID != nil,
 		CollectEmail: widget.CollectEmail, RequireEmailWhenOffline: widget.RequireEmailWhenOffline,
-		AllowAnonymous: widget.AllowAnonymous, IntercomShim: widget.IntercomShim,
+		AllowAnonymous: widget.AllowAnonymous && resolved.IdentityMode != identity.ModeRequired,
+		IdentityMode:   resolved.IdentityMode, IntercomShim: widget.IntercomShim,
 	}
 }
 

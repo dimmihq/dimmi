@@ -9,7 +9,9 @@
 | holds is stored on this lead only and never claimed, and every attribute
 | the widget writes stops being trusted, so nothing a visitor types is
 | treated as what the customer's own app said. A signed-in customer's
-| profile comes from their app and is never changed here.
+| profile comes from their app and is never changed here, except the
+| attributes the workspace explicitly lets the messenger write, which
+| then stop being trusted like any other typed value.
 |
 */
 
@@ -33,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -97,7 +100,9 @@ func (a *UpdateWidgetContact) Handle(
 		}
 
 		if current.Kind != string(enums.ContactKindLead) {
-			return exceptions.ErrIdentityLocked
+			if err := clientWritable(ctx, q, session.WorkspaceID, clean); err != nil {
+				return err
+			}
 		}
 
 		out, err = a.write(ctx, tx, current, clean)
@@ -106,6 +111,29 @@ func (a *UpdateWidgetContact) Handle(
 	})
 
 	return out, err
+}
+
+/*
+clientWritable lets a signed-in customer's messenger write only the
+attributes the workspace allows, and nothing else.
+*/
+func clientWritable(ctx context.Context, q *models.Queries, ws ids.UUID, change ContactChange) error {
+	if change.Name != nil || change.Email != nil || change.Phone != nil || len(change.CustomAttributes) == 0 {
+		return exceptions.ErrIdentityLocked
+	}
+
+	settings, err := identity.LoadSettings(ctx, q, ws)
+	if err != nil {
+		return err
+	}
+
+	for key := range change.CustomAttributes {
+		if !slices.Contains(settings.ClientWritableAttributes, key) {
+			return exceptions.ErrIdentityLocked
+		}
+	}
+
+	return nil
 }
 
 /*
@@ -132,7 +160,9 @@ func (a *UpdateWidgetContact) write(
 
 	updated, err := q.UpdateContact(ctx, models.UpdateContactParams{
 		Kind: next.Kind, ExternalID: next.ExternalID, Email: next.Email, Name: next.Name, Phone: next.Phone,
-		CustomAttributes: attrs, BlockedAt: next.BlockedAt, Now: now, WorkspaceID: next.WorkspaceID, ID: next.ID,
+		CustomAttributes: attrs, BlockedAt: next.BlockedAt, Notes: current.Notes, CompanyID: current.CompanyID,
+		EmailVerified: current.EmailVerified && !slices.Contains(changes, "email"),
+		Now:           now, WorkspaceID: next.WorkspaceID, ID: next.ID,
 		TrustedAttributeKeys: slices.DeleteFunc(slices.Clone(current.TrustedAttributeKeys), func(k string) bool {
 			return slices.Contains(written, k)
 		}),

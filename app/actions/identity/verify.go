@@ -4,12 +4,15 @@
 |--------------------------------------------------------------------------
 |
 | A host app's server signs a short-lived token naming its signed-in user,
-| and only a token that passes every check here identifies anyone. The
-| key comes from the kid header, or, for HS256 without one, each usable
-| shared secret is tried. The workspace comes from the messenger, never
-| from the token, so a token signed for another workspace fails. A token
-| with a nonce works once. Verifying writes nothing but a throttled note
-| of when the secret was last used.
+| or hands over the one its auth provider issued, and only a token that
+| passes every check here identifies anyone. The key comes from the kid
+| header: a dimmi key id names one secret, any other kid is looked up in
+| the provider key sets the workspace trusts, and for HS256 without one
+| each usable shared secret is tried. The workspace comes from the
+| messenger, never from the token, so a token signed for another
+| workspace fails. A token with a nonce works once. Verifying writes
+| nothing but a throttled note of when the secret was last used; a dry
+| check, the token checker's, writes nothing at all.
 |
 */
 
@@ -38,20 +41,29 @@ import (
 )
 
 /*
-maxTried bounds how many shared secrets a token without a kid is tried
-against.
+maxTried bounds how many shared secrets a token without a kid, or key
+sets a provider's token, is tried against.
 */
 const maxTried = 5
 
 /*
-Verifier checks identity tokens. Cache remembers used nonces. Leeway
-forgives clock skew and MaxLifetime bounds how long a token may live.
+algorithms are the signing algorithms a token may use at all.
+*/
+func algorithms() []string {
+	return []string{AlgorithmHS256, AlgorithmRS256, AlgorithmES256, AlgorithmEdDSA}
+}
+
+/*
+Verifier checks identity tokens. Cache remembers used nonces and
+KeySets fetches providers' key sets. Leeway forgives clock skew and
+MaxLifetime bounds how long a token may live.
 */
 type Verifier struct {
 	DB          *database.DB
 	Clock       clock.Clock
 	Keys        *encryption.Keys
 	Cache       *cache.Store
+	KeySets     *KeySets
 	Leeway      time.Duration
 	MaxLifetime time.Duration
 }
@@ -80,32 +92,69 @@ Verify checks the token and returns who it names. Errors are faults
 with a code and a hint, safe to show the developer.
 */
 func (v *Verifier) Verify(ctx context.Context, t Token) (Verified, error) {
-	secrets, err := v.secrets(ctx, t.WorkspaceID)
+	passed, err := v.run(ctx, t)
 	if err != nil {
 		return Verified{}, err
+	}
+	if err := v.spendNonce(ctx, t.WorkspaceID, passed.claims); err != nil {
+		return Verified{}, err
+	}
+	v.touch(ctx, passed.secret)
+	return verified(passed), nil
+}
+
+/*
+Check verifies the token like Verify but spends no nonce and notes
+nothing, so a developer can test a token and still use it.
+*/
+func (v *Verifier) Check(ctx context.Context, t Token) (Verified, error) {
+	passed, err := v.run(ctx, t)
+	if err != nil {
+		return Verified{}, err
+	}
+	return verified(passed), nil
+}
+
+/*
+passed is a token whose signature and claims checked out: the secret
+that verified it, its claims and its subject.
+*/
+type passed struct {
+	secret models.IdentitySecret
+	claims jwt.Claims
+	sub    string
+}
+
+/*
+run checks everything but the nonce.
+*/
+func (v *Verifier) run(ctx context.Context, t Token) (passed, error) {
+	secrets, err := v.secrets(ctx, t.WorkspaceID)
+	if err != nil {
+		return passed{}, err
 	}
 	p, err := readToken(t.Value)
 	if err != nil {
-		return Verified{}, err
+		return passed{}, err
 	}
 	sub, err := subject(p)
 	if err != nil {
-		return Verified{}, err
+		return passed{}, err
 	}
-	secret, claims, err := v.check(ctx, t.Value, p, secrets)
+	secret, claims, err := v.pickAndVerify(ctx, t.Value, p, secrets)
 	if err != nil {
-		return Verified{}, err
+		return passed{}, err
 	}
-	if err := audienceOK(claims.Audience, t); err != nil {
-		return Verified{}, err
+	if err := audienceOK(claims.Audience, t, secret); err != nil {
+		return passed{}, err
 	}
-	if err := v.spendNonce(ctx, t.WorkspaceID, claims); err != nil {
-		return Verified{}, err
-	}
-	v.touch(ctx, secret)
-	profile := ReadProfile(claims.Extra)
-	profile.ExternalID = sub
-	return Verified{SecretID: secret.ID, Profile: profile}, nil
+	return passed{secret: secret, claims: claims, sub: sub}, nil
+}
+
+func verified(p passed) Verified {
+	profile := ReadProfile(p.claims.Extra)
+	profile.ExternalID = p.sub
+	return Verified{SecretID: p.secret.ID, Profile: profile}
 }
 
 /*
@@ -143,12 +192,15 @@ func (v *Verifier) usable(s models.IdentitySecret) bool {
 }
 
 /*
-check finds the key the token names and verifies it.
+pickAndVerify finds the key the token names and verifies it.
 */
-func (v *Verifier) check(ctx context.Context, token string, p payload, secrets []models.IdentitySecret,
+func (v *Verifier) pickAndVerify(ctx context.Context, token string, p payload, secrets []models.IdentitySecret,
 ) (models.IdentitySecret, jwt.Claims, error) {
-	if !slices.Contains([]string{AlgorithmHS256, AlgorithmRS256, AlgorithmEdDSA}, p.header.Algorithm) {
+	if !slices.Contains(algorithms(), p.header.Algorithm) {
 		return models.IdentitySecret{}, jwt.Claims{}, algNotAllowed(p.header.Algorithm)
+	}
+	if p.header.KeyID != "" && !strings.HasPrefix(p.header.KeyID, string(models.PrefixIdentitySecret)+"_") {
+		return v.checkProvider(ctx, token, p, secrets)
 	}
 	if p.header.KeyID != "" {
 		return v.checkNamed(ctx, token, p, secrets)
@@ -166,7 +218,7 @@ func (v *Verifier) checkNamed(ctx context.Context, token string, p payload, secr
 ) (models.IdentitySecret, jwt.Claims, error) {
 	kid := p.header.KeyID
 	i := slices.IndexFunc(secrets, func(s models.IdentitySecret) bool {
-		return models.PublicID(models.PrefixIdentitySecret, s.ID) == kid
+		return s.JwksUrl == nil && models.PublicID(models.PrefixIdentitySecret, s.ID) == kid
 	})
 	if i < 0 {
 		return models.IdentitySecret{}, jwt.Claims{}, kidUnknown(kid)
@@ -204,6 +256,44 @@ func (v *Verifier) checkEach(ctx context.Context, token string, p payload, secre
 }
 
 /*
+checkProvider looks the token's kid up in the provider key sets the
+workspace trusts and verifies it with the key found, then checks the
+issuer. A set that cannot be fetched is reported only when no other set
+holds the key.
+*/
+func (v *Verifier) checkProvider(ctx context.Context, token string, p payload, secrets []models.IdentitySecret,
+) (models.IdentitySecret, jwt.Claims, error) {
+	kid, tried := p.header.KeyID, 0
+	var unavailable error
+	for _, s := range secrets {
+		if s.JwksUrl == nil || !v.usable(s) || tried == maxTried || v.KeySets == nil {
+			continue
+		}
+		tried++
+		fresh, keys, err := v.KeySets.providerKeys(ctx, s, kid)
+		if err != nil {
+			unavailable = err
+			continue
+		}
+		if !hasKey(keys, kid) {
+			continue
+		}
+		if fresh.Algorithm != p.header.Algorithm {
+			return fresh, jwt.Claims{}, algMismatch(p.header.Algorithm, kid, fresh.Algorithm)
+		}
+		claims, err := v.verifyKeys(token, p, keys, fresh.Algorithm)
+		if err == nil && !sameIssuer(claims.Issuer, expectedIssuer(fresh)) {
+			err = ErrIssuer
+		}
+		return fresh, claims, err
+	}
+	if unavailable != nil {
+		return models.IdentitySecret{}, jwt.Claims{}, unavailable
+	}
+	return models.IdentitySecret{}, jwt.Claims{}, kidUnknown(kid)
+}
+
+/*
 verifyWith verifies the token with one secret's key.
 */
 func (v *Verifier) verifyWith(ctx context.Context, token string, p payload, s models.IdentitySecret,
@@ -212,8 +302,15 @@ func (v *Verifier) verifyWith(ctx context.Context, token string, p payload, s mo
 	if err != nil {
 		return jwt.Claims{}, err
 	}
-	claims, err := jwt.Verify(token, []jwt.Key{key}, jwt.Options{
-		Algorithms: []jwt.Algorithm{jwt.Algorithm(s.Algorithm)}, Leeway: v.Leeway,
+	return v.verifyKeys(token, p, []jwt.Key{key}, s.Algorithm)
+}
+
+/*
+verifyKeys verifies the token against keys pinned to one algorithm.
+*/
+func (v *Verifier) verifyKeys(token string, p payload, keys []jwt.Key, algorithm string) (jwt.Claims, error) {
+	claims, err := jwt.Verify(token, keys, jwt.Options{
+		Algorithms: []jwt.Algorithm{jwt.Algorithm(algorithm)}, Leeway: v.Leeway,
 		MaxLifetime: v.MaxLifetime, Clock: v.Clock,
 	})
 	if err != nil {
@@ -224,13 +321,19 @@ func (v *Verifier) verifyWith(ctx context.Context, token string, p payload, s mo
 
 /*
 audienceOK accepts a token without aud, or one naming dimmi, the
-messenger or the workspace.
+messenger, the workspace or the secret's own audience. A provider's
+token is pinned by its issuer and usually carries the provider's
+audience, so for a key set without an audience of its own any aud
+passes.
 */
-func audienceOK(aud []string, t Token) error {
-	if len(aud) == 0 {
+func audienceOK(aud []string, t Token, s models.IdentitySecret) error {
+	if len(aud) == 0 || (s.JwksUrl != nil && deref(s.Audience) == "") {
 		return nil
 	}
 	accepted := []string{"dimmi", t.AppID, models.PublicID(models.PrefixWorkspace, t.WorkspaceID)}
+	if s.Audience != nil && *s.Audience != "" {
+		accepted = append(accepted, *s.Audience)
+	}
 	for _, a := range aud {
 		if slices.Contains(accepted, a) {
 			return nil

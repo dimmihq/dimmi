@@ -1,0 +1,80 @@
+{
+  "name": "@dimmi/nextjs",
+  "version": "0.1.0",
+  "description": "The dimmi messenger for Next.js, with your signed-in users verified through a server action.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./clerk": {
+      "types": "./dist/clerk.d.ts",
+      "default": "./dist/clerk.js"
+    },
+    "./authjs": {
+      "types": "./dist/authjs.d.ts",
+      "default": "./dist/authjs.js"
+    },
+    "./supabase": {
+      "types": "./dist/supabase.d.ts",
+      "default": "./dist/supabase.js"
+    },
+    "./better-auth": {
+      "types": "./dist/better-auth.d.ts",
+      "default": "./dist/better-auth.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@dimmi/server": "^0.1.0"
+  },
+  "peerDependencies": {
+    "next": ">=14",
+    "react": ">=18",
+    "@clerk/nextjs": ">=6",
+    "@supabase/ssr": ">=0.5"
+  },
+  "peerDependenciesMeta": {
+    "@clerk/nextjs": {
+      "optional": true
+    },
+    "@supabase/ssr": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "dimmi",
+    "nextjs",
+    "messenger",
+    "identity",
+    "customer-support"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimmihq/dimmi",
+    "directory": "sdk/nextjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
