@@ -101,8 +101,12 @@ it.describe("the inbox", () => {
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);
     const details = page.getByRole("region", { name: "Details" });
+    const act = async (name: string) => {
+      await details.getByRole("button", { name: "Actions" }).click();
+      await page.getByRole("dialog", { name: "Conversation actions" }).getByRole("button", { name }).click();
+    };
 
-    await details.getByRole("button", { name: "Assign to me" }).click();
+    await act("Assign to me");
     await expect(details.getByRole("button", { name: /Assignee/ })).toContainText(person.name);
     await expect(page.getByText(`${person.name} assigned the conversation to ${person.name}`)).toBeVisible();
 
@@ -110,15 +114,15 @@ it.describe("the inbox", () => {
     await page.getByRole("option", { name: "Unassigned" }).click();
     await expect(page.getByText(`${person.name} unassigned the conversation`)).toBeVisible();
 
-    await details.getByRole("button", { name: "Mark as done" }).click();
+    await act("Mark as done");
     await expect(details.getByRole("button", { name: /Status/ })).toContainText("Done");
     await expect(page.getByText(`${person.name} closed the conversation`)).toBeVisible();
 
-    await details.getByRole("button", { name: "Reopen" }).click();
+    await act("Reopen");
     await expect(details.getByRole("button", { name: /Status/ })).toContainText("Open");
     await expect(page.getByText(`${person.name} reopened the conversation`)).toBeVisible();
 
-    await details.getByRole("button", { name: "Snooze" }).click();
+    await act("Snooze");
     await expect(details.getByRole("button", { name: /Status/ })).toContainText("Snoozed");
   });
 
