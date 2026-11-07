@@ -159,8 +159,9 @@ function CustomerClock({
 /*
  * ThreadTitle names the conversation above its thread: back to the list,
  * the view it came from when the list is hidden, its subject, number and
- * status. When the header runs short the view crumb steps aside first,
- * then the subject truncates, so the chips never squeeze the rest.
+ * status. When the header runs short the view crumb folds into a small
+ * inbox button first, then the subject truncates, so the chips never
+ * squeeze the rest.
  */
 function ThreadTitle({
   view,
@@ -186,9 +187,9 @@ function ThreadTitle({
         <RiArrowLeftSLine aria-hidden className="size-5" />
       </Link>
       {listHidden ? (
-        <div className="flex max-w-36 shrink-0 items-center gap-2 @max-lg:hidden">
+        <div className="flex max-w-36 shrink-0 items-center gap-2">
           <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
-          <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary">
+          <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary @max-lg:hidden">
             /
           </span>
         </div>

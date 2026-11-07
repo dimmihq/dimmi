@@ -5,9 +5,10 @@
  * reads as the view and how many wait in it. Typing narrows the views by
  * name, V opens it from the keyboard, and a new saved view starts from
  * the view on screen. While a conversation fills the screen, a smaller
- * crumb version sits in its header, so views switch without going back.
+ * crumb version sits in its header, so views switch without going back;
+ * when that header runs narrow the crumb folds into an inbox icon.
  */
-import { RiAddLine, RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
+import { RiAddLine, RiArrowDownSLine, RiInbox2Line, RiSearchLine } from "@remixicon/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -73,10 +74,13 @@ export function ViewPicker({
         data-view-picker
         className="flex h-8 min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 transition-colors duration-150 hover:bg-background-secondary-hover aria-expanded:bg-background-secondary-hover"
       >
+        {crumb ? (
+          <RiInbox2Line aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary @lg:hidden" />
+        ) : null}
         <span
           className={cx(
             "min-w-0 truncate",
-            crumb ? "text-body-2-medium text-text-secondary" : "text-body-medium text-text-primary",
+            crumb ? "text-body-2-medium text-text-secondary @max-lg:sr-only" : "text-body-medium text-text-primary",
           )}
         >
           {title}

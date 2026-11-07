@@ -71,7 +71,7 @@ test: test-go test-app-role test-cloud test-timing test-web test-dev
 # SHARD=2/4 runs only the second of four even parts of a pass's packages,
 # so CI can spread a pass across machines; without it the whole pass runs.
 SHARD ?=
-SHARD_PKGS = $(if $(SHARD),"$$(node scripts/test-shard.ts $(1) $(SHARD) $(2))",$(2))
+SHARD_PKGS = $(if $(SHARD),"$$(node scripts/test-shard.ts $(1) $(SHARD) $(2))","$(2)")
 
 # The race passes build every test binary first with all the machine's
 # cores, running no test, then run the tests with whatever -p GOFLAGS sets:
