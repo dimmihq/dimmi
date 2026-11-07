@@ -2,12 +2,14 @@
  * The inbox's motion, on BoardUI's language. New things condense into
  * place with a fade, a small blur and BoardUI's ease-out; leaving is
  * faster and eases in. Views that swap inside a panel slide a few pixels
- * the way the person is heading while the panel eases to its new height.
- * Tiles scale in, and the ones beside them close the gap on BoardUI's
+ * the way the person is heading, mirrored in right-to-left languages,
+ * while the panel eases to its new height. Tiles scale in, and the ones beside them close the gap on BoardUI's
  * tight spring. Reduced motion turns all of it into plain appearance.
  */
 import { AnimatePresence, motion, type Transition, useReducedMotion } from "motion/react";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+
+import { useDirection } from "@/components/foundations/direction/direction";
 
 const settle = [0.22, 1, 0.36, 1] as const;
 const instant = { duration: 0 };
@@ -50,13 +52,25 @@ export function Arrive({ children }: { children: ReactNode }) {
 /*
  * Swap shows one view of a panel at a time. When view changes, the old
  * one slides out and the new one slides in from the side the person is
- * heading: forward from the end, back from the start. The direction is
- * handed to the leaving view as it leaves, so it always exits the
- * opposite way.
+ * heading: forward from the end, back from the start, sides that flip in
+ * a right-to-left language. The direction is handed to the leaving view
+ * as it leaves, so it always exits the opposite way. The className styles
+ * each view's box, such as to let it fill a dialog.
  */
-export function Swap({ view, forward, children }: { view: string; forward: boolean; children: ReactNode }) {
+export function Swap({
+  view,
+  forward,
+  className,
+  children,
+}: {
+  view: string;
+  forward: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
   const timing = useTiming(0.22);
-  const shift = forward ? 12 : -12;
+  const ahead = useDirection() === "rtl" ? -12 : 12;
+  const shift = forward ? ahead : -ahead;
   const moves = {
     enter: (by: number) => ({ opacity: 0, x: by, filter: "blur(2px)" }),
     shown: { opacity: 1, x: 0, filter: "blur(0px)", transition: timing.arrive },
@@ -65,7 +79,15 @@ export function Swap({ view, forward, children }: { view: string; forward: boole
 
   return (
     <AnimatePresence initial={false} mode="popLayout" custom={shift}>
-      <motion.div key={view} custom={shift} variants={moves} initial="enter" animate="shown" exit="leave">
+      <motion.div
+        key={view}
+        custom={shift}
+        variants={moves}
+        initial="enter"
+        animate="shown"
+        exit="leave"
+        className={className}
+      >
         {children}
       </motion.div>
     </AnimatePresence>

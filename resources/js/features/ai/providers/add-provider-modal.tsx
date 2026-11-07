@@ -1,26 +1,32 @@
 /*
- * Adding a provider, in two steps: pick one from a grid of cards, then
- * give what it needs. Most take an API key; a ChatGPT subscription signs
- * in instead. dimmi's own models are never in the grid, since they come
- * with the workspace. A provider this install cannot serve shows, greyed,
- * with the reason.
+ * Adding a provider, in two steps inside one narrow dialog of a fixed
+ * height, the same as picking a workflow's trigger: first a list of
+ * providers under their headings, each with its mark, a line on what it
+ * offers and a chevron, then what the picked one needs. Most take an API
+ * key; a ChatGPT subscription signs in instead. The steps slide into one
+ * another the way the person is heading, and the dialog never changes
+ * size between them. dimmi's own models and Engy are never offered. A
+ * provider this install cannot serve shows, greyed, with the reason.
+ * Each opening starts again from the list.
  */
-import { RiArrowLeftSLine } from "@remixicon/react";
+import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react";
 import { useState } from "react";
 
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Modal, ModalBody, ModalHeader } from "@/components/base/modal/modal";
+import { Swap } from "@/features/inbox/motion";
 import type { AiProviderDescriptor } from "@/lib/api/ai";
 import { cx } from "@/utils/cx";
 import { ProviderLogo } from "../logos";
 import { providerInfo, providerName } from "../provider-info";
 import { ChatGPTConnect } from "./chatgpt-connect";
+import { providerGroups } from "./choices";
 import { ProviderForm } from "./provider-form";
 
 /*
- * ProviderCard is one provider in the grid.
+ * Choice is one provider's row in the list.
  */
-function ProviderCard({ descriptor, onPick }: { descriptor: AiProviderDescriptor; onPick: () => void }) {
+function Choice({ descriptor, onPick }: { descriptor: AiProviderDescriptor; onPick: () => void }) {
   const info = providerInfo[descriptor.id];
 
   return (
@@ -29,26 +35,28 @@ function ProviderCard({ descriptor, onPick }: { descriptor: AiProviderDescriptor
       onClick={onPick}
       disabled={!descriptor.available}
       className={cx(
-        "flex min-h-[112px] w-full flex-col items-start gap-3 rounded-2xl bg-background-secondary-default p-4 text-start outline-none",
+        "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none",
         "transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-border-focus-ring",
         descriptor.available ? "cursor-pointer hover:bg-background-secondary-hover" : "cursor-not-allowed opacity-60",
       )}
     >
       <ProviderLogo provider={descriptor.id} />
-      <span className="flex flex-col gap-0.5">
-        <span className="text-body-medium text-text-primary">{providerName(descriptor.id)}</span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body-regular text-text-primary">{providerName(descriptor.id)}</span>
         <span className="text-body-2-regular text-text-secondary">
           {descriptor.available ? (info?.blurb ?? descriptor.name) : "Not available on this install."}
         </span>
       </span>
+      <RiArrowRightSLine aria-hidden className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100" />
     </button>
   );
 }
 
 /*
- * ProviderGrid is the first step: every provider that can be added.
+ * ProviderList is the first step: every provider that can be added,
+ * under its heading.
  */
-function ProviderGrid({
+function ProviderList({
   providers,
   onPick,
 }: {
@@ -56,15 +64,69 @@ function ProviderGrid({
   onPick: (descriptor: AiProviderDescriptor) => void;
 }) {
   return (
-    <ModalBody className="pb-1">
-      <ul aria-label="Providers" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {providers.map((descriptor) => (
-          <li key={descriptor.id} className="flex">
-            <ProviderCard descriptor={descriptor} onPick={() => onPick(descriptor)} />
-          </li>
-        ))}
-      </ul>
-    </ModalBody>
+    <>
+      <ModalHeader
+        title="Add a provider"
+        description="Choose where the agent's models come from. You can add more later."
+      />
+      <ModalBody>
+        <div className="flex flex-col gap-5 pb-2">
+          {providerGroups(providers).map((group) => (
+            <section key={group.id} aria-label={group.name} className="flex flex-col gap-2">
+              <div className="flex flex-col">
+                <h3 className="text-body-2-medium text-text-primary">{group.name}</h3>
+                <p className="text-body-2-regular text-text-secondary">{group.detail}</p>
+              </div>
+              <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">
+                {group.providers.map((descriptor) => (
+                  <Choice key={descriptor.id} descriptor={descriptor} onPick={() => onPick(descriptor)} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </ModalBody>
+    </>
+  );
+}
+
+/*
+ * Connect is the second step: what the picked provider needs, with the
+ * way back to the list.
+ */
+function Connect({
+  workspace,
+  descriptor,
+  onBack,
+  onClose,
+}: {
+  workspace: string;
+  descriptor: AiProviderDescriptor;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <ModalHeader
+        title={`Connect ${providerName(descriptor.id)}`}
+        description="dimmi checks the connection before it saves."
+      >
+        <LinkButton
+          variant="secondary"
+          size="small"
+          leadingIcon={RiArrowLeftSLine}
+          onClick={onBack}
+          className="mt-3 -ms-1 self-start rtl:[&_svg]:-scale-x-100"
+        >
+          All providers
+        </LinkButton>
+      </ModalHeader>
+      {descriptor.auth_type === "oauth" ? (
+        <ChatGPTConnect workspace={workspace} descriptor={descriptor} onCancel={onClose} onDone={onClose} />
+      ) : (
+        <ProviderForm workspace={workspace} descriptor={descriptor} onCancel={onClose} onDone={onClose} />
+      )}
+    </>
   );
 }
 
@@ -83,59 +145,33 @@ export function AddProviderModal({
   onClose: () => void;
 }) {
   const [picked, setPicked] = useState<AiProviderDescriptor | null>(null);
-  const choices = providers.filter((descriptor) => descriptor.id !== "dimmi");
+  const [wasOpen, setWasOpen] = useState(isOpen);
 
-  const close = () => {
-    setPicked(null);
-    onClose();
-  };
-  const back = () => setPicked(null);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) {
+      setPicked(null);
+    }
+  }
 
   return (
     <Modal
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          close();
+          onClose();
         }
       }}
-      size="lg"
+      size="md"
+      className="relative h-[min(640px,calc(100dvh-3rem))]"
     >
-      <ModalHeader
-        title={picked ? `Connect ${providerName(picked.id)}` : "Add a provider"}
-        description={
-          picked
-            ? "dimmi checks the connection before it saves."
-            : "Choose where the agent's models come from. Usage is billed by the provider."
-        }
-      >
+      <Swap view={picked?.id ?? "list"} forward={picked !== null} className="flex min-h-0 flex-1 flex-col gap-4">
         {picked ? (
-          <LinkButton
-            variant="secondary"
-            size="small"
-            leadingIcon={RiArrowLeftSLine}
-            onClick={back}
-            className="mt-3 -ms-1 self-start"
-          >
-            All providers
-          </LinkButton>
-        ) : null}
-      </ModalHeader>
-      {picked === null ? <ProviderGrid providers={choices} onPick={setPicked} /> : null}
-      {picked?.auth_type === "oauth" ? (
-        <ChatGPTConnect
-          workspace={workspace}
-          descriptor={picked}
-          onCancel={close}
-          onDone={() => {
-            setPicked(null);
-            onClose();
-          }}
-        />
-      ) : null}
-      {picked && picked.auth_type !== "oauth" ? (
-        <ProviderForm key={picked.id} workspace={workspace} descriptor={picked} onCancel={close} onDone={close} />
-      ) : null}
+          <Connect workspace={workspace} descriptor={picked} onBack={() => setPicked(null)} onClose={onClose} />
+        ) : (
+          <ProviderList providers={providers} onPick={setPicked} />
+        )}
+      </Swap>
     </Modal>
   );
 }

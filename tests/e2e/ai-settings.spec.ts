@@ -17,6 +17,7 @@ it.describe("ai settings", () => {
     const modal = page.getByRole("dialog", { name: "Add a provider" });
     await expect(modal.getByRole("button", { name: /Anthropic/ })).toBeVisible();
     await expect(modal.getByRole("button", { name: /OpenAI-compatible/ })).toBeVisible();
+    await expect(modal.getByRole("button", { name: /Engy/ })).toHaveCount(0);
 
     await modal.getByRole("button", { name: /Anthropic/ }).click();
     const form = page.getByRole("dialog", { name: "Connect Anthropic" });

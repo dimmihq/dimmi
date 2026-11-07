@@ -4,6 +4,7 @@ import {
   Children,
   createContext,
   isValidElement,
+  useCallback,
   useContext,
   useId,
   useLayoutEffect,
@@ -188,17 +189,20 @@ export interface ModalDialogProps {
 /**
  * The panel surface and dialog element shared by Modal and Drawer: the
  * ModalHeader title names it and the description is wired to
- * aria-describedby. Render it inside a React Aria Modal.
+ * aria-describedby. Render it inside a React Aria Modal. Headers are
+ * counted rather than flagged, so a step that slides out after the next
+ * one slid in does not take the description away from it.
  */
 export function ModalDialog({ role, "aria-label": ariaLabel, className, children }: ModalDialogProps) {
   const descriptionId = useId();
-  const [described, setDescribed] = useState(false);
+  const [described, setDescribedCount] = useState(0);
+  const setDescribed = useCallback((on: boolean) => setDescribedCount((count) => count + (on ? 1 : -1)), []);
 
   return (
     <AriaDialog
       role={role}
       aria-label={ariaLabel}
-      aria-describedby={described ? descriptionId : undefined}
+      aria-describedby={described > 0 ? descriptionId : undefined}
       className={cx(styles.dialog, className)}
     >
       {(renderProps) => (
