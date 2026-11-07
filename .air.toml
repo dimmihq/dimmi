@@ -1,5 +1,6 @@
-# Rebuilds and restarts the Go server when Go or templ output changes.
-# The browser app reloads itself through the Vite dev server.
+# Rebuilds and restarts the Go server when Go or templ output changes,
+# or when a fresh messenger build lands in public/widget (its manifest
+# changes). The browser app reloads itself through the Vite dev server.
 root = "."
 tmp_dir = "tmp"
 
@@ -7,7 +8,7 @@ tmp_dir = "tmp"
   cmd = "go build -o ./tmp/dimmi ./cmd/dimmi"
   entrypoint = ["./tmp/dimmi", "serve"]
   include_ext = ["go", "sql", "json", "yaml"]
-  exclude_dir = ["node_modules", "public", "resources/js", "storage", "tmp", "specs", "research", "docs", "bin", ".claude", ".cursor"]
+  exclude_dir = ["node_modules", "public/build", "public/brand", "resources/js", "storage", "tmp", "specs", "research", "docs", "bin", ".claude", ".cursor"]
   exclude_regex = ["_test\\.go$"]
   delay = 200
   kill_delay = "2s"

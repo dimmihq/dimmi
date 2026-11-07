@@ -16,7 +16,7 @@ APP_PKGS := ./app/...
 # cloud build.
 CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-app-role test-cloud test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-app-role test-cloud test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-widget dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -128,19 +128,24 @@ cover-app:
 	go tool cover -func=coverage-app.filtered.out | tail -1
 
 # Local development: the Go server on :8080, rebuilt by air on every Go
-# change, and the Vite dev server on :5173 for hot updates of the browser
-# app. Open http://localhost:8080/d. Settings come from dimmi.yaml, copied
-# from dimmi.example.yaml on first run. `make dev TAGS=cloud` runs the
-# cloud edition.
+# change, the Vite dev server on :5173 for hot updates of the browser
+# app, and the messenger rebuilt into public/widget whenever its source
+# changes, which air picks up through the widget manifest. Open
+# http://localhost:8080/d. Settings come from dimmi.yaml, copied from
+# dimmi.example.yaml on first run. `make dev TAGS=cloud` runs the cloud
+# edition.
 dev: dev-db pseudo-locale
 	@test -f dimmi.yaml || cp dimmi.example.yaml dimmi.yaml
-	$(MAKE) -j2 dev-server dev-web
+	$(MAKE) -j3 dev-server dev-web dev-widget
 
 dev-server:
 	$(AIR) --build.cmd "go build -tags '$(TAGS)' -o ./tmp/dimmi ./cmd/dimmi"
 
 dev-web:
 	pnpm dev
+
+dev-widget:
+	node --watch-path=resources/widget scripts/build-widget.ts
 
 dev-db:
 	@docker compose exec -T postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'dimmi'" | grep -q 1 \
