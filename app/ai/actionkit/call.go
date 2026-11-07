@@ -92,11 +92,12 @@ func (k *Kit) Call(ctx context.Context, in CallInput) (CallReply, error) {
 }
 
 /*
-validate checks the model's arguments, returning the refusal the model
-reads when they do not fit.
+validate checks the model's arguments against the schema the model was
+shown, which leaves out the arguments the admin bound, returning the
+refusal the model reads when they do not fit.
 */
 func validate(s Spec, args json.RawMessage) (map[string]any, *CallReply) {
-	schema, err := actionschema.Compile(s.InputSchema)
+	schema, err := actionschema.Compile(actionschema.Without(s.InputSchema, s.boundNames()))
 	if err == nil {
 		var input map[string]any
 		if input, err = schema.Validate(args); err == nil {

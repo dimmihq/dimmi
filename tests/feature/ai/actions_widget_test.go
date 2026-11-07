@@ -145,7 +145,7 @@ func shopMCP(t *testing.T, a *actionDesk) {
 	s := mcp.New(mcp.ServerOptions{Name: "shop", Version: "1.0.0", Errors: fhttp.Errors{}})
 	type lookup struct {
 		OrderID string `json:"order_id"`
-		UserID  string `json:"user_id,omitempty"`
+		UserID  string `json:"user_id"`
 	}
 	type order struct {
 		Status string `json:"status"`

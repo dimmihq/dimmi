@@ -123,14 +123,16 @@ func suffix(s Spec) string {
 	case s.SideEffect == SideEffectRead:
 		return "(Read-only lookup.)"
 	case s.Confirmation == ConfirmationCustomer && s.Approval != ApprovalNone:
-		return "(Changes the customer's account. The customer confirms in the chat and then a teammate " +
-			"approves before anything runs; do not ask for confirmation yourself.)"
+		return "(Changes the customer's account. Calling it is how you request it: the customer confirms in the " +
+			"chat, then a teammate approves before anything runs. Do not ask for confirmation yourself and do not " +
+			"hand off for it.)"
 	case s.Confirmation == ConfirmationCustomer:
 		return "(Changes the customer's account. The customer confirms in the chat before anything runs; " +
 			"do not ask for confirmation yourself.)"
 	case s.Approval != ApprovalNone:
-		return "(Changes the customer's account. A teammate approves it before it runs; the result says " +
-			"the request was sent.)"
+		return "(Changes the customer's account. Calling it is how you ask the team: it sends the request to a " +
+			"teammate for approval and nothing runs until they approve. Do not hand off for it; the result says the " +
+			"request was sent and you tell the customer.)"
 	}
 	return "(Changes the customer's account and runs at once.)"
 }
