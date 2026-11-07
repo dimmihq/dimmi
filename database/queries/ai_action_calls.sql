@@ -153,3 +153,12 @@ FROM ai_action_calls
 WHERE workspace_id = @workspace_id AND state = 'pending_approval' AND mode = 'live'
     AND conversation_id = ANY (@conversation_ids::uuid[])
 GROUP BY conversation_id;
+
+-- name: ScrubActionCallsForContact :execrows
+-- ScrubActionCallsForContact forgets what an erased customer's action
+-- calls held: what was sent, what came back and what people wrote. The
+-- rows stay as a record that a call happened, pointing at no one.
+UPDATE ai_action_calls SET
+    summary = '', input = '{}', bindings = '{}', request = NULL, response = NULL, result = NULL,
+    decision_reason = NULL, customer_message = NULL, cancel_reason = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id;

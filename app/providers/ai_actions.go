@@ -62,7 +62,8 @@ func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions 
 }
 
 /*
-addActionActions adds the workspace actions' own actions.
+addActionActions adds the workspace actions' own actions, and the
+eraser that makes calls forget an erased customer.
 */
 func addActionActions(a *app.App, out *app.AIActions, kit *actionkit.Kit) {
 	out.ActionKit = kit
@@ -70,6 +71,7 @@ func addActionActions(a *app.App, out *app.AIActions, kit *actionkit.Kit) {
 	out.ActionDefinitions = &agentactions.Definitions{DB: a.DB, Clock: a.Clock, Kit: kit}
 	out.ActionCalls = &agentactions.Calls{DB: a.DB, Kit: kit}
 	out.VisitorCalls = &widget.VisitorActionCalls{DB: a.DB, Kit: kit}
+	a.ContactErasers.Register(&agentactions.CallEraser{DB: a.DB, Clock: a.Clock})
 }
 
 /*

@@ -975,6 +975,30 @@ func (q *Queries) MarkActionCallReported(ctx context.Context, arg MarkActionCall
 	return err
 }
 
+const scrubActionCallsForContact = `-- name: ScrubActionCallsForContact :execrows
+UPDATE ai_action_calls SET
+    summary = '', input = '{}', bindings = '{}', request = NULL, response = NULL, result = NULL,
+    decision_reason = NULL, customer_message = NULL, cancel_reason = NULL, updated_at = $1
+WHERE workspace_id = $2 AND contact_id = $3
+`
+
+type ScrubActionCallsForContactParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   *ids.UUID `json:"contact_id"`
+}
+
+// ScrubActionCallsForContact forgets what an erased customer's action
+// calls held: what was sent, what came back and what people wrote. The
+// rows stay as a record that a call happened, pointing at no one.
+func (q *Queries) ScrubActionCallsForContact(ctx context.Context, arg ScrubActionCallsForContactParams) (int64, error) {
+	result, err := q.db.Exec(ctx, scrubActionCallsForContact, arg.Now, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setActionCallsMessage = `-- name: SetActionCallsMessage :exec
 UPDATE ai_action_calls SET message_id = $1, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = ANY ($4::uuid[])

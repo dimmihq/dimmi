@@ -24,6 +24,7 @@ func erasedBy() map[string]string {
 		"widget_sessions":           "deleted with the contact",
 		"contact_erasures":          "the request itself, holding no personal data once done",
 		"contact_exports":           "zips deleted by the wipe, rows deleted with the contact",
+		"ai_action_calls":           "inputs, results and notes scrubbed by an eraser, rows kept",
 	}
 }
 
