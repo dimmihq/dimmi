@@ -54,7 +54,7 @@ func memberPermissions() []string {
 		"identity:read", "email:read", "email_signatures:manage_own", "help_centers:read_settings",
 		"knowledge:sync", "github:read", "ai:read", "ai:write", "ai_actions:read", "ai_action_calls:approve",
 		"changelog:read", "changelog:write", "feedback:read", "feedback:write", "engage:read", "engage:write",
-		"conversations:assign", "conversations:merge",
+		"conversations:assign", "conversations:merge", "workflows:read", "workflows:run",
 	}
 }
 
@@ -78,7 +78,7 @@ func adminPermissions() []string {
 		"security_policy:manage", "roles:manage",
 		"conversations:export", "conversations:manage_notes", "contacts:export",
 		"members:reset_two_factor", "members:import",
-		"redaction:manage",
+		"redaction:manage", "workflows:manage", "schedules:manage",
 	}
 }
 

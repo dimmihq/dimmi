@@ -135,7 +135,7 @@ func PublicIDCatalog() []PublicIDEntry {
 	return slices.Concat(
 		accountPublicIDs(), inboxPublicIDs(), channelPublicIDs(), assistantPublicIDs(), helpCenterPublicIDs(),
 		platformPublicIDs(), billingPublicIDs(), changelogPublicIDs(), feedbackPublicIDs(), engagePublicIDs(),
-		reservedPublicIDs(),
+		workflowPublicIDs(), reservedPublicIDs(),
 	)
 }
 
@@ -358,6 +358,31 @@ func feedbackPublicIDs() []PublicIDEntry {
 		{"fbi", "feedback_imports"},
 		{"pts", "portal_sessions"},
 		{"psi", "portal_sign_ins"},
+	}
+}
+
+/*
+The prefixes of workflows and their schedules.
+*/
+const (
+	PrefixWorkflow        Prefix = "wf"
+	PrefixWorkflowVersion Prefix = "wfv"
+	PrefixWorkflowRun     Prefix = "wfr"
+	PrefixSchedule        Prefix = "sch"
+	PrefixSLAPolicy       Prefix = "sla"
+)
+
+/*
+workflowPublicIDs lists the prefixes of workflows, their runs, office
+hours schedules and service level policies.
+*/
+func workflowPublicIDs() []PublicIDEntry {
+	return []PublicIDEntry{
+		{PrefixWorkflow, "workflows"},
+		{PrefixWorkflowVersion, "workflow_versions"},
+		{PrefixWorkflowRun, "workflow_runs"},
+		{PrefixSchedule, "schedules"},
+		{PrefixSLAPolicy, "sla_policies"},
 	}
 }
 

@@ -571,6 +571,8 @@ type Conversation struct {
 	LastMessageID          *ids.UUID               `json:"last_message_id"`
 	Search                 database.SearchDocument `json:"search"`
 	Priority               int16                   `json:"priority"`
+	WorkflowRunID          *ids.UUID               `json:"workflow_run_id"`
+	AiMode                 string                  `json:"ai_mode"`
 }
 
 type ConversationDraft struct {
@@ -1329,6 +1331,19 @@ type SavedReply struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+type Schedule struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	Name        string          `json:"name"`
+	Timezone    string          `json:"timezone"`
+	Weekly      json.RawMessage `json:"weekly"`
+	Holidays    json.RawMessage `json:"holidays"`
+	IsDefault   bool            `json:"is_default"`
+	DeletedAt   *time.Time      `json:"deleted_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
 type SecurityEvent struct {
 	ID          ids.UUID        `json:"id"`
 	UserID      ids.UUID        `json:"user_id"`
@@ -1508,6 +1523,107 @@ type WidgetSetting struct {
 	IntercomShim            bool            `json:"intercom_shim"`
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
 	HomeLinks               json.RawMessage `json:"home_links"`
+}
+
+type Workflow struct {
+	ID                      ids.UUID        `json:"id"`
+	WorkspaceID             ids.UUID        `json:"workspace_id"`
+	Name                    string          `json:"name"`
+	Description             *string         `json:"description"`
+	Trigger                 string          `json:"trigger"`
+	Status                  string          `json:"status"`
+	Position                int32           `json:"position"`
+	Draft                   json.RawMessage `json:"draft"`
+	DraftHash               string          `json:"draft_hash"`
+	LiveVersionID           *ids.UUID       `json:"live_version_id"`
+	LiveHash                *string         `json:"live_hash"`
+	LockVersion             int32           `json:"lock_version"`
+	Kind                    string          `json:"kind"`
+	TestOnTestConversations bool            `json:"test_on_test_conversations"`
+	CreatedByMemberID       *ids.UUID       `json:"created_by_member_id"`
+	UpdatedByMemberID       *ids.UUID       `json:"updated_by_member_id"`
+	PausedAt                *time.Time      `json:"paused_at"`
+	PublishedAt             *time.Time      `json:"published_at"`
+	DeletedAt               *time.Time      `json:"deleted_at"`
+	CreatedAt               time.Time       `json:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+}
+
+type WorkflowMatchLog struct {
+	ID             ids.UUID        `json:"id"`
+	WorkspaceID    ids.UUID        `json:"workspace_id"`
+	ConversationID ids.UUID        `json:"conversation_id"`
+	Trigger        string          `json:"trigger"`
+	EventID        *string         `json:"event_id"`
+	Verdicts       json.RawMessage `json:"verdicts"`
+	CreatedAt      time.Time       `json:"created_at"`
+}
+
+type WorkflowRun struct {
+	ID             ids.UUID        `json:"id"`
+	WorkspaceID    ids.UUID        `json:"workspace_id"`
+	WorkflowID     ids.UUID        `json:"workflow_id"`
+	VersionID      *ids.UUID       `json:"version_id"`
+	ConversationID *ids.UUID       `json:"conversation_id"`
+	ContactID      *ids.UUID       `json:"contact_id"`
+	Kind           string          `json:"kind"`
+	Mode           string          `json:"mode"`
+	Status         string          `json:"status"`
+	EndReason      *string         `json:"end_reason"`
+	Trigger        string          `json:"trigger"`
+	TriggerEventID *string         `json:"trigger_event_id"`
+	TriggerData    json.RawMessage `json:"trigger_data"`
+	Spec           json.RawMessage `json:"spec"`
+	ParentRunID    *ids.UUID       `json:"parent_run_id"`
+	ParentStepID   *string         `json:"parent_step_id"`
+	Chain          []ids.UUID      `json:"chain"`
+	CursorStepID   *string         `json:"cursor_step_id"`
+	Seq            int64           `json:"seq"`
+	Wait           json.RawMessage `json:"wait"`
+	WakeAt         *time.Time      `json:"wake_at"`
+	Vars           json.RawMessage `json:"vars"`
+	StepsExecuted  int32           `json:"steps_executed"`
+	Acted          bool            `json:"acted"`
+	Error          json.RawMessage `json:"error"`
+	StartedAt      time.Time       `json:"started_at"`
+	EndedAt        *time.Time      `json:"ended_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+}
+
+type WorkflowRunStep struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	RunID       ids.UUID        `json:"run_id"`
+	WorkflowID  ids.UUID        `json:"workflow_id"`
+	VersionID   *ids.UUID       `json:"version_id"`
+	StepID      string          `json:"step_id"`
+	Kind        string          `json:"kind"`
+	Status      string          `json:"status"`
+	PathID      *string         `json:"path_id"`
+	Outcome     *string         `json:"outcome"`
+	Detail      json.RawMessage `json:"detail"`
+	Attempts    int16           `json:"attempts"`
+	StartedAt   time.Time       `json:"started_at"`
+	FinishedAt  *time.Time      `json:"finished_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+type WorkflowVersion struct {
+	ID                    ids.UUID        `json:"id"`
+	WorkspaceID           ids.UUID        `json:"workspace_id"`
+	WorkflowID            ids.UUID        `json:"workflow_id"`
+	Number                int32           `json:"number"`
+	Spec                  json.RawMessage `json:"spec"`
+	SpecHash              string          `json:"spec_hash"`
+	Kind                  string          `json:"kind"`
+	Compiled              json.RawMessage `json:"compiled"`
+	Note                  *string         `json:"note"`
+	PublishedByMemberID   *ids.UUID       `json:"published_by_member_id"`
+	PublishedVia          *string         `json:"published_via"`
+	RestoredFromVersionID *ids.UUID       `json:"restored_from_version_id"`
+	CreatedAt             time.Time       `json:"created_at"`
 }
 
 type Workspace struct {

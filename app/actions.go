@@ -33,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
+	"github.com/dimmihq/dimmi/app/actions/workflows"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 )
 
@@ -116,6 +117,7 @@ type Actions struct {
 	Articles                   *helpcenters.Articles
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
+	Workflows                  *workflows.Workflows
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
 	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy

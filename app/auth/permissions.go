@@ -175,6 +175,8 @@ func permissionGroups() map[string][]string {
 		"feedback:write":      {"feedback:write", "feedback:delete"},
 		"engage:read":         {"engage:read"},
 		"engage:write":        {"engage:write", "engage:manage"},
+		"workflows:read":      {"workflows:read"},
+		"workflows:write":     {"workflows:manage", "workflows:run"},
 		"billing:read":        {"billing:read"},
 		"billing:write":       {"billing:write", "billing:cap_unrestricted"},
 		"system:read":         {"system:read"},
@@ -194,7 +196,7 @@ func settingsWritePermissions() []string {
 		"email_signatures:manage_any", "channels:manage", "notification_destinations:manage", "help_centers:manage",
 		"help_centers:delete", "knowledge:manage", "knowledge:sync", "github:manage", "docs_sync:manage",
 		"oauth_grants:manage_any", "agent_access:manage", "feedback:manage", "imports:manage", "imports:rollback",
-		"security_policy:manage", "sso:manage", "scim:manage", "redaction:manage",
+		"security_policy:manage", "sso:manage", "scim:manage", "redaction:manage", "schedules:manage",
 	}
 }
 

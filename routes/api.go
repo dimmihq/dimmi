@@ -89,6 +89,7 @@ func API(a *app.App) {
 			emailSenderRoutes(workspace, a)
 			emailSetupRoutes(workspace, a)
 			helpCenterRoutes(workspace, a)
+			workflowRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })

@@ -38,6 +38,7 @@ func AbilityGroups() []string {
 		"changelog:read", "changelog:write",
 		"feedback:read", "feedback:write",
 		"engage:read", "engage:write",
+		"workflows:read", "workflows:write",
 		"billing:read", "billing:write",
 		"system:read", "system:write",
 	}
