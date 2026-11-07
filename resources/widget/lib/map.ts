@@ -7,7 +7,7 @@
  */
 
 import type * as api from "../client/store";
-import type { Attachment, Content, Conversation, Link, Member, Message, Source } from "../content";
+import type { ActionCard, Attachment, Content, Conversation, Link, Member, Message, Source } from "../content";
 import type { Appearance, OptionsUpdate, Tab, Texts } from "../options";
 
 export interface Config {
@@ -190,14 +190,64 @@ export function toMessage(m: api.Message, now: number): Message {
  * agentParts is what an agent's reply carries besides its text: the
  * agent's picture, the articles it cites and how its run ended.
  */
-function agentParts(m: api.Message): Pick<Message, "avatar" | "sources" | "outcome"> {
+function agentParts(m: api.Message): Pick<Message, "avatar" | "sources" | "outcome" | "action"> {
   const ai = m.ai ?? m.metadata?.ai;
   const sources = toSources(ai);
+  const action = toAction(ai);
 
   return {
     ...(m.author.avatar_url ? { avatar: m.author.avatar_url } : {}),
     ...(sources.length > 0 ? { sources } : {}),
     ...(ai?.outcome ? { outcome: ai.outcome } : {}),
+    ...(action ? { action } : {}),
+  };
+}
+
+const actionStates: Record<string, ActionCard["state"]> = {
+  awaiting_confirmation: "ask",
+  pending_confirmation: "ask",
+  pending_approval: "waiting",
+  confirmed: "done",
+  approved: "done",
+  running: "done",
+  succeeded: "done",
+  declined: "declined",
+  canceled: "cancelled",
+  cancelled: "cancelled",
+  expired: "expired",
+  failed: "failed",
+};
+
+/*
+ * toAction reads the action an answer carries: the confirmation card
+ * the server rendered, or a call that waits for the team. Statuses are
+ * read in either spelling the server uses.
+ */
+export function toAction(ai: api.AiAnswer | null | undefined): ActionCard | undefined {
+  const card = ai?.confirmation;
+  if (card?.action_call_id) {
+    const text = card.text ?? card.title ?? "";
+    return {
+      id: card.action_call_id,
+      card: true,
+      title: card.title ?? "",
+      text,
+      details: card.details ?? [],
+      state: actionStates[card.status] ?? "ask",
+    };
+  }
+  const call = ai?.action_call;
+  if (!call?.id) {
+    return undefined;
+  }
+
+  return {
+    id: call.id,
+    card: false,
+    title: call.title ?? "",
+    text: call.summary ?? call.title ?? "",
+    details: [],
+    state: actionStates[call.state] ?? "waiting",
   };
 }
 

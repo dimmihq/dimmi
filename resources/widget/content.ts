@@ -78,6 +78,21 @@ export interface Source {
   url?: string;
 }
 
+/*
+ * ActionCard is an action the agent asked to run, as the visitor sees it:
+ * a question to confirm or cancel, then where it stands. sending marks a
+ * choice on its way to the server. card is false for a call that only
+ * reports its state, such as one the team still has to approve.
+ */
+export interface ActionCard {
+  id: string;
+  card: boolean;
+  title: string;
+  text: string;
+  details: { label: string; value: string }[];
+  state: "ask" | "sending" | "waiting" | "done" | "declined" | "cancelled" | "expired" | "failed";
+}
+
 export interface Message {
   id?: string;
   key?: string;
@@ -89,6 +104,7 @@ export interface Message {
   body?: string;
   attachment?: Attachment;
   sources?: Source[];
+  action?: ActionCard;
   at: string;
 }
 

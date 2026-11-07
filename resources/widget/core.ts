@@ -215,10 +215,15 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
     root.addEventListener("click", (event) => {
-      const action = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-ai]") : null;
-      const kind = action?.dataset.ai;
+      const target = event.target instanceof Element ? event.target : null;
+      const kind = target?.closest<HTMLElement>("[data-ai]")?.dataset.ai;
       if (kind === "helped" || kind === "handoff") {
         void live?.aiAction(kind);
+      }
+      const card = target?.closest<HTMLElement>("[data-call]");
+      const decision = card?.dataset.decision;
+      if (card?.dataset.call && (decision === "confirmed" || decision === "canceled")) {
+        void live?.decideAction(card.dataset.call, decision);
       }
     });
     root.addEventListener("submit", (event) => {

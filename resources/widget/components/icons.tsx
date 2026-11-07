@@ -114,6 +114,15 @@ export function CheckIcon() {
   );
 }
 
+export function ClockIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4.5l3 1.5" />
+    </Icon>
+  );
+}
+
 export function PersonIcon() {
   return (
     <Icon>

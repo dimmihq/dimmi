@@ -7,9 +7,12 @@
  * The views ask through events: "dimmi:converse" to show a conversation, or a
  * new one when none is named, and "dimmi:send" to send what the composer
  * holds. Under the agent's latest answer the visitor can say it helped or
- * ask for a person; either shows at once and is sent in the background. Answers land in the store, and only the parts of the panel that
- * changed are drawn again, so a half-written message, the scroll position
- * and the open tab survive every update.
+ * ask for a person; either shows at once and is sent in the background.
+ * An action card's Confirm or Cancel waits on the server, since the
+ * choice decides whether something runs. Answers land in the store, and
+ * only the parts of the panel that changed are drawn again, so a
+ * half-written message, the scroll position and the open tab survive
+ * every update.
  */
 
 import { ApiError, Http } from "../client/http";
@@ -20,8 +23,9 @@ import { type Conversation as ApiConversation, type Message as ApiMessage, Store
 import { ConversationRow } from "../components/rows";
 import { AiActions, Thread, Typing } from "../components/thread";
 import { Whoami } from "../components/whoami";
-import type { Content } from "../content";
+import type { Content, Message } from "../content";
 import type { Options, OptionsUpdate } from "../options";
+import type { ActionTexts } from "../text";
 import { type Availability, type Config, content, fromConfig } from "./map";
 import { patch } from "./patch";
 import { report } from "./report";
@@ -133,6 +137,7 @@ export class Live {
   availability: Availability | undefined;
   open: string | undefined;
   private readonly helped = new Set<string>();
+  private readonly deciding = new Set<string>();
 
   constructor(
     private readonly host: Host,
@@ -484,11 +489,11 @@ export class Live {
 
     const texts = this.host.options().texts;
     const open = this.open;
-    const messages = this.content().thread;
+    const messages = this.content().thread.map((m) => this.withDecision(m));
     const typing = open ? this.store.typingIn(open) : undefined;
     const seen = open ? this.store.seen.get(open) : undefined;
     const last = messages.at(-1);
-    const parts = [this.statusLine(), String(Thread({ messages }))];
+    const parts = [this.statusLine(), String(Thread({ messages, texts: this.actionTexts() }))];
 
     if (typing) {
       parts.push(String(Typing()));
@@ -569,6 +574,65 @@ export class Live {
       if (kind === "handoff") {
         this.store.upsertConversation(found);
       }
+      this.drawThread();
+    }
+  }
+
+  /*
+   * withDecision shows an action card whose choice is on its way as
+   * sending.
+   */
+  private withDecision(message: Message): Message {
+    const action = message.action;
+    if (!action || !this.deciding.has(action.id)) {
+      return message;
+    }
+
+    return { ...message, action: { ...action, state: "sending" } };
+  }
+
+  private actionTexts(): ActionTexts {
+    const t = this.host.options().texts;
+
+    return {
+      confirm: t.action_confirm,
+      cancel: t.action_cancel,
+      waiting: t.action_waiting,
+      done: t.action_done,
+      declined: t.action_declined,
+      cancelled: t.action_cancelled,
+      expired: t.action_expired,
+      failed: t.action_failed,
+    };
+  }
+
+  /*
+   * decideAction sends the visitor's Confirm or Cancel on an action card.
+   * The card waits with a spinner until the server answers, then shows
+   * where the call stands: confirmed, waiting for the team, or cancelled.
+   * A refusal, such as an expired card, puts the server's state in place.
+   */
+  async decideAction(call: string, decision: "confirmed" | "canceled") {
+    const open = this.open;
+    if (!open || open === draftId || this.deciding.has(call)) {
+      return;
+    }
+    this.deciding.add(call);
+    this.drawThread();
+    try {
+      const res = await this.http.patch<{ data: { status: string } }>(`/conversations/${open}/action-calls/${call}`, {
+        status: decision,
+      });
+      this.store.setCallStatus(open, call, res.data.status);
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "network";
+      report("warn", code, "the choice could not be sent.");
+      const gone: Record<string, string> = { action_call_expired: "expired", action_call_not_pending: "cancelled" };
+      if (gone[code]) {
+        this.store.setCallStatus(open, call, gone[code]);
+      }
+    } finally {
+      this.deciding.delete(call);
       this.drawThread();
     }
   }

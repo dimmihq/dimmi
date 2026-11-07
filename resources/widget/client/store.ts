@@ -27,12 +27,22 @@ export interface Attachment {
 
 /*
  * AiAnswer is what an answer from the agent carries besides its text:
- * that the agent wrote it, and the articles it drew on.
+ * that the agent wrote it, the articles it drew on, and an action it
+ * asked to run: a confirmation card for the visitor, or a call waiting
+ * for the team.
  */
 export interface AiAnswer {
   generated?: boolean;
   outcome?: string;
   sources?: { title: string; url?: string | null }[];
+  confirmation?: {
+    action_call_id: string;
+    title?: string | null;
+    text?: string | null;
+    status: string;
+    details?: { label: string; value: string }[] | null;
+  } | null;
+  action_call?: { id: string; state: string; summary?: string | null; title?: string | null } | null;
 }
 
 export interface Message {
@@ -220,6 +230,28 @@ export class Store {
     if (found && found.unread_count > 0) {
       this.upsertConversation({ ...found, unread_count: 0 });
     }
+  }
+
+  /*
+   * setCallStatus moves the action a message of the conversation carries
+   * to a new status, such as confirmed once the visitor pressed Confirm.
+   */
+  setCallStatus(conversation: string, call: string, status: string) {
+    const list = this.messages.get(conversation) ?? [];
+    const found = list.find((m) => {
+      const ai = m.ai ?? m.metadata?.ai;
+      return ai?.confirmation?.action_call_id === call || ai?.action_call?.id === call;
+    });
+    const ai = found?.ai ?? found?.metadata?.ai;
+    if (!found || !ai) {
+      return;
+    }
+    const next = {
+      ...ai,
+      ...(ai.confirmation ? { confirmation: { ...ai.confirmation, status } } : {}),
+      ...(ai.action_call ? { action_call: { ...ai.action_call, state: status } } : {}),
+    };
+    this.putMessage({ ...found, ai: next, metadata: { ...found.metadata, ai: next } });
   }
 
   /*

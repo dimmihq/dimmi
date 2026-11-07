@@ -62,6 +62,14 @@ export interface Texts {
   ai_helped: string;
   ai_thanks: string;
   talk_to_human: string;
+  action_confirm: string;
+  action_cancel: string;
+  action_waiting: string;
+  action_done: string;
+  action_declined: string;
+  action_cancelled: string;
+  action_expired: string;
+  action_failed: string;
 }
 
 export interface Options {
@@ -122,6 +130,14 @@ export const defaults: Options = {
     ai_helped: "That helped",
     ai_thanks: "Glad it helped.",
     talk_to_human: "Talk to a person",
+    action_confirm: "Confirm",
+    action_cancel: "Cancel",
+    action_waiting: "Waiting for the team to approve",
+    action_done: "Confirmed",
+    action_declined: "The team could not approve this",
+    action_cancelled: "Cancelled",
+    action_expired: "This request expired",
+    action_failed: "This did not go through",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,

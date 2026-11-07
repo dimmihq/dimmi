@@ -4,15 +4,29 @@
  * time under it. Visitors' bubbles sit on the right in the brand color, the
  * team's and the agent's on the left, the agent marked as AI with the
  * articles it drew on. Text, files, images and voice notes each have their
- * own bubble. The sample thread and every message a visitor sends render
+ * own bubble. An action the agent asks to run comes as a card the visitor
+ * confirms or cancels, then says where it stands, such as waiting for the
+ * team to approve. The sample thread and every message a visitor sends render
  * through these components, so they always look alike.
  */
 import { raw } from "widget-jsx/jsx-runtime";
 
-import type { Attachment, Message, Source } from "../content";
+import type { ActionCard, Attachment, Message, Source } from "../content";
 import { markdown } from "../lib/markdown";
-import { initials, levels } from "../text";
-import { BookIcon, CheckIcon, DownloadIcon, FileIcon, ImageIcon, Mark, PauseIcon, PersonIcon, PlayIcon } from "./icons";
+import { type ActionTexts, actionTexts, initials, levels } from "../text";
+import {
+  BookIcon,
+  CheckIcon,
+  ClockIcon,
+  CloseIcon,
+  DownloadIcon,
+  FileIcon,
+  ImageIcon,
+  Mark,
+  PauseIcon,
+  PersonIcon,
+  PlayIcon,
+} from "./icons";
 
 export function Waveform({ className = "wave" }: { className?: string }) {
   return <span className={className}>{raw(levels.map((level) => `<i data-height="${level}"></i>`).join(""))}</span>;
@@ -145,19 +159,94 @@ function SourceChip({ source }: { source: Source }) {
   );
 }
 
-function Bubble({ message }: { message: Message }) {
+function StateLine({ action, texts }: { action: ActionCard; texts: ActionTexts }) {
+  const label = action.state === "ask" || action.state === "sending" ? "" : texts[action.state];
+  const icon = action.state === "waiting" ? <ClockIcon /> : action.state === "done" ? <CheckIcon /> : <CloseIcon />;
+
+  return (
+    <p className="action-state" data-state={action.state} role="status">
+      {icon}
+      {label}
+    </p>
+  );
+}
+
+/*
+ * ActionBlock is the card of an action the visitor confirms, or the line
+ * saying where a call stands once they did. While a choice is sending,
+ * both buttons wait and the pressed one spins.
+ */
+export function ActionBlock({ action, texts }: { action: ActionCard; texts: ActionTexts }) {
+  const asking = action.state === "ask" || action.state === "sending";
+  const busy = action.state === "sending";
+  if (!action.card) {
+    return asking ? raw("") : <StateLine action={action} texts={texts} />;
+  }
+
+  return (
+    <div className="action-card" data-key={`action:${action.id}`} data-state={action.state} aria-busy={busy}>
+      {action.text ? <p className="action-text">{action.text}</p> : null}
+      {action.details.length > 0 ? (
+        <dl className="action-details">
+          {action.details.map((detail) => (
+            <div key={detail.label}>
+              <dt>{detail.label}</dt>
+              <dd>{detail.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {asking ? (
+        <span className="action-buttons">
+          <button
+            type="button"
+            className="button primary"
+            data-call={action.id}
+            data-decision="confirmed"
+            disabled={busy}
+          >
+            {busy ? <span className="spinner" aria-hidden="true" /> : null}
+            {texts.confirm}
+          </button>
+          <button type="button" className="button quiet" data-call={action.id} data-decision="canceled" disabled={busy}>
+            {texts.cancel}
+          </button>
+        </span>
+      ) : (
+        <StateLine action={action} texts={texts} />
+      )}
+    </div>
+  );
+}
+
+/*
+ * spoken is the message's text without the question its action card
+ * already asks, so the visitor never reads it twice.
+ */
+function spoken(message: Message): string | undefined {
+  const body = message.body?.trim();
+  const question = message.action?.card ? message.action.text.trim() : "";
+  if (!body || !question || !body.endsWith(question)) {
+    return message.body;
+  }
+
+  return body.slice(0, -question.length).trim() || undefined;
+}
+
+function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
   const sources = message.sources ?? [];
   const key = keyOf(message);
+  const body = spoken(message);
 
   return (
     <>
-      {message.body ? (
+      {body ? (
         <div
           className={message.from === "visitor" ? "bubble" : "bubble rich"}
           data-key={`${key}:body`}
           data-state={message.state}
         >
-          {message.from === "visitor" ? message.body : raw(markdown(message.body))}
+          {message.from === "visitor" ? body : raw(markdown(body))}
           {sources.length > 0 && (
             <span className="sources">
               {sources.map((source) => (
@@ -172,6 +261,7 @@ function Bubble({ message }: { message: Message }) {
           <AttachmentBubble attachment={message.attachment} />
         </div>
       ) : null}
+      {message.action ? <ActionBlock action={message.action} texts={texts} /> : null}
     </>
   );
 }
@@ -196,7 +286,7 @@ function Who({ message }: { message: Message }) {
   );
 }
 
-export function Said({ messages }: { messages: Message[] }) {
+export function Said({ messages, texts = actionTexts }: { messages: Message[]; texts?: ActionTexts }) {
   const [first] = messages;
   const last = messages.at(-1);
   if (!first || !last) {
@@ -208,7 +298,7 @@ export function Said({ messages }: { messages: Message[] }) {
       {first.from !== "visitor" && <Who message={first} />}
       <div className="bubbles">
         {messages.map((message) => (
-          <Bubble message={message} key={`${message.at}-${message.body ?? message.attachment?.name}`} />
+          <Bubble message={message} texts={texts} key={`${message.at}-${message.body ?? message.attachment?.name}`} />
         ))}
       </div>
       <time>{last.at}</time>
@@ -234,11 +324,11 @@ function runs(messages: Message[]): Message[][] {
   return grouped;
 }
 
-export function Thread({ messages }: { messages: Message[] }) {
+export function Thread({ messages, texts = actionTexts }: { messages: Message[]; texts?: ActionTexts }) {
   return (
     <>
       {runs(messages).map((run) => (
-        <Said messages={run} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
+        <Said messages={run} texts={texts} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
       ))}
     </>
   );
