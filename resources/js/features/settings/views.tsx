@@ -4,7 +4,7 @@
  */
 import type { ComponentType } from "react";
 
-import { ActionsSettings } from "@/features/ai/actions-page";
+import { ActionsSettings } from "@/features/ai/actions/actions-page";
 import { AgentSettings } from "@/features/ai/agent/agent-settings-page";
 import { ProvidersSettings } from "@/features/ai/providers/providers-page";
 import type { SettingsSection } from "@/features/shell/navigation";
