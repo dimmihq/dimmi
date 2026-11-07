@@ -175,6 +175,9 @@ func bootWidgetSessions(a *app.App) {
 	acts.ShowSession = &widget.ShowWidgetSession{DB: a.DB}
 	acts.RevokeSession = &widget.RevokeWidgetSession{DB: a.DB, Clock: a.Clock, Streams: streams}
 	acts.UpdateContact = &widget.UpdateWidgetContact{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.EmailProofs = &widget.EmailProofs{
+		DB: a.DB, Events: a.Events, Clock: a.Clock, Cache: a.Cache, Limiter: a.Limiter, Mail: a.Mail,
+	}
 	acts.Contacts = &widget.ContactSessions{Clock: a.Clock, Streams: streams}
 }
 

@@ -56,6 +56,10 @@ func bootAI(ctx context.Context, a *app.App) error {
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
 		return enqueueAnswer(ctx, a, e)
 	})
+	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.WidgetEmailProven) error {
+		return runner.Actions.EmailProven(tenancy.With(ctx, e.WorkspaceID.String()), e.WorkspaceID, e.ContactID,
+			e.Email)
+	})
 
 	return errors.Join(
 		queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner}),

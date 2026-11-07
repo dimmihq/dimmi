@@ -222,6 +222,7 @@ func (a *PostWidgetMessage) inbound(
 		Source: source(in, now),
 		Metadata: map[string]any{
 			"session_id": models.PublicID(models.PrefixWidgetSession, s.ID), "identity_verified": verified(s, now),
+			"email_verified": EmailProven(s, now),
 		},
 	}
 

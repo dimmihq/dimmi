@@ -75,10 +75,83 @@ func (q *Queries) AbandonActionCall(ctx context.Context, arg AbandonActionCallPa
 	return i, err
 }
 
+const bindVerifiedActionCall = `-- name: BindVerifiedActionCall :one
+UPDATE ai_action_calls SET
+    bindings = $1, state = $2, expires_at = $3, updated_at = $4::timestamptz
+WHERE workspace_id = $5 AND id = $6 AND state = 'awaiting_verification'
+RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
+`
+
+type BindVerifiedActionCallParams struct {
+	Bindings    json.RawMessage `json:"bindings"`
+	NextState   string          `json:"next_state"`
+	ExpiresAt   *time.Time      `json:"expires_at"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// BindVerifiedActionCall binds a call waiting for an email proof to the
+// proven address and moves it on.
+func (q *Queries) BindVerifiedActionCall(ctx context.Context, arg BindVerifiedActionCallParams) (AiActionCall, error) {
+	row := q.db.QueryRow(ctx, bindVerifiedActionCall,
+		arg.Bindings,
+		arg.NextState,
+		arg.ExpiresAt,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i AiActionCall
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ActionID,
+		&i.ActionVersionID,
+		&i.ConnectionID,
+		&i.Mode,
+		&i.SideEffect,
+		&i.Confirmation,
+		&i.Approval,
+		&i.State,
+		&i.ErrorCode,
+		&i.HttpStatus,
+		&i.RunID,
+		&i.ReportRunID,
+		&i.ConversationID,
+		&i.ContactID,
+		&i.MessageID,
+		&i.ToolCallID,
+		&i.Title,
+		&i.Summary,
+		&i.Input,
+		&i.Bindings,
+		&i.Request,
+		&i.Response,
+		&i.Result,
+		&i.DecidedByMemberID,
+		&i.DecisionReason,
+		&i.CustomerMessage,
+		&i.CancelReason,
+		&i.Attempts,
+		&i.LatencyMs,
+		&i.RequestedAt,
+		&i.ConfirmedAt,
+		&i.DecidedAt,
+		&i.SentAt,
+		&i.CompletedAt,
+		&i.ExpiresAt,
+		&i.ReportedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const cancelActionCall = `-- name: CancelActionCall :one
 UPDATE ai_action_calls SET
     state = 'canceled', cancel_reason = $1, completed_at = $2::timestamptz, expires_at = NULL, updated_at = $2::timestamptz
-WHERE workspace_id = $3 AND id = $4 AND state IN ('awaiting_confirmation', 'pending_approval')
+WHERE workspace_id = $3 AND id = $4 AND state IN ('awaiting_verification', 'awaiting_confirmation', 'pending_approval')
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
@@ -524,7 +597,7 @@ func (q *Queries) DecideActionCall(ctx context.Context, arg DecideActionCallPara
 
 const expireActionCall = `-- name: ExpireActionCall :one
 UPDATE ai_action_calls SET state = 'expired', completed_at = $1::timestamptz, updated_at = $1::timestamptz
-WHERE workspace_id = $2 AND id = $3 AND state IN ('awaiting_confirmation', 'pending_approval')
+WHERE workspace_id = $2 AND id = $3 AND state IN ('awaiting_verification', 'awaiting_confirmation', 'pending_approval')
     AND expires_at <= $1::timestamptz
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
@@ -875,6 +948,82 @@ func (q *Queries) ListActionCalls(ctx context.Context, arg ListActionCallsParams
 	return items, nil
 }
 
+const listCallsAwaitingEmail = `-- name: ListCallsAwaitingEmail :many
+SELECT id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at FROM ai_action_calls
+WHERE workspace_id = $1 AND contact_id = $2 AND state = 'awaiting_verification'
+    AND expires_at > $3::timestamptz
+ORDER BY id
+`
+
+type ListCallsAwaitingEmailParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   *ids.UUID `json:"contact_id"`
+	Now         time.Time `json:"now"`
+}
+
+// ListCallsAwaitingEmail returns a contact's calls still waiting for
+// them to prove their email, oldest first.
+func (q *Queries) ListCallsAwaitingEmail(ctx context.Context, arg ListCallsAwaitingEmailParams) ([]AiActionCall, error) {
+	rows, err := q.db.Query(ctx, listCallsAwaitingEmail, arg.WorkspaceID, arg.ContactID, arg.Now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AiActionCall
+	for rows.Next() {
+		var i AiActionCall
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ActionID,
+			&i.ActionVersionID,
+			&i.ConnectionID,
+			&i.Mode,
+			&i.SideEffect,
+			&i.Confirmation,
+			&i.Approval,
+			&i.State,
+			&i.ErrorCode,
+			&i.HttpStatus,
+			&i.RunID,
+			&i.ReportRunID,
+			&i.ConversationID,
+			&i.ContactID,
+			&i.MessageID,
+			&i.ToolCallID,
+			&i.Title,
+			&i.Summary,
+			&i.Input,
+			&i.Bindings,
+			&i.Request,
+			&i.Response,
+			&i.Result,
+			&i.DecidedByMemberID,
+			&i.DecisionReason,
+			&i.CustomerMessage,
+			&i.CancelReason,
+			&i.Attempts,
+			&i.LatencyMs,
+			&i.RequestedAt,
+			&i.ConfirmedAt,
+			&i.DecidedAt,
+			&i.SentAt,
+			&i.CompletedAt,
+			&i.ExpiresAt,
+			&i.ReportedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listConversationActionCalls = `-- name: ListConversationActionCalls :many
 SELECT id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at FROM ai_action_calls
 WHERE workspace_id = $1 AND conversation_id = $2 AND mode = 'live'
@@ -1102,7 +1251,8 @@ func (q *Queries) SetRunTriggerActionCall(ctx context.Context, arg SetRunTrigger
 const supersedeConversationConfirmations = `-- name: SupersedeConversationConfirmations :many
 UPDATE ai_action_calls SET
     state = 'canceled', cancel_reason = 'superseded', completed_at = $1::timestamptz, expires_at = NULL, updated_at = $1::timestamptz
-WHERE workspace_id = $2 AND conversation_id = $3 AND state = 'awaiting_confirmation'
+WHERE workspace_id = $2 AND conversation_id = $3
+    AND state IN ('awaiting_verification', 'awaiting_confirmation')
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 

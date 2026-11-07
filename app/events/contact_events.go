@@ -38,3 +38,14 @@ type ContactUpdated struct {
 	Blocked              bool
 	Unblocked            bool
 }
+
+/*
+WidgetEmailProven says a messenger visitor proved they own the email
+address by typing the code mailed to it, in the session named.
+*/
+type WidgetEmailProven struct {
+	WorkspaceID ids.UUID
+	ContactID   ids.UUID
+	SessionID   ids.UUID
+	Email       string
+}

@@ -96,7 +96,7 @@ func offered(s Spec, in OfferInput, contact map[string]any) bool {
 	case in.NoWrites && s.SideEffect == SideEffectWrite:
 		return false
 	case s.UsesContact() && !bindable(s, contact):
-		return false
+		return awaitsEmail(s, in.Identity)
 	}
 	return true
 }
@@ -107,12 +107,19 @@ with what it does to the account, and its input schema without the
 arguments the admin bound.
 */
 func (l Live) ToolSpec() contracts.ToolSpec {
-	return contracts.ToolSpec{
-		Name:        l.Spec.Name,
-		Description: l.Spec.Description + " " + suffix(l.Spec),
-		Schema:      l.Spec.ModelSchema(),
+	description := l.Spec.Description + " " + suffix(l.Spec)
+	if onlyEmail(l.Spec) {
+		description += " " + emailNote
 	}
+	return contracts.ToolSpec{Name: l.Spec.Name, Description: description, Schema: l.Spec.ModelSchema()}
 }
+
+/*
+emailNote is what the model reads about actions bound to the customer's
+email, which an anonymous visitor confirms with a code.
+*/
+const emailNote = "(Uses the customer's email. If they have not confirmed it, calling it shows them a card to " +
+	"confirm their email with a code first; never ask them for the code or their email in the chat.)"
 
 /*
 suffix tells the model what calling the action does.

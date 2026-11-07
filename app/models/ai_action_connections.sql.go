@@ -19,7 +19,7 @@ UPDATE ai_action_calls SET
     state = 'canceled', cancel_reason = 'action_unpublished', completed_at = $1::timestamptz, expires_at = NULL,
     updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND connection_id = $3
-    AND state IN ('awaiting_confirmation', 'pending_approval')
+    AND state IN ('awaiting_verification', 'awaiting_confirmation', 'pending_approval')
 `
 
 type CancelConnectionCallsParams struct {

@@ -857,7 +857,8 @@ export class Live {
     const waiting = messages
       .map((m) => m.action)
       .filter(
-        (a): a is NonNullable<Message["action"]> => a !== undefined && (a.state === "ask" || a.state === "waiting"),
+        (a): a is NonNullable<Message["action"]> =>
+          a !== undefined && (a.state === "ask" || a.state === "waiting" || a.state === "verify"),
       )
       .map((a) => a.id);
     if (this.callTimer !== undefined || !open || open === draftId || waiting.length === 0) {

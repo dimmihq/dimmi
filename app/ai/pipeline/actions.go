@@ -71,9 +71,7 @@ func (r *Runner) offerActions(ctx context.Context, st *run) {
 		return
 	}
 	if st.actions.followUp == nil {
-		st.actions.identity = actionkit.Identity{
-			Verified: actionkit.VerifiedContext(e.ChannelType, e.Trigger), Contact: e.Contact,
-		}
+		st.actions.identity = identityOf(e.ChannelType, e.Trigger, e.Contact)
 	}
 	offered, err := r.Actions.Offer(ctx, actionkit.OfferInput{
 		WorkspaceID: e.Workspace.ID, ChannelType: e.ChannelType, Identity: st.actions.identity,
@@ -84,6 +82,19 @@ func (r *Runner) offerActions(ctx context.Context, st *run) {
 	}
 	if brief, err := r.Actions.Brief(ctx, e.Workspace.ID, e.Conversation.ID); err == nil {
 		st.loop.brief = brief
+	}
+}
+
+/*
+identityOf is what the trigger proves about the customer: a signed-in
+session proves who they are, an email code only their email, and an
+anonymous visitor may still prove their email when an action needs it.
+*/
+func identityOf(channelType string, trigger models.Message, contact *models.Contact) actionkit.Identity {
+	verified := actionkit.VerifiedContext(channelType, trigger)
+	proven, codes := actionkit.EmailContext(channelType, trigger)
+	return actionkit.Identity{
+		Verified: verified, EmailProven: proven && !verified, EmailCodes: codes && !verified, Contact: contact,
 	}
 }
 

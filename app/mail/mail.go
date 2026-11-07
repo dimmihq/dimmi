@@ -35,6 +35,7 @@ func Register(m *mail.Manager) {
 	mail.Register[MagicLinkMail](m, "magic_link")
 	mail.Register[ResetPasswordMail](m, "reset_password")
 	mail.Register[ConfirmCodeMail](m, "confirm_code")
+	mail.Register[VisitorCodeMail](m, "visitor_code")
 	mail.Register[PasswordChangedMail](m, "password_changed")
 	mail.Register[NewSignInMail](m, "new_sign_in")
 	mail.Register[SuspiciousSignInAttemptsMail](m, "suspicious_sign_in_attempts")

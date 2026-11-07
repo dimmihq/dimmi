@@ -191,5 +191,10 @@
     "action": "Open in dimmi",
     "why": "You get this because of your notification settings in {workspace}.",
     "manage": "Change notifications"
+  },
+  "visitor_code": {
+    "subject": "{{.code}} is your {{.workspace}} code",
+    "intro": "Type this code in the {{.workspace}} chat to confirm your email:",
+    "expiry": "The code works for 10 minutes. If you did not ask for it, you can ignore this email: nothing happens without the code."
   }
 }

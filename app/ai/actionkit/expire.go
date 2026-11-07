@@ -84,7 +84,8 @@ func (k *Kit) lapse(ctx context.Context, tx *database.Tx, call models.AiActionCa
 waiting reports whether a call waits for someone's decision.
 */
 func waiting(call models.AiActionCall) bool {
-	return call.State == "awaiting_confirmation" || call.State == "pending_approval"
+	return call.State == "awaiting_verification" || call.State == "awaiting_confirmation" ||
+		call.State == "pending_approval"
 }
 
 /*

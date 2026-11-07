@@ -51,6 +51,11 @@ func pendingText(s Spec, call models.AiActionCall) string {
 	status, next := "pending_approval", "A teammate must approve this request before anything runs. "+
 		"Nothing has run yet. Tell the customer what you requested, that the team will review it, "+
 		"and that you will update them here."
+	if call.State == "awaiting_verification" {
+		status, next = "awaiting_customer_email", "The customer now sees a card asking them to confirm their "+
+			"email with a code mailed to them. Nothing has run yet. Ask them briefly to confirm their email "+
+			"on the card; never ask for the code or the address in the chat. You will hear back once it ran."
+	}
 	if call.State == "awaiting_confirmation" {
 		status, next = "awaiting_customer_confirmation", "The customer now sees a confirmation card with this "+
 			"summary and must press Confirm. Nothing has run yet. Ask them briefly to check the details "+

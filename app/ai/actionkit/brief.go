@@ -87,6 +87,8 @@ stateText says where a request stands in words.
 */
 func stateText(c models.AiActionCall) string {
 	switch c.State {
+	case "awaiting_verification":
+		return "waiting for the customer to confirm their email on the card"
 	case "awaiting_confirmation":
 		return "waiting for the customer to press Confirm on the card"
 	case "pending_approval":

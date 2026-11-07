@@ -90,6 +90,20 @@
         ],
         "type": "object"
       },
+      "CheckWidgetEmailCodeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 12,
+            "minLength": 6,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
       "CollectionWidgetConversation": {
         "additionalProperties": false,
         "properties": {
@@ -619,6 +633,56 @@
         ],
         "type": "object"
       },
+      "EmailCodeSent": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "resend_after": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "email",
+          "expires_at",
+          "resend_after"
+        ],
+        "type": "object"
+      },
+      "EmailProven": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "verified_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "email",
+          "verified_at"
+        ],
+        "type": "object"
+      },
       "MessageAI": {
         "additionalProperties": false,
         "properties": {
@@ -967,6 +1031,30 @@
         ],
         "type": "object"
       },
+      "ResourceEmailCodeSent": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EmailCodeSent"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceEmailProven": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EmailProven"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceReadStateResource": {
         "additionalProperties": false,
         "properties": {
@@ -1088,6 +1176,20 @@
         "required": [
           "message",
           "code"
+        ],
+        "type": "object"
+      },
+      "SendWidgetEmailCodeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 3,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
         ],
         "type": "object"
       },
@@ -2661,6 +2763,80 @@
         "responses": {
           "201": {
             "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/email-verifications": {
+      "post": {
+        "operationId": "widget.email-verifications.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendWidgetEmailCodeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceEmailCodeSent"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/email-verifications/checks": {
+      "post": {
+        "operationId": "widget.email-verifications.checks.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckWidgetEmailCodeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceEmailProven"
+                }
+              }
+            },
+            "description": "OK"
           },
           "default": {
             "content": {

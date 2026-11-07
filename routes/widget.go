@@ -92,6 +92,11 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Get(visitor, "/contact", "widget.contact.show", contact.Show)
 	routing.Patch(visitor, "/contact", "widget.contact.update", contact.Patch)
 
+	proofs := &widget.EmailProofController{Proofs: a.Actions.Widget.EmailProofs}
+	routing.Post(visitor, "/email-verifications", "widget.email-verifications.store", proofs.Store)
+	routing.Post(visitor, "/email-verifications/checks", "widget.email-verifications.checks.store", proofs.Check).
+		Status(fhttp.StatusOK)
+
 	tokens := &widget.RealtimeTokenController{Realtime: a.Actions.Widget.Realtime, BaseURL: baseURLOf(a)}
 	routing.Post(visitor, "/realtime-tokens", "widget.realtime-tokens.store", tokens.Store)
 

@@ -54,7 +54,7 @@ RETURNING *;
 -- CancelActionCall gives up a call nobody has agreed to run yet.
 UPDATE ai_action_calls SET
     state = 'canceled', cancel_reason = @cancel_reason, completed_at = @now::timestamptz, expires_at = NULL, updated_at = @now::timestamptz
-WHERE workspace_id = @workspace_id AND id = @id AND state IN ('awaiting_confirmation', 'pending_approval')
+WHERE workspace_id = @workspace_id AND id = @id AND state IN ('awaiting_verification', 'awaiting_confirmation', 'pending_approval')
 RETURNING *;
 
 -- name: SupersedeConversationConfirmations :many
@@ -62,7 +62,8 @@ RETURNING *;
 -- waiting in a conversation when the agent proposes a new write.
 UPDATE ai_action_calls SET
     state = 'canceled', cancel_reason = 'superseded', completed_at = @now::timestamptz, expires_at = NULL, updated_at = @now::timestamptz
-WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND state = 'awaiting_confirmation'
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id
+    AND state IN ('awaiting_verification', 'awaiting_confirmation')
 RETURNING *;
 
 -- name: DecideActionCall :one
@@ -80,7 +81,7 @@ RETURNING *;
 -- ExpireActionCall ends a call whose confirmation or approval did not
 -- come in time.
 UPDATE ai_action_calls SET state = 'expired', completed_at = @now::timestamptz, updated_at = @now::timestamptz
-WHERE workspace_id = @workspace_id AND id = @id AND state IN ('awaiting_confirmation', 'pending_approval')
+WHERE workspace_id = @workspace_id AND id = @id AND state IN ('awaiting_verification', 'awaiting_confirmation', 'pending_approval')
     AND expires_at <= @now::timestamptz
 RETURNING *;
 
@@ -162,3 +163,19 @@ UPDATE ai_action_calls SET
     summary = '', input = '{}', bindings = '{}', request = NULL, response = NULL, result = NULL,
     decision_reason = NULL, customer_message = NULL, cancel_reason = NULL, updated_at = @now
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
+
+-- name: ListCallsAwaitingEmail :many
+-- ListCallsAwaitingEmail returns a contact's calls still waiting for
+-- them to prove their email, oldest first.
+SELECT * FROM ai_action_calls
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND state = 'awaiting_verification'
+    AND expires_at > @now::timestamptz
+ORDER BY id;
+
+-- name: BindVerifiedActionCall :one
+-- BindVerifiedActionCall binds a call waiting for an email proof to the
+-- proven address and moves it on.
+UPDATE ai_action_calls SET
+    bindings = @bindings, state = @next_state, expires_at = @expires_at, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id AND state = 'awaiting_verification'
+RETURNING *;

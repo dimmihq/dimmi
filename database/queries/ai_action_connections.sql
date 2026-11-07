@@ -104,4 +104,4 @@ UPDATE ai_action_calls SET
     state = 'canceled', cancel_reason = 'action_unpublished', completed_at = @now::timestamptz, expires_at = NULL,
     updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND connection_id = @connection_id
-    AND state IN ('awaiting_confirmation', 'pending_approval');
+    AND state IN ('awaiting_verification', 'awaiting_confirmation', 'pending_approval');

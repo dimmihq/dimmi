@@ -80,6 +80,9 @@ func (k *Kit) Call(ctx context.Context, in CallInput) (CallReply, error) {
 		return *refused, nil
 	}
 	contact := ContactValues(in.Identity)
+	if s.UsesContact() && !bindable(s, contact) && awaitsEmail(s, in.Identity) {
+		return k.awaitEmail(ctx, in, input)
+	}
 	if s.UsesContact() && !bindable(s, contact) {
 		return refusal(s, "identity_unavailable", "not available: the customer is not signed in"), nil
 	}

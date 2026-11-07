@@ -37,6 +37,7 @@ type WidgetActions struct {
 	ShowSession    *widget.ShowWidgetSession
 	RevokeSession  *widget.RevokeWidgetSession
 	UpdateContact  *widget.UpdateWidgetContact
+	EmailProofs    *widget.EmailProofs
 	Conversations  *widget.ListWidgetConversations
 	PostMessage    *widget.PostWidgetMessage
 	MarkRead       *widget.MarkWidgetConversationRead

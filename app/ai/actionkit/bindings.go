@@ -26,11 +26,14 @@ import (
 
 /*
 Identity is what a run knows about who the customer is: whether the
-context proves it, and the contact.
+context proves it, whether it proves only their email, whether an
+anonymous visitor could prove their email with a code, and the contact.
 */
 type Identity struct {
-	Verified bool
-	Contact  *models.Contact
+	Verified    bool
+	EmailProven bool
+	EmailCodes  bool
+	Contact     *models.Contact
 }
 
 /*
@@ -57,14 +60,41 @@ func VerifiedContext(channelType string, trigger models.Message) bool {
 }
 
 /*
+EmailContext reports whether the message that triggered a run came from
+a messenger session whose visitor recently proved their email with a
+code, and whether one that did not could still prove it.
+*/
+func EmailContext(channelType string, trigger models.Message) (proven, codes bool) {
+	if trigger.AuthorType != "contact" || channelType != "widget" {
+		return false, false
+	}
+	var meta struct {
+		Widget struct {
+			EmailVerified bool `json:"email_verified"`
+		} `json:"widget"`
+	}
+	if json.Unmarshal(trigger.Metadata, &meta) != nil {
+		return false, true
+	}
+	return meta.Widget.EmailVerified, !meta.Widget.EmailVerified
+}
+
+/*
 ContactValues are the contact values a verified context may bind:
 external id, a verified email, and the custom attributes a trusted
-source wrote. Outside a verified context there are none.
+source wrote. A context that proves only the email binds only that.
+Outside a verified context there are none.
 */
 func ContactValues(id Identity) map[string]any {
 	out := map[string]any{}
 	c := id.Contact
-	if !id.Verified || c == nil || c.DeletedAt != nil {
+	if c == nil || c.DeletedAt != nil {
+		return out
+	}
+	if !id.Verified {
+		if id.EmailProven && c.Email != nil && *c.Email != "" && c.EmailVerified {
+			out[actiontemplate.ContactEmail] = *c.Email
+		}
 		return out
 	}
 	if c.ExternalID != nil && *c.ExternalID != "" {

@@ -937,6 +937,8 @@ claims `{"sub":"SUB","iat":now,"exp":now+600}`, key the whole `dmi_idsec_` strin
 | Off mode | `{"mode":"off"}`, then sign in with a good token | 201 `kind` `anonymous`; the messenger warns `identity_mode_off` and never fetches the identity URL |
 | Counts | `GET $B/identity-verification/stats?days=7` a minute after some starts | totals by outcome and `verified_share`, no per-person data |
 | Sign out everywhere | `DELETE $B/contacts/$CONTACT/widget-sessions` | 200 `sessions_revoked`; each of the customer's messengers answers 401 on its next request |
+| Email code | anonymous session: `POST $W/widget/v1/email-verifications` with `{"email":"you@…"}`, then `POST $W/widget/v1/email-verifications/checks` with the mailed code | 202 with the address masked; a second send within 30 s answers 429; a wrong code 422 `email_code_invalid` with `attempts_left`; the right one 200, and the lead's email is now verified |
+| Action after email code | publish a read action whose query binds `{contact.email}` on the widget channel; ask an anonymous messenger about "my order" | the agent's reply carries a card asking to confirm the email; after the code the call runs with the proven address and the agent reports the result; the code never appears in the conversation |
 
 ## Teammate notifications
 

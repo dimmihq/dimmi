@@ -58,6 +58,19 @@ templ ConfirmCode(name, confirmCode string) {
 }
 
 /*
+VisitorCode gives a messenger visitor the code that proves they own
+their email address.
+*/
+
+templ VisitorCode(workspace, visitorCode string) {
+	@layout(i18n.T(ctx, "mail.visitor_code.subject", i18n.Args{"code": visitorCode, "workspace": workspace})) {
+		<p>{ i18n.T(ctx, "mail.visitor_code.intro", i18n.Args{"workspace": workspace}) }</p>
+		@code(visitorCode)
+		<p>{ i18n.T(ctx, "mail.visitor_code.expiry", nil) }</p>
+	}
+}
+
+/*
 PasswordChanged tells a user their password changed, was reset, or was
 removed to protect the account, and where to look if it was not them.
 */
