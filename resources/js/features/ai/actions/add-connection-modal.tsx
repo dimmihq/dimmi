@@ -115,7 +115,7 @@ function Details({
   return (
     <>
       <ModalHeader
-        title={connection ? `Change ${connection.name}` : `Connect a ${info.name}`}
+        title={connection ? `Change ${connection.name}` : `Connect ${kind === "mcp" ? "an" : "a"} ${info.name}`}
         description={
           kind === "mcp"
             ? "dimmi connects, lists the server's tools and turns each into a draft action."

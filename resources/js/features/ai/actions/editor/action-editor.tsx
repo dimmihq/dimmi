@@ -129,6 +129,39 @@ function MoreMenu({ workspace, editor }: { workspace: string; editor: Editor }) 
   );
 }
 
+/*
+ * SaveButtons keep the draft and make it live. Publish is offered while
+ * customers do not have the draft yet.
+ */
+function SaveButtons({ editor }: { editor: Editor }) {
+  const { saved, dirty, busy } = editor;
+  const live = saved?.published_version && saved.status === "published";
+  const pending = dirty || !saved || saved.has_unpublished_changes || !saved.published_version;
+
+  return (
+    <>
+      <Button
+        variant="secondary"
+        size="small"
+        loading={busy === "save"}
+        disabled={!dirty || busy !== null}
+        onClick={() => void editor.save()}
+      >
+        Save draft
+      </Button>
+      <Button
+        size="small"
+        loading={busy === "publish"}
+        disabled={!pending || busy !== null}
+        onClick={() => void editor.publish()}
+      >
+        {live ? <span className="hidden sm:inline">Publish changes</span> : null}
+        <span className={live ? "sm:hidden" : undefined}>Publish</span>
+      </Button>
+    </>
+  );
+}
+
 function Header({
   workspace,
   editor,
@@ -142,9 +175,7 @@ function Header({
   onTest?: () => void;
   onVersions: () => void;
 }) {
-  const { saved, dirty, busy } = editor;
-  const live = saved?.published_version && saved.status === "published";
-  const pending = dirty || !saved || saved.has_unpublished_changes || !saved.published_version;
+  const { saved, dirty } = editor;
 
   return (
     <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 ps-2.5 pe-2.5 pt-[7px] pb-1">
@@ -164,39 +195,25 @@ function Header({
           <span className="hidden text-body-2-regular text-text-tertiary md:inline">Unsaved changes</span>
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
         {onTest ? (
           <Button variant="secondary" size="small" leadingIcon={RiFlaskLine} onClick={onTest}>
             Test
           </Button>
         ) : null}
         {saved ? (
-          <Button variant="secondary" size="small" leadingIcon={RiHistoryLine} onClick={onVersions}>
+          <Button
+            variant="secondary"
+            size="small"
+            leadingIcon={RiHistoryLine}
+            onClick={onVersions}
+            aria-label="Versions"
+          >
             <span className="hidden sm:inline">Versions</span>
           </Button>
         ) : null}
         {manage ? <MoreMenu workspace={workspace} editor={editor} /> : null}
-        {manage ? (
-          <>
-            <Button
-              variant="secondary"
-              size="small"
-              loading={busy === "save"}
-              disabled={!dirty || busy !== null}
-              onClick={() => void editor.save()}
-            >
-              Save draft
-            </Button>
-            <Button
-              size="small"
-              loading={busy === "publish"}
-              disabled={!pending || busy !== null}
-              onClick={() => void editor.publish()}
-            >
-              {live ? "Publish changes" : "Publish"}
-            </Button>
-          </>
-        ) : null}
+        {manage ? <SaveButtons editor={editor} /> : null}
       </div>
     </header>
   );

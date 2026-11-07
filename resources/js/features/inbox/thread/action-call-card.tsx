@@ -168,6 +168,7 @@ function DeclineForm({
         autoResize
         maxRows={5}
         maxLength={500}
+        fieldClassName="bg-background-secondary-default"
         value={reason}
         onChange={setReason}
         placeholder="Past the 30-day refund window."
@@ -180,6 +181,7 @@ function DeclineForm({
         autoResize
         maxRows={5}
         maxLength={500}
+        fieldClassName="bg-background-secondary-default"
         value={message}
         onChange={setMessage}
       />
@@ -258,9 +260,10 @@ function Pending({ conversation, call }: { conversation: string; call: ActionCal
             Decline
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="small"
             leadingIcon={RiUserReceivedLine}
+            className="sm:ms-auto"
             loading={busy === "take"}
             disabled={busy !== null}
             onClick={() => void takeOver()}
