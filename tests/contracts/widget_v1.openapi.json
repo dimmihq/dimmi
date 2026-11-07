@@ -615,6 +615,50 @@
         ],
         "type": "object"
       },
+      "MessageAI": {
+        "additionalProperties": false,
+        "properties": {
+          "generated": {
+            "type": "boolean"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/MessageAISource"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "generated",
+          "sources"
+        ],
+        "type": "object"
+      },
+      "MessageAISource": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url"
+        ],
+        "type": "object"
+      },
       "MetaStruct": {
         "additionalProperties": false,
         "properties": {
@@ -1363,6 +1407,9 @@
       "WidgetMessage": {
         "additionalProperties": false,
         "properties": {
+          "ai": {
+            "$ref": "#/components/schemas/MessageAI"
+          },
           "attachments": {
             "items": {
               "$ref": "#/components/schemas/WidgetAttachment"
@@ -2042,6 +2089,66 @@
               }
             },
             "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/ai/handoff": {
+      "post": {
+        "operationId": "widget.conversations.ai.handoff",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/ai/helped": {
+      "post": {
+        "operationId": "widget.conversations.ai.helped",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
           },
           "default": {
             "content": {
