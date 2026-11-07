@@ -62,7 +62,7 @@ func TestOpenAIDriver(t *testing.T) {
 		assert.Equal(t, "Bearer sk-test", fake.Sent()[0].Header.Get("Authorization"))
 	})
 
-	t.Run("turns reasoning off with tools and asks for the effort without them", func(t *testing.T) {
+	t.Run("turns OpenAI reasoning off with tools and keeps GLM reasoning low", func(t *testing.T) {
 		t.Parallel()
 		hc, fake := fakeHTTP(t)
 		fake.Stub(completionURL, fixtures.Reply("openai_completion.json"))
@@ -80,6 +80,13 @@ func TestOpenAIDriver(t *testing.T) {
 
 		assert.Equal(t, "none", body(t, fake.Sent()[0])["reasoning_effort"])
 		assert.Equal(t, "low", body(t, fake.Sent()[1])["reasoning_effort"])
+
+		glm := request("glm-5.3-flash")
+		glm.Effort = contracts.EffortLow
+		glm.Tools = withTools.Tools
+		_, err = drv.Chat(t.Context(), glm)
+		require.NoError(t, err)
+		assert.Equal(t, "low", body(t, fake.Sent()[2])["reasoning_effort"])
 	})
 
 	t.Run("streams text, a whole tool call, usage and the stop reason", func(t *testing.T) {

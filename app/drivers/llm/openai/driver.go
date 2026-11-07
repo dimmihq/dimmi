@@ -379,14 +379,17 @@ func MapFinish(reason string) contracts.StopReason {
 /*
 reasoningEffort is the effort to send for the request. Chat Completions
 refuses function tools alongside any reasoning on OpenAI's reasoning
-models, so a request with tools turns reasoning off; one without asks
-for the effort the caller wanted.
+models, so a request with tools turns their reasoning off. Open-weight
+GLM models always reason and default to their slowest level, so they
+get the effort the caller wanted, tools or not; other models get none.
 */
 func reasoningEffort(req contracts.ChatRequest) shared.ReasoningEffort {
-	if !reasons(req.Model) {
+	switch {
+	case strings.HasPrefix(req.Model, "glm-"):
+		return shared.ReasoningEffort(req.Effort)
+	case !reasons(req.Model):
 		return ""
-	}
-	if len(req.Tools) > 0 {
+	case len(req.Tools) > 0:
 		return shared.ReasoningEffort("none")
 	}
 	return shared.ReasoningEffort(req.Effort)
