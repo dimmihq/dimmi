@@ -51,21 +51,47 @@ describe("toEntry", () => {
     const call = {
       id: "aax_1",
       action: { name: "refund_invoice", title: "Refund an invoice" },
-      state: "pending_approval",
+      state: "pending_approval" as const,
       summary: "Refund $144.00",
       arguments: { invoice_id: "inv_1001" },
-      reason: null,
       expires_at: null,
-      decided_by: null,
-      decision_reason: null,
     };
-    const said = toEntry(
-      reply({ author: { type: "agent", id: "", name: "dimmi" }, metadata: { ai: { action_call: call } } }),
-    );
+    const said = toEntry(reply({ author: { type: "agent", id: "", name: "dimmi" }, ai: { action_call: call } }));
     expect(said.kind).toBe("dimmi");
     expect("call" in said && said.call?.id).toBe("aax_1");
 
-    const event = toEntry(reply({ type: "event", metadata: { ai: { action_call: call } } }));
-    expect(event).toMatchObject({ kind: "call", call: { state: "pending_approval" } });
+    const decided = toEntry(
+      reply({ author: { type: "agent", id: "", name: "dimmi" }, ai: { action_call: { ...call, state: "approved" } } }),
+    );
+    expect("call" in decided && decided.call).toBeFalsy();
+
+    const event = toEntry(
+      reply({
+        type: "event",
+        body: null,
+        event: {
+          name: "ai.action_call_declined",
+          actor: { type: "member", id: "mem_1", name: "Grace" },
+          call_id: "aax_1",
+          action: { id: "aac_1", title: "Refund an invoice" },
+          state: "declined",
+          summary: "Refund $144.00",
+        },
+      }),
+    );
+    expect(event).toMatchObject({ kind: "call", call: { state: "declined", decided_by: { name: "Grace" } } });
+
+    const asked = toEntry(
+      reply({
+        type: "event",
+        body: null,
+        event: {
+          name: "ai.action_call_requested",
+          actor: { type: "agent", id: "", name: "dimmi" },
+          action: { id: "aac_1", title: "Refund an invoice" },
+        },
+      }),
+    );
+    expect(asked).toMatchObject({ kind: "event", text: "dimmi asked to run Refund an invoice" });
   });
 });

@@ -1,53 +1,29 @@
 /*
- * The actions settings: the empty page explains actions and starts a
- * REST API or MCP server connection in the same two-step dialog as the
- * other pickers, and the action editor checks a draft beside each field
- * before saving, filling the tool name from the title and moving an
- * action that changes data to the customer confirming first. The
- * actions endpoints and their permission are answered in the browser,
- * so these tests cover the pages on their own.
+ * The actions settings against the real server: the empty page explains
+ * actions and starts a REST API connection in the same two-step dialog
+ * as the other pickers; a connection to an address that never answers is
+ * kept and says its test did not pass; and the action editor checks a
+ * draft beside each field, fills the tool name from the title, moves an
+ * action that changes data to the customer confirming first, and saves a
+ * valid lookup as a draft on its own page.
  */
 import type { Page } from "@playwright/test";
 
 import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
-import { settled } from "./support/inbox";
-
-const billing = {
-  id: "acn_billing",
-  object: "ai_action_connection",
-  name: "Billing API",
-  kind: "http",
-  base_url: "https://billing.example.com/api",
-  auth_type: "bearer",
-  auth_config: {},
-  secret_hint: "…9f2a",
-  default_headers: {},
-  variables: {},
-  timeout_ms: 8000,
-  status: "active",
-  status_reason: null,
-  last_success_at: null,
-  actions_count: 0,
-  created_at: "2026-11-07T09:00:00Z",
-  updated_at: "2026-11-07T09:00:00Z",
-};
+import { settled, workspaceOf } from "./support/inbox";
 
 /*
- * answerActions answers the actions endpoints with the connections
- * given and lets the signed-in owner manage actions.
+ * connect creates a REST connection through the API and returns its id.
  */
-async function answerActions(page: Page, connections: unknown[]) {
-  await page.route("**/api/v1/me", async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    const member = body?.data?.member;
-    if (member) {
-      member.permissions = [...member.permissions, "ai_actions:manage", "ai_action_calls:approve"];
-    }
-    await route.fulfill({ response, json: body });
+async function connect(page: Page): Promise<string> {
+  const workspace = await workspaceOf(page);
+  const response = await page.request.post("/api/v1/ai/action-connections", {
+    headers: { "Dimmi-Workspace": workspace },
+    data: { name: "Billing API", kind: "http", base_url: "https://billing.invalid/api", auth_type: "none" },
   });
-  await page.route("**/api/v1/ai/action-connections", (route) => route.fulfill({ json: { data: connections } }));
-  await page.route("**/api/v1/ai/actions", (route) => route.fulfill({ json: { data: [] } }));
+  expect(response.status(), await response.text()).toBe(201);
+
+  return ((await response.json()) as { data: { id: string } }).data.id;
 }
 
 it.describe("agent actions", () => {
@@ -58,8 +34,7 @@ it.describe("agent actions", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("explains actions and starts a connection from the empty page", async ({ page }) => {
-    await answerActions(page, []);
+  it("explains actions and connects a REST API from the empty page", async ({ page }) => {
     await page.goto("/d/settings/actions");
     await expect(page.getByRole("heading", { level: 1, name: "Actions" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Let dimmi act in your systems" })).toBeVisible();
@@ -74,19 +49,27 @@ it.describe("agent actions", () => {
 
     await form.getByRole("button", { name: "All connections" }).click();
     const list = page.getByRole("dialog", { name: "Add a connection" });
-    await expect(list.getByRole("button", { name: /REST API/ })).toBeVisible();
+    await expect(list.getByRole("button", { name: /MCP server/ })).toBeVisible();
     await expect(list.getByRole("region", { name: "How actions stay safe" })).toBeVisible();
-    await list.getByRole("button", { name: /MCP server/ }).click();
-    const mcp = page.getByRole("dialog", { name: "Connect an MCP server" });
-    await expect(mcp.getByRole("textbox", { name: "Server URL" })).toBeVisible();
+    await list.getByRole("button", { name: /REST API/ }).click();
 
-    await mcp.getByRole("button", { name: "Cancel" }).click();
-    await expect(mcp).toBeHidden();
+    const rest = page.getByRole("dialog", { name: "Connect a REST API" });
+    await rest.getByRole("textbox", { name: "Name" }).fill("Billing API");
+    await rest.getByRole("textbox", { name: "Base URL" }).fill("https://billing.invalid/api");
+    await rest.getByRole("textbox", { name: "Token" }).fill("demo-token");
+    await rest.getByRole("button", { name: "Connect REST API" }).click();
+    await expect(rest).toBeHidden({ timeout: 20_000 });
+    await expect(page.getByText("The connection test did not pass.", { exact: false })).toBeVisible();
+
+    const card = page.getByRole("region", { name: "Billing API" });
+    await expect(card).toContainText("billing.invalid");
+    await expect(card).toContainText("…oken");
+    await expect(card).toContainText("No actions yet.");
   });
 
-  it("checks a draft action beside each field and defaults writes to the customer confirming", async ({ page }) => {
-    await answerActions(page, [billing]);
-    await page.goto("/d/settings/actions/new?connection=acn_billing");
+  it("checks a draft beside each field and saves a lookup", async ({ page }) => {
+    const connection = await connect(page);
+    await page.goto(`/d/settings/actions/new?connection=${connection}`);
     await expect(page.getByRole("heading", { level: 1, name: "New action" })).toBeVisible();
     await expect(page.getByText("Calls through")).toContainText("Billing API");
     await settled(page);
@@ -105,9 +88,24 @@ it.describe("agent actions", () => {
       "Nothing runs until they press Confirm.",
     );
     await expect(page.getByRole("checkbox", { name: "Email" })).toBeDisabled();
-
     await page.getByRole("radio", { name: /A teammate approves/ }).check({ force: true });
     await expect(page.getByRole("region", { name: "Permissions" })).toContainText("A teammate approves or declines");
     await expect(page.getByText("Bind the call to the signed-in customer")).toBeVisible();
+
+    await page.getByRole("radio", { name: /Only reads data/ }).check({ force: true });
+    await page.getByRole("textbox", { name: "Title" }).fill("Check a subscription");
+    await page.getByRole("textbox", { name: "Tool name" }).fill("get_subscription");
+    await page
+      .getByRole("textbox", { name: "Instructions for the agent" })
+      .fill("Look up the signed-in customer's plan, seats and renewal date.");
+    await page.getByRole("textbox", { name: "Path" }).fill("/customers/{contact.external_id}/subscription");
+    await page.getByRole("button", { name: "Save draft" }).click();
+
+    await expect(page).toHaveURL(/\/settings\/actions\/aac_/);
+    await expect(page.getByRole("heading", { level: 1, name: "Check a subscription" })).toBeVisible();
+    await expect(page.getByText("Draft", { exact: true })).toBeVisible();
+
+    await page.goto("/d/settings/actions");
+    await expect(page.getByRole("region", { name: "Billing API" })).toContainText("get_subscription");
   });
 });

@@ -5,7 +5,7 @@
  */
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionCall } from "@/features/ai/actions/api";
-import { actionCallOf } from "@/features/ai/actions/format";
+import { actionCallOf, callEventText, callOfEvent, isOpen } from "@/features/ai/actions/format";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
 import type {
@@ -80,8 +80,8 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * whether more of it can be opened and whether its body was cut short.
  * Failed holds why a reply never reached the customer, null otherwise.
  * Files are what the message carries. Call is an action the agent asked
- * to run, which the thread draws as a card under the message, or alone
- * when the timeline records it as an event.
+ * to run, drawn as a card under its reply while it waits on someone; a
+ * call entry is the timeline's line for its decision or outcome.
  */
 export type ThreadEntry =
   | {
@@ -165,16 +165,37 @@ function filesOf(message: Message): Attachment[] {
   return message.attachments ?? [];
 }
 
+/*
+ * eventEntry is an event as the thread draws it: a call's decision or
+ * outcome as its line, anything else as words.
+ */
+function eventEntry(message: Message, event: TimelineEvent): ThreadEntry {
+  const at = ago(message.created_at);
+  const decided = callOfEvent(event);
+  if (decided) {
+    return { kind: "call", id: message.id, at, iso: message.created_at, call: decided };
+  }
+
+  return { kind: "event", id: message.id, at, iso: message.created_at, text: callEventText(event) ?? eventText(event) };
+}
+
+/*
+ * waitingCall is the call a reply reports while it still waits on
+ * someone; once decided, the timeline's own entry shows it.
+ */
+function waitingCall(message: Message): ActionCall | null {
+  const reported = actionCallOf(message.ai);
+
+  return reported && isOpen(reported.state) ? reported : null;
+}
+
 export function toEntry(message: Message): ThreadEntry {
   const at = ago(message.created_at);
   const iso = message.created_at;
-  const call = actionCallOf(message.metadata);
-  if (message.type === "event" && call) {
-    return { kind: "call", id: message.id, at, iso, call };
-  }
   if (message.type === "event" && message.event) {
-    return { kind: "event", id: message.id, at, iso, text: eventText(message.event) };
+    return eventEntry(message, message.event);
   }
+  const call = waitingCall(message);
   if (message.deleted_at) {
     const by = message.deleted_by?.name;
     return { kind: "event", id: message.id, at, iso, text: by ? `Message deleted by ${by}` : "Message deleted" };

@@ -142,15 +142,34 @@ describe("action draft", () => {
     expect(definitionOf(draftOf(stored), "http")).toEqual(stored);
   });
 
+  it("reads an action as the server answers it", () => {
+    const draft = draftOf({
+      ...definitionOf(newDraft(connection), "http"),
+      method: null,
+      path_template: null,
+      mcp_tool_name: "issue_refund",
+      bound_arguments: { customer_id: "{contact.external_id}", limit: 5 },
+      input_schema: { type: "object" },
+      channels: ["sms"],
+    });
+    expect([draft.method, draft.path, draft.tool]).toEqual(["GET", "/", "issue_refund"]);
+    expect(draft.bound.map((row) => [row.name, row.value])).toEqual([
+      ["customer_id", "{contact.external_id}"],
+      ["limit", "5"],
+    ]);
+    expect(draft.fields).toEqual([]);
+    expect(draft.channels).toEqual(["widget"]);
+  });
+
   it("keeps a body that is not JSON as text and drops it for GET", () => {
     const draft = { ...newDraft(connection), method: "POST" as const, body: "a=b" };
     expect(definitionOf(draft, "http").body_template).toBe("a=b");
     expect(definitionOf({ ...draft, method: "GET" }, "http").body_template).toBeNull();
-    expect(definitionOf({ ...draft, tool: "issue_refund" }, "mcp")).toMatchObject({
-      method: null,
-      path_template: null,
-      mcp_tool_name: "issue_refund",
-    });
+    const mcp = definitionOf({ ...draft, tool: "issue_refund" }, "mcp");
+    expect(mcp.mcp_tool_name).toBe("issue_refund");
+    expect(mcp).not.toHaveProperty("method");
+    expect(mcp).not.toHaveProperty("path_template");
+    expect(definitionOf(draft, "http")).not.toHaveProperty("mcp_tool_name");
   });
 
   it("names what to fix beside each field", () => {

@@ -10,6 +10,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { realtimeKeys } from "@/lib/realtime/keys";
 
+import type { ActionCallState, MessageActionCall } from "./ai-actions";
 import { type DownloadedFile, request, requestFile } from "./client";
 import type { Tag } from "./tags";
 
@@ -115,6 +116,12 @@ export interface TimelineEvent {
   from?: string;
   to?: { member: Named | null; team: Named | null } | string;
   changes?: Record<string, [unknown, unknown]>;
+  /* An ai.action_call_* step: the call, its action, where it then stood and why a failure failed. */
+  call_id?: string;
+  action?: { id: string; title: string };
+  state?: ActionCallState;
+  summary?: string;
+  error_code?: string | null;
 }
 
 /*
@@ -158,8 +165,8 @@ export interface Message {
   created_at: string;
   redactions?: { rule: string; count: number }[];
   attachments?: Attachment[];
-  /* What else the message carries, such as metadata.ai.action_call for an action the agent asked to run. */
-  metadata?: Record<string, unknown> | null;
+  /* The agent's mark on its replies, such as action_call: a change the reply reports. */
+  ai?: { action_call?: MessageActionCall } | null;
 }
 
 /*

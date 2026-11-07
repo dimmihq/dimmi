@@ -24,7 +24,7 @@ import { ApiError } from "@/lib/api/client";
 
 import { type ActionTestResult, testAction } from "../api";
 import { type Draft, definitionOf } from "../draft";
-import { humanize } from "../format";
+import { humanize, requestText, responseBody, responseStatus } from "../format";
 import { Segments } from "../parts";
 import { type InputField, placeholdersIn } from "../schema";
 import type { Editor } from "./use-editor";
@@ -108,12 +108,17 @@ function Code({ value }: { value: unknown }) {
   );
 }
 
-const statusTones = { succeeded: "lime", failed: "rose", blocked: "orange" } as const;
-const statusNames = { succeeded: "Succeeded", failed: "Failed", blocked: "Blocked" } as const;
+const statusTones = { rendered: "blue", succeeded: "lime", failed: "rose", blocked: "orange" } as const;
+const statusNames = {
+  rendered: "Request built",
+  succeeded: "Succeeded",
+  failed: "Failed",
+  blocked: "Blocked",
+} as const;
 
-function Result({ result }: { result: ActionTestResult }) {
+function Result({ result, write }: { result: ActionTestResult; write: boolean }) {
   const [view, setView] = useState<View>("agent");
-  const request = result.request;
+  const status = responseStatus(result.response);
 
   return (
     <div className="flex flex-col gap-3 py-3 pe-3">
@@ -121,10 +126,8 @@ function Result({ result }: { result: ActionTestResult }) {
         <Chip variant="caption" color={statusTones[result.status]}>
           {statusNames[result.status]}
         </Chip>
-        {result.response ? (
-          <span className="text-body-2-regular text-text-secondary">HTTP {result.response.status}</span>
-        ) : null}
-        {result.latency_ms !== null ? (
+        {status !== null ? <span className="text-body-2-regular text-text-secondary">HTTP {status}</span> : null}
+        {result.status !== "rendered" ? (
           <span className="text-body-2-regular text-text-tertiary">{result.latency_ms} ms</span>
         ) : null}
         {result.error_code ? (
@@ -138,7 +141,7 @@ function Result({ result }: { result: ActionTestResult }) {
           ))}
         </ul>
       ) : null}
-      {result.confirmation_text ? (
+      {write && result.confirmation_text ? (
         <div className="flex flex-col gap-1 rounded-xl bg-background-primary-default p-3 shadow-card">
           <span className="text-caption-1-medium text-text-tertiary">The customer would see</span>
           <span className="text-body-2-medium text-text-primary">{result.confirmation_text}</span>
@@ -155,16 +158,8 @@ function Result({ result }: { result: ActionTestResult }) {
         onChange={setView}
       />
       {view === "agent" ? <Code value={result.result} /> : null}
-      {view === "request" && request ? (
-        <Code
-          value={[
-            `${request.method} ${request.url}`,
-            ...Object.entries(request.headers).map(([name, value]) => `${name}: ${value}`),
-            request.body === null || request.body === undefined ? "" : `\n${JSON.stringify(request.body, null, 2)}`,
-          ].join("\n")}
-        />
-      ) : null}
-      {view === "response" ? <Code value={result.response?.body ?? "Nothing was sent."} /> : null}
+      {view === "request" ? <Code value={requestText(result.request) || "No request was built."} /> : null}
+      {view === "response" ? <Code value={responseBody(result.response) ?? "Nothing was sent."} /> : null}
     </div>
   );
 }
@@ -318,7 +313,7 @@ export function TestPanel({
           </div>
           {result ? (
             <Section title="Result">
-              <Result result={result} />
+              <Result result={result} write={write} />
             </Section>
           ) : null}
         </div>

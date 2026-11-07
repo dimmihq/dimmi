@@ -5,6 +5,8 @@ import {
   actionCallOf,
   actionLook,
   argumentLines,
+  callEventText,
+  callOfEvent,
   callTitle,
   connectionLook,
   customerJourney,
@@ -15,6 +17,11 @@ import {
   humanize,
   isOpen,
   permissionSummary,
+  requestText,
+  responseBody,
+  responseStatus,
+  syncLine,
+  testReason,
   timeLeft,
 } from "./format";
 
@@ -24,10 +31,7 @@ const call = (change: Partial<ActionCall> = {}): ActionCall => ({
   state: "pending_approval",
   summary: "Refund $144.00 for invoice inv_1001",
   arguments: { invoice_id: "inv_1001", amount: 144 },
-  reason: "The customer bought the annual plan by mistake.",
   expires_at: "2026-11-07T11:00:00Z",
-  decided_by: null,
-  decision_reason: null,
   ...change,
 });
 
@@ -41,7 +45,7 @@ describe("action formatting", () => {
   it("names a connection's status", () => {
     expect(connectionLook({ status: "active", status_reason: null })).toEqual({ label: "Connected", tone: "lime" });
     expect(connectionLook({ status: "error", status_reason: "auth" })).toEqual({ label: "Key refused", tone: "rose" });
-    expect(connectionLook({ status: "error", status_reason: "odd" }).label).toBe("Not working");
+    expect(connectionLook({ status: "error", status_reason: null }).label).toBe("Not working");
     expect(connectionLook({ status: "disabled", status_reason: null }).label).toBe("Off");
   });
 
@@ -118,8 +122,8 @@ describe("action formatting", () => {
 
   it("names a call by its action", () => {
     expect(callTitle(call())).toBe("Refund an invoice");
-    expect(callTitle(call({ action: "issue_refund" }))).toBe("Issue refund");
-    expect(callTitle(call({ action: { name: "issue_refund", title: null } }))).toBe("Issue refund");
+    expect(callTitle(call({ action: undefined }))).toBe("Action");
+    expect(callTitle(call({ action: { name: "issue_refund", title: "" } }))).toBe("Issue refund");
   });
 
   it("collapses a decided call into one line", () => {
@@ -128,7 +132,7 @@ describe("action formatting", () => {
     expect(decisionLine(call({ state: "succeeded", decided_by: ada, result_summary: "Refund issued $144.00" }))).toBe(
       "Approved by Ada · Refund issued $144.00",
     );
-    expect(decisionLine(call({ state: "succeeded" }))).toBe("Refund an invoice done");
+    expect(decisionLine(call({ state: "succeeded" }))).toBe("Done");
     expect(decisionLine(call({ state: "failed", decided_by: ada, result_summary: "already refunded" }))).toBe(
       "Approved by Ada · Failed: already refunded",
     );
@@ -136,7 +140,7 @@ describe("action formatting", () => {
       "Declined by Ada: past 30 days",
     );
     expect(decisionLine(call({ state: "expired" }))).toBe("Expired: nobody decided in time");
-    expect(decisionLine(call({ state: "cancelled" }))).toBe("Cancelled");
+    expect(decisionLine(call({ state: "canceled" }))).toBe("Canceled");
     expect(decisionLine(call({ state: "running" }))).toBe("Approved");
   });
 
@@ -146,10 +150,80 @@ describe("action formatting", () => {
     expect(isOpen("succeeded")).toBe(false);
   });
 
-  it("reads the call a message carries", () => {
+  it("reads the call a reply reports", () => {
     expect(actionCallOf(null)).toBeNull();
-    expect(actionCallOf({ ai: null })).toBeNull();
-    expect(actionCallOf({ ai: { action_call: { id: 3 } } })).toBeNull();
-    expect(actionCallOf({ ai: { action_call: call() } })?.id).toBe("aax_1");
+    expect(actionCallOf({})).toBeNull();
+    expect(actionCallOf({ action_call: { id: 3 } })).toBeNull();
+    expect(actionCallOf({ action_call: call() })?.id).toBe("aax_1");
+  });
+
+  it("turns a call's decision on the timeline into its line", () => {
+    const grace = { type: "member", id: "mem_1", name: "Grace" };
+    const event = {
+      name: "ai.action_call_approved",
+      actor: grace,
+      call_id: "aax_1",
+      action: { id: "aac_1", title: "Refund an invoice" },
+      state: "approved" as const,
+      summary: "Refund $144.00",
+    };
+    expect(callOfEvent(event)).toEqual({
+      id: "aax_1",
+      state: "approved",
+      summary: "Refund $144.00",
+      action: { name: "", title: "Refund an invoice" },
+      decided_by: { id: "mem_1", name: "Grace" },
+    });
+    const failed = callOfEvent({
+      ...event,
+      name: "ai.action_call_completed",
+      actor: { type: "agent", id: "", name: "dimmi" },
+      state: "failed",
+      error_code: "upstream_rejected",
+    });
+    expect(failed && decisionLine(failed)).toBe("Failed: upstream rejected");
+    expect(callOfEvent({ ...event, name: "ai.action_call_requested" })).toBeNull();
+    expect(callOfEvent({ name: "conversation.closed", actor: grace })).toBeNull();
+  });
+
+  it("says a call's request and confirmation in words", () => {
+    const action = { id: "aac_1", title: "Refund an invoice" };
+    expect(
+      callEventText({ name: "ai.action_call_requested", actor: { type: "agent", id: "", name: "Ada" }, action }),
+    ).toBe("Ada asked to run Refund an invoice");
+    expect(
+      callEventText({ name: "ai.action_call_confirmed", actor: { type: "contact", id: "c", name: "" }, action }),
+    ).toBe("The customer confirmed Refund an invoice");
+    expect(
+      callEventText({ name: "ai.action_call_approved", actor: { type: "member", id: "m", name: "G" } }),
+    ).toBeNull();
+  });
+
+  it("says what a tool sync did and why a test failed", () => {
+    expect(syncLine({ created: [], existing: 2, skipped: [] })).toBe("0 new draft actions, 2 already there.");
+    expect(
+      syncLine({ created: [{} as never], existing: 0, skipped: [{ tool: "export", reason: "schema_unsupported" }] }),
+    ).toBe("1 new draft action, 0 already there, 1 skipped: export.");
+    expect(testReason("auth")).toBe("The server refused the key.");
+    expect(testReason(null)).toBe("The server did not answer.");
+  });
+
+  it("writes a test's request and reads its response", () => {
+    expect(requestText(null)).toBe("");
+    expect(requestText({ tool: "issue_refund", arguments: { a: 1 } })).toContain('"tool": "issue_refund"');
+    expect(
+      requestText({
+        method: "POST",
+        url: "https://x.test/refunds",
+        headers: { Authorization: "[secret]" },
+        body: { a: 1 },
+      }),
+    ).toBe('POST https://x.test/refunds\nAuthorization: [secret]\n\n{\n  "a": 1\n}');
+    expect(requestText({ method: "GET", url: "https://x.test/a" })).toBe("GET https://x.test/a");
+    expect(responseBody(null)).toBeUndefined();
+    expect(responseBody({ status: 200, body: { ok: true } })).toEqual({ ok: true });
+    expect(responseBody({ structured: 1 })).toEqual({ structured: 1 });
+    expect(responseStatus({ status: 201 })).toBe(201);
+    expect(responseStatus({ status: "x" })).toBeNull();
   });
 });

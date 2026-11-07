@@ -33,14 +33,41 @@ const fieldNames: Record<string, string> = {
   requires_verified_contact: "identity",
 };
 
-function serverProblems(error: unknown): Problems {
+/*
+ * codeFields places a refusal without field errors beside the field it
+ * is about.
+ */
+const codeFields: Record<string, string> = {
+  action_name_reserved: "name",
+  action_name_taken: "name",
+  action_schema_unsupported: "fields",
+  read_needs_no_agreement: "permissions",
+};
+
+function serverProblems(error: unknown, kind: "http" | "mcp"): Problems {
   if (!(error instanceof ApiError)) {
     return {};
   }
-
-  return Object.fromEntries(
+  const fields = Object.fromEntries(
     Object.entries(error.fields).map(([field, message]) => [fieldNames[field.split(".")[0] ?? ""] ?? field, message]),
   );
+  if (Object.keys(fields).length > 0) {
+    return fields;
+  }
+  const field = error.code === "action_template_invalid" ? (kind === "mcp" ? "tool" : "path") : codeFields[error.code];
+
+  return field ? { [field]: error.message } : {};
+}
+
+/*
+ * publishRefusal says why publishing did not happen.
+ */
+function publishRefusal(error: unknown): string {
+  if (error instanceof ApiError && error.code === "nothing_to_publish") {
+    return "Customers already have this version. Change something first.";
+  }
+
+  return error instanceof ApiError ? error.message : "Try again.";
 }
 
 export function useEditor(workspace: string, action: AiAction | null, connection: ActionConnection) {
@@ -78,7 +105,7 @@ export function useEditor(workspace: string, action: AiAction | null, connection
       }
       return result;
     } catch (error) {
-      setRefused(serverProblems(error));
+      setRefused(serverProblems(error, connection.kind));
       toast.error("Not saved", { description: error instanceof ApiError ? error.message : "Try again." });
       return null;
     }
@@ -108,7 +135,7 @@ export function useEditor(workspace: string, action: AiAction | null, connection
       toast.success(`Version ${version.number} is live`, { description: "dimmi uses it from the next message." });
       await refresh();
     } catch (error) {
-      toast.error("Not published", { description: error instanceof ApiError ? error.message : "Try again." });
+      toast.error("Not published", { description: publishRefusal(error) });
     } finally {
       setBusy(null);
     }

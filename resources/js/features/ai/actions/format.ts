@@ -14,6 +14,7 @@ import type {
   CallState,
   Confirmation,
   SideEffect,
+  ToolSync,
 } from "./api";
 
 export type Tone = "lime" | "rose" | "neutral" | "yellow" | "blue" | "purple" | "orange";
@@ -71,6 +72,77 @@ const reasonLabels: Record<string, string> = {
   host_blocked: "Address blocked",
   mcp_incompatible: "Not an MCP server",
 };
+
+/*
+ * requestText writes a test's request as it went out: the method, the
+ * address, the headers with secrets masked and the body, or for an MCP
+ * tool its name and arguments.
+ */
+export function requestText(request: Record<string, unknown> | null): string {
+  if (!request) {
+    return "";
+  }
+  if (typeof request.method !== "string") {
+    return JSON.stringify(request, null, 2);
+  }
+  const headers = Object.entries((request.headers ?? {}) as Record<string, unknown>).map(
+    ([name, value]) => `${name}: ${String(value)}`,
+  );
+  const body = request.body === null || request.body === undefined ? [] : ["", JSON.stringify(request.body, null, 2)];
+
+  return [`${request.method} ${String(request.url ?? "")}`, ...headers, ...body].join("\n");
+}
+
+/*
+ * responseBody is what an API answered a test, or undefined when nothing
+ * was sent.
+ */
+export function responseBody(response: Record<string, unknown> | null | undefined): unknown {
+  if (!response) {
+    return undefined;
+  }
+
+  return "body" in response ? response.body : response;
+}
+
+/*
+ * responseStatus is the HTTP status a test's API answered with.
+ */
+export function responseStatus(response: Record<string, unknown> | null | undefined): number | null {
+  return typeof response?.status === "number" ? response.status : null;
+}
+
+const testReasons: Record<string, string> = {
+  auth: "The server refused the key.",
+  credentials: "The secret is missing or cannot be read. Paste it again.",
+  unreachable: "The server could not be reached.",
+  host_blocked: "dimmi may not call this address.",
+  url_escape: "The address leaves the connection's base URL.",
+};
+
+/*
+ * testReason says why a connection test failed.
+ */
+export function testReason(reason: string | null): string {
+  return testReasons[reason ?? ""] ?? "The server did not answer.";
+}
+
+/*
+ * syncLine says what a tool sync did: "3 new draft actions, 2 already
+ * there", with the tools it could not use.
+ */
+export function syncLine(sync: Pick<ToolSync, "created" | "existing" | "skipped">): string {
+  const created = sync.created.length;
+  const parts = [
+    created === 1 ? "1 new draft action" : `${created} new draft actions`,
+    `${sync.existing} already there`,
+  ];
+  if (sync.skipped.length > 0) {
+    parts.push(`${sync.skipped.length} skipped: ${sync.skipped.map((s) => s.tool).join(", ")}`);
+  }
+
+  return `${parts.join(", ")}.`;
+}
 
 export const sideEffectLabels: Record<SideEffect, string> = { read: "Reads", write: "Changes data" };
 
@@ -180,7 +252,7 @@ export const callStateLabels: Record<CallState, string> = {
   approved: "Approved",
   declined: "Declined",
   expired: "Expired",
-  cancelled: "Cancelled",
+  canceled: "Canceled",
   running: "Running",
   succeeded: "Done",
   failed: "Failed",
@@ -192,7 +264,7 @@ export const callStateTones: Record<CallState, Tone> = {
   approved: "lime",
   declined: "rose",
   expired: "neutral",
-  cancelled: "neutral",
+  canceled: "neutral",
   running: "blue",
   succeeded: "lime",
   failed: "rose",
@@ -209,7 +281,7 @@ export function isOpen(state: CallState): boolean {
  * timeLeft is how long a call has before it expires, in words: "12 min
  * left", "3 h 5 min left", or "Expired" once the time is up.
  */
-export function timeLeft(expiresAt: string | null, now: number): string | null {
+export function timeLeft(expiresAt: string | null | undefined, now: number): string | null {
   if (!expiresAt) {
     return null;
   }
@@ -248,8 +320,8 @@ export function humanize(key: string): string {
  * argumentLines lists a call's frozen arguments as label and value, for
  * a teammate to read before deciding.
  */
-export function argumentLines(args: Record<string, unknown>): { label: string; value: string }[] {
-  return Object.entries(args).map(([key, value]) => ({ label: humanize(key), value: valueText(value) }));
+export function argumentLines(args: Record<string, unknown> | undefined): { label: string; value: string }[] {
+  return Object.entries(args ?? {}).map(([key, value]) => ({ label: humanize(key), value: valueText(value) }));
 }
 
 function valueText(value: unknown): string {
@@ -271,11 +343,19 @@ function valueText(value: unknown): string {
  * one, else its tool name in words.
  */
 export function callTitle(call: Pick<ActionCall, "action">): string {
-  if (typeof call.action === "string") {
-    return humanize(call.action);
+  if (!call.action) {
+    return "Action";
   }
 
   return call.action.title || humanize(call.action.name);
+}
+
+function by(call: ActionCall): string {
+  return call.decided_by?.name ? ` by ${call.decided_by.name}` : "";
+}
+
+function approvedBy(call: ActionCall): string {
+  return call.decided_by?.name ? `Approved by ${call.decided_by.name} · ` : "";
 }
 
 /*
@@ -284,40 +364,98 @@ export function callTitle(call: Pick<ActionCall, "action">): string {
  * eligible", "Expired: nobody decided in time".
  */
 export function decisionLine(call: ActionCall): string {
-  const by = call.decided_by?.name;
   const outcome = call.result_summary ? ` · ${call.result_summary}` : "";
   switch (call.state) {
     case "approved":
     case "running":
-      return `Approved${by ? ` by ${by}` : ""}${outcome}`;
+      return `Approved${by(call)}${outcome}`;
     case "succeeded":
-      return `${by ? `Approved by ${by} · ` : ""}${call.result_summary ?? `${callTitle(call)} done`}`;
+      return `${approvedBy(call)}${call.result_summary ?? "Done"}`;
     case "failed":
-      return `${by ? `Approved by ${by} · ` : ""}Failed${call.result_summary ? `: ${call.result_summary}` : ""}`;
+      return `${approvedBy(call)}Failed${call.result_summary ? `: ${call.result_summary}` : ""}`;
     case "declined":
-      return `Declined${by ? ` by ${by}` : ""}${call.decision_reason ? `: ${call.decision_reason}` : ""}`;
+      return `Declined${by(call)}${call.decision_reason ? `: ${call.decision_reason}` : ""}`;
     case "expired":
       return "Expired: nobody decided in time";
-    case "cancelled":
-      return "Cancelled";
+    case "canceled":
+      return "Canceled";
     default:
       return callStateLabels[call.state];
   }
 }
 
 /*
- * actionCallOf reads the call a message carries, if any, from its
- * metadata.
+ * actionCallOf reads the call an agent reply reports, if any, from the
+ * reply's agent mark.
  */
-export function actionCallOf(metadata: unknown): ActionCall | null {
-  if (!metadata || typeof metadata !== "object") {
-    return null;
-  }
-  const ai = (metadata as { ai?: unknown }).ai;
+export function actionCallOf(ai: unknown): ActionCall | null {
   if (!ai || typeof ai !== "object") {
     return null;
   }
   const call = (ai as { action_call?: ActionCall }).action_call;
 
   return call && typeof call.id === "string" && typeof call.state === "string" ? call : null;
+}
+
+/*
+ * CallEvent is a timeline entry recording one step of a call: who took
+ * it, the call, its action, where it then stood and, for a failure, why.
+ */
+export interface CallEvent {
+  name: string;
+  actor: { type: string; id: string; name: string };
+  call_id?: string;
+  action?: { id: string; title: string };
+  state?: CallState;
+  summary?: string;
+  error_code?: string | null;
+}
+
+const decidedEvents = [
+  "ai.action_call_approved",
+  "ai.action_call_declined",
+  "ai.action_call_canceled",
+  "ai.action_call_expired",
+  "ai.action_call_completed",
+];
+
+/*
+ * callOfEvent turns a call's decision or outcome on the timeline into
+ * the call its line shows, with a teammate who decided as its decider
+ * and a failure's code as its outcome. Other entries answer null.
+ */
+export function callOfEvent(event: CallEvent): ActionCall | null {
+  if (!decidedEvents.includes(event.name) || !event.call_id || !event.state) {
+    return null;
+  }
+  const call: ActionCall = {
+    id: event.call_id,
+    state: event.state,
+    summary: event.summary ?? "",
+    action: { name: "", title: event.action?.title ?? "" },
+  };
+  if (event.actor.type === "member" && event.actor.name) {
+    call.decided_by = { id: event.actor.id, name: event.actor.name };
+  }
+  if (event.state === "failed" && event.error_code) {
+    call.result_summary = humanize(event.error_code).toLowerCase();
+  }
+
+  return call;
+}
+
+/*
+ * callEventText says in words a call's request or the customer's
+ * confirmation: "dimmi asked to run Refund an invoice".
+ */
+export function callEventText(event: CallEvent): string | null {
+  const title = event.action?.title || "an action";
+  if (event.name === "ai.action_call_requested") {
+    return `${event.actor.name || "dimmi"} asked to run ${title}`;
+  }
+  if (event.name === "ai.action_call_confirmed") {
+    return `${event.actor.type === "contact" ? "The customer" : event.actor.name || "The customer"} confirmed ${title}`;
+  }
+
+  return null;
 }

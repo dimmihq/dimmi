@@ -2,13 +2,14 @@
  * An action the agent asked to run, as the team sees it in the thread.
  * While it waits for approval it is a card across the thread: the
  * action, what exactly would run (the arguments frozen when the customer
- * confirmed), why the agent asked, and how long is left before the
+ * confirmed) and how long is left before the
  * request expires and the conversation comes to the team. Approve runs
  * it once; Decline opens a short form for the team's own reason and an
  * optional message for the customer; Take over assigns the conversation
  * to the reader. Waiting is never blocking: the customer was already
- * told the team is checking. Once decided, the card folds into a single
- * line on the timeline that opens again to show what ran.
+ * told the team is checking. Once decided, the timeline's own entry for
+ * the decision shows it as a single line that opens to show what ran,
+ * so the card under the reply steps aside.
  */
 import {
   RiArrowDownSLine,
@@ -97,10 +98,9 @@ function useDecision(conversation: string, call: ActionCall) {
       const result = await decideCall(workspace, call.id, decision);
       setLocal({
         ...call,
-        ...result,
-        state: result.state ?? decision.status,
-        decided_by: result.decided_by ?? { id: caller?.member?.id ?? "", name: me },
-        decision_reason: result.decision_reason ?? decision.reason ?? null,
+        state: result.state,
+        decided_by: { id: caller?.member?.id ?? "", name: me },
+        decision_reason: result.decision_reason ?? decision.reason,
       });
       toast.success(decision.status === "approved" ? "Approved" : "Declined", {
         description:
@@ -231,12 +231,6 @@ function Pending({ conversation, call }: { conversation: string; call: ActionCal
       </header>
       {call.summary ? <p className="text-body-regular text-text-primary">{call.summary}</p> : null}
       <Arguments call={call} />
-      {call.reason ? (
-        <p className="text-body-2-regular text-text-secondary">
-          <span className="text-text-primary">Why dimmi asked: </span>
-          {call.reason}
-        </p>
-      ) : null}
       {declining ? (
         <DeclineForm busy={busy === "declined"} onDecline={decide} onBack={() => setDeclining(false)} />
       ) : (

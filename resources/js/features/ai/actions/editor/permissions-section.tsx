@@ -164,6 +164,11 @@ export function PermissionsSection({ editor }: { editor: Editor }) {
       }
     >
       {draft.side_effect === "write" ? <WritePermissions editor={editor} /> : null}
+      {editor.problems.permissions ? (
+        <p role="alert" className="py-3 pe-3 text-body-2-regular text-text-error-primary">
+          {editor.problems.permissions}
+        </p>
+      ) : null}
       <Journey draft={draft} />
     </Section>
   );

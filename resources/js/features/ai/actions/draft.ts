@@ -7,15 +7,17 @@
  * marked as changing data, one the customer confirms first. Problems
  * name the field they belong to, so the page shows each under its field.
  */
-import type {
-  ActionChannel,
-  ActionConnection,
-  ActionDefinition,
-  AiAction,
-  Approval,
-  Confirmation,
-  HttpMethod,
-  SideEffect,
+import {
+  ACTION_CHANNELS,
+  type ActionChannel,
+  type ActionConnection,
+  type ActionDefinition,
+  type AiAction,
+  type Approval,
+  type Confirmation,
+  type HttpMethod,
+  type InputSchema,
+  type SideEffect,
 } from "./api";
 import {
   fieldsFromSchema,
@@ -101,9 +103,37 @@ export function newDraft(connection: Pick<ActionConnection, "id" | "kind">): Dra
 }
 
 /*
+ * Stored is an action as the server answers it, or as the editor saved
+ * it: the fields the working copy is made from.
+ */
+type Stored = Pick<
+  AiAction,
+  | "connection_id"
+  | "name"
+  | "title"
+  | "description"
+  | "side_effect"
+  | "confirmation"
+  | "approval"
+  | "approval_timeout_minutes"
+  | "body_encoding"
+  | "response_fields"
+> & {
+  body_template?: unknown;
+  method?: HttpMethod | null;
+  path_template?: string | null;
+  query?: Record<string, string>;
+  headers?: Record<string, string>;
+  mcp_tool_name?: string | null;
+  bound_arguments?: Record<string, unknown>;
+  input_schema?: Record<string, unknown>;
+  channels?: string[];
+};
+
+/*
  * draftOf turns a stored action into the editor's working copy.
  */
-export function draftOf(action: ActionDefinition): Draft {
+export function draftOf(action: Stored): Draft {
   return {
     connection_id: action.connection_id,
     name: action.name,
@@ -111,15 +141,36 @@ export function draftOf(action: ActionDefinition): Draft {
     description: action.description,
     side_effect: action.side_effect,
     ...requestOf(action),
-    fields: fieldsFromSchema(action.input_schema ?? { type: "object", properties: {} }),
+    fields: fieldsFromSchema(schemaOf(action.input_schema)),
     response: (action.response_fields ?? []).map((field) => ({ key: rowKey(), name: field.name, value: field.path })),
-    channels: action.channels ?? ["widget"],
+    channels: channelsOf(action.channels),
     ...permissionsOf(action),
   };
 }
 
+function schemaOf(schema: Record<string, unknown> | undefined): InputSchema {
+  const properties = schema?.properties;
+  if (!properties || typeof properties !== "object") {
+    return { type: "object", properties: {} };
+  }
+
+  return schema as InputSchema;
+}
+
+function channelsOf(channels: string[] | undefined): ActionChannel[] {
+  const known = (channels ?? ["widget"]).filter((c): c is ActionChannel =>
+    (ACTION_CHANNELS as readonly string[]).includes(c),
+  );
+
+  return known.length > 0 ? known : ["widget"];
+}
+
+function strings(record: Record<string, unknown> | undefined): Record<string, string> {
+  return Object.fromEntries(Object.entries(record ?? {}).map(([key, value]) => [key, String(value)]));
+}
+
 function requestOf(
-  action: ActionDefinition,
+  action: Stored,
 ): Pick<Draft, "method" | "path" | "query" | "headers" | "body" | "body_encoding" | "tool" | "bound"> {
   const body = action.body_template;
 
@@ -131,13 +182,11 @@ function requestOf(
     body: body === null || body === undefined ? "" : JSON.stringify(body, null, 2),
     body_encoding: action.body_encoding ?? "json",
     tool: action.mcp_tool_name ?? "",
-    bound: pairs(action.bound_arguments ?? {}),
+    bound: pairs(strings(action.bound_arguments)),
   };
 }
 
-function permissionsOf(
-  action: ActionDefinition,
-): Pick<Draft, "confirmation" | "approval" | "approval_timeout_minutes"> {
+function permissionsOf(action: Stored): Pick<Draft, "confirmation" | "approval" | "approval_timeout_minutes"> {
   return {
     confirmation: action.confirmation ?? (action.side_effect === "write" ? "customer" : "none"),
     approval: action.approval ?? "none",
@@ -176,7 +225,16 @@ function bodyOf(draft: Draft): unknown {
  * definitionOf turns the working copy into what the server stores.
  */
 export function definitionOf(draft: Draft, kind: "http" | "mcp"): ActionDefinition {
-  const http = kind === "http";
+  const target =
+    kind === "http"
+      ? {
+          method: draft.method,
+          path_template: draft.path.trim(),
+          query: record(draft.query),
+          headers: record(draft.headers),
+          body_template: bodyOf(draft),
+        }
+      : { mcp_tool_name: draft.tool.trim(), bound_arguments: record(draft.bound) };
 
   return {
     connection_id: draft.connection_id,
@@ -184,14 +242,8 @@ export function definitionOf(draft: Draft, kind: "http" | "mcp"): ActionDefiniti
     title: draft.title.trim(),
     description: draft.description.trim(),
     side_effect: draft.side_effect,
-    method: http ? draft.method : null,
-    path_template: http ? draft.path.trim() : null,
-    query: http ? record(draft.query) : {},
-    headers: http ? record(draft.headers) : {},
-    body_template: http ? bodyOf(draft) : null,
+    ...target,
     body_encoding: draft.body_encoding,
-    mcp_tool_name: http ? null : draft.tool.trim(),
-    bound_arguments: http ? {} : record(draft.bound),
     input_schema: schemaFromFields(draft.fields),
     response_fields: draft.response
       .filter((row) => row.value.trim())

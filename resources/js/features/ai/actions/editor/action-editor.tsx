@@ -37,6 +37,7 @@ import {
   deleteAction,
   setActionStatus,
 } from "../api";
+import { responseBody } from "../format";
 import { ActionStateChip, ConnectionMark } from "../parts";
 import { BasicsSection } from "./basics-section";
 import { InputsSection } from "./inputs-section";
@@ -282,7 +283,7 @@ function Loaded({
         />
         <ScrollArea ground>
           <fieldset disabled={!manage} className="contents">
-            <Body editor={editor} connection={connection} sample={result?.response?.body} />
+            <Body editor={editor} connection={connection} sample={responseBody(result?.response)} />
           </fieldset>
         </ScrollArea>
       </Panel>

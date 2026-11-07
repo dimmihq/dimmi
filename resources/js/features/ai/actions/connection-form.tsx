@@ -38,7 +38,7 @@ import {
   type ConnectionProblems as Problems,
   type ConnectionValues as Values,
 } from "./connection-values";
-import { authLabels } from "./format";
+import { authLabels, syncLine } from "./format";
 import { PairRows } from "./parts";
 
 const timeouts = [2000, 5000, 8000, 10000, 15000];
@@ -59,9 +59,7 @@ function useSave(workspace: string, kind: ConnectionKind, connection: ActionConn
     if (test?.status === "ok" && kind === "mcp") {
       const sync = await syncTools(workspace, saved.id).catch(() => null);
       toast.success(`${saved.name} connected`, {
-        description: sync
-          ? `${sync.created} new ${sync.created === 1 ? "tool became a draft action" : "tools became draft actions"}.`
-          : "Sync its tools from the connection's menu.",
+        description: sync ? syncLine(sync) : "Sync its tools from the connection's menu.",
       });
     } else if (test?.status === "ok") {
       toast.success(`${saved.name} connected`, { description: "Add the actions dimmi may call through it." });

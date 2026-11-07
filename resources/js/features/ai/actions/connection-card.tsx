@@ -17,6 +17,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
+import { ApiError } from "@/lib/api/client";
 import { cx } from "@/utils/cx";
 
 import { refusal } from "../use-agent";
@@ -30,7 +31,7 @@ import {
   updateConnection,
 } from "./api";
 import { kindInfo } from "./connection-values";
-import { authLabels, connectionLook, hostOf, permissionSummary } from "./format";
+import { authLabels, connectionLook, hostOf, permissionSummary, syncLine, testReason } from "./format";
 import { ActionStateChip, ConnectionMark, SideEffectChip } from "./parts";
 
 function ActionRow({ action }: { action: AiAction }) {
@@ -76,7 +77,7 @@ function useConnectionMoves(workspace: string, connection: ActionConnection) {
         const tools = typeof result.tools_count === "number" ? ` · ${result.tools_count} tools` : "";
         toast.success("Connection works", { description: `${connection.name} answered${tools}.` });
       } else {
-        toast.error("Connection failed", { description: result.status_reason ?? "The server did not answer." });
+        toast.error("Connection failed", { description: testReason(result.status_reason) });
       }
       await refresh();
     },
@@ -85,9 +86,7 @@ function useConnectionMoves(workspace: string, connection: ActionConnection) {
   const sync = useMutation({
     mutationFn: () => syncTools(workspace, connection.id),
     onSuccess: async (result) => {
-      toast.success("Tools synced", {
-        description: `${result.created} new, ${result.updated} changed, ${result.disabled} turned off.`,
-      });
+      toast.success("Tools synced", { description: syncLine(result) });
       await refresh();
     },
     onError: (error) => toast.error("Tools not synced", { description: refusal(error, "Try again.") }),
@@ -100,15 +99,19 @@ function useConnectionMoves(workspace: string, connection: ActionConnection) {
     onSuccess: refresh,
     onError: (error) => toast.error("Not changed", { description: refusal(error, "Try again.") }),
   });
-  const remove = async () => {
+  const remove = async (force: boolean): Promise<"removed" | "in_use"> => {
     try {
-      await deleteConnection(workspace, connection.id);
-      toast.success(`${connection.name} removed`);
-      await refresh();
+      await deleteConnection(workspace, connection.id, force);
     } catch (error) {
+      if (error instanceof ApiError && error.code === "connection_in_use") {
+        return "in_use";
+      }
       toast.error("Not removed", { description: refusal(error, "Try again.") });
       throw error;
     }
+    toast.success(`${connection.name} removed`);
+    await refresh();
+    return "removed";
   };
 
   return { test, sync, toggle, remove };
@@ -229,7 +232,7 @@ function removeText(count: number): string {
   }
   const stop = count === 1 ? "action stops" : `${count} actions stop`;
 
-  return `Its ${stop} working right away and move to the trash. Calls waiting for approval are cancelled.`;
+  return `Its ${stop} working right away. dimmi forgets its address and secret.`;
 }
 
 /*
@@ -249,6 +252,7 @@ export function ConnectionCard({
   onChange: () => void;
 }) {
   const [removing, setRemoving] = useState(false);
+  const [inUse, setInUse] = useState(false);
   const moves = useConnectionMoves(workspace, connection);
   const look = connectionLook(connection);
   const testing = moves.test.isPending;
@@ -291,7 +295,20 @@ export function ConnectionCard({
         description={removeText(actions.length)}
         confirmLabel="Remove"
         pendingLabel="Removing…"
-        onConfirm={moves.remove}
+        onConfirm={async () => {
+          if ((await moves.remove(false)) === "in_use") {
+            setInUse(true);
+          }
+        }}
+      />
+      <AlertDialog
+        isOpen={inUse}
+        onOpenChange={setInUse}
+        title={`Remove ${connection.name} and its actions?`}
+        description="Actions still call through this connection. Removing it deletes them too and cancels their waiting calls."
+        confirmLabel="Remove all"
+        pendingLabel="Removing…"
+        onConfirm={() => moves.remove(true)}
       />
     </section>
   );

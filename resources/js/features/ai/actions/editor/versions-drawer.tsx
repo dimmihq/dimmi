@@ -20,6 +20,21 @@ import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page
 import { type ActionVersion, type AiAction, versionsQuery } from "../api";
 import { permissionSummary } from "../format";
 
+/*
+ * specOf reads what a version froze that its row shows: the title and
+ * who had to agree.
+ */
+function specOf(version: ActionVersion) {
+  const spec = version.spec as Partial<Pick<AiAction, "title" | "name" | "side_effect" | "confirmation" | "approval">>;
+
+  return {
+    title: spec.title || spec.name || `Version ${version.number}`,
+    side_effect: spec.side_effect ?? "read",
+    confirmation: spec.confirmation ?? "none",
+    approval: spec.approval ?? "none",
+  };
+}
+
 function VersionRow({
   version,
   live,
@@ -31,6 +46,7 @@ function VersionRow({
 }) {
   const [busy, setBusy] = useState(false);
   const by = version.published_by?.name;
+  const spec = specOf(version);
 
   return (
     <li className="flex items-start gap-3 border-b border-separator-border py-3 pe-3 last:border-b-0">
@@ -39,7 +55,7 @@ function VersionRow({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex items-center gap-2 text-body-regular text-text-primary">
-          {version.spec.title || version.spec.name}
+          {spec.title}
           {live ? (
             <Chip variant="caption" color="lime">
               Live
@@ -49,7 +65,7 @@ function VersionRow({
         <span className="text-body-2-regular text-text-secondary">
           {[by ? `Published by ${by}` : "Published", ago(version.created_at).toLowerCase()].join(" · ")}
         </span>
-        <span className="text-body-2-regular text-text-tertiary">{permissionSummary(version.spec)}</span>
+        <span className="text-body-2-regular text-text-tertiary">{permissionSummary(spec)}</span>
         {version.note ? <span className="text-body-2-regular text-text-secondary">“{version.note}”</span> : null}
       </div>
       <Button
