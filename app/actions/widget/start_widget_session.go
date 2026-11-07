@@ -10,9 +10,9 @@
 | answer as anyone, so it learns nothing, but its session is marked and
 | everything it starts lands as spam.
 |
-| Signing a visitor in with their identity token belongs to identity
-| verification; until an install has it, a token is refused rather than
-| silently treated as anonymous.
+| A visitor whose host app sent an identity token starts a signed-in
+| session instead, and only once the token passes every check; a token
+| that fails is refused, never quietly treated as anonymous.
 |
 */
 
@@ -44,41 +44,52 @@ const honeypotScore = 100
 /*
 StartWidgetSessionInput is what a visitor's browser sends to start a session,
 with where the request came from. Honeypot is the hidden field real visitors
-never fill.
+never fill. PreviousToken is the session the browser had, handed over
+when the visitor signs in.
 */
 type StartWidgetSessionInput struct {
-	Resolved Resolved
-	Visitor  Visitor
-	UserJWT  string
-	Page     *Page
-	Pages    []Page
-	Locale   string
-	Timezone string
-	Context  map[string]any
-	Honeypot string
-	SDK      string
+	Resolved      Resolved
+	Visitor       Visitor
+	UserJWT       string
+	PreviousToken string
+	Page          *Page
+	Pages         []Page
+	Locale        string
+	Timezone      string
+	Context       map[string]any
+	Honeypot      string
+	SDK           string
 }
 
 /*
-StartedSession is a new session with its token, shown only now.
+StartedSession is a new session with its token, shown only now. Reused
+says the visitor's signed-in session was extended instead, with no new
+token.
 */
 type StartedSession struct {
 	Session models.WidgetSession
 	Contact models.Contact
 	Token   string
+	Reused  bool
 }
 
 /*
 StartWidgetSession starts visitors' sessions. AnonymousTTL is how long an
-anonymous session lives after the last visit.
+anonymous session lives after the last visit and IdentifiedTTL how long a
+signed-in one lives after its last verified token. Identity checks
+identity tokens, nil when the install verifies none, and Streams closes
+what sessions that ended had open.
 
-Events: [appevents.ContactCreated].
+Events: [appevents.ContactCreated], [appevents.ContactUpdated].
 */
 type StartWidgetSession struct {
-	DB           *database.DB
-	Events       *events.Dispatcher
-	Clock        clock.Clock
-	AnonymousTTL time.Duration
+	DB            *database.DB
+	Events        *events.Dispatcher
+	Clock         clock.Clock
+	AnonymousTTL  time.Duration
+	IdentifiedTTL time.Duration
+	Identity      IdentityVerifier
+	Streams       SessionCloser
 }
 
 /*
@@ -86,7 +97,7 @@ Handle starts the session the input asks for.
 */
 func (a *StartWidgetSession) Handle(ctx context.Context, in StartWidgetSessionInput) (StartedSession, error) {
 	if in.UserJWT != "" {
-		return StartedSession{}, exceptions.ErrIdentityNotConfigured
+		return a.identified(ctx, in)
 	}
 
 	if !in.Resolved.Widget.AllowAnonymous {

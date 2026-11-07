@@ -45,7 +45,7 @@ StoreWidgetSessionBody is the body of POST /widget/v1/sessions.
 type StoreWidgetSessionBody struct {
 	_             struct{}         `additionalProperties:"true"`
 	AppID         string           `json:"app_id"                   maxLength:"64"`
-	UserJWT       *string          `json:"user_jwt,omitempty"       maxLength:"8192"`
+	UserJWT       *string          `json:"user_jwt,omitempty"       maxLength:"16384"`
 	PreviousToken *string          `json:"previous_token,omitempty" maxLength:"128"`
 	TestToken     *string          `json:"test_token,omitempty"     maxLength:"128"`
 	Page          *WidgetPageBody  `json:"page,omitempty"`

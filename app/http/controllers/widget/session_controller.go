@@ -62,6 +62,10 @@ func (c *SessionController) Store(
 		start.UserJWT = *b.UserJWT
 	}
 
+	if b.PreviousToken != nil {
+		start.PreviousToken = *b.PreviousToken
+	}
+
 	if b.Page != nil {
 		page := b.Page.Page()
 		start.Page = &page
@@ -77,8 +81,40 @@ func (c *SessionController) Store(
 	}
 
 	view := actions.SessionView{Session: started.Session, Contact: started.Contact}
+	if started.Session.Kind == string(enums.WidgetSessionIdentified) {
+		auth := actions.Authenticated{Session: started.Session, Resolved: resolved}
+		if view, err = c.Describe.Describe(ctx, auth); err != nil {
+			return nil, err
+		}
+	}
+
+	if started.Reused {
+		return c.answer(ctx, fhttp.StatusOK, view, ""), nil
+	}
 
 	return c.answer(ctx, fhttp.StatusCreated, view, started.Token), nil
+}
+
+/*
+Update proves a signed-in session's customer again with a fresh identity
+token and extends it.
+*/
+func (c *SessionController) Update(
+	ctx context.Context, in *requests.UpdateWidgetSessionRequest,
+) (*SessionOutput, error) {
+	auth := authenticated(ctx)
+
+	refreshed, err := c.Start.Refresh(ctx, auth, in.Body.UserJWT)
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := c.Describe.Describe(ctx, actions.Authenticated{Session: refreshed.Session, Resolved: auth.Resolved})
+	if err != nil {
+		return nil, err
+	}
+
+	return c.answer(ctx, fhttp.StatusOK, view, ""), nil
 }
 
 /*

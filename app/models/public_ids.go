@@ -57,6 +57,7 @@ const (
 	PrefixOrganizationDomain Prefix = "odom"
 	PrefixRole               Prefix = "rol"
 	PrefixUserDevice         Prefix = "dev"
+	PrefixIdentitySecret     Prefix = "isk"
 )
 
 /*
@@ -199,7 +200,7 @@ func channelPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{"wgt", "widget_settings"},
 		{"wss", "widget_sessions"},
-		{"isk", "identity_secrets"},
+		{PrefixIdentitySecret, "identity_secrets"},
 		{PrefixEmailSignature, "email_signatures"},
 		{PrefixEmailDomain, "email_domains"},
 		{PrefixEmailAddress, "email_addresses"},

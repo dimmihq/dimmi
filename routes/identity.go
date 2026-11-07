@@ -44,6 +44,35 @@ func identityRoutes(api *routing.Router, a *app.App) {
 	})
 
 	ssoRoutes(api, a)
+	identitySecretRoutes(api, a)
+}
+
+/*
+identitySecretRoutes declares the routes of the secrets a workspace's
+server signs visitors' identity tokens with. Tokens need settings:read
+to list them and settings:write to change them; the actions then check
+the member may manage identity. Creating and rotating take no
+idempotency key, since a replay cache would keep the secret in plain
+text.
+*/
+func identitySecretRoutes(api *routing.Router, a *app.App) {
+	if a.Actions.IdentitySecrets == nil {
+		return
+	}
+	c := &v1.IdentitySecretController{Secrets: a.Actions.IdentitySecrets, IDs: a.IDs}
+	one := "/identity-secrets/{secret}"
+
+	api.Group("", func(r *routing.Router) {
+		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+
+		routing.Get(r, "/identity-secrets", "identity-secrets.index", c.Index).Ability("settings:read")
+		routing.Post(r, "/identity-secrets", "identity-secrets.store", c.Store).Ability("settings:write").
+			Status(fhttp.StatusCreated)
+		routing.Get(r, one, "identity-secrets.show", c.Show).Ability("settings:read")
+		routing.Patch(r, one, "identity-secrets.update", c.Update).Ability("settings:write")
+		routing.Post(r, one+"/rotations", "identity-secrets.rotations.store", c.Rotate).
+			Ability("settings:write").Status(fhttp.StatusCreated)
+	})
 }
 
 /*

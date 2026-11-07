@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/factors"
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
@@ -99,6 +100,8 @@ type Actions struct {
 	AcceptInvitation        *invitations.AcceptInvitation
 
 	CompleteTwoFactorChallenge *auth.CompleteTwoFactorChallenge
+	IdentitySecrets            *identity.Secrets
+	IdentityVerifier           *identity.Verifier
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
 	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy

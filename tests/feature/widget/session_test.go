@@ -107,7 +107,7 @@ func TestWidgetSessionStart(t *testing.T) {
 		assert.Equal(t, int16(100), v.session(t).BotScore)
 	})
 
-	t.Run("an identity token is refused until identities can be verified", func(t *testing.T) {
+	t.Run("an identity token is refused until the workspace has a secret", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 

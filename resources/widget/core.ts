@@ -19,10 +19,18 @@
  * says otherwise, so the design can be judged. Dimmi("simulate", ...)
  * changes the latency or delivers a message from the team there.
  * Dimmi("update", { ... }) merges changes over the options and re-renders
- * either way, keeping the panel open on the same tab. In a preview,
+ * either way, keeping the panel open on the same tab.
+ *
+ * A signed-in visitor's identity comes from the snippet's
+ * data-identity-url, or from Dimmi("identify", fn), where fn answers the
+ * token the host app's server minted, or null. Dimmi("identify") with no
+ * argument asks again after the visitor signed in without a page load,
+ * and Dimmi("logout") forgets the visitor here and on the server. In a preview,
  * Dimmi("configure", config) takes a config as the server would serve it,
  * which is how the messenger settings show unsaved changes.
  */
+
+import { fromFunction, fromUrl, type Source } from "./client/identity";
 import type { Content } from "./content";
 import { ComposerController } from "./controllers/composer_controller";
 import { MessengerController } from "./controllers/messenger_controller";
@@ -183,18 +191,34 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     widget.update(fromConfig(config, options.texts));
   };
 
+  /*
+   * identify takes a new identity function, when given one, and asks who
+   * is signed in now.
+   */
+  const identify = (argument: unknown) => {
+    if (typeof argument === "function") {
+      live?.setIdentity(fromFunction(argument as () => unknown));
+    }
+    void live?.checkIdentity();
+  };
+
+  const commands: Record<string, (argument: unknown) => void> = {
+    update: (argument) => widget.update(argument as OptionsUpdate),
+    boot: (argument) => widget.update(argument as OptionsUpdate),
+    simulate: (argument) => simulate(argument as Simulation),
+    configure: (argument) => configure(argument as Config),
+    shutdown: () => void live?.logout(),
+    logout: () => void live?.logout(),
+    identify,
+  };
+
   const run = ([name, argument]: Command) => {
     const toggle = toggles.find((known) => known === name);
+    const command = Object.hasOwn(commands, name) ? commands[name] : undefined;
     if (toggle) {
       find()?.[toggle]();
-    } else if (name === "update" || name === "boot") {
-      widget.update(argument as OptionsUpdate);
-    } else if (name === "simulate") {
-      simulate(argument as Simulation);
-    } else if (name === "configure") {
-      configure(argument as Config);
-    } else if (name === "shutdown" || name === "logout") {
-      void live?.session.signOut();
+    } else if (command) {
+      command(argument);
     } else {
       report("warn", "unknown_command", `Dimmi("${String(name)}") is not supported yet.`);
     }
@@ -281,6 +305,8 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     blank,
   );
 
+  live.setIdentity(identitySource(win, settings.identityUrl));
+
   ready = live.start().then((shown) => {
     if (shown) {
       mount();
@@ -288,6 +314,19 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   });
 
   return widget;
+}
+
+/*
+ * identitySource is where the visitor's identity token comes from: a
+ * function queued with Dimmi("identify", fn) before the messenger loaded,
+ * else the snippet's identity URL, else nowhere.
+ */
+function identitySource(win: Window & DimmiWindow, url: string | undefined): Source | undefined {
+  const queued = (win.Dimmi?.q ?? []).find(([name, arg]) => name === "identify" && typeof arg === "function");
+  if (queued) {
+    return fromFunction(queued[1] as () => unknown);
+  }
+  return url ? fromUrl(win.fetch.bind(win), url) : undefined;
 }
 
 /*
@@ -328,6 +367,16 @@ function browserOf(win: Window) {
     clearTimeout: (handle: unknown) => win.clearTimeout(handle as number),
     setInterval: (fn: () => void, ms: number) => win.setInterval(fn, ms),
     page: () => ({ url: win.location.href, title: win.document.title, referrer: win.document.referrer }),
+    onVisible: (fn: (hiddenFor: number) => void) => {
+      let hiddenAt = 0;
+      win.document.addEventListener("visibilitychange", () => {
+        if (win.document.visibilityState === "hidden") {
+          hiddenAt = Date.now();
+        } else if (hiddenAt) {
+          fn(Date.now() - hiddenAt);
+        }
+      });
+    },
   };
 }
 

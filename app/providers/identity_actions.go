@@ -15,9 +15,11 @@ package providers
 import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/sso"
 	"github.com/dimmihq/dimmi/app/actions/ssologin"
+	"github.com/dimmihq/dimmi/app/actions/widget"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 )
 
@@ -100,4 +102,26 @@ func bootSSOLogin(a *app.App) {
 	acts.ConsumeSAML = &ssologin.ConsumeSAML{
 		DB: a.DB, Clock: a.Clock, Attempts: attempts, SAML: providers, Complete: acts.CompleteSSOLogin,
 	}
+}
+
+/*
+bootIdentityVerifier builds the identity token checks once and the
+secrets visitors' tokens are signed with, which close the streams of
+sessions a revoked secret ends.
+*/
+func bootIdentityVerifier(a *app.App) *identity.Verifier {
+	if a.Actions.IdentityVerifier != nil {
+		return a.Actions.IdentityVerifier
+	}
+	cfg := a.Config.Identity
+	a.Actions.IdentityVerifier = &identity.Verifier{
+		DB: a.DB, Clock: a.Clock, Keys: a.Keys, Cache: a.Cache, Leeway: cfg.ClockLeeway,
+		MaxLifetime: cfg.MaxTokenLifetime,
+	}
+	a.Actions.IdentitySecrets = &identity.Secrets{
+		DB: a.DB, Clock: a.Clock, Keys: a.Keys,
+		Streams:   widget.IdentityStreams{Streams: widget.BroadcastStreams{Server: a.Broadcast}},
+		MaxActive: cfg.MaxActiveSecrets, RetireDefault: cfg.RetireDefault, RetireMax: cfg.RetireMax,
+	}
+	return a.Actions.IdentityVerifier
 }

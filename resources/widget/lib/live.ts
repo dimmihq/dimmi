@@ -16,6 +16,7 @@
  */
 
 import { ApiError, Http } from "../client/http";
+import type { Source } from "../client/identity";
 import { Outbox, type Pending, type Sent } from "../client/outbox";
 import { Realtime } from "../client/realtime";
 import { Session, type Storage } from "../client/session";
@@ -52,6 +53,7 @@ export interface Browser {
   clearTimeout: (handle: unknown) => void;
   page: () => { url: string; title?: string; referrer?: string };
   setInterval: (fn: () => void, ms: number) => unknown;
+  onVisible?: (fn: (hiddenFor: number) => void) => void;
 }
 
 /*
@@ -59,6 +61,14 @@ export interface Browser {
  * one, to notice a single-page app moving to another route.
  */
 const routeCheck = 1000;
+
+/*
+ * How often identity is asked again: once the tab is visible after a
+ * minute away, and at most every 30 seconds of navigation while nobody is
+ * signed in.
+ */
+const visibleRecheck = 60_000;
+const anonymousRecheck = 30_000;
 
 /*
  * callCheck is how often, in milliseconds, a waiting action card asks
@@ -157,6 +167,9 @@ export class Live {
   private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
   private callTimer: unknown;
+  private identity: Source | undefined;
+  private checking: Promise<void> | undefined;
+  private lastAnonymousCheck = 0;
 
   constructor(
     private readonly host: Host,
@@ -213,7 +226,7 @@ export class Live {
     this.host.update(fromConfig(this.config, this.host.options().texts));
     void this.loadAvailability();
 
-    const session = await this.session.resume().catch(() => undefined);
+    const session = await this.handshake().catch(() => undefined);
     if (session) {
       await this.reload();
       this.streaming();
@@ -227,8 +240,81 @@ export class Live {
   }
 
   /*
+   * setIdentity sets where the visitor's identity token comes from. Set
+   * after the messenger started, it checks who is signed in at once.
+   */
+  setIdentity(source: Source | undefined) {
+    this.identity = source;
+  }
+
+  /*
+   * handshake picks the visitor's session up on page load: by identity
+   * token when the page has an identity source, else by the stored token.
+   */
+  /*
+   * logout ends the visitor's session and forgets everything about it
+   * here, so the next person on this browser starts fresh.
+   */
+  async logout() {
+    this.realtime.stop();
+    await this.session.signOut();
+    this.ended();
+  }
+
+  private async handshake() {
+    if (!this.identity) {
+      return this.session.resume();
+    }
+    return this.session.identify(await this.identity(), this.startDetails());
+  }
+
+  /*
+   * checkIdentity asks the identity source again, mid-session: signing
+   * the visitor in, switching to another customer, or signing them out.
+   * Nothing is sent when the same customer is still signed in. When the
+   * session changes, the messenger shows the new visitor's conversations
+   * only. Several checks at once share one.
+   */
+  checkIdentity(): Promise<void> {
+    if (!this.identity) {
+      return Promise.resolve();
+    }
+    this.checking ??= this.recheck().finally(() => {
+      this.checking = undefined;
+    });
+    return this.checking;
+  }
+
+  private async recheck() {
+    const source = this.identity;
+    if (!source) {
+      return;
+    }
+    const token = await source();
+    if (token && this.session.signedIn && (await this.session.sameCustomer(token))) {
+      return;
+    }
+    if (!token && !this.session.signedIn) {
+      return;
+    }
+    const before = this.session.current?.id;
+    const after = await this.session.identify(token, this.startDetails()).catch(() => undefined);
+    if (after?.id === before) {
+      return;
+    }
+    this.realtime.stop();
+    this.ended();
+    if (after) {
+      await this.reload();
+      this.streaming();
+    }
+  }
+
+  /*
    * watchRoutes tells the server where the visitor is once a page that
-   * never reloads, such as a single-page app, moves to another address.
+   * never reloads, such as a single-page app, moves to another address,
+   * and checks who is signed in: on every move while signed in, so a
+   * sign-out shows at once, and at most every 30 seconds otherwise.
    */
   private watchRoutes() {
     let last = this.browser.page().url;
@@ -241,7 +327,22 @@ export class Live {
       if (this.session.current) {
         void this.http.post("/pings", { page }).catch(() => undefined);
       }
+      this.routeIdentityCheck();
     }, routeCheck);
+    this.browser.onVisible?.((hiddenFor) => {
+      if (hiddenFor >= visibleRecheck) {
+        void this.checkIdentity();
+      }
+    });
+  }
+
+  private routeIdentityCheck() {
+    const now = this.browser.now();
+    if (!this.session.signedIn && now - this.lastAnonymousCheck < anonymousRecheck) {
+      return;
+    }
+    this.lastAnonymousCheck = now;
+    void this.checkIdentity();
   }
 
   /*

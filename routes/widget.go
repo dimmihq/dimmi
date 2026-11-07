@@ -49,6 +49,10 @@ func Widget(a *app.App) {
 			widgetSessionRoutes(visitor, a)
 			widgetAttachmentRoutes(visitor, a)
 		})
+		api.Group("", func(reviving *routing.Router) {
+			reviving.Middleware("widget.session:reviving", "widget.origin")
+			routing.Patch(reviving, "/session", "widget.session.update", sessionController(a).Update)
+		})
 		api.Group("", func(leaving *routing.Router) {
 			leaving.Middleware("widget.session:ending", "widget.origin")
 			routing.Delete(leaving, "/session", "widget.session.destroy", sessionController(a).Destroy).

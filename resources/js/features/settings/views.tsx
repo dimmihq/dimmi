@@ -21,9 +21,10 @@ import {
   KnowledgeSettings,
 } from "./pages/content";
 import { ConversationSafetySettings } from "./pages/conversation-safety";
-import { AppsSettings, GithubSettings, IdentitySettings, WebhooksSettings } from "./pages/developers";
+import { AppsSettings, GithubSettings, WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
 import { ExportsSettings } from "./pages/exports";
+import { IdentitySettings } from "./pages/identity";
 import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
 import { MessengersSettings } from "./pages/messengers";

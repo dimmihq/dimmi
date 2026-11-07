@@ -29,6 +29,17 @@ newVisitor starts an anonymous messenger session.
 func newVisitor(t *testing.T, d tests.Desk) visitor {
 	t.Helper()
 
+	res := d.TC.Client().PostJSON("/widget/v1/sessions", testkit.JSON{"app_id": appOf(t, d)}).AssertCreated()
+
+	return visitor{d: d, token: res.String("data.token")}
+}
+
+/*
+appOf returns the public id of the workspace's first messenger.
+*/
+func appOf(t *testing.T, d tests.Desk) string {
+	t.Helper()
+
 	var app string
 	d.TC.InWorkspace(func(ctx context.Context) error {
 		rows, err := models.New(d.TC.App.DB).ListWidgetSettings(ctx, d.TC.Workspace.Workspace.ID)
@@ -40,9 +51,7 @@ func newVisitor(t *testing.T, d tests.Desk) visitor {
 		return nil
 	})
 
-	res := d.TC.Client().PostJSON("/widget/v1/sessions", testkit.JSON{"app_id": app}).AssertCreated()
-
-	return visitor{d: d, token: res.String("data.token")}
+	return app
 }
 
 /*

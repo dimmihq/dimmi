@@ -909,6 +909,29 @@ a teammate's `mem_` id whose account has two-factor on, `t.jar` the teammate's b
 Browser: the security page's "Sign-in methods" section, the member menu's "Help with two-factor" and "Clear
 sign-in lock", and `/two-factor-reset` from the mailed link, in light and dark.
 
+## Signed-in messenger visitors
+
+`a.jar` is the owner, `$WS` its workspace id, `$APP` the messenger's `wgt_` id and `$W` the install's address.
+`sign SUB` stands for a host server minting an HS256 token with the secret below: header `{"alg":"HS256","kid":"$KID"}`,
+claims `{"sub":"SUB","iat":now,"exp":now+600}`, key the whole `dmi_idsec_` string. Widget calls send
+`-H "Origin: $W"`.
+
+| Flow | Command | Expect |
+|---|---|---|
+| Create a secret | `r isk -b a.jar -X POST -H "$O" -H "$J" -H "Dimmi-Workspace: $WS" $B/identity-secrets -d '{"name":"Production","algorithm":"HS256"}'` | 201 with `secret` `dmi_idsec_` and 43 characters, `kid` `isk_`; listing it again shows no `secret` |
+| No secret yet | on a fresh workspace, `POST $W/widget/v1/sessions` with `{"app_id":"$APP","user_jwt":"a.b.c"}` | 401 `identity_not_configured` with a `hint` |
+| Sign in | `POST $W/widget/v1/sessions` with `{"app_id":"$APP","user_jwt":"$(sign user_42)"}` | 201 `kind` `identified`, `identity.status` `verified`; the contact is a user with external id `user_42` |
+| Hand over a lead | start an anonymous session, write a message, then sign in with `previous_token` | 201; same contact, now a user; the old token answers 401 `session_revoked` |
+| Same customer again | sign in with `previous_token` of the signed-in session | 200, same `id`, no `token` |
+| Refresh | `PATCH $W/widget/v1/session` with the bearer and `{"user_jwt":"$(sign user_42)"}`; then with `$(sign user_7)` | 200 and `expires_at` moved on; then 409 `identity_mismatch` |
+| Resume without proof | `GET $W/widget/v1/session` with a signed-in bearer | 409 `identity_proof_required` |
+| Bad tokens | wrong key, no `sub`, `exp` past, `exp` in milliseconds, unknown `kid`, foreign `aud` | 401 `token_signature_invalid`, `token_sub_missing`, `token_expired`, `token_lifetime_too_long`, `token_kid_unknown`, `token_audience_mismatch`, each with a `hint`; the session sent as `previous_token` still works |
+| Nonce | the same token with a `nonce` claim twice | 201, then 401 `token_replayed` |
+| Rotate | `POST $B/identity-secrets/$KID/rotations` | 201 new secret; the old one `retiring` and still signs in for 7 days, then 401 `token_secret_revoked` |
+| Revoke | `PATCH $B/identity-secrets/$KID` with `{"status":"revoked"}` | 200; every session it signed in answers 401 `session_revoked` |
+| Messenger | page with `data-identity-url` answering `{"token":"<jwt>"}` for a signed-in user | the messenger signs in on load; signing out on the site sends `DELETE /widget/v1/session` on the next load and shows none of the previous conversations |
+| Agent actions | a published action binding `{contact.external_id}` on the widget channel; ask the signed-in messenger about the account | the action runs with the token's `sub`, never a value the model chose |
+
 ## Reporting
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in

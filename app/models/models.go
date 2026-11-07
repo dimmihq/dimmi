@@ -758,6 +758,24 @@ type IdempotencyKey struct {
 	ExpiresAt   time.Time       `json:"expires_at"`
 }
 
+type IdentitySecret struct {
+	ID                ids.UUID          `json:"id"`
+	WorkspaceID       ids.UUID          `json:"workspace_id"`
+	Name              string            `json:"name"`
+	Algorithm         string            `json:"algorithm"`
+	SecretEncrypted   encryption.Sealed `json:"secret_encrypted"`
+	PublicKeyJwk      json.RawMessage   `json:"public_key_jwk"`
+	Fingerprint       string            `json:"fingerprint"`
+	Status            string            `json:"status"`
+	RetiresAt         *time.Time        `json:"retires_at"`
+	RevokedAt         *time.Time        `json:"revoked_at"`
+	RevokedReason     *string           `json:"revoked_reason"`
+	CreatedByMemberID *ids.UUID         `json:"created_by_member_id"`
+	LastUsedAt        *time.Time        `json:"last_used_at"`
+	CreatedAt         time.Time         `json:"created_at"`
+	UpdatedAt         time.Time         `json:"updated_at"`
+}
+
 type InboundEmail struct {
 	ID                  ids.UUID        `json:"id"`
 	WorkspaceID         ids.UUID        `json:"workspace_id"`

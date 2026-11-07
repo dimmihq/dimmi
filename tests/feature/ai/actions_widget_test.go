@@ -3,6 +3,7 @@ package ai_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,21 +12,30 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/jwt"
 	"github.com/dimmihq/dimmi/framework/mcp"
 	"github.com/dimmihq/dimmi/framework/testkit"
+
+	"github.com/dimmihq/dimmi/app/actions/agentactions"
 )
 
 /*
-signedInVisitor is a messenger session signed in with a verified
-identity token as the external id, before it says anything.
+signedInVisitor is a messenger session signed in the way a host app does
+it: the owner creates an identity secret, and the visitor's browser
+starts its session with a token signed by it naming the external id.
 */
 func signedInVisitor(a *actionDesk, externalID string) visitor {
 	a.t.Helper()
-	v := newVisitor(a.t, a.d)
-	a.operator(`UPDATE widget_sessions SET kind = 'identified', verified_at = now(), expires_at = '2030-01-01'`)
-	a.operator(`UPDATE contacts SET external_id = $1, kind = 'user'
-		WHERE id IN (SELECT contact_id FROM widget_sessions)`, externalID)
-	return v
+	created := a.d.Owner.PostJSON("/api/v1/identity-secrets", testkit.JSON{"algorithm": "HS256"}).AssertCreated()
+	key, err := jwt.NewKey(created.String("data.kid"), jwt.HS256, []byte(created.String("data.secret")))
+	require.NoError(a.t, err)
+	now := a.d.TC.Clock.Now()
+	token, err := jwt.Sign(jwt.Claims{Subject: externalID, IssuedAt: now, Expiry: now.Add(10 * time.Minute)}, key)
+	require.NoError(a.t, err)
+	res := a.d.TC.Client().PostJSON("/widget/v1/sessions", testkit.JSON{
+		"app_id": appOf(a.t, a.d), "user_jwt": token,
+	}).AssertCreated().AssertJSONPath("data.kind", "identified")
+	return visitor{d: a.d, token: res.String("data.token")}
 }
 
 /*
@@ -121,6 +131,26 @@ func TestAiActionConfirmations(t *testing.T) {
 
 		assert.Equal(t, "canceled", a.onlyCall(convID).State)
 		assert.Empty(t, a.api.Sent())
+	})
+
+	t.Run("forgets what a call held once its customer is erased", func(t *testing.T) {
+		t.Parallel()
+		a := newActionDesk(t, widgetAgent)
+		p := proposeRefund(t, a)
+		c := a.onlyCall(p.conv)
+		require.NotNil(t, c.ContactID)
+		assert.Contains(t, string(c.Input), "1042")
+
+		eraser := &agentactions.CallEraser{DB: a.d.TC.App.DB, Clock: a.d.TC.Clock}
+		assert.Equal(t, "ai_action_calls", eraser.Name())
+		require.NoError(t, eraser.Erase(t.Context(), a.d.TC.Workspace.Workspace.ID, *c.ContactID))
+		require.NoError(t, eraser.Erase(t.Context(), a.d.TC.Workspace.Workspace.ID, *c.ContactID))
+
+		c = a.onlyCall(p.conv)
+		assert.JSONEq(t, `{}`, string(c.Input))
+		assert.JSONEq(t, `{}`, string(c.Bindings))
+		assert.Empty(t, c.Summary)
+		assert.Nil(t, c.Result)
 	})
 
 	t.Run("lets no other visitor see or confirm the card", func(t *testing.T) {

@@ -1,10 +1,9 @@
 /*
- * The developer settings: webhooks to your own endpoints, the secrets
- * that verify signed-in messenger visitors, the agents and apps signed in
- * to the workspace, and GitHub. Identity tokens are always verified;
- * there is no switch to turn that off.
+ * The developer settings: webhooks to your own endpoints, the agents and
+ * apps signed in to the workspace, and GitHub. The secrets that verify
+ * signed-in messenger visitors have a page of their own.
  */
-import { RiClaudeFill, RiFingerprintLine, RiGithubFill, RiTerminalBoxLine, RiWebhookLine } from "@remixicon/react";
+import { RiClaudeFill, RiGithubFill, RiTerminalBoxLine, RiWebhookLine } from "@remixicon/react";
 
 import { Chip } from "@/components/base/badges/chip";
 
@@ -25,30 +24,6 @@ export function WebhooksSettings() {
           </Chip>
           <Action>Edit</Action>
         </Item>
-      </Section>
-    </SettingsPage>
-  );
-}
-
-export function IdentitySettings() {
-  return (
-    <SettingsPage
-      title="Identity verification"
-      description="Your server signs a token for each signed-in user, so nobody can pose as one of your customers."
-    >
-      <Section
-        title="Secrets"
-        description="Up to 5 active. A rotated secret keeps working for 7 days."
-        action={<Action>New secret</Action>}
-      >
-        <Item mark={<Glyph icon={RiFingerprintLine} />} title="Production" detail="HS256 · 3f9c…a21b · Last used today">
-          <Action>Rotate</Action>
-        </Item>
-      </Section>
-      <Section title="Sign tokens on your server">
-        <Row label="Code samples" description="Node, Python, Ruby, Go and PHP.">
-          <Action>Show snippets</Action>
-        </Row>
       </Section>
     </SettingsPage>
   );

@@ -163,6 +163,7 @@ func bootWidgetSessions(a *app.App) {
 	}
 	acts.StartSession = &widget.StartWidgetSession{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, AnonymousTTL: cfg.AnonymousSessionTTL,
+		IdentifiedTTL: a.Config.Identity.SessionTTL, Identity: bootIdentityVerifier(a), Streams: streams,
 	}
 	acts.ShowSession = &widget.ShowWidgetSession{DB: a.DB}
 	acts.RevokeSession = &widget.RevokeWidgetSession{DB: a.DB, Clock: a.Clock, Streams: streams}
