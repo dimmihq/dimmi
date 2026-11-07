@@ -150,7 +150,7 @@ func toolSpec(conn models.AiActionConnection, tool mcp.ToolInfo, name string, sc
 ) actionkit.Spec {
 	title := tool.Title
 	if title == "" {
-		title = strings.ReplaceAll(tool.Name, "_", " ")
+		title = humanTitle(tool.Name)
 	}
 	description := strings.TrimSpace(tool.Description)
 	if len([]rune(description)) < 10 {
@@ -162,6 +162,18 @@ func toolSpec(conn models.AiActionConnection, tool mcp.ToolInfo, name string, sc
 		Confirmation: actionkit.ConfirmationCustomer, Approval: actionkit.ApprovalNone,
 		MCPToolName: tool.Name, InputSchema: schema,
 	}
+}
+
+/*
+humanTitle reads a tool name such as issue_refund as "Issue refund".
+*/
+func humanTitle(name string) string {
+	words := strings.TrimSpace(strings.NewReplacer("_", " ", "-", " ", ".", " ").Replace(name))
+	if words == "" {
+		return name
+	}
+	r := []rune(words)
+	return strings.ToUpper(string(r[0])) + string(r[1:])
 }
 
 /*

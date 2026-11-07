@@ -219,19 +219,21 @@ const actionStates: Record<string, ActionCard["state"]> = {
 
 /*
  * toAction reads the action an answer carries: the confirmation card
- * the server rendered, or a call that waits for the team. Statuses are
- * read in either spelling the server uses.
+ * the server rendered, or a call that waits for the team. A card with
+ * details asks with the action's title, since the details already list
+ * what it will do. Statuses are read in either spelling the server uses.
  */
 export function toAction(ai: api.AiAnswer | null | undefined): ActionCard | undefined {
   const card = ai?.confirmation;
   if (card?.action_call_id) {
-    const text = card.text ?? card.title ?? "";
+    const details = card.details ?? [];
+    const text = details.length > 0 && card.title ? `${card.title}?` : (card.text ?? card.title ?? "");
     return {
       id: card.action_call_id,
       card: true,
       title: card.title ?? "",
       text,
-      details: card.details ?? [],
+      details,
       state: actionStates[card.status] ?? "ask",
     };
   }

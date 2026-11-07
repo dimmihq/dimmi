@@ -229,7 +229,9 @@ function Pending({ conversation, call }: { conversation: string; call: ActionCal
           </Chip>
         ) : null}
       </header>
-      {call.summary ? <p className="text-body-regular text-text-primary">{call.summary}</p> : null}
+      {call.summary && Object.keys(call.arguments ?? {}).length === 0 ? (
+        <p className="text-body-regular text-text-primary">{call.summary}</p>
+      ) : null}
       <Arguments call={call} />
       {declining ? (
         <DeclineForm busy={busy === "declined"} onDecline={decide} onBack={() => setDeclining(false)} />
