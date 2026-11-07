@@ -185,6 +185,9 @@ func TestAiRunRobustness(t *testing.T) {
 		require.NotNil(t, req.Temperature)
 		assert.InDelta(t, 0.2, *req.Temperature, 0.0001)
 		assert.Zero(t, req.MaxOutputTokens)
+		lastTurn := req.Messages[len(req.Messages)-1].Parts[0].Text
+		today := h.d.TC.Clock.Now().UTC().Format("Monday 2 January 2006")
+		assert.Contains(t, lastTurn, "<today>"+today+" (UTC)</today>")
 		assert.Equal(t, contracts.EffortLow, req.Effort)
 		assert.Positive(t, req.Timeout.Total)
 	})

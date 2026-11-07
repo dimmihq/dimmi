@@ -67,7 +67,9 @@ func (r *Runner) conversationMessages(e *env) []contracts.ChatMessage {
 /*
 envelope builds the turns. An update from the system, such as the news
 on an action request, comes last as its own user turn; with one, an
-empty customer turn is left out.
+empty customer turn is left out. The last turn carries today's date, so
+the agent can check dates against a policy without it ever reaching the
+cached system prompt.
 */
 func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 	msgs := r.historyTurns(e)
@@ -82,6 +84,8 @@ func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 	if update != "" {
 		msgs = addTurn(msgs, contracts.ChatRoleUser, update)
 	}
+	last := &msgs[len(msgs)-1]
+	last.Parts[0].Text += "\n<today>" + e.now.UTC().Format("Monday 2 January 2006") + " (UTC)</today>"
 
 	if contact := r.contactBlock(e); contact != "" {
 		if speaker(msgs[0]) != contracts.ChatRoleUser {
