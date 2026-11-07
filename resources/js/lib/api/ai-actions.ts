@@ -100,6 +100,8 @@ export interface ActionConnection {
   last_error_at: string | null;
   last_success_at: string | null;
   tools_synced_at: string | null;
+  /* How many live actions use the connection. */
+  actions_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -179,6 +181,8 @@ export interface Action {
   timeout_ms: number | null;
   channels: string[];
   source: "dashboard" | "api" | "mcp_sync";
+  /* Always empty for now: no publish check raises warnings yet. */
+  warnings: string[];
   has_unpublished_changes: boolean;
   published_version: ActionVersionRef | null;
   created_at: string;
@@ -216,6 +220,8 @@ export interface ActionInput {
   timeout_ms?: number;
   channels?: string[];
   status?: "published" | "disabled";
+  /* Makes the working copy that version's definition again; publish it to roll back. */
+  restore_version_id?: string;
 }
 
 export interface ActionVersion {
@@ -226,6 +232,7 @@ export interface ActionVersion {
   /* The frozen definition the agent runs. */
   spec: Record<string, unknown>;
   note: string | null;
+  published_by: { id: string; name: string } | null;
   created_at: string;
 }
 
@@ -233,7 +240,7 @@ export interface ActionVersion {
 export interface ActionTestContact {
   external_id?: string;
   email?: string;
-  attributes?: Record<string, unknown>;
+  custom_attributes?: Record<string, unknown>;
 }
 
 export interface ActionTestInput {
@@ -241,6 +248,8 @@ export interface ActionTestInput {
   contact?: ActionTestContact;
   /* dry_run (default) renders the request and sends nothing. */
   mode?: "dry_run" | "live";
+  /* Tests always run the working copy. */
+  version?: "draft";
   /* A live test of a write needs this, or the server answers 422 side_effects_not_confirmed. */
   confirm_side_effects?: boolean;
 }
@@ -256,8 +265,10 @@ export interface ActionTest {
   response: Record<string, unknown> | null;
   /* Exactly what the model would read. */
   result: unknown;
-  /* What a customer would confirm. */
+  /* What a customer would confirm; confirmation_text repeats it. */
   summary: string;
+  confirmation_text: string;
+  warnings: string[];
   latency_ms: number;
   call_id: string | null;
 }
@@ -266,6 +277,10 @@ export interface ActionToolSync {
   object: "ai_action_tool_sync";
   /* New draft actions, one per new tool, each a write asking the customer to confirm. */
   created: Action[];
+  /* A sync never changes or disables an earlier action: both stay empty. */
+  updated: Action[];
+  disabled: Action[];
+  /* Tools that already have an action. */
   existing: number;
   skipped: { tool: string; reason: "schema_unsupported" | "definition_invalid" }[];
 }
@@ -340,6 +355,23 @@ export interface ActionConfirmationCard {
   text: string;
   status: ActionCallState;
   expires_at: string | null;
+  details: { label: string; value: string }[];
+}
+
+/*
+ * metadata.ai.action_call: the change a reply reports, kept in step as it
+ * moves. The messenger sees id, state and summary only.
+ */
+export interface MessageActionCall {
+  id: string;
+  state: ActionCallState;
+  summary: string;
+  action?: { name: string; title: string };
+  arguments?: Record<string, unknown>;
+  expires_at?: string | null;
+  decided_by?: { id: string; name: string };
+  decision_reason?: string;
+  result_summary?: string;
 }
 
 export interface ActionCallRef {
@@ -358,6 +390,8 @@ export interface WidgetActionCall {
   title: string;
   summary: string;
   state: ActionCallState;
+  /* The same as state. */
+  status: ActionCallState;
   expires_at: string | null;
 }
 
@@ -397,9 +431,10 @@ export function updateActionConnection(workspace: string, connection: string, bo
   return request<ActionConnection>("PATCH", `/ai/action-connections/${connection}`, body, { workspace });
 }
 
-/* 409 connection_in_use while actions still use it. */
-export function deleteActionConnection(workspace: string, connection: string) {
-  return request<void>("DELETE", `/ai/action-connections/${connection}`, undefined, { workspace });
+/* 409 connection_in_use while actions still use it, unless force also deletes them. */
+export function deleteActionConnection(workspace: string, connection: string, force = false) {
+  const query = force ? "?force=true" : "";
+  return request<void>("DELETE", `/ai/action-connections/${connection}${query}`, undefined, { workspace });
 }
 
 export function testActionConnection(workspace: string, connection: string, body: { path?: string } = {}) {
@@ -449,7 +484,11 @@ export function deleteAction(workspace: string, action: string) {
 }
 
 /* 409 nothing_to_publish when the working copy equals the live version. */
-export function publishAction(workspace: string, action: string, body: { note?: string } = {}) {
+export function publishAction(
+  workspace: string,
+  action: string,
+  body: { note?: string; acknowledge_warnings?: string[] } = {},
+) {
   return request<ActionVersion>("POST", `/ai/actions/${action}/publications`, body, { workspace });
 }
 
