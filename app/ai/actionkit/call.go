@@ -97,7 +97,7 @@ shown, which leaves out the arguments the admin bound, returning the
 refusal the model reads when they do not fit.
 */
 func validate(s Spec, args json.RawMessage) (map[string]any, *CallReply) {
-	schema, err := actionschema.Compile(actionschema.Without(s.InputSchema, s.boundNames()))
+	schema, err := actionschema.Compile(s.ModelSchema())
 	if err == nil {
 		var input map[string]any
 		if input, err = schema.Validate(args); err == nil {

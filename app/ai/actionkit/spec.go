@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/actionresult"
+	"github.com/dimmihq/dimmi/app/support/actionschema"
 	"github.com/dimmihq/dimmi/app/support/actiontemplate"
 )
 
@@ -158,6 +159,15 @@ NeedsAgreement reports whether a call waits for anyone before it runs.
 */
 func (s Spec) NeedsAgreement() bool {
 	return s.Confirmation == ConfirmationCustomer || s.Approval != ApprovalNone
+}
+
+/*
+ModelSchema is the input schema the model fills: the action's own,
+without the arguments the admin bound. Everything that checks what the
+model or a tester sent checks it against this one.
+*/
+func (s Spec) ModelSchema() json.RawMessage {
+	return actionschema.Without(s.InputSchema, s.boundNames())
 }
 
 /*

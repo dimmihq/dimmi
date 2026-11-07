@@ -196,7 +196,7 @@ validateInput checks the sample input against the schema, returning the
 failed result when it does not fit.
 */
 func validateInput(s actionkit.Spec, raw json.RawMessage) (map[string]any, *TestResult) {
-	schema, err := actionschema.Compile(s.InputSchema)
+	schema, err := actionschema.Compile(s.ModelSchema())
 	if err == nil {
 		var input map[string]any
 		if input, err = schema.Validate(raw); err == nil {

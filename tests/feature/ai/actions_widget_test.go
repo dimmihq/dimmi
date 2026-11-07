@@ -190,6 +190,9 @@ func TestAiActionMCP(t *testing.T) {
 			"bound_arguments": testkit.JSON{"user_id": "{contact.external_id}"},
 		}).AssertOK().AssertJSONPath("data.confirmation", "none")
 		a.d.Owner.PostJSON("/api/v1/ai/actions/"+id+"/publications", testkit.JSON{}).AssertCreated()
+		a.d.Owner.PostJSON("/api/v1/ai/actions/"+id+"/tests", testkit.JSON{
+			"input": testkit.JSON{"order_id": "77"}, "contact": testkit.JSON{"external_id": "user_9"}, "mode": "live",
+		}).AssertCreated().AssertJSONPath("data.status", "succeeded")
 
 		conv, trigger := a.conversation("Where is order 77?")
 		a.signIn(conv)

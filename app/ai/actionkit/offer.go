@@ -27,7 +27,6 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/actionschema"
 )
 
 /*
@@ -111,7 +110,7 @@ func (l Live) ToolSpec() contracts.ToolSpec {
 	return contracts.ToolSpec{
 		Name:        l.Spec.Name,
 		Description: l.Spec.Description + " " + suffix(l.Spec),
-		Schema:      actionschema.Without(l.Spec.InputSchema, l.Spec.boundNames()),
+		Schema:      l.Spec.ModelSchema(),
 	}
 }
 
