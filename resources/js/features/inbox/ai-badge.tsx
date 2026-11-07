@@ -16,7 +16,8 @@ const looks: Record<Exclude<AiState, "off">, { label: string; long: string; colo
 
 /*
  * AiBadge shows the agent's state; long spells it out where there is
- * room, such as the conversation's header.
+ * room, such as the conversation's header, and falls back to the short
+ * label when that header's container runs narrow.
  */
 export function AiBadge({ state, long = false }: { state: AiState | undefined; long?: boolean }) {
   if (!state || state === "off") {
@@ -27,7 +28,14 @@ export function AiBadge({ state, long = false }: { state: AiState | undefined; l
   return (
     <Chip variant="caption" color={look.color} className="shrink-0 gap-0.5" title={look.long}>
       <RiSparkling2Line aria-hidden className="size-3" />
-      {long ? look.long : look.label}
+      {long ? (
+        <>
+          <span className="@max-md:hidden">{look.long}</span>
+          <span className="@md:hidden">{look.label}</span>
+        </>
+      ) : (
+        look.label
+      )}
     </Chip>
   );
 }

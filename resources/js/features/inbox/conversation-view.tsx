@@ -159,7 +159,8 @@ function CustomerClock({
 /*
  * ThreadTitle names the conversation above its thread: back to the list,
  * the view it came from when the list is hidden, its subject, number and
- * status.
+ * status. When the header runs short the view crumb steps aside first,
+ * then the subject truncates, so the chips never squeeze the rest.
  */
 function ThreadTitle({
   view,
@@ -175,7 +176,7 @@ function ThreadTitle({
   const viewTitle = useViewTitle(workspace, view);
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="@container flex min-w-0 flex-1 items-center gap-2">
       <Link
         to="/d/inbox/$view"
         params={{ view }}
@@ -185,17 +186,17 @@ function ThreadTitle({
         <RiArrowLeftSLine aria-hidden className="size-5" />
       </Link>
       {listHidden ? (
-        <>
+        <div className="flex max-w-36 shrink-0 items-center gap-2 @max-lg:hidden">
           <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
           <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary">
             /
           </span>
-        </>
+        </div>
       ) : null}
       <h1 className={cx("min-w-0 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
         {subjectOf(conversation)}
       </h1>
-      <Chip variant="caption" color="neutral">
+      <Chip variant="caption" color="neutral" className="shrink-0">
         #{conversation.number} · {statusLabel[conversation.status]}
       </Chip>
       <AiBadge state={conversation.ai_state} long />

@@ -1,6 +1,6 @@
 /*
- * What a teammate needs beside the thread. On top, the moves they make on
- * the case. Below, in BoardUI's divided accordion straight on the panel,
+ * What a teammate needs beside the thread. Its header holds the moves
+ * they make on the case, in one Actions menu beside the close button. Below, in BoardUI's divided accordion straight on the panel,
  * who the customer is, their company and their other conversations, all
  * read from the conversation's context in one request. A section only
  * shows when it has something to say.
@@ -86,11 +86,13 @@ export function DetailsPanel({
   return (
     <Panel label="Details" className="h-full w-full">
       <PageHeader title="Details" level={2}>
-        <IconButton size="small" icon={RiCloseLine} aria-label="Close details" onClick={onClose} />
+        <div className="flex items-center gap-1.5">
+          <Actions conversation={conversation} caze={caze} me={caller?.member?.id ?? null} />
+          <IconButton size="small" icon={RiCloseLine} aria-label="Close details" onClick={onClose} />
+        </div>
       </PageHeader>
       <ScrollArea className="px-4 pb-4">
         <div className="flex flex-col gap-2 pt-1 pb-2">
-          <Actions conversation={conversation} caze={caze} me={caller?.member?.id ?? null} />
           <Refusal error={caze.error} />
           <CaseFields conversation={conversation} caze={caze} people={people} />
           <CaseTags workspace={workspace} conversation={conversation} caze={caze} />

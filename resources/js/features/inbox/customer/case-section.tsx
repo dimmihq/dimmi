@@ -4,12 +4,12 @@
  * vocabulary the workspace shares; Shift+T opens the picker from
  * anywhere in the conversation.
  */
-import { RiCheckLine, RiTimeLine, RiUserSharedLine } from "@remixicon/react";
-import type { Key } from "react";
+import { RiArrowDownSLine, RiArrowGoBackLine, RiCheckLine, RiTimeLine, RiUserSharedLine } from "@remixicon/react";
+import { type Key, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { StatusDot } from "@/components/base/badges/status-dot";
-import { Button } from "@/components/base/buttons/button";
+import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { TeamRow } from "@/features/inbox/team-select";
 import { avatarColor } from "@/features/shell/avatar-color";
@@ -20,6 +20,7 @@ import {
   type ConversationStatus,
   conversationPriorities,
 } from "@/lib/api/inbox";
+import { cx } from "@/utils/cx";
 
 import { type CaseControls, statusLabel } from "../case";
 import { priorityLabel } from "../priority/labels";
@@ -118,6 +119,11 @@ export function CaseFields({
   );
 }
 
+/*
+ * Actions gathers the case's moves in one menu beside the panel's close
+ * button: take the conversation, snooze it, and mark it done or reopen
+ * it. Each move closes the menu.
+ */
 export function Actions({
   conversation,
   caze,
@@ -127,28 +133,48 @@ export function Actions({
   caze: CaseControls;
   me: string | null;
 }) {
+  const [open, setOpen] = useState(false);
+  const run = (move: () => void) => {
+    setOpen(false);
+    move();
+  };
+  const closed = conversation.status === "closed";
+
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {me === null || conversation.assignee?.id === me ? null : (
-        <Button variant="secondary" size="small" leadingIcon={RiUserSharedLine} onClick={() => caze.assign(me)}>
-          Assign to me
-        </Button>
-      )}
-      {conversation.status === "open" ? (
-        <Button variant="secondary" size="small" leadingIcon={RiTimeLine} onClick={() => caze.setStatus("snoozed")}>
-          Snooze
-        </Button>
-      ) : null}
-      {conversation.status === "closed" ? (
-        <Button variant="secondary" size="small" onClick={() => caze.setStatus("open")}>
-          Reopen
-        </Button>
-      ) : (
-        <Button size="small" leadingIcon={RiCheckLine} onClick={() => caze.setStatus("closed")}>
-          Mark as done
-        </Button>
-      )}
-    </div>
+    <Dropdown isOpen={open} onOpenChange={setOpen}>
+      <DropdownTrigger className="flex h-8 items-center gap-0.5 rounded-lg border border-border-button-default bg-background-primary-default ps-2.5 pe-1.5 text-body-medium text-text-primary shadow-xs transition-colors duration-150 hover:border-border-button-hover hover:bg-background-primary-hover">
+        Actions
+        <RiArrowDownSLine
+          aria-hidden
+          className={cx("size-4 text-foreground-icon-tertiary transition-transform duration-150", open && "rotate-180")}
+        />
+      </DropdownTrigger>
+      <DropdownPopover aria-label="Conversation actions" placement="bottom end" className="w-52 p-1.5">
+        {me === null || conversation.assignee?.id === me ? null : (
+          <DropdownItem onSelect={() => run(() => caze.assign(me))} className="gap-2 px-2 py-1.5">
+            <RiUserSharedLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+            <span className="text-body-2-medium">Assign to me</span>
+          </DropdownItem>
+        )}
+        {conversation.status === "open" ? (
+          <DropdownItem onSelect={() => run(() => caze.setStatus("snoozed"))} className="gap-2 px-2 py-1.5">
+            <RiTimeLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+            <span className="text-body-2-medium">Snooze</span>
+          </DropdownItem>
+        ) : null}
+        <DropdownItem
+          onSelect={() => run(() => caze.setStatus(closed ? "open" : "closed"))}
+          className="gap-2 px-2 py-1.5"
+        >
+          {closed ? (
+            <RiArrowGoBackLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+          ) : (
+            <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+          )}
+          <span className="text-body-2-medium">{closed ? "Reopen" : "Mark as done"}</span>
+        </DropdownItem>
+      </DropdownPopover>
+    </Dropdown>
   );
 }
 
