@@ -144,9 +144,10 @@ func Supported(provider enums.AIProvider) ([]Entry, bool) {
 		return ChatGPT(), true
 	case enums.AIProviderDimmi:
 		return Managed(), true
-	default:
+	case enums.AIProviderOpenAICompatible:
 		return nil, false
 	}
+	return nil, false
 }
 
 /*

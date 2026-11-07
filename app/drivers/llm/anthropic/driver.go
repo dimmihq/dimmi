@@ -246,9 +246,10 @@ func toolResult(msg contracts.ChatMessage) bool {
 	switch msg.Role {
 	case contracts.ChatRoleTool:
 		return true
-	default:
+	case contracts.ChatRoleUser, contracts.ChatRoleAssistant:
 		return false
 	}
+	return false
 }
 
 /*

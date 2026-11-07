@@ -60,7 +60,8 @@ func TestManagedDriver(t *testing.T) {
 
 		reported := []string{"gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna", "gpt-6-astra"}
 
-		assert.Equal(t, []string{"gpt-6-luna", "gpt-6.1-terra"}, aimodels.KeepSupported(enums.AIProviderOpenAI, reported))
+		kept := aimodels.KeepSupported(enums.AIProviderOpenAI, reported)
+		assert.Equal(t, []string{"gpt-6-luna", "gpt-6.1-terra"}, kept)
 		assert.Equal(t, []string{"my-local-model"},
 			aimodels.KeepSupported(enums.AIProviderOpenAICompatible, []string{"my-local-model"}))
 	})

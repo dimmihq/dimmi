@@ -73,5 +73,6 @@ func aiTraceRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/ai/usage", "ai.usage.show", t.Usage).Ability("ai:read")
 	routing.Post(r, "/ai/playground", "ai.playground.store", t.Ask).Ability("ai:write").Status(fhttp.StatusOK)
 	routing.Get(r, "/conversations/{conversation}/ai/runs", "conversations.ai.runs.index", t.Runs).Ability("ai:read")
-	routing.Get(r, "/conversations/{conversation}/ai/runs/{run}", "conversations.ai.runs.show", t.Run).Ability("ai:read")
+	routing.Get(r, "/conversations/{conversation}/ai/runs/{run}", "conversations.ai.runs.show", t.Run).
+		Ability("ai:read")
 }
