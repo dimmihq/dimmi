@@ -52,7 +52,7 @@ INSERT INTO ai_runs (
     $7, $8, $9, $10, $11, $12, $13,
     $14, $15, $15
 )
-RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at
+RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id
 `
 
 type CreateRunParams struct {
@@ -135,12 +135,13 @@ func (q *Queries) CreateRun(ctx context.Context, arg CreateRunParams) (AiRun, er
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TriggerActionCallID,
 	)
 	return i, err
 }
 
 const findRun = `-- name: FindRun :one
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at FROM ai_runs WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id FROM ai_runs WHERE workspace_id = $1 AND id = $2
 `
 
 type FindRunParams struct {
@@ -194,6 +195,7 @@ func (q *Queries) FindRun(ctx context.Context, arg FindRunParams) (AiRun, error)
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TriggerActionCallID,
 	)
 	return i, err
 }
@@ -211,7 +213,7 @@ UPDATE ai_runs SET
     action_calls_count = $23,
     completed_at = $24, updated_at = $25
 WHERE workspace_id = $26 AND id = $27
-RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at
+RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id
 `
 
 type FinishRunParams struct {
@@ -318,12 +320,13 @@ func (q *Queries) FinishRun(ctx context.Context, arg FinishRunParams) (AiRun, er
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TriggerActionCallID,
 	)
 	return i, err
 }
 
 const listConversationRuns = `-- name: ListConversationRuns :many
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at FROM ai_runs
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id FROM ai_runs
 WHERE workspace_id = $1 AND conversation_id = $2
 ORDER BY created_at DESC
 LIMIT $3
@@ -387,6 +390,7 @@ func (q *Queries) ListConversationRuns(ctx context.Context, arg ListConversation
 			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TriggerActionCallID,
 		); err != nil {
 			return nil, err
 		}
@@ -399,7 +403,7 @@ func (q *Queries) ListConversationRuns(ctx context.Context, arg ListConversation
 }
 
 const listRuns = `-- name: ListRuns :many
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at FROM ai_runs
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id FROM ai_runs
 WHERE workspace_id = $1
     AND ($2::uuid IS NULL OR conversation_id = $2)
     AND ($3::text = '' OR kind = $3)
@@ -480,6 +484,7 @@ func (q *Queries) ListRuns(ctx context.Context, arg ListRunsParams) ([]AiRun, er
 			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TriggerActionCallID,
 		); err != nil {
 			return nil, err
 		}
@@ -559,7 +564,7 @@ func (q *Queries) SetLatestAnswerFeedback(ctx context.Context, arg SetLatestAnsw
 const setRunFeedback = `-- name: SetRunFeedback :one
 UPDATE ai_runs SET feedback = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at
+RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id
 `
 
 type SetRunFeedbackParams struct {
@@ -620,6 +625,7 @@ func (q *Queries) SetRunFeedback(ctx context.Context, arg SetRunFeedbackParams) 
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TriggerActionCallID,
 	)
 	return i, err
 }
