@@ -61,6 +61,24 @@ export interface Browser {
 const routeCheck = 1000;
 
 /*
+ * callCheck is how often, in milliseconds, a waiting action card asks
+ * where its call stands.
+ */
+const callCheck = 5000;
+
+/*
+ * WidgetCall is a call as the messenger reads it: where it stands, in
+ * state and again in status.
+ */
+interface WidgetCall {
+  id: string;
+  title: string;
+  summary: string;
+  state: string;
+  status: string;
+}
+
+/*
  * draftId names the conversation a visitor writes before the server gave
  * it an id.
  */
@@ -138,6 +156,7 @@ export class Live {
   open: string | undefined;
   private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
+  private callTimer: unknown;
 
   constructor(
     private readonly host: Host,
@@ -516,6 +535,7 @@ export class Live {
 
     place({ thread, loaded, open: open ?? "", shown: messages.length }, parts.join(""));
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
+    this.watchCalls(messages);
   }
 
   /*
@@ -600,7 +620,7 @@ export class Live {
       waiting: t.action_waiting,
       done: t.action_done,
       declined: t.action_declined,
-      cancelled: t.action_cancelled,
+      canceled: t.action_canceled,
       expired: t.action_expired,
       failed: t.action_failed,
     };
@@ -609,7 +629,7 @@ export class Live {
   /*
    * decideAction sends the visitor's Confirm or Cancel on an action card.
    * The card waits with a spinner until the server answers, then shows
-   * where the call stands: confirmed, waiting for the team, or cancelled.
+   * where the call stands: confirmed, waiting for the team, or canceled.
    * A refusal, such as an expired card, puts the server's state in place.
    */
   async decideAction(call: string, decision: "confirmed" | "canceled") {
@@ -620,21 +640,61 @@ export class Live {
     this.deciding.add(call);
     this.drawThread();
     try {
-      const res = await this.http.patch<{ data: { status: string } }>(`/conversations/${open}/action-calls/${call}`, {
+      const res = await this.http.patch<{ data: WidgetCall }>(`/conversations/${open}/action-calls/${call}`, {
         status: decision,
       });
-      this.store.setCallStatus(open, call, res.data.status);
+      this.store.setCallStatus(open, call, res.data.state ?? res.data.status);
     } catch (error) {
       const code = error instanceof ApiError ? error.code : "network";
       report("warn", code, "the choice could not be sent.");
-      const gone: Record<string, string> = { action_call_expired: "expired", action_call_not_pending: "cancelled" };
-      if (gone[code]) {
-        this.store.setCallStatus(open, call, gone[code]);
+      if (code === "action_call_expired") {
+        this.store.setCallStatus(open, call, "expired");
+      } else if (code === "action_call_not_pending") {
+        await this.refreshCall(open, call);
       }
     } finally {
       this.deciding.delete(call);
       this.drawThread();
     }
+  }
+
+  /*
+   * refreshCall reads where one call stands and keeps it on its card.
+   */
+  private async refreshCall(conversation: string, call: string) {
+    try {
+      const res = await this.http.get<{ data: WidgetCall }>(`/conversations/${conversation}/action-calls/${call}`);
+      this.store.setCallStatus(conversation, call, res.data.state ?? res.data.status);
+    } catch {
+      return;
+    }
+  }
+
+  /*
+   * watchCalls checks the open conversation's waiting calls again every
+   * few seconds while the visitor can see them, since the team's decision
+   * is not pushed yet. It stops once every call has ended or the
+   * conversation is out of sight, and starts again on the next redraw.
+   */
+  private watchCalls(messages: Message[]) {
+    const open = this.open;
+    const waiting = messages
+      .map((m) => m.action)
+      .filter(
+        (a): a is NonNullable<Message["action"]> => a !== undefined && (a.state === "ask" || a.state === "waiting"),
+      )
+      .map((a) => a.id);
+    if (this.callTimer !== undefined || !open || open === draftId || waiting.length === 0) {
+      return;
+    }
+    this.callTimer = this.browser.setTimeout(async () => {
+      this.callTimer = undefined;
+      if (this.open !== open || !this.host.showing(open)) {
+        return;
+      }
+      await Promise.all(waiting.map((call) => this.refreshCall(open, call)));
+      this.drawThread();
+    }, callCheck);
   }
 
   /*

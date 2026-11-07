@@ -27,7 +27,7 @@ describe("action cards", () => {
     expect(
       toAction({ confirmation: { action_call_id: "aax_1", text: "Refund?", status: "pending_confirmation" } }),
     ).toMatchObject({ id: "aax_1", card: true, text: "Refund?", state: "ask" });
-    expect(toAction({ confirmation: { action_call_id: "aax_1", status: "canceled" } })?.state).toBe("cancelled");
+    expect(toAction({ confirmation: { action_call_id: "aax_1", status: "canceled" } })?.state).toBe("canceled");
     expect(toAction({ action_call: { id: "aax_2", state: "pending_approval", summary: "Refund" } })).toMatchObject({
       card: false,
       state: "waiting",
@@ -58,11 +58,11 @@ describe("action cards", () => {
   it("says where the call stands once decided", () => {
     const waiting = render(ActionBlock({ action: card("waiting"), texts: actionTexts }));
     expect(waiting.querySelector("button")).toBeNull();
-    expect(waiting.querySelector(".action-state")?.textContent).toBe("Waiting for the team to approve");
+    expect(waiting.querySelector(".action-state")?.textContent).toBe("Waiting for the team to review this");
 
     const line = render(ActionBlock({ action: { ...card("declined"), card: false }, texts: actionTexts }));
     expect(line.querySelector(".action-card")).toBeNull();
-    expect(line.textContent).toBe("The team could not approve this");
+    expect(line.textContent).toBe("Not approved");
     expect(String(ActionBlock({ action: { ...card("ask"), card: false }, texts: actionTexts }))).toBe("");
   });
 

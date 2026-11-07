@@ -90,7 +90,7 @@ export interface ActionCard {
   title: string;
   text: string;
   details: { label: string; value: string }[];
-  state: "ask" | "sending" | "waiting" | "done" | "declined" | "cancelled" | "expired" | "failed";
+  state: "ask" | "sending" | "waiting" | "done" | "declined" | "canceled" | "expired" | "failed";
 }
 
 export interface Message {

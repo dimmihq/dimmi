@@ -67,7 +67,7 @@ export interface Texts {
   action_waiting: string;
   action_done: string;
   action_declined: string;
-  action_cancelled: string;
+  action_canceled: string;
   action_expired: string;
   action_failed: string;
 }
@@ -132,12 +132,12 @@ export const defaults: Options = {
     talk_to_human: "Talk to a person",
     action_confirm: "Confirm",
     action_cancel: "Cancel",
-    action_waiting: "Waiting for the team to approve",
-    action_done: "Confirmed",
-    action_declined: "The team could not approve this",
-    action_cancelled: "Cancelled",
+    action_waiting: "Waiting for the team to review this",
+    action_done: "Done",
+    action_declined: "Not approved",
+    action_canceled: "Canceled",
     action_expired: "This request expired",
-    action_failed: "This did not go through",
+    action_failed: "This didn't go through",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,

@@ -322,6 +322,77 @@ describe("a connected messenger", () => {
     expect(root.querySelector(".ai-actions")).toBeNull();
   });
 
+  it("confirms an action card, then checks on it until the team decides", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    let state = "pending_approval";
+    const card = {
+      id: "msg_2",
+      conversation_id: "conv_1",
+      author: { type: "agent", name: "Ada", avatar_url: null },
+      body: "Refund $144.00 for invoice inv_1001?",
+      attachments: [],
+      created_at: "2026-01-01T00:00:02Z",
+      ai: {
+        generated: true,
+        confirmation: {
+          action_call_id: "aax_1",
+          title: "Refund an invoice",
+          text: "Refund $144.00 for invoice inv_1001?",
+          status: "awaiting_confirmation",
+          details: [],
+        },
+      },
+    };
+    const call = () => ({
+      status: 200,
+      body: { data: { id: "aax_1", title: "Refund", summary: "", state, status: state } },
+    });
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [{ ...conversation, ai_state: "active" }] } }),
+      "GET /conversations/conv_1/messages": () => ({ status: 200, body: { data: [card] } }),
+      "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
+      "PATCH /conversations/conv_1/action-calls/aax_1": call,
+      "GET /conversations/conv_1/action-calls/aax_1": call,
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 60000 } } }),
+    });
+
+    boot(win, document);
+    await settle();
+    await settle();
+    const root = shadow() as ShadowRoot;
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: { conversation: "conv_1" } }));
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+    const messenger = root.querySelector<HTMLElement>("[data-tab]");
+    if (messenger) {
+      messenger.dataset.open = "true";
+      messenger.dataset.tab = "conversation";
+    }
+
+    expect(root.querySelector(".bubble")).toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-decision="confirmed"]')?.click();
+    await settle();
+    await settle();
+    expect(calls).toContain("PATCH /conversations/conv_1/action-calls/aax_1");
+    expect(root.querySelector(".action-state")?.textContent).toBe("Waiting for the team to review this");
+
+    state = "succeeded";
+    await vi.advanceTimersByTimeAsync(5100);
+    await settle();
+    expect(root.querySelector(".action-state")?.textContent).toBe("Done");
+
+    const checks = calls.filter((c) => c === "GET /conversations/conv_1/action-calls/aax_1").length;
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(calls.filter((c) => c === "GET /conversations/conv_1/action-calls/aax_1")).toHaveLength(checks);
+    vi.useRealTimers();
+  });
+
   it("tells the server when a single-page app moves to another route", async () => {
     localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
     const pings: unknown[] = [];

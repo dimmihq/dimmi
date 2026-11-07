@@ -212,8 +212,7 @@ const actionStates: Record<string, ActionCard["state"]> = {
   running: "done",
   succeeded: "done",
   declined: "declined",
-  canceled: "cancelled",
-  cancelled: "cancelled",
+  canceled: "canceled",
   expired: "expired",
   failed: "failed",
 };

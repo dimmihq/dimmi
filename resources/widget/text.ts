@@ -26,7 +26,7 @@ export interface ActionTexts {
   waiting: string;
   done: string;
   declined: string;
-  cancelled: string;
+  canceled: string;
   expired: string;
   failed: string;
 }
@@ -34,10 +34,10 @@ export interface ActionTexts {
 export const actionTexts: ActionTexts = {
   confirm: "Confirm",
   cancel: "Cancel",
-  waiting: "Waiting for the team to approve",
-  done: "Confirmed",
-  declined: "The team could not approve this",
-  cancelled: "Cancelled",
+  waiting: "Waiting for the team to review this",
+  done: "Done",
+  declined: "Not approved",
+  canceled: "Canceled",
   expired: "This request expired",
-  failed: "This did not go through",
+  failed: "This didn't go through",
 };
