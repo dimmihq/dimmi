@@ -4,6 +4,8 @@
  * a timeline entry as the kind of bubble the thread draws for it.
  */
 import { useSuspenseQuery } from "@tanstack/react-query";
+import type { ActionCall } from "@/features/ai/actions/api";
+import { actionCallOf } from "@/features/ai/actions/format";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
 import { meQuery } from "@/lib/api/auth";
 import type {
@@ -77,7 +79,9 @@ export function waitedFor(iso: string, now = Date.now()): string {
  * how its text is read, Markdown or plain words, and for received email
  * whether more of it can be opened and whether its body was cut short.
  * Failed holds why a reply never reached the customer, null otherwise.
- * Files are what the message carries.
+ * Files are what the message carries. Call is an action the agent asked
+ * to run, which the thread draws as a card under the message, or alone
+ * when the timeline records it as an event.
  */
 export type ThreadEntry =
   | {
@@ -99,8 +103,10 @@ export type ThreadEntry =
       mentions?: MentionRef[];
       reactions?: Reaction[];
       files: Attachment[];
+      call?: ActionCall;
     }
-  | { kind: "event"; id: string; at: string; iso?: string; text: string };
+  | { kind: "event"; id: string; at: string; iso?: string; text: string }
+  | { kind: "call"; id: string; at: string; iso?: string; call: ActionCall };
 
 const statusWords: Record<string, string> = {
   "conversation.closed": "closed the conversation",
@@ -162,6 +168,10 @@ function filesOf(message: Message): Attachment[] {
 export function toEntry(message: Message): ThreadEntry {
   const at = ago(message.created_at);
   const iso = message.created_at;
+  const call = actionCallOf(message.metadata);
+  if (message.type === "event" && call) {
+    return { kind: "call", id: message.id, at, iso, call };
+  }
   if (message.type === "event" && message.event) {
     return { kind: "event", id: message.id, at, iso, text: eventText(message.event) };
   }
@@ -181,6 +191,7 @@ export function toEntry(message: Message): ThreadEntry {
     failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
     authorId: message.author.id,
     files: filesOf(message),
+    ...(call ? { call } : {}),
   } as const;
   const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
 

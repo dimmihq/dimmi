@@ -17,7 +17,7 @@ import { avatarColor } from "@/features/shell/avatar-color";
 import { type Conversation, inboxesQuery } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
-import { AiBadge } from "./ai-badge";
+import { AiBadge, ApprovalBadge } from "./ai-badge";
 import { ago, customerName, subjectOf, useInbox } from "./conversations";
 import { PriorityChip } from "./priority/priority-menu";
 import { AssigneeAvatar, ChannelBadge, DraftMark, InboxLabel, Viewers, Waiting } from "./row-extras";
@@ -80,6 +80,7 @@ export function ConversationList({
                   <DraftMark drafted={drafted?.has(conversation.id) ?? false} />
                   <Waiting conversation={conversation} />
                   <AiBadge state={conversation.ai_state} />
+                  <ApprovalBadge count={conversation.ai_pending_approvals} />
                   <PriorityChip priority={conversation.priority} />
                   <AssigneeAvatar assignee={conversation.assignee} />
                   {conversation.unread ? (

@@ -10,8 +10,10 @@
  * text mail is shown as written. An email whose quoted thread was cut, or
  * whose long body was cut short, offers its full message below it. A reply
  * that never reached the customer says so, with the reason, and can be
- * sent again. Hovering a message offers a link to it, editing one's own
- * note and deleting; a deleted message stays as a line saying who deleted
+ * sent again. An action the agent asked to run shows as a card the team
+ * approves or declines, and as one line once decided. Hovering a message
+ * offers a link to it, editing one's own note and deleting; a deleted
+ * message stays as a line saying who deleted
  * it. A reply the customer has seen says when. Every time shows its full
  * date on hover, and reads in the customer's zone when the person
  * chooses; with events hidden, each run of them folds into one line.
@@ -35,6 +37,7 @@ import { MessageBody } from "./message-body";
 import { MessageFiles } from "./message-files";
 import type { Mode } from "./modes";
 import { ThreadSkeleton } from "./skeletons";
+import { ActionCallCard } from "./thread/action-call-card";
 import { foldEvents, foldedText } from "./thread/fold-events";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
 import { ReactionChips } from "./thread/reactions";
@@ -183,11 +186,13 @@ function Undelivered({ entry, onRetry }: { entry: Said; onRetry?: (id: string) =
 
 function Entry({
   entry,
+  conversation,
   customer,
   moves,
   follow,
 }: {
   entry: ThreadEntry;
+  conversation: string;
   customer: string;
   moves: Moves;
   follow: FollowUps;
@@ -195,11 +200,23 @@ function Entry({
   if (entry.kind === "event") {
     return <Pill>{entry.text}</Pill>;
   }
+  if (entry.kind === "call") {
+    return <ActionCallCard conversation={conversation} call={entry.call} />;
+  }
   if (entry.kind === "note" && entry.author === "Operator") {
     return <OperatorCard entry={entry} customer={customer} />;
   }
 
-  return <SaidEntry entry={entry} customer={customer} moves={moves} follow={follow} />;
+  return (
+    <>
+      <SaidEntry entry={entry} customer={customer} moves={moves} follow={follow} />
+      {entry.call ? (
+        <div className="mt-3">
+          <ActionCallCard conversation={conversation} call={entry.call} />
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 /*
@@ -416,7 +433,13 @@ export function Thread({
                     {entry.kind === "folded" ? (
                       <Pill>{foldedText(entry.count)}</Pill>
                     ) : (
-                      <Entry entry={entry} customer={customer} moves={moves} follow={{ onOpenOriginal, onRetry }} />
+                      <Entry
+                        entry={entry}
+                        conversation={conversation}
+                        customer={customer}
+                        moves={moves}
+                        follow={{ onOpenOriginal, onRetry }}
+                      />
                     )}
                   </li>
                 ))}

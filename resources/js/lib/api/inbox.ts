@@ -84,6 +84,8 @@ export interface Conversation {
   ai_state?: AiState;
   ai_reply_count?: number;
   ai_handoff_reason?: string | null;
+  /* How many of the agent's action calls wait for a teammate to approve them. */
+  ai_pending_approvals?: number;
   created_at: string;
   updated_at: string;
 }
@@ -156,6 +158,8 @@ export interface Message {
   created_at: string;
   redactions?: { rule: string; count: number }[];
   attachments?: Attachment[];
+  /* What else the message carries, such as metadata.ai.action_call for an action the agent asked to run. */
+  metadata?: Record<string, unknown> | null;
 }
 
 /*

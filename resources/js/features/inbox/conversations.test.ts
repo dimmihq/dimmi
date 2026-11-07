@@ -38,12 +38,34 @@ describe("toEntry", () => {
   it("carries why a reply was not delivered", () => {
     const entry = toEntry(reply({ delivery_status: "failed", delivery_error: "The address bounced." }));
 
-    expect(entry.kind !== "event" && entry.failed).toBe("The address bounced.");
+    expect("author" in entry && entry.failed).toBe("The address bounced.");
   });
 
   it("marks a delivered reply as nothing failed", () => {
     const entry = toEntry(reply({}));
 
-    expect(entry.kind !== "event" && entry.failed).toBeNull();
+    expect("author" in entry && entry.failed).toBeNull();
+  });
+
+  it("carries an action the agent asked to run", () => {
+    const call = {
+      id: "aax_1",
+      action: { name: "refund_invoice", title: "Refund an invoice" },
+      state: "pending_approval",
+      summary: "Refund $144.00",
+      arguments: { invoice_id: "inv_1001" },
+      reason: null,
+      expires_at: null,
+      decided_by: null,
+      decision_reason: null,
+    };
+    const said = toEntry(
+      reply({ author: { type: "agent", id: "", name: "dimmi" }, metadata: { ai: { action_call: call } } }),
+    );
+    expect(said.kind).toBe("dimmi");
+    expect("call" in said && said.call?.id).toBe("aax_1");
+
+    const event = toEntry(reply({ type: "event", metadata: { ai: { action_call: call } } }));
+    expect(event).toMatchObject({ kind: "call", call: { state: "pending_approval" } });
   });
 });
