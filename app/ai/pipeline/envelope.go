@@ -61,6 +61,45 @@ conversationMessages are the turns the answer model reads: the recent
 history and, last, the customer's messages since the last reply.
 */
 func (r *Runner) conversationMessages(e *env) []contracts.ChatMessage {
+	return r.envelope(e, "")
+}
+
+/*
+envelope builds the turns. An update from the system, such as the news
+on an action request, comes last as its own user turn; with one, an
+empty customer turn is left out.
+*/
+func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
+	msgs := r.historyTurns(e)
+
+	pending := r.redactFor(e, e.pendingText())
+	if runes := []rune(pending); len(runes) > customerChars {
+		pending = string(runes[len(runes)-customerChars:])
+	}
+	if pending != "" || update == "" {
+		msgs = addTurn(msgs, contracts.ChatRoleUser, "<customer_message>"+escape(pending)+"</customer_message>")
+	}
+	if update != "" {
+		msgs = addTurn(msgs, contracts.ChatRoleUser, update)
+	}
+
+	if contact := r.contactBlock(e); contact != "" {
+		if speaker(msgs[0]) != contracts.ChatRoleUser {
+			msgs = append([]contracts.ChatMessage{userMessage(contact)}, msgs...)
+		} else {
+			msgs[0].Parts[0].Text = contact + "\n" + msgs[0].Parts[0].Text
+		}
+	}
+	if speaker(msgs[0]) != contracts.ChatRoleUser {
+		msgs = append([]contracts.ChatMessage{userMessage("<conversation_start></conversation_start>")}, msgs...)
+	}
+	return msgs
+}
+
+/*
+historyTurns are the recent turns before the pending messages.
+*/
+func (r *Runner) historyTurns(e *env) []contracts.ChatMessage {
 	history := e.History
 	if len(history) > historyTurns {
 		history = history[len(history)-historyTurns:]
@@ -77,23 +116,6 @@ func (r *Runner) conversationMessages(e *env) []contracts.ChatMessage {
 		default:
 			msgs = addTurn(msgs, contracts.ChatRoleAssistant, text)
 		}
-	}
-
-	pending := r.redactFor(e, e.pendingText())
-	if runes := []rune(pending); len(runes) > customerChars {
-		pending = string(runes[len(runes)-customerChars:])
-	}
-	msgs = addTurn(msgs, contracts.ChatRoleUser, "<customer_message>"+escape(pending)+"</customer_message>")
-
-	if contact := r.contactBlock(e); contact != "" {
-		if speaker(msgs[0]) != contracts.ChatRoleUser {
-			msgs = append([]contracts.ChatMessage{userMessage(contact)}, msgs...)
-		} else {
-			msgs[0].Parts[0].Text = contact + "\n" + msgs[0].Parts[0].Text
-		}
-	}
-	if speaker(msgs[0]) != contracts.ChatRoleUser {
-		msgs = append([]contracts.ChatMessage{userMessage("<conversation_start></conversation_start>")}, msgs...)
 	}
 	return msgs
 }

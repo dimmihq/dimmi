@@ -11,7 +11,9 @@
 | demand a handoff the agent did not make, code makes it. The outcome
 | comes from what the turn did: a handoff when one was made, an answer
 | when it cited what it found, small talk when it never searched, and
-| otherwise the honest no-answer.
+| otherwise the honest no-answer. A reply grounded in an action's result
+| is an answer too, and a reply saying a request now waits for the
+| customer or the team is not a failed answer.
 |
 */
 
@@ -53,8 +55,10 @@ func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
 		d := handoff(st.handoff.reason, text, st.env.handoffKey())
 		d.citations = cited
 		return d
-	case len(cited) > 0:
+	case len(cited) > 0, st.actions.answered && text != "":
 		return &decision{outcome: outcomeAnswered, reply: text, citations: cited}
+	case st.actions.waiting && text != "":
+		return &decision{outcome: outcomeGreeted, reply: text}
 	case !st.searched && text != "":
 		return &decision{outcome: outcomeGreeted, reply: text}
 	}

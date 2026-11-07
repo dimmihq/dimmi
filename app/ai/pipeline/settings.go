@@ -41,7 +41,8 @@ const (
 
 /*
 TurnSettings shape one turn. Mode is full or triage only; Tools lists
-the tools the agent may call, by name; Instructions is a mandatory
+the tools the agent may call, by name, where ToolActions stands for
+every action the workspace published; Instructions is a mandatory
 procedure that follows the workspace guidance; AlwaysHandoffTags are
 the tags whose presence makes a handoff mandatory; HandoffTeamID and
 RaisePriority route a handoff; ConfirmResolution asks the customer
@@ -79,7 +80,7 @@ func settingsFor(e *env) *TurnSettings {
 	h := ai.ReadHandoff(e.Agent.Handoff)
 
 	s := &TurnSettings{
-		Mode: ModeFull, Tools: []string{toolSearchKnowledge, toolHandoff, toolTriage},
+		Mode: ModeFull, Tools: []string{toolSearchKnowledge, toolHandoff, toolTriage, ToolActions},
 		AlwaysHandoffTags: h.AlwaysTags, HandoffTeamID: h.TargetTeamID, RaisePriority: h.RaisePriority,
 		MaxReplies: e.Agent.MaxAiReplies,
 	}
@@ -87,6 +88,19 @@ func settingsFor(e *env) *TurnSettings {
 		s.Mode, s.Tools = ModeTriageOnly, []string{toolHandoff, toolTriage}
 	}
 	return s
+}
+
+/*
+ToolActions is the entry of TurnSettings.Tools that allows every action
+the workspace published; an action's own name allows that one alone.
+*/
+const ToolActions = "actions"
+
+/*
+allows reports whether the turn may call the tool.
+*/
+func (s *TurnSettings) allows(name string, action bool) bool {
+	return slices.Contains(s.Tools, name) || action && slices.Contains(s.Tools, ToolActions)
 }
 
 /*

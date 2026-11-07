@@ -7,9 +7,9 @@
 | effect and a handler. Three are built in: search_knowledge reads the
 | workspace's knowledge, handoff asks for a person, triage_conversation
 | keeps the inbox's view of the conversation current. The registry is the
-| one place tools join, so workspace agent actions (named with a dimmi_
-| prefix; the built-in names are reserved) and a workflow step's tool
-| limits plug in without touching the loop.
+| one place tools join, so the workspace's own actions (whose names can
+| never take a built-in name or the dimmi_ prefix) and a workflow step's
+| tool limits plug in without touching the loop.
 |
 | A write tool never acts during the loop: it records what it wants and
 | the commit applies it, after checking nothing newer landed.
@@ -26,6 +26,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/contracts"
 )
 
@@ -74,11 +75,12 @@ errToolArguments marks a call whose arguments do not fit the schema.
 var errToolArguments = errors.New("invalid arguments")
 
 /*
-tool is one callable tool.
+tool is one callable tool; action marks one of the workspace's own.
 */
 type tool struct {
 	spec   contracts.ToolSpec
 	effect sideEffect
+	action bool
 	handle func(ctx context.Context, st *run, args json.RawMessage) (string, error)
 }
 
@@ -105,11 +107,19 @@ registry lists every tool the runner knows for the run; descriptions
 may carry the workspace's own names.
 */
 func (r *Runner) registry(st *run) map[string]tool {
-	return map[string]tool{
+	tools := map[string]tool{
 		toolSearchKnowledge: {spec: searchSpec(), effect: sideEffectRead, handle: r.searchKnowledge},
 		toolHandoff:         {spec: handoffSpec(), effect: sideEffectWrite, handle: r.requestHandoff},
 		toolTriage:          {spec: triageSpec(st.env), effect: sideEffectWrite, handle: r.triage},
 	}
+	for _, live := range st.actions.offered {
+		effect := sideEffectRead
+		if live.Spec.SideEffect == actionkit.SideEffectWrite {
+			effect = sideEffectWrite
+		}
+		tools[live.Spec.Name] = tool{spec: live.ToolSpec(), effect: effect, action: true, handle: r.actionHandler(live)}
+	}
+	return tools
 }
 
 /*
@@ -117,13 +127,17 @@ toolSpecs are the specs of the tools the turn allows, sorted by name so
 the prompt stays cacheable.
 */
 func (r *Runner) toolSpecs(st *run) []contracts.ToolSpec {
-	names := slices.Clone(st.settings.Tools)
-	sort.Strings(names)
-	var out []contracts.ToolSpec
-	for _, name := range slices.Compact(names) {
-		if t, ok := r.registry(st)[name]; ok {
-			out = append(out, t.spec)
+	tools := r.registry(st)
+	names := make([]string, 0, len(tools))
+	for name, t := range tools {
+		if st.settings.allows(name, t.action) {
+			names = append(names, name)
 		}
+	}
+	sort.Strings(names)
+	out := make([]contracts.ToolSpec, 0, len(names))
+	for _, name := range names {
+		out = append(out, tools[name].spec)
 	}
 	return out
 }

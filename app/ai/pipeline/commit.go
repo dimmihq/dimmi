@@ -71,6 +71,9 @@ func (r *Runner) commit(ctx context.Context, tx *database.Tx, st *run, d *decisi
 	if err := r.write(ctx, tx, st, d); err != nil {
 		return d, err
 	}
+	if err := r.linkActions(ctx, tx, st, d); err != nil {
+		return d, fmt.Errorf("link action calls: %w", err)
+	}
 	if err := r.finishRun(ctx, tx, st, d); err != nil {
 		return d, fmt.Errorf("finish run: %w", err)
 	}
@@ -243,8 +246,8 @@ func (r *Runner) reply(e *env, d *decision) string {
 /*
 metadata is what every agent reply carries under "ai" for the widget,
 the channels and the trace: generated, the run, the outcome, the
-sources it cites as title and url, and whether a person is offered or
-on the way.
+sources it cites as title and url, whether a person is offered or on
+the way, and the action calls it reports with any confirmation card.
 */
 func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 	ai := map[string]any{
@@ -265,6 +268,7 @@ func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 		ai["handoff_reason"] = d.handoffReason
 		ai["handoff_available"] = st.env.availability() != "unavailable"
 	}
+	actionMetadata(st, ai)
 	data, err := json.Marshal(map[string]any{"ai": ai})
 	if err != nil {
 		return json.RawMessage("{}")

@@ -19,7 +19,7 @@ CREATE TABLE ai_action_calls (
     confirmation text NOT NULL DEFAULT 'none' CHECK (confirmation IN ('none', 'customer')),
     approval text NOT NULL DEFAULT 'none' CHECK (approval IN ('none', 'teammate', 'admin')),
     state text NOT NULL CHECK (state IN (
-        'awaiting_confirmation', 'pending_approval', 'approved', 'declined', 'expired', 'cancelled',
+        'awaiting_confirmation', 'pending_approval', 'approved', 'declined', 'expired', 'canceled',
         'running', 'succeeded', 'failed'
     )),
     error_code text,

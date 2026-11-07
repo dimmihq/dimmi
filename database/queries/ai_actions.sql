@@ -9,7 +9,7 @@ INSERT INTO ai_actions (
     @workspace_id, @connection_id, @name, @title, @description, @kind, @side_effect, @confirmation, @approval,
     @approval_timeout_minutes, @method, @path_template, @query, @headers, @body_template, @body_encoding,
     @mcp_tool_name, @bound_arguments, @input_schema, @response_fields, @error_message_path, @response_max_bytes,
-    @timeout_ms, @channels, @spec_hash, @source, @member_id, @member_id, @now, @now
+    @timeout_ms, @channels, @spec_hash, @source, @member_id, @member_id, @now::timestamptz, @now::timestamptz
 )
 RETURNING *;
 
@@ -51,26 +51,26 @@ UPDATE ai_actions SET
     body_template = @body_template, body_encoding = @body_encoding, mcp_tool_name = @mcp_tool_name,
     bound_arguments = @bound_arguments, input_schema = @input_schema, response_fields = @response_fields,
     error_message_path = @error_message_path, response_max_bytes = @response_max_bytes, timeout_ms = @timeout_ms,
-    channels = @channels, spec_hash = @spec_hash, updated_by_member_id = @member_id, updated_at = @now
+    channels = @channels, spec_hash = @spec_hash, updated_by_member_id = @member_id, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 
 -- name: SetActionStatus :one
 -- SetActionStatus moves the action between published and disabled.
-UPDATE ai_actions SET status = @status, updated_by_member_id = @member_id, updated_at = @now
+UPDATE ai_actions SET status = @status, updated_by_member_id = @member_id, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 
 -- name: PublishAction :one
 -- PublishAction makes the version the one the agent runs.
 UPDATE ai_actions SET
-    status = 'published', published_version_id = @version_id, updated_by_member_id = @member_id, updated_at = @now
+    status = 'published', published_version_id = @version_id, updated_by_member_id = @member_id, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 
 -- name: DeleteAction :exec
 -- DeleteAction soft-deletes the action; past calls keep it.
-UPDATE ai_actions SET deleted_at = @now, status = 'disabled', updated_by_member_id = @member_id, updated_at = @now
+UPDATE ai_actions SET deleted_at = @now::timestamptz, status = 'disabled', updated_by_member_id = @member_id, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
 
 -- name: CreateActionVersion :one
@@ -81,7 +81,7 @@ VALUES (
     @workspace_id, @action_id,
     (SELECT coalesce(max(number), 0) + 1 FROM ai_action_versions v
      WHERE v.workspace_id = @workspace_id AND v.action_id = @action_id),
-    @spec, @spec_hash, @note, @member_id, @now
+    @spec, @spec_hash, @note, @member_id, @now::timestamptz
 )
 RETURNING *;
 

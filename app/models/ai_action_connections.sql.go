@@ -38,7 +38,7 @@ INSERT INTO ai_action_connections (
     created_by_member_id, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
-    $10, $11, $11
+    $10, $11::timestamptz, $11::timestamptz
 )
 RETURNING id, workspace_id, name, kind, base_url, auth_type, auth_config, credentials_encrypted, secret_hint, default_headers, variables, timeout_ms, status, status_reason, last_error, last_error_at, last_success_at, consecutive_auth_failures, mcp_server_info, tools_synced_at, created_by_member_id, deleted_at, created_at, updated_at
 `
@@ -105,14 +105,14 @@ func (q *Queries) CreateActionConnection(ctx context.Context, arg CreateActionCo
 
 const deleteActionConnection = `-- name: DeleteActionConnection :exec
 UPDATE ai_action_connections SET
-    credentials_encrypted = NULL, secret_hint = NULL, deleted_at = $1, updated_at = $1
+    credentials_encrypted = NULL, secret_hint = NULL, deleted_at = $1::timestamptz, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
 `
 
 type DeleteActionConnectionParams struct {
-	Now         *time.Time `json:"now"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // DeleteActionConnection soft-deletes the connection and shreds its
@@ -219,7 +219,7 @@ func (q *Queries) ListActionConnections(ctx context.Context, workspaceID ids.UUI
 
 const recordActionConnectionFailure = `-- name: RecordActionConnectionFailure :exec
 UPDATE ai_action_connections SET
-    last_error = $1, last_error_at = $2,
+    last_error = $1, last_error_at = $2::timestamptz,
     consecutive_auth_failures = CASE WHEN $3::boolean THEN consecutive_auth_failures + 1 ELSE 0 END,
     status = CASE
         WHEN status = 'disabled' THEN status
@@ -230,17 +230,17 @@ UPDATE ai_action_connections SET
         WHEN $4::boolean THEN 'host_blocked'
         WHEN $3::boolean AND consecutive_auth_failures + 1 >= 3 THEN 'auth'
         ELSE status_reason END,
-    updated_at = $2
+    updated_at = $2::timestamptz
 WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL
 `
 
 type RecordActionConnectionFailureParams struct {
-	LastError   *string    `json:"last_error"`
-	Now         *time.Time `json:"now"`
-	AuthFailure bool       `json:"auth_failure"`
-	Blocked     bool       `json:"blocked"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	LastError   *string   `json:"last_error"`
+	Now         time.Time `json:"now"`
+	AuthFailure bool      `json:"auth_failure"`
+	Blocked     bool      `json:"blocked"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // RecordActionConnectionFailure notes a failed call or test. Three
@@ -260,17 +260,17 @@ func (q *Queries) RecordActionConnectionFailure(ctx context.Context, arg RecordA
 
 const recordActionConnectionSuccess = `-- name: RecordActionConnectionSuccess :exec
 UPDATE ai_action_connections SET
-    last_success_at = $1, consecutive_auth_failures = 0,
+    last_success_at = $1::timestamptz, consecutive_auth_failures = 0,
     status = CASE WHEN status = 'error' THEN 'active' ELSE status END,
     status_reason = CASE WHEN status = 'error' THEN NULL ELSE status_reason END,
-    updated_at = $1
+    updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
 `
 
 type RecordActionConnectionSuccessParams struct {
-	Now         *time.Time `json:"now"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // RecordActionConnectionSuccess notes a call or test that reached the
@@ -281,12 +281,12 @@ func (q *Queries) RecordActionConnectionSuccess(ctx context.Context, arg RecordA
 }
 
 const recordActionConnectionSync = `-- name: RecordActionConnectionSync :exec
-UPDATE ai_action_connections SET tools_synced_at = $1, mcp_server_info = $2, updated_at = $1
+UPDATE ai_action_connections SET tools_synced_at = $1::timestamptz, mcp_server_info = $2, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
 `
 
 type RecordActionConnectionSyncParams struct {
-	Now           *time.Time      `json:"now"`
+	Now           time.Time       `json:"now"`
 	McpServerInfo json.RawMessage `json:"mcp_server_info"`
 	WorkspaceID   ids.UUID        `json:"workspace_id"`
 	ID            ids.UUID        `json:"id"`
@@ -306,7 +306,7 @@ func (q *Queries) RecordActionConnectionSync(ctx context.Context, arg RecordActi
 
 const setActionConnectionCredentials = `-- name: SetActionConnectionCredentials :one
 UPDATE ai_action_connections SET
-    credentials_encrypted = $1, secret_hint = $2, updated_at = $3
+    credentials_encrypted = $1, secret_hint = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
 RETURNING id, workspace_id, name, kind, base_url, auth_type, auth_config, credentials_encrypted, secret_hint, default_headers, variables, timeout_ms, status, status_reason, last_error, last_error_at, last_success_at, consecutive_auth_failures, mcp_server_info, tools_synced_at, created_by_member_id, deleted_at, created_at, updated_at
 `
@@ -363,7 +363,7 @@ const updateActionConnection = `-- name: UpdateActionConnection :one
 UPDATE ai_action_connections SET
     name = $1, base_url = $2, auth_type = $3, auth_config = $4,
     default_headers = $5, variables = $6, timeout_ms = $7, status = $8,
-    status_reason = $9, updated_at = $10
+    status_reason = $9, updated_at = $10::timestamptz
 WHERE workspace_id = $11 AND id = $12 AND deleted_at IS NULL
 RETURNING id, workspace_id, name, kind, base_url, auth_type, auth_config, credentials_encrypted, secret_hint, default_headers, variables, timeout_ms, status, status_reason, last_error, last_error_at, last_success_at, consecutive_auth_failures, mcp_server_info, tools_synced_at, created_by_member_id, deleted_at, created_at, updated_at
 `

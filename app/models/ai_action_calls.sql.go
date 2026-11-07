@@ -14,15 +14,15 @@ import (
 )
 
 const abandonActionCall = `-- name: AbandonActionCall :one
-UPDATE ai_action_calls SET state = 'failed', error_code = 'outcome_unknown', completed_at = $1, updated_at = $1
+UPDATE ai_action_calls SET state = 'failed', error_code = 'outcome_unknown', completed_at = $1::timestamptz, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND state = 'running' AND sent_at IS NOT NULL
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type AbandonActionCallParams struct {
-	Now         *time.Time `json:"now"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // AbandonActionCall fails a call whose execution died after its request
@@ -77,16 +77,16 @@ func (q *Queries) AbandonActionCall(ctx context.Context, arg AbandonActionCallPa
 
 const cancelActionCall = `-- name: CancelActionCall :one
 UPDATE ai_action_calls SET
-    state = 'cancelled', cancel_reason = $1, completed_at = $2, expires_at = NULL, updated_at = $2
+    state = 'canceled', cancel_reason = $1, completed_at = $2::timestamptz, expires_at = NULL, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND state IN ('awaiting_confirmation', 'pending_approval')
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type CancelActionCallParams struct {
-	CancelReason *string    `json:"cancel_reason"`
-	Now          *time.Time `json:"now"`
-	WorkspaceID  ids.UUID   `json:"workspace_id"`
-	ID           ids.UUID   `json:"id"`
+	CancelReason *string   `json:"cancel_reason"`
+	Now          time.Time `json:"now"`
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	ID           ids.UUID  `json:"id"`
 }
 
 // CancelActionCall gives up a call nobody has agreed to run yet.
@@ -144,15 +144,15 @@ func (q *Queries) CancelActionCall(ctx context.Context, arg CancelActionCallPara
 }
 
 const claimActionCall = `-- name: ClaimActionCall :one
-UPDATE ai_action_calls SET state = 'running', sent_at = $1, attempts = attempts + 1, updated_at = $1
+UPDATE ai_action_calls SET state = 'running', sent_at = $1::timestamptz, attempts = attempts + 1, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND state = 'approved' AND sent_at IS NULL
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type ClaimActionCallParams struct {
-	Now         *time.Time `json:"now"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // ClaimActionCall takes an approved call for execution and writes the
@@ -208,14 +208,14 @@ func (q *Queries) ClaimActionCall(ctx context.Context, arg ClaimActionCallParams
 
 const confirmActionCall = `-- name: ConfirmActionCall :one
 UPDATE ai_action_calls SET
-    state = $1, confirmed_at = $2, expires_at = $3, updated_at = $2
-WHERE workspace_id = $4 AND id = $5 AND state = 'awaiting_confirmation' AND expires_at > $2
+    state = $1, confirmed_at = $2::timestamptz, expires_at = $3, updated_at = $2::timestamptz
+WHERE workspace_id = $4 AND id = $5 AND state = 'awaiting_confirmation' AND expires_at > $2::timestamptz
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type ConfirmActionCallParams struct {
 	NextState   string     `json:"next_state"`
-	Now         *time.Time `json:"now"`
+	Now         time.Time  `json:"now"`
 	ExpiresAt   *time.Time `json:"expires_at"`
 	WorkspaceID ids.UUID   `json:"workspace_id"`
 	ID          ids.UUID   `json:"id"`
@@ -278,7 +278,7 @@ func (q *Queries) ConfirmActionCall(ctx context.Context, arg ConfirmActionCallPa
 }
 
 const countRunActionCall = `-- name: CountRunActionCall :exec
-UPDATE ai_runs SET action_calls_count = action_calls_count + 1, updated_at = $1
+UPDATE ai_runs SET action_calls_count = action_calls_count + 1, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3
 `
 
@@ -301,8 +301,8 @@ INSERT INTO ai_action_calls (
     expires_at, attempts, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
-    $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-    $19, $20, $21, $18, $18
+    $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::timestamptz,
+    $19, $20, $21, $18::timestamptz, $18::timestamptz
 )
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
@@ -405,22 +405,22 @@ func (q *Queries) CreateActionCall(ctx context.Context, arg CreateActionCallPara
 
 const decideActionCall = `-- name: DecideActionCall :one
 UPDATE ai_action_calls SET
-    state = $1, decided_by_member_id = $2, decided_at = $3, decision_reason = $4,
+    state = $1, decided_by_member_id = $2, decided_at = $3::timestamptz, decision_reason = $4,
     customer_message = $5, expires_at = NULL,
-    completed_at = CASE WHEN $1::text = 'declined' THEN $3 ELSE completed_at END,
-    updated_at = $3
-WHERE workspace_id = $6 AND id = $7 AND state = 'pending_approval' AND expires_at > $3
+    completed_at = CASE WHEN $1::text = 'declined' THEN $3::timestamptz ELSE completed_at END,
+    updated_at = $3::timestamptz
+WHERE workspace_id = $6 AND id = $7 AND state = 'pending_approval' AND expires_at > $3::timestamptz
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type DecideActionCallParams struct {
-	NextState       string     `json:"next_state"`
-	MemberID        *ids.UUID  `json:"member_id"`
-	Now             *time.Time `json:"now"`
-	DecisionReason  *string    `json:"decision_reason"`
-	CustomerMessage *string    `json:"customer_message"`
-	WorkspaceID     ids.UUID   `json:"workspace_id"`
-	ID              ids.UUID   `json:"id"`
+	NextState       string    `json:"next_state"`
+	MemberID        *ids.UUID `json:"member_id"`
+	Now             time.Time `json:"now"`
+	DecisionReason  *string   `json:"decision_reason"`
+	CustomerMessage *string   `json:"customer_message"`
+	WorkspaceID     ids.UUID  `json:"workspace_id"`
+	ID              ids.UUID  `json:"id"`
 }
 
 // DecideActionCall records a teammate's approval or decline of a call
@@ -482,16 +482,16 @@ func (q *Queries) DecideActionCall(ctx context.Context, arg DecideActionCallPara
 }
 
 const expireActionCall = `-- name: ExpireActionCall :one
-UPDATE ai_action_calls SET state = 'expired', completed_at = $1, updated_at = $1
+UPDATE ai_action_calls SET state = 'expired', completed_at = $1::timestamptz, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND state IN ('awaiting_confirmation', 'pending_approval')
-    AND expires_at <= $1
+    AND expires_at <= $1::timestamptz
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type ExpireActionCallParams struct {
-	Now         *time.Time `json:"now"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // ExpireActionCall ends a call whose confirmation or approval did not
@@ -666,7 +666,7 @@ func (q *Queries) FindConversationActionCall(ctx context.Context, arg FindConver
 const finishActionCall = `-- name: FinishActionCall :one
 UPDATE ai_action_calls SET
     state = $1, error_code = $2, http_status = $3, request = $4,
-    response = $5, result = $6, latency_ms = $7, completed_at = $8, updated_at = $8
+    response = $5, result = $6, latency_ms = $7, completed_at = $8::timestamptz, updated_at = $8::timestamptz
 WHERE workspace_id = $9 AND id = $10 AND state = 'running'
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
@@ -679,7 +679,7 @@ type FinishActionCallParams struct {
 	Response    json.RawMessage `json:"response"`
 	Result      json.RawMessage `json:"result"`
 	LatencyMs   *int32          `json:"latency_ms"`
-	Now         *time.Time      `json:"now"`
+	Now         time.Time       `json:"now"`
 	WorkspaceID ids.UUID        `json:"workspace_id"`
 	ID          ids.UUID        `json:"id"`
 }
@@ -911,15 +911,15 @@ func (q *Queries) ListConversationActionCalls(ctx context.Context, arg ListConve
 }
 
 const markActionCallReported = `-- name: MarkActionCallReported :exec
-UPDATE ai_action_calls SET reported_at = $1, report_run_id = $2, updated_at = $1
+UPDATE ai_action_calls SET reported_at = $1::timestamptz, report_run_id = $2, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND reported_at IS NULL
 `
 
 type MarkActionCallReportedParams struct {
-	Now         *time.Time `json:"now"`
-	ReportRunID *ids.UUID  `json:"report_run_id"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	ReportRunID *ids.UUID `json:"report_run_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // MarkActionCallReported notes that the customer was told how the call
@@ -935,7 +935,7 @@ func (q *Queries) MarkActionCallReported(ctx context.Context, arg MarkActionCall
 }
 
 const setActionCallsMessage = `-- name: SetActionCallsMessage :exec
-UPDATE ai_action_calls SET message_id = $1, updated_at = $2
+UPDATE ai_action_calls SET message_id = $1, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = ANY ($4::uuid[])
 `
 
@@ -960,7 +960,7 @@ func (q *Queries) SetActionCallsMessage(ctx context.Context, arg SetActionCallsM
 
 const setMessageConfirmationStatus = `-- name: SetMessageConfirmationStatus :exec
 UPDATE messages SET metadata = jsonb_set(metadata, '{ai,confirmation,status}', to_jsonb($1::text)),
-    updated_at = $2
+    updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND metadata -> 'ai' ? 'confirmation'
 `
 
@@ -984,7 +984,7 @@ func (q *Queries) SetMessageConfirmationStatus(ctx context.Context, arg SetMessa
 }
 
 const setRunTriggerActionCall = `-- name: SetRunTriggerActionCall :exec
-UPDATE ai_runs SET trigger_action_call_id = $1, updated_at = $2
+UPDATE ai_runs SET trigger_action_call_id = $1, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4
 `
 
@@ -1008,15 +1008,15 @@ func (q *Queries) SetRunTriggerActionCall(ctx context.Context, arg SetRunTrigger
 
 const supersedeConversationConfirmations = `-- name: SupersedeConversationConfirmations :many
 UPDATE ai_action_calls SET
-    state = 'cancelled', cancel_reason = 'superseded', completed_at = $1, expires_at = NULL, updated_at = $1
+    state = 'canceled', cancel_reason = 'superseded', completed_at = $1::timestamptz, expires_at = NULL, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND conversation_id = $3 AND state = 'awaiting_confirmation'
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type SupersedeConversationConfirmationsParams struct {
-	Now            *time.Time `json:"now"`
-	WorkspaceID    ids.UUID   `json:"workspace_id"`
-	ConversationID *ids.UUID  `json:"conversation_id"`
+	Now            time.Time `json:"now"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID *ids.UUID `json:"conversation_id"`
 }
 
 // SupersedeConversationConfirmations cancels the confirmations still

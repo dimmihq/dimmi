@@ -114,19 +114,22 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 /*
 loadMessages loads the trigger by id and the newest public turns,
 splitting them into history and the customer messages pending since
-the last reply.
+the last reply. A run without a trigger message, such as a follow-up
+on an action request, loads the turns alone.
 */
 func (r *Runner) loadMessages(ctx context.Context, q *models.Queries, e *env, triggerID ids.UUID) error {
-	trigger, err := q.FindConversationMessage(ctx, models.FindConversationMessageParams{
-		WorkspaceID: e.Conversation.WorkspaceID, ConversationID: e.Conversation.ID, ID: triggerID,
-	})
-	if errors.Is(err, database.ErrNotFound) {
-		return errTriggerMissing
+	if triggerID != (ids.UUID{}) {
+		trigger, err := q.FindConversationMessage(ctx, models.FindConversationMessageParams{
+			WorkspaceID: e.Conversation.WorkspaceID, ConversationID: e.Conversation.ID, ID: triggerID,
+		})
+		if errors.Is(err, database.ErrNotFound) {
+			return errTriggerMissing
+		}
+		if err != nil {
+			return fmt.Errorf("find trigger: %w", err)
+		}
+		e.Trigger = trigger
 	}
-	if err != nil {
-		return fmt.Errorf("find trigger: %w", err)
-	}
-	e.Trigger = trigger
 
 	latest, err := q.ListLatestPublicMessages(ctx, models.ListLatestPublicMessagesParams{
 		WorkspaceID: e.Conversation.WorkspaceID, ConversationID: e.Conversation.ID,

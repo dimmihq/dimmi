@@ -165,11 +165,16 @@ func (r *Runner) playgroundAnswer(st *run, d *decision) *contracts.PlaygroundAns
 
 /*
 runSubject is who and what a run row names: the conversation and
-trigger of a conversation run, nothing for a playground question.
+trigger of a conversation run, nothing for a playground question. A
+run with no trigger message names none.
 */
 func runSubject(e *env, kind string) (*ids.UUID, *ids.UUID, *ids.UUID) {
 	if kind == playgroundKind {
 		return nil, nil, nil
 	}
-	return &e.Conversation.ID, &e.Trigger.ID, &e.Conversation.ContactID
+	var trigger *ids.UUID
+	if e.Trigger.ID != (ids.UUID{}) {
+		trigger = &e.Trigger.ID
+	}
+	return &e.Conversation.ID, trigger, &e.Conversation.ContactID
 }

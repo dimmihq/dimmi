@@ -28,6 +28,7 @@ import (
 	fevents "github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -42,7 +43,8 @@ import (
 Runner runs the agent for one conversation. Timeouts bound each
 provider call; StorePayloads keeps request and response text on the
 run's steps. Publisher, when set, shows the customer the agent is
-typing while it writes.
+typing while it writes. Actions, when set, gives the agent the
+workspace's own actions as tools.
 */
 type Runner struct {
 	DB            *database.DB
@@ -53,6 +55,7 @@ type Runner struct {
 	Prices        *aiprices.Table
 	Events        *fevents.Dispatcher
 	Publisher     appbroadcasting.Publisher
+	Actions       *actionkit.Kit
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
 
@@ -152,6 +155,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 
 	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
 	st.loop.messages = r.conversationMessages(st.env)
+	r.offerActions(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
 	if err != nil {

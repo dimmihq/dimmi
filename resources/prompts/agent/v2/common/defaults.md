@@ -5,3 +5,4 @@ handoff_unavailable: This is something I can't resolve here. Please reach the te
 max_replies: I've reached what I can help with in this conversation. A teammate will take it from here.
 error: Something went wrong on my side while answering. Please try again in a moment.
 refusal: That's outside what I can help with here, but I'm glad to help with anything about the product.
+action_update: There's an update on your request. A teammate will follow up here if anything else is needed.

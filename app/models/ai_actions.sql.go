@@ -35,7 +35,7 @@ INSERT INTO ai_actions (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
     $10, $11, $12, $13, $14, $15, $16,
     $17, $18, $19, $20, $21, $22,
-    $23, $24, $25, $26, $27, $27, $28, $28
+    $23, $24, $25, $26, $27, $27, $28::timestamptz, $28::timestamptz
 )
 RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
 `
@@ -149,7 +149,7 @@ VALUES (
     $1, $2,
     (SELECT coalesce(max(number), 0) + 1 FROM ai_action_versions v
      WHERE v.workspace_id = $1 AND v.action_id = $2),
-    $3, $4, $5, $6, $7
+    $3, $4, $5, $6, $7::timestamptz
 )
 RETURNING id, workspace_id, action_id, number, spec, spec_hash, note, published_by_member_id, created_at
 `
@@ -192,15 +192,15 @@ func (q *Queries) CreateActionVersion(ctx context.Context, arg CreateActionVersi
 }
 
 const deleteAction = `-- name: DeleteAction :exec
-UPDATE ai_actions SET deleted_at = $1, status = 'disabled', updated_by_member_id = $2, updated_at = $1
+UPDATE ai_actions SET deleted_at = $1::timestamptz, status = 'disabled', updated_by_member_id = $2, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
 `
 
 type DeleteActionParams struct {
-	Now         *time.Time `json:"now"`
-	MemberID    *ids.UUID  `json:"member_id"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	Now         time.Time `json:"now"`
+	MemberID    *ids.UUID `json:"member_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // DeleteAction soft-deletes the action; past calls keep it.
@@ -559,7 +559,7 @@ func (q *Queries) ListLiveActionVersions(ctx context.Context, workspaceID ids.UU
 
 const publishAction = `-- name: PublishAction :one
 UPDATE ai_actions SET
-    status = 'published', published_version_id = $1, updated_by_member_id = $2, updated_at = $3
+    status = 'published', published_version_id = $1, updated_by_member_id = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
 RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
 `
@@ -622,7 +622,7 @@ func (q *Queries) PublishAction(ctx context.Context, arg PublishActionParams) (A
 }
 
 const setActionStatus = `-- name: SetActionStatus :one
-UPDATE ai_actions SET status = $1, updated_by_member_id = $2, updated_at = $3
+UPDATE ai_actions SET status = $1, updated_by_member_id = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
 RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
 `
@@ -692,7 +692,7 @@ UPDATE ai_actions SET
     body_template = $12, body_encoding = $13, mcp_tool_name = $14,
     bound_arguments = $15, input_schema = $16, response_fields = $17,
     error_message_path = $18, response_max_bytes = $19, timeout_ms = $20,
-    channels = $21, spec_hash = $22, updated_by_member_id = $23, updated_at = $24
+    channels = $21, spec_hash = $22, updated_by_member_id = $23, updated_at = $24::timestamptz
 WHERE workspace_id = $25 AND id = $26 AND deleted_at IS NULL
 RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
 `

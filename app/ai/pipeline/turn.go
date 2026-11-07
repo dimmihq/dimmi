@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"slices"
 	"strings"
 	"time"
 
@@ -44,11 +43,13 @@ const maxModelCalls = 6
 
 /*
 loop is the turn's conversation with the answer model: the driver, the
-rendered system prompt, the turns so far and why the last call ended.
+rendered system prompt, the brief of the conversation's action
+requests, the turns so far and why the last call ended.
 */
 type loop struct {
 	llm      contracts.LLM
 	system   string
+	brief    string
 	messages []contracts.ChatMessage
 	stop     contracts.StopReason
 }
@@ -72,7 +73,7 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 	lp := st.loop
 	for calls := 1; ; calls++ {
 		var tools []contracts.ToolSpec
-		if calls < maxModelCalls {
+		if calls < maxModelCalls && !st.actions.closed {
 			tools = r.toolSpecs(st)
 		}
 
@@ -105,7 +106,8 @@ the result the model reads, which says what went wrong when it failed.
 func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall) (string, bool) {
 	started := r.Clock.Now()
 	t, ok := r.registry(st)[call.Name]
-	allowed := ok && slices.Contains(st.settings.Tools, call.Name)
+	allowed := ok && st.settings.allows(call.Name, t.action)
+	st.actions.toolCallID = call.ID
 
 	var result string
 	err := errors.New("unknown tool " + call.Name)
@@ -130,8 +132,12 @@ outcome.
 func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSpec) (streamed, error) {
 	e, lp := st.env, st.loop
 	model := strv(e.Agent.AnswerModel)
+	system := []contracts.SystemBlock{{Text: lp.system, Cacheable: true}}
+	if lp.brief != "" {
+		system = append(system, contracts.SystemBlock{Text: lp.brief})
+	}
 	req := contracts.ChatRequest{
-		Model: model, System: []contracts.SystemBlock{{Text: lp.system, Cacheable: true}},
+		Model: model, System: system,
 		Messages: lp.messages, Tools: tools, CacheHint: true, Effort: contracts.EffortLow,
 		Temperature: temperature(e), Timeout: llmretry.StepTimeouts(r.Timeouts, llmretry.StepGenerate),
 	}

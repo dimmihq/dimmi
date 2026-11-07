@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The agent's actions on the registry: its settings, its connections,
-| the subscription sign-in, the runs and usage readers and the
-| playground. The playground asks whatever answers the AIPlayground
+| the subscription sign-in, the runs and usage readers, the playground
+| and the workspace actions the agent may call.| playground. The playground asks whatever answers the AIPlayground
 | contract, which is the pipeline once it offers a stateless entry; until
 | then the playground answers that it is unavailable.
 |
@@ -15,7 +15,11 @@ package providers
 
 import (
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/agentactions"
 	"github.com/dimmihq/dimmi/app/actions/ai"
+	"github.com/dimmihq/dimmi/app/actions/widget"
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
@@ -28,7 +32,7 @@ serves the playground when it implements the contract.
 func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions {
 	playground, _ := answerer.(contracts.AIPlayground)
 
-	return &app.AIActions{
+	out := &app.AIActions{
 		GetAgent:    &ai.GetAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI, Prices: prices},
 		UpdateAgent: &ai.UpdateAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
 
@@ -51,6 +55,21 @@ func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions 
 		ShowUsage:     &ai.ShowUsage{DB: a.DB, Clock: a.Clock},
 		AskPlayground: &ai.AskPlayground{DB: a.DB, Playground: playground, Limiter: a.Limiter},
 	}
+	if runner, ok := answerer.(*pipeline.Runner); ok && runner.Actions != nil {
+		addActionActions(a, out, runner.Actions)
+	}
+	return out
+}
+
+/*
+addActionActions adds the workspace actions' own actions.
+*/
+func addActionActions(a *app.App, out *app.AIActions, kit *actionkit.Kit) {
+	out.ActionKit = kit
+	out.ActionConnections = &agentactions.Connections{DB: a.DB, Clock: a.Clock, Keys: a.Keys, HTTP: a.HTTP, Kit: kit}
+	out.ActionDefinitions = &agentactions.Definitions{DB: a.DB, Clock: a.Clock, Kit: kit}
+	out.ActionCalls = &agentactions.Calls{DB: a.DB, Kit: kit}
+	out.VisitorCalls = &widget.VisitorActionCalls{DB: a.DB, Kit: kit}
 }
 
 /*

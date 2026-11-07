@@ -6,8 +6,9 @@
 | The agent's wiring: the knowledge contract starts on the seeded
 | index while the help center's index is built, the manager resolves
 | connections to drivers, the prompt tree is checked before anything
-| runs, the runner carries a customer's message through the pipeline,
-| and every AI action lands on the registry.
+| runs, the runner carries a customer's message through the pipeline
+| with the workspace's own actions as tools, and every AI action lands
+| on the registry.
 |
 */
 
@@ -26,6 +27,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -45,6 +47,9 @@ func bootAI(ctx context.Context, a *app.App) error {
 		return err
 	}
 	a.AI = runner
+	runner.Actions = &actionkit.Kit{
+		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
+	}
 
 	a.Actions.AI = aiActions(a, runner, runner.Prices)
 
@@ -55,6 +60,9 @@ func bootAI(ctx context.Context, a *app.App) error {
 	return errors.Join(
 		queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner}),
 		queue.Register(a.Queue, pruneAiTraces(a)),
+		queue.Register(a.Queue, &aijobs.ExecuteAiActionCall{Kit: runner.Actions}),
+		queue.Register(a.Queue, &aijobs.FollowUpAiActionCall{Runner: runner}),
+		queue.Register(a.Queue, &aijobs.ExpireAiActionCall{Kit: runner.Actions}),
 	)
 }
 

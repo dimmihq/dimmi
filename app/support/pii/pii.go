@@ -98,6 +98,28 @@ func (r *Redactor) Redact(text string) string {
 }
 
 /*
+RedactSecrets masks what must never be repeated even to its owner:
+secrets, payment cards, IBANs and social security numbers. Emails and
+phone numbers stay, since a lookup result naming the customer's own
+address is what they asked for.
+*/
+func (r *Redactor) RedactSecrets(text string) string {
+	if text == "" {
+		return text
+	}
+
+	out := text
+	for _, p := range r.secrets {
+		out = p.ReplaceAllStringFunc(out, maskSecret(p))
+	}
+
+	out = r.iban.ReplaceAllStringFunc(out, maskIBAN)
+	out = r.card.ReplaceAllStringFunc(out, maskCard)
+
+	return r.ssn.ReplaceAllString(out, SSN)
+}
+
+/*
 maskSecret keeps the label of a "password: x" or "Bearer x" pair, so
 the text still reads, and replaces only the value.
 */
