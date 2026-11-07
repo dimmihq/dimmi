@@ -20,4 +20,11 @@ func TestEd25519(t *testing.T) {
 		assert.NotNil(t, a.Private)
 		assert.NotEqual(t, a.PublicPEM, b.PublicPEM)
 	})
+
+	t.Run("makes browser push keys of the sizes browsers send", func(t *testing.T) {
+		t.Parallel()
+		k := testkit.BrowserPushKeys(t)
+		assert.Len(t, k.P256dh, 87)
+		assert.Len(t, k.Auth, 22)
+	})
 }

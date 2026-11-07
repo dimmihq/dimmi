@@ -9,8 +9,13 @@
 | after the code that sent it has changed.
 |
 | The row is keyed by the delivery id, so a queued delivery that runs
-| twice stores one row, not two. Rows are only ever marked read for the
-| recipient they belong to.
+| twice stores one row, not two. A grouped notification, such as every
+| new reply in one thread, folds into the recipient's unread row
+| of its group instead: the row counts the occurrences, carries the
+| latest data and becomes unseen again, so a busy thread is one line in
+| the list, not fifty. Rows belong to a tenant when the notification
+| names one, and are written in that tenant's scope. Rows are only ever
+| marked read or seen for the recipient they belong to.
 |
 */
 
@@ -30,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/manager"
 	"github.com/dimmihq/dimmi/framework/notifications"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 )
 
 /*
@@ -63,6 +69,28 @@ type Notification interface {
 }
 
 /*
+Tenanted is a notification that belongs to a tenant; its rows carry
+the tenant and are written in its scope.
+*/
+type Tenanted interface {
+	/*
+		TenantID returns the tenant the notification belongs to.
+	*/
+	TenantID() string
+}
+
+/*
+Grouped is a notification whose occurrences fold into one unread row
+per recipient and group.
+*/
+type Grouped interface {
+	/*
+		GroupKey returns the group of the delivery, "" for none.
+	*/
+	GroupKey(d notifications.Delivery) string
+}
+
+/*
 Channel stores notifications as rows and marks them read.
 */
 type Channel struct {
@@ -75,7 +103,7 @@ type Channel struct {
 statements are the channel's SQL, written for its table.
 */
 type statements struct {
-	insert, markRead, markUnread, markAllRead string
+	insert, group, markRead, markUnread, markAllRead, markSeen string
 }
 
 /*
@@ -104,14 +132,24 @@ func New(db database.Querier, clk clock.Clock, cfg Config) (*Channel, error) {
 	}
 
 	return &Channel{db: db, clock: clk, sql: statements{
-		insert: `INSERT INTO ` + table + ` (id, notifiable_type, notifiable_id, type, data, created_at)
-VALUES ($1, $2, $3, $4, $5::jsonb, $6) ON CONFLICT (id) DO NOTHING`,
+		insert: `INSERT INTO ` + table + ` (id, notifiable_type, notifiable_id, type, data, tenant_id,
+	last_delivery_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5::jsonb, $6, $8, $7, $7) ON CONFLICT (id) DO NOTHING`,
+		group: `INSERT INTO ` + table + ` AS n (id, notifiable_type, notifiable_id, type, data, tenant_id, group_key,
+	last_delivery_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5::jsonb, $6, $9, $8, $7, $7)
+ON CONFLICT (notifiable_type, notifiable_id, group_key) WHERE read_at IS NULL AND group_key IS NOT NULL
+DO UPDATE SET count = n.count + 1, data = excluded.data, updated_at = excluded.updated_at, seen_at = NULL,
+	last_delivery_id = excluded.last_delivery_id
+WHERE n.last_delivery_id IS DISTINCT FROM excluded.last_delivery_id`,
 		markRead: `UPDATE ` + table + ` SET read_at = $3
 WHERE notifiable_type = $1 AND notifiable_id = $2 AND id = ANY($4::uuid[]) AND read_at IS NULL`,
 		markUnread: `UPDATE ` + table + ` SET read_at = NULL
 WHERE notifiable_type = $1 AND notifiable_id = $2 AND id = ANY($3::uuid[])`,
 		markAllRead: `UPDATE ` + table + ` SET read_at = $3
 WHERE notifiable_type = $1 AND notifiable_id = $2 AND read_at IS NULL`,
+		markSeen: `UPDATE ` + table + ` SET seen_at = $3
+WHERE notifiable_type = $1 AND notifiable_id = $2 AND seen_at IS NULL AND updated_at <= $3`,
 	}}, nil
 }
 
@@ -134,10 +172,66 @@ func (c *Channel) Send(ctx context.Context, d notifications.Delivery, n notifica
 		return fmt.Errorf("encode %s: %w: %w", n.Type(), notifications.ErrPermanent, err)
 	}
 
-	to := d.Notifiable
-	if _, err := c.db.Exec(ctx, c.sql.insert, d.ID, to.NotifiableType(), to.NotifiableID(), n.Type(),
-		string(encoded), c.clock.Now()); err != nil {
+	to, tenant, group := d.Notifiable, tenantOf(n), groupOf(n, d)
+	args := []any{
+		d.ID, to.NotifiableType(), to.NotifiableID(), n.Type(), string(encoded), tenant, c.clock.Now(), d.ID,
+	}
+	statement := c.sql.insert
+	if group != nil {
+		statement, args = c.sql.group, append(args, *group)
+	}
+
+	if err := c.exec(ctx, tenant, statement, args...); err != nil {
 		return fmt.Errorf("store %s: %w", n.Type(), err)
+	}
+
+	return nil
+}
+
+/*
+transactor runs work in a transaction that carries the context's
+tenant, which *database.DB does.
+*/
+type transactor interface {
+	Transaction(ctx context.Context, fn func(ctx context.Context, tx *database.Tx) error) error
+}
+
+/*
+exec runs a write, inside the tenant's scope when the notification
+names one and the database can open a transaction for it.
+*/
+func (c *Channel) exec(ctx context.Context, tenant *string, statement string, args ...any) error {
+	db, ok := c.db.(transactor)
+	if tenant == nil || !ok {
+		_, err := c.db.Exec(ctx, statement, args...)
+		return err
+	}
+
+	return db.Transaction(tenancy.With(ctx, *tenant), func(ctx context.Context, _ *database.Tx) error {
+		_, err := c.db.Exec(ctx, statement, args...)
+		return err
+	})
+}
+
+/*
+tenantOf returns the notification's tenant, nil when it names none.
+*/
+func tenantOf(n notifications.Notification) *string {
+	if t, ok := n.(Tenanted); ok && t.TenantID() != "" {
+		id := t.TenantID()
+		return &id
+	}
+
+	return nil
+}
+
+/*
+groupOf returns the delivery's group, nil when it has none.
+*/
+func groupOf(n notifications.Notification, d notifications.Delivery) *string {
+	if g, ok := n.(Grouped); ok && g.GroupKey(d) != "" {
+		key := g.GroupKey(d)
+		return &key
 	}
 
 	return nil
@@ -176,6 +270,19 @@ func (c *Channel) MarkAllRead(ctx context.Context, to notifications.Notifiable) 
 	_, err := c.db.Exec(ctx, c.sql.markAllRead, to.NotifiableType(), to.NotifiableID(), c.clock.Now())
 	if err != nil {
 		return fmt.Errorf("mark all notifications read: %w", err)
+	}
+
+	return nil
+}
+
+/*
+MarkSeen marks every notification of the recipient that changed by now
+seen, such as when they open the list behind a bell.
+*/
+func (c *Channel) MarkSeen(ctx context.Context, to notifications.Notifiable) error {
+	_, err := c.db.Exec(ctx, c.sql.markSeen, to.NotifiableType(), to.NotifiableID(), c.clock.Now())
+	if err != nil {
+		return fmt.Errorf("mark notifications seen: %w", err)
 	}
 
 	return nil

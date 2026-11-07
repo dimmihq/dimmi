@@ -209,7 +209,7 @@ func newFixture(t *testing.T, subject string, gone webpush.GoneFunc) fixture {
 		"driver": "webpush", "vapid_public_key": public, "vapid_private_key": private, "subject": subject,
 	}}}, nil)
 	require.NoError(t, err)
-	m.Extend("webpush", webpush.Factory(client, clk, gone))
+	m.Extend("webpush", webpush.Factory(client, clk, gone, webpush.Defaults{}))
 
 	return fixture{
 		manager: m,

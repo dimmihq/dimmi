@@ -5,10 +5,12 @@
 |
 | The table's name comes from configuration, so its schema is created by
 | a migration step rather than a fixed SQL file. The step only creates
-| what is missing, which keeps it safe to run on every boot.
+| what is missing, columns added later included, which keeps it safe to
+| run on every boot and on tables made by an older release.
 |
-| Rows are read newest first for one recipient, which is the one index
-| the table needs.
+| Rows are read newest first for one recipient, by the time they last
+| changed. A grouped notification keeps one unread row per recipient and
+| group, which a unique index enforces.
 |
 */
 
@@ -26,8 +28,8 @@ import (
 )
 
 /*
-schemaSQL creates the table and its index; {table} and {index} stand
-for their quoted names.
+schemaSQL creates the table, its columns and its indexes; {table},
+{index}, {recent} and {group} stand for their quoted names.
 */
 const schemaSQL = `CREATE TABLE IF NOT EXISTS {table} (
 	id uuid PRIMARY KEY,
@@ -38,7 +40,16 @@ const schemaSQL = `CREATE TABLE IF NOT EXISTS {table} (
 	read_at timestamptz,
 	created_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS {index} ON {table} (notifiable_type, notifiable_id, created_at DESC)`
+ALTER TABLE {table} ADD COLUMN IF NOT EXISTS tenant_id text;
+ALTER TABLE {table} ADD COLUMN IF NOT EXISTS group_key text;
+ALTER TABLE {table} ADD COLUMN IF NOT EXISTS count integer NOT NULL DEFAULT 1;
+ALTER TABLE {table} ADD COLUMN IF NOT EXISTS last_delivery_id text;
+ALTER TABLE {table} ADD COLUMN IF NOT EXISTS seen_at timestamptz;
+ALTER TABLE {table} ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+CREATE INDEX IF NOT EXISTS {index} ON {table} (notifiable_type, notifiable_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS {recent} ON {table} (notifiable_type, notifiable_id, updated_at DESC, id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS {group} ON {table} (notifiable_type, notifiable_id, group_key)
+	WHERE read_at IS NULL AND group_key IS NOT NULL`
 
 /*
 Migration returns the migration step that creates the notifications
@@ -71,7 +82,10 @@ func schema(table string) (string, error) {
 		return "", err
 	}
 
-	index := pgx.Identifier{table + "_notifiable_index"}.Sanitize()
+	name := func(suffix string) string { return pgx.Identifier{table + suffix}.Sanitize() }
 
-	return strings.NewReplacer("{table}", quoted, "{index}", index).Replace(schemaSQL), nil
+	return strings.NewReplacer(
+		"{table}", quoted, "{index}", name("_notifiable_index"), "{recent}", name("_recent_index"),
+		"{group}", name("_group_key"),
+	).Replace(schemaSQL), nil
 }

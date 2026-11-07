@@ -13,9 +13,11 @@
 package testkit
 
 import (
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"testing"
 )
@@ -57,4 +59,35 @@ func Ed25519(tb testing.TB) KeyPair {
 		PrivatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privateDER})),
 		Private:    private,
 	}
+}
+
+/*
+PushKeys are the keys a browser's push subscription carries, base64url
+as the browser gives them: its P-256 public key and its auth secret.
+*/
+type PushKeys struct {
+	P256dh string
+	Auth   string
+}
+
+/*
+BrowserPushKeys returns fresh push subscription keys, failing the test
+when they cannot be made.
+*/
+func BrowserPushKeys(tb testing.TB) PushKeys {
+	tb.Helper()
+
+	key, err := ecdh.P256().GenerateKey(rand.Reader)
+	if err != nil {
+		tb.Fatalf("generate push key: %v", err)
+	}
+
+	secret := make([]byte, 16)
+	if _, err := rand.Read(secret); err != nil {
+		tb.Fatalf("generate push secret: %v", err)
+	}
+
+	encode := base64.RawURLEncoding.EncodeToString
+
+	return PushKeys{P256dh: encode(key.PublicKey().Bytes()), Auth: encode(secret)}
 }

@@ -13,6 +13,7 @@ sql:
       - framework/oauth
       - framework/customdomain/storage
       - framework/foundation
+      - framework/notifications/channels/database
       - database/migrations
     gen:
       go:

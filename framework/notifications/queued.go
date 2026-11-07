@@ -74,6 +74,29 @@ func Register[N Notification](m *Manager) {
 }
 
 /*
+RegisterWith makes notifications of type N deliverable from the queue
+like Register, decoding each queued one into the value build returns.
+A notification that needs services when it is delivered, such as to
+check at send time whether it still matters, gets them from build;
+they are not encoded, so keep them out of JSON.
+*/
+func RegisterWith[N Notification](m *Manager, build func() N) {
+	zero := build()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.types[zero.Type()] = func(data []byte) (Notification, error) {
+		n := build()
+		if err := json.Unmarshal(data, n); err != nil {
+			return nil, fmt.Errorf("decode %s: %w", zero.Type(), err)
+		}
+
+		return n, nil
+	}
+}
+
+/*
 SendTx queues the notification for every recipient, one job per channel
 it picks, inside the transaction: nothing is delivered unless the
 transaction commits. With a nil transaction the jobs are pushed on their

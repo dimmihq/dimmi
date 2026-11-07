@@ -124,13 +124,21 @@ type Channel struct {
 }
 
 /*
-Factory builds Web Push channels for the notification manager.
+Factory builds Web Push channels for the notification manager. The
+defaults fill a configuration that names no keys or subject.
 */
-func Factory(client *httpclient.Client, clk clock.Clock, gone GoneFunc) manager.Factory[notifications.Channel] {
+func Factory(
+	client *httpclient.Client, clk clock.Clock, gone GoneFunc, defaults Defaults,
+) manager.Factory[notifications.Channel] {
 	return func(_ string, section config.Section) (notifications.Channel, error) {
 		var cfg Config
 		if err := section.Decode(&cfg); err != nil {
 			return nil, fmt.Errorf("webpush: %w", err)
+		}
+
+		cfg, err := cfg.withDefaults(defaults)
+		if err != nil {
+			return nil, err
 		}
 
 		return New(cfg, client, clk, gone)

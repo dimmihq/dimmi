@@ -273,7 +273,7 @@ func TestNew(t *testing.T) {
 
 	t.Run("reads its settings from the channel's configuration", func(t *testing.T) {
 		t.Parallel()
-		factory := webpush.Factory(client, clock.System(), nil)
+		factory := webpush.Factory(client, clock.System(), nil, webpush.Defaults{})
 
 		_, err := factory("webpush", config.Section{
 			"vapid_public_key": public, "vapid_private_key": private, "subject": "mailto:ops@example.com",

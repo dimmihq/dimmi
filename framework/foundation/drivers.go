@@ -92,7 +92,9 @@ func (a *Application) registerDrivers(ctx context.Context) {
 	a.Notify.Extend("mail", mailchannel.Factory(a.Mail))
 	a.Notify.Extend("database", notifydb.Factory(a.DB, a.Clock))
 	a.Notify.Extend("broadcast", broadcast.Factory(a.Broadcast))
-	a.Notify.Extend("webpush", webpush.Factory(a.HTTP, a.Clock, a.opts.WebPushGone))
+	a.Notify.Extend("webpush", webpush.Factory(a.HTTP, a.Clock, a.opts.WebPushGone, webpush.Defaults{
+		Seed: a.DerivedKey("notifications.webpush.vapid"), Subject: a.Config.App.URL,
+	}))
 
 	a.Hash.Extend("argon2id", argon2id.Factory)
 	a.Hash.Extend("bcrypt", bcrypt.Factory)

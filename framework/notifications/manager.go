@@ -75,13 +75,20 @@ type Manager struct {
 }
 
 /*
-New returns a manager for the channels in the configuration. With a
-queue, it registers the worker that runs queued deliveries, so call it
-before the queue starts; without one, only Send works.
+New returns a manager for the channels in the configuration, or, when
+it names none, one channel per built-in driver under the driver's own
+name: database, mail, broadcast and webpush. With a queue, it registers
+the worker that runs queued deliveries, so call it before the queue
+starts; without one, only Send works.
 */
 func New(cfg Config, q *queue.Queue) (*Manager, error) {
+	channels := cfg.Channels
+	if len(channels) == 0 {
+		channels = DefaultChannels()
+	}
+
 	m := &Manager{
-		channels:   manager.New[Channel]("notification channel", cfg.Channels, ""),
+		channels:   manager.New[Channel]("notification channel", channels, ""),
 		queue:      q,
 		queueName:  cfg.Queue,
 		translator: cfg.Translator,
@@ -98,6 +105,19 @@ func New(cfg Config, q *queue.Queue) (*Manager, error) {
 	}
 
 	return m, nil
+}
+
+/*
+DefaultChannels configures one channel per built-in driver, named after
+it.
+*/
+func DefaultChannels() map[string]config.Section {
+	out := map[string]config.Section{}
+	for _, driver := range []string{"database", "mail", "broadcast", "webpush"} {
+		out[driver] = config.Section{"driver": driver}
+	}
+
+	return out
 }
 
 /*
