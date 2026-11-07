@@ -48,7 +48,7 @@ export function MessageActions({
       role="toolbar"
       aria-label="Message actions"
       className={cx(
-        "flex items-center gap-0.5 rounded-xl bg-background-primary-default p-0.5 shadow-card",
+        "flex items-center gap-0.5 rounded-xl border border-border-button-default bg-background-primary-default p-0.5 shadow-card",
         "opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100",
       )}
     >

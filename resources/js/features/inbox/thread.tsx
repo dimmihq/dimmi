@@ -213,15 +213,15 @@ function bubbleClass(entry: Said, editing: boolean): string {
     bubble,
     "text-body-regular text-text-primary",
     !ours && "bg-background-tertiary-default",
-    ours && !note && "bg-background-primary-default shadow-card",
-    note && "border border-dashed border-border-button-hover",
+    ours && "bg-background-primary-default shadow-card",
+    note && "border border-status-yellow-text/40",
     editing && "w-full",
   );
 }
 
 /*
- * EntryActions sits beside a message's bubble on hover: a link to it,
- * editing one's own note, deleting, and reacting to a note.
+ * EntryActions sits on the top edge of a message's bubble on hover: a
+ * link to it, editing one's own note, deleting, and reacting to a note.
  */
 function EntryActions({
   entry,
@@ -242,7 +242,7 @@ function EntryActions({
   const kind = note ? "note" : ours ? "reply" : "customer";
 
   return (
-    <div className={cx("absolute top-1/2 z-10 w-max -translate-y-1/2", ours ? "end-full me-2" : "start-full ms-2")}>
+    <div className={cx("absolute -top-4 z-10 w-max", ours ? "end-3" : "start-3")}>
       <MessageActions
         kind={kind}
         customer={customer}
