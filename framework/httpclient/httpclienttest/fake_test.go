@@ -30,6 +30,24 @@ func TestFake(t *testing.T) {
 		})
 	})
 
+	t.Run("answers from an in-process handler", func(t *testing.T) {
+		t.Parallel()
+		client := newClient(t, httpclient.Config{})
+		httpclienttest.New(client).Serve("POST https://mcp.example.test/*", http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Seen", r.URL.Path)
+				w.WriteHeader(http.StatusAccepted)
+				_, _ = w.Write([]byte("served"))
+			}))
+
+		resp, err := client.New().Post(t.Context(), "https://mcp.example.test/mcp", "{}")
+
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusAccepted, resp.Status)
+		assert.Equal(t, "/mcp", resp.Header.Get("X-Seen"))
+		assert.Equal(t, "served", string(resp.Body))
+	})
+
 	t.Run("answers an unmatched request with an empty success", func(t *testing.T) {
 		t.Parallel()
 		client := newClient(t, httpclient.Config{})

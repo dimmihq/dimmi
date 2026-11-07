@@ -29,6 +29,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"regexp"
 	"slices"
@@ -141,6 +142,27 @@ func (f *Fake) StubSequence(pattern string, resps ...httpclient.Response) *Fake 
 			mu.Unlock()
 
 			return responder(resp)(req)
+		})
+	}
+
+	return f
+}
+
+/*
+Serve answers requests matching the pattern by running the handler in
+process, so a test can stand up a real protocol server, such as an MCP
+server, behind a URL the client believes is remote.
+*/
+func (f *Fake) Serve(pattern string, h http.Handler) *Fake {
+	methods, glob := splitPattern(pattern)
+	for _, method := range methods {
+		f.mock.RegisterRegexpResponder(method, glob, func(req *http.Request) (*http.Response, error) {
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			resp := rec.Result()
+			resp.Request = req
+
+			return resp, nil
 		})
 	}
 
