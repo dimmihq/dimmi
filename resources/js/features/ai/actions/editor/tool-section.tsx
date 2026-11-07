@@ -112,7 +112,8 @@ function bind(draft: Draft, name: string): Draft {
 
 export function ToolSection({ editor }: { editor: Editor }) {
   const { draft, update, problems } = editor;
-  const suspects = draft.fields.filter((field) => identityLike(field.name));
+  const boundNames = new Set(draft.bound.map((row) => row.name.trim()));
+  const suspects = draft.fields.filter((field) => identityLike(field.name) && !boundNames.has(field.name));
   const setRow = (key: string, change: Partial<Pair>) =>
     update({ bound: draft.bound.map((row) => (row.key === key ? { ...row, ...change } : row)) });
 
