@@ -792,3 +792,8 @@ Owner applies in own files; listed here so build order holds. 07 files already u
 4. Connection edits apply to published actions live (not versioned): **yes**, with `confirm_affects_published` guard + audit; versioning connections doubles UX for rare change.
 5. Follow-up after write: **LLM follow-up run** (multilingual, can explain 4xx) vs deterministic success template; template option later if evals show drift.
 6. Whole-response exposure when `response_fields` empty: **allowed with warning** (fast onboarding); publish of write action without fields allowed (result rarely needed).
+
+## Decisions 2026-11-07: email-proven context
+
+- Third proof level beside verified context: a messenger session whose visitor typed a code mailed to their address ([02 email-code.md](../02-widget-identity/email-code.md)). Only `{contact.email}` resolves there, for 24 hours.
+- An action whose only contact reference is `{contact.email}` is offered to an anonymous messenger visitor; calling it records the call as `awaiting_verification` and the reply carries a card to confirm the email. After the code, the call binds the proven address and continues to confirmation, approval or execution.
