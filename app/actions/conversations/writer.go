@@ -44,7 +44,8 @@ type Actor struct {
 Writer writes the changes of one transaction. Now is the time they
 happen, and Timezone the actor's own time zone, nil when they set none.
 MutationID is the id the client gave the change, carried on every
-event so the screen that made it can drop its own echo.
+event so the screen that made it can drop its own echo. Chain lists the
+workflows whose steps make the changes, carried on every event.
 */
 type Writer struct {
 	Q          *models.Queries
@@ -54,6 +55,7 @@ type Writer struct {
 	Actor      Actor
 	Timezone   *string
 	MutationID string
+	Chain      []ids.UUID
 }
 
 /*
@@ -99,7 +101,7 @@ func (w *Writer) Base(workspaceID ids.UUID) appevents.Base {
 	return appevents.Base{
 		ID: ids.New(), WorkspaceID: workspaceID, OccurredAt: w.Now,
 		Actor:            appevents.Actor{Type: w.actorType(), ID: w.Actor.ID},
-		ClientMutationID: w.MutationID,
+		ClientMutationID: w.MutationID, WorkflowChain: w.Chain,
 	}
 }
 

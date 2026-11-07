@@ -847,6 +847,23 @@ func (q *Queries) ReleaseConversationClaim(ctx context.Context, arg ReleaseConve
 	return err
 }
 
+const resetConversationAiMode = `-- name: ResetConversationAiMode :exec
+UPDATE conversations SET ai_mode = 'auto', updated_at = $1 WHERE workspace_id = $2 AND id = $3
+`
+
+type ResetConversationAiModeParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// ResetConversationAiMode gives a closed conversation back to the
+// automatic agent's own rules.
+func (q *Queries) ResetConversationAiMode(ctx context.Context, arg ResetConversationAiModeParams) error {
+	_, err := q.db.Exec(ctx, resetConversationAiMode, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const saveWorkflowRun = `-- name: SaveWorkflowRun :one
 UPDATE workflow_runs SET
     status = $1, end_reason = $2, cursor_step_id = $3, wait = $4, wake_at = $5,
@@ -922,6 +939,27 @@ func (q *Queries) SaveWorkflowRun(ctx context.Context, arg SaveWorkflowRunParams
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const scrubWorkflowRunsForContact = `-- name: ScrubWorkflowRunsForContact :execrows
+UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = $1
+WHERE workspace_id = $2 AND contact_id = $3
+`
+
+type ScrubWorkflowRunsForContactParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   *ids.UUID `json:"contact_id"`
+}
+
+// ScrubWorkflowRunsForContact forgets what an erased customer's runs
+// learned about them; the runs stay as a record that they happened.
+func (q *Queries) ScrubWorkflowRunsForContact(ctx context.Context, arg ScrubWorkflowRunsForContactParams) (int64, error) {
+	result, err := q.db.Exec(ctx, scrubWorkflowRunsForContact, arg.Now, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const workflowRanOnConversation = `-- name: WorkflowRanOnConversation :one

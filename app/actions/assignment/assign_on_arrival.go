@@ -159,11 +159,11 @@ func (a *AssignOnArrival) assign(
 
 /*
 assignable reports whether the conversation is one to assign: live,
-open, held by nobody, not spam, not with the AI agent, and of a contact
-not blocked.
+open, held by nobody, not spam, not with the AI agent or a workflow,
+and of a contact not blocked.
 */
 func assignable(ctx context.Context, q *models.Queries, c models.Conversation) (bool, error) {
-	if c.AssigneeMemberID != nil || c.Spam || c.DeletedAt != nil ||
+	if c.AssigneeMemberID != nil || c.Spam || c.DeletedAt != nil || c.WorkflowRunID != nil ||
 		c.Status != string(enums.ConversationStatusOpen) || c.AiState == "active" {
 		return false, nil
 	}

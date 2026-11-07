@@ -199,7 +199,8 @@ func TestHelpCenters(t *testing.T) {
 		sub := hc.String("data.0.subdomain")
 		hc.AssertJSONPath("data.0.url", "https://"+sub+".help.example.test")
 		id := owner.PostJSON("/api/v1/help-centers/"+hc.String("data.0.id")+"/articles",
-			testkit.JSON{"title": "Hosted page", "body_markdown": "Served on its own host."}).AssertCreated().String("data.id")
+			testkit.JSON{"title": "Hosted page", "body_markdown": "Served on its own host."}).
+			AssertCreated().String("data.id")
 		owner.PostJSON("/api/v1/articles/"+id+"/publications", nil).AssertOK()
 
 		page := tc.Client().WithHeader("Accept", "text/html").

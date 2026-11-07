@@ -30,6 +30,8 @@ Base is the header of every inbox event. ID is the event's own id,
 WorkspaceID the workspace it happened in and OccurredAt when. Actor is
 who caused it, and ClientMutationID the id the client sent with the
 change in the Dimmi-Client-Mutation-Id header, empty when it sent none.
+WorkflowChain lists the workflows whose steps led to the change, so a
+workflow never starts again from its own changes.
 */
 type Base struct {
 	ID               ids.UUID
@@ -37,6 +39,7 @@ type Base struct {
 	OccurredAt       time.Time
 	Actor            Actor
 	ClientMutationID string
+	WorkflowChain    []ids.UUID
 }
 
 /*

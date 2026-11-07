@@ -283,6 +283,18 @@ func TestCheck(t *testing.T) {
 		})
 	}
 
+	t.Run("refuses office hours until schedules can run", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Contains(t, errorCodes(t, `{"schema":1,"trigger":"reusable","schedule":{"mode":"open"}}`),
+			workflowspec.CodeStepNotAvailable)
+		business := `{"id":"s_aaaaaa","kind":"wait","settings":{"for":"1h","count":"business"}}`
+		assert.Contains(t, errorCodes(t, def(fm, business)), workflowspec.CodeStepNotAvailable)
+
+		open := `{"id":"s_aaaaaa","kind":"wait","settings":{"until":{"kind":"office_hours_open"}}}`
+		assert.Contains(t, errorCodes(t, def(fm, open)), workflowspec.CodeStepNotAvailable)
+	})
+
 	t.Run("refuses paths nested too deep", func(t *testing.T) {
 		t.Parallel()
 
@@ -324,9 +336,10 @@ func TestCheck(t *testing.T) {
 				{"id":"s_coll00","kind":"collect","settings":{"text":"Email?","field":"contact.email","type":"email"}},
 				{"id":"s_upd000","kind":"update_contact","settings":{"set":[{"field":"contact.custom.plan",
 			"value":"{{run.vars.p}}"}]}},
-				{"id":"s_snz000","kind":"snooze","settings":{"until":{"kind":"office_hours_open"}}},
-				{"id":"s_wait00","kind":"wait","settings":{"for":"1d","count":"business",
+				{"id":"s_snz000","kind":"snooze","settings":{"for":"2h"}},
+				{"id":"s_wait00","kind":"wait","settings":{"for":"1d","count":"calendar",
 			"interrupt_on":["teammate_reply"]}},
+				{"id":"s_wait01","kind":"wait","settings":{"until":{"kind":"time_of_day","time":"09:00"}}},
 				{"id":"s_un0000","kind":"unassign","settings":{"what":"both"}},
 				{"id":"s_pri000","kind":"priority","settings":{"value":"high"}},
 				{"id":"s_untag0","kind":"untag","settings":{"tag_ids":["tag_a"]}},

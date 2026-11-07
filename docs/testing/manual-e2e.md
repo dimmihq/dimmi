@@ -988,3 +988,17 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Conflict | two `PATCH $B/articles/$ART` with the same `lock_version` | the second answers 409 `article_changed` |
 | Messenger Help tab | `GET $W/widget/v1/apps/$APP/help` | collections and articles with plain-block bodies |
 | Agent | publish an article, ask the messenger a question it answers | the agent cites the article's public address |
+
+## Workflows
+
+| Flow | How | Expect |
+|---|---|---|
+| Draft | `POST $B/workflows` `{"name":"Route","trigger":"conversation.first_message"}` | 201 `draft`, `spec.reentry.mode` `once_per_conversation`, `report.errors` empty |
+| Save | `PATCH $B/workflows/$WF` with `spec` and the `lock_version` read | 200, `lock_version` + 1; a second save with the old `lock_version` answers 409 `edit_conflict` |
+| Refused publish | a `message` step under `note.created`, then `POST $B/workflows/$WF/publications` | 422 `workflow_invalid` with `errors.0.code` `step_unavailable_for_trigger` and the step id |
+| Publish | a valid definition, then `POST $B/workflows/$WF/publications` `{"note":"first"}` | 200, `workflow.status` `live`, `version.number` 1; publishing again answers 409 `nothing_to_publish` |
+| Rollback | `PATCH $B/workflows/$WF` `{"restore_version_id":"$V1","publish":true}` | a new version with `restored_from_version_id` `$V1` |
+| Buttons | first-message workflow with a `buttons` step; customer writes in | the customer sees the question with numbered choices; answering "2", the label or "it's about billing" takes that path |
+| Teammate wins | reply as a teammate while the buttons step waits | the run ends `exited` `teammate_replied`; the customer gets no more workflow messages |
+| Background | `message.customer` workflow branching on `message.body contains_any ["refund"]` | the conversation gets the tag and priority; the timeline says "Workflow: <name>" |
+| Archive | `DELETE $B/workflows/$WF` on a reusable workflow a live workflow calls | 409 `workflow_in_use` |

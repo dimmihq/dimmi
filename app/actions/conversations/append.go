@@ -104,7 +104,8 @@ func (w *Writer) Append(
 
 /*
 announceCreated tells the application the entry was written, with the
-teammates a note mentions.
+teammates a note mentions, and whether the message is the first of its
+conversation.
 */
 func (w *Writer) announceCreated(
 	ctx context.Context, c models.Conversation, msg models.Message, mentioned []ids.UUID,
@@ -116,7 +117,8 @@ func (w *Writer) announceCreated(
 		MessageRef: appevents.MessageRef{ConversationRef: ref(c), MessageID: msg.ID},
 		ContactID:  c.ContactID, ChannelConnectionID: &connection, Type: msg.Type,
 		AuthorType: msg.AuthorType, AuthorID: msg.AuthorID, Substantive: msg.Substantive,
-		MentionedMemberIDs: mentioned,
+		ConversationCreated: msg.Type == string(enums.MessageTypeMessage) && c.MessageCount == 1,
+		MentionedMemberIDs:  mentioned,
 	})
 }
 

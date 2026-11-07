@@ -25,6 +25,7 @@ func erasedBy() map[string]string {
 		"contact_erasures":          "the request itself, holding no personal data once done",
 		"contact_exports":           "zips deleted by the wipe, rows deleted with the contact",
 		"ai_action_calls":           "inputs, results and notes scrubbed by an eraser, rows kept",
+		"workflow_runs":             "variables and trigger data scrubbed by an eraser, rows kept",
 	}
 }
 

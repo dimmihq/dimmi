@@ -34,12 +34,12 @@ func workflowRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/workflows", "workflows.index", wf.Index).Ability("workflows:read")
 	routing.Post(workspace, "/workflows", "workflows.store", wf.Store).
 		Ability("workflows:write").Status(fhttp.StatusCreated)
-	routing.Patch(workspace, "/workflows", "workflows.reorder", wf.Reorder).Ability("workflows:write")
+	routing.Patch(workspace, "/workflows", "workflows.update-many", wf.Reorder).Ability("workflows:write")
 	routing.Get(workspace, one, "workflows.show", wf.Show).Ability("workflows:read")
 	routing.Patch(workspace, one, "workflows.update", wf.Update).Ability("workflows:write")
 	routing.Delete(workspace, one, "workflows.destroy", wf.Destroy).
 		Ability("workflows:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, one+"/unarchive", "workflows.unarchive", wf.Unarchive).
+	routing.Post(workspace, one+"/unarchive", "workflows.unarchive.store", wf.Unarchive).
 		Ability("workflows:write").Status(fhttp.StatusOK)
 	routing.Post(workspace, one+"/publications", "workflows.publications.store", wf.Publish).
 		Ability("workflows:write").Status(fhttp.StatusOK)

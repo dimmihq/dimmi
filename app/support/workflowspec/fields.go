@@ -78,7 +78,7 @@ func eventFields() []audience.Field {
 		on("note.body", audience.TypeString, audience.Observed, TriggerNoteCreated),
 		on("rating.score", audience.TypeNumber, audience.Claimed, TriggerRated),
 		on("dimmi.handover_reason", audience.TypeList, audience.Observed, TriggerDimmiHandedOver),
-		on("trigger.to", audience.TypeList, audience.Observed, TriggerStatusChanged),
+		on("trigger.to", audience.TypeList, audience.Observed, TriggerStatusChanged, TriggerAssignmentChanged),
 		on("trigger.from", audience.TypeList, audience.Observed, TriggerStatusChanged),
 		on("trigger.reason", audience.TypeString, audience.Observed, TriggerStatusChanged),
 		on("trigger.to_member", audience.TypeID, audience.Observed, TriggerAssignmentChanged),

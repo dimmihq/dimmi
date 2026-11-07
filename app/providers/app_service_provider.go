@@ -143,7 +143,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootOperator(a)
 	bootTokens(a)
 	bootIdentity(a)
-	bootContent(a)
+	bootHelpCenters(a)
 
 	if err := bootAccountAndAudit(a); err != nil {
 		return err
@@ -153,17 +153,18 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
-	return errors.Join(registerJobs(a), registerWorkspaceJobs(a))
+	return errors.Join(registerJobs(a), registerWorkspaceJobs(a), registerWorkflowJobs(a))
 }
 
 /*
 bootSurfaces starts every customer-facing piece in order: channels
-first, the agent after them.
+first, then the workflows that talk through them, the agent last.
 */
 func bootSurfaces(ctx context.Context, a *app.App) error {
 	if err := bootChannels(ctx, a); err != nil {
 		return err
 	}
+	bootWorkflows(a)
 	return bootAI(ctx, a)
 }
 

@@ -146,3 +146,14 @@ DELETE FROM workflow_match_logs AS l WHERE l.id IN (
     SELECT o.id FROM workflow_match_logs AS o WHERE o.created_at < sqlc.arg(before)::timestamptz
     LIMIT sqlc.arg(row_limit)::integer
 );
+
+-- name: ResetConversationAiMode :exec
+-- ResetConversationAiMode gives a closed conversation back to the
+-- automatic agent's own rules.
+UPDATE conversations SET ai_mode = 'auto', updated_at = @now WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ScrubWorkflowRunsForContact :execrows
+-- ScrubWorkflowRunsForContact forgets what an erased customer's runs
+-- learned about them; the runs stay as a record that they happened.
+UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id;

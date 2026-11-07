@@ -526,3 +526,15 @@ Members read everything (they need to understand why a conversation was routed).
 11. Native buttons on Slack, Telegram, WhatsApp, Discord at MVP? **No; numbered choices everywhere, native later (`native-channel-buttons`).**
 12. `dimmi workflows export/apply` (workflows as code) at MVP? **Yes; thin over REST, strong fit for our audience.**
 13. SLA `count_ai_replies` default? **false: an AI answer does not satisfy a human SLA unless the admin says so.**
+
+## Decisions 2026-11-07 (first build)
+
+Owner ordered workflows before audiences, so the build starts from the parts of 18 workflows need.
+
+- **Rule language first.** `app/support/audience` (parse, catalog, surfaces, compile, three-valued evaluate, partial, explain, saved audience leaves) and `app/support/urlmatch` ship now. 18's SQL compiler, lint, attribute definitions and saved audience storage come with audiences. Workflow fields register in `workflowspec.Catalog()` (not `app/workflows/fields.go`): the validator and the engine share one catalog without an import cycle.
+- **Built:** definitions, validator, CRUD, publish, versions, rollback, pause, archive, reorder (M1 minus schedules CRUD and entitlements); engine core (matcher with verdicts and match logs, claims, runner with advisory lock, sequence and trace, step budget, loop guard via `WorkflowChain` on every event base); steps message, buttons, collect, branch, wait (duration and time of day), assign (member, team, round robin, balanced via `assignment.PickAssignee`), unassign, tag, untag, priority, note, update contact, snooze, close; triggers first message and customer reopened (in transaction), customer message, teammate message, note, assignment and status changes (queued); teammate reply, close, spam and delete interrupt runs in transaction.
+- **Background order:** the runs one event starts advance from one job, one after another in list order, each in its own transaction. Same determinism as the spec's batch links, one job instead of a chain.
+- **Live cache:** per-server memo with a 5 s lifetime plus local drop on publish, pause, archive and reorder. Pubsub busting later; 5 s is the bound on a stale server.
+- **Not ready, refused at publish with `step_not_available`:** dimmi, classify, reply time, run workflow, apply SLA, HTTP request, close with rating, schedule restriction, office-hours waits and business-time counting. Each lands with its milestone.
+- **Buttons render as numbered text on every channel**, the widget included, until the widget draws `metadata.workflow.buttons`.
+- **Fix found on the way:** `message.created` never carried `ConversationCreated`; it now marks a conversation's first message, which also lets notifications tell a new conversation from a reply.

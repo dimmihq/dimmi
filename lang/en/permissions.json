@@ -378,5 +378,21 @@
   "workspace:delete": {
     "label": "Delete the workspace",
     "description": "Delete the workspace and everything in it."
+  },
+  "schedules:manage": {
+    "label": "Manage office hours",
+    "description": "Create and change the schedules workflows and dimmi follow."
+  },
+  "workflows:manage": {
+    "label": "Manage workflows",
+    "description": "Build, publish, pause and archive workflows."
+  },
+  "workflows:read": {
+    "label": "See workflows",
+    "description": "See workflows, their versions and why they ran."
+  },
+  "workflows:run": {
+    "label": "Run workflows",
+    "description": "Run a reusable workflow on a conversation."
   }
 }
