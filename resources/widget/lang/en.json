@@ -1,6 +1,12 @@
 {
   "action_cancel": "Cancel",
+  "action_canceled": "Canceled",
   "action_confirm": "Confirm",
+  "action_declined": "Not approved",
+  "action_done": "Done",
+  "action_expired": "This request expired",
+  "action_failed": "This didn't go through",
+  "action_waiting": "Waiting for the team to review this",
   "ai_answering": "AI answering",
   "changelog": "What's new",
   "chat_body": "We usually reply in a few minutes",

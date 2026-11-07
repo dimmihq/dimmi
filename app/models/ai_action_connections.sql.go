@@ -14,6 +14,59 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const cancelConnectionCalls = `-- name: CancelConnectionCalls :exec
+UPDATE ai_action_calls SET
+    state = 'canceled', cancel_reason = 'action_unpublished', completed_at = $1::timestamptz, expires_at = NULL,
+    updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND connection_id = $3
+    AND state IN ('awaiting_confirmation', 'pending_approval')
+`
+
+type CancelConnectionCallsParams struct {
+	Now          time.Time `json:"now"`
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	ConnectionID ids.UUID  `json:"connection_id"`
+}
+
+// CancelConnectionCalls gives up the calls still waiting on a
+// connection being removed.
+func (q *Queries) CancelConnectionCalls(ctx context.Context, arg CancelConnectionCallsParams) error {
+	_, err := q.db.Exec(ctx, cancelConnectionCalls, arg.Now, arg.WorkspaceID, arg.ConnectionID)
+	return err
+}
+
+const countActionsByConnection = `-- name: CountActionsByConnection :many
+SELECT connection_id, count(*) AS actions FROM ai_actions
+WHERE workspace_id = $1 AND deleted_at IS NULL
+GROUP BY connection_id
+`
+
+type CountActionsByConnectionRow struct {
+	ConnectionID ids.UUID `json:"connection_id"`
+	Actions      int64    `json:"actions"`
+}
+
+// CountActionsByConnection counts each connection's live actions.
+func (q *Queries) CountActionsByConnection(ctx context.Context, workspaceID ids.UUID) ([]CountActionsByConnectionRow, error) {
+	rows, err := q.db.Query(ctx, countActionsByConnection, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountActionsByConnectionRow
+	for rows.Next() {
+		var i CountActionsByConnectionRow
+		if err := rows.Scan(&i.ConnectionID, &i.Actions); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countConnectionActions = `-- name: CountConnectionActions :one
 SELECT count(*) FROM ai_actions
 WHERE workspace_id = $1 AND connection_id = $2 AND deleted_at IS NULL
@@ -119,6 +172,24 @@ type DeleteActionConnectionParams struct {
 // secret.
 func (q *Queries) DeleteActionConnection(ctx context.Context, arg DeleteActionConnectionParams) error {
 	_, err := q.db.Exec(ctx, deleteActionConnection, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const deleteConnectionActions = `-- name: DeleteConnectionActions :exec
+UPDATE ai_actions SET deleted_at = $1::timestamptz, status = 'disabled', updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND connection_id = $3 AND deleted_at IS NULL
+`
+
+type DeleteConnectionActionsParams struct {
+	Now          time.Time `json:"now"`
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	ConnectionID ids.UUID  `json:"connection_id"`
+}
+
+// DeleteConnectionActions soft-deletes every action of a connection
+// being removed for good.
+func (q *Queries) DeleteConnectionActions(ctx context.Context, arg DeleteConnectionActionsParams) error {
+	_, err := q.db.Exec(ctx, deleteConnectionActions, arg.Now, arg.WorkspaceID, arg.ConnectionID)
 	return err
 }
 

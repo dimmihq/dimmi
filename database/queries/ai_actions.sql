@@ -105,3 +105,11 @@ JOIN ai_action_connections c ON c.workspace_id = a.workspace_id AND c.id = a.con
 WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.status = 'published'
     AND c.deleted_at IS NULL AND c.status = 'active'
 ORDER BY a.name;
+
+-- name: ListPublishedActionVersions :many
+-- ListPublishedActionVersions returns the version each live action
+-- currently publishes, published or disabled.
+SELECT v.*
+FROM ai_action_versions v
+JOIN ai_actions a ON a.workspace_id = v.workspace_id AND a.published_version_id = v.id
+WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL;

@@ -50,29 +50,29 @@ BoundArguments are MCP arguments the admin fills, hidden from the
 model; TimeoutMS of zero takes the connection's.
 */
 type Spec struct {
-	ConnectionID           ids.UUID             `json:"connection_id"`
-	Name                   string               `json:"name"`
-	Title                  string               `json:"title"`
-	Description            string               `json:"description"`
-	Kind                   string               `json:"kind"`
-	SideEffect             string               `json:"side_effect"`
-	Confirmation           string               `json:"confirmation"`
-	Approval               string               `json:"approval"`
-	ApprovalTimeoutMinutes int32                `json:"approval_timeout_minutes"`
-	Method                 string               `json:"method,omitempty"`
-	PathTemplate           string               `json:"path_template,omitempty"`
-	Query                  map[string]string    `json:"query"`
-	Headers                map[string]string    `json:"headers"`
-	BodyTemplate           json.RawMessage      `json:"body_template,omitempty"`
-	BodyEncoding           string               `json:"body_encoding"`
-	MCPToolName            string               `json:"mcp_tool_name,omitempty"`
-	BoundArguments         map[string]any       `json:"bound_arguments"`
-	InputSchema            json.RawMessage      `json:"input_schema"`
-	ResponseFields         []actionresult.Field `json:"response_fields"`
-	ErrorMessagePath       string               `json:"error_message_path,omitempty"`
-	ResponseMaxBytes       int32                `json:"response_max_bytes"`
-	TimeoutMS              int32                `json:"timeout_ms,omitempty"`
-	Channels               []string             `json:"channels"`
+	ConnectionID           ids.UUID                     `json:"connection_id"`
+	Name                   string                       `json:"name"`
+	Title                  string                       `json:"title"`
+	Description            string                       `json:"description"`
+	Kind                   string                       `json:"kind"`
+	SideEffect             string                       `json:"side_effect"`
+	Confirmation           string                       `json:"confirmation"`
+	Approval               string                       `json:"approval"`
+	ApprovalTimeoutMinutes int32                        `json:"approval_timeout_minutes"`
+	Method                 string                       `json:"method,omitempty"`
+	PathTemplate           string                       `json:"path_template,omitempty"`
+	Query                  map[string]string            `json:"query"`
+	Headers                map[string]string            `json:"headers"`
+	BodyTemplate           json.RawMessage              `json:"body_template,omitempty"`
+	BodyEncoding           string                       `json:"body_encoding"`
+	MCPToolName            string                       `json:"mcp_tool_name,omitempty"`
+	BoundArguments         map[string]any               `json:"bound_arguments"`
+	InputSchema            json.RawMessage              `json:"input_schema"`
+	ResponseFields         []actionresult.ResponseField `json:"response_fields"`
+	ErrorMessagePath       string                       `json:"error_message_path,omitempty"`
+	ResponseMaxBytes       int32                        `json:"response_max_bytes"`
+	TimeoutMS              int32                        `json:"timeout_ms,omitempty"`
+	Channels               []string                     `json:"channels"`
 }
 
 /*

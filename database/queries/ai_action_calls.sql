@@ -135,3 +135,11 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- CountRunActionCall adds one action call to the run's tally.
 UPDATE ai_runs SET action_calls_count = action_calls_count + 1, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: SetMessageActionCall :exec
+-- SetMessageActionCall merges a call's news into the action call an
+-- agent message reports, when that message reports this call.
+UPDATE messages SET
+    metadata = jsonb_set(metadata, '{ai,action_call}', (metadata -> 'ai' -> 'action_call') || @patch::jsonb),
+    updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id AND metadata -> 'ai' -> 'action_call' ->> 'id' = @call_id::text;

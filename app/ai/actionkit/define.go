@@ -121,7 +121,7 @@ func withDefaults(s Spec) Spec {
 		s.BoundArguments = map[string]any{}
 	}
 	if s.ResponseFields == nil {
-		s.ResponseFields = []actionresult.Field{}
+		s.ResponseFields = []actionresult.ResponseField{}
 	}
 	if s.BodyEncoding == "" {
 		s.BodyEncoding = "json"

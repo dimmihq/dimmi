@@ -120,6 +120,21 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 
 	routing.Post(visitor, one+"/ai/helped", "widget.conversations.ai.helped", conv.Helped)
 	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff).Middleware("idempotent")
+
+	widgetActionCallRoutes(visitor, a, one)
+}
+
+/*
+widgetActionCallRoutes declares the visitor's confirmation cards: read
+one, and confirm or cancel it.
+*/
+func widgetActionCallRoutes(visitor *routing.Router, a *app.App, one string) {
+	if a.Actions.AI == nil || a.Actions.AI.VisitorCalls == nil {
+		return
+	}
+	calls := &widget.ActionCallController{Calls: a.Actions.AI.VisitorCalls, IDs: a.IDs}
+	routing.Get(visitor, one+"/action-calls/{call}", "widget.conversations.action-calls.show", calls.Show)
+	routing.Patch(visitor, one+"/action-calls/{call}", "widget.conversations.action-calls.update", calls.Update)
 }
 
 /*

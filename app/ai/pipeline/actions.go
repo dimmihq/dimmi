@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -170,12 +171,13 @@ func actionMetadata(st *run, ai map[string]any) {
 	if c := st.actions.card; c != nil {
 		ai["confirmation"] = map[string]any{
 			"action_call_id": models.PublicID(models.PrefixAiActionCall, c.ID), "title": c.Title,
-			"text": c.Summary, "status": c.State, "expires_at": c.ExpiresAt,
+			"text": c.Summary, "status": c.State, "expires_at": c.ExpiresAt, "details": details(*c),
 		}
 	}
 	if len(st.actions.calls) == 0 {
 		return
 	}
+	ai["action_call"] = reportedCall(st)
 	calls := make([]map[string]any, 0, len(st.actions.calls))
 	for _, c := range st.actions.calls {
 		calls = append(calls, map[string]any{
@@ -183,6 +185,54 @@ func actionMetadata(st *run, ai map[string]any) {
 		})
 	}
 	ai["action_calls"] = calls
+}
+
+/*
+reportedCall is the call the reply reports in full: the turn's write
+when it made one, else its last call.
+*/
+func reportedCall(st *run) map[string]any {
+	c := st.actions.calls[len(st.actions.calls)-1]
+	for _, call := range st.actions.calls {
+		if call.SideEffect == actionkit.SideEffectWrite {
+			c = call
+		}
+	}
+	name := ""
+	for _, live := range st.actions.offered {
+		if live.ActionID == c.ActionID {
+			name = live.Spec.Name
+		}
+	}
+	args := map[string]any{}
+	_ = json.Unmarshal(c.Input, &args)
+	out := actionkit.MessagePatch(c, conversations.Actor{})
+	out["id"] = models.PublicID(models.PrefixAiActionCall, c.ID)
+	out["action"] = map[string]any{"name": name, "title": c.Title}
+	out["summary"], out["arguments"], out["expires_at"] = c.Summary, args, c.ExpiresAt
+	return out
+}
+
+/*
+details are the card's lines: each argument the customer confirms, by
+name.
+*/
+func details(c models.AiActionCall) []map[string]string {
+	args := map[string]any{}
+	_ = json.Unmarshal(c.Input, &args)
+	keys := make([]string, 0, len(args))
+	for k := range args {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	out := make([]map[string]string, 0, len(keys))
+	for _, k := range keys {
+		value, _ := json.Marshal(args[k])
+		out = append(out, map[string]string{
+			"label": strings.ReplaceAll(k, "_", " "), "value": strings.Trim(string(value), `"`),
+		})
+	}
+	return out
 }
 
 /*

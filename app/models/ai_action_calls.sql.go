@@ -958,6 +958,34 @@ func (q *Queries) SetActionCallsMessage(ctx context.Context, arg SetActionCallsM
 	return err
 }
 
+const setMessageActionCall = `-- name: SetMessageActionCall :exec
+UPDATE messages SET
+    metadata = jsonb_set(metadata, '{ai,action_call}', (metadata -> 'ai' -> 'action_call') || $1::jsonb),
+    updated_at = $2::timestamptz
+WHERE workspace_id = $3 AND id = $4 AND metadata -> 'ai' -> 'action_call' ->> 'id' = $5::text
+`
+
+type SetMessageActionCallParams struct {
+	Patch       json.RawMessage `json:"patch"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+	CallID      string          `json:"call_id"`
+}
+
+// SetMessageActionCall merges a call's news into the action call an
+// agent message reports, when that message reports this call.
+func (q *Queries) SetMessageActionCall(ctx context.Context, arg SetMessageActionCallParams) error {
+	_, err := q.db.Exec(ctx, setMessageActionCall,
+		arg.Patch,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.CallID,
+	)
+	return err
+}
+
 const setMessageConfirmationStatus = `-- name: SetMessageConfirmationStatus :exec
 UPDATE messages SET metadata = jsonb_set(metadata, '{ai,confirmation,status}', to_jsonb($1::text)),
     updated_at = $2::timestamptz

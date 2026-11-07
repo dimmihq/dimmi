@@ -54,9 +54,9 @@ var (
 )
 
 /*
-Field maps one value of the response to a name the model reads.
+ResponseField maps one value of the response to a name the model reads.
 */
-type Field struct {
+type ResponseField struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
 	Description string `json:"description,omitempty"`
@@ -81,7 +81,7 @@ func namePattern() *regexp.Regexp {
 CheckFields validates the mapped fields: plain paths without modifiers,
 pipes or multipaths, and unique names.
 */
-func CheckFields(fields []Field) error {
+func CheckFields(fields []ResponseField) error {
 	if len(fields) > maxFields {
 		return fmt.Errorf("%w: at most %d fields", ErrInvalidPath, maxFields)
 	}
@@ -112,7 +112,7 @@ func CheckPath(path string) error {
 Shape maps a JSON body to the result the model reads. With no fields
 the whole body is kept, capped like any result.
 */
-func Shape(body []byte, fields []Field, maxBytes int) (json.RawMessage, error) {
+func Shape(body []byte, fields []ResponseField, maxBytes int) (json.RawMessage, error) {
 	if !gjson.ValidBytes(body) {
 		return nil, ErrInvalidResponse
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -49,6 +50,7 @@ type Definitions struct {
 DefinitionInput is an action to create, or the fields of one to change:
 nil leaves a field as it is. BodyTemplate set to JSON null clears the
 body. Status moves a published action between published and disabled.
+RestoreVersionID makes the working copy one of its versions again.
 */
 type DefinitionInput struct {
 	Membership             authz.Membership
@@ -69,12 +71,13 @@ type DefinitionInput struct {
 	MCPToolName            *string
 	BoundArguments         *map[string]any
 	InputSchema            *json.RawMessage
-	ResponseFields         *[]actionresult.Field
+	ResponseFields         *[]actionresult.ResponseField
 	ErrorMessagePath       *string
 	ResponseMaxBytes       *int32
 	TimeoutMS              *int32
 	Channels               *[]string
 	Status                 *string
+	RestoreVersionID       *ids.UUID
 	Source                 string
 }
 
@@ -87,21 +90,50 @@ type ListFilter struct {
 }
 
 /*
-List returns the workspace's actions by name.
+List returns the workspace's actions by name, each with its live
+version.
 */
-func (d *Definitions) List(ctx context.Context, m authz.Membership, f ListFilter) ([]models.AiAction, error) {
+func (d *Definitions) List(ctx context.Context, m authz.Membership, f ListFilter) ([]View, error) {
 	if err := RequireRead(m); err != nil {
 		return nil, err
 	}
-	var out []models.AiAction
+	var out []View
 	err := d.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		out, err = models.New(tx).ListActions(ctx, models.ListActionsParams{
+		q := models.New(tx)
+		rows, err := q.ListActions(ctx, models.ListActionsParams{
 			WorkspaceID: m.Workspace.ID, Status: f.Status, ConnectionID: f.ConnectionID,
 		})
-		return err
+		if err != nil {
+			return fmt.Errorf("list actions: %w", err)
+		}
+		versions, err := q.ListPublishedActionVersions(ctx, m.Workspace.ID)
+		if err != nil {
+			return fmt.Errorf("list published versions: %w", err)
+		}
+		live := map[ids.UUID]models.AiActionVersion{}
+		for _, v := range versions {
+			live[v.ID] = v
+		}
+		for _, a := range rows {
+			view := View{Action: a}
+			if v, ok := live[deref(a.PublishedVersionID)]; ok {
+				view.Version = &v
+			}
+			out = append(out, view)
+		}
+		return nil
 	})
 	return out, err
+}
+
+/*
+deref reads a nullable id, zero when null.
+*/
+func deref(id *ids.UUID) ids.UUID {
+	if id == nil {
+		return ids.UUID{}
+	}
+	return *id
 }
 
 /*
@@ -177,8 +209,11 @@ func (d *Definitions) Update(ctx context.Context, id ids.UUID, in DefinitionInpu
 		if err != nil {
 			return err
 		}
-		row, err := d.edit(ctx, tx, current.Action, in)
+		row, err := d.restore(ctx, tx, current.Action, in)
 		if err != nil {
+			return err
+		}
+		if row, err = d.edit(ctx, tx, row, in); err != nil {
 			return err
 		}
 		if in.Status != nil {
@@ -190,6 +225,55 @@ func (d *Definitions) Update(ctx context.Context, id ids.UUID, in DefinitionInpu
 		return err
 	})
 	return out, err
+}
+
+/*
+restore makes the working copy the definition of one of the action's
+versions, to publish again as a rollback.
+*/
+func (d *Definitions) restore(ctx context.Context, tx *database.Tx, a models.AiAction, in DefinitionInput,
+) (models.AiAction, error) {
+	if in.RestoreVersionID == nil {
+		return a, nil
+	}
+	q := models.New(tx)
+	v, err := q.FindActionVersion(ctx, models.FindActionVersionParams{
+		WorkspaceID: a.WorkspaceID, ID: *in.RestoreVersionID,
+	})
+	if err != nil || v.ActionID != a.ID {
+		return a, invalidField("version_invalid", "restore_version_id", "the version is not one of this action's")
+	}
+	s, err := actionkit.FromVersion(v)
+	if err != nil {
+		return a, err
+	}
+	row, err := q.UpdateAction(ctx, updateParams(a, s, in, d.Clock))
+	if err != nil {
+		return a, actionWriteError(err)
+	}
+	return row, nil
+}
+
+/*
+PublisherNames names who published each version.
+*/
+func (d *Definitions) PublisherNames(ctx context.Context, m authz.Membership, versions []models.AiActionVersion,
+) map[ids.UUID]string {
+	var memberIDs []ids.UUID
+	for _, v := range versions {
+		if v.PublishedByMemberID != nil {
+			memberIDs = append(memberIDs, *v.PublishedByMemberID)
+		}
+	}
+	out := map[ids.UUID]string{}
+	_ = d.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		members, err := conversations.Members(ctx, models.New(tx), m.Workspace.ID, memberIDs)
+		for id, member := range members {
+			out[id] = member.User.Name
+		}
+		return err
+	})
+	return out
 }
 
 /*

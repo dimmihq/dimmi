@@ -19,7 +19,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/fault"
-	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -42,7 +41,7 @@ func newSpec(conn models.AiActionConnection, in DefinitionInput) actionkit.Spec 
 		s.Method = *in.Method
 	}
 	s.SideEffect = actionkit.SideEffectWrite
-	if s.Kind == actionkit.KindHTTP && strings.EqualFold(s.Method, fhttp.MethodGet) {
+	if s.Kind == actionkit.KindHTTP && strings.EqualFold(s.Method, "get") {
 		s.SideEffect = actionkit.SideEffectRead
 	}
 	if in.SideEffect != nil {

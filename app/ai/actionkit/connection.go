@@ -91,10 +91,10 @@ func (c Credentials) Hint() *string {
 }
 
 /*
-AuthConfig is a connection's non-secret auth setting: the header an API
+ConnectionAuth is a connection's non-secret auth setting: the header an API
 key travels in, the query parameter, or a prefix other than Bearer.
 */
-type AuthConfig struct {
+type ConnectionAuth struct {
 	HeaderName string `json:"header_name,omitempty"`
 	QueryParam string `json:"query_param,omitempty"`
 	Prefix     string `json:"prefix,omitempty"`
@@ -181,7 +181,7 @@ func hostPort(u *url.URL) string {
 /*
 CheckAuth checks an auth type and its setting.
 */
-func CheckAuth(authType string, cfg AuthConfig) error {
+func CheckAuth(authType string, cfg ConnectionAuth) error {
 	if !slices.Contains(AuthTypes(), authType) {
 		return fault.New(fault.Invalid, "auth_type_invalid", "unknown auth type").OnField("auth_type")
 	}
@@ -216,7 +216,7 @@ carries.
 */
 func applyAuth(conn models.AiActionConnection, creds Credentials) applied {
 	out := applied{headers: fhttp.Header{}, query: url.Values{}}
-	var cfg AuthConfig
+	var cfg ConnectionAuth
 	_ = json.Unmarshal(conn.AuthConfig, &cfg)
 	switch conn.AuthType {
 	case "bearer":

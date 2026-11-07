@@ -557,6 +557,45 @@ func (q *Queries) ListLiveActionVersions(ctx context.Context, workspaceID ids.UU
 	return items, nil
 }
 
+const listPublishedActionVersions = `-- name: ListPublishedActionVersions :many
+SELECT v.id, v.workspace_id, v.action_id, v.number, v.spec, v.spec_hash, v.note, v.published_by_member_id, v.created_at
+FROM ai_action_versions v
+JOIN ai_actions a ON a.workspace_id = v.workspace_id AND a.published_version_id = v.id
+WHERE a.workspace_id = $1 AND a.deleted_at IS NULL
+`
+
+// ListPublishedActionVersions returns the version each live action
+// currently publishes, published or disabled.
+func (q *Queries) ListPublishedActionVersions(ctx context.Context, workspaceID ids.UUID) ([]AiActionVersion, error) {
+	rows, err := q.db.Query(ctx, listPublishedActionVersions, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AiActionVersion
+	for rows.Next() {
+		var i AiActionVersion
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ActionID,
+			&i.Number,
+			&i.Spec,
+			&i.SpecHash,
+			&i.Note,
+			&i.PublishedByMemberID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const publishAction = `-- name: PublishAction :one
 UPDATE ai_actions SET
     status = 'published', published_version_id = $1, updated_by_member_id = $2, updated_at = $3::timestamptz

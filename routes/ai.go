@@ -58,6 +58,7 @@ func aiRoutes(r *routing.Router, a *app.App) {
 	routing.Post(r, "/ai/chatgpt/callback", "ai.chatgpt.callback.store", c.CompleteConnect).Ability("ai:keys")
 
 	aiTraceRoutes(r, a)
+	aiActionRoutes(r, a)
 }
 
 /*

@@ -84,3 +84,24 @@ WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
 -- CountConnectionActions counts the live actions that use the connection.
 SELECT count(*) FROM ai_actions
 WHERE workspace_id = @workspace_id AND connection_id = @connection_id AND deleted_at IS NULL;
+
+-- name: CountActionsByConnection :many
+-- CountActionsByConnection counts each connection's live actions.
+SELECT connection_id, count(*) AS actions FROM ai_actions
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL
+GROUP BY connection_id;
+
+-- name: DeleteConnectionActions :exec
+-- DeleteConnectionActions soft-deletes every action of a connection
+-- being removed for good.
+UPDATE ai_actions SET deleted_at = @now::timestamptz, status = 'disabled', updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND connection_id = @connection_id AND deleted_at IS NULL;
+
+-- name: CancelConnectionCalls :exec
+-- CancelConnectionCalls gives up the calls still waiting on a
+-- connection being removed.
+UPDATE ai_action_calls SET
+    state = 'canceled', cancel_reason = 'action_unpublished', completed_at = @now::timestamptz, expires_at = NULL,
+    updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND connection_id = @connection_id
+    AND state IN ('awaiting_confirmation', 'pending_approval');

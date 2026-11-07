@@ -54,7 +54,7 @@ type ConnectionInput struct {
 	Kind           string
 	BaseURL        *string
 	AuthType       *string
-	AuthConfig     *actionkit.AuthConfig
+	AuthConfig     *actionkit.ConnectionAuth
 	Token          *string
 	Username       *string
 	Password       *string
@@ -243,7 +243,7 @@ func applyNames(conn *models.AiActionConnection, in ConnectionInput, client *htt
 applyAuthFields applies the auth type and its setting.
 */
 func applyAuthFields(conn *models.AiActionConnection, in ConnectionInput) error {
-	cfg := actionkit.AuthConfig{}
+	cfg := actionkit.ConnectionAuth{}
 	_ = json.Unmarshal(conn.AuthConfig, &cfg)
 	if in.AuthType != nil {
 		conn.AuthType = *in.AuthType
@@ -318,30 +318,69 @@ func secretOf(in ConnectionInput) (actionkit.Credentials, bool) {
 }
 
 /*
-Delete removes a connection no live action uses, shredding its secret.
+Removal is a connection to delete; Force also deletes the actions that
+use it.
 */
-func (c *Connections) Delete(ctx context.Context, m authz.Membership, id ids.UUID) error {
+type Removal struct {
+	Membership   authz.Membership
+	ConnectionID ids.UUID
+	Force        bool
+}
+
+/*
+Delete removes a connection, shredding its secret. While actions use it
+the caller must force it, which deletes those actions too and cancels
+their calls still waiting for a decision.
+*/
+func (c *Connections) Delete(ctx context.Context, in Removal) error {
+	m, id := in.Membership, in.ConnectionID
 	if err := RequireManage(m); err != nil {
 		return err
 	}
 	return c.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		if _, err := findConnection(ctx, tx, m.Workspace.ID, id); err != nil {
+		q, ws, now := models.New(tx), m.Workspace.ID, c.Clock.Now()
+		if _, err := findConnection(ctx, tx, ws, id); err != nil {
 			return err
 		}
 		used, err := q.CountConnectionActions(ctx, models.CountConnectionActionsParams{
-			WorkspaceID: m.Workspace.ID, ConnectionID: id,
+			WorkspaceID: ws, ConnectionID: id,
 		})
 		if err != nil {
 			return fmt.Errorf("count connection actions: %w", err)
 		}
-		if used > 0 {
+		if used > 0 && !in.Force {
 			return exceptions.ErrConnectionInUse
 		}
-		return q.DeleteActionConnection(ctx, models.DeleteActionConnectionParams{
-			WorkspaceID: m.Workspace.ID, ID: id, Now: c.Clock.Now(),
-		})
+		if err := q.CancelConnectionCalls(ctx, models.CancelConnectionCallsParams{
+			WorkspaceID: ws, ConnectionID: id, Now: now,
+		}); err != nil {
+			return fmt.Errorf("cancel connection calls: %w", err)
+		}
+		if err := q.DeleteConnectionActions(ctx, models.DeleteConnectionActionsParams{
+			WorkspaceID: ws, ConnectionID: id, Now: now,
+		}); err != nil {
+			return fmt.Errorf("delete connection actions: %w", err)
+		}
+		return q.DeleteActionConnection(ctx, models.DeleteActionConnectionParams{WorkspaceID: ws, ID: id, Now: now})
 	})
+}
+
+/*
+ActionCounts counts each connection's live actions.
+*/
+func (c *Connections) ActionCounts(ctx context.Context, m authz.Membership) (map[ids.UUID]int64, error) {
+	if err := RequireRead(m); err != nil {
+		return nil, err
+	}
+	out := map[ids.UUID]int64{}
+	err := c.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		rows, err := models.New(tx).CountActionsByConnection(ctx, m.Workspace.ID)
+		for _, r := range rows {
+			out[r.ConnectionID] = r.Actions
+		}
+		return err
+	})
+	return out, err
 }
 
 /*

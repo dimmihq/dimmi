@@ -618,6 +618,12 @@
       "MessageAI": {
         "additionalProperties": false,
         "properties": {
+          "action_call": {
+            "$ref": "#/components/schemas/MessageAIActionCall"
+          },
+          "confirmation": {
+            "$ref": "#/components/schemas/MessageAIConfirmation"
+          },
           "generated": {
             "type": "boolean"
           },
@@ -640,6 +646,136 @@
         "required": [
           "generated",
           "sources"
+        ],
+        "type": "object"
+      },
+      "MessageAIAction": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title"
+        ],
+        "type": "object"
+      },
+      "MessageAIActionCall": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/MessageAIAction"
+          },
+          "arguments": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "decided_by": {
+            "$ref": "#/components/schemas/MessageAIPerson"
+          },
+          "decision_reason": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "result_summary": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "MessageAIConfirmation": {
+        "additionalProperties": false,
+        "properties": {
+          "action_call_id": {
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/MessageAIDetail"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_call_id",
+          "title",
+          "text",
+          "status",
+          "expires_at",
+          "details"
+        ],
+        "type": "object"
+      },
+      "MessageAIDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "type": "object"
+      },
+      "MessageAIPerson": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ],
         "type": "object"
       },
@@ -844,6 +980,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/RealtimeTokenResource"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWidgetActionCall": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetActionCall"
           }
         },
         "required": [
@@ -1119,6 +1267,18 @@
         ],
         "type": "object"
       },
+      "UpdateWidgetActionCallRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
       "UpdateWidgetAttachmentRequestBody": {
         "additionalProperties": true,
         "properties": {
@@ -1186,6 +1346,46 @@
         "required": [
           "data",
           "meta"
+        ],
+        "type": "object"
+      },
+      "WidgetActionCall": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "title",
+          "summary",
+          "state",
+          "status",
+          "expires_at"
         ],
         "type": "object"
       },
@@ -2085,6 +2285,104 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResourceWidgetConversation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/action-calls/{call}": {
+      "get": {
+        "operationId": "widget.conversations.action-calls.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "call",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetActionCall"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "widget.conversations.action-calls.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "call",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWidgetActionCallRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetActionCall"
                 }
               }
             },

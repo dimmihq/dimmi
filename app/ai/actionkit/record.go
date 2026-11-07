@@ -15,6 +15,7 @@ package actionkit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -75,18 +76,62 @@ func (k *Kit) note(ctx context.Context, tx *database.Tx, s step) error {
 		return err
 	}
 
-	if call.MessageID != nil {
-		if err := q.SetMessageConfirmationStatus(ctx, models.SetMessageConfirmationStatusParams{
-			WorkspaceID: call.WorkspaceID, ID: *call.MessageID, Status: call.State, Now: now,
-		}); err != nil {
-			return fmt.Errorf("update confirmation card: %w", err)
-		}
+	if err := k.updateMessage(ctx, q, s); err != nil {
+		return err
 	}
 
 	return k.Events.Dispatch(ctx, tx, appevents.AiActionCallUpdated{
 		Base: w.Base(call.WorkspaceID), ConversationRef: appevents.ConversationRef{ConversationID: conv.ID},
 		CallID: call.ID, State: call.State,
 	})
+}
+
+/*
+updateMessage keeps the agent message that reported the call in step:
+the confirmation card's status and the call's state, decider and
+outcome.
+*/
+func (k *Kit) updateMessage(ctx context.Context, q *models.Queries, s step) error {
+	call, now := s.call, k.Clock.Now()
+	if call.MessageID == nil {
+		return nil
+	}
+	if err := q.SetMessageConfirmationStatus(ctx, models.SetMessageConfirmationStatusParams{
+		WorkspaceID: call.WorkspaceID, ID: *call.MessageID, Status: call.State, Now: now,
+	}); err != nil {
+		return fmt.Errorf("update confirmation card: %w", err)
+	}
+	patch, err := json.Marshal(MessagePatch(call, s.actor))
+	if err != nil {
+		return fmt.Errorf("encode action call news: %w", err)
+	}
+	if err := q.SetMessageActionCall(ctx, models.SetMessageActionCallParams{
+		WorkspaceID: call.WorkspaceID, ID: *call.MessageID, Patch: patch, CallID: models.PublicID(
+			models.PrefixAiActionCall, call.ID), Now: now,
+	}); err != nil {
+		return fmt.Errorf("update reported action call: %w", err)
+	}
+	return nil
+}
+
+/*
+MessagePatch is a call's news as the message reporting it keeps it:
+its state, who decided and why, and a short line of its result.
+*/
+func MessagePatch(call models.AiActionCall, actor conversations.Actor) map[string]any {
+	out := map[string]any{"state": call.State}
+	if call.DecidedByMemberID != nil && actor.Type == string(enums.AuthorTypeMember) {
+		out["decided_by"] = map[string]any{
+			"id": models.PublicID(models.PrefixMember, *call.DecidedByMemberID), "name": actor.Name,
+		}
+	}
+	if call.DecisionReason != nil {
+		out["decision_reason"] = *call.DecisionReason
+	}
+	if call.State == "succeeded" && len(call.Result) > 0 {
+		out["result_summary"] = truncateText(string(call.Result), 200)
+	}
+	return out
 }
 
 /*
