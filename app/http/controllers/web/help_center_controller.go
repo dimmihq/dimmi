@@ -40,11 +40,13 @@ const PortalEntry = "resources/js/portal/portal.ts"
 
 /*
 HelpCenterController serves the public help center's pages. Assets
-serves the images they show.
+serves the images they show; Readers signs readers in through the
+team's product.
 */
 type HelpCenterController struct {
 	Library *helpsample.Library
 	Public  *helpcenters.Public
+	Readers *helpcenters.Readers
 	Assets  fhttp.Handler
 	Vite    *vite.Bundle
 	Errors  fhttp.Errors
@@ -207,9 +209,7 @@ func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
 	if c.Public != nil {
 		snap, err := c.Public.Load(r.Context(), slug)
 		if err == nil {
-			center := centerOf(snap.HelpCenter, base)
-			center.Origin = origin(r)
-			return center, newSite(r.Context(), c.Public, snap), true
+			return c.realSite(w, r, snap, base)
 		}
 		if !errors.Is(err, helpcenters.ErrNoHelpCenter) {
 			c.Errors.Render(w, r, err)
@@ -260,7 +260,9 @@ func (c *HelpCenterController) styles() view.Component {
 }
 
 func (c *HelpCenterController) respond(w fhttp.ResponseWriter, r *fhttp.Request, status int, page view.Component) {
-	w.Header().Set("Cache-Control", "no-cache")
+	if w.Header().Get("Cache-Control") == "" {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
 
 	if err := view.Respond(w, r, status, page); err != nil {
 		c.Errors.Render(w, r, err)

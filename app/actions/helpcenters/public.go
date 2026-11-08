@@ -108,10 +108,78 @@ func (p *Public) Load(ctx context.Context, subdomain string) (Snapshot, error) {
 }
 
 /*
+LoadFor returns the help center answering the subdomain as one signed-in
+reader sees it, with what their audiences open. It is never cached, so
+nothing one reader sees reaches another.
+*/
+func (p *Public) LoadFor(ctx context.Context, subdomain string, contact ids.UUID) (Snapshot, error) {
+	row, err := models.New(p.DB).ResolveHelpCenter(ctx, subdomain)
+	if errors.Is(err, database.ErrNotFound) {
+		return Snapshot{}, ErrNoHelpCenter
+	}
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("resolve help center: %w", err)
+	}
+	var out Snapshot
+	scoped := tenancy.With(ctx, row.WorkspaceID.String())
+	err = p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+		h, err := q.FindHelpCenter(ctx, models.FindHelpCenterParams(row))
+		if err != nil {
+			return fmt.Errorf("find help center: %w", err)
+		}
+		reader, err := p.reader(ctx, q, h.WorkspaceID, &contact)
+		if err != nil {
+			return err
+		}
+		full, err := loadAll(ctx, q, h)
+		if err != nil {
+			return err
+		}
+		out, err = readable(ctx, q, full, reader)
+		return err
+	})
+	return out, err
+}
+
+/*
+reader is who reads: a contact, or nil for a reader nobody knows.
+*/
+func (p *Public) reader(ctx context.Context, q *models.Queries, ws ids.UUID, contact *ids.UUID,
+) (audiences.Reader, error) {
+	out := audiences.Reader{WorkspaceID: ws, Now: p.Clock.Now()}
+	if contact == nil {
+		return out, nil
+	}
+	c, err := q.FindContact(ctx, models.FindContactParams{WorkspaceID: ws, ID: *contact})
+	if err != nil {
+		return out, fmt.Errorf("find reader: %w", err)
+	}
+	people, err := audiences.LoadPeople(ctx, q, ws, []models.Contact{c})
+	if err != nil {
+		return out, err
+	}
+	out.Person = &people[0]
+	return out, nil
+}
+
+/*
 load reads a help center's collections and published articles, those an
 anonymous reader may see.
 */
 func load(ctx context.Context, q *models.Queries, h models.HelpCenter, now nowFunc) (Snapshot, error) {
+	out, err := loadAll(ctx, q, h)
+	if err != nil {
+		return out, err
+	}
+	return readable(ctx, q, out, audiences.Reader{WorkspaceID: h.WorkspaceID, Now: now()})
+}
+
+/*
+loadAll reads every collection and published article of a help center,
+before any audience is applied.
+*/
+func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter) (Snapshot, error) {
 	out := Snapshot{HelpCenter: h}
 	var err error
 	out.Collections, err = q.ListCollections(ctx, models.ListCollectionsParams{
@@ -126,7 +194,7 @@ func load(ctx context.Context, q *models.Queries, h models.HelpCenter, now nowFu
 	if err != nil {
 		return out, fmt.Errorf("list published articles: %w", err)
 	}
-	return readable(ctx, q, out, now)
+	return out, nil
 }
 
 /*
@@ -135,24 +203,35 @@ nowFunc gives the current time.
 type nowFunc func() time.Time
 
 /*
-Search finds a help center's published public articles matching the
-query, best first.
+Find is one search of a help center: the help center, the words, how
+many results at most, and the signed-in reader, nil for anyone else.
 */
-func (p *Public) Search(ctx context.Context, h models.HelpCenter, query string, limit int32,
-) ([]models.SearchPublishedArticlesRow, error) {
+type Find struct {
+	Center models.HelpCenter
+	Query  string
+	Limit  int32
+	Reader *ids.UUID
+}
+
+/*
+Search finds a help center's published public articles matching the
+query, best first, those the reader may read.
+*/
+func (p *Public) Search(ctx context.Context, f Find) ([]models.SearchPublishedArticlesRow, error) {
 	var out []models.SearchPublishedArticlesRow
+	h := f.Center
 	scoped := tenancy.With(ctx, h.WorkspaceID.String())
 	err := p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		rows, err := q.SearchPublishedArticles(ctx, models.SearchPublishedArticlesParams{
-			Query: query, WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, IncludeAgentOnly: false, RowLimit: limit,
+			Query: f.Query, WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, IncludeAgentOnly: false, RowLimit: f.Limit,
 		})
 		if err != nil {
 			return err
 		}
-		visible, err := p.anonymousArticles(ctx, q, h.WorkspaceID)
+		visible, err := p.articlesFor(ctx, q, h.WorkspaceID, f.Reader)
 		for _, r := range rows {
-			if visible(r.ID) {
+			if err == nil && visible(r.ID) {
 				out = append(out, r)
 			}
 		}
@@ -222,16 +301,23 @@ func (p *Public) LoadByID(ctx context.Context, workspaceID, id ids.UUID) (Snapsh
 }
 
 /*
-anonymousArticles answers whether an anonymous reader may read an
+articlesFor answers whether the reader, nil for anyone, may read an
 article.
 */
-func (p *Public) anonymousArticles(ctx context.Context, q *models.Queries, ws ids.UUID) (func(ids.UUID) bool, error) {
+func (p *Public) articlesFor(ctx context.Context, q *models.Queries, ws ids.UUID, contact *ids.UUID,
+) (func(ids.UUID) bool, error) {
 	r, err := audiences.LoadRestrictions(ctx, q, ws)
 	if err != nil {
 		return nil, err
 	}
 
-	allowed, err := audiences.Allowed(ctx, q, audiences.Reader{WorkspaceID: ws, Needed: r.Needed(), Now: p.Clock.Now()})
+	reader, err := p.reader(ctx, q, ws, contact)
+	if err != nil {
+		return nil, err
+	}
+
+	reader.Needed = r.Needed()
+	allowed, err := audiences.Allowed(ctx, q, reader)
 
 	return func(id ids.UUID) bool { return r.Article(id, allowed) }, err
 }

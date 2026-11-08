@@ -138,9 +138,9 @@ func wrapTouch(err error) error {
 }
 
 /*
-readable keeps the articles and collections an anonymous reader may see.
+readable keeps the articles and collections the reader may see.
 */
-func readable(ctx context.Context, q *models.Queries, s Snapshot, now nowFunc) (Snapshot, error) {
+func readable(ctx context.Context, q *models.Queries, s Snapshot, reader audiences.Reader) (Snapshot, error) {
 	r, err := audiences.LoadRestrictions(ctx, q, s.HelpCenter.WorkspaceID)
 	if err != nil {
 		return s, err
@@ -151,9 +151,8 @@ func readable(ctx context.Context, q *models.Queries, s Snapshot, now nowFunc) (
 		return s, nil
 	}
 
-	allowed, err := audiences.Allowed(ctx, q, audiences.Reader{
-		WorkspaceID: s.HelpCenter.WorkspaceID, Needed: needed, Now: now(),
-	})
+	reader.Needed = needed
+	allowed, err := audiences.Allowed(ctx, q, reader)
 	if err != nil {
 		return s, err
 	}

@@ -1084,3 +1084,13 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Unfit audience | an audience on email domain, a page, or one that does not exist | 422 `audience_unfit` |
 | In use | delete the audience an article is kept to | 409 `audience_in_use` naming the article |
 | Editor | Docs, an article, Audience | picking a saved audience saves at once; the public page answers 404 |
+
+## Help center sign-in
+
+| Flow | How | Expect |
+|---|---|---|
+| Login address | `PATCH $B/help-centers/$H` `{"settings":{"login_url":"https://app.example.com/help-login"}}` | pages show Sign in, leading to the address with `return_to` set to the help center's `/sso?next=<page>`; an http address answers 422 `login_url_invalid` |
+| Sign in | the product redirects to `return_to` with `#token=<identity token, aud dimmi-help>` | the page posts the token, sets `dimmi_help_reader` (httpOnly, one hour) and returns to the page; the header shows Sign out |
+| Audience | an article kept to Pro; a token with `custom_attributes.plan` pro | the signed-in reader reads it and finds it in search; responses say `private, no-store`; a reader without Pro, a forged or an hour-old cookie get 404 |
+| Bad token | post a broken token | 401, no cookie |
+| Redirects | `next` pointing at another site | the reader lands on the help center's home |

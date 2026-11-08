@@ -6,6 +6,9 @@
  * such as the messenger, survives the move. The rest are small touches a
  * page reads from its own markup: the greeting follows the visitor's
  * clock, and the copy buttons put an article's Markdown on the clipboard.
+ * A reader coming back from signing in to the team's product brings an
+ * identity token in the address's fragment, which no server sees; the
+ * sign-in page's form takes it from there and sends it at once.
  */
 import "@hotwired/turbo";
 import "./portal.css";
@@ -53,7 +56,27 @@ async function copy(button: HTMLButtonElement): Promise<void> {
   }, 1600);
 }
 
-document.addEventListener("turbo:load", () => greet(document));
+/*
+ * signIn sends the token the fragment carries, then forgets it.
+ */
+function signIn(root: ParentNode): void {
+  const form = root.querySelector<HTMLFormElement>("form[data-help-sign-in]");
+  const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
+  if (!form || !token) {
+    return;
+  }
+  const field = form.querySelector<HTMLInputElement>('input[name="token"]');
+  if (field) {
+    field.value = token;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    form.requestSubmit();
+  }
+}
+
+document.addEventListener("turbo:load", () => {
+  greet(document);
+  signIn(document);
+});
 
 document.addEventListener("click", (event) => {
   const button = (event.target as Element).closest<HTMLButtonElement>("button[data-copy]");

@@ -27,6 +27,7 @@ type HelpCenterSettingsBody struct {
 	HomeSubtitle string `json:"home_subtitle,omitempty" maxLength:"200"`
 	FooterText   string `json:"footer_text,omitempty"   maxLength:"500"`
 	ContactURL   string `json:"contact_url,omitempty"   maxLength:"2048"`
+	LoginURL     string `json:"login_url,omitempty"     maxLength:"2048"`
 }
 
 /*

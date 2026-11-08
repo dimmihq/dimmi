@@ -137,7 +137,7 @@ conversations, and the files their pages show.
 */
 func helpCenter(pages *routing.Router, a *app.App) {
 	hc := &web.HelpCenterController{
-		Library: a.HelpSample, Public: a.Actions.HelpPublic, Errors: a.Errors,
+		Library: a.HelpSample, Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Errors: a.Errors,
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 	}
@@ -154,6 +154,9 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	get("/articles/{slug}", "hc.articles.show", hc.Article)
 	post("/articles/{slug}/feedback", "hc.articles.feedback", hc.Rate)
 	get("/search", "hc.search", hc.Search)
+	get("/sso", "hc.sso.show", hc.SignInPage)
+	post("/sso", "hc.sso.store", hc.SignIn)
+	post("/sso/sign-out", "hc.sso.destroy", hc.SignOut)
 	get("/changelog", "hc.changelog.index", cl.Index)
 	get("/changelog/page/{page}", "hc.changelog.index.page", cl.Index)
 	get("/changelog/labels/{label}", "hc.changelog.labels.show", cl.Index)

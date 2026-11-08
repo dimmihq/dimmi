@@ -20,6 +20,7 @@ interface Form {
   subdomain: string;
   color: string;
   title: string;
+  login: string;
 }
 
 function formOf(center: HelpCenter): Form {
@@ -28,6 +29,7 @@ function formOf(center: HelpCenter): Form {
     subdomain: center.subdomain,
     color: center.settings.primary_color ?? "#10b981",
     title: center.settings.home_title ?? "",
+    login: center.settings.login_url ?? "",
   };
 }
 
@@ -74,7 +76,12 @@ export function HelpCentersSettings() {
                   update.mutate({
                     name: form.name,
                     subdomain: form.subdomain,
-                    settings: { ...center.settings, primary_color: form.color, home_title: form.title },
+                    settings: {
+                      ...center.settings,
+                      primary_color: form.color,
+                      home_title: form.title,
+                      login_url: form.login.trim() || undefined,
+                    },
                   })
                 }
               >
@@ -108,6 +115,17 @@ export function HelpCentersSettings() {
             </Row>
             <Row label="Brand color" description="Links, buttons and the header.">
               <Colour label="Help center color" value={form.color} onChange={(color) => setForm({ ...form, color })} />
+            </Row>
+            <Row
+              label="Sign-in address"
+              description="Where readers sign in to your product to read articles kept to an audience. It sends them back with an identity token."
+            >
+              <Field
+                label="Sign-in address"
+                value={form.login}
+                placeholder="https://app.example.com/help-login"
+                onChange={(login) => setForm({ ...form, login })}
+              />
             </Row>
           </Section>
           <Section title="Features">

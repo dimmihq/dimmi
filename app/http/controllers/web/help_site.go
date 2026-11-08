@@ -99,11 +99,13 @@ type site struct {
 }
 
 /*
-newSite shapes a snapshot for the pages, searching through the reader.
+newSite shapes a snapshot for the pages, searching as the reader, nil for
+anyone.
 */
-func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.Snapshot) *site {
+func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.Snapshot, reader *ids.UUID) *site {
 	return &site{snap: snap, search: func(query string) []models.SearchPublishedArticlesRow {
-		rows, err := public.Search(ctx, snap.HelpCenter, query, 20)
+		find := helpcenters.Find{Center: snap.HelpCenter, Query: query, Limit: 20, Reader: reader}
+		rows, err := public.Search(ctx, find)
 		if err != nil {
 			return nil
 		}

@@ -157,7 +157,9 @@ templ trail(c Center, m Meta) {
 
 /*
 account is the visitor's way in: a sign-in button, or their initials
-linking to their conversations once signed in.
+linking to their conversations once signed in. A reader signed in through
+the team's product gets a sign-out button instead; a help center that
+takes no sign-in shows neither.
 */
 
 templ account(c Center) {
@@ -165,8 +167,12 @@ templ account(c Center) {
 		<a href={ Href(c, "/conversations") } title={ c.Visitor.Name } class="flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 			@Avatar(*c.Visitor, "size-8 text-caption-1-semibold")
 		</a>
-	} else {
-		<a href={ Href(c, "/sign-in") } class="button-brand inline-flex h-8 items-center rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign in</a>
+	} else if c.SignedIn {
+		<form method="post" action={ templ.SafeURL(c.SignOutURL) }>
+			<button type="submit" class="inline-flex h-8 cursor-pointer items-center rounded-full border border-border-button-default px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign out</button>
+		</form>
+	} else if c.SignInURL != "" {
+		<a href={ templ.SafeURL(c.SignInURL) } class="button-brand inline-flex h-8 items-center rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign in</a>
 	}
 }
 

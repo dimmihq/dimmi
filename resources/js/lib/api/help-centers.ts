@@ -15,6 +15,7 @@ export interface HelpCenterSettings {
   home_subtitle?: string;
   footer_text?: string;
   contact_url?: string;
+  login_url?: string;
 }
 
 export interface HelpCenter {

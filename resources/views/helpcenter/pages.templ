@@ -143,3 +143,24 @@ templ NotFoundPage(c Center, all []Collection, popular []Summary, assets templ.C
 		</div>
 	}
 }
+
+/*
+ReaderSignInPage takes a reader back from the team's product: the identity
+token arrives in the address's fragment, which the browser never sends,
+so the page's script copies it into the form and sends it. Without
+scripts, the reader presses the button.
+*/
+
+templ ReaderSignInPage(c Center, action string, next string, assets templ.Component) {
+	@Layout(c, Meta{Title: "Signing in | " + c.Product, NoIndex: true}, templ.NopComponent, assets) {
+		<div class="mx-auto flex max-w-md flex-col items-center py-24 text-center">
+			<h1 class="text-title-2-medium tracking-tight">Signing you in</h1>
+			<p class="mt-2 text-body-regular text-text-secondary">One moment while we open { c.Product }.</p>
+			<form method="post" action={ templ.SafeURL(action) } data-help-sign-in class="mt-6">
+				<input type="hidden" name="token" value=""/>
+				<input type="hidden" name="next" value={ next }/>
+				<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center rounded-xl px-4 text-body-medium">Continue</button>
+			</form>
+		</div>
+	}
+}

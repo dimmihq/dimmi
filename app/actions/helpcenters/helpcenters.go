@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -51,6 +52,8 @@ var (
 
 /*
 HelpCenterSettings is how a help center looks and what its home page says.
+LoginURL is where readers sign in to the team's product, which sends them
+back signed in, so they can read what is kept to an audience.
 */
 type HelpCenterSettings struct {
 	PrimaryColor string `json:"primary_color,omitempty"`
@@ -59,6 +62,7 @@ type HelpCenterSettings struct {
 	HomeSubtitle string `json:"home_subtitle,omitempty"`
 	FooterText   string `json:"footer_text,omitempty"`
 	ContactURL   string `json:"contact_url,omitempty"`
+	LoginURL     string `json:"login_url,omitempty"`
 }
 
 /*
@@ -330,6 +334,10 @@ func checkSettings(s HelpCenterSettings) (json.RawMessage, error) {
 		return nil, fault.New(fault.Invalid, "contact_url_invalid", "Use an https address.").
 			OnField("settings.contact_url")
 	}
+	if s.LoginURL != "" && !secureURL(s.LoginURL) {
+		return nil, fault.New(fault.Invalid, "login_url_invalid", "Use an https address.").
+			OnField("settings.login_url")
+	}
 	s.HomeTitle, s.HomeSubtitle = truncate(s.HomeTitle, 80), truncate(s.HomeSubtitle, 200)
 	s.FooterText = truncate(s.FooterText, 500)
 	raw, err := json.Marshal(s)
@@ -378,4 +386,17 @@ func truncate(s string, limit int) string {
 		return string(r[:limit])
 	}
 	return s
+}
+
+/*
+secureURL accepts an https address, or plain http on this machine for
+development.
+*/
+func secureURL(s string) bool {
+	u, err := url.Parse(s)
+	if err != nil || u.Host == "" {
+		return false
+	}
+
+	return u.Scheme == "https" || (u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1"))
 }

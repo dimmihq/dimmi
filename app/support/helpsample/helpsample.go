@@ -97,17 +97,20 @@ Center returns the help center with the slug, with its paths under base.
 */
 func (l *Library) Center(slug, base string) (helpcenter.Center, bool) {
 	for _, s := range l.sites {
-		if s.slug == slug {
-			c := s.center
-			c.Base = base
-			c.Sections = []helpcenter.Section{
-				{Key: "changelog", Name: "Changelog", Icon: "megaphone", Path: "/changelog"},
-				{Key: "feedback", Name: "Feature requests", Icon: "lightbulb", Path: "/feedback"},
-				{Key: "conversations", Name: "Conversations", Icon: "inbox", Path: "/conversations"},
-			}
-
-			return c, true
+		if s.slug != slug {
+			continue
 		}
+
+		c := s.center
+		c.Base = base
+		c.SignInURL = base + "/sign-in"
+		c.Sections = []helpcenter.Section{
+			{Key: "changelog", Name: "Changelog", Icon: "megaphone", Path: "/changelog"},
+			{Key: "feedback", Name: "Feature requests", Icon: "lightbulb", Path: "/feedback"},
+			{Key: "conversations", Name: "Conversations", Icon: "inbox", Path: "/conversations"},
+		}
+
+		return c, true
 	}
 
 	return helpcenter.Center{}, false

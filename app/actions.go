@@ -123,6 +123,7 @@ type Actions struct {
 	Articles                   *helpcenters.Articles
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
+	HelpReaders                *helpcenters.Readers
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules
 	Procedures                 *procedures.Procedures
