@@ -20,6 +20,8 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/support/str"
+
+	"github.com/dimmihq/dimmi/app/support/audience"
 )
 
 /*
@@ -39,6 +41,7 @@ type References struct {
 	Tags      []string `json:"tags,omitempty"`
 	Schedules []string `json:"schedules,omitempty"`
 	Workflows []string `json:"workflows,omitempty"`
+	Audiences []string `json:"audiences,omitempty"`
 }
 
 /*
@@ -63,7 +66,16 @@ func Compile(s Spec) Compiled {
 		}
 
 		collectReferences(step, &c.References)
+		for _, p := range step.Paths {
+			if rule, err := audience.ParseRule(p.Condition); err == nil {
+				c.References.Audiences = appendUnique(c.References.Audiences, audience.SavedIDs(rule)...)
+			}
+		}
 	})
+
+	if a, err := audience.Parse(s.Audience); err == nil {
+		c.References.Audiences = appendUnique(c.References.Audiences, audience.SavedIDs(a.Rules)...)
+	}
 
 	if s.Schedule.ScheduleID != "" {
 		c.References.Schedules = appendUnique(c.References.Schedules, s.Schedule.ScheduleID)

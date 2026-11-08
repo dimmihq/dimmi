@@ -373,6 +373,22 @@ type Attachment struct {
 	UploadedAt     *time.Time `json:"uploaded_at"`
 }
 
+type Audience struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Description       *string         `json:"description"`
+	Rules             json.RawMessage `json:"rules"`
+	RulesSchema       int16           `json:"rules_schema"`
+	LastEstimate      json.RawMessage `json:"last_estimate"`
+	LockVersion       int32           `json:"lock_version"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	UpdatedByMemberID *ids.UUID       `json:"updated_by_member_id"`
+	DeletedAt         *time.Time      `json:"deleted_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
 type AuditLog struct {
 	ID           ids.UUID        `json:"id"`
 	WorkspaceID  ids.UUID        `json:"workspace_id"`

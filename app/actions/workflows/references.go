@@ -3,8 +3,8 @@
 | Workflow References
 |--------------------------------------------------------------------------
 |
-| A definition names teams, members, tags, schedules and other workflows
-| by public id. Before it goes live every one of them must exist and be
+| A definition names teams, members, tags, schedules, saved audiences and
+| other workflows by public id. Before it goes live every one of them must exist and be
 | usable: a deactivated member or a deleted tag would make the step
 | silently do nothing. A called workflow must be a live reusable
 | workflow, never the caller itself, and one that speaks to customers
@@ -43,7 +43,7 @@ func (w *Workflows) references(
 	sets := map[string]idSet{}
 	for kind, list := range map[string][]string{
 		"team": refs.Teams, "member": refs.Members, "tag": refs.Tags, "schedule": refs.Schedules,
-		"workflow": refs.Workflows,
+		"workflow": refs.Workflows, "audience": refs.Audiences,
 	} {
 		set, bad := w.decodeAll(kind, list)
 		sets[kind] = set
@@ -52,7 +52,7 @@ func (w *Workflows) references(
 
 	missing, err := q.MissingWorkflowReferences(ctx, models.MissingWorkflowReferencesParams{
 		WorkspaceID: wf.WorkspaceID, TeamIds: values(sets["team"]), MemberIds: values(sets["member"]),
-		TagIds: values(sets["tag"]), ScheduleIds: values(sets["schedule"]),
+		TagIds: values(sets["tag"]), ScheduleIds: values(sets["schedule"]), AudienceIds: values(sets["audience"]),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("check workflow references: %w", err)
@@ -112,7 +112,7 @@ decodeAll decodes public ids of one kind, reporting malformed ones.
 func (w *Workflows) decodeAll(kind string, list []string) (idSet, []workflowspec.Issue) {
 	prefix := map[string]models.Prefix{
 		"team": models.PrefixTeam, "member": models.PrefixMember, "tag": models.PrefixTag,
-		"schedule": models.PrefixSchedule, "workflow": models.PrefixWorkflow,
+		"schedule": models.PrefixSchedule, "workflow": models.PrefixWorkflow, "audience": models.PrefixAudience,
 	}[kind]
 
 	set := idSet{}

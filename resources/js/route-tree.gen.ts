@@ -46,6 +46,8 @@ import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
 import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$section'
 import { Route as DWorkflowsIndexRouteImport } from './routes/d/workflows/index'
 import { Route as DWorkflowsWorkflowRouteImport } from './routes/d/workflows/$workflow'
+import { Route as DCustomersAudiencesIndexRouteImport } from './routes/d/customers/audiences/index'
+import { Route as DCustomersAudiencesAudienceRouteImport } from './routes/d/customers/audiences/$audience'
 import { Route as DCustomersCompaniesIndexRouteImport } from './routes/d/customers/companies/index'
 import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
@@ -241,6 +243,18 @@ const DWorkflowsWorkflowRoute = DWorkflowsWorkflowRouteImport.update({
   path: '/workflows/$workflow',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DCustomersAudiencesIndexRoute =
+  DCustomersAudiencesIndexRouteImport.update({
+    id: '/audiences/',
+    path: '/audiences/',
+    getParentRoute: () => DCustomersRoute,
+  } as any)
+const DCustomersAudiencesAudienceRoute =
+  DCustomersAudiencesAudienceRouteImport.update({
+    id: '/audiences/$audience',
+    path: '/audiences/$audience',
+    getParentRoute: () => DCustomersRoute,
+  } as any)
 const DCustomersCompaniesIndexRoute =
   DCustomersCompaniesIndexRouteImport.update({
     id: '/companies/',
@@ -335,12 +349,14 @@ export interface FileRoutesByFullPath {
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
+  '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/customers/audiences/': typeof DCustomersAudiencesIndexRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -380,12 +396,14 @@ export interface FileRoutesByTo {
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
+  '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/customers/audiences': typeof DCustomersAudiencesIndexRoute
   '/d/customers/companies': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -430,12 +448,14 @@ export interface FileRoutesById {
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
+  '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/customers/audiences/': typeof DCustomersAudiencesIndexRoute
   '/d/customers/companies/': typeof DCustomersCompaniesIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -481,12 +501,14 @@ export interface FileRouteTypes {
     | '/d/procedures/'
     | '/d/settings/'
     | '/d/workflows/'
+    | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
+    | '/d/customers/audiences/'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
     | '/d/settings/email/addresses/$address'
@@ -526,12 +548,14 @@ export interface FileRouteTypes {
     | '/d/procedures'
     | '/d/settings'
     | '/d/workflows'
+    | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
+    | '/d/customers/audiences'
     | '/d/customers/companies'
     | '/d/inbox/$view'
     | '/d/settings/email/addresses/$address'
@@ -575,12 +599,14 @@ export interface FileRouteTypes {
     | '/d/procedures/'
     | '/d/settings/'
     | '/d/workflows/'
+    | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
+    | '/d/customers/audiences/'
     | '/d/customers/companies/'
     | '/d/inbox/$view/'
     | '/d/settings/email/addresses/$address'
@@ -855,6 +881,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DWorkflowsWorkflowRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/customers/audiences/': {
+      id: '/d/customers/audiences/'
+      path: '/audiences'
+      fullPath: '/d/customers/audiences/'
+      preLoaderRoute: typeof DCustomersAudiencesIndexRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
+    '/d/customers/audiences/$audience': {
+      id: '/d/customers/audiences/$audience'
+      path: '/audiences/$audience'
+      fullPath: '/d/customers/audiences/$audience'
+      preLoaderRoute: typeof DCustomersAudiencesAudienceRouteImport
+      parentRoute: typeof DCustomersRoute
+    }
     '/d/customers/companies/': {
       id: '/d/customers/companies/'
       path: '/companies'
@@ -933,7 +973,9 @@ interface DCustomersRouteChildren {
   DCustomersBlockedRoute: typeof DCustomersBlockedRoute
   DCustomersErasuresRoute: typeof DCustomersErasuresRoute
   DCustomersIndexRoute: typeof DCustomersIndexRoute
+  DCustomersAudiencesAudienceRoute: typeof DCustomersAudiencesAudienceRoute
   DCustomersCompaniesCompanyRoute: typeof DCustomersCompaniesCompanyRoute
+  DCustomersAudiencesIndexRoute: typeof DCustomersAudiencesIndexRoute
   DCustomersCompaniesIndexRoute: typeof DCustomersCompaniesIndexRoute
 }
 
@@ -942,7 +984,9 @@ const DCustomersRouteChildren: DCustomersRouteChildren = {
   DCustomersBlockedRoute: DCustomersBlockedRoute,
   DCustomersErasuresRoute: DCustomersErasuresRoute,
   DCustomersIndexRoute: DCustomersIndexRoute,
+  DCustomersAudiencesAudienceRoute: DCustomersAudiencesAudienceRoute,
   DCustomersCompaniesCompanyRoute: DCustomersCompaniesCompanyRoute,
+  DCustomersAudiencesIndexRoute: DCustomersAudiencesIndexRoute,
   DCustomersCompaniesIndexRoute: DCustomersCompaniesIndexRoute,
 }
 

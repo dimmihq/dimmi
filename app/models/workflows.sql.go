@@ -575,16 +575,19 @@ SELECT r.kind::text AS kind, r.id::uuid AS id FROM (
     UNION ALL SELECT 'member', x FROM unnest($2::uuid[]) AS x
     UNION ALL SELECT 'tag', x FROM unnest($3::uuid[]) AS x
     UNION ALL SELECT 'schedule', x FROM unnest($4::uuid[]) AS x
+    UNION ALL SELECT 'audience', x FROM unnest($5::uuid[]) AS x
 ) r
 WHERE NOT CASE r.kind
     WHEN 'team' THEN EXISTS (
-        SELECT 1 FROM teams t WHERE t.workspace_id = $5 AND t.id = r.id AND t.deleted_at IS NULL)
+        SELECT 1 FROM teams t WHERE t.workspace_id = $6 AND t.id = r.id AND t.deleted_at IS NULL)
     WHEN 'member' THEN EXISTS (
-        SELECT 1 FROM workspace_members m WHERE m.workspace_id = $5 AND m.id = r.id
+        SELECT 1 FROM workspace_members m WHERE m.workspace_id = $6 AND m.id = r.id
           AND m.status = 'active')
-    WHEN 'tag' THEN EXISTS (SELECT 1 FROM tags g WHERE g.workspace_id = $5 AND g.id = r.id)
+    WHEN 'tag' THEN EXISTS (SELECT 1 FROM tags g WHERE g.workspace_id = $6 AND g.id = r.id)
+    WHEN 'audience' THEN EXISTS (
+        SELECT 1 FROM audiences a WHERE a.workspace_id = $6 AND a.id = r.id AND a.deleted_at IS NULL)
     ELSE EXISTS (
-        SELECT 1 FROM schedules s WHERE s.workspace_id = $5 AND s.id = r.id AND s.deleted_at IS NULL)
+        SELECT 1 FROM schedules s WHERE s.workspace_id = $6 AND s.id = r.id AND s.deleted_at IS NULL)
 END
 `
 
@@ -593,6 +596,7 @@ type MissingWorkflowReferencesParams struct {
 	MemberIds   []ids.UUID `json:"member_ids"`
 	TagIds      []ids.UUID `json:"tag_ids"`
 	ScheduleIds []ids.UUID `json:"schedule_ids"`
+	AudienceIds []ids.UUID `json:"audience_ids"`
 	WorkspaceID ids.UUID   `json:"workspace_id"`
 }
 
@@ -602,13 +606,14 @@ type MissingWorkflowReferencesRow struct {
 }
 
 // MissingWorkflowReferences returns the referenced ids that name no live
-// team, active member, tag or schedule of the workspace.
+// team, active member, tag, schedule or saved audience of the workspace.
 func (q *Queries) MissingWorkflowReferences(ctx context.Context, arg MissingWorkflowReferencesParams) ([]MissingWorkflowReferencesRow, error) {
 	rows, err := q.db.Query(ctx, missingWorkflowReferences,
 		arg.TeamIds,
 		arg.MemberIds,
 		arg.TagIds,
 		arg.ScheduleIds,
+		arg.AudienceIds,
 		arg.WorkspaceID,
 	)
 	if err != nil {

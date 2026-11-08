@@ -35,3 +35,12 @@ known in the browser, conversation fields are not known at all.
 func WorkflowOpener() Surface {
 	return Surface{Key: "workflow.opener", Gate: GateDisplay, Where: []Location{Server, Client}}
 }
+
+/*
+SavedAudience is the surface of a saved audience. It may be used
+anywhere, so it reads the person and the page they are on, never a
+conversation, which only some surfaces have.
+*/
+func SavedAudience() Surface {
+	return Surface{Key: "audience.saved", Gate: GateDisplay, Where: []Location{Server, Client}}
+}

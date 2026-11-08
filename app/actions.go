@@ -16,6 +16,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
 	"github.com/dimmihq/dimmi/app/actions/assignment"
+	"github.com/dimmihq/dimmi/app/actions/audiences"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
@@ -123,6 +124,7 @@ type Actions struct {
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules
 	Procedures                 *procedures.Procedures
+	Audiences                  *audiences.Audiences
 	WorkflowEngine             *engine.Engine
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy

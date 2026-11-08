@@ -43,6 +43,14 @@
     "label": "Write articles",
     "description": "Create, edit and publish articles."
   },
+  "audiences:manage": {
+    "label": "Manage audiences",
+    "description": "Create, change and delete saved audiences."
+  },
+  "audiences:read": {
+    "label": "See audiences",
+    "description": "See saved audiences, who they match and where they are used."
+  },
   "audit_logs:read": {
     "label": "Read the audit log",
     "description": "See who changed what in the workspace."

@@ -2,21 +2,25 @@
  * The inspector beside the canvas: the settings of whatever is selected,
  * the trigger or a step, laid out like the settings pages. The trigger
  * shows what starts the workflow, which never changes, and holds the
- * workflow's own settings: its name, the channels it runs on and how
- * often it may run on one conversation. Whatever checking the workflow
+ * workflow's own settings: its name, the saved audience and channels it
+ * runs for and how often it may run on one conversation. Whatever checking the workflow
  * found about the selection is listed on top, so a problem is fixed
  * where it is. Someone who may only read workflows sees every setting
  * and changes none. On screens too narrow to sit beside the canvas it
  * opens in a drawer, with a close button.
  */
 import { RiCloseLine } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
+import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { audiencesQuery } from "@/lib/api/audiences";
 import type { Issue, Spec } from "@/lib/api/workflows";
+import { audienceChoice, audienceFor, custom, everyone } from "./audience-choice";
 import { choicesOf } from "./choices";
 import { KindMark } from "./parts";
 import { Pick, Picks } from "./pick";
@@ -110,6 +114,37 @@ function QuietSettings({ spec, head }: { spec: Spec; head: Head }) {
   );
 }
 
+/*
+ * AudienceRow picks who the workflow runs for: everyone or the people in
+ * one saved audience, made and tested under Customers, Audiences.
+ */
+function AudienceRow({ spec, head }: { spec: Spec; head: Head }) {
+  const workspace = useAccount().workspace.id;
+  const saved = useQuery(audiencesQuery(workspace)).data ?? [];
+  const current = audienceChoice(spec.audience);
+  const choices: [string, string][] = [
+    [everyone, "Everyone"],
+    ...saved.map((a): [string, string] => [a.id, a.name]),
+    ...(current === custom ? [[custom, "A custom rule"] as [string, string]] : []),
+  ];
+
+  return (
+    <Row label="Audience" description="Saved audiences are made under Customers, Audiences.">
+      <Pick
+        key={`${current}-${saved.length}`}
+        label="Audience"
+        choices={choices}
+        value={current}
+        onChange={(choice) => {
+          if (choice !== custom) {
+            head.onSpec((s) => ({ ...s, audience: audienceFor(choice) }));
+          }
+        }}
+      />
+    </Row>
+  );
+}
+
 function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
   const trigger = spec.trigger as TriggerKind;
   const look = triggers[trigger];
@@ -155,6 +190,7 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
       </Section>
       <QuietSettings spec={spec} head={head} />
       <Section title="Who it runs for">
+        <AudienceRow spec={spec} head={head} />
         <Row label="Channels">
           <Pick
             label="Channels"

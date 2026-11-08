@@ -274,6 +274,10 @@ func (e *Engine) check(ctx context.Context, q *models.Queries, m *match, c candi
 		return reason, "", err
 	}
 
+	if err := m.subject.withSaved(ctx, q, c.audience); err != nil {
+		return "", "", err
+	}
+
 	if explained := c.audience.Explain(m.subject.env()); explained.Result != audience.True {
 		failing, _ := explained.FirstFailing()
 		return SkipAudience, failing.Field, nil

@@ -9,6 +9,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
+import type { AudienceRules } from "./audiences";
 import { request } from "./client";
 
 export type WorkflowStatus = "draft" | "live" | "paused";
@@ -55,7 +56,7 @@ export interface Spec {
   trigger: string;
   trigger_settings?: Record<string, unknown>;
   channels?: string[];
-  audience?: Condition;
+  audience?: AudienceRules;
   schedule: { mode: string; schedule_id?: string };
   reentry: { mode: string; cooldown?: string };
   exclusive: boolean;

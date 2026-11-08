@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -214,10 +215,21 @@ func compileLeaf(r Rule, path string, c compiler) *node {
 
 	operand, err := parseOperand(f, r)
 	if err != nil {
-		return fail(CodeValueInvalid, err.Error())
+		return fail(CodeValueInvalid, sentence(err.Error()))
 	}
 
 	n.operand = operand
 
 	return n
+}
+
+/*
+sentence turns a lowercase error into a sentence for people.
+*/
+func sentence(text string) string {
+	if text == "" {
+		return text
+	}
+
+	return strings.ToUpper(text[:1]) + text[1:] + "."
 }

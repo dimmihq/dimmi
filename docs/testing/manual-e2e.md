@@ -1022,3 +1022,15 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Action not published | an `action` step naming a draft action, then publish | 422 with `errors.0.code` `reference_missing` and the step id |
 | Publish | description and a step, then publish | 200 `live`; a later save shows `has_unpublished_changes` |
 | dimmi follows it | agent on, customer asks what the description covers | the run calls `follow_procedure`, the reply follows the steps, the run is flagged `procedure:<id>`, the list shows 1 use |
+
+## Audiences
+
+| Flow | How | Expect |
+|---|---|---|
+| Save | `POST $B/audiences` `{"name":"Pro","rules":{"rules":{"field":"contact.custom.plan","op":"eq","value":"pro"}}}` | 201 with an `audn_` id; a second "pro" answers 409 |
+| Bad rule | a leaf on `contact.shoe_size` or `gt` on an email | 422 `audience_invalid`, every problem in `errors` with its path |
+| Nesting | A names B names C, then C names A | 422 `audience_cycle`; a fourth level answers `limit_exceeded` |
+| Preview | `POST $B/audience-previews` with the rule | `count` matches the people whose plan is pro, any case; a page-only rule counts them in `pages` instead |
+| Test a person | `POST $B/audience-evaluations` with a contact and `context.page_url` | `match`, `no_match` or `depends_on_page`, each leaf with the person's value and trust |
+| Workflow | first-message workflow whose audience is `audience in [$A]`, published | runs only for people in the audience; deleting the audience answers 409 `audience_in_use` |
+| Builder | Customers, Audiences, New audience; add a condition | the count beside the rule follows each edit; Save keeps it; Test a person shows each condition |

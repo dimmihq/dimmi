@@ -21,6 +21,7 @@ package audience
 
 import (
 	"maps"
+	"slices"
 	"strings"
 )
 
@@ -146,4 +147,29 @@ func (c *Catalog) Lookup(key string) (Field, bool) {
 	}
 
 	return best, found
+}
+
+/*
+Fields returns the fields registered by exact key, in key order, for
+builders that list what a rule may read.
+*/
+func (c *Catalog) Fields() []Field {
+	out := make([]Field, 0, len(c.exact))
+	for _, key := range slices.Sorted(maps.Keys(c.exact)) {
+		out = append(out, c.exact[key])
+	}
+
+	return out
+}
+
+/*
+OpsOf returns the operators a field takes. A field of unknown type
+takes the operators of the given type when one is known.
+*/
+func OpsOf(f Field, known FieldType) []string {
+	if f.Type == TypeAuto && known != "" {
+		return opsFor(known)
+	}
+
+	return allowedOps(f)
 }

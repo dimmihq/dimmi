@@ -58,6 +58,10 @@ func runBranch(ctx context.Context, st *state, s workflowspec.Step) (outcome, er
 			continue
 		}
 
+		if err := subj.withSaved(ctx, st.q, program); err != nil {
+			return outcome{}, err
+		}
+
 		explained := program.Explain(subj.env())
 		if explained.Result == audience.True {
 			return outcome{path: p.ID, outcome: outcomeMatched, detail: map[string]any{"failed": failed}}, nil

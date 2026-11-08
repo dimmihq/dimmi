@@ -5,6 +5,7 @@ import { createAccount, expect, test as it, type Person, signIn } from "./suppor
 const pages = [
   "/d/workflows",
   "/d/procedures",
+  "/d/customers/audiences",
   "/d/settings/profile",
   "/d/settings/security",
   "/d/settings/connections",
@@ -87,5 +88,15 @@ it.describe("small screens", () => {
     await page.getByRole("button", { name: "Procedure settings" }).click();
     const drawer = page.getByRole("dialog", { name: "Procedure settings" });
     await expect(drawer.getByText("Delete this procedure")).toBeVisible();
+  });
+
+  it("opens who an audience matches in a drawer on a tablet", async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 1000 });
+    await page.goto("/d/customers/audiences");
+    await page.getByRole("button", { name: "New audience" }).click();
+    await expect(page).toHaveURL(/\/audiences\/audn_[^/]+$/);
+    await page.getByRole("button", { name: "Who matches" }).click();
+    const drawer = page.getByRole("dialog", { name: "Who matches" });
+    await expect(drawer.getByText("Nothing uses this audience yet.")).toBeVisible();
   });
 });

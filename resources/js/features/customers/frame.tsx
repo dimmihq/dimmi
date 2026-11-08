@@ -1,7 +1,8 @@
 /*
  * The frame of the customer pages: one panel with the section's title,
- * tabs between people, companies, the blocked and, for those who may
- * erase customers, the erasures, and the page's own actions on the right.
+ * tabs between people, companies, saved audiences, the blocked and, for
+ * those who may erase customers, the erasures, and the page's own actions
+ * on the right.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
@@ -16,6 +17,7 @@ import { useWorkspace } from "./names";
 const tabs = [
   { to: "/d/customers", label: "People" },
   { to: "/d/customers/companies", label: "Companies" },
+  { to: "/d/customers/audiences", label: "Audiences" },
   { to: "/d/customers/blocked", label: "Blocked" },
   { to: "/d/customers/erasures", label: "Erasures" },
 ] as const;
@@ -28,7 +30,7 @@ function Tabs() {
   const shown = tabs.filter((tab) => tab.to !== "/d/customers/erasures" || canErase);
 
   return (
-    <nav aria-label="Customers" className="flex items-center gap-1 px-4 pb-3">
+    <nav aria-label="Customers" className="flex flex-wrap items-center gap-1 px-4 pb-3">
       {shown.map((tab) => {
         const current = pathname === tab.to;
 

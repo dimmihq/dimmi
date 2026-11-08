@@ -15,13 +15,13 @@ package workflows
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/audiences"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/audience"
@@ -31,7 +31,8 @@ import (
 /*
 subject is what conditions are evaluated about: the conversation, its
 contact and company with their tags, the channel, the trigger's data,
-the run's variables, and the workspace's default office hours.
+the run's variables, the workspace's default office hours, and its
+saved audiences once a rule names one.
 */
 type subject struct {
 	conversation     models.Conversation
@@ -45,6 +46,7 @@ type subject struct {
 	now              time.Time
 	location         *time.Location
 	hours            *officehours.Schedule
+	saved            *audiences.Resolver
 }
 
 /*
@@ -115,7 +117,31 @@ func (s *subject) loadTags(ctx context.Context, q *models.Queries) error {
 env is the evaluation environment of the subject.
 */
 func (s *subject) env() audience.Env {
-	return audience.Env{Facts: s, Now: s.now, Location: s.location}
+	env := audience.Env{Facts: s, Now: s.now, Location: s.location}
+	if s.saved != nil {
+		env.Saved = s.saved.Saved
+	}
+
+	return env
+}
+
+/*
+withSaved loads the workspace's saved audiences once, when a rule about
+to be evaluated names one.
+*/
+func (s *subject) withSaved(ctx context.Context, q *models.Queries, p *audience.Program) error {
+	if s.saved != nil || !p.NeedsSaved() {
+		return nil
+	}
+
+	r, err := audiences.LoadResolver(ctx, q, s.conversation.WorkspaceID)
+	if err != nil {
+		return fmt.Errorf("load saved audiences: %w", err)
+	}
+
+	s.saved = r
+
+	return nil
 }
 
 /*
@@ -142,46 +168,21 @@ func (s *subject) Lookup(key string) (any, bool) {
 		v = lookupMap(s.trigger, key)
 	}
 
-	return present(v)
+	return audiences.Present(v)
 }
 
 /*
 contactField returns one of the contact's fields.
 */
 func (s *subject) contactField(name string) any {
-	c := s.contact
-	if key, ok := strings.CutPrefix(name, "custom."); ok {
-		return customValue(c.CustomAttributes, key)
-	}
-
-	fields := map[string]any{
-		"kind": c.Kind, "email": c.Email, "email_verified": c.EmailVerified, "phone": c.Phone, "name": c.Name,
-		"external_id": c.ExternalID, "locale": c.Locale, "timezone": c.Timezone, "created_at": c.CreatedAt,
-		"first_seen_at": c.FirstSeenAt, "last_seen_at": c.LastSeenAt, "has_company": c.CompanyID != nil,
-		"tags": s.contactTags, "email_domain": emailDomain(c.Email),
-	}
-
-	if v, ok := fields[name]; ok {
-		return v
-	}
-
-	return customValue(c.Location, name)
+	return audiences.ContactValue(s.contact, s.contactTags, name)
 }
 
 /*
 companyField returns one of the company's fields, nothing without one.
 */
 func (s *subject) companyField(name string) any {
-	if s.company == nil {
-		return nil
-	}
-
-	c := *s.company
-	if key, ok := strings.CutPrefix(name, "custom."); ok {
-		return customValue(c.CustomAttributes, key)
-	}
-
-	return map[string]any{"name": c.Name, "domain": c.Domain, "created_at": c.CreatedAt}[name]
+	return audiences.CompanyValue(s.company, nil, name)
 }
 
 /*
@@ -232,32 +233,6 @@ func (s *subject) timeField(name string) any {
 }
 
 /*
-present unwraps pointers and reports whether there is a value.
-*/
-func present(v any) (any, bool) {
-	switch p := v.(type) {
-	case nil:
-		return nil, false
-	case *string:
-		if p == nil {
-			return nil, false
-		}
-
-		return *p, true
-	case *time.Time:
-		if p == nil {
-			return nil, false
-		}
-
-		return *p, true
-	case []string:
-		return p, true
-	}
-
-	return v, true
-}
-
-/*
 publicID returns the public id of an optional id.
 */
 func publicID(prefix models.Prefix, id *ids.UUID) any {
@@ -269,18 +244,6 @@ func publicID(prefix models.Prefix, id *ids.UUID) any {
 }
 
 /*
-customValue reads one key of a JSON object of custom values.
-*/
-func customValue(raw json.RawMessage, key string) any {
-	var values map[string]any
-	if json.Unmarshal(raw, &values) != nil {
-		return nil
-	}
-
-	return values[key]
-}
-
-/*
 lookupMap reads a dotted key from a map, falling back to the whole key.
 */
 func lookupMap(values map[string]any, key string) any {
@@ -289,20 +252,4 @@ func lookupMap(values map[string]any, key string) any {
 	}
 
 	return nil
-}
-
-/*
-emailDomain returns the domain of an address.
-*/
-func emailDomain(email *string) any {
-	if email == nil {
-		return nil
-	}
-
-	_, domain, ok := strings.Cut(*email, "@")
-	if !ok {
-		return nil
-	}
-
-	return domain
 }

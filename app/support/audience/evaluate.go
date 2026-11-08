@@ -18,7 +18,10 @@
 
 package audience
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 /*
 Truth is a three-valued result.
@@ -100,13 +103,18 @@ type Env struct {
 }
 
 /*
-LeafResult is one condition's result in an explanation.
+LeafResult is one condition's result in an explanation: the condition,
+the value the person actually has, how far that value is trusted, and
+whether the condition held.
 */
 type LeafResult struct {
-	Path   string `json:"path"`
-	Field  string `json:"field"`
-	Op     string `json:"op"`
-	Result string `json:"result"`
+	Path   string          `json:"path"`
+	Field  string          `json:"field"`
+	Op     string          `json:"op"`
+	Value  json.RawMessage `json:"value,omitempty"`
+	Actual any             `json:"actual"`
+	Trust  Trust           `json:"trust"`
+	Result string          `json:"result"`
 }
 
 /*
@@ -183,7 +191,7 @@ func eval(n *node, env Env, rec *[]LeafResult) (Truth, *Rule) {
 
 	t := evalLeaf(n, env)
 	if rec != nil {
-		*rec = append(*rec, LeafResult{Path: n.path, Field: n.key, Op: n.op, Result: t.String()})
+		*rec = append(*rec, leafResult(n, env, t))
 	}
 
 	if t == Unknown {
@@ -192,6 +200,23 @@ func eval(n *node, env Env, rec *[]LeafResult) (Truth, *Rule) {
 	}
 
 	return t, nil
+}
+
+/*
+leafResult records one condition with the value it was decided on.
+*/
+func leafResult(n *node, env Env, t Truth) LeafResult {
+	out := LeafResult{
+		Path: n.path, Field: n.key, Op: n.op, Value: n.original.Value, Trust: n.field.Trust, Result: t.String(),
+	}
+
+	if env.Facts != nil && n.field.Type != TypeSaved {
+		if v, ok := env.Facts.Lookup(n.key); ok {
+			out.Actual = v
+		}
+	}
+
+	return out
 }
 
 /*
