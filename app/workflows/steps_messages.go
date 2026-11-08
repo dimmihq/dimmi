@@ -57,7 +57,7 @@ func executors() map[string]executor {
 		workflowspec.KindAssign: runAssign, workflowspec.KindUnassign: runUnassign, workflowspec.KindTag: runTag,
 		workflowspec.KindUntag: runUntag, workflowspec.KindPriority: runPriority, workflowspec.KindNote: runNote,
 		workflowspec.KindUpdateContact: runUpdateContact, workflowspec.KindSnooze: runSnooze,
-		workflowspec.KindClose: runClose,
+		workflowspec.KindClose: runClose, workflowspec.KindDimmi: runDimmi,
 	}
 }
 
@@ -67,7 +67,7 @@ resumers returns the resumer of every step kind that waits.
 func resumers() map[string]resumer {
 	return map[string]resumer{
 		workflowspec.KindButtons: resumeButtons, workflowspec.KindCollect: resumeCollect,
-		workflowspec.KindWait: resumeWait,
+		workflowspec.KindWait: resumeWait, workflowspec.KindDimmi: resumeDimmi,
 	}
 }
 

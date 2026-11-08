@@ -493,6 +493,63 @@ func (q *Queries) FinishWorkflowRunStep(ctx context.Context, arg FinishWorkflowR
 	return err
 }
 
+const lastAgentAndCustomerMessages = `-- name: LastAgentAndCustomerMessages :one
+SELECT
+    coalesce(max(created_at) FILTER (WHERE author_type = 'agent'), 'epoch'::timestamptz)::timestamptz AS agent_at,
+    coalesce(max(created_at) FILTER (WHERE author_type = 'contact'), 'epoch'::timestamptz)::timestamptz AS contact_at
+FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
+  AND deleted_at IS NULL AND created_at >= $3
+`
+
+type LastAgentAndCustomerMessagesParams struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	Since          time.Time `json:"since"`
+}
+
+type LastAgentAndCustomerMessagesRow struct {
+	AgentAt   time.Time `json:"agent_at"`
+	ContactAt time.Time `json:"contact_at"`
+}
+
+// LastAgentAndCustomerMessages returns when the agent and the customer
+// last wrote publicly on the conversation since a moment; the Unix
+// epoch stands for not at all.
+func (q *Queries) LastAgentAndCustomerMessages(ctx context.Context, arg LastAgentAndCustomerMessagesParams) (LastAgentAndCustomerMessagesRow, error) {
+	row := q.db.QueryRow(ctx, lastAgentAndCustomerMessages, arg.WorkspaceID, arg.ConversationID, arg.Since)
+	var i LastAgentAndCustomerMessagesRow
+	err := row.Scan(&i.AgentAt, &i.ContactAt)
+	return i, err
+}
+
+const lastCustomerMessage = `-- name: LastCustomerMessage :one
+SELECT id, author_type FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
+  AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 1
+`
+
+type LastCustomerMessageParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+}
+
+type LastCustomerMessageRow struct {
+	ID         ids.UUID `json:"id"`
+	AuthorType string   `json:"author_type"`
+}
+
+// LastCustomerMessage returns the conversation's newest message when
+// the customer wrote it, so the agent can answer what is waiting.
+func (q *Queries) LastCustomerMessage(ctx context.Context, arg LastCustomerMessageParams) (LastCustomerMessageRow, error) {
+	row := q.db.QueryRow(ctx, lastCustomerMessage, arg.WorkspaceID, arg.ConversationID)
+	var i LastCustomerMessageRow
+	err := row.Scan(&i.ID, &i.AuthorType)
+	return i, err
+}
+
 const listConversationWorkflowRuns = `-- name: ListConversationWorkflowRuns :many
 SELECT r.id, r.workspace_id, r.workflow_id, r.version_id, r.conversation_id, r.contact_id, r.kind, r.mode, r.status, r.end_reason, r.trigger, r.trigger_event_id, r.trigger_data, r.spec, r.parent_run_id, r.parent_step_id, r.chain, r.cursor_step_id, r.seq, r.wait, r.wake_at, r.vars, r.steps_executed, r.acted, r.error, r.started_at, r.ended_at, r.created_at, r.updated_at, w.name AS workflow_name FROM workflow_runs r
 JOIN workflows w ON w.id = r.workflow_id
@@ -824,6 +881,48 @@ func (q *Queries) PruneWorkflowMatchLogs(ctx context.Context, arg PruneWorkflowM
 	return result.RowsAffected(), nil
 }
 
+const publicAuthorBefore = `-- name: PublicAuthorBefore :one
+SELECT author_type FROM messages
+WHERE workspace_id = $1 AND conversation_id = $2 AND type = 'message'
+  AND deleted_at IS NULL AND id < $3
+ORDER BY id DESC
+LIMIT 1
+`
+
+type PublicAuthorBeforeParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+	MessageID      ids.UUID `json:"message_id"`
+}
+
+// PublicAuthorBefore names who wrote the conversation's last public
+// message before the given one, so a short "yes" is read as confirming
+// the agent's answer only when that answer came right before it.
+func (q *Queries) PublicAuthorBefore(ctx context.Context, arg PublicAuthorBeforeParams) (string, error) {
+	row := q.db.QueryRow(ctx, publicAuthorBefore, arg.WorkspaceID, arg.ConversationID, arg.MessageID)
+	var author_type string
+	err := row.Scan(&author_type)
+	return author_type, err
+}
+
+const readyConversationAi = `-- name: ReadyConversationAi :exec
+UPDATE conversations SET ai_state = 'off', ai_handed_off_at = NULL, ai_handoff_reason = NULL, updated_at = $1
+WHERE workspace_id = $2 AND id = $3 AND ai_state = 'handed_off'
+`
+
+type ReadyConversationAiParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// ReadyConversationAi lets the agent answer again on a conversation it
+// was handed away from, as a workflow step hands it back.
+func (q *Queries) ReadyConversationAi(ctx context.Context, arg ReadyConversationAiParams) error {
+	_, err := q.db.Exec(ctx, readyConversationAi, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
 const releaseConversationClaim = `-- name: ReleaseConversationClaim :exec
 UPDATE conversations SET workflow_run_id = NULL, updated_at = $1
 WHERE workspace_id = $2 AND id = $3 AND workflow_run_id = $4
@@ -960,6 +1059,24 @@ func (q *Queries) ScrubWorkflowRunsForContact(ctx context.Context, arg ScrubWork
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const standDownConversationAi = `-- name: StandDownConversationAi :exec
+UPDATE conversations SET ai_state = 'off', updated_at = $1
+WHERE workspace_id = $2 AND id = $3 AND ai_state = 'active'
+`
+
+type StandDownConversationAiParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// StandDownConversationAi stops the agent answering once a workflow
+// step that let it handle the conversation is over.
+func (q *Queries) StandDownConversationAi(ctx context.Context, arg StandDownConversationAiParams) error {
+	_, err := q.db.Exec(ctx, standDownConversationAi, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const workflowRanOnConversation = `-- name: WorkflowRanOnConversation :one

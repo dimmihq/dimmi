@@ -30,7 +30,7 @@ engine to the events it runs on.
 func bootWorkflows(a *app.App) {
 	runner := engine.New(engine.Engine{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue, IDs: a.IDs,
-		Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue},
+		Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue}, AgentOn: a.Config.AI.Enabled,
 	})
 	runner.Listen(a.Events)
 	a.ContactErasers.Register(engine.RunEraser{Engine: runner})
@@ -53,5 +53,6 @@ func registerWorkflowJobs(a *app.App) error {
 		queue.Register(a.Queue, &jobs.AdvanceWorkflowRuns{Engine: runner}),
 		queue.Register(a.Queue, &jobs.AdvanceWorkflowRun{Engine: runner}),
 		queue.Register(a.Queue, &jobs.ResumeWorkflowInput{Engine: runner}),
+		queue.Register(a.Queue, &jobs.ResumeWorkflowOnAgent{Engine: runner}),
 	)
 }

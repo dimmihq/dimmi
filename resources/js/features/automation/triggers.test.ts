@@ -30,6 +30,8 @@ describe("triggers", () => {
     expect(allowsStep("conversation.first_message", "buttons")).toBe(true);
     expect(allowsStep("message.customer", "message")).toBe(false);
     expect(allowsStep("message.customer", "tag")).toBe(true);
+    expect(allowsStep("conversation.first_message", "dimmi")).toBe(true);
+    expect(allowsStep("note.created", "dimmi")).toBe(false);
   });
 
   it("only accepts the triggers it knows", () => {

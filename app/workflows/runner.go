@@ -78,11 +78,12 @@ type Step struct {
 
 /*
 Input is what a waiting run receives: a customer message, a teammate's
-reply, or its timer.
+reply, its timer, or the agent handing the conversation over, with why.
 */
 type Input struct {
 	Kind      string    `json:"kind"`
 	MessageID *ids.UUID `json:"message_id,omitempty"`
+	Reason    string    `json:"reason,omitempty"`
 	Text      string    `json:"-"`
 }
 
@@ -93,6 +94,7 @@ const (
 	InputMessage       = "message"
 	InputTimer         = "timer"
 	InputTeammateReply = "teammate_reply"
+	InputAgentHandover = "agent_handover"
 )
 
 /*
@@ -167,9 +169,11 @@ func (e *Engine) applies(run models.WorkflowRun, s Step) bool {
 	case InputTimer:
 		return run.WakeAt != nil && !run.WakeAt.After(e.Clock.Now())
 	case InputMessage:
-		return w.Kind == waitInput || w.interrupts(interruptCustomer)
+		return w.Kind == waitInput || w.Kind == workflowspec.WaitAgent || w.interrupts(interruptCustomer)
 	case InputTeammateReply:
 		return w.interrupts(interruptTeammate)
+	case InputAgentHandover:
+		return w.Kind == workflowspec.WaitAgent
 	}
 
 	return false

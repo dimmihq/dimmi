@@ -147,6 +147,13 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
   buttons: written,
   collect: collected,
   branch: () => "Go down the first path that matches",
+  dimmi: (step) => {
+    const instructions = text(step.settings, "instructions").trim();
+
+    return instructions
+      ? `dimmi answers, following: ${instructions}`
+      : "dimmi answers until it resolves, hands over or the customer goes quiet";
+  },
   wait: (step) => waited(step, "Wait"),
   snooze: (step) => waited(step, "Snooze"),
   assign: (step, names) => assigned(step.settings, names),

@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | A customer message resumes the runs of its conversation that wait for
-| an answer, or whose wait ends early when the customer writes. People
+| an answer, or whose wait ends early when the customer writes; the
+| agent handing a conversation over resumes the runs waiting on it. People
 | win over scripts: a teammate's public reply ends every
 | customer-facing run on the conversation at once, in the transaction
 | of the reply, so the customer never gets a scripted message after a
@@ -67,8 +68,23 @@ ResumeOnMessage resumes the conversation's runs that wait for the
 customer.
 */
 func (e *Engine) ResumeOnMessage(ctx context.Context, workspace, conversation, message ids.UUID) error {
-	var waiting []ids.UUID
+	return e.resumeWaiting(ctx, workspace, conversation, Input{Kind: InputMessage, MessageID: &message})
+}
 
+/*
+ResumeOnAgent tells the conversation's runs waiting on the agent that
+it handed the conversation over, and why.
+*/
+func (e *Engine) ResumeOnAgent(ctx context.Context, workspace, conversation ids.UUID, reason string) error {
+	return e.resumeWaiting(ctx, workspace, conversation, Input{Kind: InputAgentHandover, Reason: reason})
+}
+
+/*
+resumeWaiting hands the input to every waiting run of the conversation;
+each run takes only what it waits for.
+*/
+func (e *Engine) resumeWaiting(ctx context.Context, workspace, conversation ids.UUID, in Input) error {
+	var waiting []ids.UUID
 	err := e.transaction(ctx, workspace, func(ctx context.Context, tx *database.Tx) error {
 		runs, err := models.New(tx).ActiveWorkflowRuns(ctx, models.ActiveWorkflowRunsParams{
 			WorkspaceID: workspace, ConversationID: &conversation,
@@ -86,8 +102,8 @@ func (e *Engine) ResumeOnMessage(ctx context.Context, workspace, conversation, m
 	}
 
 	for _, run := range waiting {
-		input := &Input{Kind: InputMessage, MessageID: &message}
-		if err := e.Advance(ctx, Step{WorkspaceID: workspace, RunID: run, Input: input}); err != nil {
+		input := in
+		if err := e.Advance(ctx, Step{WorkspaceID: workspace, RunID: run, Input: &input}); err != nil {
 			return err
 		}
 	}

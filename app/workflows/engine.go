@@ -57,7 +57,9 @@ func DefaultLimits() Limits {
 
 /*
 Engine runs workflows. Delivery hands workflow messages to channels;
-IDs reads the public ids definitions name.
+IDs reads the public ids definitions name; AgentOn says this server
+runs the agent at all, so a step that lets dimmi handle a conversation
+hands it over at once when it cannot.
 */
 type Engine struct {
 	DB       *database.DB
@@ -67,6 +69,7 @@ type Engine struct {
 	IDs      *ids.Registry
 	Delivery conversations.Delivery
 	Limits   Limits
+	AgentOn  bool
 	live     *liveCache
 }
 

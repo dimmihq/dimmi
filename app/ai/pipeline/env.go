@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/officehours"
+	"github.com/dimmihq/dimmi/app/support/workflowspec"
 )
 
 /*
@@ -57,6 +58,7 @@ type env struct {
 	Triage        triageFacts
 	Version       string
 	Defaults      map[string]string
+	WorkflowStep  *workflowspec.AgentHandling
 	now           time.Time
 }
 
@@ -107,6 +109,9 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 		return nil, err
 	}
 	r.loadConnections(ctx, q, e)
+	if err := loadWorkflowStep(ctx, q, e); err != nil {
+		return nil, err
+	}
 
 	return e, r.loadFacts(ctx, q, e)
 }

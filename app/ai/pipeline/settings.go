@@ -88,6 +88,8 @@ func settingsFor(e *env) *TurnSettings {
 	if h.Mode == enums.AIHandoffModeTriageOnly {
 		s.Mode, s.Tools = ModeTriageOnly, []string{toolHandoff, toolTriage}
 	}
+
+	applyWorkflowStep(e, s)
 	return s
 }
 

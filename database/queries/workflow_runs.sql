@@ -157,3 +157,45 @@ UPDATE conversations SET ai_mode = 'auto', updated_at = @now WHERE workspace_id 
 -- learned about them; the runs stay as a record that they happened.
 UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = @now
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
+
+-- name: PublicAuthorBefore :one
+-- PublicAuthorBefore names who wrote the conversation's last public
+-- message before the given one, so a short "yes" is read as confirming
+-- the agent's answer only when that answer came right before it.
+SELECT author_type FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND deleted_at IS NULL AND id < @message_id
+ORDER BY id DESC
+LIMIT 1;
+
+-- name: LastAgentAndCustomerMessages :one
+-- LastAgentAndCustomerMessages returns when the agent and the customer
+-- last wrote publicly on the conversation since a moment; the Unix
+-- epoch stands for not at all.
+SELECT
+    coalesce(max(created_at) FILTER (WHERE author_type = 'agent'), 'epoch'::timestamptz)::timestamptz AS agent_at,
+    coalesce(max(created_at) FILTER (WHERE author_type = 'contact'), 'epoch'::timestamptz)::timestamptz AS contact_at
+FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND deleted_at IS NULL AND created_at >= @since;
+
+-- name: StandDownConversationAi :exec
+-- StandDownConversationAi stops the agent answering once a workflow
+-- step that let it handle the conversation is over.
+UPDATE conversations SET ai_state = 'off', updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND ai_state = 'active';
+
+-- name: ReadyConversationAi :exec
+-- ReadyConversationAi lets the agent answer again on a conversation it
+-- was handed away from, as a workflow step hands it back.
+UPDATE conversations SET ai_state = 'off', ai_handed_off_at = NULL, ai_handoff_reason = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND ai_state = 'handed_off';
+
+-- name: LastCustomerMessage :one
+-- LastCustomerMessage returns the conversation's newest message when
+-- the customer wrote it, so the agent can answer what is waiting.
+SELECT id, author_type FROM messages
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND type = 'message'
+  AND deleted_at IS NULL
+ORDER BY id DESC
+LIMIT 1;

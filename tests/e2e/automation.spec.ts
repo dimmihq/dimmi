@@ -91,6 +91,25 @@ it.describe("automation", () => {
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
   });
 
+  it("lets dimmi handle a conversation with a path for each way its turn ends", async ({ page }) => {
+    await newWorkflow(page, "first message", /Customer sends their first message/);
+    const canvas = page.getByRole("region", { name: "Workflow" });
+    await canvas.getByRole("button", { name: "Add a step" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Let dimmi handle" }).click();
+
+    const inspector = page.getByRole("region", { name: "Step settings" });
+    await expect(inspector.getByRole("region", { name: "dimmi is off" })).toBeVisible();
+    for (const path of ["Resolved", "Handed over", "Customer went quiet"]) {
+      await expect(canvas.getByText(path, { exact: true })).toBeVisible();
+    }
+
+    await inspector.getByRole("textbox", { name: "Extra instructions" }).fill("Only answer billing questions.");
+    await expect(canvas.getByRole("button", { name: /following: Only answer billing questions/ })).toBeVisible();
+    await expect(page.getByText("Saved as draft")).toBeVisible();
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  });
+
   it("fits a workflow on screen and keeps a new step in view", async ({ page }) => {
     await newWorkflow(page, "first message", /Customer sends their first message/);
     const canvas = page.getByRole("region", { name: "Workflow" });

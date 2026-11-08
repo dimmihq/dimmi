@@ -9,7 +9,8 @@
 | conversation before the automatic agent could look at it. Everything
 | else is matched from a job. A teammate's reply, a close, spam and
 | deletion reach running workflows inside their own transaction, before
-| anything is sent. Workflow and agent messages never trigger anything.
+| anything is sent. Workflow and agent messages never trigger anything;
+| the agent handing a conversation over moves a run waiting on it.
 |
 */
 
@@ -50,6 +51,11 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	})
 	events.ListenQueued(d, queuedMessage)
 	events.ListenQueued(d, resumeOnMessage)
+	events.ListenQueued(d, func(ev appevents.AiHandoffRequested) queue.Args {
+		return jobs.ResumeWorkflowOnAgentArgs{
+			WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Reason: ev.Reason, EventID: ev.ID,
+		}
+	})
 	events.ListenQueued(d, func(ev appevents.ConversationAssigned) queue.Args {
 		return queuedChange(ev.Base, ev.ConversationID, workflowspec.TriggerAssignmentChanged, assignmentData(ev))
 	})

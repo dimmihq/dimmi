@@ -189,6 +189,12 @@ func (w *Workflows) ready(ctx context.Context, q *models.Queries, wf models.Work
 	}
 
 	report.Errors = append(report.Errors, missing...)
+	warnings, err := agentWarnings(ctx, q, wf, spec)
+	if err != nil {
+		return spec, err
+	}
+
+	report.Warnings = append(report.Warnings, warnings...)
 	if !report.OK() {
 		return spec, invalid(report.Err())
 	}

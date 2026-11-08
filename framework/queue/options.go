@@ -19,6 +19,8 @@ import (
 
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
+
+	"github.com/dimmihq/dimmi/framework/clock"
 )
 
 /*
@@ -125,6 +127,19 @@ Unique skips the push when a matching job already exists.
 */
 func Unique(unique UniqueOpts) Opt {
 	return func(o *Options) { o.Unique = unique }
+}
+
+/*
+insertOpts is [insertOpts] with a held job's time read on the queue's
+clock and moved onto the system's.
+*/
+func (q *Queue) insertOpts(args Args, opts []Opt) *river.InsertOpts {
+	out := insertOpts(args, opts)
+	if q.clock != nil && !out.ScheduledAt.IsZero() {
+		out.ScheduledAt = clock.System().Now().Add(out.ScheduledAt.Sub(q.clock.Now()))
+	}
+
+	return out
 }
 
 /*

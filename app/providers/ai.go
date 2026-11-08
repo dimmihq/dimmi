@@ -64,6 +64,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 
 	return errors.Join(
 		queue.Register(a.Queue, &aijobs.AnswerWithAI{Runner: runner}),
+		queue.Register(a.Queue, &aijobs.AnswerForWorkflow{Runner: runner}),
 		queue.Register(a.Queue, pruneAiTraces(a)),
 		queue.Register(a.Queue, &aijobs.ExecuteAiActionCall{Kit: runner.Actions}),
 		queue.Register(a.Queue, &aijobs.FollowUpAiActionCall{Runner: runner}),

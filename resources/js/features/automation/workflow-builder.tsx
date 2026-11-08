@@ -21,6 +21,7 @@ import { Drawer } from "@/components/base/drawer/drawer";
 import { usePermission } from "@/features/settings/inboxes";
 import { Panel } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
+import { agentQuery } from "@/lib/api/ai";
 import { tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
 import type { Issue, Workflow } from "@/lib/api/workflows";
@@ -38,12 +39,14 @@ import { findStep, readyKinds, type Step, type StepKind, triggerStep } from "./w
 
 /*
  * useLists reads the workspace's teams, active teammates and tags, as the
- * pickers offer them and as the cards name them.
+ * pickers offer them and as the cards name them, and whether its agent
+ * is on.
  */
 function useLists(workspace: string): { lists: Lists; names: Names } {
   const teams = useQuery(teamsQuery(workspace)).data;
   const members = useQuery(membersQuery(workspace)).data;
   const tags = useQuery(tagsQuery(workspace)).data;
+  const agent = useQuery({ ...agentQuery(workspace), retry: false }).data;
 
   return useMemo(() => {
     const lists: Lists = {
@@ -52,13 +55,14 @@ function useLists(workspace: string): { lists: Lists; names: Names } {
         .filter((member) => member.status === "active")
         .map((member) => [member.id, member.user.name] as const),
       tags: (tags ?? []).map((tag) => [tag.id, tag.name] as const),
+      agentOn: agent ? agent.agent.enabled && agent.ready : undefined,
     };
 
     return {
       lists,
       names: { teams: new Map(lists.teams), members: new Map(lists.members), tags: new Map(lists.tags) },
     };
-  }, [teams, members, tags]);
+  }, [teams, members, tags, agent]);
 }
 
 const saveWords: Record<SaveState, string> = {

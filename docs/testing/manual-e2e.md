@@ -1002,3 +1002,7 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Teammate wins | reply as a teammate while the buttons step waits | the run ends `exited` `teammate_replied`; the customer gets no more workflow messages |
 | Background | `message.customer` workflow branching on `message.body contains_any ["refund"]` | the conversation gets the tag and priority; the timeline says "Workflow: <name>" |
 | Archive | `DELETE $B/workflows/$WF` on a reusable workflow a live workflow calls | 409 `workflow_in_use` |
+| dimmi step | first-message workflow whose step is `dimmi` with notes on its three paths; agent on with a working key; customer writes in | dimmi answers, ending with "Did that solve it? Reply yes if it did."; replying "thanks!" takes `resolved` (no second answer) and closes when that path is empty |
+| dimmi hands over | same, customer asks for a refund the agent hands over | `handed_over` path runs; the agent's own handoff team is not applied |
+| dimmi quiet | same, customer says nothing for `quiet_after` after an answer | `quiet` path runs, `ai_state` `off` |
+| dimmi off | agent disabled, then publish | publish needs `acknowledge_warnings` (`dimmi_not_ready`); a customer writing in goes straight down `handed_over` |

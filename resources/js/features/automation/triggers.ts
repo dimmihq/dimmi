@@ -55,7 +55,8 @@ export type TriggerKind =
  * example of what to do with it, and its icon. Runs says the server
  * starts workflows from it today; only those are offered for new
  * workflows. Talks lists the steps that speak to the customer it may
- * use, and onceOnly says it runs at most once per conversation.
+ * use, dimmi whether it may let dimmi handle the conversation, and
+ * onceOnly says it runs at most once per conversation.
  */
 export interface Trigger {
   group: TriggerGroup;
@@ -64,6 +65,7 @@ export interface Trigger {
   icon: ComponentType<{ className?: string }>;
   runs: boolean;
   talks: StepKind[];
+  dimmi?: boolean;
   onceOnly?: boolean;
 }
 
@@ -84,6 +86,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     icon: RiChatSmile2Line,
     runs: false,
     talks: customerKinds,
+    dimmi: true,
     onceOnly: true,
   },
   "conversation.first_message": {
@@ -93,6 +96,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     icon: RiMessage2Line,
     runs: true,
     talks: customerKinds,
+    dimmi: true,
     onceOnly: true,
   },
   "conversation.customer_reopened": {
@@ -102,6 +106,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     icon: RiChatNewLine,
     runs: true,
     talks: customerKinds,
+    dimmi: true,
   },
   "message.customer": {
     group: "during",
@@ -118,6 +123,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     icon: RiTimerLine,
     runs: false,
     talks: customerKinds,
+    dimmi: true,
   },
   "conversation.rated": {
     group: "during",
@@ -207,15 +213,20 @@ export const triggers: Record<TriggerKind, Trigger> = {
     icon: RiLinksLine,
     runs: false,
     talks: customerKinds,
+    dimmi: true,
   },
 };
 
 /*
  * allowsStep reports whether a step kind may appear under the trigger:
  * actions and logic everywhere, steps that speak to the customer only
- * where the trigger may speak.
+ * where the trigger may speak, and dimmi only where it may take over.
  */
 export function allowsStep(kind: TriggerKind, step: StepKind): boolean {
+  if (step === "dimmi") {
+    return triggers[kind].dimmi === true;
+  }
+
   return !customerKinds.includes(step) || triggers[kind].talks.includes(step);
 }
 

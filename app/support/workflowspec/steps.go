@@ -88,7 +88,10 @@ func Kinds() []Kind {
 		},
 		{Key: KindCollect, CustomerFacing: true, Fixed: []string{OutcomeInvalid, OutcomeTimeout}, Ready: true},
 		{Key: KindReplyTime, CustomerFacing: true},
-		{Key: KindDimmi, CustomerFacing: true, Fixed: []string{OutcomeResolved, OutcomeHandedOver, OutcomeQuiet}},
+		{
+			Key: KindDimmi, CustomerFacing: true, Fixed: []string{OutcomeResolved, OutcomeHandedOver, OutcomeQuiet},
+			Ready: true,
+		},
 		{
 			Key: KindBranch, Fixed: []string{OutcomeElse}, Required: []string{OutcomeElse},
 			MinPaths: 1, MaxPaths: 10, Ready: true,

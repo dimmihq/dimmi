@@ -32,6 +32,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/log"
 )
@@ -51,7 +52,10 @@ sizes the queue's own pool. JobTimeout bounds one run of a job.
 PollInterval is how often idle workers look for jobs no notification
 announced, such as scheduled jobs and retries coming due. NoLeader keeps
 this node out of leader election, so it never pushes periodic jobs: set
-on worker nodes when dedicated scheduler nodes run the schedule.
+on worker nodes when dedicated scheduler nodes run the schedule. Clock
+is the application's clock: a job held until a moment on it is held
+for that long from now on the database's, so a clock that is not the
+system's, such as a test's, still holds jobs for the right length.
 */
 type Config struct {
 	Queues       map[string]int `koanf:"queues"`
@@ -59,6 +63,7 @@ type Config struct {
 	JobTimeout   time.Duration  `default:"1m" koanf:"job_timeout"`
 	PollInterval time.Duration  `default:"1s" koanf:"poll_interval"`
 	NoLeader     bool           `koanf:"-"`
+	Clock        clock.Clock    `koanf:"-"`
 }
 
 /*
@@ -74,6 +79,7 @@ type Queue struct {
 	queues   []string
 	txMode   pgx.QueryExecMode
 	noLeader bool
+	clock    clock.Clock
 	running  atomic.Bool
 }
 
@@ -108,6 +114,7 @@ func New(ctx context.Context, db database.Config, cfg Config) (*Queue, error) {
 		queues:   slices.Collect(maps.Keys(cfg.Queues)),
 		txMode:   execMode(db.PoolMode),
 		noLeader: cfg.NoLeader,
+		clock:    cfg.Clock,
 	}
 
 	q.client, err = river.NewClient(riverpgxv5.New(pool), q.riverConfig(ctx, cfg))
@@ -125,7 +132,7 @@ Push adds a job on its own, outside any transaction. A job that is
 unique and already exists is skipped without an error.
 */
 func (q *Queue) Push(ctx context.Context, args Args, opts ...Opt) error {
-	_, err := q.client.Insert(ctx, args, insertOpts(args, opts))
+	_, err := q.client.Insert(ctx, args, q.insertOpts(args, opts))
 
 	return pushError(args, err)
 }
@@ -135,7 +142,7 @@ PushTx adds a job inside the transaction. The job exists only if the
 transaction commits, and no worker sees it before then.
 */
 func (q *Queue) PushTx(ctx context.Context, tx *database.Tx, args Args, opts ...Opt) error {
-	_, err := q.client.InsertTx(ctx, riverTx{tx: tx, mode: q.txMode}, args, insertOpts(args, opts))
+	_, err := q.client.InsertTx(ctx, riverTx{tx: tx, mode: q.txMode}, args, q.insertOpts(args, opts))
 
 	return pushError(args, err)
 }

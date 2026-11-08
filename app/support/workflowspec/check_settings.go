@@ -50,7 +50,7 @@ func (c *checker) checkSettings(s Step) {
 		KindBranch: c.checkBranch, KindWait: c.checkWait, KindAssign: c.checkAssign,
 		KindUnassign: c.checkUnassign, KindTag: c.checkTags, KindUntag: c.checkTags,
 		KindPriority: c.checkPriority, KindNote: c.checkNote, KindUpdateContact: c.checkUpdateContact,
-		KindSnooze: c.checkSnooze, KindClose: c.checkClose,
+		KindSnooze: c.checkSnooze, KindClose: c.checkClose, KindDimmi: c.checkDimmi,
 	}
 
 	if check, ok := checks[s.Kind]; ok {

@@ -47,12 +47,14 @@ import { pathName, type Step } from "./workflows";
 type Edit = (edit: (step: Step) => Step) => void;
 
 /*
- * Lists are the workspace's teams, teammates and tags, as choices.
+ * Lists are the workspace's teams, teammates and tags, as choices, and
+ * whether its agent is on, unknown until read.
  */
 export interface Lists {
   teams: Choices;
   members: Choices;
   tags: Choices;
+  agentOn?: boolean;
 }
 
 interface Props {
@@ -427,6 +429,87 @@ function CloseFields({ step, onEdit }: Props) {
   );
 }
 
+const replyLimits: Record<string, string> = {
+  agent: "The agent's own limit",
+  "3": "3 replies",
+  "5": "5 replies",
+  "10": "10 replies",
+  "20": "20 replies",
+};
+
+const quietWaits: Record<string, string> = {
+  channel: "10 minutes in chat, 1 day by email",
+  "5m": "5 minutes",
+  "30m": "30 minutes",
+  "1h": "1 hour",
+  "4h": "4 hours",
+  "1d": "1 day",
+};
+
+/*
+ * DimmiFields shows how long dimmi keeps the conversation and what it
+ * is told, and repeats the rules it always keeps.
+ */
+function DimmiFields({ step, lists, onEdit }: Props) {
+  const set = useSet(onEdit);
+  const limit = step.settings?.max_replies;
+
+  return (
+    <>
+      {lists.agentOn === false ? (
+        <Section
+          title="dimmi is off"
+          description="Until you turn dimmi on in Agent settings, this step hands every conversation to the team."
+        />
+      ) : null}
+      <Section title="Extra instructions" description="Added to dimmi's guidance while this step is active.">
+        <Words
+          label="Extra instructions"
+          value={text(step.settings, "instructions")}
+          placeholder="Only answer billing questions; hand refunds to the team."
+          onChange={(value) => set({ instructions: value || undefined })}
+        />
+      </Section>
+      <Section title="While dimmi handles it">
+        <Row label="Replies at most">
+          <Pick
+            label="Replies at most"
+            choices={choicesOf(replyLimits)}
+            value={typeof limit === "number" ? String(limit) : "agent"}
+            onChange={(value) => set({ max_replies: value === "agent" ? undefined : Number(value) })}
+          />
+        </Row>
+        <Row label="Customer gone quiet after">
+          <Pick
+            label="Customer gone quiet after"
+            choices={choicesOf(quietWaits)}
+            value={text(step.settings, "quiet_after") || "channel"}
+            onChange={(value) => set({ quiet_after: value === "channel" ? undefined : value })}
+          />
+        </Row>
+        <Row label="Ask the customer to confirm answers" description="Resolved only when the customer says so.">
+          <Toggle
+            label="Ask the customer to confirm answers"
+            on={step.settings?.confirm_resolution !== false}
+            onChange={(on) => set({ confirm_resolution: on ? undefined : false })}
+          />
+        </Row>
+        <Row label="Close when resolved" description="When the resolved path has no steps.">
+          <Toggle
+            label="Close when resolved"
+            on={step.settings?.close_on_resolved !== false}
+            onChange={(on) => set({ close_on_resolved: on ? undefined : false })}
+          />
+        </Row>
+      </Section>
+      <Section
+        title="Always"
+        description="dimmi stops the moment a teammate replies. Silence never counts as resolved: it takes the quiet path."
+      />
+    </>
+  );
+}
+
 /*
  * Unavailable stands in for a kind the server does not run yet, which
  * only a definition written through the API can hold.
@@ -447,6 +530,7 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   note: MessageFields,
   buttons: ButtonsFields,
   collect: CollectFields,
+  dimmi: DimmiFields,
   branch: BranchFields,
   wait: (props) => <LengthFields {...props} title="Wait" />,
   snooze: (props) => <LengthFields {...props} title="Snooze" />,

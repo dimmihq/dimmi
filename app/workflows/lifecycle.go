@@ -46,15 +46,20 @@ const (
 /*
 waitState is what a waiting run waits for: its kind and step, when it
 times out, what interrupts it, and for questions how many answers it
-had and whether it already asked again.
+had and whether it already asked again. A run waiting on the agent
+also keeps when the agent took over, how long a silent customer is
+waited for, and what the agent must honor meanwhile.
 */
 type waitState struct {
-	Kind      string     `json:"kind,omitempty"`
-	StepID    string     `json:"step_id,omitempty"`
-	Until     *time.Time `json:"until,omitempty"`
-	Interrupt []string   `json:"interrupt,omitempty"`
-	Attempts  int        `json:"attempts,omitempty"`
-	Retried   bool       `json:"retried,omitempty"`
+	Kind      string                      `json:"kind,omitempty"`
+	StepID    string                      `json:"step_id,omitempty"`
+	Until     *time.Time                  `json:"until,omitempty"`
+	Interrupt []string                    `json:"interrupt,omitempty"`
+	Attempts  int                         `json:"attempts,omitempty"`
+	Retried   bool                        `json:"retried,omitempty"`
+	Since     *time.Time                  `json:"since,omitempty"`
+	Quiet     string                      `json:"quiet,omitempty"`
+	Agent     *workflowspec.AgentHandling `json:"dimmi,omitempty"`
 }
 
 /*

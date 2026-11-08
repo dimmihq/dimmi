@@ -220,7 +220,7 @@ post writes the decision's reply as the agent.
 */
 func (r *Runner) post(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
 	e := st.env
-	text := r.reply(e, d)
+	text := withConfirmation(r.reply(e, d), st, d)
 	msg, conv, err := r.agentWriter(tx, e).Append(ctx, e.Conversation, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: text, BodyFormat: new("markdown"),
 		Metadata: r.metadata(st, d), Automatic: !d.substantive,

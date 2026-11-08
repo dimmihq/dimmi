@@ -71,12 +71,16 @@ const starts: Partial<Record<StepKind, Step["settings"]>> = {
 /*
  * freshStep is a new step of a kind with the settings it starts with
  * and the paths it needs: two buttons for reply buttons, one condition
- * and everyone else for a branch.
+ * and everyone else for a branch, and for dimmi a path for each way its
+ * turn ends.
  */
 export function freshStep(kind: StepKind): Step {
   const step: Step = { id: newId("s_"), kind, settings: { ...starts[kind] } };
   if (kind === "buttons") {
     step.paths = ["Option 1", "Option 2"].map((label) => ({ id: newId("p_"), label, steps: [] }));
+  }
+  if (kind === "dimmi") {
+    step.paths = ["resolved", "handed_over", "quiet"].map((outcome) => ({ id: newId("p_"), outcome, steps: [] }));
   }
   if (kind === "branch") {
     step.paths = [

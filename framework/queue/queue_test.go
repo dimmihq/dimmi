@@ -84,6 +84,23 @@ func TestPush(t *testing.T) {
 		assert.WithinDuration(t, at, jobs[0].ScheduledAt, time.Millisecond)
 	})
 
+	t.Run("holds a job for its time on the queue's clock, however far that clock is from now", func(t *testing.T) {
+		t.Parallel()
+		appClock := clock.NewFake(time.Date(2020, 1, 1, 9, 0, 0, 0, time.UTC))
+		cfg := testConfig()
+		cfg.Clock = appClock
+		dbCfg := database.Config{URL: migratedDatabase(t), PoolMode: database.PoolModeSession, MaxConns: 2}
+		q, db := newQueue(t, dbCfg, cfg), openDB(t, dbCfg)
+		require.NoError(t, queue.Register(q, workerFunc[greetArgs](nil)))
+
+		require.NoError(t, q.Push(t.Context(), greetArgs{Name: "Ada"}, queue.At(appClock.Now().Add(time.Hour))))
+
+		jobs := jobRows(t, db)
+		require.Len(t, jobs, 1)
+		assert.Equal(t, "scheduled", jobs[0].State)
+		assert.WithinDuration(t, clock.System().Now().Add(time.Hour), jobs[0].ScheduledAt, time.Minute)
+	})
+
 	t.Run("skips a unique job that already waits", func(t *testing.T) {
 		t.Parallel()
 		q, db := setup(t)

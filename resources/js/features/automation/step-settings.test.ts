@@ -49,7 +49,13 @@ describe("describe", () => {
   });
 
   it("says when a step cannot run yet", () => {
-    expect(describeStep({ id: "s", kind: "dimmi" }, names)).toBe("Let dimmi handle, not available yet");
+    expect(describeStep({ id: "s", kind: "classify" }, names)).toBe("Sort by topic, not available yet");
+  });
+
+  it("says what dimmi is told while it handles the conversation", () => {
+    expect(describeStep({ id: "s", kind: "dimmi", settings: { instructions: "Only billing." } }, names)).toBe(
+      "dimmi answers, following: Only billing.",
+    );
   });
 });
 

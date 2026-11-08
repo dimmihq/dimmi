@@ -47,6 +47,12 @@ type WorkflowEngine interface {
 		conversation that wait for one.
 	*/
 	ResumeOnMessage(ctx context.Context, workspaceID, conversationID, messageID ids.UUID) error
+
+	/*
+		ResumeOnAgent tells the runs of a conversation waiting on the agent
+		that it handed the conversation over, and why.
+	*/
+	ResumeOnAgent(ctx context.Context, workspaceID, conversationID ids.UUID, reason string) error
 }
 
 /*

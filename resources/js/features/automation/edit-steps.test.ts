@@ -51,6 +51,10 @@ describe("freshStep", () => {
     expect(freshStep("buttons").paths?.map((path) => path.label)).toEqual(["Option 1", "Option 2"]);
   });
 
+  it("gives dimmi a path for each way its turn ends", () => {
+    expect(freshStep("dimmi").paths?.map((path) => path.outcome)).toEqual(["resolved", "handed_over", "quiet"]);
+  });
+
   it("gives a branch one condition and everyone else", () => {
     const branch = freshStep("branch");
 
