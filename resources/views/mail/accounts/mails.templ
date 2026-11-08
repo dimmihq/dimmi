@@ -71,6 +71,18 @@ templ VisitorCode(workspace, visitorCode string) {
 }
 
 /*
+ReaderCode gives a help center reader the code that signs them in.
+*/
+
+templ ReaderCode(helpCenter, readerCode string) {
+	@layout(i18n.T(ctx, "mail.reader_code.subject", i18n.Args{"code": readerCode, "help_center": helpCenter})) {
+		<p>{ i18n.T(ctx, "mail.reader_code.intro", i18n.Args{"help_center": helpCenter}) }</p>
+		@code(readerCode)
+		<p>{ i18n.T(ctx, "mail.reader_code.expiry", nil) }</p>
+	}
+}
+
+/*
 PasswordChanged tells a user their password changed, was reset, or was
 removed to protect the account, and where to look if it was not them.
 */

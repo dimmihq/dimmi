@@ -237,6 +237,18 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   /*
+   * articleClick opens an article in the full help center signed in,
+   * when the messenger knows the visitor; anyone else follows the link.
+   */
+  const articleClick = (event: Event, target: Element | null) => {
+    const article = target?.closest<HTMLAnchorElement>("a[data-help-article]");
+    if (article?.dataset.helpArticle && live?.knowsVisitor()) {
+      event.preventDefault();
+      void live.openInHelpCenter(article.dataset.helpArticle, article.href);
+    }
+  };
+
+  /*
    * verifySubmit sends an email code card's form, reporting whether the
    * event was one.
    */
@@ -273,6 +285,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
         void live?.aiAction(kind);
       }
       verifyClick(target);
+      articleClick(event, target);
       const card = target?.closest<HTMLElement>("[data-call]");
       const decision = card?.dataset.decision;
       if (card?.dataset.call && (decision === "confirmed" || decision === "canceled")) {
@@ -410,6 +423,18 @@ function browserOf(win: Window) {
           fn(Date.now() - hiddenAt);
         }
       });
+    },
+    openTab: () => {
+      const tab = win.open("about:blank", "_blank");
+      if (!tab) {
+        return null;
+      }
+      tab.opener = null;
+      return {
+        go: (url: string) => {
+          tab.location.href = url;
+        },
+      };
     },
   };
 }

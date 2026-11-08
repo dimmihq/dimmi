@@ -225,7 +225,7 @@ func cleanContactChange(change ContactChange) (ContactChange, error) {
 	}
 
 	if change.Email != nil {
-		email, ok := normalizeTypedEmail(*change.Email)
+		email, ok := NormalizeTypedEmail(*change.Email)
 		if !ok {
 			return change, contactField("email", "Use an email address.")
 		}
@@ -252,10 +252,10 @@ func cleanContactChange(change ContactChange) (ContactChange, error) {
 }
 
 /*
-normalizeTypedEmail returns a bare address with its domain in ASCII form,
+NormalizeTypedEmail returns a bare address with its domain in ASCII form,
 and false for anything else.
 */
-func normalizeTypedEmail(raw string) (string, bool) {
+func NormalizeTypedEmail(raw string) (string, bool) {
 	raw = strings.TrimSpace(raw)
 
 	parsed, err := mail.ParseAddress(raw)

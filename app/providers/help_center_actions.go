@@ -28,7 +28,7 @@ func bootHelpCenters(a *app.App) {
 	acts.HelpPublic = helpcenters.NewPublic(a.DB, a.Clock)
 	acts.HelpReaders = &helpcenters.Readers{
 		DB: a.DB, Clock: a.Clock, Verifier: bootIdentityVerifier(a), Events: a.Events,
-		Key: a.DerivedKey("help.readers"),
+		Cache: a.Cache, Limiter: a.Limiter, Mail: a.Mail, Key: a.DerivedKey("help.readers"),
 	}
 	acts.HelpCenterAddresses = helpcenters.Addresses{
 		BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,

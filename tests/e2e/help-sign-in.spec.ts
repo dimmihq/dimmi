@@ -2,11 +2,14 @@
  * A reader signs in to a help center through the team's product: the
  * product sends them back to /sso with an identity token in the fragment,
  * the page sends it on, and the article kept to their audience opens.
+ * Signed out, the same customer signs in again with only their email and
+ * the code mailed to it.
  */
 import { createHmac } from "node:crypto";
 
 import { api } from "./support/customers";
 import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
+import { mailedText } from "./support/mail";
 
 /*
  * hs256 signs claims the way the team's product would.
@@ -25,7 +28,7 @@ it.describe("help center sign-in", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("opens an article kept to the reader's audience after signing in", async ({ page, browser }) => {
+  it("opens an article kept to the reader's audience after signing in", async ({ page, browser, person }) => {
     await page.goto("/d/docs");
     const secret = await api<{ id: string; secret: string }>(page, "POST", "/identity-secrets", {
       name: "Product",
@@ -49,7 +52,9 @@ it.describe("help center sign-in", () => {
     const path = `/hc/${center.subdomain}/articles/priority-support`;
     await reader.goto(path);
     await expect(reader.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
-    await expect(reader.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+    await reader.getByRole("link", { name: "Sign in" }).click();
+    await expect(reader.getByRole("heading", { name: "Sign in to see articles for customers" })).toBeVisible();
+    await expect(reader.getByRole("link", { name: "Continue with your account" })).toHaveAttribute(
       "href",
       /^https:\/\/login\.example\/help\?return_to=/,
     );
@@ -61,11 +66,24 @@ it.describe("help center sign-in", () => {
       iat: now,
       exp: now + 300,
       nonce: `n-${now}`,
+      email: `pro.${person.email}`,
       custom_attributes: { plan: "pro" },
     });
     await reader.goto(`/hc/${center.subdomain}/sso?next=${encodeURIComponent(path)}#token=${token}`);
     await expect(reader).toHaveURL(new RegExp(`${path}$`));
     await expect(reader.getByText("Call us any time.")).toBeVisible();
-    await expect(reader.getByRole("button", { name: "Sign out" })).toBeVisible();
+    await reader.getByRole("button", { name: "Sign out" }).click();
+    await reader.goto(path);
+    await expect(reader.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
+
+    await reader.getByRole("link", { name: "Sign in" }).click();
+    await reader.getByLabel("Email").fill(`pro.${person.email}`);
+    await reader.getByRole("button", { name: "Email me a code" }).click();
+    await expect(reader.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    const mailed = await mailedText(`pro.${person.email}`, "your code for");
+    await reader.getByLabel("Code").fill(mailed.match(/\b\d{6}\b/)?.[0] ?? "");
+    await reader.getByRole("button", { name: "Sign in" }).click();
+    await expect(reader).toHaveURL(new RegExp(`${path}$`));
+    await expect(reader.getByText("Call us any time.")).toBeVisible();
   });
 });

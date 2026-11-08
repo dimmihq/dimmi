@@ -145,10 +145,11 @@ templ NotFoundPage(c Center, all []Collection, popular []Summary, assets templ.C
 }
 
 /*
-ReaderSignInPage takes a reader back from the team's product: the identity
-token arrives in the address's fragment, which the browser never sends,
-so the page's script copies it into the form and sends it. Without
-scripts, the reader presses the button.
+ReaderSignInPage takes a reader back from the team's product, or in from
+the messenger: the identity token or the pass arrives in the address's
+fragment, which the browser never sends, so the page's script copies it
+into the form and sends it. Without scripts, the reader presses the
+button.
 */
 
 templ ReaderSignInPage(c Center, action string, next string, assets templ.Component) {
@@ -158,6 +159,7 @@ templ ReaderSignInPage(c Center, action string, next string, assets templ.Compon
 			<p class="mt-2 text-body-regular text-text-secondary">One moment while we open { c.Product }.</p>
 			<form method="post" action={ templ.SafeURL(action) } data-help-sign-in class="mt-6">
 				<input type="hidden" name="token" value=""/>
+				<input type="hidden" name="pass" value=""/>
 				<input type="hidden" name="next" value={ next }/>
 				<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center rounded-xl px-4 text-body-medium">Continue</button>
 			</form>

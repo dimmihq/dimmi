@@ -800,9 +800,13 @@
               "array",
               "null"
             ]
+          },
+          "url": {
+            "type": "string"
           }
         },
         "required": [
+          "url",
           "collections",
           "articles",
           "popular"
@@ -818,6 +822,22 @@
         },
         "required": [
           "data"
+        ],
+        "type": "object"
+      },
+      "HelpPass": {
+        "additionalProperties": false,
+        "properties": {
+          "object": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "url"
         ],
         "type": "object"
       },
@@ -1193,6 +1213,18 @@
         ],
         "type": "object"
       },
+      "ResourceHelpPass": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HelpPass"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceReadStateResource": {
         "additionalProperties": false,
         "properties": {
@@ -1383,6 +1415,17 @@
           "content_type",
           "size_bytes"
         ],
+        "type": "object"
+      },
+      "StoreWidgetHelpPassRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "article": {
+            "maxLength": 200,
+            "pattern": "^[a-z0-9-]*$",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "StoreWidgetPingRequestBody": {
@@ -3023,6 +3066,70 @@
               }
             },
             "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/help": {
+      "get": {
+        "operationId": "widget.help.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/help-passes": {
+      "post": {
+        "operationId": "widget.help-passes.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetHelpPassRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceHelpPass"
+                }
+              }
+            },
+            "description": "Created"
           },
           "default": {
             "content": {

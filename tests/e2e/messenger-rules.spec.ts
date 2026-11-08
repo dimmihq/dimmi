@@ -72,6 +72,10 @@ it.describe("messenger rules", () => {
       name: "Pro plan",
       rules: { rules: { field: "contact.custom.plan", op: "eq", value: "pro" } },
     });
+    await api(page, "POST", "/audiences", {
+      name: "Pricing readers",
+      rules: { rules: { field: "page.path", op: "contains", value: "pricing" } },
+    });
     const widgets = await api<{ id: string }[]>(page, "GET", "/widget-settings");
     const app = widgets[0]?.id ?? "";
 
@@ -90,7 +94,7 @@ it.describe("messenger rules", () => {
 
     await expect(async () => {
       await section.getByRole("button", { name: "Starting a conversation" }).click();
-      await page.getByRole("option", { name: "Pro plan", selected: false }).click({ timeout: 2000 });
+      await page.getByRole("option", { name: "Pricing readers" }).click({ timeout: 2000 });
     }).toPass();
     await expect(section).toContainText("cannot decide who may start a conversation");
   });

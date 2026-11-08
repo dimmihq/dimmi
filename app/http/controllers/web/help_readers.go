@@ -3,13 +3,16 @@
 | Help Center Readers
 |--------------------------------------------------------------------------
 |
-| A help center with a login address offers its readers a Sign in
-| button: it leads to the team's product, which signs an identity token
-| and sends the reader back to /sso with the token in the fragment. That
-| page posts it here, and a signed, httpOnly cookie remembers the reader
-| for an hour. A signed-in reader's pages show what their audiences open
-| and are never stored by any cache. A reader goes back only to a page of
-| the same help center.
+| A help center offers its readers a Sign in button when audiences keep
+| some of it from them or when it has the team's login address. It leads
+| to the email sign-in page, or straight to the team's product when that
+| is the only way in; the product signs an identity token and sends the
+| reader back to /sso with the token in the fragment, where the messenger
+| also sends readers with a pass. That page posts either here, and a
+| signed, httpOnly cookie remembers the reader for seven days, renewed as
+| they come back. A signed-in reader's pages show what their audiences
+| open and are never stored by any cache. A reader goes back only to a
+| page of the same help center.
 |
 */
 
@@ -18,6 +21,7 @@ package web
 import (
 	"net/url"
 	"strings"
+	"time"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -42,10 +46,14 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	center := centerOf(snap.HelpCenter, base)
 	center.Origin = origin(r)
 
-	contact, signed := c.readerOf(r, snap.HelpCenter)
+	contact, until, signed := c.readerOf(r, snap.HelpCenter)
 	if !signed {
-		center.SignInURL = signInURL(snap.HelpCenter, center, r.URL.Path)
+		center.SignInURL = signInURL(snap, center, r.URL.Path)
 		return center, newSite(r.Context(), c.Public, snap, nil), true
+	}
+
+	if fresh, renew := c.Readers.Renewal(snap.HelpCenter, contact, until); renew {
+		c.remember(w, r, base, fresh)
 	}
 
 	mine, err := c.Public.LoadFor(r.Context(), r.PathValue("center"), contact)
@@ -62,24 +70,36 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 
 /*
 readerOf returns the reader the request's cookie names for the help
-center.
+center, and when the cookie ends.
 */
-func (c *HelpCenterController) readerOf(r *fhttp.Request, h models.HelpCenter) (ids.UUID, bool) {
+func (c *HelpCenterController) readerOf(r *fhttp.Request, h models.HelpCenter) (ids.UUID, time.Time, bool) {
 	cookie, err := r.Cookie(readerCookie)
 	if err != nil || c.Readers == nil {
-		return ids.Nil(), false
+		return ids.Nil(), time.Time{}, false
 	}
 
 	return c.Readers.Reader(h, cookie.Value)
 }
 
 /*
-signInURL leads to the team's login address, which sends the reader back
-to /sso and then to the page they were on. Empty when the help center
-takes no sign-in.
+signInURL is where the Sign in button leads: the email sign-in page,
+when the help center takes email and signing in could show more, else
+the team's login. Empty when the help center offers no sign-in.
 */
-func signInURL(h models.HelpCenter, center helpcenter.Center, path string) string {
-	login := helpcenters.SettingsOf(h).LoginURL
+func signInURL(snap helpcenters.Snapshot, center helpcenter.Center, path string) string {
+	s := helpcenters.SettingsOf(snap.HelpCenter)
+	if s.EmailSignInOn() && (snap.Restricted || s.LoginURL != "") {
+		return center.Base + "/sso/sign-in?next=" + url.QueryEscape(path)
+	}
+
+	return productLogin(s.LoginURL, center, path)
+}
+
+/*
+productLogin leads to the team's login address, which sends the reader
+back to /sso and then to the page they were on. Empty without one.
+*/
+func productLogin(login string, center helpcenter.Center, path string) string {
 	if login == "" {
 		return ""
 	}
@@ -108,8 +128,10 @@ func (c *HelpCenterController) SignInPage(w fhttp.ResponseWriter, r *fhttp.Reque
 }
 
 /*
-SignIn checks the token, remembers the reader and sends them back to the
-page they were on.
+SignIn checks the token or the messenger's pass, remembers the reader
+and sends them back to the page they were on. A pass that no longer
+works leads to the email sign-in page, saying so, when the help center
+takes email.
 */
 func (c *HelpCenterController) SignIn(w fhttp.ResponseWriter, r *fhttp.Request) {
 	snap, base, ok := c.helpCenter(w, r)
@@ -117,16 +139,45 @@ func (c *HelpCenterController) SignIn(w fhttp.ResponseWriter, r *fhttp.Request) 
 		return
 	}
 
-	value, until, err := c.Readers.SignIn(r.Context(), snap.HelpCenter, r.FormValue("token"))
-	if err != nil {
+	next := nextPage(base, r.FormValue("next"))
+	session, err := c.readerSignIn(r, snap)
+	switch {
+	case err == nil:
+		c.remember(w, r, base, session)
+		back(w, next)
+	case r.FormValue("pass") != "" && helpcenters.SettingsOf(snap.HelpCenter).EmailSignInOn():
+		center := c.readerCenter(r, snap, base)
+		f := readerForm(center, snap, next)
+		_, f.Error, _ = readerProblem(err)
+		w.Header().Set("Cache-Control", "no-store")
+		c.respond(w, r, fhttp.StatusUnauthorized, helpcenter.ReaderEmailPage(center, f, c.styles()))
+	default:
 		c.Errors.Render(w, r, err)
-		return
+	}
+}
+
+/*
+readerSignIn signs in the reader the form's pass or identity token
+names.
+*/
+func (c *HelpCenterController) readerSignIn(r *fhttp.Request, snap helpcenters.Snapshot,
+) (helpcenters.ReaderSession, error) {
+	if pass := r.FormValue("pass"); pass != "" {
+		return c.Readers.RedeemPass(r.Context(), snap.HelpCenter, pass)
 	}
 
+	return c.Readers.SignIn(r.Context(), snap.HelpCenter, r.FormValue("token"))
+}
+
+/*
+remember sets the cookie that remembers a reader.
+*/
+func (c *HelpCenterController) remember(w fhttp.ResponseWriter, r *fhttp.Request, base string,
+	s helpcenters.ReaderSession,
+) {
 	cookie := c.cookie(r, base)
-	cookie.Value, cookie.Expires = value, until
+	cookie.Value, cookie.Expires = s.Value, s.Until
 	w.Header().Add("Set-Cookie", cookie.String())
-	back(w, nextPage(base, r.FormValue("next")))
 }
 
 /*

@@ -35,7 +35,7 @@ func Register(m *mail.Manager) {
 	mail.Register[MagicLinkMail](m, "magic_link")
 	mail.Register[ResetPasswordMail](m, "reset_password")
 	mail.Register[ConfirmCodeMail](m, "confirm_code")
-	mail.Register[VisitorCodeMail](m, "visitor_code")
+	registerCodes(m)
 	mail.Register[PasswordChangedMail](m, "password_changed")
 	mail.Register[NewSignInMail](m, "new_sign_in")
 	mail.Register[SuspiciousSignInAttemptsMail](m, "suspicious_sign_in_attempts")
@@ -61,6 +61,15 @@ func Register(m *mail.Manager) {
 	mail.Register[InvitationPendingMail](m, "invitation_pending")
 	mail.Register[TwoFactorResetMail](m, "two_factor_reset")
 	mail.Register[TwoFactorResetCompletedMail](m, "two_factor_reset_completed")
+}
+
+/*
+registerCodes lets the codes customers type to prove an address be
+queued: in the messenger and on a help center.
+*/
+func registerCodes(m *mail.Manager) {
+	mail.Register[VisitorCodeMail](m, "visitor_code")
+	mail.Register[ReaderCodeMail](m, "reader_code")
 }
 
 /*

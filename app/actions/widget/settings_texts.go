@@ -52,7 +52,7 @@ func TextLimits() map[string]int {
 
 	for _, key := range []string{
 		"status_with_team", "status_waiting_on_you", "status_closed", "seen", "reopen_hint", "deleted_message",
-		"new_conversation", "talk_to_human", "ai_answering",
+		"new_conversation", "talk_to_human", "ai_answering", "open_in_help_center",
 	} {
 		limits[key] = 40
 	}

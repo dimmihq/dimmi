@@ -30,6 +30,7 @@ import type { Block, Collection, Content, Message, VerifyStep } from "../content
  * HelpIndex is what the server answers for the Help tab.
  */
 interface HelpIndex {
+  url: string;
   collections: Collection[];
   popular: string[];
   articles: { slug: string; title: string; summary: string; updated: string; body: Block[] }[];
@@ -67,6 +68,7 @@ export interface Browser {
   language?: () => string;
   setInterval: (fn: () => void, ms: number) => unknown;
   onVisible?: (fn: (hiddenFor: number) => void) => void;
+  openTab?: () => { go: (url: string) => void } | null;
 }
 
 /*
@@ -180,7 +182,7 @@ export class Live {
   private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
   private readonly verifying = new Map<string, VerifyStep>();
-  private help: Pick<Content, "collections" | "articles" | "popular"> | undefined;
+  private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
   private callTimer: unknown;
   private identity: Source | undefined;
   private checking: Promise<void> | undefined;
@@ -255,9 +257,6 @@ export class Live {
     this.surface = this.config.surface?.anonymous;
     this.applySurface();
     void this.loadAvailability();
-    if (this.config.tabs?.includes("help")) {
-      void this.loadHelp();
-    }
 
     const session = await this.handshake().catch(() => undefined);
     this.takeSession(session);
@@ -397,12 +396,16 @@ export class Live {
   /*
    * loadHelp reads the help center the messenger links to: its
    * collections and published articles, each body as plain blocks, and
-   * draws the Help tab with them. Without it the tab stays empty.
+   * draws the Help tab with them. A visitor with a session reads it as
+   * themselves, so articles kept to their audiences show too. Without a
+   * help center the tab stays empty.
    */
   private async loadHelp() {
+    const path = this.session.current ? "/help" : `/apps/${this.appId}/help`;
     try {
-      const res = await this.http.get<{ data: HelpIndex }>(`/apps/${this.appId}/help`);
+      const res = await this.http.get<{ data: HelpIndex }>(path);
       this.help = {
+        help_url: res.data.url || undefined,
         collections: res.data.collections,
         popular: res.data.popular,
         articles: res.data.articles.map((a) => ({
@@ -417,6 +420,33 @@ export class Live {
       this.host.update({});
     } catch {
       this.help = undefined;
+    }
+  }
+
+  /*
+   * knowsVisitor says the visitor has a session the help center could
+   * be opened for.
+   */
+  knowsVisitor(): boolean {
+    return Boolean(this.session.current);
+  }
+
+  /*
+   * openInHelpCenter opens an article in the full help center, signed in
+   * when the messenger knows the visitor. The new tab opens at once, so
+   * no popup blocker stops it, and moves to the address with its pass
+   * once the server answers; the plain address is the fallback.
+   */
+  async openInHelpCenter(slug: string, plain: string) {
+    const opened = this.browser.openTab?.();
+    if (!opened) {
+      return;
+    }
+    try {
+      const res = await this.http.post<{ data: { url: string } }>("/help-passes", { article: slug });
+      opened.go(res.data.url);
+    } catch {
+      opened.go(plain);
     }
   }
 
@@ -602,6 +632,9 @@ export class Live {
   private takeSession(session: SessionData | undefined) {
     this.surface = session?.surface ?? this.config.surface?.anonymous;
     this.applySurface();
+    if (this.config.tabs?.includes("help")) {
+      void this.loadHelp();
+    }
   }
 
   /*
@@ -843,6 +876,7 @@ export class Live {
         await this.http.post("/email-verifications/checks", { code: value.replace(/\D/g, "") });
         this.verifying.delete(call);
         await this.session.resume();
+        this.takeSession(this.session.current);
         await this.refreshCall(open, call);
       }
     } catch (error) {

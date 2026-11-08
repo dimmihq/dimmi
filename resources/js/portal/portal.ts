@@ -7,8 +7,9 @@
  * page reads from its own markup: the greeting follows the visitor's
  * clock, and the copy buttons put an article's Markdown on the clipboard.
  * A reader coming back from signing in to the team's product brings an
- * identity token in the address's fragment, which no server sees; the
- * sign-in page's form takes it from there and sends it at once.
+ * identity token in the address's fragment, which no server sees, and
+ * one coming from the messenger brings a pass there; the sign-in page's
+ * form takes either from there and sends it at once.
  */
 import "@hotwired/turbo";
 import "./portal.css";
@@ -57,20 +58,19 @@ async function copy(button: HTMLButtonElement): Promise<void> {
 }
 
 /*
- * signIn sends the token the fragment carries, then forgets it.
+ * signIn sends the token or pass the fragment carries, then forgets it.
  */
 function signIn(root: ParentNode): void {
   const form = root.querySelector<HTMLFormElement>("form[data-help-sign-in]");
-  const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
-  if (!form || !token) {
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  const name = ["token", "pass"].find((key) => fragment.get(key));
+  const field = name ? form?.querySelector<HTMLInputElement>(`input[name="${name}"]`) : null;
+  if (!form || !name || !field) {
     return;
   }
-  const field = form.querySelector<HTMLInputElement>('input[name="token"]');
-  if (field) {
-    field.value = token;
-    history.replaceState(null, "", window.location.pathname + window.location.search);
-    form.requestSubmit();
-  }
+  field.value = fragment.get(name) ?? "";
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+  form.requestSubmit();
 }
 
 document.addEventListener("turbo:load", () => {

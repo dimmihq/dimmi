@@ -75,8 +75,7 @@ func widgetAppRoutes(public *routing.Router, a *app.App) {
 
 	routing.Get(public, "/apps/{app}/config", "widget.apps.config.show", config.Invoke)
 	routing.Get(public, "/apps/{app}/availability", "widget.apps.availability.show", availability.Invoke)
-	help := &widget.HelpController{Public: a.Actions.HelpPublic}
-	routing.Get(public, "/apps/{app}/help", "widget.apps.help.show", help.Show)
+	routing.Get(public, "/apps/{app}/help", "widget.apps.help.show", helpController(a).Show)
 
 	sessions := sessionController(a)
 	routing.Post(public, "/sessions", "widget.sessions.store", sessions.Store)
@@ -98,6 +97,8 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Post(visitor, "/email-verifications", "widget.email-verifications.store", proofs.Store)
 	routing.Post(visitor, "/email-verifications/checks", "widget.email-verifications.checks.store", proofs.Check).
 		Status(fhttp.StatusOK)
+
+	widgetHelpRoutes(visitor, a)
 
 	tokens := &widget.RealtimeTokenController{Realtime: a.Actions.Widget.Realtime, BaseURL: baseURLOf(a)}
 	routing.Post(visitor, "/realtime-tokens", "widget.realtime-tokens.store", tokens.Store)
@@ -197,4 +198,24 @@ func installOrigin(appURL string) string {
 	}
 
 	return u.Scheme + "://" + u.Host
+}
+
+/*
+widgetHelpRoutes declares the Help tab as the visitor reads it, and the
+passes that open the help center signed in.
+*/
+func widgetHelpRoutes(visitor *routing.Router, a *app.App) {
+	help := helpController(a)
+	routing.Get(visitor, "/help", "widget.help.show", help.Mine)
+	routing.Post(visitor, "/help-passes", "widget.help-passes.store", help.Pass)
+}
+
+/*
+helpController serves the messenger's Help tab.
+*/
+func helpController(a *app.App) *widget.HelpController {
+	return &widget.HelpController{
+		Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Addresses: a.Actions.HelpCenterAddresses,
+		Clock: a.Clock,
+	}
 }

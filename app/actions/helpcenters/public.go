@@ -33,11 +33,14 @@ import (
 
 /*
 Snapshot is a help center as readers see it at one cache version.
+Restricted says audiences keep some of it from this reader, so signing
+in could show more.
 */
 type Snapshot struct {
 	HelpCenter  models.HelpCenter
 	Collections []models.Collection
 	Articles    []models.ListPublishedArticlesRow
+	Restricted  bool
 }
 
 /*
@@ -120,11 +123,32 @@ func (p *Public) LoadFor(ctx context.Context, subdomain string, contact ids.UUID
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("resolve help center: %w", err)
 	}
+
+	return p.readFor(ctx, models.FindHelpCenterParams(row), contact)
+}
+
+/*
+LoadByIDFor returns a workspace's help center as one reader the
+messenger knows sees it, for the messenger's Help tab. It is never
+cached either.
+*/
+func (p *Public) LoadByIDFor(ctx context.Context, workspaceID, id, contact ids.UUID) (Snapshot, error) {
+	return p.readFor(ctx, models.FindHelpCenterParams{WorkspaceID: workspaceID, ID: id}, contact)
+}
+
+/*
+readFor reads the help center as the reader sees it, inside its
+workspace.
+*/
+func (p *Public) readFor(ctx context.Context, find models.FindHelpCenterParams, contact ids.UUID) (Snapshot, error) {
 	var out Snapshot
-	scoped := tenancy.With(ctx, row.WorkspaceID.String())
-	err = p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+	scoped := tenancy.With(ctx, find.WorkspaceID.String())
+	err := p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		h, err := q.FindHelpCenter(ctx, models.FindHelpCenterParams(row))
+		h, err := q.FindHelpCenter(ctx, find)
+		if errors.Is(err, database.ErrNotFound) || (err == nil && h.Status != "active") {
+			return ErrNoHelpCenter
+		}
 		if err != nil {
 			return fmt.Errorf("find help center: %w", err)
 		}

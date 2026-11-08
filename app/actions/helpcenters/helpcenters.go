@@ -54,6 +54,8 @@ var (
 HelpCenterSettings is how a help center looks and what its home page says.
 LoginURL is where readers sign in to the team's product, which sends them
 back signed in, so they can read what is kept to an audience.
+EmailSignIn says whether readers may sign in with a code mailed to them;
+unset means yes.
 */
 type HelpCenterSettings struct {
 	PrimaryColor string `json:"primary_color,omitempty"`
@@ -63,6 +65,14 @@ type HelpCenterSettings struct {
 	FooterText   string `json:"footer_text,omitempty"`
 	ContactURL   string `json:"contact_url,omitempty"`
 	LoginURL     string `json:"login_url,omitempty"`
+	EmailSignIn  *bool  `json:"email_sign_in,omitempty"`
+}
+
+/*
+EmailSignInOn reports whether readers may sign in with an emailed code.
+*/
+func (s HelpCenterSettings) EmailSignInOn() bool {
+	return s.EmailSignIn == nil || *s.EmailSignIn
 }
 
 /*

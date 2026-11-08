@@ -15,9 +15,19 @@ import (
 
 /*
 token mints the identity token the team's product would sign for the
-customer, with a fresh nonce.
+customer to read the help center, with a fresh nonce.
 */
 func (c center) token(t *testing.T, sub string, attrs map[string]any) string {
+	t.Helper()
+
+	return c.signed(t, sub, map[string]any{"aud": "dimmi-help", "custom_attributes": attrs})
+}
+
+/*
+signed mints an identity token for the customer with the claims given,
+a fresh nonce added.
+*/
+func (c center) signed(t *testing.T, sub string, extra map[string]any) string {
 	t.Helper()
 	secret := c.d.Owner.PostJSON("/api/v1/identity-secrets", testkit.JSON{"name": "Product", "algorithm": "HS256"}).
 		AssertCreated()
@@ -25,10 +35,8 @@ func (c center) token(t *testing.T, sub string, attrs map[string]any) string {
 	require.NoError(t, err)
 
 	now := c.d.TC.Clock.Now()
-	claims := jwt.Claims{
-		Subject: sub, IssuedAt: now, Expiry: now.Add(5 * time.Minute),
-		Extra: map[string]any{"aud": "dimmi-help", "nonce": sub + now.String(), "custom_attributes": attrs},
-	}
+	extra["nonce"] = sub + now.String()
+	claims := jwt.Claims{Subject: sub, IssuedAt: now, Expiry: now.Add(5 * time.Minute), Extra: extra}
 	signed, err := jwt.Sign(claims, key)
 	require.NoError(t, err)
 
@@ -56,7 +64,7 @@ func (c center) as(cookie *fhttp.Cookie, path string) *testkit.Response {
 func TestHelpCenterReaders(t *testing.T) {
 	t.Parallel()
 
-	t.Run("offers sign-in only when the help center has a login address", func(t *testing.T) {
+	t.Run("offers the team's login beside email once the help center has a login address", func(t *testing.T) {
 		t.Parallel()
 		c := newCenter(t)
 		assert.NotContains(t, string(c.page("").AssertOK().Body), ">Sign in<")
@@ -65,8 +73,18 @@ func TestHelpCenterReaders(t *testing.T) {
 			"settings": testkit.JSON{"login_url": "https://app.acme.dev/login"},
 		}).AssertOK().AssertJSONPath("data.settings.login_url", "https://app.acme.dev/login")
 		body := string(c.page("/articles/anything").Body)
-		assert.Contains(t, body, "https://app.acme.dev/login?return_to=")
-		assert.Contains(t, body, url.QueryEscape("/hc/"+c.subdomain+"/sso?next="))
+		assert.Contains(t, body, "/hc/"+c.subdomain+"/sso/sign-in?next=")
+
+		form := string(c.page("/sso/sign-in?next=/hc/" + c.subdomain + "/articles/x").AssertOK().Body)
+		assert.Contains(t, form, "Continue with your account")
+		assert.Contains(t, form, "https://app.acme.dev/login?return_to=")
+		assert.Contains(t, form, url.QueryEscape("/hc/"+c.subdomain+"/sso?next="))
+
+		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id, testkit.JSON{
+			"settings": testkit.JSON{"login_url": "https://app.acme.dev/login", "email_sign_in": false},
+		}).AssertOK().AssertJSONPath("data.settings.email_sign_in", false)
+		assert.Contains(t, string(c.page("").Body), "https://app.acme.dev/login?return_to=")
+		c.page("/sso/sign-in").AssertStatus(fhttp.StatusSeeOther)
 
 		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id, testkit.JSON{
 			"settings": testkit.JSON{"login_url": "http://app.acme.dev/login"},
@@ -118,7 +136,7 @@ func TestHelpCenterReaders(t *testing.T) {
 		}
 		c.as(forged, "/articles/priority-support").AssertNotFound()
 
-		c.d.TC.Clock.Travel(2 * time.Hour)
+		c.d.TC.Clock.Travel(8 * 24 * time.Hour)
 		c.as(paying, "/articles/priority-support").AssertNotFound()
 	})
 

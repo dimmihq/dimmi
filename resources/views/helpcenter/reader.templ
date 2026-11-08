@@ -1,0 +1,124 @@
+package helpcenter
+
+/*
+ReaderForm is what a reader's sign-in pages carry: where each form goes,
+the page to return to, the team's login address when the help center
+takes it, the address typed, how it is shown once a code went to it, and
+what went wrong, if anything.
+*/
+type ReaderForm struct {
+	Action     string
+	CheckURL   string
+	ResendURL  string
+	RestartURL string
+	Next       string
+	ProductURL string
+	Email      string
+	Masked     string
+	Error      string
+}
+
+/*
+ReaderEmailPage lets a reader sign in with their email, or with their
+account on the team's product when the help center takes that too. The
+forms that answer with the code page itself skip Turbo, which only
+follows redirects after a form.
+*/
+
+templ ReaderEmailPage(c Center, f ReaderForm, assets templ.Component) {
+	@Layout(c, Meta{Title: "Sign in | " + c.Name, NoIndex: true}, templ.NopComponent, assets) {
+		<div class="stagger mx-auto w-full max-w-[26rem] px-5 pt-16 pb-24 md:pt-24">
+			<span class="button-brand grid size-11 place-items-center rounded-2xl">
+				@Icon("login", "size-5")
+			</span>
+			<h1 class="mt-6 text-title-1-medium tracking-tight">Sign in to see articles for customers</h1>
+			<p class="mt-2 text-body-regular text-text-secondary">Some articles on { c.Name } are only for customers.</p>
+			if f.ProductURL != "" {
+				<a href={ templ.SafeURL(f.ProductURL) } class="button-brand mt-8 inline-flex h-10 w-full items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Continue with your account</a>
+				<p class="mt-6 flex items-center gap-3 text-caption-1-regular text-text-tertiary">
+					<span class="h-px flex-1 bg-separator-border"></span>
+					or use your email
+					<span class="h-px flex-1 bg-separator-border"></span>
+				</p>
+			}
+			<form method="post" action={ templ.SafeURL(f.Action) } data-turbo="false" class={ "flex flex-col gap-4", templ.KV("mt-8", f.ProductURL == ""), templ.KV("mt-6", f.ProductURL != "") }>
+				<input type="hidden" name="next" value={ f.Next }/>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-body-medium">Email</span>
+					<input
+						type="email"
+						name="email"
+						value={ f.Email }
+						placeholder="you@company.com"
+						required
+						autocomplete="email"
+						autofocus?={ f.ProductURL == "" }
+						if f.Error != "" {
+							aria-invalid="true"
+						}
+						aria-describedby="reader-error"
+						class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"
+					/>
+				</label>
+				@readerError(f.Error)
+				<button type="submit" class={ "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring", templ.KV("button-brand", f.ProductURL == ""), templ.KV("border border-border-button-default hover:bg-background-secondary-hover", f.ProductURL != "") }>Email me a code</button>
+			</form>
+		</div>
+	}
+}
+
+/*
+ReaderCodePage takes the code mailed to the reader, with a way to send
+another and a way back to type a different address.
+*/
+
+templ ReaderCodePage(c Center, f ReaderForm, assets templ.Component) {
+	@Layout(c, Meta{Title: "Check your email | " + c.Name, NoIndex: true}, templ.NopComponent, assets) {
+		<div class="stagger mx-auto w-full max-w-[26rem] px-5 pt-16 pb-24 md:pt-24">
+			<span class="button-brand grid size-11 place-items-center rounded-2xl">
+				@Icon("mail", "size-5")
+			</span>
+			<h1 class="mt-6 text-title-1-medium tracking-tight">Check your email</h1>
+			<p class="mt-2 text-body-regular text-text-secondary">We sent a code to <bdi dir="ltr">{ f.Masked }</bdi>. It works for 10 minutes.</p>
+			<form method="post" action={ templ.SafeURL(f.CheckURL) } class="mt-8 flex flex-col gap-4">
+				<input type="hidden" name="next" value={ f.Next }/>
+				<input type="hidden" name="email" value={ f.Email }/>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-body-medium">Code</span>
+					<input
+						type="text"
+						name="code"
+						required
+						inputmode="numeric"
+						autocomplete="one-time-code"
+						pattern="[0-9]{6}"
+						maxlength="6"
+						placeholder="123456"
+						autofocus
+						dir="ltr"
+						if f.Error != "" {
+							aria-invalid="true"
+						}
+						aria-describedby="reader-error"
+						class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular tracking-[0.3em] shadow-xs outline-none transition placeholder:text-text-placeholder placeholder:tracking-normal hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"
+					/>
+				</label>
+				@readerError(f.Error)
+				<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign in</button>
+			</form>
+			<div class="mt-6 flex flex-wrap items-center justify-between gap-3 text-body-2-regular">
+				<form method="post" action={ templ.SafeURL(f.ResendURL) } data-turbo="false">
+					<input type="hidden" name="next" value={ f.Next }/>
+					<input type="hidden" name="email" value={ f.Email }/>
+					<input type="hidden" name="resend" value="1"/>
+					<button type="submit" class="cursor-pointer rounded-md text-text-secondary underline-offset-4 outline-none hover:text-text-primary hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring">Resend code</button>
+				</form>
+				<a href={ templ.SafeURL(f.RestartURL) } class="rounded-md text-text-secondary underline-offset-4 outline-none hover:text-text-primary hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring">Use another email</a>
+			</div>
+		</div>
+	}
+}
+
+templ readerError(message string) {
+	<p id="reader-error" role="alert" class={ "text-body-2-regular text-text-error-primary", templ.KV("hidden", message == "") }>{ message }</p>
+}

@@ -1089,8 +1089,13 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 
 | Flow | How | Expect |
 |---|---|---|
-| Login address | `PATCH $B/help-centers/$H` `{"settings":{"login_url":"https://app.example.com/help-login"}}` | pages show Sign in, leading to the address with `return_to` set to the help center's `/sso?next=<page>`; an http address answers 422 `login_url_invalid` |
-| Sign in | the product redirects to `return_to` with `#token=<identity token, aud dimmi-help>` | the page posts the token, sets `dimmi_help_reader` (httpOnly, one hour) and returns to the page; the header shows Sign out |
-| Audience | an article kept to Pro; a token with `custom_attributes.plan` pro | the signed-in reader reads it and finds it in search; responses say `private, no-store`; a reader without Pro, a forged or an hour-old cookie get 404 |
+| Sign in button | keep one article to an audience, or set `login_url` | pages show Sign in, leading to `/sso/sign-in?next=<page>`; with `email_sign_in: false` it leads straight to the login address; with neither, no button |
+| Login address | `PATCH $B/help-centers/$H` `{"settings":{"login_url":"https://app.example.com/help-login"}}` | the sign-in page shows "Continue with your account", leading to the address with `return_to` set to the help center's `/sso?next=<page>`; an http address answers 422 `login_url_invalid` |
+| Sign in | the product redirects to `return_to` with `#token=<identity token, aud dimmi-help>` | the page posts the token, sets `dimmi_help_reader` (httpOnly, seven days) and returns to the page; the header shows Sign out |
+| Email code | sign-in page, type an address, "Email me a code", type the mailed code | Mailpit has "<code> is your code for <help center>"; a good code signs in as the customer with that address, else a new lead with it verified; a wrong one says so and keeps the page; five wrong burn it; a second send within 30 seconds answers 429 |
+| Messenger pass | a signed-in or email-proven visitor opens an article from the messenger's Help tab, "Open in help center" | `POST /widget/v1/help-passes` answers 201 with `/sso?next=…#pass=dmi_hp_…`; the tab lands on the article signed in; the same pass again shows the sign-in page with "That link expired" |
+| Known Help tab | `GET /widget/v1/help` with a signed-in visitor's token | articles their audiences open are listed, with `url` set; `/apps/{app}/help` still lists only what anyone reads |
+| Renewal | visit three days after signing in | a fresh `dimmi_help_reader` for another seven days; a cookie left unrenewed for seven days stops working |
+| Audience | an article kept to Pro; a token with `custom_attributes.plan` pro | the signed-in reader reads it and finds it in search; responses say `private, no-store`; a reader without Pro, a forged or a week-old cookie get 404 |
 | Bad token | post a broken token | 401, no cookie |
 | Redirects | `next` pointing at another site | the reader lands on the help center's home |

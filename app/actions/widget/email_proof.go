@@ -106,7 +106,7 @@ func (a *EmailProofs) Send(ctx context.Context, auth Authenticated, raw string) 
 	if s.Kind == string(enums.WidgetSessionIdentified) {
 		return SentCode{}, ErrAlreadySignedIn
 	}
-	email, ok := normalizeTypedEmail(raw)
+	email, ok := NormalizeTypedEmail(raw)
 	if !ok {
 		return SentCode{}, contactField("email", "Enter an email address such as you@example.com.")
 	}

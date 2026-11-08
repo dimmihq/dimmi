@@ -133,6 +133,7 @@ export interface Content {
   collections: Collection[];
   articles: Article[];
   popular: string[];
+  help_url?: string;
   changelog: Entry[];
   unread_changelog: number;
 }

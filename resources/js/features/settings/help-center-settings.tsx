@@ -1,7 +1,9 @@
 /*
- * The workspace's help center: its name and address, how it looks, and
- * whether search engines may index it and readers may ask the AI. The
- * address and look are saved together with Save; switches save at once.
+ * The workspace's help center: its name and address, how it looks, how
+ * readers sign in to see articles kept to an audience, and whether
+ * search engines may index it and readers may ask the AI. The address
+ * and look are saved together with Save, as is the product's login
+ * address; switches save at once.
  */
 import { RiBookOpenLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -80,7 +82,6 @@ export function HelpCentersSettings() {
                       ...center.settings,
                       primary_color: form.color,
                       home_title: form.title,
-                      login_url: form.login.trim() || undefined,
                     },
                   })
                 }
@@ -116,12 +117,37 @@ export function HelpCentersSettings() {
             <Row label="Brand color" description="Links, buttons and the header.">
               <Colour label="Help center color" value={form.color} onChange={(color) => setForm({ ...form, color })} />
             </Row>
+          </Section>
+          <Section
+            title="Readers sign in with"
+            description="To read articles kept to an audience."
+            action={
+              <Action
+                loading={update.isPending}
+                onPress={() =>
+                  update.mutate({ settings: { ...center.settings, login_url: form.login.trim() || undefined } })
+                }
+              >
+                Save
+              </Action>
+            }
+          >
             <Row
-              label="Sign-in address"
-              description="Where readers sign in to your product to read articles kept to an audience. It sends them back with an identity token."
+              label="Email code"
+              description="Readers type their email and the code we send. Messenger visitors arrive signed in."
+            >
+              <Toggle
+                label="Email code"
+                on={center.settings.email_sign_in ?? true}
+                onChange={(on) => update.mutate({ settings: { ...center.settings, email_sign_in: on } })}
+              />
+            </Row>
+            <Row
+              label="Your product's login"
+              description="Where readers sign in to your product. It sends them back with an identity token."
             >
               <Field
-                label="Sign-in address"
+                label="Login address"
                 value={form.login}
                 placeholder="https://app.example.com/help-login"
                 onChange={(login) => setForm({ ...form, login })}

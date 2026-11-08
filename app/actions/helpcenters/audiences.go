@@ -170,5 +170,7 @@ func readable(ctx context.Context, q *models.Queries, s Snapshot, reader audienc
 		}
 	}
 
+	out.Restricted = len(out.Articles) < len(s.Articles) || len(out.Collections) < len(s.Collections)
+
 	return out, nil
 }

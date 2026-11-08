@@ -44,7 +44,12 @@ function CollectionPage({ collection, content }: { collection: Collection; conte
   );
 }
 
-function ArticlePage({ article, options }: { article: Article; options: Options }) {
+/*
+ * ArticlePage shows an article, with a link to the full help center when
+ * the messenger links to one; the messenger opens it signed in for a
+ * visitor it knows.
+ */
+function ArticlePage({ article, options, url }: { article: Article; options: Options; url?: string }) {
   return (
     <>
       <BackBar title={options.texts.help} />
@@ -58,6 +63,18 @@ function ArticlePage({ article, options }: { article: Article; options: Options 
             <span>{article.updated}</span>
           </p>
           <Prose blocks={article.body} />
+          {url ? (
+            <p className="byline">
+              <a
+                href={`${url}/articles/${article.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-help-article={article.slug}
+              >
+                {options.texts.open_in_help_center}
+              </a>
+            </p>
+          ) : null}
           <Feedback options={options} prompt={options.texts.helpful} />
         </Loadable>
       </article>
@@ -98,7 +115,7 @@ export function Pages({ options, content }: { options: Options; content: Content
       ))}
       {content.articles.map((article) => (
         <Page name={`article:${article.slug}`} expand key={article.slug}>
-          <ArticlePage article={article} options={options} />
+          <ArticlePage article={article} options={options} url={content.help_url} />
         </Page>
       ))}
       {content.changelog.map((entry, index) => (

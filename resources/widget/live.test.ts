@@ -134,6 +134,55 @@ describe("a connected messenger", () => {
     expect(shadow()?.textContent).toContain("Invite your team");
   });
 
+  it("reads the Help tab as a known visitor and opens an article in the help center signed in", async () => {
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    const help = {
+      data: {
+        url: "https://acme.dimmi.help",
+        collections: [],
+        popular: ["priority"],
+        articles: [
+          { slug: "priority", title: "Priority support", summary: "", updated: "2026-01-01T00:00:00Z", body: [] },
+        ],
+      },
+    };
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({
+        status: 200,
+        body: { data: { ...config.data, tabs: ["home", "messages", "help"] } },
+      }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [] } }),
+      "GET /help": () => ({ status: 200, body: help }),
+      "POST /help-passes": () => ({
+        status: 201,
+        body: { data: { object: "help_pass", url: "https://acme.dimmi.help/sso?next=%2F#pass=dmi_hp_1" } },
+      }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
+    });
+    const tab = { opener: {}, location: { href: "about:blank" } };
+    vi.spyOn(window, "open").mockImplementation(() => tab as unknown as Window);
+
+    boot(win, document);
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+
+    expect(calls).toContain("GET /help");
+    expect(calls).not.toContain("GET /apps/wgt_1/help");
+    const link = shadow()?.querySelector<HTMLAnchorElement>('a[data-help-article="priority"]');
+    expect(link?.href).toBe("https://acme.dimmi.help/articles/priority");
+    link?.click();
+    await settle();
+    await settle();
+
+    expect(calls).toContain("POST /help-passes");
+    expect(tab.opener).toBeNull();
+    expect(tab.location.href).toBe("https://acme.dimmi.help/sso?next=%2F#pass=dmi_hp_1");
+  });
+
   it("shows nothing and says why when the server does not serve the app here", async () => {
     serve({ "GET /apps/wgt_1/config": () => ({ status: 403, body: { code: "origin_not_allowed" } }) });
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
