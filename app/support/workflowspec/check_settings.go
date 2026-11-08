@@ -115,11 +115,11 @@ func (c *checker) duration(s Step, field, value string, within span) {
 }
 
 /*
-required refuses an empty setting.
+required refuses an empty setting, saying what to fill in.
 */
-func (c *checker) required(s Step, field, value string) {
+func (c *checker) required(s Step, field, value, message string) {
 	if strings.TrimSpace(value) == "" {
-		c.fail(Issue{Code: CodeMissingSetting, StepID: s.ID, Field: field, Message: "Fill in " + field + "."})
+		c.fail(Issue{Code: CodeMissingSetting, StepID: s.ID, Field: field, Message: message})
 	}
 }
 

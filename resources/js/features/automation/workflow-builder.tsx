@@ -100,7 +100,7 @@ function Actions({ draft, readOnly }: { draft: ReturnType<typeof useWorkflowDraf
         </Button>
       ) : null}
       {changed ? (
-        <Button size="small" disabled={busy || blocked} onClick={() => void draft.publish()}>
+        <Button size="small" loading={busy} disabled={busy || blocked} onClick={() => void draft.publish()}>
           {server.status === "draft" ? "Publish" : "Publish changes"}
         </Button>
       ) : null}
@@ -116,7 +116,7 @@ function ProblemCount({ errors, onShow }: { errors: Issue[]; onShow: (issue: Iss
 
   return (
     <Button
-      variant="ghost"
+      variant="secondary"
       size="small"
       leadingIcon={RiErrorWarningLine}
       onClick={() => onShow(first)}
@@ -187,8 +187,8 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 gap-3">
       <Panel label="Workflow" ground className="h-full flex-1">
-        <header className="flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
-          <div className="flex min-w-0 items-center gap-2">
+        <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 ps-2.5 pe-2.5 pt-[7px]">
+          <div className="flex min-w-40 flex-1 items-center gap-2">
             <Link
               to="/d/workflows"
               aria-label="Back to workflows"
@@ -202,7 +202,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
               {stateLine(draft.saveState, draft.server)}
             </span>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ms-auto flex shrink-0 items-center gap-2">
             <ProblemCount errors={draft.report.errors} onShow={(issue) => select(issue.step_id ?? triggerStep)} />
             {beside ? null : (
               <IconButton

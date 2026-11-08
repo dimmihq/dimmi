@@ -62,13 +62,23 @@ interface Props {
   onEdit: Edit;
 }
 
-function Words({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function Words({
+  label,
+  value,
+  placeholder = unsetSummary,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <div className="py-2.5 pe-2.5">
       <Textarea
         aria-label={label}
         defaultValue={value}
-        placeholder={unsetSummary}
+        placeholder={placeholder}
         onChange={onChange}
         rows={3}
         autoResize
@@ -127,15 +137,16 @@ function ButtonsFields({ step, onEdit }: Props) {
           </Row>
         ) : null}
       </Section>
-      <Section title="When the answer matches no button">
-        <Row label="Message sent once" description="Before the workflow stops waiting.">
-          <Field
-            label="Message sent once"
-            value={text(step.settings, "retry_text")}
-            placeholder="Please reply with one of the numbers above."
-            onChange={(value) => set({ retry_text: value || undefined })}
-          />
-        </Row>
+      <Section
+        title="When the answer matches no button"
+        description="Sent once, before the workflow stops waiting for an answer."
+      >
+        <Words
+          label="Message when no button matches"
+          value={text(step.settings, "retry_text")}
+          placeholder="Please reply with one of the numbers above."
+          onChange={(value) => set({ retry_text: value || undefined })}
+        />
       </Section>
     </>
   );
@@ -213,10 +224,11 @@ function ConditionFields({
         />
       ) : null}
       {field && needsValue(op) && !options ? (
-        <Row label="Value" description="Separate several with commas.">
+        <Row label="Value">
           <Field
             key={`${field}-${op}`}
             label="Condition value"
+            placeholder="Words, separated by commas"
             value={valueText(condition)}
             onChange={(typed) => onChange(conditionOf(field, op, typed))}
           />

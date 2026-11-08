@@ -118,9 +118,9 @@ func (c *checker) checkAssign(s Step) {
 	c.oneOf(s, "mode", a.Mode, "member", "team", "team_round_robin", "team_balanced")
 
 	if a.Mode == "member" {
-		c.required(s, "member_id", a.MemberID)
+		c.required(s, "member_id", a.MemberID, "Pick a teammate.")
 	} else {
-		c.required(s, "team_id", a.TeamID)
+		c.required(s, "team_id", a.TeamID, "Pick a team.")
 	}
 
 	if a.Fallback != "" {
