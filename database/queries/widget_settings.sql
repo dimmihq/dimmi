@@ -91,3 +91,10 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- another inbox; those it already started stay where they are.
 UPDATE channel_connections SET inbox_id = @inbox_id, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: SaveWidgetAudiences :one
+-- SaveWidgetAudiences stores who sees a messenger, who may start a
+-- conversation in it and who sees each tab, and moves its version on.
+UPDATE widget_settings SET audiences = @audiences, config_version = config_version + 1, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
+RETURNING *;

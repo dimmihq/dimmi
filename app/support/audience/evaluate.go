@@ -190,6 +190,15 @@ func eval(n *node, env Env, rec *[]LeafResult) (Truth, *Rule) {
 		return evalGroup(n, env, rec)
 	}
 
+	if n.field.Type == TypeSaved && (env.Unknown == nil || !env.Unknown(n.field)) {
+		t, residual := evalSaved(n, env)
+		if rec != nil {
+			*rec = append(*rec, leafResult(n, env, t))
+		}
+
+		return t, residual
+	}
+
 	t := evalLeaf(n, env)
 	if rec != nil {
 		*rec = append(*rec, leafResult(n, env, t))
@@ -266,10 +275,6 @@ func evalLeaf(n *node, env Env) Truth {
 		return Unknown
 	}
 
-	if n.field.Type == TypeSaved {
-		return evalSaved(n, env)
-	}
-
 	var value any
 	present := false
 
@@ -287,16 +292,20 @@ func evalLeaf(n *node, env Env) Truth {
 
 /*
 evalSaved decides membership of saved audiences: in matches when any
-listed audience matches, not_in when none does.
+listed audience matches, not_in when none does. When membership depends
+on what is not known here, the rule left open is the saved audiences'
+own open rules, never the audience condition itself, so a browser that
+checks page conditions never learns which saved audiences exist.
 */
-func evalSaved(n *node, env Env) Truth {
+func evalSaved(n *node, env Env) (Truth, *Rule) {
 	if env.Saved == nil || env.depth >= maxSavedDepth {
-		return truth(n.op == OpNotIn)
+		return truth(n.op == OpNotIn), nil
 	}
 
 	inner := env
 	inner.depth++
 	result := False
+	var open []Rule
 
 	for _, id := range n.operand.texts {
 		program, ok := env.Saved(id)
@@ -304,22 +313,42 @@ func evalSaved(n *node, env Env) Truth {
 			continue
 		}
 
-		t, _ := program.Partial(inner)
+		t, residual := program.Partial(inner)
 		if t == True {
-			result = True
+			result, open = True, nil
 			break
 		}
 
 		if t == Unknown {
 			result = Unknown
+			open = append(open, *residual)
 		}
 	}
 
-	if n.op == OpNotIn {
-		return invert(result)
+	residual := anyOf(open)
+	if n.op != OpNotIn {
+		return result, residual
 	}
 
-	return result
+	if residual != nil {
+		residual = &Rule{Not: residual}
+	}
+
+	return invert(result), residual
+}
+
+/*
+anyOf joins open rules with "any", nil when there are none.
+*/
+func anyOf(open []Rule) *Rule {
+	switch len(open) {
+	case 0:
+		return nil
+	case 1:
+		return &open[0]
+	}
+
+	return &Rule{Any: open}
 }
 
 /*

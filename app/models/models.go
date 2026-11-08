@@ -1608,6 +1608,7 @@ type WidgetSetting struct {
 	IntercomShim            bool            `json:"intercom_shim"`
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
 	HomeLinks               json.RawMessage `json:"home_links"`
+	Audiences               json.RawMessage `json:"audiences"`
 }
 
 type Workflow struct {

@@ -399,6 +399,8 @@ function browserOf(win: Window) {
     clearTimeout: (handle: unknown) => win.clearTimeout(handle as number),
     setInterval: (fn: () => void, ms: number) => win.setInterval(fn, ms),
     page: () => ({ url: win.location.href, title: win.document.title, referrer: win.document.referrer }),
+    width: () => win.innerWidth,
+    language: () => win.navigator.language,
     onVisible: (fn: (hiddenFor: number) => void) => {
       let hiddenAt = 0;
       win.document.addEventListener("visibilitychange", () => {

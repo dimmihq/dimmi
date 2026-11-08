@@ -17,7 +17,9 @@
  * server refuses changes nothing: the visitor carries on as they were and
  * the console says why.
  */
+
 import { report } from "../lib/report";
+import type { Surface } from "../lib/rules";
 import { ApiError, type Http } from "./http";
 import { fingerprint, subjectOf } from "./identity";
 
@@ -40,6 +42,7 @@ export interface SessionData {
   expires_at?: string;
   unread_count?: number;
   contact: SessionContact;
+  surface?: Surface;
 }
 
 export interface StartDetails {

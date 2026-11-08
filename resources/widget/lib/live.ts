@@ -19,7 +19,7 @@ import { ApiError, Http } from "../client/http";
 import type { Source } from "../client/identity";
 import { Outbox, type Pending, type Sent } from "../client/outbox";
 import { Realtime } from "../client/realtime";
-import { Session, type Storage } from "../client/session";
+import { Session, type SessionData, type Storage } from "../client/session";
 import { type Conversation as ApiConversation, type Message as ApiMessage, Store } from "../client/store";
 import { ConversationRow } from "../components/rows";
 import { AiActions, Thread, Typing } from "../components/thread";
@@ -35,11 +35,12 @@ interface HelpIndex {
   articles: { slug: string; title: string; summary: string; updated: string; body: Block[] }[];
 }
 
-import type { Options, OptionsUpdate } from "../options";
+import type { Options, OptionsUpdate, Tab } from "../options";
 import type { ActionTexts } from "../text";
 import { type Availability, type Config, content, fromConfig } from "./map";
 import { patch } from "./patch";
 import { report } from "./report";
+import type { Surface } from "./rules";
 
 export interface Host {
   root: ShadowRoot;
@@ -62,6 +63,8 @@ export interface Browser {
   setTimeout: (fn: () => void, ms: number) => unknown;
   clearTimeout: (handle: unknown) => void;
   page: () => { url: string; title?: string; referrer?: string };
+  width?: () => number;
+  language?: () => string;
   setInterval: (fn: () => void, ms: number) => unknown;
   onVisible?: (fn: (hiddenFor: number) => void) => void;
 }
@@ -182,6 +185,10 @@ export class Live {
   private identity: Source | undefined;
   private checking: Promise<void> | undefined;
   private lastAnonymousCheck = 0;
+  private surface: Surface | undefined;
+  private rules: typeof import("./rules") | undefined;
+  private allTabs: Tab[] = [];
+  private shown = "";
 
   constructor(
     private readonly host: Host,
@@ -244,12 +251,16 @@ export class Live {
     }
 
     this.host.update(fromConfig(this.config, this.host.options().texts));
+    this.allTabs = this.host.options().tabs;
+    this.surface = this.config.surface?.anonymous;
+    this.applySurface();
     void this.loadAvailability();
     if (this.config.tabs?.includes("help")) {
       void this.loadHelp();
     }
 
     const session = await this.handshake().catch(() => undefined);
+    this.takeSession(session);
     if (mode === "required" && !this.session.signedIn) {
       report("warn", "identity_required", "this messenger is only shown to signed-in customers.");
       return false;
@@ -326,6 +337,7 @@ export class Live {
     }
     const before = this.session.current?.id;
     const after = await this.session.identify(token, this.startDetails()).catch(() => undefined);
+    this.takeSession(after);
     if (after?.id === before) {
       return;
     }
@@ -351,6 +363,7 @@ export class Live {
         return;
       }
       last = page.url;
+      this.applySurface();
       if (this.session.current) {
         void this.http.post("/pings", { page }).catch(() => undefined);
       }
@@ -582,8 +595,44 @@ export class Live {
     }
   }
 
+  /*
+   * takeSession takes what the messenger's rules give a known visitor,
+   * or what they give anyone when there is no session.
+   */
+  private takeSession(session: SessionData | undefined) {
+    this.surface = session?.surface ?? this.config.surface?.anonymous;
+    this.applySurface();
+  }
+
+  /*
+   * applySurface shows the launcher and tabs the rules allow on this
+   * page, drawing again only when that changed. The rule checker is its
+   * own chunk, fetched only by a messenger that has rules.
+   */
+  private applySurface() {
+    if (this.surface && !this.rules) {
+      void import("./rules").then((rules) => {
+        this.rules = rules;
+        this.applySurface();
+      });
+      return;
+    }
+    const visit = { ...this.browser.page(), width: this.browser.width?.(), language: this.browser.language?.() };
+    const decide = (d: Parameters<typeof import("./rules").decide>[0]) => this.rules?.decide(d, visit) ?? true;
+    const tabs = this.allTabs.filter((tab) => decide(this.surface?.tabs?.[tab]));
+    const ruledOut = !decide(this.surface?.launcher);
+    const key = `${ruledOut}|${tabs.join(",")}`;
+    if (key === this.shown) {
+      return;
+    }
+    this.shown = key;
+    this.host.update({ launcher_ruled_out: ruledOut, tabs });
+  }
+
   private ended() {
     this.session.forget();
+    this.surface = this.config.surface?.anonymous;
+    this.applySurface();
     this.store.setConversations([]);
     this.store.messages.clear();
     this.open = undefined;

@@ -28,6 +28,7 @@ type WidgetActions struct {
 	Delete       *widget.DeleteWidget
 	Branding     *widget.ResolveBranding
 	ShowConfig   *widget.ShowWidgetConfig
+	Surfaces     *widget.Surfaces
 	Preview      *widget.PreviewWidgetConfig
 	Availability *widget.ComputeTeamAvailability
 	Install      *widgetinstall.Tracker

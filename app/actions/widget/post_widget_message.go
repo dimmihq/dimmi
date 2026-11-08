@@ -107,6 +107,7 @@ type PostWidgetMessage struct {
 	Clock    clock.Clock
 	Receiver Receiver
 	Team     OnlineChecker
+	Surfaces *Surfaces
 }
 
 /*
@@ -129,7 +130,7 @@ func (a *PostWidgetMessage) Handle(ctx context.Context, in MessageInput) (Posted
 		}
 
 		previous = &found
-	} else if err := a.requireEmail(ctx, in.Auth); err != nil {
+	} else if err := a.mayStart(ctx, in.Auth); err != nil {
 		return PostedMessage{}, err
 	}
 
@@ -480,4 +481,18 @@ func currentPage(s models.WidgetSession, sent *Page, now time.Time) *Page {
 	}
 
 	return &stored
+}
+
+/*
+mayStart refuses a new conversation the messenger's start rule does not
+allow this visitor, then one the widget wants an email for first.
+*/
+func (a *PostWidgetMessage) mayStart(ctx context.Context, auth Authenticated) error {
+	if a.Surfaces != nil {
+		if err := a.Surfaces.MayStart(ctx, auth.Resolved.Widget, auth.Session); err != nil {
+			return err
+		}
+	}
+
+	return a.requireEmail(ctx, auth)
 }

@@ -44,3 +44,21 @@ conversation, which only some surfaces have.
 func SavedAudience() Surface {
 	return Surface{Key: "audience.saved", Gate: GateDisplay, Where: []Location{Server, Client}}
 }
+
+/*
+MessengerDisplay is the surface of what the messenger shows: its
+launcher and its tabs. Showing reveals nothing, so a browser's claims may
+decide it, and page conditions are checked in the browser on each page.
+*/
+func MessengerDisplay(key string) Surface {
+	return Surface{Key: "messenger." + key, Gate: GateDisplay, Where: []Location{Server, Client}}
+}
+
+/*
+MessengerStart is the surface of who may start a conversation. It
+spends the team's time, so only what the server knows and trusts
+decides it: no page conditions, no value a browser could claim.
+*/
+func MessengerStart() Surface {
+	return Surface{Key: "messenger.start", Gate: GateAccess, Where: []Location{Server}}
+}

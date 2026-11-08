@@ -9,6 +9,7 @@
 import type * as api from "../client/store";
 import type { ActionCard, Attachment, Content, Conversation, Link, Member, Message, Source } from "../content";
 import type { Appearance, OptionsUpdate, Tab, Texts } from "../options";
+import type { Surface } from "./rules";
 
 export interface Config {
   company?: { name?: string; logo_url?: string | null };
@@ -17,6 +18,7 @@ export interface Config {
   };
   texts?: Record<string, string>;
   tabs?: string[];
+  surface?: { version?: number; anonymous?: Surface };
   branding?: { show?: boolean; url?: string };
   features?: { attachments?: boolean; max_attachment_mb?: number; identity_mode?: string };
   realtime?: { url?: string; token_url?: string; polling_interval_ms?: number };

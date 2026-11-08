@@ -110,3 +110,8 @@
 .launcher[data-style="tab"] .icons {
   rotate: 90deg;
 }
+
+/* A launcher hidden by its style or by the messenger's rules takes no space. */
+.launcher[hidden] {
+  display: none;
+}

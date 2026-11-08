@@ -86,6 +86,7 @@ export interface Options {
   tabs: Tab[];
   show_branding: boolean;
   branding_url: string;
+  launcher_ruled_out: boolean;
 }
 
 export type OptionsUpdate = {
@@ -94,6 +95,7 @@ export type OptionsUpdate = {
   tabs?: Tab[];
   show_branding?: boolean;
   branding_url?: string;
+  launcher_ruled_out?: boolean;
 };
 
 export const defaults: Options = {
@@ -158,6 +160,7 @@ export const defaults: Options = {
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,
   branding_url: "https://trydimmi.com",
+  launcher_ruled_out: false,
 };
 
 export function merge(options: Options, update: OptionsUpdate = {}): Options {
@@ -171,6 +174,7 @@ export function merge(options: Options, update: OptionsUpdate = {}): Options {
     tabs: update.tabs?.length ? update.tabs : options.tabs,
     show_branding: update.show_branding ?? options.show_branding,
     branding_url: update.branding_url ?? options.branding_url,
+    launcher_ruled_out: update.launcher_ruled_out ?? options.launcher_ruled_out,
   };
 }
 

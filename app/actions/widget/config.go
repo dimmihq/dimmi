@@ -11,6 +11,8 @@
 
 package widget
 
+import "github.com/dimmihq/dimmi/app/audiences"
+
 /*
 ConfigRealtime says where live updates come from and how often to poll when
 they cannot.
@@ -22,13 +24,15 @@ type ConfigRealtime struct {
 }
 
 /*
-ConfigSurface carries the rule for showing the launcher, in the audience
-language, for the browser to evaluate on each page.
+ConfigSurface is what a visitor nobody knows gets from the messenger's
+rules: the launcher, starting a conversation and each tab, each yes, no
+or the page conditions to check in the browser. It is present only when
+the messenger has rules.
 */
 type ConfigSurface struct {
-	Version   int64          `json:"version"`
-	Dynamic   bool           `json:"dynamic"`
-	Anonymous map[string]any `json:"anonymous"`
+	Version   int64              `json:"version"`
+	Dynamic   bool               `json:"dynamic"`
+	Anonymous *audiences.Surface `json:"anonymous"`
 }
 
 /*

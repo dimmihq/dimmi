@@ -122,7 +122,7 @@ export function Messenger({ options, content }: { options: Options; content: Con
         <Viewer />
       </section>
       <div className="notice" data-target="notice" role="status" aria-live="polite" hidden />
-      <Launcher launcher={appearance.launcher} />
+      <Launcher launcher={appearance.launcher} ruledOut={options.launcher_ruled_out} />
     </div>
   );
 }

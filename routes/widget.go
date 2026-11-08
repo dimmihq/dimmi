@@ -155,8 +155,8 @@ func sessionController(a *app.App) *widget.SessionController {
 	acts := a.Actions.Widget
 
 	return &widget.SessionController{
-		Start: acts.StartSession, Describe: acts.ShowSession, Revoke: acts.RevokeSession, Clock: a.Clock,
-		BaseURL: baseURLOf(a),
+		Start: acts.StartSession, Describe: acts.ShowSession, Revoke: acts.RevokeSession, Surfaces: acts.Surfaces,
+		Clock: a.Clock, BaseURL: baseURLOf(a),
 	}
 }
 

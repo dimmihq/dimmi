@@ -639,8 +639,7 @@
         "additionalProperties": false,
         "properties": {
           "anonymous": {
-            "additionalProperties": {},
-            "type": "object"
+            "$ref": "#/components/schemas/Surface"
           },
           "dynamic": {
             "type": "boolean"
@@ -1475,6 +1474,24 @@
         ],
         "type": "object"
       },
+      "Surface": {
+        "additionalProperties": false,
+        "properties": {
+          "launcher": {},
+          "start": {
+            "type": "boolean"
+          },
+          "tabs": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "launcher",
+          "start"
+        ],
+        "type": "object"
+      },
       "TeamFace": {
         "additionalProperties": false,
         "properties": {
@@ -2098,6 +2115,9 @@
           "server_time": {
             "format": "date-time",
             "type": "string"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/Surface"
           },
           "test": {
             "type": "boolean"

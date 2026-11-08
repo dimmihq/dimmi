@@ -12,6 +12,7 @@
 package resources
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -58,6 +59,7 @@ type WidgetSettings struct {
 	IntercomShim            bool                    `json:"intercom_shim"`
 	ShowBranding            *bool                   `json:"show_branding"`
 	HomeLinks               []widget.ConfigHomeLink `json:"home_links"`
+	Audiences               json.RawMessage         `json:"audiences"`
 	Branding                widget.Branding         `json:"branding"`
 	ConfigVersion           int64                   `json:"config_version"`
 	LastBootAt              *time.Time              `json:"last_boot_at"`
@@ -87,7 +89,7 @@ func NewWidgetSettings(row widget.SettingsRow, base string) WidgetSettings {
 		MaxAttachmentMB: w.MaxAttachmentMb, NativeAppsEnabled: w.NativeAppsEnabled,
 		HelpCenterID:   helpCenterID(w.HelpCenterID),
 		HelpTabEnabled: w.HelpTabEnabled, ChangelogTabEnabled: w.ChangelogTabEnabled, IntercomShim: w.IntercomShim,
-		ShowBranding: w.ShowBranding, HomeLinks: widget.HomeLinks(w), Branding: row.Branding,
+		ShowBranding: w.ShowBranding, HomeLinks: widget.HomeLinks(w), Audiences: w.Audiences, Branding: row.Branding,
 		ConfigVersion: w.ConfigVersion, LastBootAt: w.LastBootAt,
 		LastBootOrigin: w.LastBootOrigin, CreatedAt: w.CreatedAt, UpdatedAt: w.UpdatedAt,
 		Links: WidgetSettingsLinks{

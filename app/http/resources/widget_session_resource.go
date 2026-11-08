@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/app/actions/widget"
+	"github.com/dimmihq/dimmi/app/audiences"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -44,19 +45,20 @@ type Realtime struct {
 WidgetSession is a visitor's session.
 */
 type WidgetSession struct {
-	ID                  string         `json:"id"`
-	Object              string         `json:"object"`
-	Token               string         `json:"token,omitempty"`
-	Kind                string         `json:"kind"`
-	Test                bool           `json:"test"`
-	ExpiresAt           time.Time      `json:"expires_at"`
-	Contact             WidgetContact  `json:"contact"`
-	Identity            WidgetIdentity `json:"identity"`
-	UnreadCount         int64          `json:"unread_count"`
-	OpenConversationIDs []string       `json:"open_conversation_ids"`
-	Realtime            Realtime       `json:"realtime"`
-	ConfigVersion       int64          `json:"config_version"`
-	ServerTime          time.Time      `json:"server_time"`
+	ID                  string             `json:"id"`
+	Object              string             `json:"object"`
+	Token               string             `json:"token,omitempty"`
+	Kind                string             `json:"kind"`
+	Test                bool               `json:"test"`
+	ExpiresAt           time.Time          `json:"expires_at"`
+	Contact             WidgetContact      `json:"contact"`
+	Identity            WidgetIdentity     `json:"identity"`
+	UnreadCount         int64              `json:"unread_count"`
+	OpenConversationIDs []string           `json:"open_conversation_ids"`
+	Realtime            Realtime           `json:"realtime"`
+	ConfigVersion       int64              `json:"config_version"`
+	ServerTime          time.Time          `json:"server_time"`
+	Surface             *audiences.Surface `json:"surface,omitempty"`
 }
 
 /*

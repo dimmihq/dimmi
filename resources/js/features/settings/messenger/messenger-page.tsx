@@ -18,6 +18,7 @@ import { usePermission } from "../inboxes";
 import { PageSkeleton, SettingsPage } from "../layout";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
+import { AudiencesSection } from "./audiences-section";
 import { changed, withChange, withDraft } from "./draft";
 import { forPreview, linkProblems } from "./links";
 import { LinksSection } from "./links-section";
@@ -137,6 +138,7 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
           <VisitorsSection {...props} />
           <LinksSection {...props} problems={problems} />
           <TabsSection {...props} />
+          <AudiencesSection key={edit.shown.id} workspace={workspace} value={edit.shown} locked={locked} />
           {locked ? null : <DangerSection workspace={workspace} value={edit.shown} />}
         </div>
         {preview.error && Object.keys(linkProblems(preview.error)).length === 0 ? (

@@ -33,12 +33,14 @@ type SessionOutput struct {
 
 /*
 SessionController serves visitors' sessions. BaseURL returns the base
-address a request reached this install on.
+address a request reached this install on. Surfaces decides the
+messenger's rules for the session's visitor.
 */
 type SessionController struct {
 	Start    *actions.StartWidgetSession
 	Describe *actions.ShowWidgetSession
 	Revoke   *actions.RevokeWidgetSession
+	Surfaces *actions.Surfaces
 	Clock    clock.Clock
 	BaseURL  func(ctx context.Context) string
 }
@@ -89,10 +91,10 @@ func (c *SessionController) Store(
 	}
 
 	if started.Reused {
-		return c.answer(ctx, fhttp.StatusOK, view, ""), nil
+		return c.answer(ctx, fhttp.StatusOK, view, "")
 	}
 
-	return c.answer(ctx, fhttp.StatusCreated, view, started.Token), nil
+	return c.answer(ctx, fhttp.StatusCreated, view, started.Token)
 }
 
 /*
@@ -114,7 +116,7 @@ func (c *SessionController) Update(
 		return nil, err
 	}
 
-	return c.answer(ctx, fhttp.StatusOK, view, ""), nil
+	return c.answer(ctx, fhttp.StatusOK, view, "")
 }
 
 /*
@@ -126,7 +128,7 @@ func (c *SessionController) Show(ctx context.Context, _ *requests.NoInput) (*Ses
 		return nil, err
 	}
 
-	return c.answer(ctx, fhttp.StatusOK, view, ""), nil
+	return c.answer(ctx, fhttp.StatusOK, view, "")
 }
 
 /*
@@ -146,19 +148,27 @@ func (c *SessionController) Destroy(ctx context.Context, _ *requests.NoInput) (*
 }
 
 /*
-answer wraps the session view in its resource.
+answer wraps the session view in its resource, with what the
+messenger's rules give its visitor.
 */
 func (c *SessionController) answer(
 	ctx context.Context, status int, view actions.SessionView, token string,
-) *SessionOutput {
+) (*SessionOutput, error) {
 	resolved, _ := actions.CurrentResolved(ctx)
+	session := resources.NewWidgetSession(
+		view, resolved.Widget, resources.SessionAnswer{Base: c.BaseURL(ctx), Token: token, Now: c.Clock.Now()},
+	)
 
-	return &SessionOutput{
-		Status: status,
-		Body: fhttp.NewResource(resources.NewWidgetSession(
-			view, resolved.Widget, resources.SessionAnswer{Base: c.BaseURL(ctx), Token: token, Now: c.Clock.Now()},
-		)),
+	if c.Surfaces != nil {
+		surface, err := c.Surfaces.For(ctx, resolved.Widget, view.Session)
+		if err != nil {
+			return nil, err
+		}
+
+		session.Surface = surface
 	}
+
+	return &SessionOutput{Status: status, Body: fhttp.NewResource(session)}, nil
 }
 
 /*

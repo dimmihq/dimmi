@@ -6,6 +6,7 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 
+import type { AudienceRules } from "./audiences";
 import { request } from "./client";
 
 export interface WidgetSummary {
@@ -82,7 +83,35 @@ export interface HomeLink {
  * WidgetSettings is one messenger as its settings page edits it. Texts
  * holds only the words someone changed from the defaults.
  */
+/*
+ * MessengerAudiences are who sees a messenger's launcher, who may start a
+ * conversation, and who sees each tab. A missing rule means everyone.
+ */
+export interface MessengerAudiences {
+  launcher?: AudienceRules | null;
+  start?: AudienceRules | null;
+  tabs?: { help?: AudienceRules | null; changelog?: AudienceRules | null };
+}
+
+/*
+ * saveMessengerAudiences changes a messenger's rules: a rule sent
+ * replaces that one, null removes it, one left out stays.
+ */
+export function saveMessengerAudiences(
+  workspace: string,
+  widget: string,
+  rules: MessengerAudiences,
+): Promise<{ rules: MessengerAudiences }> {
+  return request<{ rules: MessengerAudiences }>(
+    "PATCH",
+    `/widget-settings/${encodeURIComponent(widget)}/audiences`,
+    rules,
+    { workspace },
+  );
+}
+
 export interface WidgetSettings extends WidgetSummary {
+  audiences: MessengerAudiences;
   appearance: WidgetAppearance;
   texts: Record<string, string>;
   locale: string;

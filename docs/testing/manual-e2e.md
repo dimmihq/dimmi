@@ -1060,3 +1060,16 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Rule | preview `{"field":"event.report.exported.count","op":"gte","value":2,"within_days":7}` | counts people with two exports in the last 7 days; `count eq 0` matches people who never did it |
 | Archive | `PATCH $B/event-definitions/$E` `{"status":"archived"}`, then send one | `archived`, not counted |
 | Screens | the person's profile and Settings, Attributes | an Activity card; an Events section with totals and last times |
+
+## Messenger rules
+
+| Flow | How | Expect |
+|---|---|---|
+| No rules | `GET /widget/v1/apps/$APP/config` | no `surface` key; the loader fetches no rule chunk |
+| Page rule | `PATCH $B/widget-settings/$APP/audiences` with a launcher rule `any` of a custom attribute and `page.path starts_with /pricing` | config `surface.anonymous.launcher` is only the page condition; the attribute name and value appear nowhere in the response |
+| Navigation | the snippet on `/pricing`, then `history.pushState` to `/about` and back | the launcher hides and shows again within a second, with no request |
+| Saved audience | a launcher rule naming a saved audience of page conditions | the config carries the page condition, never the audience id or name |
+| Known visitor | launcher rule on `contact.custom.plan eq pro`; set the visitor's plan through the API | `GET /widget/v1/session` turns `surface.launcher` from false to true |
+| Start | start rule `visitors: identified`; an anonymous visitor writes | session `surface.start` false; `POST /widget/v1/conversations` answers 403 `conversation_start_restricted` |
+| Untrusted start | start rule on a custom attribute, a page, or a saved audience reading one | 422 `messenger_rules_invalid` naming `claimed_field_on_access_gate` or `field_unavailable_for_surface` |
+| Settings | Settings, Messengers, a messenger, Who sees it | each of launcher, starting a conversation, help and what's new picks Everyone or a saved audience and saves at once |

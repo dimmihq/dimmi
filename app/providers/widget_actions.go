@@ -104,7 +104,6 @@ bootWidget builds the messenger's actions.
 */
 func bootWidget(ctx context.Context, a *app.App) error {
 	bootEntitlements(a)
-
 	cfg := a.Config.Widget
 
 	words, err := widgetstrings.Load()
@@ -120,7 +119,8 @@ func bootWidget(ctx context.Context, a *app.App) error {
 	directory := widget.NewDirectory(a.DB, a.PubSub, cfg.ConfigCacheTTL)
 	branding := &widget.ResolveBranding{Edition: a.Config.App.Edition, Billing: bootBilling(a)}
 	show := &widget.ShowWidgetConfig{
-		Directory: directory, Branding: branding, Strings: words, PollingInterval: cfg.PollingInterval.Milliseconds(),
+		Directory: directory, Surfaces: &widget.Surfaces{DB: a.DB, Clock: a.Clock, Bust: directory}, Branding: branding,
+		Strings: words, PollingInterval: cfg.PollingInterval.Milliseconds(),
 	}
 
 	a.Actions.Widget = &app.WidgetActions{
@@ -162,6 +162,7 @@ func bootWidgetSessions(a *app.App) {
 	forgetOnWorkspaceChange(a)
 	acts, cfg := a.Actions.Widget, a.Config.Widget
 	streams := widget.BroadcastStreams{Server: a.Broadcast}
+	acts.Surfaces = acts.ShowConfig.Surfaces
 
 	acts.Authenticate = &widget.AuthenticateWidgetSession{
 		DB: a.DB, Clock: a.Clock, Directory: acts.Directory, AnonymousTTL: cfg.AnonymousSessionTTL,
@@ -234,7 +235,7 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Cache: a.Cache, Throttle: a.Config.Widget.TypingThrottle,
 	}
 	acts.PostMessage = &widget.PostWidgetMessage{
-		DB: a.DB, Clock: a.Clock, Team: acts.Availability,
+		DB: a.DB, Clock: a.Clock, Team: acts.Availability, Surfaces: acts.Surfaces,
 		Receiver: &conversations.ReceiveInboundMessage{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,
 			ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,

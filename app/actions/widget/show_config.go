@@ -43,10 +43,12 @@ type ShowWidgetConfigInput struct {
 /*
 ShowWidgetConfig builds what a widget tells a browser. Directory holds built
 configs, Branding decides the badge, Strings holds the built-in words and
-PollingInterval is how often a browser without a stream polls.
+PollingInterval is how often a browser without a stream polls. Surfaces
+decides the messenger's rules for a visitor nobody knows.
 */
 type ShowWidgetConfig struct {
 	Directory       *Directory
+	Surfaces        *Surfaces
 	Branding        *ResolveBranding
 	Strings         *widgetstrings.Strings
 	PollingInterval int64
@@ -136,8 +138,14 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 		return Config{}, err
 	}
 
+	surface, err := a.surface(ctx, widget)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
-		Object: "widget_config", AppID: models.PublicID(models.PrefixWidget, widget.ID),
+		Surface: surface,
+		Object:  "widget_config", AppID: models.PublicID(models.PrefixWidget, widget.ID),
 		ConfigVersion: widget.ConfigVersion, Company: company(r, in.BaseURL),
 		Appearance: configAppearance(appearance), Texts: texts, Locale: locale, Dir: widgetstrings.Direction(locale),
 		Locales: a.Strings.Locales(), Tabs: configTabs(widget), OpenTo: "home",
@@ -209,4 +217,21 @@ func configAppearance(a Appearance) ConfigAppearance {
 	}
 
 	return out
+}
+
+/*
+surface is the anonymous outcome of the messenger's rules, nil when it
+has none.
+*/
+func (a *ShowWidgetConfig) surface(ctx context.Context, widget models.WidgetSetting) (*ConfigSurface, error) {
+	if a.Surfaces == nil {
+		return nil, nil
+	}
+
+	anonymous, err := a.Surfaces.Anonymous(ctx, widget)
+	if err != nil || anonymous == nil {
+		return nil, err
+	}
+
+	return &ConfigSurface{Version: widget.ConfigVersion, Anonymous: anonymous}, nil
 }
