@@ -96,6 +96,22 @@ func (q *Queries) CreateEventDefinition(ctx context.Context, arg CreateEventDefi
 	return i, err
 }
 
+const deleteContactEventSummaries = `-- name: DeleteContactEventSummaries :exec
+DELETE FROM contact_event_summaries WHERE workspace_id = $1 AND contact_id = $2
+`
+
+type DeleteContactEventSummariesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// DeleteContactEventSummaries removes a person's summaries once they were
+// added to the person they turned out to be.
+func (q *Queries) DeleteContactEventSummaries(ctx context.Context, arg DeleteContactEventSummariesParams) error {
+	_, err := q.db.Exec(ctx, deleteContactEventSummaries, arg.WorkspaceID, arg.ContactID)
+	return err
+}
+
 const findEventContactByEmail = `-- name: FindEventContactByEmail :one
 SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
 WHERE workspace_id = $1 AND email = $2 AND merged_into_id IS NULL AND deleted_at IS NULL

@@ -31,6 +31,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/companies"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
+	contactevents "github.com/dimmihq/dimmi/app/actions/events"
 	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -134,9 +135,10 @@ func (r *identifyRun) create(ctx context.Context) (Identified, error) {
 }
 
 /*
-merge moves a lead's conversations to the customer it signed in as and
-leaves the lead pointing at them. The lead's other open messengers end,
-since an unproven browser must never see a customer's history.
+merge moves a lead's conversations and what it did to the customer it
+signed in as and leaves the lead pointing at them. The lead's other
+open messengers end, since an unproven browser must never see a
+customer's history.
 */
 func (r *identifyRun) merge(ctx context.Context, into, lead models.Contact) (Identified, error) {
 	ws, now := r.v.WorkspaceID, r.v.Now
@@ -154,6 +156,11 @@ func (r *identifyRun) merge(ctx context.Context, into, lead models.Contact) (Ide
 		IntoContactID: &into.ID, WorkspaceID: ws, ContactID: &lead.ID,
 	}); err != nil {
 		return Identified{}, fmt.Errorf("move lead action calls: %w", err)
+	}
+	if err := contactevents.MergeSummaries(ctx, r.q, contactevents.Merge{
+		WorkspaceID: ws, From: lead.ID, Into: into.ID, Now: now,
+	}); err != nil {
+		return Identified{}, err
 	}
 	if err := r.q.MarkContactMerged(ctx, models.MarkContactMergedParams{
 		IntoContactID: &into.ID, Now: now, WorkspaceID: ws, ID: lead.ID,

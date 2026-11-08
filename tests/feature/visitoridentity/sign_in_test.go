@@ -122,6 +122,31 @@ func TestVisitorSignIn(t *testing.T) {
 		require.NotNil(t, merged.MergedIntoID)
 	})
 
+	t.Run("adds what a lead did to the customer it signs in as", func(t *testing.T) {
+		t.Parallel()
+		d := newDesk(t)
+		s := d.newSecret()
+		known := d.signedIn(s.sign(t, d.tc.Clock.Now(), map[string]any{"sub": "user_4"}), nil)
+		lead := d.anonymous()
+		track := func(contact string, metadata testkit.JSON) {
+			d.owner.PostJSON("/api/v1/contact-events", testkit.JSON{
+				"name": "report.exported", "contact_id": contact, "metadata": metadata,
+			}).AssertOK().AssertJSONPath("data.accepted", float64(1))
+		}
+		track(known.contact, testkit.JSON{"format": "csv"})
+		d.tc.Clock.Advance(time.Hour)
+		track(lead.contact, testkit.JSON{"format": "pdf"})
+		track(lead.contact, nil)
+
+		d.signedIn(s.sign(t, d.tc.Clock.Now(), map[string]any{"sub": "user_4"}), lead)
+
+		d.owner.GetJSON("/api/v1/contacts/"+known.contact+"/event-summaries").AssertOK().
+			AssertJSONPath("data.#", float64(1)).AssertJSONPath("data.0.count", float64(3)).
+			AssertJSONPath("data.0.last_7_days", float64(3))
+		d.owner.GetJSON("/api/v1/contacts/"+lead.contact+"/event-summaries").AssertOK().
+			AssertJSONPath("data.#", float64(0))
+	})
+
 	t.Run("extends a session already signed in as the same customer", func(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)

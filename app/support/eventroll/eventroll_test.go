@@ -46,4 +46,19 @@ func TestSummaries(t *testing.T) {
 		assert.Equal(t, int64(40001), s.Count)
 		assert.Equal(t, int64(32767), eventroll.Within(s, 90, monday))
 	})
+
+	t.Run("combines two people's summaries day by day", func(t *testing.T) {
+		t.Parallel()
+		a := eventroll.Add(eventroll.Summary{}, monday, 2, monday)
+		b := eventroll.Add(eventroll.Summary{}, days(3), 1, days(3))
+		b = eventroll.Add(b, days(-5), 1, days(3))
+
+		c := eventroll.Combine(a, b, days(4))
+		assert.Equal(t, int64(4), c.Count)
+		assert.Equal(t, days(-5), c.FirstAt)
+		assert.Equal(t, days(3), c.LastAt)
+		assert.Equal(t, int64(3), eventroll.Within(c, 5, days(4)))
+		assert.Equal(t, int64(4), eventroll.Within(c, 10, days(4)))
+		assert.Equal(t, int64(2), eventroll.Combine(eventroll.Summary{}, a, monday).Count)
+	})
 }

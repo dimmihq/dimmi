@@ -121,3 +121,46 @@ func clamp(n int64) int16 {
 
 	return int16(n)
 }
+
+/*
+Combine joins two people's summaries of one event, as when one person
+turns out to be the other: totals add, the first and last times widen,
+and each day's counts add, both moved on to now's day first.
+*/
+func Combine(a, b Summary, now time.Time) Summary {
+	if a.Count == 0 {
+		return moveTo(b, day(now))
+	}
+
+	if b.Count == 0 {
+		return moveTo(a, day(now))
+	}
+
+	today := day(now)
+	a, b = moveTo(a, today), moveTo(b, today)
+	out := Summary{
+		Count: a.Count + b.Count, FirstAt: a.FirstAt, LastAt: a.LastAt, Day: today, Daily: make([]int16, Days),
+	}
+
+	if b.FirstAt.Before(out.FirstAt) {
+		out.FirstAt = b.FirstAt
+	}
+
+	if b.LastAt.After(out.LastAt) {
+		out.LastAt = b.LastAt
+	}
+
+	for i := range out.Daily {
+		out.Daily[i] = clamp(int64(at(a.Daily, i)) + int64(at(b.Daily, i)))
+	}
+
+	return out
+}
+
+func at(daily []int16, i int) int16 {
+	if i < len(daily) {
+		return daily[i]
+	}
+
+	return 0
+}

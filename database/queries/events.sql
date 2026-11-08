@@ -69,3 +69,8 @@ SELECT * FROM contacts
 WHERE workspace_id = @workspace_id AND email = @email AND merged_into_id IS NULL AND deleted_at IS NULL
 ORDER BY (kind = 'user') DESC, email_verified DESC, last_seen_at DESC NULLS LAST, id DESC
 LIMIT 1;
+
+-- name: DeleteContactEventSummaries :exec
+-- DeleteContactEventSummaries removes a person's summaries once they were
+-- added to the person they turned out to be.
+DELETE FROM contact_event_summaries WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
