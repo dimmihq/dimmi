@@ -43,7 +43,7 @@ export class ApiError extends Error {
 interface ErrorBody {
   code?: string;
   message?: string;
-  errors?: Record<string, string[]>;
+  errors?: Record<string, string[]> | unknown[];
   requirement?: string;
   action_url?: string | null;
   ip?: string;
@@ -68,13 +68,17 @@ function reportRefusal(status: number, body: ErrorBody | null) {
 /*
  * toApiError reads the error envelope of a failed response. A body that
  * is not the envelope, such as a proxy's error page, still becomes an
- * ApiError so callers handle one kind of failure.
+ * ApiError so callers handle one kind of failure. Errors that are a
+ * list, such as every problem found in a definition, stay in details.
  */
 function toApiError(status: number, body: ErrorBody | null): ApiError {
   const fields: Record<string, string> = {};
   const { code, message, errors, ...details } = body ?? {};
+  if (Array.isArray(errors)) {
+    details.errors = errors;
+  }
 
-  for (const [field, messages] of Object.entries(errors ?? {})) {
+  for (const [field, messages] of Object.entries(Array.isArray(errors) ? {} : (errors ?? {}))) {
     if (messages[0]) {
       fields[field] = messages[0];
     }

@@ -1,69 +1,187 @@
 /*
  * The workflow builder: the canvas of steps on the left and the
  * inspector for the selected step on the right, under a header with the
- * workflow's name, its status and version, and the button that publishes
- * or pauses it. Publishing makes a new version; changes stay in this
- * page until workflows are saved on the server. On screens too narrow
- * for both, the inspector opens in a drawer when a card is picked, or
- * from the header.
+ * workflow's name, its status, whether its changes are saved, what still
+ * needs fixing, and the buttons that publish, pause or resume it. Every
+ * change is saved to the working copy as it is made; publishing makes
+ * that copy the version that runs. Steps with problems carry a mark, and
+ * the problems count jumps to the first of them. Teammates who may only
+ * read workflows see the same builder without anything to change. On
+ * screens too narrow for both, the inspector opens in a drawer when a
+ * card is picked, or from the header.
  */
-import { RiArrowLeftSLine, RiSettings3Line } from "@remixicon/react";
-import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { RiArrowLeftSLine, RiErrorWarningLine, RiSettings3Line } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Drawer } from "@/components/base/drawer/drawer";
+import { usePermission } from "@/features/settings/inboxes";
 import { Panel } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
+import { tagsQuery } from "@/lib/api/tags";
+import { teamsQuery } from "@/lib/api/teams";
+import type { Issue, Workflow } from "@/lib/api/workflows";
+import { membersQuery } from "@/lib/api/workspace";
 
 import { Canvas } from "./canvas";
 import { freshStep, withEdited, withoutStep, withStep } from "./edit-steps";
-import { Inspector } from "./inspector";
+import { type Head, Inspector } from "./inspector";
 import { StatusChip } from "./parts";
-import { findStep, type Step, type StepKind, triggerStep, type Workflow } from "./workflows";
+import type { Lists } from "./step-fields";
+import { type Names, sentence } from "./step-settings";
+import { allowsStep, type TriggerKind } from "./triggers";
+import { type SaveState, useWorkflowDraft } from "./use-workflow-draft";
+import { findStep, readyKinds, type Step, type StepKind, triggerStep } from "./workflows";
 
-function useDraft(workflow: Workflow) {
-  const [steps, setSteps] = useState(workflow.steps);
-  const [status, setStatus] = useState(workflow.status);
-  const [version, setVersion] = useState(workflow.version);
-  const made = useRef(0);
+/*
+ * useLists reads the workspace's teams, active teammates and tags, as the
+ * pickers offer them and as the cards name them.
+ */
+function useLists(workspace: string): { lists: Lists; names: Names } {
+  const teams = useQuery(teamsQuery(workspace)).data;
+  const members = useQuery(membersQuery(workspace)).data;
+  const tags = useQuery(tagsQuery(workspace)).data;
 
-  return {
-    steps,
-    status,
-    version,
-    add: (path: string | null, kind: StepKind) => {
-      made.current += 1;
-      const id = `new-${made.current}`;
-      setSteps((before) => withStep(before, path, freshStep(kind, id)));
+  return useMemo(() => {
+    const lists: Lists = {
+      teams: (teams ?? []).map((team) => [team.id, team.name] as const),
+      members: (members ?? [])
+        .filter((member) => member.status === "active")
+        .map((member) => [member.id, member.user.name] as const),
+      tags: (tags ?? []).map((tag) => [tag.id, tag.name] as const),
+    };
 
-      return id;
-    },
-    remove: (id: string) => setSteps((before) => withoutStep(before, id)),
-    edit: (id: string, edit: (step: Step) => Step) => setSteps((before) => withEdited(before, id, edit)),
-    publish: () => {
-      setStatus("live");
-      setVersion((before) => before + 1);
-    },
-    pause: () => setStatus("paused"),
-  };
+    return {
+      lists,
+      names: { teams: new Map(lists.teams), members: new Map(lists.members), tags: new Map(lists.tags) },
+    };
+  }, [teams, members, tags]);
 }
 
-export function WorkflowBuilder({ workflow }: { workflow: Workflow }) {
-  const draft = useDraft(workflow);
+const saveWords: Record<SaveState, string> = {
+  saved: "Saved",
+  saving: "Saving…",
+  conflict: "Changed by someone else. Reload to see it.",
+  failed: "Not saved",
+};
+
+function stateLine(saveState: SaveState, workflow: Workflow): string {
+  if (saveState !== "saved") {
+    return saveWords[saveState];
+  }
+  if (workflow.status !== "draft" && workflow.has_unpublished_changes) {
+    return "Unpublished changes";
+  }
+
+  return workflow.status === "draft" ? "Saved as draft" : "Published";
+}
+
+function Actions({ draft, readOnly }: { draft: ReturnType<typeof useWorkflowDraft>; readOnly: boolean }) {
+  if (readOnly) {
+    return null;
+  }
+  const { server, busy, report } = draft;
+  const changed = server.status === "draft" || server.has_unpublished_changes;
+  const blocked = report.errors.length > 0 || draft.saveState === "conflict";
+
+  return (
+    <>
+      {server.status === "live" ? (
+        <Button variant="secondary" size="small" disabled={busy} onClick={() => void draft.setStatus("paused")}>
+          Pause
+        </Button>
+      ) : null}
+      {server.status === "paused" ? (
+        <Button variant="secondary" size="small" disabled={busy} onClick={() => void draft.setStatus("live")}>
+          Resume
+        </Button>
+      ) : null}
+      {changed ? (
+        <Button size="small" disabled={busy || blocked} onClick={() => void draft.publish()}>
+          {server.status === "draft" ? "Publish" : "Publish changes"}
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
+function ProblemCount({ errors, onShow }: { errors: Issue[]; onShow: (issue: Issue) => void }) {
+  const first = errors[0];
+  if (!first) {
+    return null;
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="small"
+      leadingIcon={RiErrorWarningLine}
+      onClick={() => onShow(first)}
+      className="text-text-error-primary"
+    >
+      {errors.length === 1 ? "1 to fix" : `${errors.length} to fix`}
+    </Button>
+  );
+}
+
+export function WorkflowBuilder({ workspace, workflow }: { workspace: string; workflow: Workflow }) {
+  const navigate = useNavigate();
+  const readOnly = !usePermission(workspace, "workflows:manage");
+  const draft = useWorkflowDraft(workspace, workflow, () => void navigate({ to: "/d/workflows" }));
+  const { lists, names } = useLists(workspace);
   const [selected, setSelected] = useState<string>(triggerStep);
-  const step = selected === triggerStep ? undefined : findStep(draft.steps, selected);
+  const trigger = draft.spec.trigger as TriggerKind;
+  const step = selected === triggerStep ? undefined : findStep(draft.spec.steps, selected);
   const beside = useWide(1280);
   const [drawer, setDrawer] = useState(false);
+  const issues = [...draft.report.errors, ...draft.report.warnings];
+  const flagged = useMemo(
+    () => new Set(draft.report.errors.flatMap((issue) => (issue.step_id ? [issue.step_id] : []))),
+    [draft.report],
+  );
+  const kinds = readOnly ? [] : readyKinds.filter((kind) => allowsStep(trigger, kind));
   const select = (id: string) => {
     setSelected(id);
     setDrawer(!beside);
   };
+  const editSteps = (edit: (steps: Step[]) => Step[]) => draft.change((spec) => ({ ...spec, steps: edit(spec.steps) }));
   const remove = (id: string) => {
-    draft.remove(id);
+    editSteps((steps) => withoutStep(steps, id));
     setSelected(triggerStep);
     setDrawer(false);
+  };
+  const add = (path: string | null, kind: StepKind) => {
+    const fresh = freshStep(kind);
+    editSteps((steps) => withStep(steps, path, fresh));
+    select(fresh.id);
+  };
+  const edit = (id: string, change: (step: Step) => Step) => editSteps((steps) => withEdited(steps, id, change));
+  const head: Head = {
+    name: draft.name,
+    onRename: draft.rename,
+    onSpec: draft.change,
+    onArchive: () => void draft.archive(),
+  };
+  const moves = {
+    selected,
+    onSelect: select,
+    onAdd: add,
+    kinds,
+    summarize: (card: Step) => sentence(card, names),
+    flagged,
+  };
+  const inspector = {
+    spec: draft.spec,
+    step,
+    issues: issues.filter((issue) => (step ? issue.step_id === step.id : !issue.step_id)),
+    lists,
+    head,
+    readOnly,
+    onRemove: remove,
+    onEdit: edit,
   };
 
   return (
@@ -76,13 +194,16 @@ export function WorkflowBuilder({ workflow }: { workflow: Workflow }) {
               aria-label="Back to workflows"
               className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
             >
-              <RiArrowLeftSLine aria-hidden className="size-5" />
+              <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
             </Link>
-            <h1 className="min-w-0 truncate text-body-medium text-text-primary">{workflow.name}</h1>
-            <StatusChip status={draft.status} />
-            <span className="hidden text-body-2-regular text-text-tertiary sm:inline">Version {draft.version}</span>
+            <h1 className="min-w-0 truncate text-body-medium text-text-primary">{draft.name || workflow.name}</h1>
+            <StatusChip status={draft.server.status} />
+            <span role="status" className="hidden truncate text-body-2-regular text-text-tertiary sm:inline">
+              {stateLine(draft.saveState, draft.server)}
+            </span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <ProblemCount errors={draft.report.errors} onShow={(issue) => select(issue.step_id ?? triggerStep)} />
             {beside ? null : (
               <IconButton
                 size="small"
@@ -91,31 +212,13 @@ export function WorkflowBuilder({ workflow }: { workflow: Workflow }) {
                 onClick={() => setDrawer(true)}
               />
             )}
-            {draft.status === "live" ? (
-              <Button variant="secondary" size="small" onClick={draft.pause}>
-                Pause
-              </Button>
-            ) : (
-              <Button size="small" onClick={draft.publish}>
-                Publish
-              </Button>
-            )}
+            <Actions draft={draft} readOnly={readOnly} />
           </div>
         </header>
-        <Canvas
-          trigger={workflow.trigger}
-          steps={draft.steps}
-          moves={{ selected, onSelect: select, onAdd: (path, kind) => select(draft.add(path, kind)) }}
-        />
+        <Canvas trigger={trigger} steps={draft.spec.steps} moves={moves} />
       </Panel>
       {beside ? (
-        <Inspector
-          trigger={workflow.trigger}
-          step={step}
-          onRemove={remove}
-          onEdit={draft.edit}
-          className="h-full w-[360px] shrink-0"
-        />
+        <Inspector {...inspector} className="h-full w-[360px] shrink-0" />
       ) : (
         <Drawer
           isOpen={drawer}
@@ -125,14 +228,7 @@ export function WorkflowBuilder({ workflow }: { workflow: Workflow }) {
           aria-label="Step settings"
           className="p-0"
         >
-          <Inspector
-            trigger={workflow.trigger}
-            step={step}
-            onRemove={remove}
-            onEdit={draft.edit}
-            onClose={() => setDrawer(false)}
-            className="h-full"
-          />
+          <Inspector {...inspector} onClose={() => setDrawer(false)} className="h-full" />
         </Drawer>
       )}
     </div>

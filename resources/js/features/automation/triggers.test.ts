@@ -1,36 +1,40 @@
-import { isTrigger, tintOf, triggerGroups, triggers, triggersIn } from "./triggers";
-import { blankWorkflow, workflows } from "./workflows";
+import { allowsStep, isTrigger, tintOf, triggerGroups, triggers, triggersIn } from "./triggers";
 
 describe("triggers", () => {
-  it("offers every trigger in exactly one group", () => {
+  it("offers every trigger that runs in exactly one group", () => {
     const offered = triggerGroups.flatMap((group) => triggersIn(group.id));
+    const running = Object.entries(triggers)
+      .filter(([, trigger]) => trigger.runs)
+      .map(([kind]) => kind);
 
-    expect(offered.sort()).toEqual(Object.keys(triggers).sort());
+    expect(offered.sort()).toEqual(running.sort());
   });
 
   it("narrows a group to the triggers matching every searched word", () => {
-    expect(triggersIn("during", "stops replying")).toEqual(["customer-quiet"]);
-    expect(triggersIn("team", "STATE")).toEqual(["state"]);
-    expect(triggersIn("dimmi", "dimmi")).toEqual(["dimmi-handover", "dimmi-closed"]);
+    expect(triggersIn("team", "STATUS")).toEqual(["conversation.status_changed"]);
+    expect(triggersIn("start", "closed conversation")).toEqual(["conversation.customer_reopened"]);
     expect(triggersIn("start", "invoice")).toEqual([]);
   });
 
+  it("leaves out triggers that do not run yet", () => {
+    expect(triggersIn("during", "stops replying")).toEqual([]);
+    expect(triggersIn("dimmi")).toEqual([]);
+  });
+
   it("colours a trigger's mark by its group", () => {
-    expect(tintOf("first-message")).toBe("blue");
-    expect(tintOf("dimmi-handover")).toBe("lime");
+    expect(tintOf("conversation.first_message")).toBe("blue");
+    expect(tintOf("dimmi.handed_over")).toBe("lime");
+  });
+
+  it("lets only triggers that may speak use customer steps", () => {
+    expect(allowsStep("conversation.first_message", "buttons")).toBe(true);
+    expect(allowsStep("message.customer", "message")).toBe(false);
+    expect(allowsStep("message.customer", "tag")).toBe(true);
   });
 
   it("only accepts the triggers it knows", () => {
-    expect(isTrigger("page")).toBe(true);
+    expect(isTrigger("note.created")).toBe(true);
     expect(isTrigger("toString")).toBe(false);
     expect(isTrigger(undefined)).toBe(false);
-  });
-
-  it("starts every example workflow from a known trigger", () => {
-    expect(workflows.every((workflow) => isTrigger(workflow.trigger))).toBe(true);
-  });
-
-  it("makes a new workflow an empty draft with the picked trigger", () => {
-    expect(blankWorkflow("rated")).toMatchObject({ trigger: "rated", status: "draft", steps: [] });
   });
 });

@@ -4,7 +4,6 @@ import { createAccount, expect, test as it, type Person, signIn } from "./suppor
 
 const pages = [
   "/d/workflows",
-  "/d/workflows/first-message",
   "/d/procedures",
   "/d/procedures/sign-in-code",
   "/d/settings/profile",
@@ -67,12 +66,16 @@ it.describe("small screens", () => {
 
   it("opens the workflow inspector in a drawer on a phone", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/d/workflows/first-message");
+    await page.goto("/d/workflows");
+    await page.getByRole("button", { name: "New workflow" }).click();
+    const picker = page.getByRole("dialog", { name: "What starts this workflow?" });
+    await picker.getByRole("button", { name: /Customer sends their first message/ }).click();
+    await expect(page).toHaveURL(/\/workflows\/wf_[^/]+$/);
     await expect(page.getByRole("region", { name: "Step settings" })).toBeHidden();
 
-    await page.getByRole("button", { name: /Let Dimmi handle/ }).click();
+    await page.getByRole("button", { name: /Trigger/ }).click();
     const drawer = page.getByRole("dialog", { name: "Step settings" });
-    await expect(drawer.getByRole("heading", { name: "Let Dimmi handle" })).toBeVisible();
+    await expect(drawer.getByRole("heading", { name: "Trigger" })).toBeVisible();
     await drawer.getByRole("button", { name: "Close step settings" }).click();
     await expect(drawer).toBeHidden();
   });

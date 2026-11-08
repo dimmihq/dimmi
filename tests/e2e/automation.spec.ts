@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 
 /*
@@ -8,6 +10,20 @@ function workspaceOf(person: Person): string {
   return `Automation ${person.email.split("@")[0]?.split(".").at(-1) ?? ""}`;
 }
 
+/*
+ * newWorkflow makes a workflow from the trigger the search finds and
+ * waits for its builder.
+ */
+async function newWorkflow(page: Page, search: string, trigger: RegExp) {
+  await page.goto("/d/workflows");
+  await page.getByRole("button", { name: "New workflow" }).click();
+  const picker = page.getByRole("dialog", { name: "What starts this workflow?" });
+  await picker.getByRole("textbox", { name: "Search triggers" }).fill(search);
+  await picker.getByRole("button", { name: trigger }).click();
+  await expect(page).toHaveURL(/\/d\/[^/]+\/workflows\/wf_[^/]+$/);
+  await expect(page.getByRole("region", { name: "Workflow" }).getByRole("button", { name: /Trigger/ })).toBeVisible();
+}
+
 it.describe("automation", () => {
   it.beforeEach(async ({ page, person, request }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -15,48 +31,72 @@ it.describe("automation", () => {
     await signIn(page, person);
   });
 
-  it("opens a workflow from the list and shows the selected step's settings", async ({ page }) => {
-    await page.goto("/d/workflows");
-    await page.getByRole("link", { name: /Let Dimmi answer first messages/ }).click();
-    await expect(page).toHaveURL(/\/d\/[^/]+\/workflows\/first-message$/);
-    await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
-
+  it("makes a workflow from a trigger, builds it, saves it and publishes it", async ({ page }) => {
+    await newWorkflow(page, "first message", /Customer sends their first message/);
+    await expect(page.getByRole("heading", { name: "Untitled workflow" })).toBeVisible();
     const inspector = page.getByRole("region", { name: "Step settings" });
-    await expect(inspector.getByRole("heading", { name: "Trigger" })).toBeVisible();
+    await expect(inspector.getByRole("region", { name: "When it starts" })).toContainText(
+      "Customer sends their first message",
+    );
 
-    await page.getByRole("button", { name: /Let Dimmi handle/ }).click();
-    await expect(inspector.getByRole("heading", { name: "Let Dimmi handle" })).toBeVisible();
-    await expect(inspector).toContainText("stops once a teammate replies");
+    const canvas = page.getByRole("region", { name: "Workflow" });
+    await canvas.getByRole("button", { name: "Add a step" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Reply buttons" }).click();
+    await expect(inspector.getByRole("heading", { name: "Reply buttons" })).toBeVisible();
+    await inspector.getByRole("textbox", { name: "Question" }).fill("What is it about?");
+    await inspector.getByRole("textbox", { name: "Button 1" }).fill("Billing");
+    await expect(canvas.getByRole("button", { name: /What is it about\?/ })).toBeVisible();
+    await expect(canvas.getByText("Billing", { exact: true })).toBeVisible();
+    await expect(page.getByText("Saved as draft")).toBeVisible();
+
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
+
+    await page.reload();
+    await expect(canvas.getByRole("button", { name: /What is it about\?/ })).toBeVisible();
+    await page.getByRole("link", { name: "Back to workflows" }).click();
+    await expect(page.getByRole("link", { name: /Untitled workflow/ })).toContainText("Live");
   });
 
-  it("adds a step to a path, removes it, and publishes a draft", async ({ page }) => {
-    await page.goto("/d/workflows/vip");
+  it("marks what needs fixing and keeps it from being published", async ({ page }) => {
+    await newWorkflow(page, "every message", /Customer sends a message/);
     const canvas = page.getByRole("region", { name: "Workflow" });
-    const cards = canvas.locator("button[aria-pressed]");
-    await expect(canvas.getByRole("button", { name: /Trigger/ })).toBeVisible();
-    const before = await cards.count();
+    await canvas.getByRole("button", { name: "Add a step" }).click();
+    const menu = page.getByRole("dialog", { name: "Add a step" });
+    await expect(menu.getByRole("button", { name: "Send a message" })).toHaveCount(0);
+    await menu.getByRole("button", { name: "Tag", exact: true }).click();
 
-    await canvas.getByRole("button", { name: "Add a step" }).first().click();
-    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Wait" }).click();
-    await expect(cards).toHaveCount(before + 1);
-    await expect(
-      page.getByRole("region", { name: "Step settings" }).getByRole("heading", { name: "Wait" }),
-    ).toBeVisible();
+    await page.getByRole("button", { name: "1 to fix" }).click();
+    const inspector = page.getByRole("region", { name: "Step settings" });
+    await expect(inspector).toContainText("Pick 1 to 20 tags.");
+    await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeDisabled();
+  });
 
-    await page.getByRole("region", { name: "Step settings" }).getByRole("button", { name: "Remove" }).click();
-    await expect(cards).toHaveCount(before);
+  it("branches on a condition picked in the inspector and publishes it", async ({ page }) => {
+    await newWorkflow(page, "every message", /Customer sends a message/);
+    const canvas = page.getByRole("region", { name: "Workflow" });
+    await canvas.getByRole("button", { name: "Add a step" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Branch" }).click();
+    await expect(page.getByRole("button", { name: "1 to fix" })).toBeVisible();
 
-    await expect(page.getByText("Version 1")).toBeVisible();
-    await page.getByRole("button", { name: "Publish" }).click();
-    await expect(page.getByText("Version 2")).toBeVisible();
+    const inspector = page.getByRole("region", { name: "Step settings" });
+    await inspector.getByRole("button", { name: /Condition field/ }).click();
+    await page.getByRole("option", { name: "Message text" }).click();
+    await inspector.getByRole("textbox", { name: "Condition value" }).fill("refund, money back");
+    await expect(page.getByRole("button", { name: "1 to fix" })).toBeHidden();
+    await expect(canvas.getByText("Everyone else", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
   });
 
-  it("fits a wide workflow on screen and keeps a new step in view", async ({ page }) => {
-    await page.goto("/d/workflows/first-message");
+  it("fits a workflow on screen and keeps a new step in view", async ({ page }) => {
+    await newWorkflow(page, "first message", /Customer sends their first message/);
     const canvas = page.getByRole("region", { name: "Workflow" });
     const frame = canvas.locator(".react-flow");
-    await expect(canvas.getByRole("button", { name: /Trigger/ })).toBeVisible();
+    await canvas.getByRole("button", { name: "Add a step" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Reply buttons" }).click();
 
     await canvas.getByRole("button", { name: "Fit to screen" }).click();
     await expect
@@ -79,42 +119,23 @@ it.describe("automation", () => {
     await canvas.getByRole("button", { name: "Zoom in" }).click();
     await canvas.getByRole("button", { name: "Zoom in" }).click();
     await canvas.getByRole("button", { name: "Add a step" }).last().click();
-    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Tag" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Tag", exact: true }).click();
     await expect(canvas.locator('button[aria-pressed="true"]')).toBeInViewport({ ratio: 0.99 });
   });
 
-  it("shows what is typed and picked in the settings on the step's card", async ({ page }) => {
-    await page.goto("/d/workflows/first-message");
-    const canvas = page.getByRole("region", { name: "Workflow" });
-    const inspector = page.getByRole("region", { name: "Step settings" });
-
-    await canvas.getByRole("button", { name: /What can we help you with\?/ }).click();
-    await inspector.getByRole("textbox", { name: "Question" }).fill("How can we help today?");
-    await inspector.getByRole("textbox", { name: "Button 1" }).fill("Invoices");
-    await expect(canvas.getByRole("button", { name: /How can we help today\?/ })).toBeVisible();
-    await expect(canvas.getByText("Invoices", { exact: true })).toBeVisible();
-
-    await canvas.getByRole("button", { name: /Assign to the Billing team/ }).click();
-    await inspector.getByRole("button", { name: /Assignee/ }).click();
-    await page.getByRole("option", { name: "Lea Martin" }).click();
-    await expect(canvas.getByRole("button", { name: /Assign to Lea Martin/ })).toBeVisible();
-  });
-
-  it("starts a new workflow from a searched trigger and keeps that trigger", async ({ page }) => {
+  it("finds triggers by searching and offers only those that run", async ({ page }) => {
     await page.goto("/d/workflows");
     await page.getByRole("button", { name: "New workflow" }).click();
 
     const picker = page.getByRole("dialog", { name: "What starts this workflow?" });
     await expect(picker.getByRole("region", { name: "Team" })).toBeVisible();
-    await picker.getByRole("textbox", { name: "Search triggers" }).fill("stops replying");
+    await expect(picker.getByRole("region", { name: "dimmi" })).toBeHidden();
+    await picker.getByRole("textbox", { name: "Search triggers" }).fill("status");
     await expect(picker.getByRole("region", { name: "Start of conversation" })).toBeHidden();
-    await picker.getByRole("button", { name: /Teammate stops replying/ }).click();
+    await picker.getByRole("textbox", { name: "Search triggers" }).press("Enter");
 
-    await expect(page).toHaveURL(/\/d\/[^/]+\/workflows\/new\?trigger=teammate-quiet$/);
-    await expect(page.getByRole("heading", { name: "Untitled workflow" })).toBeVisible();
-    const inspector = page.getByRole("region", { name: "When it starts" });
-    await expect(inspector).toContainText("Teammate stops replying");
-    await expect(inspector.getByRole("button")).toHaveCount(0);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/workflows\/wf_[^/]+$/);
+    await expect(page.getByRole("region", { name: "When it starts" })).toContainText("Conversation status changes");
   });
 
   it("edits a procedure and keeps tests from spending without asking", async ({ page }) => {

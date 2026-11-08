@@ -1,48 +1,71 @@
 /*
  * The inspector beside the canvas: the settings of whatever is selected,
- * the trigger or a step, laid out like the settings pages. Every kind of
- * step has its own few settings; the trigger shows what starts the
- * workflow, which never changes, and holds the workflow's own settings
- * (channels, audience, office hours, how often it runs). Dimmi's step
- * repeats the rules Dimmi always keeps, so nobody has to guess them. On
- * screens too narrow to sit beside the canvas it opens in a drawer, with
- * a close button. Every change shows on the step's card as it is made.
+ * the trigger or a step, laid out like the settings pages. The trigger
+ * shows what starts the workflow, which never changes, and holds the
+ * workflow's own settings: its name, the channels it runs on and how
+ * often it may run on one conversation. Whatever checking the workflow
+ * found about the selection is listed on top, so a problem is fixed
+ * where it is. Someone who may only read workflows sees every setting
+ * and changes none. On screens too narrow to sit beside the canvas it
+ * opens in a drawer, with a close button.
  */
 import { RiCloseLine } from "@remixicon/react";
 import type { ReactNode } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
-import { Textarea } from "@/components/base/textarea/textarea";
-import { Action, Choice, Danger, Field, Toggle } from "@/features/settings/controls";
+import { Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import type { Issue, Spec } from "@/lib/api/workflows";
+import { choicesOf } from "./choices";
 import { KindMark } from "./parts";
+import { Pick, Picks } from "./pick";
+import { type Lists, StepFields } from "./step-fields";
 import { stepLook } from "./step-kinds";
-import { fieldsOf, options, unsetSummary, withField, withPathLabel } from "./step-settings";
 import { type TriggerKind, tintOf, triggers } from "./triggers";
-import type { Step } from "./workflows";
+import type { Step, StepKind } from "./workflows";
 
-type Edit = (edit: (step: Step) => Step) => void;
+const channelChoices = { all: "All channels", widget: "Messenger", email: "Email" };
+const statusChoices = { open: "Open", snoozed: "Snoozed", closed: "Closed" };
 
-function Words({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+/*
+ * Head changes the workflow's own settings: its name and the parts of
+ * its definition outside the steps.
+ */
+export interface Head {
+  name: string;
+  onRename: (name: string) => void;
+  onSpec: (edit: (spec: Spec) => Spec) => void;
+  onArchive: () => void;
+}
+
+function Issues({ issues }: { issues: Issue[] }) {
+  if (issues.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="py-2.5 pe-2.5">
-      <Textarea
-        aria-label={label}
-        defaultValue={value}
-        placeholder={unsetSummary}
-        onChange={onChange}
-        rows={3}
-        autoResize
-        maxRows={8}
-      />
-    </div>
+    <Section title="To fix before publishing">
+      {issues.map((issue) => (
+        <Row key={`${issue.code}-${issue.path_id ?? ""}-${issue.field ?? ""}-${issue.message}`} label={issue.message} />
+      ))}
+    </Section>
   );
 }
 
-function TriggerSettings({ trigger }: { trigger: TriggerKind }) {
+function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
+  const trigger = spec.trigger as TriggerKind;
+  const look = triggers[trigger];
+  const to = Array.isArray(spec.trigger_settings?.to) ? (spec.trigger_settings.to as string[]) : [];
+  const once = spec.reentry.mode === "once_per_conversation";
+
   return (
     <>
+      <Section title="Name">
+        <Row label="Name">
+          <Field label="Workflow name" value={head.name} onChange={head.onRename} />
+        </Row>
+      </Section>
       <Section
         title="When it starts"
         description="A workflow keeps the trigger it was made with. To start from another, make a new workflow."
@@ -50,196 +73,124 @@ function TriggerSettings({ trigger }: { trigger: TriggerKind }) {
         <Row
           label={
             <span className="flex items-center gap-2">
-              <KindMark icon={triggers[trigger].icon} tint={tintOf(trigger)} size="sm" />
-              {triggers[trigger].name}
+              {look ? <KindMark icon={look.icon} tint={tintOf(trigger)} size="sm" /> : null}
+              {look?.name ?? spec.trigger}
             </span>
           }
-          description={triggers[trigger].detail}
+          description={look?.detail}
         />
+        {trigger === "conversation.status_changed" ? (
+          <>
+            <Row label="Only when it becomes" description="Leave all unticked to run on every change." />
+            <Picks
+              choices={choicesOf(statusChoices)}
+              value={to}
+              empty=""
+              onChange={(next) =>
+                head.onSpec((current) => ({
+                  ...current,
+                  trigger_settings: next.length > 0 ? { to: next } : undefined,
+                }))
+              }
+            />
+          </>
+        ) : null}
       </Section>
       <Section title="Who it runs for">
         <Row label="Channels">
-          <Choice label="Channels" options={["Messenger, email", "Messenger", "Email", "All channels"]} />
+          <Pick
+            label="Channels"
+            choices={choicesOf(channelChoices)}
+            value={spec.channels?.[0] ?? "all"}
+            onChange={(channel) =>
+              head.onSpec((current) => ({ ...current, channels: channel === "all" ? undefined : [channel] }))
+            }
+          />
         </Row>
-        <Row label="Audience">
-          <Choice label="Audience" options={["Everyone", "Signed-in customers", "Visitors"]} />
-        </Row>
-        <Row label="Only during office hours">
-          <Toggle label="Only during office hours" />
-        </Row>
-        <Row label="Once per conversation" description="Never run twice in the same conversation.">
-          <Toggle label="Once per conversation" on />
-        </Row>
-      </Section>
-    </>
-  );
-}
-
-/*
- * StepFields shows the settings of one step. Every change goes back to
- * the step through onEdit, which also rewrites the sentence on its card.
- */
-function StepFields({ step, onEdit }: { step: Step; onEdit: Edit }): ReactNode {
-  const fields = fieldsOf(step);
-  const set = (name: string) => (value: string) => onEdit((current) => withField(current, name, value));
-  const flip = (name: string) => (on: boolean) => set(name)(on ? "on" : "off");
-
-  switch (step.kind) {
-    case "message":
-    case "note": {
-      const name = step.kind === "note" ? "Note" : "Message";
-      return (
-        <Section title={name}>
-          <Words label={name} value={fields.text ?? ""} onChange={set("text")} />
-        </Section>
-      );
-    }
-    case "buttons":
-      return (
-        <Section title="Question and buttons">
-          <Words label="Question" value={fields.text ?? ""} onChange={set("text")} />
-          {step.paths?.map((path, index) => (
-            <Row key={path.id} label={`Button ${index + 1}`}>
-              <Field
-                label={`Button ${index + 1}`}
-                value={path.label}
-                onChange={(label) => onEdit((current) => withPathLabel(current, path.id, label))}
-              />
-            </Row>
-          ))}
-        </Section>
-      );
-    case "collect":
-      return (
-        <Section title="Question">
-          <Words label="Question" value={fields.text ?? ""} onChange={set("text")} />
-          <Row label="Save the answer as">
-            <Choice
-              label="Save the answer as"
-              options={options.saveAs}
-              value={fields.saveAs}
-              onChange={set("saveAs")}
-            />
-          </Row>
-        </Section>
-      );
-    case "branch":
-      return (
-        <Section title="Paths" description="The first path whose condition matches wins.">
-          {step.paths?.map((path) => (
-            <Row key={path.id} label={path.label}>
-              <Action>Edit condition</Action>
-            </Row>
-          ))}
-        </Section>
-      );
-    case "dimmi":
-      return <DimmiFields />;
-    case "assign":
-      return (
-        <Section title="Who takes it">
-          <Row label="Assignee">
-            <Choice label="Assignee" options={options.assignee} value={fields.assignee} onChange={set("assignee")} />
-          </Row>
-        </Section>
-      );
-    case "tag":
-      return (
-        <Section title="Which tag">
-          <Row label="Tag">
-            <Choice label="Tag" options={options.tag} value={fields.tag} onChange={set("tag")} />
-          </Row>
-        </Section>
-      );
-    case "wait":
-      return (
-        <Section title="How long">
-          <Row label="For">
-            <Choice label="Wait for" options={options.wait} value={fields.wait} onChange={set("wait")} />
-          </Row>
-          <Row label="Stop when the customer replies">
-            <Toggle label="Stop when the customer replies" on={fields.stop !== "off"} onChange={flip("stop")} />
-          </Row>
-        </Section>
-      );
-    case "close":
-      return (
-        <Section title="Before closing">
-          <Row label="Ask for a rating first">
-            <Toggle label="Ask for a rating first" on={fields.rating === "on"} onChange={flip("rating")} />
-          </Row>
-        </Section>
-      );
-    default:
-      return (
-        <Section title="Step">
-          <Row label={step.summary} />
-        </Section>
-      );
-  }
-}
-
-function DimmiFields() {
-  return (
-    <>
-      <Section title="While Dimmi handles it">
-        <Row label="Ask for details before handing over">
-          <Toggle label="Ask for details before handing over" on />
-        </Row>
-        <Row label="Follow up when the customer goes quiet" description="After 4 minutes.">
-          <Toggle label="Follow up when the customer goes quiet" on />
-        </Row>
-        <Row label="Close when the customer confirms">
-          <Toggle label="Close when the customer confirms" on />
+        <Row
+          label="Once per conversation"
+          description={
+            look?.onceOnly
+              ? "This trigger never runs twice in one conversation."
+              : "Never run twice in the same conversation."
+          }
+        >
+          <Toggle
+            label="Once per conversation"
+            on={once || look?.onceOnly === true}
+            disabled={look?.onceOnly === true}
+            onChange={(on) =>
+              head.onSpec((current) => ({
+                ...current,
+                reentry: { mode: on ? "once_per_conversation" : "every_time" },
+              }))
+            }
+          />
         </Row>
       </Section>
-      <Section
-        title="Always"
-        description="Dimmi only answers typed messages, stops once a teammate replies, and respects office hours when it hands over."
-      >
-        <Row label="Outcomes" description="Resolved, hands over, or no answer. Each continues down its path." />
+      <Section title="Archive">
+        <Row label="Archive this workflow" description="It stops running. You can bring it back later.">
+          <Danger onPress={head.onArchive}>Archive</Danger>
+        </Row>
       </Section>
     </>
   );
 }
 
 export function Inspector({
-  trigger,
+  spec,
   step,
+  issues,
+  lists,
+  head,
+  readOnly,
   onRemove,
   onEdit,
   onClose,
   className,
 }: {
-  trigger: TriggerKind;
+  spec: Spec;
   step: Step | undefined;
+  issues: Issue[];
+  lists: Lists;
+  head: Head;
+  readOnly: boolean;
   onRemove: (id: string) => void;
   onEdit: (id: string, edit: (step: Step) => Step) => void;
   onClose?: () => void;
   className?: string;
-}) {
+}): ReactNode {
+  const title = step ? (stepLook[step.kind as StepKind]?.name ?? step.kind) : "Trigger";
+
   return (
     <Panel label="Step settings" ground className={className}>
-      <PageHeader title={step ? stepLook[step.kind].name : "Trigger"} level={2}>
+      <PageHeader title={title} level={2}>
         {onClose ? (
           <IconButton size="small" icon={RiCloseLine} aria-label="Close step settings" onClick={onClose} />
         ) : null}
       </PageHeader>
       <ScrollArea ground className="px-4 pb-6">
-        <div className="flex flex-col gap-6 pt-2">
+        <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-6 pt-2">
+          <Issues issues={issues} />
           {step ? (
-            <StepFields key={step.id} step={step} onEdit={(edit) => onEdit(step.id, edit)} />
+            <StepFields
+              key={step.id}
+              step={step}
+              trigger={spec.trigger as TriggerKind}
+              lists={lists}
+              onEdit={(edit) => onEdit(step.id, edit)}
+            />
           ) : (
-            <TriggerSettings trigger={trigger} />
+            <TriggerSettings spec={spec} head={head} />
           )}
-          {step ? (
+          {step && !readOnly ? (
             <Section title="Remove">
               <Row label="Remove this step" description="Steps on its paths go with it.">
                 <Danger onPress={() => onRemove(step.id)}>Remove</Danger>
               </Row>
             </Section>
           ) : null}
-        </div>
+        </fieldset>
       </ScrollArea>
     </Panel>
   );

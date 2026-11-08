@@ -46,7 +46,6 @@ import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
 import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$section'
 import { Route as DWorkflowsIndexRouteImport } from './routes/d/workflows/index'
 import { Route as DWorkflowsWorkflowRouteImport } from './routes/d/workflows/$workflow'
-import { Route as DWorkflowsNewRouteImport } from './routes/d/workflows/new'
 import { Route as DCustomersCompaniesIndexRouteImport } from './routes/d/customers/companies/index'
 import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
@@ -242,11 +241,6 @@ const DWorkflowsWorkflowRoute = DWorkflowsWorkflowRouteImport.update({
   path: '/workflows/$workflow',
   getParentRoute: () => DRouteRoute,
 } as any)
-const DWorkflowsNewRoute = DWorkflowsNewRouteImport.update({
-  id: '/workflows/new',
-  path: '/workflows/new',
-  getParentRoute: () => DRouteRoute,
-} as any)
 const DCustomersCompaniesIndexRoute =
   DCustomersCompaniesIndexRouteImport.update({
     id: '/companies/',
@@ -335,7 +329,6 @@ export interface FileRoutesByFullPath {
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
-  '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers/': typeof DCustomersIndexRoute
   '/d/docs/': typeof DDocsIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
@@ -381,7 +374,6 @@ export interface FileRoutesByTo {
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
-  '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers': typeof DCustomersIndexRoute
   '/d/docs': typeof DDocsIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
@@ -432,7 +424,6 @@ export interface FileRoutesById {
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
-  '/d/workflows/new': typeof DWorkflowsNewRoute
   '/d/customers/': typeof DCustomersIndexRoute
   '/d/docs/': typeof DDocsIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
@@ -484,7 +475,6 @@ export interface FileRouteTypes {
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
-    | '/d/workflows/new'
     | '/d/customers/'
     | '/d/docs/'
     | '/d/inbox/'
@@ -530,7 +520,6 @@ export interface FileRouteTypes {
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
-    | '/d/workflows/new'
     | '/d/customers'
     | '/d/docs'
     | '/d/inbox'
@@ -580,7 +569,6 @@ export interface FileRouteTypes {
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
-    | '/d/workflows/new'
     | '/d/customers/'
     | '/d/docs/'
     | '/d/inbox/'
@@ -867,13 +855,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DWorkflowsWorkflowRouteImport
       parentRoute: typeof DRouteRoute
     }
-    '/d/workflows/new': {
-      id: '/d/workflows/new'
-      path: '/workflows/new'
-      fullPath: '/d/workflows/new'
-      preLoaderRoute: typeof DWorkflowsNewRouteImport
-      parentRoute: typeof DRouteRoute
-    }
     '/d/customers/companies/': {
       id: '/d/customers/companies/'
       path: '/companies'
@@ -1009,7 +990,6 @@ interface DRouteRouteChildren {
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
   DSettingsSectionRoute: typeof DSettingsSectionRoute
   DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
-  DWorkflowsNewRoute: typeof DWorkflowsNewRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
@@ -1036,7 +1016,6 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DProceduresProcedureRoute: DProceduresProcedureRoute,
   DSettingsSectionRoute: DSettingsSectionRoute,
   DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
-  DWorkflowsNewRoute: DWorkflowsNewRoute,
   DInboxIndexRoute: DInboxIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,

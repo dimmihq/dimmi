@@ -46,6 +46,15 @@ describe("request", () => {
     });
   });
 
+  it("keeps errors that are a list in the details", async () => {
+    const issues = [{ code: "missing_setting", step_id: "s_tag000001", message: "Pick 1 to 20 tags." }];
+    respond(422, { code: "workflow_invalid", message: "The workflow cannot run as it is.", errors: issues });
+
+    const error = await request("POST", "/workflows/wf_1/publications", {}).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ code: "workflow_invalid", fields: {}, details: { errors: issues } });
+  });
+
   it("still fails with an ApiError when the body is not the envelope", async () => {
     respond(502, "<html>Bad gateway</html>");
 

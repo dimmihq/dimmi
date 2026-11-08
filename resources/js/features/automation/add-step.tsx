@@ -1,7 +1,8 @@
 /*
  * The add-step menu at the end of every path in the builder: a small
- * plus that opens BoardUI's menu panel with the step kinds, grouped as
- * messages, logic, Dimmi and team actions.
+ * plus that opens BoardUI's menu panel with the step kinds offered,
+ * grouped as messages, logic, dimmi and team actions; a group with
+ * nothing offered is left out.
  */
 import { RiAddLine } from "@remixicon/react";
 import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
@@ -14,13 +15,13 @@ import { stepLook } from "./step-kinds";
 import type { StepKind } from "./workflows";
 
 const groups: [string, StepKind[]][] = [
-  ["Messages", ["message", "buttons", "collect", "reply-time"]],
+  ["Messages", ["message", "buttons", "collect", "reply_time"]],
   ["Logic", ["branch", "wait"]],
-  ["Dimmi", ["dimmi"]],
-  ["Team", ["assign", "tag", "priority", "note", "close"]],
+  ["dimmi", ["dimmi"]],
+  ["Team", ["assign", "unassign", "tag", "untag", "priority", "note", "update_contact", "snooze", "close"]],
 ];
 
-export function AddStep({ onAdd }: { onAdd: (kind: StepKind) => void }) {
+export function AddStep({ kinds, onAdd }: { kinds: StepKind[]; onAdd: (kind: StepKind) => void }) {
   return (
     <DialogTrigger>
       <AriaButton
@@ -36,29 +37,32 @@ export function AddStep({ onAdd }: { onAdd: (kind: StepKind) => void }) {
       <Popover placement="bottom" offset={8} className={cx(MENU_POPOVER_SURFACE, "w-[260px] p-2")}>
         <Dialog aria-label="Add a step" className="flex flex-col gap-2 outline-none">
           {({ close }) =>
-            groups.map(([title, kinds]) => (
-              <div key={title} className="flex flex-col gap-1">
-                <span className="ps-2 pt-1 text-body-2-medium text-text-secondary">{title}</span>
-                {kinds.map((kind) => {
-                  const look = stepLook[kind];
+            groups
+              .map(([title, group]): [string, StepKind[]] => [title, group.filter((kind) => kinds.includes(kind))])
+              .filter(([, group]) => group.length > 0)
+              .map(([title, group]) => (
+                <div key={title} className="flex flex-col gap-1">
+                  <span className="ps-2 pt-1 text-body-2-medium text-text-secondary">{title}</span>
+                  {group.map((kind) => {
+                    const look = stepLook[kind];
 
-                  return (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => {
-                        onAdd(kind);
-                        close();
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-2lg px-2 py-1.5 text-start text-body-medium text-text-primary outline-none transition-colors hover:bg-background-primary-hover focus-visible:bg-background-primary-hover"
-                    >
-                      <KindMark icon={look.icon} tint={look.tint} size="sm" />
-                      {look.name}
-                    </button>
-                  );
-                })}
-              </div>
-            ))
+                    return (
+                      <button
+                        key={kind}
+                        type="button"
+                        onClick={() => {
+                          onAdd(kind);
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-2lg px-2 py-1.5 text-start text-body-medium text-text-primary outline-none transition-colors hover:bg-background-primary-hover focus-visible:bg-background-primary-hover"
+                      >
+                        <KindMark icon={look.icon} tint={look.tint} size="sm" />
+                        {look.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
           }
         </Dialog>
       </Popover>

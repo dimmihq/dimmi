@@ -3,8 +3,7 @@
  * tree (paths hold steps, steps hold paths), so each change rebuilds the
  * branch it touches and leaves the rest as it was.
  */
-import { describe, fieldsOf, unsetSummary } from "./step-settings";
-import type { Path, Step, StepKind } from "./workflows";
+import { newId, type Path, type Step, type StepKind } from "./workflows";
 
 /*
  * withStep adds a step to the end of a path, or to the top level when
@@ -54,24 +53,37 @@ export function withEdited(steps: Step[], id: string, edit: (step: Step) => Step
   });
 }
 
-/*
- * freshStep is a new step of a kind with the paths that kind needs. Its
- * card describes the settings it starts with, or says what to fill in
- * when it starts with nothing written.
- */
-export function freshStep(kind: StepKind, id: string): Step {
-  const paths: Partial<Record<StepKind, string[]>> = {
-    buttons: ["Option 1", "Option 2"],
-    branch: ["If…", "Everyone else"],
-    dimmi: ["Resolved", "Hands over", "No answer"],
-  };
-  const labels = paths[kind];
-  const start = describe[kind]?.(fieldsOf({ kind, summary: unsetSummary })) ?? unsetSummary;
+const starts: Partial<Record<StepKind, Step["settings"]>> = {
+  message: { text: "" },
+  buttons: { text: "" },
+  collect: { text: "What's the best email to reach you?", field: "contact.email", type: "email" },
+  wait: { for: "1h" },
+  snooze: { for: "1d" },
+  assign: { mode: "team" },
+  unassign: { what: "both" },
+  tag: { tag_ids: [] },
+  untag: { tag_ids: [] },
+  priority: { value: "high" },
+  note: { text: "" },
+  update_contact: { set: [{ field: "contact.name", value: "" }] },
+};
 
-  return {
-    id,
-    kind,
-    summary: start,
-    paths: labels?.map((label, index) => ({ id: `${id}-p${index}`, label, steps: [] })),
-  };
+/*
+ * freshStep is a new step of a kind with the settings it starts with
+ * and the paths it needs: two buttons for reply buttons, one condition
+ * and everyone else for a branch.
+ */
+export function freshStep(kind: StepKind): Step {
+  const step: Step = { id: newId("s_"), kind, settings: { ...starts[kind] } };
+  if (kind === "buttons") {
+    step.paths = ["Option 1", "Option 2"].map((label) => ({ id: newId("p_"), label, steps: [] }));
+  }
+  if (kind === "branch") {
+    step.paths = [
+      { id: newId("p_"), label: "Path 1", steps: [] },
+      { id: newId("p_"), outcome: "else", steps: [] },
+    ];
+  }
+
+  return step;
 }

@@ -11,7 +11,7 @@
  * ground surface as BoardUI secondary cards; the selected one wears the
  * accent ring.
  */
-import { RiAddLine, RiFocus3Line, RiSubtractLine } from "@remixicon/react";
+import { RiAddLine, RiErrorWarningLine, RiFocus3Line, RiSubtractLine } from "@remixicon/react";
 import {
   Background,
   BackgroundVariant,
@@ -45,13 +45,21 @@ import { type KindLook, stepLook, triggerLook } from "./step-kinds";
 import { type TriggerKind, triggers } from "./triggers";
 import type { Step, StepKind } from "./workflows";
 
+/*
+ * CanvasMoves is what the canvas does and shows beyond the steps: the
+ * selection, adding steps of the kinds offered (none when the workflow
+ * can only be read), each step's sentence, and the steps with problems.
+ */
 export interface CanvasMoves {
   selected: string;
   onSelect: (id: string) => void;
   onAdd: (path: string | null, kind: StepKind) => void;
+  kinds: StepKind[];
+  summarize: (step: Step) => string;
+  flagged: ReadonlySet<string>;
 }
 
-type CardNode = Node<{ look: KindLook; summary: string }, "card">;
+type CardNode = Node<{ look: KindLook; summary: string; flagged: boolean }, "card">;
 type AddNode = Node<{ path: string | null }, "add">;
 type PathEdge = Edge<{ label?: string }, "path">;
 type Sizes = ReadonlyMap<string, { width: number; height: number }>;
@@ -97,7 +105,10 @@ function Card({ id, data }: NodeProps<CardNode>) {
       >
         <span className="flex items-center gap-2">
           <KindMark icon={data.look.icon} tint={data.look.tint} size="sm" />
-          <span className="text-body-2-medium text-text-secondary">{data.look.name}</span>
+          <span className="flex-1 text-body-2-medium text-text-secondary">{data.look.name}</span>
+          {data.flagged ? (
+            <RiErrorWarningLine aria-label="Needs fixing" className="size-4 shrink-0 text-text-error-primary" />
+          ) : null}
         </span>
         <span className="wrap-break-word text-body-regular text-text-primary">{data.summary}</span>
       </button>
@@ -113,7 +124,7 @@ function Plus({ data }: NodeProps<AddNode>) {
     <>
       <Handle type="target" position={Position.Top} isConnectable={false} className="invisible" />
       <span className="pointer-events-auto flex">
-        <AddStep onAdd={(kind) => moves.onAdd(data.path, kind)} />
+        {moves.kinds.length > 0 ? <AddStep kinds={moves.kinds} onAdd={(kind) => moves.onAdd(data.path, kind)} /> : null}
       </span>
     </>
   );
@@ -157,15 +168,19 @@ function Line({ sourceX, sourceY, targetX, targetY, data }: EdgeProps<PathEdge>)
 const nodeTypes = { card: Card, add: Plus };
 const edgeTypes = { path: Line };
 
-function lookOf(item: FlowItem, trigger: TriggerKind): { look: KindLook; summary: string } {
+function lookOf(item: FlowItem, trigger: TriggerKind, moves: CanvasMoves): CardNode["data"] {
   if (item.kind === "step") {
-    return { look: stepLook[item.step.kind], summary: item.step.summary };
+    return {
+      look: stepLook[item.step.kind as StepKind] ?? stepLook.message,
+      summary: moves.summarize(item.step),
+      flagged: moves.flagged.has(item.step.id),
+    };
   }
 
-  return { look: triggerLook(trigger), summary: triggers[trigger].name };
+  return { look: triggerLook(trigger), summary: triggers[trigger]?.name ?? trigger, flagged: false };
 }
 
-function useGraph(trigger: TriggerKind, steps: Step[], sizes: Sizes) {
+function useGraph(trigger: TriggerKind, steps: Step[], sizes: Sizes, moves: CanvasMoves) {
   return useMemo(() => {
     const heights = new Map([...sizes].map(([id, size]) => [id, size.height]));
     const { placed, links } = layoutWorkflow(steps, heights);
@@ -175,12 +190,12 @@ function useGraph(trigger: TriggerKind, steps: Step[], sizes: Sizes) {
 
       return item.kind === "add"
         ? { ...base, type: "add", data: { path: item.path } }
-        : { ...base, type: "card", data: lookOf(item, trigger) };
+        : { ...base, type: "card", data: lookOf(item, trigger, moves) };
     });
     const edges: PathEdge[] = links.map((link) => ({ ...link, type: "path", data: { label: link.label } }));
 
     return { nodes, edges };
-  }, [trigger, steps, sizes]);
+  }, [trigger, steps, sizes, moves]);
 }
 
 /*
@@ -295,7 +310,7 @@ function Zoom() {
 function Flow({ trigger, steps, moves }: { trigger: TriggerKind; steps: Step[]; moves: CanvasMoves }) {
   const frame = useRef<HTMLDivElement>(null);
   const [sizes, setSizes] = useState<Sizes>(() => new Map());
-  const { nodes, edges } = useGraph(trigger, steps, sizes);
+  const { nodes, edges } = useGraph(trigger, steps, sizes, moves);
   const start = useStartView(frame);
   const reveal = useReveal(frame, start.moved);
   const overview = useWide(768);

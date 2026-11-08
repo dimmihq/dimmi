@@ -2,14 +2,13 @@ import { addSize, cardHeight, cardWidth, layoutWorkflow, pathGap, stepGap } from
 import type { Step } from "./workflows";
 
 const steps: Step[] = [
-  { id: "a", kind: "message", summary: "Hello" },
+  { id: "a", kind: "message", settings: { text: "Hello" } },
   {
     id: "b",
     kind: "branch",
-    summary: "Plan",
     paths: [
-      { id: "p1", label: "Enterprise", steps: [{ id: "c", kind: "tag", summary: "Tag VIP" }] },
-      { id: "p2", label: "Everyone else", steps: [] },
+      { id: "p1", label: "Enterprise", steps: [{ id: "c", kind: "tag" }] },
+      { id: "p2", outcome: "else", steps: [] },
     ],
   },
 ];

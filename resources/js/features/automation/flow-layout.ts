@@ -10,7 +10,7 @@
  */
 import { type HierarchyPointNode, hierarchy, tree } from "d3-hierarchy";
 
-import { type Step, triggerStep } from "./workflows";
+import { pathName, type Step, triggerStep } from "./workflows";
 
 export const cardWidth = 264;
 export const cardHeight = 76;
@@ -52,7 +52,7 @@ function chain(steps: Step[], index: number, path: string | null, label?: string
   }
 
   const next = step.paths
-    ? step.paths.map((branch) => chain(branch.steps, 0, branch.id, branch.label))
+    ? step.paths.map((branch) => chain(branch.steps, 0, branch.id, pathName(branch)))
     : [chain(steps, index + 1, path)];
 
   return { kind: "step", id: step.id, step, label, children: next };
