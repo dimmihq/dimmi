@@ -93,6 +93,7 @@ func API(a *app.App) {
 			procedureRoutes(workspace, a)
 			audienceRoutes(workspace, a)
 			attributeRoutes(workspace, a)
+			eventRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })

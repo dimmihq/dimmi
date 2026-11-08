@@ -537,6 +537,19 @@ type ContactErasure struct {
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
+type ContactEventSummary struct {
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	ContactID         ids.UUID        `json:"contact_id"`
+	EventDefinitionID ids.UUID        `json:"event_definition_id"`
+	Count             int64           `json:"count"`
+	FirstAt           time.Time       `json:"first_at"`
+	LastAt            time.Time       `json:"last_at"`
+	DailyDay          time.Time       `json:"daily_day"`
+	Daily             []int16         `json:"daily"`
+	LastMetadata      json.RawMessage `json:"last_metadata"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
 type ContactExport struct {
 	ID                  ids.UUID   `json:"id"`
 	WorkspaceID         ids.UUID   `json:"workspace_id"`
@@ -855,6 +868,20 @@ type EncryptionKey struct {
 	Wrapped   []byte    `json:"wrapped"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type EventDefinition struct {
+	ID          ids.UUID   `json:"id"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Name        string     `json:"name"`
+	Label       string     `json:"label"`
+	Description *string    `json:"description"`
+	Origin      string     `json:"origin"`
+	Status      string     `json:"status"`
+	LastSeenAt  *time.Time `json:"last_seen_at"`
+	TotalCount  int64      `json:"total_count"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type HelpCenter struct {

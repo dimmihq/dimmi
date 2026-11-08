@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"
+	"github.com/dimmihq/dimmi/app/actions/events"
 	"github.com/dimmihq/dimmi/app/actions/factors"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
@@ -127,6 +128,7 @@ type Actions struct {
 	Procedures                 *procedures.Procedures
 	Audiences                  *audiences.Audiences
 	Attributes                 *attributes.Definitions
+	Events                     *events.Events
 	WorkflowEngine             *engine.Engine
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy

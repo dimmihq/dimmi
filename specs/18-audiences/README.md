@@ -895,3 +895,10 @@ Workflows shipped first, so audiences start from the rule language they already 
 - **`client_writable` stays the sign-in settings' list** (20 keys), which the messenger already enforces; the definition shows and flips it. No second column.
 - **Options are plain strings**, not `{value, label}`.
 - **Not yet:** type conversion and key renames, backfilling existing values when a date is defined over text, nightly `contacts_with_value`, deleting in batches for very large workspaces (delete is one statement today), dropped keys from the browser listed as problems.
+
+## Decisions 2026-11-08 (events)
+
+- **Built:** `event_definitions` (`edf_`), `contact_event_summaries` (count, first and last time, 90 UTC daily counts from `daily_day`, last metadata), `POST /contact-events` (one or up to 100; person by `contact_id`, `external_id` or `email`; `idempotency_key` held 48 h in Valkey; times older than 30 days or over an hour ahead moved and marked `occurred_at_clamped`; metadata flat, 20 keys, 2 KB; names lowercase with a hint), `GET /event-definitions`, `PATCH` label, description, status, `GET /contacts/{id}/event-summaries`. Names are defined on their first event (1,000 per workspace, then `event_limit_reached`). Rules read `event.<name>.count` (with `within_days`), `.first_at`, `.last_at`; never did it reads as count 0. Workflows, previews and test a person load summaries only when a rule reads events. Builder: an Activity group and an "in the last N days" box on counts. Profile Activity card; Events section on Settings, Attributes.
+- **Days are UTC calendar days**, not rolling 24 hours: "in the last 7 days" is today and the six days before, in UTC.
+- **Ability:** recording takes `contacts:write`; no separate `events:write` group yet.
+- **Not yet:** messenger `track()` over the network and `writable_events`, rate limit bucket, `upsert_contact`, webhooks `contact_event.tracked`, workflow triggers on events, merge summing summaries (erase cascades already).

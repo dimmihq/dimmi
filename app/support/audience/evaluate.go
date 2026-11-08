@@ -20,6 +20,7 @@ package audience
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 )
 
@@ -211,7 +212,7 @@ func leafResult(n *node, env Env, t Truth) LeafResult {
 	}
 
 	if env.Facts != nil && n.field.Type != TypeSaved {
-		if v, ok := env.Facts.Lookup(n.key); ok {
+		if v, ok := env.Facts.Lookup(factKey(n)); ok {
 			out.Actual = v
 		}
 	}
@@ -273,7 +274,7 @@ func evalLeaf(n *node, env Env) Truth {
 	present := false
 
 	if env.Facts != nil {
-		value, present = env.Facts.Lookup(n.key)
+		value, present = env.Facts.Lookup(factKey(n))
 	}
 
 	normalized := normalize(n, value)
@@ -337,4 +338,17 @@ truth turns a boolean into a result.
 */
 func truth(b bool) Truth {
 	return map[bool]Truth{true: True, false: False}[b]
+}
+
+/*
+factKey is the key a condition asks the facts for. An event count over
+the last days asks for "event.<name>.count@<days>", so facts that hold
+daily counts can answer it.
+*/
+func factKey(n *node) string {
+	if n.within > 0 {
+		return n.key + "@" + strconv.Itoa(n.within)
+	}
+
+	return n.key
 }

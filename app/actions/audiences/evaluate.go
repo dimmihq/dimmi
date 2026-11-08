@@ -99,7 +99,7 @@ func (a *Audiences) Evaluate(ctx context.Context, in EvaluateInput) (Evaluation,
 			return err
 		}
 
-		person.Client = browserValues(in.Browser)
+		person.Client, person.Now = browserValues(in.Browser), env.Now
 		env.Facts = person
 		env.Unknown = func(f audience.Field) bool {
 			_, typed := person.Client[f.Key]

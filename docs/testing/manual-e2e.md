@@ -1047,3 +1047,16 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Delete | delete an active attribute, then an archived one | 409 `attribute_active`, then 204 and every contact loses the key |
 | Messenger | `PATCH $B/attribute-definitions/$A` `{"client_writable":true}` | the sign-in settings list the key; the messenger may now write it, untrusted |
 | Settings | Settings, Attributes | people and companies listed with type and last value; add, archive, restore, delete; dropped values at the bottom |
+
+## Events
+
+| Flow | How | Expect |
+|---|---|---|
+| Track | `POST $B/contact-events` `{"name":"report.exported","email":"ana@acme.dev","metadata":{"format":"csv"}}` | 200, `accepted` 1 with the contact id; `GET $B/event-definitions` lists it `observed` with `total_count` 1 |
+| Batch | `{"events":[...]}` with one unknown `external_id` | that one reports `contact_not_found`, the rest are accepted; a single unknown event answers 404 |
+| Retry | the same event twice with one `idempotency_key` | the second is `duplicate`; the count stays 1 |
+| Bad name | name `Report` | 422 telling to send `report` |
+| Summary | `GET $B/contacts/$C/event-summaries` | count, `last_7_days`, `last_30_days`, first and last time, last details |
+| Rule | preview `{"field":"event.report.exported.count","op":"gte","value":2,"within_days":7}` | counts people with two exports in the last 7 days; `count eq 0` matches people who never did it |
+| Archive | `PATCH $B/event-definitions/$E` `{"status":"archived"}`, then send one | `archived`, not counted |
+| Screens | the person's profile and Settings, Attributes | an Activity card; an Events section with totals and last times |

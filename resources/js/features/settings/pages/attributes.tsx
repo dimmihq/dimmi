@@ -8,7 +8,7 @@
  * none. Values that did not fit are listed at the bottom, so nothing is
  * dropped silently.
  */
-import { RiBuilding2Line, RiErrorWarningLine, RiUserLine } from "@remixicon/react";
+import { RiBuilding2Line, RiErrorWarningLine, RiFlashlightLine, RiUserLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -25,7 +25,8 @@ import {
   deleteAttribute,
   updateAttribute,
 } from "@/lib/api/attributes";
-import { definitionLine, problemNames, typeNames } from "../attributes";
+import { type EventDefinition, eventsQuery, updateEvent } from "@/lib/api/events";
+import { definitionLine, eventLine, problemNames, typeNames } from "../attributes";
 import { Action, Choice, Danger, Field, Toggle } from "../controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
@@ -173,6 +174,53 @@ function NewAttribute({ workspace }: { workspace: string }) {
   );
 }
 
+function EventRow({ workspace, event, canManage }: { workspace: string; event: EventDefinition; canManage: boolean }) {
+  const refresh = useRefresh(workspace);
+  const queryClient = useQueryClient();
+  const archived = event.status === "archived";
+  const change = useMutation({
+    mutationFn: () => updateEvent(workspace, event.id, { status: archived ? "active" : "archived" }),
+    onSuccess: () => {
+      refresh();
+      void queryClient.invalidateQueries({ queryKey: eventsQuery(workspace).queryKey });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Item mark={<Glyph icon={RiFlashlightLine} />} title={event.label} detail={eventLine(event)}>
+      {canManage ? (
+        <Action loading={change.isPending} onPress={() => change.mutate()}>
+          {archived ? "Restore" : "Archive"}
+        </Action>
+      ) : null}
+    </Item>
+  );
+}
+
+function Events({ workspace, canManage }: { workspace: string; canManage: boolean }) {
+  const { data, isPending } = useQuery(eventsQuery(workspace));
+
+  return (
+    <Section
+      title="Events"
+      description="What customers did in your product, sent to POST /api/v1/contact-events. Archived events take no new ones."
+      loading={isPending}
+    >
+      {data?.length === 0 ? (
+        <Item
+          mark={<Glyph icon={RiFlashlightLine} />}
+          title="No events yet"
+          detail="Send one from your backend and it shows up here."
+        />
+      ) : null}
+      {(data ?? []).map((e) => (
+        <EventRow key={e.id} workspace={workspace} event={e} canManage={canManage} />
+      ))}
+    </Section>
+  );
+}
+
 function Problems({ workspace }: { workspace: string }) {
   const { data } = useQuery(attributeProblemsQuery(workspace));
   if (!data || data.length === 0) {
@@ -224,6 +272,7 @@ export function AttributesSettings() {
           ))}
         </Section>
       ))}
+      <Events workspace={workspace} canManage={canManage} />
       {canManage ? <NewAttribute workspace={workspace} /> : null}
       <Problems workspace={workspace} />
     </SettingsPage>

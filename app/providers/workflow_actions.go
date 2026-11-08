@@ -20,6 +20,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/attributes"
 	"github.com/dimmihq/dimmi/app/actions/audiences"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/events"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
@@ -45,6 +46,7 @@ func bootWorkflows(a *app.App) {
 	a.Actions.Procedures = &procedures.Procedures{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 	a.Actions.Audiences = &audiences.Audiences{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 	a.Actions.Attributes = &attributes.Definitions{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
+	a.Actions.Events = &events.Events{DB: a.DB, Cache: a.Cache, Clock: a.Clock, IDs: a.IDs}
 }
 
 /*

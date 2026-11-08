@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { AudienceField } from "@/lib/api/audiences";
 
-import { fieldGroup, fieldName, shapeOf, summary, toForm, toRules, withField, withOp } from "./rules";
+import {
+  fieldGroup,
+  fieldName,
+  sentence,
+  shapeOf,
+  summary,
+  toForm,
+  toRules,
+  withField,
+  withOp,
+  withWindow,
+} from "./rules";
 
 const plan = { field: "contact.custom.plan", op: "eq", value: "pro" };
 const seen = { field: "contact.last_seen_at", op: "within_last_days", value: 30 };
@@ -73,5 +84,17 @@ describe("fields and operators", () => {
     expect(summary({ rules: { field: "audience", op: "in", value: ["audn_1"] } }, { audn_1: "VIP" })).toBe(
       "Everyone where Saved audience is any of VIP",
     );
+  });
+});
+
+describe("event conditions", () => {
+  it("names event fields and reads a window", () => {
+    const count = { field: "event.report.exported.count", op: "gte", value: 3, within_days: 7 };
+
+    expect(fieldName("event.report.exported.last_at")).toBe("report.exported: last time");
+    expect(fieldGroup("event.x.count")).toBe("Activity");
+    expect(sentence(count)).toBe("report.exported: times is at least 3 in the last 7 days");
+    expect(withWindow(count, undefined)).toEqual({ field: "event.report.exported.count", op: "gte", value: 3 });
+    expect(withOp(count, "lt", "number").within_days).toBe(7);
   });
 });

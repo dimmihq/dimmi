@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | Every surface that asks "does this person match" reads the same
-| values: the contact, their company, both sets of tags, and whatever
-| the browser reported about the page. Keeping the lookup in one place
+| values: the contact, their company, both sets of tags, what they did,
+| and whatever the browser reported about the page. Keeping the lookup in one place
 | means a workflow, a preview and "test a person" never disagree about
 | what contact.email_domain or company.custom.plan is.
 |
@@ -23,18 +23,22 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/eventroll"
 )
 
 /*
 Person is one contact with what rules read about them. Tags are public
-tag ids. Client holds page, visitor and session values when a browser
-reported them; it is empty for a person read from the database alone.
+tag ids. Events are their event summaries by name, read as of Now.
+Client holds page, visitor and session values when a browser reported
+them; it is empty for a person read from the database alone.
 */
 type Person struct {
 	Contact     models.Contact
 	Company     *models.Company
 	ContactTags []string
 	CompanyTags []string
+	Events      map[string]eventroll.Summary
+	Now         time.Time
 	Client      map[string]any
 }
 
@@ -49,6 +53,8 @@ func (p Person) Lookup(key string) (any, bool) {
 		return Present(ContactValue(p.Contact, p.ContactTags, rest))
 	case "company":
 		return Present(CompanyValue(p.Company, p.CompanyTags, rest))
+	case "event":
+		return Present(EventValue(p.Events, rest, p.Now))
 	}
 
 	return Present(p.Client[key])
@@ -148,8 +154,8 @@ func emailDomain(email *string) any {
 }
 
 /*
-LoadPeople reads the companies and tags of a page of contacts, in the
-contacts' order.
+LoadPeople reads the companies, tags and event summaries of a page of
+contacts, in the contacts' order. Callers set Now before evaluating.
 */
 func LoadPeople(ctx context.Context, q *models.Queries, ws ids.UUID, contacts []models.Contact) ([]Person, error) {
 	contactIDs := make([]ids.UUID, 0, len(contacts))
@@ -167,6 +173,11 @@ func LoadPeople(ctx context.Context, q *models.Queries, ws ids.UUID, contacts []
 		return nil, err
 	}
 
+	events, err := LoadEvents(ctx, q, ws, contactIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	tagRows, err := q.ListContactTags(ctx, models.ListContactTagsParams{WorkspaceID: ws, ContactIds: contactIDs})
 	if err != nil {
 		return nil, fmt.Errorf("list contact tags: %w", err)
@@ -179,7 +190,7 @@ func LoadPeople(ctx context.Context, q *models.Queries, ws ids.UUID, contacts []
 
 	out := make([]Person, 0, len(contacts))
 	for _, c := range contacts {
-		p := Person{Contact: c, ContactTags: contactTags[c.ID]}
+		p := Person{Contact: c, ContactTags: contactTags[c.ID], Events: events[c.ID]}
 		if c.CompanyID != nil {
 			if company, ok := companies[*c.CompanyID]; ok {
 				p.Company, p.CompanyTags = &company, companyTags[company.ID]

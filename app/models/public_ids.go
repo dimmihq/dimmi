@@ -374,12 +374,13 @@ const (
 	PrefixProcedure       Prefix = "prc"
 	PrefixAudience        Prefix = "audn"
 	PrefixAttribute       Prefix = "atd"
+	PrefixEvent           Prefix = "edf"
 )
 
 /*
 workflowPublicIDs lists the prefixes of workflows, their runs, office
 hours schedules, service level policies, procedures, saved
-audiences and attribute definitions.
+audiences, and attribute and event definitions.
 */
 func workflowPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
@@ -391,6 +392,7 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixProcedure, "procedures"},
 		{PrefixAudience, "audiences"},
 		{PrefixAttribute, "attribute_definitions"},
+		{PrefixEvent, "event_definitions"},
 	}
 }
 

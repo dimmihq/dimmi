@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/audience"
+	"github.com/dimmihq/dimmi/app/support/eventroll"
 	"github.com/dimmihq/dimmi/app/support/officehours"
 )
 
@@ -47,6 +48,7 @@ type subject struct {
 	location         *time.Location
 	hours            *officehours.Schedule
 	saved            *audiences.Resolver
+	events           map[string]eventroll.Summary
 }
 
 /*
@@ -126,10 +128,23 @@ func (s *subject) env() audience.Env {
 }
 
 /*
-withSaved loads the workspace's saved audiences once, when a rule about
-to be evaluated names one.
+withSaved loads what a rule about to be evaluated needs beyond the
+conversation, once each: the contact's event summaries, and the
+workspace's saved audiences, whose rules may read events too.
 */
 func (s *subject) withSaved(ctx context.Context, q *models.Queries, p *audience.Program) error {
+	if s.events == nil && (p.NeedsEvents() || p.NeedsSaved()) {
+		events, err := audiences.LoadEvents(ctx, q, s.conversation.WorkspaceID, []ids.UUID{s.contact.ID})
+		if err != nil {
+			return err
+		}
+
+		s.events = events[s.contact.ID]
+		if s.events == nil {
+			s.events = map[string]eventroll.Summary{}
+		}
+	}
+
 	if s.saved != nil || !p.NeedsSaved() {
 		return nil
 	}
@@ -162,6 +177,8 @@ func (s *subject) Lookup(key string) (any, bool) {
 		v = lookupMap(s.vars, strings.TrimPrefix(rest, "vars."))
 	case "time":
 		v = s.timeField(rest)
+	case "event":
+		v = audiences.EventValue(s.events, rest, s.now)
 	case "office_hours":
 		v = s.officeField(rest)
 	default:

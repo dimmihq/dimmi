@@ -114,6 +114,8 @@ export interface AudienceField {
   options?: string[];
   ops: string[];
   custom: boolean;
+  label?: string;
+  window?: boolean;
 }
 
 /*

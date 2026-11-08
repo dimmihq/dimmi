@@ -198,6 +198,7 @@ func (c *counter) judge(ctx context.Context, q *models.Queries, ws ids.UUID, pag
 
 	for _, p := range people {
 		env := c.env
+		p.Now = env.Now
 		env.Facts = p
 
 		switch t, _ := c.program.Partial(env); t {

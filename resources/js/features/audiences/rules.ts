@@ -211,6 +211,11 @@ export function fieldName(key: string): string {
   if (known) {
     return known;
   }
+  const event = key.match(/^event\.(.+)\.(count|first_at|last_at)$/);
+  if (event?.[1]) {
+    const words = { count: "times", first_at: "first time", last_at: "last time" }[event[2] ?? "count"];
+    return `${event[1]}: ${words}`;
+  }
   const custom = key.match(/^(contact|company)\.custom\.(.+)$/);
   if (custom?.[2]) {
     return custom[1] === "company" ? `Company ${humanize(custom[2]).toLowerCase()}` : humanize(custom[2]);
@@ -219,7 +224,7 @@ export function fieldName(key: string): string {
   return key;
 }
 
-export type FieldGroup = "Person" | "Company" | "Tags and audiences" | "Visit" | "Page";
+export type FieldGroup = "Person" | "Company" | "Activity" | "Tags and audiences" | "Visit" | "Page";
 
 export function fieldGroup(key: string): FieldGroup {
   if (key === "contact.tags" || key === "company.tags" || key === "audience") {
@@ -227,6 +232,9 @@ export function fieldGroup(key: string): FieldGroup {
   }
   if (key.startsWith("company.")) {
     return "Company";
+  }
+  if (key.startsWith("event.")) {
+    return "Activity";
   }
   if (key.startsWith("page.") || key.startsWith("visitor.")) {
     return "Page";
@@ -238,7 +246,7 @@ export function fieldGroup(key: string): FieldGroup {
   return "Person";
 }
 
-export const fieldGroups: FieldGroup[] = ["Person", "Company", "Tags and audiences", "Visit", "Page"];
+export const fieldGroups: FieldGroup[] = ["Person", "Company", "Activity", "Tags and audiences", "Visit", "Page"];
 
 export const opNames: Record<string, string> = {
   eq: "is",
@@ -358,8 +366,22 @@ export function withOp(condition: Condition, op: string, type?: AudienceField["t
   const before = shapeOf(condition.op, type);
   const after = shapeOf(op, type);
   const value = before === after ? condition.value : blankValue(after);
+  const out: Condition = value === undefined ? { field: condition.field, op } : { field: condition.field, op, value };
+  if (condition.within_days) {
+    out.within_days = condition.within_days;
+  }
 
-  return value === undefined ? { field: condition.field, op } : { field: condition.field, op, value };
+  return out;
+}
+
+/*
+ * withWindow narrows an event count to the last days, or to all time
+ * when the days are cleared.
+ */
+export function withWindow(condition: Condition, days: number | undefined): Condition {
+  const { within_days: _, ...rest } = condition;
+
+  return days ? { ...rest, within_days: days } : rest;
 }
 
 /*
@@ -400,7 +422,14 @@ export function valueWords(condition: Condition, names: Record<string, string> =
  * sentence says a condition in words: "Plan is any of pro, team".
  */
 export function sentence(condition: Condition, names: Record<string, string> = {}): string {
-  return [fieldName(condition.field), opNames[condition.op] ?? condition.op, valueWords(condition, names)]
+  const window = condition.within_days ? `in the last ${condition.within_days} days` : "";
+
+  return [
+    names[condition.field] ?? fieldName(condition.field),
+    opNames[condition.op] ?? condition.op,
+    valueWords(condition, names),
+    window,
+  ]
     .filter(Boolean)
     .join(" ");
 }

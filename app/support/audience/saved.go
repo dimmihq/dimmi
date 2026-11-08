@@ -14,6 +14,7 @@ package audience
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 )
 
 /*
@@ -90,4 +91,28 @@ func needsSaved(n *node) bool {
 	}
 
 	return slices.ContainsFunc(n.children, needsSaved)
+}
+
+/*
+NeedsEvents reports whether the program reads what people did, so a
+caller loads event summaries only for rules that use them.
+*/
+func (p *Program) NeedsEvents() bool {
+	if p == nil {
+		return false
+	}
+
+	return needsEvents(p.root)
+}
+
+func needsEvents(n *node) bool {
+	if n == nil {
+		return false
+	}
+
+	if n.kind == "leaf" {
+		return strings.HasPrefix(n.key, "event.")
+	}
+
+	return slices.ContainsFunc(n.children, needsEvents)
 }

@@ -186,3 +186,31 @@ export function ValueInput({
 
   return <TextValue key={condition.op} label={label} shape={shape} condition={condition} onChange={onChange} />;
 }
+
+/*
+ * WindowInput narrows an event count to the last days; left empty, the
+ * count is of all time.
+ */
+export function WindowInput({ days, onChange }: { days: number | undefined; onChange: (days?: number) => void }) {
+  const [text, setText] = useState(days ? String(days) : "");
+
+  return (
+    <span className="flex items-center gap-2">
+      <span className="text-body-2-regular text-text-secondary">in the last</span>
+      <Input
+        aria-label="Days"
+        size="small"
+        inputMode="numeric"
+        className="w-16"
+        placeholder="any"
+        value={text}
+        onChange={(next) => {
+          setText(next);
+          const n = Number(next);
+          onChange(next.trim() !== "" && Number.isInteger(n) && n >= 1 && n <= 90 ? n : undefined);
+        }}
+      />
+      <span className="text-body-2-regular text-text-secondary">days</span>
+    </span>
+  );
+}

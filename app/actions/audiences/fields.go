@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -31,6 +32,7 @@ import (
 /*
 Field is one field the builder offers: its key, its type, where it is
 known, how far it is trusted, its fixed options and its operators.
+Window is set on event counts, which may be narrowed to the last days.
 */
 type Field struct {
 	Key     string
@@ -41,6 +43,7 @@ type Field struct {
 	Ops     []string
 	Custom  bool
 	Label   string
+	Window  bool
 }
 
 /*
@@ -78,31 +81,69 @@ func (a *Audiences) customFields(ctx context.Context, m authz.Membership, catalo
 ) ([]Field, error) {
 	var out []Field
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		defs, err := q.ListAttributeDefinitions(ctx, models.ListAttributeDefinitionsParams{WorkspaceID: m.Workspace.ID})
+		q, ws := models.New(tx), m.Workspace.ID
+		attrs, err := attributeFields(ctx, q, ws, catalog)
 		if err != nil {
-			return fmt.Errorf("list attribute definitions: %w", err)
+			return err
 		}
 
-		defined := map[string]bool{}
-		for _, d := range defs {
-			defined[d.Object+"."+d.Key] = true
-			if d.Status == "active" {
-				out = append(out, definedField(catalog, d))
-			}
-		}
+		events, err := eventFieldsOf(ctx, q, ws, catalog)
+		out = slices.Concat(attrs, events)
 
-		keys, err := q.CustomAttributeKeys(ctx, m.Workspace.ID)
-		for _, k := range keys {
-			if !defined[k.Object+"."+k.Key] {
-				out = append(out, customField(catalog, k))
-			}
-		}
-
-		return wrap("list custom attribute keys", err)
+		return err
 	})
 
 	return out, err
+}
+
+/*
+attributeFields lists the defined custom attributes, then the keys in
+use that have no definition.
+*/
+func attributeFields(ctx context.Context, q *models.Queries, ws ids.UUID, catalog *audience.Catalog,
+) ([]Field, error) {
+	defs, err := q.ListAttributeDefinitions(ctx, models.ListAttributeDefinitionsParams{WorkspaceID: ws})
+	if err != nil {
+		return nil, fmt.Errorf("list attribute definitions: %w", err)
+	}
+
+	var out []Field
+	defined := map[string]bool{}
+	for _, d := range defs {
+		defined[d.Object+"."+d.Key] = true
+		if d.Status == "active" {
+			out = append(out, definedField(catalog, d))
+		}
+	}
+
+	keys, err := q.CustomAttributeKeys(ctx, ws)
+	for _, k := range keys {
+		if !defined[k.Object+"."+k.Key] {
+			out = append(out, customField(catalog, k))
+		}
+	}
+
+	return out, wrap("list custom attribute keys", err)
+}
+
+/*
+eventFieldsOf lists the fields of the workspace's active events.
+*/
+func eventFieldsOf(ctx context.Context, q *models.Queries, ws ids.UUID, catalog *audience.Catalog,
+) ([]Field, error) {
+	names, err := q.ListEventDefinitions(ctx, ws)
+	if err != nil {
+		return nil, fmt.Errorf("list event definitions: %w", err)
+	}
+
+	var out []Field
+	for _, e := range names {
+		if e.Status == "active" {
+			out = append(out, eventFields(catalog, e)...)
+		}
+	}
+
+	return out, nil
 }
 
 /*
@@ -151,4 +192,25 @@ func customField(catalog *audience.Catalog, k models.CustomAttributeKeysRow) Fie
 	}
 
 	return Field{Key: key, Type: t, Where: f.Where, Trust: f.Trust, Ops: audience.OpsOf(f, t), Custom: true}
+}
+
+/*
+eventFields are the fields of one event: how many times, the first time
+and the last time.
+*/
+func eventFields(catalog *audience.Catalog, e models.EventDefinition) []Field {
+	base := "event." + e.Name
+	f, _ := catalog.Lookup(base + ".count")
+	field := func(suffix, words string, t audience.FieldType) Field {
+		return Field{
+			Key: base + suffix, Type: t, Where: f.Where, Trust: f.Trust, Ops: audience.OpsOf(f, t), Custom: true,
+			Label: e.Label + ": " + words, Window: suffix == ".count",
+		}
+	}
+
+	return []Field{
+		field(".count", "times", audience.TypeNumber),
+		field(".first_at", "first time", audience.TypeDate),
+		field(".last_at", "last time", audience.TypeDate),
+	}
 }

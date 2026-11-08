@@ -3,6 +3,7 @@
  * and a definition's line under its label.
  */
 import type { AttributeDefinition, AttributeProblem, AttributeType } from "@/lib/api/attributes";
+import type { EventDefinition } from "@/lib/api/events";
 
 export const typeNames: Record<AttributeType, string> = {
   string: "Text",
@@ -50,6 +51,19 @@ export function definitionLine(d: AttributeDefinition, now: Date = new Date()): 
     parts.push("archived");
   } else if (d.origin === "observed") {
     parts.push("seen in data");
+  }
+
+  return parts.join(" · ");
+}
+
+/*
+ * eventLine is an event's name, how many arrived and when the last did.
+ */
+export function eventLine(e: EventDefinition, now: Date = new Date()): string {
+  const parts = [e.name, e.total_count === 1 ? "1 event" : `${e.total_count.toLocaleString()} events`];
+  parts.push(e.last_seen_at ? `last ${ago(e.last_seen_at, now)}` : "none yet");
+  if (e.status === "archived") {
+    parts.push("archived");
   }
 
   return parts.join(" · ");

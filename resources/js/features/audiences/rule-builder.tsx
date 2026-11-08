@@ -26,8 +26,9 @@ import {
   visitorChoices,
   withField,
   withOp,
+  withWindow,
 } from "./rules";
-import { type Choice, ValueInput } from "./value-input";
+import { type Choice, ValueInput, WindowInput } from "./value-input";
 
 /*
  * Lookups are the named things conditions pick from: tags and saved
@@ -106,12 +107,12 @@ function FieldPick({
       {fieldGroups.map((group) => {
         const inGroup = fields
           .filter((f) => fieldGroup(f.key) === group)
-          .sort((a, b) => fieldName(a.key).localeCompare(fieldName(b.key)));
+          .sort((a, b) => (a.label ?? fieldName(a.key)).localeCompare(b.label ?? fieldName(b.key)));
         return inGroup.length === 0 ? null : (
           <SelectSection key={group} title={group}>
             {inGroup.map((f) => (
-              <SelectItem key={f.key} id={f.key} textValue={fieldName(f.key)}>
-                {fieldName(f.key)}
+              <SelectItem key={f.key} id={f.key} textValue={f.label ?? fieldName(f.key)}>
+                {f.label ?? fieldName(f.key)}
               </SelectItem>
             ))}
           </SelectSection>
@@ -174,6 +175,9 @@ function ConditionRow({
           choices={choicesFor(field, lookups)}
           onChange={(value) => onChange({ ...condition, value })}
         />
+        {field?.window ? (
+          <WindowInput days={condition.within_days} onChange={(days) => onChange(withWindow(condition, days))} />
+        ) : null}
         <IconButton size="small" icon={RiCloseLine} aria-label="Remove condition" onClick={onRemove} />
       </div>
       {field?.where === "client" ? (

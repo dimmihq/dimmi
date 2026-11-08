@@ -34,6 +34,7 @@ import {
   identitiesQuery,
   updateContact,
 } from "@/lib/api/customers";
+import { contactEventsQuery } from "@/lib/api/events";
 import { callerQuery } from "@/lib/api/workspace";
 import { EraseCustomer } from "./erase-customer";
 import { ExportCustomer } from "./export-customer";
@@ -211,6 +212,34 @@ function Attributes({ contact }: { contact: Contact }) {
   );
 }
 
+/*
+ * Activity is what the person did in the team's product, as its events
+ * report: each event's total, its count in the last 7 days and when it
+ * last happened.
+ */
+function Activity({ contact }: { contact: Contact }) {
+  const workspace = useWorkspace();
+  const { data } = useQuery({ ...contactEventsQuery(workspace, contact.id), enabled: workspace !== "" });
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card title="Activity">
+      <ul className="flex flex-col gap-2">
+        {data.map((e) => (
+          <li key={e.name} className="flex min-w-0 flex-col">
+            <span className="truncate text-body-2-medium text-text-primary">{e.label}</span>
+            <span className="text-body-2-regular text-text-secondary">
+              {e.count === 1 ? "Once" : `${e.count} times`}, {e.last_7_days} in the last 7 days, last {when(e.last_at)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 function Identities({ contact }: { contact: Contact }) {
   const workspace = useWorkspace();
   const client = useQueryClient();
@@ -367,6 +396,7 @@ export function ContactProfile({ id }: { id: string }) {
         <div className="flex flex-col gap-3">
           <Details key={contact.updated_at} contact={contact} />
           <Attributes contact={contact} />
+          <Activity contact={contact} />
           <Identities contact={contact} />
         </div>
         <div className="flex flex-col gap-3">

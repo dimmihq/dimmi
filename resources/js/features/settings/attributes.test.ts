@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AttributeDefinition } from "@/lib/api/attributes";
 
-import { ago, definitionLine } from "./attributes";
+import { ago, definitionLine, eventLine } from "./attributes";
 
 const now = new Date("2026-11-08T12:00:00Z");
 
@@ -32,5 +32,25 @@ describe("definitionLine", () => {
     expect(ago("2026-11-08T11:59:30Z", now)).toBe("just now");
     expect(ago("2026-11-07T12:00:00Z", now)).toBe("yesterday");
     expect(ago("2026-11-01T12:00:00Z", now)).toBe("7 days ago");
+  });
+});
+
+describe("eventLine", () => {
+  it("names the event, its total and its last time", () => {
+    expect(
+      eventLine(
+        {
+          id: "edf_1",
+          name: "report.exported",
+          label: "Report exported",
+          description: null,
+          origin: "observed",
+          status: "archived",
+          total_count: 1200,
+          last_seen_at: "2026-11-08T11:00:00Z",
+        },
+        now,
+      ),
+    ).toBe("report.exported · 1,200 events · last 1 hour ago · archived");
   });
 });

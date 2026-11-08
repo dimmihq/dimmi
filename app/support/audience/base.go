@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The fields every surface can read: who the contact is, their company,
-| their tags, the session they came in on and the page they are on.
+| their tags, what they did in the team's product, the session they
+| came in on and the page they are on.
 | Email and phone are only as trusted as their verification; custom
 | attributes take their type from the value until definitions say
 | otherwise.
@@ -44,6 +45,7 @@ func contactFields() []Field {
 		{Key: "contact.has_company", Type: TypeBool, Where: Server, Trust: Verified},
 		{Key: "contact.tags", Type: TypeSet, Where: Server, Trust: Verified},
 		{Key: "contact.custom.", Prefix: true, Type: TypeAuto, Where: Server, Trust: Claimed},
+		{Key: "event.", Prefix: true, Type: TypeAuto, Where: Server, Trust: Verified},
 		{Key: "audience", Type: TypeSaved, Where: Server, Trust: Verified, Ops: []string{OpIn, OpNotIn}},
 	}
 }
