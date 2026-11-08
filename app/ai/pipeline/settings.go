@@ -80,7 +80,7 @@ func settingsFor(e *env) *TurnSettings {
 	h := ai.ReadHandoff(e.Agent.Handoff)
 
 	s := &TurnSettings{
-		Mode: ModeFull, Tools: []string{toolSearchKnowledge, toolHandoff, toolTriage, ToolActions},
+		Mode: ModeFull, Tools: []string{toolSearchKnowledge, toolHandoff, toolTriage, toolProcedure, ToolActions},
 		AlwaysHandoffTags: h.AlwaysTags, HandoffTeamID: h.TargetTeamID, RaisePriority: h.RaisePriority,
 		MaxReplies: e.Agent.MaxAiReplies,
 		Workflow:   WorkflowControl{Controlled: e.Conversation.AiMode == "workflow"},

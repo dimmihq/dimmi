@@ -30,8 +30,8 @@ import (
 run is one run in flight: its environment, recorder and settings, and
 what the turn produced: the loop's state, the search results numbered
 for citation, the last search query, the handoff and the internal
-changes the tools asked for, and the workspace actions it offered and
-called.
+changes the tools asked for, the workspace actions it offered and
+called, and whether it followed one of the team's procedures.
 */
 type run struct {
 	env      *env
@@ -48,6 +48,7 @@ type run struct {
 	handoff  *handoffRequest
 	changes  changeSet
 	actions  actionState
+	followed bool
 }
 
 /*

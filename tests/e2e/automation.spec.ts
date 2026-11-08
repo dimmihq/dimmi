@@ -187,19 +187,30 @@ it.describe("automation", () => {
     await expect(page.getByRole("region", { name: "When it starts" })).toContainText("Conversation status changes");
   });
 
-  it("edits a procedure and keeps tests from spending without asking", async ({ page }) => {
+  it("writes a procedure, shows what stops it, and publishes it", async ({ page }) => {
     await page.goto("/d/procedures");
-    await page.getByRole("link", { name: /Send a sign-in code/ }).click();
-    await expect(page).toHaveURL(/\/d\/[^/]+\/procedures\/sign-in-code$/);
+    await page.getByRole("button", { name: "New procedure" }).click();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/procedures\/prc_[^/]+$/);
 
-    const steps = page.getByRole("region", { name: "Steps" });
-    await expect(steps.getByRole("textbox")).toHaveCount(5);
-    await steps.getByRole("button", { name: "Condition" }).click();
-    await expect(steps.getByRole("textbox")).toHaveCount(6);
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Say when dimmi should use this, in 500 characters.")).toBeVisible();
 
-    const tests = page.getByRole("region", { name: "Tests" });
-    await expect(tests.getByText("Failed")).toBeVisible();
-    await tests.getByRole("button", { name: "Run tests" }).click();
-    await expect(tests).toContainText("Tests run once Dimmi answers customers.");
+    await page.getByRole("textbox", { name: "When dimmi uses this" }).fill("The customer cannot sign in.");
+    await page.getByRole("button", { name: "Instruction", exact: true }).click();
+    await page.getByRole("textbox", { name: "Instruction 1" }).fill("Ask which email address they sign in with.");
+    await page.getByRole("button", { name: "Condition", exact: true }).click();
+    await page.getByRole("textbox", { name: "Condition 2" }).fill("If it is a work address, ask them to check spam.");
+    await page.getByRole("button", { name: "Move step 2 up" }).click();
+    await expect(page.getByRole("textbox", { name: "Condition 1" })).toBeVisible();
+    await expect(page.getByText("Saved as draft")).toBeVisible();
+
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Turn off" })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Condition 1" })).toHaveValue(
+      "If it is a work address, ask them to check spam.",
+    );
+    await page.getByRole("link", { name: "Back to procedures" }).click();
+    await expect(page.getByRole("link", { name: /Untitled procedure/ })).toContainText("Live");
   });
 });

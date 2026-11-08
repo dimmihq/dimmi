@@ -29,7 +29,7 @@ func TestPublicIDs(t *testing.T) {
 			}
 		}
 		require.ErrorIs(t, err, ids.ErrPrefixTaken)
-		assert.Len(t, models.PublicIDCatalog(), 138)
+		assert.Len(t, models.PublicIDCatalog(), 139)
 		assert.Equal(t, 5, reserved)
 	})
 

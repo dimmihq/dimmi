@@ -362,7 +362,8 @@ func feedbackPublicIDs() []PublicIDEntry {
 }
 
 /*
-The prefixes of workflows and their schedules.
+The prefixes of workflows, their schedules and the procedures dimmi
+follows.
 */
 const (
 	PrefixWorkflow        Prefix = "wf"
@@ -370,11 +371,12 @@ const (
 	PrefixWorkflowRun     Prefix = "wfr"
 	PrefixSchedule        Prefix = "sch"
 	PrefixSLAPolicy       Prefix = "sla"
+	PrefixProcedure       Prefix = "prc"
 )
 
 /*
 workflowPublicIDs lists the prefixes of workflows, their runs, office
-hours schedules and service level policies.
+hours schedules, service level policies and procedures.
 */
 func workflowPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
@@ -383,6 +385,7 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixWorkflowRun, "workflow_runs"},
 		{PrefixSchedule, "schedules"},
 		{PrefixSLAPolicy, "sla_policies"},
+		{PrefixProcedure, "procedures"},
 	}
 }
 

@@ -27,6 +27,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
+	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/sso"
@@ -121,6 +122,7 @@ type Actions struct {
 	HelpPublic                 *helpcenters.Public
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules
+	Procedures                 *procedures.Procedures
 	WorkflowEngine             *engine.Engine
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy

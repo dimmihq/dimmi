@@ -5,7 +5,6 @@ import { createAccount, expect, test as it, type Person, signIn } from "./suppor
 const pages = [
   "/d/workflows",
   "/d/procedures",
-  "/d/procedures/sign-in-code",
   "/d/settings/profile",
   "/d/settings/security",
   "/d/settings/connections",
@@ -82,9 +81,11 @@ it.describe("small screens", () => {
 
   it("opens the procedure settings in a drawer on a tablet", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 1000 });
-    await page.goto("/d/procedures/sign-in-code");
+    await page.goto("/d/procedures");
+    await page.getByRole("button", { name: "New procedure" }).click();
+    await expect(page).toHaveURL(/\/procedures\/prc_[^/]+$/);
     await page.getByRole("button", { name: "Procedure settings" }).click();
     const drawer = page.getByRole("dialog", { name: "Procedure settings" });
-    await expect(drawer.getByText("Actions it may take")).toBeVisible();
+    await expect(drawer.getByText("Delete this procedure")).toBeVisible();
   });
 });

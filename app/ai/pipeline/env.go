@@ -59,6 +59,7 @@ type env struct {
 	Version       string
 	Defaults      map[string]string
 	WorkflowStep  *workflowspec.AgentHandling
+	Procedures    []liveProcedure
 	now           time.Time
 }
 
@@ -110,6 +111,10 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 	}
 	r.loadConnections(ctx, q, e)
 	if err := loadWorkflowStep(ctx, q, e); err != nil {
+		return nil, err
+	}
+
+	if err := loadProcedures(ctx, q, e); err != nil {
 		return nil, err
 	}
 

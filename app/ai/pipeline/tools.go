@@ -112,6 +112,9 @@ func (r *Runner) registry(st *run) map[string]tool {
 		toolHandoff:         {spec: handoffSpec(), effect: sideEffectWrite, handle: r.requestHandoff},
 		toolTriage:          {spec: triageSpec(st.env), effect: sideEffectWrite, handle: r.triage},
 	}
+	if len(st.env.Procedures) > 0 {
+		tools[toolProcedure] = tool{spec: procedureSpec(st.env), effect: sideEffectRead, handle: r.followProcedure}
+	}
 	for _, live := range st.actions.offered {
 		effect := sideEffectRead
 		if live.Spec.SideEffect == actionkit.SideEffectWrite {

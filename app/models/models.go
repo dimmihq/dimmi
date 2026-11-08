@@ -1253,6 +1253,22 @@ type PersonalAccessToken struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+type Procedure struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Status            string          `json:"status"`
+	Draft             json.RawMessage `json:"draft"`
+	Live              json.RawMessage `json:"live"`
+	LockVersion       int32           `json:"lock_version"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	UpdatedByMemberID *ids.UUID       `json:"updated_by_member_id"`
+	PublishedAt       *time.Time      `json:"published_at"`
+	DeletedAt         *time.Time      `json:"deleted_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
 type PushSubscription struct {
 	ID                  ids.UUID          `json:"id"`
 	UserID              ids.UUID          `json:"user_id"`

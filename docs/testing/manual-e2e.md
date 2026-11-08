@@ -1012,3 +1012,13 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Wait for hours | wait `until office_hours_open` on a Saturday | the run resumes Monday at opening time |
 | Customer quiet | `conversation.customer_quiet` after `1h`; teammate replies; customer says nothing | the workflow runs an hour later; a customer message or a newer reply in between stops that timer |
 | Team quiet | `conversation.teammate_quiet` after `30m`; customer writes, nobody replies | the workflow runs after 30 minutes, once per waiting period |
+
+## Procedures
+
+| Flow | How | Expect |
+|---|---|---|
+| Draft | `POST $B/procedures` `{"name":"Sign-in help"}` | 201 `draft`, empty `definition.steps` |
+| Unfinished publish | `POST $B/procedures/$P/publications` | 422 `procedure_invalid` listing the missing description and steps |
+| Action not published | an `action` step naming a draft action, then publish | 422 with `errors.0.code` `reference_missing` and the step id |
+| Publish | description and a step, then publish | 200 `live`; a later save shows `has_unpublished_changes` |
+| dimmi follows it | agent on, customer asks what the description covers | the run calls `follow_procedure`, the reply follows the steps, the run is flagged `procedure:<id>`, the list shows 1 use |
