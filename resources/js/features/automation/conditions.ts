@@ -9,7 +9,7 @@ import type { Condition } from "@/lib/api/workflows";
 
 import type { TriggerKind } from "./triggers";
 
-type FieldType = "text" | "choice";
+type FieldType = "text" | "choice" | "yes_no";
 
 /*
  * ConditionField is a field offered in conditions. Options lists the
@@ -50,6 +50,7 @@ export const conditionFields: Record<string, ConditionField> = {
     options: { none: "None", low: "Low", medium: "Medium", high: "High", urgent: "Urgent" },
   },
   "conversation.subject": { name: "Subject", type: "text" },
+  "office_hours.open": { name: "Team in office hours", type: "yes_no" },
   "contact.email": { name: "Contact email", type: "text" },
   "contact.email_domain": { name: "Contact email domain", type: "text" },
   "contact.name": { name: "Contact name", type: "text" },
@@ -68,6 +69,11 @@ const textOps: Record<string, string> = {
   not_exists: "is unknown",
 };
 
+const yesNoOps: Record<string, string> = {
+  is_true: "is yes",
+  is_false: "is no",
+};
+
 const choiceOps: Record<string, string> = {
   in: "is any of",
   not_in: "is none of",
@@ -79,7 +85,7 @@ const choiceOps: Record<string, string> = {
  * listOps take a list of values, typed as words separated by commas.
  */
 const listOps = new Set(["contains_any", "not_contains_any", "in", "not_in"]);
-const bareOps = new Set(["exists", "not_exists"]);
+const bareOps = new Set(["exists", "not_exists", "is_true", "is_false"]);
 
 /*
  * fieldsFor lists the fields offered under a trigger.
@@ -96,7 +102,12 @@ export function fieldsFor(trigger: TriggerKind): Record<string, string> {
 }
 
 export function opsFor(field: string): Record<string, string> {
-  return conditionFields[field]?.type === "choice" ? choiceOps : textOps;
+  const type = conditionFields[field]?.type;
+  if (type === "yes_no") {
+    return yesNoOps;
+  }
+
+  return type === "choice" ? choiceOps : textOps;
 }
 
 export function needsValue(op: string): boolean {

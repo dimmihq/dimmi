@@ -110,6 +110,36 @@ it.describe("automation", () => {
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
   });
 
+  it("waits out a quiet customer until office hours open, and publishes", async ({ page }) => {
+    await newWorkflow(page, "stops replying", /Customer stops replying/);
+    const inspector = page.getByRole("region", { name: "Step settings" });
+    await expect(inspector.getByRole("region", { name: "How long the silence lasts" })).toBeVisible();
+
+    const canvas = page.getByRole("region", { name: "Workflow" });
+    await canvas.getByRole("button", { name: "Add a step" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Wait" }).click();
+    await inspector.getByRole("button", { name: /Wait until/ }).click();
+    await page.getByRole("option", { name: "Office hours to open" }).click();
+    await expect(canvas.getByRole("button", { name: /Wait until office hours open/ })).toBeVisible();
+    await expect(page.getByText("Saved as draft")).toBeVisible();
+
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  });
+
+  it("opens Saturday in office hours and keeps it", async ({ page }) => {
+    await page.goto("/d/settings/office-hours");
+    await expect(page.getByText(/Open now|Closed now/)).toBeVisible();
+    await page.getByRole("switch", { name: "Open on Saturday" }).focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByRole("switch", { name: "Open on Saturday" })).toBeChecked();
+    await page.getByRole("button", { name: "Save hours" }).click();
+    await expect(page.getByRole("button", { name: "Save hours" })).toBeDisabled();
+
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Saturday opens" })).toHaveValue("09:00");
+  });
+
   it("fits a workflow on screen and keeps a new step in view", async ({ page }) => {
     await newWorkflow(page, "first message", /Customer sends their first message/);
     const canvas = page.getByRole("region", { name: "Workflow" });

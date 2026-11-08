@@ -1006,3 +1006,9 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | dimmi hands over | same, customer asks for a refund the agent hands over | `handed_over` path runs; the agent's own handoff team is not applied |
 | dimmi quiet | same, customer says nothing for `quiet_after` after an answer | `quiet` path runs, `ai_state` `off` |
 | dimmi off | agent disabled, then publish | publish needs `acknowledge_warnings` (`dimmi_not_ready`); a customer writing in goes straight down `handed_over` |
+| Schedules | `GET $B/schedules` on a new workspace | one default "Office hours", weekdays 09:00 to 17:00, `status.open` and `next_open`/`next_close` right for now |
+| Bad hours | `POST $B/schedules` with a range ending before it starts | 422 `schedule_invalid`; deleting the default answers 409 `schedule_default`, one a workflow names 409 `schedule_in_use` |
+| Hours only | first-message workflow with `schedule.mode` `open`; write in out of hours | no run; the match log says `schedule` |
+| Wait for hours | wait `until office_hours_open` on a Saturday | the run resumes Monday at opening time |
+| Customer quiet | `conversation.customer_quiet` after `1h`; teammate replies; customer says nothing | the workflow runs an hour later; a customer message or a newer reply in between stops that timer |
+| Team quiet | `conversation.teammate_quiet` after `30m`; customer writes, nobody replies | the workflow runs after 30 minutes, once per waiting period |

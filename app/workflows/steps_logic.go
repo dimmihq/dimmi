@@ -80,13 +80,13 @@ runWait pauses the run.
 func runWait(ctx context.Context, st *state, s workflowspec.Step) (outcome, error) {
 	w := settings[workflowspec.WaitSettings](s)
 
-	until := st.now()
-	if d, err := workflowspec.ParseDuration(w.For); err == nil && w.For != "" {
-		until = until.Add(d)
+	until, err := st.waitEnd(ctx, w)
+	if scheduleProblem(err) {
+		return skipped(outcomeMissingRef), nil
 	}
 
-	if w.Until != nil && w.Until.Kind == "time_of_day" {
-		until = st.nextTimeOfDay(ctx, w.Until.Time)
+	if err != nil {
+		return outcome{}, err
 	}
 
 	interrupt := w.InterruptOn
@@ -96,6 +96,38 @@ func runWait(ctx context.Context, st *state, s workflowspec.Step) (outcome, erro
 
 	return outcome{wait: &waitState{Kind: waitTimer, Until: &until, Interrupt: interrupt}}, nil
 }
+
+/*
+waitEnd is when a wait ends: after its duration, counting only open
+hours when it counts business time, at the next opening of its
+schedule, or at the next time of day.
+*/
+func (st *state) waitEnd(ctx context.Context, w workflowspec.WaitSettings) (time.Time, error) {
+	now := st.now()
+	switch {
+	case w.Until != nil && w.Until.Kind == untilOpen:
+		return st.nextOpen(ctx, w.Until)
+	case w.Until != nil:
+		return st.nextTimeOfDay(ctx, w.Until.Time), nil
+	}
+
+	d, _ := workflowspec.ParseDuration(w.For)
+	if w.Count != "business" || d == 0 {
+		return now.Add(d), nil
+	}
+
+	sched, err := st.e.hours(ctx, st.q, st.conv.WorkspaceID, w.ScheduleID)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return sched.AddBusiness(now, d)
+}
+
+/*
+untilOpen is the moment kind of waiting for office hours to open.
+*/
+const untilOpen = "office_hours_open"
 
 /*
 nextTimeOfDay is the next moment the clock shows the time in the

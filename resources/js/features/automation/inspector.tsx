@@ -26,6 +26,10 @@ import { type TriggerKind, tintOf, triggers } from "./triggers";
 import type { Step, StepKind } from "./workflows";
 
 const channelChoices = { all: "All channels", widget: "Messenger", email: "Email" };
+const scheduleChoices = { any: "Any time", open: "Only in office hours", closed: "Only outside office hours" };
+const customerQuietWaits = { "1h": "1 hour", "4h": "4 hours", "1d": "1 day", "2d": "2 days", "7d": "7 days" };
+const teamQuietWaits = { "5m": "5 minutes", "15m": "15 minutes", "30m": "30 minutes", "1h": "1 hour", "4h": "4 hours" };
+const replyAuthors = { both: "A teammate or dimmi", member: "A teammate", dimmi: "dimmi" };
 const statusChoices = { open: "Open", snoozed: "Snoozed", closed: "Closed" };
 
 /*
@@ -49,6 +53,59 @@ function Issues({ issues }: { issues: Issue[] }) {
       {issues.map((issue) => (
         <Row key={`${issue.code}-${issue.path_id ?? ""}-${issue.field ?? ""}-${issue.message}`} label={issue.message} />
       ))}
+    </Section>
+  );
+}
+
+/*
+ * QuietSettings shows how long the silence of a quiet trigger lasts,
+ * whose reply starts it and whether only office hours count.
+ */
+function QuietSettings({ spec, head }: { spec: Spec; head: Head }) {
+  const customer = spec.trigger === "conversation.customer_quiet";
+  if (!customer && spec.trigger !== "conversation.teammate_quiet") {
+    return null;
+  }
+  const settings = spec.trigger_settings ?? {};
+  const set = (changes: Record<string, unknown>) =>
+    head.onSpec((current) => {
+      const next: Record<string, unknown> = { ...current.trigger_settings, ...changes };
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === undefined) {
+          delete next[key];
+        }
+      }
+
+      return { ...current, trigger_settings: next };
+    });
+
+  return (
+    <Section title="How long the silence lasts">
+      <Row label={customer ? "Customer silent for" : "Customer waiting for"}>
+        <Pick
+          label="Silence lasts"
+          choices={choicesOf(customer ? customerQuietWaits : teamQuietWaits)}
+          value={typeof settings.after === "string" ? settings.after : ""}
+          onChange={(after) => set({ after })}
+        />
+      </Row>
+      {customer ? (
+        <Row label="After a reply from">
+          <Pick
+            label="After a reply from"
+            choices={choicesOf(replyAuthors)}
+            value={typeof settings.after_reply_from === "string" ? settings.after_reply_from : "both"}
+            onChange={(from) => set({ after_reply_from: from === "both" ? undefined : from })}
+          />
+        </Row>
+      ) : null}
+      <Row label="Count only office hours" description="Evenings, weekends and holidays don't count.">
+        <Toggle
+          label="Count only office hours"
+          on={settings.count === "business"}
+          onChange={(on) => set({ count: on ? "business" : undefined })}
+        />
+      </Row>
     </Section>
   );
 }
@@ -96,6 +153,7 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
           </>
         ) : null}
       </Section>
+      <QuietSettings spec={spec} head={head} />
       <Section title="Who it runs for">
         <Row label="Channels">
           <Pick
@@ -105,6 +163,14 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
             onChange={(channel) =>
               head.onSpec((current) => ({ ...current, channels: channel === "all" ? undefined : [channel] }))
             }
+          />
+        </Row>
+        <Row label="When it runs" description="Office hours are set in Settings, Office hours.">
+          <Pick
+            label="When it runs"
+            choices={choicesOf(scheduleChoices)}
+            value={spec.schedule.mode || "any"}
+            onChange={(mode) => head.onSpec((current) => ({ ...current, schedule: { ...current.schedule, mode } }))}
           />
         </Row>
         <Row

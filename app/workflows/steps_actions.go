@@ -33,13 +33,14 @@ import (
 The outcomes of action steps.
 */
 const (
-	outcomeDone       = "done"
-	outcomeAssigned   = "assigned"
-	outcomeKept       = "kept"
-	outcomeNoMember   = "no_eligible_member"
-	outcomeMissingRef = "reference_missing"
-	outcomeNotOpen    = "not_open"
-	outcomeUnchanged  = "unchanged"
+	outcomeDone        = "done"
+	outcomeAssigned    = "assigned"
+	outcomeKept        = "kept"
+	outcomeNoMember    = "no_eligible_member"
+	outcomeMissingRef  = "reference_missing"
+	outcomeNotOpen     = "not_open"
+	outcomeUnchanged   = "unchanged"
+	outcomeAlreadyOpen = "already_open"
 )
 
 /*
@@ -304,14 +305,38 @@ func runSnooze(ctx context.Context, st *state, s workflowspec.Step) (outcome, er
 		return skipped(outcomeNotOpen), nil
 	}
 
+	until, err := st.snoozeEnd(ctx, sn)
+	if scheduleProblem(err) {
+		return skipped(outcomeMissingRef), nil
+	}
+
+	if err != nil || !until.After(st.now()) {
+		return skipped(outcomeAlreadyOpen), err
+	}
+
+	return st.changeStatus(ctx, conversations.StatusChange{
+		Status: string(enums.ConversationStatusSnoozed), Until: until,
+	})
+}
+
+/*
+snoozeEnd is when a snooze ends: after its duration, at the next
+opening of its schedule, or at the next time of day.
+*/
+func (st *state) snoozeEnd(ctx context.Context, sn workflowspec.SnoozeSettings) (time.Time, error) {
+	switch {
+	case sn.Until != nil && sn.Until.Kind == untilOpen:
+		return st.nextOpen(ctx, sn.Until)
+	case sn.Until != nil:
+		return st.nextTimeOfDay(ctx, sn.Until.Time), nil
+	}
+
 	d, err := workflowspec.ParseDuration(sn.For)
 	if err != nil {
 		d = 24 * time.Hour
 	}
 
-	return st.changeStatus(ctx, conversations.StatusChange{
-		Status: string(enums.ConversationStatusSnoozed), Until: st.now().Add(d),
-	})
+	return st.now().Add(d), nil
 }
 
 /*

@@ -66,15 +66,24 @@ func startingSpec(in CreateInput) (workflowspec.Spec, error) {
 
 /*
 emptySpec is a definition of the trigger with no steps and its default
-rules.
+rules. A quiet trigger starts with a silence of its usual length, so
+a new workflow is never wrong before anyone touched it.
 */
 func emptySpec(trigger string) workflowspec.Spec {
 	t, _ := workflowspec.FindTrigger(trigger)
-
-	return workflowspec.Spec{
+	spec := workflowspec.Spec{
 		Schema: workflowspec.SchemaVersion, Trigger: trigger, Schedule: workflowspec.Schedule{Mode: "any"},
 		Reentry: workflowspec.Reentry{Mode: t.Default}, Steps: []workflowspec.Step{},
 	}
+
+	switch trigger {
+	case workflowspec.TriggerCustomerQuiet:
+		spec.TriggerSettings = json.RawMessage(`{"after":"1d"}`)
+	case workflowspec.TriggerTeammateQuiet:
+		spec.TriggerSettings = json.RawMessage(`{"after":"30m"}`)
+	}
+
+	return spec
 }
 
 /*

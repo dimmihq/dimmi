@@ -46,6 +46,7 @@ import {
   RiSparkling2Line,
   RiStackLine,
   RiTeamLine,
+  RiTimeLine,
   RiUserLine,
   RiWebhookLine,
 } from "@remixicon/react";
@@ -208,6 +209,13 @@ export const settingsPages = {
     "Where conversations land and how they reopen.",
   ),
   tags: page("settings-tags", "Tags", RiPriceTag3Line, "/d/settings/tags", "Labels teammates put on conversations."),
+  "office-hours": page(
+    "settings-office-hours",
+    "Office hours",
+    RiTimeLine,
+    "/d/settings/office-hours",
+    "When your team is around to reply.",
+  ),
   "saved-replies": page(
     "settings-saved-replies",
     "Saved replies",
@@ -460,7 +468,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "inbox",
       label: "Inbox",
-      items: [pages.inboxes, pages.tags, pages["saved-replies"], pages["conversation-safety"]],
+      items: [pages.inboxes, pages.tags, pages["office-hours"], pages["saved-replies"], pages["conversation-safety"]],
     },
     { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
     { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },

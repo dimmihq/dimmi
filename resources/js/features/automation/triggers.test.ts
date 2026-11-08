@@ -10,6 +10,11 @@ describe("triggers", () => {
     expect(offered.sort()).toEqual(running.sort());
   });
 
+  it("offers the quiet triggers", () => {
+    expect(triggersIn("during", "stops replying")).toEqual(["conversation.customer_quiet"]);
+    expect(triggersIn("team", "waits")).toEqual(["conversation.teammate_quiet"]);
+  });
+
   it("narrows a group to the triggers matching every searched word", () => {
     expect(triggersIn("team", "STATUS")).toEqual(["conversation.status_changed"]);
     expect(triggersIn("start", "closed conversation")).toEqual(["conversation.customer_reopened"]);
@@ -17,7 +22,7 @@ describe("triggers", () => {
   });
 
   it("leaves out triggers that do not run yet", () => {
-    expect(triggersIn("during", "stops replying")).toEqual([]);
+    expect(triggersIn("during", "rates")).toEqual([]);
     expect(triggersIn("dimmi")).toEqual([]);
   });
 

@@ -51,6 +51,7 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	})
 	events.ListenQueued(d, queuedMessage)
 	events.ListenQueued(d, resumeOnMessage)
+	events.ListenQueued(d, armQuiet)
 	events.ListenQueued(d, func(ev appevents.AiHandoffRequested) queue.Args {
 		return jobs.ResumeWorkflowOnAgentArgs{
 			WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Reason: ev.Reason, EventID: ev.ID,
@@ -227,4 +228,29 @@ func assignmentData(ev appevents.ConversationAssigned) map[string]any {
 		"trigger.to": to, "trigger.to_member": publicID(models.PrefixMember, ev.ToMemberID),
 		"trigger.to_team": publicID(models.PrefixTeam, ev.ToTeamID),
 	}
+}
+
+/*
+armQuiet arms the quiet triggers a message may start: a public reply
+by a teammate or the agent starts the customer's silence, a customer's
+message may start their wait for the team.
+*/
+func armQuiet(ev appevents.MessageCreated) queue.Args {
+	if ev.Type != string(enums.MessageTypeMessage) {
+		return nil
+	}
+
+	args := jobs.ArmQuietTriggersArgs{
+		WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, MessageID: ev.MessageID, Author: ev.AuthorType,
+	}
+	switch {
+	case ev.AuthorType == string(enums.AuthorTypeMember) || ev.AuthorType == string(enums.AuthorTypeAgent):
+		args.Trigger = workflowspec.TriggerCustomerQuiet
+	case customerMessage(ev):
+		args.Trigger = workflowspec.TriggerTeammateQuiet
+	default:
+		return nil
+	}
+
+	return args
 }

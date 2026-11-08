@@ -126,9 +126,14 @@ function tagged(step: Step, names: Names, verb: string): string {
 function waited(step: Step, verb: string): string {
   const length = text(step.settings, "for");
   if (length) {
-    return `${verb} for ${lasting(length)}`;
+    const office = text(step.settings, "count") === "business" ? " of office hours" : "";
+
+    return `${verb} for ${lasting(length)}${office}`;
   }
-  const until = step.settings?.until as { time?: string } | undefined;
+  const until = step.settings?.until as { kind?: string; time?: string } | undefined;
+  if (until?.kind === "office_hours_open") {
+    return `${verb} until office hours open`;
+  }
 
   return until?.time ? `${verb} until ${until.time}` : unsetSummary;
 }

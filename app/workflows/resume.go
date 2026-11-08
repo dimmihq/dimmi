@@ -19,10 +19,13 @@ package workflows
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
@@ -49,9 +52,17 @@ func (e *Engine) AdvanceRuns(ctx context.Context, workspace ids.UUID, runs []ids
 }
 
 /*
-AdvanceRun moves a run on at its sequence, or wakes it.
+AdvanceRun moves a run on at its sequence, or wakes it. A timer that
+comes before its run's wake time waits until it is due rather than
+being spent early.
 */
 func (e *Engine) AdvanceRun(ctx context.Context, a jobs.AdvanceWorkflowRunArgs) error {
+	if a.Wake {
+		if early, err := e.earlyBy(ctx, a); err != nil || early > 0 {
+			return errors.Join(err, postponed(early))
+		}
+	}
+
 	s := Step{WorkspaceID: a.WorkspaceID, RunID: a.RunID, Seq: &a.Seq}
 	switch {
 	case a.Wake:
@@ -61,6 +72,45 @@ func (e *Engine) AdvanceRun(ctx context.Context, a jobs.AdvanceWorkflowRunArgs) 
 	}
 
 	return e.Advance(ctx, s)
+}
+
+/*
+earlyBy returns how long before its run's wake time a timer came, zero
+when it is due or no longer applies.
+*/
+func (e *Engine) earlyBy(ctx context.Context, a jobs.AdvanceWorkflowRunArgs) (time.Duration, error) {
+	var early time.Duration
+	err := e.transaction(ctx, a.WorkspaceID, func(ctx context.Context, tx *database.Tx) error {
+		run, err := models.New(tx).FindWorkflowRun(ctx, models.FindWorkflowRunParams{
+			WorkspaceID: a.WorkspaceID, ID: a.RunID,
+		})
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("find workflow run: %w", err)
+		}
+
+		if run.Seq == a.Seq && run.Status == StatusWaiting && run.WakeAt != nil {
+			early = run.WakeAt.Sub(e.Clock.Now())
+		}
+
+		return nil
+	})
+
+	return max(early, 0), err
+}
+
+/*
+postponed holds the job back for the duration, nothing for none.
+*/
+func postponed(d time.Duration) error {
+	if d <= 0 {
+		return nil
+	}
+
+	return queue.Postpone(d)
 }
 
 /*

@@ -58,7 +58,9 @@ const (
 /*
 Event is something that may start workflows on a conversation: the
 trigger, the id of the event for idempotency, the chain of workflows
-that caused it, and the trigger's own data, such as the message.
+that caused it, and the trigger's own data, such as the message. Only,
+when set, offers the event to that one workflow, as a timer armed for
+it does.
 */
 type Event struct {
 	WorkspaceID    ids.UUID       `json:"workspace_id"`
@@ -67,6 +69,7 @@ type Event struct {
 	EventID        string         `json:"event_id"`
 	Chain          []ids.UUID     `json:"chain,omitempty"`
 	Data           map[string]any `json:"data,omitempty"`
+	Only           *ids.UUID      `json:"only,omitempty"`
 }
 
 /*
@@ -104,8 +107,13 @@ from a job once the transaction commits.
 func (e *Engine) MatchInTx(ctx context.Context, tx *database.Tx, ev Event) error {
 	q := models.New(tx)
 	found, err := e.candidates(ctx, q, ev.WorkspaceID, ev.Trigger)
-	if err != nil || len(found) == 0 {
+	if err != nil {
 		return err
+	}
+
+	found = onlyFor(found, ev.Only)
+	if len(found) == 0 {
+		return nil
 	}
 
 	conv, err := q.FindConversation(ctx, models.FindConversationParams{
@@ -156,6 +164,10 @@ prepare loads what every candidate's checks read.
 func (e *Engine) prepare(ctx context.Context, q *models.Queries, ev Event, conv models.Conversation) (*match, error) {
 	s, err := loadSubject(ctx, q, conv)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := e.withHours(ctx, q, s); err != nil {
 		return nil, err
 	}
 
@@ -258,6 +270,10 @@ func (e *Engine) check(ctx context.Context, q *models.Queries, m *match, c candi
 		return SkipChannel, "", nil
 	}
 
+	if reason, err := e.scheduleReason(ctx, q, m, c); reason != "" || err != nil {
+		return reason, "", err
+	}
+
 	if explained := c.audience.Explain(m.subject.env()); explained.Result != audience.True {
 		failing, _ := explained.FirstFailing()
 		return SkipAudience, failing.Field, nil
@@ -321,11 +337,13 @@ func holdReason(m *match, facing bool) string {
 }
 
 /*
-reentry applies the workflow's rule on running again.
+reentry applies the workflow's rule on running again. A customer
+waiting for the team fires once per waiting period by its own timer,
+so its rule is never counted across periods.
 */
 func (e *Engine) reentry(ctx context.Context, q *models.Queries, m *match, c candidate) (string, error) {
 	mode := c.spec.Reentry.Mode
-	if mode == "" || mode == workflowspec.ReentryEveryTime {
+	if mode == "" || mode == workflowspec.ReentryEveryTime || c.spec.Trigger == workflowspec.TriggerTeammateQuiet {
 		return "", nil
 	}
 
@@ -401,4 +419,23 @@ func (e *Engine) record(ctx context.Context, tx *database.Tx, m *match) error {
 	}
 
 	return e.queueBatch(ctx, tx, m.conv.WorkspaceID, m.started)
+}
+
+/*
+onlyFor keeps the one workflow an event is for, or every candidate when
+it is for any.
+*/
+func onlyFor(found []candidate, only *ids.UUID) []candidate {
+	if only == nil {
+		return found
+	}
+
+	var out []candidate
+	for _, c := range found {
+		if c.workflowID == *only {
+			out = append(out, c)
+		}
+	}
+
+	return out
 }

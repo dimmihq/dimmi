@@ -199,3 +199,20 @@ WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND ty
   AND deleted_at IS NULL
 ORDER BY id DESC
 LIMIT 1;
+
+-- name: QuietAnchors :one
+-- QuietAnchors returns what a quiet trigger checks before it fires: the
+-- newest public reply by a teammate or the agent, the nil id for none,
+-- and whether the customer wrote after the anchor message.
+SELECT
+    coalesce((
+        SELECT m.id FROM messages m
+        WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id AND m.type = 'message'
+          AND m.author_type IN ('member', 'agent') AND m.deleted_at IS NULL
+        ORDER BY m.id DESC LIMIT 1
+    ), '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS last_reply_id,
+    EXISTS (
+        SELECT 1 FROM messages m
+        WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id AND m.type = 'message'
+          AND m.author_type = 'contact' AND m.deleted_at IS NULL AND m.id > @anchor_id
+    )::boolean AS customer_wrote;

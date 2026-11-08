@@ -44,4 +44,27 @@ func workflowRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, one+"/publications", "workflows.publications.store", wf.Publish).
 		Ability("workflows:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, one+"/versions", "workflows.versions.index", wf.Versions).Ability("workflows:read")
+	scheduleRoutes(workspace, a)
+}
+
+/*
+scheduleRoutes declares the office hours workflows count with. Every
+member may read them; changing them takes the workflows:write ability,
+and the actions check the member may manage schedules.
+*/
+func scheduleRoutes(workspace *routing.Router, a *app.App) {
+	if a.Actions.Schedules == nil {
+		return
+	}
+
+	sc := &v1.ScheduleController{Schedules: a.Actions.Schedules, IDs: a.IDs, Clock: a.Clock}
+	one := "/schedules/{schedule}"
+
+	routing.Get(workspace, "/schedules", "schedules.index", sc.Index).Ability("workflows:read")
+	routing.Post(workspace, "/schedules", "schedules.store", sc.Store).
+		Ability("workflows:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, one, "schedules.show", sc.Show).Ability("workflows:read")
+	routing.Patch(workspace, one, "schedules.update", sc.Update).Ability("workflows:write")
+	routing.Delete(workspace, one, "schedules.destroy", sc.Destroy).
+		Ability("workflows:write").Status(fhttp.StatusNoContent)
 }

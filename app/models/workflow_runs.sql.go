@@ -905,6 +905,42 @@ func (q *Queries) PublicAuthorBefore(ctx context.Context, arg PublicAuthorBefore
 	return author_type, err
 }
 
+const quietAnchors = `-- name: QuietAnchors :one
+SELECT
+    coalesce((
+        SELECT m.id FROM messages m
+        WHERE m.workspace_id = $1 AND m.conversation_id = $2 AND m.type = 'message'
+          AND m.author_type IN ('member', 'agent') AND m.deleted_at IS NULL
+        ORDER BY m.id DESC LIMIT 1
+    ), '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS last_reply_id,
+    EXISTS (
+        SELECT 1 FROM messages m
+        WHERE m.workspace_id = $1 AND m.conversation_id = $2 AND m.type = 'message'
+          AND m.author_type = 'contact' AND m.deleted_at IS NULL AND m.id > $3
+    )::boolean AS customer_wrote
+`
+
+type QuietAnchorsParams struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	ConversationID ids.UUID `json:"conversation_id"`
+	AnchorID       ids.UUID `json:"anchor_id"`
+}
+
+type QuietAnchorsRow struct {
+	LastReplyID   ids.UUID `json:"last_reply_id"`
+	CustomerWrote bool     `json:"customer_wrote"`
+}
+
+// QuietAnchors returns what a quiet trigger checks before it fires: the
+// newest public reply by a teammate or the agent, the nil id for none,
+// and whether the customer wrote after the anchor message.
+func (q *Queries) QuietAnchors(ctx context.Context, arg QuietAnchorsParams) (QuietAnchorsRow, error) {
+	row := q.db.QueryRow(ctx, quietAnchors, arg.WorkspaceID, arg.ConversationID, arg.AnchorID)
+	var i QuietAnchorsRow
+	err := row.Scan(&i.LastReplyID, &i.CustomerWrote)
+	return i, err
+}
+
 const readyConversationAi = `-- name: ReadyConversationAi :exec
 UPDATE conversations SET ai_state = 'off', ai_handed_off_at = NULL, ai_handoff_reason = NULL, updated_at = $1
 WHERE workspace_id = $2 AND id = $3 AND ai_state = 'handed_off'

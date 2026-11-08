@@ -283,16 +283,34 @@ func TestCheck(t *testing.T) {
 		})
 	}
 
-	t.Run("refuses office hours until schedules can run", func(t *testing.T) {
+	t.Run("accepts office hours restrictions, waits and business counting", func(t *testing.T) {
 		t.Parallel()
 
-		assert.Contains(t, errorCodes(t, `{"schema":1,"trigger":"reusable","schedule":{"mode":"open"}}`),
-			workflowspec.CodeStepNotAvailable)
+		assert.Empty(t, errorCodes(t, `{"schema":1,"trigger":"conversation.first_message","schedule":{"mode":"open"}}`))
 		business := `{"id":"s_aaaaaa","kind":"wait","settings":{"for":"1h","count":"business"}}`
-		assert.Contains(t, errorCodes(t, def(fm, business)), workflowspec.CodeStepNotAvailable)
+		assert.Empty(t, errorCodes(t, def(fm, business)))
 
 		open := `{"id":"s_aaaaaa","kind":"wait","settings":{"until":{"kind":"office_hours_open"}}}`
-		assert.Contains(t, errorCodes(t, def(fm, open)), workflowspec.CodeStepNotAvailable)
+		assert.Empty(t, errorCodes(t, def(fm, open)))
+		soon := `{"schema":1,"trigger":"conversation.first_message","schedule":{"mode":"soon"}}`
+		assert.Contains(t, errorCodes(t, soon), workflowspec.CodeInvalidSetting)
+	})
+
+	t.Run("checks how long a quiet trigger waits and whose reply starts it", func(t *testing.T) {
+		t.Parallel()
+
+		quiet := `{"schema":1,"trigger":"conversation.customer_quiet","trigger_settings":%s}`
+		assert.Empty(t, errorCodes(t, fmt.Sprintf(quiet, `{"after":"2d","count":"business"}`)))
+		assert.Contains(t, errorCodes(t, `{"schema":1,"trigger":"conversation.customer_quiet"}`),
+			workflowspec.CodeInvalidDuration)
+		assert.Contains(t,
+			errorCodes(t, `{"schema":1,"trigger":"conversation.teammate_quiet","trigger_settings":{"after":"8d"}}`),
+			workflowspec.CodeInvalidDuration)
+		assert.Contains(t, errorCodes(t, fmt.Sprintf(quiet, `{"after":"1h","after_reply_from":"bot"}`)),
+			workflowspec.CodeInvalidSetting)
+		assert.Contains(t, errorCodes(t,
+			`{"schema":1,"trigger":"conversation.status_changed","trigger_settings":{"to":["gone"]}}`),
+			workflowspec.CodeInvalidSetting)
 	})
 
 	t.Run("refuses paths nested too deep", func(t *testing.T) {

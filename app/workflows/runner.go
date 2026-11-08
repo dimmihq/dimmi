@@ -385,6 +385,10 @@ func (st *state) subject(ctx context.Context) (*subject, error) {
 		return nil, err
 	}
 
+	if err := st.e.withHours(ctx, st.q, s); err != nil {
+		return nil, err
+	}
+
 	_ = json.Unmarshal(st.run.TriggerData, &s.trigger)
 	s.vars, s.now = st.vars, st.e.Clock.Now()
 	st.subj = s

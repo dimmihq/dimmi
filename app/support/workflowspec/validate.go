@@ -118,17 +118,11 @@ func (c *checker) checkHead() {
 
 	c.checkAudience()
 
-	switch s.Schedule.Mode {
-	case "", "any":
-	case "open", "closed":
-		c.fail(Issue{
-			Code: CodeStepNotAvailable, Field: "schedule.mode",
-			Message: "Running only in or out of office hours is not available yet.",
-		})
-	default:
+	if s.Schedule.Mode != "" && !slices.Contains([]string{"any", "open", "closed"}, s.Schedule.Mode) {
 		c.fail(Issue{Code: CodeInvalidSetting, Field: "schedule.mode", Message: "Use any, open or closed."})
 	}
 
+	c.checkTriggerSettings()
 	c.checkReentry()
 }
 

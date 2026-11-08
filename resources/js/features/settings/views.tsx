@@ -29,6 +29,7 @@ import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
 import { MessengersSettings } from "./pages/messengers";
 import { NotificationsSettings } from "./pages/notifications";
+import { OfficeHoursSettings } from "./pages/office-hours";
 import { RolesSettings } from "./pages/roles";
 import { SingleSignOnSettings } from "./pages/single-sign-on";
 import { TagsSettings } from "./pages/tags";
@@ -45,6 +46,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   exports: ExportsSettings,
   inboxes: InboxesSettings,
   tags: TagsSettings,
+  "office-hours": OfficeHoursSettings,
   "saved-replies": SavedRepliesSettings,
   "conversation-safety": ConversationSafetySettings,
   messenger: MessengersSettings,

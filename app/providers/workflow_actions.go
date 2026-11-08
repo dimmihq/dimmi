@@ -18,6 +18,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
 	"github.com/dimmihq/dimmi/app/jobs"
 	engine "github.com/dimmihq/dimmi/app/workflows"
@@ -37,6 +38,7 @@ func bootWorkflows(a *app.App) {
 
 	a.Actions.WorkflowEngine = runner
 	a.Actions.Workflows = &workflows.Workflows{DB: a.DB, Clock: a.Clock, IDs: a.IDs, Live: runner}
+	a.Actions.Schedules = &schedules.Schedules{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 }
 
 /*
@@ -54,5 +56,7 @@ func registerWorkflowJobs(a *app.App) error {
 		queue.Register(a.Queue, &jobs.AdvanceWorkflowRun{Engine: runner}),
 		queue.Register(a.Queue, &jobs.ResumeWorkflowInput{Engine: runner}),
 		queue.Register(a.Queue, &jobs.ResumeWorkflowOnAgent{Engine: runner}),
+		queue.Register(a.Queue, &jobs.ArmQuietTriggers{Engine: runner}),
+		queue.Register(a.Queue, &jobs.FireQuietTrigger{Engine: runner}),
 	)
 }

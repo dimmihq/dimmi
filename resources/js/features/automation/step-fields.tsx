@@ -281,19 +281,53 @@ function BranchFields({ step, trigger, onEdit }: Props) {
   );
 }
 
+const waitKinds = { length: "A length of time", open: "Office hours to open" };
+
+/*
+ * LengthFields shows how long a wait or snooze lasts: a length of time,
+ * which a wait may count in office hours only, or until office hours
+ * open.
+ */
 function LengthFields({ step, onEdit, title }: Props & { title: string }) {
   const set = useSet(onEdit);
+  const untilOpen = (step.settings?.until as { kind?: string } | undefined)?.kind === "office_hours_open";
 
   return (
-    <Section title={title}>
-      <Row label="For">
+    <Section title={title} description="Office hours are set in Settings, Office hours.">
+      <Row label="Until">
         <Pick
-          label={`${title} for`}
-          choices={choicesOf(durations)}
-          value={text(step.settings, "for")}
-          onChange={(value) => set({ for: value, until: undefined })}
+          label={`${title} until`}
+          choices={choicesOf(waitKinds)}
+          value={untilOpen ? "open" : "length"}
+          onChange={(value) =>
+            set(
+              value === "open"
+                ? { for: undefined, count: undefined, until: { kind: "office_hours_open" } }
+                : { for: "1h", until: undefined },
+            )
+          }
         />
       </Row>
+      {untilOpen ? null : (
+        <Row label="For">
+          <Pick
+            key={text(step.settings, "for") || "none"}
+            label={`${title} for`}
+            choices={choicesOf(durations)}
+            value={text(step.settings, "for")}
+            onChange={(value) => set({ for: value, until: undefined })}
+          />
+        </Row>
+      )}
+      {untilOpen || step.kind !== "wait" ? null : (
+        <Row label="Count only office hours" description="Evenings, weekends and holidays don't count.">
+          <Toggle
+            label="Count only office hours"
+            on={text(step.settings, "count") === "business"}
+            onChange={(on) => set({ count: on ? "business" : undefined })}
+          />
+        </Row>
+      )}
     </Section>
   );
 }

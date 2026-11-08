@@ -64,10 +64,10 @@ func (c *checker) checkWait(s Step) {
 	c.duration(s, "for", w.For, span{time.Minute, maxDuration})
 	c.until(s, w.Until)
 
-	if w.Count == "business" {
+	if w.Count == "business" && w.For == "" {
 		c.fail(Issue{
-			Code: CodeStepNotAvailable, StepID: s.ID, Field: "count",
-			Message: "Counting only office hours is not available yet.",
+			Code: CodeInvalidSetting, StepID: s.ID, Field: "count",
+			Message: "Count office hours only with a wait for a duration.",
 		})
 	}
 
@@ -89,13 +89,6 @@ func (c *checker) until(s Step, u *WaitUntil) {
 	}
 
 	c.oneOf(s, "until.kind", u.Kind, "office_hours_open", "time_of_day")
-
-	if u.Kind == "office_hours_open" {
-		c.fail(Issue{
-			Code: CodeStepNotAvailable, StepID: s.ID, Field: "until.kind",
-			Message: "Waiting for office hours is not available yet.",
-		})
-	}
 
 	if u.Kind != "time_of_day" {
 		return

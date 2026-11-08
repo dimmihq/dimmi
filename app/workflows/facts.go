@@ -25,12 +25,13 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/audience"
+	"github.com/dimmihq/dimmi/app/support/officehours"
 )
 
 /*
 subject is what conditions are evaluated about: the conversation, its
-contact and company with their tags, the channel, the trigger's data
-and the run's variables.
+contact and company with their tags, the channel, the trigger's data,
+the run's variables, and the workspace's default office hours.
 */
 type subject struct {
 	conversation     models.Conversation
@@ -43,6 +44,7 @@ type subject struct {
 	vars             map[string]any
 	now              time.Time
 	location         *time.Location
+	hours            *officehours.Schedule
 }
 
 /*
@@ -134,6 +136,8 @@ func (s *subject) Lookup(key string) (any, bool) {
 		v = lookupMap(s.vars, strings.TrimPrefix(rest, "vars."))
 	case "time":
 		v = s.timeField(rest)
+	case "office_hours":
+		v = s.officeField(rest)
 	default:
 		v = lookupMap(s.trigger, key)
 	}
@@ -197,6 +201,18 @@ func (s *subject) conversationField(name string) any {
 		"team_id":     publicID(models.PrefixTeam, c.AssigneeTeamID), "ai_state": c.AiState, "subject": c.Subject,
 		"message_count": c.MessageCount, "waiting_minutes": waiting, "created_at": c.CreatedAt, "is_test": c.IsTest,
 	}[name]
+}
+
+/*
+officeField answers whether the team is in office hours now, nothing
+when the workspace's hours are unknown.
+*/
+func (s *subject) officeField(name string) any {
+	if name != "open" || s.hours == nil {
+		return nil
+	}
+
+	return s.hours.IsOpen(s.now)
 }
 
 /*
