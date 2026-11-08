@@ -1073,3 +1073,14 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Start | start rule `visitors: identified`; an anonymous visitor writes | session `surface.start` false; `POST /widget/v1/conversations` answers 403 `conversation_start_restricted` |
 | Untrusted start | start rule on a custom attribute, a page, or a saved audience reading one | 422 `messenger_rules_invalid` naming `claimed_field_on_access_gate` or `field_unavailable_for_surface` |
 | Settings | Settings, Messengers, a messenger, Who sees it | each of launcher, starting a conversation, help and what's new picks Everyone or a saved audience and saves at once |
+
+## Article audiences
+
+| Flow | How | Expect |
+|---|---|---|
+| Keep an article | `PATCH $B/articles/$A/audience` `{"audience_id":"$AUD"}` with an audience of signed-in users | the public page, its `.md`, search and the home page no longer show it; `null` brings it back |
+| Keep a collection | `PATCH $B/collections/$C/audience` | every article in it, and the collection itself, leave the public site |
+| dimmi | a Pro-only article; a customer without a trusted `plan` asks | dimmi's search leaves the article out; set `plan` through the API and the next answer may use it |
+| Unfit audience | an audience on email domain, a page, or one that does not exist | 422 `audience_unfit` |
+| In use | delete the audience an article is kept to | 409 `audience_in_use` naming the article |
+| Editor | Docs, an article, Audience | picking a saved audience saves at once; the public page answers 404 |

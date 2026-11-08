@@ -56,6 +56,7 @@ export interface Article {
   body_markdown?: string;
   status: ArticleStatus;
   visibility: "public" | "agent_only";
+  audience_id: string | null;
   has_unpublished_changes: boolean;
   lock_version: number;
   word_count: number;
@@ -134,6 +135,21 @@ export function saveArticle(workspace: string, id: string, change: ArticleChange
 
 export function setArticleStatus(workspace: string, id: string, status: "draft" | "archived"): Promise<Article> {
   return request<Article>("PATCH", `/articles/${encodeURIComponent(id)}`, { status }, { workspace });
+}
+
+/*
+ * setArticleAudience keeps an article to a saved audience, or opens it
+ * to everyone with null.
+ */
+export function setArticleAudience(workspace: string, id: string, audience: string | null): Promise<Article> {
+  return request<Article>(
+    "PATCH",
+    `/articles/${encodeURIComponent(id)}/audience`,
+    { audience_id: audience },
+    {
+      workspace,
+    },
+  );
 }
 
 export function publishArticle(workspace: string, id: string): Promise<Article> {

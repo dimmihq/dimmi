@@ -24,6 +24,7 @@ const article: Article = {
   description: null,
   status: "published",
   visibility: "agent_only",
+  audience_id: null,
   has_unpublished_changes: false,
   lock_version: 1,
   word_count: 10,

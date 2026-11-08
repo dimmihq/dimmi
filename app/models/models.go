@@ -327,6 +327,7 @@ type Article struct {
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
 	TitleTrgm             *string         `json:"title_trgm"`
+	AudienceID            *ids.UUID       `json:"audience_id"`
 }
 
 type ArticleVersion struct {
@@ -471,6 +472,7 @@ type Collection struct {
 	DeletedAt    *time.Time `json:"deleted_at"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	AudienceID   *ids.UUID  `json:"audience_id"`
 }
 
 type Company struct {

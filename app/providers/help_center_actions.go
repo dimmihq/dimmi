@@ -25,7 +25,7 @@ func bootHelpCenters(a *app.App) {
 	acts.HelpCenters = &helpcenters.HelpCenters{DB: a.DB, Clock: a.Clock}
 	acts.Collections = &helpcenters.Collections{DB: a.DB, Clock: a.Clock}
 	acts.Articles = helpcenters.NewArticles(a.DB, a.Clock)
-	acts.HelpPublic = helpcenters.NewPublic(a.DB)
+	acts.HelpPublic = helpcenters.NewPublic(a.DB, a.Clock)
 	acts.HelpCenterAddresses = helpcenters.Addresses{
 		BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 	}

@@ -219,7 +219,7 @@ func (c *checker) checkFields(r *audience.Rule, at Issue, scope ruleScope) {
 			continue
 		}
 
-		if f.Trust == audience.Claimed && scope == scopeAudience {
+		if (f.Trust == audience.Claimed || f.Trust == audience.ByKey) && scope == scopeAudience {
 			issue.Code = WarnClaimedField
 			issue.Message = "A visitor can set " + leaf.Field + " themselves; do not rely on it to grant anything."
 			c.warn(issue)

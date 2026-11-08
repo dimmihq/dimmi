@@ -214,17 +214,31 @@ func TestCompile(t *testing.T) {
 		access := audience.Surface{
 			Key: "help.article", Gate: audience.GateAccess, Where: []audience.Location{audience.Server},
 		}
-		a, err := audience.Parse(json.RawMessage(leaf("contact.custom.plan", "eq", `"pro"`)))
+		a, err := audience.Parse(json.RawMessage(leaf("contact.email", "eq", `"a@b.c"`)))
 		require.NoError(t, err)
 
 		_, err = audience.Compile(a, audience.Base(), access)
 		assert.Equal(t, []string{audience.CodeClaimedOnAccessGate}, codes(t, err))
 
-		a, err = audience.Parse(json.RawMessage(leaf("company.custom.plan", "eq", `"pro"`)))
+		for _, field := range []string{"company.custom.plan", "contact.custom.plan"} {
+			a, err = audience.Parse(json.RawMessage(leaf(field, "eq", `"pro"`)))
+			require.NoError(t, err)
+
+			_, err = audience.Compile(a, audience.Base(), access)
+			require.NoError(t, err, field)
+		}
+	})
+
+	t.Run("fails every condition on a missing value when access is at stake", func(t *testing.T) {
+		t.Parallel()
+
+		a, err := audience.Parse(json.RawMessage(leaf("contact.custom.plan", "neq", `"free"`)))
+		require.NoError(t, err)
+		p, err := audience.Compile(a, audience.Base(), audience.HelpAccess())
 		require.NoError(t, err)
 
-		_, err = audience.Compile(a, audience.Base(), access)
-		require.NoError(t, err)
+		assert.True(t, p.Evaluate(audience.Env{Facts: audience.Values{}}))
+		assert.False(t, p.Evaluate(audience.Env{Facts: audience.Values{}, Strict: true}))
 	})
 
 	t.Run("reports every bad condition at once", func(t *testing.T) {

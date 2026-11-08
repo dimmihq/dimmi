@@ -102,17 +102,31 @@ func TestMessengerRules(t *testing.T) {
 	t.Run("refuses start rules a browser could satisfy", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
-		saved := owner(tc).PostJSON("/api/v1/audiences", testkit.JSON{"name": "Pro", "rules": testkit.JSON{
-			"rules": cond("contact.custom.plan", "eq", "pro"),
+		saved := owner(tc).PostJSON("/api/v1/audiences", testkit.JSON{"name": "Gmail", "rules": testkit.JSON{
+			"rules": cond("contact.email_domain", "eq", "gmail.com"),
 		}}).AssertCreated().String("data.id")
 
-		rules(t, tc, testkit.JSON{"start": testkit.JSON{"rules": cond("contact.custom.plan", "eq", "pro")}}).
+		rules(t, tc, testkit.JSON{"start": testkit.JSON{"rules": cond("contact.email", "eq", "a@b.c")}}).
 			AssertStatus(422).AssertJSONPath("errors.0.code", "claimed_field_on_access_gate")
 		rules(t, tc, testkit.JSON{"start": testkit.JSON{"rules": cond("page.path", "eq", "/a")}}).
 			AssertStatus(422).AssertJSONPath("errors.0.code", "field_unavailable_for_surface")
 		rules(t, tc, testkit.JSON{"start": testkit.JSON{"rules": cond("audience", "in", []string{saved})}}).
 			AssertStatus(422).AssertJSONPath("errors.0.code", "claimed_field_on_access_gate")
 		rules(t, tc, testkit.JSON{"tabs": testkit.JSON{"home": testkit.JSON{}}}).AssertStatus(422)
+	})
+
+	t.Run("lets only attributes the team's systems set open a start rule", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		rules(t, tc, testkit.JSON{"start": testkit.JSON{"rules": cond("contact.custom.plan", "neq", "free")}}).
+			AssertOK()
+		v := startVisitor(t, tc)
+
+		v.client().GetJSON("/widget/v1/session").AssertOK().AssertJSONPath("data.surface.start", false)
+		owner(tc).PatchJSON("/api/v1/contacts/"+v.contact, testkit.JSON{
+			"custom_attributes": testkit.JSON{"plan": "pro"},
+		}).AssertOK()
+		v.client().GetJSON("/widget/v1/session").AssertOK().AssertJSONPath("data.surface.start", true)
 	})
 
 	t.Run("keeps rules left out of a change and removes those sent as null", func(t *testing.T) {

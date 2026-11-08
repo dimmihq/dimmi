@@ -142,10 +142,11 @@ func prefixed(path string, err error) []audience.Problem {
 
 /*
 Decide tells what a visitor gets, with everything the environment
-knows. Start is only ever yes when the rule is decided yes.
+knows. Start is only ever yes when the rule is decided yes on values the
+team's own systems set.
 */
 func (m Messenger) Decide(env audience.Env) Surface {
-	out := Surface{Launcher: decision(m.Launcher, env), Start: m.Start.Evaluate(env)}
+	out := Surface{Launcher: decision(m.Launcher, env), Start: m.Start.Evaluate(Strict(env))}
 	if len(m.Tabs) > 0 {
 		out.Tabs = map[string]any{}
 		for tab, p := range m.Tabs {

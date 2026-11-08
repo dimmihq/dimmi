@@ -62,6 +62,7 @@ type Collection struct {
 	Description  *string   `json:"description"`
 	Icon         *string   `json:"icon"`
 	Position     int32     `json:"position"`
+	AudienceID   *string   `json:"audience_id"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -77,6 +78,9 @@ func NewCollection(c models.Collection) Collection {
 	}
 	if c.ParentID != nil {
 		out.ParentID = new(models.PublicID(models.PrefixCollection, *c.ParentID))
+	}
+	if c.AudienceID != nil {
+		out.AudienceID = new(models.PublicID(models.PrefixAudience, *c.AudienceID))
 	}
 	return out
 }

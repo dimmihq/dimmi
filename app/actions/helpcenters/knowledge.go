@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -27,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
+	"github.com/dimmihq/dimmi/app/audiences"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -64,7 +66,17 @@ func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts 
 		rows, err = q.SearchWorkspaceArticles(ctx, models.SearchWorkspaceArticlesParams{
 			Query: terms, WorkspaceID: ws, Visibilities: visibilities(opts.Visibility), RowLimit: candidates,
 		})
-		return err
+		if err != nil || !opts.AudienceFiltered {
+			return err
+		}
+		r, err := audiences.LoadRestrictions(ctx, q, ws)
+		if err != nil {
+			return err
+		}
+		rows = slices.DeleteFunc(rows, func(row models.SearchWorkspaceArticlesRow) bool {
+			return !r.Article(row.ID, opts.AllowedAudienceIDs)
+		})
+		return nil
 	})
 	if err != nil {
 		return contracts.KnowledgeSearchResult{}, fmt.Errorf("search articles: %w", err)

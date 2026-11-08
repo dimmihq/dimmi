@@ -173,3 +173,12 @@ func (r *Resolver) trusted(path, id string, depth int) []audience.Problem {
 
 	return found
 }
+
+/*
+CheckTrusted checks a saved audience used to decide access: it must
+exist and, with every saved audience inside it, read only what the
+server knows and trusts.
+*/
+func (r *Resolver) CheckTrusted(id string) []audience.Problem {
+	return r.trusted("audience_id", id, 0)
+}

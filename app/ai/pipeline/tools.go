@@ -204,8 +204,12 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 
 	ctx, cancel := r.timeout(ctx, searchTimeout)
 	defer cancel()
+	allowed, filtered, err := r.readerAudiences(ctx, st)
+	if err != nil {
+		return "", err
+	}
 	res, err := r.Knowledge.Search(ctx, st.env.Workspace.ID, in.Query, contracts.KnowledgeSearchOptions{
-		Limit: searchLimit, Surface: "agent",
+		Limit: searchLimit, Surface: "agent", AllowedAudienceIDs: allowed, AudienceFiltered: filtered,
 		Visibility: []contracts.KnowledgeVisibility{
 			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
 		},

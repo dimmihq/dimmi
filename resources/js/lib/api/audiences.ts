@@ -40,7 +40,7 @@ export interface AudienceEstimate {
 }
 
 export interface AudienceUser {
-  object: "workflow" | "audience";
+  object: "workflow" | "audience" | "article" | "collection";
   id: string;
   name: string;
   live: boolean;

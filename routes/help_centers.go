@@ -56,4 +56,9 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, article+"/publications", "articles.publications.store", art.Publish).
 		Ability("articles:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, article+"/versions", "articles.versions.index", art.Versions).Ability("articles:read")
+
+	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
+	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
+	routing.Patch(workspace, "/collections/{collection}/audience", "collections.audience.update", aud.Collection).
+		Ability("articles:write")
 }

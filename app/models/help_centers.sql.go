@@ -36,7 +36,7 @@ INSERT INTO collections (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10
 )
-RETURNING id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at, audience_id
 `
 
 type CreateCollectionParams struct {
@@ -80,6 +80,7 @@ func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionPara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -152,7 +153,7 @@ func (q *Queries) DeleteCollection(ctx context.Context, arg DeleteCollectionPara
 }
 
 const findCollection = `-- name: FindCollection :one
-SELECT id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at FROM collections WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at, audience_id FROM collections WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindCollectionParams struct {
@@ -177,12 +178,13 @@ func (q *Queries) FindCollection(ctx context.Context, arg FindCollectionParams) 
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AudienceID,
 	)
 	return i, err
 }
 
 const findCollectionBySlug = `-- name: FindCollectionBySlug :one
-SELECT id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at FROM collections
+SELECT id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at, audience_id FROM collections
 WHERE workspace_id = $1 AND help_center_id = $2 AND slug = $3 AND deleted_at IS NULL
 `
 
@@ -209,6 +211,7 @@ func (q *Queries) FindCollectionBySlug(ctx context.Context, arg FindCollectionBy
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -286,7 +289,7 @@ func (q *Queries) HelpCenterSubdomainTaken(ctx context.Context, subdomain string
 }
 
 const listCollections = `-- name: ListCollections :many
-SELECT id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at FROM collections
+SELECT id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at, audience_id FROM collections
 WHERE workspace_id = $1 AND help_center_id = $2 AND deleted_at IS NULL
 ORDER BY parent_id NULLS FIRST, position, id
 `
@@ -319,6 +322,7 @@ func (q *Queries) ListCollections(ctx context.Context, arg ListCollectionsParams
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AudienceID,
 		); err != nil {
 			return nil, err
 		}
@@ -466,7 +470,7 @@ UPDATE collections SET
     parent_id = $1, name = $2, slug = $3, description = $4, icon = $5,
     position = $6, updated_at = $7
 WHERE workspace_id = $8 AND id = $9 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, parent_id, name, slug, description, icon, position, deleted_at, created_at, updated_at, audience_id
 `
 
 type UpdateCollectionParams struct {
@@ -508,6 +512,7 @@ func (q *Queries) UpdateCollection(ctx context.Context, arg UpdateCollectionPara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AudienceID,
 	)
 	return i, err
 }

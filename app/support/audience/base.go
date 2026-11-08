@@ -44,7 +44,7 @@ func contactFields() []Field {
 		{Key: "contact.last_seen_at", Type: TypeDate, Where: Server, Trust: Observed},
 		{Key: "contact.has_company", Type: TypeBool, Where: Server, Trust: Verified},
 		{Key: "contact.tags", Type: TypeSet, Where: Server, Trust: Verified},
-		{Key: "contact.custom.", Prefix: true, Type: TypeAuto, Where: Server, Trust: Claimed},
+		{Key: "contact.custom.", Prefix: true, Type: TypeAuto, Where: Server, Trust: ByKey},
 		{Key: "event.", Prefix: true, Type: TypeAuto, Where: Server, Trust: Verified},
 		{Key: "audience", Type: TypeSaved, Where: Server, Trust: Verified, Ops: []string{OpIn, OpNotIn}},
 	}

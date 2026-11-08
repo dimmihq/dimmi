@@ -60,9 +60,11 @@ func NewAudience(a models.Audience, users []audiences.User) Audience {
 	}
 
 	for _, u := range users {
-		prefix := models.PrefixWorkflow
-		if u.Kind == "audience" {
-			prefix = models.PrefixAudience
+		prefix := map[string]models.Prefix{
+			"audience": models.PrefixAudience, "article": models.PrefixArticle, "collection": models.PrefixCollection,
+		}[u.Kind]
+		if prefix == "" {
+			prefix = models.PrefixWorkflow
 		}
 
 		out.UsedBy = append(out.UsedBy, AudienceUser{

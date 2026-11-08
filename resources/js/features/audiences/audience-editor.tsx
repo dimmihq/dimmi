@@ -19,7 +19,7 @@ import { Textarea } from "@/components/base/textarea/textarea";
 import { usePermission } from "@/features/settings/inboxes";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
-import { type Audience, audienceFieldsQuery, audiencesQuery } from "@/lib/api/audiences";
+import { type Audience, type AudienceUser, audienceFieldsQuery, audiencesQuery } from "@/lib/api/audiences";
 import { tagsQuery } from "@/lib/api/tags";
 
 import { PreviewPane } from "./preview-pane";
@@ -37,6 +37,41 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
+const linkClass = "truncate text-body-2-regular text-text-primary underline";
+
+function userKind(u: AudienceUser): string {
+  if (u.object === "workflow") {
+    return u.live ? "Live workflow" : "Workflow draft";
+  }
+
+  return { audience: "Audience", article: "Article", collection: "Collection" }[u.object];
+}
+
+function UserLink({ user }: { user: AudienceUser }) {
+  switch (user.object) {
+    case "workflow":
+      return (
+        <Link to="/d/workflows/$workflow" params={{ workflow: user.id }} className={linkClass}>
+          {user.name}
+        </Link>
+      );
+    case "article":
+      return (
+        <Link to="/d/docs/$article" params={{ article: user.id }} className={linkClass}>
+          {user.name}
+        </Link>
+      );
+    case "audience":
+      return (
+        <Link to="/d/customers/audiences/$audience" params={{ audience: user.id }} className={linkClass}>
+          {user.name}
+        </Link>
+      );
+    default:
+      return <span className="truncate text-body-2-regular text-text-primary">{user.name}</span>;
+  }
+}
+
 function UsedBy({ draft }: { draft: AudienceDraft }) {
   const users = draft.server.used_by ?? [];
   if (users.length === 0) {
@@ -47,26 +82,8 @@ function UsedBy({ draft }: { draft: AudienceDraft }) {
     <ul className="flex flex-col gap-2">
       {users.map((u) => (
         <li key={u.id} className="flex items-center justify-between gap-2">
-          {u.object === "workflow" ? (
-            <Link
-              to="/d/workflows/$workflow"
-              params={{ workflow: u.id }}
-              className="truncate text-body-2-regular text-text-primary underline"
-            >
-              {u.name}
-            </Link>
-          ) : (
-            <Link
-              to="/d/customers/audiences/$audience"
-              params={{ audience: u.id }}
-              className="truncate text-body-2-regular text-text-primary underline"
-            >
-              {u.name}
-            </Link>
-          )}
-          <span className="shrink-0 text-caption-1-regular text-text-tertiary">
-            {u.object === "workflow" ? (u.live ? "Live workflow" : "Workflow draft") : "Audience"}
-          </span>
+          <UserLink user={u} />
+          <span className="shrink-0 text-caption-1-regular text-text-tertiary">{userKind(u)}</span>
         </li>
       ))}
     </ul>

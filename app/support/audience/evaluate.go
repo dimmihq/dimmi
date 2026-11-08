@@ -90,11 +90,14 @@ func (v Values) Lookup(key string) (any, bool) {
 
 /*
 Env is what evaluation reads: the facts, the current time and the
-workspace's location for calendar days. Unknown marks fields that
+workspace's location for calendar days. Strict is set when access is at
+stake: a missing value then fails every condition, "is not" included,
+so knowing nothing never lets anyone in. Unknown marks fields that
 cannot be known here, such as page fields on the server. Saved finds a
 saved audience's program by id.
 */
 type Env struct {
+	Strict   bool
 	Facts    Facts
 	Now      time.Time
 	Location *time.Location
@@ -284,7 +287,7 @@ func evalLeaf(n *node, env Env) Truth {
 
 	normalized := normalize(n, value)
 	if !present || normalized == nil {
-		return truth(negative(n.op))
+		return truth(negative(n.op) && !env.Strict)
 	}
 
 	return truth(compare(n, normalized, env))

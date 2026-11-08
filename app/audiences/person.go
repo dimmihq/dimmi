@@ -17,18 +17,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/audience"
 	"github.com/dimmihq/dimmi/app/support/eventroll"
 )
 
 /*
 Person is one contact with what rules read about them. Tags are public
 tag ids. Events are their event summaries by name, read as of Now.
+TrustedOnly hides custom attributes the team's own systems did not set,
+for rules that decide access.
 Client holds page, visitor and session values when a browser reported
 them; it is empty for a person read from the database alone.
 */
@@ -39,6 +43,7 @@ type Person struct {
 	CompanyTags []string
 	Events      map[string]eventroll.Summary
 	Now         time.Time
+	TrustedOnly bool
 	Client      map[string]any
 }
 
@@ -50,6 +55,11 @@ func (p Person) Lookup(key string) (any, bool) {
 	root, rest, _ := strings.Cut(key, ".")
 	switch root {
 	case "contact":
+		if key, custom := strings.CutPrefix(rest, "custom."); custom && p.TrustedOnly &&
+			!slices.Contains(p.Contact.TrustedAttributeKeys, key) {
+			return nil, false
+		}
+
 		return Present(ContactValue(p.Contact, p.ContactTags, rest))
 	case "company":
 		return Present(CompanyValue(p.Company, p.CompanyTags, rest))
@@ -232,4 +242,19 @@ func loadCompanies(ctx context.Context, q *models.Queries, ws ids.UUID, companyI
 	}
 
 	return companies, tags, nil
+}
+
+/*
+Strict is the environment for a rule that decides access: only values
+the team's own systems set count, and a missing one fails every
+condition.
+*/
+func Strict(env audience.Env) audience.Env {
+	env.Strict = true
+	if p, ok := env.Facts.(Person); ok {
+		p.TrustedOnly = true
+		env.Facts = p
+	}
+
+	return env
 }

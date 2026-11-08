@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/memo"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/audiences"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -47,10 +49,13 @@ type snapshotKey struct {
 }
 
 /*
-Public reads help centers for readers.
+Public reads help centers for readers who are not signed in: articles
+and collections kept to an audience such a reader is not in are left
+out of everything they see, search included.
 */
 type Public struct {
 	DB        *database.DB
+	Clock     clock.Clock
 	snapshots *memo.Cache[snapshotKey, Snapshot]
 }
 
@@ -58,8 +63,10 @@ type Public struct {
 NewPublic returns a reader keeping up to a thousand help centers for a
 minute after their last change was read.
 */
-func NewPublic(db *database.DB) *Public {
-	return &Public{DB: db, snapshots: memo.New[snapshotKey, Snapshot](memo.Options{Size: 1000, TTL: time.Minute})}
+func NewPublic(db *database.DB, clk clock.Clock) *Public {
+	return &Public{
+		DB: db, Clock: clk, snapshots: memo.New[snapshotKey, Snapshot](memo.Options{Size: 1000, TTL: time.Minute}),
+	}
 }
 
 /*
@@ -91,7 +98,7 @@ func (p *Public) Load(ctx context.Context, subdomain string) (Snapshot, error) {
 			out = cached
 			return nil
 		}
-		out, err = load(ctx, q, h)
+		out, err = load(ctx, q, h, p.Clock.Now)
 		if err == nil {
 			p.snapshots.Set(key, out)
 		}
@@ -101,9 +108,10 @@ func (p *Public) Load(ctx context.Context, subdomain string) (Snapshot, error) {
 }
 
 /*
-load reads a help center's collections and published articles.
+load reads a help center's collections and published articles, those an
+anonymous reader may see.
 */
-func load(ctx context.Context, q *models.Queries, h models.HelpCenter) (Snapshot, error) {
+func load(ctx context.Context, q *models.Queries, h models.HelpCenter, now nowFunc) (Snapshot, error) {
 	out := Snapshot{HelpCenter: h}
 	var err error
 	out.Collections, err = q.ListCollections(ctx, models.ListCollectionsParams{
@@ -118,8 +126,13 @@ func load(ctx context.Context, q *models.Queries, h models.HelpCenter) (Snapshot
 	if err != nil {
 		return out, fmt.Errorf("list published articles: %w", err)
 	}
-	return out, nil
+	return readable(ctx, q, out, now)
 }
+
+/*
+nowFunc gives the current time.
+*/
+type nowFunc func() time.Time
 
 /*
 Search finds a help center's published public articles matching the
@@ -130,10 +143,19 @@ func (p *Public) Search(ctx context.Context, h models.HelpCenter, query string, 
 	var out []models.SearchPublishedArticlesRow
 	scoped := tenancy.With(ctx, h.WorkspaceID.String())
 	err := p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		out, err = models.New(tx).SearchPublishedArticles(ctx, models.SearchPublishedArticlesParams{
+		q := models.New(tx)
+		rows, err := q.SearchPublishedArticles(ctx, models.SearchPublishedArticlesParams{
 			Query: query, WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, IncludeAgentOnly: false, RowLimit: limit,
 		})
+		if err != nil {
+			return err
+		}
+		visible, err := p.anonymousArticles(ctx, q, h.WorkspaceID)
+		for _, r := range rows {
+			if visible(r.ID) {
+				out = append(out, r)
+			}
+		}
 		return err
 	})
 	if err != nil {
@@ -190,11 +212,26 @@ func (p *Public) LoadByID(ctx context.Context, workspaceID, id ids.UUID) (Snapsh
 			out = cached
 			return nil
 		}
-		out, err = load(ctx, q, h)
+		out, err = load(ctx, q, h, p.Clock.Now)
 		if err == nil {
 			p.snapshots.Set(key, out)
 		}
 		return err
 	})
 	return out, err
+}
+
+/*
+anonymousArticles answers whether an anonymous reader may read an
+article.
+*/
+func (p *Public) anonymousArticles(ctx context.Context, q *models.Queries, ws ids.UUID) (func(ids.UUID) bool, error) {
+	r, err := audiences.LoadRestrictions(ctx, q, ws)
+	if err != nil {
+		return nil, err
+	}
+
+	allowed, err := audiences.Allowed(ctx, q, audiences.Reader{WorkspaceID: ws, Needed: r.Needed(), Now: p.Clock.Now()})
+
+	return func(id ids.UUID) bool { return r.Article(id, allowed) }, err
 }

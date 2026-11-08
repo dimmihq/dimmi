@@ -174,8 +174,11 @@ func trusted(leaves []audience.LeafResult, c models.Contact) []audience.LeafResu
 	out := make([]audience.LeafResult, 0, len(leaves))
 	for _, leaf := range leaves {
 		key, custom := strings.CutPrefix(leaf.Field, "contact.custom.")
-		if custom && slices.Contains(c.TrustedAttributeKeys, key) {
+		switch {
+		case custom && slices.Contains(c.TrustedAttributeKeys, key):
 			leaf.Trust = audience.Verified
+		case leaf.Trust == audience.ByKey:
+			leaf.Trust = audience.Claimed
 		}
 
 		out = append(out, leaf)

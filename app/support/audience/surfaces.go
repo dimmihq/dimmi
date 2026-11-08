@@ -62,3 +62,13 @@ decides it: no page conditions, no value a browser could claim.
 func MessengerStart() Surface {
 	return Surface{Key: "messenger.start", Gate: GateAccess, Where: []Location{Server}}
 }
+
+/*
+HelpAccess is the surface of who may read an article, which dimmi also
+answers from. Reading reveals the team's content, so only what the
+server knows and trusts decides it: no page conditions, no value a
+browser could claim.
+*/
+func HelpAccess() Surface {
+	return Surface{Key: "help.article", Gate: GateAccess, Where: []Location{Server}}
+}

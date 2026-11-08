@@ -74,11 +74,14 @@ const (
 )
 
 /*
-KnowledgeSearchOptions narrows one search.
+KnowledgeSearchOptions narrows one search. With AudienceFiltered set,
+only articles whose audiences are all in AllowedAudienceIDs are found,
+so an answer for a person never draws on what they could not read.
 */
 type KnowledgeSearchOptions struct {
 	Limit              int
 	AllowedAudienceIDs []ids.UUID
+	AudienceFiltered   bool
 	Visibility         []KnowledgeVisibility
 	Queries            []string
 	Locale             string

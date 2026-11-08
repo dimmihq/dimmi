@@ -64,7 +64,7 @@ INSERT INTO articles (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
     $10, true, $11, $12, $13, $14, $15, $16, $16
 )
-RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id
 `
 
 type CreateArticleParams struct {
@@ -135,6 +135,7 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -237,7 +238,7 @@ func (q *Queries) DeleteArticle(ctx context.Context, arg DeleteArticleParams) er
 }
 
 const findArticle = `-- name: FindArticle :one
-SELECT id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm FROM articles WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id FROM articles WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindArticleParams struct {
@@ -277,6 +278,7 @@ func (q *Queries) FindArticle(ctx context.Context, arg FindArticleParams) (Artic
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -518,7 +520,7 @@ func (q *Queries) ListArticleVersions(ctx context.Context, arg ListArticleVersio
 }
 
 const listArticles = `-- name: ListArticles :many
-SELECT id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm FROM articles
+SELECT id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id FROM articles
 WHERE workspace_id = $1 AND help_center_id = $2 AND deleted_at IS NULL
   AND ($3::text IS NULL OR status = $3::text)
   AND ($4::uuid IS NULL OR collection_id = $4::uuid)
@@ -582,6 +584,7 @@ func (q *Queries) ListArticles(ctx context.Context, arg ListArticlesParams) ([]A
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TitleTrgm,
+			&i.AudienceID,
 		); err != nil {
 			return nil, err
 		}
@@ -685,7 +688,7 @@ func (q *Queries) ListWorkspaceHelpCenterSubdomains(ctx context.Context, workspa
 }
 
 const lockArticle = `-- name: LockArticle :one
-SELECT id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm FROM articles WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id FROM articles WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type LockArticleParams struct {
@@ -726,6 +729,7 @@ func (q *Queries) LockArticle(ctx context.Context, arg LockArticleParams) (Artic
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -774,7 +778,7 @@ UPDATE articles SET
     published_at = $2::timestamptz, first_published_at = coalesce(first_published_at, $2::timestamptz),
     archived_at = NULL, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id
 `
 
 type PublishArticleParams struct {
@@ -821,6 +825,7 @@ func (q *Queries) PublishArticle(ctx context.Context, arg PublishArticleParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -974,7 +979,7 @@ UPDATE articles SET
     has_unpublished_changes = true,
     archived_at = CASE WHEN $1::text = 'archived' THEN $2::timestamptz END, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id
 `
 
 type SetArticleStatusParams struct {
@@ -1022,6 +1027,7 @@ func (q *Queries) SetArticleStatus(ctx context.Context, arg SetArticleStatusPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.AudienceID,
 	)
 	return i, err
 }
@@ -1033,7 +1039,7 @@ UPDATE articles SET
     has_unpublished_changes = $8, last_edited_by_type = $9,
     last_edited_by_id = $10, word_count = $11, lock_version = lock_version + 1, updated_at = $12
 WHERE workspace_id = $13 AND id = $14 AND deleted_at IS NULL AND lock_version = $15
-RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, collection_id, title, slug, description, body_markdown, status, visibility, published_version_id, has_unpublished_changes, content_hash, position, seo, author_member_id, last_edited_by_type, last_edited_by_id, lock_version, word_count, published_at, first_published_at, archived_at, deleted_at, created_at, updated_at, title_trgm, audience_id
 `
 
 type UpdateArticleParams struct {
@@ -1103,6 +1109,7 @@ func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (A
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.AudienceID,
 	)
 	return i, err
 }

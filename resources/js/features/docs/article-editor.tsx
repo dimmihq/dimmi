@@ -1,6 +1,6 @@
 /*
  * Writing one article: its title, description, collection, who may read
- * it and its Markdown body. Saving keeps a working copy readers never
+ * it, the audience it is kept to and its Markdown body. Saving keeps a working copy readers never
  * see; Publish freezes it into the live version. A save made over
  * someone else's newer one is refused and says so, so nobody's words are
  * lost. Unpublishing keeps every version.
@@ -30,6 +30,7 @@ import {
   setArticleStatus,
 } from "@/lib/api/help-centers";
 
+import { ArticleAudience } from "./article-audience";
 import { articleState, collectionOptions } from "./docs-format";
 
 const visibilities = { Public: "public", "Agent only": "agent_only" } as const;
@@ -190,6 +191,7 @@ export function ArticleEditor({ id }: { id: string }) {
                 onChange={(label) => set({ visibility: visibilities[label as keyof typeof visibilities] })}
               />
             </div>
+            {article ? <ArticleAudience workspace={workspace} article={article} onSaved={settle} /> : null}
             <Input
               label="Slug"
               value={draft.slug}

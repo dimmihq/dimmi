@@ -113,6 +113,12 @@ LEFT JOIN workflow_versions v ON v.id = w.live_version_id AND w.status = 'live'
   AND v.compiled -> 'references' -> 'audiences' ? $3::text
 WHERE w.workspace_id = $1 AND w.deleted_at IS NULL
   AND (strpos(w.draft::text, $3::text) > 0 OR v.id IS NOT NULL)
+UNION ALL
+SELECT 'article', ar.id, ar.title, true FROM articles ar
+WHERE ar.workspace_id = $1 AND ar.deleted_at IS NULL AND ar.audience_id = $2
+UNION ALL
+SELECT 'collection', co.id, co.name, true FROM collections co
+WHERE co.workspace_id = $1 AND co.deleted_at IS NULL AND co.audience_id = $2
 ORDER BY 1, 3
 `
 
@@ -130,8 +136,9 @@ type AudienceUsersRow struct {
 }
 
 // AudienceUsers returns what names a saved audience: other saved audiences,
-// workflows whose working copy names it, and workflows whose live version
-// does. live is true only for the last, which keep running on it.
+// workflows whose working copy names it, workflows whose live version does,
+// and the articles and collections kept to it. live is true for live
+// workflows, articles and collections, which rely on it now.
 func (q *Queries) AudienceUsers(ctx context.Context, arg AudienceUsersParams) ([]AudienceUsersRow, error) {
 	rows, err := q.db.Query(ctx, audienceUsers, arg.WorkspaceID, arg.AudienceID, arg.PublicID)
 	if err != nil {

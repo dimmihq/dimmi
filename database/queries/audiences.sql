@@ -40,8 +40,9 @@ RETURNING id;
 
 -- name: AudienceUsers :many
 -- AudienceUsers returns what names a saved audience: other saved audiences,
--- workflows whose working copy names it, and workflows whose live version
--- does. live is true only for the last, which keep running on it.
+-- workflows whose working copy names it, workflows whose live version does,
+-- and the articles and collections kept to it. live is true for live
+-- workflows, articles and collections, which rely on it now.
 SELECT 'audience'::text AS kind, a.id, a.name, false AS live FROM audiences a
 WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.id <> @audience_id
   AND strpos(a.rules::text, @public_id::text) > 0
@@ -51,6 +52,12 @@ LEFT JOIN workflow_versions v ON v.id = w.live_version_id AND w.status = 'live'
   AND v.compiled -> 'references' -> 'audiences' ? @public_id::text
 WHERE w.workspace_id = @workspace_id AND w.deleted_at IS NULL
   AND (strpos(w.draft::text, @public_id::text) > 0 OR v.id IS NOT NULL)
+UNION ALL
+SELECT 'article', ar.id, ar.title, true FROM articles ar
+WHERE ar.workspace_id = @workspace_id AND ar.deleted_at IS NULL AND ar.audience_id = @audience_id
+UNION ALL
+SELECT 'collection', co.id, co.name, true FROM collections co
+WHERE co.workspace_id = @workspace_id AND co.deleted_at IS NULL AND co.audience_id = @audience_id
 ORDER BY 1, 3;
 
 -- name: CountAudienceContacts :one

@@ -31,6 +31,7 @@ type Article struct {
 	BodyMarkdown          *string    `json:"body_markdown,omitempty"`
 	Status                string     `json:"status"`
 	Visibility            string     `json:"visibility"`
+	AudienceID            *string    `json:"audience_id"`
 	HasUnpublishedChanges bool       `json:"has_unpublished_changes"`
 	LockVersion           int32      `json:"lock_version"`
 	WordCount             int32      `json:"word_count"`
@@ -61,6 +62,9 @@ func articleSummary(a models.Article) Article {
 	}
 	if a.CollectionID != nil {
 		out.CollectionID = new(models.PublicID(models.PrefixCollection, *a.CollectionID))
+	}
+	if a.AudienceID != nil {
+		out.AudienceID = new(models.PublicID(models.PrefixAudience, *a.AudienceID))
 	}
 	return out
 }

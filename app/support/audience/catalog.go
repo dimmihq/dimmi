@@ -68,12 +68,16 @@ Trust says how far a field's value can be believed.
 type Trust string
 
 /*
-The trust levels.
+The trust levels. ByKey is a value trusted only when the server
+recorded it from the team's own systems, key by key, as custom
+attributes are: an access rule may read it, and then reads only trusted
+values.
 */
 const (
 	Verified Trust = "verified"
 	Observed Trust = "observed"
 	Claimed  Trust = "claimed"
+	ByKey    Trust = "by_key"
 )
 
 /*
