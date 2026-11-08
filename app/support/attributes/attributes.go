@@ -99,3 +99,10 @@ func check(key string, value any) error {
 
 	return exceptions.ErrInvalidAttributes
 }
+
+/*
+ValidKey reports whether a key is a custom attribute name.
+*/
+func ValidKey(key string) bool {
+	return attributeKey.MatchString(key)
+}

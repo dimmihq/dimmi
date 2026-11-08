@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -82,6 +83,13 @@ func Identify(ctx context.Context, tx *database.Tx, i Identity) (models.Company,
 		return models.Company{}, false, exceptions.ErrUpsertKeyRequired
 	}
 
+	var err error
+	if i.Fields.CustomAttributes, err = gate(ctx, q, i); err != nil {
+		return models.Company{}, false, err
+	}
+
+	f.CustomAttributes = i.Fields.CustomAttributes
+
 	found, matched, err := match(ctx, q, i.WorkspaceID, f)
 	if err != nil {
 		return found, false, err
@@ -98,20 +106,8 @@ func Identify(ctx context.Context, tx *database.Tx, i Identity) (models.Company,
 		return found, false, err
 	}
 
-	params := paramsOf(found, i.Now)
+	params := overlay(paramsOf(found, i.Now), f, domain)
 	params.CustomAttributes = merged
-
-	if f.Name != nil {
-		params.Name = *f.Name
-	}
-
-	if domain != nil {
-		params.Domain = domain
-	}
-
-	if f.ExternalID != nil {
-		params.ExternalID = f.ExternalID
-	}
 
 	c, err := q.UpdateCompany(ctx, params)
 	if err != nil {
@@ -258,4 +254,34 @@ func (a *IdentifyCompany) Handle(ctx context.Context, in IdentifyInput) (Detail,
 	})
 
 	return out, created, err
+}
+
+/*
+gate fits the company's custom attributes to their definitions.
+*/
+func gate(ctx context.Context, q *models.Queries, i Identity) (map[string]any, error) {
+	return attributedefs.Gate(ctx, q, attributedefs.Write{
+		WorkspaceID: i.WorkspaceID, Object: attributedefs.ObjectCompany, Trusted: true,
+		Changes: i.Fields.CustomAttributes, Now: i.Now,
+	})
+}
+
+/*
+overlay writes the name, domain and external id sent over a company's
+stored ones.
+*/
+func overlay(params models.UpdateCompanyParams, f Fields, domain *string) models.UpdateCompanyParams {
+	if f.Name != nil {
+		params.Name = *f.Name
+	}
+
+	if domain != nil {
+		params.Domain = domain
+	}
+
+	if f.ExternalID != nil {
+		params.ExternalID = f.ExternalID
+	}
+
+	return params
 }

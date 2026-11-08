@@ -1034,3 +1034,16 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Test a person | `POST $B/audience-evaluations` with a contact and `context.page_url` | `match`, `no_match` or `depends_on_page`, each leaf with the person's value and trust |
 | Workflow | first-message workflow whose audience is `audience in [$A]`, published | runs only for people in the audience; deleting the audience answers 409 `audience_in_use` |
 | Builder | Customers, Audiences, New audience; add a condition | the count beside the rule follows each edit; Save keeps it; Test a person shows each condition |
+
+## Attributes
+
+| Flow | How | Expect |
+|---|---|---|
+| Observed | `POST $B/contacts` with `custom_attributes` `{"plan":"pro","seats":3,"trial_ends_at":"2026-12-01"}` | `GET $B/attribute-definitions` lists plan text, seats number, trial_ends_at date, each `observed` |
+| Dates | a contact with `signed_up_at` in milliseconds | stored as Unix seconds |
+| Wrong type | `PATCH` the contact with `{"seats":"many"}` | 200, seats unchanged; `GET $B/attribute-problems` shows `type_mismatch` with a shape, never the value |
+| List | define `tier` as a list of gold and silver, then send bronze | value dropped, problem `invalid_option` |
+| Archive | archive an attribute a saved audience reads | 409 `attribute_in_use` naming the audience; once free, archived keys keep values and take no new ones |
+| Delete | delete an active attribute, then an archived one | 409 `attribute_active`, then 204 and every contact loses the key |
+| Messenger | `PATCH $B/attribute-definitions/$A` `{"client_writable":true}` | the sign-in settings list the key; the messenger may now write it, untrusted |
+| Settings | Settings, Attributes | people and companies listed with type and last value; add, archive, restore, delete; dropped values at the bottom |

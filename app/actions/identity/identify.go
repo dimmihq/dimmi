@@ -31,6 +31,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/companies"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
@@ -186,7 +187,14 @@ func (r *identifyRun) apply(ctx context.Context, c models.Contact) (Identified, 
 	if err := r.company(ctx, &ch, p.Company); err != nil {
 		return Identified{}, err
 	}
-	ch.attributes(p.Attributes)
+	sent, err := attributedefs.Gate(ctx, r.q, attributedefs.Write{
+		WorkspaceID: c.WorkspaceID, Object: attributedefs.ObjectContact, Trusted: true, Changes: p.Attributes,
+		Now: r.v.Now,
+	})
+	if err != nil {
+		return Identified{}, err
+	}
+	ch.attributes(sent)
 	contact, err := r.write(ctx, ch)
 	if err != nil {
 		return Identified{}, err

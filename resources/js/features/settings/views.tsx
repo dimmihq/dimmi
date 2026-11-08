@@ -11,6 +11,7 @@ import type { SettingsSection } from "@/features/shell/navigation";
 
 import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
+import { AttributesSettings } from "./pages/attributes";
 import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectionsSettings } from "./pages/channels";
 import {
@@ -46,6 +47,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   exports: ExportsSettings,
   inboxes: InboxesSettings,
   tags: TagsSettings,
+  attributes: AttributesSettings,
   "office-hours": OfficeHoursSettings,
   "saved-replies": SavedRepliesSettings,
   "conversation-safety": ConversationSafetySettings,

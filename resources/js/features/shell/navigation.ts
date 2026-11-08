@@ -209,6 +209,13 @@ export const settingsPages = {
     "Where conversations land and how they reopen.",
   ),
   tags: page("settings-tags", "Tags", RiPriceTag3Line, "/d/settings/tags", "Labels teammates put on conversations."),
+  attributes: page(
+    "settings-attributes",
+    "Attributes",
+    RiDatabase2Line,
+    "/d/settings/attributes",
+    "The fields your contacts and companies carry, and their types.",
+  ),
   "office-hours": page(
     "settings-office-hours",
     "Office hours",
@@ -468,7 +475,14 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "inbox",
       label: "Inbox",
-      items: [pages.inboxes, pages.tags, pages["office-hours"], pages["saved-replies"], pages["conversation-safety"]],
+      items: [
+        pages.inboxes,
+        pages.tags,
+        pages.attributes,
+        pages["office-hours"],
+        pages["saved-replies"],
+        pages["conversation-safety"],
+      ],
     },
     { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
     { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },

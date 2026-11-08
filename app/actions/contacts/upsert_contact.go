@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/companies"
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -97,6 +98,13 @@ func (a *UpsertIdentifiedContact) Handle(ctx context.Context, in UpsertInput) (U
 		run := upsertRun{a: a, in: in, tx: tx, q: models.New(tx), now: a.Clock.Now()}
 
 		var err error
+		run.in.Fields.CustomAttributes, err = attributedefs.Gate(ctx, run.q, attributedefs.Write{
+			WorkspaceID: in.Membership.Workspace.ID, Object: attributedefs.ObjectContact, Trusted: true,
+			Changes: in.Fields.CustomAttributes, Now: run.now,
+		})
+		if err != nil {
+			return err
+		}
 
 		out, err = run.upsert(ctx)
 

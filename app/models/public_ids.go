@@ -373,12 +373,13 @@ const (
 	PrefixSLAPolicy       Prefix = "sla"
 	PrefixProcedure       Prefix = "prc"
 	PrefixAudience        Prefix = "audn"
+	PrefixAttribute       Prefix = "atd"
 )
 
 /*
 workflowPublicIDs lists the prefixes of workflows, their runs, office
-hours schedules, service level policies, procedures and saved
-audiences.
+hours schedules, service level policies, procedures, saved
+audiences and attribute definitions.
 */
 func workflowPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
@@ -389,6 +390,7 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixSLAPolicy, "sla_policies"},
 		{PrefixProcedure, "procedures"},
 		{PrefixAudience, "audiences"},
+		{PrefixAttribute, "attribute_definitions"},
 	}
 }
 

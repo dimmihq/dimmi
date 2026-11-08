@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/tags"
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -206,7 +207,15 @@ func (u *companyUpdate) write(ctx context.Context, q *models.Queries) (models.Co
 	u.text("domain", &u.params.Domain, NormalizeDomain(f.Domain))
 	u.text("notes", &u.params.Notes, u.in.Notes)
 
-	merged, keys, err := attributes.Merge(b.CustomAttributes, f.CustomAttributes)
+	gated, err := attributedefs.Gate(ctx, q, attributedefs.Write{
+		WorkspaceID: b.WorkspaceID, Object: attributedefs.ObjectCompany, Trusted: true,
+		Changes: f.CustomAttributes, Now: u.now,
+	})
+	if err != nil {
+		return b, err
+	}
+
+	merged, keys, err := attributes.Merge(b.CustomAttributes, gated)
 	if err != nil {
 		return b, err
 	}

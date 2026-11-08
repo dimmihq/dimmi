@@ -373,6 +373,32 @@ type Attachment struct {
 	UploadedAt     *time.Time `json:"uploaded_at"`
 }
 
+type AttributeDefinition struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	Object      string          `json:"object"`
+	Key         string          `json:"key"`
+	Label       string          `json:"label"`
+	Description *string         `json:"description"`
+	DataType    string          `json:"data_type"`
+	Options     json.RawMessage `json:"options"`
+	Origin      string          `json:"origin"`
+	Status      string          `json:"status"`
+	LastValueAt *time.Time      `json:"last_value_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+type AttributeProblem struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Object      string    `json:"object"`
+	Key         string    `json:"key"`
+	Code        string    `json:"code"`
+	Count       int64     `json:"count"`
+	Sample      *string   `json:"sample"`
+	LastAt      time.Time `json:"last_at"`
+}
+
 type Audience struct {
 	ID                ids.UUID        `json:"id"`
 	WorkspaceID       ids.UUID        `json:"workspace_id"`

@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -139,7 +140,14 @@ func Create(ctx context.Context, tx *database.Tx, now time.Time, n NewContact) (
 		}
 	}
 
-	attrs, keys, err := attributes.Merge(nil, f.CustomAttributes)
+	gated, err := attributedefs.Gate(ctx, q, attributedefs.Write{
+		WorkspaceID: ws, Object: attributedefs.ObjectContact, Trusted: true, Changes: f.CustomAttributes, Now: now,
+	})
+	if err != nil {
+		return models.Contact{}, err
+	}
+
+	attrs, keys, err := attributes.Merge(nil, gated)
 	if err != nil {
 		return models.Contact{}, err
 	}

@@ -79,6 +79,7 @@ func adminPermissions() []string {
 		"conversations:export", "conversations:manage_notes", "contacts:export",
 		"members:reset_two_factor", "members:import",
 		"redaction:manage", "workflows:manage", "schedules:manage", "audiences:manage",
+		"attributes:manage",
 	}
 }
 

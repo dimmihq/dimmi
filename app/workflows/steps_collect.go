@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mail"
 	"github.com/dimmihq/dimmi/framework/support/str"
 
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/attributes"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -224,7 +225,8 @@ func choose(options []string, text string) (any, bool) {
 }
 
 /*
-store saves a collected value to its field.
+store saves a collected value to its field. A customer's answer never
+defines a custom attribute and must fit one that is defined.
 */
 func (st *state) store(ctx context.Context, field string, value any) error {
 	if key, ok := strings.CutPrefix(field, "run.vars."); ok {
@@ -237,6 +239,20 @@ func (st *state) store(ctx context.Context, field string, value any) error {
 	})
 	if err != nil {
 		return fmt.Errorf("find contact: %w", err)
+	}
+
+	if key, custom := strings.CutPrefix(field, "contact.custom."); custom {
+		gated, err := attributedefs.Gate(ctx, st.q, attributedefs.Write{
+			WorkspaceID: contact.WorkspaceID, Object: attributedefs.ObjectContact,
+			Changes: map[string]any{key: value}, Now: st.now(),
+		})
+		if err != nil {
+			return err
+		}
+
+		if value, custom = gated[key]; !custom {
+			return nil
+		}
 	}
 
 	params, ok := contactChange(contact, field, value)

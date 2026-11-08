@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/tags"
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -107,6 +108,13 @@ func (a *UpdateContact) Handle(ctx context.Context, in UpdateContactInput) (Deta
 		}
 
 		u := update{in: in, now: a.Clock.Now(), before: current}
+		u.in.Fields.CustomAttributes, err = attributedefs.Gate(ctx, q, attributedefs.Write{
+			WorkspaceID: current.WorkspaceID, Object: attributedefs.ObjectContact, Trusted: true,
+			Changes: in.Fields.CustomAttributes, Now: u.now,
+		})
+		if err != nil {
+			return err
+		}
 
 		contact, err := u.write(ctx, q)
 		if err != nil {

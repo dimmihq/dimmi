@@ -3,10 +3,11 @@
 | Fields A Rule May Read
 |--------------------------------------------------------------------------
 |
-| The builder offers the registered fields of a saved audience, and the
-| custom attributes the workspace actually sends, typed from a value
-| seen. A key ending in _at is read as a date, as the widget's own
-| signed_up_at is.
+| The builder offers the registered fields of a saved audience and the
+| workspace's custom attributes: defined ones with their type, label and
+| list values, archived ones left out, and keys in use without a
+| definition typed from a value seen. A key ending in _at is read as a
+| date, as the widget's own signed_up_at is.
 |
 */
 
@@ -14,11 +15,13 @@ package audiences
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
@@ -37,6 +40,7 @@ type Field struct {
 	Options []string
 	Ops     []string
 	Custom  bool
+	Label   string
 }
 
 /*
@@ -62,19 +66,64 @@ func (a *Audiences) Fields(ctx context.Context, m authz.Membership) ([]Field, er
 		})
 	}
 
-	var keys []models.CustomAttributeKeysRow
+	custom, err := a.customFields(ctx, m, catalog)
+
+	return append(out, custom...), err
+}
+
+/*
+customFields lists the custom attributes rules may read.
+*/
+func (a *Audiences) customFields(ctx context.Context, m authz.Membership, catalog *audience.Catalog,
+) ([]Field, error) {
+	var out []Field
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		keys, err = models.New(tx).CustomAttributeKeys(ctx, m.Workspace.ID)
+		q := models.New(tx)
+		defs, err := q.ListAttributeDefinitions(ctx, models.ListAttributeDefinitionsParams{WorkspaceID: m.Workspace.ID})
+		if err != nil {
+			return fmt.Errorf("list attribute definitions: %w", err)
+		}
+
+		defined := map[string]bool{}
+		for _, d := range defs {
+			defined[d.Object+"."+d.Key] = true
+			if d.Status == "active" {
+				out = append(out, definedField(catalog, d))
+			}
+		}
+
+		keys, err := q.CustomAttributeKeys(ctx, m.Workspace.ID)
+		for _, k := range keys {
+			if !defined[k.Object+"."+k.Key] {
+				out = append(out, customField(catalog, k))
+			}
+		}
 
 		return wrap("list custom attribute keys", err)
 	})
 
-	for _, k := range keys {
-		out = append(out, customField(catalog, k))
+	return out, err
+}
+
+/*
+definedField describes a defined custom attribute.
+*/
+func definedField(catalog *audience.Catalog, d models.AttributeDefinition) Field {
+	key := d.Object + ".custom." + d.Key
+	f, _ := catalog.Lookup(key)
+	t := map[string]audience.FieldType{
+		"number": audience.TypeNumber, "boolean": audience.TypeBool, "date": audience.TypeDate,
+		"list": audience.TypeList,
+	}[d.DataType]
+
+	if t == "" {
+		t = audience.TypeString
 	}
 
-	return out, err
+	return Field{
+		Key: key, Type: t, Where: f.Where, Trust: f.Trust, Ops: audience.OpsOf(f, t), Custom: true, Label: d.Label,
+		Options: attributedefs.Options(d),
+	}
 }
 
 /*

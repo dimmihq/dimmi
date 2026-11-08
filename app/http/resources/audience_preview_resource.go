@@ -93,6 +93,7 @@ type AudienceField struct {
 	Options []string `json:"options,omitempty"`
 	Ops     []string `json:"ops"`
 	Custom  bool     `json:"custom"`
+	Label   string   `json:"label,omitempty"`
 }
 
 /*
@@ -101,7 +102,7 @@ NewAudienceField shapes a field.
 func NewAudienceField(f audiences.Field) AudienceField {
 	return AudienceField{
 		Key: f.Key, Type: string(f.Type), Where: string(f.Where), Trust: string(f.Trust), Options: f.Options,
-		Ops: f.Ops, Custom: f.Custom,
+		Ops: f.Ops, Custom: f.Custom, Label: f.Label,
 	}
 }
 

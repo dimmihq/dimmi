@@ -6,6 +6,7 @@ const pages = [
   "/d/workflows",
   "/d/procedures",
   "/d/customers/audiences",
+  "/d/settings/attributes",
   "/d/settings/profile",
   "/d/settings/security",
   "/d/settings/connections",

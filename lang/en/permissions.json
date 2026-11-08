@@ -43,6 +43,10 @@
     "label": "Write articles",
     "description": "Create, edit and publish articles."
   },
+  "attributes:manage": {
+    "label": "Manage attributes",
+    "description": "Define, archive and delete the custom attributes of contacts and companies."
+  },
   "audiences:manage": {
     "label": "Manage audiences",
     "description": "Create, change and delete saved audiences."

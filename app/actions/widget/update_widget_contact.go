@@ -19,6 +19,7 @@ package widget
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"regexp"
@@ -36,6 +37,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/support/str"
 
 	"github.com/dimmihq/dimmi/app/actions/identity"
+	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -145,7 +147,7 @@ func (a *UpdateWidgetContact) write(
 	q, now := models.New(tx), a.Clock.Now()
 	next, changes := applyContactChange(current, change)
 
-	attrs, written, err := attributes.Merge(current.CustomAttributes, change.CustomAttributes)
+	attrs, written, err := a.mergeClaimed(ctx, q, current, change)
 	if err != nil {
 		return current, err
 	}
@@ -283,4 +285,22 @@ contactField returns the refusal of one field.
 */
 func contactField(field, message string) *fault.Error {
 	return fault.New(fault.Invalid, contactFieldInvalid, message).OnField(field)
+}
+
+/*
+mergeClaimed fits a browser's custom attributes to their definitions,
+never defining a key, and merges them over the contact's.
+*/
+func (a *UpdateWidgetContact) mergeClaimed(
+	ctx context.Context, q *models.Queries, current models.Contact, change ContactChange,
+) (json.RawMessage, []string, error) {
+	gated, err := attributedefs.Gate(ctx, q, attributedefs.Write{
+		WorkspaceID: current.WorkspaceID, Object: attributedefs.ObjectContact, Changes: change.CustomAttributes,
+		Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return attributes.Merge(current.CustomAttributes, gated)
 }

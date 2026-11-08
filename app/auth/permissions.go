@@ -179,6 +179,7 @@ func permissionGroups() map[string][]string {
 		"workflows:write":     {"workflows:manage", "workflows:run"},
 		"audiences:read":      {"audiences:read"},
 		"audiences:write":     {"audiences:manage"},
+		"attributes:write":    {"attributes:manage"},
 		"billing:read":        {"billing:read"},
 		"billing:write":       {"billing:write", "billing:cap_unrestricted"},
 		"system:read":         {"system:read"},
