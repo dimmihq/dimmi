@@ -1,0 +1,54 @@
+# The API server refuses to delete anything that holds data: a namespace,
+# a database cluster, a volume claim or a secret labelled
+# dimmi.com/protected, and any volume of the data-retain class. Secrets count
+# because losing the app key loses every value encrypted with it. The
+# refusal applies to everyone, Flux and kubectl included, so a pruned file, a
+# renamed resource or a mistyped command fails loudly instead of losing data.
+#
+# Deleting one on purpose takes two steps: annotate it with
+# dimmi.com/delete=allow, then delete it.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: protect-data
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["*"]
+        operations: [DELETE]
+        resources: [namespaces, persistentvolumeclaims, persistentvolumes, secrets]
+      - apiGroups: [postgresql.cnpg.io]
+        apiVersions: ["*"]
+        operations: [DELETE]
+        resources: [clusters]
+  variables:
+    - name: labels
+      expression: "has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}"
+    - name: allowed
+      expression: >-
+        has(oldObject.metadata.annotations) &&
+        oldObject.metadata.annotations.exists(k, k == 'dimmi.com/delete') &&
+        oldObject.metadata.annotations['dimmi.com/delete'] == 'allow'
+    - name: protected
+      expression: >-
+        (variables.labels.exists(k, k == 'dimmi.com/protected') &&
+         variables.labels['dimmi.com/protected'] == 'true') ||
+        (oldObject.kind == 'PersistentVolume' &&
+         has(oldObject.spec.storageClassName) &&
+         oldObject.spec.storageClassName == 'data-retain')
+  validations:
+    - expression: "!variables.protected || variables.allowed"
+      messageExpression: >-
+        oldObject.kind + ' ' + oldObject.metadata.name +
+        ' holds data and is protected; annotate it with dimmi.com/delete=allow to delete it on purpose'
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: protect-data
+spec:
+  policyName: protect-data
+  validationActions: [Deny]

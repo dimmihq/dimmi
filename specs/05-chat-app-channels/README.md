@@ -1,6 +1,6 @@
 # 05 Chat app channels: Slack, Discord, Telegram, WhatsApp
 
-Style: caveman. Date 2026-11-01. Read with `00-conventions/README.md`, `00-foundation/*`, `03-shared-inbox/README.md` + `03-shared-inbox/channel-contract.md` (owns `contracts.Channel`, `conversations.ReceiveInboundMessage`, outbound pipeline, `send_channel_message` / `send_channel_typing` jobs).
+Style: caveman. Date 2026-11-01, revised 2026-11-08 (shared-space model: Discord forum and mention rooms, teammate echo in rooms, agent stand-down, pleasantry filter, answer controls, Telegram streaming and deep-link identity; evidence in `research/channels/`). Read with `00-conventions/README.md`, `00-foundation/*`, `03-shared-inbox/README.md` + `03-shared-inbox/channel-contract.md` (owns `contracts.Channel`, `conversations.ReceiveInboundMessage`, outbound pipeline, `send_channel_message` / `send_channel_typing` jobs).
 
 Files in this folder:
 
@@ -8,7 +8,7 @@ Files in this folder:
 |---|---|
 | README.md | this: goal, scope, data model, code map, API, events, jobs, config, permissions, budgets |
 | [providers.md](providers.md) | per provider: verified 2026 API facts, connect flow, scopes, inbound, outbound, formatting, threading, identity, receipts, limits, lifecycle |
-| [edge-cases.md](edge-cases.md) | decided behavior for 171 cases |
+| [edge-cases.md](edge-cases.md) | decided behavior for 199 cases |
 | [tasks.md](tasks.md) | build checklist, demo script |
 
 ## Goal
@@ -16,6 +16,8 @@ Files in this folder:
 Customers write from Slack, Discord, Telegram, WhatsApp. Each lands in same Dimmi inbox as widget and email, same conversation model, same Dimmi Agent, same billing rule. Teammates reply from inbox with attachments; reply reaches customer in thread on their app. 05 owns four channel drivers, generic channel connection CRUD API (`/api/v1/channels`), per-type connect flows (cloud shared app/bot, self-host own app), inbound webhook/socket ingestion, WhatsApp verification checklist and minimal template management.
 
 Why: roadmap launch item 5 (`research/roadmap.md` "Chat app channels"). Vibe-coder communities live in Discord and Telegram, early B2B customers in Slack, most of world on WhatsApp. Featurebase gates Slack/Discord to paid tier; Fin added Discord and Telegram in 2026. We ship all four free, self-hostable.
+
+Model: chat apps are **shared spaces**, not email. In Slack channels and Discord forums, customers, community helpers, teammates and Dimmi Agent answer in the same thread. So: human replies typed natively in the place count as replies; agent stands down once a human speaks; "thanks" never opens a conversation; every AI answer has an exit (Solved / Talk to a human); conversation state is visible in the place (Slack ✅, Discord tags); agent never shows one contact's private data where others read. Private places (DMs, Telegram private chats, WhatsApp) keep one-thread-per-person model.
 
 ## World-class bar (measurable)
 
@@ -32,18 +34,32 @@ Why: roadmap launch item 5 (`research/roadmap.md` "Chat app channels"). Vibe-cod
 | Self-host without public URL | Discord (gateway), Slack (Socket Mode), Telegram (long polling) work on laptop / private LAN. Only WhatsApp needs public HTTPS (Meta requirement) |
 | Memory | one Discord shard or Slack socket or Telegram poller under 4 MB RSS; idle binary budget (50 MB) unchanged with all four connected |
 | Security | 100% inbound requests signature-verified before body parse beyond size cap; tokens envelope-encrypted, never logged (redaction patterns tested) |
+| Restraint | pleasantry golden set (300+ messages: thanks, ok, 👍, lol, gm, in 10 languages) creates 0 conversations in rooms and 0 billable activations; agent posts 0 replies after a teammate or helper replied in same thread (stand-down test per provider) |
+| Feels alive | working indicator (Slack 👀 reaction, Discord/Telegram typing, Telegram streamed draft) visible under 1 s after qualifying inbound when agent will answer; Telegram first streamed characters under 2 s after model first token |
+| State in place | conversation close/reopen reflected in place (Slack reaction, Discord forum tag + archive) p95 under 5 s; customer "Solved" button closes conversation under 2 s |
 
 ## Scope
 
 ### In (MVP)
 - Drivers implementing `contracts.Channel` (03) for `slack`, `discord`, `telegram`, `whatsapp`: `Type`, `Capabilities`, `Send`, optional `ChannelTyping.SendTyping`, `ChannelReadMarker.MarkRead` where provider supports.
-- Inbound: Slack Events API (HTTP) + Socket Mode (self-host option); Discord Gateway WebSocket (lease-held, sharded; DM events only) + HTTP interactions endpoint (DM routing select menu); Telegram webhook with `secret_token` + long polling (self-host option); WhatsApp Cloud API webhooks with `X-Hub-Signature-256`.
+- Inbound: Slack Events API (HTTP) + Socket Mode (self-host option) + interactivity endpoint (buttons, message shortcut); Discord Gateway WebSocket (lease-held, sharded; DMs plus guild messages and thread events for watched rooms) + HTTP interactions endpoint (slash commands, context menu, buttons, DM routing select); Telegram webhook with `secret_token` + long polling (self-host option), `callback_query` for buttons; WhatsApp Cloud API webhooks with `X-Hub-Signature-256`.
+- **Shared-space rules** (`app/integrations/channels/shared_space.go`, all room kinds):
+  - Teammate echo: native replies by linked members (and Discord helper roles) inside a room thread are ingested as member replies (03 X2 `InboundMessage.Echo`). DMs and private chats: teammate messages keep D10 test behavior.
+  - Agent stand-down: echo or teammate @mention in thread hands conversation off (07 reason `human_replied`), agent silent for rest of conversation unless teammate re-enables.
+  - Pleasantry filter: message that is only pleasantry/ack/emoji (deterministic list per language + emoji-only + length under 40 chars, no `?`) never creates conversation in a room (ignored, metric `kind=pleasantry`); inside existing thread stored `AutoGenerated` (non-substantive: no reopen, no billing, no agent trigger).
+  - Audience guard: rooms are `public_room`; agent answers from knowledge only. Slack room linked to company (`channel_rooms.company_id`, Slack Connect) lifts guard for members of that company only while channel stays external-shared with that one org.
+- **Answer controls**: AI answers in chat apps carry buttons "Solved" and "Talk to a human" (03 X6 `OutboundMessage.Controls`): Slack Block Kit buttons, Discord components, Telegram inline keyboard. WhatsApp: reply buttons (max 3) inside open window. Solved: 03 `CloseConversation` (`conversation.closed` reason `contact_solved`); human: 07 `RequestHumanHandoff`. Buttons removed (message edit) after use or when a human replies.
+- **Working indicator**: when 07 starts a run that will answer (`ai.reply_started`), Slack adds `eyes` reaction on triggering message (removed on commit), Discord/Telegram send typing; Telegram private chats stream draft (`sendMessageDraft`) from `ai.reply_delta`, final `sendMessage` on commit.
+- **Discord rooms**: forum channels (each post = conversation, agent answers in post, tags Open / Answered / Solved / Needs team synced both ways, archive on close) and text channels (mention, `/ask`, context menu "Ask dimmi" open thread off message = conversation). Role links: Discord role to teammate, helper (echo counted, not member author: stored as `contact` author with `metadata.discord.helper`) or escalation ping.
+- **Slack ingestion modes** per room: `author_window` (default, existing), `every_message`, `emoji` (conversation only when teammate or customer adds trigger emoji, default `ticket`), `mention` (only when bot mentioned). Message shortcut "Create dimmi conversation". Manifest ships interactivity + `reactions:read`, `app_mentions:read`, `commands` from day one (no re-approval later).
+- **Telegram**: inline buttons, streamed drafts, 👀 reaction on receipt when agent off or after hours, signed `/start` deep link from widget ("Continue in Telegram") linking contact identity, QR code + `t.me` link in setup.
+- **Continue-in links**: widget and help center show "Continue in Telegram / Discord / Slack" for connected channels (01 renders; 05 serves signed links, `GET /widget/v1/channel-links`).
 - Raw inbound event store + async processing (`channel_inbound_events`), dedupe, suspended-workspace hold.
 - Generic channel connection API: list, show, update, delete (disconnect), reconnect, credentials rotate, health, setup info. Lists all types (widget/email read-only metadata here; created by 01/04).
 - Connect flows: Slack OAuth v2 (shared app) and custom app (manifest + bot token + signing secret, optional app token for Socket Mode); Discord OAuth bot invite (shared bot) and custom bot token; Telegram bot token; WhatsApp Embedded Signup v4 (cloud, Dimmi as Meta Tech Provider) and custom Meta app (system user token).
-- Rooms: which Slack channels are watched, per-room mode and settings.
-- Threading model per provider (Slack thread per conversation, Slack Connect, DMs; Discord DMs to bot; Telegram private chats; WhatsApp per user per business number).
-- Contact identity mapping, profile enrichment, member links (Slack/Discord user to Dimmi member: teammate classification, test flag). Teammate native messages in provider threads ignored (not ingested).
+- Rooms: which Slack channels, Discord forums and Discord text channels are watched, per-room mode, trigger and settings.
+- Threading model per provider (Slack thread per conversation, Slack Connect, DMs; Discord forum post, thread off text-channel message, DMs to bot; Telegram private chats; WhatsApp per user per business number).
+- Contact identity mapping, profile enrichment, member links (Slack/Discord user to Dimmi member: teammate classification, test flag, echo author), Discord role links. Teammate native messages in room threads ingested as replies (shared-space rules); in DMs ignored except test flag.
 - Formatting conversion Markdown to/from Slack `markdown_text` + mrkdwn, Discord markdown, Telegram HTML + entities, WhatsApp formatting. Message splitting within declared `MaxBodyChars`.
 - Attachments both ways within provider limits; oversize outbound falls back to signed link.
 - Delivery status mapping (WhatsApp sent/delivered/read/failed; others sent/failed), WhatsApp read receipts + typing indicator, Telegram/Discord typing.
@@ -56,29 +72,40 @@ Why: roadmap launch item 5 (`research/roadmap.md` "Chat app channels"). Vibe-cod
 ### Out (later)
 | Item | When |
 |---|---|
-| Team reply from Slack **notifications** (internal notification thread) | post-MVP: chat replies. 06 sends notifications only |
+| Team reply from Slack **notifications** (internal notification thread) | later: slack-triage (triage channel, one post per conversation with live status, reply from thread). 06 sends notifications only |
 | SMS, Instagram, Facebook Messenger, Microsoft Teams | post-MVP: more channels |
-| Inbound reactions mapped into timeline | post-MVP (needs 03 reaction model). MVP ignores inbound reactions (counted in metrics only) |
-| AI streaming to chat apps (Telegram `sendMessageDraft`, Slack `chat.startStream`) | post-MVP; 07 sends whole message at MVP |
+| Inbound reactions mapped into timeline | post-MVP (needs 03 reaction model). MVP: only reactions used as triggers (Slack `emoji` mode, Discord none) are read; rest counted in metrics |
+| later: slack-emoji-actions | teammate ✅ closes, 👀 assigns to reactor. Scope `reactions:read` already in manifest |
+| later: slack-user-replies | teammate replies posted as their own Slack user (user token). MVP: bot with teammate name + avatar (`chat:write.customize`) |
+| later: slack-auto-join | auto-watch channels matching pattern (`#ext-*`), scan existing channels at connect |
+| AI streaming on Slack (`chat.startStream`) and Discord (edit-streaming) | later; working indicator covers wait. Telegram private chats stream at MVP |
 | WhatsApp Coexistence (WhatsApp Business app + API on same number), WhatsApp Groups API, WhatsApp media/auth templates, flows, catalogs, payments | post-MVP |
 | Solution Partner credit line (Dimmi pays Meta) | not planned; Tech Provider model, Meta bills business directly, Dimmi passes through nothing |
 | Slack Enterprise Grid org-wide install | post-MVP; MVP rejects org-wide install with clear error |
 | Business-initiated first contact on Telegram/Discord/Slack | never possible (Telegram/Slack) or post-MVP (Discord DM to guild member) |
-| Telegram deep-link identity handoff from widget (`?start=<signed>`) | post-MVP |
+| later: telegram-login-button | `login_url` button verifying Telegram user against signed-in web account; self-serve unlink in contact UI. MVP: signed `/start` deep link only |
+| later: telegram-business | Telegram Business connection: agent answers as owner's own account, real read receipts, owner messages = teammate echo |
+| later: telegram-admin-group | team supergroup with one topic per conversation; teammates reply from Telegram |
+| later: telegram-managed-bots | one-tap bot creation on cloud (Managed Bots) instead of BotFather token paste |
 | Custom bot branding on cloud for Slack (own app) | supported (custom mode works on cloud); no extra UI polish at MVP |
 | Backfill of history older than connect time | not planned. 16 importers (launch: importers) import helpdesk sources (Intercom, Zendesk, Help Scout), never chat-app history; imported conversations live on `import` connection, never on 05 connections |
 | later: message-edit | edits and deletes both ways (Dimmi to provider `chat.update`/`editMessageText`/`PATCH`/`chat.delete`/`deleteMessage`, provider edit/delete events to Dimmi). MVP: delete local only; provider edit/delete events dropped |
-| later: telegram-groups | groups via mention/reply chains, forum topics (`telegram_group`/`telegram_forum` rooms, `/support` in groups). MVP: private chats only; group messages ignored |
-| later: discord-ticket-modes | forum posts, text-channel thread-on-ingest, private `/support` tickets, close tag/archive, MESSAGE_CONTENT intent + limited content mode, `/support switch`. MVP: DMs to bot only |
-| later: teammate-echo | teammates replying natively inside Slack/Discord thread recorded as replies (03 X2 `InboundMessage.Echo`). MVP: teammate native messages ignored |
-| later: chat-app-csat | CSAT over chat apps: 15 CSAT system messages sent to Slack/Discord/Telegram/WhatsApp. MVP: no system-message rendering rules in drivers |
+| later: telegram-groups | groups via @mention / reply-to-bot (privacy mode on) and Guest Mode, forum topics (`telegram_group`/`telegram_forum` rooms), escalate to private chat via deep link, 20 msg/min group bucket. First item after launch. MVP: private chats only; group messages ignored |
+| later: discord-private-tickets | panel button + `/support` open private thread in a ticket text channel with intake modal; "Continue privately" from public post; archive resolved threads (1,000 active-thread cap). MVP: DMs cover private help |
+| later: discord-webhook-identity | teammate replies via channel webhook with teammate name + avatar (one webhook per parent channel). MVP: bot with bold name prefix |
+| later: discord-account-link | "Link account" button: OAuth with signed state ties Discord user to known contact; optional linked role |
+| later: secret-guard | detect API keys, `.env` blocks, emails in public room posts; offer move to private, agent never quotes them |
+| later: knowledge-capture | solved room threads answered by teammate/helper become 08 knowledge source + help-center draft for review |
+| later: chat-app-csat | CSAT over chat apps as buttons (15 CSAT system messages rendered by drivers). MVP: Solved button only |
 
 ## User stories
 
 Workspace admin:
 1. Connect Telegram by pasting BotFather token; see bot link; message bot from phone; see message in inbox.
 2. Click "Add to Slack", approve, invite bot to `#acme-support` Slack Connect channel; each customer question becomes conversation; replies land in thread.
-3. Click "Add to Discord", pick server; members DM support bot; each DM thread becomes conversation.
+3. Click "Add to Discord", pick server, pick `#help` forum and `#general` (mention mode); each forum post becomes conversation, agent answers in post, tags show Open / Solved; members can also DM bot.
+3b. Map Discord role `@Moderators` to helper: their replies in posts count as answers, agent goes quiet.
+3c. Set Slack `#community` room to `emoji` mode with `:ticket:`: only flagged messages become conversations.
 4. Connect WhatsApp via Embedded Signup; see checklist (business verification pending, display name approved, payment method missing) with links; status turns green when Meta approves.
 5. See channel go red with "Slack app was uninstalled from Acme workspace" and one-click reconnect; get email/push (06).
 6. Self-host: run `dimmi channels:add slack`, get manifest + create-app link, paste tokens, done. No public URL: pick Socket Mode.
@@ -86,11 +113,15 @@ Workspace admin:
 
 Workspace member:
 8. Reply to Slack/Discord/Telegram/WhatsApp conversation with attachments; see sent / delivered / read ticks where supported.
+8b. Answer customer from Slack mobile inside thread; Dimmi records reply under my name, conversation shows answered, agent stays quiet.
 9. Try to reply to WhatsApp after 24 h: composer shows window closed, pick approved template, send with variables.
 
 End customer:
 10. Ask in Slack Connect channel, get answer in thread, keep conversing in thread.
 11. DM support bot in Discord or Telegram, get answer in DM.
+11b. Post in Discord `#help` forum, see agent answer in post with Solved / Talk to a human buttons; click Solved: post tagged Solved and archived.
+11c. On product site click "Continue in Telegram", bot greets me by name (identity linked), see answer stream in, press Talk to a human.
+11d. Say "thanks!" after answer: no new conversation, no reopen.
 12. Message business WhatsApp number, see typing then reply, my message shows blue ticks when read.
 
 Developer:
@@ -105,14 +136,22 @@ AI agent:
 03 owns interface in `03-shared-inbox/channel-contract.md` (canonical per `00-foundation/contracts.md`). 05 drivers implement it unchanged, exact names:
 `Type() enums.ChannelType`, `Capabilities(conn *models.ChannelConnection) ChannelCapabilities`, `Send(ctx, conn *models.ChannelConnection, msg OutboundMessage) (SendResult, error)`, optional `ChannelTyping.SendTyping`, `ChannelReadMarker.MarkRead`. Errors: `contracts.ErrPermanent`, `ErrRecipientUnreachable`, `ErrWindowClosed`, `ErrConnectionBroken`, `ErrContentRejected`, `ErrUnsupported`, `*RateLimitedError`, `*SendError`. Inbound via 03 actions `conversations.ReceiveInboundMessage` (input `InboundMessage`, result `InboundResult`), `UpdateMessageDelivery`. Provider edit/delete events dropped before ingest (later).
 
-Extensions X1, X3-X5 below defined canonically in `03-shared-inbox/channel-contract.md` section "Additions for 05 (X1, X3-X5)"; table here is summary, 03 wins on conflict (X2 teammate echo: later):
+Extensions X1-X6 below defined canonically in `03-shared-inbox/channel-contract.md` section "Additions for 05 (X1-X6)"; table here is summary, 03 wins on conflict:
 
 | # | Extension | Why |
 |---|---|---|
 | X1 | `enums.IdentityType` registry gains `whatsapp_bsuid` (registered by 05 at boot; `contact_identities.type` is registry enum, `00-foundation/extensibility.md` P1: no CHECK migration); `Recipient.IdentityType` may be `whatsapp_bsuid` | Meta business-scoped user IDs in all webhooks since early April 2026; phone (`wa_id`) omitted when user enabled username |
 | X3 | optional interface `ChannelWindowResolver{ WindowState(ctx, conn, recipient Recipient) (open bool, closesAt time.Time, err error) }`; 03 request-time window check uses it when implemented, else `last_customer_message_at` | WhatsApp window is per (business number, user), any user message incl. ones in other conversations; conversation `last_customer_message_at` ignores non-substantive messages |
 | X4 | `SendResult.Metadata["parts"]` convention: driver also writes extra provider ids to `channel_message_refs` (05 table) itself | split messages and Slack file shares produce several provider ids; part retries and receipts need all |
-| X5 | `conversations.ReceiveInboundMessage` must tolerate `ExternalThreadKey` created by driver before call | already true per contract (key is input); no MVP user (Discord thread-at-ingest deferred) |
+| X2 | `InboundMessage.Echo *EchoAuthor{MemberID, Helper}`: `Helper=false` stored as member reply (`author_type member`, `delivery_status sent`, `channel_message_id` set, never sent outbound), substantive; `Helper=true` (no member) stored as contact message of helper contact that clears `waiting_since` like a reply; both trigger 07 stand-down | teammates answer natively in Slack/Discord room threads; inbox, SLA, agent need to know |
+| X5 | `conversations.ReceiveInboundMessage` must tolerate `ExternalThreadKey` created by driver before call | already true per contract (key is input); Discord text-channel mention creates thread first |
+| X6 | `OutboundMessage.Controls []string` (`solved`, `handoff`) filled by 03 from `metadata.ai.actions` of agent messages; driver renders buttons or ignores | answer controls on chat apps |
+
+05-owned optional driver interfaces (type-asserted by 05 listeners, not 03):
+- `ChannelWorkingIndicator{ StartWorking(ctx, conn, ref WorkingRef) error; StopWorking(ctx, conn, ref WorkingRef) error }`: Slack reaction, Discord/Telegram typing loop.
+- `ChannelDraftStreamer{ StreamDraft(ctx, conn, recipient Recipient, draftID int64, text string) error }`: Telegram private chats only.
+- `ChannelControlsUpdater{ ClearControls(ctx, conn, ref MessageRef) error }`: removes buttons after use or human reply.
+- `ChannelStateMarker{ MarkState(ctx, conn, room *models.ChannelRoom, threadKey string, state enums.ConversationState) error }`: replaces Slack-only close marker; Slack reaction, Discord forum tag + archive.
 
 Driver package layout: `app/drivers/channel/{slack,discord,telegram,whatsapp}/` (adapter zone) each with `driver.go` (contract), `client.go` (SDK wrapper: slack-go, disgo, go-telegram/bot; own Graph client for WhatsApp; all on `a.HTTP.StdClient()`, providers.md Libraries), `inbound.go` (normalizer), `format.go` (Markdown converters), `errors.go` (provider error to `SendError` mapping).
 
@@ -127,7 +166,8 @@ Driver package layout: `app/drivers/channel/{slack,discord,telegram,whatsapp}/` 
 | Attachments / MaxAttachments | yes / 10 | yes / 10 | yes / 10 (media group max 10) | yes / 10 (one media per WhatsApp message) |
 | MaxAttachmentBytes | 25 MB (global cap; Slack allows more) | 25 MB (over 20 MiB Discord default: link fallback) | 25 MB (over 50 MB never; photos over 10 MB sent as document) | 25 MB (images over 5 MB sent as document; video/audio over 16 MB link fallback) |
 | AllowedContentTypes | nil | nil | nil | nil (driver maps unsupported types to document or link fallback) |
-| Typing | no (bots cannot show typing outside Slack assistant threads) | yes (10 s) | yes (`sendChatAction` 5 s) | yes when room/connection setting `send_read_receipts` true (typing indicator also marks read; 25 s) |
+| Typing | no (bots cannot show typing outside Slack assistant threads; `eyes` reaction via `ChannelWorkingIndicator` instead) | yes (10 s) | yes (`sendChatAction` 5 s); private chats stream drafts | yes when room/connection setting `send_read_receipts` true (typing indicator also marks read; 25 s) |
+| Answer controls (X6) | Block Kit buttons | components (buttons) | inline keyboard | reply buttons (window open only) |
 | DeliveryReceipts / ReadReceipts | no / no | no / no | no / no | yes / yes |
 | MessagingWindow | 0 | 0 | 0 | 24 h |
 
@@ -159,17 +199,20 @@ Custom connections in `pending` before provider identity known keep `external_id
 All tenant tables: `workspace_id uuid not null references workspaces on delete cascade`, `id uuid default uuidv7()`, `created_at`, `updated_at`, RLS in cloud, indexes lead with `workspace_id` unless stated.
 
 #### channel_rooms (public prefix `chr_`)
-Provider-side place watched by connection: Slack channel. DMs, Discord, Telegram, WhatsApp have no room rows at MVP.
+Provider-side place watched by connection: Slack channel, Discord forum channel, Discord text channel. DMs, Telegram, WhatsApp have no room rows at MVP (Telegram groups later).
 
 | Column | Type | Notes |
 |---|---|---|
 | channel_connection_id | uuid not null references channel_connections on delete cascade | |
-| kind | text not null CHECK in ('slack_channel') | Discord/Telegram room kinds later (Discord server threads, Telegram groups) |
-| external_id | text not null | Slack channel id `C...`/`G...` |
+| kind | text not null, registry enum (format CHECK, Go registry `enums.ChannelRoomKind`) | `slack_channel`, `discord_forum`, `discord_text`; later `discord_ticket_panel`, `telegram_group`, `telegram_forum` with no migration |
+| external_id | text not null | Slack channel id `C...`/`G...`; Discord channel snowflake |
 | name | text not null | `#acme-support`; refreshed on rename events |
 | status | text not null default 'active' CHECK in ('active','paused','removed','error') | `paused`: messages ignored; `removed`: bot left/channel deleted/archived |
-| mode | text not null CHECK in ('shared','community') | `shared` (Slack Connect: other-org users are contacts, own-org users are teammates) or `community` (everyone is contact unless linked member) |
-| settings | jsonb not null default '{}' | `models.ChannelRoomSettings` (providers.md): `group_window_seconds`, `close_marker`, `allow_bot_authors`, `inbox_id` override |
+| mode | text not null CHECK in ('shared','community') | `shared` (Slack Connect: other-org users are contacts, own-org users are teammates) or `community` (everyone is contact unless linked member or role link). Discord rooms always `community` |
+| trigger | text not null CHECK in ('author_window','every_message','emoji','mention','auto','off') | when message becomes conversation. Slack default `author_window`; `discord_forum` default `auto` (every post); `discord_text` default `mention` (mention, `/ask`, context menu); `off` = watch for echo/state only, agent never starts |
+| agent_enabled | boolean not null default true | room-level agent switch (07 still checks its own `enabled_channels`) |
+| company_id | uuid references companies on delete set null | Slack Connect room linked to one customer company: lifts audience guard for that company's contacts (shared-space rules). Null everywhere else |
+| settings | jsonb not null default '{}' | `models.ChannelRoomSettings` (providers.md): `group_window_seconds`, `trigger_emoji`, `state_marker` (Slack reaction names), `tag_map` (Discord tag ids per state), `archive_on_close`, `allow_bot_authors`, `inbox_id` override |
 | is_shared_external | boolean not null default false | Slack Connect channel flag from `is_ext_shared` |
 | last_error | text | e.g. "Invite @dimmi to #help" |
 | last_seen_event_at | timestamptz | gap detection for backfill |
@@ -242,7 +285,7 @@ Lease + resume state for long-lived inbound connections (Discord gateway shards,
 Unique `(kind, key)`. Credentials never stored here (read from `channel_connections` / config).
 
 #### channel_member_links (public prefix `cml_`)
-Maps provider user to Dimmi member: teammate classification in Slack `community` rooms (their messages ignored) and `IsTest` for teammates testing own bot in DMs (D10). Native teammate replies as authored replies: later (teammate echo).
+Maps provider user to Dimmi member: teammate classification in `community` rooms, echo author (native replies in room threads stored as that member's replies, X2) and `IsTest` for teammates testing own bot in DMs (D10).
 
 | Column | Type | Notes |
 |---|---|---|
@@ -251,6 +294,17 @@ Maps provider user to Dimmi member: teammate classification in Slack `community`
 | external_user_id | text not null | Slack `T..:U..`, Discord user id |
 | source | text not null CHECK in ('email_match','manual') | Slack auto-link when Slack profile email equals member user email (verified Dimmi email) |
 Unique `(channel_connection_id, external_user_id)`, unique `(channel_connection_id, workspace_member_id)`.
+
+#### channel_role_links (public prefix `crl_`)
+Maps Discord role to behavior. Mods and community helpers are roles, not linked users.
+
+| Column | Type | Notes |
+|---|---|---|
+| channel_connection_id | uuid not null references channel_connections on delete cascade | |
+| external_role_id | text not null | Discord role snowflake |
+| name | text not null | refreshed on `GUILD_ROLE_UPDATE` |
+| behavior | text not null CHECK in ('teammate','helper','escalation') | `teammate`: user with role and member link = echo as member; without link = helper. `helper`: replies in room threads count as human answer: stored via X2 `Echo{Helper: true}` as contact-authored message of helper's own contact (`metadata.discord.helper = true`, substantive, clears `waiting_since`, never a billable workspace reply), agent stands down. `escalation`: role pinged (one allowed mention) on Talk to a human |
+Unique `(channel_connection_id, external_role_id, behavior)`. Max 20 per connection.
 
 #### whatsapp_templates (public prefix `wtp_`)
 Cache of Meta message templates per WABA (minimal MVP management).
@@ -272,7 +326,7 @@ Cache of Meta message templates per WABA (minimal MVP management).
 Unique `(channel_connection_id, name, language)`. Index `(workspace_id, channel_connection_id, status)`.
 
 ### Public ID prefixes (new)
-`chr_` channel_rooms, `cml_` channel_member_links, `wtp_` whatsapp_templates, `cie_` channel_inbound_events. `chn_` existing for channel_connections.
+`chr_` channel_rooms, `cml_` channel_member_links, `crl_` channel_role_links, `wtp_` whatsapp_templates, `cie_` channel_inbound_events. `chn_` existing for channel_connections.
 
 ### Thread keys (`conversations.external_thread_key`)
 
@@ -281,6 +335,7 @@ Unique `(channel_connection_id, name, language)`. Index `(workspace_id, channel_
 | Slack channel thread | `slack:r:{room_id}:{root_ts}` | room uuid not Slack channel id: channel ids change on Slack Connect share |
 | Slack DM | `slack:d:{dm_channel_id}` | one open conversation at a time per DM |
 | Discord DM | `discord:d:{dm_channel_id}` | |
+| Discord forum post or thread off text-channel message | `discord:t:{thread_id}` | thread id survives move between channels; text-channel mention: driver creates thread first (X5) |
 | Telegram private chat | `telegram:p:{chat_id}` | |
 | WhatsApp | `whatsapp:u:{bsuid}`; fallback `whatsapp:p:{wa_id}` when no BSUID | rekeyed on `user_changed_user_id` system webhook |
 
@@ -296,7 +351,8 @@ Unique scope per 03: `(channel_connection_id, external_thread_key)`.
 - `app/drivers/channel/discord/{driver.go,client.go,inbound.go,format.go,errors.go,gateway.go,shards.go,interactions.go}`: `disgoorg/disgo` v0.19.x (REST + rate limiter, `gateway`, `sharding` with lease-owned shard ids, `httpserver` Ed25519); `gateway.go` / `shards.go` = close-code policy + lease glue only; no `buckets.go` (disgo limiter). Never `disgo/voice` (cgo)
 - `app/drivers/channel/telegram/{driver.go,client.go,inbound.go,format.go,errors.go,poller.go,entities.go}`: `client.go` / `poller.go` wrap `go-telegram/bot` v1.27.x (`WithHTTPClient(a.HTTP.StdClient())`, `getUpdates`); poller keeps lease + offset persistence
 - `app/drivers/channel/whatsapp/{driver.go,client.go,inbound.go,format.go,errors.go,templates.go,media.go,checklist.go,signup.go}`: own thin Graph client on `a.HTTP` (no mature Go SDK)
-- `app/integrations/channels/`: shared plumbing: `markdown_ast.go` (walks framework `markdown.Parse` neutral AST; converters stay in 05), `splitter.go` (code-fence and paragraph aware split), `ratelimit.go` (provider token buckets on `a.Limiter`, Valkey driver: shared across replicas), `socket_supervisor.go` (lease manager for gateway/socket/polling), `lease.go`, `mentions_guard.go`, `attachments.go` (download via `a.HTTP` with caps, provider host allowlist), `identity.go` (identity claim builders), `classify.go` (contact vs teammate vs bot vs ignore), `backoff.go`, `errors_catalog.go` (code to human message + fix URL).
+- `app/integrations/channels/`: shared plumbing: `markdown_ast.go` (walks framework `markdown.Parse` neutral AST; converters stay in 05), `splitter.go` (code-fence and paragraph aware split), `ratelimit.go` (provider token buckets on `a.Limiter`, Valkey driver: shared across replicas), `socket_supervisor.go` (lease manager for gateway/socket/polling), `lease.go`, `mentions_guard.go`, `attachments.go` (download via `a.HTTP` with caps, provider host allowlist), `identity.go` (identity claim builders), `classify.go` (contact vs teammate vs helper vs bot vs ignore), `shared_space.go` (echo decision, stand-down signal, audience guard flag), `pleasantry.go` (deterministic filter, word lists in `lang/*/channels_pleasantries.json`), `controls.go` (control id encoding: `c:{message_public_id}:{solved|handoff}`, fits Telegram 64-byte `callback_data` and Slack/Discord `custom_id`), `deep_links.go` (signed `/start` nonce, Valkey `ch:link:{nonce}` TTL 15 min, max 64 chars), `backoff.go`, `errors_catalog.go` (code to human message + fix URL).
+- Driver additions: `slack/{interactions.go,shortcuts.go,indicator.go}`, `discord/{forum.go,threads.go,commands.go,components.go,tags.go,roles.go}`, `telegram/{callbacks.go,drafts.go,deep_links.go}`, `whatsapp/buttons.go`.
 - `app/providers/app_service_provider.go`: register four drivers on `ChannelManager` (03); register channel types and identity types in foundation registries (`enums.ChannelType.Register`, `enums.IdentityType.Register`); start `SocketSupervisor` in `worker` role.
 
 ### Actions (`app/actions/channels/`)
@@ -304,17 +360,20 @@ Unique scope per 03: `(channel_connection_id, external_thread_key)`.
 - Connect: `start_slack_install.go`, `complete_slack_install.go`, `connect_custom_slack_app.go`, `start_discord_install.go`, `complete_discord_install.go`, `connect_custom_discord_bot.go`, `connect_telegram_bot.go`, `register_telegram_webhook.go`, `complete_whatsapp_embedded_signup.go`, `connect_custom_whatsapp_app.go`, `subscribe_whatsapp_webhooks.go`, `register_whatsapp_phone_number.go`.
 - Rooms: `sync_channel_rooms.go`, `upsert_channel_room.go`, `update_channel_room.go`, `remove_channel_room.go`.
 - Inbound: `store_inbound_event.go` (insert raw + job, InsertTx), `process_inbound_event.go` (dispatch to driver normalizer, then 03 actions; sets `InboundMessage.AfterPersist` so `record_contact_state.go` + `channel_message_refs` writes run inside 03 ingest tx), `route_discord_dm.go`, `record_contact_state.go`, `apply_channel_lifecycle_event.go` (uninstall, revoke, guild leave, channel archive, `my_chat_member`, Meta account updates).
-- Members: `link_channel_member.go`, `unlink_channel_member.go`, `auto_link_slack_member.go`.
+- Members: `link_channel_member.go`, `unlink_channel_member.go`, `auto_link_slack_member.go`, `upsert_channel_role_link.go`, `remove_channel_role_link.go`.
+- Shared space: `apply_channel_interaction.go` (button/shortcut/command/context menu dispatch: solved, handoff, create conversation, `/ask`), `create_channel_continue_link.go` (widget signed links), `link_contact_from_start_payload.go` (Telegram `/start` nonce to `IdentifyContact`), `sync_channel_room_state.go` (Discord tags/archive, Slack reaction).
 - WhatsApp: `refresh_whatsapp_checklist.go`, `sync_whatsapp_templates.go`, `create_whatsapp_template.go`, `delete_whatsapp_template.go`, `apply_whatsapp_template_status.go`, `rekey_whatsapp_user.go` (BSUID change), `handle_meta_deauthorize.go`, `handle_meta_data_deletion.go`.
-- Lifecycle hooks: `apply_conversation_closed_marker.go` (Slack close reaction), `apply_conversation_reopened_marker.go`, `erase_channel_contact_data.go` (`EraseChannelContactData`, GDPR contact eraser per `00-foundation/contracts.md` "Contact eraser hooks"; registered on 03 eraser registry in `app_service_provider.go`).
+- Lifecycle hooks: `apply_conversation_closed_marker.go` / `apply_conversation_reopened_marker.go` (call `ChannelStateMarker`: Slack reaction, Discord tag + archive/unarchive), `erase_channel_contact_data.go` (`EraseChannelContactData`, GDPR contact eraser per `00-foundation/contracts.md` "Contact eraser hooks"; registered on 03 eraser registry in `app_service_provider.go`).
 
 ### HTTP
 Controllers `app/http/controllers/api/v1/`:
-`channel_type_controller.go` (Index), `channel_controller.go` (Index, Show, Update, Destroy), `channel_reconnection_controller.go` (Store), `channel_credential_controller.go` (Store), `channel_health_controller.go` (Show), `channel_setup_controller.go` (Show), `channel_room_controller.go` (Index, Update), `channel_room_sync_controller.go` (Store), `channel_member_link_controller.go` (Index, Store, Destroy), `slack_channel_controller.go` (Store), `slack_installation_controller.go` (Store), `discord_channel_controller.go` (Store), `discord_installation_controller.go` (Store), `discord_guild_controller.go` (Index; custom bot guild picker), `telegram_channel_controller.go` (Store), `whatsapp_channel_controller.go` (Store), `whatsapp_embedded_signup_config_controller.go` (Show), `whatsapp_embedded_signup_controller.go` (Store), `whatsapp_checklist_controller.go` (Show; `?refresh=true` re-queries Meta, throttled), `whatsapp_template_controller.go` (Index, Store, Show, Destroy), `whatsapp_template_sync_controller.go` (Store), `conversation_channel_state_controller.go` (Show), `channel_inbound_event_controller.go` (Index), `channel_inbound_event_replay_controller.go` (Store). No action-named controllers (rest.md rule 14).
+`channel_type_controller.go` (Index), `channel_controller.go` (Index, Show, Update, Destroy), `channel_reconnection_controller.go` (Store), `channel_credential_controller.go` (Store), `channel_health_controller.go` (Show), `channel_setup_controller.go` (Show), `channel_room_controller.go` (Index, Update), `channel_room_sync_controller.go` (Store), `channel_member_link_controller.go` (Index, Store, Destroy), `channel_role_link_controller.go` (Index, Store, Destroy), `discord_role_controller.go` (Index; guild roles for picker), `slack_channel_controller.go` (Store), `slack_installation_controller.go` (Store), `discord_channel_controller.go` (Store), `discord_installation_controller.go` (Store), `discord_guild_controller.go` (Index; custom bot guild picker), `telegram_channel_controller.go` (Store), `whatsapp_channel_controller.go` (Store), `whatsapp_embedded_signup_config_controller.go` (Show), `whatsapp_embedded_signup_controller.go` (Store), `whatsapp_checklist_controller.go` (Show; `?refresh=true` re-queries Meta, throttled), `whatsapp_template_controller.go` (Index, Store, Show, Destroy), `whatsapp_template_sync_controller.go` (Store), `conversation_channel_state_controller.go` (Show), `channel_inbound_event_controller.go` (Index), `channel_inbound_event_replay_controller.go` (Store). No action-named controllers (rest.md rule 14).
 
 Controllers `app/http/controllers/web/`: `slack_oauth_callback_controller.go` (Invoke), `discord_oauth_callback_controller.go` (Invoke). Redirect to dashboard `/settings/channels/{chn}?connected=1` or `?error=<code>`.
 
-Controllers `app/http/controllers/webhooks/`: `slack_event_controller.go` (shared + per-connection), `discord_interaction_controller.go` (shared + per-connection), `telegram_update_controller.go`, `whatsapp_webhook_controller.go` (Verify GET, Store POST; shared + per-connection), `meta_deauthorize_controller.go`, `meta_data_deletion_controller.go`.
+Controllers `app/http/controllers/widget/`: `channel_link_controller.go` (Index: signed continue-in links for connected Telegram/Discord/Slack channels of widget's workspace).
+
+Controllers `app/http/controllers/webhooks/`: `slack_event_controller.go` (shared + per-connection), `slack_interaction_controller.go` (shared + per-connection; `payload` form field, same signing secret), `discord_interaction_controller.go` (shared + per-connection), `telegram_update_controller.go`, `whatsapp_webhook_controller.go` (Verify GET, Store POST; shared + per-connection), `meta_deauthorize_controller.go`, `meta_data_deletion_controller.go`.
 
 Middleware (`app/http/middleware/`): `verify_slack_signature.go` (`slack.NewSecretsVerifier`), `verify_discord_signature.go` (disgo `httpserver` Ed25519), `verify_telegram_secret.go` (header compare, own 5 lines), `verify_meta_signature.go` (HMAC, own). All read raw body once (cap per provider), constant-time compare, stash raw bytes in context.
 
@@ -330,7 +389,7 @@ Rules (`app/rules/`): `telegram_bot_token_rule.go` (`^\d{5,15}:[A-Za-z0-9_-]{30,
 `process_channel_inbound_event.go`, `download_channel_attachment.go` (only for deferred downloads; normal path streams inside processing), `sync_channel_rooms.go`, `check_channel_health.go`, `refresh_whatsapp_checklist.go`, `sync_whatsapp_templates.go`, `backfill_channel_room.go`, `prune_channel_inbound_events.go`, `refresh_channel_contact_profile.go`, `apply_channel_close_marker.go`, `register_telegram_webhook.go`, `release_held_inbound_events.go`. (`send_channel_message`, `send_channel_typing` are 03 jobs calling 05 drivers.)
 
 ### Listeners (`app/listeners/`)
-`apply_channel_close_marker_listener.go` (conversation.closed, queued), `apply_channel_reopen_marker_listener.go` (conversation.reopened, queued), `mark_channel_messages_read.go` (conversation.read, queued; sole caller of 03 `ChannelReadMarker.MarkRead`: 03 defines interface, has no caller), `move_contact_channel_states.go` (contact.merged, queued; dedupe rows), `unlink_deactivated_member.go` (00-accounts `member.deactivated`, queued), `release_held_inbound_events_listener.go` (00-accounts `workspace.unsuspended` and `workspace.restored`), `rebuild_webhook_registrations.go` (11 `system.app_url_changed`, queued).
+`apply_channel_close_marker_listener.go` (conversation.closed, queued), `apply_channel_reopen_marker_listener.go` (conversation.reopened, queued), `mark_channel_messages_read.go` (conversation.read, queued; sole caller of 03 `ChannelReadMarker.MarkRead`: 03 defines interface, has no caller), `move_contact_channel_states.go` (contact.merged, queued; dedupe rows), `unlink_deactivated_member.go` (00-accounts `member.deactivated`, queued), `release_held_inbound_events_listener.go` (00-accounts `workspace.unsuspended` and `workspace.restored`), `start_channel_working_indicator.go` (07 `ai.reply_started`), `stream_channel_draft.go` (07 `ai.reply_delta`, sync, throttled), `stop_channel_working_indicator.go` (07 `ai.reply_discarded`, `ai.run_completed`), `clear_channel_answer_controls.go` (`message.created` member/echo in thread, `conversation.closed`), `rebuild_webhook_registrations.go` (11 `system.app_url_changed`, queued).
 
 ### Events (`app/events/`)
 `channel_connected.go`, `channel_disconnected.go`, `channel_errored.go` (catalog), new: `channel_updated.go`, `whatsapp_template_status_changed.go`.
@@ -345,7 +404,7 @@ Rules (`app/rules/`): `telegram_bot_token_rule.go` (`^\d{5,15}:[A-Za-z0-9_-]{30,
 `config/channels.go` (behavior), `config/services.go` additions (provider app credentials).
 
 ### Database
-- Migrations: `20261101000502_add_channel_lookup_indexes.sql`, `20261101000503_create_channel_rooms_table.sql`, `20261101000504_create_channel_contact_states_table.sql`, `20261101000505_create_channel_message_refs_table.sql`, `20261101000506_create_channel_inbound_events_table.sql`, `20261101000507_create_channel_socket_sessions_table.sql`, `20261101000508_create_channel_member_links_table.sql`, `20261101000509_create_whatsapp_templates_table.sql`, `20261101000510_add_rls_to_channel_tables.sql`.
+- Migrations: `20261101000502_add_channel_lookup_indexes.sql`, `20261101000503_create_channel_rooms_table.sql`, `20261101000504_create_channel_contact_states_table.sql`, `20261101000505_create_channel_message_refs_table.sql`, `20261101000506_create_channel_inbound_events_table.sql`, `20261101000507_create_channel_socket_sessions_table.sql`, `20261101000508_create_channel_member_links_table.sql`, `20261101000509_create_whatsapp_templates_table.sql`, `20261101000510_add_rls_to_channel_tables.sql`, `20261101000511_create_channel_role_links_table.sql` (+ RLS). Spec not built yet: `000503` carries new `channel_rooms` columns directly. Versions are placeholders: real ones stamped by `make gen ARGS="make:migration ..."` at build time.
 - Queries: `database/queries/channel_connections.sql` (05 owns queries file; table core), `channel_rooms.sql`, `channel_contact_states.sql`, `channel_message_refs.sql`, `channel_inbound_events.sql`, `channel_socket_sessions.sql`, `channel_member_links.sql`, `whatsapp_templates.sql`.
 - Factories: `channel_connection.go` additions `.Slack()`, `.Discord()`, `.Telegram()`, `.WhatsApp()`, `.Custom()`, `.Errored()`; `channel_room.go`, `channel_contact_state.go`, `whatsapp_template.go`, `channel_inbound_event.go`.
 
@@ -375,6 +434,11 @@ Base `/api/v1`. Auth `A` (`auth`: session, first-party app or token; abilities a
 | GET | /channels/{channel}/member-links | channels.member-links.index | admin; `settings:read` | |
 | POST | /channels/{channel}/member-links | channels.member-links.store | admin; `settings:write` | link provider user to member |
 | DELETE | /channels/{channel}/member-links/{link} | channels.member-links.destroy | admin; `settings:write` | |
+| GET | /channels/{channel}/role-links | channels.role-links.index | admin; `settings:read` | Discord role links |
+| POST | /channels/{channel}/role-links | channels.role-links.store | admin; `settings:write` | `{external_role_id, behavior}`; 422 `role_link_limit` over 20 |
+| DELETE | /channels/{channel}/role-links/{link} | channels.role-links.destroy | admin; `settings:write` | |
+| GET | /channels/{channel}/discord-roles | channels.discord-roles.index | admin; `settings:read` | guild roles for picker (cached 5 min) |
+| GET | /widget/v1/channel-links | widget.channel-links.index | `auth:widget` | continue-in links: Telegram `t.me/{bot}?start={nonce}` (nonce bound to widget contact), Discord server invite or bot DM link, Slack Connect not offered (needs invite flow). 01 renders buttons |
 | POST | /channels/slack/installations | channels.slack.installations.store | admin; `S` (returns browser URL; callback needs session cookie) | returns Slack OAuth `authorize_url` (shared app) |
 | POST | /channels/slack | channels.slack.store | admin; `settings:write` | custom app: create pending connection, or full connect when tokens given |
 | POST | /channels/discord/installations | channels.discord.installations.store | admin; `S` (returns browser URL; callback needs session cookie) | returns Discord bot invite `authorize_url` |
@@ -404,6 +468,8 @@ Webhook routes (`routes/webhooks.go`, no session, no CSRF, `throttle:webhooks` 3
 |---|---|---|---|
 | POST | /webhooks/slack/events | webhooks.slack.events | shared signing secret (`services.slack.signing_secret`) |
 | POST | /webhooks/slack/events/{channel} | webhooks.slack.connection-events | per-connection signing secret |
+| POST | /webhooks/slack/interactions | webhooks.slack.interactions | shared signing secret; ack under 3 s, work queued |
+| POST | /webhooks/slack/interactions/{channel} | webhooks.slack.connection-interactions | per-connection signing secret |
 | POST | /webhooks/discord/interactions | webhooks.discord.interactions | Ed25519 shared public key |
 | POST | /webhooks/discord/interactions/{channel} | webhooks.discord.connection-interactions | per-connection public key |
 | POST | /webhooks/telegram/updates/{channel} | webhooks.telegram.updates | `X-Telegram-Bot-Api-Secret-Token` equals connection secret |
@@ -583,8 +649,11 @@ All wrap REST (work against cloud and self-host). `--json`, `--workspace`, non-i
 ### Consumed
 | Event | Listener | Effect |
 |---|---|---|
-| conversation.closed | `ApplyChannelCloseMarkerListener` (queued `channels`) | Slack: add `close_marker` reaction (default `white_check_mark`) on thread root when room setting on; Discord/Telegram/WhatsApp: nothing |
-| conversation.reopened | `ApplyChannelReopenMarkerListener` | remove Slack reaction |
+| conversation.closed | `ApplyChannelCloseMarkerListener` (queued `channels`) | `ChannelStateMarker`: Slack add `state_marker.closed` reaction (default `white_check_mark`) on thread root; Discord forum tag Solved + archive when `archive_on_close`; text-channel thread archive; Telegram/WhatsApp nothing. Answer controls cleared |
+| conversation.reopened | `ApplyChannelReopenMarkerListener` | Slack remove reaction; Discord unarchive, tag Open |
+| message.created (member, agent, echo in room thread) | `SyncChannelRoomStateListener` | Discord tag Answered after workspace or helper reply, Needs team after handoff; Open on new customer message |
+| ai.reply_started, ai.reply_delta, ai.reply_discarded, ai.run_completed (07) | indicator + draft listeners | working indicator start/stop; Telegram draft stream (throttle 1 update per 500 ms per chat, provider limit) |
+| ai.handoff_requested (07) | `PingEscalationRoleListener` | Discord: post "A teammate will follow up" in thread with one allowed mention of `escalation` role; tag Needs team |
 | conversation.read | `MarkChannelMessagesRead` | WhatsApp: mark latest inbound message read (blue ticks) when connection `send_read_receipts` true; one call per conversation per 30 s |
 | contact.merged | `MoveContactChannelStates` | identities moved by 03; states follow identity id (no-op) except duplicate (same connection) rows: keep newest `last_inbound_at` |
 | member.deactivated (00-accounts) | `UnlinkDeactivatedMember` | delete member links; user's later messages in `community` rooms classified contact |
@@ -612,7 +681,7 @@ Imported messages (16, `metadata.imported`) never reach 05 drivers (03 `SendChan
 | `prune_channel_inbound_events` | `maintenance` | daily 04:00 UTC | 3 | `ByPeriod` 24 h; deletes 5,000 per batch; per workspace batch calls `RetentionGuard.MayDestroy(ws, {workspace, ws})`, then per event with linked conversation `{conversation, id}` (false = row kept, `retention_held` metric; noop driver at MVP) |
 | `download_channel_attachment` | `channels` | attachment fetch failed transiently inside processing (message already stored with placeholder) | 6 | `ByArgs` (message_id, provider_file_id) |
 
-Not jobs: `SocketSupervisor` (long-running goroutine in `worker` role): every 5 s lists required sockets (Discord shards for shared bot + each custom bot application, DM events only; Slack socket-mode connections; Telegram polling bots), acquires free leases (`UPDATE channel_socket_sessions SET owner=$me, lease_expires_at=now()+15s WHERE kind=$1 AND key=$2 AND (owner IS NULL OR lease_expires_at < now()) RETURNING *`), runs connection, renews every 5 s, drops connection immediately when renew fails. Fair share: replica takes at most `ceil(total / live_replicas) + 1` leases (live replicas from node heartbeat, `app/support/nodes/heartbeat.go`). River leader election not used: River elector is single global leader, we need per-shard ownership spread across replicas.
+Not jobs: `SocketSupervisor` (long-running goroutine in `worker` role): every 5 s lists required sockets (Discord shards for shared bot + each custom bot application, DMs and watched rooms; Slack socket-mode connections; Telegram polling bots), acquires free leases (`UPDATE channel_socket_sessions SET owner=$me, lease_expires_at=now()+15s WHERE kind=$1 AND key=$2 AND (owner IS NULL OR lease_expires_at < now()) RETURNING *`), runs connection, renews every 5 s, drops connection immediately when renew fails. Fair share: replica takes at most `ceil(total / live_replicas) + 1` leases (live replicas from node heartbeat, `app/support/nodes/heartbeat.go`). River leader election not used: River elector is single global leader, we need per-shard ownership spread across replicas.
 
 ## Config
 
@@ -641,11 +710,14 @@ Not jobs: `SocketSupervisor` (long-running goroutine in `worker` role): every 5 
 | `channels.outbound.max_parts` | | 4 | split cap; feeds `MaxBodyChars` |
 | `channels.outbound.oversize_attachments` | | `link` | `link` (signed URL 7 days) or `reject` (422 at request) |
 | `channels.attachments.inbound_max_bytes` | | `filesystems.max_upload_mb` (25 MB) | larger inbound files: placeholder note in body `[file.pdf, 40 MB, too large to import]` |
-| `channels.discord.intents` | | 4097 | GUILDS, DIRECT_MESSAGES (no privileged intent: bot DM content needs no MESSAGE_CONTENT) |
-| `channels.discord.permissions` | | 0 | DMs need no guild permissions; bot joins server so members can DM it |
+| `channels.discord.intents` | | 37377 | GUILDS 1, GUILD_MESSAGES 512, DIRECT_MESSAGES 4096, MESSAGE_CONTENT 32768 (privileged). Without MESSAGE_CONTENT granted (cloud bot above 10,000 users before review): driver runs limited mode (intents 4609; mentions of bot, `/ask`, context menu "Ask dimmi" carry content; forum post bodies and plain thread replies arrive empty: forum room falls back to `mention` trigger, echo stored as "[reply in Discord]" link). Whether forum starter message content reaches bot without the intent: verify at build, assume no |
+| `channels.discord.permissions` | | View Channels, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Read Message History, Embed Links, Attach Files, Add Reactions, Use Application Commands | Manage Threads needed for forum tags + archive |
 | `channels.discord.invalid_request_budget` | | 5,000 per 10 min | circuit breaker trips at half of Discord's 10,000 ban threshold |
 | `channels.whatsapp.read_receipts_default` | | true | new connections `send_read_receipts` |
 | `channels.slack.group_window_seconds_default` | | 120 | consecutive top-level messages join open conversation |
+| `channels.pleasantry.max_chars` | | 40 | longer messages never treated as pleasantry |
+| `channels.telegram.stream_drafts` | | true | private-chat draft streaming; false = typing + whole message |
+| `channels.deep_link_ttl` | | 15m | `/start` nonce lifetime |
 | `channels.health.interval` | | 15m | |
 
 ## Permissions matrix
@@ -692,7 +764,8 @@ Metrics (Prometheus):
 - `dimmi_channel_signature_failures_total{provider}` (alert on spike)
 - `dimmi_channel_connection_status{type,status}` gauge
 - `dimmi_whatsapp_window_closed_total`, `dimmi_whatsapp_pricing_messages_total{category,billable}`
-- `dimmi_channel_events_ignored_total{provider,kind}` (kind `reaction`, `edit`, `delete`, `teammate`, `group`)
+- `dimmi_channel_events_ignored_total{provider,kind}` (kind `reaction`, `edit`, `delete`, `teammate`, `group`, `pleasantry`, `not_triggered`)
+- `dimmi_channel_echo_total{provider,author}` (author `member`, `helper`), `dimmi_channel_controls_clicked_total{provider,control}`, `dimmi_channel_agent_standdown_total{provider,reason}`
 
 Logs: every inbound event logs `provider`, `connection_id`, `dedupe_key`, `kind`, result; bodies never at info. Provider errors log code + request id (`x-slack-req-id`, Discord `X-RateLimit-Bucket`, Meta `fbtrace_id`). Tracing spans: `channels.inbound.<provider>`, `channels.send.<provider>`.
 
@@ -705,7 +778,7 @@ Logs: every inbound event logs `provider`, `connection_id`, `dedupe_key`, `kind`
 - Mentions: outbound Discord `allowed_mentions: {"parse": []}`; Slack text `<!channel>`, `<!here>`, `<!everyone>`, `<@U...>` and `<#C...>` sequences escaped (`&lt;`) unless produced by our renderer for teammate-linked mention; Telegram HTML escaping; WhatsApp none needed.
 - Inbound content untrusted: Markdown stored, rendered by 03/frontend safe renderer; Slack/Discord/Telegram links converted to Markdown links only for http/https/mailto/tel.
 - Prompt injection: chat messages, provider display names, Slack/Discord channel names flow to 07 as untrusted user content (07 rules); never placed in system prompt.
-- Public rooms: conversations in places other people can read (Slack channel incl. Slack Connect) carry `messages.metadata.<type>.public_room = true` on inbound and `conversations.source.public_room = true`. Contract for 07 (dependency): in public rooms AI never reveals contact custom attributes, email, phone, other conversations, or verified-user data; answers from knowledge only. DMs (Slack, Discord), Telegram private chats, WhatsApp: `public_room = false`. Teammates see "Public thread" badge in composer (frontend reads `channel-state.public_room`).
+- Public rooms: conversations in places other people can read (Slack channel incl. Slack Connect) carry `messages.metadata.<type>.public_room = true` on inbound and `conversations.source.public_room = true`. Contract for 07 (dependency): in public rooms AI never reveals contact custom attributes, email, phone, other conversations, or verified-user data; answers from knowledge only. DMs (Slack, Discord), Telegram private chats, WhatsApp: `public_room = false`. Discord forum and text rooms always public (private tickets later). Slack Connect room with `company_id` sets `conversations.source.audience_company_id`; 05 clears it (and room `company_id`) on `channel_shared` with a second external org or `channel_unshared` (membership changed: guard back on). Teammates see "Public thread" badge in composer (frontend reads `channel-state.public_room`).
 - Tenancy: routing only by verified `(type, external_id)` / path connection id + verified signature; foreign `chn_` in path with valid other-connection signature impossible (secret per connection).
 - Privacy: erasing contact in Dimmi does not delete copies in Slack/Discord/Telegram/WhatsApp (UI copy states). Raw inbound payloads pruned 7 days. Profile cache max 4 KB.
 - Contact eraser `EraseChannelContactData` (`app/actions/channels/erase_channel_contact_data.go`, `Erase(ctx, workspaceID, contactID) error`, called by 03 `EraseContact` job): deletes `channel_contact_states` (provider profile, window, DM route), `channel_message_refs` of contact's messages, `channel_inbound_events` payloads matching contact's provider user ids (JSON containment, batched), Discord DM route cache entries (`dm_route` lives in state profile); collects provider user ids before 03 deletes identities (eraser runs before identity wipe or reads tombstone list). Keeps `channel_member_links` (members, not contact). Idempotent.
@@ -716,8 +789,8 @@ Logs: every inbound event logs `provider`, `connection_id`, `dedupe_key`, `kind`
 
 | Rule | 05 behavior |
 |---|---|
-| D1 activation | chat messages flow through 03 actions; teammate native replies not ingested (teammate echo: later), so only Dimmi-sent replies activate |
-| D2 substantive | bot/automation messages from other bots ignored before ingest (never stored); Telegram `/start` with no text stored as `AutoGenerated` (non-substantive) |
+| D1 activation | chat messages flow through 03 actions; teammate echo in room threads is a member reply and activates like a Dimmi-sent reply (human answered). Helper echo never activates |
+| D2 substantive | bot/automation messages from other bots ignored before ingest (never stored); Telegram `/start` with no text stored as `AutoGenerated`; pleasantries never create room conversations and are `AutoGenerated` inside threads, so "thanks" never qualifies |
 | D5 channels | same rule for all four. **Meta fees**: MVP cloud uses Tech Provider model: customer adds own payment method in WhatsApp Manager, Meta bills customer directly, Dimmi passes through nothing and adds no margin. 05 records Meta `pricing` object from status webhooks in `messages.metadata.whatsapp.pricing` (`billable`, `category`, `type`) and metric, so UI can show "Meta: 1 paid service message" per conversation. Self-host: customer's own Meta app, same. Metadata informational only; 12 reads nothing from it, no Meta line items on Dimmi invoice |
 | D7 outbound | WhatsApp template to new contact: not billable until contact replies and workspace answers |
 | D9 spam/bots | other bots' messages never ingested; blocked contacts per 03 |
@@ -731,15 +804,15 @@ Logs: every inbound event logs `provider`, `connection_id`, `dedupe_key`, `kind`
 |---|---|---|
 | 00-foundation + framework | channel_connections, contact_identities, messages, River, events, `httpclient` (`a.HTTP`, safedial, `websocket.Dial`), `encryption.KeyManager`, `ratelimit.Limiter` + `cache.Store` (Valkey), signed URLs (`routing`), `markdown.Parse` AST, live replica count (centrifuge node info on Valkey), registry enums (`contact_identities.type`, `channel_connections.type`), `RetentionGuard`, `Entitlements` (key `channels.discord.custom_bots`) | new tables, new events, registry entries (X1 `whatsapp_bsuid`, no migration) |
 | 00-accounts | roles, permission catalog + `authz.Can` (05 registers `channels:manage`, `channels:inspect`), `verified` middleware, `member.deactivated`, `workspace.unsuspended` / `workspace.restored` events, audit log | |
-| 03-shared-inbox | `contracts.Channel`, `ChannelManager`, `conversations.ReceiveInboundMessage`, `UpdateMessageDelivery`, `send_channel_message`/`send_channel_typing` jobs, `channel_options` passthrough, conversation.read/closed/reopened events. **Extensions X1, X3-X5** (`channel-contract.md` section "Additions for 05 (X1, X3-X5)") | 4 drivers, `MarkConnectionErrored` action, channel capabilities, `GET /conversations/{c}/channel-state` |
-| 01-messenger-widget | widget connections (read-only in generic list) | |
+| 03-shared-inbox | `contracts.Channel`, `ChannelManager`, `conversations.ReceiveInboundMessage`, `UpdateMessageDelivery`, `send_channel_message`/`send_channel_typing` jobs, `channel_options` passthrough, conversation.read/closed/reopened events. **Extensions X1-X6** (`channel-contract.md` section "Additions for 05 (X1-X6)") | 4 drivers, `MarkConnectionErrored` action, channel capabilities, `GET /conversations/{c}/channel-state` |
+| 01-messenger-widget | widget connections (read-only in generic list); registers `widget.channel-links.index` in widget route group (05 owns controller); renders "Continue in Telegram / Discord" buttons | signed continue-in links |
 | 04-email-channel | email connections (read-only in generic list), `channel.*` events shared semantics | |
 | 06-notifications | consumes `channel.errored`, `channel.disconnected` (`system_alert` to owners/admins), `channel.connected` reason `recovered` (resolve) | events |
-| 07-dimmi-agent | sends via 03 actions; reads capabilities (`MaxBodyChars`, `Formatting`) to size answers; typing while generating via `send_channel_typing`; NEW: honor `public_room` (no contact data in public replies) and skip rule for `metadata.<type>.bot_author` | citations footer rendered by each driver from `metadata.ai.citations` (`Sources: 1. [Title](url)` per platform format) |
+| 07-dimmi-agent | sends via 03 actions; reads capabilities (`MaxBodyChars`, `Formatting`) to size answers; typing while generating via `send_channel_typing`; honor `public_room` (no contact data in public replies unless `conversations.source.audience_company_id` matches contact company) and skip rule for `metadata.<type>.bot_author`; NEW: stand-down on echo/helper reply or teammate mention (`HandOffConversation` reason `human_replied`, silent, no handoff message in room); silence outcome for messages aimed at another person (reply-to or @mention of non-bot user); `metadata.ai.actions` includes `solved` + `handoff` on chat-app answers; emits `ai.reply_started` / `ai.reply_delta` for chat-app runs too (not only widget) | citations footer rendered by each driver from `metadata.ai.citations` (`Sources: 1. [Title](url)` per platform format) |
 | 09-agent-native | CLI framework, MCP transport | CLI commands + MCP tools above |
 | 10-webhooks | delivers `channel.*`, `whatsapp_template.status_changed` | |
 | 11-self-host | `system.app_url_changed` event, `dimmi doctor` hook | channel checks |
-| 12-cloud-billing | none (Tech Provider: Meta bills business directly, Dimmi passes through nothing) | `metadata.whatsapp.pricing` informational only |
+| 12-cloud-billing | echo replies: Block becomes Waive `over_cap_echo` (metering-rules.md "Echo replies"); WhatsApp none (Tech Provider) | `metadata.whatsapp.pricing` informational only; `metadata.echo`, `metadata.echo_helper` |
 
 ## Contradictions / notes for foundation owners
 1. Resolved (extensibility.md section 10): `contact_identities.type` is registry enum; 05 registers `whatsapp_bsuid` in Go registry (no CHECK migration). Data-model says WhatsApp thread key is `wa_id`, but since April 2026 `wa_id` may be absent. 05 keys on BSUID (X1).
@@ -757,3 +830,8 @@ Logs: every inbound event logs `provider`, `connection_id`, `dedupe_key`, `kind`
 2. Cloud: allow customer-supplied custom Discord bots (one gateway session each)? **Yes, cap 3 custom Discord bots per workspace on cloud**; self-host unlimited. Cap = entitlement catalog key `channels.discord.custom_bots` (kind limit; self-host -1, cloud 3), read via `Entitlements.Limit`; staff raises per customer with `entitlement_overrides`, no deploy. Over limit: 422 `entitlement_limit_reached` (`key`, `limit`) on `POST /channels/discord` custom.
 3. Slack Marketplace listing for shared app before cloud launch? **Yes, submit at beta**; until approved, shared app avoids `conversations.history/replies` except gap backfill (non-Marketplace distributed apps limited to 1 request/min, 15 objects since 2025-05-29).
 4. WhatsApp read receipts default on? **Yes** (customers expect blue ticks; admin can turn off).
+5. Pleasantry-only and agent-silent threads billable? **Never** (D2 path above; marketing line against "assumed resolution" billing).
+6. Discord forum and mention rooms at launch grow 05; cut WhatsApp to after launch? **No**: keep all four, Discord rooms are the reason vibe-coder communities adopt.
+7. Telegram groups at launch? **No**, first item after launch; pull in only for a web3 design partner.
+8. Slack replies as teammate's own Slack user at launch? **No**: bot with teammate name + avatar first (later: slack-user-replies).
+9. Cloud Discord MESSAGE_CONTENT: **apply for App Verification at 75 servers and intent review before 10,000 users**; limited mode keeps product working meanwhile.

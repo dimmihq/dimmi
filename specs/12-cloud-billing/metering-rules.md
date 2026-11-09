@@ -292,7 +292,7 @@ Run through real App + Postgres (testing.md): each vector builds facts with fact
 
 ## Echo replies
 
-Later (`teammate-echo`, 05 X2). MVP: teammate native Slack/Discord messages ignored, never ledger. Test vector 29 retired (numbers 30-33 kept).
+05 X2 echo (launch): teammate native reply in Slack/Discord room thread stored as member reply, already delivered in provider before Dimmi sees it, so activation can never be blocked. D1 applies as dashboard reply; decision Block becomes Waive `over_cap_echo` (same pattern as spam unmark). Helper echo (`metadata.echo_helper`, contact-authored) never activates. Test vector 29 restored: capped workspace, echo reply, waiver line, no charge, `billable_count` unchanged.
 
 ## Launch feature replay fixtures (07, 13, 14, 15, 16)
 

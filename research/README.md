@@ -13,6 +13,7 @@ Start with `roadmap.md`. Everything else is evidence.
 | [competitors/helpdesk.md](competitors/helpdesk.md) | HelpDesk (helpdesk.com) and Text suite (LiveChat, ChatBot, KnowledgeBase). |
 | [competitors/featurebase.md](competitors/featurebase.md) | Featurebase: inbox, Messenger, help center, feedback, Fibi agent. Indie-hacker go-to-market. |
 | [competitors/productlane.md](competitors/productlane.md) | Productlane: Linear-native support, self-updating help center, review queue. |
+| [channels/README.md](channels/README.md) | Slack, Discord, Telegram support competitors (2026-11-08), cross-channel principles, spec 05 scope changes. Per-channel detail in `channels/`. |
 | [tech-stack.md](tech-stack.md) | Language, database, frontend, monolith strategy, "don't build" library list, risks. |
 | [pricing.md](pricing.md) | Per-conversation pricing, billable conversation definition, unit economics, bill comparisons, BYOK design, billing stack. |
 | [landscape-2026-11.md](landscape-2026-11.md) | First broad market scan: closed and open-source players, self-updating help centers, agent protocols. |

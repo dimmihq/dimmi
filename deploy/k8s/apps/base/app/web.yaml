@@ -1,0 +1,76 @@
+# The web role serves the dashboard, the API, the widget and realtime
+# sockets. New pods start and pass /ready before old ones stop, so a deploy
+# never drops capacity, and each pod gets time to drain its sockets on stop.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector:
+    app.kubernetes.io/name: dimmi
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dimmi
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dimmi
+        app.kubernetes.io/component: web
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: dimmi
+          image: dimmi
+          args: [serve]
+          envFrom:
+            - configMapRef:
+                name: dimmi-config
+            - secretRef:
+                name: dimmi-secrets
+          env:
+            - name: DIMMI_APP__ROLES
+              value: web
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: admin
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            exec:
+              command: [/dimmi, health]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 1Gi

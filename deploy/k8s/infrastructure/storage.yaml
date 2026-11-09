@@ -1,0 +1,11 @@
+# Every volume that holds data uses this class. Retain means deleting a
+# volume claim, by hand or by any controller, never deletes the files: the
+# volume is only released, and its directory stays on disk until a person
+# removes it.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: data-retain
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer

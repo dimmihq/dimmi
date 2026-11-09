@@ -158,7 +158,6 @@ Rows here need things unbuilt and no assigned gap implies them. Everything else 
 | later: message-edit | customer-visible reply edit, edit window, edit propagation (`ChannelEditor`, `apply_channel_edit`). Notes editable, replies delete only |
 | later: message-edit (channel sync) | outbound delete propagation (`ChannelDeleter`), inbound customer edits and deletes from channels. Delete is local; channel copy stays |
 | later: teammate-typing | "Jane is typing" between teammates. Presence, list viewers (I-07), 409 guard cover collisions |
-| later: teammate-echo (X2 of 05) | teammate native reply inside Slack or Discord thread |
 
 CSAT ships at launch in 15 (system message via `SendSystemMessage`, `include=csat` here). Importers and `imported` messages: launch: importers (16-importers, in; helpers below).
 

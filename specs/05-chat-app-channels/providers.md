@@ -19,7 +19,9 @@ provider -> /webhooks/... | socket/gateway/poller
   -> StoreInboundEvent (tx: insert channel_inbound_events ON CONFLICT DO NOTHING (durable backstop + audit) + InsertTx process job) -> 200
 process_channel_inbound_event (per-thread advisory lock)
   -> driver.Normalize(event) -> []Op (message | status | lifecycle | room | ignore); provider edit/delete events -> ignore (later: message-edit)
-  -> classify author: bot/self -> ignore; teammate -> ignore (later: teammate-echo); contact -> InboundMessage
+  -> classify author: bot/self -> ignore; teammate or helper in room thread -> InboundMessage with Echo (03 X2); teammate elsewhere -> ignore (DM: IsTest rules); contact -> trigger check (room `trigger`) -> pleasantry filter -> InboundMessage
+     flags: `public_room`, `addressed_to_other` (reply-to / mention of non-bot person), `audience_company_id` (Slack Connect room with company link)
+  -> interactions (buttons, shortcuts, slash commands, context menus) -> apply_channel_interaction (solved, handoff, create conversation, /ask)
   -> attachments: stream from provider (allowlisted host, size cap) to Filesystem
   -> 03 conversations.ReceiveInboundMessage / UpdateMessageDelivery
      InboundMessage.AfterPersist hook (same 03 tx): RecordContactState (last_inbound_at, window, profile) + channel_message_refs (media groups, extra ids)
@@ -55,20 +57,24 @@ oauth_config:
   scopes:
     bot: [channels:history, groups:history, im:history, channels:read, groups:read, im:read, im:write,
           chat:write, chat:write.customize, files:read, files:write, users:read, users:read.email,
-          reactions:write, team:read, channels:join]
+          reactions:read, reactions:write, team:read, channels:join, app_mentions:read, commands]
 settings:
   event_subscriptions:
     request_url: "{{ .AppURL }}/webhooks/slack/events/{{ .ChannelID }}"   # omitted when socket mode
     bot_events: [message.channels, message.groups, message.im, app_uninstalled, tokens_revoked,
                  member_joined_channel, channel_left, group_left, channel_archive, group_archive,
                  channel_deleted, group_deleted, channel_rename, group_rename, channel_id_changed,
-                 channel_shared, channel_unshared]
-  interactivity: { is_enabled: false }
+                 channel_shared, channel_unshared, app_mention, reaction_added]
+  interactivity:
+    is_enabled: true
+    request_url: "{{ .AppURL }}/webhooks/slack/interactions/{{ .ChannelID }}"   # omitted when socket mode
+  shortcuts:
+    - { name: "Create dimmi conversation", type: message, callback_id: dimmi_create_conversation, description: "Track this message as a support conversation" }
   socket_mode_enabled: {{ .Socket }}
   token_rotation_enabled: false
   org_deploy_enabled: false
 ```
-`app_uninstalled` and `tokens_revoked` need no scope. `member_joined_channel` with `user == bot_user_id` detects bot invited.
+`app_uninstalled` and `tokens_revoked` need no scope. `member_joined_channel` with `user == bot_user_id` detects bot invited. Interactivity, `reactions:read`, `app_mentions:read`, `commands` ship from day one even where MVP uses little of them: adding scopes later forces every custom app to be edited and reinstalled.
 
 Url verification: custom `pending` connection without signing secret answers `url_verification` challenge only (Slack verifies request URL during manifest creation, before user can copy secret). Any other event before secret stored: 401. Shared endpoint always verifies.
 
@@ -88,18 +94,28 @@ Message events handled (`event.type = message`):
 Room rules:
 - Message in DM (`channel_type = im`): thread key `slack:d:{channel}`; always active (App Home messages tab).
 - Message in channel without room row or room `paused`/`removed`: ignore. Room auto-created `active` on `member_joined_channel` (bot) with mode `shared` when `is_ext_shared` else `community`.
-- Top-level message (no `thread_ts` or `thread_ts == ts`): new conversation `slack:r:{room}:{ts}` unless group window: same author posted top-level message in same room within `group_window_seconds` (default 120) and that conversation still has no workspace reply: append to it (Dimmi replies stay in first thread).
+- Top-level contact message (no `thread_ts` or `thread_ts == ts`), by room `trigger`:
+  - `author_window` (default): new conversation `slack:r:{room}:{ts}` unless same author posted top-level message in same room within `group_window_seconds` (default 120) and that conversation still has no workspace reply: append to it (Dimmi replies stay in first thread).
+  - `every_message`: each top-level message own conversation.
+  - `mention`: only when message mentions bot (`app_mention`); others ignored (`not_triggered`).
+  - `emoji`: nothing at post time; `reaction_added` of `trigger_emoji` (default `ticket`) on a top-level message by anyone in room creates conversation from that message (fetch via `conversations.history` `latest=ts inclusive limit=1`; Marketplace throttle: 1 call per trigger is within limit). Later thread replies follow normal rules.
+  - `off`: no new conversations; echo and state still tracked for existing ones.
+  - Pleasantry filter runs before all modes: pleasantry top-level message never creates conversation.
+- Message shortcut "Create dimmi conversation" (any member of Slack workspace with app): creates conversation from that message regardless of trigger; ephemeral confirmation with link for linked members.
 - Thread reply (`thread_ts != ts`): key `slack:r:{room}:{thread_ts}`. No conversation for that key (thread started by teammate or before connect): contact message in that thread creates conversation keyed on thread root; teammate message ignored.
 - Mode `shared`: author is teammate when `user_team`/`user_profile.team` equals installing team and user not `is_restricted`/`is_ultra_restricted` (guests are contacts). Mode `community`: teammate only when `channel_member_links` has user; everyone else contact.
-- Teammate messages (in threads or top level): ignored, metric `kind=teammate` (later: teammate-echo). Auto-link by email (Slack profile email equals active member's verified user email, `source=email_match`) feeds `community` classification.
+- Teammate messages: top level ignored (metric `kind=teammate`). Inside thread of existing conversation: echo (03 X2) with `MemberID` when linked member, else ignored with room warning "Link your Slack account to record replies" (once per user per 7 days, ephemeral). Teammate @mentioned by customer in thread: agent stand-down (`human_replied`). Auto-link by email (Slack profile email equals active member's verified user email, `source=email_match`) feeds `community` classification.
 
 ### Outbound
+- Interactions endpoint: `application/x-www-form-urlencoded` `payload` JSON; same signature scheme as events; ack 200 within 3 s after `StoreInboundEvent` (transport `interaction`); Socket Mode delivers same payload as envelope type `interactive`.
 - Text: `chat.postMessage` with `channel`, `thread_ts` (root ts; DMs: none), `markdown_text` (standard Markdown accepted, max 12,000 chars, cannot combine with `text`/`blocks`), `username` + `icon_url` = teammate name/avatar (or agent name) via `chat:write.customize`, `unfurl_links: false`, `unfurl_media: true`. Escaping: `<`, `>`, `&` escaped to `&lt;` `&gt;` `&amp;` (blocks `<!here>` injection).
 - First reply to top-level message: `thread_ts = root ts`, `reply_broadcast = false`.
 - Attachments: per file `files.getUploadURLExternal` (`filename`, `length`) then POST bytes to `upload_url`, then one `files.completeUploadExternal` with `files: [{id, title}]`, `channel_id`, `thread_ts` (files share into thread). Text message posted first, files after. `files.upload` sunset 2025-11-12: never used. Refs kind `file`, external id `file:{F...}`.
 - Typing: none (no bot typing API outside assistant threads). Capability false.
 - Receipts: none; `sent` on `ok: true`.
-- Close marker: `reactions.add` `white_check_mark` on thread root; reopen `reactions.remove`. Errors `already_reacted` / `no_reaction` ignored.
+- State marker (`ChannelStateMarker`): closed `reactions.add` `white_check_mark` on thread root; reopen `reactions.remove`. Errors `already_reacted` / `no_reaction` ignored.
+- Working indicator: `reactions.add` `eyes` on triggering message at `ai.reply_started`, removed at commit/discard.
+- Answer controls (X6): message sent with `blocks` instead of `markdown_text` when controls present: `markdown` block (same Markdown, 12,000 chars) + `actions` block with buttons `Solved` (`primary`) and `Talk to a human`; `action_id` = control id (`controls.go`). Click: interaction payload `block_actions`, verify clicker is thread participant contact (else ephemeral "Only the person who asked can mark this solved"); then `chat.update` removes actions block. `ClearControls` also on human reply.
 
 ### Formatting
 - Out: Markdown passed as `markdown_text` after: escaping above, tables to code block, images to links, citation footer. Mention of linked teammate never generated (plain names).
@@ -135,26 +151,33 @@ Sources: docs.slack.dev events-api, verifying-requests-from-slack, rate-limits, 
 ### Connect
 | Mode | Flow |
 |---|---|
-| shared | `POST /channels/discord/installations` returns `https://discord.com/oauth2/authorize?client_id={app}&scope=bot&permissions=0&response_type=code&redirect_uri=...&state=...` (optional `guild_id` + `disable_guild_select=true` on reconnect). Callback gets `code`, `guild_id`; exchange code at `/oauth2/token` (includes `guild` object). Create connection `external_id = app_id:guild_id`. Bot receives `GUILD_CREATE` over gateway. No rooms (DMs only) |
+| shared | `POST /channels/discord/installations` returns `https://discord.com/oauth2/authorize?client_id={app}&scope=bot+applications.commands&permissions={channels.discord.permissions bitset}&response_type=code&redirect_uri=...&state=...` (optional `guild_id` + `disable_guild_select=true` on reconnect). Callback gets `code`, `guild_id`; exchange code at `/oauth2/token` (includes `guild` object). Create connection `external_id = app_id:guild_id`. Bot receives `GUILD_CREATE` over gateway. Setup step: pick rooms (forum channels default `auto`, text channels default `mention`), map roles. Global commands `/ask`, message context menu `Ask dimmi` registered once per application |
 | custom | `POST /channels/discord {bot_token, guild_id?}`: `GET /users/@me` + `GET /applications/@me` (application id, `verify_key` public key). `GET /users/@me/guilds`: 0 guilds: `pending`, return invite URL; 1: bind; more: 422 `discord_guild_required` unless `guild_id` given. Optional Interactions Endpoint URL `/webhooks/discord/interactions/{chn}` (setup step; without it interactions arrive over gateway) |
 
-Intents (2026): MVP is DMs only, so no privileged intent (DM content arrives without MESSAGE_CONTENT). App verification still required at 100+ servers. MESSAGE_CONTENT review + limited content mode: later with Discord server threads.
+Intents (2026): GUILDS, GUILD_MESSAGES, DIRECT_MESSAGES, MESSAGE_CONTENT (privileged). Since 2026-06-10 review is by user count: free toggle below 10,000 users across all servers, review above it, renewed yearly. Custom (self-host) bots: toggle in developer portal, setup checks it. Cloud shared bot: App Verification before 100 servers (apply at 75), intent review before 10,000 users; until granted above threshold, limited mode (config `channels.discord.intents`). DM content, bot mentions and interactions carry content without the intent.
 
 ### Inbound
 - Gateway: `GET /gateway/bot` (url, recommended `shards`, `session_start_limit` with `max_concurrency`). Identify with intents 4097 (GUILDS 1, DIRECT_MESSAGES 4096), `compress` zstd-stream transport. Sharding required at 2,500 guilds per shard; shards distributed by lease (`discord_gateway` key `{app}:{shard}/{count}`). Identify budget 1,000 per 24 h across shards (exceed: all sessions terminated + token reset): supervisor checks `session_start_limit.remaining` before identify, prefers RESUME (does not count). Send limit 120 gateway events per 60 s per connection. Heartbeat at `heartbeat_interval` (first with jitter), missing ACK: close non-1000 code, resume. Resume with `resume_gateway_url`, `session_id`, last `seq` (persisted in `channel_socket_sessions.state` every 2 s and on close) so new lease holder can resume after failover. Op 7 reconnect: resume. Op 9 `d=false`: re-identify then backfill.
 - Close codes: 4004 auth failed (token reset): connection `error` `discord_token_invalid`, no reconnect until credentials rotated. 4013/4014 (intents): connection `error` `discord_intents_invalid` (config bug; no privileged intent requested). 4010/4011 sharding: refetch `/gateway/bot`, reshard (all leases released, recomputed). Others: reconnect with backoff 1 s to 60 s.
-- Events used: `GUILD_CREATE` (bind custom pending, mark `available`), `GUILD_DELETE` (`unavailable = true`: outage, keep; absent: bot removed, connection `disconnected` reason `guild_removed`), `MESSAGE_CREATE` (DM channels only; intents exclude guild messages), `INTERACTION_CREATE` (DM routing select; only when no HTTP endpoint). DM `MESSAGE_UPDATE`/`MESSAGE_DELETE`: ignored (later: message-edit).
+- Events used: `GUILD_CREATE` (bind custom pending, mark `available`), `GUILD_DELETE` (`unavailable = true`: outage, keep; absent: bot removed, connection `disconnected` reason `guild_removed`), `MESSAGE_CREATE` (DMs; guild messages only in watched rooms and their threads, rest dropped before store), `THREAD_CREATE` (forum post created; `newly_created`), `THREAD_UPDATE` (tags, archived, locked changed in Discord: synced to conversation state), `THREAD_DELETE` (conversation stays, room thread gone note), `CHANNEL_UPDATE` (forum available tags refresh `tag_map`), `GUILD_ROLE_UPDATE`/`DELETE` (role link refresh/remove), `INTERACTION_CREATE` (commands, components; only when no HTTP endpoint). `MESSAGE_UPDATE`/`MESSAGE_DELETE`: ignored (later: message-edit).
 - Interactions HTTP: verify Ed25519 signature `X-Signature-Ed25519` over `X-Signature-Timestamp + raw body` with application public key (disgo `httpserver` verifier); PING (type 1) answered `{"type":1}`; respond within 3 s (component select answered with update message).
 - Gap recovery: after re-identify or lease takeover with failed resume, `backfill_channel_room` for DMs active in last 24 h: `GET /channels/{dm}/messages?after={last_seen_message_id}&limit=100`, feed through same dedupe path.
 
-Threading (MVP: DMs only; forum posts, text-channel threads, private `/support` tickets: later):
+Threading (private `/support` tickets: later: discord-private-tickets):
 | Place | Conversation |
 |---|---|
+| Forum post (room `discord_forum`, trigger `auto`) | key `discord:t:{thread_id}`; starter message = first inbound; title = subject. Trigger `mention`: only when post or reply mentions bot. Bot applies tag Open on create (missing tags: setup step "Create tags Open, Answered, Solved, Needs team" or one-click `PATCH /channels/{forum}` `available_tags` when bot has Manage Channels; else tag sync disabled with health warning). Max 5 applied tags per post: dimmi only toggles its own state tags, keeps others |
+| Text channel (room `discord_text`, trigger `mention`) | bot mention, `/ask question:`, or context menu `Ask dimmi` on any message: driver starts thread off message (`POST /channels/{c}/messages/{m}/threads`, name = first 80 chars) then ingests with key `discord:t:{thread}` (X5). `/ask` answers ephemeral ack "Answering in thread" |
+| Thread of watched room, later messages | contact: normal inbound; linked member or `teammate` role with link: echo member; `helper` role: echo helper; reply-to or mention of other non-bot user: `addressed_to_other` |
 | DM | key `discord:d:{dm_channel}`. Shared bot DM routing: user must share a guild with bot; candidates = connections whose guild has this user (`GET /guilds/{g}/members/{u}` probe, cached 24 h). 1 candidate: route. Several: bot replies with select menu (component) "Which community do you need help with?"; choice stored in `channel_contact_states.profile.dm_route` (sticky 30 days, asked again after). 0: bot replies once per 24 h "Please ask in your community's support channel" (not stored as conversation). Custom bot: its connection(s) only |
 
 Teammates: DM from user linked in `channel_member_links`: conversation flagged `IsTest` (D10). Webhook messages (`webhook_id`) and `author.bot` ignored (own bot: confirm send).
 
 ### Outbound
+- Rooms: same call on thread id (`/channels/{thread}/messages`); archived thread: unarchive first (`PATCH archived=false`) when conversation reopened by reply. Locked thread: send fails `discord_thread_locked`, message failed with explanation.
+- Answer controls (X6): `components` action row with buttons `Solved` (style success) and `Talk to a human` (secondary), `custom_id` = control id. Click: interaction type 3; only original poster (thread owner or conversation contact) may press Solved, others get ephemeral notice; response type 7 (update message) removes row. Thumbs feedback: later.
+- Handoff in room: "A teammate will follow up here." plus one allowed role mention (`allowed_mentions.roles = [escalation role]`), tag Needs team.
+- State marker: closed: tag Solved (remove Open/Answered/Needs team) then `archived=true` when `archive_on_close`; reopened: unarchive, tag Open.
 - `POST /channels/{dm}/messages` with `content` (max 2,000 chars per message, split max 4 parts), `allowed_mentions: {"parse": []}`; files as multipart `files[n]` (max 10 per message, each within upload limit; default 20 MiB for all users since 2026-09-03, higher with server boost; `attachment_size_limit` unknown for non-interaction sends, so driver uses 20 MiB): bigger file: signed link line appended. Request total kept under 25 MiB by batching files into extra messages.
 - Bot posts as itself (no per-message username for bot messages); teammate attribution: first line `**{Teammate name}**` prefix setting `show_author_name` (default true) for human replies; agent replies prefixed with agent name only when `show_author_name`.
 - Typing: `POST /channels/{c}/typing` (expires 10 s). 03 job every 4 s while typing: driver throttles to 1 per 8 s per channel.
@@ -189,14 +212,16 @@ Sources: docs.discord.com developers/events/gateway, topics/rate-limits, resourc
 ### Connect
 - Only custom mode (each business has own bot from @BotFather). Cloud and self-host identical.
 - `POST /channels/telegram {bot_token}`: `getMe` (bot id, username, `can_join_groups`, `can_read_all_group_messages` = privacy off). Then transport:
-  - webhook: `setWebhook` url `{app.url}/webhooks/telegram/updates/{chn}`, `secret_token` (64 random chars from `[A-Za-z0-9_-]`, allowed 1 to 256), `allowed_updates: ["message","my_chat_member","callback_query"]`, `max_connections` 40 (allowed 1 to 100), `drop_pending_updates: false`. Ports allowed by Telegram: 443, 80, 88, 8443 (else polling auto).
+  - webhook: `setWebhook` url `{app.url}/webhooks/telegram/updates/{chn}`, `secret_token` (64 random chars from `[A-Za-z0-9_-]`, allowed 1 to 256), `allowed_updates: ["message","my_chat_member","callback_query"]` (callback_query = answer buttons), `max_connections` 40 (allowed 1 to 100), `drop_pending_updates: false`. Ports allowed by Telegram: 443, 80, 88, 8443 (else polling auto).
   - polling (self-host without public URL): `deleteWebhook`, lease `telegram_polling` key bot id, `getUpdates` long poll timeout 50 s, `offset` persisted in `state` after each batch commit. Webhook and polling exclusive (getUpdates fails while webhook set).
-- `setMyCommands` registers `/start`, `/help` in private chats. Bot description not touched.
+- `setMyCommands` registers `/start`, `/help`, `/human` in private chats. Bot description not touched.
+- Setup shows `t.me/{username}` link + QR code (rendered client side) for sharing.
 - Token valid format checked before network. Same bot connected to another workspace: 409 `channel_connected_elsewhere` (never steal webhook).
 
 ### Inbound
 - Header `X-Telegram-Bot-Api-Secret-Token` must equal connection secret (constant time). Non-2xx makes Telegram retry, then give up; updates kept by Telegram at most 24 h. Dedupe `update_id` per bot.
-- `message` in private chat: key `telegram:p:{chat_id}`. `/start` alone: stored `AutoGenerated` (no AI trigger, no billing) only when no open conversation; `/start payload` text kept.
+- `message` in private chat: key `telegram:p:{chat_id}`. `/start` alone: stored `AutoGenerated` (no AI trigger, no billing) only when no open conversation. `/start {nonce}`: nonce looked up in Valkey `ch:link:{nonce}` (05 `deep_links.go`, single use, TTL 15 min): hit binds `telegram_user` identity to widget contact (`InboundSender.ContactID`, verified pair), greeting uses contact name; miss or expired: treated as plain `/start`, payload never shown to agent. `/human`: 07 `RequestHumanHandoff`.
+- `callback_query`: buttons (X6 controls). `answerCallbackQuery` within 10 s always (spinner stops); `data` = control id (under 64 bytes). Then `editMessageReplyMarkup` to remove keyboard.
 - Groups/supergroups/forum topics: messages ignored, metric `kind=group`; bot added to group: no room, nothing stored (later: telegram-groups).
 - Private chats with topics (Bot API 9.3+): `message_thread_id` echoed back on replies.
 - Edits: `edited_message` not subscribed (later: message-edit). Deletes: Bot API has no update for user deletions in normal chats: never synced.
@@ -208,6 +233,9 @@ Sources: docs.discord.com developers/events/gateway, topics/rate-limits, resourc
 - `sendMessage` `parse_mode: HTML`, text max 4,096 chars after entity parsing, split max 4; `link_preview_options: {is_disabled: true}` when more than 1 link; private-chat topics: `message_thread_id`.
 - Attachments: images up to 10 MB `sendPhoto`, else `sendDocument` (up to 50 MB upload; our cap 25 MB); 2 to 10 attachments of photo/video: `sendMediaGroup` (caption on first, max 1,024 chars; longer text sent as separate message first). Refs `media_group` per item.
 - Typing: `sendChatAction` `typing` (shows 5 s or until message); 03 4 s cadence fits.
+- Draft streaming (private chats, `channels.telegram.stream_drafts`): on `ai.reply_started` `sendMessageDraft` with `draft_id` = run sequence (non-zero int), empty text = "thinking" state; on `ai.reply_delta` resend accumulated text rendered to HTML (throttle 1 per 500 ms per chat; rendered text over 4,096: stop streaming, final split send). On commit normal `sendMessage` with controls (draft replaced by message). On `ai.reply_discarded` draft cleared by empty update. Errors on draft calls never fail the answer: fall back to typing.
+- Reaction: `setMessageReaction` 👀 on inbound message when agent will not answer now (agent off for channel, handed off, outside schedule) as honest "seen"; never when agent answers (draft/typing shows instead).
+- Answer controls (X6): `reply_markup` `inline_keyboard` one row: `✅ Solved`, `🙋 Talk to a human`.
 - Receipts: none for bots (read only for business connections). `sent` on `ok: true`.
 - Cannot message first: no prior private chat (`403 Forbidden: bot can't initiate conversation with a user`): `ErrRecipientUnreachable` code `telegram_cannot_initiate`. `403 Forbidden: bot was blocked by the user`: `telegram_403_blocked`, state unreachable.
 

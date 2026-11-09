@@ -72,7 +72,7 @@ Only items without which first users will not switch or will churn week one. Eac
 | Channel | How | User setup | Gotchas |
 |---|---|---|---|
 | Telegram | Bot API, webhook. Private chats (groups, forum topics later: telegram-groups). | Paste BotFather token. About 1 minute. | Easiest. Bot cannot message user first. |
-| Discord | Bot: Gateway WebSocket plus REST. IC mode set (other modes later: discord-ticket-modes). | Click invite link (cloud) or create bot (self-host). | Gateway connection held by one replica (per-shard lease table). Large public bots need Discord verification and message content intent approval. |
+| Discord | Bot: Gateway WebSocket plus REST. Forum posts, mention / `/ask` threads and DMs at launch (private tickets later: discord-private-tickets; see research/channels). | Click invite link (cloud) or create bot (self-host). | Gateway connection held by one replica (per-shard lease table). Large public bots need Discord verification and message content intent approval. |
 | Slack | Slack app: Events API plus Web API. Customer channels and Slack Connect shared channels. Each thread is one conversation. | Install app, pick channels. | Slack Connect depends on customer's Slack plan [unverified]. Self-host uses own app manifest. |
 | WhatsApp | Meta WhatsApp Cloud API, direct (no Twilio markup). | Meta Business account, phone number, business verification. | 24-hour customer service window; outside it only approved templates. Meta bills business directly under Tech Provider model; Dimmi passes nothing through. Verification can take days: biggest setup friction. |
 
@@ -285,8 +285,7 @@ Source: `scope-audit-4-competitors.md` sections 1 (C1-C16) and 2 (B1-B20). PO: e
 | teammate-typing | C15 | 03 | Teammate "is typing" relay between teammates (collision) | IC shows viewing only. "Is viewing" + 409 guard stay |
 | discord-notifications | B1 | 06 | Discord team notifications (personal webhook + workspace destination) | FB partial (new posts only); IC/PL no. Slack stays |
 | telegram-groups | B2 | 05 | Telegram groups (mention/reply chains) and forum topics | IC Telegram, group support unclear. Private chats stay |
-| discord-ticket-modes | B3 | 05 | Discord private `/support` tickets, forum posts, text-channel threads beyond IC mode set | IC Discord, sub-modes unclear |
-| teammate-echo | B4 | 05 (03) | Teammates replying natively in Slack/Discord thread recorded as replies | PL partial; IC unclear |
+| discord-private-tickets | B3 | 05 | Discord private `/support` tickets (panel, private thread, intake modal). Forum posts and text-channel threads moved to launch 2026-11-08 | Mava, Ticket Tool, Fin |
 | agent-send-modes | B8 | 09 | Agent send modes `confirm` / `drafts_only` / `direct`; MVP always confirms | FB partial (MCP drafts) |
 | reply-drafts | B9 | 09 | Server-side reply drafts (`reply_drafts`) over REST/MCP/CLI | FB partial (MCP composer drafts) Composer drafts moved to launch 2026-11-04 (03 workbench.md); REST, MCP, CLI drafts with send modes stay here. |
 | feedback-eta | B10 | 14 | ETA on feedback posts (month/quarter, public toggle) | FB/PL unclear |

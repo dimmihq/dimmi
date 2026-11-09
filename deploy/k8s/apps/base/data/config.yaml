@@ -1,0 +1,22 @@
+# Settings every dimmi process in an environment shares, as DIMMI_ variables.
+# Overlays patch the values that differ per environment. Anything secret
+# lives in the dimmi-secrets Secret instead.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dimmi-config
+data:
+  DIMMI_APP__ENV: production
+  DIMMI_HTTP__ADDR: ":8080"
+  DIMMI_HTTP__ADMIN_ADDR: ":9090"
+  DIMMI_HTTP__SHUTDOWN_TIMEOUT: 50s
+  DIMMI_MIGRATIONS__AUTO: "false"
+  DIMMI_DATABASE__MAX_CONNS: "10"
+  DIMMI_QUEUE__MAX_CONNS: "10"
+  DIMMI_ENCRYPTION__KEK: local
+  DIMMI_FILESYSTEMS__DEFAULT: s3
+  DIMMI_FILESYSTEMS__DISKS__S3__DRIVER: s3
+  DIMMI_FILESYSTEMS__DISKS__S3__BUCKET: files
+  DIMMI_FILESYSTEMS__DISKS__S3__ENDPOINT: http://seaweedfs:8333
+  DIMMI_FILESYSTEMS__DISKS__S3__FORCE_PATH_STYLE: "true"
+  DIMMI_FILESYSTEMS__DISKS__S3__REGION: us-east-1

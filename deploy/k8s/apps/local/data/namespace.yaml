@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dimmi-local
+  labels:
+    dimmi.com/protected: "true"
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

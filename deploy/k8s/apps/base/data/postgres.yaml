@@ -1,0 +1,59 @@
+# PostgreSQL for one environment. The database belongs to dimmi_owner, which
+# runs migrations. The application connects as dimmi_app, which owns nothing
+# and cannot bypass row-level security, so every tenant policy applies to it.
+# Default privileges give it read and write on whatever the owner creates.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  labels:
+    dimmi.com/protected: "true"
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  instances: 1
+  inheritedMetadata:
+    labels:
+      dimmi.com/protected: "true"
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    storageClass: data-retain
+    size: 10Gi
+  bootstrap:
+    initdb:
+      database: dimmi
+      owner: dimmi_owner
+      secret:
+        name: postgres-owner
+      dataChecksums: true
+      postInitApplicationSQL:
+        - CREATE ROLE dimmi_app LOGIN
+        - ALTER SCHEMA public OWNER TO dimmi_owner
+        - REVOKE ALL ON DATABASE dimmi FROM PUBLIC
+        - REVOKE CREATE ON SCHEMA public FROM PUBLIC
+        - GRANT CONNECT, TEMPORARY ON DATABASE dimmi TO dimmi_app
+        - GRANT USAGE ON SCHEMA public TO dimmi_app
+        - ALTER DEFAULT PRIVILEGES FOR ROLE dimmi_owner IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE, MAINTAIN ON TABLES TO dimmi_app
+        - ALTER DEFAULT PRIVILEGES FOR ROLE dimmi_owner IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO dimmi_app
+        - ALTER DEFAULT PRIVILEGES FOR ROLE dimmi_owner IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO dimmi_app
+  managed:
+    roles:
+      - name: dimmi_app
+        ensure: present
+        login: true
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        passwordSecret:
+          name: postgres-app-role
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: 256MB
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

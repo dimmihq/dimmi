@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-local
+resources:
+  - namespace.yaml
+  - ../../base/data
+patches:
+  - target:
+      kind: ConfigMap
+      name: dimmi-config
+    patch: |
+      - op: replace
+        path: /data/DIMMI_APP__ENV
+        value: local
+      - op: add
+        path: /data/DIMMI_APP__URL
+        value: http://localhost:18080
+      - op: add
+        path: /data/DIMMI_TELEMETRY__ENVIRONMENT
+        value: local
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__DRIVER
+        value: log
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__DRIVER
+        value: log
+  - target:
+      kind: Cluster
+      name: postgres
+    patch: |
+      - op: replace
+        path: /spec/storage/size
+        value: 2Gi
+  - target:
+      kind: StatefulSet
+      name: seaweedfs
+    patch: |
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 2Gi

@@ -1,0 +1,137 @@
+# SeaweedFS is the environment's S3: uploads, attachments and exports. One
+# pod runs master, volume, filer and the S3 gateway together, which is what a
+# single server needs. Clients must sign with the key in the seaweedfs-s3
+# secret; there is no anonymous access. The pod's parts find each other
+# through the Service, so it lists the pod before the gateway is ready.
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+spec:
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: seaweedfs
+  ports:
+    - name: s3
+      port: 8333
+    - name: master
+      port: 9333
+    - name: master-grpc
+      port: 19333
+    - name: filer
+      port: 8888
+    - name: filer-grpc
+      port: 18888
+    - name: volume
+      port: 8080
+    - name: volume-grpc
+      port: 18080
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: seaweedfs
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  serviceName: seaweedfs
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+    spec:
+      containers:
+        - name: seaweedfs
+          image: chrislusf/seaweedfs:3.97
+          args:
+            - server
+            - -dir=/data
+            - -ip=seaweedfs
+            - -ip.bind=0.0.0.0
+            - -volume.max=0
+            - -master.volumeSizeLimitMB=1024
+            - -s3
+            - -s3.config=/etc/seaweedfs/s3.json
+          ports:
+            - name: s3
+              containerPort: 8333
+            - name: master
+              containerPort: 9333
+            - name: master-grpc
+              containerPort: 19333
+            - name: filer
+              containerPort: 8888
+            - name: filer-grpc
+              containerPort: 18888
+            - name: volume
+              containerPort: 8080
+            - name: volume-grpc
+              containerPort: 18080
+          readinessProbe:
+            tcpSocket:
+              port: s3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/seaweedfs
+              readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: seaweedfs-s3
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          dimmi.com/protected: "true"
+      spec:
+        storageClassName: data-retain
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 20Gi
+---
+# Creates the files bucket and fails until the bucket is listed, so the Job
+# never completes without it. Creating a bucket that exists changes nothing,
+# so it is safe to run on every apply.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seaweedfs-buckets
+  annotations:
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  backoffLimit: 10
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: buckets
+          image: chrislusf/seaweedfs:3.97
+          command:
+            - sh
+            - -ec
+            - |
+              shell() { echo "$1" | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888; }
+              shell "s3.bucket.create -name $BUCKET"
+              shell "s3.bucket.list" | grep -E "(^|[[:space:]])$BUCKET[[:space:]]"
+          env:
+            - name: BUCKET
+              value: files
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi

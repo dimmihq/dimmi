@@ -59,7 +59,7 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 47. Network partition: old holder still connected but cannot renew lease. Renewal failure closes socket immediately (before TTL ends) so two replicas never both process; brief overlap possible up to 5 s: dedupe covers duplicates.
 48. Identify budget near zero (`session_start_limit.remaining < 10`). Supervisor stops identifying, keeps resume attempts, alerts; waits until `reset_after`.
 49. All replicas restart at once (deploy). Leases expire; first replica up takes up to fair share; others take rest as they join; resume within Discord window (session alive briefly) avoids identify.
-50. Single replica self-host. Holds all leases; restart: resume or backfill. Laptop sleep 8 hours: Discord session invalid, re-identify, backfill last 24 h of active DMs only (older gap documented loss for Discord; Telegram keeps updates 24 h; Slack Socket Mode events during downtime lost beyond Slack retries: backfill via `conversations.history` for active rooms).
+50. Single replica self-host. Holds all leases; restart: resume or backfill. Laptop sleep 8 hours: Discord session invalid, re-identify, backfill last 24 h of active DMs and open room threads only (older gap documented loss for Discord; Telegram keeps updates 24 h; Slack Socket Mode events during downtime lost beyond Slack retries: backfill via `conversations.history` for active rooms).
 51. Shared bot crosses 2,500 guilds per shard. Close 4011 or `/gateway/bot` recommends more shards: supervisor reshards: release all leases, recompute keys, identify respecting `max_concurrency`.
 52. Telegram polling and webhook both configured (admin switched transport). `setWebhook` disables polling (getUpdates errors 409); switching to polling calls `deleteWebhook` first; lease holder stops on 409 conflict and flags error.
 53. Two self-host instances (staging + prod) polling same Telegram bot. Telegram returns 409 Conflict to one; that instance marks connection `error` "Bot is used by another instance (getUpdates conflict)". Never fights in loop (backoff 60 s, then 10 min).
@@ -68,14 +68,14 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 
 ## D. Threading and routing
 
-56. Slack customer posts in channel, teammate replies in thread natively before Dimmi. Teammate message not ingested (teammate echo: later); conversation stays waiting in inbox; Dimmi Agent may still answer. Docs: reply from Dimmi.
+56. Slack customer posts in channel, linked teammate replies in thread natively before Dimmi. Echo stored as member reply (03 X2), conversation answered, agent stands down (`human_replied`) even if its run is queued (07 gate 4). Unlinked teammate: not stored, ephemeral prompt to link account (once per 7 days).
 57. Slack thread started by teammate (announcement), customer replies inside. Conversation created keyed on root; root message not imported (teammate content); conversation subject from customer message.
 58. Customer posts 3 top-level messages within 2 minutes. Joined into first conversation (group window); after workspace reply, next top-level message = new conversation.
 59. Customer replies with "Also send to channel" (`thread_broadcast`). Treated as thread reply; one message, not two.
 60. Slack thread root deleted by customer. `message_deleted` ignored (channel delete sync: later), Dimmi keeps message; thread replies still exist in Slack; our sends to thread still work (Slack keeps thread with "This message was deleted").
 61. Conversation closed beyond reopen window, customer replies in old Slack thread. 03 creates new conversation with `previous_conversation_id`, same key; reply goes to same Slack thread.
 62. Two Dimmi conversations merged (03) with different Slack threads. Routing follows latest contact message's connection; reply goes to thread of surviving conversation's key; customer writing in old thread: 03 lookup by key follows `merged_into_id`.
-63. Discord DM to shared bot from user in 2 connected guilds of 2 different Dimmi workspaces. Bot asks select menu; choice sticky 30 days in `dm_route`, asked again after expiry (switch command: later with Discord `/support`).
+63. Discord DM to shared bot from user in 2 connected guilds of 2 different Dimmi workspaces. Bot asks select menu; choice sticky 30 days in `dm_route`, asked again after expiry (switch command: later with discord-private-tickets).
 64. Discord DM from user in no connected guild. Polite single reply per 24 h; nothing stored.
 65. WhatsApp user changes phone number (`user_changed_number`). New identities added to same contact; open conversation rekeyed; window state copied to new identity state.
 66. WhatsApp user enables username, `wa_id` disappears mid-conversation. Key already BSUID-based (since April 2026 webhooks carry BSUID); conversations created before BSUID era keyed `whatsapp:p:{wa_id}`: on first webhook carrying both, rekey to `whatsapp:u:{bsuid}` (one-time, logged).
@@ -86,7 +86,7 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 
 69. Slack Connect external user's email hidden by their org. No email identity; contact named from profile.
 70. Slack user display name changes. Profile refresh (24 h) updates `channel_contact_states.profile`; contact name updated only if contact name still equals previous provider name (never overwrites teammate edit).
-71. Slack user from installing team but not Dimmi member writes in `shared` room thread. Classified teammate: ignored, not stored (teammate echo: later).
+71. Slack user from installing team but not Dimmi member writes in `shared` room thread. Classified teammate without member link: not stored; agent still stands down (human from vendor side spoke); ephemeral link prompt.
 72. Teammate in `shared` room asks question as customer would (internal test). Treated as teammate (ignored top-level). Testing guide: use DM or `community` room.
 73. Linked member deactivated in Dimmi. Link deleted; that user's messages in `community` rooms now classified contact.
 74. Slack auto-link email matches two members (impossible: user emails unique) or member in other workspace. Only active members of this workspace considered.
@@ -227,3 +227,33 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 ## Imports (16)
 
 172. `GET /channels` after 16 import. `import` connections hidden from default list (`filter[type]=import` shows them read-only); imported message reaching a 05 driver (bug): `ErrPermanent` `imported_message`, no provider call.
+
+## R. Shared spaces, controls, streaming (revision 2026-11-08)
+
+173. Customer writes "thanks!" in Slack thread after agent answer. Pleasantry: stored `AutoGenerated` (no reopen, no agent run, not billable). Same text top level in room: ignored, no conversation.
+174. "thanks, but it still fails?" Contains `?` and over pleasantry rules: normal message, agent may answer.
+175. Pleasantry in a language without word list. Emoji-only and length rule still apply; otherwise treated as normal message (fail open: better a conversation than a lost question).
+176. Teammate replies natively, then customer asks follow-up in same thread. Conversation `ai_state = handed_off` stays; agent silent; teammate notified per 06 like any customer message.
+177. Teammate re-enables AI in dashboard after echo handoff. Next customer message triggers agent normally.
+178. Helper role member answers in Discord forum post. Echo helper: `waiting_since` cleared, agent stands down, tag Answered. Helper later asks own question in another post: normal contact conversation (helper is contact).
+179. User has both linked member and helper role. Member link wins (echo as member).
+180. Customer in room replies to another member ("@sam did that work for you?"). `addressed_to_other`: stored, agent skips (`not_addressed`), no stand-down (no human from workspace replied).
+181. Customer @mentions teammate in thread ("@frantz can you check?"). Stored; stand-down `human_replied` (customer asked for human); handoff notification to that member if linked.
+182. Someone other than original poster presses Solved on agent answer in public thread. Refused with ephemeral notice; Talk to a human allowed for anyone (escalates conversation, not their own).
+183. Customer presses Solved twice or after conversation closed. Idempotent; second click acknowledged, no event.
+184. Customer presses Talk to a human after teammate already replied. `RequestHumanHandoff` idempotent; buttons already cleared on human reply (old message may still show buttons if clear failed: action no-ops).
+185. Button click arrives after connection deleted. Interaction acked 200 with ephemeral "This support channel is no longer connected"; nothing stored.
+186. Telegram `callback_data` from forged client (crafted id). Control id resolves only to agent messages of same chat's conversation; mismatch: `answerCallbackQuery` with "Not available", logged.
+187. Telegram draft streaming hits 429. Stop drafts for this run, keep typing; final message sent normally after retry_after.
+188. Telegram run superseded (new customer message mid-stream). `ai.reply_discarded`: draft cleared; new run starts new draft id.
+189. Telegram client too old to show drafts. Telegram ignores draft for that client; final message still arrives. No detection needed.
+190. `/start` nonce reused or forwarded to another person. Single use: second use plain `/start`. First use by wrong person links that person to widget contact: nonce bound to widget session, TTL 15 min, link shown only inside widget of that contact; identity verified=true only for pair (telegram id, widget contact), never merges with JWT-verified identities automatically (03 suggestion instead).
+191. Discord forum lacks Open/Solved tags and bot lacks Manage Channels. Tag sync disabled, health warning with one-click fix once permission granted; conversations still work.
+192. Moderator removes dimmi tag or archives post manually. `THREAD_UPDATE`: archive = conversation closed (actor system, reason `closed_in_channel`); tag Solved added by human = closed; tag removal alone ignored.
+193. Forum post locked by moderator. Conversation stays; outbound fails `discord_thread_locked` (message failed, teammate sees reason).
+194. Guild hits 1,000 active threads. Thread create fails 160006-class error: `/ask` ephemeral "Server thread limit reached, ask in DM"; health warning suggests `archive_on_close`.
+195. Cloud bot above 10,000 users without MESSAGE_CONTENT. Limited mode: forum rooms switch to `mention` trigger, setup banner explains; no data loss for DMs and interactions.
+196. Slack `emoji` mode: trigger emoji added twice or by two people. First creates conversation; later reactions no-op (dedupe on message ts). Emoji removed: conversation stays.
+197. Slack message shortcut used on a message already in a conversation. Ephemeral link to existing conversation; no duplicate.
+198. Slack Connect room linked to company, second external org joins (`channel_shared`). `company_id` cleared, audience guard back on for future runs, `channel.updated` warning to admins.
+199. Working indicator 👀 reaction left behind (worker crash between add and remove). Stop listener on `ai.run_completed` and hourly sweep for runs ended over 5 min ago remove it; `no_reaction` ignored.

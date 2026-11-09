@@ -1,0 +1,55 @@
+# The worker and scheduler roles run queued jobs and timed tasks with no
+# listener of their own, so a slow job never holds up a request. The
+# scheduler elects one leader, so any number of these pods is safe.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dimmi
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dimmi
+        app.kubernetes.io/component: worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: dimmi
+          image: dimmi
+          args: [serve]
+          envFrom:
+            - configMapRef:
+                name: dimmi-config
+            - secretRef:
+                name: dimmi-secrets
+          env:
+            - name: DIMMI_APP__ROLES
+              value: worker,scheduler
+          ports:
+            - name: admin
+              containerPort: 9090
+          livenessProbe:
+            exec:
+              command: [/dimmi, health]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 2Gi

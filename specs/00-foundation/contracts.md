@@ -52,7 +52,7 @@ Where code lives (`00-conventions/framework.md` 2.3):
 
 ## Channel
 
-Canonical definition: `specs/03-shared-inbox/channel-contract.md` (owner 03; Go package `github.com/dimmihq/dimmi/app/contracts`, ids as `ids.UUID`), including additions X1, X3-X5 requested by 05 (X2 echo later: `teammate-echo`). Inbound entry point for every channel: action `conversations.ReceiveInboundMessage`. Email (04), chat apps (05), widget (01) implement or call exactly that. No other names (`ReceiveChannelMessage` is wrong).
+Canonical definition: `specs/03-shared-inbox/channel-contract.md` (owner 03; Go package `github.com/dimmihq/dimmi/app/contracts`, ids as `ids.UUID`), including additions X1-X6 requested by 05 (X2 teammate echo in room threads, X6 answer controls). Inbound entry point for every channel: action `conversations.ReceiveInboundMessage`. Email (04), chat apps (05), widget (01) implement or call exactly that. No other names (`ReceiveChannelMessage` is wrong).
 
 Outbound retry window per channel: 03 default about 3 hours. Driver may declare longer window in capabilities; email (04) uses about 24 hours (SMTP norms). `send_channel_message` job reads window from driver, not hardcoded.
 

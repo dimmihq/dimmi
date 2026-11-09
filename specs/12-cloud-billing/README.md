@@ -1,6 +1,6 @@
 # 12 Cloud billing: honest metering
 
-Style: caveman. Scope trim 2026-11-02: survey public-link cap seam (later: `hosted-survey-page`), echo-reply waiver (later: `teammate-echo`), changelog reply fixture clause (later: `changelog-replies-to-inbox`) removed. Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`, `research/pricing.md`. Extra files: [metering-rules.md](metering-rules.md) (D1-D15 as code, rating, cap math, replay, test vectors), [stripe.md](stripe.md) (Stripe objects, invoices, webhooks, dunning, credit notes, reconciliation).
+Style: caveman. Scope trim 2026-11-02: survey public-link cap seam (later: `hosted-survey-page`), echo-reply waiver now launch (05 X2, metering-rules.md "Echo replies"), changelog reply fixture clause (later: `changelog-replies-to-inbox`) removed. Read with `specs/00-conventions/README.md`, `specs/00-foundation/*`, `research/pricing.md`. Extra files: [metering-rules.md](metering-rules.md) (D1-D15 as code, rating, cap math, replay, test vectors), [stripe.md](stripe.md) (Stripe objects, invoices, webhooks, dunning, credit notes, reconciliation).
 
 Infrastructure (EC2 + RDS + ElastiCache, CloudFormation): [infrastructure.md](infrastructure.md).
 
@@ -62,7 +62,6 @@ Why: roadmap launch item 12 ("Hosted cloud with honest metering"), `research/roa
 - Pricing page UI and calculator UI (frontend later; data endpoints here).
 - Migration promo (3 months free for Fin switchers): implementable as credit grant by staff; no automation.
 - `hosted-survey-page` (audit C12): `HasPaid`-gated daily cap for 15 public survey links (`engage.link.public_daily_limit_unpaid`): later with 15 hosted page.
-- `teammate-echo` (audit B4): over-cap waiver for Slack/Discord echo replies (vector 29): later with 05 echo.
 
 ## Over-cap behavior (precise)
 

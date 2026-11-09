@@ -39,6 +39,22 @@
       ],
       "port": 8097,
       "autoPort": false
+    },
+    {
+      "name": "anatomy-figures",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8099", "--bind", "127.0.0.1", "--directory", "tmp/anatomy"],
+      "port": 8099,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-ai",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/195709be-4e00-4905-a8b1-b336b3c9aec5/scratchpad/dev-ai.sh"
+      ],
+      "port": 8080,
+      "url": "http://localhost:8080"
     }
   ]
 }

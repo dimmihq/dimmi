@@ -1,0 +1,45 @@
+# Applies pending migrations as dimmi_owner before a release rolls out.
+# Migrations only ever add, so the running release keeps working on the new
+# schema while the next one starts. Flux recreates the Job whenever its image
+# changes, because a Job's template cannot be edited in place.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dimmi
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: migrate
+          image: dimmi
+          args: [migrate, --force]
+          envFrom:
+            - configMapRef:
+                name: dimmi-config
+            - secretRef:
+                name: dimmi-secrets
+          env:
+            - name: DIMMI_DATABASE__URL
+              valueFrom:
+                secretKeyRef:
+                  name: dimmi-secrets
+                  key: OWNER_DATABASE_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi

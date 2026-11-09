@@ -4,7 +4,7 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
 
 ## M1 Channel plumbing (shared by all four)
 
-- [ ] **Migrations + queries + factories.** `20261101000502`..`000510` (indexes, 7 tables, RLS; no core CHECK migration). Register identity types (`slack_user`, `discord_user`, `telegram_user`, `whatsapp_wa_id`, `whatsapp_bsuid`) and channel types in foundation registries at boot. sqlc queries per table. Factories for connection types, rooms (Slack), states, templates, inbound events.
+- [ ] **Migrations + queries + factories.** `20261101000502`..`000511` (indexes, 8 tables incl. `channel_role_links`, `channel_rooms` with `trigger`/`agent_enabled`/`company_id` and registry `kind`, RLS; no core CHECK migration). Register room kinds `slack_channel`, `discord_forum`, `discord_text`. Register identity types (`slack_user`, `discord_user`, `telegram_user`, `whatsapp_wa_id`, `whatsapp_bsuid`) and channel types in foundation registries at boot. sqlc queries per table. Factories for connection types, rooms (Slack), states, templates, inbound events.
   - Accept: `dimmi migrate` clean on fresh + on DB with foundation rows; inserting `contact_identities` row with `whatsapp_bsuid` passes with no 05 migration touching core tables (test); unregistered type rejected by 03 action (edge case 150).
   - Tests: lint check (tenant queries filter `workspace_id`), RLS cross-tenant test for each tenant table.
 - [ ] **Signature middleware x4 + raw body capture.** Slack via `slack.NewSecretsVerifier` (v0 HMAC + 300 s window), Discord via disgo `httpserver` Ed25519, Telegram secret header (own), Meta `sha256=` HMAC (own); size caps; constant-time compares.
@@ -28,6 +28,15 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
   - Tests: no duplicate events on repeated failures; recovery emits `channel.connected` reason `recovered`; every catalog code has message (integration test enumerates catalog).
 - [ ] **Shared classify + identity + attachments helpers.** Author classification (self/bot/teammate/contact), identity claim builders, attachment streaming with host allowlist + caps + placeholders, `RecordContactState`, profile refresh job.
   - Tests: allowlist refusal (SSRF payload), size cap placeholder, profile name overwrite rule, display name sanitizing (157), `public_room` flag set per place type (156).
+- [ ] **Shared-space core.** `classify.go` (teammate/helper/contact), echo via 03 X2 (member + helper), `addressed_to_other` + `public_room` + `audience_company_id` flags, pleasantry filter (`pleasantry.go`, word lists 10 languages in `lang/*/channels_pleasantries.json`), trigger evaluation per room.
+  - Accept: pleasantry golden set (300+) creates 0 room conversations; echo from linked member marks conversation answered and 07 run skipped `human_replied`.
+  - Tests: per-language pleasantry table; `?` and length escape; echo without existing conversation ignored; helper echo not billable (12 metering test).
+- [ ] **Answer controls + interactions core.** 03 X6 `Controls`, control id encoding, `apply_channel_interaction` (solved: 03 close, reason `contact_solved`; handoff: 07 `RequestHumanHandoff`; only asker may press Solved), `ClearControls` listener on human reply/close.
+  - Tests: forged id rejected (186), double click idempotent (183), non-asker refused (182).
+- [ ] **Working indicator + state marker listeners.** `ai.reply_started`/`ai.run_completed`/`ai.reply_discarded` listeners calling `ChannelWorkingIndicator`; `ChannelStateMarker` on close/reopen/answered/handoff; hourly orphan sweep (199).
+  - Tests: indicator start/stop pairs per provider fixture; orphan sweep.
+- [ ] **Continue-in links.** `deep_links.go` nonce (Valkey, single use, 15 min), `GET /widget/v1/channel-links`, `create_channel_continue_link`.
+  - Tests: single use (190), expiry, wrong workspace.
 - [ ] **Cross-tenant and abuse suite.** Shared endpoints (Slack, Discord, Meta) with two workspaces: routing never crosses (158, 159); unsigned flood 401 without DB write (160); every API route other-workspace `chn_`/`chr_`/`wtp_`/`cie_` returns 404.
   - Tests: feature tests per case; RLS on with app role.
 
@@ -38,6 +47,11 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
 - [ ] **Telegram inbound.** Private chats, `/start`, private-chat topics, `my_chat_member` (block/unblock), group messages ignored, media download (20 MB cap), entities to Markdown with UTF-16 offsets.
   - Tests: golden entity conversion (emoji, ZWJ, RTL), group message ignored (no room, no conversation), dedupe `update_id`.
 - [ ] **Telegram outbound driver.** HTML renderer, split, private-chat `message_thread_id`, photo/document/media group, typing, error mapping (403 blocked, cannot initiate, 429 retry_after, 401).
+- [ ] **Telegram interactive.** Inline keyboard controls + `callback_query` (answer within 10 s, remove keyboard), `/human`, `/start {nonce}` identity link, 👀 reaction when agent will not answer, setup QR + link.
+  - Tests: nonce hit/miss/reuse, callback for other chat refused, reaction only when agent off/handed off.
+- [ ] **Telegram draft streaming.** `ChannelDraftStreamer` (`sendMessageDraft`), listener on `ai.reply_delta` (500 ms throttle), final message replaces draft, discard clears, 429 fallback to typing, length overflow stop.
+  - Accept: first characters visible under 2 s after first model token in fake-LLM run.
+  - Tests: fake Bot API records draft sequence; supersede (188); 429 (187).
   - Tests: 03 contract suite passes; format golden suite (250+ cases).
 - [ ] **Telegram polling transport.** Lease `telegram_polling`, offset persistence, 409 conflict handling, switch webhook/polling.
   - Tests: fake Bot API server; offset never skips on crash between fetch and commit.
@@ -48,8 +62,10 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
   - Tests: state tampering, user mismatch, cancel, duplicate team across workspaces; bearer token (PAT or first-party app) on `installations` 403 `session_required`.
 - [ ] **Slack custom app + manifest.** Manifest template, `create_app_url`, pending connection, url_verification for pending, credentials (`auth.test`, scopes header), Socket Mode token check.
   - Tests: manifest snapshot test; url_verification only path without secret.
-- [ ] **Slack inbound.** Events endpoint (shared + per connection), retries/dedupe, message subtypes, rich_text + mrkdwn to Markdown, room rules (modes, group window, threads, DMs), teammate classification (ignored; auto-link by email for `community` rooms), edit/delete events dropped, `apps.event.authorizations.list` fan-out for multi-install shared channels, lifecycle events (uninstall, revoke, channel archive/rename/id change/shared).
-  - Tests: Slack Connect external vs internal user classification, guest users, bot and teammate messages ignored, edit/delete events dropped (E103).
+- [ ] **Slack inbound.** Events endpoint (shared + per connection), retries/dedupe, message subtypes, rich_text + mrkdwn to Markdown, room rules (modes, triggers `author_window`/`every_message`/`mention`/`emoji`/`off`, threads, DMs), teammate classification (echo in threads for linked members, link prompt for unlinked; auto-link by email), edit/delete events dropped, `apps.event.authorizations.list` fan-out for multi-install shared channels, lifecycle events (uninstall, revoke, channel archive/rename/id change/shared).
+  - Tests: Slack Connect external vs internal user classification, guest users, bot messages ignored, teammate echo vs top-level ignore, each trigger mode, emoji trigger dedupe (196), edit/delete events dropped (E103).
+- [ ] **Slack interactivity.** Interactions endpoint (shared + per connection, Socket Mode `interactive` envelopes), Block Kit answer controls, `chat.update` clear, message shortcut "Create dimmi conversation" (197), `eyes` working indicator, company link on Slack Connect room + clearing on share change (198).
+  - Tests: signature on form payload, 3 s ack, non-asker Solved ephemeral, shortcut on tracked message.
 - [ ] **Slack outbound driver.** `markdown_text`, escaping, `username`/`icon_url`, thread_ts, file upload external flow (+ refs), close marker reactions, error mapping, 429.
   - Tests: contract suite; format golden suite; mention injection tests (`<!channel>` never pings).
 - [ ] **Slack Socket Mode transport.** slack-go `socketmode` (`apps.connections.open`, envelope ack), reconnect on `disconnect`, lease, backfill after gap (`conversations.history`/`replies`, rate-aware).
@@ -59,11 +75,15 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
 
 - [ ] **Discord gateway on disgo.** disgo `gateway` + `sharding` ShardManager limited to lease-owned shard ids; our glue: identify budget guard, close-code policy (4004, 4010/4011 reshard), resume state persistence, lease hand-off. No own heartbeat/zstd code. CI `CGO_ENABLED=0` build + depguard `disgo/voice`.
   - Tests: fake gateway server scripts every op/close code; resume after takeover by second replica.
-- [ ] **Discord shared install + custom bot.** `POST /channels/discord/installations` (`S`) returns OAuth bot invite URL (`scope=bot`, permissions 0), callback + code exchange, custom token validation (`/users/@me`, `/applications/@me`), guild picker, pending until `GUILD_CREATE`, custom bot cap via `Entitlements.Limit(ws, "channels.discord.custom_bots")` (catalog: self-host -1, cloud 3; 422 `entitlement_limit_reached`, edge cases 166, 167).
+- [ ] **Discord shared install + custom bot.** `POST /channels/discord/installations` (`S`) returns OAuth bot invite URL (`scope=bot applications.commands`, room permission bitset), global command registration (`/ask`, `Ask dimmi`), callback + code exchange, custom token validation (`/users/@me`, `/applications/@me`), guild picker, pending until `GUILD_CREATE`, custom bot cap via `Entitlements.Limit(ws, "channels.discord.custom_bots")` (catalog: self-host -1, cloud 3; 422 `entitlement_limit_reached`, edge cases 166, 167).
   - Tests: multiple guilds 422 with list, guild already bound elsewhere.
-- [ ] **Discord inbound routing.** DMs only: shared-bot DM routing (select menu, sticky `dm_route`), guild messages ignored (intents exclude them), linked members flagged `IsTest`, REST backfill of active DMs.
-  - Tests: DM routing 0/1/many guilds; sticky route expiry re-asks.
-- [ ] **Discord interactions endpoint.** disgo `httpserver` Ed25519 verify, PING, component select for DM routing.
+- [ ] **Discord inbound routing.** DMs: shared-bot DM routing (select menu, sticky `dm_route`), linked members flagged `IsTest`. Guild messages outside watched rooms dropped before store. REST backfill of active DMs and open room threads.
+  - Tests: DM routing 0/1/many guilds; sticky route expiry re-asks; unwatched channel message never stored.
+- [ ] **Discord rooms.** Room sync (forum + text channels bot can see), forum post = conversation (`THREAD_CREATE`), text-channel mention / `/ask` / context menu creates thread then ingests (X5), role links (teammate/helper/escalation) + `discord-roles` picker, echo in threads, `THREAD_UPDATE` sync (archive/tag Solved by human closes), limited mode without MESSAGE_CONTENT (195).
+  - Tests: fake gateway fixtures per event; helper echo (178, 179); `addressed_to_other` (180); thread cap (194); locked thread (193).
+- [ ] **Discord tags + controls.** Tag map from forum `available_tags` (setup fix 191), state marker (Open/Answered/Solved/Needs team, archive on close), components controls, escalation role ping on handoff (one allowed mention).
+  - Tests: tags preserved for non-dimmi tags (max 5), ping limited to escalation role, never `@everyone`.
+- [ ] **Discord interactions endpoint.** disgo `httpserver` Ed25519 verify, PING, component select for DM routing, slash command + context menu + answer buttons dispatch.
   - Tests: signature vectors; 3 s budget.
 - [ ] **Discord outbound driver.** Markdown renderer + mention neutralizing, `allowed_mentions` none, split 2,000, multipart files (20 MiB, 25 MiB request batching, link fallback), author name prefix, typing (1 per 8 s), disgo REST limiter + Valkey global limiter + breaker, error mapping (50007, 10003).
   - Tests: contract suite; format golden suite; breaker.
@@ -103,7 +123,9 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
 - Demo script (cloud staging, then self-host on laptop):
   1. `dimmi channels:add telegram`, paste token. Open printed `t.me` link, send "hi" with photo. Inbox shows conversation under 2 s with image. Reply "**Hello** there" with PDF from inbox: Telegram shows bold text + file. Typing visible while composing.
   2. Dashboard "Add to Slack" (cloud) / `dimmi channels:add slack --socket` (laptop, no public URL). Invite bot to Slack Connect channel. External user posts question: conversation created; reply lands in thread with teammate name/avatar. Close conversation: checkmark reaction on root.
-  3. Add Discord bot to server. Member DMs bot: DM conversation in inbox; reply lands in DM; typing shown.
+  3. Add Discord bot to server, pick `#help` forum and `#general`. Post in forum: conversation, agent answers in post with buttons, tag Open then Answered; press Solved: tag Solved, post archived. In `#general` right-click message "Ask dimmi": thread created, answered. Moderator with helper role replies in another post: agent silent, tag Answered. Member DMs bot: DM conversation; reply lands in DM.
+  3b. In Slack thread teammate replies from Slack: inbox shows member reply, agent run skipped `human_replied`. Customer writes "thanks!": no reopen.
+  3c. Widget "Continue in Telegram": bot greets contact by name, answer streams in, press Talk to a human: handed off.
   4. Embedded Signup WhatsApp (cloud test number). Checklist lists steps with statuses. Send WhatsApp message: conversation; reply shows delivered then read ticks; typing shown. Freeze clock +25 h: reply blocked with `channel_window_closed`; send approved template with variables: delivered.
   5. Kill replica holding Discord shard during 200-DM burst: all 200 in inbox once.
   6. Uninstall Slack app in Slack: channel red "Slack app was uninstalled", `channel.disconnected` webhook fires, admin gets notification (06). Reconnect: green, rooms restored.

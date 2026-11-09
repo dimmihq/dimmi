@@ -1,0 +1,20 @@
+# A local stand-in for the Hetzner server: one k3s node, no bundled ingress
+# or service load balancer, and the web NodePort published on the host at
+# localhost:18080.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: dimmi
+servers: 1
+agents: 0
+image: rancher/k3s:v1.34.1-k3s1
+ports:
+  - port: 18080:30080
+    nodeFilters: [server:0]
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters: [server:0]
+      - arg: --disable=servicelb
+        nodeFilters: [server:0]

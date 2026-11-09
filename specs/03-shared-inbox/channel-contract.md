@@ -360,7 +360,7 @@ Verified-claim takeover (`ResolveInboundContact`, requested by 14; also correct 
 - Used by 14 portal email sign-in (`IdentifyContact` / magic code), 04 inbound mail with DMARC-aligned pass (`IdentityClaim.Verified = true`), 02 JWT `email_verified: true`.
 - Metric `dimmi_contact_identity_takeovers_total{type}`; audit row (actor system, from/to contact).
 
-## 5. Additions for 05 (X1, X3-X5)
+## 5. Additions for 05 (X1-X6)
 
 Requested by `05-chat-app-channels/README.md` ("Extensions 05 needs from 03"); canonical per `00-foundation/contracts.md` Channel section. 05 code assumes these names.
 
@@ -370,7 +370,18 @@ Requested by `05-chat-app-channels/README.md` ("Extensions 05 needs from 03"); c
 - `Recipient.IdentityType` and `IdentityClaim.Type` may be `whatsapp_bsuid`. Verified = true (provider id). 05 keys WhatsApp threads on BSUID.
 
 ### X2. `InboundMessage.Echo`
-Removed from MVP (later: teammate-echo). Teammate native replies inside provider threads are not ingested (05 drops them before ingest).
+```go
+type EchoAuthor struct {
+    MemberID *ids.UUID // linked member: stored as that member's reply
+    Helper   bool      // community helper without member link (05 Discord role link `helper`)
+}
+// InboundMessage gains: Echo *EchoAuthor // nil for normal contact messages
+```
+- Used by 05 for native replies inside room threads (Slack channels, Discord forum posts and threads). Chat apps are shared spaces: humans answer there, not only in the inbox.
+- `MemberID` set: message `type = message`, `author_type = member`, `author_id = member`, `substantive = true`, `channel_message_id` set, `delivery_status = sent`, never enqueued outbound. State effects as dashboard member reply (clears `waiting_since`, sets `first_response_at`, SLA, unsnooze rules). Requires existing conversation for thread key: miss = ignored (teammate starting a thread is not a conversation). Billing D1: counts as workspace reply.
+- `Helper` set: stored as contact message of helper's own contact (Sender identities as usual), `metadata.echo_helper = true`, substantive; clears `waiting_since` like a reply; never a workspace reply for billing; never notifies assignee as customer message.
+- Both: `message.created` carries `metadata.echo = true`; 07 stands down (`human_replied`).
+- Dedupe by `ChannelMessageID` as normal; own-bot sends never arrive as echo (driver drops own author first).
 
 ### X3. Optional `ChannelWindowResolver`
 ```go
@@ -388,5 +399,12 @@ type ChannelWindowResolver interface {
 - 03 lookups by `(connection, channel_message_id)` (`UpdateMessageDelivery`, `FindConversationByChannelMessage`) accept ids resolved by driver via `channel_message_refs` to owning message id; 03 never reads that table directly.
 
 ### X5. Driver-created thread key at ingest
-- Driver may create provider thread before calling core and pass resulting key as `InboundMessage.ExternalThreadKey`. `ReceiveInboundMessage` accepts it unchanged: lookup by `(channel_connection_id, external_thread_key)`, miss creates conversation storing key. Already true per section 3 (key is input); contract test covers key unseen before. No MVP driver needs it (Discord thread-at-ingest deferred with Discord thread modes, 05).
+- Driver may create provider thread before calling core and pass resulting key as `InboundMessage.ExternalThreadKey`. `ReceiveInboundMessage` accepts it unchanged: lookup by `(channel_connection_id, external_thread_key)`, miss creates conversation storing key. Already true per section 3 (key is input); contract test covers key unseen before. Used by 05 Discord text-channel mention mode (thread created off message before ingest).
 
+### X6. `OutboundMessage.Controls`
+```go
+// OutboundMessage gains: Controls []string // "solved", "handoff"; empty for member replies
+```
+- 03 fills from `messages.metadata.ai.actions` of agent-authored messages (07 sets `["solved", "handoff"]` on answers in chat-app conversations; widget keeps own rendering).
+- Driver renders native buttons (Slack Block Kit, Discord components, Telegram inline keyboard, WhatsApp reply buttons when window open) or ignores (email). Click handling lives in 05 (`apply_channel_interaction`): `solved` calls 03 `CloseConversation` (actor system, `conversation.closed` payload `reason: contact_solved`, timeline event "Closed by customer"); `handoff` calls 07 `RequestHumanHandoff`.
+- `conversation.closed` gains optional `reason` (`manual` default, `contact_solved`), mirroring `reopened`; 15 CSAT rule unchanged.
