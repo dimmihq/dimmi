@@ -45,6 +45,7 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 ) (helpcenter.Center, HelpLibrary, bool) {
 	center := centerOf(snap.HelpCenter, base)
 	center.Origin = origin(r)
+	c.withMessenger(&center, snap)
 
 	updates := c.announce(r, snap.HelpCenter, &center)
 	contact, until, signed := c.readerOf(r, snap.HelpCenter)

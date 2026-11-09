@@ -57,7 +57,9 @@ back signed in, so they can read what is kept to an audience.
 EmailSignIn says whether readers may sign in with a code mailed to them;
 unset means yes. FeedbackBoard opens the portal's feature requests to
 customers, and FeedbackApproval holds what customers post until the
-team approves it.
+team approves it. Messenger says whether the help center's pages show a
+messenger; unset means yes. MessengerID picks which of the workspace's
+messengers, empty for its first.
 */
 type HelpCenterSettings struct {
 	PrimaryColor string `json:"primary_color,omitempty"`
@@ -71,6 +73,16 @@ type HelpCenterSettings struct {
 
 	FeedbackBoard    bool `json:"feedback_board,omitempty"`
 	FeedbackApproval bool `json:"feedback_approval,omitempty"`
+
+	Messenger   *bool  `json:"messenger,omitempty"`
+	MessengerID string `json:"messenger_id,omitempty"`
+}
+
+/*
+MessengerOn reports whether the help center's pages show a messenger.
+*/
+func (s HelpCenterSettings) MessengerOn() bool {
+	return s.Messenger == nil || *s.Messenger
 }
 
 /*
@@ -281,7 +293,11 @@ func (h *HelpCenters) apply(ctx context.Context, q *models.Queries, c models.Hel
 		return p, err
 	}
 	if in.Settings != nil {
-		raw, err := checkSettings(in.Settings.Over(SettingsOf(c)))
+		merged := in.Settings.Over(SettingsOf(c))
+		if err := checkMessenger(ctx, q, c.WorkspaceID, merged.MessengerID); err != nil {
+			return p, err
+		}
+		raw, err := checkSettings(merged)
 		if err != nil {
 			return p, err
 		}

@@ -109,6 +109,7 @@ function pickTheme(button: HTMLButtonElement): void {
   }
   (window as { dimmiTheme?: () => void }).dimmiTheme?.();
   showThemes(document);
+  closeMenus();
 }
 
 const motion = { duration: 260, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
@@ -200,6 +201,19 @@ document.addEventListener(
   },
   { passive: true },
 );
+
+/*
+ * The messenger draws itself into the page's body, which Turbo replaces on
+ * every visit, so it moves into the incoming body first and stays open,
+ * mid-conversation, as the reader moves around.
+ */
+document.addEventListener("turbo:before-render", (event) => {
+  const messenger = document.getElementById("dimmi-messenger");
+  const next = (event as CustomEvent<{ newBody: HTMLElement }>).detail.newBody;
+  if (messenger && !next.querySelector("#dimmi-messenger")) {
+    next.append(messenger);
+  }
+});
 
 document.addEventListener("turbo:load", () => {
   greet(document);

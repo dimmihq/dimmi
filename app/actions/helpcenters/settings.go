@@ -27,6 +27,8 @@ type HelpCenterSettingsChange struct {
 	EmailSignIn      *bool
 	FeedbackBoard    *bool
 	FeedbackApproval *bool
+	Messenger        *bool
+	MessengerID      *string
 }
 
 /*
@@ -42,8 +44,12 @@ func (c HelpCenterSettingsChange) Over(s HelpCenterSettings) HelpCenterSettings 
 	keep(&s.LoginURL, c.LoginURL)
 	keep(&s.FeedbackBoard, c.FeedbackBoard)
 	keep(&s.FeedbackApproval, c.FeedbackApproval)
+	keep(&s.MessengerID, c.MessengerID)
 	if c.EmailSignIn != nil {
 		s.EmailSignIn = c.EmailSignIn
+	}
+	if c.Messenger != nil {
+		s.Messenger = c.Messenger
 	}
 	return s
 }

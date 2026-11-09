@@ -14,7 +14,10 @@
 package middleware
 
 import (
+	"context"
+
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -34,11 +37,23 @@ type InstallRecorder interface {
 }
 
 /*
+HelpSites recognizes the sites of a workspace's own help centers.
+*/
+type HelpSites interface {
+	/*
+		Owns reports whether the origin is one of the workspace's help
+		centers.
+	*/
+	Owns(ctx context.Context, workspaceID ids.UUID, origin string) bool
+}
+
+/*
 VerifyWidgetOrigin returns the middleware that stops requests a widget does
 not accept. Install is this install's own origin, which is always allowed,
-because the hosted page and the preview run there.
+because the hosted page and the preview run there, and so are the
+workspace's own help centers, which show its messenger.
 */
-func VerifyWidgetOrigin(install string, tracker InstallRecorder, errs fhttp.Errors) fhttp.Middleware {
+func VerifyWidgetOrigin(install string, tracker InstallRecorder, help HelpSites, errs fhttp.Errors) fhttp.Middleware {
 	return func(next fhttp.Handler) fhttp.Handler {
 		return fhttp.HandlerFunc(func(w fhttp.ResponseWriter, r *fhttp.Request) {
 			resolved, ok := widget.CurrentResolved(r.Context())
@@ -51,7 +66,7 @@ func VerifyWidgetOrigin(install string, tracker InstallRecorder, errs fhttp.Erro
 			asking := r.Header.Get("Origin")
 			allowed := widgetorigin.OriginAllowed(
 				resolved.Widget.AllowedOrigins, resolved.Widget.NativeAppsEnabled, asking, install,
-			)
+			) || (asking != "" && help.Owns(r.Context(), resolved.Workspace.ID, asking))
 
 			tracker.Record(widgetinstall.Visit{
 				WorkspaceID: resolved.Workspace.ID, WidgetID: resolved.Widget.ID, Origin: asking, Allowed: allowed,

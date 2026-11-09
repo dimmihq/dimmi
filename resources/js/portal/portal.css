@@ -221,13 +221,28 @@ card's text.
 }
 
 /*
- * The theme switch shows the reader's pick from the first paint: the
+ * The theme menu shows the reader's pick from the first paint: the
  * script in the page's head marks the pick on the root before anything
- * renders, so the switch never shifts or changes once the page loads.
+ * renders, so the button shows that pick's icon and the menu checks it,
+ * and nothing changes once the page loads.
  */
+[data-theme-icon],
+[data-theme-choice] > svg:last-child {
+  display: none;
+}
+
+html[data-theme-pick="light"] [data-theme-icon="light"],
+html[data-theme-pick="dark"] [data-theme-icon="dark"],
+html[data-theme-pick="system"] [data-theme-icon="system"] {
+  display: contents;
+}
+
 html[data-theme-pick="light"] [data-theme-choice="light"],
 html[data-theme-pick="dark"] [data-theme-choice="dark"],
 html[data-theme-pick="system"] [data-theme-choice="system"] {
-  background-color: var(--color-background-secondary-default);
-  color: var(--color-foreground-icon-primary);
+  color: var(--color-text-primary);
+
+  & > svg:last-child {
+    display: block;
+  }
 }

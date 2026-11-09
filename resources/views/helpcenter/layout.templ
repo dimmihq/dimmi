@@ -48,6 +48,9 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			@applyTheme()
 			@drawerStyle()
 			@assets
+			if c.Messenger != "" {
+				<script async nonce={ templ.GetNonce(ctx) } src={ c.MessengerSrc } data-app-id={ c.Messenger }></script>
+			}
 		</head>
 		<body class="bg-background-full font-inter text-text-primary">
 			<a href="#main" class="sr-only rounded-xl bg-background-primary-default px-4 py-2 text-body-medium focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">Skip to content</a>
@@ -114,24 +117,40 @@ templ applyTheme() {
 }
 
 /*
-themeSwitch lets a reader pick light, dark or their system's theme,
-shown only where the team left the choice to readers and only once the
-portal's script can act on it.
+themeSwitch lets a reader pick light, dark or their system's theme from
+a small menu, shown only where the team left the choice to readers. Its
+button shows the current pick, which the page's head marks before the
+first paint, so it never changes once the page loads.
 */
 
 templ themeSwitch(c Center) {
 	if fixedTheme(c) == "" {
-		<div data-theme-switch role="group" aria-label="Theme" class="flex items-center gap-0.5 rounded-xl border border-border-button-default p-0.5">
-			@themeChoice("light", "Light theme", "sun")
-			@themeChoice("dark", "Dark theme", "moon")
-			@themeChoice("system", "Match my system", "system")
-		</div>
+		<details data-menu data-theme-switch class="relative">
+			<summary aria-label="Theme" title="Theme" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+				<span data-theme-icon="light">
+					@Icon("sun", "size-4")
+				</span>
+				<span data-theme-icon="dark">
+					@Icon("moon", "size-4")
+				</span>
+				<span data-theme-icon="system">
+					@Icon("system", "size-4")
+				</span>
+			</summary>
+			<div class="absolute end-0 top-10 z-40 w-44 rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
+				@themeChoice("light", "Light", "sun")
+				@themeChoice("dark", "Dark", "moon")
+				@themeChoice("system", "System", "system")
+			</div>
+		</details>
 	}
 }
 
 templ themeChoice(value, label, icon string) {
-	<button type="button" data-theme-choice={ value } aria-label={ label } title={ label } aria-pressed="false" class="grid size-7 cursor-pointer place-items-center rounded-lg text-foreground-icon-tertiary outline-none transition-colors hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
-		@Icon(icon, "size-3.5")
+	<button type="button" data-theme-choice={ value } aria-pressed="false" class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:bg-background-secondary-hover">
+		@Icon(icon, "size-4 text-foreground-icon-tertiary")
+		<span class="flex-1 text-start">{ label }</span>
+		@Icon("check", "size-4 text-link")
 	</button>
 }
 
@@ -177,13 +196,11 @@ templ topBar(c Center, m Meta) {
 			}
 		</nav>
 		<div class="flex shrink-0 items-center gap-2 max-lg:ms-auto">
-			<div class="max-sm:hidden">
-				@themeSwitch(c)
-			</div>
-			<a href={ Href(c, "/conversations/new") } title="Ask a human" class="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden">
+			@themeSwitch(c)
+			@AskHuman(c, "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden") {
 				@Icon("chat", "size-4")
 				<span class="max-xl:sr-only">Ask a human</span>
-			</a>
+			}
 			@account(c)
 			<details data-menu class="group relative lg:hidden">
 				<summary aria-label="Sections" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
@@ -196,9 +213,6 @@ templ topBar(c Center, m Meta) {
 							{ s.Name }
 						</a>
 					}
-					<div class="mt-1 flex border-t border-separator-border px-1 pt-2 sm:hidden">
-						@themeSwitch(c)
-					</div>
 				</div>
 			</details>
 		</div>
@@ -279,6 +293,24 @@ templ account(c Center) {
 		</form>
 	} else if c.SignInURL != "" {
 		<a href={ templ.SafeURL(c.SignInURL) } class="button-brand inline-flex h-8 items-center whitespace-nowrap rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign in</a>
+	}
+}
+
+/*
+AskHuman is the way to a person: it opens the messenger where the help
+center shows one, so the reader writes in place without signing in,
+and otherwise leads to starting a conversation in the portal.
+*/
+
+templ AskHuman(c Center, class string) {
+	if c.Messenger != "" {
+		<button type="button" data-dimmi="open" title="Ask a human" class={ "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring " + class }>
+			{ children... }
+		</button>
+	} else {
+		<a href={ Href(c, "/conversations/new") } title="Ask a human" class={ class }>
+			{ children... }
+		</a>
 	}
 }
 

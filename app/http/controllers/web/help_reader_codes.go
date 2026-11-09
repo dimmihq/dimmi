@@ -148,6 +148,7 @@ func (c *HelpCenterController) readerCenter(r *fhttp.Request, snap helpcenters.S
 ) helpcenter.Center {
 	center := centerOf(snap.HelpCenter, base)
 	center.Origin = origin(r)
+	c.withMessenger(&center, snap)
 	c.announce(r, snap.HelpCenter, &center)
 
 	return center

@@ -25,6 +25,8 @@ it, if any. SignInURL is where a reader signs in, empty when the help
 center takes no sign-in; SignedIn says a reader is signed in, and
 SignOutURL ends that. Appearance is the theme the team set: light or
 dark for every reader, or auto, or empty, to let each reader pick.
+Messenger is the public id of the messenger its pages load from
+MessengerSrc, empty to load none.
 */
 type Center struct {
 	Name       string
@@ -43,6 +45,9 @@ type Center struct {
 	SignedIn   bool
 	SignOutURL string
 	Appearance string
+
+	Messenger    string
+	MessengerSrc string
 }
 
 /*

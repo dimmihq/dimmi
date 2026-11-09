@@ -1,0 +1,39 @@
+import { api } from "./support/customers";
+import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
+
+it.describe("help center messenger", () => {
+  it.beforeEach(async ({ page, person, request }) => {
+    await createAccount(request, person, `Messenger ${person.email.split("@")[0]?.split(".").at(-1) ?? ""}`);
+    await signIn(page, person);
+    await expect(page).toHaveURL(inbox);
+  });
+
+  it("shows the messenger on the help center, opens it from Ask a human, and goes when turned off", async ({
+    page,
+    guest,
+  }) => {
+    const centers = await api<{ subdomain: string }[]>(page, "GET", "/help-centers");
+    const home = `/hc/${centers[0]?.subdomain}`;
+
+    await guest.setViewportSize({ width: 1440, height: 900 });
+    await guest.goto(`${home}/search?q=nothing-matches-this`);
+    const launcher = guest.locator(".launcher");
+    await expect(launcher).toBeVisible();
+    await guest.getByRole("button", { name: "Ask a human" }).last().click();
+    await expect(launcher).toHaveAttribute("aria-expanded", "true");
+
+    await page.goto("/d/settings/help-centers");
+    const show = page.getByRole("switch", { name: "Show the messenger" });
+    await expect(show).toBeChecked();
+    await show.focus();
+    await page.keyboard.press("Space");
+    await expect(show).not.toBeChecked();
+
+    await guest.goto(`${home}/search?q=nothing-matches-this`);
+    await expect(guest.getByRole("link", { name: "Ask a human" }).last()).toHaveAttribute(
+      "href",
+      `${home}/conversations/new`,
+    );
+    await expect(guest.locator(".launcher")).toHaveCount(0);
+  });
+});

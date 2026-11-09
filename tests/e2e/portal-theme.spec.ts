@@ -20,23 +20,27 @@ it.describe("portal theme", () => {
 
     await guest.emulateMedia({ colorScheme: "light" });
     await guest.goto(home);
-    const themes = guest.getByRole("group", { name: "Theme" });
-    await expect(themes.getByRole("button", { name: "Match my system" })).toHaveAttribute("aria-pressed", "true");
+    const menu = guest.getByLabel("Theme", { exact: true });
+    const choice = (name: string) => guest.getByRole("button", { name, exact: true });
+    await menu.click();
+    await expect(choice("System")).toHaveAttribute("aria-pressed", "true");
     await expect(root).not.toHaveClass(/dark/);
 
-    await themes.getByRole("button", { name: "Dark theme" }).click();
+    await choice("Dark").click();
     await expect(root).toHaveClass(/dark/);
+    await expect(choice("Dark")).toBeHidden();
     await guest.reload();
     await expect(root).toHaveClass(/dark/);
-    await expect(themes.getByRole("button", { name: "Dark theme" })).toHaveAttribute("aria-pressed", "true");
+    await menu.click();
+    await expect(choice("Dark")).toHaveAttribute("aria-pressed", "true");
 
-    await themes.getByRole("button", { name: "Match my system" }).click();
+    await choice("System").click();
     await guest.emulateMedia({ colorScheme: "dark" });
     await expect(root).toHaveClass(/dark/);
 
     await api(page, "PATCH", `/help-centers/${center?.id}`, { settings: { ...center?.settings, appearance: "light" } });
     await guest.reload();
     await expect(root).not.toHaveClass(/dark/);
-    await expect(guest.getByRole("group", { name: "Theme" })).toHaveCount(0);
+    await expect(guest.getByLabel("Theme", { exact: true })).toHaveCount(0);
   });
 });

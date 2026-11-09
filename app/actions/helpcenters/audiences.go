@@ -157,7 +157,7 @@ func readable(ctx context.Context, q *models.Queries, s Snapshot, reader audienc
 		return s, err
 	}
 
-	out := Snapshot{HelpCenter: s.HelpCenter}
+	out := Snapshot{HelpCenter: s.HelpCenter, Messenger: s.Messenger}
 	for _, c := range s.Collections {
 		if r.Collection(c.ID, allowed) {
 			out.Collections = append(out.Collections, c)

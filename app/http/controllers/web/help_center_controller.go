@@ -49,7 +49,8 @@ HelpCenterController serves the public help center's pages. Assets
 serves the images they show; Readers signs readers in through the
 team's product. Changelog reads the help center's published changelog
 and Subscribers takes the people who want to hear about it. Board is
-the board of feature requests.
+the board of feature requests. AppURL is where the messenger's loader
+and API answer, which a help center on its own host loads across.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -61,6 +62,19 @@ type HelpCenterController struct {
 	Assets      fhttp.Handler
 	Vite        *vite.Bundle
 	Errors      fhttp.Errors
+	AppURL      string
+}
+
+/*
+withMessenger has the page load the help center's messenger, if it
+shows one, from the app's own address.
+*/
+func (c *HelpCenterController) withMessenger(center *helpcenter.Center, snap helpcenters.Snapshot) {
+	if snap.Messenger == "" {
+		return
+	}
+	center.Messenger = snap.Messenger
+	center.MessengerSrc = strings.TrimSuffix(c.AppURL, "/") + "/widget/v1/loader.js"
 }
 
 /*

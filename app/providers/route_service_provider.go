@@ -181,12 +181,34 @@ func origin(appURL string) string {
 }
 
 /*
+messengerSources returns the origins a help center on its own host loads
+the messenger from: the app, which serves its loader and answers its
+requests, and the host of its files when that is another. None when
+help centers are served under the app's own address with the files.
+*/
+func messengerSources(a *app.App) []string {
+	var out []string
+	if a.Config.HelpCenters.BaseDomain != "" {
+		out = append(out, origin(a.Application.Config.App.URL))
+	}
+	if a.Config.Widget.AssetsBaseURL != "" {
+		out = append(out, origin(a.Config.Widget.AssetsBaseURL))
+	}
+	return out
+}
+
+/*
 pageSources returns the extra sources of the pages a csp middleware
-covers: every page may load the captcha provider when one is on, and the
-dashboard also reaches GIPHY when the instance has a GIF search key.
+covers: every page may load the captcha provider when one is on and the
+messenger from wherever it is served, and the dashboard also reaches
+GIPHY when the instance has a GIF search key.
 */
 func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
 	extra := captchaSources(p.App)
+	messenger := messengerSources(p.App)
+	extra.Scripts = append(extra.Scripts, messenger...)
+	extra.Connect = append(extra.Connect, messenger...)
+	extra.Images = append(extra.Images, messenger...)
 	if !slices.Contains(params, "dashboard") || p.App.Config.Inbox.GIF.GiphyAPIKey == "" {
 		return extra
 	}

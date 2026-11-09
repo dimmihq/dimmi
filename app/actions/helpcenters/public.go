@@ -34,13 +34,15 @@ import (
 /*
 Snapshot is a help center as readers see it at one cache version.
 Restricted says audiences keep some of it from this reader, so signing
-in could show more.
+in could show more. Messenger is the public id of the messenger its
+pages load, empty when they show none.
 */
 type Snapshot struct {
 	HelpCenter  models.HelpCenter
 	Collections []models.Collection
 	Articles    []models.ListPublishedArticlesRow
 	Restricted  bool
+	Messenger   string
 }
 
 /*
@@ -218,7 +220,8 @@ func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter) (Snaps
 	if err != nil {
 		return out, fmt.Errorf("list published articles: %w", err)
 	}
-	return out, nil
+	out.Messenger, err = messengerOf(ctx, q, h)
+	return out, err
 }
 
 /*

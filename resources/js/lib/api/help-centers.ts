@@ -19,6 +19,8 @@ export interface HelpCenterSettings {
   email_sign_in?: boolean;
   feedback_board?: boolean;
   feedback_approval?: boolean;
+  messenger?: boolean;
+  messenger_id?: string;
 }
 
 /*

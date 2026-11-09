@@ -87,7 +87,9 @@ templ feedback(c Center, slug, answer string) {
 			</span>
 			<p class="text-body-medium">Thanks for letting us know.</p>
 			if answer == "no" {
-				<a href={ Href(c, "/conversations/new") } class="ms-auto text-body-medium text-link hover:underline">Ask a human</a>
+				@AskHuman(c, "ms-auto text-body-medium text-link hover:underline") {
+					Ask a human
+				}
 			}
 		} else {
 			<h2 class="text-body-medium">Was this article helpful?</h2>

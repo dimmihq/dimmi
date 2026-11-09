@@ -1,9 +1,10 @@
 /*
  * The workspace's help center: its name and address, how it looks, how
  * readers sign in to see articles kept to an audience, and whether
- * search engines may index it and readers may ask the AI. The address
- * and look are saved together with Save, as is the product's login
- * address; switches save at once.
+ * search engines may index it and readers may ask the AI, and which of
+ * the workspace's messengers its pages show, if any. The address and look
+ * are saved together with Save, as is the product's login address;
+ * switches and the messenger pick save at once.
  */
 import { RiBookOpenLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,9 @@ import { useEffect, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Notification } from "@/components/base/notification/notification";
+import { Select, SelectItem } from "@/components/base/select/select";
 import { type HelpCenter, helpCentersQuery, updateHelpCenter } from "@/lib/api/help-centers";
+import { type WidgetSummary, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
 import { Action, Colour, Field, Toggle } from "./controls";
 import { Glyph, Item, Row, Section, SettingsPage } from "./layout";
@@ -152,6 +155,11 @@ export function HelpCentersSettings() {
               />
             </Row>
           </Section>
+          <MessengerSection
+            workspace={workspace}
+            center={center}
+            onChange={(change) => update.mutate({ settings: { ...center.settings, ...change } })}
+          />
           <Section title="Features">
             <Row label="Ask AI" description="Let readers ask a question and get an answer from your articles.">
               <Toggle
@@ -171,5 +179,70 @@ export function HelpCentersSettings() {
         </>
       ) : null}
     </SettingsPage>
+  );
+}
+
+/*
+ * MessengerSection shows a messenger on every help center page, on until
+ * the team turns it off, and picks which one when the workspace has more
+ * than one; the first is shown until one is picked.
+ */
+function MessengerSection({
+  workspace,
+  center,
+  onChange,
+}: {
+  workspace: string;
+  center: HelpCenter;
+  onChange: (change: { messenger?: boolean; messenger_id?: string }) => void;
+}) {
+  const { data: messengers = [] } = useQuery({ ...widgetSettingsQuery(workspace), enabled: workspace !== "" });
+  const on = center.settings.messenger ?? true;
+  const picked = messengers.find((m) => m.id === center.settings.messenger_id) ?? messengers[0];
+
+  return (
+    <Section title="Messenger" description="So readers can ask your team without leaving the page.">
+      <Row
+        label="Show the messenger"
+        description={
+          messengers.length === 0
+            ? "Add a messenger first; the help center shows it once you do."
+            : "Readers chat with your team from every page. Ask a human opens it."
+        }
+      >
+        <Toggle label="Show the messenger" on={on} onChange={(next) => onChange({ messenger: next })} />
+      </Row>
+      {on && messengers.length > 1 ? (
+        <Row label="Which messenger" description="Its look, greeting and team show on the help center.">
+          <MessengerPicker messengers={messengers} picked={picked} onPick={(id) => onChange({ messenger_id: id })} />
+        </Row>
+      ) : null}
+    </Section>
+  );
+}
+
+function MessengerPicker({
+  messengers,
+  picked,
+  onPick,
+}: {
+  messengers: WidgetSummary[];
+  picked?: WidgetSummary;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <Select
+      aria-label="Which messenger"
+      size="sm"
+      selectedKey={picked?.id ?? null}
+      onSelectionChange={(key) => (key === null ? undefined : onPick(String(key)))}
+      popoverClassName="w-56"
+    >
+      {messengers.map((m) => (
+        <SelectItem key={m.id} id={m.id} textValue={m.name}>
+          {m.name}
+        </SelectItem>
+      ))}
+    </Select>
   );
 }

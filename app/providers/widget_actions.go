@@ -67,7 +67,9 @@ func registerWidget(a *app.App, fa *foundation.Application) {
 		return appmiddleware.AuthenticateWidget(a.Actions.Widget.Authenticate, fa.Errors), nil
 	})
 	fa.Kernel.Alias("widget.origin", func(...string) (fhttp.Middleware, error) {
-		return appmiddleware.VerifyWidgetOrigin(origin(fa.Config.App.URL), a.Actions.Widget.Install, fa.Errors), nil
+		help := helpcenters.HelpOrigins{DB: a.DB, Addresses: a.Actions.HelpCenterAddresses}
+		install := origin(fa.Config.App.URL)
+		return appmiddleware.VerifyWidgetOrigin(install, a.Actions.Widget.Install, help, fa.Errors), nil
 	})
 }
 

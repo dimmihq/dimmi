@@ -31,8 +31,10 @@ type HelpCenterSettingsBody struct {
 	LoginURL     *string `json:"login_url,omitempty"     maxLength:"2048"`
 	EmailSignIn  *bool   `json:"email_sign_in,omitempty"`
 
-	FeedbackBoard    *bool `json:"feedback_board,omitempty"`
-	FeedbackApproval *bool `json:"feedback_approval,omitempty"`
+	FeedbackBoard    *bool   `json:"feedback_board,omitempty"`
+	FeedbackApproval *bool   `json:"feedback_approval,omitempty"`
+	Messenger        *bool   `json:"messenger,omitempty"`
+	MessengerID      *string `json:"messenger_id,omitempty"     maxLength:"64"`
 }
 
 /*

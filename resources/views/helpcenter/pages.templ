@@ -142,10 +142,10 @@ templ SearchPage(c Center, all []Collection, query string, results []Result, ass
 					</span>
 					<h1 class="mt-4 text-headline-semibold">No answers for “{ query }”</h1>
 					<p class="mt-1 text-body-regular text-text-secondary">Try fewer or different words, or ask our team.</p>
-					<a href={ Href(c, "/conversations/new") } class="button-brand mt-5 inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium">
+					@AskHuman(c, "button-brand mt-5 inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium") {
 						@Icon("chat", "size-4")
 						Ask a human
-					</a>
+					}
 				</div>
 			} else {
 				<h1 class="mt-8 text-body-regular text-text-secondary">
