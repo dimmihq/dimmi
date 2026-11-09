@@ -116,9 +116,10 @@ func bootIdentityVerifier(a *app.App) *identity.Verifier {
 	cfg := a.Config.Identity
 	keySets := &identity.KeySets{DB: a.DB, HTTP: a.HTTP, Clock: a.Clock}
 	a.Actions.IdentityKeySets = keySets
+	a.Actions.IdentityPasses = &identity.Passes{Cache: a.Cache}
 	a.Actions.IdentityVerifier = &identity.Verifier{
 		DB: a.DB, Clock: a.Clock, Keys: a.Keys, Cache: a.Cache, KeySets: keySets, Leeway: cfg.ClockLeeway,
-		MaxLifetime: cfg.MaxTokenLifetime,
+		MaxLifetime: cfg.MaxTokenLifetime, Passes: a.Actions.IdentityPasses,
 	}
 	a.Actions.IdentitySecrets = &identity.Secrets{
 		DB: a.DB, Clock: a.Clock, Keys: a.Keys, KeySets: keySets,

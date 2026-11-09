@@ -1,5 +1,6 @@
 import { api } from "./support/customers";
 import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
+import { mailedText } from "./support/mail";
 
 it.describe("help center messenger", () => {
   it.beforeEach(async ({ page, person, request }) => {
@@ -39,5 +40,35 @@ it.describe("help center messenger", () => {
     await expect(guest.getByText("Try fewer or different words.")).toBeVisible();
     await expect(guest.getByRole("button", { name: "Contact us" })).toHaveCount(0);
     await expect(guest.locator(".launcher")).toHaveCount(0);
+  });
+
+  it("signs the messenger in as the reader who signs in to the help center, and out with them", async ({
+    page,
+    person,
+    guest,
+  }) => {
+    const centers = await api<{ subdomain: string }[]>(page, "GET", "/help-centers");
+    const apps = await api<{ id: string }[]>(page, "GET", "/widget-settings");
+    const home = `/hc/${centers[0]?.subdomain}`;
+    const signedIn = () => guest.evaluate((app) => localStorage.getItem(`dimmi:${app}:sub`), apps[0]?.id ?? "");
+    const reader = `reader.${person.email}`;
+
+    await guest.goto(home);
+    await expect(guest.locator(".launcher")).toBeVisible();
+    expect(await signedIn()).toBeNull();
+
+    await guest.goto(`${home}/sso/sign-in?next=${encodeURIComponent(home)}`);
+    await guest.getByLabel("Email").fill(reader);
+    await guest.getByRole("button", { name: "Email me a code" }).click();
+    const mailed = await mailedText(reader, "your code for");
+    await guest.getByLabel("Code").fill(mailed.match(/\b\d{6}\b/)?.[0] ?? "");
+    await guest.getByRole("button", { name: "Sign in" }).click();
+    await expect(guest.getByRole("button", { name: "Sign out" })).toBeVisible();
+    await expect.poll(signedIn).not.toBeNull();
+
+    await guest.getByRole("button", { name: "Sign out" }).click();
+    await expect(guest.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+    await guest.reload();
+    await expect.poll(signedIn).toBeNull();
   });
 });

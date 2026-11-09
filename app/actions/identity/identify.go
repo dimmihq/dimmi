@@ -141,43 +141,58 @@ open messengers end, since an unproven browser must never see a
 customer's history.
 */
 func (r *identifyRun) merge(ctx context.Context, into, lead models.Contact) (Identified, error) {
+	ended, err := r.absorb(ctx, into, lead)
+	if err != nil {
+		return Identified{}, err
+	}
+	out, err := r.apply(ctx, into)
+	out.Ended = append(out.Ended, ended...)
+	return out, err
+}
+
+/*
+absorb moves an anonymous lead's conversations, participations and
+pending actions to the customer, marks the lead merged into them and
+ends the lead's sessions, returning those that ended.
+*/
+func (r *identifyRun) absorb(ctx context.Context, into, lead models.Contact) ([]Ended, error) {
 	ws, now := r.v.WorkspaceID, r.v.Now
 	if err := r.q.MoveLeadConversations(ctx, models.MoveLeadConversationsParams{
 		IntoContactID: into.ID, Now: now, WorkspaceID: ws, ContactID: lead.ID,
 	}); err != nil {
-		return Identified{}, fmt.Errorf("move lead conversations: %w", err)
+		return nil, fmt.Errorf("move lead conversations: %w", err)
 	}
 	if err := r.q.MoveLeadParticipations(ctx, models.MoveLeadParticipationsParams{
 		IntoContactID: into.ID, WorkspaceID: ws, ContactID: lead.ID,
 	}); err != nil {
-		return Identified{}, fmt.Errorf("move lead participations: %w", err)
+		return nil, fmt.Errorf("move lead participations: %w", err)
 	}
 	if err := r.q.MoveLeadActionCalls(ctx, models.MoveLeadActionCallsParams{
 		IntoContactID: &into.ID, WorkspaceID: ws, ContactID: &lead.ID,
 	}); err != nil {
-		return Identified{}, fmt.Errorf("move lead action calls: %w", err)
+		return nil, fmt.Errorf("move lead action calls: %w", err)
 	}
 	if err := contactevents.MergeSummaries(ctx, r.q, contactevents.Merge{
 		WorkspaceID: ws, From: lead.ID, Into: into.ID, Now: now,
 	}); err != nil {
-		return Identified{}, err
+		return nil, err
 	}
 	if err := r.q.MarkContactMerged(ctx, models.MarkContactMergedParams{
 		IntoContactID: &into.ID, Now: now, WorkspaceID: ws, ID: lead.ID,
 	}); err != nil {
-		return Identified{}, fmt.Errorf("mark lead merged: %w", err)
+		return nil, fmt.Errorf("mark lead merged: %w", err)
 	}
 	rows, err := r.q.RevokeWidgetSessionsForContact(ctx, models.RevokeWidgetSessionsForContactParams{
 		Now: now, Reason: string(enums.WidgetRevokeContactMerged), WorkspaceID: ws, ContactID: lead.ID,
 	})
 	if err != nil {
-		return Identified{}, fmt.Errorf("end merged lead sessions: %w", err)
+		return nil, fmt.Errorf("end merged lead sessions: %w", err)
 	}
-	out, err := r.apply(ctx, into)
+	out := make([]Ended, 0, len(rows))
 	for _, row := range rows {
-		out.Ended = append(out.Ended, Ended{SessionID: row.ID, ContactID: row.ContactID})
+		out = append(out, Ended{SessionID: row.ID, ContactID: row.ContactID})
 	}
-	return out, err
+	return out, nil
 }
 
 /*

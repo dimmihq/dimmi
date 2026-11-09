@@ -20,6 +20,7 @@ package workflows
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -354,12 +355,11 @@ func (e *Engine) reentry(ctx context.Context, q *models.Queries, m *match, c can
 	last, err := q.WorkflowRanOnConversation(ctx, models.WorkflowRanOnConversationParams{
 		WorkspaceID: m.conv.WorkspaceID, WorkflowID: c.workflowID, ConversationID: &m.conv.ID,
 	})
+	if errors.Is(err, database.ErrNotFound) {
+		return "", nil
+	}
 	if err != nil {
 		return "", fmt.Errorf("check earlier runs: %w", err)
-	}
-
-	if last.IsZero() {
-		return "", nil
 	}
 
 	if mode == workflowspec.ReentryOnce {

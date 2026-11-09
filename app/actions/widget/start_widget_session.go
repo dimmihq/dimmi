@@ -121,10 +121,12 @@ func (a *StartWidgetSession) Handle(ctx context.Context, in StartWidgetSessionIn
 
 /*
 signsIn reports whether the start signs a customer in: a token was sent
-and the workspace reads tokens.
+and the workspace reads tokens, or the token is the help center's own
+pass, which signs its readers in whatever the workspace does with its
+product's tokens.
 */
 func signsIn(in StartWidgetSessionInput) bool {
-	return in.UserJWT != "" && in.Resolved.IdentityMode != identity.ModeOff
+	return in.UserJWT != "" && (in.Resolved.IdentityMode != identity.ModeOff || identity.IsPass(in.UserJWT))
 }
 
 /*

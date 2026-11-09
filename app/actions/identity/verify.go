@@ -56,7 +56,8 @@ func algorithms() []string {
 /*
 Verifier checks identity tokens. Cache remembers used nonces and
 KeySets fetches providers' key sets. Leeway forgives clock skew and
-MaxLifetime bounds how long a token may live.
+MaxLifetime bounds how long a token may live. Passes redeems the help
+center's passes, nil where none are accepted.
 */
 type Verifier struct {
 	DB          *database.DB
@@ -66,6 +67,7 @@ type Verifier struct {
 	KeySets     *KeySets
 	Leeway      time.Duration
 	MaxLifetime time.Duration
+	Passes      *Passes
 }
 
 /*
@@ -80,18 +82,26 @@ type Token struct {
 
 /*
 Verified is a token that passed: the secret that signed it, the
-customer's id and what it says about them.
+customer's id and what it says about them. A help center pass sets
+Contact instead, the workspace's own contact it signs in, and leaves the
+rest empty.
 */
 type Verified struct {
 	SecretID ids.UUID
 	Profile  Profile
+	Contact  *ids.UUID
 }
 
 /*
 Verify checks the token and returns who it names. Errors are faults
-with a code and a hint, safe to show the developer.
+with a code and a hint, safe to show the developer. A help center pass
+is redeemed instead of checked.
 */
 func (v *Verifier) Verify(ctx context.Context, t Token) (Verified, error) {
+	if IsPass(t.Value) && v.Passes != nil {
+		contact, err := v.Passes.Redeem(ctx, t.WorkspaceID, t.Value)
+		return Verified{Contact: &contact}, err
+	}
 	passed, err := v.run(ctx, t)
 	if err != nil {
 		return Verified{}, err

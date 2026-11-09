@@ -11,7 +11,8 @@
 | becoming the customer, and then ends. A session already signed in as
 | the same customer is simply extended. Refreshing needs a token for the
 | very customer the session belongs to, so a signed-in session never
-| changes hands.
+| changes hands. A help center pass names the workspace's own contact
+| instead of an id from the team's product, and signs in as them as is.
 |
 */
 
@@ -140,6 +141,11 @@ func (a *StartWidgetSession) identifyLead(ctx context.Context, tx *database.Tx, 
 		}
 		lead = &found
 	}
+	if sign.verified.Contact != nil {
+		return identity.Adopt(ctx, tx, a.Events, identity.Adoption{
+			WorkspaceID: ws, Contact: *sign.verified.Contact, Lead: lead, Now: a.Clock.Now(),
+		})
+	}
 	return identity.Identify(ctx, tx, a.Events, identity.Visitor{
 		WorkspaceID: ws, Profile: sign.verified.Profile, Lead: lead, Now: a.Clock.Now(),
 	})
@@ -209,15 +215,29 @@ session.
 func (a *StartWidgetSession) reverify(ctx context.Context, tx *database.Tx, s models.WidgetSession,
 	verified identity.Verified,
 ) (models.WidgetSession, models.Contact, error) {
-	now := a.Clock.Now()
-	who, err := identity.Identify(ctx, tx, a.Events, identity.Visitor{
-		WorkspaceID: s.WorkspaceID, Profile: verified.Profile, Now: now,
-	})
+	who, err := a.customerOf(ctx, tx, s.WorkspaceID, verified)
 	if err != nil {
 		return s, who.Contact, err
 	}
 	session, err := a.verify(ctx, models.New(tx), s, verified)
 	return session, who.Contact, err
+}
+
+/*
+customerOf is the customer a refreshed token names: the contact a help
+center pass signs in, or the one the team's token identifies.
+*/
+func (a *StartWidgetSession) customerOf(ctx context.Context, tx *database.Tx, ws ids.UUID,
+	verified identity.Verified,
+) (identity.Identified, error) {
+	if verified.Contact != nil {
+		return identity.Adopt(ctx, tx, a.Events, identity.Adoption{
+			WorkspaceID: ws, Contact: *verified.Contact, Now: a.Clock.Now(),
+		})
+	}
+	return identity.Identify(ctx, tx, a.Events, identity.Visitor{
+		WorkspaceID: ws, Profile: verified.Profile, Now: a.Clock.Now(),
+	})
 }
 
 /*
@@ -228,10 +248,14 @@ func (a *StartWidgetSession) verify(ctx context.Context, q *models.Queries, s mo
 	verified identity.Verified,
 ) (models.WidgetSession, error) {
 	now := a.Clock.Now()
-	out, err := q.VerifyWidgetSession(ctx, models.VerifyWidgetSessionParams{
+	params := models.VerifyWidgetSessionParams{
 		IdentitySecretID: &verified.SecretID, ExternalID: &verified.Profile.ExternalID, Now: now,
 		ExpiresAt: now.Add(a.IdentifiedTTL), WorkspaceID: s.WorkspaceID, ID: s.ID,
-	})
+	}
+	if verified.Contact != nil {
+		params.IdentitySecretID, params.ExternalID = nil, nil
+	}
+	out, err := q.VerifyWidgetSession(ctx, params)
 	if err != nil {
 		return s, fmt.Errorf("verify widget session: %w", err)
 	}
@@ -279,6 +303,9 @@ sameCustomer reports whether the session belongs to the customer the
 token names.
 */
 func sameCustomer(s models.WidgetSession, verified identity.Verified) bool {
+	if verified.Contact != nil {
+		return s.ExternalID == nil && s.ContactID == *verified.Contact
+	}
 	return s.ExternalID != nil && *s.ExternalID == verified.Profile.ExternalID
 }
 

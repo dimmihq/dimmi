@@ -21,7 +21,10 @@ function serve(routes: Record<string, (body: unknown) => { status: number; body?
       return new Response(JSON.stringify({ code: "not_found" }), { status: 404 });
     }
     const answer = route(init.body ? JSON.parse(String(init.body)) : undefined);
-    return new Response(answer.body === undefined ? "" : JSON.stringify(answer.body), { status: answer.status });
+    return new Response(answer.body === undefined ? "" : JSON.stringify(answer.body), {
+      status: answer.status,
+      headers: { "Content-Type": "application/json" },
+    });
   });
   vi.stubGlobal("fetch", fetch);
 
@@ -210,6 +213,42 @@ describe("a connected messenger", () => {
 
     expect(shadow()).toBeUndefined();
     expect(warn.mock.calls.flat().join(" ")).toContain("identity_required");
+  });
+
+  it("keeps the new session when a visitor signs in mid-visit, so the next requests carry it", async () => {
+    win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com", identityUrl: "/me/dimmi-token" };
+    const payload = btoa(JSON.stringify({ sub: "ctc_9" })).replace(/=+$/, "");
+    const token: { value: string | null } = { value: null };
+    const bearers: string[] = [];
+    serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /me/dimmi-token": () => ({ status: 200, body: { token: token.value } }),
+      "POST /sessions": () => ({
+        status: 201,
+        body: { data: { id: "wss_9", token: "dmi_ws_9", kind: "identified", contact: { id: "ctc_9" } } },
+      }),
+      "GET /conversations": () => ({ status: 200, body: { data: [], has_more: false } }),
+      "POST /realtime-tokens": () => ({ status: 201, body: { data: { token: "t", url: "https://rt", channel: "c" } } }),
+    });
+    const fetch = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+
+    boot(win, document);
+    await settle();
+    await settle();
+    token.value = `e30.${payload}.sig`;
+    win.Dimmi?.("identify");
+    await vi.waitFor(() => expect(localStorage.getItem("dimmi:wgt_1:token")).toBe("dmi_ws_9"));
+    await vi.waitFor(() => expect(fetch.mock.calls.some(([url]) => String(url).includes("/conversations"))).toBe(true));
+
+    for (const [url, init] of fetch.mock.calls as [string, RequestInit][]) {
+      if (String(url).includes("/conversations")) {
+        bearers.push((init.headers as Record<string, string>).Authorization ?? "none");
+      }
+    }
+    expect(bearers).not.toHaveLength(0);
+    expect(bearers.every((b) => b === "Bearer dmi_ws_9")).toBe(true);
+    expect(localStorage.getItem("dimmi:wgt_1:token")).toBe("dmi_ws_9");
   });
 
   it("does not ask who is signed in when sign-in is off", async () => {

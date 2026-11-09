@@ -51,7 +51,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			@drawerStyle()
 			@assets
 			if c.Messenger != "" {
-				<script async nonce={ templ.GetNonce(ctx) } src={ c.MessengerSrc } data-app-id={ c.Messenger }></script>
+				<script async nonce={ templ.GetNonce(ctx) } src={ c.MessengerSrc } data-app-id={ c.Messenger } data-identity-url={ c.MessengerIdentity }></script>
 			}
 		</head>
 		<body class="bg-background-full font-inter text-text-primary">

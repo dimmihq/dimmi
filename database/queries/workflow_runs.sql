@@ -39,10 +39,12 @@ ORDER BY started_at;
 
 -- name: WorkflowRanOnConversation :one
 -- WorkflowRanOnConversation reports when the workflow last started a run
--- on the conversation that did something, null when never.
-SELECT max(started_at)::timestamptz AS last_started_at FROM workflow_runs
+-- on the conversation that did something; no row when it never did.
+SELECT started_at AS last_started_at FROM workflow_runs
 WHERE workspace_id = @workspace_id AND workflow_id = @workflow_id AND conversation_id = @conversation_id
-  AND status <> 'passed';
+  AND status <> 'passed'
+ORDER BY started_at DESC
+LIMIT 1;
 
 -- name: CountConversationStepsSince :one
 -- CountConversationStepsSince counts the steps runs executed on a

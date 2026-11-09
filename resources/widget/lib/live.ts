@@ -341,7 +341,7 @@ export class Live {
       return;
     }
     this.realtime.stop();
-    this.ended();
+    this.ended(after);
     if (after) {
       await this.reload();
       this.streaming();
@@ -662,10 +662,16 @@ export class Live {
     this.host.update({ launcher_ruled_out: ruledOut, tabs });
   }
 
-  private ended() {
-    this.session.forget();
-    this.surface = this.config.surface?.anonymous;
-    this.applySurface();
+  /*
+   * ended clears the visitor who left: their conversations and thread,
+   * and their session unless the messenger already holds the next
+   * visitor's, which it keeps.
+   */
+  private ended(kept?: SessionData) {
+    if (!kept) {
+      this.session.forget();
+    }
+    this.takeSession(kept);
     this.store.setConversations([]);
     this.store.messages.clear();
     this.open = undefined;

@@ -109,14 +109,10 @@
 
 /*
  * Highlighted code: keywords and numbers in the messenger's accent,
- * comments quieter, everything else in the code's own color.
+ * everything else in the code's own color.
  */
 .prose :is(.keyword, .number) {
   color: var(--accent);
-}
-
-.prose .comment {
-  color: var(--text-tertiary);
 }
 
 .note {

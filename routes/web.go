@@ -142,7 +142,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 		Changelog: a.Actions.ChangelogPublic, Subscribers: a.Actions.ChangelogSubscribers, Board: a.Actions.Feedback,
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
-		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings,
+		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings, Passes: a.Actions.IdentityPasses,
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
@@ -159,6 +159,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	post("/articles/{slug}/feedback", "hc.articles.feedback", hc.Rate)
 	post("/articles/{slug}/feedback/comment", "hc.articles.feedback.comment", hc.Comment)
 	get("/search", "hc.search", hc.Search)
+	get("/messenger-identity", "hc.messenger-identity", hc.MessengerIdentity)
 	get("/sso", "hc.sso.show", hc.SignInPage)
 	post("/sso", "hc.sso.store", hc.SignIn)
 	post("/sso/sign-out", "hc.sso.destroy", hc.SignOut)

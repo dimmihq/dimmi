@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/changelog"
 	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
+	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/resources/views/helpcenter"
 )
@@ -51,7 +52,8 @@ team's product. Changelog reads the help center's published changelog
 and Subscribers takes the people who want to hear about it. Board is
 the board of feature requests. AppURL is where the messenger's loader
 and API answer, which a help center on its own host loads across.
-Ratings keeps readers' answers about articles.
+Ratings keeps readers' answers about articles, and Passes signs readers
+in to the messenger on the help center's pages.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -65,6 +67,7 @@ type HelpCenterController struct {
 	Errors      fhttp.Errors
 	AppURL      string
 	Ratings     *helpcenters.Ratings
+	Passes      *identity.Passes
 }
 
 /*
@@ -76,6 +79,7 @@ func (c *HelpCenterController) withMessenger(center *helpcenter.Center, snap hel
 		return
 	}
 	center.Messenger, center.MessengerAI = snap.Messenger.ID, snap.Messenger.AI
+	center.MessengerIdentity = center.Base + "/messenger-identity"
 	center.MessengerSrc = strings.TrimSuffix(c.AppURL, "/") + "/widget/v1/loader.js"
 }
 

@@ -1116,9 +1116,11 @@ func (q *Queries) StandDownConversationAi(ctx context.Context, arg StandDownConv
 }
 
 const workflowRanOnConversation = `-- name: WorkflowRanOnConversation :one
-SELECT max(started_at)::timestamptz AS last_started_at FROM workflow_runs
+SELECT started_at AS last_started_at FROM workflow_runs
 WHERE workspace_id = $1 AND workflow_id = $2 AND conversation_id = $3
   AND status <> 'passed'
+ORDER BY started_at DESC
+LIMIT 1
 `
 
 type WorkflowRanOnConversationParams struct {
@@ -1128,7 +1130,7 @@ type WorkflowRanOnConversationParams struct {
 }
 
 // WorkflowRanOnConversation reports when the workflow last started a run
-// on the conversation that did something, null when never.
+// on the conversation that did something; no row when it never did.
 func (q *Queries) WorkflowRanOnConversation(ctx context.Context, arg WorkflowRanOnConversationParams) (time.Time, error) {
 	row := q.db.QueryRow(ctx, workflowRanOnConversation, arg.WorkspaceID, arg.WorkflowID, arg.ConversationID)
 	var last_started_at time.Time

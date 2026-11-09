@@ -162,6 +162,25 @@ func TestEngine(t *testing.T) {
 		d.Owner.GetJSON(conv).AssertOK().AssertJSONPath("data.tags.0.id", tag).AssertJSONPath("data.priority", "high")
 	})
 
+	t.Run("runs a workflow kept to once per conversation the first time, and not again", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		live(t, d, "Once", testkit.JSON{
+			"schema": 1, "trigger": "message.customer", "reentry": testkit.JSON{"mode": "once_per_conversation"},
+			"steps": []testkit.JSON{step("s_prio001", "priority", testkit.JSON{"value": "high"})},
+		})
+		conv := conversation(t, d, "cy", "Hello")
+
+		d.Owner.PostJSON(conv+"/messages", testkit.JSON{"body": "Anyone there?"}).AssertCreated()
+		d.TC.Drain()
+		d.Owner.GetJSON(conv).AssertOK().AssertJSONPath("data.priority", "high")
+		d.Owner.PatchJSON(conv, testkit.JSON{"priority": "low"}).AssertOK()
+		d.Owner.PostJSON(conv+"/messages", testkit.JSON{"body": "Still there?"}).AssertCreated()
+		d.TC.Drain()
+
+		d.Owner.GetJSON(conv).AssertOK().AssertJSONPath("data.priority", "low")
+	})
+
 	t.Run("stops talking once a teammate replies", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
