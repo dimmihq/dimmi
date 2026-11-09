@@ -3,16 +3,18 @@ package helpcenter
 import "strconv"
 
 /*
-Layout is the frame of every portal page. A sidebar holds the logo and
-what the current section lists, such as the help center's collections;
-a top bar shows the trail to the page, the portal's sections and the
-visitor's sign-in; the page sits beside them. Turbo Drive swaps pages
-in place with a fade, fetching a link while the pointer rests on it;
+Layout is the frame of every portal page: a top bar with the logo, the
+portal's sections, the theme menu, a way to a person and the visitor's
+sign-in; the page in one column; then the team's footer text, its
+contact link and the dimmi mark. Where a section lists something to
+browse, such as the help center's collections, a drawer slides in from
+the start edge and pushes the page aside. Turbo Drive swaps pages in
+place with a fade, fetching a link while the pointer rests on it;
 without scripts every link and form still works. The theme check in the
 head applies the theme before anything paints: the team's when it set
-light or dark, else the one the reader picked with the switcher in the
-top bar, else their system's. The tab shows the company's logo, and with none the page names
-an empty icon so browsers do not ask the server for one.
+light or dark, else the reader's pick, else their system's. The tab
+shows the company's logo, and with none the page names an empty icon
+so browsers do not ask the server for one.
 */
 
 templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) {
@@ -65,7 +67,17 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 				<main id="main" class="flex-1 pb-24">
 					{ children... }
 				</main>
-				<footer class="flex justify-center px-4 pb-8">
+				<footer class="flex flex-col items-center gap-4 px-4 pb-8 text-center">
+					if c.FooterText != "" || c.ContactURL != "" {
+						<div class="flex max-w-[40rem] flex-col items-center gap-2 text-body-2-regular text-text-tertiary">
+							if c.FooterText != "" {
+								<p class="whitespace-pre-line">{ c.FooterText }</p>
+							}
+							if c.ContactURL != "" {
+								<a href={ templ.SafeURL(c.ContactURL) } class="text-link hover:underline">Contact us</a>
+							}
+						</div>
+					}
 					<a href="https://trydimmi.com" class="inline-flex items-center gap-1.5 rounded-full border border-border-button-default px-2.5 py-1 text-caption-1-medium text-text-tertiary transition-colors hover:text-text-primary">
 						<svg viewBox="4 4 40 40" width="12" height="12" class="size-3" fill="currentColor" aria-hidden="true">
 							<path d="M4 24a20 20 0 0 1 13.7-19L43 30.3A20 20 0 0 1 24 44H11a7 7 0 0 1-7-7Z"></path>

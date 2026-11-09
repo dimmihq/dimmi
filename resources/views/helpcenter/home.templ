@@ -19,7 +19,7 @@ templ Home(c Center, collections []Collection, popular []Summary, updates []Upda
 				</div>
 				<h1 class="mt-5 text-title-1-medium tracking-tight text-balance">
 					<span data-greeting>Hi there.</span>
-					<span class="text-text-tertiary">How can we help?</span>
+					<span class="text-text-tertiary">{ homeTitle(c) }</span>
 				</h1>
 				if c.Tagline != "" {
 					<p class="mt-1 text-body-regular text-text-secondary">{ c.Tagline }</p>
@@ -169,4 +169,15 @@ templ HelpSidebar(c Center, all []Collection, current, article string) {
 			@CollectionGroup(c, col, current, article)
 		}
 	</nav>
+}
+
+/*
+homeTitle is the question the home page asks under the greeting: the
+team's own, or the default.
+*/
+func homeTitle(c Center) string {
+	if c.HomeTitle == "" {
+		return "How can we help?"
+	}
+	return c.HomeTitle
 }

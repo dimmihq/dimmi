@@ -127,7 +127,7 @@ func centerOf(h models.HelpCenter, base string) helpcenter.Center {
 	}
 	return helpcenter.Center{
 		Name: h.Name, Product: h.Name, Base: base, Brand: brand, Tagline: s.HomeSubtitle, ContactURL: s.ContactURL,
-		Appearance: s.Appearance,
+		Appearance: s.Appearance, HomeTitle: s.HomeTitle, FooterText: s.FooterText,
 	}
 }
 

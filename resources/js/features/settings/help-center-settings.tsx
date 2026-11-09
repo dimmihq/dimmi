@@ -25,6 +25,9 @@ interface Form {
   subdomain: string;
   color: string;
   title: string;
+  subtitle: string;
+  footer: string;
+  contact: string;
   login: string;
 }
 
@@ -34,6 +37,9 @@ function formOf(center: HelpCenter): Form {
     subdomain: center.subdomain,
     color: center.settings.primary_color ?? "#10b981",
     title: center.settings.home_title ?? "",
+    subtitle: center.settings.home_subtitle ?? "",
+    footer: center.settings.footer_text ?? "",
+    contact: center.settings.contact_url ?? "",
     login: center.settings.login_url ?? "",
   };
 }
@@ -84,7 +90,10 @@ export function HelpCentersSettings() {
                     settings: {
                       ...center.settings,
                       primary_color: form.color,
-                      home_title: form.title,
+                      home_title: form.title.trim(),
+                      home_subtitle: form.subtitle.trim(),
+                      footer_text: form.footer.trim(),
+                      contact_url: form.contact.trim(),
                     },
                   })
                 }
@@ -115,6 +124,30 @@ export function HelpCentersSettings() {
                 value={form.title}
                 placeholder="How can we help?"
                 onChange={(title) => setForm({ ...form, title })}
+              />
+            </Row>
+            <Row label="Home subtitle" description="A line under the logo on the home page.">
+              <Field
+                label="Home subtitle"
+                value={form.subtitle}
+                placeholder="Answers from the team behind Acme"
+                onChange={(subtitle) => setForm({ ...form, subtitle })}
+              />
+            </Row>
+            <Row label="Footer" description="Shown at the bottom of every page.">
+              <Field
+                label="Footer text"
+                value={form.footer}
+                placeholder="© Acme Inc."
+                onChange={(footer) => setForm({ ...form, footer })}
+              />
+            </Row>
+            <Row label="Contact link" description="A Contact us link in the footer. Leave empty for none.">
+              <Field
+                label="Contact link"
+                value={form.contact}
+                placeholder="https://acme.com/contact"
+                onChange={(contact) => setForm({ ...form, contact })}
               />
             </Row>
             <Row label="Brand color" description="Links, buttons and the header.">
