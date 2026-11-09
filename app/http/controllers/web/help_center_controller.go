@@ -77,10 +77,10 @@ withMessenger has the page load the help center's messenger, if it
 shows one, from the app's own address.
 */
 func (c *HelpCenterController) withMessenger(center *helpcenter.Center, snap helpcenters.Snapshot) {
-	if snap.Messenger == "" {
+	if snap.Messenger.ID == "" {
 		return
 	}
-	center.Messenger = snap.Messenger
+	center.Messenger, center.MessengerAI = snap.Messenger.ID, snap.Messenger.AI
 	center.MessengerSrc = strings.TrimSuffix(c.AppURL, "/") + "/widget/v1/loader.js"
 }
 

@@ -111,17 +111,28 @@ templ articleRow(c Center, a Summary, current bool) {
 }
 
 /*
-AskBox is the one box the portal asks questions in. It searches the
-articles today; suggested questions sit under it.
+AskBox is the one box the portal asks questions in, with suggested
+articles under it. Where the AI agent answers the messenger, a fresh
+question goes to it in a new chat, which can hand over to the team in
+the same thread; otherwise, and on the search page or without scripts,
+the box searches the articles.
 */
 
 templ AskBox(c Center, query string, suggestions []Summary) {
-	<form action={ Href(c, "/search") } method="get" role="search" class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-sm transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint">
+	<form
+		action={ Href(c, "/search") }
+		method="get"
+		role="search"
+		if c.MessengerAI && query == "" {
+			data-ask-ai
+		}
+		class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-sm transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint"
+	>
 		<label class="flex h-14 items-center gap-3 ps-4 pe-2.5">
-			@Icon("sparkle", "size-5 shrink-0 text-link")
-			<span class="sr-only">Ask a question or search the help center</span>
-			<input type="search" name="q" value={ query } placeholder="Ask anything…" autocomplete="off" class="h-full min-w-0 flex-1 bg-transparent text-headline-regular text-text-primary outline-none placeholder:text-text-placeholder"/>
-			<button type="submit" aria-label="Ask" class="button-brand grid size-9 shrink-0 cursor-pointer place-items-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+			@Icon(askIcon(c), "size-5 shrink-0 text-link")
+			<span class="sr-only">{ askLabel(c) }</span>
+			<input type="search" name="q" value={ query } placeholder={ askPlaceholder(c) } autocomplete="off" class="h-full min-w-0 flex-1 bg-transparent text-headline-regular text-text-primary outline-none placeholder:text-text-placeholder"/>
+			<button type="submit" aria-label={ askButton(c) } class="button-brand grid size-9 shrink-0 cursor-pointer place-items-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 				@Icon("arrow-up", "size-4")
 			</button>
 		</label>
@@ -180,4 +191,36 @@ func homeTitle(c Center) string {
 		return "How can we help?"
 	}
 	return c.HomeTitle
+}
+
+/*
+askIcon, askLabel, askButton and askPlaceholder say what the ask box
+does: ask the AI where it answers, else search the articles.
+*/
+func askIcon(c Center) string {
+	if c.MessengerAI {
+		return "sparkle"
+	}
+	return "search"
+}
+
+func askLabel(c Center) string {
+	if c.MessengerAI {
+		return "Ask AI a question or search the help center"
+	}
+	return "Search the help center"
+}
+
+func askButton(c Center) string {
+	if c.MessengerAI {
+		return "Ask"
+	}
+	return "Search"
+}
+
+func askPlaceholder(c Center) string {
+	if c.MessengerAI {
+		return "Ask anything…"
+	}
+	return "Search for articles…"
 }

@@ -9,7 +9,9 @@
  * the theme switch keeps the reader's pick of light, dark or their
  * system's theme in this browser, the browse drawer and dropdowns close
  * on a click outside them or Escape, collections open and close with a slide, and an
- * article's contents mark the heading being read.
+ * article's contents mark the heading being read. Where the help center's
+ * AI answers its messenger, a question typed in the ask box goes to it in
+ * a new chat instead of the search page.
  * A reader coming back from signing in to the team's product brings an
  * identity token in the address's fragment, which no server sees, and
  * one coming from the messenger brings a pass there; the sign-in page's
@@ -260,6 +262,33 @@ document.addEventListener(
     }
     if (document.activeElement?.closest("[data-drawer-panel]")) {
       drawer.querySelector("summary")?.focus();
+    }
+  },
+  true,
+);
+
+/*
+ * The ask box hands its question to the messenger, which opens a new chat
+ * with it; without the messenger the box searches as usual. It listens
+ * before Turbo does, so the search page never opens behind the chat.
+ */
+document.addEventListener(
+  "submit",
+  (event) => {
+    const form = event.target;
+    const dimmi = (window as { Dimmi?: (...command: unknown[]) => void }).Dimmi;
+    if (!(form instanceof HTMLFormElement && form.hasAttribute("data-ask-ai")) || !dimmi) {
+      return;
+    }
+    const input = form.querySelector<HTMLInputElement>("input[name=q]");
+    const question = input?.value.trim() ?? "";
+    if (!question) {
+      return;
+    }
+    event.preventDefault();
+    dimmi("ask", question);
+    if (input) {
+      input.value = "";
     }
   },
   true,

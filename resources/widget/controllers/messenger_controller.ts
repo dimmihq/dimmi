@@ -28,6 +28,10 @@
  * and, while the messenger is closed, a preview card above the launcher
  * that opens the conversation when clicked. Opening the conversation reads
  * everything; dismissing the preview leaves the message unread.
+ *
+ * Asking opens the messenger on a new conversation and sends the question
+ * from its composer, as if the visitor typed it, so a help center's search
+ * box can hand a question to whoever answers the messenger.
  */
 import { Notice } from "../components/notice";
 import { Said } from "../components/thread";
@@ -120,6 +124,19 @@ export class MessengerController extends Controller {
     if (notice) {
       notice.hidden = true;
     }
+  }
+
+  ask(question: string): void {
+    const text = question.trim();
+    this.open();
+    this.#converse(undefined);
+    const form = this.element.querySelector<HTMLFormElement>('[data-view="conversation"] form.composer');
+    const input = form?.querySelector("textarea");
+    if (!text || !form || !input) {
+      return;
+    }
+    input.value = text;
+    form.requestSubmit();
   }
 
   converse(event?: Event): void {

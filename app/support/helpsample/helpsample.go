@@ -107,7 +107,6 @@ func (l *Library) Center(slug, base string) (helpcenter.Center, bool) {
 		c.Sections = []helpcenter.Section{
 			{Key: "changelog", Name: "Changelog", Icon: "megaphone", Path: "/changelog"},
 			{Key: "feedback", Name: "Feature requests", Icon: "lightbulb", Path: "/feedback"},
-			{Key: "conversations", Name: "Conversations", Icon: "inbox", Path: "/conversations"},
 		}
 
 		return c, true

@@ -81,8 +81,8 @@ it.describe("the public portal", () => {
   it("answers a question from the articles", async ({ page }) => {
     await page.goto("/hc/dimmi");
 
-    await page.getByPlaceholder("Ask anything…").fill("custom domain");
-    await page.getByRole("button", { name: "Ask" }).click();
+    await page.getByPlaceholder("Search for articles…").fill("custom domain");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
 
     await expect(page.getByRole("link", { name: /Use a custom domain/ })).toBeVisible();
   });

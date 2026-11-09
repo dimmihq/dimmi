@@ -400,6 +400,18 @@ describe("core", () => {
       expect(sent?.textContent).toContain("Hello");
       expect(shadow().querySelector(".thread > .loaded > [data-typing]")).not.toBeNull();
     });
+
+    it("asks a question in a new conversation, opening the messenger", async () => {
+      const widget = await started();
+
+      win.Dimmi?.("ask", "  How do I reset my password?  ");
+      vi.advanceTimersByTime(800);
+
+      expect(widget?.messenger?.isOpen).toBe(true);
+      expect(widget?.messenger?.tab).toBe("conversation");
+      const sent = [...shadow().querySelectorAll('.thread > .loaded > [data-from="visitor"]')].at(-1);
+      expect(sent?.textContent).toContain("How do I reset my password?");
+    });
   });
 
   describe("voice notes", () => {

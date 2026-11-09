@@ -8,7 +8,7 @@ it.describe("help center messenger", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("shows the messenger on the help center, opens it from Ask a human, and goes when turned off", async ({
+  it("shows the messenger on the help center, opens it from Contact us, and goes when turned off", async ({
     page,
     guest,
   }) => {
@@ -19,7 +19,7 @@ it.describe("help center messenger", () => {
     await guest.goto(`${home}/search?q=nothing-matches-this`);
     const launcher = guest.locator(".launcher");
     await expect(launcher).toBeVisible();
-    await guest.getByRole("button", { name: "Ask a human" }).last().click();
+    await guest.getByRole("button", { name: "Contact us" }).last().click();
     await expect(launcher).toHaveAttribute("aria-expanded", "true");
 
     await page.goto("/d/settings/help-centers");
@@ -32,10 +32,8 @@ it.describe("help center messenger", () => {
     expect((await saved).ok()).toBe(true);
 
     await guest.goto(`${home}/search?q=nothing-matches-this`);
-    await expect(guest.getByRole("link", { name: "Ask a human" }).last()).toHaveAttribute(
-      "href",
-      `${home}/conversations/new`,
-    );
+    await expect(guest.getByText("Try fewer or different words.")).toBeVisible();
+    await expect(guest.getByRole("button", { name: "Contact us" })).toHaveCount(0);
     await expect(guest.locator(".launcher")).toHaveCount(0);
   });
 });

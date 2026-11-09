@@ -141,11 +141,14 @@ templ SearchPage(c Center, all []Collection, query string, results []Result, ass
 						@Icon("search", "size-5")
 					</span>
 					<h1 class="mt-4 text-headline-semibold">No answers for “{ query }”</h1>
-					<p class="mt-1 text-body-regular text-text-secondary">Try fewer or different words, or ask our team.</p>
-					@AskHuman(c, "button-brand mt-5 inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium") {
-						@Icon("chat", "size-4")
-						Ask a human
-					}
+					<p class="mt-1 text-body-regular text-text-secondary">
+						if c.Messenger != "" {
+							Try fewer or different words, or ask us.
+						} else {
+							Try fewer or different words.
+						}
+					</p>
+					@HelpButton(c, "button-brand mt-5 inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium", "", "size-4")
 				</div>
 			} else {
 				<h1 class="mt-8 text-body-regular text-text-secondary">

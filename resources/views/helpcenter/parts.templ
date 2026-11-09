@@ -97,9 +97,7 @@ templ feedback(c Center, slug string, h Helpful) {
 			case h.Commented:
 				<div class="flex flex-wrap items-center gap-4">
 					@feedbackThanks("Thanks. The team reads every note and will improve this article.")
-					@AskHuman(c, "ms-auto text-body-medium text-link hover:underline") {
-						Ask a human
-					}
+					@HelpButton(c, "ms-auto text-body-medium text-link hover:underline", "", "")
 				</div>
 			default:
 				@missingForm(c, slug, h)
@@ -129,9 +127,7 @@ templ missingForm(c Center, slug string, h Helpful) {
 		<textarea id="feedback-comment" name="comment" rows="3" required maxlength="2000" placeholder="Tell us what was missing or unclear" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
 		<div class="flex flex-wrap items-center gap-3">
 			<button type="submit" class="button-brand inline-flex h-9 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Send feedback</button>
-			@AskHuman(c, "ms-auto text-body-medium text-link hover:underline") {
-				Ask a human instead
-			}
+			@HelpButton(c, "ms-auto text-body-medium text-link hover:underline", "Or ", "")
 		</div>
 	</form>
 }

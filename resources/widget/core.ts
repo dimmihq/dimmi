@@ -19,7 +19,8 @@
  * says otherwise, so the design can be judged. Dimmi("simulate", ...)
  * changes the latency or delivers a message from the team there.
  * Dimmi("update", { ... }) merges changes over the options and re-renders
- * either way, keeping the panel open on the same tab.
+ * either way, keeping the panel open on the same tab. Dimmi("ask", text)
+ * opens a new conversation and sends the text in it.
  *
  * A signed-in visitor's identity comes from the snippet's
  * data-identity-url, or from Dimmi("identify", fn), where fn answers the
@@ -209,6 +210,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     configure: (argument) => configure(argument as Config),
     shutdown: () => void live?.logout(),
     logout: () => void live?.logout(),
+    ask: (argument) => find()?.ask(typeof argument === "string" ? argument : ""),
     identify,
   };
 

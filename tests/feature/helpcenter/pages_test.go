@@ -139,7 +139,7 @@ func TestHelpCenterPages(t *testing.T) {
 
 		_, body := get(t, tc, "/hc/dimmi/articles/invite-your-team?helpful=no")
 		assert.Contains(t, body, "What were you looking for?")
-		assert.Contains(t, body, "Ask a human instead")
+		assert.NotContains(t, body, `data-dimmi="open"`)
 		_, body = get(t, tc, "/hc/dimmi/articles/invite-your-team?helpful=yes")
 		assert.Contains(t, body, "Thanks for letting us know.")
 	})

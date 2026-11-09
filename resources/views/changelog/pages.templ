@@ -172,10 +172,7 @@ templ EntryPage(c helpcenter.Center, all []Label, p Page, assets templ.Component
 			}
 			<div class="mt-12 flex flex-wrap items-center gap-4 border-y border-separator-border py-5">
 				@reactions(c, p.Entry)
-				@helpcenter.AskHuman(c, "ms-auto inline-flex items-center gap-1.5 text-body-medium text-text-secondary transition-colors hover:text-text-primary") {
-					@helpcenter.Icon("answers", "size-4")
-					Questions? Ask a human
-				}
+				@helpcenter.HelpButton(c, "ms-auto inline-flex items-center gap-1.5 text-body-medium text-text-secondary transition-colors hover:text-text-primary", "Questions? ", "size-4")
 			</div>
 			@entryNeighbors(c, p.Previous, p.Next)
 			<section class="mt-12 flex flex-col items-center rounded-3xl border border-border-button-default bg-background-secondary-default px-6 py-8 text-center">

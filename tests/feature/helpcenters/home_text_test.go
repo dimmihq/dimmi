@@ -17,7 +17,7 @@ func TestHelpCenterHomeText(t *testing.T) {
 
 		body := string(c.page("").Body)
 		assert.Contains(t, body, "How can we help?")
-		assert.NotContains(t, body, "Contact us")
+		assert.NotContains(t, body, `>Contact us</a>`)
 	})
 
 	t.Run("shows the team's question, subtitle, footer and contact link", func(t *testing.T) {

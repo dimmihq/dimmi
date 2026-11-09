@@ -34,15 +34,15 @@ import (
 /*
 Snapshot is a help center as readers see it at one cache version.
 Restricted says audiences keep some of it from this reader, so signing
-in could show more. Messenger is the public id of the messenger its
-pages load, empty when they show none.
+in could show more. Messenger is the messenger its pages load, the zero
+value when they show none.
 */
 type Snapshot struct {
 	HelpCenter  models.HelpCenter
 	Collections []models.Collection
 	Articles    []models.ListPublishedArticlesRow
 	Restricted  bool
-	Messenger   string
+	Messenger   Messenger
 }
 
 /*

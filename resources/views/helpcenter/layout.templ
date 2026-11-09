@@ -209,10 +209,7 @@ templ topBar(c Center, m Meta) {
 		</nav>
 		<div class="flex shrink-0 items-center gap-2 max-lg:ms-auto">
 			@themeSwitch(c)
-			@AskHuman(c, "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden") {
-				@Icon("chat", "size-4")
-				<span class="max-xl:sr-only">Ask a human</span>
-			}
+			@HelpButton(c, "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden [&>span]:max-xl:sr-only", "", "size-4")
 			@account(c)
 			<details data-menu class="group relative lg:hidden">
 				<summary aria-label="Sections" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
@@ -309,21 +306,41 @@ templ account(c Center) {
 }
 
 /*
-AskHuman is the way to a person: it opens the messenger where the help
-center shows one, so the reader writes in place without signing in,
-and otherwise leads to starting a conversation in the portal.
+HelpButton is the one way to get help beyond the articles. It opens the
+help center's messenger, and is not drawn when the help center shows
+none, so it never leads nowhere. It reads Ask AI where the AI agent
+answers the messenger first and hands over to the team inside the same
+chat, and Contact us where the team answers. Lead is said before that,
+such as "Questions? ", and icon, when set, sizes the icon drawn before.
 */
 
-templ AskHuman(c Center, class string) {
+templ HelpButton(c Center, class, lead, icon string) {
 	if c.Messenger != "" {
-		<button type="button" data-dimmi="open" title="Ask a human" class={ "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring " + class }>
-			{ children... }
+		<button type="button" data-dimmi="open" title={ HelpLabel(c) } class={ "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring " + class }>
+			if icon != "" {
+				@Icon(helpIcon(c), icon)
+			}
+			<span>{ lead + HelpLabel(c) }</span>
 		</button>
-	} else {
-		<a href={ Href(c, "/conversations/new") } title="Ask a human" class={ class }>
-			{ children... }
-		</a>
 	}
+}
+
+/*
+HelpLabel names the way to get help: Ask AI where the AI agent answers
+first, Contact us where the team does.
+*/
+func HelpLabel(c Center) string {
+	if c.MessengerAI {
+		return "Ask AI"
+	}
+	return "Contact us"
+}
+
+func helpIcon(c Center) string {
+	if c.MessengerAI {
+		return "sparkle"
+	}
+	return "chat"
 }
 
 /*

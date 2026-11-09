@@ -26,7 +26,8 @@ center takes no sign-in; SignedIn says a reader is signed in, and
 SignOutURL ends that. Appearance is the theme the team set: light or
 dark for every reader, or auto, or empty, to let each reader pick.
 Messenger is the public id of the messenger its pages load from
-MessengerSrc, empty to load none. HomeTitle is the question the home page
+MessengerSrc, empty to load none; MessengerAI says the AI agent answers
+it first. HomeTitle is the question the home page
 asks, empty for the default, and FooterText closes every page.
 */
 type Center struct {
@@ -49,6 +50,7 @@ type Center struct {
 
 	Messenger    string
 	MessengerSrc string
+	MessengerAI  bool
 	HomeTitle    string
 	FooterText   string
 }

@@ -39,7 +39,44 @@ func TestHelpCenterMessenger(t *testing.T) {
 		body := string(c.page("/search?q=nothing-matches").Body)
 		assert.NotContains(t, body, "/widget/v1/loader.js")
 		assert.NotContains(t, body, `data-dimmi="open"`)
-		assert.Contains(t, body, `/conversations/new`)
+		assert.NotContains(t, body, "/conversations/new")
+	})
+
+	t.Run("offers Ask AI where the agent answers the messenger and Contact us where the team does", func(t *testing.T) {
+		t.Parallel()
+		team, ai, elsewhere := newCenter(t), newCenter(t), newCenter(t)
+		for _, c := range []center{ai, elsewhere} {
+			c.d.Owner.GetJSON("/api/v1/ai/agent").AssertOK()
+		}
+		agent := func(c center, sql string) {
+			_, err := c.d.TC.Operator().Exec(t.Context(), sql, c.d.TC.Workspace.Workspace.ID)
+			require.NoError(t, err)
+		}
+		agent(ai, "UPDATE ai_agents SET enabled = true WHERE workspace_id = $1")
+		agent(elsewhere, "UPDATE ai_agents SET enabled = true, enabled_channels = '{email}' WHERE workspace_id = $1")
+
+		home := string(team.page("").Body)
+		assert.Contains(t, home, "<span>Contact us</span>")
+		assert.NotContains(t, home, "data-ask-ai")
+		assert.Contains(t, home, `placeholder="Search for articles…"`)
+
+		home = string(ai.page("").Body)
+		assert.Contains(t, home, "<span>Ask AI</span>")
+		assert.Contains(t, home, "data-ask-ai")
+		assert.NotContains(t, string(ai.page("/search?q=x").Body), "data-ask-ai")
+
+		assert.Contains(t, string(elsewhere.page("").Body), "<span>Contact us</span>")
+	})
+
+	t.Run("shows no way to get help while the workspace's messenger is switched off", func(t *testing.T) {
+		t.Parallel()
+		c := newCenter(t)
+		widget := c.d.Owner.GetJSON("/api/v1/widget-settings").AssertOK().String("data.0.id")
+		c.d.Owner.PatchJSON("/api/v1/widget-settings/"+widget, testkit.JSON{"enabled": false}).AssertOK()
+
+		body := string(c.page("").Body)
+		assert.NotContains(t, body, "/widget/v1/loader.js")
+		assert.NotContains(t, body, `data-dimmi="open"`)
 	})
 
 	t.Run("shows the picked messenger and refuses one the workspace does not have", func(t *testing.T) {
