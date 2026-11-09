@@ -107,6 +107,52 @@
   white-space: pre;
 }
 
+/*
+ * Highlighted code takes the help center's colors for each kind of token,
+ * lighter on a dark messenger.
+ */
+.prose pre {
+  --code-keyword: light-dark(#9333ea, #d8b4fe);
+  --code-string: light-dark(#047857, #6ee7b7);
+  --code-name: light-dark(#2563eb, #7dd3fc);
+  --code-tag: light-dark(#e11d48, #fda4af);
+  --code-attribute: light-dark(#b45309, #fde68a);
+  --code-number: light-dark(#ea580c, #fdba74);
+}
+
+.prose :is(.chroma-k, .chroma-kd, .chroma-kr, .chroma-kn, .chroma-kc, .chroma-kt) {
+  color: var(--code-keyword);
+}
+
+.prose :is(.chroma-s, .chroma-s1, .chroma-s2, .chroma-sb, .chroma-sx) {
+  color: var(--code-string);
+}
+
+.prose :is(.chroma-nf, .chroma-nb, .chroma-nc, .chroma-fm) {
+  color: var(--code-name);
+}
+
+.prose .chroma-nt {
+  color: var(--code-tag);
+}
+
+.prose :is(.chroma-na, .chroma-nv) {
+  color: var(--code-attribute);
+}
+
+.prose :is(.chroma-m, .chroma-mi, .chroma-mf) {
+  color: var(--code-number);
+}
+
+.prose :is(.chroma-c, .chroma-c1, .chroma-cm) {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.prose :is(.chroma-p, .chroma-o) {
+  color: var(--text-secondary);
+}
+
 .note {
   display: flex;
   gap: 10px;

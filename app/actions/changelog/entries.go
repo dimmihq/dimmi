@@ -76,9 +76,44 @@ NewEntries returns the entries action with the help center's renderer,
 so entries read the same as articles.
 */
 func NewEntries(db *database.DB, clk clock.Clock, q *queue.Queue) *Entries {
-	return &Entries{DB: db, Clock: clk, Queue: q, Renderer: markdown.New(markdown.Options{
-		GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true,
-	})}
+	return &Entries{DB: db, Clock: clk, Queue: q, Renderer: renderer()}
+}
+
+/*
+RendererVersion is the version of the rendering kept with each published
+entry. Raising it renders older entries again as readers open them.
+*/
+const RendererVersion = 2
+
+/*
+renderer turns entry Markdown into the HTML readers see, the same way
+articles render, code highlighted.
+*/
+func renderer() *markdown.Renderer {
+	return markdown.New(markdown.Options{
+		GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true, Highlight: true,
+	})
+}
+
+/*
+refreshed renders again the published entries an older renderer kept,
+so readers never see stale HTML. An entry that fails to render keeps
+what it had.
+*/
+func refreshed(rows []models.ChangelogEntry) []models.ChangelogEntry {
+	var r *markdown.Renderer
+	for i, row := range rows {
+		if row.PublishedRendererVersion >= RendererVersion || row.PublishedBodyMarkdown == nil {
+			continue
+		}
+		if r == nil {
+			r = renderer()
+		}
+		if out, err := r.HTML([]byte(*row.PublishedBodyMarkdown)); err == nil {
+			rows[i].PublishedBodyHtml = &out.HTML
+		}
+	}
+	return rows
 }
 
 /*

@@ -454,30 +454,31 @@ type CertmagicStorage struct {
 }
 
 type ChangelogEntry struct {
-	ID                    ids.UUID   `json:"id"`
-	WorkspaceID           ids.UUID   `json:"workspace_id"`
-	HelpCenterID          ids.UUID   `json:"help_center_id"`
-	Title                 string     `json:"title"`
-	Slug                  string     `json:"slug"`
-	Summary               *string    `json:"summary"`
-	BodyMarkdown          string     `json:"body_markdown"`
-	CoverUrl              *string    `json:"cover_url"`
-	Status                string     `json:"status"`
-	ScheduledFor          *time.Time `json:"scheduled_for"`
-	PublishedAt           *time.Time `json:"published_at"`
-	PublishedTitle        *string    `json:"published_title"`
-	PublishedSummary      *string    `json:"published_summary"`
-	PublishedBodyMarkdown *string    `json:"published_body_markdown"`
-	PublishedBodyHtml     *string    `json:"published_body_html"`
-	PublishedCoverUrl     *string    `json:"published_cover_url"`
-	HasUnpublishedChanges bool       `json:"has_unpublished_changes"`
-	NotifySubscribers     bool       `json:"notify_subscribers"`
-	NotifiedAt            *time.Time `json:"notified_at"`
-	AuthorsChosen         bool       `json:"authors_chosen"`
-	LockVersion           int32      `json:"lock_version"`
-	DeletedAt             *time.Time `json:"deleted_at"`
-	CreatedAt             time.Time  `json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
+	ID                       ids.UUID   `json:"id"`
+	WorkspaceID              ids.UUID   `json:"workspace_id"`
+	HelpCenterID             ids.UUID   `json:"help_center_id"`
+	Title                    string     `json:"title"`
+	Slug                     string     `json:"slug"`
+	Summary                  *string    `json:"summary"`
+	BodyMarkdown             string     `json:"body_markdown"`
+	CoverUrl                 *string    `json:"cover_url"`
+	Status                   string     `json:"status"`
+	ScheduledFor             *time.Time `json:"scheduled_for"`
+	PublishedAt              *time.Time `json:"published_at"`
+	PublishedTitle           *string    `json:"published_title"`
+	PublishedSummary         *string    `json:"published_summary"`
+	PublishedBodyMarkdown    *string    `json:"published_body_markdown"`
+	PublishedBodyHtml        *string    `json:"published_body_html"`
+	PublishedCoverUrl        *string    `json:"published_cover_url"`
+	HasUnpublishedChanges    bool       `json:"has_unpublished_changes"`
+	NotifySubscribers        bool       `json:"notify_subscribers"`
+	NotifiedAt               *time.Time `json:"notified_at"`
+	AuthorsChosen            bool       `json:"authors_chosen"`
+	LockVersion              int32      `json:"lock_version"`
+	DeletedAt                *time.Time `json:"deleted_at"`
+	CreatedAt                time.Time  `json:"created_at"`
+	UpdatedAt                time.Time  `json:"updated_at"`
+	PublishedRendererVersion int16      `json:"published_renderer_version"`
 }
 
 type ChangelogEntryLabel struct {

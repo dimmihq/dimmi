@@ -70,7 +70,7 @@ plain Markdown without raw HTML.
 func NewPosts(db *database.DB, clk clock.Clock, mail *fmail.Manager, addresses helpcenters.Addresses) *Posts {
 	return &Posts{
 		DB: db, Clock: clk, Mail: mail, Addresses: addresses,
-		Renderer: markdown.New(markdown.Options{GFM: true, HardWraps: true}),
+		Renderer: markdown.New(markdown.Options{GFM: true, HardWraps: true, Highlight: true}),
 	}
 }
 

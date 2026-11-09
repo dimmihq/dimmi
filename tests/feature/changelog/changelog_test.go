@@ -206,6 +206,20 @@ func TestChangelogEntries(t *testing.T) {
 func TestChangelogPublishing(t *testing.T) {
 	t.Parallel()
 
+	t.Run("colors code in entries, also ones published before highlighting", func(t *testing.T) {
+		t.Parallel()
+		l := newLog(t)
+		l.published(t, testkit.JSON{"title": "SDK release", "body_markdown": "```js\nconst a = 1\n```\n"})
+		_, err := l.d.TC.Operator().Exec(t.Context(),
+			`UPDATE changelog_entries SET published_renderer_version = 1, published_body_html = '<p>plain</p>'
+			 WHERE workspace_id = $1`, l.d.TC.Workspace.Workspace.ID)
+		require.NoError(t, err)
+
+		page := string(l.page("/changelog/sdk-release").Body)
+		assert.Contains(t, page, `class="chroma-kr"`)
+		assert.NotContains(t, page, "<p>plain</p>")
+	})
+
 	t.Run("shows only published entries as last published, newest first", func(t *testing.T) {
 		t.Parallel()
 		l := newLog(t)

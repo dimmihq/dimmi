@@ -27,13 +27,15 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/markdown"
 	"github.com/dimmihq/dimmi/framework/support/str"
+
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
 RendererVersion is the version of the rendering stored with each
 article version.
 */
-const RendererVersion = 1
+const RendererVersion = 2
 
 /*
 rendered is an article body as a version keeps it.
@@ -47,7 +49,30 @@ type rendered struct {
 renderer turns article Markdown into the HTML readers see.
 */
 func renderer() *markdown.Renderer {
-	return markdown.New(markdown.Options{GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true})
+	return markdown.New(markdown.Options{
+		GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true, Highlight: true,
+	})
+}
+
+/*
+refreshed renders again the published articles an older renderer kept,
+such as before code was highlighted, so readers never see stale HTML.
+An article that fails to render keeps what it had.
+*/
+func refreshed(rows []models.ListPublishedArticlesRow) []models.ListPublishedArticlesRow {
+	var r *markdown.Renderer
+	for i, row := range rows {
+		if row.RendererVersion >= RendererVersion {
+			continue
+		}
+		if r == nil {
+			r = renderer()
+		}
+		if out, err := render(r, row.BodyMarkdown); err == nil {
+			rows[i].BodyHtml, rows[i].Toc = out.html, out.toc
+		}
+	}
+	return rows
 }
 
 /*

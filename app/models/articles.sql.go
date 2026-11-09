@@ -598,7 +598,7 @@ func (q *Queries) ListArticles(ctx context.Context, arg ListArticlesParams) ([]A
 
 const listPublishedArticles = `-- name: ListPublishedArticles :many
 SELECT a.id, a.collection_id, a.position, a.published_at, v.title, v.slug, v.description, v.body_markdown,
-    v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at
+    v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at, v.renderer_version
 FROM articles a
 JOIN article_versions v ON v.id = a.published_version_id
 WHERE a.workspace_id = $1 AND a.help_center_id = $2 AND a.deleted_at IS NULL
@@ -624,6 +624,7 @@ type ListPublishedArticlesRow struct {
 	Toc              json.RawMessage `json:"toc"`
 	VersionID        ids.UUID        `json:"version_id"`
 	VersionCreatedAt time.Time       `json:"version_created_at"`
+	RendererVersion  int16           `json:"renderer_version"`
 }
 
 // ListPublishedArticles returns what readers see of a help center: every
@@ -650,6 +651,7 @@ func (q *Queries) ListPublishedArticles(ctx context.Context, arg ListPublishedAr
 			&i.Toc,
 			&i.VersionID,
 			&i.VersionCreatedAt,
+			&i.RendererVersion,
 		); err != nil {
 			return nil, err
 		}

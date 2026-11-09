@@ -176,7 +176,7 @@ const claimChangelogMailing = `-- name: ClaimChangelogMailing :one
 UPDATE changelog_entries SET notified_at = $1
 WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL AND status = 'published'
   AND notify_subscribers AND notified_at IS NULL
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type ClaimChangelogMailingParams struct {
@@ -215,6 +215,7 @@ func (q *Queries) ClaimChangelogMailing(ctx context.Context, arg ClaimChangelogM
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -511,7 +512,7 @@ INSERT INTO changelog_entries (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $8
 )
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type CreateChangelogEntryParams struct {
@@ -563,6 +564,7 @@ func (q *Queries) CreateChangelogEntry(ctx context.Context, arg CreateChangelogE
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -691,7 +693,7 @@ func (q *Queries) DueChangelogEntries(ctx context.Context, arg DueChangelogEntri
 }
 
 const findChangelogEntry = `-- name: FindChangelogEntry :one
-SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at FROM changelog_entries WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version FROM changelog_entries WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindChangelogEntryParams struct {
@@ -728,6 +730,7 @@ func (q *Queries) FindChangelogEntry(ctx context.Context, arg FindChangelogEntry
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -823,7 +826,7 @@ func (q *Queries) FindChangelogSubscriberByEmail(ctx context.Context, arg FindCh
 }
 
 const findPublishedChangelogEntryBySlug = `-- name: FindPublishedChangelogEntryBySlug :one
-SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at FROM changelog_entries
+SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version FROM changelog_entries
 WHERE workspace_id = $1 AND help_center_id = $2 AND slug = $3
   AND deleted_at IS NULL AND status = 'published'
 `
@@ -863,6 +866,7 @@ func (q *Queries) FindPublishedChangelogEntryBySlug(ctx context.Context, arg Fin
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -982,7 +986,7 @@ func (q *Queries) ListActiveChangelogSubscribers(ctx context.Context, arg ListAc
 }
 
 const listChangelogEntries = `-- name: ListChangelogEntries :many
-SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at FROM changelog_entries e
+SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version FROM changelog_entries e
 WHERE e.workspace_id = $1 AND e.help_center_id = $2 AND e.deleted_at IS NULL
   AND ($3::text IS NULL OR e.status = $3::text)
   AND ($4::uuid IS NULL OR EXISTS (
@@ -1046,6 +1050,7 @@ func (q *Queries) ListChangelogEntries(ctx context.Context, arg ListChangelogEnt
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PublishedRendererVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -1310,7 +1315,7 @@ func (q *Queries) ListChangelogSubscribers(ctx context.Context, arg ListChangelo
 }
 
 const listPublishedChangelogEntries = `-- name: ListPublishedChangelogEntries :many
-SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at FROM changelog_entries e
+SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version FROM changelog_entries e
 WHERE e.workspace_id = $1 AND e.help_center_id = $2 AND e.deleted_at IS NULL
   AND e.status = 'published'
   AND ($3::uuid IS NULL OR EXISTS (
@@ -1369,6 +1374,7 @@ func (q *Queries) ListPublishedChangelogEntries(ctx context.Context, arg ListPub
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PublishedRendererVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -1381,7 +1387,7 @@ func (q *Queries) ListPublishedChangelogEntries(ctx context.Context, arg ListPub
 }
 
 const lockChangelogEntry = `-- name: LockChangelogEntry :one
-SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at FROM changelog_entries WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version FROM changelog_entries WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type LockChangelogEntryParams struct {
@@ -1419,6 +1425,7 @@ func (q *Queries) LockChangelogEntry(ctx context.Context, arg LockChangelogEntry
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -1428,20 +1435,21 @@ UPDATE changelog_entries SET
     status = 'published', scheduled_for = NULL,
     published_at = coalesce($1::timestamptz, published_at, $2),
     published_title = title, published_summary = summary, published_body_markdown = body_markdown,
-    published_body_html = $3, published_cover_url = cover_url,
-    has_unpublished_changes = false, notify_subscribers = notify_subscribers OR $4,
+    published_body_html = $3, published_renderer_version = $4, published_cover_url = cover_url,
+    has_unpublished_changes = false, notify_subscribers = notify_subscribers OR $5,
     lock_version = lock_version + 1, updated_at = $2
-WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+WHERE workspace_id = $6 AND id = $7 AND deleted_at IS NULL
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type PublishChangelogEntryParams struct {
-	PublishedAt *time.Time `json:"published_at"`
-	Now         time.Time  `json:"now"`
-	BodyHtml    *string    `json:"body_html"`
-	Notify      bool       `json:"notify"`
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	ID          ids.UUID   `json:"id"`
+	PublishedAt     *time.Time `json:"published_at"`
+	Now             time.Time  `json:"now"`
+	BodyHtml        *string    `json:"body_html"`
+	RendererVersion int16      `json:"renderer_version"`
+	Notify          bool       `json:"notify"`
+	WorkspaceID     ids.UUID   `json:"workspace_id"`
+	ID              ids.UUID   `json:"id"`
 }
 
 // PublishChangelogEntry copies the working copy over what readers see.
@@ -1452,6 +1460,7 @@ func (q *Queries) PublishChangelogEntry(ctx context.Context, arg PublishChangelo
 		arg.PublishedAt,
 		arg.Now,
 		arg.BodyHtml,
+		arg.RendererVersion,
 		arg.Notify,
 		arg.WorkspaceID,
 		arg.ID,
@@ -1482,6 +1491,7 @@ func (q *Queries) PublishChangelogEntry(ctx context.Context, arg PublishChangelo
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -1491,7 +1501,7 @@ UPDATE changelog_entries SET
     status = 'scheduled', scheduled_for = $1, notify_subscribers = $2,
     lock_version = lock_version + 1, updated_at = $3
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL AND status <> 'published'
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type ScheduleChangelogEntryParams struct {
@@ -1537,6 +1547,7 @@ func (q *Queries) ScheduleChangelogEntry(ctx context.Context, arg ScheduleChange
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -1544,7 +1555,7 @@ func (q *Queries) ScheduleChangelogEntry(ctx context.Context, arg ScheduleChange
 const setChangelogPublishDate = `-- name: SetChangelogPublishDate :one
 UPDATE changelog_entries SET published_at = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL AND status = 'published'
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type SetChangelogPublishDateParams struct {
@@ -1588,6 +1599,7 @@ func (q *Queries) SetChangelogPublishDate(ctx context.Context, arg SetChangelogP
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -1597,7 +1609,7 @@ UPDATE changelog_entries SET
     status = 'draft', scheduled_for = NULL, has_unpublished_changes = false,
     lock_version = lock_version + 1, updated_at = $1
 WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type UnpublishChangelogEntryParams struct {
@@ -1636,6 +1648,7 @@ func (q *Queries) UnpublishChangelogEntry(ctx context.Context, arg UnpublishChan
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }
@@ -1686,7 +1699,7 @@ UPDATE changelog_entries SET
     has_unpublished_changes = (status = 'published'), authors_chosen = $6,
     lock_version = lock_version + 1, updated_at = $7
 WHERE workspace_id = $8 AND id = $9 AND deleted_at IS NULL AND lock_version = $10
-RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, help_center_id, title, slug, summary, body_markdown, cover_url, status, scheduled_for, published_at, published_title, published_summary, published_body_markdown, published_body_html, published_cover_url, has_unpublished_changes, notify_subscribers, notified_at, authors_chosen, lock_version, deleted_at, created_at, updated_at, published_renderer_version
 `
 
 type UpdateChangelogEntryParams struct {
@@ -1743,6 +1756,7 @@ func (q *Queries) UpdateChangelogEntry(ctx context.Context, arg UpdateChangelogE
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PublishedRendererVersion,
 	)
 	return i, err
 }

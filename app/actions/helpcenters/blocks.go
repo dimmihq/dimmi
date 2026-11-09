@@ -6,7 +6,9 @@
 | The messenger shows articles as plain blocks, never as HTML, so no
 | customer markup ever reaches the host page: paragraphs, headings,
 | lists, numbered steps, code and notes, each only text. Formatting
-| inside a paragraph is dropped; links keep their words.
+| inside a paragraph is dropped; links keep their words. Code in a known
+| language also comes as highlighted tokens, still only text, which the
+| messenger colors with the same classes as the help center.
 |
 */
 
@@ -19,12 +21,14 @@ import (
 )
 
 /*
-Block is one block of an article as the messenger draws it.
+Block is one block of an article as the messenger draws it. Tokens is
+code split for coloring, empty when its language is unknown.
 */
 type Block struct {
-	Kind  string   `json:"kind"`
-	Text  string   `json:"text,omitempty"`
-	Items []string `json:"items,omitempty"`
+	Kind   string           `json:"kind"`
+	Text   string           `json:"text,omitempty"`
+	Items  []string         `json:"items,omitempty"`
+	Tokens []markdown.Token `json:"tokens,omitempty"`
 }
 
 /*
@@ -55,7 +59,8 @@ func blockOf(n *markdown.Node) (Block, bool) {
 		}
 		return Block{Kind: kind, Items: items}, true
 	case markdown.KindCodeBlock:
-		return Block{Kind: "code", Text: strings.TrimRight(n.Text, "\n")}, true
+		text := strings.TrimRight(n.Text, "\n")
+		return Block{Kind: "code", Text: text, Tokens: markdown.Tokens(n.Language, text)}, true
 	case markdown.KindAlert, markdown.KindBlockquote:
 		return Block{Kind: "note", Text: strings.TrimSpace(inline(n))}, true
 	case markdown.KindImage:

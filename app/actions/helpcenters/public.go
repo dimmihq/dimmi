@@ -220,6 +220,7 @@ func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter) (Snaps
 	if err != nil {
 		return out, fmt.Errorf("list published articles: %w", err)
 	}
+	out.Articles = refreshed(out.Articles)
 	out.Messenger, err = messengerOf(ctx, q, h)
 	return out, err
 }

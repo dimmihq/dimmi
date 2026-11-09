@@ -385,3 +385,31 @@ func TestStyleSheet(t *testing.T) {
 		assert.Contains(t, css, ".chroma-chroma")
 	})
 }
+
+func TestTokens(t *testing.T) {
+	t.Parallel()
+
+	t.Run("splits code of a known language into classed runs that rebuild it", func(t *testing.T) {
+		t.Parallel()
+		code := "func main() {\n\treturn 42\n}\n"
+
+		tokens := markdown.Tokens("go", code)
+
+		var rebuilt string
+		classes := map[string]bool{}
+		for _, tok := range tokens {
+			rebuilt += tok.Text
+			classes[tok.Class] = true
+		}
+		assert.Equal(t, code, rebuilt)
+		assert.True(t, classes["kd"] || classes["k"])
+		assert.True(t, classes["mi"])
+	})
+
+	t.Run("gives nothing for an unknown or missing language", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Nil(t, markdown.Tokens("no-such-language", "x"))
+		assert.Nil(t, markdown.Tokens("", "x"))
+	})
+}

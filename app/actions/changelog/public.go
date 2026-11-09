@@ -195,7 +195,7 @@ func (p *Public) published(ctx context.Context, q *models.Queries, ws ids.UUID, 
 	if len(rows) == 0 {
 		return nil, nil
 	}
-	dressed, err := dressAll(ctx, q, ws, rows)
+	dressed, err := dressAll(ctx, q, ws, refreshed(rows))
 	if err != nil {
 		return nil, err
 	}

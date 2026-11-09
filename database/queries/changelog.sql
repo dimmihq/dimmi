@@ -121,7 +121,7 @@ UPDATE changelog_entries SET
     status = 'published', scheduled_for = NULL,
     published_at = coalesce(sqlc.narg(published_at)::timestamptz, published_at, @now),
     published_title = title, published_summary = summary, published_body_markdown = body_markdown,
-    published_body_html = @body_html, published_cover_url = cover_url,
+    published_body_html = @body_html, published_renderer_version = @renderer_version, published_cover_url = cover_url,
     has_unpublished_changes = false, notify_subscribers = notify_subscribers OR @notify,
     lock_version = lock_version + 1, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL

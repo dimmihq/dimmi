@@ -125,7 +125,7 @@ func (e *Entries) goLive(ctx context.Context, tx *database.Tx, current models.Ch
 		at = current.PublishedAt
 	}
 	row, err := q.PublishChangelogEntry(ctx, models.PublishChangelogEntryParams{
-		PublishedAt: at, Now: now, BodyHtml: &html.HTML, Notify: in.Notify,
+		PublishedAt: at, Now: now, BodyHtml: &html.HTML, RendererVersion: RendererVersion, Notify: in.Notify,
 		WorkspaceID: current.WorkspaceID, ID: current.ID,
 	})
 	if err != nil {

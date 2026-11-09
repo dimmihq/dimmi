@@ -33,10 +33,20 @@ export interface Link {
   url: string;
 }
 
+/*
+ * Token is one run of highlighted code: its text and the class of its
+ * kind, such as "k" for a keyword, none for plain text.
+ */
+export interface Token {
+  class?: string;
+  text: string;
+}
+
 export interface Block {
   kind: "p" | "h2" | "list" | "steps" | "code" | "note" | "image";
   text?: string;
   items?: string[];
+  tokens?: Token[];
 }
 
 export interface Article {
