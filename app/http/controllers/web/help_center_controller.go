@@ -68,11 +68,6 @@ type HelpCenterController struct {
 }
 
 /*
-errHandled says a step already answered the request.
-*/
-var errHandled = errors.New("request already answered")
-
-/*
 withMessenger has the page load the help center's messenger, if it
 shows one, from the app's own address.
 */
@@ -154,81 +149,6 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 	}
 	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful, c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
-}
-
-/*
-Rate keeps the answer to "Was this article helpful?" and returns the
-visitor to the article, thanked after a yes and asked what was missing
-after a no. The sample help center keeps nothing.
-*/
-func (c *HelpCenterController) Rate(w fhttp.ResponseWriter, r *fhttp.Request) {
-	answer := "yes"
-	if r.FormValue("helpful") == "no" {
-		answer = "no"
-	}
-	to := strings.TrimSuffix(r.URL.Path, "/feedback") + "?helpful=" + answer
-	err := c.rating(w, r, func(in helpcenters.Rating) error {
-		in.Helpful = answer == "yes"
-		return c.Ratings.Rate(r.Context(), in)
-	})
-	c.afterRating(w, r, to, err)
-}
-
-/*
-Comment keeps what a reader who said no was looking for, and thanks
-them. A comment with no words leaves them where they were.
-*/
-func (c *HelpCenterController) Comment(w fhttp.ResponseWriter, r *fhttp.Request) {
-	to := strings.TrimSuffix(r.URL.Path, "/feedback/comment") + "?helpful=no"
-	err := c.rating(w, r, func(in helpcenters.Rating) error {
-		in.Comment = r.FormValue("comment")
-		return c.Ratings.Comment(r.Context(), in)
-	})
-	if errors.Is(err, helpcenters.ErrRatingCommentEmpty) {
-		back(w, to+"#feedback")
-		return
-	}
-	if err == nil {
-		to += "&commented=1"
-	}
-	c.afterRating(w, r, to, err)
-}
-
-/*
-rating hands the reader's rating on the real help center to keep, naming
-the reader by their sign-in or their address.
-*/
-func (c *HelpCenterController) rating(w fhttp.ResponseWriter, r *fhttp.Request,
-	keep func(helpcenters.Rating) error,
-) error {
-	s, live, ok := c.live(w, r)
-	if !ok {
-		return errHandled
-	}
-	if !live || c.Ratings == nil {
-		return nil
-	}
-	rater := "ip:" + fhttp.ClientIP(r)
-	if s.reader != nil {
-		rater = "contact:" + s.reader.String()
-	}
-	return keep(helpcenters.Rating{Center: s.help, Slug: r.PathValue("slug"), Rater: rater, Contact: s.reader})
-}
-
-/*
-afterRating returns the reader to the article's feedback, saying so when
-they sent too much, and shows any other failure.
-*/
-func (c *HelpCenterController) afterRating(w fhttp.ResponseWriter, r *fhttp.Request, to string, err error) {
-	switch {
-	case errors.Is(err, errHandled):
-	case errors.Is(err, helpcenters.ErrRatingLimited):
-		back(w, to+"&limited=1#feedback")
-	case err != nil:
-		c.Errors.Render(w, r, err)
-	default:
-		back(w, to+"#feedback")
-	}
 }
 
 /*

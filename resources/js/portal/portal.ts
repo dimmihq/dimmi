@@ -9,7 +9,8 @@
  * the theme switch keeps the reader's pick of light, dark or their
  * system's theme in this browser, the browse drawer and dropdowns close
  * on a click outside them or Escape, collections open and close with a slide, and an
- * article's contents mark the heading being read. Where the help center's
+ * article's contents mark the heading being read, and "Was this article
+ * helpful?" answers in place, without reloading the page. Where the help center's
  * AI answers its messenger, a question typed in the ask box goes to it in
  * a new chat instead of the search page.
  * A reader coming back from signing in to the team's product brings an
@@ -206,15 +207,24 @@ document.addEventListener(
 
 /*
  * The messenger draws itself into the page's body, which Turbo replaces on
- * every visit, so it moves into the incoming body first and stays open,
+ * every visit. It steps out of the old body before the swap and back into
+ * the new one after, staying in this document the whole time: its styles
+ * belong to this document, and moving it into the incoming page, parsed
+ * as another document, would drop them. So it stays open,
  * mid-conversation, as the reader moves around.
  */
-document.addEventListener("turbo:before-render", (event) => {
-  const messenger = document.getElementById("dimmi-messenger");
-  const next = (event as CustomEvent<{ newBody: HTMLElement }>).detail.newBody;
-  if (messenger && !next.querySelector("#dimmi-messenger")) {
-    next.append(messenger);
+const carried: { messenger: HTMLElement | null } = { messenger: null };
+
+document.addEventListener("turbo:before-render", () => {
+  carried.messenger = document.getElementById("dimmi-messenger");
+  carried.messenger?.remove();
+});
+
+document.addEventListener("turbo:render", () => {
+  if (carried.messenger && !document.getElementById("dimmi-messenger")) {
+    document.body.append(carried.messenger);
   }
+  carried.messenger = null;
 });
 
 document.addEventListener("turbo:load", () => {
@@ -263,6 +273,71 @@ document.addEventListener(
     if (document.activeElement?.closest("[data-drawer-panel]")) {
       drawer.querySelector("summary")?.focus();
     }
+  },
+  true,
+);
+
+/*
+ * showStep shows one step of an article's feedback box and hides the
+ * others, moving focus into a step that asks for words.
+ */
+function showStep(box: HTMLElement, name: string): void {
+  for (const step of box.querySelectorAll<HTMLElement>("[data-step]")) {
+    step.hidden = step.dataset.step !== name;
+  }
+  box.querySelector<HTMLTextAreaElement>(`[data-step="${name}"] textarea`)?.focus();
+}
+
+/*
+ * sendFeedback posts a feedback form in the background and moves its box
+ * on: an answer goes to thanks or to the note, a note to thanks, and a
+ * reader who sent too much is told so. The step shows at once for an
+ * answer, so the reader can start typing while it is sent.
+ */
+async function sendFeedback(form: HTMLFormElement, submitter: HTMLElement | null): Promise<void> {
+  const box = form.closest<HTMLElement>("[data-feedback]");
+  if (!box) {
+    return;
+  }
+  const body = new URLSearchParams();
+  for (const [name, value] of new FormData(form, submitter)) {
+    if (typeof value === "string") {
+      body.append(name, value);
+    }
+  }
+  const answer = form.hasAttribute("data-feedback-answer");
+  if (answer) {
+    showStep(box, body.get("helpful") === "yes" ? "yes" : "no");
+  }
+  const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+  if (!answer && button) {
+    button.disabled = true;
+  }
+  try {
+    const response = await fetch(form.action, { method: "POST", body, headers: { Accept: "application/json" } });
+    const limited = box.querySelector<HTMLElement>("[data-limited]");
+    if (limited) {
+      limited.hidden = response.status !== 429;
+    }
+    if (!answer && response.ok) {
+      showStep(box, "done");
+    }
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
+}
+
+document.addEventListener(
+  "submit",
+  (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement && form.closest("[data-feedback]"))) {
+      return;
+    }
+    event.preventDefault();
+    void sendFeedback(form, (event as SubmitEvent).submitter);
   },
   true,
 );

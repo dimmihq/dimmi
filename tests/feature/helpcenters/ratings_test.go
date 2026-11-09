@@ -11,13 +11,22 @@ import (
 )
 
 /*
-answer posts a reader's form on the help center and returns where the
-portal sends them.
+answer posts a reader's form on the help center as a browser without
+scripts does, and returns where the portal sends them.
 */
 func (c center) answer(path string, form url.Values) string {
 	res := c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		Send("POST", "/hc/"+c.subdomain+path, form.Encode())
+		WithHeader("Accept", "text/html").Send("POST", "/hc/"+c.subdomain+path, form.Encode())
 	return res.Header.Get("Location")
+}
+
+/*
+sendInPlace posts a reader's form the way the portal's script does, in
+the background, and returns the status it gets.
+*/
+func (c center) sendInPlace(path string, form url.Values) int {
+	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+		WithHeader("Accept", "application/json").Send("POST", "/hc/"+c.subdomain+path, form.Encode()).Status
 }
 
 /*
@@ -87,6 +96,24 @@ func TestArticleRatings(t *testing.T) {
 		}
 		assert.Contains(t, last, "limited=1")
 		assert.Contains(t, string(c.page(path+"?helpful=no&limited=1").Body), "sent a lot of feedback")
+	})
+
+	t.Run("answers the portal's background requests with a status instead of a page", func(t *testing.T) {
+		t.Parallel()
+		c := newCenter(t)
+		id, path := published(t, c)
+
+		assert.Equal(t, fhttp.StatusNoContent, c.sendInPlace(path+"/feedback", url.Values{"helpful": {"no"}}))
+		assert.Equal(t, fhttp.StatusUnprocessableEntity, c.sendInPlace(path+"/feedback/comment", url.Values{}))
+		assert.Equal(t, fhttp.StatusNoContent,
+			c.sendInPlace(path+"/feedback/comment", url.Values{"comment": {"Where is SSO?"}}))
+		c.feedbackOf(id).AssertJSONPath("data.recent.0.comment", "Where is SSO?")
+
+		status := 0
+		for range 10 {
+			status = c.sendInPlace(path+"/feedback/comment", url.Values{"comment": {"again"}})
+		}
+		assert.Equal(t, fhttp.StatusTooManyRequests, status)
 	})
 
 	t.Run("shows an article's feedback only to its own workspace", func(t *testing.T) {

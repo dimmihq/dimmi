@@ -132,7 +132,8 @@ func TestHelpCenterPages(t *testing.T) {
 	t.Run("thanks a yes and asks what was missing after a no", func(t *testing.T) {
 		t.Parallel()
 
-		res := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/articles/invite-your-team/feedback?helpful=no", nil)
+		res := tc.Client().WithHeader("Accept", "text/html").
+			Send(fhttp.MethodPost, "/hc/dimmi/articles/invite-your-team/feedback?helpful=no", nil)
 
 		assert.Equal(t, fhttp.StatusSeeOther, res.Status)
 		assert.Equal(t, "/hc/dimmi/articles/invite-your-team?helpful=no#feedback", res.Header.Get("Location"))

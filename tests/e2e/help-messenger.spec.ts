@@ -21,6 +21,10 @@ it.describe("help center messenger", () => {
     await expect(launcher).toBeVisible();
     await guest.getByRole("button", { name: "Contact us" }).last().click();
     await expect(launcher).toHaveAttribute("aria-expanded", "true");
+    await guest.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Help center" }).click();
+    await expect(guest).toHaveURL(new RegExp(`${home}/?$`));
+    await expect(launcher).toHaveAttribute("aria-expanded", "true");
+    expect((await launcher.boundingBox())?.width ?? 0).toBeLessThan(80);
 
     await page.goto("/d/settings/help-centers");
     const show = page.getByRole("switch", { name: "Show the messenger" });

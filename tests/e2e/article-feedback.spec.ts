@@ -17,11 +17,18 @@ it.describe("article feedback", () => {
     });
     await api(page, "POST", `/articles/${article.id}/publications`, {});
 
-    await guest.goto(`/hc/${center.subdomain}/articles/reset-your-password`);
+    const articleURL = `/hc/${center.subdomain}/articles/reset-your-password`;
+    await guest.goto(articleURL);
+    await guest.evaluate(() => {
+      (window as unknown as { stayed: boolean }).stayed = true;
+    });
     await guest.getByRole("button", { name: "No" }).click();
+    await expect(guest.getByLabel("Sorry about that. What were you looking for?")).toBeFocused();
     await guest.getByLabel("Sorry about that. What were you looking for?").fill("How do I reset it with SSO?");
     await guest.getByRole("button", { name: "Send feedback" }).click();
     await expect(guest.getByText("The team reads every note")).toBeVisible();
+    await expect(guest).toHaveURL(new RegExp(`${articleURL}$`));
+    expect(await guest.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true);
 
     await page.goto(`/d/help-center/${article.id}`);
     await page.getByRole("button", { name: "Reader feedback" }).click();
