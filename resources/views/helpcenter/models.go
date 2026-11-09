@@ -23,7 +23,8 @@ its initial on the brand), the address of the product it supports, the
 sections it shows beside the help center, and the visitor signed in to
 it, if any. SignInURL is where a reader signs in, empty when the help
 center takes no sign-in; SignedIn says a reader is signed in, and
-SignOutURL ends that.
+SignOutURL ends that. Appearance is the theme the team set: light or
+dark for every reader, or auto, or empty, to let each reader pick.
 */
 type Center struct {
 	Name       string
@@ -41,6 +42,7 @@ type Center struct {
 	SignInURL  string
 	SignedIn   bool
 	SignOutURL string
+	Appearance string
 }
 
 /*

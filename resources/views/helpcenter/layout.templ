@@ -9,18 +9,19 @@ a top bar shows the trail to the page, the portal's sections and the
 visitor's sign-in; the page sits beside them. Turbo Drive swaps pages
 in place with a fade, fetching a link while the pointer rests on it;
 without scripts every link and form still works. The theme check in the
-head follows the visitor's light or dark setting before anything
-paints. The tab shows the company's logo, and with none the page names
+head applies the theme before anything paints: the team's when it set
+light or dark, else the one the reader picked with the switcher in the
+top bar, else their system's. The tab shows the company's logo, and with none the page names
 an empty icon so browsers do not ask the server for one.
 */
 
 templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) {
 	<!DOCTYPE html>
-	<html lang="en" style={ BrandStyle(c) } data-on-brand={ OnBrand(c.Brand) }>
+	<html lang="en" style={ BrandStyle(c) } data-on-brand={ OnBrand(c.Brand) } data-appearance={ fixedTheme(c) }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<meta name="color-scheme" content="light dark"/>
+			<meta name="color-scheme" content={ colorScheme(c) }/>
 			<meta name="view-transition" content="same-origin"/>
 			<meta name="csp-nonce" content={ templ.GetNonce(ctx) }/>
 			<title>{ m.Title }</title>
@@ -43,7 +44,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 				<link rel="alternate" type="text/markdown" href={ Href(c, m.Markdown) }/>
 			}
 			<link rel="alternate" type="application/rss+xml" title={ c.Product + " changelog" } href={ Href(c, "/changelog/feed.xml") }/>
-			@followSystemTheme()
+			@applyTheme()
 			@assets
 		</head>
 		<body class="bg-background-full font-inter text-text-primary">
@@ -82,10 +83,38 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 	</html>
 }
 
-templ followSystemTheme() {
+/*
+applyTheme sets the page's theme before it paints: the team's fixed
+one, or the reader's pick kept in this browser, or their system's,
+which it then keeps following.
+*/
+
+templ applyTheme() {
 	<script nonce={ templ.GetNonce(ctx) }>
-		(() => { const dark = matchMedia("(prefers-color-scheme: dark)"); const apply = () => document.documentElement.classList.toggle("dark", dark.matches); apply(); dark.addEventListener("change", apply) })()
+		(() => { const root = document.documentElement; const dark = matchMedia("(prefers-color-scheme: dark)"); const pick = () => { const fixed = root.dataset.appearance; if (fixed) return fixed; try { return localStorage.getItem("dimmi-portal-theme") || "system" } catch { return "system" } }; const apply = () => { const p = pick(); root.classList.toggle("dark", p === "dark" || (p === "system" && dark.matches)) }; apply(); dark.addEventListener("change", apply); window.dimmiTheme = apply })()
 	</script>
+}
+
+/*
+themeSwitch lets a reader pick light, dark or their system's theme,
+shown only where the team left the choice to readers and only once the
+portal's script can act on it.
+*/
+
+templ themeSwitch(c Center) {
+	if fixedTheme(c) == "" {
+		<div data-theme-switch hidden role="group" aria-label="Theme" class="flex items-center gap-0.5 rounded-xl border border-border-button-default p-0.5">
+			@themeChoice("light", "Light theme", "sun")
+			@themeChoice("dark", "Dark theme", "moon")
+			@themeChoice("system", "Match my system", "system")
+		</div>
+	}
+}
+
+templ themeChoice(value, label, icon string) {
+	<button type="button" data-theme-choice={ value } aria-label={ label } title={ label } aria-pressed="false" class="grid size-7 cursor-pointer place-items-center rounded-lg text-foreground-icon-tertiary outline-none transition-colors hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-pressed:bg-background-secondary-default aria-pressed:text-foreground-icon-primary">
+		@Icon(icon, "size-3.5")
+	</button>
 }
 
 templ homeLink(c Center) {
@@ -118,6 +147,7 @@ templ topBar(c Center, m Meta, sidebar templ.Component) {
 			}
 		</nav>
 		<div class="flex items-center gap-2 max-lg:ms-auto">
+			@themeSwitch(c)
 			@account(c)
 			<details class="group relative lg:hidden">
 				<summary aria-label="Menu" class="grid size-9 cursor-pointer list-none place-items-center rounded-xl border border-border-button-default text-foreground-icon-secondary">

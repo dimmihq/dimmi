@@ -129,3 +129,25 @@ func luminance(hex string) (float64, bool) {
 
 	return 0.2126*channel(16) + 0.7152*channel(8) + 0.0722*channel(0), true
 }
+
+/*
+fixedTheme is the theme every reader gets when the team set one, empty
+when each reader picks their own.
+*/
+func fixedTheme(c Center) string {
+	if c.Appearance == "light" || c.Appearance == "dark" {
+		return c.Appearance
+	}
+	return ""
+}
+
+/*
+colorScheme tells the browser which themes the page can show, so form
+controls and scrollbars match.
+*/
+func colorScheme(c Center) string {
+	if t := fixedTheme(c); t != "" {
+		return t
+	}
+	return "light dark"
+}
