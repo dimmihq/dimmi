@@ -15,7 +15,6 @@ package helpcenter
 import (
 	"math"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -62,18 +61,6 @@ Stamp formats a date for a time element's datetime attribute.
 */
 func Stamp(t time.Time) string {
 	return t.Format(time.DateOnly)
-}
-
-/*
-Initial returns the first letter of the help center's product, drawn on
-the brand when there is no logo.
-*/
-func Initial(c Center) string {
-	for _, r := range c.Product {
-		return strings.ToUpper(string(r))
-	}
-
-	return "?"
 }
 
 /*

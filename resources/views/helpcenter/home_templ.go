@@ -48,7 +48,7 @@ func Home(c Center, collections []Collection, popular []Summary, updates []Updat
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"mx-auto w-full max-w-[42rem] px-5 pt-14 md:pt-20\"><header class=\"stagger\"><div class=\"flex items-center gap-3 [&_img]:h-9 [&>span:first-child]:size-10 [&>span:first-child]:text-title-3-semibold\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"mx-auto w-full max-w-[42rem] px-5 pt-14 md:pt-20\"><header class=\"stagger\"><div class=\"flex items-center gap-3 [&_img]:h-9 [&>span]:text-title-2-semibold\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

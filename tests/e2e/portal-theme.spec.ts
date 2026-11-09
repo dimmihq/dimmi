@@ -28,6 +28,7 @@ it.describe("portal theme", () => {
 
     await choice("Dark").click();
     await expect(root).toHaveClass(/dark/);
+    await expect(guest.locator("#dimmi-messenger")).toHaveAttribute("data-theme", "dark");
     await expect(choice("Dark")).toBeHidden();
     await guest.reload();
     await expect(root).toHaveClass(/dark/);

@@ -345,8 +345,7 @@ func helpIcon(c Center) string {
 
 /*
 Logo draws the portal's logo, in its light or dark version to match the
-page, or its initial on the brand color with the product's name when it
-has none.
+page, or the product's name when it has none.
 */
 
 templ Logo(c Center) {
@@ -354,7 +353,6 @@ templ Logo(c Center) {
 		<img src={ Path(c, c.LogoLight) } alt={ c.Product } height="22" class="theme-logo-light h-[1.375rem] w-auto"/>
 		<img src={ Path(c, c.LogoDark) } alt={ c.Product } height="22" class="theme-logo-dark h-[1.375rem] w-auto"/>
 	} else {
-		<span class="button-brand grid size-7 shrink-0 place-items-center rounded-lg text-body-semibold" aria-hidden="true">{ Initial(c) }</span>
 		<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
 	}
 }

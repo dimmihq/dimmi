@@ -228,6 +228,27 @@ document.addEventListener("turbo:render", () => {
   carried.messenger = null;
 });
 
+/*
+ * themeMessenger keeps the messenger in the page's theme, light or dark,
+ * whatever the messenger's own setting: it marks the messenger's host,
+ * which its stylesheet reads, and marks it again whenever the messenger
+ * draws itself, the reader picks another theme or the page changes.
+ */
+function themeMessenger(): void {
+  const host = document.getElementById("dimmi-messenger");
+  const theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+  if (host && host.dataset.theme !== theme) {
+    host.dataset.theme = theme;
+  }
+}
+
+new MutationObserver(themeMessenger).observe(document.documentElement, {
+  attributes: true,
+  attributeFilter: ["class", "data-theme"],
+  childList: true,
+  subtree: true,
+});
+
 document.addEventListener("turbo:load", () => {
   greet(document);
   signIn(document);
