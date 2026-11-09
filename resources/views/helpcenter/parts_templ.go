@@ -190,7 +190,7 @@ func contents(headings []Heading) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<nav aria-labelledby=\"contents\" class=\"max-xl:hidden\"><div class=\"sticky top-24\"><p id=\"contents\" class=\"text-caption-1-medium text-text-tertiary\">On this page</p><ul class=\"mt-3 flex flex-col border-s border-separator-border\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<nav aria-labelledby=\"contents\"><div><p id=\"contents\" class=\"text-caption-1-medium text-text-tertiary\">In this article</p><ul class=\"mt-3 flex flex-col border-s border-separator-border\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -667,6 +667,21 @@ func helpTrail(trail []Crumb, collection, page string) []Crumb {
 	}
 
 	return out
+}
+
+/*
+collectionBySlug finds the collection with the slug at any depth.
+*/
+func collectionBySlug(all []Collection, slug string) (Collection, bool) {
+	for _, col := range all {
+		if col.Slug == slug {
+			return col, true
+		}
+		if found, ok := collectionBySlug(col.Children, slug); ok {
+			return found, true
+		}
+	}
+	return Collection{}, false
 }
 
 func trailEnd(trail []Crumb) string {

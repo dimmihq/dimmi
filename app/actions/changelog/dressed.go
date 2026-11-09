@@ -104,11 +104,12 @@ func dressAll(ctx context.Context, q *models.Queries, ws ids.UUID, rows []models
 	}
 	for _, p := range people {
 		e, person := byID[p.EntryID], Person{MemberID: p.MemberID, Name: p.Name, Avatar: p.AvatarPath}
-		if p.Role == "author" {
+		switch p.Role {
+		case "author":
 			e.Authors = append(e.Authors, person)
-			continue
+		default:
+			e.Editors = append(e.Editors, person)
 		}
-		e.Editors = append(e.Editors, person)
 	}
 	for i := range out {
 		if !out[i].AuthorsChosen || len(out[i].Authors) == 0 {

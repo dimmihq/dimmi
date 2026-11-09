@@ -1,47 +1,113 @@
 package helpcenter
 
+import "strconv"
+
 /*
-Home is the help center's front page. It greets the visitor and leads
-with one box to ask anything, which answers from the articles, then the
-collections as cards, the articles most read this week and the latest
-changes.
+Home is the help center's front page, one calm column: the logo and
+the help center's name, a greeting, one box to ask anything, then the
+collections in their groups. Each collection opens in place to list its articles, so a
+reader reaches any answer without leaving the page. The latest changes
+close it.
 */
 
 templ Home(c Center, collections []Collection, popular []Summary, updates []Update, assets templ.Component) {
 	@Layout(c, Meta{Title: c.Name, Description: c.Tagline, Section: "help", Trail: []Crumb{{Title: "Help center", Path: "/"}}, Markdown: "/index.md"}, HelpSidebar(c, collections, "", ""), assets) {
-		<div class="mx-auto w-full max-w-[52rem] px-5 pt-14 md:pt-24">
-			<div class="stagger">
-				<h1 class="text-display-4-medium tracking-tight text-balance">
+		<div class="mx-auto w-full max-w-[42rem] px-5 pt-14 md:pt-20">
+			<header class="stagger">
+				<div class="flex items-center gap-3 [&_img]:h-9 [&>span:first-child]:size-10 [&>span:first-child]:text-title-3-semibold">
+					@Logo(c)
+				</div>
+				<h1 class="mt-5 text-title-1-medium tracking-tight">
 					<span data-greeting>Hi there.</span>
 					<span class="text-text-tertiary">How can we help?</span>
 				</h1>
-				<div class="mt-7">
+				if c.Tagline != "" {
+					<p class="mt-1 text-body-regular text-text-secondary">{ c.Tagline }</p>
+				}
+				<div class="mt-6">
 					@AskBox(c, "", popular)
 				</div>
-			</div>
-			<section aria-labelledby="collections" class="mt-16">
-				<h2 id="collections" class="text-body-medium text-text-secondary">Collections</h2>
-				<ul class="stagger mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-					for _, col := range collections {
-						<li class="flex">
-							@collectionCard(c, col)
-						</li>
-					}
-				</ul>
-			</section>
-			<div class="mt-16 grid gap-10 md:grid-cols-[minmax(0,1fr)_17rem]">
-				<section aria-labelledby="trending">
-					<h2 id="trending" class="text-body-medium text-text-secondary">Trending articles</h2>
-					<div class="mt-4">
-						@ArticleList(c, popular, true)
-					</div>
-				</section>
-				if len(updates) > 0 {
-					@latestUpdates(c, updates)
+			</header>
+			<div class="stagger mt-10 flex flex-col gap-8">
+				for _, col := range collections {
+					@CollectionGroup(c, col, "", "")
 				}
 			</div>
+			if len(updates) > 0 {
+				<div class="mt-14">
+					@latestUpdates(c, updates)
+				</div>
+			}
 		</div>
 	}
+}
+
+/*
+CollectionGroup is a collection as a group: its name over a card of
+rows, one for each collection inside it, which opens to list its
+articles, and one for each article it holds itself. The collection
+holding the page being read starts open, with that article marked.
+*/
+
+templ CollectionGroup(c Center, col Collection, current, article string) {
+	if len(col.Children) > 0 || len(col.Articles) > 0 {
+		<section aria-label={ col.Title }>
+			<h2 class="px-1 pb-2 text-caption-1-medium text-text-tertiary">
+				<a href={ Href(c, "/collections/"+col.Slug) } class="hover:text-text-primary">{ col.Title }</a>
+			</h2>
+			<div class="overflow-hidden rounded-xl border border-border-button-default bg-background-primary-default">
+				for _, sub := range col.Children {
+					@collectionRow(c, sub, current, article)
+				}
+				for _, a := range col.Articles {
+					@articleRow(c, a, a.Slug == article)
+				}
+			</div>
+		</section>
+	}
+}
+
+templ collectionRow(c Center, col Collection, current, article string) {
+	<details class="group/row border-separator-border [&+*]:border-t" open?={ holds(col, current) }>
+		<summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-2.5 text-body-medium outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover">
+			<span class="min-w-0 flex-1 truncate">{ col.Title }</span>
+			<span class="text-caption-1-medium tabular-nums text-text-tertiary">{ strconv.Itoa(col.Count) }</span>
+			@Icon("chevron-right", "size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-open/row:rotate-90 rtl:-scale-x-100")
+		</summary>
+		<ul class="pb-2">
+			for _, a := range col.Articles {
+				<li>
+					<a
+						href={ Href(c, "/articles/"+a.Slug) }
+						if a.Slug == article {
+							aria-current="page"
+						}
+						class="mx-2 block rounded-lg px-3.5 py-1.5 text-body-2-regular text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary aria-[current=page]:bg-background-secondary-default aria-[current=page]:text-text-primary"
+					>{ a.Title }</a>
+				</li>
+			}
+			for _, sub := range col.Children {
+				<li>
+					<a href={ Href(c, "/collections/"+sub.Slug) } class="mx-2 flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-body-2-medium text-text-secondary hover:bg-background-secondary-hover hover:text-text-primary">
+						@Icon("book", "size-3.5 text-foreground-icon-tertiary")
+						{ sub.Title }
+					</a>
+				</li>
+			}
+		</ul>
+	</details>
+}
+
+templ articleRow(c Center, a Summary, current bool) {
+	<a
+		href={ Href(c, "/articles/"+a.Slug) }
+		if current {
+			aria-current="page"
+		}
+		class="flex items-center gap-3 border-separator-border px-4 py-2.5 text-body-medium outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover aria-[current=page]:bg-background-secondary-default [&+*]:border-t"
+	>
+		<span class="min-w-0 flex-1 truncate">{ a.Title }</span>
+	</a>
 }
 
 /*
@@ -69,45 +135,6 @@ templ AskBox(c Center, query string, suggestions []Summary) {
 	</form>
 }
 
-templ collectionCard(c Center, col Collection) {
-	<a href={ Href(c, "/collections/"+col.Slug) } class="group flex w-full flex-col overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default outline-none transition duration-200 hover:border-border-button-hover hover:shadow-md focus-visible:ring-2 focus-visible:ring-border-focus-ring">
-		<span class="dot-grid relative flex h-24 items-start border-b border-separator-border bg-background-secondary-default p-4 transition-colors group-hover:bg-tint">
-			<span class="grid size-9 place-items-center rounded-xl border border-border-button-default bg-background-primary-default text-link shadow-xs">
-				@Icon(col.Icon, "size-[1.125rem]")
-			</span>
-			<span class="absolute bottom-3 end-4 text-caption-1-medium text-text-tertiary">{ Plural(col.Count, "article") }</span>
-		</span>
-		<span class="flex flex-1 flex-col p-4">
-			<span class="text-body-semibold text-text-primary">{ col.Title }</span>
-			<span class="mt-1 text-body-2-regular text-text-secondary">{ col.Description }</span>
-		</span>
-	</a>
-}
-
-/*
-ArticleList is a list of articles grouped in one card, each a row with
-its title and, when the list mixes collections, where it lives.
-*/
-
-templ ArticleList(c Center, articles []Summary, showCollection bool) {
-	<ul class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
-		for _, a := range articles {
-			<li class="border-separator-border [&+&]:border-t">
-				<a href={ Href(c, "/articles/"+a.Slug) } class="group flex items-center gap-3 px-4 py-3 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover">
-					@Icon("file", "size-4 shrink-0 text-foreground-icon-tertiary")
-					<span class="min-w-0 flex-1">
-						<span class="block truncate text-body-medium text-text-primary">{ a.Title }</span>
-						if showCollection {
-							<span class="block truncate text-body-2-regular text-text-tertiary">{ a.Collection }</span>
-						}
-					</span>
-					@Icon("chevron-right", "size-4 shrink-0 text-foreground-icon-quaternary transition group-hover:translate-x-0.5 group-hover:text-foreground-icon-secondary rtl:-scale-x-100")
-				</a>
-			</li>
-		}
-	</ul>
-}
-
 templ latestUpdates(c Center, updates []Update) {
 	<section aria-labelledby="updates">
 		<div class="flex items-baseline justify-between">
@@ -132,49 +159,14 @@ templ latestUpdates(c Center, updates []Update) {
 }
 
 /*
-HelpSidebar lists every collection. The current one opens to show its
-articles, with the current article marked among them.
+HelpSidebar is what the browse drawer lists on help pages: every
+collection as a group, the one holding the page open.
 */
 
 templ HelpSidebar(c Center, all []Collection, current, article string) {
-	<nav aria-label="Collections" class="flex flex-col gap-0.5">
-		@SidebarHeading("Collections")
+	<nav aria-label="Collections" class="flex flex-col gap-5">
 		for _, col := range all {
-			@helpSidebarItem(c, col, current, article)
+			@CollectionGroup(c, col, current, article)
 		}
 	</nav>
-}
-
-templ helpSidebarItem(c Center, col Collection, current, article string) {
-	<a
-		href={ Href(c, "/collections/"+col.Slug) }
-		if col.Slug == current && article == "" {
-			aria-current="page"
-		}
-		class="group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:bg-background-secondary-default aria-[current=page]:text-text-primary"
-	>
-		@Icon(col.Icon, "size-4 shrink-0 opacity-80")
-		<span class="flex-1 truncate">{ col.Title }</span>
-		if holds(col, current) {
-			@Icon("chevron-down", "size-4 shrink-0 text-foreground-icon-tertiary")
-		} else {
-			@Icon("chevron-right", "size-4 shrink-0 text-foreground-icon-quaternary opacity-0 transition group-hover:opacity-100 rtl:-scale-x-100")
-		}
-	</a>
-	if holds(col, current) {
-		<div class="mb-1.5 ms-[1.1875rem] flex flex-col border-s border-separator-border ps-2">
-			for _, a := range col.Articles {
-				<a
-					href={ Href(c, "/articles/"+a.Slug) }
-					if a.Slug == article {
-						aria-current="page"
-					}
-					class="relative rounded-md px-2.5 py-1 text-body-2-regular text-text-secondary transition-colors hover:text-text-primary aria-[current=page]:font-medium aria-[current=page]:text-text-primary aria-[current=page]:before:absolute aria-[current=page]:before:-start-[9px] aria-[current=page]:before:inset-y-1 aria-[current=page]:before:w-px aria-[current=page]:before:bg-brand"
-				>{ a.Title }</a>
-			}
-			for _, sub := range col.Children {
-				@helpSidebarItem(c, sub, current, article)
-			}
-		</div>
-	}
 }

@@ -169,13 +169,8 @@ func again(w fhttp.ResponseWriter, s liveSite, form helpcenter.IdeaForm, why str
 ideaForm shows the form to post a request.
 */
 func (c PortalController) ideaForm(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite, form helpcenter.IdeaForm) {
-	statuses, err := c.columns(r, s)
-	if err != nil {
-		c.Errors.Render(w, r, err)
-		return
-	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(s.center, statuses, form, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(s.center, form, c.styles()))
 }
 
 func (c PortalController) signInFirst(w fhttp.ResponseWriter, s liveSite, path string) {
@@ -302,11 +297,6 @@ func (c PortalController) Idea(w fhttp.ResponseWriter, r *fhttp.Request) {
 }
 
 func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite, page feedback.Page) {
-	statuses, err := c.columns(r, s)
-	if err != nil {
-		c.Errors.Render(w, r, err)
-		return
-	}
 	status, _ := feedback.StatusOf(page.Status)
 	path := feedback.PostPath(page.FeedbackPost)
 	v := helpcenter.IdeaView{
@@ -322,7 +312,7 @@ func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s l
 		s.center.SignInURL = v.SignIn
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.IdeaPage(s.center, statuses, v, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.IdeaPage(s.center, v, c.styles()))
 }
 
 /*

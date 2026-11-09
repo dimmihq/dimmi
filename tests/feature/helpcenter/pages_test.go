@@ -231,7 +231,7 @@ func TestChangelogPages(t *testing.T) {
 
 		assert.Equal(t, fhttp.StatusOK, status)
 		assert.Contains(t, body, "<title>Fixed · Changelog | dimmi</title>")
-		assert.Contains(t, body, `<li aria-current="page" class="truncate text-text-primary">Fixed</li>`)
+		assert.Regexp(t, `<a href="/hc/dimmi/changelog/labels/fixed" aria-current="page"`, body)
 		assert.Contains(t, body, "Fixes and polish")
 		assert.NotContains(t, body, "Voice notes in the messenger")
 	})

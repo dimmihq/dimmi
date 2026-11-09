@@ -7,7 +7,8 @@
  * page reads from its own markup: the greeting follows the visitor's
  * clock, the copy buttons put an article's Markdown on the clipboard, and
  * the theme switch keeps the reader's pick of light, dark or their
- * system's theme in this browser.
+ * system's theme in this browser, and the browse drawer closes on a
+ * click outside it or Escape.
  * A reader coming back from signing in to the team's product brings an
  * identity token in the address's fragment, which no server sees, and
  * one coming from the messenger brings a pass there; the sign-in page's
@@ -118,8 +119,26 @@ document.addEventListener("turbo:load", () => {
   showThemes(document);
 });
 
+/*
+ * closeDrawers shuts the browse drawer.
+ */
+function closeDrawers(): void {
+  for (const drawer of document.querySelectorAll<HTMLDetailsElement>("details[data-drawer][open]")) {
+    drawer.open = false;
+  }
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeDrawers();
+  }
+});
+
 document.addEventListener("click", (event) => {
   const target = event.target as Element;
+  if (target.closest("[data-drawer-backdrop], [data-drawer-close]")) {
+    closeDrawers();
+  }
   const button = target.closest<HTMLButtonElement>("button[data-copy]");
   if (button) {
     void copy(button);

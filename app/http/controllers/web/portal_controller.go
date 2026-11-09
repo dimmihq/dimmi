@@ -73,7 +73,7 @@ func (c PortalController) NewIdea(w fhttp.ResponseWriter, r *fhttp.Request) {
 		return
 	}
 
-	page := helpcenter.NewIdeaPage(center, c.Library.Feedback(), helpcenter.IdeaForm{}, c.styles())
+	page := helpcenter.NewIdeaPage(center, helpcenter.IdeaForm{}, c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 

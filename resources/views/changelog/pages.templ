@@ -1,6 +1,10 @@
 package changelog
 
-import "github.com/dimmihq/dimmi/resources/views/helpcenter"
+import (
+	"strconv"
+
+	"github.com/dimmihq/dimmi/resources/views/helpcenter"
+)
 
 /*
 IndexPage is the changelog: a centered header with the subscribe form,
@@ -10,7 +14,7 @@ scrolls past.
 */
 
 templ IndexPage(c helpcenter.Center, index Index, assets templ.Component) {
-	@helpcenter.Layout(c, helpcenter.Meta{Title: indexTitle(c, index), Description: "New features, improvements and fixes in " + c.Product + ".", Section: "changelog", Trail: indexTrail(index), Markdown: "/changelog.md"}, Sidebar(c, index.Labels, index.Active), assets) {
+	@helpcenter.Layout(c, helpcenter.Meta{Title: indexTitle(c, index), Description: "New features, improvements and fixes in " + c.Product + ".", Section: "changelog", Trail: indexTrail(index), Markdown: "/changelog.md"}, templ.NopComponent, assets) {
 		<div class="mx-auto w-full max-w-[58rem] px-5">
 			<header class="stagger flex flex-col items-center pt-14 text-center md:pt-20">
 				<h1 class="text-display-3-medium tracking-tight max-md:text-display-4-medium">Changelog</h1>
@@ -24,6 +28,7 @@ templ IndexPage(c helpcenter.Center, index Index, assets templ.Component) {
 				</a>
 			</header>
 			@strip(c, index)
+			@labelFilter(c, index)
 			<ol class="mt-14">
 				for _, e := range index.Entries {
 					@timelineEntry(c, e)
@@ -120,7 +125,7 @@ reactions, a way to ask about it and the entries around it.
 */
 
 templ EntryPage(c helpcenter.Center, all []Label, p Page, assets templ.Component) {
-	@helpcenter.Layout(c, helpcenter.Meta{Title: p.Entry.Title + " | " + c.Product + " changelog", Description: p.Entry.Summary, Section: "changelog", Trail: []helpcenter.Crumb{{Title: "Changelog", Path: "/changelog"}, {Title: p.Entry.Title, Path: p.Entry.Path}}, Markdown: p.Entry.Path + ".md"}, Sidebar(c, all, ""), assets) {
+	@helpcenter.Layout(c, helpcenter.Meta{Title: p.Entry.Title + " | " + c.Product + " changelog", Description: p.Entry.Summary, Section: "changelog", Trail: []helpcenter.Crumb{{Title: "Changelog", Path: "/changelog"}, {Title: p.Entry.Title, Path: p.Entry.Path}}, Markdown: p.Entry.Path + ".md"}, templ.NopComponent, assets) {
 		<article class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
 			<div class="stagger">
 				<p class="flex flex-wrap items-center gap-3 text-body-medium text-text-secondary">
@@ -185,24 +190,38 @@ templ EntryPage(c helpcenter.Center, all []Label, p Page, assets templ.Component
 }
 
 /*
-Sidebar lists every update and each label with how many entries carry
-it, marking the one being shown.
+labelFilter sits under the release strip: one chip for every update and
+one per label with how many entries carry it, so a reader narrows the
+timeline in a click and clears it in another.
 */
 
-templ Sidebar(c helpcenter.Center, labels []Label, active string) {
-	<nav aria-label="Changelog" class="flex flex-col gap-0.5">
-		@helpcenter.SidebarHeading("Changelog")
-		@helpcenter.SidebarLink(c, "/changelog", "All updates", "megaphone", "", 0, active == "")
-		@helpcenter.SidebarHeading("Labels")
-		for _, l := range labels {
-			@helpcenter.SidebarLink(c, l.Path, l.Name, "", l.Color, l.Count, active == l.Slug)
+templ labelFilter(c helpcenter.Center, index Index) {
+	if len(index.Labels) > 0 {
+		<nav aria-label="Labels" class="mt-6 flex flex-wrap items-center justify-center gap-2 animate-rise">
+			@labelChip(c, "/changelog", "All updates", "", 0, index.Active == "")
+			for _, l := range index.Labels {
+				@labelChip(c, l.Path, l.Name, l.Color, l.Count, index.Active == l.Slug)
+			}
+		</nav>
+	}
+}
+
+templ labelChip(c helpcenter.Center, path, name, color string, count int, current bool) {
+	<a
+		href={ helpcenter.Href(c, path) }
+		if current {
+			aria-current="page"
 		}
-		@helpcenter.SidebarHeading("Follow")
-		<a href={ helpcenter.Href(c, "/changelog/feed.xml") } data-turbo="false" class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">
-			@helpcenter.Icon("rss", "size-4 opacity-80")
-			RSS feed
-		</a>
-	</nav>
+		class="inline-flex h-8 items-center gap-2 rounded-full border border-border-button-default px-3 text-body-2-medium text-text-secondary outline-none transition-colors hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:border-border-button-hover aria-[current=page]:bg-background-secondary-default aria-[current=page]:text-text-primary"
+	>
+		if color != "" {
+			@dot(color)
+		}
+		{ name }
+		if count > 0 {
+			<span class="tabular-nums text-text-tertiary">{ strconv.Itoa(count) }</span>
+		}
+	</a>
 }
 
 /*

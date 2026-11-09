@@ -52,9 +52,9 @@ the article scrolls on wide screens.
 */
 
 templ contents(headings []Heading) {
-	<nav aria-labelledby="contents" class="max-xl:hidden">
-		<div class="sticky top-24">
-			<p id="contents" class="text-caption-1-medium text-text-tertiary">On this page</p>
+	<nav aria-labelledby="contents">
+		<div>
+			<p id="contents" class="text-caption-1-medium text-text-tertiary">In this article</p>
 			<ul class="mt-3 flex flex-col border-s border-separator-border">
 				for _, h := range headings {
 					@contentsItem(h, "ps-3")
@@ -173,6 +173,21 @@ func helpTrail(trail []Crumb, collection, page string) []Crumb {
 	}
 
 	return out
+}
+
+/*
+collectionBySlug finds the collection with the slug at any depth.
+*/
+func collectionBySlug(all []Collection, slug string) (Collection, bool) {
+	for _, col := range all {
+		if col.Slug == slug {
+			return col, true
+		}
+		if found, ok := collectionBySlug(col.Children, slug); ok {
+			return found, true
+		}
+	}
+	return Collection{}, false
 }
 
 func trailEnd(trail []Crumb) string {
