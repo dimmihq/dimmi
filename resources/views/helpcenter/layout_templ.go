@@ -309,7 +309,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</main><footer class=\"flex justify-center px-4 pb-8\"><a href=\"https://trydimmi.com\" class=\"inline-flex items-center gap-1.5 rounded-full border border-border-button-default px-2.5 py-1 text-caption-1-medium text-text-tertiary transition-colors hover:text-text-primary\"><svg viewBox=\"4 4 40 40\" class=\"size-3\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M4 24a20 20 0 0 1 13.7-19L43 30.3A20 20 0 0 1 24 44H11a7 7 0 0 1-7-7Z\"></path> <path d=\"M19.8 4.5a20 20 0 0 1 4.9-.5L44 23.3a20 20 0 0 1-.5 4.9Z\"></path> <path d=\"M27.6 4.3A20 20 0 0 1 35 7.3l5.7 5.7a20 20 0 0 1 3 7.4Z\"></path></svg> Powered by dimmi</a></footer></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</main><footer class=\"flex justify-center px-4 pb-8\"><a href=\"https://trydimmi.com\" class=\"inline-flex items-center gap-1.5 rounded-full border border-border-button-default px-2.5 py-1 text-caption-1-medium text-text-tertiary transition-colors hover:text-text-primary\"><svg viewBox=\"4 4 40 40\" width=\"12\" height=\"12\" class=\"size-3\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M4 24a20 20 0 0 1 13.7-19L43 30.3A20 20 0 0 1 24 44H11a7 7 0 0 1-7-7Z\"></path> <path d=\"M19.8 4.5a20 20 0 0 1 4.9-.5L44 23.3a20 20 0 0 1-.5 4.9Z\"></path> <path d=\"M27.6 4.3A20 20 0 0 1 35 7.3l5.7 5.7a20 20 0 0 1 3 7.4Z\"></path></svg> Powered by dimmi</a></footer></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1092,7 +1092,7 @@ func Logo(c Center) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "\" class=\"theme-logo-light h-[1.375rem] w-auto\"> <img src=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "\" height=\"22\" class=\"theme-logo-light h-[1.375rem] w-auto\"> <img src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1118,7 +1118,7 @@ func Logo(c Center) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "\" class=\"theme-logo-dark h-[1.375rem] w-auto\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "\" height=\"22\" class=\"theme-logo-dark h-[1.375rem] w-auto\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1159,7 +1159,9 @@ func Logo(c Center) templ.Component {
 }
 
 /*
-Icon draws one of the portal's icons in the current text color.
+Icon draws one of the portal's icons in the current text color, at the
+size of the text around it until the class gives it its own, so it never
+fills the page before the stylesheet arrives.
 */
 
 func Icon(name, class string) templ.Component {
@@ -1183,7 +1185,7 @@ func Icon(name, class string) templ.Component {
 			templ_7745c5c3_ElementWriter := templ_7745c5c3_Buffer
 			templ_7745c5c3_Buffer := templ.GetBuffer()
 			var templ_7745c5c3_ElementScripts []templ.ComponentScript
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "<svg viewBox=\"0 0 24 24\" width=\"1em\" height=\"1em\" fill=\"currentColor\" aria-hidden=\"true\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1222,7 +1224,7 @@ func Icon(name, class string) templ.Component {
 		var templ_7745c5c3_Var53 string
 		templ_7745c5c3_Var53, templ_7745c5c3_Err = templruntime.NewAttributeExpression(iconPath(name)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 307, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 309, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var53)
 		if templ_7745c5c3_Err != nil {
@@ -1268,7 +1270,7 @@ func Avatar(p Person, size string) templ.Component {
 			var templ_7745c5c3_Var55 string
 			templ_7745c5c3_Var55, templ_7745c5c3_Err = templruntime.NewAttributeExpression(p.Name).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 316, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 318, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var55)
 			if templ_7745c5c3_Err != nil {
@@ -1313,7 +1315,7 @@ func Avatar(p Person, size string) templ.Component {
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(p.Initials)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 316, Col: 181}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 318, Col: 181}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 		if templ_7745c5c3_Err != nil {
@@ -1390,7 +1392,7 @@ func SidebarHeading(title string) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 332, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 334, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 		if templ_7745c5c3_Err != nil {
@@ -1433,7 +1435,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, path)).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 342, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 344, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var63)
 		if templ_7745c5c3_Err != nil {
@@ -1460,14 +1462,14 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 			}
 		}
 		if dot != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 107, "<svg viewBox=\"0 0 8 8\" class=\"size-2 shrink-0\" aria-hidden=\"true\"><circle cx=\"4\" cy=\"4\" r=\"4\" fill=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 107, "<svg viewBox=\"0 0 8 8\" width=\"8\" height=\"8\" class=\"size-2 shrink-0\" aria-hidden=\"true\"><circle cx=\"4\" cy=\"4\" r=\"4\" fill=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templruntime.NewAttributeExpression(dot).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 352, Col: 107}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 354, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var64)
 			if templ_7745c5c3_Err != nil {
@@ -1485,7 +1487,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 		var templ_7745c5c3_Var65 string
 		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 354, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 356, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 		if templ_7745c5c3_Err != nil {
@@ -1503,7 +1505,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(count))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 356, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 358, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 			if templ_7745c5c3_Err != nil {

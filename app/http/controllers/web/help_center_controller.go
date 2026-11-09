@@ -35,10 +35,14 @@ import (
 )
 
 /*
-PortalEntry is the source path of the public portal's script, which
-brings its stylesheet.
+PortalEntry and PortalStyles are the source paths of the public portal's
+script and stylesheet. The stylesheet is linked on its own, ahead of the
+script, so pages paint styled.
 */
-const PortalEntry = "resources/js/portal/portal.ts"
+const (
+	PortalEntry  = "resources/js/portal/portal.ts"
+	PortalStyles = "resources/js/portal/portal.css"
+)
 
 /*
 HelpCenterController serves the public help center's pages. Assets
@@ -263,7 +267,7 @@ func (c *HelpCenterController) center(w fhttp.ResponseWriter, r *fhttp.Request) 
 }
 
 func (c *HelpCenterController) styles() view.Component {
-	return c.Vite.Tags(PortalEntry)
+	return c.Vite.Tags(PortalStyles, PortalEntry)
 }
 
 func (c *HelpCenterController) respond(w fhttp.ResponseWriter, r *fhttp.Request, status int, page view.Component) {

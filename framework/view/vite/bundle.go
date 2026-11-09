@@ -87,15 +87,18 @@ func (b *Bundle) DevServer() (string, bool) {
 }
 
 /*
-Tags returns the component writing the tags the entry needs, such as
-"resources/js/app.tsx", from the dev server while it runs, else from the
-production build. Rendering fails with ErrNoManifest when there is no
-build, and with ErrUnknownEntry when the build lacks the entry.
+Tags returns the component writing the tags the entries need, such as
+"resources/js/app.tsx", in order, from the dev server while it runs, else
+from the production build. A stylesheet entry, such as
+"resources/js/site.css", loads as a link in both, so the page is styled
+from its first paint instead of once a script injects the styles.
+Rendering fails with ErrNoManifest when there is no build, and with
+ErrUnknownEntry when the build lacks an entry.
 */
-func (b *Bundle) Tags(entry string) view.Component {
+func (b *Bundle) Tags(entries ...string) view.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		if server, ok := b.DevServer(); ok {
-			return b.devTags(ctx, w, server, entry)
+			return b.devTags(ctx, w, server, entries)
 		}
 
 		assets, err := b.build()
@@ -103,7 +106,13 @@ func (b *Bundle) Tags(entry string) view.Component {
 			return err
 		}
 
-		return assets.Tags(entry).Render(ctx, w)
+		for _, entry := range entries {
+			if err := assets.Tags(entry).Render(ctx, w); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 }
 
@@ -117,19 +126,26 @@ func (b *Bundle) build() (*Assets, error) {
 }
 
 /*
-devTags writes the scripts that load the entry from the dev server: the
+devTags writes the tags that load the entries from the dev server: the
 Fast Refresh runtime when asked for, the client that receives hot
-updates, and the entry itself.
+updates, then each entry, a stylesheet as a link the dev server keeps
+updating and a script as a module.
 */
-func (b *Bundle) devTags(ctx context.Context, w io.Writer, server, entry string) error {
+func (b *Bundle) devTags(ctx context.Context, w io.Writer, server string, entries []string) error {
 	var tags strings.Builder
 
 	if b.opts.React {
 		tags.WriteString(vitejs.PluginReactPreamble(server))
 	}
 
-	for _, src := range []string{server + "/@vite/client", server + "/" + strings.TrimLeft(entry, "/")} {
-		tags.WriteString(`<script type="module" src="` + html.EscapeString(src) + `"></script>`)
+	tags.WriteString(`<script type="module" src="` + html.EscapeString(server+"/@vite/client") + `"></script>`)
+	for _, entry := range entries {
+		src := html.EscapeString(server + "/" + strings.TrimLeft(entry, "/"))
+		if strings.HasSuffix(entry, ".css") {
+			tags.WriteString(`<link rel="stylesheet" href="` + src + `">`)
+			continue
+		}
+		tags.WriteString(`<script type="module" src="` + src + `"></script>`)
 	}
 
 	if _, err := io.WriteString(w, withNonce(tags.String(), view.Nonce(ctx))); err != nil {

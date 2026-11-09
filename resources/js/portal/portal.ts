@@ -16,7 +16,6 @@
  * form takes either from there and sends it at once.
  */
 import "@hotwired/turbo";
-import "./portal.css";
 
 const greetings: [hour: number, text: string][] = [
   [18, "Good evening."],

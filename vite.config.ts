@@ -8,7 +8,9 @@
  * manifest and is embedded in the binary; fonts stay files, since the
  * content security policy loads fonts from this origin only. The public
  * portal (help center, changelog, feedback) is a second entry, so its
- * pages never load the dashboard.
+ * pages never load the dashboard, and its stylesheet is an entry of its
+ * own, so the server links it in the page's head and pages are styled
+ * from their first paint, in development too.
  */
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -72,7 +74,9 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     manifest: true,
     assetsInlineLimit: (file) => (file.endsWith(".woff2") ? false : undefined),
-    rollupOptions: { input: ["resources/js/app.tsx", "resources/js/portal/portal.ts"] },
+    rollupOptions: {
+      input: ["resources/js/app.tsx", "resources/js/portal/portal.ts", "resources/js/portal/portal.css"],
+    },
   },
   test: {
     projects: [

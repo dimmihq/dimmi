@@ -16,8 +16,12 @@ const manifest = `{
   "resources/js/portal/portal.ts": {
     "file": "assets/portal-4f2a.js",
     "src": "resources/js/portal/portal.ts",
-    "isEntry": true,
-    "css": ["assets/portal-9c1d.css"]
+    "isEntry": true
+  },
+  "resources/js/portal/portal.css": {
+    "file": "assets/portal-9c1d.css",
+    "src": "resources/js/portal/portal.css",
+    "isEntry": true
   }
 }`
 

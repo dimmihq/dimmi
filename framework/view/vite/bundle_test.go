@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -57,6 +58,31 @@ func TestBundle(t *testing.T) {
 		server, running := bundle.DevServer()
 		assert.True(t, running)
 		assert.Equal(t, "http://localhost:5173", server)
+	})
+
+	t.Run("writes several entries from the production build in order and fails on an unknown one", func(t *testing.T) {
+		t.Parallel()
+		bundle := vite.New(vite.Options{Build: build(".vite/manifest.json"), Base: "/build"})
+
+		got, err := view.HTML(t.Context(), bundle.Tags("src/site.css", "src/main.ts"))
+
+		require.NoError(t, err)
+		assert.Less(t, strings.Index(got, `rel="stylesheet" href="/build/assets/site-`),
+			strings.Index(got, `src="/build/assets/main-4f2a.js"`))
+		_, err = view.HTML(t.Context(), bundle.Tags("src/main.ts", "src/missing.ts"))
+		require.ErrorIs(t, err, vite.ErrUnknownEntry)
+	})
+
+	t.Run("links a stylesheet entry from the dev server before the scripts that follow it", func(t *testing.T) {
+		t.Parallel()
+		bundle := vite.New(vite.Options{HotFile: hotFile(t, "http://localhost:5173")})
+
+		got, err := view.HTML(t.Context(), bundle.Tags("src/site.css", "src/main.ts"))
+
+		require.NoError(t, err)
+		assert.Equal(t, `<script type="module" src="http://localhost:5173/@vite/client"></script>`+
+			`<link rel="stylesheet" href="http://localhost:5173/src/site.css">`+
+			`<script type="module" src="http://localhost:5173/src/main.ts"></script>`, got)
 	})
 
 	t.Run("installs the fast refresh runtime first for react", func(t *testing.T) {

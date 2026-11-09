@@ -64,7 +64,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 				</main>
 				<footer class="flex justify-center px-4 pb-8">
 					<a href="https://trydimmi.com" class="inline-flex items-center gap-1.5 rounded-full border border-border-button-default px-2.5 py-1 text-caption-1-medium text-text-tertiary transition-colors hover:text-text-primary">
-						<svg viewBox="4 4 40 40" class="size-3" fill="currentColor" aria-hidden="true">
+						<svg viewBox="4 4 40 40" width="12" height="12" class="size-3" fill="currentColor" aria-hidden="true">
 							<path d="M4 24a20 20 0 0 1 13.7-19L43 30.3A20 20 0 0 1 24 44H11a7 7 0 0 1-7-7Z"></path>
 							<path d="M19.8 4.5a20 20 0 0 1 4.9-.5L44 23.3a20 20 0 0 1-.5 4.9Z"></path>
 							<path d="M27.6 4.3A20 20 0 0 1 35 7.3l5.7 5.7a20 20 0 0 1 3 7.4Z"></path>
@@ -290,8 +290,8 @@ has none.
 
 templ Logo(c Center) {
 	if c.LogoLight != "" {
-		<img src={ Path(c, c.LogoLight) } alt={ c.Product } class="theme-logo-light h-[1.375rem] w-auto"/>
-		<img src={ Path(c, c.LogoDark) } alt={ c.Product } class="theme-logo-dark h-[1.375rem] w-auto"/>
+		<img src={ Path(c, c.LogoLight) } alt={ c.Product } height="22" class="theme-logo-light h-[1.375rem] w-auto"/>
+		<img src={ Path(c, c.LogoDark) } alt={ c.Product } height="22" class="theme-logo-dark h-[1.375rem] w-auto"/>
 	} else {
 		<span class="button-brand grid size-7 shrink-0 place-items-center rounded-lg text-body-semibold" aria-hidden="true">{ Initial(c) }</span>
 		<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
@@ -299,11 +299,13 @@ templ Logo(c Center) {
 }
 
 /*
-Icon draws one of the portal's icons in the current text color.
+Icon draws one of the portal's icons in the current text color, at the
+size of the text around it until the class gives it its own, so it never
+fills the page before the stylesheet arrives.
 */
 
 templ Icon(name, class string) {
-	<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class={ class }>
+	<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true" class={ class }>
 		<path d={ iconPath(name) }></path>
 	</svg>
 }
@@ -349,7 +351,7 @@ templ SidebarLink(c Center, path, title, icon, dot string, count int, current bo
 			@Icon(icon, "size-4 shrink-0 opacity-80")
 		}
 		if dot != "" {
-			<svg viewBox="0 0 8 8" class="size-2 shrink-0" aria-hidden="true"><circle cx="4" cy="4" r="4" fill={ dot }></circle></svg>
+			<svg viewBox="0 0 8 8" width="8" height="8" class="size-2 shrink-0" aria-hidden="true"><circle cx="4" cy="4" r="4" fill={ dot }></circle></svg>
 		}
 		<span class="flex-1 truncate">{ title }</span>
 		if count > 0 {

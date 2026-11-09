@@ -175,14 +175,14 @@ func dot(color string) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<svg viewBox=\"0 0 8 8\" class=\"size-2 shrink-0\" aria-hidden=\"true\"><circle cx=\"4\" cy=\"4\" r=\"4\" fill=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<svg viewBox=\"0 0 8 8\" width=\"8\" height=\"8\" class=\"size-2 shrink-0\" aria-hidden=\"true\"><circle cx=\"4\" cy=\"4\" r=\"4\" fill=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.NewAttributeExpression(color).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `changelog/parts.templ`, Line: 55, Col: 107}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `changelog/parts.templ`, Line: 55, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
