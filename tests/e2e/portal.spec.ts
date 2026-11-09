@@ -16,6 +16,24 @@ it.describe("the public portal", () => {
     expect(await page.evaluate(() => (window as unknown as { kept?: boolean }).kept)).toBe(true);
   });
 
+  it("browses from a drawer that pushes the page aside, and marks the heading being read", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/hc/dimmi/articles/write-articles-in-markdown");
+
+    await page.getByLabel("Browse", { exact: true }).click();
+    const drawer = page.getByRole("complementary", { name: "Browse articles" });
+    await expect(drawer).toBeInViewport();
+    await expect(page.locator("[data-page]")).toHaveCSS("translate", "320px");
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+
+    const links = page.getByRole("navigation", { name: "In this article" }).getByRole("link");
+    await expect(links.first()).toHaveAttribute("aria-current", "location");
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(links.last()).toHaveAttribute("aria-current", "location");
+    await expect(links.first()).not.toHaveAttribute("aria-current", "location");
+  });
+
   it("answers a question from the articles", async ({ page }) => {
     await page.goto("/hc/dimmi");
 
@@ -54,7 +72,11 @@ it.describe("the public portal", () => {
     await page.getByRole("link", { name: /Webhook retries after a timeout/ }).click();
     await expect(page.getByText("retried for up to 24 hours")).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByLabel("Browse", { exact: true }).click();
+    await page
+      .getByRole("complementary", { name: "Your conversations" })
+      .getByRole("button", { name: "Sign out" })
+      .click();
     await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
   });
 });

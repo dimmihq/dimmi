@@ -48,11 +48,12 @@ func askURL(chat string, c Center, a Article) templ.SafeURL {
 
 /*
 contents lists an article's headings beside it, staying in view while
-the article scrolls on wide screens.
+the article scrolls on wide screens. The portal's script marks the
+heading being read as the article scrolls.
 */
 
 templ contents(headings []Heading) {
-	<nav aria-labelledby="contents">
+	<nav aria-labelledby="contents" data-contents>
 		<div>
 			<p id="contents" class="text-caption-1-medium text-text-tertiary">In this article</p>
 			<ul class="mt-3 flex flex-col border-s border-separator-border">
@@ -69,7 +70,7 @@ templ contents(headings []Heading) {
 
 templ contentsItem(h Heading, indent string) {
 	<li>
-		<a href={ templ.SafeURL("#" + h.ID) } class={ "-ms-px block border-s border-transparent py-1 text-body-2-regular text-text-secondary transition-colors hover:border-border-button-hover hover:text-text-primary " + indent }>{ h.Title }</a>
+		<a href={ templ.SafeURL("#" + h.ID) } class={ "-ms-px block border-s border-transparent py-1 text-body-2-regular text-text-secondary transition-colors hover:border-border-button-hover hover:text-text-primary aria-[current=location]:border-brand aria-[current=location]:text-text-primary " + indent }>{ h.Title }</a>
 	</li>
 }
 

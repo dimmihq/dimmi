@@ -49,8 +49,14 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 		</head>
 		<body class="bg-background-full font-inter text-text-primary">
 			<a href="#main" class="sr-only rounded-xl bg-background-primary-default px-4 py-2 text-body-medium focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">Skip to content</a>
-			<div class="flex min-h-dvh min-w-0 flex-col">
-				@topBar(c, m, sidebar)
+			if hasDrawer(m) {
+				@drawerPanel(c, m, sidebar)
+			}
+			<div data-page class="relative flex min-h-dvh min-w-0 flex-col">
+				if hasDrawer(m) {
+					<div data-drawer-backdrop aria-hidden="true" class="absolute inset-0 z-40"></div>
+				}
+				@topBar(c, m)
 				<main id="main" class="flex-1 pb-24">
 					{ children... }
 				</main>
@@ -119,11 +125,11 @@ because a blurred bar would hold the drawer's panel inside itself
 instead of against the window.
 */
 
-templ topBar(c Center, m Meta, sidebar templ.Component) {
+templ topBar(c Center, m Meta) {
 	<header class="sticky top-0 z-30 isolate flex h-14 shrink-0 items-center gap-3 border-b border-separator-border px-4 lg:px-6">
 		<span aria-hidden="true" class="absolute inset-0 -z-10 bg-background-full/85 backdrop-blur-xl backdrop-saturate-150"></span>
-		if m.Section == "help" || m.Section == "conversations" {
-			@drawer(c, m, sidebar)
+		if hasDrawer(m) {
+			@drawerToggle()
 		}
 		@homeLink(c)
 		if m.Section == "help" && len(m.Trail) > 1 {
@@ -174,37 +180,52 @@ templ topBar(c Center, m Meta, sidebar templ.Component) {
 }
 
 /*
-drawer is the menu button and the panel it slides in from the start
-edge, holding what the section lists. It is a details element, so it
-opens without scripts; the portal's script closes it on a click outside
-or Escape.
+drawerToggle is the menu button that opens the browse drawer. It is a
+details element, so the drawer opens and closes without scripts; the
+portal's styles slide the drawer in and push the page aside while it is
+open, and the portal's script closes it on a click on the page or
+Escape.
 */
 
-templ drawer(c Center, m Meta, sidebar templ.Component) {
-	<details data-drawer class="group">
+templ drawerToggle() {
+	<details data-drawer>
 		<summary aria-label="Browse" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 			@Icon("menu", "size-4")
 		</summary>
-		<div class="fixed inset-0 z-40 bg-black/30 group-open:animate-[fade-in_150ms_ease-out]" aria-hidden="true" data-drawer-backdrop></div>
-		<div class="fixed inset-y-0 start-0 z-50 flex w-[22rem] max-w-[90vw] flex-col border-e border-separator-border bg-background-full shadow-xl group-open:animate-[drawer-in_220ms_cubic-bezier(0.22,1,0.36,1)]">
-			<div class="flex h-14 shrink-0 items-center justify-between px-4">
-				<p class="text-body-semibold">{ drawerTitle(m) }</p>
-				<button type="button" data-drawer-close aria-label="Close" class="grid size-8 cursor-pointer place-items-center rounded-lg text-foreground-icon-secondary hover:bg-background-secondary-hover">
-					@Icon("close", "size-4")
-				</button>
-			</div>
-			if m.Section == "help" {
-				<form action={ Href(c, "/search") } method="get" role="search" class="mx-4 mb-3 flex h-9 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5">
-					@Icon("search", "size-3.5 shrink-0 text-foreground-icon-tertiary")
-					<label for="drawer-search" class="sr-only">Search the help center</label>
-					<input id="drawer-search" type="search" name="q" placeholder="Search help center" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
-				</form>
-			}
-			<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
-				@sidebar
-			</div>
-		</div>
 	</details>
+}
+
+/*
+drawerPanel is the drawer itself, beside the page rather than inside it,
+so it stays put while the page moves aside to make room for it.
+*/
+
+templ drawerPanel(c Center, m Meta, sidebar templ.Component) {
+	<aside data-drawer-panel aria-label={ drawerTitle(m) } class="fixed inset-y-0 start-0 z-50 flex flex-col border-e border-separator-border bg-background-full">
+		<div class="flex h-14 shrink-0 items-center justify-between px-4">
+			<p class="text-body-semibold">{ drawerTitle(m) }</p>
+			<button type="button" data-drawer-close aria-label="Close" class="grid size-8 cursor-pointer place-items-center rounded-lg text-foreground-icon-secondary hover:bg-background-secondary-hover">
+				@Icon("close", "size-4")
+			</button>
+		</div>
+		if m.Section == "help" {
+			<form action={ Href(c, "/search") } method="get" role="search" class="mx-4 mb-3 flex h-9 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5">
+				@Icon("search", "size-3.5 shrink-0 text-foreground-icon-tertiary")
+				<label for="drawer-search" class="sr-only">Search the help center</label>
+				<input id="drawer-search" type="search" name="q" placeholder="Search help center" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
+			</form>
+		}
+		<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
+			@sidebar
+		</div>
+	</aside>
+}
+
+/*
+hasDrawer says whether a page's section lists anything to browse.
+*/
+func hasDrawer(m Meta) bool {
+	return m.Section == "help" || m.Section == "conversations"
 }
 
 func drawerTitle(m Meta) string {

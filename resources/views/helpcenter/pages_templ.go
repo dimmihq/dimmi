@@ -311,7 +311,7 @@ func ArticlePage(c Center, all []Collection, a Article, helpful string, assets t
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</article><aside class=\"flex flex-col gap-8 max-xl:hidden\"><div class=\"sticky top-24 flex flex-col gap-8\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</article><aside class=\"flex flex-col gap-8 max-xl:hidden\"><div data-rail class=\"sticky top-24 flex max-h-[calc(100dvh-8rem)] flex-col gap-8 overflow-y-auto overscroll-contain pb-4 [scrollbar-width:none]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

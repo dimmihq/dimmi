@@ -68,13 +68,13 @@ templ CollectionGroup(c Center, col Collection, current, article string) {
 }
 
 templ collectionRow(c Center, col Collection, current, article string) {
-	<details class="group/row border-separator-border [&+*]:border-t" open?={ holds(col, current) }>
+	<details data-accordion class="group/row border-separator-border [&+*]:border-t" open?={ holds(col, current) }>
 		<summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-2.5 text-body-medium outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover">
 			<span class="min-w-0 flex-1 truncate">{ col.Title }</span>
 			<span class="text-caption-1-medium tabular-nums text-text-tertiary">{ strconv.Itoa(col.Count) }</span>
 			@Icon("chevron-right", "size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-open/row:rotate-90 rtl:-scale-x-100")
 		</summary>
-		<ul class="pb-2">
+		<ul data-accordion-body class="overflow-hidden pb-2">
 			for _, a := range col.Articles {
 				<li>
 					<a

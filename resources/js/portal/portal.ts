@@ -7,8 +7,9 @@
  * page reads from its own markup: the greeting follows the visitor's
  * clock, the copy buttons put an article's Markdown on the clipboard, and
  * the theme switch keeps the reader's pick of light, dark or their
- * system's theme in this browser, and the browse drawer closes on a
- * click outside it or Escape.
+ * system's theme in this browser, the browse drawer closes on a click
+ * outside it or Escape, collections open and close with a slide, and an
+ * article's contents mark the heading being read.
  * A reader coming back from signing in to the team's product brings an
  * identity token in the address's fragment, which no server sees, and
  * one coming from the messenger brings a pass there; the sign-in page's
@@ -113,10 +114,101 @@ function pickTheme(button: HTMLButtonElement): void {
   showThemes(document);
 }
 
+const motion = { duration: 260, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
+
+/*
+ * slide opens or closes a collection row with its height easing, where
+ * the reader has not asked for less motion. It reports whether it took
+ * over the toggle from the browser.
+ */
+function slide(summary: HTMLElement): boolean {
+  const row = summary.parentElement;
+  const body = row?.querySelector<HTMLElement>(":scope > [data-accordion-body]");
+  if (!(row instanceof HTMLDetailsElement) || !body || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return false;
+  }
+  if (body.getAnimations().length > 0) {
+    return true;
+  }
+  const shut = { height: "0px", paddingBottom: "0px", opacity: 0 };
+  if (row.open) {
+    summary.querySelector("svg")?.animate([{ rotate: "90deg" }, { rotate: "0deg" }], motion);
+    body.animate([{ height: `${body.offsetHeight}px` }, shut], motion).onfinish = () => {
+      row.open = false;
+    };
+    return true;
+  }
+  row.open = true;
+  body.animate([shut, { height: `${body.offsetHeight}px` }], motion);
+  return true;
+}
+
+const reading = { links: [] as HTMLAnchorElement[], headings: [] as HTMLElement[], frame: 0 };
+
+/*
+ * watchContents finds the contents beside the article and the headings
+ * they lead to.
+ */
+function watchContents(root: ParentNode): void {
+  reading.links = [...root.querySelectorAll<HTMLAnchorElement>("[data-contents] a[href^='#']")];
+  reading.headings = reading.links
+    .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
+    .filter((heading): heading is HTMLElement => heading !== null);
+  markReading();
+}
+
+/*
+ * markReading marks the last heading that has scrolled past the top bar,
+ * the first before any has, and the last once the page reaches its end.
+ */
+function markReading(): void {
+  reading.frame = 0;
+  if (reading.headings.length === 0) {
+    return;
+  }
+  const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+  const passed = reading.headings.filter((heading) => heading.getBoundingClientRect().top <= 112);
+  const current = atEnd ? reading.headings.at(-1) : (passed.at(-1) ?? reading.headings[0]);
+  for (const link of reading.links) {
+    const active = current !== undefined && link.hash === `#${encodeURIComponent(current.id)}`;
+    link.toggleAttribute("aria-current", active);
+    if (active) {
+      link.setAttribute("aria-current", "location");
+      keepInView(link);
+    }
+  }
+}
+
+/*
+ * keepInView scrolls the rail beside the article, never the page, so
+ * the marked heading stays visible in a long list of contents.
+ */
+function keepInView(link: HTMLElement): void {
+  const rail = link.closest<HTMLElement>("[data-rail]");
+  if (!rail) {
+    return;
+  }
+  const top = link.getBoundingClientRect().top - rail.getBoundingClientRect().top + rail.scrollTop;
+  if (top < rail.scrollTop + 24 || top > rail.scrollTop + rail.clientHeight - 48) {
+    rail.scrollTo({ top: top - rail.clientHeight / 3, behavior: "smooth" });
+  }
+}
+
+document.addEventListener(
+  "scroll",
+  () => {
+    if (reading.frame === 0) {
+      reading.frame = requestAnimationFrame(markReading);
+    }
+  },
+  { passive: true },
+);
+
 document.addEventListener("turbo:load", () => {
   greet(document);
   signIn(document);
   showThemes(document);
+  watchContents(document);
 });
 
 /*
@@ -138,6 +230,10 @@ document.addEventListener("click", (event) => {
   const target = event.target as Element;
   if (target.closest("[data-drawer-backdrop], [data-drawer-close]")) {
     closeDrawers();
+  }
+  const summary = target.closest<HTMLElement>("details[data-accordion] > summary");
+  if (summary && slide(summary)) {
+    event.preventDefault();
   }
   const button = target.closest<HTMLButtonElement>("button[data-copy]");
   if (button) {
