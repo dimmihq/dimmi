@@ -18,20 +18,21 @@ type HelpCenterRequest struct {
 }
 
 /*
-HelpCenterSettingsBody is how a help center looks.
+HelpCenterSettingsBody is how a help center looks. Only the settings it
+names change; an empty text clears one.
 */
 type HelpCenterSettingsBody struct {
-	PrimaryColor string `json:"primary_color,omitempty" maxLength:"7"`
-	Appearance   string `json:"appearance,omitempty"    enum:"auto,light,dark"`
-	HomeTitle    string `json:"home_title,omitempty"    maxLength:"80"`
-	HomeSubtitle string `json:"home_subtitle,omitempty" maxLength:"200"`
-	FooterText   string `json:"footer_text,omitempty"   maxLength:"500"`
-	ContactURL   string `json:"contact_url,omitempty"   maxLength:"2048"`
-	LoginURL     string `json:"login_url,omitempty"     maxLength:"2048"`
-	EmailSignIn  *bool  `json:"email_sign_in,omitempty"`
+	PrimaryColor *string `json:"primary_color,omitempty" maxLength:"7"`
+	Appearance   *string `json:"appearance,omitempty"    enum:"auto,light,dark"`
+	HomeTitle    *string `json:"home_title,omitempty"    maxLength:"80"`
+	HomeSubtitle *string `json:"home_subtitle,omitempty" maxLength:"200"`
+	FooterText   *string `json:"footer_text,omitempty"   maxLength:"500"`
+	ContactURL   *string `json:"contact_url,omitempty"   maxLength:"2048"`
+	LoginURL     *string `json:"login_url,omitempty"     maxLength:"2048"`
+	EmailSignIn  *bool   `json:"email_sign_in,omitempty"`
 
-	FeedbackBoard    bool `json:"feedback_board,omitempty"`
-	FeedbackApproval bool `json:"feedback_approval,omitempty"`
+	FeedbackBoard    *bool `json:"feedback_board,omitempty"`
+	FeedbackApproval *bool `json:"feedback_approval,omitempty"`
 }
 
 /*

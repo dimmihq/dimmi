@@ -73,6 +73,7 @@ it.describe("help center sign-in", () => {
     await expect(reader).toHaveURL(new RegExp(`${path}$`));
     await expect(reader.getByText("Call us any time.")).toBeVisible();
     await reader.getByRole("button", { name: "Sign out" }).click();
+    await expect(reader.getByRole("link", { name: "Sign in" })).toBeVisible();
     await reader.goto(path);
     await expect(reader.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
 

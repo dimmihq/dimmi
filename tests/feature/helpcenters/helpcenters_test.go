@@ -65,6 +65,28 @@ func TestHelpCenters(t *testing.T) {
 			AssertStatus(fhttp.StatusUnprocessableEntity)
 	})
 
+	t.Run("changes only the settings a request names and clears one sent empty", func(t *testing.T) {
+		t.Parallel()
+		c := newCenter(t)
+		path := "/api/v1/help-centers/" + c.id
+		c.d.Owner.PatchJSON(path, testkit.JSON{"settings": testkit.JSON{
+			"primary_color": "#123456", "home_title": "Hello", "feedback_board": true,
+			"login_url": "https://app.example.com/login",
+		}}).AssertOK()
+
+		res := c.d.Owner.PatchJSON(path, testkit.JSON{"settings": testkit.JSON{"primary_color": "#0d9488"}}).AssertOK()
+		res.AssertJSONPath("data.settings.primary_color", "#0d9488").
+			AssertJSONPath("data.settings.home_title", "Hello").
+			AssertJSONPath("data.settings.feedback_board", true).
+			AssertJSONPath("data.settings.login_url", "https://app.example.com/login")
+
+		cleared := testkit.JSON{"settings": testkit.JSON{"login_url": "", "feedback_board": false}}
+		res = c.d.Owner.PatchJSON(path, cleared).AssertOK()
+		res.AssertJSONPath("data.settings.primary_color", "#0d9488").AssertJSONPath("data.settings.home_title", "Hello")
+		assert.NotContains(t, res.String("data.settings"), "login_url")
+		assert.NotContains(t, res.String("data.settings"), "feedback_board")
+	})
+
 	t.Run("publishes an article readers can open, search and follow after a rename", func(t *testing.T) {
 		t.Parallel()
 		c := newCenter(t)

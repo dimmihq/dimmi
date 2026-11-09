@@ -223,7 +223,7 @@ type HelpCenterChange struct {
 	Status     *string
 	Indexing   *bool
 	AskAI      *bool
-	Settings   *HelpCenterSettings
+	Settings   *HelpCenterSettingsChange
 }
 
 /*
@@ -281,7 +281,7 @@ func (h *HelpCenters) apply(ctx context.Context, q *models.Queries, c models.Hel
 		return p, err
 	}
 	if in.Settings != nil {
-		raw, err := checkSettings(*in.Settings)
+		raw, err := checkSettings(in.Settings.Over(SettingsOf(c)))
 		if err != nil {
 			return p, err
 		}

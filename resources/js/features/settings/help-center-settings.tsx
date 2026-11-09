@@ -124,9 +124,7 @@ export function HelpCentersSettings() {
             action={
               <Action
                 loading={update.isPending}
-                onPress={() =>
-                  update.mutate({ settings: { ...center.settings, login_url: form.login.trim() || undefined } })
-                }
+                onPress={() => update.mutate({ settings: { ...center.settings, login_url: form.login.trim() } })}
               >
                 Save
               </Action>

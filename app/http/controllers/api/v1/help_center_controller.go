@@ -105,7 +105,7 @@ func (c *HelpCenterController) Update(ctx context.Context, in *requests.UpdateHe
 		Indexing: b.IndexingEnabled, AskAI: b.AskAIEnabled,
 	}
 	if b.Settings != nil {
-		change.Settings = new(helpcenters.HelpCenterSettings(*b.Settings))
+		change.Settings = new(helpcenters.HelpCenterSettingsChange(*b.Settings))
 	}
 	h, err := c.HelpCenters.Update(ctx, change)
 	return c.one(h, err)
