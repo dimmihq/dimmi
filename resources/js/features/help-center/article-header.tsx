@@ -1,9 +1,9 @@
 /*
  * The article's header: back to the list, its title and state, and what
- * can be done with it. Publish and Unpublish ask first; history and
- * settings are icons.
+ * can be done with it. Publish and Unpublish ask first; reader feedback,
+ * history and settings are icons.
  */
-import { RiArrowLeftLine, RiExternalLinkLine, RiHistoryLine, RiSettings3Line } from "@remixicon/react";
+import { RiArrowLeftLine, RiChatQuoteLine, RiExternalLinkLine, RiHistoryLine, RiSettings3Line } from "@remixicon/react";
 import { Link } from "@tanstack/react-router";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -14,6 +14,7 @@ import type { Article } from "@/lib/api/help-centers";
 import { cx } from "@/utils/cx";
 
 import { articleState } from "./docs-format";
+import type { SideView } from "./history-pane";
 
 export function ArticleHeader({
   article,
@@ -27,7 +28,7 @@ export function ArticleHeader({
   article: Article;
   live: string | null;
   saving: boolean;
-  history: { shown: boolean; toggle: () => void };
+  history: { shown: boolean; view: SideView; toggle: (view?: SideView) => void };
   onSettings: () => void;
   onSave: () => void;
   onConfirm: (what: "publish" | "unpublish") => void;
@@ -67,14 +68,10 @@ export function ArticleHeader({
           Unpublish
         </Button>
       ) : null}
-      <IconButton
-        size="small"
-        icon={RiHistoryLine}
-        aria-label="Version history"
-        aria-pressed={history.shown}
-        className={cx(history.shown && "border-border-button-active bg-background-primary-active")}
-        onClick={history.toggle}
-      />
+      {article.status === "published" ? (
+        <SideButton icon={RiChatQuoteLine} label="Reader feedback" view="feedback" history={history} />
+      ) : null}
+      <SideButton icon={RiHistoryLine} label="Version history" view="history" history={history} />
       <IconButton size="small" icon={RiSettings3Line} aria-label="Article settings" onClick={onSettings} />
       <Button size="small" variant="secondary" onClick={onSave} disabled={saving}>
         Save draft
@@ -83,5 +80,34 @@ export function ArticleHeader({
         {saving ? "Saving…" : "Publish"}
       </Button>
     </PageHeader>
+  );
+}
+
+/*
+ * SideButton opens the side pane on its view, or closes it when the pane
+ * already shows that view.
+ */
+function SideButton({
+  icon,
+  label,
+  view,
+  history,
+}: {
+  icon: typeof RiHistoryLine;
+  label: string;
+  view: SideView;
+  history: { shown: boolean; view: SideView; toggle: (view?: SideView) => void };
+}) {
+  const on = history.shown && history.view === view;
+
+  return (
+    <IconButton
+      size="small"
+      icon={icon}
+      aria-label={label}
+      aria-pressed={on}
+      className={cx(on && "border-border-button-active bg-background-primary-active")}
+      onClick={() => history.toggle(view)}
+    />
   );
 }

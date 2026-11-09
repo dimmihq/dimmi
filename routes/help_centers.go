@@ -68,6 +68,8 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, article+"/versions", "articles.versions.index", art.Versions).Ability("articles:read")
 
 	extras := &v1.ArticleExtrasController{Articles: acts.Articles, Images: acts.HelpImages, IDs: a.IDs}
+	ratings := &v1.ArticleFeedbackController{Ratings: acts.HelpRatings, IDs: a.IDs}
+	routing.Get(workspace, article+"/feedback", "articles.feedback.show", ratings.Show).Ability("articles:read")
 	routing.Post(workspace, article+"/restorations", "articles.restorations.store", extras.Restore).
 		Ability("articles:write").Status(fhttp.StatusOK)
 	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).

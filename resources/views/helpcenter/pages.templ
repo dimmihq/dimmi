@@ -37,7 +37,7 @@ before and after it. Beside it on wide screens sit its contents and the
 other articles of its collection.
 */
 
-templ ArticlePage(c Center, all []Collection, a Article, helpful string, assets templ.Component) {
+templ ArticlePage(c Center, all []Collection, a Article, helpful Helpful, assets templ.Component) {
 	@Layout(c, Meta{Title: a.Title + " | " + c.Name, Description: a.Description, Section: "help", Trail: helpTrail(a.Trail, "", a.Title), Markdown: "/articles/" + a.Slug + ".md"}, HelpSidebar(c, all, trailEnd(a.Trail), a.Slug), assets) {
 		<div class="mx-auto grid w-full max-w-[66rem] gap-14 px-5 pt-10 md:pt-14 xl:grid-cols-[minmax(0,1fr)_15rem]">
 			<article class="min-w-0 w-full max-w-[42.5rem] animate-rise max-xl:mx-auto">

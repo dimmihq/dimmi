@@ -178,7 +178,7 @@ func (c ChangelogController) React(w fhttp.ResponseWriter, r *fhttp.Request) {
 		return
 	}
 	name := nameOfEmoji(r.FormValue("emoji"))
-	reactor := "ip:" + clientIP(r)
+	reactor := "ip:" + fhttp.ClientIP(r)
 	if s.reader != nil {
 		reactor = "contact:" + s.reader.String()
 	}
@@ -202,14 +202,6 @@ func nameOfEmoji(posted string) string {
 		}
 	}
 	return posted
-}
-
-func clientIP(r *fhttp.Request) string {
-	host := r.RemoteAddr
-	if i := strings.LastIndexByte(host, ':'); i > 0 {
-		host = host[:i]
-	}
-	return host
 }
 
 /*

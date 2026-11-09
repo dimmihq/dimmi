@@ -128,6 +128,7 @@ type Actions struct {
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
 	HelpReaders                *helpcenters.Readers
+	HelpRatings                *helpcenters.Ratings
 	ChangelogEntries           *changelog.Entries
 	ChangelogSubscribers       *changelog.Subscribers
 	ChangelogPublic            *changelog.Public

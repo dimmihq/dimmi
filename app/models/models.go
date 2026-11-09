@@ -330,6 +330,18 @@ type Article struct {
 	AudienceID            *ids.UUID       `json:"audience_id"`
 }
 
+type ArticleRating struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ArticleID   ids.UUID  `json:"article_id"`
+	RaterHash   string    `json:"rater_hash"`
+	ContactID   *ids.UUID `json:"contact_id"`
+	Helpful     bool      `json:"helpful"`
+	Comment     *string   `json:"comment"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type ArticleVersion struct {
 	ID              ids.UUID                `json:"id"`
 	WorkspaceID     ids.UUID                `json:"workspace_id"`

@@ -119,6 +119,31 @@ export function articleQuery(workspace: string, article: string) {
 }
 
 /*
+ * ArticleFeedback is what readers said about an article: how many found it
+ * helpful or not, and the notes left by readers who did not, newest first,
+ * with who left them when they were signed in.
+ */
+export interface ArticleFeedback {
+  object: "article_feedback";
+  helpful: number;
+  unhelpful: number;
+  comments: number;
+  recent: {
+    comment: string;
+    created_at: string;
+    contact: { id: string; name: string | null; email: string | null } | null;
+  }[];
+}
+
+export function articleFeedbackQuery(workspace: string, article: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "articles", article, "feedback"],
+    queryFn: () =>
+      request<ArticleFeedback>("GET", `/articles/${encodeURIComponent(article)}/feedback`, undefined, { workspace }),
+  });
+}
+
+/*
  * ArticleVersion is one kept version of an article: published, a
  * snapshot taken before a change, a restore or a suggestion.
  */

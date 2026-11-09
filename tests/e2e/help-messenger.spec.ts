@@ -25,9 +25,11 @@ it.describe("help center messenger", () => {
     await page.goto("/d/settings/help-centers");
     const show = page.getByRole("switch", { name: "Show the messenger" });
     await expect(show).toBeChecked();
+    const saved = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("/help-centers/"));
     await show.focus();
     await page.keyboard.press("Space");
     await expect(show).not.toBeChecked();
+    expect((await saved).ok()).toBe(true);
 
     await guest.goto(`${home}/search?q=nothing-matches-this`);
     await expect(guest.getByRole("link", { name: "Ask a human" }).last()).toHaveAttribute(

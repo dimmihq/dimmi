@@ -38,6 +38,9 @@ func bootHelpCenters(a *app.App) {
 		DB: a.DB, Clock: a.Clock, Verifier: bootIdentityVerifier(a), Events: a.Events,
 		Cache: a.Cache, Limiter: a.Limiter, Mail: a.Mail, Key: a.DerivedKey("help.readers"),
 	}
+	acts.HelpRatings = &helpcenters.Ratings{
+		DB: a.DB, Clock: a.Clock, Limiter: a.Limiter, Key: a.DerivedKey("help.ratings"),
+	}
 	acts.HelpCenterAddresses = helpcenters.Addresses{
 		BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 	}

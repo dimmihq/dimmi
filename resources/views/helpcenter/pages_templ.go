@@ -154,7 +154,7 @@ before and after it. Beside it on wide screens sit its contents and the
 other articles of its collection.
 */
 
-func ArticlePage(c Center, all []Collection, a Article, helpful string, assets templ.Component) templ.Component {
+func ArticlePage(c Center, all []Collection, a Article, helpful Helpful, assets templ.Component) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

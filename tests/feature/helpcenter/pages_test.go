@@ -129,7 +129,7 @@ func TestHelpCenterPages(t *testing.T) {
 		assert.Contains(t, string(res.Body), "# Invite your team\n\n> Add teammates")
 	})
 
-	t.Run("thanks the visitor after they say whether an article helped", func(t *testing.T) {
+	t.Run("thanks a yes and asks what was missing after a no", func(t *testing.T) {
 		t.Parallel()
 
 		res := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/articles/invite-your-team/feedback?helpful=no", nil)
@@ -138,8 +138,10 @@ func TestHelpCenterPages(t *testing.T) {
 		assert.Equal(t, "/hc/dimmi/articles/invite-your-team?helpful=no#feedback", res.Header.Get("Location"))
 
 		_, body := get(t, tc, "/hc/dimmi/articles/invite-your-team?helpful=no")
+		assert.Contains(t, body, "What were you looking for?")
+		assert.Contains(t, body, "Ask a human instead")
+		_, body = get(t, tc, "/hc/dimmi/articles/invite-your-team?helpful=yes")
 		assert.Contains(t, body, "Thanks for letting us know.")
-		assert.Contains(t, body, "Ask a human")
 	})
 
 	t.Run("finds articles matching every word of a search, title matches first", func(t *testing.T) {

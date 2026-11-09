@@ -76,29 +76,64 @@ templ contentsItem(h Heading, indent string) {
 
 /*
 feedback asks whether the article helped, with two buttons that post a
-plain form, and thanks the visitor once they have answered.
+plain form. A yes is thanked. A no asks what the reader was looking for,
+in a box they can leave empty, with a way to a person beside it; once
+they write, the team reads it beside the article.
 */
 
-templ feedback(c Center, slug, answer string) {
-	<section id="feedback" class="mt-14 flex flex-wrap items-center gap-4 rounded-2xl border border-border-button-default bg-background-secondary-default px-5 py-4">
-		if answer != "" {
-			<span class="grid size-8 place-items-center rounded-full bg-tint text-link">
-				@Icon("check", "size-4")
-			</span>
-			<p class="text-body-medium">Thanks for letting us know.</p>
-			if answer == "no" {
-				@AskHuman(c, "ms-auto text-body-medium text-link hover:underline") {
-					Ask a human
-				}
-			}
-		} else {
-			<h2 class="text-body-medium">Was this article helpful?</h2>
-			<form method="post" action={ Href(c, "/articles/"+slug+"/feedback") } class="ms-auto flex gap-2">
-				@feedbackButton("yes", "thumb-up", "Yes")
-				@feedbackButton("no", "thumb-down", "No")
-			</form>
+templ feedback(c Center, slug string, h Helpful) {
+	<section id="feedback" class="mt-14 rounded-2xl border border-border-button-default bg-background-secondary-default px-5 py-4">
+		switch  {
+			case h.Answer == "":
+				<div class="flex flex-wrap items-center gap-4">
+					<h2 class="text-body-medium">Was this article helpful?</h2>
+					<form method="post" action={ Href(c, "/articles/"+slug+"/feedback") } class="ms-auto flex gap-2">
+						@feedbackButton("yes", "thumb-up", "Yes")
+						@feedbackButton("no", "thumb-down", "No")
+					</form>
+				</div>
+			case h.Answer == "yes":
+				@feedbackThanks("Thanks for letting us know.")
+			case h.Commented:
+				<div class="flex flex-wrap items-center gap-4">
+					@feedbackThanks("Thanks. The team reads every note and will improve this article.")
+					@AskHuman(c, "ms-auto text-body-medium text-link hover:underline") {
+						Ask a human
+					}
+				</div>
+			default:
+				@missingForm(c, slug, h)
 		}
 	</section>
+}
+
+templ feedbackThanks(text string) {
+	<p class="flex items-center gap-3 text-body-medium">
+		<span class="grid size-8 shrink-0 place-items-center rounded-full bg-tint text-link">
+			@Icon("check", "size-4")
+		</span>
+		{ text }
+	</p>
+}
+
+/*
+missingForm asks a reader who said no what they were looking for.
+*/
+
+templ missingForm(c Center, slug string, h Helpful) {
+	<form method="post" action={ Href(c, "/articles/"+slug+"/feedback/comment") } class="flex flex-col gap-3">
+		<label for="feedback-comment" class="text-body-medium">Sorry about that. What were you looking for?</label>
+		if h.Limited {
+			<p role="alert" class="text-body-2-regular text-text-error-primary">You've sent a lot of feedback. Try again in a little while.</p>
+		}
+		<textarea id="feedback-comment" name="comment" rows="3" required maxlength="2000" placeholder="Tell us what was missing or unclear" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
+		<div class="flex flex-wrap items-center gap-3">
+			<button type="submit" class="button-brand inline-flex h-9 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Send feedback</button>
+			@AskHuman(c, "ms-auto text-body-medium text-link hover:underline") {
+				Ask a human instead
+			}
+		</div>
+	</form>
 }
 
 templ feedbackButton(value, icon, label string) {
