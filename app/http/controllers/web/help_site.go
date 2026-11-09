@@ -18,6 +18,8 @@ import (
 	"html"
 	"regexp"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
@@ -323,11 +325,24 @@ func contents(raw json.RawMessage) []helpcenter.Heading {
 }
 
 /*
-plain drops the search highlight marks the database puts in a snippet,
-which the page escapes and highlights itself.
+plain turns a search snippet into the words a reader sees. It drops the
+highlight marks the database adds, keeps the text of links and drops
+images, and removes the Markdown punctuation for emphasis, headings,
+quotes, callouts and code, since the snippet is cut from the article's
+Markdown source. A snippet cut from the middle of a sentence opens with
+an ellipsis.
 */
 func plain(snippet string) string {
-	return html.UnescapeString(regexp.MustCompile(`</?mark>`).ReplaceAllString(snippet, ""))
+	text := regexp.MustCompile(`</?mark>`).ReplaceAllString(snippet, "")
+	text = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`).ReplaceAllString(text, "")
+	text = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`).ReplaceAllString(text, "$1")
+	text = regexp.MustCompile(`\[![A-Za-z]+\]|(^|\s)(#{1,6}|>|[-*+]|\d+\.)\s`).ReplaceAllString(text, " ")
+	text = strings.NewReplacer("**", "", "__", "", "`", "", "~~", "").Replace(text)
+	text = strings.Join(strings.Fields(html.UnescapeString(text)), " ")
+	if first, _ := utf8.DecodeRuneInString(text); unicode.IsLower(first) {
+		return "…" + text
+	}
+	return text
 }
 
 func deref(s *string) string {

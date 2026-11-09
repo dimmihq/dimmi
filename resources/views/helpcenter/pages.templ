@@ -16,7 +16,9 @@ templ CollectionPage(c Center, all []Collection, col Collection, trail []Crumb, 
 					<p class="mt-2 text-body-regular text-text-secondary">{ col.Description }</p>
 				}
 				<p class="mt-4 flex items-center gap-2.5 text-body-2-regular text-text-tertiary">
-					@Avatars(col.Authors)
+					if len(col.Authors) > 0 {
+						@Avatars(col.Authors)
+					}
 					{ byline(col.Authors) } · { Plural(col.Count, "article") }
 				</p>
 			</header>
@@ -38,10 +40,10 @@ other articles of its collection.
 templ ArticlePage(c Center, all []Collection, a Article, helpful string, assets templ.Component) {
 	@Layout(c, Meta{Title: a.Title + " | " + c.Name, Description: a.Description, Section: "help", Trail: helpTrail(a.Trail, "", a.Title), Markdown: "/articles/" + a.Slug + ".md"}, HelpSidebar(c, all, trailEnd(a.Trail), a.Slug), assets) {
 		<div class="mx-auto grid w-full max-w-[66rem] gap-14 px-5 pt-10 md:pt-14 xl:grid-cols-[minmax(0,1fr)_15rem]">
-			<article class="min-w-0 max-w-[42.5rem] animate-rise">
+			<article class="min-w-0 w-full max-w-[42.5rem] animate-rise max-xl:mx-auto">
 				@Breadcrumb(c, helpTrail(a.Trail, "", ""))
 				<div class="mt-5 flex items-start justify-between gap-6">
-					<h1 class="text-display-4-medium tracking-tight text-balance">{ a.Title }</h1>
+					<h1 class="min-w-0 flex-1 text-display-4-medium tracking-tight text-balance">{ a.Title }</h1>
 					<div class="pt-1.5 max-sm:hidden">
 						@copyMenu(c, a)
 					</div>
@@ -66,7 +68,7 @@ templ ArticlePage(c Center, all []Collection, a Article, helpful string, assets 
 				@neighbors(c, a.Previous, a.Next)
 			</article>
 			<aside class="flex flex-col gap-8 max-xl:hidden">
-				<div data-rail class="sticky top-24 flex max-h-[calc(100dvh-8rem)] flex-col gap-8 overflow-y-auto overscroll-contain pb-4 [scrollbar-width:none]">
+				<div data-rail class="sticky top-24 flex max-h-[calc(100dvh-8rem)] flex-col gap-8 overflow-y-auto overscroll-contain pb-8 [mask-image:linear-gradient(to_bottom,black_calc(100%-3rem),transparent)] [scrollbar-width:none]">
 					if len(a.Contents) > 0 {
 						@contents(a.Contents)
 					}
@@ -107,8 +109,8 @@ templ Breadcrumb(c Center, crumbs []Crumb) {
 				if i > 0 {
 					<li aria-hidden="true">/</li>
 				}
-				<li>
-					<a href={ Href(c, crumb.Path) } class="inline-flex items-center gap-1 transition-colors hover:text-text-primary">
+				<li class="flex">
+					<a href={ Href(c, crumb.Path) } class="flex items-center gap-1 transition-colors hover:text-text-primary">
 						if i == 0 {
 							@Icon("arrow-left-line", "size-3.5 rtl:-scale-x-100")
 							Home

@@ -56,7 +56,7 @@ func Home(c Center, collections []Collection, popular []Summary, updates []Updat
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><h1 class=\"mt-5 text-title-1-medium tracking-tight\"><span data-greeting>Hi there.</span> <span class=\"text-text-tertiary\">How can we help?</span></h1>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><h1 class=\"mt-5 text-title-1-medium tracking-tight text-balance\"><span data-greeting>Hi there.</span> <span class=\"text-text-tertiary\">How can we help?</span></h1>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

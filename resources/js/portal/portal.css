@@ -134,70 +134,6 @@
   animation: var(--animate-rise);
 }
 
-/*
- * The browse drawer slides in from the start edge and pushes the page
- * aside by its own width, then both slide back when it closes. The page
- * stays visible beside it; a click on it closes the drawer. Nothing moves
- * for readers who ask for less motion.
- */
-:root {
-  --drawer-width: min(20rem, 85vw);
-  --drawer-ease: cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-body {
-  overflow-x: clip;
-}
-
-[data-drawer-panel] {
-  inline-size: var(--drawer-width);
-  translate: -100% 0;
-  visibility: hidden;
-  transition:
-    translate 380ms var(--drawer-ease),
-    visibility 0s linear 380ms;
-}
-
-[dir="rtl"] [data-drawer-panel] {
-  translate: 100% 0;
-}
-
-[data-page] {
-  transition: translate 380ms var(--drawer-ease);
-}
-
-[data-drawer-backdrop] {
-  display: none;
-}
-
-html:has(details[data-drawer][open]) {
-  [data-drawer-panel] {
-    translate: 0 0;
-    visibility: visible;
-    transition: translate 380ms var(--drawer-ease);
-  }
-
-  [data-page] {
-    translate: var(--drawer-width) 0;
-  }
-
-  [data-drawer-backdrop] {
-    display: block;
-    cursor: pointer;
-  }
-}
-
-html[dir="rtl"]:has(details[data-drawer][open]) [data-page] {
-  translate: calc(var(--drawer-width) * -1) 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-drawer-panel],
-  [data-page] {
-    transition: none;
-  }
-}
-
 .stagger > :nth-child(2) {
   animation-delay: 50ms;
 }
@@ -246,4 +182,16 @@ card's text.
 @utility dot-grid {
   background-image: radial-gradient(var(--color-separator-border) 1px, transparent 1px);
   background-size: 12px 12px;
+}
+
+/*
+ * The theme switch shows the reader's pick from the first paint: the
+ * script in the page's head marks the pick on the root before anything
+ * renders, so the switch never shifts or changes once the page loads.
+ */
+html[data-theme-pick="light"] [data-theme-choice="light"],
+html[data-theme-pick="dark"] [data-theme-choice="dark"],
+html[data-theme-pick="system"] [data-theme-choice="system"] {
+  background-color: var(--color-background-secondary-default);
+  color: var(--color-foreground-icon-primary);
 }

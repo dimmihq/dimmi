@@ -7,8 +7,8 @@
  * page reads from its own markup: the greeting follows the visitor's
  * clock, the copy buttons put an article's Markdown on the clipboard, and
  * the theme switch keeps the reader's pick of light, dark or their
- * system's theme in this browser, the browse drawer closes on a click
- * outside it or Escape, collections open and close with a slide, and an
+ * system's theme in this browser, the browse drawer and dropdowns close
+ * on a click outside them or Escape, collections open and close with a slide, and an
  * article's contents mark the heading being read.
  * A reader coming back from signing in to the team's product brings an
  * identity token in the address's fragment, which no server sees, and
@@ -92,13 +92,11 @@ function storedTheme(): string {
 }
 
 /*
- * showThemes reveals the switch and marks the reader's pick.
+ * showThemes tells assistive technology which theme is picked; the page's
+ * own styles already show it from the first paint.
  */
 function showThemes(root: ParentNode): void {
   const pick = storedTheme();
-  for (const group of root.querySelectorAll<HTMLElement>("[data-theme-switch]")) {
-    group.hidden = false;
-  }
   for (const button of root.querySelectorAll<HTMLButtonElement>("button[data-theme-choice]")) {
     button.setAttribute("aria-pressed", String(button.dataset.themeChoice === pick));
   }
@@ -220,14 +218,28 @@ function closeDrawers(): void {
   }
 }
 
+/*
+ * closeMenus shuts every open dropdown except the one the reader is
+ * using, so a click elsewhere or Escape dismisses it.
+ */
+function closeMenus(keep?: Element | null): void {
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>("details[data-menu][open]")) {
+    if (menu !== keep) {
+      menu.open = false;
+    }
+  }
+}
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeDrawers();
+    closeMenus();
   }
 });
 
 document.addEventListener("click", (event) => {
   const target = event.target as Element;
+  closeMenus(target.closest("details[data-menu]"));
   if (target.closest("[data-drawer-backdrop], [data-drawer-close]")) {
     closeDrawers();
   }

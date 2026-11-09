@@ -141,12 +141,14 @@ func (c *HelpCenterController) CheckCode(w fhttp.ResponseWriter, r *fhttp.Reques
 }
 
 /*
-readerCenter is the frame of the sign-in pages, which show no reader.
+readerCenter is the frame of the sign-in pages, which show no reader but
+the same sections in the header as every other page.
 */
 func (c *HelpCenterController) readerCenter(r *fhttp.Request, snap helpcenters.Snapshot, base string,
 ) helpcenter.Center {
 	center := centerOf(snap.HelpCenter, base)
 	center.Origin = origin(r)
+	c.announce(r, snap.HelpCenter, &center)
 
 	return center
 }

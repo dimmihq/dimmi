@@ -47,7 +47,7 @@ func copyMenu(c Center, a Article) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-s-xl px-2.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"inline-flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-s-xl px-2.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -55,7 +55,7 @@ func copyMenu(c Center, a Article) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span data-copy-label>Copy page</span></button> <details class=\"group relative border-s border-border-button-default\"><summary aria-label=\"More ways to use this page\" class=\"grid h-8 w-8 cursor-pointer list-none place-items-center rounded-e-xl text-foreground-icon-secondary transition-colors hover:bg-background-secondary-hover\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span data-copy-label>Copy page</span></button> <details data-menu class=\"group relative border-s border-border-button-default\"><summary aria-label=\"More ways to use this page\" class=\"grid h-8 w-8 cursor-pointer list-none place-items-center rounded-e-xl text-foreground-icon-secondary transition-colors hover:bg-background-secondary-hover\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

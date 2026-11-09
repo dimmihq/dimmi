@@ -34,6 +34,23 @@ it.describe("the public portal", () => {
     await expect(links.first()).not.toHaveAttribute("aria-current", "location");
   });
 
+  it("closes the copy menu on a click outside it or Escape", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/hc/dimmi/articles/write-articles-in-markdown");
+    const more = page.getByLabel("More ways to use this page");
+    const view = page.getByRole("link", { name: /View as Markdown/ });
+
+    await more.click();
+    await expect(view).toBeVisible();
+    await page.getByRole("heading", { level: 1 }).click();
+    await expect(view).toBeHidden();
+
+    await more.click();
+    await expect(view).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(view).toBeHidden();
+  });
+
   it("answers a question from the articles", async ({ page }) => {
     await page.goto("/hc/dimmi");
 

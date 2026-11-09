@@ -23,6 +23,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<meta name="color-scheme" content={ colorScheme(c) }/>
 			<meta name="view-transition" content="same-origin"/>
+			<meta name="turbo-cache-control" content="no-preview"/>
 			<meta name="csp-nonce" content={ templ.GetNonce(ctx) }/>
 			<title>{ m.Title }</title>
 			if m.Description != "" {
@@ -45,6 +46,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			}
 			<link rel="alternate" type="application/rss+xml" title={ c.Product + " changelog" } href={ Href(c, "/changelog/feed.xml") }/>
 			@applyTheme()
+			@drawerStyle()
 			@assets
 		</head>
 		<body class="bg-background-full font-inter text-text-primary">
@@ -76,6 +78,30 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 }
 
 /*
+drawerStyle slides the browse drawer in from the start edge and pushes
+the page aside by its width, then slides both back when it closes. It
+sits in the head rather than the stylesheet so the drawer is closed
+from the very first paint, before the stylesheet arrives. Nothing moves
+for readers who ask for less motion.
+*/
+
+templ drawerStyle() {
+	<style>
+		:root { --drawer-width: min(20rem, 85vw); --drawer-ease: cubic-bezier(0.32, 0.72, 0, 1); }
+		body { overflow-x: clip; }
+		[data-drawer-panel] { inline-size: var(--drawer-width); translate: -100% 0; visibility: hidden; transition: translate 380ms var(--drawer-ease), visibility 0s linear 380ms; }
+		[dir="rtl"] [data-drawer-panel] { translate: 100% 0; }
+		[data-page] { transition: translate 380ms var(--drawer-ease); }
+		[data-drawer-backdrop] { display: none; }
+		html:has(details[data-drawer][open]) [data-drawer-panel] { translate: 0 0; visibility: visible; transition: translate 380ms var(--drawer-ease); }
+		html:has(details[data-drawer][open]) [data-page] { translate: var(--drawer-width) 0; }
+		html:has(details[data-drawer][open]) [data-drawer-backdrop] { display: block; cursor: pointer; }
+		html[dir="rtl"]:has(details[data-drawer][open]) [data-page] { translate: calc(var(--drawer-width) * -1) 0; }
+		@media (prefers-reduced-motion: reduce) { [data-drawer-panel], [data-page] { transition: none; } }
+	</style>
+}
+
+/*
 applyTheme sets the page's theme before it paints: the team's fixed
 one, or the reader's pick kept in this browser, or their system's,
 which it then keeps following.
@@ -83,7 +109,7 @@ which it then keeps following.
 
 templ applyTheme() {
 	<script nonce={ templ.GetNonce(ctx) }>
-		(() => { const root = document.documentElement; const dark = matchMedia("(prefers-color-scheme: dark)"); const pick = () => { const fixed = root.dataset.appearance; if (fixed) return fixed; try { return localStorage.getItem("dimmi-portal-theme") || "system" } catch { return "system" } }; const apply = () => { const p = pick(); root.classList.toggle("dark", p === "dark" || (p === "system" && dark.matches)) }; apply(); dark.addEventListener("change", apply); window.dimmiTheme = apply })()
+		(() => { const root = document.documentElement; const dark = matchMedia("(prefers-color-scheme: dark)"); const pick = () => { const fixed = root.dataset.appearance; if (fixed) return fixed; try { return localStorage.getItem("dimmi-portal-theme") || "system" } catch { return "system" } }; const apply = () => { const p = pick(); root.dataset.themePick = p; root.classList.toggle("dark", p === "dark" || (p === "system" && dark.matches)) }; apply(); dark.addEventListener("change", apply); window.dimmiTheme = apply })()
 	</script>
 }
 
@@ -95,7 +121,7 @@ portal's script can act on it.
 
 templ themeSwitch(c Center) {
 	if fixedTheme(c) == "" {
-		<div data-theme-switch hidden role="group" aria-label="Theme" class="flex items-center gap-0.5 rounded-xl border border-border-button-default p-0.5">
+		<div data-theme-switch role="group" aria-label="Theme" class="flex items-center gap-0.5 rounded-xl border border-border-button-default p-0.5">
 			@themeChoice("light", "Light theme", "sun")
 			@themeChoice("dark", "Dark theme", "moon")
 			@themeChoice("system", "Match my system", "system")
@@ -104,7 +130,7 @@ templ themeSwitch(c Center) {
 }
 
 templ themeChoice(value, label, icon string) {
-	<button type="button" data-theme-choice={ value } aria-label={ label } title={ label } aria-pressed="false" class="grid size-7 cursor-pointer place-items-center rounded-lg text-foreground-icon-tertiary outline-none transition-colors hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-pressed:bg-background-secondary-default aria-pressed:text-foreground-icon-primary">
+	<button type="button" data-theme-choice={ value } aria-label={ label } title={ label } aria-pressed="false" class="grid size-7 cursor-pointer place-items-center rounded-lg text-foreground-icon-tertiary outline-none transition-colors hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 		@Icon(icon, "size-3.5")
 	</button>
 }
@@ -133,7 +159,7 @@ templ topBar(c Center, m Meta) {
 		}
 		@homeLink(c)
 		if m.Section == "help" && len(m.Trail) > 1 {
-			<form action={ Href(c, "/search") } method="get" role="search" class="ms-2 flex h-8 w-full max-w-[20rem] items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5 max-md:hidden">
+			<form action={ Href(c, "/search") } method="get" role="search" class="ms-2 flex h-8 min-w-0 max-w-[18rem] flex-1 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5 max-xl:hidden">
 				@Icon("search", "size-3.5 shrink-0 text-foreground-icon-tertiary")
 				<label for="top-search" class="sr-only">Search the help center</label>
 				<input id="top-search" type="search" name="q" placeholder="Search help center" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
@@ -146,7 +172,7 @@ templ topBar(c Center, m Meta) {
 					if s.Key == m.Section {
 						aria-current="page"
 					}
-					class="rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary outline-none transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:text-text-primary"
+					class="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary outline-none transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:text-text-primary"
 				>{ s.Name }</a>
 			}
 		</nav>
@@ -154,13 +180,13 @@ templ topBar(c Center, m Meta) {
 			<div class="max-sm:hidden">
 				@themeSwitch(c)
 			</div>
-			<a href={ Href(c, "/conversations/new") } class="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden">
+			<a href={ Href(c, "/conversations/new") } title="Ask a human" class="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden">
 				@Icon("chat", "size-4")
-				Ask a human
+				<span class="max-xl:sr-only">Ask a human</span>
 			</a>
 			@account(c)
-			<details class="group relative lg:hidden">
-				<summary aria-label="Sections" class="grid size-9 cursor-pointer list-none place-items-center rounded-xl border border-border-button-default text-foreground-icon-secondary">
+			<details data-menu class="group relative lg:hidden">
+				<summary aria-label="Sections" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 					@Icon("more", "size-4")
 				</summary>
 				<div class="absolute end-0 top-11 z-40 w-60 rounded-2xl border border-border-button-default bg-background-primary-default p-2 shadow-lg">
@@ -291,9 +317,9 @@ templ Avatar(p Person, size string) {
 }
 
 templ Avatars(people []Person) {
-	<span class="flex -space-x-1">
+	<span class="flex -space-x-0.5">
 		for _, p := range people {
-			@Avatar(p, "size-6 text-caption-2-semibold")
+			@Avatar(p, "size-7 text-caption-2-semibold")
 		}
 	</span>
 }

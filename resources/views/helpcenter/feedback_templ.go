@@ -171,7 +171,7 @@ func FeedbackPage(c Center, board Board, assets templ.Component) templ.Component
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<div class=\"-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 md:grid md:snap-none md:overflow-visible md:[grid-template-columns:repeat(auto-fit,minmax(0,1fr))]\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<div class=\"-mx-5 flex scroll-px-5 snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-4 md:grid md:snap-none md:overflow-visible md:[grid-template-columns:repeat(auto-fit,minmax(0,1fr))]\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
