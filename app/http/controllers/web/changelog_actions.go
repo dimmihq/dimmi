@@ -30,7 +30,7 @@ import (
 realIndex shows a page of a real changelog, or not found past the end
 or for a label it does not have.
 */
-func (c ChangelogController) realIndex(w fhttp.ResponseWriter, r *fhttp.Request, s realChangelog, page int) {
+func (c ChangelogController) realIndex(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite, page int) {
 	label := r.PathValue("label")
 	p, found, err := c.Changelog.Index(r.Context(), cl.PageRequest{
 		Center: s.help, Label: label, Page: page, Size: changelogPerPage,
@@ -52,7 +52,7 @@ func (c ChangelogController) realIndex(w fhttp.ResponseWriter, r *fhttp.Request,
 realEntry shows a published entry, or its Markdown when the path ends
 in .md.
 */
-func (c ChangelogController) realEntry(w fhttp.ResponseWriter, r *fhttp.Request, s realChangelog) {
+func (c ChangelogController) realEntry(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite) {
 	slug, markdown := strings.CutSuffix(r.PathValue("slug"), ".md")
 	one, found, err := c.Changelog.Entry(r.Context(), s.help, slug)
 	if err != nil {
@@ -76,7 +76,7 @@ func (c ChangelogController) realEntry(w fhttp.ResponseWriter, r *fhttp.Request,
 	c.respond(w, r, fhttp.StatusOK, views.EntryPage(s.center, labels, singleView(one), c.styles()))
 }
 
-func (c ChangelogController) labelsOf(r *fhttp.Request, s realChangelog) ([]views.Label, error) {
+func (c ChangelogController) labelsOf(r *fhttp.Request, s liveSite) ([]views.Label, error) {
 	p, _, err := c.Changelog.Index(r.Context(), cl.PageRequest{Center: s.help, Page: 1, Size: 1})
 	return labelViews(p.Labels), err
 }
@@ -114,7 +114,7 @@ func (c ChangelogController) Feed(w fhttp.ResponseWriter, r *fhttp.Request) {
 feedOf is the changelog's feed of entries, with links that work away
 from the site.
 */
-func feedOf(s realChangelog, entries []cl.Published) feed.Feed {
+func feedOf(s liveSite, entries []cl.Published) feed.Feed {
 	root := s.center.Origin + s.center.Base
 	out := feed.Feed{
 		Title: s.help.Name + " changelog", Link: root + "/changelog",

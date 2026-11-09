@@ -213,5 +213,13 @@
     "action": "Read on the site",
     "why": "You get these because you subscribed to updates from {{.help_center}}.",
     "unsubscribe": "Unsubscribe"
+  },
+  "feedback_status": {
+    "subject": "{{.title}} is now {{.status}}",
+    "kicker": "An update on your request to {{.help_center}}",
+    "now": "It is now {{.status}}.",
+    "update": "Read what shipped",
+    "action": "See the request",
+    "why": "You get this because you asked for this or voted for it on {{.help_center}}."
   }
 }

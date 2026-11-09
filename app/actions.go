@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/events"
 	"github.com/dimmihq/dimmi/app/actions/factors"
+	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
@@ -130,6 +131,7 @@ type Actions struct {
 	ChangelogEntries           *changelog.Entries
 	ChangelogSubscribers       *changelog.Subscribers
 	ChangelogPublic            *changelog.Public
+	Feedback                   *feedback.Posts
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules
 	Procedures                 *procedures.Procedures

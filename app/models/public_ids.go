@@ -347,6 +347,14 @@ func changelogPublicIDs() []PublicIDEntry {
 }
 
 /*
+The prefixes of feature requests and their comments.
+*/
+const (
+	PrefixFeedbackPost    Prefix = "fbp"
+	PrefixFeedbackComment Prefix = "fbc"
+)
+
+/*
 feedbackPublicIDs lists the prefixes of feedback boards and the
 roadmap portal.
 */
@@ -355,9 +363,9 @@ func feedbackPublicIDs() []PublicIDEntry {
 		{"fbd", "feedback_boards"},
 		{"fbct", "feedback_categories"},
 		{"fbs", "feedback_statuses"},
-		{"fbp", "feedback_posts"},
+		{PrefixFeedbackPost, "feedback_posts"},
 		{"fbv", "feedback_votes"},
-		{"fbc", "feedback_comments"},
+		{PrefixFeedbackComment, "feedback_comments"},
 		{"fbr", "feedback_requests"},
 		{"fbm", "feedback_post_merges"},
 		{"fbsb", "feedback_subscriptions"},

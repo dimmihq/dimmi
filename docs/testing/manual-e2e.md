@@ -1115,3 +1115,20 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Feed | `GET /hc/<sub>/changelog/feed.xml` and `/labels/<label>/feed.xml` | RSS with absolute links and pictures; drafts and scheduled updates never appear |
 | React | an emoji on an entry's page | the count rises once per reader |
 | Unpublish | Unpublish on a published update | the page answers 404; it lists as Draft |
+
+## Feature requests
+
+| Flow | How | Expect |
+|---|---|---|
+| Closed board | `/hc/<sub>/feedback` before the team opens it | 404; the header has no Feature requests link |
+| Open | Feature requests, Open to customers | the board shows the roadmap by status and the header links it |
+| Post | a reader signs in with an emailed code and submits an idea | it opens on its own page with their vote; the team sees it Under consideration |
+| Similar | submit a title close to an existing one | the form comes back with "Is it one of these?" and Post mine anyway |
+| Approval | turn on Approve new posts first, then post | "The team will look at your idea"; only the author sees its page; Waiting for approval lists it until Approve |
+| Vote | the vote button, twice | one vote, then none; each customer counts once |
+| Move | the request's Status, Planned, with a note | Mailpit has "<title> is now Planned" for each voter and the author, once, with the note |
+| Ship | Status Shipped, linked to a published changelog update | the portal page links the update; the mail links it too |
+| Notes | Internal note on, then Add note | the team sees it marked Internal note; the portal never shows it |
+| Vote for | Vote for a customer, pick them and Must have | the vote counts, marked added by the team, with Must have |
+| Merge | Merge into another request | votes move once per customer; the old page answers 301 to the kept one |
+| Order | Trending, Top and New on the portal and the dashboard, and search | the order follows votes, recent votes, and posting time; search narrows by title |

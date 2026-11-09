@@ -1,0 +1,52 @@
+package feedback
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+Moved is a feature request that changed status, as its mail tells it:
+the help center, the request and where it now stands, the team's note,
+where to read it, and the update that shipped it when there is one.
+*/
+type Moved struct {
+	HelpCenter string
+	Brand      string
+	Title      string
+	Status     string
+	Message    string
+	URL        string
+	Update     string
+}
+
+/*
+StatusChanged tells a voter where a request they backed now stands.
+*/
+
+templ StatusChanged(m Moved) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ m.Title }</title>
+		</head>
+		<body style="margin:0;padding:0;background:#f6f6f7;">
+			<div style={ "max-width:560px;margin:0 auto;padding:32px 24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1b1b1f;border-top:4px solid " + m.Brand + ";" }>
+				<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b6b76;">{ i18n.T(ctx, "mail.feedback_status.kicker", i18n.Args{"help_center": m.HelpCenter}) }</p>
+				<h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;">{ m.Title }</h1>
+				<p style="margin:0 0 16px;">{ i18n.T(ctx, "mail.feedback_status.now", i18n.Args{"status": m.Status}) }</p>
+				if m.Message != "" {
+					<p style="margin:0 0 16px;padding:12px 16px;border-radius:8px;background:#ffffff;border:1px solid #e4e4e7;">{ m.Message }</p>
+				}
+				if m.Update != "" {
+					<p style="margin:0 0 16px;">
+						<a href={ templ.SafeURL(m.Update) } style="color:#1b1b1f;">{ i18n.T(ctx, "mail.feedback_status.update", nil) }</a>
+					</p>
+				}
+				<p style="margin:24px 0;">
+					<a href={ templ.SafeURL(m.URL) } style={ "display:inline-block;padding:10px 18px;border-radius:6px;background:" + m.Brand + ";color:#ffffff;text-decoration:none;font-weight:600;" }>{ i18n.T(ctx, "mail.feedback_status.action", nil) }</a>
+				</p>
+				<p style="margin-top:32px;font-size:12px;color:#6b6b76;">{ i18n.T(ctx, "mail.feedback_status.why", i18n.Args{"help_center": m.HelpCenter}) }</p>
+			</div>
+		</body>
+	</html>
+}

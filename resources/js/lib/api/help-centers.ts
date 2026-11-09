@@ -17,6 +17,8 @@ export interface HelpCenterSettings {
   contact_url?: string;
   login_url?: string;
   email_sign_in?: boolean;
+  feedback_board?: boolean;
+  feedback_approval?: boolean;
 }
 
 /*

@@ -3,7 +3,8 @@
 | Help Center Wiring
 |--------------------------------------------------------------------------
 |
-| The actions behind a workspace's public docs and its changelog, and
+| The actions behind a workspace's public docs, its changelog and its
+| feature requests, and
 | the jobs that publish scheduled entries and mail them out.
 |
 */
@@ -18,6 +19,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/changelog"
+	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
 )
@@ -45,6 +47,7 @@ func bootHelpCenters(a *app.App) {
 		Addresses: acts.HelpCenterAddresses,
 	}
 	acts.ChangelogPublic = &changelog.Public{DB: a.DB, Clock: a.Clock, Key: a.DerivedKey("changelog.reactions")}
+	acts.Feedback = feedback.NewPosts(a.DB, a.Clock, a.Mail, acts.HelpCenterAddresses)
 }
 
 /*

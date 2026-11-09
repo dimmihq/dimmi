@@ -37,6 +37,8 @@ import { Route as DChangelogIndexRouteImport } from './routes/d/changelog/index'
 import { Route as DChangelogEntryRouteImport } from './routes/d/changelog/$entry'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
 import { Route as DCustomersListsRouteImport } from './routes/d/customers/_lists'
+import { Route as DFeedbackIndexRouteImport } from './routes/d/feedback/index'
+import { Route as DFeedbackPostRouteImport } from './routes/d/feedback/$post'
 import { Route as DHelpCenterIndexRouteImport } from './routes/d/help-center/index'
 import { Route as DHelpCenterArticleRouteImport } from './routes/d/help-center/$article'
 import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
@@ -201,6 +203,16 @@ const DCustomersListsRoute = DCustomersListsRouteImport.update({
   id: '/_lists',
   getParentRoute: () => DCustomersRoute,
 } as any)
+const DFeedbackIndexRoute = DFeedbackIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DFeedbackRoute,
+} as any)
+const DFeedbackPostRoute = DFeedbackPostRouteImport.update({
+  id: '/$post',
+  path: '/$post',
+  getParentRoute: () => DFeedbackRoute,
+} as any)
 const DHelpCenterIndexRoute = DHelpCenterIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -350,7 +362,7 @@ export interface FileRoutesByFullPath {
   '/d/broadcasts': typeof DBroadcastsRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
-  '/d/feedback': typeof DFeedbackRoute
+  '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
   '/d/series': typeof DSeriesRoute
@@ -362,11 +374,13 @@ export interface FileRoutesByFullPath {
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
+  '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/changelog/': typeof DChangelogIndexRoute
+  '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
@@ -402,7 +416,6 @@ export interface FileRoutesByTo {
   '/d/agent': typeof DAgentRoute
   '/d/broadcasts': typeof DBroadcastsRoute
   '/d/customers': typeof DCustomersListsIndexRoute
-  '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
@@ -412,11 +425,13 @@ export interface FileRoutesByTo {
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
+  '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/changelog': typeof DChangelogIndexRoute
+  '/d/feedback': typeof DFeedbackIndexRoute
   '/d/help-center': typeof DHelpCenterIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
@@ -454,7 +469,7 @@ export interface FileRoutesById {
   '/d/broadcasts': typeof DBroadcastsRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
-  '/d/feedback': typeof DFeedbackRoute
+  '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
   '/d/series': typeof DSeriesRoute
@@ -467,11 +482,13 @@ export interface FileRoutesById {
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/_lists': typeof DCustomersListsRouteWithChildren
+  '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/changelog/': typeof DChangelogIndexRoute
+  '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
@@ -523,11 +540,13 @@ export interface FileRouteTypes {
     | '/login/two-factor'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
+    | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/changelog/'
+    | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
@@ -563,7 +582,6 @@ export interface FileRouteTypes {
     | '/d/agent'
     | '/d/broadcasts'
     | '/d/customers'
-    | '/d/feedback'
     | '/d/notifications'
     | '/d/series'
     | '/d/shortcuts'
@@ -573,11 +591,13 @@ export interface FileRouteTypes {
     | '/login/two-factor'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
+    | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/changelog'
+    | '/d/feedback'
     | '/d/help-center'
     | '/d/inbox'
     | '/d/procedures'
@@ -627,11 +647,13 @@ export interface FileRouteTypes {
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/customers/_lists'
+    | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
     | '/d/changelog/'
+    | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
@@ -858,6 +880,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/customers'
       preLoaderRoute: typeof DCustomersListsRouteImport
       parentRoute: typeof DCustomersRoute
+    }
+    '/d/feedback/': {
+      id: '/d/feedback/'
+      path: '/'
+      fullPath: '/d/feedback/'
+      preLoaderRoute: typeof DFeedbackIndexRouteImport
+      parentRoute: typeof DFeedbackRoute
+    }
+    '/d/feedback/$post': {
+      id: '/d/feedback/$post'
+      path: '/$post'
+      fullPath: '/d/feedback/$post'
+      preLoaderRoute: typeof DFeedbackPostRouteImport
+      parentRoute: typeof DFeedbackRoute
     }
     '/d/help-center/': {
       id: '/d/help-center/'
@@ -1089,6 +1125,20 @@ const DCustomersRouteWithChildren = DCustomersRoute._addFileChildren(
   DCustomersRouteChildren,
 )
 
+interface DFeedbackRouteChildren {
+  DFeedbackPostRoute: typeof DFeedbackPostRoute
+  DFeedbackIndexRoute: typeof DFeedbackIndexRoute
+}
+
+const DFeedbackRouteChildren: DFeedbackRouteChildren = {
+  DFeedbackPostRoute: DFeedbackPostRoute,
+  DFeedbackIndexRoute: DFeedbackIndexRoute,
+}
+
+const DFeedbackRouteWithChildren = DFeedbackRoute._addFileChildren(
+  DFeedbackRouteChildren,
+)
+
 interface DHelpCenterRouteChildren {
   DHelpCenterArticleRoute: typeof DHelpCenterArticleRoute
   DHelpCenterIndexRoute: typeof DHelpCenterIndexRoute
@@ -1122,7 +1172,7 @@ interface DRouteRouteChildren {
   DBroadcastsRoute: typeof DBroadcastsRoute
   DChangelogRoute: typeof DChangelogRouteWithChildren
   DCustomersRoute: typeof DCustomersRouteWithChildren
-  DFeedbackRoute: typeof DFeedbackRoute
+  DFeedbackRoute: typeof DFeedbackRouteWithChildren
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
   DNotificationsRoute: typeof DNotificationsRoute
   DSeriesRoute: typeof DSeriesRoute
@@ -1149,7 +1199,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DBroadcastsRoute: DBroadcastsRoute,
   DChangelogRoute: DChangelogRouteWithChildren,
   DCustomersRoute: DCustomersRouteWithChildren,
-  DFeedbackRoute: DFeedbackRoute,
+  DFeedbackRoute: DFeedbackRouteWithChildren,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
   DNotificationsRoute: DNotificationsRoute,
   DSeriesRoute: DSeriesRoute,

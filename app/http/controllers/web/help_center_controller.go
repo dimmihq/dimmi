@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app/actions/changelog"
+	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/resources/views/helpcenter"
@@ -43,7 +44,8 @@ const PortalEntry = "resources/js/portal/portal.ts"
 HelpCenterController serves the public help center's pages. Assets
 serves the images they show; Readers signs readers in through the
 team's product. Changelog reads the help center's published changelog
-and Subscribers takes the people who want to hear about it.
+and Subscribers takes the people who want to hear about it. Board is
+the board of feature requests.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -51,6 +53,7 @@ type HelpCenterController struct {
 	Readers     *helpcenters.Readers
 	Changelog   *changelog.Public
 	Subscribers *changelog.Subscribers
+	Board       *feedback.Posts
 	Assets      fhttp.Handler
 	Vite        *vite.Bundle
 	Errors      fhttp.Errors

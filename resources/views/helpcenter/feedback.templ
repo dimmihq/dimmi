@@ -1,0 +1,337 @@
+package helpcenter
+
+import "strconv"
+
+/*
+FeedbackPage lists feature requests grouped by where they stand, or as
+one list sorted and searched, each with its vote button, and invites
+the visitor to suggest their own. Voting is a plain form, so it works
+without scripts.
+*/
+
+templ FeedbackPage(c Center, board Board, assets templ.Component) {
+	@Layout(c, Meta{Title: "Feature requests | " + c.Product, Description: "Discover what " + c.Product + " is building next and suggest improvements.", Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}}}, FeedbackSidebar(c, board.Statuses), assets) {
+		<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 md:pt-16">
+			<header class="stagger flex flex-wrap items-end justify-between gap-6">
+				<div>
+					<h1 class="text-display-4-medium tracking-tight">Feature requests</h1>
+					<p class="mt-2 text-title-3-regular text-text-secondary">See what we're building and vote for what you need next.</p>
+				</div>
+				<a href={ Href(c, "/feedback/new") } class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+					@Icon("edit", "size-4")
+					Submit idea
+				</a>
+			</header>
+			if board.Submitted {
+				<p role="status" class="mt-8 flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-secondary-default px-4 py-3 text-body-regular">
+					<span class="grid size-7 place-items-center rounded-full bg-tint text-link">
+						@Icon("check", "size-3.5")
+					</span>
+					if board.Pending {
+						Thanks! The team will look at your idea before it appears here.
+					} else {
+						Thanks! We read every idea and will let you know when it moves.
+					}
+				</p>
+			}
+			@boardTools(c, board)
+			<div class="mt-6 flex flex-col gap-6 animate-rise">
+				if board.Sort != "" || board.Query != "" {
+					<section aria-label="Requests" class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+						if len(board.List) == 0 {
+							<p class="px-4 py-6 text-center text-body-regular text-text-tertiary">No requests match. Suggest it instead.</p>
+						}
+						<ul>
+							for _, idea := range board.List {
+								@ideaRow(c, idea)
+							}
+						</ul>
+					</section>
+				} else {
+					for _, s := range board.Statuses {
+						<section id={ s.Slug } aria-labelledby={ s.Slug + "-title" } class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+							<h2 id={ s.Slug + "-title" } class="flex items-center gap-2 border-b border-separator-border bg-background-secondary-default px-4 py-2.5 text-body-2-semibold">
+								@statusIcon(s)
+								{ s.Name }
+								<span class="text-caption-1-medium text-text-tertiary">{ strconv.Itoa(s.Count) }</span>
+							</h2>
+							if len(s.Ideas) == 0 {
+								<p class="px-4 py-4 text-body-2-regular text-text-tertiary">Nothing here yet.</p>
+							}
+							<ul>
+								for _, idea := range s.Ideas {
+									@ideaRow(c, idea)
+								}
+							</ul>
+						</section>
+					}
+				}
+			</div>
+		</div>
+	}
+}
+
+/*
+boardTools switches between the roadmap and the sorted list, and
+searches the requests.
+*/
+
+templ boardTools(c Center, board Board) {
+	<div class="mt-10 flex flex-wrap items-center justify-between gap-3">
+		<nav aria-label="Order" class="flex items-center gap-1 rounded-xl bg-background-secondary-default p-1">
+			@sortTab(c, "", "Roadmap", board)
+			@sortTab(c, "trending", "Trending", board)
+			@sortTab(c, "top", "Top", board)
+			@sortTab(c, "new", "New", board)
+		</nav>
+		<form method="get" action={ Href(c, "/feedback") } role="search" class="flex h-9 w-full items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs sm:w-64">
+			@Icon("search", "size-4 shrink-0 text-foreground-icon-tertiary")
+			if board.Sort != "" {
+				<input type="hidden" name="sort" value={ board.Sort }/>
+			}
+			<label class="sr-only" for="feedback-search">Search requests</label>
+			<input id="feedback-search" type="search" name="q" value={ board.Query } placeholder="Search requests" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"/>
+		</form>
+	</div>
+}
+
+templ sortTab(c Center, sort, label string, board Board) {
+	<a
+		href={ Href(c, sortPath(sort)) }
+		if board.Sort == sort && (sort != "" || board.Query == "") {
+			aria-current="page"
+		}
+		class="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition-colors hover:text-text-primary aria-[current=page]:bg-background-primary-default aria-[current=page]:text-text-primary aria-[current=page]:shadow-xs"
+	>{ label }</a>
+}
+
+func sortPath(sort string) string {
+	if sort == "" {
+		return "/feedback"
+	}
+	return "/feedback?sort=" + sort
+}
+
+templ ideaRow(c Center, idea Idea) {
+	<li class="flex items-center gap-3 border-separator-border px-4 py-3 [&+&]:border-t">
+		<span class="grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary-default text-foreground-icon-secondary">
+			@Icon(ideaIcon(idea), "size-4")
+		</span>
+		<span class="min-w-0 flex-1">
+			if idea.Path != "" {
+				<a href={ Href(c, idea.Path) } class="block truncate text-body-medium hover:underline">{ idea.Title }</a>
+			} else {
+				<span class="block truncate text-body-medium">{ idea.Title }</span>
+			}
+			<span class="block truncate text-body-2-regular text-text-tertiary">{ idea.Details }</span>
+		</span>
+		if idea.Comments > 0 {
+			<span class="flex items-center gap-1 text-caption-1-medium tabular-nums text-text-tertiary max-sm:hidden">
+				@Icon("comment", "size-3.5")
+				{ strconv.Itoa(idea.Comments) }
+			</span>
+		}
+		@voteButton(c, idea)
+	</li>
+}
+
+func ideaIcon(idea Idea) string {
+	if idea.Icon == "" {
+		return "lightbulb"
+	}
+	return idea.Icon
+}
+
+templ voteButton(c Center, idea Idea) {
+	<form method="post" action={ Href(c, "/feedback/"+idea.Slug+"/votes") }>
+		<button
+			type="submit"
+			aria-label={ "Vote for " + idea.Title + ", " + strconv.Itoa(idea.Votes) + " votes" }
+			if idea.Voted {
+				aria-pressed="true"
+			}
+			class="flex h-12 w-11 cursor-pointer flex-col items-center justify-center rounded-xl border border-border-button-default bg-background-primary-default text-caption-1-semibold tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95 aria-pressed:border-transparent aria-pressed:bg-tint aria-pressed:text-link"
+		>
+			@Icon("vote", "size-4")
+			{ strconv.Itoa(idea.Votes) }
+		</button>
+	</form>
+}
+
+/*
+statusIcon draws a status as a ring that fills as requests move along:
+open while under consideration, dashed when planned, half full in
+progress, full once shipped and crossed out when closed.
+*/
+
+templ statusIcon(s Status) {
+	<svg viewBox="0 0 16 16" class="size-3.5 shrink-0" fill="none" stroke={ s.Color } stroke-width="1.6" aria-hidden="true">
+		switch s.Slug {
+			case "planned":
+				<circle cx="8" cy="8" r="6.2" stroke-dasharray="2.4 2"></circle>
+			case "in-progress":
+				<circle cx="8" cy="8" r="6.2"></circle>
+				<path d="M8 3.6a4.4 4.4 0 0 1 0 8.8Z" fill={ s.Color } stroke="none"></path>
+			case "shipped":
+				<circle cx="8" cy="8" r="6.2" fill={ s.Color }></circle>
+				<path d="m5.4 8.2 1.8 1.8 3.4-3.6" stroke="white"></path>
+			case "closed":
+				<circle cx="8" cy="8" r="6.2"></circle>
+				<path d="m5.8 5.8 4.4 4.4M10.2 5.8l-4.4 4.4"></path>
+			default:
+				<circle cx="8" cy="8" r="6.2"></circle>
+		}
+	</svg>
+}
+
+/*
+FeedbackSidebar lists the statuses with how many requests each holds,
+and a short invitation to suggest something.
+*/
+
+templ FeedbackSidebar(c Center, statuses []Status) {
+	<nav aria-label="Statuses" class="flex flex-col gap-0.5">
+		@SidebarHeading("Roadmap")
+		for _, s := range statuses {
+			<a href={ Href(c, "/feedback#"+s.Slug) } class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">
+				@statusIcon(s)
+				<span class="flex-1 truncate">{ s.Name }</span>
+				<span class="text-caption-1-medium tabular-nums text-text-tertiary">{ strconv.Itoa(s.Count) }</span>
+			</a>
+		}
+		@SidebarHeading("Your ideas")
+		@SidebarLink(c, "/feedback/new", "Submit an idea", "edit", "", 0, false)
+	</nav>
+}
+
+/*
+NewIdeaPage is the form a visitor suggests a feature with. When similar
+requests exist it shows them first, so the visitor can vote for one, or
+post theirs anyway.
+*/
+
+templ NewIdeaPage(c Center, statuses []Status, form IdeaForm, assets templ.Component) {
+	@Layout(c, Meta{Title: "Submit an idea | " + c.Product, Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}, {Title: "Submit an idea", Path: "/feedback/new"}}, NoIndex: true}, FeedbackSidebar(c, statuses), assets) {
+		<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
+			<h1 class="text-display-4-medium tracking-tight">Submit an idea</h1>
+			<p class="mt-2 text-title-3-regular text-text-secondary">Tell us what you'd like to do and what gets in the way today.</p>
+			if form.Error != "" {
+				<p role="alert" class="mt-6 rounded-xl border border-border-error-default px-4 py-3 text-body-regular text-text-error-primary">{ form.Error }</p>
+			}
+			if len(form.Similar) > 0 {
+				<section aria-labelledby="similar-title" class="mt-8 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+					<h2 id="similar-title" class="border-b border-separator-border bg-background-secondary-default px-4 py-2.5 text-body-2-semibold">Is it one of these? Vote for it instead.</h2>
+					<ul>
+						for _, idea := range form.Similar {
+							@ideaRow(c, idea)
+						}
+					</ul>
+				</section>
+			}
+			<form method="post" action={ Href(c, "/feedback") } class="mt-8 flex flex-col gap-5">
+				if len(form.Similar) > 0 {
+					<input type="hidden" name="sure" value="1"/>
+				}
+				<label class="flex flex-col gap-1.5">
+					<span class="text-body-medium">Title</span>
+					<input type="text" name="title" value={ form.Title } required maxlength="150" placeholder="Short, like “Export conversations to CSV”" class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"/>
+				</label>
+				<label class="flex flex-col gap-1.5">
+					<span class="text-body-medium">Details</span>
+					<textarea name="details" rows="6" placeholder="What are you trying to do? How do you work around it today?" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint">{ form.Details }</textarea>
+				</label>
+				<div class="flex items-center gap-3">
+					<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+						if len(form.Similar) > 0 {
+							Post mine anyway
+						} else {
+							Submit idea
+						}
+					</button>
+					<a href={ Href(c, "/feedback") } class="text-body-medium text-text-secondary hover:text-text-primary">Cancel</a>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+/*
+IdeaPage is one request on its own page: where it stands, its details,
+its votes, the update that shipped it, and the conversation under it.
+*/
+
+templ IdeaPage(c Center, statuses []Status, v IdeaView, assets templ.Component) {
+	@Layout(c, Meta{Title: v.Idea.Title + " | " + c.Product, Description: v.Idea.Details, Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}, {Title: v.Idea.Title, Path: v.Idea.Path}}, NoIndex: v.Pending}, FeedbackSidebar(c, statuses), assets) {
+		<article class="stagger mx-auto w-full max-w-[44rem] px-5 pt-12 pb-20 md:pt-16">
+			<div class="flex items-start gap-5">
+				@voteButton(c, v.Idea)
+				<div class="min-w-0 flex-1">
+					<span class="inline-flex items-center gap-1.5 rounded-full bg-background-secondary-default px-2.5 py-1 text-caption-1-medium text-text-secondary">
+						@statusIcon(v.Status)
+						{ v.Status.Name }
+					</span>
+					<h1 class="mt-3 text-display-4-medium tracking-tight text-balance">{ v.Idea.Title }</h1>
+					<p class="mt-2 text-body-2-regular text-text-tertiary">{ v.Author } · { v.Posted }</p>
+				</div>
+			</div>
+			if v.Pending {
+				<p role="status" class="mt-6 rounded-xl bg-background-secondary-default px-4 py-3 text-body-regular text-text-secondary">Only you can see this until the team approves it.</p>
+			}
+			if v.Update != "" {
+				<a href={ Href(c, v.Update) } class="mt-6 flex items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-4 py-3 text-body-medium transition-colors hover:border-border-button-hover">
+					@Icon("megaphone", "size-4 text-link")
+					Shipped. Read what's new
+					@Icon("arrow-right", "ms-auto size-4 text-foreground-icon-tertiary")
+				</a>
+			}
+			if v.Details != "" {
+				<div class="prose mt-8">
+					@templ.Raw(v.Details)
+				</div>
+			}
+			<section aria-labelledby="comments-title" class="mt-12 border-t border-separator-border pt-8">
+				<h2 id="comments-title" class="text-headline-semibold">Comments</h2>
+				if len(v.Comments) == 0 {
+					<p class="mt-3 text-body-regular text-text-tertiary">No comments yet.</p>
+				}
+				<ol class="mt-5 flex flex-col gap-5">
+					for _, cm := range v.Comments {
+						@comment(cm)
+					}
+				</ol>
+				if v.Commented {
+					<p role="status" class="mt-6 text-body-2-regular text-text-secondary">Thanks, your comment is up.</p>
+				}
+				if v.CanAct {
+					<form method="post" action={ Href(c, v.Idea.Path+"/comments") } class="mt-6 flex flex-col gap-3">
+						<label class="sr-only" for="comment-body">Add a comment</label>
+						<textarea id="comment-body" name="body" rows="3" required maxlength="5000" placeholder="Add a comment" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
+						<button type="submit" class="button-brand inline-flex h-9 cursor-pointer items-center self-start rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Comment</button>
+					</form>
+				} else if v.SignIn != "" {
+					<a href={ templ.SafeURL(v.SignIn) } class="mt-6 inline-flex h-9 items-center rounded-xl border border-border-button-default px-4 text-body-medium transition-colors hover:border-border-button-hover">Sign in to comment and vote</a>
+				}
+			</section>
+		</article>
+	}
+}
+
+templ comment(cm Comment) {
+	<li class="flex flex-col gap-1.5">
+		<p class="flex items-center gap-2 text-body-2-medium">
+			{ cm.Author }
+			if cm.FromTeam {
+				<span class="rounded-full bg-tint px-2 py-0.5 text-caption-2-medium text-link">Team</span>
+			}
+			<span class="text-caption-1-regular text-text-tertiary">{ cm.At }</span>
+		</p>
+		<p class="whitespace-pre-line text-body-regular text-text-secondary">{ cm.Body }</p>
+		if len(cm.Replies) > 0 {
+			<ol class="mt-2 flex flex-col gap-4 border-s border-separator-border ps-4">
+				for _, r := range cm.Replies {
+					@comment(r)
+				}
+			</ol>
+		}
+	</li>
+}

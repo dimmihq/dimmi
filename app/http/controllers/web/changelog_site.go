@@ -51,10 +51,10 @@ func emojiOf() map[string]views.Reaction {
 }
 
 /*
-realChangelog is a real help center's changelog as a request reaches it:
+liveSite is a real help center as a request reaches it:
 the page frame, the help center, and the reader when one is signed in.
 */
-type realChangelog struct {
+type liveSite struct {
 	center helpcenter.Center
 	help   models.HelpCenter
 	reader *ids.UUID
@@ -65,7 +65,7 @@ live finds the real help center the request names. Live is false when
 none answers, so the sample serves the page; ok is false when the
 request was already answered.
 */
-func (c ChangelogController) live(w fhttp.ResponseWriter, r *fhttp.Request) (out realChangelog, live, ok bool) {
+func (c *HelpCenterController) live(w fhttp.ResponseWriter, r *fhttp.Request) (out liveSite, live, ok bool) {
 	if c.Public == nil || c.Changelog == nil {
 		return out, false, true
 	}
@@ -82,7 +82,7 @@ func (c ChangelogController) live(w fhttp.ResponseWriter, r *fhttp.Request) (out
 		base = ""
 	}
 	center, _, shown := c.realSite(w, r, snap, base)
-	out = realChangelog{center: center, help: snap.HelpCenter}
+	out = liveSite{center: center, help: snap.HelpCenter}
 	if contact, _, signed := c.readerOf(r, snap.HelpCenter); signed {
 		out.reader = &contact
 	}

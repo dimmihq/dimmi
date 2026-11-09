@@ -139,7 +139,7 @@ conversations, and the files their pages show.
 func helpCenter(pages *routing.Router, a *app.App) {
 	hc := &web.HelpCenterController{
 		Library: a.HelpSample, Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Errors: a.Errors,
-		Changelog: a.Actions.ChangelogPublic, Subscribers: a.Actions.ChangelogSubscribers,
+		Changelog: a.Actions.ChangelogPublic, Subscribers: a.Actions.ChangelogSubscribers, Board: a.Actions.Feedback,
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 	}
@@ -179,6 +179,8 @@ func portalPages(get, post func(path, name string, h fhttp.HandlerFunc), portal 
 	get("/feedback/new", "hc.feedback.create", portal.NewIdea)
 	post("/feedback", "hc.feedback.store", portal.SubmitIdea)
 	post("/feedback/{idea}/votes", "hc.feedback.votes.store", portal.Vote)
+	get("/feedback/{idea}", "hc.feedback.show", portal.Idea)
+	post("/feedback/{idea}/comments", "hc.feedback.comments.store", portal.Comment)
 	get("/sign-in", "hc.sign-in", portal.SignIn)
 	post("/sign-in", "hc.sessions.store", portal.StartSession)
 	post("/sign-out", "hc.sessions.destroy", portal.EndSession)

@@ -5,7 +5,8 @@
 |
 | The API of a workspace's public docs and their changelog. Reading
 | articles takes articles:read and writing them articles:write; the
-| changelog takes changelog:read and changelog:write; changing a help
+| changelog takes changelog:read and changelog:write, feature requests
+| feedback:read and feedback:write; changing a help
 | center's address and look takes settings:write, and the actions check
 | the member may manage help centers.
 |
@@ -74,6 +75,7 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
 
 	changelogRoutes(workspace, a)
+	feedbackRoutes(workspace, a)
 
 	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
 	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
@@ -117,4 +119,34 @@ func changelogRoutes(workspace *routing.Router, a *app.App) {
 		Ability("changelog:read")
 	routing.Delete(workspace, "/changelog-subscribers/{subscriber}", "changelog-subscribers.destroy",
 		ex.DestroySubscriber).Ability("changelog:write").Status(fhttp.StatusNoContent)
+}
+
+/*
+feedbackRoutes declares the feature requests API: a help center's
+requests, their votes, comments and internal notes.
+*/
+func feedbackRoutes(workspace *routing.Router, a *app.App) {
+	fb := &v1.FeedbackController{Posts: a.Actions.Feedback, IDs: a.IDs}
+	ex := &v1.FeedbackExtrasController{Posts: a.Actions.Feedback, IDs: a.IDs}
+	one, post := "/help-centers/{help_center}", "/feedback-posts/{post}"
+
+	routing.Get(workspace, one+"/feedback-posts", "help-centers.feedback-posts.index", fb.Index).
+		Ability("feedback:read")
+	routing.Post(workspace, one+"/feedback-posts", "help-centers.feedback-posts.store", fb.Store).
+		Ability("feedback:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, post, "feedback-posts.show", fb.Show).Ability("feedback:read")
+	routing.Patch(workspace, post, "feedback-posts.update", fb.Update).Ability("feedback:write")
+	routing.Delete(workspace, post, "feedback-posts.destroy", fb.Destroy).
+		Ability("feedback:write").Status(fhttp.StatusNoContent)
+
+	routing.Get(workspace, post+"/votes", "feedback-posts.votes.index", ex.Voters).Ability("feedback:read")
+	routing.Post(workspace, post+"/votes", "feedback-posts.votes.store", ex.Vote).
+		Ability("feedback:write").Status(fhttp.StatusOK)
+	routing.Delete(workspace, post+"/votes/{contact}", "feedback-posts.votes.destroy", ex.Unvote).
+		Ability("feedback:write").Status(fhttp.StatusOK)
+	routing.Get(workspace, post+"/comments", "feedback-posts.comments.index", ex.Comments).Ability("feedback:read")
+	routing.Post(workspace, post+"/comments", "feedback-posts.comments.store", ex.StoreComment).
+		Ability("feedback:write").Status(fhttp.StatusCreated)
+	routing.Delete(workspace, "/feedback-comments/{comment}", "feedback-comments.destroy", ex.DestroyComment).
+		Ability("feedback:write").Status(fhttp.StatusNoContent)
 }

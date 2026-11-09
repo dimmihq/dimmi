@@ -12,32 +12,6 @@
 package helpcenter
 
 /*
-Status is a stage feature requests move through, with the hex color of
-its icon and how many requests are in it.
-*/
-type Status struct {
-	Name  string
-	Slug  string
-	Color string
-	Count int
-	Ideas []Idea
-}
-
-/*
-Idea is a feature request: what is asked for, how many voted for it and
-whether the signed-in visitor did, and how many comments it has.
-*/
-type Idea struct {
-	Slug     string
-	Title    string
-	Details  string
-	Icon     string
-	Votes    int
-	Voted    bool
-	Comments int
-}
-
-/*
 Conversation is one of the signed-in visitor's conversations with the
 team, as their inbox lists it and as its own page shows it.
 */

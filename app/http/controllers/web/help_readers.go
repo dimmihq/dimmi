@@ -75,10 +75,18 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 
 /*
 announce links the changelog from the help center's header once it has
-an entry, and returns the newest entries for the home page.
+an entry, and the feature requests once the board is open, and returns
+the newest entries for the home page.
 */
 func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, center *helpcenter.Center,
 ) []helpcenter.Update {
+	if helpcenters.SettingsOf(h).FeedbackBoard {
+		defer func() {
+			center.Sections = append(center.Sections, helpcenter.Section{
+				Key: "feedback", Name: "Feature requests", Icon: "lightbulb", Path: "/feedback",
+			})
+		}()
+	}
 	if c.Changelog == nil {
 		return nil
 	}

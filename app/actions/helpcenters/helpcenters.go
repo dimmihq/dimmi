@@ -55,7 +55,9 @@ HelpCenterSettings is how a help center looks and what its home page says.
 LoginURL is where readers sign in to the team's product, which sends them
 back signed in, so they can read what is kept to an audience.
 EmailSignIn says whether readers may sign in with a code mailed to them;
-unset means yes.
+unset means yes. FeedbackBoard opens the portal's feature requests to
+customers, and FeedbackApproval holds what customers post until the
+team approves it.
 */
 type HelpCenterSettings struct {
 	PrimaryColor string `json:"primary_color,omitempty"`
@@ -66,6 +68,9 @@ type HelpCenterSettings struct {
 	ContactURL   string `json:"contact_url,omitempty"`
 	LoginURL     string `json:"login_url,omitempty"`
 	EmailSignIn  *bool  `json:"email_sign_in,omitempty"`
+
+	FeedbackBoard    bool `json:"feedback_board,omitempty"`
+	FeedbackApproval bool `json:"feedback_approval,omitempty"`
 }
 
 /*

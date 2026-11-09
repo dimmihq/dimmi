@@ -5,10 +5,10 @@
 |
 | The parts of the public portal beside the help center and changelog:
 | feature requests and the visitor's own conversations with the team,
-| behind a sign-in. The sample portal signs anyone in who asks, with a
-| cookie that only says so, and keeps nothing a visitor submits: every
-| form returns to the page it belongs to, so the whole portal can be
-| tried end to end.
+| behind a sign-in. A real help center's feature requests are its own;
+| the sample portal signs anyone in who asks, with a cookie that only
+| says so, and keeps nothing a visitor submits: every form returns to
+| the page it belongs to, so the whole portal can be tried end to end.
 |
 */
 
@@ -39,38 +39,72 @@ type PortalController struct {
 Feedback lists the feature requests by status.
 */
 func (c PortalController) Feedback(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if site, live, ok := c.live(w, r); live || !ok {
+		if ok {
+			c.realBoard(w, r, site)
+		}
+
+		return
+	}
+
 	center, ok := c.center(w, r)
 	if !ok {
 		return
 	}
 
-	page := helpcenter.FeedbackPage(center, c.Library.Feedback(), r.URL.Query().Has("submitted"), c.styles())
-	c.respond(w, r, fhttp.StatusOK, page)
+	board := helpcenter.Board{Statuses: c.Library.Feedback(), Submitted: r.URL.Query().Has("submitted")}
+	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(center, board, c.styles()))
 }
 
 /*
 NewIdea shows the form to suggest a feature.
 */
 func (c PortalController) NewIdea(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if site, live, ok := c.live(w, r); live || !ok {
+		if ok {
+			c.realNewIdea(w, r, site)
+		}
+
+		return
+	}
+
 	center, ok := c.center(w, r)
 	if !ok {
 		return
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(center, c.Library.Feedback(), c.styles()))
+	page := helpcenter.NewIdeaPage(center, c.Library.Feedback(), helpcenter.IdeaForm{}, c.styles())
+	c.respond(w, r, fhttp.StatusOK, page)
 }
 
 /*
 SubmitIdea takes a suggestion and thanks the visitor on the list.
 */
 func (c PortalController) SubmitIdea(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if site, live, ok := c.live(w, r); live || !ok {
+		if ok {
+			c.realSubmit(w, r, site)
+		}
+
+		return
+	}
+
 	back(w, r.URL.Path+"?submitted")
 }
 
 /*
-Vote takes a vote for a request and returns to the list.
+Vote takes a vote for a request, or takes it back, and returns to the
+page the visitor voted from.
 */
 func (c PortalController) Vote(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if site, live, ok := c.live(w, r); live || !ok {
+		if ok {
+			c.realVote(w, r, site)
+		}
+
+		return
+	}
+
 	idea := "/" + r.PathValue("idea") + "/votes"
 	back(w, strings.TrimSuffix(r.URL.Path, idea))
 }

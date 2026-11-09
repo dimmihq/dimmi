@@ -73,7 +73,10 @@ func (l *Library) Feedback() []helpcenter.Status {
 	for _, s := range l.statuses {
 		v := helpcenter.Status{Name: s.Name, Slug: s.Slug, Color: s.Color, Count: len(s.Ideas)}
 		for _, idea := range s.Ideas {
-			v.Ideas = append(v.Ideas, helpcenter.Idea(idea))
+			v.Ideas = append(v.Ideas, helpcenter.Idea{
+				Slug: idea.Slug, Title: idea.Title, Details: idea.Details, Icon: idea.Icon, Votes: idea.Votes,
+				Voted: idea.Voted, Comments: idea.Comments,
+			})
 		}
 
 		out = append(out, v)

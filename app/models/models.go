@@ -963,6 +963,52 @@ type EventDefinition struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+type FeedbackComment struct {
+	ID              ids.UUID   `json:"id"`
+	WorkspaceID     ids.UUID   `json:"workspace_id"`
+	PostID          ids.UUID   `json:"post_id"`
+	ParentID        *ids.UUID  `json:"parent_id"`
+	AuthorContactID *ids.UUID  `json:"author_contact_id"`
+	AuthorMemberID  *ids.UUID  `json:"author_member_id"`
+	Body            string     `json:"body"`
+	Internal        bool       `json:"internal"`
+	DeletedAt       *time.Time `json:"deleted_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+}
+
+type FeedbackPost struct {
+	ID               ids.UUID   `json:"id"`
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	HelpCenterID     ids.UUID   `json:"help_center_id"`
+	Number           int32      `json:"number"`
+	Title            string     `json:"title"`
+	Slug             string     `json:"slug"`
+	BodyMarkdown     string     `json:"body_markdown"`
+	Status           string     `json:"status"`
+	Moderation       string     `json:"moderation"`
+	AuthorContactID  *ids.UUID  `json:"author_contact_id"`
+	AuthorMemberID   *ids.UUID  `json:"author_member_id"`
+	VoteCount        int32      `json:"vote_count"`
+	CommentCount     int32      `json:"comment_count"`
+	TrendingLog      *float64   `json:"trending_log"`
+	MergedIntoID     *ids.UUID  `json:"merged_into_id"`
+	ChangelogEntryID *ids.UUID  `json:"changelog_entry_id"`
+	StatusChangedAt  *time.Time `json:"status_changed_at"`
+	DeletedAt        *time.Time `json:"deleted_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	TitleTrgm        *string    `json:"title_trgm"`
+}
+
+type FeedbackVote struct {
+	PostID      ids.UUID  `json:"post_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	Priority    string    `json:"priority"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type HelpCenter struct {
 	ID              ids.UUID        `json:"id"`
 	WorkspaceID     ids.UUID        `json:"workspace_id"`
