@@ -47,7 +47,7 @@ func dataExportRoutes(r *routing.Router, a *app.App) {
 	acts := a.Actions.Inbox
 	c := &v1.DataExportController{
 		Request: acts.RequestDataExport, List: acts.ListDataExports, Show: acts.ShowDataExport,
-		Download: acts.DownloadDataExport, Remove: acts.DeleteDataExport, IDs: a.IDs,
+		Download: acts.DownloadDataExport, Remove: acts.DeleteDataExport, IDs: a.IDs, Clock: a.Clock,
 	}
 	path := "/data-exports/{data_export}"
 

@@ -6,9 +6,9 @@
 | The sanitize policy rendered Markdown passes through unless the caller
 | brings its own: the user content policy plus exactly the markup this
 | package writes itself. Heading ids in any script, the alert, footnote
-| and highlighting classes, the roles alerts and footnotes carry, lazy
-| image loading, and the disabled checkboxes of task lists. Anything
-| else in the output is removed.
+| and highlighting classes, the layout classes of pictures, the roles
+| alerts and footnotes carry, lazy image loading, and the disabled
+| checkboxes of task lists. Anything else in the output is removed.
 |
 */
 
@@ -25,7 +25,7 @@ Patterns for the attribute values this package writes.
 */
 const (
 	headingIDPattern = `^[\p{L}\p{N}_-]+$`
-	classPattern     = `^(?:(?:alert|chroma|footnote)[\w-]*)(?:\s+(?:alert|chroma|footnote)[\w-]*)*$`
+	classPattern     = `^(?:(?:alert|chroma|footnote|image)[\w-]*)(?:\s+(?:alert|chroma|footnote|image)[\w-]*)*$`
 	rolePattern      = `^(?:note|doc-noteref|doc-endnotes|doc-backlink)$`
 )
 

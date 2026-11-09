@@ -38,8 +38,8 @@ function MultiPick({
 
   return (
     <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button variant="secondary" size="small" trailingIcon={RiArrowDownSLine} aria-label={label}>
-        <span className="max-w-48 truncate">{names.length > 0 ? names.join(", ") : "Pick values"}</span>
+      <Button variant="secondary" trailingIcon={RiArrowDownSLine} aria-label={label} className="w-full justify-between">
+        <span className="min-w-0 truncate">{names.length > 0 ? names.join(", ") : "Pick values"}</span>
       </Button>
       <Popover aria-label={label} placement="bottom start" className="max-h-72 w-60 overflow-y-auto">
         {choices.length === 0 ? (
@@ -77,8 +77,7 @@ function OnePick({
   return (
     <Select
       aria-label={label}
-      size="sm"
-      className="w-44"
+      className="w-full"
       placeholder="Pick one"
       selectedKey={value || null}
       onSelectionChange={(key) => key !== null && onChange(String(key))}
@@ -96,9 +95,8 @@ function NumberInput({ label, value, onChange }: { label: string; value: unknown
   return (
     <Input
       aria-label={label}
-      size="small"
       inputMode="decimal"
-      className="w-24"
+      className="w-full min-w-16"
       value={typeof value === "number" ? String(value) : ""}
       onChange={(text) => {
         const n = Number(text);
@@ -126,8 +124,7 @@ function TextValue({
   return (
     <Input
       aria-label={label}
-      size="small"
-      className="w-44"
+      className="w-full"
       placeholder={shape === "list" ? "pro, team" : shape === "date" ? "2026-12-31" : "Value"}
       value={text}
       onChange={(next) => {
@@ -157,9 +154,9 @@ export function ValueInput({
   }
   if (shape === "days") {
     return (
-      <span className="flex items-center gap-2">
+      <span className="flex w-full items-center gap-2">
         <NumberInput label="Days" value={condition.value} onChange={onChange} />
-        <span className="text-body-2-regular text-text-secondary">{daysSuffix(condition.op)}</span>
+        <span className="shrink-0 text-body-2-regular text-text-secondary">{daysSuffix(condition.op)}</span>
       </span>
     );
   }
@@ -169,9 +166,9 @@ export function ValueInput({
   if (shape === "range") {
     const [lo, hi] = Array.isArray(condition.value) ? condition.value : [0, 0];
     return (
-      <span className="flex items-center gap-2">
+      <span className="flex w-full items-center gap-2">
         <NumberInput label="From" value={lo} onChange={(n) => onChange([n, hi])} />
-        <span className="text-body-2-regular text-text-secondary">and</span>
+        <span className="shrink-0 text-body-2-regular text-text-secondary">and</span>
         <NumberInput label="To" value={hi} onChange={(n) => onChange([lo, n])} />
       </span>
     );
@@ -199,9 +196,8 @@ export function WindowInput({ days, onChange }: { days: number | undefined; onCh
       <span className="text-body-2-regular text-text-secondary">in the last</span>
       <Input
         aria-label="Days"
-        size="small"
         inputMode="numeric"
-        className="w-16"
+        className="w-20"
         placeholder="any"
         value={text}
         onChange={(next) => {

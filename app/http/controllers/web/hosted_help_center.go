@@ -34,7 +34,7 @@ func HostedHelpCenters(addresses helpcenters.Addresses) fhttp.Middleware {
 	return func(next fhttp.Handler) fhttp.Handler {
 		return fhttp.HandlerFunc(func(w fhttp.ResponseWriter, r *fhttp.Request) {
 			sub := addresses.Subdomain(r.Host)
-			if sub == "" || strings.HasPrefix(r.URL.Path, "/build/") {
+			if sub == "" || strings.HasPrefix(r.URL.Path, "/build/") || strings.HasPrefix(r.URL.Path, "/help-images/") {
 				next.ServeHTTP(w, r)
 				return
 			}

@@ -5,7 +5,8 @@
 |
 | The API of saved audiences, previews and tests. Reading, previewing and
 | testing take the audiences:read ability; changing takes
-| audiences:write. The actions check the member's permissions, and
+| audiences:write. Tagging customers in bulk, from a list or by freezing
+| an audience, takes contacts:write. The actions check the member's permissions, and
 | testing a person also needs leave to read contacts.
 |
 */
@@ -46,4 +47,10 @@ func audienceRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, "/audience-evaluations", "audience-evaluations.store", pc.Evaluate).
 		Ability("audiences:read").Status(fhttp.StatusOK)
 	routing.Get(workspace, "/audience-fields", "audience-fields.index", pc.Fields).Ability("audiences:read")
+
+	lists := &v1.ContactListController{Lists: a.Actions.ContactLists, Audiences: a.Actions.Audiences, IDs: a.IDs}
+	routing.Post(workspace, one+"/freezes", "audiences.freezes.store", lists.Freeze).
+		Ability("contacts:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, "/contact-lists", "contact-lists.store", lists.Import).
+		Ability("contacts:write").Status(fhttp.StatusOK)
 }

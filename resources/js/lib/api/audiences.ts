@@ -5,9 +5,10 @@
  * and tests it on one person. Reading takes audiences:read; changing
  * takes audiences:manage, which the server checks.
  */
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
-import { request } from "./client";
+import { request, requestPage } from "./client";
+import { peoplePerPage, queryString } from "./customers";
 
 export type Visitors = "everyone" | "identified" | "leads" | "anonymous" | "anonymous_and_leads";
 
@@ -131,6 +132,25 @@ export interface BrowserContext {
 
 const path = (id: string) => `/audiences/${encodeURIComponent(id)}`;
 
+/*
+ * audiencesPageQuery is one numbered page of the audiences by name,
+ * searched by name, with how many match in all.
+ */
+export function audiencesPageQuery(workspace: string, q: string, page: number) {
+  const query = queryString([
+    ["q", q || undefined],
+    ["limit", String(peoplePerPage)],
+    ["page", String(page)],
+    ["total", "true"],
+  ]);
+
+  return queryOptions({
+    queryKey: ["workspace", workspace, "audiences", "page", q, page] as const,
+    queryFn: () => requestPage<Audience>(`/audiences?${query}`, { workspace }),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function audiencesQuery(workspace: string) {
   return queryOptions({
     queryKey: ["workspace", workspace, "audiences"],
@@ -193,4 +213,30 @@ export function evaluateAudience(
     { rules, contact_id: contactID, context },
     { workspace },
   );
+}
+
+/*
+ * TaggedList is what tagging customers in bulk did: the tag, how many
+ * matched, how many were newly tagged, and some values that named nobody.
+ */
+export interface TaggedList {
+  tag_id: string;
+  tag_name: string;
+  rows?: number;
+  matched: number;
+  tagged: number;
+  unmatched: number;
+  unmatched_sample: string[];
+}
+
+export function uploadContactList(workspace: string, tag: string, file: File): Promise<TaggedList> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("tag", tag);
+
+  return request<TaggedList>("POST", "/contact-lists", form, { workspace });
+}
+
+export function freezeAudience(workspace: string, id: string, tag: string): Promise<TaggedList> {
+  return request<TaggedList>("POST", `${path(id)}/freezes`, { tag }, { workspace });
 }

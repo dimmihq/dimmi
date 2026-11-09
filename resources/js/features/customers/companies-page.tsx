@@ -1,49 +1,52 @@
 /*
- * The companies the workspace's customers work at, searched by name or
- * domain, and a company's own page: its details, tags and notes, the
- * people who work there and their conversations.
+ * The companies the workspace's customers work at, in the data table
+ * block: how many match, search by name or domain, numbered pages, and
+ * how many people each has. Ticking companies lets a teammate tag them
+ * together with the inbox's tag picker. Opening one slides it in from the
+ * side, kept in the address. New company adds one by hand.
  */
-import { RiAddLine, RiBuilding2Line, RiSearchLine } from "@remixicon/react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useDeferredValue, useState } from "react";
+import { RiAddLine, RiSearchLine } from "@remixicon/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
+import { useDeferredValue, useState } from "react";
 
+import { DataTable } from "@/components/application/data-table/data-table";
 import { Button } from "@/components/base/buttons/button";
-import { Input } from "@/components/base/input/input";
+import { LinkButton } from "@/components/base/buttons/link-button";
+import { Input, InputBase } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/base/table/table";
-import { Textarea } from "@/components/base/textarea/textarea";
-import { show } from "@/features/inbox/customer/format";
-import { Copyable, Nothing, Row } from "@/features/inbox/customer/rows";
-import { TagChip } from "@/features/inbox/tags/tag-chip";
+import { toast } from "@/components/base/toast/toast";
 import { TagPicker } from "@/features/inbox/tags/tag-picker";
-import { EmptyState } from "@/features/shell/page";
 import { TableSkeleton } from "@/features/shell/table-skeleton";
 import { ApiError } from "@/lib/api/client";
 import {
   type Company,
-  companiesQuery,
-  companyConversationsQuery,
-  companyPeopleQuery,
-  companyQuery,
+  companiesPageQuery,
   createCompany,
+  peopleCap,
+  peoplePerPage,
   updateCompany,
 } from "@/lib/api/customers";
-import { CustomersFrame } from "./frame";
-import { personName, useWorkspace } from "./names";
-import { RecordConversations } from "./record-conversations";
+import { formatDate, formatNumber } from "@/lib/i18n/format";
 
-function NewCompanyDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+import { CompanyDrawer } from "./company-drawer";
+import { CustomersActions } from "./frame";
+import { useWorkspace } from "./names";
+import { CompanyName, Muted, Tags } from "./people-cells";
+
+function NewCompanyDialog({ isOpen, onClose }: { isOpen: boolean; onClose: (created?: string) => void }) {
   const workspace = useWorkspace();
   const client = useQueryClient();
-  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
   const create = useMutation({
     mutationFn: () => createCompany(workspace, { name: name.trim(), domain: domain.trim() || undefined }),
     onSuccess: async (company) => {
       await client.invalidateQueries({ queryKey: ["workspace", workspace, "companies"] });
-      await navigate({ to: "/d/customers/companies/$company", params: { company: company.id } });
+      setName("");
+      setDomain("");
+      onClose(company.id);
     },
   });
   const fields = create.error instanceof ApiError ? create.error.fields : {};
@@ -79,199 +82,153 @@ function NewCompanyDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
   );
 }
 
-export function CompaniesPage() {
+/*
+ * TagSelected tags the ticked companies, as the people list does.
+ */
+function TagSelected({ companies }: { companies: Company[] }) {
   const workspace = useWorkspace();
-  const [search, setSearch] = useState("");
-  const [adding, setAdding] = useState(false);
-  const q = useDeferredValue(search.trim());
-  const list = useInfiniteQuery({ ...companiesQuery(workspace, q), enabled: workspace !== "" });
-  const companies = list.data?.pages.flatMap((page) => page.items) ?? [];
+  const client = useQueryClient();
+  const shared = (companies[0]?.tags ?? []).filter((tag) =>
+    companies.every((company) => company.tags.some((other) => other.id === tag.id)),
+  );
+  const change = useMutation({
+    mutationFn: (changes: Parameters<typeof updateCompany>[2]) =>
+      Promise.all(companies.map((company) => updateCompany(workspace, company.id, changes))),
+    onSettled: () => client.invalidateQueries({ queryKey: ["workspace", workspace, "companies"] }),
+    onError: (error) => toast.error(error.message),
+  });
 
   return (
-    <CustomersFrame
-      actions={
+    <TagPicker
+      workspace={workspace}
+      size="medium"
+      label="Tag the selected companies"
+      selected={shared}
+      onAdd={(name) => change.mutate({ add_tags: [name] })}
+      onRemove={(tag) => change.mutate({ remove_tags: [tag.id] })}
+    />
+  );
+}
+
+const columns: ColumnDef<Company>[] = [
+  { id: "name", header: "Company", cell: ({ row }) => <CompanyName company={row.original} /> },
+  {
+    id: "domain",
+    header: "Domain",
+    cell: ({ row }) => <Muted ltr>{row.original.domain ?? "—"}</Muted>,
+  },
+  {
+    id: "people",
+    header: "People",
+    cell: ({ row }) => (
+      <span className="text-body-medium text-text-primary">{formatNumber(row.original.people_count ?? 0)}</span>
+    ),
+  },
+  { id: "tags", header: "Tags", cell: ({ row }) => <Tags tags={row.original.tags} /> },
+  {
+    id: "created",
+    header: "Added",
+    cell: ({ row }) => <Muted>{formatDate(row.original.created_at)}</Muted>,
+  },
+];
+
+const widths: Record<string, string> = {
+  name: "w-[260px]",
+  domain: "w-[260px]",
+  people: "w-[120px]",
+  tags: "w-[280px]",
+  created: "w-[160px]",
+};
+
+function totalText(total: number | undefined): string {
+  if (total === undefined) {
+    return "—";
+  }
+  const shown = total >= peopleCap ? `${formatNumber(peopleCap)}+` : formatNumber(total);
+
+  return `${shown} ${total === 1 ? "company" : "companies"}`;
+}
+
+export function CompaniesPage() {
+  const workspace = useWorkspace();
+  const navigate = useNavigate();
+  const { company: open } = useSearch({ strict: false }) as { company?: string };
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selection, setSelection] = useState<RowSelectionState>({});
+  const [adding, setAdding] = useState(false);
+  const q = useDeferredValue(search.trim());
+  const list = useQuery({ ...companiesPageQuery(workspace, q, page), enabled: workspace !== "" });
+  const companies = list.data?.items ?? [];
+  const total = list.data?.total;
+  const show = (company: string | undefined) =>
+    navigate({ to: ".", search: company ? { company } : {}, replace: company === undefined });
+
+  return (
+    <>
+      <CustomersActions>
         <Button size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
           New company
         </Button>
-      }
-    >
-      <div className="flex flex-col gap-3 px-4 pb-4">
-        <Input
-          aria-label="Search companies"
-          size="small"
-          className="w-64"
-          leadingIcon={RiSearchLine}
-          placeholder="Search by name or domain"
-          value={search}
-          onChange={setSearch}
-        />
-        <Table aria-label="Companies" size="sm" className="[&_th]:border-t-0">
-          <TableHeader>
-            <TableColumn isRowHeader>Name</TableColumn>
-            <TableColumn>Domain</TableColumn>
-            <TableColumn>Tags</TableColumn>
-          </TableHeader>
-          <TableBody
-            items={companies}
-            renderEmptyState={() =>
-              list.isPending ? (
-                <TableSkeleton />
-              ) : (
-                <p className="py-2 text-body-2-regular text-text-tertiary">No companies yet.</p>
-              )
-            }
-          >
-            {(company) => (
-              <TableRow id={company.id}>
-                <TableCell>
-                  <Link
-                    to="/d/customers/companies/$company"
-                    params={{ company: company.id }}
-                    className="rounded-md text-body-2-medium text-text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-                  >
-                    {company.name}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <span dir="ltr" className="text-body-2-regular text-text-secondary">
-                    {company.domain ?? "—"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="flex flex-wrap gap-1">
-                    {company.tags.map((tag) => (
-                      <TagChip key={tag.id} tag={tag} size="small" />
-                    ))}
-                  </span>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        {list.hasNextPage ? (
-          <Button variant="secondary" size="small" className="self-center" onClick={() => list.fetchNextPage()}>
-            Load more
-          </Button>
-        ) : null}
-      </div>
-      <NewCompanyDialog isOpen={adding} onClose={() => setAdding(false)} />
-    </CustomersFrame>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section
-      aria-label={title}
-      className="flex flex-col gap-2 rounded-3xl border border-border-button-default bg-background-primary-default p-4"
-    >
-      <h2 className="text-body-medium text-text-primary">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function CompanyDetails({ company }: { company: Company }) {
-  const workspace = useWorkspace();
-  const client = useQueryClient();
-  const write = useMutation({
-    mutationFn: (changes: Parameters<typeof updateCompany>[2]) => updateCompany(workspace, company.id, changes),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["workspace", workspace] }),
-  });
-  const [notes, setNotes] = useState(company.notes ?? "");
-
-  return (
-    <Card title="Details">
-      <dl className="flex flex-col">
-        <Row label="Domain">{company.domain ? <Copyable value={company.domain} label="domain" /> : "—"}</Row>
-        {company.external_id ? (
-          <Row label="Company id">
-            <Copyable value={company.external_id} label="company id" />
-          </Row>
-        ) : null}
-        {Object.entries(company.custom_attributes).map(([key, value]) => (
-          <Row key={key} label={<span className="truncate">{key}</span>}>
-            <Copyable value={show(value)} label={key} />
-          </Row>
-        ))}
-      </dl>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {company.tags.map((tag) => (
-          <TagChip key={tag.id} tag={tag} onRemove={() => write.mutate({ remove_tags: [tag.id] })} />
-        ))}
-        <TagPicker
-          workspace={workspace}
-          selected={company.tags}
-          onAdd={(tag) => write.mutate({ add_tags: [tag] })}
-          onRemove={(tag) => write.mutate({ remove_tags: [tag.id] })}
+      </CustomersActions>
+      <div className="h-full px-4 pb-4">
+        <DataTable
+          aria-label="Companies"
+          data={companies}
+          columns={columns}
+          getRowId={(company) => company.id}
+          total={list.isError ? list.error.message : totalText(total)}
+          toolbar={
+            <InputBase
+              aria-label="Search companies"
+              placeholder="Search"
+              leadingIcon={RiSearchLine}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+                setSelection({});
+              }}
+              fieldClassName="min-w-[153px] flex-1 rounded-full bg-background-secondary-default sm:w-[200px] sm:min-w-0 sm:flex-none"
+              className="text-body-medium"
+            />
+          }
+          selectionBar={(selected, clear) => (
+            <>
+              <span className="text-body-medium whitespace-nowrap text-text-secondary">
+                {formatNumber(selected.length)} selected
+              </span>
+              <TagSelected companies={companies.filter((company) => selected.includes(company.id))} />
+              <LinkButton variant="secondary" onClick={clear}>
+                Clear
+              </LinkButton>
+            </>
+          )}
+          selection={selection}
+          onSelectionChange={setSelection}
+          page={page}
+          pageCount={Math.ceil(Math.min(total ?? 0, peopleCap) / peoplePerPage)}
+          onPageChange={(next) => {
+            setPage(next);
+            setSelection({});
+          }}
+          onRowAction={(id) => show(id)}
+          widths={widths}
+          loading={list.isPending}
+          skeleton={<TableSkeleton />}
+          empty={q ? "No company matches." : "No companies yet."}
         />
       </div>
-      <Textarea
-        aria-label="Notes"
-        placeholder="Add a note only the team sees"
-        rows={3}
-        autoResize
-        maxRows={12}
-        maxLength={10000}
-        value={notes}
-        onChange={setNotes}
-        onBlur={() => {
-          const next = notes.trim() === "" ? null : notes;
-          if (next !== company.notes) {
-            write.mutate({ notes: next });
+      <NewCompanyDialog
+        isOpen={adding}
+        onClose={(created) => {
+          setAdding(false);
+          if (created) {
+            void show(created);
           }
         }}
       />
-    </Card>
-  );
-}
-
-export function CompanyPage({ id }: { id: string }) {
-  const workspace = useWorkspace();
-  const { data: company, isPending } = useQuery({ ...companyQuery(workspace, id), retry: false });
-  const { data: people = [] } = useQuery(companyPeopleQuery(workspace, id));
-  const { data: conversations = [] } = useQuery(companyConversationsQuery(workspace, id));
-
-  if (!company) {
-    return (
-      <CustomersFrame tabs={false}>
-        {isPending ? null : (
-          <EmptyState
-            icon={RiBuilding2Line}
-            title="Company not found"
-            description="It may have been deleted, or it belongs to another workspace."
-          />
-        )}
-      </CustomersFrame>
-    );
-  }
-
-  return (
-    <CustomersFrame tabs={false} title={company.name}>
-      <div className="grid gap-3 px-4 pb-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <CompanyDetails key={company.id} company={company} />
-        <div className="flex flex-col gap-3">
-          <Card title="People">
-            {people.length === 0 ? <Nothing>No one works here yet.</Nothing> : null}
-            <ul className="flex flex-col">
-              {people.map((person) => (
-                <li key={person.id} className="flex min-h-9 items-center">
-                  <Link
-                    to="/d/customers/$contact"
-                    params={{ contact: person.id }}
-                    className="truncate rounded-md text-body-2-regular text-text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-                  >
-                    {personName(person)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Card>
-          <Card title="Conversations">
-            <RecordConversations conversations={conversations} />
-          </Card>
-        </div>
-      </div>
-    </CustomersFrame>
+      <CompanyDrawer id={open} onClose={() => show(undefined)} />
+    </>
   );
 }

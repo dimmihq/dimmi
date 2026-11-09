@@ -20,6 +20,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/audiences"
 	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/auth"
+	"github.com/dimmihq/dimmi/app/actions/contactlists"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/events"
@@ -121,6 +122,7 @@ type Actions struct {
 	HelpCenters                *helpcenters.HelpCenters
 	Collections                *helpcenters.Collections
 	Articles                   *helpcenters.Articles
+	HelpImages                 *helpcenters.Images
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
 	HelpReaders                *helpcenters.Readers
@@ -130,6 +132,7 @@ type Actions struct {
 	Audiences                  *audiences.Audiences
 	Attributes                 *attributes.Definitions
 	Events                     *events.Events
+	ContactLists               *contactlists.Lists
 	WorkflowEngine             *engine.Engine
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy

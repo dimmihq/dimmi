@@ -6,11 +6,12 @@ const pages = [
   ["Workflows", "/d/workflows"],
   ["Procedures", "/d/procedures"],
   ["Agent", "/d/agent"],
-  ["Docs", "/d/docs"],
+  ["Help center", "/d/help-center"],
   ["Feature requests", "/d/feedback"],
   ["Changelog", "/d/changelog"],
-  ["Announcements", "/d/announcements"],
   ["Customers", "/d/customers"],
+  ["Broadcasts", "/d/broadcasts"],
+  ["Series", "/d/series"],
   ["Inbox", "/d/inbox/unassigned"],
 ] as const;
 
@@ -100,8 +101,8 @@ it.describe("the app's frame", () => {
     await page.getByRole("button", { name: "Collapse sidebar" }).click();
     await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Docs" }).click();
-    await expect(page).toHaveURL(/\/d\/[^/]+\/docs$/);
+    await page.getByRole("link", { name: "Help center" }).click();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/help-center$/);
 
     await page.getByRole("button", { name: "Expand sidebar" }).click();
     await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
@@ -109,11 +110,11 @@ it.describe("the app's frame", () => {
 
   it("moves the sidebar into a drawer on a phone", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("link", { name: "Docs" })).toBeHidden();
+    await expect(page.getByRole("link", { name: "Help center" })).toBeHidden();
 
     await page.getByRole("button", { name: "Open navigation" }).click();
-    await page.getByRole("dialog", { name: "Navigation" }).getByRole("link", { name: "Docs" }).click();
+    await page.getByRole("dialog", { name: "Navigation" }).getByRole("link", { name: "Help center" }).click();
 
-    await expect(page).toHaveURL(/\/d\/[^/]+\/docs$/);
+    await expect(page).toHaveURL(/\/d\/[^/]+\/help-center$/);
   });
 });

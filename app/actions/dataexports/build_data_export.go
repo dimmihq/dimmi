@@ -227,7 +227,7 @@ func renderContacts(ctx context.Context, q *models.Queries, row models.DataExpor
 	}
 
 	details, err := selectContacts(ctx, q, contactRead{
-		ws: row.WorkspaceID, sel: sel, limit: limits()[row.Kind][row.Format],
+		ws: row.WorkspaceID, sel: sel, limit: limits()[row.Kind][row.Format], now: row.CreatedAt,
 	})
 	if err != nil {
 		return nil, 0, err

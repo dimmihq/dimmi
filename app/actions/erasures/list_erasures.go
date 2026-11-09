@@ -23,9 +23,13 @@ import (
 )
 
 /*
-MaxListed is the most requests a list returns.
+MaxListed is the most requests one page returns, and TotalCap the most a
+count goes up to, so counting never scans a long history.
 */
-const MaxListed = 100
+const (
+	MaxListed = 100
+	TotalCap  = 10_000
+)
 
 /*
 ErasureInput is who reads the requests, and which one when reading one.
@@ -36,10 +40,32 @@ type ErasureInput struct {
 }
 
 /*
-ListErasures returns the workspace's newest requests.
+ListErasuresInput is who reads the requests and which page: Status
+narrows to one status, Offset skips that many rows, and Count asks how
+many match in all, up to TotalCap.
+*/
+type ListErasuresInput struct {
+	Membership authz.Membership
+	Status     *string
+	Limit      int
+	Offset     int
+	Count      bool
+}
+
+/*
+ErasurePage is one page of requests and, when asked, how many match.
+*/
+type ErasurePage struct {
+	Erasures []models.ContactErasure
+	Total    *int64
+}
+
+/*
+ListErasures returns a page of the workspace's requests, newest first.
 
 Rules:
   - The caller needs contacts:erase.
+  - A page holds at most MaxListed requests.
 
 Errors: [exceptions.ErrForbidden], or a wrapped database error.
 */
@@ -48,24 +74,42 @@ type ListErasures struct {
 }
 
 /*
-Handle returns the requests, newest first.
+Handle returns the page.
 */
-func (a *ListErasures) Handle(ctx context.Context, in ErasureInput) ([]models.ContactErasure, error) {
+func (a *ListErasures) Handle(ctx context.Context, in ListErasuresInput) (ErasurePage, error) {
 	if !in.Membership.Can("contacts:erase") {
-		return nil, exceptions.ErrForbidden
+		return ErasurePage{}, exceptions.ErrForbidden
 	}
 
-	var out []models.ContactErasure
+	limit := min(max(in.Limit, 1), MaxListed)
+
+	var out ErasurePage
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+
 		var err error
 
-		out, err = models.New(tx).ListContactErasures(ctx, models.ListContactErasuresParams{
-			WorkspaceID: in.Membership.Workspace.ID, RowLimit: MaxListed,
+		out.Erasures, err = q.ListContactErasures(ctx, models.ListContactErasuresParams{
+			WorkspaceID: in.Membership.Workspace.ID, Status: in.Status,
+			RowLimit: int64(limit), RowOffset: int64(in.Offset),
 		})
 		if err != nil {
 			return fmt.Errorf("list erasures: %w", err)
 		}
+
+		if !in.Count {
+			return nil
+		}
+
+		n, err := q.CountContactErasures(ctx, models.CountContactErasuresParams{
+			WorkspaceID: in.Membership.Workspace.ID, Status: in.Status, RowLimit: TotalCap,
+		})
+		if err != nil {
+			return fmt.Errorf("count erasures: %w", err)
+		}
+
+		out.Total = &n
 
 		return nil
 	})

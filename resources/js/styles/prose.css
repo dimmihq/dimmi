@@ -1,0 +1,484 @@
+/*
+ * How an article reads, shared by the public help center and the article
+ * writer in the dashboard, so what a teammate writes looks the way readers
+ * will see it. Article HTML carries no utility classes, so everything is
+ * styled here. Links follow --link, which the help center derives from its
+ * brand color and the writer from the help center's; .article-brand sets
+ * it inside the dashboard.
+ */
+.article-brand {
+  --brand: oklch(20% 0 0);
+  --link: oklch(from var(--brand) min(l, 0.5) c h);
+}
+
+.dark .article-brand {
+  --link: oklch(from var(--brand) max(l, 0.78) c h);
+}
+
+/*
+ * Article bodies. Reading text is 16/28 in the secondary text color with
+ * headings in the primary one, links in the brand, code in JetBrains Mono
+ * on the tertiary surface, and alerts as tinted asides.
+ */
+.prose {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.006em;
+  overflow-wrap: break-word;
+}
+
+.prose > * + * {
+  margin-top: 1.25rem;
+}
+
+.prose :is(h2, h3, h4) {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  scroll-margin-top: 6rem;
+}
+
+.prose h2 {
+  margin-top: 3rem;
+  font-size: 1.375rem;
+  line-height: 1.875rem;
+}
+
+.prose h3 {
+  margin-top: 2.25rem;
+  font-size: 1.125rem;
+  line-height: 1.625rem;
+}
+
+.prose h4 {
+  margin-top: 1.75rem;
+  font-size: 1rem;
+}
+
+.prose :is(h2, h3, h4) + * {
+  margin-top: 0.75rem;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--link);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--link) 35%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms;
+}
+
+.prose a:hover {
+  text-decoration-color: var(--link);
+}
+
+.prose :is(ul, ol) {
+  padding-inline-start: 1.375rem;
+}
+
+.prose ul {
+  list-style: disc;
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose li + li {
+  margin-top: 0.5rem;
+}
+
+.prose li::marker {
+  color: var(--color-text-tertiary);
+}
+
+.prose ol > li::marker {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose :not(pre) > code {
+  border: 1px solid var(--color-separator-border);
+  border-radius: 0.375rem;
+  background: var(--color-background-secondary-default);
+  padding: 0.0625rem 0.3125rem;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono-source), ui-monospace, monospace;
+  font-size: 0.8125em;
+}
+
+.prose pre {
+  border: 1px solid var(--color-separator-border);
+  border-radius: 1rem;
+  background: var(--color-background-secondary-default);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono-source), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.375rem;
+}
+
+.prose blockquote {
+  border-inline-start: 2px solid var(--color-separator-border);
+  padding-inline-start: 1rem;
+  font-style: italic;
+}
+
+.prose hr {
+  margin-block: 2.5rem;
+  border: 0;
+  border-top: 1px solid var(--color-separator-border);
+}
+
+.prose img {
+  border: 1px solid var(--color-separator-border);
+  border-radius: 1rem;
+}
+
+/* A picture's width, as a share of the column, and its place in it. */
+.prose .article-image {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.prose .image-width-20 {
+  width: 20%;
+}
+
+.prose .image-width-25 {
+  width: 25%;
+}
+
+.prose .image-width-30 {
+  width: 30%;
+}
+
+.prose .image-width-35 {
+  width: 35%;
+}
+
+.prose .image-width-40 {
+  width: 40%;
+}
+
+.prose .image-width-45 {
+  width: 45%;
+}
+
+.prose .image-width-50 {
+  width: 50%;
+}
+
+.prose .image-width-55 {
+  width: 55%;
+}
+
+.prose .image-width-60 {
+  width: 60%;
+}
+
+.prose .image-width-65 {
+  width: 65%;
+}
+
+.prose .image-width-70 {
+  width: 70%;
+}
+
+.prose .image-width-75 {
+  width: 75%;
+}
+
+.prose .image-width-80 {
+  width: 80%;
+}
+
+.prose .image-width-85 {
+  width: 85%;
+}
+
+.prose .image-width-90 {
+  width: 90%;
+}
+
+.prose .image-width-95 {
+  width: 95%;
+}
+
+.prose .image-width-100 {
+  width: 100%;
+}
+
+.prose img[class*="image-width-"] {
+  height: auto;
+}
+
+.prose .image-align-center {
+  display: block;
+  margin-inline: auto;
+}
+
+.prose .image-align-end {
+  display: block;
+  margin-inline-start: auto;
+}
+
+.prose .article-image[class*="image-width-"] {
+  max-width: none;
+}
+
+.prose .article-image img {
+  display: block;
+  width: 100%;
+  cursor: grab;
+}
+
+.prose .article-image[data-resizing] img {
+  cursor: ew-resize;
+}
+
+.prose table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+.prose :is(th, td) {
+  border-bottom: 1px solid var(--color-separator-border);
+  padding: 0.625rem 1rem 0.625rem 0;
+  text-align: start;
+  vertical-align: top;
+}
+
+.prose th {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.prose kbd {
+  border: 1px solid var(--color-border-button-default);
+  border-bottom-width: 2px;
+  border-radius: 0.375rem;
+  padding: 0 0.375rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.8125em;
+}
+
+.prose .alert {
+  border: 1px solid color-mix(in oklab, var(--alert) 22%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--alert) 7%, transparent);
+  padding: 0.875rem 1.125rem;
+  font-size: 0.9375rem;
+  line-height: 1.625rem;
+}
+
+.prose .alert > * + * {
+  margin-top: 0.5rem;
+}
+
+.prose .alert::before {
+  content: var(--alert-title);
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--alert);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.alert-note {
+  --alert: var(--color-blue-500);
+  --alert-title: "Note";
+}
+
+.alert-tip {
+  --alert: var(--color-green-600);
+  --alert-title: "Tip";
+}
+
+.alert-important {
+  --alert: var(--color-purple-500);
+  --alert-title: "Important";
+}
+
+.alert-warning {
+  --alert: var(--color-amber-600);
+  --alert-title: "Warning";
+}
+
+.alert-caution {
+  --alert: var(--color-red-500);
+  --alert-title: "Caution";
+}
+
+.prose input[type="checkbox"] {
+  margin-inline-end: 0.5rem;
+  accent-color: var(--brand);
+}
+
+/*
+Highlighted code. Colors come from Tailwind's palette at a darker step
+on light pages and a lighter one on dark pages, so every token keeps its
+contrast on the code block's surface.
+*/
+.prose pre {
+  --code-keyword: var(--color-purple-600);
+  --code-string: var(--color-emerald-700);
+  --code-name: var(--color-blue-600);
+  --code-tag: var(--color-rose-600);
+  --code-attribute: var(--color-amber-700);
+  --code-number: var(--color-orange-600);
+}
+
+.dark .prose pre {
+  --code-keyword: var(--color-purple-300);
+  --code-string: var(--color-emerald-300);
+  --code-name: var(--color-sky-300);
+  --code-tag: var(--color-rose-300);
+  --code-attribute: var(--color-amber-200);
+  --code-number: var(--color-orange-300);
+}
+
+.prose :is(.chroma-k, .chroma-kd, .chroma-kr, .chroma-kn, .chroma-kc, .chroma-kt) {
+  color: var(--code-keyword);
+}
+
+.prose :is(.chroma-s, .chroma-s1, .chroma-s2, .chroma-sb, .chroma-sx) {
+  color: var(--code-string);
+}
+
+.prose :is(.chroma-nf, .chroma-nb, .chroma-nc, .chroma-fm) {
+  color: var(--code-name);
+}
+
+.prose :is(.chroma-nt) {
+  color: var(--code-tag);
+}
+
+.prose :is(.chroma-na, .chroma-nv) {
+  color: var(--code-attribute);
+}
+
+.prose :is(.chroma-m, .chroma-mi, .chroma-mf) {
+  color: var(--code-number);
+}
+
+.prose :is(.chroma-c, .chroma-c1, .chroma-cm) {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.prose :is(.chroma-p, .chroma-o) {
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The writer's callout: the same aside, with its title as a control that
+ * picks the kind instead of a drawn label.
+ */
+.prose .callout::before {
+  content: none;
+}
+
+.prose .callout-title {
+  margin-bottom: 0.25rem;
+  color: var(--alert);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  user-select: none;
+}
+
+.prose .callout-kind {
+  border-radius: 0.375rem;
+  margin-inline: -0.25rem;
+  padding-inline: 0.25rem;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.prose .callout-kind:hover,
+.prose .callout-kind:focus-visible {
+  background: color-mix(in oklab, var(--alert) 12%, transparent);
+}
+
+.prose .callout [data-node-view-content] > * + * {
+  margin-top: 0.5rem;
+}
+
+.callout-dot {
+  background: var(--alert);
+}
+
+/*
+ * The writer's own marks on the page: the hint on an empty line, a
+ * selected picture or rule, and table cells that hold paragraphs.
+ */
+.prose .is-empty::before {
+  content: attr(data-placeholder);
+  float: inline-start;
+  height: 0;
+  color: var(--color-text-placeholder);
+  pointer-events: none;
+}
+
+.prose img.ProseMirror-selectednode,
+.prose .ProseMirror-selectednode .article-image img,
+.prose hr.ProseMirror-selectednode {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.prose :is(th, td) > p {
+  margin: 0;
+}
+
+.prose.ProseMirror :is(th, td) {
+  border: 1px solid var(--color-separator-border);
+  padding-inline: 0.75rem;
+  min-width: 6rem;
+}
+
+.prose .tableWrapper {
+  overflow-x: auto;
+}
+
+.prose .selectedCell {
+  background: color-mix(in oklab, var(--link) 8%, transparent);
+}
+
+.prose img[data-uploading] {
+  animation: image-uploading 1.6s ease-in-out infinite;
+}
+
+@keyframes image-uploading {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prose img[data-uploading] {
+    animation: none;
+    opacity: 0.6;
+  }
+}

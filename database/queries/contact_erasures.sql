@@ -15,11 +15,23 @@ SELECT * FROM contact_erasures WHERE workspace_id = @workspace_id AND id = @id;
 SELECT * FROM contact_erasures WHERE workspace_id = @workspace_id AND id = @id FOR UPDATE;
 
 -- name: ListContactErasures :many
--- ListContactErasures returns the workspace's requests, newest first.
+-- ListContactErasures returns a page of the workspace's requests, newest
+-- first, narrowed to one status when one is given.
 SELECT * FROM contact_erasures
 WHERE workspace_id = @workspace_id
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
 ORDER BY created_at DESC, id DESC
-LIMIT @row_limit;
+LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
+
+-- name: CountContactErasures :one
+-- CountContactErasures counts the requests ListContactErasures would
+-- list, up to the cap.
+SELECT count(*) FROM (
+SELECT 1 FROM contact_erasures
+WHERE workspace_id = @workspace_id
+  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
+LIMIT @row_limit::bigint
+) AS counted;
 
 -- name: SetContactErasureStatus :one
 UPDATE contact_erasures SET status = @status, updated_at = @now

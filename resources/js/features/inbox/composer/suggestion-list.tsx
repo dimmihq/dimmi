@@ -1,15 +1,22 @@
 /*
  * The list of suggestions above the caret while typing, such as emoji
- * after a colon. A click takes a match without moving the focus out of
- * the editor.
+ * after a colon, or below it when there is no room above. A long list
+ * scrolls and keeps the chosen match in view. A click takes a match
+ * without moving the focus out of the editor.
  */
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-import { MENU_POPOVER_SURFACE } from "@/components/base/dropdown/menu-styles";
+import { MENU_ITEM, MENU_ITEM_ACTIVE, MENU_POPOVER_SURFACE } from "@/components/base/dropdown/menu-styles";
 import { cx } from "@/utils/cx";
 
 import type { Suggested } from "./suggestion-extension";
+
+/*
+ * roomAbove is how far below the top of the window the caret must be for
+ * the list to open above it.
+ */
+const roomAbove = 340;
 
 export function SuggestionList<T>({
   label,
@@ -26,13 +33,21 @@ export function SuggestionList<T>({
     return null;
   }
   const { caret } = suggested;
+  const below = caret.top < roomAbove;
+  const place = below
+    ? { left: caret.left, top: caret.bottom + 6 }
+    : { left: caret.left, bottom: window.innerHeight - caret.top + 6 };
 
   return createPortal(
     <div
       role="listbox"
       aria-label={label}
-      style={{ left: caret.left, bottom: window.innerHeight - caret.top + 6 }}
-      className={cx(MENU_POPOVER_SURFACE, "fixed z-50 flex w-64 flex-col gap-0.5 p-1")}
+      style={place}
+      className={cx(
+        MENU_POPOVER_SURFACE,
+        "fixed flex max-h-80 w-72 flex-col gap-0.5 p-1.5 motion-safe:animate-menu-in",
+        below ? "origin-top-left" : "origin-bottom-left",
+      )}
     >
       {suggested.items.map((item, index) => (
         <div
@@ -40,14 +55,12 @@ export function SuggestionList<T>({
           role="option"
           tabIndex={-1}
           aria-selected={index === suggested.index}
+          ref={index === suggested.index ? (node) => node?.scrollIntoView({ block: "nearest" }) : undefined}
           onMouseDown={(event) => {
             event.preventDefault();
             suggested.pick(item);
           }}
-          className={cx(
-            "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-body-medium text-text-primary",
-            index === suggested.index && "bg-background-primary-hover",
-          )}
+          className={cx(MENU_ITEM, "py-1.5 text-body-medium", index === suggested.index && MENU_ITEM_ACTIVE)}
         >
           {render(item)}
         </div>

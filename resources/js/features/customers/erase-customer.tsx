@@ -1,16 +1,14 @@
 /*
- * Erasing a customer from their page. They disappear at once and are
+ * Erasing a customer, from the actions of their row. They disappear at once and are
  * wiped when the grace period ends, unless someone cancels from the
  * erasures list first. Skipping the grace period wipes them as soon as
  * the server gets to it, and asks for the password when the last proof
  * of who is at the keyboard is too old.
  */
-import { RiDeleteBin6Line } from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { useRecentAuth } from "@/features/settings/recent-auth";
@@ -20,13 +18,16 @@ import { type Contact, customerKeys, eraseContact } from "@/lib/api/customers";
 
 import { personName, useWorkspace } from "./names";
 
-export function EraseCustomer({ contact }: { contact: Contact }) {
+/*
+ * EraseDialog asks before erasing the customer and closes once they are
+ * gone or the member changes their mind.
+ */
+export function EraseDialog({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const workspace = useWorkspace();
   const client = useQueryClient();
   const navigate = useNavigate();
   const me = useAccount();
   const { run, prompt } = useRecentAuth(me.hasPassword);
-  const [open, setOpen] = useState(false);
   const [now, setNow] = useState(false);
   const [failure, setFailure] = useState<Error | null>(null);
   const name = personName(contact);
@@ -38,7 +39,7 @@ export function EraseCustomer({ contact }: { contact: Contact }) {
       if (!done) {
         return;
       }
-      setOpen(false);
+      onClose();
       client.removeQueries({ queryKey: customerKeys.contact(workspace, contact.id) });
       await navigate({ to: "/d/customers/erasures" });
       void client.invalidateQueries({ queryKey: ["workspace", workspace] });
@@ -50,12 +51,9 @@ export function EraseCustomer({ contact }: { contact: Contact }) {
 
   return (
     <>
-      <Button variant="danger-secondary" size="small" leadingIcon={RiDeleteBin6Line} onClick={() => setOpen(true)}>
-        Erase
-      </Button>
       <AlertDialog
-        isOpen={open}
-        onOpenChange={setOpen}
+        isOpen
+        onOpenChange={(open) => (open ? undefined : onClose())}
         title={`Erase ${name}?`}
         description="They disappear from the inbox now. Their messages, files and details are wiped after 7 days; until then you can cancel."
         confirmLabel="Erase customer"

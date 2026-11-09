@@ -17,12 +17,14 @@ it.describe("attributes", () => {
     const people = page.getByRole("region", { name: "People" });
     await expect(people).toContainText("seats · Number");
 
-    const add = page.getByRole("region", { name: "Add an attribute" });
+    await page.getByRole("button", { name: "New attribute" }).click();
+    const add = page.getByRole("dialog", { name: "New attribute" });
     await add.getByRole("textbox", { name: "Key" }).fill("tier");
-    await add.getByRole("button", { name: "Type" }).click();
+    await add.getByRole("button", { name: /Type/ }).click();
     await page.getByRole("option", { name: "List" }).click();
-    await add.getByRole("textbox", { name: "List values" }).fill("gold, silver");
+    await add.getByRole("textbox", { name: "Values" }).fill("gold, silver");
     await add.getByRole("button", { name: "Add attribute" }).click();
+    await expect(add).toBeHidden();
     await expect(people).toContainText("tier · List · gold, silver");
 
     await people.getByRole("button", { name: "Archive" }).first().click();

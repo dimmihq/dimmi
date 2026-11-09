@@ -9,8 +9,12 @@ import type { RefObject } from "react";
  * lock / focus trap that comes with a modal popover) also silently disables
  * its built-in outside-click-to-close behavior. This restores just that
  * piece manually: closes when a pointerdown lands outside every given ref
- * (typically the trigger + the popover's own content).
+ * (typically the trigger + the popover's own content). A press inside the
+ * list of a select, combobox or menu opened from within the popover is not
+ * outside it, though React Aria portals that list elsewhere in the page.
  */
+const nestedLists = '[data-trigger="Select"], [data-trigger="ComboBox"], [data-trigger="MenuTrigger"]';
+
 export function useDismissOnOutsidePress(
   isOpen: boolean,
   onDismiss: () => void,
@@ -22,6 +26,7 @@ export function useDismissOnOutsidePress(
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (refs.some((ref) => ref.current?.contains(target))) return;
+      if (target instanceof Element && target.closest(nestedLists)) return;
       onDismiss();
     };
 

@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
@@ -34,12 +35,17 @@ at the size limit, so a picture just under it is judged by its own bytes.
 const avatarUploadOverhead = 16 << 10
 
 /*
-Account declares the pages that serve pictures.
+Account declares the pages that serve pictures: people's and the ones
+placed in articles.
 */
 func Account(a *app.App) {
 	avatars := &web.AvatarController{Disks: a.Storage}
 
 	a.Router.Handle(fhttp.MethodGet, "/avatars/{file}", "avatars.show", fhttp.HandlerFunc(avatars.Show))
+
+	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
+	a.Router.Handle(fhttp.MethodGet, "/"+helpcenters.ImageDir+"/{file}", "help-images.show",
+		fhttp.HandlerFunc(images.Show))
 }
 
 /*

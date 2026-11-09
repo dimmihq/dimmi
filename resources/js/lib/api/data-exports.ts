@@ -37,6 +37,7 @@ export interface ExportSelection {
   ids?: string[];
   filter?: Record<string, string>;
   q?: string;
+  conditions?: string;
 }
 
 export interface ExportRequest {

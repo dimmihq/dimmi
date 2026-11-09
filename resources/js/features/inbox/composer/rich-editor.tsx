@@ -23,12 +23,12 @@ import {
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 
-import { Input } from "@/components/base/input/input";
-
 import { cx } from "@/utils/cx";
 
 import { composerExtensions } from "./composer-markdown";
+import { applyLink, syncContent, whenReady } from "./editor-helpers";
 import { type Emoji, findEmoji, loadEmoji } from "./emoji";
+import { LinkRow } from "./link-row";
 import type { Mentionable } from "./mentionable";
 import { type Suggested, suggestionExtension } from "./suggestion-extension";
 import { SuggestionList } from "./suggestion-list";
@@ -58,19 +58,6 @@ export interface RichEditorProps {
 }
 
 /*
- * applyLink puts a link over the selection, or removes it when the
- * address is empty.
- */
-function applyLink(editor: Editor, href: string) {
-  const chain = editor.chain().focus().extendMarkRange("link");
-  if (href.trim() === "") {
-    chain.unsetLink().run();
-    return;
-  }
-  chain.setLink({ href: href.trim() }).run();
-}
-
-/*
  * submitKey reads the send shortcuts: Cmd+Enter sends, with Shift it
  * also closes and with Alt it snoozes.
  */
@@ -83,34 +70,6 @@ function submitKey(event: KeyboardEvent): "send" | "close" | "snooze" | null {
   }
 
   return event.altKey ? "snooze" : "send";
-}
-
-/*
- * whenReady runs the step on the editor once it is set up, at once when
- * it already is, and returns what stops waiting.
- */
-function whenReady(editor: Editor | null, step: (ready: Editor) => unknown): () => void {
-  if (!editor || editor.isDestroyed) {
-    return () => undefined;
-  }
-  if (editor.isInitialized) {
-    step(editor);
-    return () => undefined;
-  }
-  const run = () => step(editor);
-  editor.on("create", run);
-
-  return () => editor.off("create", run);
-}
-
-/*
- * syncContent puts Markdown that changed outside the editor, such as a
- * draft from another device, into it without counting as typing.
- */
-function syncContent(editor: Editor, value: string) {
-  if (editor.getMarkdown() !== value) {
-    editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
-  }
 }
 
 export default function RichEditor({
@@ -325,44 +284,5 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
         </button>
       ))}
     </div>
-  );
-}
-
-/*
- * LinkRow asks for the address of a link; Enter applies it, Escape leaves
- * the text as it was, and an empty address removes the link.
- */
-function LinkRow({
-  initial,
-  onApply,
-  onCancel,
-}: {
-  initial: string;
-  onApply: (href: string) => void;
-  onCancel: () => void;
-}) {
-  const [href, setHref] = useState(initial);
-
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(href);
-      }}
-    >
-      <Input
-        size="small"
-        aria-label="Link address"
-        inputDir="ltr"
-        autoFocus
-        value={href}
-        onChange={setHref}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            onCancel();
-          }
-        }}
-      />
-    </form>
   );
 }

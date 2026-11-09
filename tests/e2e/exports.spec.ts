@@ -20,7 +20,8 @@ it.describe("data exports", () => {
     await page.goto("/d/inbox/all");
     await page.getByRole("button", { name: "Export conversations" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByRole("radio", { name: "Spreadsheet" }).click();
+    await dialog.getByText("Spreadsheet", { exact: true }).click();
+    await expect(dialog.getByRole("radio", { name: /Spreadsheet/ })).toBeChecked();
     await dialog.getByRole("button", { name: "Export", exact: true }).click();
     await expect(dialog.getByText("Export started")).toBeVisible();
     await dialog.getByRole("link", { name: "Go to Exports" }).click();

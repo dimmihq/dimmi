@@ -1,15 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { ContactProfile } from "@/features/customers/contact-profile";
-
+/*
+ * A customer's old address opens them in the drawer over the people list,
+ * so links from the inbox, mails and companies keep working.
+ */
 export const Route = createFileRoute("/d/customers/$contact")({
-  validateSearch: (search: Record<string, unknown>): { duplicates?: boolean } =>
-    search.duplicates === true || search.duplicates === "true" ? { duplicates: true } : {},
-  component: ContactRoute,
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/d/customers", search: { contact: params.contact }, replace: true });
+  },
 });
-
-function ContactRoute() {
-  const { contact } = Route.useParams();
-
-  return <ContactProfile key={contact} id={contact} />;
-}

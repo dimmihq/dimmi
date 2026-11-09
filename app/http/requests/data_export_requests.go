@@ -26,13 +26,15 @@ type StoreDataExportRequest struct {
 
 /*
 ExportSelection is what an export covers. Filter takes the same keys and
-values as the list's filter[...] parameters.
+values as the list's filter[...] parameters, and Conditions the contact
+list's conditions parameter.
 */
 type ExportSelection struct {
-	IDs    []string          `json:"ids,omitempty" validate:"max=10000"`
-	Filter map[string]string `json:"filter,omitempty"`
-	Q      string            `json:"q,omitempty"`
-	ViewID string            `json:"view_id,omitempty"`
+	IDs        []string          `json:"ids,omitempty"        validate:"max=10000"`
+	Filter     map[string]string `json:"filter,omitempty"`
+	Q          string            `json:"q,omitempty"`
+	ViewID     string            `json:"view_id,omitempty"`
+	Conditions string            `json:"conditions,omitempty" validate:"max=8000"`
 }
 
 /*

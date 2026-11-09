@@ -14,11 +14,19 @@ package routes
 
 import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 )
+
+/*
+imageUploadOverhead is room for the multipart framing around a picture
+at the size limit, so a picture just under it is judged by its own bytes.
+*/
+const imageUploadOverhead = 16 << 10
 
 /*
 helpCenterRoutes declares the help center API.
@@ -56,6 +64,13 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, article+"/publications", "articles.publications.store", art.Publish).
 		Ability("articles:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, article+"/versions", "articles.versions.index", art.Versions).Ability("articles:read")
+
+	extras := &v1.ArticleExtrasController{Articles: acts.Articles, Images: acts.HelpImages, IDs: a.IDs}
+	routing.Post(workspace, article+"/restorations", "articles.restorations.store", extras.Restore).
+		Ability("articles:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).
+		Ability("articles:write").Status(fhttp.StatusCreated).
+		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
 
 	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
 	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")

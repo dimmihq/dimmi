@@ -36,31 +36,36 @@ type ContactSelection struct {
 /*
 ContactFilters are the directory's filters, each narrowing only when
 set. Search matches names, addresses, phone numbers and external ids;
-Custom is a JSON object of custom attributes the customers must hold.
+Custom is a JSON object of custom attributes the customers must hold;
+Conditions is the contact list's checked conditions, and Audiences the
+saved audiences people must be in or out of.
 */
 type ContactFilters struct {
-	Kind          *string         `json:"kind,omitempty"`
-	Email         *string         `json:"email,omitempty"`
-	ExternalID    *string         `json:"external_id,omitempty"`
-	Blocked       *bool           `json:"blocked,omitempty"`
-	CompanyID     *ids.UUID       `json:"company_id,omitempty"`
-	TagIDs        []ids.UUID      `json:"tag_ids,omitempty"`
-	SeenAfter     *time.Time      `json:"seen_after,omitempty"`
-	SeenBefore    *time.Time      `json:"seen_before,omitempty"`
-	CreatedAfter  *time.Time      `json:"created_after,omitempty"`
-	CreatedBefore *time.Time      `json:"created_before,omitempty"`
-	Custom        json.RawMessage `json:"custom,omitempty"`
-	Search        string          `json:"search,omitempty"`
+	Kind          *string                  `json:"kind,omitempty"`
+	Email         *string                  `json:"email,omitempty"`
+	ExternalID    *string                  `json:"external_id,omitempty"`
+	Blocked       *bool                    `json:"blocked,omitempty"`
+	CompanyID     *ids.UUID                `json:"company_id,omitempty"`
+	TagIDs        []ids.UUID               `json:"tag_ids,omitempty"`
+	SeenAfter     *time.Time               `json:"seen_after,omitempty"`
+	SeenBefore    *time.Time               `json:"seen_before,omitempty"`
+	CreatedAfter  *time.Time               `json:"created_after,omitempty"`
+	CreatedBefore *time.Time               `json:"created_before,omitempty"`
+	Custom        json.RawMessage          `json:"custom,omitempty"`
+	Conditions    json.RawMessage          `json:"conditions,omitempty"`
+	Audiences     *contacts.AudienceFilter `json:"audiences,omitempty"`
+	Search        string                   `json:"search,omitempty"`
 }
 
 /*
-contactRead is one read of a contact selection: in which workspace, and
-how many rows at most.
+contactRead is one read of a contact selection: in which workspace, how
+many rows at most, and the moment audiences are judged at.
 */
 type contactRead struct {
 	ws    ids.UUID
 	sel   ContactSelection
 	limit int
+	now   time.Time
 }
 
 /*
@@ -74,14 +79,21 @@ func countContacts(ctx context.Context, q *models.Queries, r contactRead) (int, 
 		return len(rows), err
 	}
 
+	if r.sel.Filters.Audiences != nil {
+		r.limit = countCap
+		rows, err := filteredContacts(ctx, q, r)
+
+		return len(rows), err
+	}
+
 	f := r.sel.Filters
 
 	n, err := q.CountContacts(ctx, models.CountContactsParams{
 		WorkspaceID: r.ws, Kind: f.Kind, Email: contacts.NormalizeEmail(f.Email), ExternalID: f.ExternalID,
 		Blocked: f.Blocked, CompanyID: f.CompanyID, TagIds: f.TagIDs, LastSeenAfter: f.SeenAfter,
 		LastSeenBefore: f.SeenBefore, CreatedAfter: f.CreatedAfter, CreatedBefore: f.CreatedBefore,
-		Custom: f.Custom, Search: contacts.LikePattern(f.Search), Terms: searchquery.Parse(f.Search).TSQuery,
-		RowLimit: countCap,
+		Custom: f.Custom, Conditions: f.Conditions, Search: contacts.LikePattern(f.Search),
+		Terms: searchquery.Parse(f.Search).TSQuery, RowLimit: countCap,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count contacts: %w", err)
@@ -97,15 +109,7 @@ most recently seen first.
 func selectContacts(ctx context.Context, q *models.Queries, r contactRead) ([]contacts.Detail, error) {
 	rows, err := pickedContacts(ctx, q, r.ws, r.sel.IDs)
 	if r.sel.Filters != nil {
-		f := r.sel.Filters
-
-		rows, err = q.ListContacts(ctx, models.ListContactsParams{
-			WorkspaceID: r.ws, Kind: f.Kind, Email: contacts.NormalizeEmail(f.Email), ExternalID: f.ExternalID,
-			Blocked: f.Blocked, CompanyID: f.CompanyID, TagIds: f.TagIDs, LastSeenAfter: f.SeenAfter,
-			LastSeenBefore: f.SeenBefore, CreatedAfter: f.CreatedAfter, CreatedBefore: f.CreatedBefore,
-			Custom: f.Custom, Search: contacts.LikePattern(f.Search), Terms: searchquery.Parse(f.Search).TSQuery,
-			Sort: "last_seen_at", RowLimit: int64(r.limit),
-		})
+		rows, err = filteredContacts(ctx, q, r)
 	}
 
 	if err != nil {
@@ -113,6 +117,36 @@ func selectContacts(ctx context.Context, q *models.Queries, r contactRead) ([]co
 	}
 
 	return contacts.LoadDetails(ctx, q, rows)
+}
+
+/*
+filteredContacts lists up to limit customers the filters keep, most
+recently seen first; when they name audiences, every other filter
+narrows first and the audiences judge the rest.
+*/
+func filteredContacts(ctx context.Context, q *models.Queries, r contactRead) ([]models.Contact, error) {
+	f := r.sel.Filters
+	limit := r.limit
+	if f.Audiences != nil {
+		limit = contacts.AudienceScanCap
+	}
+
+	rows, err := q.ListContacts(ctx, models.ListContactsParams{
+		WorkspaceID: r.ws, Kind: f.Kind, Email: contacts.NormalizeEmail(f.Email), ExternalID: f.ExternalID,
+		Blocked: f.Blocked, CompanyID: f.CompanyID, TagIds: f.TagIDs, LastSeenAfter: f.SeenAfter,
+		LastSeenBefore: f.SeenBefore, CreatedAfter: f.CreatedAfter, CreatedBefore: f.CreatedBefore,
+		Custom: f.Custom, Conditions: f.Conditions, Search: contacts.LikePattern(f.Search),
+		Terms: searchquery.Parse(f.Search).TSQuery, Sort: "last_seen_at", RowLimit: int64(limit),
+	})
+	if err != nil || f.Audiences == nil {
+		return rows, err
+	}
+
+	kept, err := contacts.InAudiences(ctx, q, contacts.Judging{
+		WorkspaceID: r.ws, Now: r.now, Rows: rows, Filter: *f.Audiences,
+	})
+
+	return kept[:min(len(kept), r.limit)], err
 }
 
 /*

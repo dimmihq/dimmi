@@ -49,7 +49,7 @@ func bootInbox(a *app.App) error {
 		UpdateInbox:    &inboxes.UpdateInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		SetInboxAccess: &inboxes.SetInboxAccess{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		DeleteInbox:    &inboxes.DeleteInbox{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		ListContacts:   &contacts.ListContacts{DB: a.DB},
+		ListContacts:   &contacts.ListContacts{DB: a.DB, Clock: a.Clock},
 		ShowContact:    &contacts.ShowContact{DB: a.DB},
 		CreateContact:  &contacts.CreateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		UpdateContact:  &contacts.UpdateContact{DB: a.DB, Events: a.Events, Clock: a.Clock},

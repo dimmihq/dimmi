@@ -209,14 +209,12 @@ export function ViewEditor({
         ) : null}
         {refusal ? <p className="text-body-2-regular text-text-error-primary">{refusal}</p> : null}
       </DrawerBody>
-      <DrawerFooter className="justify-between">
+      <DrawerFooter>
         {view ? (
           <Button variant="danger-secondary" leadingIcon={RiDeleteBinLine} onClick={() => remove.mutate()}>
             Delete
           </Button>
-        ) : (
-          <span />
-        )}
+        ) : null}
         <Button onClick={() => save.mutate()} loading={save.isPending} disabled={name.trim() === ""}>
           Save view
         </Button>

@@ -92,7 +92,10 @@ describe("event conditions", () => {
     const count = { field: "event.report.exported.count", op: "gte", value: 3, within_days: 7 };
 
     expect(fieldName("event.report.exported.last_at")).toBe("report.exported: last time");
-    expect(fieldGroup("event.x.count")).toBe("Activity");
+    expect(fieldGroup("event.x.count")).toBe("Your events");
+    expect(fieldGroup("contact.custom.plan")).toBe("Your person attributes");
+    expect(fieldGroup("company.custom.seats")).toBe("Your company attributes");
+    expect(fieldGroup("contact.email")).toBe("Person");
     expect(sentence(count)).toBe("report.exported: times is at least 3 in the last 7 days");
     expect(withWindow(count, undefined)).toEqual({ field: "event.report.exported.count", op: "gte", value: 3 });
     expect(withOp(count, "lt", "number").within_days).toBe(7);

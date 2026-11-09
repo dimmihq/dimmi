@@ -59,6 +59,7 @@ export function TagPicker({
   onRemove,
   shortcut = false,
   label,
+  size = "small",
 }: {
   workspace: string;
   selected: Tag[];
@@ -66,6 +67,7 @@ export function TagPicker({
   onRemove: (tag: Tag) => void;
   shortcut?: boolean;
   label?: string;
+  size?: "small" | "medium";
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -90,7 +92,7 @@ export function TagPicker({
 
   return (
     <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button variant="secondary" size="small" leadingIcon={RiPriceTag3Line} aria-label={label}>
+      <Button variant="secondary" size={size} leadingIcon={RiPriceTag3Line} aria-label={label}>
         Add tag
       </Button>
       <Popover aria-label="Tags" placement="bottom end" className="w-64">

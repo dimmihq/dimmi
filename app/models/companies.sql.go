@@ -55,6 +55,88 @@ func (q *Queries) CompaniesByIDs(ctx context.Context, arg CompaniesByIDsParams) 
 	return items, nil
 }
 
+const countCompanies = `-- name: CountCompanies :one
+SELECT count(*) FROM (
+SELECT 1 FROM companies AS c
+WHERE c.workspace_id = $1
+  AND c.deleted_at IS NULL
+  AND (
+      $2::text IS NULL
+      OR strpos(lower(c.name), lower($2::text)) > 0
+      OR strpos(lower(coalesce(c.domain::text, '')), lower($2::text)) > 0
+  )
+  AND (
+      coalesce(cardinality($3::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.company_id FROM company_tag AS ct
+          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($3::uuid[])
+          GROUP BY ct.company_id
+          HAVING count(*) = cardinality($3::uuid[])
+      )
+  )
+LIMIT $4::bigint
+) AS counted
+`
+
+type CountCompaniesParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Search      *string    `json:"search"`
+	TagIds      []ids.UUID `json:"tag_ids"`
+	RowLimit    int64      `json:"row_limit"`
+}
+
+// CountCompanies counts the companies ListCompanies would list, up to
+// the cap.
+func (q *Queries) CountCompanies(ctx context.Context, arg CountCompaniesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCompanies,
+		arg.WorkspaceID,
+		arg.Search,
+		arg.TagIds,
+		arg.RowLimit,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countCompanyPeople = `-- name: CountCompanyPeople :many
+SELECT company_id::uuid AS company_id, count(*) AS people FROM contacts
+WHERE workspace_id = $1 AND company_id = ANY ($2::uuid[])
+  AND deleted_at IS NULL AND merged_into_id IS NULL
+GROUP BY company_id
+`
+
+type CountCompanyPeopleParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	CompanyIds  []ids.UUID `json:"company_ids"`
+}
+
+type CountCompanyPeopleRow struct {
+	CompanyID ids.UUID `json:"company_id"`
+	People    int64    `json:"people"`
+}
+
+// CountCompanyPeople counts the live contacts of each company given.
+func (q *Queries) CountCompanyPeople(ctx context.Context, arg CountCompanyPeopleParams) ([]CountCompanyPeopleRow, error) {
+	rows, err := q.db.Query(ctx, countCompanyPeople, arg.WorkspaceID, arg.CompanyIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountCompanyPeopleRow
+	for rows.Next() {
+		var i CountCompanyPeopleRow
+		if err := rows.Scan(&i.CompanyID, &i.People); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies (workspace_id, external_id, name, domain, custom_attributes, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $6)
@@ -254,7 +336,7 @@ WHERE c.workspace_id = $1
       OR (c.created_at, c.id) < ($5::timestamptz, $4::uuid)
   )
 ORDER BY c.created_at DESC, c.id DESC
-LIMIT $6::bigint
+LIMIT $7::bigint OFFSET $6::bigint
 `
 
 type ListCompaniesParams struct {
@@ -263,6 +345,7 @@ type ListCompaniesParams struct {
 	TagIds          []ids.UUID `json:"tag_ids"`
 	BeforeID        *ids.UUID  `json:"before_id"`
 	BeforeCreatedAt *time.Time `json:"before_created_at"`
+	RowOffset       int64      `json:"row_offset"`
 	RowLimit        int64      `json:"row_limit"`
 }
 
@@ -277,6 +360,7 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 		arg.TagIds,
 		arg.BeforeID,
 		arg.BeforeCreatedAt,
+		arg.RowOffset,
 		arg.RowLimit,
 	)
 	if err != nil {

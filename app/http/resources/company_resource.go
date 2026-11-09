@@ -19,7 +19,8 @@ import (
 )
 
 /*
-Company is one company.
+Company is one company. PeopleCount is how many contacts it has, given
+only in lists.
 */
 type Company struct {
 	ID               string          `json:"id"`
@@ -30,6 +31,7 @@ type Company struct {
 	CustomAttributes json.RawMessage `json:"custom_attributes"`
 	Notes            *string         `json:"notes"`
 	Tags             []Tag           `json:"tags"`
+	PeopleCount      *int64          `json:"people_count,omitempty"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
 }

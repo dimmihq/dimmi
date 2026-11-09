@@ -4,7 +4,7 @@
  * company queries are cached under the workspace, so a change made here
  * refreshes every screen that shows the same record.
  */
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 
 import { request, requestPage } from "./client";
 import type { Conversation } from "./inbox";
@@ -137,6 +137,7 @@ export interface Company extends CompanySummary {
   custom_attributes: Attributes;
   notes: string | null;
   tags: Tag[];
+  people_count?: number;
   created_at: string;
 }
 
@@ -147,49 +148,34 @@ export interface NewContact {
 }
 
 /*
- * Since is a window back from now: within the last day, week or month,
- * or longer ago than a month.
- */
-export type Since = "day" | "week" | "month" | "older";
-
-/*
  * PeopleFilters narrows the people list: q searches names, addresses and
- * phone numbers; seen and created are windows back from the moment the
- * page is fetched; attribute matches one custom attribute; the rest map
- * to the list's filters.
+ * phone numbers; conditions are the filter chips, each a field, how it
+ * compares and its value or values, checked by the server.
  */
 export interface PeopleFilters {
   q?: string;
-  kind?: "user" | "lead";
-  tag?: string;
-  company?: string;
   blocked?: boolean;
-  seen?: Since;
-  created?: Since;
-  attribute?: { key: string; value: string };
+  conditions?: Condition[];
   sort?: "last_seen_at" | "-created_at" | "name";
 }
 
-const sinceDays: Record<Since, number> = { day: 1, week: 7, month: 30, older: 30 };
-
 /*
- * windowFilter turns a window into the after or before bound of the
- * named time filter.
+ * Condition is one filter as the server reads it. Type is a custom
+ * attribute's type; days counts back from now for the time fields.
  */
-function windowFilter(name: string, since: Since | undefined, now: number): [string, string | undefined] {
-  if (!since) {
-    return [`filter[${name}_after]`, undefined];
-  }
-
-  const at = new Date(now - sinceDays[since] * 86_400_000).toISOString();
-
-  return [`filter[${name}_${since === "older" ? "before" : "after"}]`, at];
+export interface Condition {
+  field: string;
+  op: string;
+  value?: string;
+  values?: string[];
+  type?: string;
+  days?: number;
 }
 
 /*
  * queryString writes the parameters that have a value.
  */
-function queryString(entries: [string, string | undefined][]): string {
+export function queryString(entries: [string, string | undefined][]): string {
   const params = new URLSearchParams();
   for (const [key, value] of entries) {
     if (value) {
@@ -206,13 +192,8 @@ function queryString(entries: [string, string | undefined][]): string {
  */
 function peopleFilters(filters: PeopleFilters): [string, string | undefined][] {
   return [
-    ["filter[kind]", filters.kind],
-    ["filter[tag]", filters.tag],
-    ["filter[company]", filters.company],
     ["filter[blocked]", filters.blocked ? "true" : undefined],
-    windowFilter("last_seen", filters.seen, Date.now()),
-    windowFilter("created", filters.created, Date.now()),
-    [`filter[custom.${filters.attribute?.key ?? ""}]`, filters.attribute?.value],
+    ["conditions", filters.conditions?.length ? JSON.stringify(filters.conditions) : undefined],
   ];
 }
 
@@ -229,18 +210,47 @@ function peoplePath(filters: PeopleFilters, cursor: string | null): string {
 }
 
 /*
+ * peoplePage is one numbered page of the directory, with how many people
+ * match in all, counted up to peopleCap.
+ */
+export function peoplePageQuery(workspace: string, filters: PeopleFilters, page: number) {
+  const entries: [string, string | undefined][] = [
+    ["q", filters.q],
+    ...peopleFilters(filters),
+    ["sort", filters.sort],
+    ["limit", String(peoplePerPage)],
+    ["page", String(page)],
+    ["total", "true"],
+  ];
+
+  return queryOptions({
+    queryKey: [...customerKeys.contacts(workspace), "page", filters, page] as const,
+    queryFn: () => requestPage<Contact>(`/contacts?${queryString(entries)}`, { workspace }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/*
+ * peoplePerPage is how many people a directory page shows; peopleCap is
+ * the most the server counts.
+ */
+export const peoplePerPage = 25;
+export const peopleCap = 10_000;
+
+/*
  * peopleSelection is what an export of the directory's current list
  * covers: its filters and search.
  */
-export function peopleSelection(filters: PeopleFilters): { filter: Record<string, string>; q?: string } {
-  const filter: Record<string, string> = {};
-  for (const [key, value] of peopleFilters(filters)) {
-    if (value) {
-      filter[key.slice("filter[".length, -1)] = value;
-    }
-  }
-
-  return filters.q ? { filter, q: filters.q } : { filter };
+export function peopleSelection(filters: PeopleFilters): {
+  filter: Record<string, string>;
+  q?: string;
+  conditions?: string;
+} {
+  return {
+    filter: filters.blocked ? { blocked: "true" } : {},
+    ...(filters.q ? { q: filters.q } : {}),
+    ...(filters.conditions?.length ? { conditions: JSON.stringify(filters.conditions) } : {}),
+  };
 }
 
 export function peopleQuery(workspace: string, filters: PeopleFilters) {
@@ -293,6 +303,25 @@ export function companiesQuery(workspace: string, q: string) {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.next,
+  });
+}
+
+/*
+ * companiesPageQuery is one numbered page of the companies, with how many
+ * match in all, counted up to peopleCap.
+ */
+export function companiesPageQuery(workspace: string, q: string, page: number) {
+  const query = queryString([
+    ["q", q || undefined],
+    ["limit", String(peoplePerPage)],
+    ["page", String(page)],
+    ["total", "true"],
+  ]);
+
+  return queryOptions({
+    queryKey: ["workspace", workspace, "companies", "page", q, page] as const,
+    queryFn: () => requestPage<Company>(`/companies?${query}`, { workspace }),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -352,10 +381,22 @@ export const erasureKeys = {
   all: (workspace: string) => ["workspace", workspace, "contact-erasures"] as const,
 };
 
-export function erasuresQuery(workspace: string) {
+/*
+ * erasuresPageQuery is one numbered page of the erasure requests, newest
+ * first, narrowed to one status when given, with how many match in all.
+ */
+export function erasuresPageQuery(workspace: string, status: ContactErasure["status"] | undefined, page: number) {
+  const query = queryString([
+    ["filter[status]", status],
+    ["limit", String(peoplePerPage)],
+    ["page", String(page)],
+    ["total", "true"],
+  ]);
+
   return queryOptions({
-    queryKey: erasureKeys.all(workspace),
-    queryFn: () => request<ContactErasure[]>("GET", "/contact-erasures", undefined, { workspace }),
+    queryKey: [...erasureKeys.all(workspace), "page", status ?? "", page] as const,
+    queryFn: () => requestPage<ContactErasure>(`/contact-erasures?${query}`, { workspace }),
+    placeholderData: keepPreviousData,
   });
 }
 

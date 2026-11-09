@@ -47,22 +47,65 @@ type AudienceOutput struct {
 }
 
 /*
-Index lists the saved audiences.
+Index lists the saved audiences. With page=N it answers that numbered
+page instead, searched by name with q and counted with total=true;
+without one it answers every audience, for pickers.
 */
 func (c *AudienceController) Index(ctx context.Context, _ *requests.NoInput) (*AudiencesOutput, error) {
+	r, _ := fhttp.RequestFrom(ctx)
+	if r.URL.Query().Get("page") != "" {
+		return c.page(ctx)
+	}
+
 	rows, err := c.Audiences.List(ctx, membership(ctx))
 	if err != nil {
 		return nil, err
 	}
 
+	page := pagination.Page[resources.Audience]{Items: audienceItems(rows), Limit: 500}
+
+	return &AudiencesOutput{Body: fhttp.NewCollection(page)}, nil
+}
+
+/*
+page answers one numbered page of audiences.
+*/
+func (c *AudienceController) page(ctx context.Context) (*AudiencesOutput, error) {
+	r, _ := fhttp.RequestFrom(ctx)
+
+	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{})
+	if err != nil {
+		return nil, err
+	}
+
+	in := audiences.PageInput{Membership: membership(ctx), Limit: query.Limit}
+	if in.Offset, in.Count, err = numberedPage(ctx, in.Limit); err != nil {
+		return nil, err
+	}
+
+	if query.Search != "" {
+		in.Search = &query.Search
+	}
+
+	found, err := c.Audiences.Page(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	page := pagination.Page[resources.Audience]{
+		Items: audienceItems(found.Audiences), Limit: in.Limit, Total: found.Total,
+	}
+
+	return &AudiencesOutput{Body: fhttp.NewCollection(page)}, nil
+}
+
+func audienceItems(rows []models.Audience) []resources.Audience {
 	items := make([]resources.Audience, len(rows))
 	for i, r := range rows {
 		items[i] = resources.NewAudience(r, nil)
 	}
 
-	page := pagination.Page[resources.Audience]{Items: items, Limit: 500}
-
-	return &AudiencesOutput{Body: fhttp.NewCollection(page)}, nil
+	return items
 }
 
 /*

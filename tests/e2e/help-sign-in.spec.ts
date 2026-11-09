@@ -29,7 +29,7 @@ it.describe("help center sign-in", () => {
   });
 
   it("opens an article kept to the reader's audience after signing in", async ({ page, browser, person }) => {
-    await page.goto("/d/docs");
+    await page.goto("/d/help-center");
     const secret = await api<{ id: string; secret: string }>(page, "POST", "/identity-secrets", {
       name: "Product",
       algorithm: "HS256",

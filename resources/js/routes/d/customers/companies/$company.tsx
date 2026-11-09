@@ -1,13 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { CompanyPage } from "@/features/customers/companies-page";
-
+/*
+ * A company's old address opens it in the drawer over the companies list,
+ * so links from mails and elsewhere keep working.
+ */
 export const Route = createFileRoute("/d/customers/companies/$company")({
-  component: CompanyRoute,
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/d/customers/companies", search: { company: params.company }, replace: true });
+  },
 });
-
-function CompanyRoute() {
-  const { company } = Route.useParams();
-
-  return <CompanyPage key={company} id={company} />;
-}

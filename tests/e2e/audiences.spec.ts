@@ -9,7 +9,7 @@ it.describe("audiences", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("builds an audience, sees who it matches, saves it and tests a person", async ({ page }) => {
+  it("makes an audience with filters, tests a person, and narrows people by it", async ({ page }) => {
     await api(page, "POST", "/contacts", {
       name: "Ana Lima",
       email: "ana@lima.example",
@@ -24,30 +24,49 @@ it.describe("audiences", () => {
     await page.goto("/d/customers/audiences");
     await expect(page.getByText("No audiences yet")).toBeVisible();
     await page.getByRole("button", { name: "New audience" }).click();
-    await expect(page).toHaveURL(/\/d\/[^/]+\/customers\/audiences\/audn_[^/]+$/);
+    const modal = page.getByRole("dialog", { name: "New audience" });
+    await expect(modal.getByText("Matches 2 people")).toBeVisible();
+    await modal.getByRole("textbox", { name: "Name" }).fill("Pro customers");
+    const group = modal.getByRole("region", { name: "Group 1" });
+    await group.getByRole("button", { name: /Field/ }).click();
+    await expect(page.getByRole("option", { name: "Plan Text", exact: true })).toBeAttached();
+    await page.keyboard.type("Plan");
+    await page.keyboard.press("Enter");
+    await expect(group.getByRole("button", { name: /^is Comparison/ })).toBeVisible();
+    await group.getByRole("textbox", { name: "Value" }).fill("PRO");
+    await expect(modal.getByText("Matches 1 person")).toBeVisible();
 
-    const matches = page.getByRole("region", { name: "Right now" });
-    await expect(matches).toContainText("2 people");
-    await page.getByRole("textbox", { name: "Name" }).fill("Pro customers");
-    await page.getByRole("button", { name: "Add condition" }).click();
-    await page.getByRole("button", { name: "Field" }).click();
-    await page.getByRole("option", { name: "Plan", exact: true }).click();
-    await page.getByRole("textbox", { name: "Value" }).fill("PRO");
-    await expect(matches).toContainText("1 person");
-    await expect(matches.getByRole("link", { name: "Ana Lima" })).toBeVisible();
+    await modal.getByRole("button", { name: "Add group" }).click();
+    await expect(modal.getByRole("region", { name: "Group 2" })).toBeVisible();
+    await modal.getByRole("button", { name: "Remove group 2" }).click();
+    await expect(modal.getByRole("region", { name: "Group 2" })).toBeHidden();
+    await modal.getByRole("button", { name: "Create audience" }).click();
+    await expect(modal).toBeHidden();
 
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    const row = page.getByRole("row", { name: /Pro customers/ });
+    await expect(row).toContainText("Everyone where Plan is PRO");
+    await expect(row).toContainText("1 person");
 
-    const tester = page.getByRole("region", { name: "Test a person" });
+    await row.getByRole("button", { name: "Actions for Pro customers" }).click();
+    await page.getByRole("menuitem", { name: "Test a person" }).or(page.getByText("Test a person")).first().click();
+    const tester = page.getByRole("dialog", { name: "Test Pro customers" });
+    await tester.getByRole("textbox", { name: "Person" }).fill("Bo");
     await tester.getByRole("button", { name: "Person to test" }).click();
     await page.getByRole("option", { name: "Bo Chen" }).click();
     await tester.getByRole("button", { name: "Test", exact: true }).click();
     await expect(tester.getByText("Does not match")).toBeVisible();
-    await expect(tester.getByText("Has free")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tester).toBeHidden();
 
-    await page.getByRole("link", { name: "Back to audiences" }).click();
-    await expect(page.getByRole("link", { name: /Pro customers/ })).toContainText("Everyone where Plan is PRO");
+    await page.goto("/d/customers");
+    await page.getByRole("button", { name: "Add filter" }).click();
+    const panel = page.getByRole("dialog", { name: "Add filter" });
+    await panel.getByRole("button", { name: /^Audience/ }).click();
+    await panel.getByRole("button", { name: "is in any of" }).click();
+    await panel.getByText("Pro customers").click();
+    await panel.getByRole("button", { name: "Apply" }).click();
+    const people = page.getByRole("grid", { name: "People" });
+    await expect(people.getByText("Ana Lima")).toBeVisible();
+    await expect(people.getByText("Bo Chen")).toBeHidden();
   });
 });

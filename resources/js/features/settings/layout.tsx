@@ -36,16 +36,20 @@ const stackLine =
  * floats over the bottom of the panel, outside the scrolling column, such
  * as a bar to save changes; the column keeps room for it at its end, so
  * it never covers the last row or changes the page's height when it shows.
+ * actions sit at the top end of the page, beside the title, such as the
+ * button that adds a new item.
  */
 export function SettingsPage({
   title,
   description,
   footer,
+  actions,
   children,
 }: {
   title: string | null;
   description?: string;
   footer?: ReactNode;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -57,13 +61,16 @@ export function SettingsPage({
             footer !== undefined && "pb-28",
           )}
         >
-          <header className="flex flex-col gap-1">
-            {title === null ? (
-              <Skeleton shape="text" className="my-1 h-6 w-48" />
-            ) : (
-              <h1 className="text-title-2-medium text-text-primary">{title}</h1>
-            )}
-            {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
+          <header className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-col gap-1">
+              {title === null ? (
+                <Skeleton shape="text" className="my-1 h-6 w-48" />
+              ) : (
+                <h1 className="text-title-2-medium text-text-primary">{title}</h1>
+              )}
+              {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
+            </div>
+            {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
           </header>
           {children}
         </div>

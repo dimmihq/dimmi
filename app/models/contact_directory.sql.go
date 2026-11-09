@@ -103,22 +103,23 @@ WHERE c.workspace_id = $1
   AND ($9::timestamptz IS NULL OR c.created_at >= $9::timestamptz)
   AND ($10::timestamptz IS NULL OR c.created_at < $10::timestamptz)
   AND ($11::jsonb IS NULL OR c.custom_attributes @> $11::jsonb)
+  AND ($12::jsonb IS NULL OR contact_matches(c, $12::jsonb))
   AND (
-      coalesce(cardinality($12::uuid[]), 0) = 0
+      coalesce(cardinality($13::uuid[]), 0) = 0
       OR c.id IN (
           SELECT ct.contact_id FROM contact_tag ct
-          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($12::uuid[])
+          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($13::uuid[])
           GROUP BY ct.contact_id
-          HAVING count(*) = cardinality($12::uuid[])
+          HAVING count(*) = cardinality($13::uuid[])
       )
   )
   AND (
-      $13::text = ''
-      OR c.search @@ to_tsquery('simple', $14::text)
-      OR c.name ILIKE '%' || $13::text || '%'
-      OR c.email ILIKE $13::text || '%'
+      $14::text = ''
+      OR c.search @@ to_tsquery('simple', $15::text)
+      OR c.name ILIKE '%' || $14::text || '%'
+      OR c.email ILIKE $14::text || '%'
   )
-LIMIT $15::bigint
+LIMIT $16::bigint
 ) AS counted
 `
 
@@ -134,6 +135,7 @@ type CountContactsParams struct {
 	CreatedAfter   *time.Time      `json:"created_after"`
 	CreatedBefore  *time.Time      `json:"created_before"`
 	Custom         json.RawMessage `json:"custom"`
+	Conditions     json.RawMessage `json:"conditions"`
 	TagIds         []ids.UUID      `json:"tag_ids"`
 	Search         string          `json:"search"`
 	Terms          string          `json:"terms"`
@@ -155,6 +157,7 @@ func (q *Queries) CountContacts(ctx context.Context, arg CountContactsParams) (i
 		arg.CreatedAfter,
 		arg.CreatedBefore,
 		arg.Custom,
+		arg.Conditions,
 		arg.TagIds,
 		arg.Search,
 		arg.Terms,
@@ -399,27 +402,28 @@ WHERE c.workspace_id = $1
   AND ($9::timestamptz IS NULL OR c.created_at >= $9::timestamptz)
   AND ($10::timestamptz IS NULL OR c.created_at < $10::timestamptz)
   AND ($11::jsonb IS NULL OR c.custom_attributes @> $11::jsonb)
+  AND ($12::jsonb IS NULL OR contact_matches(c, $12::jsonb))
   AND (
-      coalesce(cardinality($12::uuid[]), 0) = 0
+      coalesce(cardinality($13::uuid[]), 0) = 0
       OR c.id IN (
           SELECT ct.contact_id FROM contact_tag ct
-          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($12::uuid[])
+          WHERE ct.workspace_id = $1 AND ct.tag_id = ANY ($13::uuid[])
           GROUP BY ct.contact_id
-          HAVING count(*) = cardinality($12::uuid[])
+          HAVING count(*) = cardinality($13::uuid[])
       )
   )
   AND (
-      $13::text = ''
-      OR c.search @@ to_tsquery('simple', $14::text)
-      OR c.name ILIKE '%' || $13::text || '%'
-      OR c.email ILIKE $13::text || '%'
+      $14::text = ''
+      OR c.search @@ to_tsquery('simple', $15::text)
+      OR c.name ILIKE '%' || $14::text || '%'
+      OR c.email ILIKE $14::text || '%'
   )
 ORDER BY
-    CASE WHEN $15::text = 'name' THEN lower(c.name) END,
-    CASE WHEN $15::text = 'created_at' THEN c.created_at END DESC,
-    CASE WHEN $15::text = 'last_seen_at' THEN coalesce(c.last_seen_at, c.created_at) END DESC,
+    CASE WHEN $16::text = 'name' THEN lower(c.name) END,
+    CASE WHEN $16::text = 'created_at' THEN c.created_at END DESC,
+    CASE WHEN $16::text = 'last_seen_at' THEN coalesce(c.last_seen_at, c.created_at) END DESC,
     c.id DESC
-LIMIT $17::bigint OFFSET $16::bigint
+LIMIT $18::bigint OFFSET $17::bigint
 `
 
 type ListContactsParams struct {
@@ -434,6 +438,7 @@ type ListContactsParams struct {
 	CreatedAfter   *time.Time      `json:"created_after"`
 	CreatedBefore  *time.Time      `json:"created_before"`
 	Custom         json.RawMessage `json:"custom"`
+	Conditions     json.RawMessage `json:"conditions"`
 	TagIds         []ids.UUID      `json:"tag_ids"`
 	Search         string          `json:"search"`
 	Terms          string          `json:"terms"`
@@ -445,8 +450,9 @@ type ListContactsParams struct {
 // ListContacts returns a page of the workspace's live contacts that were
 // not merged away, narrowed by kind, email, external id, blocked state,
 // company, tags, when they were last seen or added, custom attributes and
-// a search of names, emails, phones and external ids, most recently seen
-// first, newest first or by name.
+// a search of names, emails, phones and external ids, and the conditions
+// contact_matches checks, most recently seen first, newest first or by
+// name.
 func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]Contact, error) {
 	rows, err := q.db.Query(ctx, listContacts,
 		arg.WorkspaceID,
@@ -460,6 +466,7 @@ func (q *Queries) ListContacts(ctx context.Context, arg ListContactsParams) ([]C
 		arg.CreatedAfter,
 		arg.CreatedBefore,
 		arg.Custom,
+		arg.Conditions,
 		arg.TagIds,
 		arg.Search,
 		arg.Terms,

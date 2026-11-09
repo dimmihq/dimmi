@@ -41,7 +41,12 @@ function spills(page: Page): Promise<string[]> {
     [...document.querySelectorAll("main *")]
       .filter((element) => {
         const box = element.getBoundingClientRect();
-        return box.width > 0 && box.right > window.innerWidth + 1 && !element.closest(".react-flow");
+        let scroller = element.parentElement;
+        while (scroller && !["auto", "scroll"].includes(getComputedStyle(scroller).overflowX)) {
+          scroller = scroller.parentElement;
+        }
+        const scrolls = scroller !== null && scroller.getBoundingClientRect().right <= window.innerWidth + 1;
+        return box.width > 0 && box.right > window.innerWidth + 1 && !scrolls && !element.closest(".react-flow");
       })
       .slice(0, 3)
       .map((element) => element.textContent?.trim().slice(0, 40) ?? element.tagName),
@@ -91,13 +96,12 @@ it.describe("small screens", () => {
     await expect(drawer.getByText("Delete this procedure")).toBeVisible();
   });
 
-  it("opens who an audience matches in a drawer on a tablet", async ({ page }) => {
+  it("makes an audience in a modal on a tablet", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 1000 });
     await page.goto("/d/customers/audiences");
     await page.getByRole("button", { name: "New audience" }).click();
-    await expect(page).toHaveURL(/\/audiences\/audn_[^/]+$/);
-    await page.getByRole("button", { name: "Who matches" }).click();
-    const drawer = page.getByRole("dialog", { name: "Who matches" });
-    await expect(drawer.getByText("Nothing uses this audience yet.")).toBeVisible();
+    const modal = page.getByRole("dialog", { name: "New audience" });
+    await expect(modal.getByRole("button", { name: "Add group" })).toBeVisible();
+    expect(await spills(page)).toEqual([]);
   });
 });

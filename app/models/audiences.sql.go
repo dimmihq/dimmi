@@ -178,6 +178,30 @@ func (q *Queries) CountAudienceContacts(ctx context.Context, workspaceID ids.UUI
 	return count, err
 }
 
+const countAudiences = `-- name: CountAudiences :one
+SELECT count(*) FROM (
+SELECT 1 FROM audiences
+WHERE workspace_id = $1 AND deleted_at IS NULL
+  AND ($2::text IS NULL OR strpos(lower(name), lower($2::text)) > 0)
+LIMIT $3::bigint
+) AS counted
+`
+
+type CountAudiencesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Search      *string  `json:"search"`
+	RowLimit    int64    `json:"row_limit"`
+}
+
+// CountAudiences counts the audiences ListAudiencePage would list, up to
+// the cap.
+func (q *Queries) CountAudiences(ctx context.Context, arg CountAudiencesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAudiences, arg.WorkspaceID, arg.Search, arg.RowLimit)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAudience = `-- name: CreateAudience :one
 INSERT INTO audiences (id, workspace_id, name, description, rules, created_by_member_id, updated_by_member_id,
     created_at, updated_at)
@@ -327,6 +351,63 @@ func (q *Queries) FindAudience(ctx context.Context, arg FindAudienceParams) (Aud
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listAudiencePage = `-- name: ListAudiencePage :many
+SELECT id, workspace_id, name, description, rules, rules_schema, last_estimate, lock_version, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at FROM audiences
+WHERE workspace_id = $1 AND deleted_at IS NULL
+  AND ($2::text IS NULL OR strpos(lower(name), lower($2::text)) > 0)
+ORDER BY lower(name), id
+LIMIT $4::bigint OFFSET $3::bigint
+`
+
+type ListAudiencePageParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Search      *string  `json:"search"`
+	RowOffset   int64    `json:"row_offset"`
+	RowLimit    int64    `json:"row_limit"`
+}
+
+// ListAudiencePage returns a page of the workspace's saved audiences by
+// name, narrowed to those whose name contains the search when one is
+// given.
+func (q *Queries) ListAudiencePage(ctx context.Context, arg ListAudiencePageParams) ([]Audience, error) {
+	rows, err := q.db.Query(ctx, listAudiencePage,
+		arg.WorkspaceID,
+		arg.Search,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Audience
+	for rows.Next() {
+		var i Audience
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Description,
+			&i.Rules,
+			&i.RulesSchema,
+			&i.LastEstimate,
+			&i.LockVersion,
+			&i.CreatedByMemberID,
+			&i.UpdatedByMemberID,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAudiences = `-- name: ListAudiences :many

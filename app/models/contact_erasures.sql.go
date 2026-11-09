@@ -85,6 +85,30 @@ func (q *Queries) CompleteContactErasure(ctx context.Context, arg CompleteContac
 	return i, err
 }
 
+const countContactErasures = `-- name: CountContactErasures :one
+SELECT count(*) FROM (
+SELECT 1 FROM contact_erasures
+WHERE workspace_id = $1
+  AND ($2::text IS NULL OR status = $2::text)
+LIMIT $3::bigint
+) AS counted
+`
+
+type CountContactErasuresParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Status      *string  `json:"status"`
+	RowLimit    int64    `json:"row_limit"`
+}
+
+// CountContactErasures counts the requests ListContactErasures would
+// list, up to the cap.
+func (q *Queries) CountContactErasures(ctx context.Context, arg CountContactErasuresParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countContactErasures, arg.WorkspaceID, arg.Status, arg.RowLimit)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createContactErasure = `-- name: CreateContactErasure :one
 INSERT INTO contact_erasures (
     workspace_id, contact_id, status, requested_by_member_id, scheduled_for, identities_stash, created_at, updated_at
@@ -326,18 +350,27 @@ func (q *Queries) HandOverErasedConversations(ctx context.Context, arg HandOverE
 const listContactErasures = `-- name: ListContactErasures :many
 SELECT id, workspace_id, contact_id, status, requested_by_member_id, scheduled_for, completed_at, counts, identities_stash, created_at, updated_at FROM contact_erasures
 WHERE workspace_id = $1
+  AND ($2::text IS NULL OR status = $2::text)
 ORDER BY created_at DESC, id DESC
-LIMIT $2
+LIMIT $4::bigint OFFSET $3::bigint
 `
 
 type ListContactErasuresParams struct {
 	WorkspaceID ids.UUID `json:"workspace_id"`
-	RowLimit    int32    `json:"row_limit"`
+	Status      *string  `json:"status"`
+	RowOffset   int64    `json:"row_offset"`
+	RowLimit    int64    `json:"row_limit"`
 }
 
-// ListContactErasures returns the workspace's requests, newest first.
+// ListContactErasures returns a page of the workspace's requests, newest
+// first, narrowed to one status when one is given.
 func (q *Queries) ListContactErasures(ctx context.Context, arg ListContactErasuresParams) ([]ContactErasure, error) {
-	rows, err := q.db.Query(ctx, listContactErasures, arg.WorkspaceID, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listContactErasures,
+		arg.WorkspaceID,
+		arg.Status,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

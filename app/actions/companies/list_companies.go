@@ -88,16 +88,26 @@ type ListInput struct {
 	TagIDs     []ids.UUID
 	AfterAt    *time.Time
 	AfterID    *ids.UUID
+	Offset     int
 	Limit      int
+	Count      bool
 }
 
 /*
-Page is a page of companies and whether more follow.
+Page is a page of companies, whether more follow, how many people each
+has and, when asked, how many companies match in all, up to TotalCap.
 */
 type Page struct {
 	Companies []Detail
 	More      bool
+	People    map[ids.UUID]int64
+	Total     *int64
 }
+
+/*
+TotalCap is the most a company count goes up to.
+*/
+const TotalCap = 10_000
 
 /*
 ListCompanies lists the workspace's companies, newest first.
@@ -126,7 +136,7 @@ func (a *ListCompanies) Handle(ctx context.Context, in ListInput) (Page, error) 
 
 		rows, err := q.ListCompanies(ctx, models.ListCompaniesParams{
 			WorkspaceID: in.Membership.Workspace.ID, Search: in.Search, TagIds: in.TagIDs, BeforeID: in.AfterID,
-			BeforeCreatedAt: in.AfterAt, RowLimit: int64(in.Limit) + 1,
+			BeforeCreatedAt: in.AfterAt, RowLimit: int64(in.Limit) + 1, RowOffset: int64(in.Offset),
 		})
 		if err != nil {
 			return fmt.Errorf("list companies: %w", err)
@@ -136,7 +146,15 @@ func (a *ListCompanies) Handle(ctx context.Context, in ListInput) (Page, error) 
 			rows, page.More = rows[:in.Limit], true
 		}
 
-		page.Companies, err = LoadDetails(ctx, q, rows)
+		if page.Companies, err = LoadDetails(ctx, q, rows); err != nil {
+			return err
+		}
+
+		if page.People, err = people(ctx, q, rows); err != nil || !in.Count {
+			return err
+		}
+
+		page.Total, err = count(ctx, q, in)
 
 		return err
 	})
@@ -158,4 +176,46 @@ func find(ctx context.Context, q *models.Queries, ws, id ids.UUID) (models.Compa
 	}
 
 	return c, nil
+}
+
+/*
+people counts the contacts of each company of the page.
+*/
+func people(ctx context.Context, q *models.Queries, rows []models.Company) (map[ids.UUID]int64, error) {
+	out := map[ids.UUID]int64{}
+	if len(rows) == 0 {
+		return out, nil
+	}
+
+	companyIDs := make([]ids.UUID, 0, len(rows))
+	for _, c := range rows {
+		companyIDs = append(companyIDs, c.ID)
+	}
+
+	counted, err := q.CountCompanyPeople(ctx, models.CountCompanyPeopleParams{
+		WorkspaceID: rows[0].WorkspaceID, CompanyIds: companyIDs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("count company people: %w", err)
+	}
+
+	for _, row := range counted {
+		out[row.CompanyID] = row.People
+	}
+
+	return out, nil
+}
+
+/*
+count counts the companies the input lists, up to TotalCap.
+*/
+func count(ctx context.Context, q *models.Queries, in ListInput) (*int64, error) {
+	n, err := q.CountCompanies(ctx, models.CountCompaniesParams{
+		WorkspaceID: in.Membership.Workspace.ID, Search: in.Search, TagIds: in.TagIDs, RowLimit: TotalCap,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("count companies: %w", err)
+	}
+
+	return &n, nil
 }

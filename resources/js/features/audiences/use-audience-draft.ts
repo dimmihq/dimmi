@@ -14,6 +14,7 @@ import {
   type AudienceRules,
   audienceQuery,
   audiencesQuery,
+  createAudience,
   deleteAudience,
   previewAudience,
   type RuleProblem,
@@ -105,11 +106,13 @@ export function useAudienceDraft(workspace: string, audience: Audience, onDelete
 
   const save = useMutation({
     mutationFn: () =>
-      saveAudience(workspace, server.id, { name, description, rules, lock_version: server.lock_version }),
+      server.id === ""
+        ? createAudience(workspace, { name, description, rules })
+        : saveAudience(workspace, server.id, { name, description, rules, lock_version: server.lock_version }),
     onSuccess: (saved) => {
       setServer({ ...saved, used_by: server.used_by });
-      void queryClient.invalidateQueries({ queryKey: audiencesQuery(workspace).queryKey, exact: true });
-      void queryClient.invalidateQueries({ queryKey: audienceQuery(workspace, server.id).queryKey });
+      void queryClient.invalidateQueries({ queryKey: audiencesQuery(workspace).queryKey });
+      void queryClient.invalidateQueries({ queryKey: audienceQuery(workspace, saved.id).queryKey });
     },
   });
 
@@ -142,3 +145,20 @@ export function useAudienceDraft(workspace: string, audience: Audience, onDelete
 }
 
 export type AudienceDraft = ReturnType<typeof useAudienceDraft>;
+
+/*
+ * blankAudience is a new audience before its first save: matching
+ * everyone, named so it never clashes.
+ */
+export function blankAudience(name: string): Audience {
+  return {
+    id: "",
+    name,
+    description: null,
+    rules: { visitors: "everyone" },
+    last_estimate: null,
+    lock_version: 0,
+    used_by: null,
+    updated_at: "",
+  };
+}

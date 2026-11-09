@@ -3,7 +3,7 @@
 | Collections
 |--------------------------------------------------------------------------
 |
-| Collections group articles, two levels deep at most. A slug is unique
+| Collections group articles, three levels deep at most. A slug is unique
 | in its help center, made from the name when none is given. Renaming a
 | slug leaves a redirect from the old address. Deleting a collection
 | keeps its articles: they simply become uncollected. One with
@@ -36,7 +36,7 @@ var (
 	ErrCollectionNotFound = fault.New(fault.NotFound, "collection_not_found",
 		"No collection of this help center has this id.")
 	ErrCollectionDepth = fault.New(fault.Invalid, "collection_too_deep",
-		"Collections go two levels deep: a sub-collection cannot hold another.").OnField("parent_id")
+		"Collections go three levels deep: this move would nest one deeper.").OnField("parent_id")
 	ErrCollectionHasChildren = fault.New(fault.Conflict, "collection_has_children",
 		"Move or delete its sub-collections first.")
 	ErrSlugTaken = fault.New(fault.Conflict, "slug_taken",
@@ -286,28 +286,6 @@ func collectionSlug(ctx context.Context, q *models.Queries, in CollectionInput, 
 		return "", ErrSlugTaken
 	}
 	return slug, nil
-}
-
-/*
-checkParent refuses a parent that is itself a sub-collection, or the
-collection itself; a new collection has no id yet.
-*/
-func checkParent(ctx context.Context, q *models.Queries, c models.Collection, parent *ids.UUID) error {
-	ws, self := c.WorkspaceID, c.ID
-	if parent == nil {
-		return nil
-	}
-	if *parent == self {
-		return ErrCollectionDepth
-	}
-	found, err := findCollection(ctx, q, ws, *parent)
-	if err != nil {
-		return err
-	}
-	if found.ParentID != nil {
-		return ErrCollectionDepth
-	}
-	return nil
 }
 
 /*

@@ -2,34 +2,34 @@
  * The custom attributes the workspace's contacts and companies carry,
  * each with its type and when it last took a value. Keys the workspace
  * already sends are listed as seen in data; a type never changes once
- * set. Archiving stops new values and keeps old ones; only an archived
+ * set. New attribute, at the top, adds one in a modal. Archiving stops new values and keeps old ones; only an archived
  * attribute can be deleted, which removes its values. A contact
  * attribute can be opened to the messenger, which may otherwise write
  * none. Values that did not fit are listed at the bottom, so nothing is
  * dropped silently.
  */
-import { RiBuilding2Line, RiErrorWarningLine, RiFlashlightLine, RiUserLine } from "@remixicon/react";
+import { RiAddLine, RiBuilding2Line, RiErrorWarningLine, RiFlashlightLine, RiUserLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
 import {
   type AttributeDefinition,
   type AttributeOf,
-  type AttributeType,
   attributeProblemsQuery,
   attributesQuery,
-  defineAttribute,
   deleteAttribute,
   updateAttribute,
 } from "@/lib/api/attributes";
 import { type EventDefinition, eventsQuery, updateEvent } from "@/lib/api/events";
-import { definitionLine, eventLine, problemNames, typeNames } from "../attributes";
-import { Action, Choice, Danger, Field, Toggle } from "../controls";
-import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
+import { definitionLine, eventLine, problemNames } from "../attributes";
+import { Action, Danger, Toggle } from "../controls";
+import { Glyph, Item, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
+import { NewAttributeModal } from "./new-attribute-modal";
 
 const objects: Record<AttributeOf, string> = { contact: "Person", company: "Company" };
 
@@ -105,75 +105,6 @@ function DefinitionRow({
   );
 }
 
-function NewAttribute({ workspace }: { workspace: string }) {
-  const refresh = useRefresh(workspace);
-  const [of, setOf] = useState<AttributeOf>("contact");
-  const [key, setKey] = useState("");
-  const [label, setLabel] = useState("");
-  const [type, setType] = useState<AttributeType>("string");
-  const [options, setOptions] = useState("");
-  const define = useMutation({
-    mutationFn: () =>
-      defineAttribute(workspace, {
-        object: of,
-        key: key.trim(),
-        label: label.trim() || key.trim(),
-        data_type: type,
-        options:
-          type === "list"
-            ? options
-                .split(",")
-                .map((o) => o.trim())
-                .filter(Boolean)
-            : undefined,
-      }),
-    onSuccess: () => {
-      setKey("");
-      setLabel("");
-      setOptions("");
-      refresh();
-    },
-  });
-  const typeEntries = Object.entries(typeNames) as [AttributeType, string][];
-
-  return (
-    <Section title="Add an attribute" description="Keys are how your code sends the value: plan, seats, trial_ends_at.">
-      <Row label="Belongs to">
-        <Choice
-          label="Belongs to"
-          options={Object.values(objects)}
-          value={objects[of]}
-          onChange={(name) => setOf(name === objects.company ? "company" : "contact")}
-        />
-      </Row>
-      <Row label="Key">
-        <Field label="Key" placeholder="plan" value={key} onChange={setKey} />
-      </Row>
-      <Row label="Label">
-        <Field label="Label" placeholder="Plan" value={label} onChange={setLabel} />
-      </Row>
-      <Row label="Type" description="A type never changes once set.">
-        <Choice
-          label="Type"
-          options={typeEntries.map(([, name]) => name)}
-          value={typeNames[type]}
-          onChange={(name) => setType(typeEntries.find(([, n]) => n === name)?.[0] ?? "string")}
-        />
-      </Row>
-      {type === "list" ? (
-        <Row label="Values" description="Separate them with commas.">
-          <Field label="List values" placeholder="free, pro, team" value={options} onChange={setOptions} />
-        </Row>
-      ) : null}
-      <Row label={define.error ? define.error.message : "New attribute"}>
-        <Action loading={define.isPending} onPress={() => key.trim() && define.mutate()}>
-          Add attribute
-        </Action>
-      </Row>
-    </Section>
-  );
-}
-
 function EventRow({ workspace, event, canManage }: { workspace: string; event: EventDefinition; canManage: boolean }) {
   const refresh = useRefresh(workspace);
   const queryClient = useQueryClient();
@@ -245,10 +176,21 @@ export function AttributesSettings() {
   const workspace = useAccount().workspace.id;
   const canManage = usePermission(workspace, "attributes:manage");
   const { data, isPending } = useQuery(attributesQuery(workspace));
+  const [adding, setAdding] = useState(false);
   const of = (object: AttributeOf) => (data ?? []).filter((d) => d.of === object);
 
   return (
-    <SettingsPage title="Attributes" description="The fields your contacts and companies carry, and their types.">
+    <SettingsPage
+      title="Attributes"
+      description="The fields your contacts and companies carry, and their types."
+      actions={
+        canManage ? (
+          <Button size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
+            New attribute
+          </Button>
+        ) : null
+      }
+    >
       {(["contact", "company"] as const).map((object) => (
         <Section
           key={object}
@@ -264,7 +206,7 @@ export function AttributesSettings() {
             <Item
               mark={<Glyph icon={object === "contact" ? RiUserLine : RiBuilding2Line} />}
               title="No attributes yet"
-              detail="Send one through the API or add it below."
+              detail="Send one through the API or add it with New attribute."
             />
           ) : null}
           {of(object).map((d) => (
@@ -273,8 +215,8 @@ export function AttributesSettings() {
         </Section>
       ))}
       <Events workspace={workspace} canManage={canManage} />
-      {canManage ? <NewAttribute workspace={workspace} /> : null}
       <Problems workspace={workspace} />
+      {adding ? <NewAttributeModal workspace={workspace} onClose={() => setAdding(false)} /> : null}
     </SettingsPage>
   );
 }

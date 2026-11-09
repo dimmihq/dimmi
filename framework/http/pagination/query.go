@@ -90,12 +90,15 @@ type Sort struct {
 /*
 Page is one page of results and the cursors around it. A cursor is empty
 when there is no page in that direction. Limit is the page size used.
+Total is how many rows match in all, nil when the endpoint did not
+count.
 */
 type Page[T any] struct {
 	Items      []T
 	NextCursor string
 	PrevCursor string
 	Limit      int
+	Total      *int64
 }
 
 /*

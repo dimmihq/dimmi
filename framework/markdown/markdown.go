@@ -40,6 +40,7 @@ numbers.
 */
 const (
 	alertPriority    = 100
+	imagePriority    = 110
 	rendererPriority = 100
 )
 
@@ -52,7 +53,9 @@ Footnotes adds GFM footnotes. Alerts renders GitHub alerts such as
 id, keeping letters of every script. Highlight colors fenced code
 blocks of a known language with CSS classes; StyleSheet returns the
 matching CSS. HardWraps keeps every line break inside a paragraph, as a
-person typing into a message box expects.
+person typing into a message box expects. ImageLayout reads a picture's
+width and alignment from its address's fragment and renders them as
+classes.
 
 RewriteLink, when set, sees every link and image and returns what to
 render instead. Sanitize is the policy the HTML passes through; nil
@@ -65,6 +68,7 @@ type Options struct {
 	HeadingIDs  bool
 	Highlight   bool
 	HardWraps   bool
+	ImageLayout bool
 	RewriteLink func(Link) Link
 	Sanitize    *sanitize.Policy
 }
@@ -164,6 +168,10 @@ func newEngine(opts Options) goldmark.Markdown {
 
 	if opts.HeadingIDs {
 		parsing = append(parsing, parser.WithAutoHeadingID())
+	}
+
+	if opts.ImageLayout {
+		parsing = append(parsing, parser.WithASTTransformers(util.Prioritized(imageTransformer{}, imagePriority)))
 	}
 
 	nodes := newNodeRenderer(opts.Highlight, opts.Alerts)

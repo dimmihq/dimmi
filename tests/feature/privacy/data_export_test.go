@@ -134,6 +134,25 @@ func TestDataExports(t *testing.T) {
 		assert.NotContains(t, sheet, "bob@example.com")
 		assert.Contains(t, picked, `"email": "bob@example.com"`)
 		assert.NotContains(t, picked, "ann@example.com")
+
+		narrowed := string(downloaded(t, d.Owner, exportAll(t, d, d.Owner, testkit.JSON{
+			"kind": "contacts", "format": "csv", "selection": testkit.JSON{
+				"conditions": `[{"field":"email","op":"starts_with","value":"bob"}]`,
+			},
+		})).Body)
+		assert.Contains(t, narrowed, "bob@example.com")
+		assert.NotContains(t, narrowed, "ann@example.com")
+
+		bobs := d.Owner.PostJSON("/api/v1/audiences", testkit.JSON{"name": "Bobs", "rules": testkit.JSON{
+			"rules": testkit.JSON{"field": "contact.email", "op": "starts_with", "value": "bob"},
+		}}).AssertCreated().String("data.id")
+		members := string(downloaded(t, d.Owner, exportAll(t, d, d.Owner, testkit.JSON{
+			"kind": "contacts", "format": "csv", "selection": testkit.JSON{
+				"conditions": `[{"field":"audience","op":"in_any","values":["` + bobs + `"]}]`,
+			},
+		})).Body)
+		assert.Contains(t, members, "bob@example.com")
+		assert.NotContains(t, members, "ann@example.com")
 	})
 
 	t.Run("fills every column from who holds the conversation and whose it is", func(t *testing.T) {

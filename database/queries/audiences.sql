@@ -2,6 +2,26 @@
 -- ListAudiences returns the workspace's saved audiences by name.
 SELECT * FROM audiences WHERE workspace_id = @workspace_id AND deleted_at IS NULL ORDER BY lower(name), id;
 
+-- name: ListAudiencePage :many
+-- ListAudiencePage returns a page of the workspace's saved audiences by
+-- name, narrowed to those whose name contains the search when one is
+-- given.
+SELECT * FROM audiences
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL
+  AND (sqlc.narg(search)::text IS NULL OR strpos(lower(name), lower(sqlc.narg(search)::text)) > 0)
+ORDER BY lower(name), id
+LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
+
+-- name: CountAudiences :one
+-- CountAudiences counts the audiences ListAudiencePage would list, up to
+-- the cap.
+SELECT count(*) FROM (
+SELECT 1 FROM audiences
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL
+  AND (sqlc.narg(search)::text IS NULL OR strpos(lower(name), lower(sqlc.narg(search)::text)) > 0)
+LIMIT @row_limit::bigint
+) AS counted;
+
 -- name: FindAudience :one
 -- FindAudience returns one saved audience.
 SELECT * FROM audiences WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;

@@ -2,8 +2,9 @@
 -- ListContacts returns a page of the workspace's live contacts that were
 -- not merged away, narrowed by kind, email, external id, blocked state,
 -- company, tags, when they were last seen or added, custom attributes and
--- a search of names, emails, phones and external ids, most recently seen
--- first, newest first or by name.
+-- a search of names, emails, phones and external ids, and the conditions
+-- contact_matches checks, most recently seen first, newest first or by
+-- name.
 SELECT c.* FROM contacts AS c
 WHERE c.workspace_id = @workspace_id
   AND c.merged_into_id IS NULL
@@ -18,6 +19,7 @@ WHERE c.workspace_id = @workspace_id
   AND (sqlc.narg(created_after)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_after)::timestamptz)
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(custom)::jsonb IS NULL OR c.custom_attributes @> sqlc.narg(custom)::jsonb)
+  AND (sqlc.narg(conditions)::jsonb IS NULL OR contact_matches(c, sqlc.narg(conditions)::jsonb))
   AND (
       coalesce(cardinality(@tag_ids::uuid[]), 0) = 0
       OR c.id IN (
@@ -58,6 +60,7 @@ WHERE c.workspace_id = @workspace_id
   AND (sqlc.narg(created_after)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_after)::timestamptz)
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(custom)::jsonb IS NULL OR c.custom_attributes @> sqlc.narg(custom)::jsonb)
+  AND (sqlc.narg(conditions)::jsonb IS NULL OR contact_matches(c, sqlc.narg(conditions)::jsonb))
   AND (
       coalesce(cardinality(@tag_ids::uuid[]), 0) = 0
       OR c.id IN (

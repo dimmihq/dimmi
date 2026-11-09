@@ -1,16 +1,17 @@
 /*
- * Exporting a customer from their page, to answer a request for a copy
- * of their data. The export is built in the background; the button waits
- * for it and then saves the zip.
+ * Exporting a customer from the actions of their row, to answer a
+ * request for a copy of their data. The export is built in the
+ * background; the dialog waits for it and then saves the zip.
  */
 import { RiDownload2Line } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
+import { Modal, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { type Contact, downloadExport, exportQuery, requestExport } from "@/lib/api/customers";
 
-import { useWorkspace } from "./names";
+import { personName, useWorkspace } from "./names";
 
 const pollEvery = 1000;
 
@@ -23,7 +24,7 @@ function save(blob: Blob, name: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ExportCustomer({ contact }: { contact: Contact }) {
+function ExportCustomer({ contact }: { contact: Contact }) {
   const workspace = useWorkspace();
   const [id, setId] = useState<string | null>(null);
   const start = useMutation({
@@ -47,13 +48,7 @@ export function ExportCustomer({ contact }: { contact: Contact }) {
 
   if (current?.status === "ready") {
     return (
-      <Button
-        variant="secondary"
-        size="small"
-        leadingIcon={RiDownload2Line}
-        loading={download.isPending}
-        onClick={() => download.mutate()}
-      >
+      <Button leadingIcon={RiDownload2Line} loading={download.isPending} onClick={() => download.mutate()}>
         Download export
       </Button>
     );
@@ -62,14 +57,29 @@ export function ExportCustomer({ contact }: { contact: Contact }) {
   const waiting = start.isPending || current?.status === "pending" || current?.status === "running";
 
   return (
-    <Button
-      variant="secondary"
-      size="small"
-      leadingIcon={RiDownload2Line}
-      disabled={waiting}
-      onClick={() => start.mutate()}
-    >
+    <Button leadingIcon={RiDownload2Line} disabled={waiting} onClick={() => start.mutate()}>
       {waiting ? "Preparing export…" : current?.status === "failed" ? "Export failed, try again" : "Export data"}
     </Button>
+  );
+}
+
+/*
+ * ExportDialog prepares a copy of everything dimmi holds about the
+ * customer and saves it once it is ready.
+ */
+export function ExportDialog({ contact, onClose }: { contact: Contact; onClose: () => void }) {
+  return (
+    <Modal size="sm" isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
+      <ModalHeader
+        title={`Export ${personName(contact)}'s data`}
+        description="A zip of their details, conversations and files, to answer a request for a copy."
+      />
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+        <ExportCustomer contact={contact} />
+      </ModalFooter>
+    </Modal>
   );
 }

@@ -1,6 +1,21 @@
+import type { Page } from "@playwright/test";
 import { api } from "./support/customers";
+
 import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
 import { startConversation } from "./support/inbox";
+
+/*
+ * act opens the row menu of the named customer and picks an action.
+ */
+async function act(page: Page, name: string, action: string) {
+  await page.goto("/d/customers");
+  await page.getByRole("button", { name: `Actions for ${name}` }).click();
+  await page
+    .getByRole("menuitem", { name: action })
+    .or(page.getByText(action, { exact: true }))
+    .first()
+    .click();
+}
 
 it.describe("customer privacy", () => {
   it.beforeEach(async ({ page, person, request }) => {
@@ -20,8 +35,7 @@ it.describe("customer privacy", () => {
     const conversation = await api<{ contact: { id: string } }>(page, "GET", `/conversations/${id}`);
     const contact = conversation.contact.id;
 
-    await page.goto(`/d/customers/${contact}`);
-    await page.getByRole("button", { name: "Erase" }).click();
+    await act(page, "Ana Lima", "Erase");
     await page.getByRole("button", { name: "Erase customer" }).click();
     await expect(page).toHaveURL(/\/d\/[^/]+\/customers\/erasures$/);
     const erasures = page.getByRole("grid", { name: "Erasures" });
@@ -31,9 +45,9 @@ it.describe("customer privacy", () => {
     await erasures.getByRole("button", { name: "Cancel erasure" }).click();
     await expect(erasures.getByText("Canceled")).toBeVisible();
     await page.goto(`/d/customers/${contact}`);
-    await expect(page.getByRole("heading", { name: "Ana Lima" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Edit Ana Lima" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Erase" }).click();
+    await act(page, "Ana Lima", "Erase");
     await page.getByText("Wipe now instead of in 7 days").click();
     await page.getByRole("button", { name: "Erase customer" }).click();
     await expect(page).toHaveURL(/\/d\/[^/]+\/customers\/erasures$/);
@@ -57,8 +71,9 @@ it.describe("customer privacy", () => {
     });
     const conversation = await api<{ contact: { id: string } }>(page, "GET", `/conversations/${id}`);
 
-    await page.goto(`/d/customers/${conversation.contact.id}`);
-    await page.getByRole("button", { name: "Export data" }).click();
+    expect(conversation.contact.id).toMatch(/^ctc_/);
+    await act(page, "Bo Chen", "Export data");
+    await page.getByRole("dialog").getByRole("button", { name: "Export data" }).click();
     const download = page.getByRole("button", { name: "Download export" });
     await expect(download).toBeVisible({ timeout: 15_000 });
     const [file] = await Promise.all([page.waitForEvent("download"), download.click()]);

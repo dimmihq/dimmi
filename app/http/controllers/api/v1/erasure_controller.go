@@ -91,19 +91,38 @@ func (c *ErasureController) Destroy(ctx context.Context, in *requests.RemoveCont
 }
 
 /*
-Index lists the workspace's newest erasure requests.
+Index lists a page of the workspace's erasure requests, newest first,
+with filter[status] narrowing to one status.
 */
 func (c *ErasureController) Index(ctx context.Context, _ *requests.NoInput) (*ContactErasuresOutput, error) {
-	rows, err := c.List.Handle(ctx, erasures.ErasureInput{Membership: membership(ctx)})
+	r, _ := fhttp.RequestFrom(ctx)
+
+	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
+		Filters: []string{"status"}, DefaultLimit: erasures.MaxListed, MaxLimit: erasures.MaxListed,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	page := pagination.Page[resources.ContactErasure]{
-		Items: resources.NewContactErasures(rows), Limit: erasures.MaxListed,
+	in := erasures.ListErasuresInput{Membership: membership(ctx), Limit: query.Limit}
+	if in.Offset, in.Count, err = numberedPage(ctx, in.Limit); err != nil {
+		return nil, err
 	}
 
-	return &ContactErasuresOutput{Body: fhttp.NewCollection(page)}, nil
+	if status := query.Filters["status"]; len(status) > 0 {
+		in.Status = &status[0]
+	}
+
+	page, err := c.List.Handle(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	out := pagination.Page[resources.ContactErasure]{
+		Items: resources.NewContactErasures(page.Erasures), Limit: in.Limit, Total: page.Total,
+	}
+
+	return &ContactErasuresOutput{Body: fhttp.NewCollection(out)}, nil
 }
 
 /*

@@ -101,6 +101,10 @@ func (c *CompanyController) Index(ctx context.Context, _ *requests.NoInput) (*Co
 	}
 
 	in := companies.ListInput{Membership: membership(ctx), Limit: query.Limit}
+	if in.Offset, in.Count, err = numberedPage(ctx, in.Limit); err != nil {
+		return nil, err
+	}
+
 	if query.Search != "" {
 		in.Search = &query.Search
 	}
@@ -123,7 +127,12 @@ func (c *CompanyController) Index(ctx context.Context, _ *requests.NoInput) (*Co
 		return nil, err
 	}
 
-	out := pagination.Page[resources.Company]{Items: resources.NewCompanies(page.Companies), Limit: in.Limit}
+	items := resources.NewCompanies(page.Companies)
+	for i, d := range page.Companies {
+		items[i].PeopleCount = new(page.People[d.Company.ID])
+	}
+
+	out := pagination.Page[resources.Company]{Items: items, Limit: in.Limit, Total: page.Total}
 	if page.More {
 		last := page.Companies[len(page.Companies)-1].Company
 		if out.NextCursor, err = c.Cursors.Encode(timeCursor{At: last.CreatedAt, ID: last.ID}); err != nil {

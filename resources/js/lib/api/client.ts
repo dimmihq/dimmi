@@ -200,6 +200,7 @@ export async function requestBody<T>(
 export interface Page<T> {
   items: T[];
   next: string | null;
+  total?: number;
 }
 
 /*
@@ -219,9 +220,9 @@ export async function requestPage<T>(path: string, options: RequestOptions = {})
     throw toApiError(response.status, json as ErrorBody | null);
   }
 
-  const body = json as { data?: T[]; meta?: { next_cursor?: string | null } } | null;
+  const body = json as { data?: T[]; meta?: { next_cursor?: string | null; total?: number } } | null;
 
-  return { items: body?.data ?? [], next: body?.meta?.next_cursor ?? null };
+  return { items: body?.data ?? [], next: body?.meta?.next_cursor ?? null, total: body?.meta?.total };
 }
 
 /*

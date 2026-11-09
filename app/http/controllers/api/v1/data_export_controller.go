@@ -17,6 +17,7 @@ package v1
 import (
 	"context"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -63,6 +64,7 @@ type DataExportController struct {
 	Download *dataexports.DownloadDataExport
 	Remove   *dataexports.DeleteDataExport
 	IDs      *ids.Registry
+	Clock    clock.Clock
 }
 
 /*
@@ -218,10 +220,16 @@ func (c *DataExportController) contactSelection(
 		return dataexports.ContactSelection{}, err
 	}
 
+	conditions, members, err := conditionsOf(sel.Conditions, c.IDs, c.Clock)
+	if err != nil {
+		return dataexports.ContactSelection{}, err
+	}
+
 	return dataexports.ContactSelection{Filters: &dataexports.ContactFilters{
 		Kind: in.Kind, Email: in.Email, ExternalID: in.ExternalID, Blocked: in.Blocked, CompanyID: in.CompanyID,
 		TagIDs: in.TagIDs, SeenAfter: in.Seen.From, SeenBefore: in.Seen.To, CreatedAfter: in.Created.From,
-		CreatedBefore: in.Created.To, Custom: in.Custom, Search: in.Search,
+		CreatedBefore: in.Created.To, Custom: in.Custom, Conditions: conditions, Audiences: members,
+		Search: in.Search,
 	}}, nil
 }
 

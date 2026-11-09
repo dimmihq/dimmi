@@ -19,6 +19,12 @@ export interface HelpCenterSettings {
   email_sign_in?: boolean;
 }
 
+/*
+ * defaultBrand is the color a help center wears until one is picked, the
+ * same one its pages use.
+ */
+export const defaultBrand = "#10b981";
+
 export interface HelpCenter {
   id: string;
   object: "help_center";
@@ -108,6 +114,51 @@ export function articleQuery(workspace: string, article: string) {
   });
 }
 
+/*
+ * ArticleVersion is one kept version of an article: published, a
+ * snapshot taken before a change, a restore or a suggestion.
+ */
+export interface ArticleVersion {
+  id: string;
+  number: number;
+  kind: "published" | "snapshot" | "restored" | "suggestion";
+  title: string;
+  created_at: string;
+}
+
+export function articleVersionsQuery(workspace: string, article: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "articles", article, "versions"],
+    queryFn: () =>
+      request<ArticleVersion[]>("GET", `/articles/${encodeURIComponent(article)}/versions`, undefined, { workspace }),
+  });
+}
+
+/*
+ * uploadArticleImage keeps a picture for an article and returns the
+ * address it is served at.
+ */
+export async function uploadArticleImage(workspace: string, file: File): Promise<string> {
+  const form = new FormData();
+  form.append("image", file);
+  const kept = await request<{ url: string }>("POST", "/help-images", form, { workspace });
+
+  return kept.url;
+}
+
+/*
+ * restoreArticleVersion puts a kept version back into the article's
+ * working copy.
+ */
+export function restoreArticleVersion(workspace: string, article: string, version: string): Promise<Article> {
+  return request<Article>(
+    "POST",
+    `/articles/${encodeURIComponent(article)}/restorations`,
+    { version_id: version },
+    { workspace },
+  );
+}
+
 export function updateHelpCenter(
   workspace: string,
   id: string,
@@ -118,13 +169,36 @@ export function updateHelpCenter(
   return request<HelpCenter>("PATCH", `/help-centers/${encodeURIComponent(id)}`, change, { workspace });
 }
 
-export function createCollection(workspace: string, helpCenter: string, name: string): Promise<Collection> {
+export function createCollection(
+  workspace: string,
+  helpCenter: string,
+  name: string,
+  parent?: string,
+): Promise<Collection> {
   return request<Collection>(
     "POST",
     `/help-centers/${encodeURIComponent(helpCenter)}/collections`,
-    { name },
+    { name, ...(parent ? { parent_id: parent } : {}) },
     { workspace },
   );
+}
+
+/*
+ * CollectionChange is a change to a collection: an empty parent_id moves
+ * it to the top level.
+ */
+export interface CollectionChange {
+  name?: string;
+  parent_id?: string;
+  position?: number;
+}
+
+export function updateCollection(workspace: string, id: string, change: CollectionChange): Promise<Collection> {
+  return request<Collection>("PATCH", `/collections/${encodeURIComponent(id)}`, change, { workspace });
+}
+
+export function deleteCollection(workspace: string, id: string): Promise<void> {
+  return request<void>("DELETE", `/collections/${encodeURIComponent(id)}`, undefined, { workspace });
 }
 
 export function createArticle(workspace: string, helpCenter: string, change: ArticleChange): Promise<Article> {

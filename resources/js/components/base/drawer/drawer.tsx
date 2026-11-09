@@ -44,7 +44,7 @@ import { cx, sortCx } from "@/utils/cx";
  */
 
 export type DrawerPlacement = "start" | "end" | "top" | "bottom";
-export type DrawerSize = "nav" | "sm" | "md" | "lg";
+export type DrawerSize = "nav" | "sm" | "md" | "lg" | "xl";
 
 const styles = sortCx({
   overlay: "group/drawer fixed inset-x-0 top-0 z-100 flex h-(--visual-viewport-height) p-2 sm:p-3",
@@ -96,13 +96,15 @@ const styles = sortCx({
     sm: "max-w-[320px]",
     md: "max-w-[400px]",
     lg: "max-w-[600px]",
+    // Editors with nested rules, such as an audience.
+    xl: "max-w-[760px]",
   },
 });
 
 export interface DrawerProps extends Omit<ModalOverlayProps, "children" | "className" | "style"> {
   /** The edge the panel slides in from. `start` and `end` follow the reading direction. */
   placement?: DrawerPlacement;
-  /** Width of a start or end drawer: 260 (the sidebar's), 320, 400 (default), or 600px. */
+  /** Width of a start or end drawer: 260 (the sidebar's), 320, 400 (default), 600 or 760px. */
   size?: DrawerSize;
   /** Accessible name when the content has no DrawerHeader title. */
   "aria-label"?: string;

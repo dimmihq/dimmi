@@ -24,6 +24,7 @@ import {
   RiFileList3Line,
   RiFingerprintLine,
   RiFlashlightLine,
+  RiFlowChart,
   RiGitBranchLine,
   RiGithubLine,
   RiGroupLine,
@@ -125,11 +126,11 @@ export const workspacePages = {
     "/d/procedures",
     "Step-by-step instructions dimmi follows for particular requests.",
   ),
-  docs: page(
-    "docs",
-    "Docs",
+  helpCenter: page(
+    "help-center",
+    "Help center",
     RiBookOpenLine,
-    "/d/docs",
+    "/d/help-center",
     "Your help center: articles, collections and the review queue.",
   ),
   feedback: page(
@@ -146,19 +147,26 @@ export const workspacePages = {
     "/d/changelog",
     "Tell customers what shipped, by mail and in the widget.",
   ),
-  announcements: page(
-    "announcements",
-    "Announcements",
-    RiMegaphoneLine,
-    "/d/announcements",
-    "Banners, posts and surveys shown inside your product.",
-  ),
   customers: page(
     "customers",
     "Customers",
     RiContactsBook3Line,
     "/d/customers",
     "Everyone who wrote in, with their conversations and companies.",
+  ),
+  broadcasts: page(
+    "broadcasts",
+    "Broadcasts",
+    RiMegaphoneLine,
+    "/d/broadcasts",
+    "One-off messages to an audience, by email, in the messenger or inside your product.",
+  ),
+  series: page(
+    "series",
+    "Series",
+    RiFlowChart,
+    "/d/series",
+    "Messages sent over days and weeks, each step waiting for what the customer does.",
   ),
 } as const;
 
@@ -430,18 +438,20 @@ export function appSections(inboxBadge?: number, notificationBadge?: number): Da
         { ...inboxLink, badge: inboxBadge || undefined },
       ],
     },
-    { key: "automation", label: "Automation", items: [workspacePages.workflows, workspacePages.procedures] },
     {
-      key: "workspace",
-      label: "Workspace",
-      items: [
-        workspacePages.agent,
-        workspacePages.docs,
-        workspacePages.feedback,
-        workspacePages.changelog,
-        workspacePages.announcements,
-        workspacePages.customers,
-      ],
+      key: "automation",
+      label: "Automation",
+      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
+    },
+    {
+      key: "customers",
+      label: "Customers",
+      items: [workspacePages.customers, workspacePages.broadcasts, workspacePages.series],
+    },
+    {
+      key: "knowledge",
+      label: "Knowledge",
+      items: [workspacePages.helpCenter, workspacePages.feedback, workspacePages.changelog],
     },
   ];
 }

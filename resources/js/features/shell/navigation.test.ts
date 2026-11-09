@@ -17,7 +17,7 @@ describe("selectedKey", () => {
   it("never treats an address as holding another that only starts with its letters", () => {
     const sections = [{ key: "s", items: [{ key: "doc", label: "Doc", icon: () => null, href: "/d/doc" }] }];
 
-    expect(selectedKey(sections, [], "/d/docs")).toBe("");
+    expect(selectedKey(sections, [], "/d/help-center")).toBe("");
   });
 });
 

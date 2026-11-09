@@ -10,7 +10,7 @@ it.describe("article audiences", () => {
   });
 
   it("keeps an article to an audience and hides it from anonymous readers", async ({ page }) => {
-    await page.goto("/d/docs");
+    await page.goto("/d/help-center");
     await api(page, "POST", "/audiences", { name: "Signed-in users", rules: { visitors: "identified" } });
     const centers = await api<{ id: string; subdomain: string }[]>(page, "GET", "/help-centers");
     const center = centers[0] ?? { id: "", subdomain: "" };
@@ -22,12 +22,14 @@ it.describe("article audiences", () => {
     const reader = `/hc/${center.subdomain}/articles/admin-keys`;
     expect((await page.request.get(reader)).status()).toBe(200);
 
-    await page.goto(`/d/docs/${article.id}`);
+    await page.goto(`/d/help-center/${article.id}`);
+    await page.getByRole("button", { name: "Settings" }).click();
+    const settings = page.getByRole("dialog", { name: "Article settings" });
     await expect(async () => {
-      await page.getByRole("button", { name: "Audience" }).click();
+      await settings.getByRole("button", { name: /Audience/ }).click();
       await page.getByRole("option", { name: "Signed-in users" }).click({ timeout: 2000 });
     }).toPass();
-    await expect(page.getByRole("button", { name: "Audience" })).toContainText("Signed-in users");
+    await expect(settings.getByRole("button", { name: /Audience/ })).toContainText("Signed-in users");
     await expect.poll(async () => (await page.request.get(reader)).status()).toBe(404);
   });
 });

@@ -63,7 +63,7 @@ func TestErasureRefusals(t *testing.T) {
 		require.ErrorIs(t, err, exceptions.ErrForbidden)
 		_, err = acts.CancelErasure.Handle(ctx, erasures.CancelErasureInput{Membership: none})
 		require.ErrorIs(t, err, exceptions.ErrForbidden)
-		_, err = acts.ListErasures.Handle(ctx, erasures.ErasureInput{Membership: none})
+		_, err = acts.ListErasures.Handle(ctx, erasures.ListErasuresInput{Membership: none})
 		require.ErrorIs(t, err, exceptions.ErrForbidden)
 		_, err = acts.ShowErasure.Handle(ctx, erasures.ErasureInput{Membership: none})
 		require.ErrorIs(t, err, exceptions.ErrForbidden)

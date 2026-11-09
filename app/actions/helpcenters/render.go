@@ -47,7 +47,7 @@ type rendered struct {
 renderer turns article Markdown into the HTML readers see.
 */
 func renderer() *markdown.Renderer {
-	return markdown.New(markdown.Options{GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true})
+	return markdown.New(markdown.Options{GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true})
 }
 
 /*

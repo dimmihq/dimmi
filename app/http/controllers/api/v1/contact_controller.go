@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -75,6 +76,7 @@ type ContactController struct {
 	Conversations *conversations.ListRecordConversations
 	IDs           *ids.Registry
 	Cursors       *pagination.Cursors
+	Clock         clock.Clock
 }
 
 /*
@@ -125,12 +127,18 @@ func (c *ContactController) Index(ctx context.Context, _ *requests.NoInput) (*Co
 		return nil, err
 	}
 
+	if in.Conditions, in.Audiences, err = conditionsOf(r.URL.Query().Get("conditions"), c.IDs, c.Clock); err != nil {
+		return nil, err
+	}
+
 	page, err := c.List.Handle(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	out := pagination.Page[resources.Contact]{Items: resources.NewContactDetails(page.Contacts), Limit: in.Limit}
+	out := pagination.Page[resources.Contact]{
+		Items: resources.NewContactDetails(page.Contacts), Limit: in.Limit, Total: page.Total,
+	}
 	if page.More {
 		if out.NextCursor, err = c.Cursors.Encode(contactPage{Offset: in.Offset + in.Limit}); err != nil {
 			return nil, err
@@ -177,16 +185,34 @@ func (c *ContactController) listInput(ctx context.Context, query pagination.Quer
 		in.Sort = sort.Field
 	}
 
-	if query.Cursor != "" {
-		var start contactPage
-		if err := c.Cursors.Decode(query.Cursor, &start); err != nil {
-			return in, err
-		}
+	err = c.start(ctx, query, &in)
 
-		in.Offset = start.Offset
+	return in, err
+}
+
+/*
+start reads where the page starts: the cursor, or a numbered page within
+the counted rows, and whether to count every contact that matches.
+*/
+func (c *ContactController) start(ctx context.Context, query pagination.Query, in *contacts.ListContactsInput) error {
+	offset, count, err := numberedPage(ctx, in.Limit)
+	if err != nil {
+		return err
 	}
 
-	return in, nil
+	in.Offset, in.Count = offset, count
+	if query.Cursor == "" {
+		return nil
+	}
+
+	var start contactPage
+	if err := c.Cursors.Decode(query.Cursor, &start); err != nil {
+		return err
+	}
+
+	in.Offset = start.Offset
+
+	return nil
 }
 
 /*

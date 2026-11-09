@@ -6,14 +6,19 @@
  * Exports page, so the dialog only says where to find it. A selection
  * larger than the format allows is refused with the server's reason.
  */
-import { RiDownload2Line } from "@remixicon/react";
+import { RiBracesLine, RiDownload2Line, RiFileTextLine, RiTableLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Focusable } from "react-aria-components";
+
 import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
-import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { RadioGroup } from "@/components/base/radio/radio";
+import { RadioCard } from "@/components/base/radio/radio-card";
 import { Switch } from "@/components/base/switch/switch";
+import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { ButtonLink } from "@/features/navigation/links";
 import {
   dataExportsKey,
@@ -25,6 +30,12 @@ import {
 } from "@/lib/api/data-exports";
 import { callerQuery } from "@/lib/api/workspace";
 
+const formatIcons: Record<ExportFormat, typeof RiTableLine> = {
+  txt: RiFileTextLine,
+  csv: RiTableLine,
+  json: RiBracesLine,
+};
+
 const permissionOf: Record<ExportKind, string> = {
   conversations: "conversations:export",
   contacts: "contacts:export",
@@ -32,7 +43,8 @@ const permissionOf: Record<ExportKind, string> = {
 
 /*
  * ExportButton opens the export dialog for the list; compact draws it as
- * an icon, for a list header beside the view's own actions.
+ * an icon, for a list header beside the view's own actions, and "table"
+ * as the outlined icon button of a table's action group, with a tooltip.
  */
 export function ExportButton({
   workspace,
@@ -43,7 +55,7 @@ export function ExportButton({
   workspace: string;
   kind: ExportKind;
   selection: ExportSelection;
-  compact?: boolean;
+  compact?: boolean | "table";
 }) {
   const [open, setOpen] = useState(false);
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
@@ -55,7 +67,14 @@ export function ExportButton({
 
   return (
     <>
-      {compact ? (
+      {compact === "table" ? (
+        <TooltipTrigger delay={200}>
+          <Focusable>
+            <IconButton icon={RiDownload2Line} aria-label="Export" onClick={() => setOpen(true)} />
+          </Focusable>
+          <Tooltip size="md">Export</Tooltip>
+        </TooltipTrigger>
+      ) : compact ? (
         <Button
           iconOnly
           size="xs"
@@ -103,7 +122,6 @@ function ExportDialog({
     mutationFn: () => requestDataExport(workspace, { kind, format, include_notes: withNotes, selection }),
     onSuccess: () => client.invalidateQueries({ queryKey: dataExportsKey(workspace) }),
   });
-  const hint = formats.find((f) => f.id === format)?.hint;
   const what = kind === "contacts" ? "customers" : "conversations";
 
   return (
@@ -119,23 +137,16 @@ function ExportDialog({
       {start.isSuccess ? null : (
         <ModalBody>
           <div className="flex flex-col gap-3">
-            <SegmentedControl
+            <RadioGroup
               aria-label="Format"
-              selectedKeys={[format]}
-              onSelectionChange={(selected) => {
-                const next = formats.find((f) => f.id === [...selected][0]);
-                if (next) {
-                  setFormat(next.id);
-                }
-              }}
+              value={format}
+              onChange={(next) => setFormat(next as ExportFormat)}
+              className="flex flex-col gap-2"
             >
               {formats.map((f) => (
-                <SegmentedControlItem key={f.id} id={f.id}>
-                  {f.label}
-                </SegmentedControlItem>
+                <RadioCard key={f.id} value={f.id} icon={formatIcons[f.id]} title={f.label} description={f.hint} />
               ))}
-            </SegmentedControl>
-            <p className="text-body-2-regular text-text-tertiary">{hint}</p>
+            </RadioGroup>
             {notes && format !== "csv" ? (
               <Switch size="sm" isSelected={withNotes} onChange={setWithNotes}>
                 Include internal notes

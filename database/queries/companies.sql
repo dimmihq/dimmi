@@ -52,7 +52,38 @@ WHERE c.workspace_id = @workspace_id
       OR (c.created_at, c.id) < (sqlc.narg(before_created_at)::timestamptz, sqlc.narg(before_id)::uuid)
   )
 ORDER BY c.created_at DESC, c.id DESC
-LIMIT @row_limit::bigint;
+LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
+
+-- name: CountCompanies :one
+-- CountCompanies counts the companies ListCompanies would list, up to
+-- the cap.
+SELECT count(*) FROM (
+SELECT 1 FROM companies AS c
+WHERE c.workspace_id = @workspace_id
+  AND c.deleted_at IS NULL
+  AND (
+      sqlc.narg(search)::text IS NULL
+      OR strpos(lower(c.name), lower(sqlc.narg(search)::text)) > 0
+      OR strpos(lower(coalesce(c.domain::text, '')), lower(sqlc.narg(search)::text)) > 0
+  )
+  AND (
+      coalesce(cardinality(@tag_ids::uuid[]), 0) = 0
+      OR c.id IN (
+          SELECT ct.company_id FROM company_tag AS ct
+          WHERE ct.workspace_id = @workspace_id AND ct.tag_id = ANY (@tag_ids::uuid[])
+          GROUP BY ct.company_id
+          HAVING count(*) = cardinality(@tag_ids::uuid[])
+      )
+  )
+LIMIT @row_limit::bigint
+) AS counted;
+
+-- name: CountCompanyPeople :many
+-- CountCompanyPeople counts the live contacts of each company given.
+SELECT company_id::uuid AS company_id, count(*) AS people FROM contacts
+WHERE workspace_id = @workspace_id AND company_id = ANY (@company_ids::uuid[])
+  AND deleted_at IS NULL AND merged_into_id IS NULL
+GROUP BY company_id;
 
 -- name: UpdateCompany :one
 -- UpdateCompany replaces a live company's attributes. A deleted company

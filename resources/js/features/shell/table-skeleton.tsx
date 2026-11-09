@@ -41,3 +41,60 @@ export function ProfileSkeleton() {
     </div>
   );
 }
+
+/*
+ * ListSkeleton fills a card's list, such as a record's conversations,
+ * while it loads.
+ */
+export function ListSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div aria-busy aria-label="Loading" role="status" className="flex flex-col">
+      {placeholders(rows).map((id) => (
+        <div key={id} aria-hidden className="flex h-9 items-center gap-3">
+          <Skeleton shape="text" className="h-3 w-10" />
+          <Skeleton shape="text" className="h-3.5 flex-1" />
+          <Skeleton shape="text" className="h-3 w-14" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/*
+ * TitleSkeleton stands in for a record's avatar and name in a drawer's
+ * header.
+ */
+export function TitleSkeleton() {
+  return (
+    <span aria-busy className="flex items-center gap-2.5">
+      <Skeleton shape="circle" className="size-8 shrink-0" />
+      <span className="flex flex-col gap-1.5">
+        <Skeleton shape="text" className="h-4 w-36" />
+        <Skeleton shape="text" className="h-3 w-24" />
+      </span>
+    </span>
+  );
+}
+
+/*
+ * EditorSkeleton stands in for a full-page editor: its header and two
+ * columns of cards.
+ */
+export function EditorSkeleton() {
+  return (
+    <div aria-busy aria-label="Loading" role="status" className="flex h-full flex-col gap-4 p-4">
+      <div className="flex items-center justify-between">
+        <Skeleton shape="text" className="h-5 w-48" />
+        <Skeleton shape="text" className="h-8 w-24" />
+      </div>
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+        <div className="flex flex-col gap-3">
+          {placeholders(4).map((id) => (
+            <Skeleton key={id} shape="rect" className="h-16 w-full rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton shape="rect" className="h-64 w-full rounded-2xl" />
+      </div>
+    </div>
+  );
+}

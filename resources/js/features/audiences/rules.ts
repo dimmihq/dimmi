@@ -224,17 +224,36 @@ export function fieldName(key: string): string {
   return key;
 }
 
-export type FieldGroup = "Person" | "Company" | "Activity" | "Tags and audiences" | "Visit" | "Page";
+export type FieldGroup =
+  | "Your person attributes"
+  | "Your company attributes"
+  | "Your events"
+  | "Person"
+  | "Company"
+  | "Tags and audiences"
+  | "Visit"
+  | "Page";
 
+/*
+ * fieldGroup is the heading a field sits under in the field list: the
+ * fields every workspace has first, then the workspace's own attributes
+ * and events under headings of their own, so they are easy to find.
+ */
 export function fieldGroup(key: string): FieldGroup {
+  if (key.startsWith("contact.custom.")) {
+    return "Your person attributes";
+  }
+  if (key.startsWith("company.custom.")) {
+    return "Your company attributes";
+  }
+  if (key.startsWith("event.")) {
+    return "Your events";
+  }
   if (key === "contact.tags" || key === "company.tags" || key === "audience") {
     return "Tags and audiences";
   }
   if (key.startsWith("company.")) {
     return "Company";
-  }
-  if (key.startsWith("event.")) {
-    return "Activity";
   }
   if (key.startsWith("page.") || key.startsWith("visitor.")) {
     return "Page";
@@ -246,7 +265,29 @@ export function fieldGroup(key: string): FieldGroup {
   return "Person";
 }
 
-export const fieldGroups: FieldGroup[] = ["Person", "Company", "Activity", "Tags and audiences", "Visit", "Page"];
+export const fieldGroups: FieldGroup[] = [
+  "Person",
+  "Company",
+  "Tags and audiences",
+  "Visit",
+  "Page",
+  "Your person attributes",
+  "Your company attributes",
+  "Your events",
+];
+
+/*
+ * typeWords says what kind of value a field holds, shown beside the
+ * workspace's own fields.
+ */
+export const typeWords: Partial<Record<AudienceField["type"], string>> = {
+  string: "Text",
+  number: "Number",
+  bool: "Yes or no",
+  date: "Date",
+  list: "List",
+  auto: "Value",
+};
 
 export const opNames: Record<string, string> = {
   eq: "is",

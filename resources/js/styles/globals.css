@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./theme.css";
 @import "./typography.css";
+@import "./prose.css";
 
 /* ---------------------------------------------------------------------------
  * Dark mode strategy
@@ -426,6 +427,18 @@ input[type="search"]::-webkit-search-cancel-button {
   }
   to {
     grid-template-rows: 1fr;
+  }
+}
+/* A panel sliding in from the reading end, such as a filter's settings
+   after its field is picked from a menu. */
+@keyframes filter-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 @keyframes row-slide-in {
@@ -1022,4 +1035,21 @@ input[type="search"]::-webkit-search-cancel-button {
     border-color: var(--color-border-button-hover);
     box-shadow: inset 0 0 0 2px var(--color-border-button-hover);
   }
+}
+
+/*
+ * Menus that are not React Aria popovers, such as an editor's suggestion
+ * list or floating bar, open with the same motion as BoardUI's menus:
+ * 150ms out of a slightly smaller, blurred and transparent state.
+ */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+    filter: blur(2px);
+  }
+}
+
+@utility animate-menu-in {
+  animation: menu-in 150ms ease-out;
 }

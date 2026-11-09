@@ -8,11 +8,22 @@ import { StatusDot } from "@/components/base/badges/status-dot";
 import { statusLabel } from "@/features/inbox/case";
 import { ago, subjectOf } from "@/features/inbox/conversations";
 import { Nothing } from "@/features/inbox/customer/rows";
+import { ListSkeleton } from "@/features/shell/table-skeleton";
 import type { Conversation } from "@/lib/api/inbox";
 
 const statusDot = { open: "green", snoozed: "yellow", closed: "indigo" } as const;
 
-export function RecordConversations({ conversations }: { conversations: Conversation[] }) {
+export function RecordConversations({
+  conversations,
+  loading = false,
+}: {
+  conversations: Conversation[];
+  loading?: boolean;
+}) {
+  if (loading) {
+    return <ListSkeleton />;
+  }
+
   if (conversations.length === 0) {
     return <Nothing>No conversations yet.</Nothing>;
   }

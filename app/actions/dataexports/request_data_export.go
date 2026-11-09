@@ -169,7 +169,9 @@ count returns how many rows the export covers as the caller sees them.
 */
 func (a *RequestDataExport) count(ctx context.Context, tx *database.Tx, in RequestInput) (int, error) {
 	if in.Kind == KindContacts {
-		return countContacts(ctx, models.New(tx), contactRead{ws: in.Membership.Workspace.ID, sel: in.Contacts})
+		return countContacts(ctx, models.New(tx), contactRead{
+			ws: in.Membership.Workspace.ID, sel: in.Contacts, now: a.Clock.Now(),
+		})
 	}
 
 	return a.Selector.Count(ctx, tx, conversations.Reading{
