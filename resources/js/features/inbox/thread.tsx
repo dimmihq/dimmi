@@ -21,7 +21,7 @@
  * a note from anywhere, and O opens or closes Operator.
  */
 import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
@@ -30,6 +30,7 @@ import { avatarColor } from "@/features/shell/avatar-color";
 import { ScrollArea } from "@/features/shell/page";
 import { cx } from "@/utils/cx";
 
+import { useComposeTarget } from "./compose-bridge-context";
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
 import { LinkPolicyProvider } from "./links/link-policy";
@@ -404,6 +405,7 @@ export function Thread({
 }) {
   const moves = useMessageMoves(conversation);
   const [mode, setMode] = useState<Mode | null>(null);
+  const [incoming, setIncoming] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
   const ask = useRef(onAskOperator);
   useEffect(() => {
@@ -418,6 +420,11 @@ export function Thread({
     return { r: () => write("reply"), n: () => write("note"), o: () => ask.current() };
   });
   useComposerKeys(keys);
+  useComposeTarget((text) => {
+    setIncoming(text);
+    keys.r();
+  });
+  const used = useCallback(() => setIncoming(null), []);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -461,6 +468,8 @@ export function Thread({
           onOpen={(next) => (next === "reply" ? keys.r() : keys.n())}
           onAskOperator={() => ask.current()}
           onTyping={onTyping}
+          incoming={incoming}
+          onIncomingUsed={used}
         />
       </div>
     </div>

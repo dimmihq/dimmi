@@ -214,7 +214,8 @@ func (c *AIActionController) input(ctx context.Context, b requests.AIActionBody,
 		ApprovalTimeoutMinutes: b.ApprovalTimeoutMinutes, Method: b.Method, PathTemplate: b.PathTemplate,
 		Query: b.Query, Headers: b.Headers, BodyEncoding: b.BodyEncoding, MCPToolName: b.MCPToolName,
 		BoundArguments: b.BoundArguments, ResponseFields: b.ResponseFields, ErrorMessagePath: b.ErrorMessagePath,
-		ResponseMaxBytes: b.ResponseMaxBytes, TimeoutMS: b.TimeoutMS, Channels: b.Channels, Status: b.Status,
+		ResponseMaxBytes: b.ResponseMaxBytes, TimeoutMS: b.TimeoutMS, Channels: b.Channels, Agents: b.Agents,
+		Status: b.Status,
 		Source: "api",
 	}
 	sent := requests.Sent(raw)

@@ -1,14 +1,16 @@
 -- name: CreateActionCall :one
 -- CreateActionCall records a call the moment it is requested, in the
--- state its permissions put it in.
+-- state its permissions put it in, with the teammate who approved it
+-- when one did before it was asked for.
 INSERT INTO ai_action_calls (
     workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state,
     run_id, conversation_id, contact_id, tool_call_id, title, summary, input, bindings, requested_at, sent_at,
-    expires_at, attempts, created_at, updated_at
+    expires_at, attempts, decided_by_member_id, decided_at, created_at, updated_at
 ) VALUES (
     @workspace_id, @action_id, @action_version_id, @connection_id, @mode, @side_effect, @confirmation, @approval,
     @state, @run_id, @conversation_id, @contact_id, @tool_call_id, @title, @summary, @input, @bindings, @now::timestamptz,
-    @sent_at, @expires_at, @attempts, @now::timestamptz, @now::timestamptz
+    @sent_at, @expires_at, @attempts, sqlc.narg('decided_by_member_id'), sqlc.narg('decided_at'),
+    @now::timestamptz, @now::timestamptz
 )
 RETURNING *;
 

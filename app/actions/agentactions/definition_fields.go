@@ -110,6 +110,9 @@ func applyValues(s actionkit.Spec, in DefinitionInput) actionkit.Spec {
 	if in.Channels != nil {
 		s.Channels = *in.Channels
 	}
+	if in.Agents != nil {
+		s.Agents = *in.Agents
+	}
 	if in.BodyTemplate != nil {
 		s.BodyTemplate = *in.BodyTemplate
 		if string(s.BodyTemplate) == "null" {
@@ -135,7 +138,7 @@ func (in DefinitionInput) editsDefinition() bool {
 	}
 	return in.ApprovalTimeoutMinutes != nil || in.ResponseMaxBytes != nil || in.TimeoutMS != nil ||
 		in.Query != nil || in.Headers != nil || in.BodyTemplate != nil || in.BoundArguments != nil ||
-		in.InputSchema != nil || in.ResponseFields != nil || in.Channels != nil
+		in.InputSchema != nil || in.ResponseFields != nil || in.Channels != nil || in.Agents != nil
 }
 
 /*
@@ -182,7 +185,8 @@ func createParams(ws ids.UUID, s actionkit.Spec, in DefinitionInput, c clock.Clo
 		Query: col.query, Headers: col.headers, BodyTemplate: col.body, BodyEncoding: s.BodyEncoding,
 		McpToolName: col.tool, BoundArguments: col.bound, InputSchema: s.InputSchema, ResponseFields: col.fields,
 		ErrorMessagePath: col.errPath, ResponseMaxBytes: s.ResponseMaxBytes, TimeoutMs: col.timeout,
-		Channels: s.Channels, SpecHash: s.Hash(), Source: source, MemberID: &member, Now: c.Now(),
+		Channels: s.Channels, Agents: s.AgentsColumn(), SpecHash: s.Hash(), Source: source, MemberID: &member,
+		Now: c.Now(),
 	}
 }
 
@@ -198,7 +202,7 @@ func updateParams(a models.AiAction, s actionkit.Spec, in DefinitionInput, c clo
 		Query: col.query, Headers: col.headers, BodyTemplate: col.body, BodyEncoding: s.BodyEncoding,
 		McpToolName: col.tool, BoundArguments: col.bound, InputSchema: s.InputSchema, ResponseFields: col.fields,
 		ErrorMessagePath: col.errPath, ResponseMaxBytes: s.ResponseMaxBytes, TimeoutMs: col.timeout,
-		Channels: s.Channels, SpecHash: s.Hash(), MemberID: &member, Now: c.Now(),
+		Channels: s.Channels, Agents: s.AgentsColumn(), SpecHash: s.Hash(), MemberID: &member, Now: c.Now(),
 	}
 }
 

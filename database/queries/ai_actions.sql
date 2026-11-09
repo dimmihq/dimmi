@@ -4,12 +4,14 @@ INSERT INTO ai_actions (
     workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval,
     approval_timeout_minutes, method, path_template, query, headers, body_template, body_encoding,
     mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes,
-    timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, created_at, updated_at
+    timeout_ms, channels, agents, spec_hash, source, created_by_member_id, updated_by_member_id, created_at,
+    updated_at
 ) VALUES (
     @workspace_id, @connection_id, @name, @title, @description, @kind, @side_effect, @confirmation, @approval,
     @approval_timeout_minutes, @method, @path_template, @query, @headers, @body_template, @body_encoding,
     @mcp_tool_name, @bound_arguments, @input_schema, @response_fields, @error_message_path, @response_max_bytes,
-    @timeout_ms, @channels, @spec_hash, @source, @member_id, @member_id, @now::timestamptz, @now::timestamptz
+    @timeout_ms, @channels, @agents::text[], @spec_hash, @source, @member_id, @member_id, @now::timestamptz,
+    @now::timestamptz
 )
 RETURNING *;
 
@@ -51,7 +53,8 @@ UPDATE ai_actions SET
     body_template = @body_template, body_encoding = @body_encoding, mcp_tool_name = @mcp_tool_name,
     bound_arguments = @bound_arguments, input_schema = @input_schema, response_fields = @response_fields,
     error_message_path = @error_message_path, response_max_bytes = @response_max_bytes, timeout_ms = @timeout_ms,
-    channels = @channels, spec_hash = @spec_hash, updated_by_member_id = @member_id, updated_at = @now::timestamptz
+    channels = @channels, agents = @agents::text[], spec_hash = @spec_hash, updated_by_member_id = @member_id,
+    updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
 

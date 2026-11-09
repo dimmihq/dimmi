@@ -59,6 +59,7 @@ type AIActionBody struct {
 	ResponseMaxBytes       *int32                        `json:"response_max_bytes,omitempty"`
 	TimeoutMS              *int32                        `json:"timeout_ms,omitempty"`
 	Channels               *[]string                     `json:"channels,omitempty"`
+	Agents                 *[]string                     `json:"agents,omitempty"`
 	Status                 *string                       `json:"status,omitempty"`
 	RestoreVersionID       *string                       `json:"restore_version_id,omitempty"`
 }

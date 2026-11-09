@@ -68,6 +68,8 @@ export function Composer({
   onOpen,
   onAskOperator,
   onTyping,
+  incoming = null,
+  onIncomingUsed,
 }: {
   conversation: string;
   mode: Mode | null;
@@ -79,6 +81,8 @@ export function Composer({
   onOpen: (mode: Mode) => void;
   onAskOperator: () => void;
   onTyping: Report;
+  incoming?: string | null;
+  onIncomingUsed?: () => void;
 }) {
   const still = useReducedMotion();
   useEffect(preloadEditor, []);
@@ -105,6 +109,8 @@ export function Composer({
               onModeChange={onOpen}
               onAskOperator={onAskOperator}
               onTyping={onTyping}
+              incoming={incoming}
+              onIncomingUsed={onIncomingUsed}
             />
           </motion.div>
         ) : (
@@ -212,6 +218,8 @@ function Panel({
   onModeChange,
   onAskOperator,
   onTyping,
+  incoming,
+  onIncomingUsed,
 }: {
   conversation: string;
   mode: Mode;
@@ -223,6 +231,8 @@ function Panel({
   onModeChange: (mode: Mode) => void;
   onAskOperator: () => void;
   onTyping: Report;
+  incoming: string | null;
+  onIncomingUsed?: () => void;
 }) {
   const { workspace, userId } = useInbox();
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
@@ -233,6 +243,13 @@ function Panel({
     onModeChange("reply");
   });
   const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
+  const takeIncoming = drafts.reply.edit;
+  useEffect(() => {
+    if (incoming !== null) {
+      takeIncoming(incoming);
+      onIncomingUsed?.();
+    }
+  }, [incoming, takeIncoming, onIncomingUsed]);
   const addEmoji = (emoji: string) => draft.edit(`${draft.body}${emoji}`);
   const gifs = useGifs(workspace, userId, insert);
   const files = useReplyFiles(workspace);

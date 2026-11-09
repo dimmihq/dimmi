@@ -75,7 +75,7 @@ func (r *Runner) offerActions(ctx context.Context, st *run) {
 	}
 	offered, err := r.Actions.Offer(ctx, actionkit.OfferInput{
 		WorkspaceID: e.Workspace.ID, ChannelType: e.ChannelType, Identity: st.actions.identity,
-		NoWrites: st.actions.noWrites,
+		NoWrites: st.actions.noWrites, Agent: actionkit.AgentDimmi,
 	})
 	if err == nil {
 		st.actions.offered = offered

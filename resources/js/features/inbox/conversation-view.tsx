@@ -45,6 +45,7 @@ import { cx } from "@/utils/cx";
 import { AiBadge } from "./ai-badge";
 import { AssignPicker } from "./assign/assign-picker";
 import { statusLabel, useCase } from "./case";
+import { ComposeBridge } from "./compose-bridge";
 import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
 import type { Mode } from "./modes";
@@ -67,9 +68,6 @@ const visible = { overflow: "visible" } as const;
  */
 const pane = { group: "dimmi:conversation", thread: "thread", details: "details", operator: "operator" } as const;
 const pressed = "border-border-button-active bg-background-primary-active";
-
-const notConnected =
-  "I can't brief you on this conversation yet: Operator connects later. Ask your question and I'll say what I can.";
 
 /*
  * useTimeline reads the conversation's timeline, marks it read once it
@@ -341,71 +339,85 @@ export function ConversationView({
 
   if (!sideBySide) {
     return (
-      <div className="flex h-full min-w-0 flex-1">
-        {thread}
-        <Drawer
-          isOpen={drawer}
-          onOpenChange={setDrawer}
-          placement="end"
-          size="md"
-          aria-label="Operator"
-          className="p-0"
-        >
-          <OperatorPanel briefing={notConnected} onClose={() => setDrawer(false)} className="h-full" />
-        </Drawer>
-      </div>
+      <ComposeBridge>
+        <div className="flex h-full min-w-0 flex-1">
+          {thread}
+          <Drawer
+            isOpen={drawer}
+            onOpenChange={setDrawer}
+            placement="end"
+            size="md"
+            aria-label="Operator"
+            className="p-0"
+          >
+            <OperatorPanel
+              workspace={workspace}
+              conversation={conversation.id}
+              onClose={() => setDrawer(false)}
+              className="h-full"
+            />
+          </Drawer>
+        </div>
+      </ComposeBridge>
     );
   }
 
   return (
-    <PaneGroup
-      id={pane.group}
-      panelIds={[pane.thread, pane.details, pane.operator]}
-      easing={easing}
-      groupRef={sides.group}
-    >
-      <Pane id={pane.thread} minSize={360} style={visible} className="flex h-full">
-        {thread}
-      </Pane>
-      <PaneHandle hidden={!detailsOpen} />
-      <Pane
-        id={pane.details}
-        defaultSize={360}
-        minSize={300}
-        maxSize={560}
-        collapsible
-        groupResizeBehavior="preserve-pixel-size"
-        onResize={(size) => {
-          sides.remember(pane.details)(size);
-          setDetailsOpen(size.inPixels > 0);
-        }}
-        style={visible}
-        className={cx("flex h-full", !detailsOpen && "invisible")}
+    <ComposeBridge>
+      <PaneGroup
+        id={pane.group}
+        panelIds={[pane.thread, pane.details, pane.operator]}
+        easing={easing}
+        groupRef={sides.group}
       >
-        <DetailsPanel
-          workspace={workspace}
-          conversation={conversation}
-          caze={caze}
-          onClose={() => toggle(pane.details)}
-        />
-      </Pane>
-      <PaneHandle hidden={!operatorOpen} />
-      <Pane
-        id={pane.operator}
-        defaultSize={operatorDefault ? 380 : 0}
-        minSize={300}
-        maxSize={600}
-        collapsible
-        groupResizeBehavior="preserve-pixel-size"
-        onResize={(size) => {
-          sides.remember(pane.operator)(size);
-          setOperatorOpen(size.inPixels > 0);
-        }}
-        style={visible}
-        className={cx("flex h-full", !operatorOpen && "invisible")}
-      >
-        <OperatorPanel briefing={notConnected} onClose={() => toggle(pane.operator)} className="h-full w-full" />
-      </Pane>
-    </PaneGroup>
+        <Pane id={pane.thread} minSize={360} style={visible} className="flex h-full">
+          {thread}
+        </Pane>
+        <PaneHandle hidden={!detailsOpen} />
+        <Pane
+          id={pane.details}
+          defaultSize={360}
+          minSize={300}
+          maxSize={560}
+          collapsible
+          groupResizeBehavior="preserve-pixel-size"
+          onResize={(size) => {
+            sides.remember(pane.details)(size);
+            setDetailsOpen(size.inPixels > 0);
+          }}
+          style={visible}
+          className={cx("flex h-full", !detailsOpen && "invisible")}
+        >
+          <DetailsPanel
+            workspace={workspace}
+            conversation={conversation}
+            caze={caze}
+            onClose={() => toggle(pane.details)}
+          />
+        </Pane>
+        <PaneHandle hidden={!operatorOpen} />
+        <Pane
+          id={pane.operator}
+          defaultSize={operatorDefault ? 380 : 0}
+          minSize={300}
+          maxSize={600}
+          collapsible
+          groupResizeBehavior="preserve-pixel-size"
+          onResize={(size) => {
+            sides.remember(pane.operator)(size);
+            setOperatorOpen(size.inPixels > 0);
+          }}
+          style={visible}
+          className={cx("flex h-full", !operatorOpen && "invisible")}
+        >
+          <OperatorPanel
+            workspace={workspace}
+            conversation={conversation.id}
+            onClose={() => toggle(pane.operator)}
+            className="h-full w-full"
+          />
+        </Pane>
+      </PaneGroup>
+    </ComposeBridge>
   );
 }

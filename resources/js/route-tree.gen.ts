@@ -28,6 +28,7 @@ import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
+import { Route as DOperatorRouteImport } from './routes/d/operator'
 import { Route as DSeriesRouteImport } from './routes/d/series'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
@@ -157,6 +158,11 @@ const DHelpCenterRoute = DHelpCenterRouteImport.update({
 const DNotificationsRoute = DNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DOperatorRoute = DOperatorRouteImport.update({
+  id: '/operator',
+  path: '/operator',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DSeriesRoute = DSeriesRouteImport.update({
@@ -365,6 +371,7 @@ export interface FileRoutesByFullPath {
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
+  '/d/operator': typeof DOperatorRoute
   '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
@@ -417,6 +424,7 @@ export interface FileRoutesByTo {
   '/d/broadcasts': typeof DBroadcastsRoute
   '/d/customers': typeof DCustomersListsIndexRoute
   '/d/notifications': typeof DNotificationsRoute
+  '/d/operator': typeof DOperatorRoute
   '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d': typeof DIndexRoute
@@ -472,6 +480,7 @@ export interface FileRoutesById {
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
+  '/d/operator': typeof DOperatorRoute
   '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
@@ -531,6 +540,7 @@ export interface FileRouteTypes {
     | '/d/feedback'
     | '/d/help-center'
     | '/d/notifications'
+    | '/d/operator'
     | '/d/series'
     | '/d/shortcuts'
     | '/d/'
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/d/broadcasts'
     | '/d/customers'
     | '/d/notifications'
+    | '/d/operator'
     | '/d/series'
     | '/d/shortcuts'
     | '/d'
@@ -637,6 +648,7 @@ export interface FileRouteTypes {
     | '/d/feedback'
     | '/d/help-center'
     | '/d/notifications'
+    | '/d/operator'
     | '/d/series'
     | '/d/shortcuts'
     | '/d/'
@@ -816,6 +828,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/d/notifications'
       preLoaderRoute: typeof DNotificationsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/operator': {
+      id: '/d/operator'
+      path: '/operator'
+      fullPath: '/d/operator'
+      preLoaderRoute: typeof DOperatorRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/series': {
@@ -1175,6 +1194,7 @@ interface DRouteRouteChildren {
   DFeedbackRoute: typeof DFeedbackRouteWithChildren
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
   DNotificationsRoute: typeof DNotificationsRoute
+  DOperatorRoute: typeof DOperatorRoute
   DSeriesRoute: typeof DSeriesRoute
   DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
@@ -1202,6 +1222,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DFeedbackRoute: DFeedbackRouteWithChildren,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
   DNotificationsRoute: DNotificationsRoute,
+  DOperatorRoute: DOperatorRoute,
   DSeriesRoute: DSeriesRoute,
   DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,

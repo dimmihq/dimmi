@@ -23,7 +23,14 @@ import { RadioCard } from "@/components/base/radio/radio-card";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Section } from "@/features/settings/layout";
 
-import { ACTION_CHANNELS, type ActionChannel, type Approval, type Confirmation } from "../api";
+import {
+  ACTION_AGENTS,
+  ACTION_CHANNELS,
+  type ActionAgent,
+  type ActionChannel,
+  type Approval,
+  type Confirmation,
+} from "../api";
 import type { Draft } from "../draft";
 import { customerJourney, durationLabel } from "../format";
 import { Block } from "../parts";
@@ -32,6 +39,11 @@ import type { Editor } from "./use-editor";
 const timeouts = [15, 30, 60, 240, 1440];
 
 const channelNames: Record<ActionChannel, string> = { widget: "Messenger", email: "Email", api: "API" };
+
+const agentNames: Record<ActionAgent, { label: string; hint: string }> = {
+  dimmi: { label: "dimmi", hint: "Answers customers." },
+  operator: { label: "Operator", hint: "Works for your team." },
+};
 
 /*
  * CardPreview is the confirmation card as the customer will see it in
@@ -174,6 +186,12 @@ export function PermissionsSection({ editor }: { editor: Editor }) {
   );
 }
 
+/*
+ * ChannelsSection says which agents may use the action, and where dimmi
+ * may use it. Operator works for the team: it looks things up at once
+ * and proposes changes a teammate applies, so the customer's channel
+ * does not apply to it.
+ */
 export function ChannelsSection({ editor }: { editor: Editor }) {
   const { draft, update, problems } = editor;
   const write = draft.side_effect === "write";
@@ -183,28 +201,60 @@ export function ChannelsSection({ editor }: { editor: Editor }) {
         ? ACTION_CHANNELS.filter((c) => c === channel || draft.channels.includes(c))
         : draft.channels.filter((c) => c !== channel),
     });
+  const toggleAgent = (agent: ActionAgent, on: boolean) =>
+    update({
+      agents: on
+        ? ACTION_AGENTS.filter((a) => a === agent || draft.agents.includes(a))
+        : draft.agents.filter((a) => a !== agent),
+    });
 
   return (
-    <Section title="Channels" description="Where dimmi may use this action.">
+    <Section title="Who can use it" description="Connect an action once and give it to dimmi, Operator or both.">
       <Block
-        label="Available in"
-        hint={write ? "Actions that change data run only in the messenger, where the customer can confirm." : undefined}
-        problem={problems.channels}
+        label="Used by"
+        hint={
+          draft.agents.includes("operator")
+            ? "Operator looks things up at once and proposes changes for a teammate to apply."
+            : undefined
+        }
       >
         <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {ACTION_CHANNELS.map((channel) => (
+          {ACTION_AGENTS.map((agent) => (
             <Checkbox
-              key={channel}
+              key={agent}
               size="sm"
-              isSelected={draft.channels.includes(channel)}
-              isDisabled={write && channel !== "widget"}
-              onChange={(on) => toggle(channel, on)}
+              isSelected={draft.agents.includes(agent)}
+              onChange={(on) => toggleAgent(agent, on)}
             >
-              {channelNames[channel]}
+              {agentNames[agent].label}
+              <span className="text-text-tertiary"> · {agentNames[agent].hint}</span>
             </Checkbox>
           ))}
         </div>
       </Block>
+      {draft.agents.includes("dimmi") ? (
+        <Block
+          label="dimmi uses it in"
+          hint={
+            write ? "Actions that change data run only in the messenger, where the customer can confirm." : undefined
+          }
+          problem={problems.channels}
+        >
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {ACTION_CHANNELS.map((channel) => (
+              <Checkbox
+                key={channel}
+                size="sm"
+                isSelected={draft.channels.includes(channel)}
+                isDisabled={write && channel !== "widget"}
+                onChange={(on) => toggle(channel, on)}
+              >
+                {channelNames[channel]}
+              </Checkbox>
+            ))}
+          </div>
+        </Block>
+      ) : null}
     </Section>
   );
 }

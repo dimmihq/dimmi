@@ -30,14 +30,16 @@ INSERT INTO ai_actions (
     workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval,
     approval_timeout_minutes, method, path_template, query, headers, body_template, body_encoding,
     mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes,
-    timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, created_at, updated_at
+    timeout_ms, channels, agents, spec_hash, source, created_by_member_id, updated_by_member_id, created_at,
+    updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
     $10, $11, $12, $13, $14, $15, $16,
     $17, $18, $19, $20, $21, $22,
-    $23, $24, $25, $26, $27, $27, $28::timestamptz, $28::timestamptz
+    $23, $24, $25::text[], $26, $27, $28, $28, $29::timestamptz,
+    $29::timestamptz
 )
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
 `
 
 type CreateActionParams struct {
@@ -65,6 +67,7 @@ type CreateActionParams struct {
 	ResponseMaxBytes       int32           `json:"response_max_bytes"`
 	TimeoutMs              *int32          `json:"timeout_ms"`
 	Channels               []string        `json:"channels"`
+	Agents                 []string        `json:"agents"`
 	SpecHash               string          `json:"spec_hash"`
 	Source                 string          `json:"source"`
 	MemberID               *ids.UUID       `json:"member_id"`
@@ -98,6 +101,7 @@ func (q *Queries) CreateAction(ctx context.Context, arg CreateActionParams) (AiA
 		arg.ResponseMaxBytes,
 		arg.TimeoutMs,
 		arg.Channels,
+		arg.Agents,
 		arg.SpecHash,
 		arg.Source,
 		arg.MemberID,
@@ -139,6 +143,7 @@ func (q *Queries) CreateAction(ctx context.Context, arg CreateActionParams) (AiA
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }
@@ -215,7 +220,7 @@ func (q *Queries) DeleteAction(ctx context.Context, arg DeleteActionParams) erro
 }
 
 const findAction = `-- name: FindAction :one
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at FROM ai_actions WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindActionParams struct {
@@ -262,12 +267,13 @@ func (q *Queries) FindAction(ctx context.Context, arg FindActionParams) (AiActio
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }
 
 const findActionByName = `-- name: FindActionByName :one
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at FROM ai_actions WHERE workspace_id = $1 AND name = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions WHERE workspace_id = $1 AND name = $2 AND deleted_at IS NULL
 `
 
 type FindActionByNameParams struct {
@@ -314,12 +320,13 @@ func (q *Queries) FindActionByName(ctx context.Context, arg FindActionByNamePara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }
 
 const findActionByToolName = `-- name: FindActionByToolName :one
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at FROM ai_actions
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions
 WHERE workspace_id = $1 AND connection_id = $2 AND mcp_tool_name = $3
     AND deleted_at IS NULL
 LIMIT 1
@@ -371,6 +378,7 @@ func (q *Queries) FindActionByToolName(ctx context.Context, arg FindActionByTool
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }
@@ -445,7 +453,7 @@ func (q *Queries) ListActionVersions(ctx context.Context, arg ListActionVersions
 }
 
 const listActions = `-- name: ListActions :many
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at FROM ai_actions
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions
 WHERE workspace_id = $1 AND deleted_at IS NULL
     AND ($2::text IS NULL OR status = $2::text)
     AND ($3::uuid IS NULL OR connection_id = $3::uuid)
@@ -504,6 +512,7 @@ func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]AiA
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Agents,
 		); err != nil {
 			return nil, err
 		}
@@ -600,7 +609,7 @@ const publishAction = `-- name: PublishAction :one
 UPDATE ai_actions SET
     status = 'published', published_version_id = $1, updated_by_member_id = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
 `
 
 type PublishActionParams struct {
@@ -656,6 +665,7 @@ func (q *Queries) PublishAction(ctx context.Context, arg PublishActionParams) (A
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }
@@ -663,7 +673,7 @@ func (q *Queries) PublishAction(ctx context.Context, arg PublishActionParams) (A
 const setActionStatus = `-- name: SetActionStatus :one
 UPDATE ai_actions SET status = $1, updated_by_member_id = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
 `
 
 type SetActionStatusParams struct {
@@ -719,6 +729,7 @@ func (q *Queries) SetActionStatus(ctx context.Context, arg SetActionStatusParams
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }
@@ -731,9 +742,10 @@ UPDATE ai_actions SET
     body_template = $12, body_encoding = $13, mcp_tool_name = $14,
     bound_arguments = $15, input_schema = $16, response_fields = $17,
     error_message_path = $18, response_max_bytes = $19, timeout_ms = $20,
-    channels = $21, spec_hash = $22, updated_by_member_id = $23, updated_at = $24::timestamptz
-WHERE workspace_id = $25 AND id = $26 AND deleted_at IS NULL
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at
+    channels = $21, agents = $22::text[], spec_hash = $23, updated_by_member_id = $24,
+    updated_at = $25::timestamptz
+WHERE workspace_id = $26 AND id = $27 AND deleted_at IS NULL
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
 `
 
 type UpdateActionParams struct {
@@ -758,6 +770,7 @@ type UpdateActionParams struct {
 	ResponseMaxBytes       int32           `json:"response_max_bytes"`
 	TimeoutMs              *int32          `json:"timeout_ms"`
 	Channels               []string        `json:"channels"`
+	Agents                 []string        `json:"agents"`
 	SpecHash               string          `json:"spec_hash"`
 	MemberID               *ids.UUID       `json:"member_id"`
 	Now                    time.Time       `json:"now"`
@@ -789,6 +802,7 @@ func (q *Queries) UpdateAction(ctx context.Context, arg UpdateActionParams) (AiA
 		arg.ResponseMaxBytes,
 		arg.TimeoutMs,
 		arg.Channels,
+		arg.Agents,
 		arg.SpecHash,
 		arg.MemberID,
 		arg.Now,
@@ -831,6 +845,7 @@ func (q *Queries) UpdateAction(ctx context.Context, arg UpdateActionParams) (AiA
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Agents,
 	)
 	return i, err
 }

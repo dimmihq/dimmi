@@ -201,8 +201,9 @@ type Actions struct {
 	RevokePersonalAccessToken *tokens.RevokePersonalAccessToken
 	ListTokenAbilities        *tokens.ListTokenAbilities
 
-	Inbox *InboxActions
-	AI    *AIActions
+	Inbox         *InboxActions
+	AI            *AIActions
+	OperatorAgent *OperatorAgentActions
 
 	Assignment       *assignment.Assigner
 	AssignmentStatus *assignment.ShowAssignmentStatus

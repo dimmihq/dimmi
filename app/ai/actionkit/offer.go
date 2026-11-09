@@ -17,6 +17,7 @@
 package actionkit
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -46,14 +47,16 @@ type Live struct {
 
 /*
 OfferInput is what decides a run's actions: the workspace, the
-conversation's channel, who the customer is, and whether writes may be
-offered at all.
+conversation's channel, who the customer is, whether writes may be
+offered at all, and the agent asking, dimmi when empty. Operator works
+for the team, so the customer's channel does not limit its actions.
 */
 type OfferInput struct {
 	WorkspaceID ids.UUID
 	ChannelType string
 	Identity    Identity
 	NoWrites    bool
+	Agent       string
 }
 
 /*
@@ -90,8 +93,11 @@ func (k *Kit) Offer(ctx context.Context, in OfferInput) ([]Live, error) {
 offered reports whether one action may be offered in the run.
 */
 func offered(s Spec, in OfferInput, contact map[string]any) bool {
+	agent := cmp.Or(in.Agent, AgentDimmi)
 	switch {
-	case !slices.Contains(s.Channels, in.ChannelType):
+	case !s.UsableBy(agent):
+		return false
+	case agent == AgentDimmi && !slices.Contains(s.Channels, in.ChannelType):
 		return false
 	case in.NoWrites && s.SideEffect == SideEffectWrite:
 		return false

@@ -135,6 +135,7 @@ func withDefaults(s Spec) Spec {
 	if len(s.Channels) == 0 {
 		s.Channels = []string{"widget"}
 	}
+	s.Agents = compactAgents(s.Agents)
 	s.Method = strings.ToUpper(s.Method)
 	return s
 }
@@ -156,6 +157,11 @@ func checkIdentity(s Spec, _ models.AiActionConnection) error {
 	for _, c := range s.Channels {
 		if !channelPattern().MatchString(c) {
 			return invalid("channel_invalid", "channels", "unknown channel "+c)
+		}
+	}
+	for _, a := range s.Agents {
+		if a != AgentDimmi && a != AgentOperator {
+			return invalid("agent_invalid", "agents", "agents are dimmi and operator")
 		}
 	}
 	return nil

@@ -222,7 +222,8 @@ func channelPublicIDs() []PublicIDEntry {
 }
 
 /*
-assistantPublicIDs lists the prefixes of the AI agent and its actions.
+assistantPublicIDs lists the prefixes of the AI agent, its actions and
+Operator.
 */
 func assistantPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
@@ -234,11 +235,15 @@ func assistantPublicIDs() []PublicIDEntry {
 		{PrefixAiAction, "ai_actions"},
 		{PrefixAiActionVersion, "ai_action_versions"},
 		{PrefixAiActionCall, "ai_action_calls"},
+		{PrefixOperatorThread, "operator_threads"},
+		{PrefixOperatorMessage, "operator_messages"},
+		{PrefixOperatorChangeset, "operator_changesets"},
+		{PrefixOperatorMemory, "operator_memories"},
 	}
 }
 
 /*
-The prefixes of the AI agent's tables.
+The prefixes of the AI agent's and Operator's tables.
 */
 const (
 	PrefixAiAgent            Prefix = "aia"
@@ -249,6 +254,10 @@ const (
 	PrefixAiAction           Prefix = "aac"
 	PrefixAiActionVersion    Prefix = "aacv"
 	PrefixAiActionCall       Prefix = "aax"
+	PrefixOperatorThread     Prefix = "opt"
+	PrefixOperatorMessage    Prefix = "opm"
+	PrefixOperatorChangeset  Prefix = "opc"
+	PrefixOperatorMemory     Prefix = "opy"
 )
 
 /*

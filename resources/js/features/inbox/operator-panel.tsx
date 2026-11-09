@@ -1,53 +1,72 @@
 /*
  * Operator is the team's own agent: it reads the case and talks it over
- * with teammates, and nothing said here reaches the customer. It opens
- * with what it has gathered about the conversation. Until Operator is
- * connected, a question gets an honest answer saying so.
+ * with the teammate, and nothing said here reaches the customer. Each
+ * teammate has their own thread per conversation. Asked for a brief, it
+ * reads the conversation and says what the customer needs, what happened
+ * and the next step; it does so on its own when the conversation opens
+ * only if the workspace turned that on, since every brief spends tokens.
+ * Replies it drafts go into the reply box on request, and changes it
+ * proposes wait as cards to apply, decline or undo.
  */
 import { RiCloseLine, RiSparkling2Line } from "@remixicon/react";
-import { AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
-import { AgentMessage } from "@/components/application/agent-chat/agent-chat-message";
-import { AgentComposer } from "@/components/application/agent-chat/agent-composer";
 import { Chip } from "@/components/base/badges/chip";
+import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
-import { Panel, ScrollArea } from "@/features/shell/page";
+import { OperatorChat } from "@/features/operator/operator-chat";
+import { useOperatorChat } from "@/features/operator/use-operator-chat";
+import { Panel } from "@/features/shell/page";
+import { briefConversation, conversationThreadQuery, operatorKeys, operatorSettingsQuery } from "@/lib/api/operator";
 
-import { Arrive } from "./motion";
+const starters = ["Draft a reply", "Suggest tags and an owner", "Has this customer written before?"];
 
-interface Said {
-  id: number;
-  role: "user" | "assistant";
-  text: string;
+function Starting({ onBrief, onAsk, busy }: { onBrief: () => void; onAsk: (q: string) => void; busy: boolean }) {
+  return (
+    <div className="flex flex-col items-start gap-3 px-1 pt-2">
+      <p className="text-body-2-regular text-text-secondary">
+        Ask about this conversation, or have Operator read it and brief you. Only your team sees this.
+      </p>
+      <Button size="small" leadingIcon={RiSparkling2Line} disabled={busy} onClick={onBrief}>
+        Brief me
+      </Button>
+      <div className="flex flex-wrap gap-1.5">
+        {starters.map((starter) => (
+          <Button key={starter} size="small" variant="secondary" disabled={busy} onClick={() => onAsk(starter)}>
+            {starter}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-const notConnected = "I can't look into this yet: Operator connects once the inbox does.";
-
 export function OperatorPanel({
-  briefing,
+  workspace,
+  conversation,
   onClose,
   className,
 }: {
-  briefing: string;
+  workspace: string;
+  conversation: string;
   onClose: () => void;
   className?: string;
 }) {
-  const [said, setSaid] = useState<Said[]>([{ id: 0, role: "assistant", text: briefing }]);
-  const [draft, setDraft] = useState("");
+  const key = operatorKeys.conversation(workspace, conversation);
+  const { data: thread } = useQuery(conversationThreadQuery(workspace, conversation));
+  const { data: settings } = useQuery(operatorSettingsQuery(workspace));
+  const chat = useOperatorChat(workspace, thread, key);
+  const brief = () => void chat.run(null, (signal) => briefConversation(workspace, conversation, signal));
+  const briefed = useRef(false);
+  const autoBrief = settings?.enabled && settings.brief_on_open && thread?.messages.length === 0;
 
-  const ask = () => {
-    const question = draft.trim();
-    if (!question) {
-      return;
+  useEffect(() => {
+    if (autoBrief && !briefed.current) {
+      briefed.current = true;
+      void chat.run(null, (signal) => briefConversation(workspace, conversation, signal));
     }
-    setSaid((before) => [
-      ...before,
-      { id: before.length, role: "user", text: question },
-      { id: before.length + 1, role: "assistant", text: notConnected },
-    ]);
-    setDraft("");
-  };
+  }, [autoBrief, chat, workspace, conversation]);
 
   return (
     <Panel label="Operator" className={className}>
@@ -61,30 +80,19 @@ export function OperatorPanel({
         </span>
         <IconButton size="small" icon={RiCloseLine} aria-label="Close Operator" onClick={onClose} />
       </header>
-      <ScrollArea>
-        <ol aria-label="Operator chat" className="flex flex-col gap-5 px-4 pt-2 pb-6">
-          <AnimatePresence initial={false}>
-            {said.map((message) => (
-              <Arrive key={message.id}>
-                <AgentMessage role={message.role} text={message.text} />
-              </Arrive>
-            ))}
-          </AnimatePresence>
-        </ol>
-      </ScrollArea>
-      <div className="shrink-0 px-3 pb-3">
-        <AgentComposer
-          value={draft}
-          onValueChange={setDraft}
-          onSubmit={ask}
-          onStop={() => undefined}
-          busy={false}
-          messageCount={said.length}
+      {settings && !settings.enabled ? (
+        <p className="px-4 pt-2 text-body-2-regular text-text-secondary">
+          Operator is switched off for this workspace. An admin can turn it on in Settings, Operator.
+        </p>
+      ) : (
+        <OperatorChat
+          thread={thread}
+          chat={chat}
+          empty={<Starting onBrief={brief} onAsk={chat.ask} busy={chat.busy || !thread} />}
           placeholder="Ask Operator about this conversation"
           inputId="operator-composer-input"
-          showStatus={false}
         />
-      </div>
+      )}
     </Panel>
   );
 }

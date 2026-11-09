@@ -412,41 +412,45 @@ const createActionCall = `-- name: CreateActionCall :one
 INSERT INTO ai_action_calls (
     workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state,
     run_id, conversation_id, contact_id, tool_call_id, title, summary, input, bindings, requested_at, sent_at,
-    expires_at, attempts, created_at, updated_at
+    expires_at, attempts, decided_by_member_id, decided_at, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::timestamptz,
-    $19, $20, $21, $18::timestamptz, $18::timestamptz
+    $19, $20, $21, $22, $23,
+    $18::timestamptz, $18::timestamptz
 )
 RETURNING id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at
 `
 
 type CreateActionCallParams struct {
-	WorkspaceID     ids.UUID        `json:"workspace_id"`
-	ActionID        ids.UUID        `json:"action_id"`
-	ActionVersionID *ids.UUID       `json:"action_version_id"`
-	ConnectionID    ids.UUID        `json:"connection_id"`
-	Mode            string          `json:"mode"`
-	SideEffect      string          `json:"side_effect"`
-	Confirmation    string          `json:"confirmation"`
-	Approval        string          `json:"approval"`
-	State           string          `json:"state"`
-	RunID           *ids.UUID       `json:"run_id"`
-	ConversationID  *ids.UUID       `json:"conversation_id"`
-	ContactID       *ids.UUID       `json:"contact_id"`
-	ToolCallID      *string         `json:"tool_call_id"`
-	Title           string          `json:"title"`
-	Summary         string          `json:"summary"`
-	Input           json.RawMessage `json:"input"`
-	Bindings        json.RawMessage `json:"bindings"`
-	Now             time.Time       `json:"now"`
-	SentAt          *time.Time      `json:"sent_at"`
-	ExpiresAt       *time.Time      `json:"expires_at"`
-	Attempts        int32           `json:"attempts"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	ActionID          ids.UUID        `json:"action_id"`
+	ActionVersionID   *ids.UUID       `json:"action_version_id"`
+	ConnectionID      ids.UUID        `json:"connection_id"`
+	Mode              string          `json:"mode"`
+	SideEffect        string          `json:"side_effect"`
+	Confirmation      string          `json:"confirmation"`
+	Approval          string          `json:"approval"`
+	State             string          `json:"state"`
+	RunID             *ids.UUID       `json:"run_id"`
+	ConversationID    *ids.UUID       `json:"conversation_id"`
+	ContactID         *ids.UUID       `json:"contact_id"`
+	ToolCallID        *string         `json:"tool_call_id"`
+	Title             string          `json:"title"`
+	Summary           string          `json:"summary"`
+	Input             json.RawMessage `json:"input"`
+	Bindings          json.RawMessage `json:"bindings"`
+	Now               time.Time       `json:"now"`
+	SentAt            *time.Time      `json:"sent_at"`
+	ExpiresAt         *time.Time      `json:"expires_at"`
+	Attempts          int32           `json:"attempts"`
+	DecidedByMemberID *ids.UUID       `json:"decided_by_member_id"`
+	DecidedAt         *time.Time      `json:"decided_at"`
 }
 
 // CreateActionCall records a call the moment it is requested, in the
-// state its permissions put it in.
+// state its permissions put it in, with the teammate who approved it
+// when one did before it was asked for.
 func (q *Queries) CreateActionCall(ctx context.Context, arg CreateActionCallParams) (AiActionCall, error) {
 	row := q.db.QueryRow(ctx, createActionCall,
 		arg.WorkspaceID,
@@ -470,6 +474,8 @@ func (q *Queries) CreateActionCall(ctx context.Context, arg CreateActionCallPara
 		arg.SentAt,
 		arg.ExpiresAt,
 		arg.Attempts,
+		arg.DecidedByMemberID,
+		arg.DecidedAt,
 	)
 	var i AiActionCall
 	err := row.Scan(

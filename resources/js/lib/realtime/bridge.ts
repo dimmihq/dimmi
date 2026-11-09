@@ -8,7 +8,8 @@
  * a broadcast carrying one of its own client mutation ids is dropped.
  * A broadcast too large to send carries only a reference, and the
  * screens that show it refetch. Who views a conversation patches the
- * rows that show it and nothing else.
+ * rows that show it and nothing else. Operator's own stream belongs to
+ * the chat that asked and changes nothing cached here.
  */
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
@@ -108,7 +109,11 @@ export class Bridge {
    * workspace, and reports whether it was applied.
    */
   apply(workspace: string, channel: string, envelope: Envelope): boolean {
-    if (this.duplicate(envelope.id) || this.mutations.isOwn(envelope.meta?.client_mutation_id)) {
+    if (
+      envelope.event.startsWith("operator.") ||
+      this.duplicate(envelope.id) ||
+      this.mutations.isOwn(envelope.meta?.client_mutation_id)
+    ) {
       return false;
     }
 

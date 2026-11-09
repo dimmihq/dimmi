@@ -50,6 +50,7 @@ type AiAction struct {
 	DeletedAt              *time.Time      `json:"deleted_at"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
+	Agents                 []string        `json:"agents"`
 }
 
 type AiActionCall struct {
@@ -1377,6 +1378,69 @@ type OneTimeToken struct {
 	ExpiresAt  time.Time       `json:"expires_at"`
 	ConsumedAt *time.Time      `json:"consumed_at"`
 	CreatedAt  time.Time       `json:"created_at"`
+}
+
+type OperatorChangeset struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	ThreadID          *ids.UUID       `json:"thread_id"`
+	MessageID         *ids.UUID       `json:"message_id"`
+	MemberID          *ids.UUID       `json:"member_id"`
+	ConversationID    *ids.UUID       `json:"conversation_id"`
+	Title             string          `json:"title"`
+	Reason            string          `json:"reason"`
+	Operations        json.RawMessage `json:"operations"`
+	Status            string          `json:"status"`
+	Auto              bool            `json:"auto"`
+	Error             *string         `json:"error"`
+	DecidedByMemberID *ids.UUID       `json:"decided_by_member_id"`
+	AppliedAt         *time.Time      `json:"applied_at"`
+	RevertedAt        *time.Time      `json:"reverted_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+type OperatorMemory struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    ids.UUID  `json:"member_id"`
+	Body        string    `json:"body"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type OperatorMessage struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ThreadID    ids.UUID        `json:"thread_id"`
+	Role        string          `json:"role"`
+	Body        string          `json:"body"`
+	Steps       json.RawMessage `json:"steps"`
+	Status      string          `json:"status"`
+	RunID       *ids.UUID       `json:"run_id"`
+	CreatedAt   time.Time       `json:"created_at"`
+}
+
+type OperatorSetting struct {
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	Enabled         bool            `json:"enabled"`
+	BriefOnOpen     bool            `json:"brief_on_open"`
+	TriageOnArrival bool            `json:"triage_on_arrival"`
+	Instructions    string          `json:"instructions"`
+	Policies        json.RawMessage `json:"policies"`
+	Model           *string         `json:"model"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type OperatorThread struct {
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	MemberID       ids.UUID   `json:"member_id"`
+	ConversationID *ids.UUID  `json:"conversation_id"`
+	Title          string     `json:"title"`
+	LastMessageAt  *time.Time `json:"last_message_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type Organization struct {

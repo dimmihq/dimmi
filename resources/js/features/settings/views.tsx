@@ -31,6 +31,7 @@ import { InboxesSettings } from "./pages/inboxes";
 import { MessengersSettings } from "./pages/messengers";
 import { NotificationsSettings } from "./pages/notifications";
 import { OfficeHoursSettings } from "./pages/office-hours";
+import { OperatorSettingsView } from "./pages/operator";
 import { RolesSettings } from "./pages/roles";
 import { SingleSignOnSettings } from "./pages/single-sign-on";
 import { TagsSettings } from "./pages/tags";
@@ -55,6 +56,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   email: EmailSettings,
   connections: ConnectionsSettings,
   agent: AgentSettings,
+  operator: OperatorSettingsView,
   actions: ActionsSettings,
   "ai-providers": ProvidersSettings,
   "help-centers": HelpCentersSettings,

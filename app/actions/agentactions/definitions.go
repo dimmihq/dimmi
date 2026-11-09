@@ -76,6 +76,7 @@ type DefinitionInput struct {
 	ResponseMaxBytes       *int32
 	TimeoutMS              *int32
 	Channels               *[]string
+	Agents                 *[]string
 	Status                 *string
 	RestoreVersionID       *ids.UUID
 	Source                 string

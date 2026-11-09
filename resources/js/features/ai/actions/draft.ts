@@ -8,7 +8,9 @@
  * name the field they belong to, so the page shows each under its field.
  */
 import {
+  ACTION_AGENTS,
   ACTION_CHANNELS,
+  type ActionAgent,
   type ActionChannel,
   type ActionConnection,
   type ActionDefinition,
@@ -51,6 +53,7 @@ export interface Draft {
   fields: InputField[];
   response: Pair[];
   channels: ActionChannel[];
+  agents: ActionAgent[];
   confirmation: Confirmation;
   approval: Approval;
   approval_timeout_minutes: number;
@@ -96,6 +99,7 @@ export function newDraft(connection: Pick<ActionConnection, "id" | "kind">): Dra
     fields: [],
     response: [],
     channels: ["widget"],
+    agents: ["dimmi"],
     confirmation: "none",
     approval: "none",
     approval_timeout_minutes: 60,
@@ -128,6 +132,7 @@ type Stored = Pick<
   bound_arguments?: Record<string, unknown>;
   input_schema?: Record<string, unknown>;
   channels?: string[];
+  agents?: string[];
 };
 
 /*
@@ -144,6 +149,7 @@ export function draftOf(action: Stored): Draft {
     fields: fieldsFromSchema(schemaOf(action.input_schema)),
     response: (action.response_fields ?? []).map((field) => ({ key: rowKey(), name: field.name, value: field.path })),
     channels: channelsOf(action.channels),
+    agents: agentsOf(action.agents),
     ...permissionsOf(action),
   };
 }
@@ -163,6 +169,10 @@ function channelsOf(channels: string[] | undefined): ActionChannel[] {
   );
 
   return known.length > 0 ? known : ["widget"];
+}
+
+function agentsOf(agents: string[] | undefined): ActionAgent[] {
+  return (agents ?? ["dimmi"]).filter((a): a is ActionAgent => (ACTION_AGENTS as readonly string[]).includes(a));
 }
 
 function strings(record: Record<string, unknown> | undefined): Record<string, string> {
@@ -249,6 +259,7 @@ export function definitionOf(draft: Draft, kind: "http" | "mcp"): ActionDefiniti
       .filter((row) => row.value.trim())
       .map((row) => ({ name: row.name.trim() || row.value.trim(), path: row.value.trim() })),
     channels: draft.channels,
+    agents: draft.agents,
     confirmation: draft.side_effect === "write" ? draft.confirmation : "none",
     approval: draft.side_effect === "write" ? draft.approval : "none",
     approval_timeout_minutes: draft.approval_timeout_minutes,

@@ -40,6 +40,7 @@ import {
   RiPlugLine,
   RiPriceTag3Line,
   RiQuestionAnswerLine,
+  RiRobot2Line,
   RiSettings4Line,
   RiShieldCheckLine,
   RiShieldUserLine,
@@ -98,6 +99,13 @@ export const inboxViews = {
 export type InboxView = keyof typeof inboxViews;
 
 export const workspacePages = {
+  operator: page(
+    "operator",
+    "Operator",
+    RiRobot2Line,
+    "/d/operator",
+    "Your team's own agent: ask about your workspace and approve the changes it proposes.",
+  ),
   notifications: page(
     "notifications",
     "Notifications",
@@ -273,6 +281,13 @@ export const settingsPages = {
     "/d/settings/agent",
     "How the agent answers customers, when it hands over and what it may spend.",
   ),
+  operator: page(
+    "settings-operator",
+    "Operator",
+    RiRobot2Line,
+    "/d/settings/operator",
+    "Your team's own agent: what it may change, what it costs and what it knows.",
+  ),
   actions: page(
     "settings-actions",
     "Actions",
@@ -441,7 +456,7 @@ export function appSections(inboxBadge?: number, notificationBadge?: number): Da
     {
       key: "automation",
       label: "Automation",
-      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
+      items: [workspacePages.operator, workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
     },
     {
       key: "customers",
@@ -495,7 +510,7 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
       ],
     },
     { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
-    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
+    { key: "ai", label: "AI", items: [pages.agent, pages.operator, pages.actions, pages["ai-providers"]] },
     {
       key: "content",
       label: "Content",

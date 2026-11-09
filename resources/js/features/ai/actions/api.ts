@@ -54,6 +54,7 @@ export const HTTP_METHODS = ACTION_METHODS;
 export const CALL_STATES = ACTION_CALL_STATES;
 export const FIELD_TYPES = ["string", "number", "integer", "boolean"] as const;
 export const ACTION_CHANNELS = ["widget", "email", "api"] as const;
+export const ACTION_AGENTS = ["dimmi", "operator"] as const;
 
 export type ConnectionKind = ActionConnectionKind;
 export type AuthType = ActionAuthType;
@@ -64,6 +65,7 @@ export type Confirmation = ActionConfirmation;
 export type Approval = ActionApproval;
 export type FieldType = (typeof FIELD_TYPES)[number];
 export type ActionChannel = (typeof ACTION_CHANNELS)[number];
+export type ActionAgent = (typeof ACTION_AGENTS)[number];
 export type NewConnection = ActionConnectionInput;
 export type ConnectionTest = ActionConnectionTest;
 export type ToolSync = ActionToolSync;
@@ -121,6 +123,7 @@ export type ActionDefinition = {
   input_schema: InputSchema;
   response_fields: ResponseField[];
   channels: ActionChannel[];
+  agents: ActionAgent[];
   confirmation: Confirmation;
   approval: Approval;
   approval_timeout_minutes: number;

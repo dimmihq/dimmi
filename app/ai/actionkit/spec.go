@@ -74,6 +74,48 @@ type Spec struct {
 	ResponseMaxBytes       int32                        `json:"response_max_bytes"`
 	TimeoutMS              int32                        `json:"timeout_ms,omitempty"`
 	Channels               []string                     `json:"channels"`
+	Agents                 []string                     `json:"agents,omitempty"`
+}
+
+/*
+The agents that may use an action: dimmi answers customers, Operator
+works for the team. An action that names none is dimmi's alone, which
+is what every action connected before the choice existed was.
+*/
+const (
+	AgentDimmi    = "dimmi"
+	AgentOperator = "operator"
+)
+
+/*
+UsableBy reports whether an agent may use the action.
+*/
+func (s Spec) UsableBy(agent string) bool {
+	if len(s.Agents) == 0 {
+		return agent == AgentDimmi
+	}
+	return slices.Contains(s.Agents, agent)
+}
+
+/*
+AgentsColumn is who may use the action as the database stores it.
+*/
+func (s Spec) AgentsColumn() []string {
+	if len(s.Agents) == 0 {
+		return []string{AgentDimmi}
+	}
+	return s.Agents
+}
+
+/*
+compactAgents leaves out the default of dimmi alone, so a definition
+saved before agents existed keeps its fingerprint.
+*/
+func compactAgents(agents []string) []string {
+	if len(agents) == 1 && agents[0] == AgentDimmi {
+		return nil
+	}
+	return agents
 }
 
 /*
@@ -86,7 +128,7 @@ func FromAction(a models.AiAction) Spec {
 		ApprovalTimeoutMinutes: a.ApprovalTimeoutMinutes, Method: deref(a.Method),
 		PathTemplate: deref(a.PathTemplate), BodyTemplate: a.BodyTemplate, BodyEncoding: a.BodyEncoding,
 		MCPToolName: deref(a.McpToolName), InputSchema: a.InputSchema, ErrorMessagePath: deref(a.ErrorMessagePath),
-		ResponseMaxBytes: a.ResponseMaxBytes, Channels: a.Channels,
+		ResponseMaxBytes: a.ResponseMaxBytes, Channels: a.Channels, Agents: compactAgents(a.Agents),
 		Query: map[string]string{}, Headers: map[string]string{}, BoundArguments: map[string]any{},
 	}
 	if a.TimeoutMs != nil {

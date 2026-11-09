@@ -165,7 +165,10 @@ func bootSurfaces(ctx context.Context, a *app.App) error {
 		return err
 	}
 	bootWorkflows(a)
-	return bootAI(ctx, a)
+	if err := bootAI(ctx, a); err != nil {
+		return err
+	}
+	return bootOperatorAgent(a)
 }
 
 /*

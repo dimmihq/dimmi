@@ -43,7 +43,9 @@ const summaryValue = 80
 /*
 CallInput is one action the model asked for in a conversation run:
 where, by whom, the offered action, the provider's tool call id, the
-raw arguments, and who the customer is.
+raw arguments, and who the customer is. ApprovedBy names the teammate
+who already agreed to a write, as when they apply a change Operator
+proposed; such a call runs at once, recorded as their decision.
 */
 type CallInput struct {
 	WorkspaceID    ids.UUID
@@ -55,6 +57,7 @@ type CallInput struct {
 	Args           json.RawMessage
 	Identity       Identity
 	Agent          conversations.Actor
+	ApprovedBy     *ids.UUID
 }
 
 /*
@@ -88,10 +91,23 @@ func (k *Kit) Call(ctx context.Context, in CallInput) (CallReply, error) {
 	}
 	bindings := bindingsFor(s, contact)
 
-	if s.NeedsAgreement() {
+	if s.NeedsAgreement() && in.ApprovedBy == nil {
 		return k.propose(ctx, in, input, bindings)
 	}
 	return k.runNow(ctx, in, input, bindings)
+}
+
+/*
+Check validates a model's arguments for an action without calling it,
+returning them as the call would read them, or the reason they do not
+fit.
+*/
+func Check(s Spec, args json.RawMessage) (map[string]any, error) {
+	schema, err := actionschema.Compile(s.ModelSchema())
+	if err != nil {
+		return nil, err
+	}
+	return schema.Validate(args)
 }
 
 /*
@@ -207,6 +223,9 @@ func (k *Kit) insert(ctx context.Context, tx *database.Tx, in CallInput, nc newC
 	}
 	if nc.sent {
 		params.SentAt, params.Attempts = &now, 1
+	}
+	if in.ApprovedBy != nil {
+		params.DecidedByMemberID, params.DecidedAt = in.ApprovedBy, &now
 	}
 	if !nc.expires.IsZero() {
 		params.ExpiresAt = &nc.expires

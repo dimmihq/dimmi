@@ -33,6 +33,7 @@ const pages = new Set([
   "shortcuts",
   "procedures",
   "workflows",
+  "operator",
 ]);
 
 /*

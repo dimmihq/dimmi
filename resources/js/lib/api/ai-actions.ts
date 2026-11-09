@@ -180,6 +180,7 @@ export interface Action {
   response_max_bytes: number;
   timeout_ms: number | null;
   channels: string[];
+  agents: string[];
   source: "dashboard" | "api" | "mcp_sync";
   /* Always empty for now: no publish check raises warnings yet. */
   warnings: string[];
@@ -219,6 +220,7 @@ export interface ActionInput {
   response_max_bytes?: number;
   timeout_ms?: number;
   channels?: string[];
+  agents?: string[];
   status?: "published" | "disabled";
   /* Makes the working copy that version's definition again; publish it to roll back. */
   restore_version_id?: string;

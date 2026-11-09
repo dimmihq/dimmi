@@ -124,6 +124,7 @@ type AIAction struct {
 	ResponseMaxBytes       int32                        `json:"response_max_bytes"`
 	TimeoutMS              *int32                       `json:"timeout_ms"`
 	Channels               []string                     `json:"channels"`
+	Agents                 []string                     `json:"agents"`
 	Source                 string                       `json:"source"`
 	Warnings               []string                     `json:"warnings"`
 	HasUnpublishedChanges  bool                         `json:"has_unpublished_changes"`
@@ -147,8 +148,9 @@ func NewAIAction(v agentactions.View) AIAction {
 		BodyTemplate: a.BodyTemplate, BodyEncoding: a.BodyEncoding, MCPToolName: a.McpToolName,
 		BoundArguments: s.BoundArguments, InputSchema: a.InputSchema, ResponseFields: orEmpty(s.ResponseFields),
 		ErrorMessagePath: a.ErrorMessagePath, ResponseMaxBytes: a.ResponseMaxBytes, TimeoutMS: a.TimeoutMs,
-		Channels: orEmpty(a.Channels), Source: a.Source, Warnings: []string{}, HasUnpublishedChanges: true,
-		CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
+		Channels: orEmpty(a.Channels), Agents: orEmpty(a.Agents), Source: a.Source, Warnings: []string{},
+		HasUnpublishedChanges: true,
+		CreatedAt:             a.CreatedAt, UpdatedAt: a.UpdatedAt,
 	}
 	if v.Version != nil {
 		out.PublishedVersion = &AIActionVersionRef{
