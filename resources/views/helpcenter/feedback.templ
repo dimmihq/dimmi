@@ -130,18 +130,22 @@ func ideaIcon(idea Idea) string {
 	return idea.Icon
 }
 
+/*
+voteButton votes for a request or takes the vote back. It is a plain
+form, so it works without scripts; the portal's script sends it in the
+background and writes the new count and state on the button.
+*/
+
 templ voteButton(c Center, idea Idea) {
-	<form method="post" action={ Href(c, "/feedback/"+idea.Slug+"/votes") }>
+	<form method="post" action={ Href(c, "/feedback/"+idea.Slug+"/votes") } data-vote={ idea.Title }>
 		<button
 			type="submit"
 			aria-label={ "Vote for " + idea.Title + ", " + strconv.Itoa(idea.Votes) + " votes" }
-			if idea.Voted {
-				aria-pressed="true"
-			}
+			aria-pressed={ strconv.FormatBool(idea.Voted) }
 			class="flex h-12 w-11 cursor-pointer flex-col items-center justify-center rounded-xl border border-border-button-default bg-background-primary-default text-caption-1-semibold tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95 aria-pressed:border-transparent aria-pressed:bg-tint aria-pressed:text-link"
 		>
 			@Icon("vote", "size-4")
-			{ strconv.Itoa(idea.Votes) }
+			<span data-votes>{ strconv.Itoa(idea.Votes) }</span>
 		</button>
 	</form>
 }

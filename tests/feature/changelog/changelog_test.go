@@ -322,6 +322,26 @@ func TestChangelogPublishing(t *testing.T) {
 
 		l.d.TC.Table("changelog_reactions").AssertCount(1)
 	})
+
+	t.Run("answers reactions and subscriptions sent in the background without a page", func(t *testing.T) {
+		t.Parallel()
+		l := newLog(t)
+		l.published(t, testkit.JSON{"title": "Party"})
+		background := l.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+			WithHeader("Accept", "application/json")
+		send := func(path string, values url.Values) *testkit.Response {
+			return background.Send("POST", "/hc/"+l.subdomain+path, values.Encode())
+		}
+
+		send("/changelog/party/reactions", url.Values{"emoji": {"🎉"}}).AssertOK().AssertJSONPath("🎉", float64(1))
+		send("/changelog/party/reactions", url.Values{"emoji": {"🚀"}}).AssertOK().
+			AssertJSONPath("🎉", float64(1)).AssertJSONPath("🚀", float64(1))
+
+		send("/changelog/subscriptions", url.Values{"email": {"reader@example.org"}}).
+			AssertStatus(fhttp.StatusNoContent)
+		send("/changelog/subscriptions", url.Values{"email": {"not an address"}}).
+			AssertStatus(fhttp.StatusUnprocessableEntity)
+	})
 }
 
 func TestChangelogSubscribers(t *testing.T) {

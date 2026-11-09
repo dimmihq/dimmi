@@ -99,6 +99,27 @@ func TestFeedbackPortal(t *testing.T) {
 		assert.Contains(t, string(b.page("/feedback/1-dark-mode").AssertOK().Body), "Easier on the eyes.")
 	})
 
+	t.Run("answers a vote sent in the background with where it stands, or where to sign in", func(t *testing.T) {
+		t.Parallel()
+		b := newBoard(t, testkit.JSON{})
+		ana := b.reader(t, "ana@example.org")
+		b.form(ana, "/feedback", url.Values{"title": {"Export to CSV"}}).AssertStatus(fhttp.StatusSeeOther)
+		vote := func(cookie *fhttp.Cookie) *testkit.Response {
+			client := b.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+				WithHeader("Accept", "application/json")
+			if cookie != nil {
+				client = client.WithCookie(cookie)
+			}
+			return client.Send("POST", "/hc/"+b.subdomain+"/feedback/1-export-to-csv/votes", "")
+		}
+
+		vote(nil).AssertStatus(fhttp.StatusUnauthorized).AssertJSONPath("sign_in",
+			"/hc/"+b.subdomain+"/sso/sign-in?next=%2Fhc%2F"+b.subdomain+"%2Ffeedback")
+		bob := b.reader(t, "bob@example.org")
+		vote(bob).AssertOK().AssertJSONPath("voted", true).AssertJSONPath("votes", float64(2))
+		vote(bob).AssertOK().AssertJSONPath("voted", false).AssertJSONPath("votes", float64(1))
+	})
+
 	t.Run("lets a signed-in customer post, vote once and comment", func(t *testing.T) {
 		t.Parallel()
 		b := newBoard(t, testkit.JSON{})

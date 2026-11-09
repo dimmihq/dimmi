@@ -174,11 +174,18 @@ func (c PortalController) ideaForm(w fhttp.ResponseWriter, r *fhttp.Request, s l
 }
 
 func (c PortalController) signInFirst(w fhttp.ResponseWriter, s liveSite, path string) {
-	to := signInFor(s, path)
-	if to == "" {
-		to = s.center.Base + path
+	back(w, signInTarget(s, path))
+}
+
+/*
+signInTarget is where a reader signs in before acting on the page at
+path, or the page itself when the help center takes no sign-in.
+*/
+func signInTarget(s liveSite, path string) string {
+	if to := signInFor(s, path); to != "" {
+		return to
 	}
-	back(w, to)
+	return s.center.Base + path
 }
 
 /*
@@ -218,7 +225,8 @@ func (c PortalController) realSubmit(w fhttp.ResponseWriter, r *fhttp.Request, s
 
 /*
 realVote counts or takes back a signed-in reader's vote, returning to
-the page they voted from.
+the page they voted from. Sent in the background, it answers where the
+vote stands, or where to sign in first.
 */
 func (c PortalController) realVote(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite) {
 	if !c.open(w, r, s) {
@@ -230,12 +238,21 @@ func (c PortalController) realVote(w fhttp.ResponseWriter, r *fhttp.Request, s l
 		c.NotFound(w, r)
 		return
 	}
+	if s.reader == nil && inPlace(r) {
+		fhttp.WriteJSON(w, fhttp.StatusUnauthorized, map[string]string{"sign_in": signInTarget(s, from)})
+		return
+	}
 	if s.reader == nil {
 		c.signInFirst(w, s, from)
 		return
 	}
-	if _, err := c.Board.Toggle(r.Context(), s.help, number, *s.reader); err != nil {
+	ballot, _, err := c.Board.Toggle(r.Context(), s.help, number, *s.reader)
+	if err != nil {
 		c.Errors.Render(w, r, err)
+		return
+	}
+	if inPlace(r) {
+		fhttp.WriteJSON(w, fhttp.StatusOK, map[string]any{"voted": ballot.Voted, "votes": ballot.Votes})
 		return
 	}
 	back(w, s.center.Base+from)

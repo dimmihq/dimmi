@@ -127,16 +127,13 @@ export class MessengerController extends Controller {
   }
 
   ask(question: string): void {
-    const text = question.trim();
     this.open();
     this.#converse(undefined);
-    const form = this.element.querySelector<HTMLFormElement>('[data-view="conversation"] form.composer');
-    const input = form?.querySelector("textarea");
-    if (!text || !form || !input) {
-      return;
+    const input = this.element.querySelector("textarea");
+    if (input && question.trim()) {
+      input.value = question.trim();
+      input.form?.requestSubmit();
     }
-    input.value = text;
-    form.requestSubmit();
   }
 
   converse(event?: Event): void {

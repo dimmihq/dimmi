@@ -20,6 +20,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -105,14 +106,15 @@ type Reaction struct {
 }
 
 /*
-React counts the reader's emoji on the entry, once. Found is false when
-the entry is not published.
+React counts the reader's emoji on the entry, once, and returns how many
+readers now gave each emoji, so a page can show the counts without
+loading again. Found is false when the entry is not published.
 */
-func (p *Public) React(ctx context.Context, in Reaction) (bool, error) {
+func (p *Public) React(ctx context.Context, in Reaction) (map[string]int32, bool, error) {
 	if !slices.Contains(Emoji(), in.Emoji) {
-		return false, ErrEmojiInvalid
+		return nil, false, ErrEmojiInvalid
 	}
-	found := false
+	found, counts := false, map[string]int32{}
 	err := p.read(ctx, in.Center, func(ctx context.Context, q *models.Queries) error {
 		row, err := q.FindPublishedChangelogEntryBySlug(ctx, models.FindPublishedChangelogEntryBySlugParams{
 			WorkspaceID: in.Center.WorkspaceID, HelpCenterID: in.Center.ID, Slug: in.Slug,
@@ -125,10 +127,23 @@ func (p *Public) React(ctx context.Context, in Reaction) (bool, error) {
 		}
 		found = true
 		mac := hashing.HMAC(p.Key, []byte(row.ID.String()+"|"+in.Reactor))
-		return q.AddChangelogReaction(ctx, models.AddChangelogReactionParams{
+		err = q.AddChangelogReaction(ctx, models.AddChangelogReactionParams{
 			EntryID: row.ID, WorkspaceID: row.WorkspaceID, ReactorHash: hex.EncodeToString(mac),
 			Emoji: in.Emoji, Now: p.Clock.Now(),
 		})
+		if err != nil {
+			return fmt.Errorf("add changelog reaction: %w", err)
+		}
+		rows, err := q.CountChangelogReactions(ctx, models.CountChangelogReactionsParams{
+			WorkspaceID: row.WorkspaceID, EntryIds: []ids.UUID{row.ID},
+		})
+		if err != nil {
+			return fmt.Errorf("count changelog reactions: %w", err)
+		}
+		for _, r := range rows {
+			counts[r.Emoji] = r.Reactions
+		}
+		return nil
 	})
-	return found, err
+	return counts, found, err
 }

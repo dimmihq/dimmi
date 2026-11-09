@@ -141,6 +141,7 @@ func absoluteHTML(html, origin string) string {
 Subscribe takes an email address for the changelog's updates, sends the
 confirmation, and shows the changelog asking the visitor to check their
 inbox. A filled hidden field marks a bot, which gets the same answer.
+The portal's script sends it in the background and gets only a status.
 */
 func (c ChangelogController) Subscribe(w fhttp.ResponseWriter, r *fhttp.Request) {
 	to := strings.TrimSuffix(r.URL.Path, "/subscriptions") + "?subscribed#main"
@@ -148,24 +149,27 @@ func (c ChangelogController) Subscribe(w fhttp.ResponseWriter, r *fhttp.Request)
 	if !ok {
 		return
 	}
-	if !live || r.FormValue("website") != "" || c.Subscribers == nil {
-		back(w, to)
-		return
+	var err error
+	if live && r.FormValue("website") == "" && c.Subscribers != nil {
+		_, err = c.Subscribers.Subscribe(r.Context(), cl.SubscribeInput{Center: s.help, Email: r.FormValue("email")})
 	}
-	_, err := c.Subscribers.Subscribe(r.Context(), cl.SubscribeInput{Center: s.help, Email: r.FormValue("email")})
-	if errors.Is(err, cl.ErrEmailInvalid) {
+	switch {
+	case inPlace(r) && errors.Is(err, cl.ErrEmailInvalid):
+		w.WriteHeader(fhttp.StatusUnprocessableEntity)
+	case errors.Is(err, cl.ErrEmailInvalid):
 		back(w, strings.TrimSuffix(r.URL.Path, "/subscriptions")+"#main")
-		return
-	}
-	if err != nil {
+	case err != nil:
 		c.Errors.Render(w, r, err)
-		return
+	case inPlace(r):
+		w.WriteHeader(fhttp.StatusNoContent)
+	default:
+		back(w, to)
 	}
-	back(w, to)
 }
 
 /*
-React takes a reaction to an entry and returns to the entry.
+React takes a reaction to an entry and returns to the entry. Sent in the
+background, it answers each emoji's count instead.
 */
 func (c ChangelogController) React(w fhttp.ResponseWriter, r *fhttp.Request) {
 	to := strings.TrimSuffix(r.URL.Path, "/reactions")
@@ -182,11 +186,15 @@ func (c ChangelogController) React(w fhttp.ResponseWriter, r *fhttp.Request) {
 	if s.reader != nil {
 		reactor = "contact:" + s.reader.String()
 	}
-	_, err := c.Changelog.React(r.Context(), cl.Reaction{
+	counts, _, err := c.Changelog.React(r.Context(), cl.Reaction{
 		Center: s.help, Slug: r.PathValue("slug"), Emoji: name, Reactor: reactor,
 	})
 	if err != nil && !errors.Is(err, cl.ErrEmojiInvalid) {
 		c.Errors.Render(w, r, err)
+		return
+	}
+	if inPlace(r) {
+		fhttp.WriteJSON(w, fhttp.StatusOK, reactionCounts(counts))
 		return
 	}
 	back(w, to)
@@ -254,4 +262,18 @@ func (c ChangelogController) subscriberPage(w fhttp.ResponseWriter, r *fhttp.Req
 	page.Email = sub.Email
 	w.Header().Set("Cache-Control", "private, no-store")
 	c.respond(w, r, fhttp.StatusOK, views.SubscriptionPage(s.center, page, c.styles()))
+}
+
+/*
+reactionCounts shows each emoji's count by the character readers see,
+for the page to write on its buttons.
+*/
+func reactionCounts(counts map[string]int32) map[string]int32 {
+	out := make(map[string]int32, len(counts))
+	for name, n := range counts {
+		if e, ok := emojiOf()[name]; ok {
+			out[e.Emoji] = n
+		}
+	}
+	return out
 }

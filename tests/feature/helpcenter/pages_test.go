@@ -279,7 +279,8 @@ func TestChangelogPages(t *testing.T) {
 	t.Run("asks a new subscriber to confirm from their inbox", func(t *testing.T) {
 		t.Parallel()
 
-		res := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/changelog/subscriptions", nil)
+		res := tc.Client().WithHeader("Accept", "text/html").
+			Send(fhttp.MethodPost, "/hc/dimmi/changelog/subscriptions", nil)
 
 		assert.Equal(t, fhttp.StatusSeeOther, res.Status)
 		assert.Equal(t, "/hc/dimmi/changelog?subscribed#main", res.Header.Get("Location"))

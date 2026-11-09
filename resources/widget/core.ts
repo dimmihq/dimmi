@@ -210,7 +210,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     configure: (argument) => configure(argument as Config),
     shutdown: () => void live?.logout(),
     logout: () => void live?.logout(),
-    ask: (argument) => find()?.ask(typeof argument === "string" ? argument : ""),
+    ask: (argument) => find()?.ask(String(argument ?? "")),
     identify,
   };
 

@@ -10,28 +10,29 @@ import (
 /*
 subscribe is the email form that signs a visitor up for announcements,
 or the note telling them to confirm from their inbox once they have.
-The hidden field catches bots that fill every input.
+Both are in the page, so the portal's script swaps the form for the
+note in place once the address is sent. The hidden field catches bots
+that fill every input.
 */
 
 templ subscribe(c helpcenter.Center, subscribed bool) {
-	if subscribed {
-		<p role="status" class="flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-primary-default px-4 py-3 text-body-regular">
+	<div data-subscribe class="contents">
+		<p role="status" data-subscribed hidden?={ !subscribed } class="flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-primary-default px-4 py-3 text-body-regular">
 			<span class="grid size-7 place-items-center rounded-full bg-tint text-link">
 				@helpcenter.Icon("mail", "size-3.5")
 			</span>
 			Check your inbox to confirm your subscription.
 		</p>
-	} else {
-		<form method="post" action={ helpcenter.Href(c, "/changelog/subscriptions") } class="flex w-full gap-2 md:w-[22rem]">
+		<form method="post" action={ helpcenter.Href(c, "/changelog/subscriptions") } hidden?={ subscribed } class="flex w-full gap-2 md:w-[22rem]">
 			<label class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint hover:border-border-button-hover">
 				@helpcenter.Icon("mail", "size-4 shrink-0 text-foreground-icon-tertiary")
 				<span class="sr-only">Email address</span>
 				<input type="email" name="email" required placeholder="you@company.com" autocomplete="email" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"/>
 			</label>
 			<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden"/>
-			<button type="submit" class="button-brand inline-flex h-10 shrink-0 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Subscribe</button>
+			<button type="submit" class="button-brand inline-flex h-10 shrink-0 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-60">Subscribe</button>
 		</form>
-	}
+	</div>
 }
 
 /*
@@ -61,17 +62,16 @@ templ version(v string) {
 
 /*
 reactions is the row of emoji visitors react with. Each is a button of
-a plain form, so reacting works without scripts.
+a plain form, so reacting works without scripts; the portal's script
+sends it in the background and writes the new counts on the buttons.
 */
 
 templ reactions(c helpcenter.Center, e Entry) {
-	<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
+	<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } data-reactions class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
 		for _, r := range e.Reactions {
 			<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
 				<span class="text-[0.9375rem] leading-none">{ r.Emoji }</span>
-				if r.Count > 0 {
-					{ strconv.Itoa(r.Count) }
-				}
+				<span data-count hidden?={ r.Count == 0 }>{ strconv.Itoa(r.Count) }</span>
 			</button>
 		}
 	</form>

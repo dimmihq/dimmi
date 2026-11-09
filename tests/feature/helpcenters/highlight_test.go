@@ -44,7 +44,7 @@ func TestCodeHighlighting(t *testing.T) {
 
 		res := c.d.TC.Client().GetJSON("/widget/v1/apps/" + app + "/help").AssertOK()
 		res.AssertJSONPath("data.articles.0.body.1.kind", "code").
-			AssertJSONPath("data.articles.0.body.1.tokens.0.class", "kd").
+			AssertJSONPath("data.articles.0.body.1.tokens.0.class", "keyword").
 			AssertJSONPath("data.articles.0.body.1.tokens.0.text", "func")
 		assert.NotContains(t, string(res.Body), "chroma")
 	})

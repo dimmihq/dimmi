@@ -34,11 +34,11 @@ export interface Link {
 }
 
 /*
- * Token is one run of highlighted code: its text and the class of its
- * kind, such as "k" for a keyword, none for plain text.
+ * Token is one run of highlighted code: its text and its kind, keyword,
+ * string, number or comment, none for plain text.
  */
 export interface Token {
-  class?: string;
+  class?: "keyword" | "string" | "number" | "comment";
   text: string;
 }
 

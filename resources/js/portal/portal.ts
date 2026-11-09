@@ -10,7 +10,8 @@
  * system's theme in this browser, the browse drawer and dropdowns close
  * on a click outside them or Escape, collections open and close with a slide, and an
  * article's contents mark the heading being read, and "Was this article
- * helpful?" answers in place, without reloading the page. Where the help center's
+ * helpful?", reactions, votes and subscriptions are sent in the
+ * background and answered in place, without reloading the page. Where the help center's
  * AI answers its messenger, a question typed in the ask box goes to it in
  * a new chat instead of the search page.
  * A reader coming back from signing in to the team's product brings an
@@ -299,22 +300,16 @@ async function sendFeedback(form: HTMLFormElement, submitter: HTMLElement | null
   if (!box) {
     return;
   }
-  const body = new URLSearchParams();
-  for (const [name, value] of new FormData(form, submitter)) {
-    if (typeof value === "string") {
-      body.append(name, value);
-    }
-  }
   const answer = form.hasAttribute("data-feedback-answer");
   if (answer) {
-    showStep(box, body.get("helpful") === "yes" ? "yes" : "no");
+    showStep(box, submitter instanceof HTMLButtonElement && submitter.value === "yes" ? "yes" : "no");
   }
   const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
   if (!answer && button) {
     button.disabled = true;
   }
   try {
-    const response = await fetch(form.action, { method: "POST", body, headers: { Accept: "application/json" } });
+    const response = await post(form, submitter);
     const limited = box.querySelector<HTMLElement>("[data-limited]");
     if (limited) {
       limited.hidden = response.status !== 429;
@@ -338,6 +333,114 @@ document.addEventListener(
     }
     event.preventDefault();
     void sendFeedback(form, (event as SubmitEvent).submitter);
+  },
+  true,
+);
+
+/*
+ * post sends a form in the background with the button that sent it,
+ * asking for a status or JSON rather than a page.
+ */
+function post(form: HTMLFormElement, submitter: HTMLElement | null): Promise<Response> {
+  const body = new URLSearchParams();
+  for (const [name, value] of new FormData(form, submitter)) {
+    if (typeof value === "string") {
+      body.append(name, value);
+    }
+  }
+  return fetch(form.action, { method: "POST", body, headers: { Accept: "application/json" } });
+}
+
+/*
+ * react sends an emoji and writes each emoji's new count on its button.
+ */
+async function react(form: HTMLFormElement, submitter: HTMLElement | null): Promise<void> {
+  const response = await post(form, submitter);
+  if (!response.ok) {
+    return;
+  }
+  const counts = (await response.json()) as Record<string, number>;
+  for (const button of form.querySelectorAll<HTMLButtonElement>("button[name=emoji]")) {
+    const count = button.querySelector<HTMLElement>("[data-count]");
+    const n = counts[button.value] ?? 0;
+    if (count) {
+      count.textContent = String(n);
+      count.hidden = n === 0;
+    }
+  }
+}
+
+/*
+ * vote counts or takes back the reader's vote, writing the new count and
+ * state on the button; a reader who must sign in first is taken there.
+ */
+async function vote(form: HTMLFormElement): Promise<void> {
+  const button = form.querySelector<HTMLButtonElement>("button");
+  const response = await post(form, button);
+  if (response.status === 401) {
+    const { sign_in: to } = (await response.json()) as { sign_in: string };
+    window.location.assign(to);
+    return;
+  }
+  if (!(response.ok && button)) {
+    return;
+  }
+  const { voted, votes } = (await response.json()) as { voted: boolean; votes: number };
+  button.setAttribute("aria-pressed", String(voted));
+  button.setAttribute("aria-label", `Vote for ${form.dataset.vote ?? ""}, ${votes} votes`);
+  const count = button.querySelector<HTMLElement>("[data-votes]");
+  if (count) {
+    count.textContent = String(votes);
+  }
+}
+
+/*
+ * subscribe sends the address and swaps the form for the note asking the
+ * reader to confirm from their inbox.
+ */
+async function subscribe(form: HTMLFormElement): Promise<void> {
+  const box = form.closest<HTMLElement>("[data-subscribe]");
+  const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+  if (button) {
+    button.disabled = true;
+  }
+  try {
+    const response = await post(form, button);
+    const note = box?.querySelector<HTMLElement>("[data-subscribed]");
+    if (response.ok && note) {
+      form.hidden = true;
+      note.hidden = false;
+    }
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
+}
+
+/*
+ * inPlace answers the forms the page handles itself: reactions, votes and
+ * subscriptions are sent in the background, so the page never reloads.
+ */
+document.addEventListener(
+  "submit",
+  (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    const submitter = (event as SubmitEvent).submitter;
+    const handled = form.hasAttribute("data-reactions")
+      ? react(form, submitter)
+      : form.hasAttribute("data-vote")
+        ? vote(form)
+        : form.parentElement?.hasAttribute("data-subscribe")
+          ? subscribe(form)
+          : null;
+    if (handled) {
+      event.preventDefault();
+      void handled;
+    }
   },
   true,
 );

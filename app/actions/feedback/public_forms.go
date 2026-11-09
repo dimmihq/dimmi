@@ -101,11 +101,22 @@ func (p *Posts) Similar(ctx context.Context, h models.HelpCenter, title string) 
 }
 
 /*
-Toggle counts the reader's vote for the request, or takes it back when
-they already voted. Found is false for a request they cannot see.
+Ballot is where a reader's vote stands after they toggle it: whether
+they now vote for the request, and how many readers do.
 */
-func (p *Posts) Toggle(ctx context.Context, h models.HelpCenter, number int32, reader ids.UUID) (bool, error) {
-	found := false
+type Ballot struct {
+	Voted bool
+	Votes int32
+}
+
+/*
+Toggle counts the reader's vote for the request, or takes it back when
+they already voted, and returns where the vote now stands. Found is
+false for a request they cannot see.
+*/
+func (p *Posts) Toggle(ctx context.Context, h models.HelpCenter, number int32, reader ids.UUID,
+) (Ballot, bool, error) {
+	found, out := false, Ballot{}
 	err := p.inside(ctx, h, func(ctx context.Context, q *models.Queries) error {
 		row, err := q.FindFeedbackPostByNumber(ctx, models.FindFeedbackPostByNumberParams{
 			WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, Number: number,
@@ -117,18 +128,38 @@ func (p *Posts) Toggle(ctx context.Context, h models.HelpCenter, number int32, r
 			return fmt.Errorf("find board request: %w", err)
 		}
 		found = true
-		removed, err := q.RemoveFeedbackVote(ctx, models.RemoveFeedbackVoteParams{
-			WorkspaceID: h.WorkspaceID, PostID: row.ID, ContactID: reader,
-		})
-		if err != nil {
-			return fmt.Errorf("take back board vote: %w", err)
-		}
-		if removed > 0 {
-			return recount(ctx, q, row)
-		}
-		return castVote(ctx, q, vote{post: row, contact: reader, priority: "nice", now: p.Clock.Now()})
+		out, err = p.flip(ctx, q, row, reader)
+		return err
 	})
-	return found, err
+	return out, found, err
+}
+
+/*
+flip takes back the reader's vote on the request when they had one, and
+casts it when they had none, then reads where it stands.
+*/
+func (p *Posts) flip(ctx context.Context, q *models.Queries, row models.FeedbackPost, reader ids.UUID,
+) (Ballot, error) {
+	removed, err := q.RemoveFeedbackVote(ctx, models.RemoveFeedbackVoteParams{
+		WorkspaceID: row.WorkspaceID, PostID: row.ID, ContactID: reader,
+	})
+	if err != nil {
+		return Ballot{}, fmt.Errorf("take back board vote: %w", err)
+	}
+	if removed > 0 {
+		err = recount(ctx, q, row)
+	}
+	if removed == 0 {
+		err = castVote(ctx, q, vote{post: row, contact: reader, priority: "nice", now: p.Clock.Now()})
+	}
+	if err != nil {
+		return Ballot{}, err
+	}
+	after, err := q.FindFeedbackPost(ctx, models.FindFeedbackPostParams{WorkspaceID: row.WorkspaceID, ID: row.ID})
+	if err != nil {
+		return Ballot{}, fmt.Errorf("read board request: %w", err)
+	}
+	return Ballot{Voted: removed == 0, Votes: after.VoteCount}, nil
 }
 
 /*
