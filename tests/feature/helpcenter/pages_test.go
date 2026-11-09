@@ -58,7 +58,6 @@ func TestHelpCenterPages(t *testing.T) {
 
 		assert.Equal(t, fhttp.StatusOK, status)
 		assert.Contains(t, body, `style="--brand: #5b5bd6;"`)
-		assert.Contains(t, body, `data-on-brand="light"`)
 		assert.Contains(t, body, `href="/build/assets/portal-9c1d.css"`)
 		assert.Contains(t, body, `type="module" src="/build/assets/portal-4f2a.js"`)
 		assert.Contains(t, body, `<meta name="view-transition" content="same-origin">`)

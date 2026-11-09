@@ -230,6 +230,28 @@ function closeMenus(keep?: Element | null): void {
   }
 }
 
+/*
+ * The drawer sits outside the page it pushes aside, so opening it moves
+ * focus into it and closing it hands focus back to the menu button.
+ */
+document.addEventListener(
+  "toggle",
+  (event) => {
+    const drawer = event.target;
+    if (!(drawer instanceof HTMLDetailsElement && drawer.matches("[data-drawer]"))) {
+      return;
+    }
+    if (drawer.open) {
+      document.querySelector<HTMLElement>("[data-drawer-panel] input, [data-drawer-panel] button")?.focus();
+      return;
+    }
+    if (document.activeElement?.closest("[data-drawer-panel]")) {
+      drawer.querySelector("summary")?.focus();
+    }
+  },
+  true,
+);
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeDrawers();

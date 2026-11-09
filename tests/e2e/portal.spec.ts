@@ -24,8 +24,10 @@ it.describe("the public portal", () => {
     const drawer = page.getByRole("complementary", { name: "Browse articles" });
     await expect(drawer).toBeInViewport();
     await expect(page.locator("[data-page]")).toHaveCSS("translate", "320px");
+    await expect(drawer.getByRole("button", { name: "Close" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
+    await expect(page.getByLabel("Browse", { exact: true })).toBeFocused();
 
     const links = page.getByRole("navigation", { name: "In this article" }).getByRole("link");
     await expect(links.first()).toHaveAttribute("aria-current", "location");
@@ -49,6 +51,31 @@ it.describe("the public portal", () => {
     await expect(view).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(view).toBeHidden();
+  });
+
+  it("keeps the brand visible on both themes, whatever its color", async ({ page }) => {
+    await page.goto("/hc/dimmi");
+    const sample = async (brand: string, dark: boolean) =>
+      page.evaluate(
+        ([color, on]) => {
+          const root = document.documentElement;
+          root.style.setProperty("--brand", color as string);
+          root.classList.toggle("dark", on as boolean);
+          const probe = document.createElement("span");
+          probe.className = "button-brand";
+          document.body.append(probe);
+          const fill = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return fill;
+        },
+        [brand, dark] as const,
+      );
+    const lightness = (color: string) => Number(/oklch\(([\d.]+)/.exec(color)?.[1] ?? Number.NaN);
+
+    expect(lightness(await sample("#0a0a0a", true))).toBeGreaterThan(0.9);
+    expect(lightness(await sample("#ffffff", false))).toBeLessThan(0.25);
+    expect(lightness(await sample("#1e3a8a", true))).toBeGreaterThanOrEqual(0.62);
+    expect(lightness(await sample("#f59e0b", true))).toBeCloseTo(0.77, 1);
   });
 
   it("answers a question from the articles", async ({ page }) => {

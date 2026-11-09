@@ -77,23 +77,6 @@ func Initial(c Center) string {
 }
 
 /*
-OnBrand returns "dark" when black text reads better than white on the
-brand color, and "light" otherwise, by the WCAG contrast of each.
-*/
-func OnBrand(hex string) string {
-	l, ok := luminance(hex)
-	if !ok {
-		return "light"
-	}
-
-	if (l+0.05)/0.05 > 1.05/(l+0.05) {
-		return "dark"
-	}
-
-	return "light"
-}
-
-/*
 Plural returns the count with the noun, made plural unless the count is
 one.
 */

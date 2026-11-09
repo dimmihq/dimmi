@@ -4,9 +4,9 @@
  * the help center's brand color in place of BoardUI's accent. The page's
  * html carries the brand as --brand; every accent step derives from it, so
  * buttons, links, focus rings and chips follow the one color the customer
- * picked; dark pages lift a dark brand so fills stay visible and put dark
- * text on them. data-on-brand says whether text on the brand reads black or
- * white, decided on the server from the color's contrast. Articles render
+ * picked. A brand keeps its own color wherever it reads on the page's
+ * ground and only the extremes move, see the fills below; text on a fill
+ * turns white or near black from the fill's own lightness. Articles render
  * from Markdown into .prose, styled here since their HTML carries no
  * utility classes.
  */
@@ -21,7 +21,6 @@
   --font-inter: "Inter Variable";
   --font-mono-source: "JetBrains Mono Variable";
   --brand: oklch(20% 0 0);
-  --on-brand: #fff;
   --color-accent-50: oklch(from var(--brand) 0.975 calc(c * 0.12) h);
   --color-accent-100: oklch(from var(--brand) 0.95 calc(c * 0.25) h);
   --color-accent-200: oklch(from var(--brand) 0.9 calc(c * 0.45) h);
@@ -33,20 +32,57 @@
   --color-accent-800: oklch(from var(--brand) calc(l - 0.16) c h);
   --color-accent-900: oklch(from var(--brand) calc(l - 0.22) c h);
   --color-accent-950: oklch(from var(--brand) 0.2 calc(c * 0.6) h);
-  --brand-fill: var(--brand);
-  --link: oklch(from var(--brand) min(l, 0.5) c h);
-  --tint: color-mix(in oklab, var(--brand) 8%, transparent);
+  --brand-fill: oklch(
+    from var(--brand)
+      calc(
+        clamp(0.2, l, 0.82) -
+        (clamp(0.2, l, 0.82) - 0.2) *
+        clamp(0, (0.015 - c) * 1000, 1) *
+        clamp(0, (l - 0.6) * 1000, 1)
+      )
+      c h
+  );
+  --on-brand: oklch(from var(--brand-fill) calc(0.18 + 0.82 * clamp(0, (0.7 - l) * 1000, 1)) 0 0);
+  --link: oklch(from var(--brand-fill) min(l, 0.5) c h);
+  --tint: color-mix(in oklab, var(--brand-fill) 8%, transparent);
+  --color-border-focus-ring: var(--brand-fill);
 }
 
-:root[data-on-brand="dark"] {
-  --on-brand: oklch(18% 0 0);
-}
-
+/*
+ * On light pages only a pale brand moves: a colored one darkens just
+ * enough to show against white, and a white or grey one becomes near
+ * black, the way monochrome brands invert. On dark pages only a dark brand
+ * moves the same way the other direction: a colored one lifts to a
+ * lightness that stays visible, a black or grey one becomes near white.
+ * Links lift further on dark pages so they read as text, and tints mix
+ * the fill so they show even for a black brand. Reading pages lift the
+ * secondary and tertiary text one step on dark, where the dashboard's
+ * quieter greys would make long articles and dates hard to read. Hairlines
+ * sit between the card surface and the card border, because the shared
+ * separator matches the cards' own color on dark and rows would run
+ * together.
+ */
 .dark {
-  --brand-fill: oklch(from var(--brand) max(l, 0.74) c h);
-  --on-brand: oklch(18% 0 0);
-  --link: oklch(from var(--brand) max(l, 0.78) c h);
-  --tint: color-mix(in oklab, var(--brand) 14%, transparent);
+  --brand-fill: oklch(
+    from var(--brand)
+      calc(
+        clamp(0.62, l, 0.9) +
+        (0.94 - clamp(0.62, l, 0.9)) *
+        clamp(0, (0.04 - c) * 1000, 1) *
+        clamp(0, (0.5 - l) * 1000, 1)
+      )
+      c h
+  );
+  --link: oklch(from var(--brand-fill) max(l, 0.8) min(c, 0.16) h);
+  --tint: color-mix(in oklab, var(--brand-fill) 14%, transparent);
+  --color-accent-500: var(--brand-fill);
+  --color-text-secondary: var(--color-neutral-400);
+  --color-text-tertiary: var(--color-neutral-500);
+  --color-separator-border: color-mix(
+    in oklab,
+    var(--color-border-button-default) 60%,
+    var(--color-background-primary-default)
+  );
 }
 
 @theme inline {
@@ -172,7 +208,7 @@ html {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--brand) 22%, transparent);
+  background: color-mix(in oklab, var(--brand-fill) 28%, transparent);
 }
 
 /*
