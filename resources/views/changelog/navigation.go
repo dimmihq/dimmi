@@ -29,3 +29,44 @@ type Page struct {
 	Previous *Entry
 	Next     *Entry
 }
+
+/*
+Subscription is a page a subscriber's link opens: what the link does
+(confirm or unsubscribe), the address it is for, the form that does it,
+and whether it is done or the link no longer works.
+*/
+type Subscription struct {
+	Purpose string
+	Email   string
+	Action  string
+	Done    bool
+	Invalid bool
+}
+
+func subscriptionTitle(s Subscription) string {
+	if s.Purpose == "unsubscribe" {
+		return "Unsubscribe from updates"
+	}
+	return "Confirm your subscription"
+}
+
+func subscriptionAsk(s Subscription) string {
+	if s.Purpose == "unsubscribe" {
+		return s.Email + " will stop getting product updates."
+	}
+	return "Start getting product updates at " + s.Email + "."
+}
+
+func subscriptionButton(s Subscription) string {
+	if s.Purpose == "unsubscribe" {
+		return "Unsubscribe"
+	}
+	return "Confirm subscription"
+}
+
+func subscriptionDone(s Subscription) string {
+	if s.Purpose == "unsubscribe" {
+		return "Done. " + s.Email + " will not get any more updates."
+	}
+	return "You're subscribed. New updates will reach " + s.Email + "."
+}

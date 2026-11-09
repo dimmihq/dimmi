@@ -46,10 +46,13 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	center := centerOf(snap.HelpCenter, base)
 	center.Origin = origin(r)
 
+	updates := c.announce(r, snap.HelpCenter, &center)
 	contact, until, signed := c.readerOf(r, snap.HelpCenter)
 	if !signed {
 		center.SignInURL = signInURL(snap, center, r.URL.Path)
-		return center, newSite(r.Context(), c.Public, snap, nil), true
+		s := newSite(r.Context(), c.Public, snap, nil)
+		s.updates = updates
+		return center, s, true
 	}
 
 	if fresh, renew := c.Readers.Renewal(snap.HelpCenter, contact, until); renew {
@@ -65,7 +68,37 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	w.Header().Set("Cache-Control", "private, no-store")
 	center.SignedIn, center.SignOutURL = true, base+"/sso/sign-out"
 
-	return center, newSite(r.Context(), c.Public, mine, &contact), true
+	s := newSite(r.Context(), c.Public, mine, &contact)
+	s.updates = updates
+	return center, s, true
+}
+
+/*
+announce links the changelog from the help center's header once it has
+an entry, and returns the newest entries for the home page.
+*/
+func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, center *helpcenter.Center,
+) []helpcenter.Update {
+	if c.Changelog == nil {
+		return nil
+	}
+	latest, err := c.Changelog.Latest(r.Context(), h, 3)
+	if err != nil || len(latest) == 0 {
+		return nil
+	}
+	center.Sections = append(center.Sections, helpcenter.Section{
+		Key: "changelog", Name: "Changelog", Icon: "megaphone", Path: "/changelog",
+	})
+	out := make([]helpcenter.Update, len(latest))
+	for i, e := range latest {
+		out[i] = helpcenter.Update{
+			Title: deref(e.PublishedTitle), Path: "/changelog/" + e.Slug, Published: *e.PublishedAt,
+		}
+		if len(e.Labels) > 0 {
+			out[i].Label = e.Labels[0].Name
+		}
+	}
+	return out
 }
 
 /*

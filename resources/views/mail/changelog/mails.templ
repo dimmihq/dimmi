@@ -1,0 +1,87 @@
+package changelog
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+Entry is a published entry as its mail shows it: the help center it is
+from, its title, summary, rendered body and cover, where to read it,
+and where to stop getting these.
+*/
+type Entry struct {
+	HelpCenter  string
+	Brand       string
+	Title       string
+	Summary     string
+	BodyHTML    string
+	CoverURL    string
+	URL         string
+	Unsubscribe string
+}
+
+/*
+layout is the frame of a changelog mail, in the help center's brand.
+*/
+
+templ layout(title, brand string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+		</head>
+		<body style="margin:0;padding:0;background:#f6f6f7;">
+			<div style={ "max-width:600px;margin:0 auto;padding:32px 24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1b1b1f;border-top:4px solid " + brand + ";" }>
+				{ children... }
+			</div>
+		</body>
+	</html>
+}
+
+/*
+Confirm asks a person to confirm they want the help center's updates.
+*/
+
+templ Confirm(helpCenter, brand, link string) {
+	@layout(i18n.T(ctx, "mail.changelog_confirm.subject", i18n.Args{"help_center": helpCenter}), brand) {
+		<p>{ i18n.T(ctx, "mail.changelog_confirm.intro", i18n.Args{"help_center": helpCenter}) }</p>
+		<p style="margin:24px 0;">
+			<a href={ templ.SafeURL(link) } style={ "display:inline-block;padding:10px 18px;border-radius:6px;background:" + brand + ";color:#ffffff;text-decoration:none;font-weight:600;" }>
+				{ i18n.T(ctx, "mail.changelog_confirm.action", nil) }
+			</a>
+		</p>
+		<p style="font-size:13px;color:#6b6b76;">{ i18n.T(ctx, "mail.changelog_confirm.ignore", nil) }</p>
+	}
+}
+
+/*
+NewEntry is a new entry for a subscriber, whole, with a link to read it
+on the site and one to unsubscribe.
+*/
+
+templ NewEntry(e Entry) {
+	@layout(e.Title, e.Brand) {
+		<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b6b76;">{ i18n.T(ctx, "mail.changelog_entry.kicker", i18n.Args{"help_center": e.HelpCenter}) }</p>
+		<h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;">
+			<a href={ templ.SafeURL(e.URL) } style="color:#1b1b1f;text-decoration:none;">{ e.Title }</a>
+		</h1>
+		if e.Summary != "" {
+			<p style="margin:0 0 20px;font-size:17px;color:#4b4b55;">{ e.Summary }</p>
+		}
+		if e.CoverURL != "" {
+			<img src={ e.CoverURL } alt="" width="552" style="display:block;width:100%;max-width:552px;height:auto;border-radius:12px;margin:0 0 20px;"/>
+		}
+		<div>
+			@templ.Raw(e.BodyHTML)
+		</div>
+		<p style="margin:28px 0;">
+			<a href={ templ.SafeURL(e.URL) } style={ "display:inline-block;padding:10px 18px;border-radius:6px;background:" + e.Brand + ";color:#ffffff;text-decoration:none;font-weight:600;" }>
+				{ i18n.T(ctx, "mail.changelog_entry.action", nil) }
+			</a>
+		</p>
+		<p style="margin-top:32px;font-size:12px;color:#6b6b76;">
+			{ i18n.T(ctx, "mail.changelog_entry.why", i18n.Args{"help_center": e.HelpCenter}) }
+			<a href={ templ.SafeURL(e.Unsubscribe) } style="color:#6b6b76;">{ i18n.T(ctx, "mail.changelog_entry.unsubscribe", nil) }</a>
+		</p>
+	}
+}

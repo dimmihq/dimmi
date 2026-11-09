@@ -441,6 +441,83 @@ type CertmagicStorage struct {
 	Modified time.Time `json:"modified"`
 }
 
+type ChangelogEntry struct {
+	ID                    ids.UUID   `json:"id"`
+	WorkspaceID           ids.UUID   `json:"workspace_id"`
+	HelpCenterID          ids.UUID   `json:"help_center_id"`
+	Title                 string     `json:"title"`
+	Slug                  string     `json:"slug"`
+	Summary               *string    `json:"summary"`
+	BodyMarkdown          string     `json:"body_markdown"`
+	CoverUrl              *string    `json:"cover_url"`
+	Status                string     `json:"status"`
+	ScheduledFor          *time.Time `json:"scheduled_for"`
+	PublishedAt           *time.Time `json:"published_at"`
+	PublishedTitle        *string    `json:"published_title"`
+	PublishedSummary      *string    `json:"published_summary"`
+	PublishedBodyMarkdown *string    `json:"published_body_markdown"`
+	PublishedBodyHtml     *string    `json:"published_body_html"`
+	PublishedCoverUrl     *string    `json:"published_cover_url"`
+	HasUnpublishedChanges bool       `json:"has_unpublished_changes"`
+	NotifySubscribers     bool       `json:"notify_subscribers"`
+	NotifiedAt            *time.Time `json:"notified_at"`
+	AuthorsChosen         bool       `json:"authors_chosen"`
+	LockVersion           int32      `json:"lock_version"`
+	DeletedAt             *time.Time `json:"deleted_at"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+}
+
+type ChangelogEntryLabel struct {
+	EntryID     ids.UUID `json:"entry_id"`
+	LabelID     ids.UUID `json:"label_id"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+}
+
+type ChangelogEntryPerson struct {
+	EntryID     ids.UUID  `json:"entry_id"`
+	MemberID    ids.UUID  `json:"member_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Role        string    `json:"role"`
+	Position    int32     `json:"position"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ChangelogLabel struct {
+	ID           ids.UUID  `json:"id"`
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	HelpCenterID ids.UUID  `json:"help_center_id"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	Color        string    `json:"color"`
+	Position     int32     `json:"position"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type ChangelogReaction struct {
+	EntryID     ids.UUID  `json:"entry_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ReactorHash string    `json:"reactor_hash"`
+	Emoji       string    `json:"emoji"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ChangelogSubscriber struct {
+	ID                 ids.UUID   `json:"id"`
+	WorkspaceID        ids.UUID   `json:"workspace_id"`
+	HelpCenterID       ids.UUID   `json:"help_center_id"`
+	Email              string     `json:"email"`
+	ContactID          *ids.UUID  `json:"contact_id"`
+	Status             string     `json:"status"`
+	Nonce              string     `json:"nonce"`
+	ConfirmationSentAt *time.Time `json:"confirmation_sent_at"`
+	ConfirmedAt        *time.Time `json:"confirmed_at"`
+	UnsubscribedAt     *time.Time `json:"unsubscribed_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
 type ChannelConnection struct {
 	ID                   ids.UUID          `json:"id"`
 	WorkspaceID          ids.UUID          `json:"workspace_id"`

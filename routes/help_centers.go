@@ -3,8 +3,9 @@
 | Help Center Routes
 |--------------------------------------------------------------------------
 |
-| The API of a workspace's public docs. Reading articles takes
-| articles:read and writing them articles:write; changing a help
+| The API of a workspace's public docs and their changelog. Reading
+| articles takes articles:read and writing them articles:write; the
+| changelog takes changelog:read and changelog:write; changing a help
 | center's address and look takes settings:write, and the actions check
 | the member may manage help centers.
 |
@@ -72,8 +73,48 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 		Ability("articles:write").Status(fhttp.StatusCreated).
 		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
 
+	changelogRoutes(workspace, a)
+
 	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
 	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
 	routing.Patch(workspace, "/collections/{collection}/audience", "collections.audience.update", aud.Collection).
 		Ability("articles:write")
+}
+
+/*
+changelogRoutes declares the changelog API: entries, labels and
+subscribers of a help center's changelog.
+*/
+func changelogRoutes(workspace *routing.Router, a *app.App) {
+	acts := a.Actions
+	cl := &v1.ChangelogController{Entries: acts.ChangelogEntries, IDs: a.IDs}
+	ex := &v1.ChangelogExtrasController{Entries: acts.ChangelogEntries, People: acts.ChangelogSubscribers, IDs: a.IDs}
+	one, entry := "/help-centers/{help_center}", "/changelog-entries/{entry}"
+
+	routing.Get(workspace, one+"/changelog-entries", "help-centers.changelog-entries.index", cl.Index).
+		Ability("changelog:read")
+	routing.Post(workspace, one+"/changelog-entries", "help-centers.changelog-entries.store", cl.Store).
+		Ability("changelog:write").Status(fhttp.StatusCreated)
+	routing.Get(workspace, entry, "changelog-entries.show", cl.Show).Ability("changelog:read")
+	routing.Patch(workspace, entry, "changelog-entries.update", cl.Update).Ability("changelog:write")
+	routing.Delete(workspace, entry, "changelog-entries.destroy", cl.Destroy).
+		Ability("changelog:write").Status(fhttp.StatusNoContent)
+	routing.Post(workspace, entry+"/publications", "changelog-entries.publications.store", cl.Publish).
+		Ability("changelog:write").Status(fhttp.StatusOK)
+	routing.Delete(workspace, entry+"/publications", "changelog-entries.publications.destroy", cl.Unpublish).
+		Ability("changelog:write").Status(fhttp.StatusOK)
+
+	routing.Get(workspace, one+"/changelog-labels", "help-centers.changelog-labels.index", ex.Labels).
+		Ability("changelog:read")
+	routing.Post(workspace, one+"/changelog-labels", "help-centers.changelog-labels.store", ex.StoreLabel).
+		Ability("changelog:write").Status(fhttp.StatusCreated)
+	routing.Patch(workspace, "/changelog-labels/{label}", "changelog-labels.update", ex.UpdateLabel).
+		Ability("changelog:write")
+	routing.Delete(workspace, "/changelog-labels/{label}", "changelog-labels.destroy", ex.DestroyLabel).
+		Ability("changelog:write").Status(fhttp.StatusNoContent)
+
+	routing.Get(workspace, one+"/changelog-subscribers", "help-centers.changelog-subscribers.index", ex.Subscribers).
+		Ability("changelog:read")
+	routing.Delete(workspace, "/changelog-subscribers/{subscriber}", "changelog-subscribers.destroy",
+		ex.DestroySubscriber).Ability("changelog:write").Status(fhttp.StatusNoContent)
 }

@@ -3,16 +3,21 @@
 | Help Center Wiring
 |--------------------------------------------------------------------------
 |
-| The actions behind a workspace's public docs.
+| The actions behind a workspace's public docs and its changelog, and
+| the jobs that publish scheduled entries and mail them out.
 |
 */
 
 package providers
 
 import (
+	"errors"
+
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/changelog"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
 )
@@ -34,6 +39,22 @@ func bootHelpCenters(a *app.App) {
 	acts.HelpCenterAddresses = helpcenters.Addresses{
 		BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 	}
+	acts.ChangelogEntries = changelog.NewEntries(a.DB, a.Clock, a.Queue)
+	acts.ChangelogSubscribers = &changelog.Subscribers{
+		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Key: a.DerivedKey("changelog.subscribers"),
+		Addresses: acts.HelpCenterAddresses,
+	}
+	acts.ChangelogPublic = &changelog.Public{DB: a.DB, Clock: a.Clock, Key: a.DerivedKey("changelog.reactions")}
+}
+
+/*
+registerChangelogJobs runs scheduled publishes and mailings.
+*/
+func registerChangelogJobs(a *app.App) error {
+	return errors.Join(
+		queue.Register(a.Queue, &changelog.PublishWorker{Entries: a.Actions.ChangelogEntries}),
+		queue.Register(a.Queue, &changelog.MailWorker{Subscribers: a.Actions.ChangelogSubscribers}),
+	)
 }
 
 /*

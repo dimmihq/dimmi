@@ -33,6 +33,8 @@ import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
+import { Route as DChangelogIndexRouteImport } from './routes/d/changelog/index'
+import { Route as DChangelogEntryRouteImport } from './routes/d/changelog/$entry'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
 import { Route as DCustomersListsRouteImport } from './routes/d/customers/_lists'
 import { Route as DHelpCenterIndexRouteImport } from './routes/d/help-center/index'
@@ -179,6 +181,16 @@ const AuthLoginTwoFactorRoute = AuthLoginTwoFactorRouteImport.update({
   id: '/login_/two-factor',
   path: '/login/two-factor',
   getParentRoute: () => AuthRoute,
+} as any)
+const DChangelogIndexRoute = DChangelogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DChangelogRoute,
+} as any)
+const DChangelogEntryRoute = DChangelogEntryRouteImport.update({
+  id: '/$entry',
+  path: '/$entry',
+  getParentRoute: () => DChangelogRoute,
 } as any)
 const DCustomersContactRoute = DCustomersContactRouteImport.update({
   id: '/$contact',
@@ -336,7 +348,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/broadcasts': typeof DBroadcastsRoute
-  '/d/changelog': typeof DChangelogRoute
+  '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRoute
   '/d/help-center': typeof DHelpCenterRouteWithChildren
@@ -348,11 +360,13 @@ export interface FileRoutesByFullPath {
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
+  '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/changelog/': typeof DChangelogIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
@@ -387,7 +401,6 @@ export interface FileRoutesByTo {
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/broadcasts': typeof DBroadcastsRoute
-  '/d/changelog': typeof DChangelogRoute
   '/d/customers': typeof DCustomersListsIndexRoute
   '/d/feedback': typeof DFeedbackRoute
   '/d/notifications': typeof DNotificationsRoute
@@ -397,11 +410,13 @@ export interface FileRoutesByTo {
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
+  '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/changelog': typeof DChangelogIndexRoute
   '/d/help-center': typeof DHelpCenterIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
@@ -437,7 +452,7 @@ export interface FileRoutesById {
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
   '/d/broadcasts': typeof DBroadcastsRoute
-  '/d/changelog': typeof DChangelogRoute
+  '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRoute
   '/d/help-center': typeof DHelpCenterRouteWithChildren
@@ -449,12 +464,14 @@ export interface FileRoutesById {
   '/_auth/email/confirm': typeof AuthEmailConfirmRoute
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
+  '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/_lists': typeof DCustomersListsRouteWithChildren
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/changelog/': typeof DChangelogIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
@@ -504,11 +521,13 @@ export interface FileRouteTypes {
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
+    | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
+    | '/d/changelog/'
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
@@ -543,7 +562,6 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/d/agent'
     | '/d/broadcasts'
-    | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/notifications'
@@ -553,11 +571,13 @@ export interface FileRouteTypes {
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
+    | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
+    | '/d/changelog'
     | '/d/help-center'
     | '/d/inbox'
     | '/d/procedures'
@@ -604,12 +624,14 @@ export interface FileRouteTypes {
     | '/_auth/email/confirm'
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
+    | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/customers/_lists'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
+    | '/d/changelog/'
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
@@ -809,6 +831,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginTwoFactorRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/d/changelog/': {
+      id: '/d/changelog/'
+      path: '/'
+      fullPath: '/d/changelog/'
+      preLoaderRoute: typeof DChangelogIndexRouteImport
+      parentRoute: typeof DChangelogRoute
+    }
+    '/d/changelog/$entry': {
+      id: '/d/changelog/$entry'
+      path: '/$entry'
+      fullPath: '/d/changelog/$entry'
+      preLoaderRoute: typeof DChangelogEntryRouteImport
+      parentRoute: typeof DChangelogRoute
+    }
     '/d/customers/$contact': {
       id: '/d/customers/$contact'
       path: '/$contact'
@@ -1001,6 +1037,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DChangelogRouteChildren {
+  DChangelogEntryRoute: typeof DChangelogEntryRoute
+  DChangelogIndexRoute: typeof DChangelogIndexRoute
+}
+
+const DChangelogRouteChildren: DChangelogRouteChildren = {
+  DChangelogEntryRoute: DChangelogEntryRoute,
+  DChangelogIndexRoute: DChangelogIndexRoute,
+}
+
+const DChangelogRouteWithChildren = DChangelogRoute._addFileChildren(
+  DChangelogRouteChildren,
+)
+
 interface DCustomersListsRouteChildren {
   DCustomersListsBlockedRoute: typeof DCustomersListsBlockedRoute
   DCustomersListsErasuresRoute: typeof DCustomersListsErasuresRoute
@@ -1070,7 +1120,7 @@ const DInboxViewRouteRouteWithChildren = DInboxViewRouteRoute._addFileChildren(
 interface DRouteRouteChildren {
   DAgentRoute: typeof DAgentRoute
   DBroadcastsRoute: typeof DBroadcastsRoute
-  DChangelogRoute: typeof DChangelogRoute
+  DChangelogRoute: typeof DChangelogRouteWithChildren
   DCustomersRoute: typeof DCustomersRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRoute
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
@@ -1097,7 +1147,7 @@ interface DRouteRouteChildren {
 const DRouteRouteChildren: DRouteRouteChildren = {
   DAgentRoute: DAgentRoute,
   DBroadcastsRoute: DBroadcastsRoute,
-  DChangelogRoute: DChangelogRoute,
+  DChangelogRoute: DChangelogRouteWithChildren,
   DCustomersRoute: DCustomersRouteWithChildren,
   DFeedbackRoute: DFeedbackRoute,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,

@@ -1099,3 +1099,19 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Audience | an article kept to Pro; a token with `custom_attributes.plan` pro | the signed-in reader reads it and finds it in search; responses say `private, no-store`; a reader without Pro, a forged or a week-old cookie get 404 |
 | Bad token | post a broken token | 401, no cookie |
 | Redirects | `next` pointing at another site | the reader lands on the help center's home |
+
+## Changelog
+
+| Flow | How | Expect |
+|---|---|---|
+| Labels | `GET $B/help-centers/$H/changelog-labels` on a new workspace | New, Improved and Fixed; a 21st label answers 422 `too_many_labels` |
+| Write | Changelog, New update; add a cover, a label and authors; Save draft | the update lists as Draft with its cover, labels and authors; editors are the authors until some are picked |
+| Address | change the title of a never-published update | its address follows the title; once published, or typed in Settings, it stays |
+| Publish | Publish, Publish now | `/hc/<sub>/changelog` shows it first, the help center's header links Changelog and its home lists it under latest updates |
+| Schedule | Publish, Schedule for a time ahead | Scheduled in the list; the page answers 404 until the time, then the job publishes it |
+| Subscribe | the changelog's form with an address | "Check your inbox"; Mailpit has "Confirm you want updates"; opening the link changes nothing until the button is pressed; the same address again mails nothing more within ten minutes |
+| Mail | publish with "Email N subscribers" | each active subscriber gets the update with `List-Unsubscribe` and `List-Unsubscribe-Post`; publishing again mails nobody |
+| Unsubscribe | the mail's Unsubscribe link, or a one-click POST to it | the subscriber is Unsubscribed and old links say they no longer work |
+| Feed | `GET /hc/<sub>/changelog/feed.xml` and `/labels/<label>/feed.xml` | RSS with absolute links and pictures; drafts and scheduled updates never appear |
+| React | an emoji on an entry's page | the count rises once per reader |
+| Unpublish | Unpublish on a published update | the page answers 404; it lists as Draft |

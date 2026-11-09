@@ -94,8 +94,9 @@ site is a real help center as the pages read it, searching through the
 reader bound to the request.
 */
 type site struct {
-	snap   helpcenters.Snapshot
-	search func(query string) []models.SearchPublishedArticlesRow
+	snap    helpcenters.Snapshot
+	search  func(query string) []models.SearchPublishedArticlesRow
+	updates []helpcenter.Update
 }
 
 /*
@@ -155,9 +156,9 @@ func (s *site) Popular() []helpcenter.Summary {
 }
 
 /*
-Updates returns nothing: a real help center announces no changes yet.
+Updates returns the newest changelog entries, for the home page.
 */
-func (s *site) Updates(int) []helpcenter.Update { return nil }
+func (s *site) Updates(n int) []helpcenter.Update { return s.updates[:min(n, len(s.updates))] }
 
 /*
 Collection returns the collection with the slug and its trail.

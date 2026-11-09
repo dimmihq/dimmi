@@ -4,10 +4,11 @@
 |--------------------------------------------------------------------------
 |
 | The public changelog under its help center's /changelog: the list of
-| entries a page at a time, the same filtered to a label, and each entry
-| on its own page. Entries come from the sample help center for now. The
-| subscribe and reaction forms answer as the real ones will, returning
-| the visitor to the page they were on, without storing anything yet.
+| entries a page at a time, the same filtered to a label, each entry on
+| its own page, and the RSS feed. A real help center shows its published
+| entries; the sample help center answers only where no real one
+| exists, as a demo. Subscribing and reacting are kept for real help
+| centers, and the sample answers them without storing anything.
 |
 */
 
@@ -35,11 +36,6 @@ Index shows a page of the newest entries, filtered to a label when the
 path names one.
 */
 func (c ChangelogController) Index(w fhttp.ResponseWriter, r *fhttp.Request) {
-	center, ok := c.center(w, r)
-	if !ok {
-		return
-	}
-
 	page := 1
 	if n := r.PathValue("page"); n != "" {
 		parsed, err := strconv.Atoi(n)
@@ -50,6 +46,19 @@ func (c ChangelogController) Index(w fhttp.ResponseWriter, r *fhttp.Request) {
 		}
 
 		page = parsed
+	}
+
+	if site, live, ok := c.live(w, r); live || !ok {
+		if ok {
+			c.realIndex(w, r, site, page)
+		}
+
+		return
+	}
+
+	center, ok := c.center(w, r)
+	if !ok {
+		return
 	}
 
 	index, found, err := c.Library.Changelog(center, r.PathValue("label"), page)
@@ -73,12 +82,20 @@ func (c ChangelogController) Index(w fhttp.ResponseWriter, r *fhttp.Request) {
 Entry shows one entry, or its Markdown when the path ends in .md.
 */
 func (c ChangelogController) Entry(w fhttp.ResponseWriter, r *fhttp.Request) {
+	slug, markdown := strings.CutSuffix(r.PathValue("slug"), ".md")
+
+	if site, live, ok := c.live(w, r); live || !ok {
+		if ok {
+			c.realEntry(w, r, site)
+		}
+
+		return
+	}
+
 	center, ok := c.center(w, r)
 	if !ok {
 		return
 	}
-
-	slug, markdown := strings.CutSuffix(r.PathValue("slug"), ".md")
 
 	page, found, err := c.Library.Entry(center, slug)
 	if err != nil {
@@ -101,19 +118,4 @@ func (c ChangelogController) Entry(w fhttp.ResponseWriter, r *fhttp.Request) {
 	}
 
 	c.respond(w, r, fhttp.StatusOK, changelog.EntryPage(center, c.Library.Labels(), page, c.styles()))
-}
-
-/*
-Subscribe takes an email address for announcements and shows the
-changelog asking the visitor to confirm from their inbox.
-*/
-func (c ChangelogController) Subscribe(w fhttp.ResponseWriter, r *fhttp.Request) {
-	back(w, strings.TrimSuffix(r.URL.Path, "/subscriptions")+"?subscribed#main")
-}
-
-/*
-React takes a reaction to an entry and returns to the entry.
-*/
-func (c ChangelogController) React(w fhttp.ResponseWriter, r *fhttp.Request) {
-	back(w, strings.TrimSuffix(r.URL.Path, "/reactions"))
 }

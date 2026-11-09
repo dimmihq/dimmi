@@ -323,14 +323,23 @@ func billingPublicIDs() []PublicIDEntry {
 }
 
 /*
+The prefixes of the changelog's tables.
+*/
+const (
+	PrefixChangelogEntry      Prefix = "cle"
+	PrefixChangelogLabel      Prefix = "cll"
+	PrefixChangelogSubscriber Prefix = "csub"
+)
+
+/*
 changelogPublicIDs lists the prefixes of the changelog.
 */
 func changelogPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{"clg", "changelogs"},
-		{"cle", "changelog_entries"},
-		{"cll", "changelog_labels"},
-		{"csub", "changelog_subscribers"},
+		{PrefixChangelogEntry, "changelog_entries"},
+		{PrefixChangelogLabel, "changelog_labels"},
+		{PrefixChangelogSubscriber, "changelog_subscribers"},
 		{"clm", "changelog_mailings"},
 		{"cls", "changelog_sources"},
 		{"cgn", "changelog_generations"},

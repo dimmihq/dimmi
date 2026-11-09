@@ -27,6 +27,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/view"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
+	"github.com/dimmihq/dimmi/app/actions/changelog"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/resources/views/helpcenter"
@@ -41,15 +42,18 @@ const PortalEntry = "resources/js/portal/portal.ts"
 /*
 HelpCenterController serves the public help center's pages. Assets
 serves the images they show; Readers signs readers in through the
-team's product.
+team's product. Changelog reads the help center's published changelog
+and Subscribers takes the people who want to hear about it.
 */
 type HelpCenterController struct {
-	Library *helpsample.Library
-	Public  *helpcenters.Public
-	Readers *helpcenters.Readers
-	Assets  fhttp.Handler
-	Vite    *vite.Bundle
-	Errors  fhttp.Errors
+	Library     *helpsample.Library
+	Public      *helpcenters.Public
+	Readers     *helpcenters.Readers
+	Changelog   *changelog.Public
+	Subscribers *changelog.Subscribers
+	Assets      fhttp.Handler
+	Vite        *vite.Bundle
+	Errors      fhttp.Errors
 }
 
 /*

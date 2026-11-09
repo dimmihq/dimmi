@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
 	"github.com/dimmihq/dimmi/app/http/controllers/widget"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
@@ -138,10 +139,12 @@ conversations, and the files their pages show.
 func helpCenter(pages *routing.Router, a *app.App) {
 	hc := &web.HelpCenterController{
 		Library: a.HelpSample, Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Errors: a.Errors,
+		Changelog: a.Actions.ChangelogPublic, Subscribers: a.Actions.ChangelogSubscribers,
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
+	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
 	get := func(path, name string, h fhttp.HandlerFunc) {
 		pages.Handle(fhttp.MethodGet, "/hc/{center}"+path, name, h)
 	}
@@ -160,13 +163,8 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	get("/sso/sign-in", "hc.sso.sign-in", hc.EmailSignIn)
 	post("/sso/codes", "hc.sso.codes.store", hc.SendCode)
 	post("/sso/codes/check", "hc.sso.codes.check", hc.CheckCode)
-	get("/changelog", "hc.changelog.index", cl.Index)
-	get("/changelog/page/{page}", "hc.changelog.index.page", cl.Index)
-	get("/changelog/labels/{label}", "hc.changelog.labels.show", cl.Index)
-	get("/changelog/labels/{label}/page/{page}", "hc.changelog.labels.page", cl.Index)
-	get("/changelog/{slug}", "hc.changelog.entries.show", cl.Entry)
-	post("/changelog/subscriptions", "hc.changelog.subscriptions.store", cl.Subscribe)
-	post("/changelog/{slug}/reactions", "hc.changelog.entries.reactions.store", cl.React)
+	changelogPages(get, post, cl)
+	get("/help-images/{file}", "hc.help-images.show", images.Show)
 	portalPages(get, post, web.PortalController{HelpCenterController: hc})
 	get("/assets/{file}", "hc.assets", hc.Asset)
 	get("/*", "hc.missing", hc.NotFound)
@@ -209,4 +207,23 @@ func authPages() map[string]string {
 		"invitation":       "/invitation",
 		"onboarding":       "/onboarding",
 	}
+}
+
+/*
+changelogPages declares the changelog's public pages: its list, label
+pages and feeds, each entry, and the forms and links readers use.
+*/
+func changelogPages(get, post func(path, name string, h fhttp.HandlerFunc), cl web.ChangelogController) {
+	get("/changelog", "hc.changelog.index", cl.Index)
+	get("/changelog/page/{page}", "hc.changelog.index.page", cl.Index)
+	get("/changelog/labels/{label}", "hc.changelog.labels.show", cl.Index)
+	get("/changelog/labels/{label}/page/{page}", "hc.changelog.labels.page", cl.Index)
+	get("/changelog/feed.xml", "hc.changelog.feed", cl.Feed)
+	get("/changelog/labels/{label}/feed.xml", "hc.changelog.labels.feed", cl.Feed)
+	get("/changelog/{slug}", "hc.changelog.entries.show", cl.Entry)
+	post("/changelog/subscriptions", "hc.changelog.subscriptions.store", cl.Subscribe)
+	get("/changelog/subscribers/{subscriber}/{purpose}/{token}", "hc.changelog.subscribers.show", cl.SubscriberLink)
+	post("/changelog/subscribers/{subscriber}/{purpose}/{token}", "hc.changelog.subscribers.update",
+		cl.SubscriberAction)
+	post("/changelog/{slug}/reactions", "hc.changelog.entries.reactions.store", cl.React)
 }

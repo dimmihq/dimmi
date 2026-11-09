@@ -64,12 +64,15 @@ func Register(m *mail.Manager) {
 }
 
 /*
-registerCodes lets the codes customers type to prove an address be
-queued: in the messenger and on a help center.
+registerCodes lets the mail customers ask for on the messenger and on
+a help center be queued: codes that prove an address, and the
+changelog's confirmations and entries.
 */
 func registerCodes(m *mail.Manager) {
 	mail.Register[VisitorCodeMail](m, "visitor_code")
 	mail.Register[ReaderCodeMail](m, "reader_code")
+	mail.Register[ChangelogConfirmMail](m, "changelog_confirm")
+	mail.Register[ChangelogEntryMail](m, "changelog_entry")
 }
 
 /*

@@ -201,5 +201,17 @@
     "subject": "{{.code}} is your code for {{.help_center}}",
     "intro": "Type this code on {{.help_center}} to sign in:",
     "expiry": "The code works for 10 minutes. If you did not ask for it, you can ignore this email: nothing happens without the code."
+  },
+  "changelog_confirm": {
+    "subject": "Confirm you want updates from {{.help_center}}",
+    "intro": "Someone asked to get {{.help_center}}'s product updates at this address. Confirm it was you:",
+    "action": "Confirm subscription",
+    "ignore": "If you did not ask, ignore this email and you will not get any updates."
+  },
+  "changelog_entry": {
+    "kicker": "New from {{.help_center}}",
+    "action": "Read on the site",
+    "why": "You get these because you subscribed to updates from {{.help_center}}.",
+    "unsubscribe": "Unsubscribe"
   }
 }
