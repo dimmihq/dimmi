@@ -164,7 +164,7 @@ function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
     name: me.user.name,
     detail: me.user.email,
     initials: initialsOf(me.user.name),
-    product: "Dimmi",
+    product: "dimmi",
     version: me.instance?.version,
     status: availability.status,
     groups: [
@@ -251,7 +251,6 @@ function SignedInShell({
       switcher={switcher}
       account={account}
       footer={inSettings ? null : <GetStarted />}
-      showThemeToggle={false}
       density="compact"
       collapsed={mobile ? false : collapsed}
       onCollapsedChange={mobile ? undefined : setCollapsed}

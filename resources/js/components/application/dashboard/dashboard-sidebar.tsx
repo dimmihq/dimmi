@@ -3,7 +3,6 @@
 import { useTemplateCopy } from "@/components/foundations/template-copy/template-copy";
 
 import {
-  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -21,6 +20,7 @@ import { Kbd } from "@/components/base/kbd/kbd";
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { cx } from "@/utils/cx";
 import { DashboardTeamMenu, type MenuGroup, type PresenceStatus } from "./dashboard-team-menu";
+import { DensityContext, density, type SidebarDensity } from "./sidebar-density";
 import { type AvatarColor, DashboardUserMenu } from "./dashboard-user-menu";
 
 /**
@@ -70,20 +70,6 @@ function Collapsible({ collapsed, children, className }: { collapsed: boolean; c
     </span>
   ));
 }
-
-/**
- * Row density. `regular` is the Figma 36px row (8px padding around a 20px
- * icon). `compact` is a 32px row with an 18px icon and
- * tighter section spacing, for sidebars with many pages such as settings.
- */
-export type SidebarDensity = "regular" | "compact";
-
-const DensityContext = createContext<SidebarDensity>("regular");
-
-const density = {
-  regular: { row: "p-2", icon: "size-5", text: "text-body-medium", rail: "w-9", rows: "gap-1", heading: "h-7" },
-  compact: { row: "px-2 py-1.5", icon: "size-[18px]", text: "text-body-medium", rail: "w-8", rows: "gap-0.5", heading: "h-6" },
-} as const;
 
 function NavItem({
   icon: Icon,
@@ -736,7 +722,6 @@ export function DashboardSidebar({
         {/* Account card → opens the account menu next to the sidebar */}
         <DashboardTeamMenu
           {...account}
-          showThemeToggle={!showThemeToggle}
           collapsed={collapsed}
           className={flat ? "!bg-background-secondary-default" : undefined}
         />
