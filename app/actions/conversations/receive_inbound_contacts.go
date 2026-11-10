@@ -20,9 +20,11 @@
 package conversations
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/dimmihq/dimmi/framework/database"
 
@@ -46,6 +48,10 @@ func (run *ingestRun) resolveContact(ctx context.Context, s contracts.InboundSen
 		return run.known(ctx, contact, s, contracts.IdentityClaim{})
 	}
 
+	if err := run.lockIdentities(ctx, s.Identities); err != nil {
+		return models.Contact{}, err
+	}
+
 	for _, claim := range s.Identities {
 		contact, err := run.q.FindContactByIdentity(ctx, models.FindContactByIdentityParams{
 			WorkspaceID: run.ws, Type: string(claim.Type), Value: claim.Value,
@@ -62,6 +68,31 @@ func (run *ingestRun) resolveContact(ctx context.Context, s contracts.InboundSen
 	}
 
 	return run.create(ctx, s)
+}
+
+/*
+lockIdentities holds the sender's identities, in one order so two
+senders never wait on each other, until the message is stored, so a
+second message from the same new sender finds the contact the first
+created instead of creating it again.
+*/
+func (run *ingestRun) lockIdentities(ctx context.Context, claims []contracts.IdentityClaim) error {
+	keys := make([]contracts.IdentityClaim, len(claims))
+	copy(keys, claims)
+	slices.SortFunc(keys, func(a, b contracts.IdentityClaim) int {
+		return cmp.Or(cmp.Compare(a.Type, b.Type), cmp.Compare(a.Value, b.Value))
+	})
+
+	for _, claim := range keys {
+		err := run.q.LockContactIdentity(ctx, models.LockContactIdentityParams{
+			WorkspaceID: run.ws.String(), Type: string(claim.Type), Value: claim.Value,
+		})
+		if err != nil {
+			return fmt.Errorf("lock contact identity: %w", err)
+		}
+	}
+
+	return nil
 }
 
 /*

@@ -53,3 +53,9 @@ WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND id = @id;
 -- value from the contact, when it holds one.
 DELETE FROM contact_identities
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND type = @type AND value = @value;
+
+-- name: LockContactIdentity :exec
+-- LockContactIdentity holds the identity until the transaction ends, so
+-- two messages from one new sender, taken in at the same time, create
+-- one contact between them instead of both trying to.
+SELECT pg_advisory_xact_lock(hashtext('contact_identity:' || @workspace_id::text || ':' || @type::text || ':' || @value::text));

@@ -346,3 +346,21 @@ func (q *Queries) ListContactIdentities(ctx context.Context, arg ListContactIden
 	}
 	return items, nil
 }
+
+const lockContactIdentity = `-- name: LockContactIdentity :exec
+SELECT pg_advisory_xact_lock(hashtext('contact_identity:' || $1::text || ':' || $2::text || ':' || $3::text))
+`
+
+type LockContactIdentityParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Type        string `json:"type"`
+	Value       string `json:"value"`
+}
+
+// LockContactIdentity holds the identity until the transaction ends, so
+// two messages from one new sender, taken in at the same time, create
+// one contact between them instead of both trying to.
+func (q *Queries) LockContactIdentity(ctx context.Context, arg LockContactIdentityParams) error {
+	_, err := q.db.Exec(ctx, lockContactIdentity, arg.WorkspaceID, arg.Type, arg.Value)
+	return err
+}
