@@ -31,6 +31,11 @@ func TestAiTurn(t *testing.T) {
 		assert.Equal(t, "completed", s.run.Status)
 		assert.Equal(t, "v2", s.run.PromptVersion)
 		assert.Equal(t, []string{"generate", "tool_call", "generate"}, s.stepKinds())
+		var undated int
+		require.NoError(t, h.d.TC.Operator().QueryRow(t.Context(),
+			"SELECT count(*) FROM ai_run_steps WHERE run_id = $1 AND created_at < now() - interval '1 year'",
+			res.RunID).Scan(&undated))
+		assert.Zero(t, undated, "every step is stamped with when it was written")
 		assert.Positive(t, s.run.CostMicros)
 		assert.Equal(t, "pro plan price per seat", str(s.run.QueryRewritten))
 		assert.Equal(t, int32(1), s.conv.AiReplyCount)

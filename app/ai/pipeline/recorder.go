@@ -115,7 +115,7 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 		CacheWriteTokens: usage.CacheWriteTokens, OutputTokens: usage.OutputTokens,
 		ReasoningTokens: usage.ReasoningTokens, UsageEstimated: estimated, CostMicros: cost,
 		LatencyMs: millis(rec.clock.Now().Sub(in.started)), FirstTokenMs: millis(in.firstToken),
-		StartedAt: nilableTime(in.started), CompletedAt: nilableTime(rec.clock.Now()),
+		StartedAt: nilableTime(in.started), CompletedAt: nilableTime(rec.clock.Now()), Now: rec.clock.Now(),
 	}
 	if in.key != nil {
 		params.ProviderKeyID = &in.key.id

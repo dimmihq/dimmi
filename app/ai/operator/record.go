@@ -124,7 +124,7 @@ func (e *Engine) record(ctx context.Context, s *session, in step) {
 		CachedInputTokens: in.usage.CachedInputTokens, CacheWriteTokens: in.usage.CacheWriteTokens,
 		OutputTokens: in.usage.OutputTokens, ReasoningTokens: in.usage.ReasoningTokens, CostMicros: cost,
 		LatencyMs: millis(now.Sub(in.started)), FirstTokenMs: millis(in.firstToken),
-		StartedAt: &in.started, CompletedAt: &now,
+		StartedAt: &in.started, CompletedAt: &now, Now: now,
 	}
 	if in.kind == enums.AIRunStepKindGenerate {
 		provider := string(s.llm.Provider())
