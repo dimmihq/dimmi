@@ -54,9 +54,10 @@ it.describe("own preferences", () => {
     await expect(page.getByRole("combobox", { name: "Time zone" })).toHaveValue(/^Workspace default/);
   });
 
-  it("the notifications page stays hidden until it works", async ({ page }) => {
-    await expect(page.getByRole("link", { name: "Notifications", exact: true })).toHaveCount(0);
-    await page.goto("/d/settings/notifications");
+  it("lists notification settings beside preferences as a page of their own", async ({ page }) => {
+    await page.getByRole("link", { name: "Notifications", exact: true }).click();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/notifications$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Time zone" })).toHaveCount(0);
   });
 });
