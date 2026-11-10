@@ -38,7 +38,8 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	}
 	view := "/conversation-views/{view}"
 
-	routing.Get(r, "/conversation-views", "conversation-views.index", views.Index).Ability("conversations:read")
+	routing.Get(r, "/conversation-views", "conversation-views.index", views.Index).Ability("conversations:read").
+		Query(routing.QueryParam{Name: "q", Description: "Only views whose name holds this text."})
 	routing.Post(r, "/conversation-views", "conversation-views.store", views.Store).Ability("conversations:write")
 	routing.Patch(r, "/conversation-views", "conversation-views.reorder", views.ReorderShared).
 		Ability("conversations:write")
@@ -53,7 +54,8 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 
 	routing.Get(r, "/snooze-lists", "snooze-lists.index", snooze.Index).Ability("conversations:read")
 	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Ability("settings:write")
-	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read")
+	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read").
+		Query(routing.QueryParam{Name: "conversation", Description: "ID or number of the conversation to snooze."})
 
 	collaborationRoutes(r, a)
 
@@ -61,7 +63,12 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 		List: acts.ListDrafts, Save: acts.SaveDraft, Update: acts.UpdateDraft, Delete: acts.DeleteDraft, IDs: a.IDs,
 	}
 
-	routing.Get(r, "/drafts", "drafts.index", drafts.Index).Ability("conversations:read")
+	routing.Get(r, "/drafts", "drafts.index", drafts.Index).Ability("conversations:read").Query(
+		routing.QueryParam{Name: "filter[conversation]", Description: "Only drafts on this conversation."},
+		routing.QueryParam{
+			Name: "filter[mode]", Description: "Only drafts of this kind.", Values: []string{"reply", "note", "new"},
+		},
+	)
 	routing.Post(r, "/drafts", "drafts.store", drafts.Store).Ability("conversations:write")
 	routing.Patch(r, "/drafts/{draft}", "drafts.update", drafts.Patch).Ability("conversations:write")
 	routing.Delete(r, "/drafts/{draft}", "drafts.destroy", drafts.Destroy).Ability("conversations:write").

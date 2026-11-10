@@ -61,13 +61,21 @@ type EmailSignatureController struct {
 }
 
 /*
+EmailSignatureListing is what the signature list accepts: filters on
+the member, the address and the kind of signature.
+*/
+func EmailSignatureListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"member", "address", "kind"}}
+}
+
+/*
 Index lists the signatures, narrowed by filter[member], filter[address]
 and filter[kind].
 */
 func (c *EmailSignatureController) Index(ctx context.Context, _ *requests.NoInput) (*EmailSignaturesOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: []string{"member", "address", "kind"}})
+	query, err := pagination.Parse(r.URL.Query(), EmailSignatureListing())
 	if err != nil {
 		return nil, err
 	}

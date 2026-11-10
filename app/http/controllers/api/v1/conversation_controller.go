@@ -88,7 +88,7 @@ Index lists a page of a view.
 func (c *ConversationController) Index(ctx context.Context, _ *requests.NoInput) (*ConversationsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), conversationAllow())
+	query, err := pagination.Parse(r.URL.Query(), ConversationListing())
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (c *ConversationController) ListNeighbors(
 
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), conversationAllow())
+	query, err := pagination.Parse(r.URL.Query(), ConversationListing())
 	if err != nil {
 		return nil, err
 	}

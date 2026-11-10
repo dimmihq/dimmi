@@ -73,13 +73,21 @@ type tokenPage struct {
 }
 
 /*
+TokenListing is what the token list accepts: a filter on the member
+whose tokens to list.
+*/
+func TokenListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"member"}}
+}
+
+/*
 Index lists a page of tokens, newest first: the caller's own, or with
 filter[member] one member's or everyone's.
 */
 func (c *PersonalAccessTokenController) Index(ctx context.Context, _ *requests.NoInput) (*TokensOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: []string{"member"}})
+	query, err := pagination.Parse(r.URL.Query(), TokenListing())
 	if err != nil {
 		return nil, err
 	}

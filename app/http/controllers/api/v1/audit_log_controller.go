@@ -57,10 +57,14 @@ type AuditLogController struct {
 }
 
 /*
-auditFilters are the filters the audit log accepts.
+AuditLogListing is what the audit log accepts: its filters, which the
+export takes too, and the oldest-first order.
 */
-func auditFilters() []string {
-	return []string{"event", "actor", "via", "subject", "created_after", "created_before"}
+func AuditLogListing() pagination.Allow {
+	return pagination.Allow{
+		Filters: []string{"event", "actor", "via", "subject", "created_after", "created_before"},
+		Sorts:   []string{"created_at"},
+	}
 }
 
 /*
@@ -70,9 +74,7 @@ sort=created_at, oldest first.
 func (c *AuditLogController) Index(ctx context.Context, _ *requests.NoInput) (*AuditLogsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	allow := pagination.Allow{Filters: auditFilters(), Sorts: []string{"created_at"}}
-
-	query, err := pagination.Parse(r.URL.Query(), allow)
+	query, err := pagination.Parse(r.URL.Query(), AuditLogListing())
 	if err != nil {
 		return nil, err
 	}

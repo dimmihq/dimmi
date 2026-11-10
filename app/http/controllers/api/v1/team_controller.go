@@ -63,9 +63,10 @@ type teamPage struct {
 }
 
 /*
-teamIncludes are the relations a team can embed.
+TeamListing is what the team list accepts: its members embedded with
+include=members.
 */
-func teamIncludes() pagination.Allow {
+func TeamListing() pagination.Allow {
 	return pagination.Allow{Includes: []string{"members"}}
 }
 
@@ -75,7 +76,7 @@ Index lists a page of teams by name.
 func (c *TeamController) Index(ctx context.Context, _ *requests.NoInput) (*TeamsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), teamIncludes())
+	query, err := pagination.Parse(r.URL.Query(), TeamListing())
 	if err != nil {
 		return nil, err
 	}
@@ -109,10 +110,11 @@ func (c *TeamController) Index(ctx context.Context, _ *requests.NoInput) (*Teams
 }
 
 /*
-teamShowIncludes are the relations one team can embed: its members, and
-for those who may delete it, how many conversations it holds.
+TeamShowing is what one team accepts: the relations it can embed, its
+members and, for those who may delete it, how many conversations it
+holds.
 */
-func teamShowIncludes() pagination.Allow {
+func TeamShowing() pagination.Allow {
 	return pagination.Allow{Includes: []string{"members", "conversation_counts"}}
 }
 
@@ -122,7 +124,7 @@ Show answers with one team.
 func (c *TeamController) Show(ctx context.Context, in *requests.ShowTeamRequest) (*TeamOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), teamShowIncludes())
+	query, err := pagination.Parse(r.URL.Query(), TeamShowing())
 	if err != nil {
 		return nil, err
 	}

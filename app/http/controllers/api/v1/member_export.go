@@ -44,7 +44,7 @@ stream that breaks after its headers went out can only be logged.
 func (c *MemberController) serveExport(w fhttp.ResponseWriter, r *fhttp.Request) {
 	ctx := r.Context()
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: memberFilters()})
+	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: MemberListing().Filters})
 	if err != nil {
 		c.Errors.Render(w, r, err)
 

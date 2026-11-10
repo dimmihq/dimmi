@@ -123,13 +123,14 @@ func contactDetailRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, path+"/exports/{export}", "contacts.exports.show", exports.Get).Ability("contacts:write")
 	routing.Get(r, path+"/exports/{export}/download", "contacts.exports.download", exports.Zip).
 		Ability("contacts:write")
-	routing.Get(r, "/contact-erasures", "contact-erasures.index", removal.Index).Ability("contacts:write")
+	routing.Get(r, "/contact-erasures", "contact-erasures.index", removal.Index).Ability("contacts:write").
+		Lists(v1.ErasureListing()).Query(numberedPagesQuery()...)
 	routing.Get(r, "/contact-erasures/{contact_erasure}", "contact-erasures.show", removal.Get).
 		Ability("contacts:write")
 	routing.Patch(r, "/contact-erasures/{contact_erasure}", "contact-erasures.update", removal.Update).
 		Ability("contacts:write")
 	routing.Get(r, path+"/conversations", "contacts.conversations.index", contacts.ConversationsIndex).
-		Ability("conversations:read")
+		Ability("conversations:read").Lists(v1.PageListing())
 	routing.Get(r, path+"/identities", "contacts.identities.index", details.Index).Ability("contacts:read")
 	routing.Delete(r, path+"/identities/{identity}", "contacts.identities.destroy", details.Destroy).
 		Ability("contacts:write")
@@ -149,14 +150,16 @@ func companyRoutes(r *routing.Router, a *app.App) {
 	}
 	path := "/companies/{company}"
 
-	routing.Get(r, "/companies", "companies.index", c.Index).Ability("contacts:read")
+	routing.Get(r, "/companies", "companies.index", c.Index).Ability("contacts:read").
+		Lists(v1.CompanyListing()).Query(numberedPagesQuery()...)
 	routing.Post(r, "/companies", "companies.store", c.Store).Ability("contacts:write")
 	routing.Get(r, path, "companies.show", c.Get).Ability("contacts:read")
 	routing.Patch(r, path, "companies.update", c.Update).Ability("contacts:write")
 	routing.Delete(r, path, "companies.destroy", c.Destroy).Ability("contacts:write")
-	routing.Get(r, path+"/contacts", "companies.contacts.index", c.Contacts).Ability("contacts:read")
+	routing.Get(r, path+"/contacts", "companies.contacts.index", c.Contacts).Ability("contacts:read").
+		Lists(v1.PageListing())
 	routing.Get(r, path+"/conversations", "companies.conversations.index", c.ConversationsIndex).
-		Ability("conversations:read")
+		Ability("conversations:read").Lists(v1.PageListing())
 }
 
 /*
@@ -171,7 +174,13 @@ func tagRoutes(r *routing.Router, a *app.App) {
 		Tag: acts.TagConversation, Untag: acts.UntagConversation, IDs: a.IDs,
 	}
 
-	routing.Get(r, "/tags", "tags.index", tags.Index).Ability("conversations:read")
+	routing.Get(r, "/tags", "tags.index", tags.Index).Ability("conversations:read").Query(
+		routing.QueryParam{Name: "q", Description: "Only tags whose name starts with this text."},
+		routing.QueryParam{
+			Name: "include", Description: "Set to counts to add how many records carry each tag.",
+			Values: []string{"counts"},
+		},
+	)
 	routing.Post(r, "/tags", "tags.store", tags.Store).Ability("conversations:write")
 	routing.Patch(r, "/tags/{tag}", "tags.update", tags.Update).Ability("settings:write")
 	routing.Delete(r, "/tags/{tag}", "tags.destroy", tags.Destroy).Ability("settings:write")

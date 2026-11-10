@@ -93,11 +93,15 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/inboxes/{inbox}/assignment-status", "inboxes.assignment-status.show",
 		c.inboxes.AssignmentStatus).Ability("settings:read")
 
-	routing.Get(r, "/contacts", "contacts.index", c.contacts.Index).Ability("contacts:read")
+	routing.Get(r, "/contacts", "contacts.index", c.contacts.Index).Ability("contacts:read").
+		Lists(v1.ContactListing()).Query(numberedPagesQuery()...).Query(routing.QueryParam{
+		Name: "conditions", Description: "Audience conditions as JSON, the same a saved audience holds.",
+	})
 	routing.Post(r, "/contacts", "contacts.store", c.contacts.Store).Ability("contacts:write")
 	files := &v1.AttachmentController{Upload: a.Actions.Inbox.UploadFile, Disks: a.Storage, Errors: a.Errors}
 	r.Handle(fhttp.MethodPost, "/attachments", "attachments.store", fhttp.HandlerFunc(files.Store)).
-		Ability("conversations:write").Use(middleware.BodyLimit(v1.MaxMemberUploadBytes + uploadOverhead))
+		Ability("conversations:write").Use(middleware.BodyLimit(v1.MaxMemberUploadBytes + uploadOverhead)).
+		Query(routing.QueryParam{Name: "filename", Description: "Name of the uploaded file. Required."})
 	routing.Get(r, "/contacts/{contact}", "contacts.show", c.contacts.Get).Ability("contacts:read")
 	routing.Patch(r, "/contacts/{contact}", "contacts.update", c.contacts.Update).Ability("contacts:write")
 
@@ -105,7 +109,10 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 
 	routing.Get(r, "/conversation-counts", "conversation-counts.index", c.views.CountIndex).
 		Ability("conversations:read")
-	routing.Get(r, "/search", "search.index", c.views.SearchIndex).Ability("conversations:read")
+	routing.Get(r, "/search", "search.index", c.views.SearchIndex).Ability("conversations:read").Query(
+		routing.QueryParam{Name: "q", Description: "Search text."},
+		routing.QueryParam{Name: "limit", Description: "How many results of each kind to answer."},
+	)
 
 	inboxViewRoutes(r, a)
 }
@@ -117,18 +124,22 @@ timelines.
 func conversationRoutes(r *routing.Router, c inboxControllers) {
 	conv := "/conversations/{conversation}"
 
-	routing.Get(r, "/conversations", "conversations.index", c.conversations.Index).Ability("conversations:read")
+	routing.Get(r, "/conversations", "conversations.index", c.conversations.Index).Ability("conversations:read").
+		Lists(v1.ConversationListing())
 	routing.Post(r, "/conversations", "conversations.store", c.conversations.Store).Ability("conversations:write")
 	routing.Get(r, conv, "conversations.show", c.conversations.Get).Ability("conversations:read")
 	routing.Patch(r, conv, "conversations.update", c.conversations.Update).Ability("conversations:write")
 	routing.Get(r, conv+"/neighbors", "conversations.neighbors.index", c.conversations.ListNeighbors).
-		Ability("conversations:read")
+		Ability("conversations:read").Lists(v1.ConversationListing())
 	routing.Get(r, conv+"/read-state", "conversations.read-state.show", c.views.ReadState).
 		Ability("conversations:read")
 	routing.Patch(r, conv+"/read-state", "conversations.read-state.update", c.views.UpdateReadState).
 		Ability("conversations:read")
 	routing.Get(r, conv+"/messages", "conversations.messages.index", c.messages.Index).
-		Ability("conversations:read")
+		Ability("conversations:read").Lists(v1.TimelineListing()).Query(
+		routing.QueryParam{Name: "before", Description: "The prev_cursor of a page, to read older entries."},
+		routing.QueryParam{Name: "after", Description: "The next_cursor of a page, to read newer entries."},
+	)
 	routing.Get(r, conv+"/messages/{message}/original", "conversations.messages.original.show",
 		c.messages.ShowOriginal).Ability("conversations:read")
 	routing.Get(r, conv+"/messages/{message}/original/raw", "conversations.messages.original.raw",

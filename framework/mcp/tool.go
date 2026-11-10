@@ -10,7 +10,8 @@
 |
 | A tool fails the way the rest of the application does: by returning a
 | fault. The agent gets the fault's code and message as a tool error it
-| can act on, while anything unexpected stays a bare internal error.
+| can act on, while anything unexpected stays a bare internal error. A
+| tool that explains its own failures returns a ToolError instead.
 |
 */
 
@@ -19,6 +20,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -36,8 +38,10 @@ Name identifies it, Title names it for people and Description tells
 agents when to use it and what it returns. Toolset is the toolset that
 must be enabled to see it, none for an always enabled tool. Abilities
 lists what the caller's credential must carry. Confirm makes every call
-pass the server's confirmation hook first. ReadOnly and Destructive are
-hints shown to clients.
+pass the server's confirmation hook first. ReadOnly, Destructive,
+Idempotent and OpenWorld are hints shown to clients: whether the tool
+only reads, may destroy, repeats safely, and reaches beyond the server,
+such as sending a message to a customer.
 */
 type ToolDef struct {
 	Name        string
@@ -48,6 +52,8 @@ type ToolDef struct {
 	Confirm     bool
 	ReadOnly    bool
 	Destructive bool
+	Idempotent  bool
+	OpenWorld   bool
 }
 
 /*
@@ -110,6 +116,61 @@ func Tool[I, O any](s *Server, def ToolDef, fn func(ctx context.Context, in I) (
 }
 
 /*
+SchemaTool registers a tool whose input is described by a JSON schema
+rather than a Go type, such as one built from an API document. The
+function receives the arguments as an object after they passed the
+schema, with defaults filled in.
+*/
+func SchemaTool(
+	s *Server, def ToolDef, input map[string]any, fn func(ctx context.Context, args map[string]any) (any, error),
+) error {
+	data, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("%w: tool %s input: %w", ErrInvalidDefinition, def.Name, err)
+	}
+
+	schema := &jsonschema.Schema{}
+	if err := json.Unmarshal(data, schema); err != nil {
+		return fmt.Errorf("%w: tool %s input: %w", ErrInvalidDefinition, def.Name, err)
+	}
+
+	if schema.Type != "object" {
+		return fmt.Errorf("%w: tool %s input must be an object", ErrInvalidDefinition, def.Name)
+	}
+
+	resolved, err := schema.Resolve(&jsonschema.ResolveOptions{ValidateDefaults: true})
+	if err != nil {
+		return fmt.Errorf("%w: tool %s input: %w", ErrInvalidDefinition, def.Name, err)
+	}
+
+	prepare := func(raw json.RawMessage) (prepared, error) {
+		args, err := decode[map[string]any](resolved, raw)
+		if err != nil {
+			return prepared{}, err
+		}
+
+		return prepared{input: args, run: func(ctx context.Context) (any, error) { return fn(ctx, args) }}, nil
+	}
+
+	s.addTool(def, schema, nil, prepare)
+
+	return nil
+}
+
+/*
+ToolError is an error a tool explains itself: the text the model reads
+and the structured detail programs read. The agent receives it as a
+tool error, whatever kind of failure it describes.
+*/
+type ToolError interface {
+	error
+	/*
+		ToolResult returns the text and structured detail of the error.
+	*/
+	ToolResult() (string, any)
+}
+
+/*
 addTool registers the tool with the protocol server behind the checks
 every call goes through.
 */
@@ -120,12 +181,17 @@ func (s *Server) addTool(
 	s.register(s.tools, def.Name, a)
 
 	tool := &sdk.Tool{
-		Name:         def.Name,
-		Title:        def.Title,
-		Description:  def.Description,
-		InputSchema:  input,
-		OutputSchema: output,
-		Annotations:  &sdk.ToolAnnotations{ReadOnlyHint: def.ReadOnly, DestructiveHint: &def.Destructive},
+		Name:        def.Name,
+		Title:       def.Title,
+		Description: def.Description,
+		InputSchema: input,
+		Annotations: &sdk.ToolAnnotations{
+			Title: def.Title, ReadOnlyHint: def.ReadOnly, DestructiveHint: &def.Destructive,
+			IdempotentHint: def.Idempotent, OpenWorldHint: &def.OpenWorld,
+		},
+	}
+	if output != nil {
+		tool.OutputSchema = output
 	}
 
 	s.sdk.AddTool(tool, func(ctx context.Context, req *sdk.CallToolRequest) (*sdk.CallToolResult, error) {
@@ -220,6 +286,16 @@ agent can correct itself; any other error is reported and becomes an
 internal protocol error that reveals nothing.
 */
 func (s *Server) failure(ctx context.Context, err error) (*sdk.CallToolResult, error) {
+	if explained, ok := errors.AsType[ToolError](err); ok {
+		text, detail := explained.ToolResult()
+
+		return &sdk.CallToolResult{
+			Content:           []sdk.Content{&sdk.TextContent{Text: text}},
+			StructuredContent: detail,
+			IsError:           true,
+		}, nil
+	}
+
 	res := s.errors.Resolve(ctx, err)
 	if res.Status >= http.StatusInternalServerError {
 		return nil, &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: res.Message}

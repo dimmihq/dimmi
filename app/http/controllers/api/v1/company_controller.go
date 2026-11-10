@@ -89,13 +89,20 @@ type timeCursor struct {
 }
 
 /*
+CompanyListing is what the company list accepts: a filter on tags.
+*/
+func CompanyListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"tag"}}
+}
+
+/*
 Index lists a page of companies, newest first; filter[tag] and q narrow
 it.
 */
 func (c *CompanyController) Index(ctx context.Context, _ *requests.NoInput) (*CompaniesOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: []string{"tag"}})
+	query, err := pagination.Parse(r.URL.Query(), CompanyListing())
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +256,7 @@ func (c *CompanyController) Contacts(ctx context.Context, in *requests.CompanyRe
 
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{})
+	query, err := pagination.Parse(r.URL.Query(), PageListing())
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +340,7 @@ func recordConversations(
 ) (*ConversationsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{})
+	query, err := pagination.Parse(r.URL.Query(), PageListing())
 	if err != nil {
 		return nil, err
 	}

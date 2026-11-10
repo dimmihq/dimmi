@@ -91,15 +91,21 @@ func (c *ErasureController) Destroy(ctx context.Context, in *requests.RemoveCont
 }
 
 /*
+ErasureListing is what the list of erasure requests accepts: a status
+filter, and pages of at most the most it lists at once.
+*/
+func ErasureListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"status"}, DefaultLimit: erasures.MaxListed, MaxLimit: erasures.MaxListed}
+}
+
+/*
 Index lists a page of the workspace's erasure requests, newest first,
 with filter[status] narrowing to one status.
 */
 func (c *ErasureController) Index(ctx context.Context, _ *requests.NoInput) (*ContactErasuresOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
-		Filters: []string{"status"}, DefaultLimit: erasures.MaxListed, MaxLimit: erasures.MaxListed,
-	})
+	query, err := pagination.Parse(r.URL.Query(), ErasureListing())
 	if err != nil {
 		return nil, err
 	}

@@ -23,4 +23,5 @@ func Register(a *app.App) {
 	Channels(a)
 	Webhooks(a)
 	Widget(a)
+	MCP(a)
 }

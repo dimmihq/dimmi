@@ -43,7 +43,7 @@ Index lists a page of the caller's security log.
 func (c *SecurityEventController) Index(ctx context.Context, _ *requests.NoInput) (*SecurityEventsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{})
+	query, err := pagination.Parse(r.URL.Query(), PageListing())
 	if err != nil {
 		return nil, err
 	}

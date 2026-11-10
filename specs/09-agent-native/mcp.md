@@ -4,13 +4,13 @@ Style: caveman. Verified against MCP spec revision 2026-07-28 (stateless core, M
 
 ## Principles
 
-1. Few sharp tools beat many thin ones. 19 core tools (plus opt-in feature toolsets), each maps to one user intent, not one endpoint. Featurebase 168 tools cost clients ~30k+ tokens of context before first call; ours under 6,000.
-2. Names `dimmi_<verb>_<noun>`. Descriptions start with when to use, then what returns. Max 400 chars per description, max 150 chars per param description.
-3. Outputs concise by default: Markdown text block an LLM reads well (IDs inline), plus `structuredContent` with stable JSON for programs. Never raw API dumps in text.
-4. Read freely, write internal freely (notes, tags, proposals), customer-visible or public writes need human confirmation.
-5. Customer content is untrusted data. Always enveloped.
-6. Same actions as REST. Tools never contain business rules; they parse, authorize, call action, render.
-7. Deterministic tool order and stable descriptions (prompt cache friendly; spec SHOULD).
+1. Full parity with the REST API. Every `/api/v1` operation a token can call is a tool, generated at runtime from the API's OpenAPI document (`framework/mcp.Operations` + `SchemaTool`). New routes become tools with no tool code. ~290 tools today; clients lazy-load tools, so count is fine. Operations needing a person at a browser (ChatGPT OAuth connect/callback) are excluded with a reason.
+2. Every tool has a hand-written catalog entry (`app/mcpserver/catalog_*.go`): title, use (when and why), returns, next steps, risk, argument help, failure hint. `mcpserver.Audit` + `tests/feature/mcp` fail on any callable operation without an entry, stale entries, and texts naming tools that do not exist.
+3. Names `dimmi_<operation id>` with `.`/`-` as `_` and verbs index→list, show→get, store→create, destroy→delete (`conversations.replies.store` → `dimmi_conversations_replies_create`). Plus `dimmi_guide` (overview, jobs, safety, paging).
+4. Tools never contain business rules: each call is the very REST request (same path, query, body, caller's bearer token, client address, language) dispatched in-process through the kernel. Auth, workspace rules, role permissions, rate limits, validation and audit apply exactly as for the API.
+5. The OpenAPI document is complete: validate tags become JSON Schema (required, enum, min/max, format) in the published copy; hand-read query parameters are declared with `Route.Lists(pagination.Allow)` / `Route.Query(...)`.
+6. Risk per tool: read; write (team-only); sensitive (private or bulk reads); reach (customers or public see it); danger (deletes, members, roles, settings, keys, billing). Default from method and abilities, catalog overrides. Sensitive, reach and danger need the person's approval on every call. Annotations: readOnly, destructive, idempotent, openWorld.
+7. Customer content is untrusted: rendered inside `<untrusted>` tags. Outputs: concise Markdown for the model (ids first, empty fields dropped, page summary, `next_cursor` instruction, Next steps) + the API JSON as structured content. Errors: status, reason, code, field errors, one "What to do" line, catalog hint.
 
 ## Transports
 
@@ -126,7 +126,7 @@ Tool error text always names the fix ("pass reopen: true", "call dimmi_reopen_co
 
 ## Confirmation gate
 
-Applies to `dimmi_send_reply` and to gated feature-toolset tools (section Feature toolsets). Articles never publish via MCP (08). Logic in `app/mcp/confirm`:
+Applies to every tool whose risk is sensitive, reach or danger (`app/mcpserver/confirm.go`). Clients on 2026-07-28 with form elicitation are asked directly; others get a preview and a `confirmation_token` sealed with the app key to tool, argument digest and caller, valid 10 minutes, passed back on the retry. The detailed flow below is the target for nonce reuse and new-message checks:
 
 ```
 # always confirm: no workspace send-mode bypass at MVP (later: agent-send-modes)
@@ -187,139 +187,7 @@ Retry by client: same `tools/call` params plus `inputResponses: {"confirm_send":
 
 ## Tool catalog
 
-Common params: `detail` (`concise|full`) on reads; `cursor`, `limit` on lists. IDs accept prefixed id or human ref where noted. All write tools return updated resource summary.
-
-Identifier resolution: conversation `conv_...` or number (`1042` or `"#1042"`); contact `ctc_...` or email (exact, case-insensitive; multiple matches: error `ambiguous_contact` listing ids); member `mem_...`, email, or `"me"`; tag by name (case-insensitive) or `tag_...`; article `art_...` or slug; collection `col_...` (08 prefix) or name.
-
-### 1. `dimmi_get_workspace`
-Description: "Get workspace overview: you, your role and allowed actions, teammates, teams, inboxes, tags, help center collections, and open/unassigned counts. Call first."
-Input: none.
-Output: `{workspace:{id,name,timezone}, me:{member_id,name,email,role,permissions[]}, abilities[] (token scopes; agents decide allowed actions from `me.permissions` = `/me` `member.permissions` intersect scopes, never from `role`), teammates[{id,name,email,role,availability}] (max 100), teams[], inboxes[], tags[{id,name}] (top 100 by use), collections[{id,name,article_count}], counts:{open,unassigned,mine,snoozed} (cached, may be approximate), help_center_url}`.
-
-### 2. `dimmi_list_conversations`
-Description: "List conversations by filters, newest activity first. Use for inbox views like 'my open conversations'. For text search use dimmi_search_conversations."
-Input: `status` (`open|snoozed|closed|all`, default `open`), `assignee` (`me|unassigned|<member>|any`, default any), `team`, `inbox`, `tag`, `channel` (`widget|email|slack|discord|telegram|whatsapp|api`), `priority` (bool), `updated_since` (ISO), `sort` (`-last_message_at` default, `last_message_at`, `-created_at`, `waiting_longest` = oldest unanswered customer message first), `cursor`, `limit`.
-Output text one line each: `#1042 open · Bob Smith <bob@acme.com> · email · "Double charged" · waiting 2h · assigned Frantz · tags: billing`.
-Structured: `conversations[{id,number,status,subject,contact{id,name,email},channel,assignee,team,tags[],priority,last_message_at,waiting_since,unread,last_message_preview (120 chars, untrusted flag)}]`, `next_cursor`.
-
-### 3. `dimmi_search_conversations`
-Description: "Full-text search across conversation messages, notes, subjects, and contact names/emails. Returns matching conversations with highlighted snippets."
-Input: `query` (required, 1..200 chars), plus same filters as list (status default `all`), `cursor`, `limit`.
-Output: list entries + `snippet` (match highlighted with `**`), enveloped as untrusted when from customer.
-
-### 4. `dimmi_get_conversation`
-Description: "Get one conversation with its messages (oldest to newest), notes, contact summary, assignment, and tags. Use before writing a reply."
-Input: `conversation` (required), `include_notes` (default true), `messages_limit` (default 30, max 100; most recent N), `before` (msg id for older page), `detail`.
-Output text:
-
-```
-# #1042 Double charged (open, email)
-Contact: Bob Smith <bob@acme.com> · user · plan: pro · ctc_01jb...
-Assigned: Frantz · Tags: billing · Priority: no · Waiting since 2h ago
-AI agent: handed_off
-
-## Messages (3 of 3)
-[2026-11-01 08:02 UTC] Bob Smith (customer) msg_01jb...
-<untrusted source="customer" message="msg_01jb...">I was charged twice for March.</untrusted>
-[2026-11-01 08:03 UTC] Dimmi Agent (ai) msg_...
-<untrusted source="ai_agent" message="msg_...">...</untrusted>
-[2026-11-01 09:10 UTC] NOTE Frantz: refund pending in Stripe
-```
-
-Structured: conversation resource (03 shape, compact contact) + `messages[]` (`id,type,author{type,id,name},body,created_at,delivery_status,attachments[{id,filename,content_type,size_bytes}]`, `truncated`), `previous_page_cursor`.
-Attachments listed by name and size, never content; signed URLs not included (avoid leaking pre-authenticated links into LLM context).
-
-### 5. `dimmi_send_reply`
-Description: "Send a reply to the customer (visible to them via the conversation's channel). Only use when the user explicitly asked to send. Requires user confirmation every time."
-Input: `conversation` (required), `body` (required, Markdown, 1..64 KB), `reopen` (bool, default false; needed if closed), `close_after` (bool, default false; both true: schema validation error), `channel_options` (object, optional; passed unchanged to 03 reply, e.g. WhatsApp `{template:{name,language,parameters}}` from 05 `dimmi_list_whatsapp_templates`; covered by args digest and shown in preview), `confirm` (bool, default false; set true only after the user approved this exact text).
-Annotations: `destructiveHint: true`, `openWorldHint: true`, `idempotentHint: false`.
-Arg mapping (tool sugar, rest.md rule 15): `reopen: true` sends 03 reply `then: "open"`; `close_after: true` sends `then: "close"`; neither sends `then: "keep"`. REST never sees `reopen`/`close_after`.
-Closed guard (09 tool layer, not 03): conversation `closed` and neither flag set: tool error 422 `invalid_transition` `{from: "closed", to: "open"}`, text "#1042 is closed. Pass reopen: true to reopen and send, or close_after: true to send and keep it closed." Checked at preview and again at accept. Race (closed between accept re-check and 03 row lock): 03 sends with `then: keep`, conversation stays closed (benign; never reopens without flag). 03 itself never emits `conversation_closed`.
-Behavior: secret scan of body first (`secret_detected`, runs before confirmation so user never approves leaking text); closed guard; confirmation gate; then 03 `ReplyToConversation` (same path as REST `POST /conversations/{conv}/replies {body, then}`); metered check; per-principal 30 sends/min, plus 1 send per conversation per 10 s; channel window errors from 05 (WhatsApp 24 h) surface as `channel_window_closed` with template hint.
-Output: `Sent to Bob Smith by email on #1042 (msg_...). Delivery: pending.` Structured: `{status:"sent"|"confirmation_required"|"declined"|"cancelled", message?, preview?}`.
-Preview (`confirmation_required`) text: "Not sent. Show the user this reply and ask for approval. If they approve, call dimmi_send_reply again with the same arguments and confirm: true." plus recipient, channel, full body (budgeted).
-
-### 6. `dimmi_add_note`
-Description: "Add an internal note to a conversation. Only teammates see notes; customer never does."
-Input: `conversation`, `body` (1..64 KB), `mentions` (optional members, triggers 06 notifications).
-Output: note id.
-
-### 7. `dimmi_tag_conversation`
-Input: `conversation`, `add` (array tag names/ids, max 20), `remove` (array), `create_missing` (default false; true creates tags, needs `conversations:write`). Unknown tags without create_missing: error lists unknown names and closest existing (trigram).
-Output: final tag list.
-
-### 8. `dimmi_assign_conversation`
-Input: `conversation`, `assignee` (`me|<member>|null` for unassign), `team` (optional, name/id/null). At least one of assignee/team.
-Output: new assignment. Assigning to deactivated member: error `member_inactive`.
-
-### 9. `dimmi_close_conversation`
-Input: `conversation`. Already closed: success, `changed: false`.
-
-### 10. `dimmi_reopen_conversation`
-Input: `conversation`. Already open: success, `changed: false`.
-
-### 11. `dimmi_snooze_conversation`
-Input: `conversation`, `until` (ISO 8601 with offset) or `for` (duration `30m|2h|1d|1w`, units m/h/d/w, max 90 d). `d`/`w` keep local wall-clock time in workspace timezone (DST safe). Past or under 1 minute: validation error.
-Output: `Snoozed #1042 until 2026-11-02 09:00 Europe/Berlin (08:00 UTC).`
-
-### 12. `dimmi_search_contacts`
-Description: "Find contacts (customers and leads) by name, email, phone, or your app's user id."
-Input: `query` (required 1..200), `kind` (`user|lead|any`), `company`, `cursor`, `limit`.
-Output: lines `Bob Smith <bob@acme.com> · user · ext id 42 · Acme · last seen 3h ago · ctc_...`.
-
-### 13. `dimmi_get_contact`
-Input: `contact` (id or email), `detail`.
-Output: profile, verified flags, custom attributes (enveloped untrusted: values supplied by host app/JWT or visitor), company, last 10 conversations (number, status, subject), identities (channel list without raw ids for phone? include masked phone `+1 *** *** 4567` concise; full in `detail: full`).
-
-### 14. `dimmi_update_contact`
-Input: `contact`, `name`, `email` (sets `email_verified=false` unless unchanged), `phone` (E.164), `custom_attributes` (object merge; `null` value deletes key; limits per data-model), `company` (name or id; creates company if name unknown and `create_company: true`).
-Verified users (`kind=user` with verified identity): changing email allowed but recorded as unverified, contact identities untouched (03 rules). Output: changed fields list.
-
-### 15. `dimmi_search_knowledge`
-Description: "Search help center articles, agent-only articles, and connected knowledge sources. Returns best passages with citations. Use to ground replies."
-Input: `query` (required), `sources` (`articles|agent_only|knowledge|all`, default all), `limit` (default 5, max 20).
-Output: passages `[1] "How refunds work" (art_..., published) score 0.82` + passage (max 600 chars each) enveloped `source="knowledge"` for crawled content; articles authored by workspace not enveloped.
-
-### 16. `dimmi_list_articles`
-Input: `collection`, `status` (`draft|published|archived|any`), `visibility` (`public|agent_only|any`), `query`, `cursor`, `limit`.
-Output: title, slug, status, collection, updated, pending suggestion count.
-
-### 17. `dimmi_get_article`
-Input: `article` (id or slug), `version` (optional). Output: frontmatter-like header + Markdown body (budgeted, `detail: full` up to cap), pending suggestions summary.
-
-### 18. `dimmi_propose_article`
-Description: "Propose a new help center article. Lands in review queue; nothing goes live until a teammate accepts in dashboard."
-Input: per 08 `StoreArticleSuggestionRequest` kind `create` (title, Markdown body, collection, visibility, reason, source conversations/URLs). 08 owns validation, limits, response. Output: suggestion id (`sug_`), review URL.
-
-### 19. `dimmi_propose_article_edit`
-Description: "Propose a change to an existing article as full new Markdown. Goes to review queue with diff."
-Input: per 08 kind `edit`: `article`, full proposed Markdown, `base_version_id` (from `dimmi_get_article`), `reason`. Stale base: 08 returns `base_version_mismatch` (later: review-rebase). Output: suggestion id, +/- line counts, review URL.
-
-### Feature toolsets (tools owned by other specs)
-
-Other specs define tools (`dimmi_get_billing_meter` 12, `dimmi_list_channels` 05, `dimmi_get_email_domain` 04, `dimmi_ask_agent` 07, `dimmi_list_article_suggestions` 08, `dimmi_list_webhook_endpoints` 10, `dimmi_get_system_health` 11, `dimmi_publish_changelog_entry` 13, `dimmi_update_feedback_status` 14, `dimmi_update_announcement` 15, ...). Rules, binding on every spec:
-- 09 owns registry, transport, auth, renderer, confirmation gate. Feature tool file lives in `app/mcp/tools/`, registered in `routes/mcp.go` under one toolset: `accounts` (00-accounts: `dimmi_list_members`, `dimmi_list_teams`, `dimmi_update_availability`; `00-accounts/api.md` MCP table), `inbox_extra` (03: `dimmi_untag_conversation`, `dimmi_list_tags`, `dimmi_list_saved_replies`, `dimmi_render_saved_reply`, `dimmi_set_priority`, `dimmi_merge_conversations` (confirm gate), `dimmi_add_participant`, `dimmi_list_views`, `dimmi_structured_search`; `03-shared-inbox/README.md` MCP section), `email` (04), `channels` (05), `notifications` (06), `ai` (07), `ai_actions` (07 agent actions, `07-dimmi-agent/actions.md` MCP table: `dimmi_list_ai_actions`, `dimmi_get_ai_action`, `dimmi_create_ai_action`, `dimmi_update_ai_action`, `dimmi_test_ai_action`, `dimmi_publish_ai_action`, `dimmi_list_ai_action_calls`, `dimmi_list_ai_action_connections`), `help_center` (08: `dimmi_get_help_center_outline`, `dimmi_propose_help_center`, `dimmi_list_article_suggestions`, `dimmi_list_knowledge_sources`, `dimmi_sync_knowledge_source`, prompt `dimmi_draft_help_center`), `docs_sync` (08 docs sync, `08-help-center/docs-sync.md` section 11: `dimmi_list_docs_sync_runs`, `dimmi_list_stale_articles`, `dimmi_request_docs_update`, prompt `dimmi_update_docs_for_change`), `webhooks` (10), `system` (11), `billing` (12), `widget` (01/02), `changelog` (13: `dimmi_list_changelog_entries`, `dimmi_get_changelog_entry`, `dimmi_draft_changelog_entry`, `dimmi_update_changelog_entry`, `dimmi_publish_changelog_entry`, prompt `dimmi_write_changelog_entry`), `feedback` (14: `dimmi_search_feedback`, `dimmi_get_feedback_post`, `dimmi_create_feedback_post`, `dimmi_link_feedback_request`, `dimmi_update_feedback_status`, `dimmi_comment_on_feedback`, `dimmi_merge_feedback_posts`, `dimmi_list_feedback_suggestions`), `engage` (15-announcements-surveys: `dimmi_list_announcements`, `dimmi_create_announcement`, `dimmi_update_announcement`, `dimmi_list_surveys`, `dimmi_create_survey`, `dimmi_get_survey_results`, `dimmi_list_survey_responses`), `audiences` (18: `dimmi_list_audiences`, `dimmi_preview_audience`, `dimmi_test_audience`, `dimmi_save_audience` (confirm gate when it changes live surface reach), `dimmi_list_attributes`, `dimmi_define_attribute`, `dimmi_list_events`), `imports` (16: `dimmi_list_import_sources`, `dimmi_start_import`, `dimmi_get_import`, `dimmi_run_import`, `dimmi_cancel_import`, `dimmi_rollback_import`). Tool tables, abilities, REST maps: owner spec README "MCP tools" section.
-- Default `tools/list` = core 19 only (6,000-token budget holds). Toolsets enabled per connection: `/mcp?toolsets=billing,channels` (or `all`), stdio `dimmi mcp --toolsets ...`. Each toolset under 2,000 tokens (CI test per toolset). Unknown toolset: 400 listing valid names.
-- `tools/list` filtered by principal effective permissions (scopes intersect role permissions) and edition (`billing` only on cloud, `system` only for instance admin). Cache scope becomes `private` when filtered.
-- No duplicate intents: feature tool must not re-implement core tool. Customer-visible send is only `dimmi_send_reply` (03 `dimmi_reply_to_conversation` is retired name; same params incl. `channel_options`).
-- Gate: any feature tool that is customer-visible, public, moves money, or opens data egress (spend cap change, webhook endpoint create/URL change, channel connect/disconnect, widget/identity settings, backups/exports, changelog publish, public feedback content, engage go-live) goes through `app/mcp/confirm` (elicitation, then `confirm` param fallback). Own ad-hoc `confirm_token` schemes forbidden. Webhook URL change via MCP always confirms (exfiltration channel for prompt injection).
-- Articles: no MCP tool creates-and-publishes, publishes, accepts suggestions, marks articles verified, or deletes articles, even behind the gate (08 review-queue rule 2 wins; 08 REST returns 403 `human_review_required` to MCP surface and third-party OAuth clients; `PATCH /articles/{art} {verified}` refused on MCP surface). Only carve-out: 16 `dimmi_run_import` with `articles.publish: preserve` (migrated human-written content) after confirm gate. Earlier draft names `dimmi_create_article`, `dimmi_publish_article`, `dimmi_delete_article`, `dimmi_suggest_article` do not exist; `dimmi_propose_article` / `dimmi_propose_article_edit` cover proposals.
-- Gate rules for 13-15 (risk column in owner README is binding; summary):
-  - `inbox_extra` (03): `dimmi_merge_conversations` always confirms (irreversible); rest ungated, internal or read-only.
-  - `audiences` (18): `dimmi_save_audience` confirms when it changes live surface's reach; rest ungated. Sample names enveloped as untrusted; preview omits samples without `contacts:read`.
-  - `changelog`: `dimmi_publish_changelog_entry` always confirms; `dimmi_update_changelog_entry` on published entry confirms; publish with `notify_subscribers` confirms (mass email egress, same class as webhook URL change). Changelog drafts never gated.
-  - `feedback`: `dimmi_create_feedback_post` on public board, `dimmi_link_feedback_request` creating a public post, public `dimmi_comment_on_feedback`, `dimmi_merge_feedback_posts` confirm; `dimmi_update_feedback_status` confirms when `notify` and subscribers > 0 (preview shows recipient count). Bodies, quotes, comments in untrusted envelope.
-  - `ai_actions` (07): `dimmi_publish_ai_action` always confirms (customer-facing behavior change); publish of write action refused `human_review_required`; `dimmi_test_ai_action` live only for read actions (write: `dry_run` only, else tool error `mcp_live_write_forbidden`); create/update = draft working copy, no gate. No tool creates/updates connections (secrets), approves/declines calls, deletes actions, imports OpenAPI, or executes live writes. Test and call results in untrusted envelope.
-  - `docs_sync` (08): all 3 tools ungated (`dimmi_request_docs_update` spends workspace BYOK, creates suggestions only, never accepts). No tool accepts, reapplies-and-accepts, publishes, or verifies.
-  - `imports` (16): `dimmi_run_import` confirms always; preview shows counts and "N articles will go live" when `articles.publish = preserve` (destructive class). `dimmi_rollback_import` destructive: always confirms with delete counts; needs `settings:write` + owner/admin. Credentials never accepted or returned (credentialed sources return `credentials_url`); attribute mapping `trusted: true` via REST only behind confirm (16).
-  - `engage`: `dimmi_update_announcement` to `status: live` (or resume) and `bypass_throttle` change confirm; create = draft only, no gate. Survey text answers untrusted. No delete via MCP.
-- Same output rules (budget, untrusted envelope, errors table), same per-principal rate limits.
-
-### Ability per tool
-
-See README table (ability + REST equivalent per tool). `dimmi_get_workspace` works with any token; sections hidden when ability missing (e.g. no `members:read` hides teammates list).
-
-REST mapping rule (rest.md rule 15): tool names stay verbs; each tool wraps the noun REST operation (`dimmi_close_conversation` = `PATCH /conversations/{conv} {status: "closed"}`, `dimmi_assign_conversation` = `PATCH /conversations/{conv} {assignee_id, team_id}`, `dimmi_snooze_conversation` = `PATCH ... {status: "snoozed", snoozed_until}`, `dimmi_send_reply` = `POST /conversations/{conv}/replies {body, then}`). Same actions, same per-field policy (`UpdateField`), same domain events. Feature toolset tools follow same rule (e.g. 03 spam/merge tools wrap `PATCH {spam}` and `POST /conversations/{target}/merges`; 06 mark-read wraps `PATCH /notifications/{ntf} {read: true}`).
+Generated, one tool per callable `/api/v1` operation; entries live in `app/mcpserver/catalog_{inbox,people,knowledge,automation,workspace,settings}.go`. The source of truth for what exists is the route table; the audit test keeps catalog and routes in step. Ability per tool = the route's `x-abilities`; tools a token lacks abilities for are hidden from `tools/list`.
 
 ## Resources
 

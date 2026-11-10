@@ -101,6 +101,14 @@ type timelineCursor struct {
 }
 
 /*
+TimelineListing is what a conversation's timeline accepts: a filter on
+the type of entry, and pages of the timeline's own default size.
+*/
+func TimelineListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"type"}, DefaultLimit: defaultTimelinePage}
+}
+
+/*
 Index reads a page of a conversation's timeline. The page's prev cursor
 reads older entries with ?before=, its next cursor newer ones with
 ?after=.
@@ -116,9 +124,7 @@ func (c *ConversationMessageController) Index(
 	r, _ := fhttp.RequestFrom(ctx)
 	values := r.URL.Query()
 
-	query, err := pagination.Parse(values, pagination.Allow{
-		Filters: []string{"type"}, DefaultLimit: defaultTimelinePage,
-	})
+	query, err := pagination.Parse(values, TimelineListing())
 	if err != nil {
 		return nil, err
 	}

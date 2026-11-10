@@ -32,7 +32,15 @@ func operatorRoutes(r *routing.Router, a *app.App) {
 	c := &v1.OperatorController{Settings: acts.Settings, Threads: acts.Threads, IDs: a.IDs}
 	routing.Get(r, "/operator/settings", "operator.settings.show", c.ShowSettings).Ability("conversations:read")
 	routing.Patch(r, "/operator/settings", "operator.settings.update", c.UpdateSettings).Ability("ai:write")
-	routing.Get(r, "/operator/threads", "operator.threads.index", c.Index).Ability("conversations:read")
+	routing.Get(r, "/operator/threads", "operator.threads.index", c.Index).Ability("conversations:read").Query(
+		routing.QueryParam{
+			Name: "filter[scope]", Values: []string{"workspace"},
+			Description: "Only threads about the whole workspace.",
+		},
+		routing.QueryParam{
+			Name: "filter[conversation]", Description: "Only threads about this conversation (conv_...).",
+		},
+	)
 	routing.Post(r, "/operator/threads", "operator.threads.store", c.Store).Ability("conversations:read").
 		Status(fhttp.StatusOK)
 	routing.Get(r, "/operator/threads/{thread}", "operator.threads.show", c.Show).Ability("conversations:read")
@@ -53,7 +61,15 @@ operatorChangesetRoutes declares the changeset and memory routes.
 func operatorChangesetRoutes(r *routing.Router, a *app.App) {
 	acts := a.Actions.OperatorAgent
 	c := &v1.OperatorChangesetController{Changesets: acts.Changesets, Memories: acts.Memories, IDs: a.IDs}
-	routing.Get(r, "/operator/changesets", "operator.changesets.index", c.Index).Ability("conversations:read")
+	routing.Get(r, "/operator/changesets", "operator.changesets.index", c.Index).Ability("conversations:read").Query(
+		routing.QueryParam{
+			Name: "filter[conversation]", Description: "Only changes about this conversation (conv_...).",
+		},
+		routing.QueryParam{
+			Name: "filter[status]", Description: "Only changes in this state.",
+			Values: []string{"pending", "applied", "declined", "reverted", "failed"},
+		},
+	)
 	routing.Post(r, "/operator/changesets/{changeset}/applications", "operator.changesets.applications.store",
 		c.Apply).Ability("conversations:write").Status(fhttp.StatusOK)
 	routing.Post(r, "/operator/changesets/{changeset}/declines", "operator.changesets.declines.store",

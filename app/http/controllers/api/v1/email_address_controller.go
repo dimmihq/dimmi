@@ -239,6 +239,14 @@ func (c *EmailAddressController) Destroy(ctx context.Context, in *requests.Email
 }
 
 /*
+InboundEmailListing is what the log of arrived emails accepts: a filter
+on how each was handled.
+*/
+func InboundEmailListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"status"}}
+}
+
+/*
 InboundEmails lists a page of what arrived at the address, newest
 first; filter[status] narrows it.
 */
@@ -252,7 +260,7 @@ func (c *EmailAddressController) InboundEmails(
 
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: []string{"status"}})
+	query, err := pagination.Parse(r.URL.Query(), InboundEmailListing())
 	if err != nil {
 		return nil, err
 	}

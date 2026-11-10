@@ -73,7 +73,7 @@ page answers one numbered page of audiences.
 func (c *AudienceController) page(ctx context.Context) (*AudiencesOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{})
+	query, err := pagination.Parse(r.URL.Query(), PageListing())
 	if err != nil {
 		return nil, err
 	}

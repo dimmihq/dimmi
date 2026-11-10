@@ -33,7 +33,8 @@ func audienceRoutes(workspace *routing.Router, a *app.App) {
 	pc := &v1.AudiencePreviewController{Audiences: a.Actions.Audiences, IDs: a.IDs}
 	one := "/audiences/{audience}"
 
-	routing.Get(workspace, "/audiences", "audiences.index", ac.Index).Ability("audiences:read")
+	routing.Get(workspace, "/audiences", "audiences.index", ac.Index).Ability("audiences:read").
+		Lists(v1.PageListing()).Query(numberedPagesQuery()...)
 	routing.Post(workspace, "/audiences", "audiences.store", ac.Store).
 		Ability("audiences:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, one, "audiences.show", ac.Show).Ability("audiences:read")

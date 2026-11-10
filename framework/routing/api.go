@@ -98,7 +98,7 @@ func (r *Router) OpenAPI(prefix string) ([]byte, error) {
 			return nil, fmt.Errorf("encode openapi %s: %w", prefix, err)
 		}
 
-		return doc, nil
+		return constrain(doc, spec, r.table.routes)
 	}
 
 	return nil, fmt.Errorf("openapi %s: %w", prefix, ErrUnknownAPI)

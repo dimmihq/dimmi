@@ -18,7 +18,16 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/fault"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/pagination"
 )
+
+/*
+PageListing is what a list that takes no filters, orders or inclusions
+accepts: only its page size, its cursor and search text.
+*/
+func PageListing() pagination.Allow {
+	return pagination.Allow{}
+}
 
 /*
 ErrInvalidPage refuses a page number that is not a whole number from 1

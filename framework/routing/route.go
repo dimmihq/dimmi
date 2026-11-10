@@ -18,11 +18,14 @@ package routing
 
 import (
 	"context"
+	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/http/pagination"
 )
 
 /*
@@ -49,6 +52,8 @@ type Route struct {
 	summary    string
 	tags       []string
 	status     int
+	input      reflect.Type
+	queries    []QueryParam
 	handler    http.Handler
 	register   func(api huma.API, op huma.Operation, opts Options)
 	chain      []http.Middleware
@@ -98,7 +103,7 @@ CurrentRoute returns the route that matched the request in the context.
 func CurrentRoute(ctx context.Context) (*Route, bool) {
 	route, ok := ctx.Value(routeKey{}).(*Route)
 
-	return route, ok
+	return route, ok && route != nil
 }
 
 /*
@@ -134,6 +139,69 @@ Summary sets the one-line description in the API document.
 */
 func (r *Route) Summary(summary string) *Route {
 	r.summary = summary
+
+	return r
+}
+
+/*
+QueryParam documents a query parameter a handler reads itself rather
+than through its input type: its name, what it does and, when it takes
+one of a few values, those values.
+*/
+type QueryParam struct {
+	Name        string
+	Description string
+	Values      []string
+}
+
+/*
+Query documents query parameters the handler reads itself, so the API
+document and every client built from it know they exist.
+*/
+func (r *Route) Query(params ...QueryParam) *Route {
+	r.queries = append(r.queries, params...)
+
+	return r
+}
+
+/*
+Lists documents the list parameters a handler reads with
+pagination.Parse: a filter[field] parameter per allowed filter, the
+sorts and inclusions it accepts, the page size and the cursor of the
+next page, and the search text.
+*/
+func (r *Route) Lists(allow pagination.Allow) *Route {
+	for _, field := range allow.Filters {
+		r.queries = append(r.queries, QueryParam{
+			Name:        "filter[" + field + "]",
+			Description: "Only items whose " + field + " matches; several values separated by commas match any.",
+		})
+	}
+
+	if len(allow.Sorts) > 0 {
+		sorts := make([]string, 0, len(allow.Sorts)*2)
+		for _, field := range allow.Sorts {
+			sorts = append(sorts, field, "-"+field)
+		}
+
+		r.queries = append(r.queries, QueryParam{
+			Name: "sort", Values: sorts,
+			Description: "Order of the items; a leading minus sorts newest or largest first.",
+		})
+	}
+
+	if len(allow.Includes) > 0 {
+		r.queries = append(r.queries, QueryParam{
+			Name: "include", Description: "Related records to include, separated by commas: " +
+				strings.Join(allow.Includes, ", ") + ".",
+		})
+	}
+
+	r.queries = append(r.queries,
+		QueryParam{Name: "limit", Description: "How many items a page holds."},
+		QueryParam{Name: "cursor", Description: "The next_cursor of the previous page, to read the page after it."},
+		QueryParam{Name: "q", Description: "Search text."},
+	)
 
 	return r
 }
@@ -225,6 +293,7 @@ func (r *Route) operation() huma.Operation {
 }
 
 func typed[I, O any](route *Route, h Endpoint[I, O]) *Route {
+	route.input = reflect.TypeFor[I]()
 	route.register = func(api huma.API, op huma.Operation, opts Options) {
 		huma.Register(api, op, func(ctx context.Context, in *I) (*O, error) {
 			if err := check(ctx, in, opts.Validator); err != nil {

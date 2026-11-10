@@ -64,12 +64,20 @@ type invitationPage struct {
 }
 
 /*
+InvitationListing is what the invitation list accepts: a filter on the
+invitation's status.
+*/
+func InvitationListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"status"}}
+}
+
+/*
 Index lists a page of invitations, newest first.
 */
 func (c *InvitationController) Index(ctx context.Context, _ *requests.NoInput) (*InvitationsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: []string{"status"}})
+	query, err := pagination.Parse(r.URL.Query(), InvitationListing())
 	if err != nil {
 		return nil, err
 	}

@@ -96,7 +96,7 @@ func changelogRoutes(workspace *routing.Router, a *app.App) {
 	one, entry := "/help-centers/{help_center}", "/changelog-entries/{entry}"
 
 	routing.Get(workspace, one+"/changelog-entries", "help-centers.changelog-entries.index", cl.Index).
-		Ability("changelog:read")
+		Ability("changelog:read").Query(numberedPageQuery())
 	routing.Post(workspace, one+"/changelog-entries", "help-centers.changelog-entries.store", cl.Store).
 		Ability("changelog:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, entry, "changelog-entries.show", cl.Show).Ability("changelog:read")
@@ -118,7 +118,7 @@ func changelogRoutes(workspace *routing.Router, a *app.App) {
 		Ability("changelog:write").Status(fhttp.StatusNoContent)
 
 	routing.Get(workspace, one+"/changelog-subscribers", "help-centers.changelog-subscribers.index", ex.Subscribers).
-		Ability("changelog:read")
+		Ability("changelog:read").Query(numberedPageQuery())
 	routing.Delete(workspace, "/changelog-subscribers/{subscriber}", "changelog-subscribers.destroy",
 		ex.DestroySubscriber).Ability("changelog:write").Status(fhttp.StatusNoContent)
 }
@@ -133,7 +133,7 @@ func feedbackRoutes(workspace *routing.Router, a *app.App) {
 	one, post := "/help-centers/{help_center}", "/feedback-posts/{post}"
 
 	routing.Get(workspace, one+"/feedback-posts", "help-centers.feedback-posts.index", fb.Index).
-		Ability("feedback:read")
+		Ability("feedback:read").Query(numberedPageQuery())
 	routing.Post(workspace, one+"/feedback-posts", "help-centers.feedback-posts.store", fb.Store).
 		Ability("feedback:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, post, "feedback-posts.show", fb.Show).Ability("feedback:read")

@@ -91,9 +91,7 @@ filter[two_factor] and q narrow it.
 func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*MembersOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
-		Filters: memberFilters(), Sorts: []string{"name", "created_at", "last_active_at"}, Includes: []string{"teams"},
-	})
+	query, err := pagination.Parse(r.URL.Query(), MemberListing())
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +136,7 @@ Show answers with one member, with their teams under include=teams.
 func (c *MemberController) Show(ctx context.Context, in *requests.ShowMemberRequest) (*MemberOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Includes: []string{"teams"}})
+	query, err := pagination.Parse(r.URL.Query(), MemberShowing())
 	if err != nil {
 		return nil, err
 	}
@@ -436,10 +434,23 @@ func (c *MemberController) listInput(ctx context.Context, query pagination.Query
 }
 
 /*
-memberFilters are the filters the member list and its export take.
+MemberListing is what the member list accepts: its filters, which the
+export takes too, the orders and the teams of each member.
 */
-func memberFilters() []string {
-	return []string{"status", "role", "team", "two_factor"}
+func MemberListing() pagination.Allow {
+	return pagination.Allow{
+		Filters:  []string{"status", "role", "team", "two_factor"},
+		Sorts:    []string{"name", "created_at", "last_active_at"},
+		Includes: []string{"teams"},
+	}
+}
+
+/*
+MemberShowing is what one member accepts: their teams under
+include=teams.
+*/
+func MemberShowing() pagination.Allow {
+	return pagination.Allow{Includes: []string{"teams"}}
 }
 
 /*

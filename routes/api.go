@@ -147,14 +147,16 @@ func userRoutes(user *routing.Router, c controllers) {
 	routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index)
 	routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)
-	routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index)
+	routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index).
+		Lists(v1.MembershipListing())
 	routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store)
 	routing.Post(user, "/workspaces", "workspaces.store", c.workspaces.Store).Status(fhttp.StatusCreated)
 	routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update)
 	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
 		Status(fhttp.StatusNoContent)
 	authFactorRoutes(user, c.authFactors)
-	routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index)
+	routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index).
+		Lists(v1.PageListing())
 }
 
 /*
@@ -169,13 +171,14 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
 	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK)
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read").
-		Use(c.members.ServeCSV)
-	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read")
+		Use(c.members.ServeCSV).Lists(v1.MemberListing()).Query(csvQuery())
+	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read").
+		Lists(v1.MemberShowing())
 	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).Ability("conversations:write")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 	routing.Patch(workspace, "/members", "members.update-many", c.members.UpdateMany).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read").
-		Use(c.auditLogs.ServeCSV)
+		Use(c.auditLogs.ServeCSV).Lists(v1.AuditLogListing()).Query(csvQuery())
 	routing.Get(workspace, "/audit-logs/{audit_log}", "audit-logs.show", c.auditLogs.Show).Ability("settings:read")
 	invitationRoutes(workspace, c)
 	teamRoutes(workspace, c)
@@ -188,7 +191,8 @@ Inviting reaches other people, so it needs a verified email where the
 install asks for one.
 */
 func invitationRoutes(workspace *routing.Router, c controllers) {
-	routing.Get(workspace, "/invitations", "invitations.index", c.invitations.Index).Ability("members:read")
+	routing.Get(workspace, "/invitations", "invitations.index", c.invitations.Index).Ability("members:read").
+		Lists(v1.InvitationListing())
 	routing.Post(workspace, "/invitations", "invitations.store", c.invitations.Store).
 		Ability("members:write").Middleware("verified").Status(fhttp.StatusOK)
 	routing.Delete(workspace, "/invitations/{invitation}", "invitations.destroy", c.invitations.Destroy).
@@ -202,9 +206,10 @@ teamRoutes declares the workspace's teams and their members. Anyone who
 may see the members sees the teams; changing them takes members:write.
 */
 func teamRoutes(workspace *routing.Router, c controllers) {
-	routing.Get(workspace, "/teams", "teams.index", c.teams.Index).Ability("members:read")
+	routing.Get(workspace, "/teams", "teams.index", c.teams.Index).Ability("members:read").Lists(v1.TeamListing())
 	routing.Post(workspace, "/teams", "teams.store", c.teams.Store).Ability("members:write")
-	routing.Get(workspace, "/teams/{team}", "teams.show", c.teams.Show).Ability("members:read")
+	routing.Get(workspace, "/teams/{team}", "teams.show", c.teams.Show).Ability("members:read").
+		Lists(v1.TeamShowing())
 	routing.Patch(workspace, "/teams/{team}", "teams.update", c.teams.Update).Ability("members:write")
 	routing.Delete(workspace, "/teams/{team}", "teams.destroy", c.teams.Destroy).Ability("members:write").
 		Status(fhttp.StatusNoContent)
@@ -223,7 +228,7 @@ Minting needs a verified email and a recent confirmation.
 func tokenRoutes(tokens *routing.Router, c controllers) {
 	tokens.Middleware("csrf", "session", "auth:user", "workspace", "api.throttle")
 
-	routing.Get(tokens, "/tokens", "tokens.index", c.tokens.Index)
+	routing.Get(tokens, "/tokens", "tokens.index", c.tokens.Index).Lists(v1.TokenListing())
 	routing.Post(tokens, "/tokens", "tokens.store", c.tokens.Store).
 		Middleware("verified", "password.confirm")
 	routing.Get(tokens, "/tokens/abilities", "tokens.abilities.index", c.tokenAbilities.Index)
@@ -248,7 +253,7 @@ func emailAddressRoutes(workspace *routing.Router, c *v1.EmailAddressController)
 	routing.Delete(workspace, "/email-addresses/{address}", "email-addresses.destroy", c.Destroy).
 		Ability("settings:write").Status(fhttp.StatusNoContent)
 	routing.Get(workspace, "/email-addresses/{address}/inbound-emails", "email-addresses.inbound-emails.index",
-		c.InboundEmails).Ability("settings:read")
+		c.InboundEmails).Ability("settings:read").Lists(v1.InboundEmailListing())
 }
 
 /*

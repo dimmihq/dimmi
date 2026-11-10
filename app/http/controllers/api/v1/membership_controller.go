@@ -55,13 +55,21 @@ type MembershipOutput struct {
 }
 
 /*
+MembershipListing is what the caller's membership list accepts: the
+trashed filter.
+*/
+func MembershipListing() pagination.Allow {
+	return pagination.Allow{Filters: []string{"trashed"}}
+}
+
+/*
 Index lists the caller's memberships. The trashed filter adds
 workspaces in the trash ("with") or lists only them ("only").
 */
 func (c *MembershipController) Index(ctx context.Context, _ *requests.NoInput) (*MembershipsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: []string{"trashed"}})
+	query, err := pagination.Parse(r.URL.Query(), MembershipListing())
 	if err != nil {
 		return nil, err
 	}

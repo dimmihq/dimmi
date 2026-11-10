@@ -59,7 +59,7 @@ that breaks after its headers went out can only be logged.
 func (c *AuditLogController) export(w fhttp.ResponseWriter, r *fhttp.Request) {
 	ctx := r.Context()
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: auditFilters()})
+	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{Filters: AuditLogListing().Filters})
 	if err != nil {
 		c.Errors.Render(w, r, err)
 

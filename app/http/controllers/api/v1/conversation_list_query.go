@@ -45,9 +45,10 @@ const (
 )
 
 /*
-conversationAllow is what the conversation list accepts.
+ConversationListing is what the conversation list and the neighbors of
+a conversation accept: the filters, sorts and inclusions of a view.
 */
-func conversationAllow() pagination.Allow {
+func ConversationListing() pagination.Allow {
 	return pagination.Allow{
 		Filters: []string{
 			"view", "status", "inbox", "assignee", "team", "contact", "company", "channel", "channel_connection",

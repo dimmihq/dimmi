@@ -85,7 +85,8 @@ func emailSignatureRoutes(workspace *routing.Router, a *app.App) {
 		Render: &email.RenderEmailSignature{DB: a.DB}, IDs: a.IDs,
 	}
 
-	routing.Get(workspace, "/email-signatures", "email-signatures.index", c.Index).Ability("settings:read")
+	routing.Get(workspace, "/email-signatures", "email-signatures.index", c.Index).Ability("settings:read").
+		Lists(v1.EmailSignatureListing())
 	routing.Post(workspace, "/email-signatures", "email-signatures.store", c.Store).
 		Ability("settings:write").Status(fhttp.StatusCreated)
 	routing.Post(workspace, "/email-signatures/renderings", "email-signatures.renderings.store", c.StoreRendering).

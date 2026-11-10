@@ -87,24 +87,35 @@ type contactPage struct {
 }
 
 /*
-contactFilters returns the filters a contact list accepts, with each
-custom attribute the query names. Custom attribute names are the
-workspace's own, so they cannot be listed up front.
+ContactListing is what the contact list accepts up front: its fixed
+filters and orders. Filters on custom attributes are added per request,
+since their names are the workspace's own.
 */
-func contactFilters(values url.Values) []string {
-	filters := []string{
-		"kind", "email", "external_id", "blocked", "company", "tag", "last_seen_after", "last_seen_before",
-		"created_after", "created_before",
+func ContactListing() pagination.Allow {
+	return pagination.Allow{
+		Filters: []string{
+			"kind", "email", "external_id", "blocked", "company", "tag", "last_seen_after", "last_seen_before",
+			"created_after", "created_before",
+		},
+		Sorts: []string{contacts.SortLastSeen, contacts.SortCreated, contacts.SortName},
 	}
+}
+
+/*
+contactAllow is the contact list's listing with a filter for each
+custom attribute the query names.
+*/
+func contactAllow(values url.Values) pagination.Allow {
+	allow := ContactListing()
 
 	for key := range values {
 		name, ok := strings.CutPrefix(key, "filter[custom.")
 		if ok && strings.HasSuffix(name, "]") {
-			filters = append(filters, "custom."+strings.TrimSuffix(name, "]"))
+			allow.Filters = append(allow.Filters, "custom."+strings.TrimSuffix(name, "]"))
 		}
 	}
 
-	return filters
+	return allow
 }
 
 /*
@@ -114,10 +125,7 @@ sort=-created_at or sort=name; the filters and q narrow it.
 func (c *ContactController) Index(ctx context.Context, _ *requests.NoInput) (*ContactsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
 
-	query, err := pagination.Parse(r.URL.Query(), pagination.Allow{
-		Filters: contactFilters(r.URL.Query()),
-		Sorts:   []string{contacts.SortLastSeen, contacts.SortCreated, contacts.SortName},
-	})
+	query, err := pagination.Parse(r.URL.Query(), contactAllow(r.URL.Query()))
 	if err != nil {
 		return nil, err
 	}
