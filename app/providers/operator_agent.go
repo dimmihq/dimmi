@@ -47,6 +47,7 @@ func bootOperatorAgent(a *app.App) error {
 		Threads:    &operatorchat.Threads{DB: a.DB, Clock: a.Clock, Operator: engine, Limiter: a.Limiter},
 		Changesets: &operatorchat.Changesets{DB: a.DB, Operator: engine},
 		Memories:   &operatorchat.Memories{DB: a.DB},
+		Usage:      &operatorchat.Usage{DB: a.DB, Clock: a.Clock},
 	}
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.ConversationCreated) error {
 		return enqueueTriage(ctx, a, e)

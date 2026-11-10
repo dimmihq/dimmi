@@ -42,7 +42,7 @@ budget.
 | `triage_on_arrival` | false | When a conversation arrives, Operator proposes tags, team, priority and a summary note as a pending changeset. Costs per conversation. |
 | `instructions` | empty | Workspace instructions every run reads (tone, policies, who owns what). Max 8000 chars. |
 | `policies` | `{}` | Map tool group to `auto`, `ask` or `off`. Missing group means `ask`. |
-| `model` | null | Model Operator answers with, on the agent's answer connection. Null: the agent's own model. |
+| `model` | null | Model Operator answers with, on the agent's answer connection. Null: GPT-6 Luna when the connection offers it (the cheapest that does the job; GPT-6.1 Terra costs ten times as much), else the agent's own model. |
 
 Groups: `conversations` (tags, assign, priority, status, title), `notes`, `contacts`, `articles`, `procedures`,
 `actions`. `articles`, `procedures` and `actions` can never be `auto`: drafts are still reviewed and actions cannot be
@@ -70,8 +70,8 @@ needs conversations read access; each tool checks its own permission through the
 - `operator_settings (workspace_id pk, enabled, brief_on_open, triage_on_arrival, instructions, policies jsonb,
   updated_at)`.
 - `operator_threads (id, workspace_id, member_id, conversation_id null, title, created_at, updated_at,
-  last_message_at)`. One thread per member and conversation for the pane; any number of workspace threads.
-  A thread is private to its member.
+  last_message_at)`. Any number of threads per member and conversation; the pane opens the latest and lists
+  the rest. A thread that began with a brief is titled "Brief". A thread is private to its member.
 - `operator_messages (id, workspace_id, thread_id, role user|assistant, body, steps jsonb, status
   done|stopped|failed, run_id null, created_at)`. `steps` is the run's visible activity:
   `[{tool, summary, ok}]`, plus `draft` entries for reply drafts.
@@ -121,9 +121,13 @@ first response and resolution time, AI runs by outcome, handoff reasons, top tag
 
 ## Surfaces
 
-- Conversation pane (inbox right pane, `O`): thread for this conversation. Brief, chat, steps, draft cards ("Use in
-  reply"), changeset cards (Apply / Decline / Undo).
-- Operator page (`/d/{workspace}/operator`): workspace threads, history, changesets awaiting review.
+- Conversation pane (inbox right pane, `O`): the latest thread for this conversation, past threads in a menu, a
+  new thread on request. Brief, chat, steps, draft cards ("Use in reply"), changeset cards (Apply / Decline /
+  Undo). "Brief me" also keeps the brief on the conversation as an internal note by the teammate, so the whole
+  team reads it; a brief made on open (`brief_on_open`) stays in the thread only.
+- Agent page, Operator tab (`/d/{workspace}/agent?tab=operator`; `/d/{workspace}/operator` lands there): whether it
+  is on and its model, this month's runs, spend against the shared cap, changes applied of those proposed, failed
+  runs, runs by day, runs by purpose (ask, brief, triage), by teammate, by model, and the latest 25 runs.
 - Settings (`/d/{workspace}/settings/ai/operator`): the fields above plus memories.
 - Streaming: member channel, ephemeral `operator.delta` and `operator.step`; the POST answers with the stored message.
 
@@ -132,10 +136,11 @@ first response and resolution time, AI runs by outcome, handoff reasons, top tag
 | Method | Path | Ability |
 |---|---|---|
 | GET/PATCH | `/operator/settings` | `ai:read` / `ai:write` |
-| GET/POST | `/operator/threads` | `conversations:read` |
+| GET/POST | `/operator/threads` (`filter[conversation]`, `filter[scope]=workspace`; POST `fresh`) | `conversations:read` |
 | GET/DELETE | `/operator/threads/{thread}` | `conversations:read` |
 | POST | `/operator/threads/{thread}/messages` | `conversations:read` |
-| POST | `/conversations/{conversation}/operator/brief` | `conversations:read` |
+| POST | `/conversations/{conversation}/operator/brief` (`thread_id`, `attach`) | `conversations:read` |
+| GET | `/operator/usage?period=YYYY-MM` | `ai:read` |
 | GET | `/operator/changesets?conversation=&status=` | `conversations:read` |
 | POST | `/operator/changesets/{changeset}/applications` | `conversations:write` |
 | POST | `/operator/changesets/{changeset}/declines` | `conversations:read` |

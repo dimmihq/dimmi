@@ -30,12 +30,12 @@ it.describe("operator", () => {
     ).toBeChecked();
   });
 
-  it("opens a chat about the workspace and one beside a conversation, and says when no model is connected", async ({
-    page,
-  }) => {
+  it("shows Operator's usage beside dimmi's, and its chats beside a conversation", async ({ page }) => {
     await page.goto("/d/operator");
-    await page.getByRole("button", { name: "Start a chat" }).click();
-    await expect(page.getByRole("button", { name: "How did support go over the last 30 days?" })).toBeVisible();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/agent\?tab=operator$/);
+    await expect(page.getByRole("tab", { name: "Operator", selected: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Operator this month" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Operator", exact: true })).toHaveCount(0);
 
     const inboxes = await api<{ id: string }[]>(page, "GET", "/inboxes");
     const created = await api<{ id: string }>(page, "POST", "/conversations", {
@@ -47,6 +47,7 @@ it.describe("operator", () => {
     });
     await page.goto(`/d/inbox/all/${created.id}`);
     const pane = page.getByRole("region", { name: "Operator" });
+    await expect(pane.getByRole("button", { name: "Past chats" })).toBeDisabled();
     await pane.getByRole("button", { name: "Brief me" }).click();
     await expect(pane.getByRole("alert")).toHaveText("Operator needs an AI connection. Connect one in Settings, AI.");
   });

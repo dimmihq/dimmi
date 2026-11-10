@@ -3,11 +3,12 @@
 | Operator Threads
 |--------------------------------------------------------------------------
 |
-| Each teammate talks with Operator in their own threads: one per
-| conversation they open it on, and as many about the whole workspace as
-| they like. A thread is private to its teammate; a thread about a
-| conversation they can no longer see is not found. Questions are
-| counted per teammate, since every one spends real tokens.
+| Each teammate talks with Operator in their own threads: as many about
+| each conversation and about the whole workspace as they like, the
+| latest about a conversation opening first. A thread is private to its
+| teammate; a thread about a conversation they can no longer see is not
+| found. Questions are counted per teammate, since every one spends real
+| tokens.
 |
 */
 
@@ -69,7 +70,8 @@ Operator on them.
 Rules:
   - Every call needs conversations:read; a thread about a conversation
     needs the teammate to see it.
-  - Opening a conversation's thread twice returns the same thread.
+  - Opening a conversation's thread returns the teammate's latest one
+    about it; asking for a fresh one starts another.
   - A teammate asks at most 30 questions a minute.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], a [fault]
@@ -84,18 +86,35 @@ type Threads struct {
 }
 
 /*
-List returns the teammate's threads, latest first, only those about the
-whole workspace when asked.
+ListFilter narrows a teammate's threads: only those about the whole
+workspace, or only those about one conversation.
 */
-func (a *Threads) List(ctx context.Context, m authz.Membership, workspaceOnly bool) ([]models.OperatorThread, error) {
+type ListFilter struct {
+	WorkspaceOnly bool
+	Conversation  *ids.UUID
+}
+
+/*
+List returns the teammate's threads with messages, latest first,
+narrowed by the filter. Threads about a conversation the teammate can
+no longer see are refused with that conversation.
+*/
+func (a *Threads) List(ctx context.Context, m authz.Membership, filter ListFilter) ([]models.OperatorThread, error) {
 	if err := conversations.CanRead(m); err != nil {
 		return nil, err
 	}
 	var out []models.OperatorThread
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+		if filter.Conversation != nil {
+			if _, err := conversations.Find(ctx, q, m, conversations.Ref{ID: *filter.Conversation}); err != nil {
+				return err
+			}
+		}
 		var err error
-		out, err = models.New(tx).ListOperatorThreads(ctx, models.ListOperatorThreadsParams{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, WorkspaceOnly: workspaceOnly, RowLimit: threadsListed,
+		out, err = q.ListOperatorThreads(ctx, models.ListOperatorThreadsParams{
+			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, WorkspaceOnly: filter.WorkspaceOnly,
+			ConversationID: filter.Conversation, RowLimit: threadsListed,
 		})
 		return err
 	})
@@ -103,31 +122,71 @@ func (a *Threads) List(ctx context.Context, m authz.Membership, workspaceOnly bo
 }
 
 /*
-Open returns the teammate's thread about a conversation, starting it
-when there is none, or starts a thread about the whole workspace.
+Open returns the teammate's latest thread about a conversation, starting
+one when there is none or when fresh asks for a new one; without a
+conversation it starts a thread about the whole workspace.
 */
-func (a *Threads) Open(ctx context.Context, m authz.Membership, conversation *ids.UUID) (Thread, error) {
+func (a *Threads) Open(ctx context.Context, m authz.Membership, conversation *ids.UUID, fresh bool) (Thread, error) {
 	if err := conversations.CanRead(m); err != nil {
 		return Thread{}, err
 	}
 	var out Thread
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		if conversation != nil {
-			if _, err := conversations.Find(ctx, q, m, conversations.Ref{ID: *conversation}); err != nil {
-				return err
-			}
-		}
-		thread, err := q.CreateOperatorThread(ctx, models.CreateOperatorThreadParams{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ConversationID: conversation, Now: a.Clock.Now(),
-		})
+		thread, err := a.thread(ctx, q, m, opening{conversation: conversation, fresh: fresh})
 		if err != nil {
-			return fmt.Errorf("open operator thread: %w", err)
+			return err
 		}
 		out, err = load(ctx, q, m, thread)
 		return err
 	})
 	return out, err
+}
+
+/*
+opening is what Open was asked for: a conversation, nil for the whole
+workspace, and whether to start a new thread even when one exists.
+*/
+type opening struct {
+	conversation *ids.UUID
+	fresh        bool
+}
+
+/*
+thread finds the thread Open returns, or starts it.
+*/
+func (a *Threads) thread(ctx context.Context, q *models.Queries, m authz.Membership, in opening,
+) (models.OperatorThread, error) {
+	if in.conversation != nil {
+		if _, err := conversations.Find(ctx, q, m, conversations.Ref{ID: *in.conversation}); err != nil {
+			return models.OperatorThread{}, err
+		}
+	}
+	if in.conversation != nil && !in.fresh {
+		latest, err := q.FindConversationOperatorThread(ctx, models.FindConversationOperatorThreadParams{
+			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ConversationID: in.conversation,
+		})
+		if err == nil || !errors.Is(err, database.ErrNotFound) {
+			return latest, wrapFind(err)
+		}
+	}
+	thread, err := q.CreateOperatorThread(ctx, models.CreateOperatorThreadParams{
+		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ConversationID: in.conversation, Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return thread, fmt.Errorf("open operator thread: %w", err)
+	}
+	return thread, nil
+}
+
+/*
+wrapFind says what failed when finding the latest thread did.
+*/
+func wrapFind(err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("find operator thread: %w", err)
 }
 
 /*
@@ -185,24 +244,59 @@ func (a *Threads) Ask(ctx context.Context, in AskInput) (operator.Answer, error)
 }
 
 /*
-Brief asks Operator to brief the teammate on a conversation, on their
-thread about it.
+BriefInput asks for a brief on a conversation: on one of the teammate's
+threads about it, or their latest, and kept on the conversation as a
+note when Attach says so.
 */
-func (a *Threads) Brief(ctx context.Context, m authz.Membership, conversation ids.UUID) (Thread, error) {
-	thread, err := a.Open(ctx, m, &conversation)
+type BriefInput struct {
+	Membership   authz.Membership
+	Conversation ids.UUID
+	Thread       *ids.UUID
+	Attach       bool
+}
+
+/*
+Brief asks Operator to brief the teammate on a conversation, on their
+thread about it, and keeps the brief on the conversation when asked.
+*/
+func (a *Threads) Brief(ctx context.Context, in BriefInput) (Thread, error) {
+	thread, err := a.briefThread(ctx, in)
 	if err != nil {
 		return thread, err
 	}
-	if err := a.throttle(ctx, m); err != nil {
+	if err := a.throttle(ctx, in.Membership); err != nil {
 		return thread, err
 	}
-	_, err = a.Operator.Ask(ctx, operator.Question{
-		Membership: m, ThreadID: thread.Thread.ID, Text: operator.BriefQuestion, Hidden: true,
+	answer, err := a.Operator.Ask(ctx, operator.Question{
+		Membership: in.Membership, ThreadID: thread.Thread.ID, Text: operator.BriefQuestion, Hidden: true,
 	})
 	if err != nil {
 		return thread, err
 	}
-	return a.Show(ctx, m, thread.Thread.ID)
+	if in.Attach {
+		if err := a.Operator.NoteBrief(ctx, in.Membership, in.Conversation, answer.Message); err != nil {
+			return thread, fmt.Errorf("keep brief: %w", err)
+		}
+	}
+	return a.Show(ctx, in.Membership, thread.Thread.ID)
+}
+
+/*
+briefThread is the thread a brief goes on: the one named, which must be
+about the conversation, or the teammate's latest about it.
+*/
+func (a *Threads) briefThread(ctx context.Context, in BriefInput) (Thread, error) {
+	if in.Thread == nil {
+		return a.Open(ctx, in.Membership, &in.Conversation, false)
+	}
+	thread, err := a.Show(ctx, in.Membership, *in.Thread)
+	if err != nil {
+		return thread, err
+	}
+	if thread.Thread.ConversationID == nil || *thread.Thread.ConversationID != in.Conversation {
+		return thread, exceptions.ErrNotFound
+	}
+	return thread, nil
 }
 
 /*

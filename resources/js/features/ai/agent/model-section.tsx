@@ -52,7 +52,11 @@ function ConnectionSelect({
   );
 }
 
-function ModelSelect({
+/*
+ * ModelSelect picks a model, each shown with its price per million
+ * tokens and how much it reads at once.
+ */
+export function ModelSelect({
   label,
   models,
   value,

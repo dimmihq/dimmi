@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -51,7 +52,7 @@ startRun opens the run row for the session.
 func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (models.AiRun, error) {
 	now := e.Clock.Now()
 	actor := "member"
-	snapshot, _ := json.Marshal(map[string]any{"answer_model": s.model, "operator": true})
+	snapshot, _ := json.Marshal(map[string]any{"answer_model": s.model, "operator": true, "purpose": purposeOf(s)})
 	run, err := q.CreateRun(ctx, models.CreateRunParams{
 		WorkspaceID: s.m.Workspace.ID, AgentID: s.agent.ID, Kind: runKind,
 		ConversationID: s.thread.ConversationID, IncludedMessageIds: []ids.UUID{},
@@ -63,6 +64,31 @@ func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (m
 		return run, fmt.Errorf("start operator run: %w", err)
 	}
 	return run, nil
+}
+
+/*
+The reasons an Operator run starts: a teammate's question, a brief on a
+conversation, or a triage when a conversation arrives. Usage reports
+split runs by them.
+*/
+const (
+	PurposeAsk    = "ask"
+	PurposeBrief  = "brief"
+	PurposeTriage = "triage"
+)
+
+/*
+purposeOf says why the session runs.
+*/
+func purposeOf(s *session) string {
+	switch {
+	case s.background:
+		return PurposeTriage
+	case s.question == strings.TrimSpace(BriefQuestion):
+		return PurposeBrief
+	default:
+		return PurposeAsk
+	}
 }
 
 /*

@@ -16,9 +16,10 @@ import { useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
-import { Select, SelectItem } from "@/components/base/select/select";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
+import { ModelSelect } from "@/features/ai/agent/model-section";
+import { modelsFor, operatorModel, usableKeys } from "@/features/ai/format";
 import { agentQuery } from "@/lib/api/ai";
 import {
   forgetOperatorMemory,
@@ -88,12 +89,10 @@ function Policy({
   );
 }
 
-const agentModel = "agent";
-
 /*
-ModelRow picks the model Operator answers with, among those the
-agent's connection offers; the default follows the agent.
-*/
+ * ModelRow picks the model Operator answers with, among those the
+ * agent's connection offers, each with its price.
+ */
 function ModelRow({
   workspace,
   settings,
@@ -106,35 +105,23 @@ function ModelRow({
   onChange: (change: OperatorSettingsChange) => void;
 }) {
   const { data: view } = useQuery({ ...agentQuery(workspace), enabled: workspace !== "" });
-  const key = view?.keys.find((k) => k.id === view.agent.answer_key_id);
-  const choices = key?.models ?? [];
-  const agent = view?.agent.answer_model ?? null;
+  const key = view ? usableKeys(view.keys).find((k) => k.id === view.agent.answer_key_id) : undefined;
+  const models = view ? modelsFor(key, view.catalog) : [];
+  const value = operatorModel(settings.model, models, view?.agent.answer_model ?? null);
 
   return (
     <Row
       label="Model"
-      description="Operator works through many steps, so a stronger model than the agent's often pays off."
+      description="Operator runs several steps for each answer, so a model's price adds up fast. It starts on GPT-6 Luna, the cheapest that does the job well."
     >
-      <Select
-        aria-label="Model"
-        size="sm"
-        isDisabled={!canManage || choices.length === 0}
-        selectedKey={settings.model ?? agentModel}
-        onSelectionChange={(picked) =>
-          picked ? onChange({ model: picked === agentModel ? "" : String(picked) }) : undefined
-        }
-        popoverClassName="w-64"
-      >
-        {[agentModel, ...choices].map((choice) => {
-          const label = choice === agentModel ? `Same as the agent${agent ? ` (${agent})` : ""}` : choice;
-
-          return (
-            <SelectItem key={choice} id={choice} textValue={label}>
-              {label}
-            </SelectItem>
-          );
-        })}
-      </Select>
+      <ModelSelect
+        label="Operator model"
+        models={models}
+        value={value}
+        disabled={!canManage}
+        placeholder="Choose a model"
+        onPick={(model) => onChange({ model })}
+      />
     </Row>
   );
 }

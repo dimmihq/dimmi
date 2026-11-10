@@ -103,13 +103,6 @@ export const inboxViews = {
 export type InboxView = keyof typeof inboxViews;
 
 export const workspacePages = {
-  operator: page(
-    "operator",
-    "Operator",
-    RiRobot2Line,
-    "/d/operator",
-    "Your team's own agent: ask about your workspace and approve the changes it proposes.",
-  ),
   notifications: page(
     "notifications",
     "Notifications",
@@ -464,7 +457,7 @@ export function appSections(
     {
       key: "automation",
       label: "Automation",
-      items: [workspacePages.operator, workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
+      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
     },
     {
       key: "customers",

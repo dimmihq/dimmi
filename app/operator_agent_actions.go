@@ -25,4 +25,5 @@ type OperatorAgentActions struct {
 	Threads    *operatorchat.Threads
 	Changesets *operatorchat.Changesets
 	Memories   *operatorchat.Memories
+	Usage      *operatorchat.Usage
 }

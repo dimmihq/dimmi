@@ -103,6 +103,38 @@ export interface OperatorMemory {
   created_at: string;
 }
 
+export type OperatorPurpose = "ask" | "brief" | "triage";
+
+export interface OperatorUsageRun {
+  id: string;
+  purpose: OperatorPurpose;
+  status: "running" | "completed" | "failed" | "skipped";
+  member_name: string;
+  thread_title: string;
+  conversation_id: string | null;
+  conversation_number: number | null;
+  cost_micros: number;
+  latency_ms: number | null;
+  created_at: string;
+}
+
+export interface OperatorUsage {
+  period_start: string;
+  cost_micros: number;
+  runs_count: number;
+  failed_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  agent_cost_micros: number;
+  monthly_spend_cap_micros: number | null;
+  daily: { day: string; cost_micros: number; runs_count: number }[];
+  by_purpose: { purpose: OperatorPurpose; runs_count: number; cost_micros: number }[];
+  by_member: { member_id: string; name: string; runs_count: number; cost_micros: number }[];
+  by_model: { model: string; cost_micros: number; calls: number }[];
+  changesets: { status: ChangesetStatus; count: number }[];
+  recent: OperatorUsageRun[];
+}
+
 export const operatorKeys = {
   settings: (workspace: string) => ["workspace", workspace, "operator", "settings"] as const,
   threads: (workspace: string) => ["workspace", workspace, "operator", "threads"] as const,
@@ -112,7 +144,15 @@ export const operatorKeys = {
   changesets: (workspace: string, status: string) =>
     ["workspace", workspace, "operator", "changesets", status] as const,
   memories: (workspace: string) => ["workspace", workspace, "operator", "memories"] as const,
+  usage: (workspace: string) => ["workspace", workspace, "operator", "usage"] as const,
 };
+
+export function operatorUsageQuery(workspace: string) {
+  return queryOptions({
+    queryKey: operatorKeys.usage(workspace),
+    queryFn: () => request<OperatorUsage>("GET", "/operator/usage", undefined, { workspace }),
+  });
+}
 
 export function operatorSettingsQuery(workspace: string) {
   return queryOptions({
@@ -124,14 +164,6 @@ export function operatorSettingsQuery(workspace: string) {
 
 export function updateOperatorSettings(workspace: string, change: OperatorSettingsChange) {
   return request<OperatorSettings>("PATCH", "/operator/settings", change, { workspace });
-}
-
-export function operatorThreadsQuery(workspace: string) {
-  return queryOptions({
-    queryKey: operatorKeys.threads(workspace),
-    queryFn: () =>
-      request<OperatorThread[]>("GET", "/operator/threads?filter[scope]=workspace", undefined, { workspace }),
-  });
 }
 
 /*
@@ -155,14 +187,6 @@ export function operatorThreadQuery(workspace: string, id: string) {
   });
 }
 
-export function startWorkspaceThread(workspace: string) {
-  return request<OperatorThreadView>("POST", "/operator/threads", {}, { workspace });
-}
-
-export function deleteOperatorThread(workspace: string, id: string) {
-  return request<void>("DELETE", `/operator/threads/${encodeURIComponent(id)}`, undefined, { workspace });
-}
-
 export function askOperator(workspace: string, thread: string, body: string, signal?: AbortSignal) {
   return request<OperatorAnswer>(
     "POST",
@@ -172,21 +196,51 @@ export function askOperator(workspace: string, thread: string, body: string, sig
   );
 }
 
-export function briefConversation(workspace: string, conversation: string, signal?: AbortSignal) {
+/*
+ * briefConversation asks for a brief on one of the teammate's threads
+ * about the conversation, the latest when none is named; attach also
+ * keeps the brief on the conversation as a note the whole team sees.
+ */
+export function briefConversation(
+  workspace: string,
+  conversation: string,
+  options: { thread?: string; attach?: boolean; signal?: AbortSignal } = {},
+) {
   return request<OperatorThreadView>(
     "POST",
     `/conversations/${encodeURIComponent(conversation)}/operator/brief`,
-    {},
-    { workspace, signal },
+    { thread_id: options.thread, attach: options.attach },
+    { workspace, signal: options.signal },
   );
 }
 
-export function pendingChangesetsQuery(workspace: string) {
+/*
+ * conversationThreadsQuery lists the teammate's past threads about a
+ * conversation, latest first.
+ */
+export function conversationThreadsQuery(workspace: string, conversation: string) {
   return queryOptions({
-    queryKey: operatorKeys.changesets(workspace, "pending"),
+    queryKey: [...operatorKeys.conversation(workspace, conversation), "list"] as const,
     queryFn: () =>
-      request<OperatorChangeset[]>("GET", "/operator/changesets?filter[status]=pending", undefined, { workspace }),
+      request<OperatorThread[]>(
+        "GET",
+        `/operator/threads?filter[conversation]=${encodeURIComponent(conversation)}`,
+        undefined,
+        { workspace },
+      ),
   });
+}
+
+/*
+ * startConversationThread starts a fresh thread about a conversation.
+ */
+export function startConversationThread(workspace: string, conversation: string) {
+  return request<OperatorThreadView>(
+    "POST",
+    "/operator/threads",
+    { conversation_id: conversation, fresh: true },
+    { workspace },
+  );
 }
 
 export type ChangesetDecision = "applications" | "declines" | "reversions";

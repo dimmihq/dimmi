@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { OperatorPage } from "@/features/operator/operator-page";
+/*
+ * Operator's own page moved onto the agent's page, as a tab beside
+ * dimmi; older links land there.
+ */
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/d/operator")({
-  component: OperatorPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/d/agent", search: { tab: "operator" }, replace: true });
+  },
 });

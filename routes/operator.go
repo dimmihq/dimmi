@@ -7,7 +7,7 @@
 | teammate's threads and questions, briefs on a conversation, the
 | changes it proposes and what it remembers. Tokens need
 | conversations:read to talk with Operator and conversations:write to
-| apply or revert its changes; changing its settings needs ai:write. The
+| apply or revert its changes; changing its settings needs ai:write and reading its usage ai:read. The
 | actions then check the member's own permissions, and every change
 | Operator makes runs through the action a teammate would use.
 |
@@ -42,6 +42,8 @@ func operatorRoutes(r *routing.Router, a *app.App) {
 		Ability("conversations:read").Status(fhttp.StatusOK)
 	routing.Post(r, "/conversations/{conversation}/operator/brief", "conversations.operator.brief.store", c.Brief).
 		Ability("conversations:read").Status(fhttp.StatusOK)
+	usage := &v1.OperatorUsageController{Usage: acts.Usage}
+	routing.Get(r, "/operator/usage", "operator.usage.show", usage.Show).Ability("ai:read")
 	operatorChangesetRoutes(r, a)
 }
 

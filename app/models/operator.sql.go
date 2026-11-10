@@ -172,8 +172,6 @@ func (q *Queries) CreateOperatorMessage(ctx context.Context, arg CreateOperatorM
 const createOperatorThread = `-- name: CreateOperatorThread :one
 INSERT INTO operator_threads (workspace_id, member_id, conversation_id, title, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
-ON CONFLICT (member_id, conversation_id) WHERE conversation_id IS NOT NULL
-DO UPDATE SET updated_at = operator_threads.updated_at
 RETURNING id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at
 `
 
@@ -185,7 +183,7 @@ type CreateOperatorThreadParams struct {
 	Now            time.Time `json:"now"`
 }
 
-// CreateOperatorThread opens a thread for a member, about one
+// CreateOperatorThread starts a new thread for a member, about one
 // conversation or the whole workspace.
 func (q *Queries) CreateOperatorThread(ctx context.Context, arg CreateOperatorThreadParams) (OperatorThread, error) {
 	row := q.db.QueryRow(ctx, createOperatorThread,
@@ -251,6 +249,8 @@ func (q *Queries) DeleteOperatorThread(ctx context.Context, arg DeleteOperatorTh
 const findConversationOperatorThread = `-- name: FindConversationOperatorThread :one
 SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at FROM operator_threads
 WHERE workspace_id = $1 AND member_id = $2 AND conversation_id = $3
+ORDER BY updated_at DESC, id DESC
+LIMIT 1
 `
 
 type FindConversationOperatorThreadParams struct {
@@ -259,8 +259,8 @@ type FindConversationOperatorThreadParams struct {
 	ConversationID *ids.UUID `json:"conversation_id"`
 }
 
-// FindConversationOperatorThread returns the member's thread about the
-// conversation.
+// FindConversationOperatorThread returns the member's latest thread
+// about the conversation.
 func (q *Queries) FindConversationOperatorThread(ctx context.Context, arg FindConversationOperatorThreadParams) (OperatorThread, error) {
 	row := q.db.QueryRow(ctx, findConversationOperatorThread, arg.WorkspaceID, arg.MemberID, arg.ConversationID)
 	var i OperatorThread
@@ -535,25 +535,29 @@ const listOperatorThreads = `-- name: ListOperatorThreads :many
 SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at FROM operator_threads
 WHERE workspace_id = $1 AND member_id = $2
   AND (NOT $3::boolean OR conversation_id IS NULL)
+  AND ($4::uuid IS NULL OR conversation_id = $4::uuid)
   AND last_message_at IS NOT NULL
 ORDER BY last_message_at DESC, id DESC
-LIMIT $4
+LIMIT $5
 `
 
 type ListOperatorThreadsParams struct {
-	WorkspaceID   ids.UUID `json:"workspace_id"`
-	MemberID      ids.UUID `json:"member_id"`
-	WorkspaceOnly bool     `json:"workspace_only"`
-	RowLimit      int32    `json:"row_limit"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	MemberID       ids.UUID  `json:"member_id"`
+	WorkspaceOnly  bool      `json:"workspace_only"`
+	ConversationID *ids.UUID `json:"conversation_id"`
+	RowLimit       int32     `json:"row_limit"`
 }
 
-// ListOperatorThreads returns the member's threads, latest first, only
-// those about the whole workspace when asked.
+// ListOperatorThreads returns the member's threads with messages, latest
+// first: only those about the whole workspace when asked, or only those
+// about one conversation when one is named.
 func (q *Queries) ListOperatorThreads(ctx context.Context, arg ListOperatorThreadsParams) ([]OperatorThread, error) {
 	rows, err := q.db.Query(ctx, listOperatorThreads,
 		arg.WorkspaceID,
 		arg.MemberID,
 		arg.WorkspaceOnly,
+		arg.ConversationID,
 		arg.RowLimit,
 	)
 	if err != nil {

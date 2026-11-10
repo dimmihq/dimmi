@@ -198,10 +198,7 @@ func (e *Engine) loadModel(ctx context.Context, q *models.Queries, s *session) e
 	if capped {
 		return ErrCapped
 	}
-	s.agent, s.key, s.model = agent, key, *agent.AnswerModel
-	if s.settings.Model != "" && Offers(key, s.settings.Model) {
-		s.model = s.settings.Model
-	}
+	s.agent, s.key, s.model = agent, key, modelFor(s.settings, key, *agent.AnswerModel)
 	return nil
 }
 
@@ -270,9 +267,13 @@ func (e *Engine) store(ctx context.Context, q *models.Queries, s *session, m sai
 }
 
 /*
-titleOf names a thread after its first question.
+titleOf names a thread after its first question, or Brief when it began
+with a brief.
 */
 func titleOf(question string) string {
+	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion) {
+		return briefTitle
+	}
 	line, _, _ := strings.Cut(strings.TrimSpace(question), "\n")
 	runes := []rune(line)
 	if len(runes) > 80 {
@@ -280,6 +281,12 @@ func titleOf(question string) string {
 	}
 	return line
 }
+
+/*
+briefTitle names a thread that began with a brief, since the question
+behind a brief is never shown.
+*/
+const briefTitle = "Brief"
 
 /*
 stepsOrEmpty never stores a null list of steps.

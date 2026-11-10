@@ -93,11 +93,21 @@ func (c *OperatorController) UpdateSettings(ctx context.Context, in *requests.Up
 
 /*
 Index lists the caller's threads, only those about the whole workspace
-when filter[scope] is workspace.
+when filter[scope] is workspace, or about one conversation when
+filter[conversation] names it.
 */
 func (c *OperatorController) Index(ctx context.Context, _ *requests.NoInput) (*OperatorThreadsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
-	rows, err := c.Threads.List(ctx, membership(ctx), r.URL.Query().Get("filter[scope]") == "workspace")
+	query := r.URL.Query()
+	filter := operatorchat.ListFilter{WorkspaceOnly: query.Get("filter[scope]") == "workspace"}
+	if named := query.Get("filter[conversation]"); named != "" {
+		id, err := c.decode(models.PrefixConversation, named)
+		if err != nil {
+			return nil, err
+		}
+		filter.Conversation = &id
+	}
+	rows, err := c.Threads.List(ctx, membership(ctx), filter)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +125,7 @@ func (c *OperatorController) Store(ctx context.Context, in *requests.StoreOperat
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Threads.Open(ctx, membership(ctx), conversation)
+	t, err := c.Threads.Open(ctx, membership(ctx), conversation, in.Body.Fresh)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +187,13 @@ func (c *OperatorController) Brief(ctx context.Context, in *requests.BriefConver
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Threads.Brief(ctx, membership(ctx), id)
+	thread, err := decodeField(c.IDs, models.PrefixOperatorThread, in.Body.ThreadID, exceptions.ErrNotFound)
+	if err != nil {
+		return nil, err
+	}
+	t, err := c.Threads.Brief(ctx, operatorchat.BriefInput{
+		Membership: membership(ctx), Conversation: id, Thread: thread, Attach: in.Body.Attach,
+	})
 	if err != nil {
 		return nil, err
 	}

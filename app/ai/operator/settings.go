@@ -125,6 +125,31 @@ func ValidGroup(g Group) bool {
 }
 
 /*
+DefaultModel is the model Operator answers with until an admin picks
+another, when the agent's connection offers it. Operator runs many steps
+for one answer, so it starts on the cheapest model that does the job
+well.
+*/
+const DefaultModel = "gpt-6-luna"
+
+/*
+modelFor is the model a run answers with: the one the settings name when
+the connection offers it, else the default when the connection lists it,
+else the agent's own.
+*/
+func modelFor(settings Settings, key models.AiProviderKey, agentModel string) string {
+	if settings.Model != "" && Offers(key, settings.Model) {
+		return settings.Model
+	}
+	var listed []string
+	_ = json.Unmarshal(key.Models, &listed)
+	if settings.Model == "" && slices.Contains(listed, DefaultModel) {
+		return DefaultModel
+	}
+	return agentModel
+}
+
+/*
 Offers reports whether a connection can call a model: it lists the
 model, or lists none and takes any.
 */

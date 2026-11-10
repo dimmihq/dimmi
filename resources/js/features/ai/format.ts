@@ -209,3 +209,27 @@ export function readiness(view: AgentView): Step[] {
     },
   ];
 }
+
+/*
+ * operatorDefaultModel is the model Operator answers with until an admin
+ * picks another, when the connection offers it: the cheapest that does
+ * the job well, since Operator runs many steps for one answer.
+ */
+export const operatorDefaultModel = "gpt-6-luna";
+
+/*
+ * operatorModel is the model Operator answers with: the one picked when
+ * the connection offers it, else the default when offered, else the
+ * agent's own.
+ */
+export function operatorModel(picked: string | null, models: AiModelEntry[], agentModel: string | null): string | null {
+  const offered = (id: string | null) => id !== null && models.some((model) => model.id === id);
+  if (offered(picked)) {
+    return picked;
+  }
+  if (offered(operatorDefaultModel)) {
+    return operatorDefaultModel;
+  }
+
+  return agentModel;
+}

@@ -17,12 +17,10 @@ ON CONFLICT (workspace_id) DO UPDATE SET
 RETURNING *;
 
 -- name: CreateOperatorThread :one
--- CreateOperatorThread opens a thread for a member, about one
+-- CreateOperatorThread starts a new thread for a member, about one
 -- conversation or the whole workspace.
 INSERT INTO operator_threads (workspace_id, member_id, conversation_id, title, created_at, updated_at)
 VALUES (@workspace_id, @member_id, sqlc.narg('conversation_id'), @title, @now, @now)
-ON CONFLICT (member_id, conversation_id) WHERE conversation_id IS NOT NULL
-DO UPDATE SET updated_at = operator_threads.updated_at
 RETURNING *;
 
 -- name: FindOperatorThread :one
@@ -30,17 +28,21 @@ RETURNING *;
 SELECT * FROM operator_threads WHERE workspace_id = @workspace_id AND member_id = @member_id AND id = @id;
 
 -- name: FindConversationOperatorThread :one
--- FindConversationOperatorThread returns the member's thread about the
--- conversation.
+-- FindConversationOperatorThread returns the member's latest thread
+-- about the conversation.
 SELECT * FROM operator_threads
-WHERE workspace_id = @workspace_id AND member_id = @member_id AND conversation_id = @conversation_id;
+WHERE workspace_id = @workspace_id AND member_id = @member_id AND conversation_id = @conversation_id
+ORDER BY updated_at DESC, id DESC
+LIMIT 1;
 
 -- name: ListOperatorThreads :many
--- ListOperatorThreads returns the member's threads, latest first, only
--- those about the whole workspace when asked.
+-- ListOperatorThreads returns the member's threads with messages, latest
+-- first: only those about the whole workspace when asked, or only those
+-- about one conversation when one is named.
 SELECT * FROM operator_threads
 WHERE workspace_id = @workspace_id AND member_id = @member_id
   AND (NOT @workspace_only::boolean OR conversation_id IS NULL)
+  AND (sqlc.narg('conversation_id')::uuid IS NULL OR conversation_id = sqlc.narg('conversation_id')::uuid)
   AND last_message_at IS NOT NULL
 ORDER BY last_message_at DESC, id DESC
 LIMIT @row_limit;

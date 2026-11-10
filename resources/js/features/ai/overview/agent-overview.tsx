@@ -1,18 +1,19 @@
 /*
- * The agent at a glance: whether it is answering customers or what
- * still stands in the way, how this month went, and the conversations
- * it took part in lately, each opening in the inbox. Changing anything
+ * The agents at a glance, one tab each. dimmi's tab says whether it is
+ * answering customers or what still stands in the way, how this month
+ * went, and the conversations it took part in lately, each opening in
+ * the inbox; Operator's says how the team used it. Changing anything
  * happens in the agent's settings, one click away.
  */
 import { RiArrowRightSLine, RiSettings3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { Button } from "@/components/base/buttons/button";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
+import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
 import { DimmiIcon } from "@/features/brand/logo";
 import { AiBadge } from "@/features/inbox/ai-badge";
 import { ago, customerName, subjectOf } from "@/features/inbox/conversations";
@@ -26,6 +27,8 @@ import { conversationsQuery } from "@/lib/api/inbox";
 import { modelsFor, readiness, usableKeys, usd } from "../format";
 import { ModelLogo } from "../logos";
 import { useAgent } from "../use-agent";
+import { OperatorUsageTab } from "./operator-usage";
+import { Stat } from "./stat";
 
 /*
  * StatusCard says whether the agent answers, and with what.
@@ -74,16 +77,6 @@ function StatusCard({ view }: { view: AgentView }) {
       >
         {open > 0 ? "Finish setup" : "Open settings"}
       </Button>
-    </div>
-  );
-}
-
-function Stat({ label, value, note }: { label: string; value: ReactNode; note?: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl bg-background-secondary-default p-4">
-      <span className="text-body-2-regular text-text-secondary">{label}</span>
-      <span className="text-title-2-medium text-text-primary tabular-nums">{value}</span>
-      {note ? <span className="text-caption-1-medium text-text-tertiary">{note}</span> : null}
     </div>
   );
 }
@@ -199,10 +192,16 @@ function RecentConversations({ workspace }: { workspace: string }) {
   );
 }
 
-export function AgentOverview() {
+export type AgentTab = "dimmi" | "operator";
+
+/*
+ * AgentOverview shows dimmi, who answers customers, and Operator, who
+ * works for the team, each on its own tab.
+ */
+export function AgentOverview({ tab, onTab }: { tab: AgentTab; onTab: (tab: AgentTab) => void }) {
   const navigate = useNavigate();
   const { workspace, view } = useAgent();
-  const { data: usage } = useQuery({ ...aiUsageQuery(workspace), enabled: workspace !== "" });
+  const { data: usage } = useQuery({ ...aiUsageQuery(workspace), enabled: workspace !== "" && tab === "dimmi" });
 
   return (
     <Panel label="Agent" ground className="h-full flex-1">
@@ -211,20 +210,41 @@ export function AgentOverview() {
           size="small"
           variant="secondary"
           leadingIcon={RiSettings3Line}
-          onClick={() => navigate({ to: "/d/settings/$section", params: { section: "agent" } })}
+          onClick={() =>
+            navigate({ to: "/d/settings/$section", params: { section: tab === "operator" ? "operator" : "agent" } })
+          }
         >
           Settings
         </Button>
       </PageHeader>
+      <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
+        <Tabs selectedKey={tab} onSelectionChange={(key) => onTab(key === "operator" ? "operator" : "dimmi")}>
+          <TabList
+            aria-label="Agents"
+            items={[
+              { id: "dimmi", label: view.data?.agent.name ?? "dimmi" },
+              { id: "operator", label: "Operator" },
+            ]}
+          >
+            {(item) => <Tab id={item.id}>{item.label}</Tab>}
+          </TabList>
+        </Tabs>
+      </div>
       <ScrollArea ground>
-        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-4 pb-16 sm:px-6 sm:pt-8">
-          {view.data ? <StatusCard view={view.data} /> : <Skeleton className="h-[84px] rounded-2xl" />}
-          <section aria-label="This month" className="flex flex-col gap-2">
-            <h2 className="px-3 text-body-2-medium text-text-secondary">This month</h2>
-            <MonthStats usage={usage} cap={view.data?.agent.monthly_spend_cap_micros ?? null} />
-          </section>
-          <ByModel usage={usage} view={view.data} />
-          <RecentConversations workspace={workspace} />
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-4 pb-16 sm:px-6 sm:pt-6">
+          {tab === "operator" ? (
+            <OperatorUsageTab workspace={workspace} view={view.data} />
+          ) : (
+            <>
+              {view.data ? <StatusCard view={view.data} /> : <Skeleton className="h-[84px] rounded-2xl" />}
+              <section aria-label="This month" className="flex flex-col gap-2">
+                <h2 className="px-3 text-body-2-medium text-text-secondary">This month</h2>
+                <MonthStats usage={usage} cap={view.data?.agent.monthly_spend_cap_micros ?? null} />
+              </section>
+              <ByModel usage={usage} view={view.data} />
+              <RecentConversations workspace={workspace} />
+            </>
+          )}
         </div>
       </ScrollArea>
     </Panel>
