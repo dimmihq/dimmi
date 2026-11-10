@@ -106,6 +106,7 @@ func TestServer(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.ElementsMatch(t, report, tools)
+		assert.NotContains(t, tools, "dimmi_workspace_delete")
 	})
 
 	t.Run("lists conversations through the API, as text and structured content", func(t *testing.T) {

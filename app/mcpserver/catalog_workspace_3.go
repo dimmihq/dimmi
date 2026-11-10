@@ -44,13 +44,5 @@ func callerDocs() map[string]Doc {
 			Returns: "the workspace's request limits.",
 			Hint:    "When calls are refused for going too fast, wait as the error says.",
 		},
-		"workspace.destroy": {
-			Title: "Delete the workspace",
-			Use: "Moves the whole workspace to the trash: its conversations, contacts, help center and settings " +
-				"stop working for everyone, and it is purged for good after its time in the trash. Only the owner " +
-				"may do this. Never call it unless the person explicitly asks to delete the workspace.",
-			Returns: "the workspace in the trash, with when it will be purged.",
-			Risk:    new(RiskDanger),
-		},
 	}
 }

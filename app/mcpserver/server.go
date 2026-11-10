@@ -129,6 +129,8 @@ func register(s *mcp.Server, api fhttp.Handler, op mcp.Operation, docs map[strin
 callable keeps the operations an agent can complete with a token: those
 open to every credential, access tokens included, that need neither a
 recently confirmed password, a file upload nor a person at a browser.
+An operation kept for the person's own browser or app is left out, so
+no agent sees a tool it could never use.
 */
 func callable(router *routing.Router) func(mcp.Operation) bool {
 	routes := map[string]*routing.Route{}
@@ -150,7 +152,8 @@ func callable(router *routing.Router) func(mcp.Operation) bool {
 
 		names := route.MiddlewareNames()
 
-		return slices.Contains(names, "auth") && !slices.Contains(names, "password.confirm")
+		return slices.Contains(names, "auth") && !slices.Contains(names, "auth:user") &&
+			!slices.Contains(names, "password.confirm")
 	}
 }
 

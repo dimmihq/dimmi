@@ -170,7 +170,8 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/workspace", "workspace.show", c.workspace.Show)
 	routing.Get(workspace, "/workspace/entitlements", "workspace.entitlements.show", c.entitlements.Show)
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
-	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK)
+	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK).
+		Middleware("auth:user")
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read").
 		Use(c.members.ServeCSV).Lists(v1.MemberListing()).Query(csvQuery())
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read").
