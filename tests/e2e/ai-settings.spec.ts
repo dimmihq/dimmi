@@ -11,7 +11,7 @@ it.describe("ai settings", () => {
   it("adds a provider through the modal and shows what is wrong", async ({ page }) => {
     await page.goto("/d/settings/ai-providers");
     await expect(page.getByRole("heading", { level: 1, name: "AI providers" })).toBeVisible();
-    await expect(page.getByText("No providers yet")).toBeVisible();
+    await expect(page.getByText("Included with dimmi", { exact: false })).toBeVisible();
 
     await page.getByRole("button", { name: "Add provider" }).click();
     const modal = page.getByRole("dialog", { name: "Add a provider" });
@@ -40,14 +40,32 @@ it.describe("ai settings", () => {
 
     await compatible.getByRole("button", { name: "Cancel" }).click();
     await expect(compatible).toBeHidden();
-    await expect(page.getByText("No providers yet")).toBeVisible();
+    await expect(page.getByText("Included with dimmi", { exact: false })).toBeVisible();
+  });
+
+  it("answers with the built-in provider and the cheapest model without any setup", async ({ page }) => {
+    await page.goto("/d/settings/agent");
+    await expect(page.getByRole("heading", { level: 1, name: "dimmi agent" })).toBeVisible();
+    await expect(page.getByText("Ready to answer. Switch it on when you are.")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Setup" })).toHaveCount(0);
+    await expect(page.getByText("GPT-6 Luna").first()).toBeVisible();
+
+    const answer = page.getByRole("switch", { name: "Answer customers" });
+    await expect(answer).toBeEnabled();
+    await Promise.all([
+      page.waitForResponse(
+        (response) => response.url().endsWith("/api/v1/ai/agent") && response.request().method() === "PATCH",
+      ),
+      page.locator("label", { has: answer }).click(),
+    ]);
+    await expect(answer).toBeChecked();
+    await page.reload();
+    await expect(page.getByRole("switch", { name: "Answer customers" })).toBeChecked();
   });
 
   it("saves the agent's settings one change at a time", async ({ page }) => {
     await page.goto("/d/settings/agent");
     await expect(page.getByRole("heading", { level: 1, name: "dimmi agent" })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Setup" })).toContainText("Connect a provider");
-    await expect(page.getByRole("switch", { name: "Answer customers" })).toBeDisabled();
 
     const saved = () =>
       page.waitForResponse(
@@ -69,10 +87,10 @@ it.describe("ai settings", () => {
 
   it("shows the agent's overview instead of a placeholder", async ({ page }) => {
     await page.goto("/d/agent");
-    await expect(page.getByText("Setup not finished")).toBeVisible();
+    await expect(page.getByText("Paused", { exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "This month" })).toContainText("Answered");
     await expect(page.getByText("Nothing yet. Conversations show here once the agent answers.")).toBeVisible();
-    await page.getByRole("button", { name: "Finish setup" }).click();
+    await page.getByRole("button", { name: "Open settings" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "dimmi agent" })).toBeVisible();
   });
 });

@@ -129,7 +129,7 @@ func (a *GetAiAgent) provision(ctx context.Context, tx *database.Tx,
 	if err != nil {
 		return agent, nil, err
 	}
-	if managedKey == nil || !defaultRoles(&agent, managedKey) {
+	if !defaultRoles(&agent, managedKey, a.Config) {
 		return agent, managedKey, nil
 	}
 
@@ -257,8 +257,26 @@ managedConfigured reports whether the install offers the built-in
 provider.
 */
 func managedConfigured(cfg config.AIConfig) bool {
+	return aimodels.DefaultAnswer(managedFamily(cfg)) != ""
+}
+
+/*
+managedFamily reports, for the install's config, whether a model family
+has a built-in upstream to answer it.
+*/
+func managedFamily(cfg config.AIConfig) func(enums.AIModelFamily) bool {
 	m := cfg.Managed
-	return m.Anthropic.APIKey != "" || m.OpenAI.APIKey != "" || m.OpenWeight.APIKey != ""
+	return func(family enums.AIModelFamily) bool {
+		switch family {
+		case enums.AIModelFamilyAnthropic:
+			return m.Anthropic.APIKey != ""
+		case enums.AIModelFamilyOpenAI:
+			return m.OpenAI.APIKey != ""
+		case enums.AIModelFamilyOpenWeight:
+			return m.OpenWeight.APIKey != ""
+		}
+		return false
+	}
 }
 
 /*
@@ -274,20 +292,18 @@ func managedModelIDs() []string {
 }
 
 /*
-defaultRoles points an unconfigured agent's roles at the managed
-connection's defaults.
+defaultRoles points an unconfigured agent's answer role at the managed
+connection and the cheapest model the install's upstreams can serve, so
+the agent can answer without any setup.
 */
-func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey) bool {
-	if key == nil {
+func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey, cfg config.AIConfig) bool {
+	answer := aimodels.DefaultAnswer(managedFamily(cfg))
+	if key == nil || agent.AnswerKeyID != nil || answer == "" {
 		return false
 	}
-	if agent.AnswerKeyID == nil {
-		answer := "claude-haiku-5-5"
-		agent.AnswerKeyID = &key.ID
-		agent.AnswerModel = &answer
-		return true
-	}
-	return false
+	agent.AnswerKeyID = &key.ID
+	agent.AnswerModel = &answer
+	return true
 }
 
 /*
@@ -295,13 +311,10 @@ providers lists the connectable providers, marking which the install
 can actually serve.
 */
 func providers(cfg config.AIConfig) []ProviderDescriptor {
-	managed := cfg.Managed
-	managedUp := managed.Anthropic.APIKey != "" || managed.OpenAI.APIKey != "" || managed.OpenWeight.APIKey != ""
-
 	return []ProviderDescriptor{
 		{
 			ID: enums.AIProviderDimmi, Name: managedKeyName,
-			AuthType: "managed", Available: managedUp,
+			AuthType: "managed", Available: managedConfigured(cfg),
 		},
 		{
 			ID: enums.AIProviderAnthropic, Name: "Anthropic",

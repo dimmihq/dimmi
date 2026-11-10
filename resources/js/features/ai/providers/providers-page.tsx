@@ -1,7 +1,8 @@
 /*
  * The AI providers page: the model connections the agent
- * can write with. dimmi's own models come first when the install offers
- * them, then every key the workspace added, each with how its last check
+ * can write with. dimmi's own models come first: ready when the install
+ * has built-in credentials, shown off with why when it does not. Then
+ * every key the workspace added, each with how its last check
  * went. Adding, testing, renaming and removing are for people the server
  * lets manage keys; everyone else reads the list.
  */
@@ -13,7 +14,7 @@ import { Section, SettingsPage } from "@/features/settings/layout";
 
 import { useAgent } from "../use-agent";
 import { AddProviderModal } from "./add-provider-modal";
-import { BuiltInRow, KeyRow } from "./key-row";
+import { BuiltInOffRow, BuiltInRow, KeyRow } from "./key-row";
 
 /*
  * NoProviders fills the list before the first connection, with the way
@@ -73,6 +74,7 @@ export function ProvidersSettings() {
       >
         {empty ? <NoProviders canKeys={canKeys} onAdd={() => setAdding(true)} /> : null}
         {builtIn ? <BuiltInRow connection={builtIn} /> : null}
+        {view.data && !view.data.managed ? <BuiltInOffRow /> : null}
         {own.map((connection) => (
           <KeyRow key={connection.id} workspace={workspace} connection={connection} manage={canKeys} />
         ))}

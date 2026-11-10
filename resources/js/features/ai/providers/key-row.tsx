@@ -93,6 +93,23 @@ export function BuiltInRow({ connection }: { connection: AiProviderKey }) {
   );
 }
 
+/*
+ * BuiltInOffRow is dimmi's own models on an install that has no
+ * built-in credentials: shown, but off, with why, so people know to add
+ * their own provider instead.
+ */
+export function BuiltInOffRow() {
+  return (
+    <Item
+      mark={<ProviderLogo provider="dimmi" />}
+      title="dimmi"
+      detail="Not set up on this install. Add your own provider, or ask whoever runs dimmi to add built-in credentials."
+    >
+      <Chip variant="caption">Unavailable</Chip>
+    </Item>
+  );
+}
+
 function useRefresh(workspace: string) {
   const client = useQueryClient();
 

@@ -9,7 +9,9 @@
  * Google sign-in points at a local provider started here on a free port,
  * which the binary is allowed to reach and nothing else is. It serves
  * the pseudo locale en-XA beside English, so the language tests can
- * switch to a language whose every word looks different. It runs in the
+ * switch to a language whose every word looks different. Like every cloud
+ * install it has built-in model credentials, pointed at a closed local
+ * port so no test can ever reach a real model. It runs in the
  * local environment: production would refuse its local disk and plain
  * http address, and testing would swap real services for fakes.
  *
@@ -84,6 +86,8 @@ const env = {
   DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS: "ses,test",
   DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET: inboundSecret,
   DIMMI_INBOX__GIF__GIPHY_API_KEY: "e2e-giphy-key",
+  DIMMI_AI__MANAGED__OPENAI__API_KEY: "e2e-managed-key",
+  DIMMI_AI__MANAGED__OPENAI__BASE_URL: "http://127.0.0.1:9/v1",
   DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID: provider.clientId,
   DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET: provider.clientSecret,
   DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER: provider.issuer,
