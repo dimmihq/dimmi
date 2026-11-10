@@ -200,6 +200,10 @@ In one transaction:
 
 Unknown streak: two consecutive runs with outcome `unknown` in same conversation: second unknown goes straight to handoff reason `unknown_streak` (message combines "I couldn't find that" + handoff notice).
 
+Draft mode (05 "Slack AI controls", room `agent_mode = draft`): step 2 does not create a public message. The answer is stored on `ai_runs` (`draft_body`, citations) with outcome `drafted`, never counted toward `ai_reply_count` or unknown streak, and handed to the channel to post as a draft for teammates. A teammate's Send turns it into their own reply (`author_type=member`, `metadata.ai.from_draft = run_id`). Feedback from Solved / Talk to a human / draft discard / Slack feedback buttons is written to `ai_runs.feedback` (`solved`, `handoff`, `discarded`, `good`, `bad`) with `feedback_at`.
+
+Agent delay (room `agent_delay_seconds`): trigger job is scheduled after the delay; gate rule 4 (member or helper replied after trigger) skips with `skip_reason = human_replied_in_delay`.
+
 ## Unknown path
 
 Message (localized template key `unknown` in `lang/*/ai.json`, or agent `messages.unknown` override): "I couldn't find an answer to that in our docs." + handoff offer. Default behavior `unknown_behavior = offer_handoff`:

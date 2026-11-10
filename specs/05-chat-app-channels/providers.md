@@ -119,7 +119,7 @@ Room rules:
 - Text: `chat.postMessage` with `channel`, `thread_ts` (root ts; DMs: none), `markdown_text` (standard Markdown accepted, max 12,000 chars, cannot combine with `text`/`blocks`), `username` + `icon_url` = teammate name/avatar (or agent name) via `chat:write.customize`, `unfurl_links: false`, `unfurl_media: true`. Escaping: `<`, `>`, `&` escaped to `&lt;` `&gt;` `&amp;` (blocks `<!here>` injection).
 - First reply to top-level message: `thread_ts = root ts`, `reply_broadcast = false`.
 - Attachments: per file `files.getUploadURLExternal` (`filename`, `length`) then POST bytes to `upload_url`, then one `files.completeUploadExternal` with `files: [{id, title}]`, `channel_id`, `thread_ts` (files share into thread). Text message posted first, files after. `files.upload` sunset 2025-11-12: never used. Refs kind `file`, external id `file:{F...}`.
-- Typing: none (no bot typing API outside assistant threads). Capability false.
+- Typing: no typing event for apps. Working state: `agents.sessions.setStatus` in any thread (README "Slack AI controls"); capability `typing` stays false.
 - Receipts: none; `sent` on `ok: true`.
 - State marker (`ChannelStateMarker`): closed `reactions.add` `white_check_mark` on thread root; reopen `reactions.remove`. Errors `already_reacted` / `no_reaction` ignored.
 - Working indicator: `reactions.add` `eyes` on triggering message at `ai.reply_started`, removed at commit/discard.

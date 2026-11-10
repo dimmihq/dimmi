@@ -88,10 +88,20 @@ Slack serves three audiences from one install (`23-integrations`), told apart by
 - Meta app compliance endpoints (deauthorize, data deletion callback) for cloud.
 - CLI `dimmi channels:add <type>`, `channels:list`, `channels:manifest`, `channels:check`. MCP tools for listing channels, health, templates, Telegram connect.
 
+- **Slack AI controls (launch, market check 2026-11-10: Plain, Pylon, ClearFeed, Unthread, Thena, Fin, Zendesk, JSM)**:
+  - Room `agent_mode`: `auto` (default, agent answers in thread) or `draft` (agent posts its answer as a draft in the room's triage thread, or as an ephemeral note to linked members when no triage room, with Send / Edit / Discard buttons; Send posts as the clicker through their 23 user grant, else as bot with their name). Draft outcome `drafted` never counts toward `ai_reply_count`; discard records feedback.
+  - Room `agent_delay_seconds` (0-900, default 0) and `agent_delay_when` (`always` | `inside_hours`): agent run scheduled after the delay; a teammate or helper reply inside it cancels the run (07 gate rule 4).
+  - Native working state: `agents.sessions.setStatus` `processing` at `ai.reply_started`, `active` at commit/discard; `agent_session_stopped` (Stop button) = customer handoff. Fallback 👀 reaction on API error, in Slack Connect rooms and DMs until verified.
+  - Feedback: Solved / Talk to a human presses and draft discards stored as `ai_runs.feedback` (`solved` | `handoff` | `discarded`); Operator and DM replies carry Slack `feedback_buttons` (good/bad) stored the same way.
+  - "Hand back to AI" button on the triage post: clicker re-enables the agent on the conversation (`ai_state active`), audited.
+  - Silence explained: when the agent stays silent on a room message (aimed at someone else, pleasantry, stand-down, delay cancelled), an ephemeral note tells the linked member who opens the thread why, once per thread (`chat.postEphemeral`, from `skip_reason`). Customers never see it.
+  - Shadow score: in `draft` mode each draft is compared with the teammate's sent reply by a cheap judge (07 BYOK, run kind `judge`); room settings show "agreed on N% of last 50" before switching to `auto`.
+  - Knowledge capture (scoped): a teammate-solved room thread offers "Draft help article" on the triage post; creates an 08 article draft for review, never published by itself.
+
 ### Out (later)
 | Item | When |
 |---|---|
-| SMS, Instagram, Facebook Messenger, Microsoft Teams | post-MVP: more channels |
+| SMS, Instagram, Facebook Messenger, Microsoft Teams | post-MVP: more channels. Teams is table stakes for Unthread, ClearFeed, Pylon, JSM, Zendesk: first channel after launch |
 | Inbound reactions mapped into timeline | post-MVP (needs 03 reaction model). MVP: only reactions used as triggers (Slack `emoji` mode) and Slack emoji actions are read; rest counted in metrics |
 | AI streaming on Slack (`chat.startStream`) and Discord (edit-streaming) | later; working indicator covers wait. Telegram private chats stream at MVP |
 | WhatsApp Coexistence (WhatsApp Business app + API on same number), WhatsApp Groups API, WhatsApp media/auth templates, flows, catalogs, payments | post-MVP |
@@ -110,7 +120,7 @@ Slack serves three audiences from one install (`23-integrations`), told apart by
 | later: discord-webhook-identity | teammate replies via channel webhook with teammate name + avatar (one webhook per parent channel). MVP: bot with bold name prefix |
 | later: discord-account-link | "Link account" button: OAuth with signed state ties Discord user to known contact; optional linked role |
 | later: secret-guard | detect API keys, `.env` blocks, emails in public room posts; offer move to private, agent never quotes them |
-| later: knowledge-capture | solved room threads answered by teammate/helper become 08 knowledge source + help-center draft for review |
+| later: knowledge-capture (full) | solved threads as an automatic 08 knowledge source. Launch: on-demand article draft from the triage post |
 | later: chat-app-csat | CSAT over chat apps as buttons (15 CSAT system messages rendered by drivers). MVP: Solved button only |
 
 ## User stories
