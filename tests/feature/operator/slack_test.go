@@ -29,6 +29,7 @@ func TestOperatorInSlack(t *testing.T) {
 		updates := s.slack.called("chat.update")
 		require.Len(t, updates, 1)
 		assert.Contains(t, updates[0].Form.Get("blocks"), "Three refunds this week.")
+		assert.Contains(t, updates[0].Form.Get("blocks"), `"type":"markdown"`, "Markdown renders as Markdown")
 		sent := s.llm.Sent()
 		require.Len(t, sent, 1)
 		last := sent[0].Messages[len(sent[0].Messages)-1].Parts[0].Text

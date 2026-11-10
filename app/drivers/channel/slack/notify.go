@@ -45,14 +45,16 @@ type Button struct {
 
 /*
 Card is a message in Slack's own markup: Text is the plain fallback,
-Lines are its sections in order, Context the small print under them and
-Buttons what can be done from it.
+Markdown a body written in standard Markdown, which Slack renders as is,
+Lines its sections in Slack's own markup, in order, Context the small
+print under them and Buttons what can be done from it.
 */
 type Card struct {
-	Text    string
-	Lines   []string
-	Context string
-	Buttons []Button
+	Text     string
+	Markdown string
+	Lines    []string
+	Context  string
+	Buttons  []Button
 }
 
 /*
@@ -60,6 +62,10 @@ blocks lays the card out as Slack blocks.
 */
 func (c Card) blocks() []slack.Block {
 	var out []slack.Block
+
+	if strings.TrimSpace(c.Markdown) != "" {
+		out = append(out, slack.NewMarkdownBlock("", Truncate(c.Markdown, MaxBodyChars)))
+	}
 
 	for _, line := range c.Lines {
 		if strings.TrimSpace(line) == "" {

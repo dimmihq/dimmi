@@ -34,11 +34,6 @@ import (
 )
 
 /*
-sectionChars is how much of an answer one Slack section holds.
-*/
-const sectionChars = 2900
-
-/*
 answer asks Operator as the teammate and answers in the Slack thread.
 */
 func (o *Operator) answer(ctx context.Context, in Asked, who slackteam.Teammate) error {
@@ -149,8 +144,7 @@ func failure(err error) string {
 answerCard is Operator's answer as a card, with what it looked at.
 */
 func answerCard(m models.OperatorMessage) slackdriver.Card {
-	body := slackdriver.ToSlack(m.Body)
-	card := slackdriver.Card{Text: slackdriver.Truncate(m.Body, 3000), Lines: sections(body)}
+	card := slackdriver.Card{Text: slackdriver.Truncate(m.Body, 3000), Markdown: slackdriver.ToSlack(m.Body)}
 
 	var steps []operator.Step
 	_ = json.Unmarshal(m.Steps, &steps)
@@ -168,24 +162,4 @@ func answerCard(m models.OperatorMessage) slackdriver.Card {
 	}
 
 	return card
-}
-
-/*
-sections cuts text into pieces one Slack section holds, at line breaks
-where it can.
-*/
-func sections(text string) []string {
-	var out []string
-
-	for len(text) > sectionChars {
-		cut := strings.LastIndex(text[:sectionChars], "\n")
-		if cut <= 0 {
-			cut = sectionChars
-		}
-
-		out = append(out, text[:cut])
-		text = strings.TrimLeft(text[cut:], "\n")
-	}
-
-	return append(out, text)
 }
