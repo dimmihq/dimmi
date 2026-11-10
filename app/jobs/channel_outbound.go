@@ -18,7 +18,6 @@ package jobs
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -231,68 +230,33 @@ func authorOf(ctx context.Context, q *models.Queries, msg models.Message) (contr
 }
 
 /*
-agentMeta is what an agent's answer says about itself.
-*/
-type agentMeta struct {
-	AI struct {
-		Outcome string   `json:"outcome"`
-		Actions []string `json:"actions"`
-		Sources []struct {
-			Title string `json:"title"`
-			URL   string `json:"url"`
-		} `json:"sources"`
-	} `json:"ai"`
-}
-
-/*
-readAgentMeta reads an agent's answer about itself, false for a reply
-the agent did not write.
-*/
-func readAgentMeta(msg models.Message) (agentMeta, bool) {
-	var meta agentMeta
-	if msg.AuthorType != string(enums.AuthorTypeAgent) || json.Unmarshal(msg.Metadata, &meta) != nil {
-		return meta, false
-	}
-
-	return meta, true
-}
-
-/*
 controlsOf returns the answer controls an agent's answer offers: every
 answer gives the customer Solved and Talk to a human, so nobody is left
 with an answer they cannot act on; other replies offer what the agent
 listed on them, and a teammate's reply offers none.
 */
 func controlsOf(msg models.Message) []string {
-	meta, ok := readAgentMeta(msg)
-	if !ok {
+	if msg.AuthorType != string(enums.AuthorTypeAgent) {
 		return nil
 	}
 
-	if meta.AI.Outcome == "answered" {
+	meta := models.ReadAnswerMetadata(msg.Metadata)
+	if meta.Outcome == "answered" {
 		return []string{contracts.ControlSolved, contracts.ControlHandoff}
 	}
 
-	return meta.AI.Actions
+	return meta.Actions
 }
 
 /*
 sourcesOf returns the articles an agent's answer cites.
 */
 func sourcesOf(msg models.Message) []contracts.OutboundSource {
-	meta, ok := readAgentMeta(msg)
-	if !ok {
+	if msg.AuthorType != string(enums.AuthorTypeAgent) {
 		return nil
 	}
 
-	out := make([]contracts.OutboundSource, 0, len(meta.AI.Sources))
-	for _, s := range meta.AI.Sources {
-		if s.URL != "" {
-			out = append(out, contracts.OutboundSource{Title: s.Title, URL: s.URL})
-		}
-	}
-
-	return out
+	return contracts.SourcesOf(models.ReadAnswerMetadata(msg.Metadata).Sources)
 }
 
 /*

@@ -84,9 +84,9 @@ used them or a teammate replied.
 type ChannelControlsUpdater interface {
 	/*
 		ClearControls removes the answer controls from the sent message,
-		keeping its text.
+		keeping its text and the articles it cites.
 	*/
-	ClearControls(ctx context.Context, conn models.ChannelConnection, ref ChatMessageRef, body string) error
+	ClearControls(ctx context.Context, conn models.ChannelConnection, ref ChatMessageRef, answer ChatAnswer) error
 }
 
 /*

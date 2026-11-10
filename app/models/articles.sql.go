@@ -906,8 +906,8 @@ func (q *Queries) SearchPublishedArticles(ctx context.Context, arg SearchPublish
 }
 
 const searchWorkspaceArticles = `-- name: SearchWorkspaceArticles :many
-SELECT a.id, a.help_center_id, h.subdomain, v.title, v.slug, v.body_markdown, v.visibility, v.created_at,
-    ts_rank_cd(v.search_document, to_tsquery('dimmi_search', $1::text))::real AS rank
+SELECT a.id, a.help_center_id, v.id AS version_id, h.subdomain, v.title, v.slug, v.body_markdown, v.visibility,
+    v.created_at, ts_rank_cd(v.search_document, to_tsquery('dimmi_search', $1::text))::real AS rank
 FROM articles a
 JOIN article_versions v ON v.id = a.published_version_id
 JOIN help_centers h ON h.id = a.help_center_id
@@ -928,6 +928,7 @@ type SearchWorkspaceArticlesParams struct {
 type SearchWorkspaceArticlesRow struct {
 	ID           ids.UUID  `json:"id"`
 	HelpCenterID ids.UUID  `json:"help_center_id"`
+	VersionID    ids.UUID  `json:"version_id"`
 	Subdomain    string    `json:"subdomain"`
 	Title        string    `json:"title"`
 	Slug         string    `json:"slug"`
@@ -957,6 +958,7 @@ func (q *Queries) SearchWorkspaceArticles(ctx context.Context, arg SearchWorkspa
 		if err := rows.Scan(
 			&i.ID,
 			&i.HelpCenterID,
+			&i.VersionID,
 			&i.Subdomain,
 			&i.Title,
 			&i.Slug,

@@ -71,6 +71,15 @@ func Parse(s string) (UUID, error) {
 }
 
 /*
+Derive returns the name-based UUID of the name under the parent, the
+same every time, so a row that is rebuilt from the same source keeps
+its id.
+*/
+func Derive(parent UUID, name string) UUID {
+	return uuid.NewSHA1(parent, []byte(name))
+}
+
+/*
 Nil returns the all-zero UUID, which never names a row.
 */
 func Nil() UUID {

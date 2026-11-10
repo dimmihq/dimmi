@@ -46,12 +46,40 @@ var (
 )
 
 /*
-Articles manages articles.
+Articles manages articles. Index, when set, keeps the knowledge index
+in step with what is published, inside the same transaction.
 */
 type Articles struct {
 	DB       *database.DB
 	Clock    clock.Clock
 	Renderer *markdown.Renderer
+	Index    ArticleIndexer
+}
+
+/*
+ArticleIndexer brings an article's knowledge chunks in line with its
+live published version.
+*/
+type ArticleIndexer interface {
+	/*
+		IndexArticle stores the chunks of the article's live version,
+		or drops them all when it has none, inside the transaction.
+	*/
+	IndexArticle(ctx context.Context, tx *database.Tx, ws, articleID ids.UUID) error
+}
+
+/*
+settle finishes a change readers can see: the knowledge index follows
+the article, when there is an indexer, and the help center's cache
+version moves on.
+*/
+func (a *Articles) settle(ctx context.Context, tx *database.Tx, at place, articleID ids.UUID) error {
+	if a.Index != nil {
+		if err := a.Index.IndexArticle(ctx, tx, at.workspace, articleID); err != nil {
+			return err
+		}
+	}
+	return touch(ctx, models.New(tx), at, a.Clock.Now())
 }
 
 /*
@@ -262,7 +290,7 @@ func (a *Articles) Publish(ctx context.Context, m authz.Membership, id ids.UUID)
 				return err
 			}
 		}
-		return touch(ctx, q, place{workspace: ws, helpCenter: out.HelpCenterID}, now)
+		return a.settle(ctx, tx, place{workspace: ws, helpCenter: out.HelpCenterID}, out.ID)
 	})
 	return out, err
 }
@@ -345,7 +373,7 @@ func (a *Articles) SetStatus(ctx context.Context, m authz.Membership, id ids.UUI
 		if err != nil {
 			return fmt.Errorf("set article status: %w", err)
 		}
-		return touch(ctx, q, place{workspace: ws, helpCenter: out.HelpCenterID}, now)
+		return a.settle(ctx, tx, place{workspace: ws, helpCenter: out.HelpCenterID}, id)
 	})
 	return out, err
 }
@@ -367,7 +395,7 @@ func (a *Articles) Delete(ctx context.Context, m authz.Membership, id ids.UUID) 
 		if err := q.DeleteArticle(ctx, models.DeleteArticleParams{WorkspaceID: ws, ID: id, Now: now}); err != nil {
 			return fmt.Errorf("delete article: %w", err)
 		}
-		return touch(ctx, q, place{workspace: ws, helpCenter: current.HelpCenterID}, now)
+		return a.settle(ctx, tx, place{workspace: ws, helpCenter: current.HelpCenterID}, id)
 	})
 }
 

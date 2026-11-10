@@ -220,7 +220,11 @@ func (s *Slack) clearControls(ctx context.Context, conn models.ChannelConnection
 		body = *msg.Body
 	}
 
-	err := s.Driver.ClearControls(ctx, conn, contracts.ChatMessageRef{ChannelMessageID: *msg.ChannelMessageID}, body)
+	answer := contracts.ChatAnswer{
+		Body: body, Sources: contracts.SourcesOf(models.ReadAnswerMetadata(msg.Metadata).Sources),
+	}
+
+	err := s.Driver.ClearControls(ctx, conn, contracts.ChatMessageRef{ChannelMessageID: *msg.ChannelMessageID}, answer)
 	if err != nil {
 		return err
 	}

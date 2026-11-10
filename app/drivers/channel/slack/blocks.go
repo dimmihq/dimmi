@@ -70,10 +70,11 @@ func controlBlocks(body, messagePublicID string, controls []string,
 }
 
 /*
-ClearControls takes the buttons off a sent answer, keeping its text.
+ClearControls takes the buttons off a sent answer, keeping its text and
+the articles it cites.
 */
 func (d *Driver) ClearControls(ctx context.Context, conn models.ChannelConnection, ref contracts.ChatMessageRef,
-	body string,
+	answer contracts.ChatAnswer,
 ) error {
 	channel, ts, ok := SplitMessageID(ref.ChannelMessageID)
 	if !ok {
@@ -85,7 +86,11 @@ func (d *Driver) ClearControls(ctx context.Context, conn models.ChannelConnectio
 		return err
 	}
 
-	return d.API(token).Update(ctx, channel, ts, ToSlack(body))
+	body := Truncate(ToSlack(answer.Body), MaxBodyChars)
+
+	return d.API(token).updateBlocks(ctx, channel, ts, rendered{
+		text: body, blocks: controlBlocks(body, "", nil, answer.Sources),
+	})
 }
 
 /*

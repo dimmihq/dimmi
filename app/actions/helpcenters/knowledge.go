@@ -7,9 +7,13 @@
 | agent-only alike, in every live help center. A search finds the
 | articles sharing words with the customer's question, then ranks their
 | sections and returns the best passages, each with the article's public
-| address so the agent can cite it. Drafts never count: only what was
-| published. A workspace with no published article yet falls back to
-| the seeded index, so a new install still has something to answer from.
+| address so the agent can cite it. With an embedding model bound, the
+| same search also ranks the stored chunks by meaning and fuses both
+| rankings, so a question asked in other words still finds its answer;
+| when vectors are unavailable it answers from keywords, as before.
+| Drafts never count: only what was published. A workspace with no
+| published article yet falls back to the seeded index, so a new
+| install still has something to answer from.
 |
 */
 
@@ -39,12 +43,20 @@ candidates is how many articles a search ranks sections of.
 const candidates = 12
 
 /*
-Knowledge is the agent's index over published articles.
+defaultPerDocument is how many chunks of one article a hybrid result
+keeps.
+*/
+const defaultPerDocument = 3
+
+/*
+Knowledge is the agent's index over published articles. Vectors, when
+set, adds the meaning half of a hybrid search.
 */
 type Knowledge struct {
 	DB        *database.DB
 	Addresses Addresses
 	Fallback  contracts.Knowledge
+	Vectors   *knowledge.Vectors
 }
 
 /*
@@ -58,6 +70,7 @@ func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts 
 	}
 	var rows []models.SearchWorkspaceArticlesRow
 	var count int64
+	var restrictions *audiences.Restrictions
 	err := k.inWorkspace(ctx, ws, func(ctx context.Context, q *models.Queries) error {
 		var err error
 		if count, err = q.CountWorkspaceArticles(ctx, ws); err != nil || count == 0 {
@@ -73,6 +86,7 @@ func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts 
 		if err != nil {
 			return err
 		}
+		restrictions = &r
 		rows = slices.DeleteFunc(rows, func(row models.SearchWorkspaceArticlesRow) bool {
 			return !r.Article(row.ID, opts.AllowedAudienceIDs)
 		})
@@ -90,8 +104,13 @@ func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts 
 			ID: r.ID, HelpCenterID: r.HelpCenterID, Subdomain: r.Subdomain, Title: r.Title, Slug: r.Slug,
 			BodyMarkdown: r.BodyMarkdown, Visibility: r.Visibility, CreatedAt: r.CreatedAt,
 		})
+		docs[i].VersionID = r.VersionID
 	}
-	return knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
+	res, err := knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
+	if err != nil || k.Vectors == nil || opts.Mode == "keyword" {
+		return res, err
+	}
+	return k.hybrid(ctx, search{ws: ws, query: query, opts: opts, restrictions: restrictions}, res)
 }
 
 /*
@@ -137,14 +156,24 @@ func (k *Knowledge) Status(ctx context.Context, ws ids.UUID) (contracts.Knowledg
 	if count == 0 && k.Fallback != nil {
 		return k.Fallback.Status(ctx, ws)
 	}
-	return contracts.KnowledgeStatus{HasContent: count > 0, DocumentCount: count}, nil
+	status := contracts.KnowledgeStatus{HasContent: count > 0, DocumentCount: count}
+	if k.Vectors != nil {
+		if status.EmbeddingModel, err = k.Vectors.ActiveModel(ctx, ws); err != nil {
+			return status, err
+		}
+	}
+	return status, nil
 }
 
 /*
-EmbeddingKeyInUse is always false: the index searches by keywords.
+EmbeddingKeyInUse reports whether the workspace embeds through the
+provider key.
 */
-func (k *Knowledge) EmbeddingKeyInUse(context.Context, ids.UUID, ids.UUID) (bool, error) {
-	return false, nil
+func (k *Knowledge) EmbeddingKeyInUse(ctx context.Context, ws, keyID ids.UUID) (bool, error) {
+	if k.Vectors == nil {
+		return false, nil
+	}
+	return k.Vectors.KeyInUse(ctx, ws, keyID)
 }
 
 /*

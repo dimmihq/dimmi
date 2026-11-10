@@ -62,6 +62,8 @@ func NewDatabase(tb testing.TB) Database {
 /*
 createDatabase creates a database and its owner for the test, copied
 from the template when one is named, and drops both when the test ends.
+An empty database gets the extensions only a superuser may create, as
+a template does, so migrations run on it the same way.
 */
 func createDatabase(tb testing.TB, template string) Database {
 	tb.Helper()
@@ -90,6 +92,10 @@ func createDatabase(tb testing.TB, template string) Database {
 	}
 
 	mustExec(tb, admin, create)
+
+	if template == "" {
+		installUntrustedExtensions(tb, withDatabase(tb, serverURL, name, nil))
+	}
 
 	return Database{
 		Name:     name,

@@ -17,6 +17,7 @@
 package slack
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/slack-go/slack"
@@ -194,28 +195,53 @@ func DiscussionCard(channel, summary, link string) TeamCard {
 }
 
 /*
-HomeItem is one conversation on a requester's App Home.
+Home is what one person's App Home shows: a heading, the line shown
+when there is nothing, and their conversations.
 */
-type HomeItem struct {
-	Title  string
-	Status string
-	Link   string
+type Home struct {
+	Heading string
+	Empty   string
+	Items   []HomeItem
 }
 
 /*
-homeBlocks lists the requester's conversations, or says there are none.
+HomeItem is one conversation on an App Home, with a link and the words
+the link reads.
 */
-func homeBlocks(items []HomeItem) slack.Blocks {
-	blocks := []slack.Block{slack.NewHeaderBlock(label("Your requests"))}
-	if len(items) == 0 {
-		blocks = append(blocks, slack.NewSectionBlock(teamMarkup("You have no requests yet. Ask in a support channel."),
-			nil, nil))
+type HomeItem struct {
+	Title     string
+	Status    string
+	Link      string
+	LinkLabel string
+}
+
+/*
+RequesterHome is the App Home of someone who asks the team for help.
+*/
+func RequesterHome(items []HomeItem) Home {
+	return Home{Heading: "Your requests", Empty: "You have no requests yet. Ask in a support channel.", Items: items}
+}
+
+/*
+TeammateHome is the App Home of a linked teammate: what they hold.
+*/
+func TeammateHome(items []HomeItem) Home {
+	return Home{Heading: "Assigned to you", Empty: "Nothing is waiting on you right now.", Items: items}
+}
+
+/*
+homeBlocks lists the person's conversations, or says there are none.
+*/
+func homeBlocks(home Home) slack.Blocks {
+	blocks := []slack.Block{slack.NewHeaderBlock(label(home.Heading))}
+	if len(home.Items) == 0 {
+		blocks = append(blocks, slack.NewSectionBlock(teamMarkup(home.Empty), nil, nil))
 	}
 
-	for _, item := range items {
+	for _, item := range home.Items {
 		line := "*" + shown(Truncate(item.Title, 150)) + "* · " + item.Status
 		if item.Link != "" {
-			line += " · <" + item.Link + "|Open thread>"
+			line += " · <" + item.Link + "|" + cmp.Or(item.LinkLabel, "Open thread") + ">"
 		}
 
 		blocks = append(blocks, slack.NewSectionBlock(teamMarkup(line), nil, nil))

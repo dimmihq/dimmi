@@ -167,6 +167,15 @@ func TestVector(t *testing.T) {
 				database.NewVector([]float32{1, 2, 4})).Scan(&got)
 			require.NoError(t, err)
 			assert.Equal(t, []float32{1, 2, 3}, got.Slice())
+
+			mustExec(t, db, "CREATE TABLE IF NOT EXISTS half_embeddings (id int, embedding halfvec(3))")
+			mustExec(t, db, "TRUNCATE half_embeddings")
+			_, err = db.Exec(t.Context(), "INSERT INTO half_embeddings VALUES (1, $1)",
+				database.NewHalfVector([]float32{1, 2, 3}))
+			require.NoError(t, err)
+			var half database.HalfVector
+			require.NoError(t, db.QueryRow(t.Context(), "SELECT embedding FROM half_embeddings").Scan(&half))
+			assert.Equal(t, []float32{1, 2, 3}, half.Slice())
 		}
 	})
 }

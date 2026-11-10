@@ -19,3 +19,12 @@ LIMIT @row_limit;
 SELECT * FROM channel_member_links
 WHERE workspace_id = @workspace_id AND channel_connection_id = @channel_connection_id
 ORDER BY created_at, id;
+
+-- name: ListMemberOpenConversations :many
+-- ListMemberOpenConversations returns the open conversations the member
+-- holds, newest activity first, for their App Home in Slack.
+SELECT * FROM conversations
+WHERE workspace_id = @workspace_id AND assignee_member_id = @member_id AND status = 'open'
+  AND deleted_at IS NULL AND NOT spam
+ORDER BY last_message_at DESC NULLS LAST, id DESC
+LIMIT @row_limit;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"net/url"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/oauthclient"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
@@ -159,6 +161,28 @@ func TestSlackDirectMessages(t *testing.T) {
 		require.Len(t, posts, 2)
 		assert.Contains(t, posts[1].Form.Get("blocks"), "My invoice is wrong")
 		assert.Len(t, s.slack.called("conversations.open"), 1)
+	})
+
+	t.Run("a teammate who connected their own Slack gets direct messages whatever their email", func(t *testing.T) {
+		t.Parallel()
+		s := newSlackDesk(t)
+		itg := s.install("notifications")
+		s.slack.answer("users.lookupByEmail", `{"ok": false, "error": "users_not_found"}`)
+
+		res := s.Owner.PostJSON("/api/v1/integrations/"+itg+"/member-grants", testkit.JSON{}).AssertOK()
+		callback, err := s.oauth.Approve(res.String("data.authorize_url"), oauthclient.Grant{
+			UserAccess: &oauthclient.Token{Value: "xoxp-" + ids.New().String()}, UserID: ownerSlack,
+			UserScopes: []string{"chat:write", "reactions:write"}, Account: slackTeam,
+		})
+		require.NoError(t, err)
+		parsed, err := url.Parse(callback)
+		require.NoError(t, err)
+		s.Owner.Send(fhttp.MethodGet, parsed.RequestURI(), nil).AssertStatus(fhttp.StatusFound)
+
+		s.Owner.PostJSON("/api/v1/notification-destinations", testkit.JSON{
+			"type": "slack_dm", "integration_id": itg,
+		}).AssertCreated()
+		assert.Empty(t, s.slack.called("users.lookupByEmail"))
 	})
 
 	t.Run("refuses a teammate Slack does not know and one without slack yet", func(t *testing.T) {

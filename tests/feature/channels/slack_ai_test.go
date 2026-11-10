@@ -158,12 +158,36 @@ func TestSlackAgentControls(t *testing.T) {
 		assert.Contains(t, answered.Form.Get("blocks"), `"value":"handoff"`)
 		assert.Contains(t, answered.Form.Get("blocks"), "plans-and-pricing|Plans and pricing")
 
-		for _, m := range sc.messages(conv) {
-			if m.AuthorType == string(enums.AuthorTypeAgent) {
-				require.NotNil(t, m.DeliveryStatus)
-				assert.Equal(t, string(enums.DeliveryStatusSent), *m.DeliveryStatus)
-			}
-		}
+		agentAnswer := sc.agentAnswer(conv)
+		require.NotNil(t, agentAnswer.DeliveryStatus)
+		assert.Equal(t, string(enums.DeliveryStatusSent), *agentAnswer.DeliveryStatus)
+
+		sc.interact(pressed(agentAnswer, contracts.ControlSolved, "U0CUSTOMER"))
+		cleared := sc.lastUpdate(supportRoom)
+		require.NotEmpty(t, cleared)
+		assert.Contains(t, cleared, "plans-and-pricing|Plans and pricing", "the sources stay once the buttons go")
+		assert.NotContains(t, cleared, `"value":"solved"`)
+	})
+
+	t.Run("an answer the agent could not find offers a human and waits for the customer", func(t *testing.T) {
+		t.Parallel()
+		sc, conv := triaged(t)
+		query, _ := json.Marshal(map[string]string{"query": "weather paris"})
+		withAgent(sc).Script(
+			fake.Step{ToolCalls: []contracts.ToolCall{{ID: "c1", Name: "search_knowledge", Arguments: query}}},
+			fake.Step{Text: "I couldn't find anything about that in our docs."},
+		)
+
+		res := sc.runAgent(conv, false)
+		require.Equal(t, "unknown", res.Outcome)
+		sc.Drain()
+
+		replies := sc.posted(supportRoom)
+		require.NotEmpty(t, replies)
+		blocks := replies[len(replies)-1].Form.Get("blocks")
+		assert.Contains(t, blocks, `"value":"handoff"`)
+		assert.NotContains(t, blocks, `"value":"solved"`)
+		assert.Equal(t, string(enums.AIStateActive), sc.refreshed(conv).AiState)
 	})
 
 	t.Run("in a draft room the answer is a draft the teammate sends as themselves", func(t *testing.T) {
@@ -301,4 +325,35 @@ func TestSlackRequestModel(t *testing.T) {
 
 		assert.Len(t, sc.conversations(), 1)
 	})
+}
+
+/*
+agentAnswer returns the agent's newest answer in the conversation.
+*/
+func (sc *slackCase) agentAnswer(conv models.Conversation) models.Message {
+	sc.T.Helper()
+
+	var out models.Message
+	for _, m := range sc.messages(conv) {
+		if m.AuthorType == string(enums.AuthorTypeAgent) && m.Type == string(enums.MessageTypeMessage) {
+			out = m
+		}
+	}
+
+	return out
+}
+
+/*
+lastUpdate returns the blocks of the newest message update in the
+channel, empty for none.
+*/
+func (sc *slackCase) lastUpdate(channel string) string {
+	var out string
+	for _, u := range sc.slack.called("chat.update") {
+		if u.Form.Get("channel") == channel {
+			out = u.Form.Get("blocks")
+		}
+	}
+
+	return out
 }

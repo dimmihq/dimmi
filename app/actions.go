@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
+	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
@@ -126,6 +127,7 @@ type Actions struct {
 	HelpCenters                *helpcenters.HelpCenters
 	Collections                *helpcenters.Collections
 	Articles                   *helpcenters.Articles
+	KnowledgeSettings          *knowledge.Settings
 	HelpImages                 *helpcenters.Images
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public

@@ -35,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	emailactions "github.com/dimmihq/dimmi/app/actions/email"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
+	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/auth"
@@ -74,8 +75,11 @@ WorkspaceInitializers are the setup steps every new workspace goes
 through, registered by the parts of the product that need defaults, and
 ContactErasers what each part removes when a customer is erased, and
 ContactExporters what each adds to a customer's export.
-Retention is asked before any purge destroys data. Entitlements answers
-what a workspace may have and BillingStatus whether it ever paid.
+Retention is asked before any purge destroys data. Knowledge is what
+the agent retrieves from, Embeddings builds embedding drivers and
+Vectors is the workspace vector index behind semantic search.
+Entitlements answers what a workspace may have and BillingStatus
+whether it ever paid.
 EmailChannel is the email channel driver, which also receives inbound
 mail. EmailDomains is what the sending domain actions share.
 Frontend is the browser app's production build and Vite links it, or
@@ -120,6 +124,8 @@ type App struct {
 	BillingStatus         contracts.BillingStatus
 	Knowledge             contracts.Knowledge
 	LLM                   *managers.LLMManager
+	Embeddings            *managers.EmbeddingsManager
+	Vectors               *knowledge.Vectors
 	AI                    *pipeline.Runner
 	EmailChannel          *email.Channel
 	EmailDomains          *emailactions.Domains

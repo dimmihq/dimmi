@@ -361,9 +361,26 @@ func (a *API) Delete(ctx context.Context, channelID, ts string) error {
 Update replaces a message's text, dropping its buttons.
 */
 func (a *API) Update(ctx context.Context, channelID, ts, markdown string) error {
+	return a.updateBlocks(ctx, channelID, ts, rendered{
+		text: markdown, blocks: []slack.Block{slack.NewMarkdownBlock("", Truncate(markdown, MaxBodyChars))},
+	})
+}
+
+/*
+rendered is a message laid out as blocks, with the text Slack shows
+where blocks cannot be.
+*/
+type rendered struct {
+	text   string
+	blocks []slack.Block
+}
+
+/*
+updateBlocks replaces a message with the rendered blocks.
+*/
+func (a *API) updateBlocks(ctx context.Context, channelID, ts string, r rendered) error {
 	_, _, _, err := a.client.UpdateMessageContext(ctx, channelID, ts,
-		slack.MsgOptionBlocks(slack.NewMarkdownBlock("", Truncate(markdown, MaxBodyChars))),
-		slack.MsgOptionText(Truncate(markdown, MaxBodyChars), false))
+		slack.MsgOptionBlocks(r.blocks...), slack.MsgOptionText(Truncate(r.text, MaxBodyChars), false))
 
 	return MapError("chat.update", err)
 }

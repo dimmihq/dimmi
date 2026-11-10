@@ -112,7 +112,11 @@ type KnowledgeSearchResult struct {
 }
 
 /*
-KnowledgeChunk is one citable passage of one document.
+KnowledgeChunk is one citable passage of one document. Similarity is
+the cosine similarity of the chunk's vector to the query when it was
+found by meaning, else its keyword coverage; Coverage is always the
+keyword coverage, nil when keywords did not find it. MatchedBy names
+the retrievers that found it.
 */
 type KnowledgeChunk struct {
 	ID               ids.UUID
@@ -127,6 +131,7 @@ type KnowledgeChunk struct {
 	URL              string
 	Text             string
 	Similarity       *float64
+	Coverage         *float64
 	Score            float64
 	Rank             int
 	MatchedBy        []string

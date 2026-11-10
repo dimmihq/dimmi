@@ -123,9 +123,9 @@ func (a *API) SetSession(ctx context.Context, channel, threadTS, status string) 
 /*
 PublishHome shows the user their App Home.
 */
-func (a *API) PublishHome(ctx context.Context, user string, items []HomeItem) error {
+func (a *API) PublishHome(ctx context.Context, user string, home Home) error {
 	_, err := a.client.PublishViewContext(ctx, slack.PublishViewContextRequest{
-		UserID: user, View: slack.HomeTabViewRequest{Type: slack.VTHomeTab, Blocks: homeBlocks(items)},
+		UserID: user, View: slack.HomeTabViewRequest{Type: slack.VTHomeTab, Blocks: homeBlocks(home)},
 	})
 
 	return MapError("views.publish", err)

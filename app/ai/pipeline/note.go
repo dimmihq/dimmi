@@ -61,8 +61,11 @@ func plainSummary(st *run, d *decision) string {
 	for _, s := range st.sources {
 		titles = append(titles, s.chunk.Title)
 	}
-	if len(titles) > 0 {
+	switch {
+	case len(titles) > 0:
 		tried = "Searched the knowledge base: " + strings.Join(titles, ", ") + "."
+	case st.searched:
+		tried = "Searched the knowledge base for \"" + truncate(st.query, 120) + "\": nothing relevant."
 	}
 	return strings.Join([]string{
 		"Wants: " + wants,

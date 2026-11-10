@@ -26,3 +26,16 @@ NewVector returns a vector holding the values.
 func NewVector(values []float32) Vector {
 	return pgvector.NewVector(values)
 }
+
+/*
+HalfVector is a pgvector halfvec value: half the storage of a vector,
+precise enough for similarity search. It binds and scans like Vector.
+*/
+type HalfVector = pgvector.HalfVector
+
+/*
+NewHalfVector returns a half-precision vector holding the values.
+*/
+func NewHalfVector(values []float32) HalfVector {
+	return pgvector.NewHalfVector(values)
+}

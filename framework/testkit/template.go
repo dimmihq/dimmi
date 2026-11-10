@@ -19,6 +19,9 @@
 | The migrations run as a role without superuser rights, like the
 | application. Each copy is handed to the test's own role, so the test
 | owns every table exactly as it would after migrating by itself.
+| Extensions PostgreSQL only lets a superuser create, such as pgvector,
+| are installed first by the superuser, as an operator does once on a
+| real server, so a migration's CREATE EXTENSION IF NOT EXISTS passes.
 |
 */
 
@@ -190,6 +193,7 @@ func buildTemplate(tb testing.TB, admin *pgx.Conn, name string, migrate Migrate)
 	mustExec(tb, admin, fmt.Sprintf("CREATE DATABASE %s OWNER %s", name, name))
 
 	serverURL := Env(tb, "DATABASE_URL")
+	installUntrustedExtensions(tb, withDatabase(tb, serverURL, name, nil))
 	if err := migrate(tb.Context(), withDatabase(tb, serverURL, name, url.UserPassword(name, password))); err != nil {
 		tb.Fatalf("migrate template %s: %v", name, err)
 	}
@@ -202,4 +206,40 @@ func buildTemplate(tb testing.TB, admin *pgx.Conn, name string, migrate Migrate)
 
 	mustExec(tb, admin, fmt.Sprintf("ALTER DATABASE %s OWNER TO CURRENT_USER", name))
 	mustExec(tb, admin, fmt.Sprintf("ALTER DATABASE %s WITH ALLOW_CONNECTIONS false IS_TEMPLATE true", name))
+}
+
+/*
+untrustedExtensions are the extensions migrations may name that only a
+superuser can create.
+*/
+func untrustedExtensions() []string {
+	return []string{"vector"}
+}
+
+/*
+installUntrustedExtensions creates, as the superuser, each untrusted
+extension the server offers in the database.
+*/
+func installUntrustedExtensions(tb testing.TB, databaseURL string) {
+	tb.Helper()
+
+	conn, err := pgx.Connect(tb.Context(), databaseURL)
+	if err != nil {
+		tb.Fatalf("connect to template as superuser: %v", err)
+	}
+
+	defer func() { _ = conn.Close(context.WithoutCancel(tb.Context())) }()
+
+	for _, extension := range untrustedExtensions() {
+		var available bool
+		if err := conn.QueryRow(tb.Context(),
+			"SELECT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = $1)", extension).
+			Scan(&available); err != nil {
+			tb.Fatalf("look up extension %s: %v", extension, err)
+		}
+
+		if available {
+			mustExec(tb, conn, "CREATE EXTENSION IF NOT EXISTS "+extension)
+		}
+	}
 }

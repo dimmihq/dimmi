@@ -23,6 +23,7 @@ member must not see.
 func unscopedQueries() map[string]string {
 	return map[string]string{
 		"FindConversation":                   "one row by id: conversations.Find checks it with Scope.Contains",
+		"FindConversationForEmbedding":       "the embedding job remembers a closed conversation: no member is asking",
 		"FindConversationByNumber":           "one row by number: conversations.Find checks it with Scope.Contains",
 		"ListConversations":                  "workspace-level readers only: no person to restrict",
 		"ListTeamConversations":              "deleting a team moves all its conversations, whoever may see them",
@@ -37,6 +38,7 @@ func unscopedQueries() map[string]string {
 		"ListWaitingInboxes":                 "the assignment drain: names inboxes, not conversations",
 		"ListWidgetConversations":            "a widget visitor's own conversations: the customer asks, not a member",
 		"ListContactConnectionConversations": "a Slack customer's own requests in App Home: the customer asks",
+		"ListMemberOpenConversations":        "the member's own assigned conversations, always theirs to see",
 		"FindWidgetConversation":             "a widget visitor's own conversations: the customer asks, not a member",
 		"CountWaitingConversations":          "inbox-wide queue totals for inbox settings: names no conversation",
 		"CountInboxConversations":            "whether an inbox being deleted is empty: names no conversation",

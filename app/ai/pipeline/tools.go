@@ -40,15 +40,17 @@ const (
 
 /*
 Search limits: chunks asked of the index, results returned to the
-model, searches per turn, the default minimum similarity and the time
-one search may take.
+model, searches per turn, the default minimum keyword coverage, the
+default minimum cosine similarity of a passage found by meaning, and
+the time one search may take.
 */
 const (
-	searchLimit       = 8
-	searchResults     = 5
-	searchesPerTurn   = 4
-	defaultSimilarity = 0.35
-	searchTimeout     = 5 * time.Second
+	searchLimit             = 8
+	searchResults           = 5
+	searchesPerTurn         = 4
+	defaultSimilarity       = 0.35
+	defaultVectorSimilarity = 0.50
+	searchTimeout           = 5 * time.Second
 )
 
 /*
@@ -225,9 +227,9 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 		Text  string `json:"text"`
 	}
 	results := []result{}
-	threshold := minSimilarity(st.env)
+	gate := similarityGate{keyword: minSimilarity(st.env), vector: minVectorSimilarity(st.env)}
 	for _, ch := range res.Chunks {
-		if len(results) >= searchResults || ch.Similarity == nil || *ch.Similarity < threshold {
+		if len(results) >= searchResults || !gate.passes(ch) {
 			continue
 		}
 		n := st.sourceFor(ch)
@@ -269,6 +271,43 @@ func (st *run) sourceFor(ch contracts.KnowledgeChunk) int {
 	}
 	st.sources = append(st.sources, source{n: len(st.sources) + 1, chunk: ch})
 	return len(st.sources)
+}
+
+/*
+similarityGate holds the minimum each kind of score must reach.
+*/
+type similarityGate struct {
+	keyword float64
+	vector  float64
+}
+
+/*
+passes reports whether a chunk is close enough to the question: found
+by meaning with a cosine similarity at the vector minimum, or covering
+enough of the question's keywords. A chunk found only by keywords is
+held to the keyword minimum, as before vectors existed.
+*/
+func (g similarityGate) passes(ch contracts.KnowledgeChunk) bool {
+	byVector := slices.Contains(ch.MatchedBy, "vector")
+	if byVector && ch.Similarity != nil && *ch.Similarity >= g.vector {
+		return true
+	}
+	if ch.Coverage != nil {
+		return *ch.Coverage >= g.keyword
+	}
+	return !byVector && ch.Similarity != nil && *ch.Similarity >= g.keyword
+}
+
+/*
+minVectorSimilarity is the agent's minimum cosine similarity, or the
+default when unset.
+*/
+func minVectorSimilarity(e *env) float64 {
+	v, err := e.Agent.MinVectorSimilarity.Float64Value()
+	if err != nil || !v.Valid {
+		return defaultVectorSimilarity
+	}
+	return v.Float64
 }
 
 /*

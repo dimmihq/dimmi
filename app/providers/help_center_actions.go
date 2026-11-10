@@ -25,7 +25,8 @@ import (
 )
 
 /*
-bootHelpCenters builds the help center actions.
+bootHelpCenters builds the help center actions and the knowledge
+index their articles feed.
 */
 func bootHelpCenters(a *app.App) {
 	acts := a.Actions
@@ -51,15 +52,18 @@ func bootHelpCenters(a *app.App) {
 	}
 	acts.ChangelogPublic = &changelog.Public{DB: a.DB, Clock: a.Clock, Key: a.DerivedKey("changelog.reactions")}
 	acts.Feedback = feedback.NewPosts(a.DB, a.Clock, a.Mail, acts.HelpCenterAddresses)
+	bootKnowledge(a)
 }
 
 /*
-registerChangelogJobs runs scheduled publishes and mailings.
+registerChangelogJobs runs scheduled publishes and mailings, and the
+embedding jobs of the knowledge index the help centers feed.
 */
 func registerChangelogJobs(a *app.App) error {
 	return errors.Join(
 		queue.Register(a.Queue, &changelog.PublishWorker{Entries: a.Actions.ChangelogEntries}),
 		queue.Register(a.Queue, &changelog.MailWorker{Subscribers: a.Actions.ChangelogSubscribers}),
+		registerKnowledgeJobs(a),
 	)
 }
 

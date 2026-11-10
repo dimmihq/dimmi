@@ -1,6 +1,7 @@
 package channels_test
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -47,12 +48,13 @@ const (
 
 /*
 slackCall is one Web API call the fake Slack received, with the token
-it was made with.
+it was made with and its raw body for calls sent as JSON.
 */
 type slackCall struct {
 	Method string
 	Form   url.Values
 	Token  string
+	Body   string
 }
 
 /*
@@ -144,11 +146,16 @@ serve answers one Web API call.
 */
 func (f *fakeSlack) serve(w fhttp.ResponseWriter, r *fhttp.Request) {
 	method := strings.TrimPrefix(r.URL.Path, "/api/")
+	var raw []byte
+	if r.Body != nil {
+		raw, _ = io.ReadAll(r.Body)
+		r.Body = io.NopCloser(bytes.NewReader(raw))
+	}
 	_ = r.ParseForm()
 
 	f.mu.Lock()
 	token := cmp.Or(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "), r.Form.Get("token"))
-	f.calls = append(f.calls, slackCall{Method: method, Form: r.Form, Token: token})
+	f.calls = append(f.calls, slackCall{Method: method, Form: r.Form, Token: token, Body: string(raw)})
 
 	scripted, ok := f.answers[method]
 	if ok && len(scripted) > 0 {

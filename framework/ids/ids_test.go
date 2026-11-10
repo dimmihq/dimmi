@@ -57,6 +57,14 @@ func TestIDs(t *testing.T) {
 		require.ErrorIs(t, err, ids.ErrInvalid)
 	})
 
+	t.Run("derives the same id from the same parent and name", func(t *testing.T) {
+		t.Parallel()
+		parent := ids.New()
+		assert.Equal(t, ids.Derive(parent, "1"), ids.Derive(parent, "1"))
+		assert.NotEqual(t, ids.Derive(parent, "1"), ids.Derive(parent, "2"))
+		assert.NotEqual(t, ids.Derive(parent, "1"), ids.Derive(ids.New(), "1"))
+	})
+
 	t.Run("has a nil value", func(t *testing.T) {
 		t.Parallel()
 

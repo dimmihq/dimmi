@@ -6,8 +6,9 @@
 | Everything the agent needs that is not a workspace's own choice:
 | the kill switch, the built-in provider's upstream credentials, the
 | subscription sign-in endpoints, budgets, debounce, retention, the
-| self-host bootstrap keys and the directory of seed articles the
-| agent answers from until the help center's index exists.
+| self-host bootstrap keys, the built-in embedder, retrieval timeouts
+| and the directory of seed articles the agent answers from until the
+| help center's index exists.
 |
 */
 
@@ -29,6 +30,7 @@ type AIConfig struct {
 	Breaker   AIBreakerConfig   `koanf:"breaker"`
 	Bootstrap AIBootstrapConfig `koanf:"bootstrap"`
 	Decisions AIDecisionsConfig `koanf:"decisions"`
+	Knowledge AIKnowledgeConfig `koanf:"knowledge"`
 
 	TracesRetentionDays     int  `default:"30"  koanf:"traces_retention_days"`
 	RunsRetentionDays       int  `default:"400" koanf:"runs_retention_days"`
@@ -57,6 +59,8 @@ type AIManagedConfig struct {
 	Anthropic  AIManagedUpstream `koanf:"anthropic"`
 	OpenAI     AIManagedUpstream `koanf:"openai"`
 	OpenWeight AIManagedUpstream `koanf:"openweight"`
+
+	Embeddings AIManagedEmbeddings `koanf:"embeddings"`
 }
 
 /*

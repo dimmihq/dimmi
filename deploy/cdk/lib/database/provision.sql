@@ -12,6 +12,8 @@
 -- either role somehow holds one.
 -- Default privileges make every table the owner creates readable and
 -- writable by it, and MAINTAIN lets the queue's leader reindex its tables.
+-- pgvector may only be created by the master (rds_superuser), so it is
+-- installed here and the owner's migration finds it in place.
 -- Grants are never repeated on existing tables: a migration that takes a
 -- privilege away, such as updating audit entries, must stay in force.
 
@@ -37,6 +39,7 @@ SELECT format('GRANT CONNECT, TEMPORARY ON DATABASE %I TO %I', :'database', :'ap
 
 SELECT format('ALTER SCHEMA public OWNER TO %I', :'owner_role') \gexec
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+CREATE EXTENSION IF NOT EXISTS vector;
 SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'app_role') \gexec
 
 SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE, MAINTAIN ON TABLES TO %I', :'owner_role', :'app_role') \gexec

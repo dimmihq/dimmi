@@ -58,5 +58,7 @@ sql:
             go_type: { import: github.com/dimmihq/dimmi/framework/database, type: SearchDocument }
           - db_type: vector
             go_type: { import: github.com/dimmihq/dimmi/framework/database, type: Vector }
+          - db_type: halfvec
+            go_type: { import: github.com/dimmihq/dimmi/framework/database, type: HalfVector }
           - column: "*.*_encrypted"
             go_type: { import: github.com/dimmihq/dimmi/framework/encryption, type: Sealed }

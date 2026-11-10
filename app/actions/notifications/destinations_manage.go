@@ -266,15 +266,35 @@ func (a *ManageDestinations) createDirect(ctx context.Context, m authz.Membershi
 }
 
 /*
-slackUser finds the member in Slack by their verified address.
+slackUser finds the member in Slack: the Slack user they connected
+themselves, which Slack proved is theirs, or else the one with their
+verified address.
 */
 func (a *ManageDestinations) slackUser(ctx context.Context, m authz.Membership, installation ids.UUID,
 ) (slackdriver.User, error) {
-	var user models.User
+	var (
+		user  models.User
+		grant *models.IntegrationMemberGrant
+	)
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+
 		var err error
-		user, err = models.New(tx).FindUser(ctx, m.Member.UserID)
+		if user, err = q.FindUser(ctx, m.Member.UserID); err != nil {
+			return err
+		}
+
+		found, err := q.FindIntegrationGrantOfMember(ctx, models.FindIntegrationGrantOfMemberParams{
+			WorkspaceID: m.Workspace.ID, IntegrationInstallationID: installation, MemberID: m.Member.ID,
+		})
+		if err == nil && found.Status == "active" {
+			grant = &found
+		}
+
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
 
 		return err
 	})
@@ -282,6 +302,19 @@ func (a *ManageDestinations) slackUser(ctx context.Context, m authz.Membership, 
 		return slackdriver.User{}, fmt.Errorf("find user: %w", err)
 	}
 
+	if grant != nil {
+		return slackdriver.User{ID: grant.ExternalUserID}, nil
+	}
+
+	return a.slackUserByEmail(ctx, m, installation, user)
+}
+
+/*
+slackUserByEmail finds the member in Slack by their verified address.
+*/
+func (a *ManageDestinations) slackUserByEmail(ctx context.Context, m authz.Membership, installation ids.UUID,
+	user models.User,
+) (slackdriver.User, error) {
 	if user.EmailVerifiedAt == nil {
 		return slackdriver.User{}, ErrEmailUnverified
 	}

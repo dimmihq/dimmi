@@ -35,14 +35,16 @@ import (
 
 /*
 Article is one document to index: a title, its public URL and Markdown.
-Documents from a help center also carry their article, help center and
-who may see them; seed documents leave those empty and are public.
+Documents from a help center also carry their article, the published
+version the chunks are cut from, help center and who may see them;
+seed documents leave those empty and are public.
 */
 type Article struct {
 	Title        string
 	URL          string
 	Body         string
 	DocumentID   ids.UUID
+	VersionID    ids.UUID
 	ArticleID    *ids.UUID
 	HelpCenterID *ids.UUID
 	Visibility   contracts.KnowledgeVisibility
@@ -124,7 +126,7 @@ func NewSeed(articles []Article) *Seed {
 		if doc == (ids.UUID{}) {
 			doc = ids.New()
 		}
-		for _, c := range chunkArticle(a) {
+		for _, c := range ChunkArticle(a) {
 			c.DocumentID = doc
 			s.chunks = append(s.chunks, index(c))
 		}
@@ -156,7 +158,7 @@ func (s *Seed) Search(_ context.Context, _ ids.UUID, query string,
 	for i, h := range hits {
 		chunk := s.chunks[h.at].chunk
 		similarity := h.similarity
-		chunk.Similarity = &similarity
+		chunk.Similarity, chunk.Coverage = &similarity, &similarity
 		chunk.Score = h.score
 		chunk.Rank = i + 1
 		chunk.MatchedBy = []string{"bm25"}

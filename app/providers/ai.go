@@ -94,7 +94,7 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 			return nil, err
 		}
 		a.Knowledge = &helpcenters.Knowledge{
-			DB: a.DB, Fallback: seed, Addresses: helpcenters.Addresses{
+			DB: a.DB, Fallback: seed, Vectors: a.Vectors, Addresses: helpcenters.Addresses{
 				BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 			},
 		}

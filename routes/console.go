@@ -10,7 +10,9 @@
 | ran out are handed to their purges, the audit log and the security log
 | drop the entries older than they are kept for, the agent's traces lose
 | their payloads and old runs, all a few minutes apart so they never
-| compete, and every workspace is checked for an active owner.
+| compete, every workspace is checked for an active owner, and the
+| knowledge vectors are swept: refused inputs retried, missing ones
+| filled and models out of use for a week deleted.
 | In the morning owners of workspaces about to be purged are reminded,
 | and owners of access tokens about to expire are warned. Every hour the
 | auth provider key sets visitors sign in with are fetched again when
@@ -53,4 +55,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.PruneAiTracesArgs{}).DailyAt("03:50")
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
+	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
 }

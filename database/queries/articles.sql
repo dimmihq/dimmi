@@ -169,8 +169,8 @@ LIMIT @row_limit;
 -- SearchWorkspaceArticles finds the workspace's published articles, in
 -- every live help center, matching any of the query's words, best first,
 -- with the visibilities asked for. The agent retrieves from it.
-SELECT a.id, a.help_center_id, h.subdomain, v.title, v.slug, v.body_markdown, v.visibility, v.created_at,
-    ts_rank_cd(v.search_document, to_tsquery('dimmi_search', @query::text))::real AS rank
+SELECT a.id, a.help_center_id, v.id AS version_id, h.subdomain, v.title, v.slug, v.body_markdown, v.visibility,
+    v.created_at, ts_rank_cd(v.search_document, to_tsquery('dimmi_search', @query::text))::real AS rank
 FROM articles a
 JOIN article_versions v ON v.id = a.published_version_id
 JOIN help_centers h ON h.id = a.help_center_id

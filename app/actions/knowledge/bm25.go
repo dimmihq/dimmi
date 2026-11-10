@@ -112,10 +112,10 @@ func frontMatter(a *Article, text string) {
 }
 
 /*
-chunkArticle cuts an article at its "## " headings; the text before
+cutArticle cuts an article at its "## " headings; the text before
 the first one is the intro chunk. Empty sections are dropped.
 */
-func chunkArticle(a Article) []contracts.KnowledgeChunk {
+func cutArticle(a Article) []contracts.KnowledgeChunk {
 	var out []contracts.KnowledgeChunk
 	heading := ""
 	var section []string

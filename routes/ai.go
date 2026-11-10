@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The agent's part of the API: its settings, its provider connections,
-| the subscription connect, its runs, its usage and the playground.
+| the subscription connect, its runs, its usage, the playground and
+| the embedding model its knowledge search uses.
 | Tokens need ai:read to read, ai:write to change the agent or ask the
 | playground, and ai:keys to manage connections; the actions then check
 | the member's own permissions, so changing the agent and its
@@ -59,6 +60,10 @@ func aiRoutes(r *routing.Router, a *app.App) {
 
 	aiTraceRoutes(r, a)
 	aiActionRoutes(r, a)
+
+	k := &v1.KnowledgeSettingsController{Settings: a.Actions.KnowledgeSettings, IDs: a.IDs}
+	routing.Get(r, "/knowledge/settings", "knowledge.settings.show", k.Show).Ability("ai:read")
+	routing.Patch(r, "/knowledge/settings", "knowledge.settings.update", k.Update).Ability("ai:write")
 }
 
 /*

@@ -139,6 +139,84 @@ func (q *Queries) ListContactConnectionConversations(ctx context.Context, arg Li
 	return items, nil
 }
 
+const listMemberOpenConversations = `-- name: ListMemberOpenConversations :many
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode FROM conversations
+WHERE workspace_id = $1 AND assignee_member_id = $2 AND status = 'open'
+  AND deleted_at IS NULL AND NOT spam
+ORDER BY last_message_at DESC NULLS LAST, id DESC
+LIMIT $3
+`
+
+type ListMemberOpenConversationsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+// ListMemberOpenConversations returns the open conversations the member
+// holds, newest activity first, for their App Home in Slack.
+func (q *Queries) ListMemberOpenConversations(ctx context.Context, arg ListMemberOpenConversationsParams) ([]Conversation, error) {
+	rows, err := q.db.Query(ctx, listMemberOpenConversations, arg.WorkspaceID, arg.MemberID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Number,
+			&i.InboxID,
+			&i.ChannelConnectionID,
+			&i.ContactID,
+			&i.Subject,
+			&i.Status,
+			&i.Spam,
+			&i.AssigneeMemberID,
+			&i.AssigneeTeamID,
+			&i.AiState,
+			&i.SnoozedUntil,
+			&i.ExternalThreadKey,
+			&i.Source,
+			&i.FirstCustomerMessageAt,
+			&i.LastCustomerMessageAt,
+			&i.FirstReplyAt,
+			&i.LastReplyAt,
+			&i.LastMessageAt,
+			&i.ClosedAt,
+			&i.MessageCount,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AiReplyCount,
+			&i.AiCostMicros,
+			&i.AiLanguage,
+			&i.AiHandedOffAt,
+			&i.AiHandoffReason,
+			&i.IsTest,
+			&i.PreviousConversationID,
+			&i.AssignmentWaitReason,
+			&i.AssignmentWaitingSince,
+			&i.WaitingSince,
+			&i.LastActivityAt,
+			&i.LastMessageID,
+			&i.Search,
+			&i.Priority,
+			&i.WorkflowRunID,
+			&i.AiMode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const patchChannelConnectionConfig = `-- name: PatchChannelConnectionConfig :exec
 UPDATE channel_connections SET config = config || $1::jsonb, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4

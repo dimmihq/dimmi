@@ -323,8 +323,16 @@ func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 
 /*
 offersButtons reports whether a channel can show the customer a
-"talk to a person" button under a reply.
+"talk to a person" button under a reply: the messenger, the API and
+the chat apps that render answer controls.
 */
 func offersButtons(channel string) bool {
-	return channel == "widget" || channel == "api"
+	switch enums.ChannelType(channel) {
+	case enums.ChannelTypeWidget, enums.ChannelTypeAPI, enums.ChannelTypeSlack:
+		return true
+	case enums.ChannelTypeEmail:
+		return false
+	}
+
+	return false
 }

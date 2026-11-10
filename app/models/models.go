@@ -177,6 +177,7 @@ type AiAgent struct {
 	CreatedAt                    time.Time       `json:"created_at"`
 	UpdatedAt                    time.Time       `json:"updated_at"`
 	DeletedAt                    *time.Time      `json:"deleted_at"`
+	MinVectorSimilarity          pgtype.Numeric  `json:"min_vector_similarity"`
 }
 
 type AiProviderKey struct {
@@ -1313,6 +1314,67 @@ type Invitation struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 	RemindedAt        *time.Time `json:"reminded_at"`
 	CustomRoleID      *ids.UUID  `json:"custom_role_id"`
+}
+
+type KnowledgeChunk struct {
+	ID               ids.UUID  `json:"id"`
+	WorkspaceID      ids.UUID  `json:"workspace_id"`
+	ArticleID        ids.UUID  `json:"article_id"`
+	ArticleVersionID ids.UUID  `json:"article_version_id"`
+	HelpCenterID     ids.UUID  `json:"help_center_id"`
+	Ordinal          int32     `json:"ordinal"`
+	Title            string    `json:"title"`
+	HeadingPath      []string  `json:"heading_path"`
+	Body             string    `json:"body"`
+	Visibility       string    `json:"visibility"`
+	EmbedHash        string    `json:"embed_hash"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+type KnowledgeConversation struct {
+	ConversationID ids.UUID                `json:"conversation_id"`
+	WorkspaceID    ids.UUID                `json:"workspace_id"`
+	Body           string                  `json:"body"`
+	EmbedHash      string                  `json:"embed_hash"`
+	Search         database.SearchDocument `json:"search"`
+	ClosedAt       time.Time               `json:"closed_at"`
+	UpdatedAt      time.Time               `json:"updated_at"`
+}
+
+type KnowledgeEmbedding struct {
+	WorkspaceID ids.UUID            `json:"workspace_id"`
+	ModelKey    string              `json:"model_key"`
+	EmbedHash   string              `json:"embed_hash"`
+	Dims        int32               `json:"dims"`
+	Embedding   database.HalfVector `json:"embedding"`
+	CreatedAt   time.Time           `json:"created_at"`
+}
+
+type KnowledgeEmbeddingFailure struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ModelKey    string    `json:"model_key"`
+	EmbedHash   string    `json:"embed_hash"`
+	Attempts    int32     `json:"attempts"`
+	LastError   string    `json:"last_error"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type KnowledgeSetting struct {
+	WorkspaceID      ids.UUID   `json:"workspace_id"`
+	ActiveModelKey   *string    `json:"active_model_key"`
+	EmbeddingKeyID   *ids.UUID  `json:"embedding_key_id"`
+	PendingModelKey  *string    `json:"pending_model_key"`
+	PendingKeyID     *ids.UUID  `json:"pending_key_id"`
+	PreviousModelKey *string    `json:"previous_model_key"`
+	EmbeddingsStatus string     `json:"embeddings_status"`
+	EmbeddingsError  *string    `json:"embeddings_error"`
+	ReembedTotal     int32      `json:"reembed_total"`
+	ReembedDone      int32      `json:"reembed_done"`
+	ReembedFailed    int32      `json:"reembed_failed"`
+	ReembedStartedAt *time.Time `json:"reembed_started_at"`
+	SwitchedAt       *time.Time `json:"switched_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type Maintenance struct {

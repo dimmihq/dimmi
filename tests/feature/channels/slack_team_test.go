@@ -336,7 +336,21 @@ func TestSlackHomeAndSessions(t *testing.T) {
 
 		sc.deliver(map[string]any{"type": "app_home_opened", "user": "U0CUSTOMER", "tab": "home"})
 
-		require.Len(t, sc.slack.called("views.publish"), 1)
+		views := sc.slack.called("views.publish")
+		require.Len(t, views, 1)
+		assert.Contains(t, views[0].Body, "Your requests")
+	})
+
+	t.Run("a linked teammate's home tab lists what they hold instead", func(t *testing.T) {
+		t.Parallel()
+		sc, _ := opened(t)
+
+		sc.deliver(map[string]any{"type": "app_home_opened", "user": "U0TEAMMATE", "tab": "home"})
+
+		views := sc.slack.called("views.publish")
+		require.Len(t, views, 1)
+		assert.Contains(t, views[0].Body, "Assigned to you")
+		assert.NotContains(t, views[0].Body, "Your requests")
 	})
 
 	t.Run("stopping the agent in Slack hands the conversation to the team", func(t *testing.T) {
