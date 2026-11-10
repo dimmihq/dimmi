@@ -173,7 +173,8 @@ func (r *Runner) writeAnswer(ctx context.Context, tx *database.Tx, st *run, d *d
 /*
 writeUnknown posts the no-answer. A second no-answer in a row, an
 agent set to hand off, or a channel with no button to offer a person
-hands off; otherwise the widget offers a person with a button.
+hands off, and the reply says a teammate is on the way; otherwise the
+customer is offered a person with a button.
 */
 func (r *Runner) writeUnknown(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
 	e := st.env
@@ -190,8 +191,9 @@ func (r *Runner) writeUnknown(ctx context.Context, tx *database.Tx, st *run, d *
 		d.outcome, d.handoffReason = outcomeHandoff, "unknown_streak"
 		d.reply = r.reply(e, d) + "\n\n" + r.line(e, e.handoffKey())
 		return r.writeHandoff(ctx, tx, st, d)
-	case available && (e.Agent.UnknownBehavior == "handoff" || !offersButtons(e.ChannelType)):
+	case handsOffUnknowns(e):
 		d.outcome, d.handoffReason = outcomeHandoff, "unknown"
+		d.reply = r.reply(e, d) + "\n\n" + r.line(e, e.handoffKey())
 		return r.writeHandoff(ctx, tx, st, d)
 	}
 	d.offerHandoff = available

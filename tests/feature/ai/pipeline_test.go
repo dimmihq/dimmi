@@ -136,7 +136,10 @@ func TestAiTurn(t *testing.T) {
 		assert.Equal(t, "unknown", res.HandoffReason)
 
 		s := h.load(conv, res.RunID)
-		assert.Contains(t, str(s.agentReplies()[0].Body), "couldn't find that in our documentation")
+		body := str(s.agentReplies()[0].Body)
+		assert.Contains(t, body, "couldn't find that in our documentation")
+		assert.Contains(t, body, "bringing in a teammate")
+		assert.Contains(t, sentText(h.llm.answer), "call handoff with reason unknown at once")
 		require.Len(t, s.notes(), 1)
 	})
 

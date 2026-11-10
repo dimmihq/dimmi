@@ -122,6 +122,10 @@ func rulesText(e *env, s *TurnSettings) string {
 	if len(names) > 0 {
 		lines = append(lines, "Always hand off when the conversation is about: "+strings.Join(names, ", ")+".")
 	}
+	if handsOffUnknowns(e) {
+		lines = append(lines, "When the documentation does not cover the question, call handoff with reason "+
+			"unknown at once, without asking the customer first, and tell them a teammate will pick it up.")
+	}
 	if text := strings.TrimSpace(s.Instructions); text != "" {
 		lines = append(lines, text)
 	}
@@ -129,6 +133,19 @@ func rulesText(e *env, s *TurnSettings) string {
 		return "No extra rules."
 	}
 	return strings.Join(lines, "\n")
+}
+
+/*
+handsOffUnknowns reports whether a question the documentation does not
+cover goes straight to a person instead of being offered: the agent is
+set to hand off, a person can be reached, and the channel cannot show
+the customer a button to ask for one.
+*/
+func handsOffUnknowns(e *env) bool {
+	if e.availability() == "unavailable" {
+		return false
+	}
+	return e.Agent.UnknownBehavior == "handoff" || !offersButtons(e.ChannelType)
 }
 
 /*
