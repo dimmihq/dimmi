@@ -11,8 +11,10 @@ import { RiAddLine, RiDeleteBin6Line, RiSparkling2Line } from "@remixicon/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Badge } from "@/components/base/badges/badge";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { waitedFor } from "@/features/inbox/conversations";
 import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import {
@@ -31,6 +33,7 @@ import { cx } from "@/utils/cx";
 
 import { ChangesetCard } from "./changeset-card";
 import { OperatorChat } from "./operator-chat";
+import { workspaceScope } from "./scope";
 import { failureText, useOperatorChat } from "./use-operator-chat";
 
 const starters = [
@@ -58,28 +61,65 @@ function Threads({
   return (
     <ul aria-label="Chats" className="flex flex-col gap-0.5 px-2">
       {threads.map((thread) => (
-        <li key={thread.id} className="group/thread flex items-center gap-1">
+        <li key={thread.id} className="group/thread relative flex items-center">
           <button
             type="button"
             onClick={() => onPick(thread.id)}
             aria-current={thread.id === current ? "true" : undefined}
             className={cx(
-              "min-w-0 flex-1 truncate rounded-lg px-2.5 py-1.5 text-start text-body-2-regular text-text-secondary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
-              thread.id === current && "bg-background-secondary-default text-text-primary",
+              "flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg ps-2.5 pe-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+              thread.id === current && "bg-background-secondary-hover",
             )}
           >
-            {thread.title || "New chat"}
+            <span
+              className={cx(
+                "min-w-0 flex-1 truncate text-body-2-regular",
+                thread.id === current ? "text-text-primary" : "text-text-secondary",
+              )}
+            >
+              {thread.title || "New chat"}
+            </span>
+            <Badge className="shrink-0 group-hover/thread:invisible group-focus-within/thread:invisible">
+              {thread.last_message_at ? waitedFor(thread.last_message_at) : "new"}
+            </Badge>
           </button>
           <IconButton
             size="small"
             icon={RiDeleteBin6Line}
             aria-label={`Delete ${thread.title || "chat"}`}
-            className="opacity-0 group-hover/thread:opacity-100 focus-visible:opacity-100"
+            className="absolute end-1 opacity-0 group-hover/thread:opacity-100 focus-visible:opacity-100"
             onClick={() => onDelete(thread.id)}
           />
         </li>
       ))}
     </ul>
+  );
+}
+
+/*
+ * Welcome opens a new chat: what Operator is for, and questions to start
+ * with.
+ */
+function Welcome({ onAsk }: { onAsk: (question: string) => void }) {
+  return (
+    <div className="flex flex-col items-center gap-5 py-6 text-center">
+      <span className="flex size-11 items-center justify-center rounded-full bg-background-primary-default shadow-card">
+        <RiSparkling2Line aria-hidden className="size-5 text-foreground-icon-secondary" />
+      </span>
+      <div className="flex max-w-md flex-col gap-1">
+        <h2 className="text-title-3-semibold text-text-primary">What should we look into?</h2>
+        <p className="text-body-regular text-text-secondary">
+          Ask about your workspace. Operator reads what you can see, and proposes changes for you to approve.
+        </p>
+      </div>
+      <div className="flex max-w-xl flex-wrap justify-center gap-2">
+        {starters.map((starter) => (
+          <Button key={starter} size="small" variant="secondary" onClick={() => onAsk(starter)}>
+            {starter}
+          </Button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -92,22 +132,11 @@ function Chat({ workspace, thread }: { workspace: string; thread: string }) {
     <OperatorChat
       thread={data}
       chat={chat}
-      empty={
-        <div className="flex flex-col items-start gap-3 px-1 pt-2">
-          <p className="text-body-2-regular text-text-secondary">
-            Ask about your workspace. Operator reads what you can see, and proposes changes for you to approve.
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {starters.map((starter) => (
-              <Button key={starter} size="small" variant="secondary" onClick={() => chat.ask(starter)}>
-                {starter}
-              </Button>
-            ))}
-          </div>
-        </div>
-      }
+      empty={<Welcome onAsk={chat.ask} />}
       placeholder="Ask Operator about your workspace"
       inputId="operator-page-input"
+      scope={workspaceScope}
+      wide
     />
   );
 }
@@ -125,7 +154,10 @@ function Waiting({ workspace }: { workspace: string }) {
   }
 
   return (
-    <section aria-label="Waiting for review" className="flex flex-col gap-2 px-4 pb-3">
+    <section
+      aria-label="Waiting for review"
+      className="mx-auto flex w-full max-w-[720px] flex-col gap-2 px-6 pt-2 pb-3"
+    >
       <h2 className="text-caption-1-semibold text-text-tertiary">Proposed on its own · {own.length}</h2>
       {own.slice(0, 3).map((changeset) => (
         <ChangesetCard key={changeset.id} changeset={changeset} onDecide={onDecide} />

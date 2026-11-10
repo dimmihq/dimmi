@@ -6,7 +6,13 @@
  * someone changed it since. A change that failed says why and can be
  * tried again.
  */
-import { RiArrowGoBackLine, RiCheckLine, RiCloseLine, RiErrorWarningLine } from "@remixicon/react";
+import {
+  RiArrowGoBackLine,
+  RiCheckLine,
+  RiCloseLine,
+  RiErrorWarningLine,
+  RiGitPullRequestLine,
+} from "@remixicon/react";
 import { useState } from "react";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
@@ -48,7 +54,7 @@ function FullText({ kind, text }: { kind: string; text: string }) {
       <summary className="cursor-pointer list-none text-caption-1-medium text-text-tertiary outline-none hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
         Show the text
       </summary>
-      <div className="mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-separator-border bg-background-primary-default p-2.5">
+      <div className="mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-separator-border bg-background-secondary-default p-2.5">
         {kind.startsWith("procedure.") ? (
           <pre className="text-caption-1-regular whitespace-pre-wrap text-text-secondary">{text}</pre>
         ) : (
@@ -79,57 +85,93 @@ export function ChangesetCard({
       setPending(null);
     }
   };
-  const open = changeset.status === "pending" || changeset.status === "failed";
-
   return (
     <section
       aria-label={changeset.title}
-      className="flex flex-col gap-3 rounded-2xl border border-border-button-default bg-background-secondary-default p-3"
+      className="flex flex-col overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-xs"
     >
-      <header className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-body-medium text-text-primary">{changeset.title}</h3>
-          {changeset.reason ? <p className="text-body-2-regular text-text-secondary">{changeset.reason}</p> : null}
-        </div>
+      <header className="flex min-h-10 items-center gap-2 border-b border-separator-border ps-3 pe-2 py-2">
+        <RiGitPullRequestLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+        <h3 className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{changeset.title}</h3>
         <Chip variant="caption" color={statusColors[changeset.status]} className="shrink-0 py-0">
           {changeset.auto && changeset.status === "applied" ? "Applied on its own" : statusLabels[changeset.status]}
         </Chip>
       </header>
-      <ul className="flex flex-col gap-1.5">
-        {changeset.operations.map((operation) => (
-          <li
-            key={`${operation.kind}:${operation.label}`}
-            className="flex items-start gap-2 text-body-2-regular text-text-primary"
-          >
-            <RiCheckLine
-              aria-hidden
-              className={cx(
-                "mt-0.5 size-3.5 shrink-0",
-                operation.outcome === "applied" ? "text-foreground-icon-primary" : "text-foreground-icon-quaternary",
-              )}
-            />
-            <span className="flex min-w-0 flex-col gap-1">
-              <span>
-                {operation.label}
-                {operation.kind === "action.run" ? (
-                  <span className="text-text-tertiary"> · cannot be undone</span>
-                ) : operation.outcome && outcomeLabels[operation.outcome] ? (
-                  <span className="text-text-tertiary"> · {outcomeLabels[operation.outcome]}</span>
-                ) : null}
-              </span>
-              {operation.text ? <FullText kind={operation.kind} text={operation.text} /> : null}
+      <div className="flex flex-col gap-2.5 px-3 py-2.5">
+        {changeset.reason ? <p className="text-body-2-regular text-text-secondary">{changeset.reason}</p> : null}
+        <Operations changeset={changeset} />
+        {changeset.error || failure ? (
+          <p className="flex items-start gap-1.5 text-body-2-regular text-text-error-primary">
+            <RiErrorWarningLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+            {failure ?? changeset.error}
+          </p>
+        ) : null}
+      </div>
+      <Decisions changeset={changeset} pending={pending} decide={decide} />
+    </section>
+  );
+}
+
+/*
+ * Operations lists what a changeset does, one plain line each, marked
+ * once applied.
+ */
+function Operations({ changeset }: { changeset: OperatorChangeset }) {
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {changeset.operations.map((operation) => (
+        <li
+          key={`${operation.kind}:${operation.label}`}
+          className="flex items-start gap-2 text-body-2-regular text-text-primary"
+        >
+          <RiCheckLine
+            aria-hidden
+            className={cx(
+              "mt-0.5 size-3.5 shrink-0",
+              operation.outcome === "applied" ? "text-foreground-icon-primary" : "text-foreground-icon-quaternary",
+            )}
+          />
+          <span className="flex min-w-0 flex-col gap-1">
+            <span>
+              {operation.label}
+              {operation.kind === "action.run" ? (
+                <span className="text-text-tertiary"> · cannot be undone</span>
+              ) : operation.outcome && outcomeLabels[operation.outcome] ? (
+                <span className="text-text-tertiary"> · {outcomeLabels[operation.outcome]}</span>
+              ) : null}
             </span>
-          </li>
-        ))}
-      </ul>
-      {changeset.error || failure ? (
-        <p className="flex items-start gap-1.5 text-body-2-regular text-text-error-primary">
-          <RiErrorWarningLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-          {failure ?? changeset.error}
-        </p>
-      ) : null}
+            {operation.text ? <FullText kind={operation.kind} text={operation.text} /> : null}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/*
+ * Decisions are the buttons a changeset offers in its state: apply or
+ * decline while it waits or after it failed, undo once applied unless
+ * all it did was run actions.
+ */
+function Decisions({
+  changeset,
+  pending,
+  decide,
+}: {
+  changeset: OperatorChangeset;
+  pending: ChangesetDecision | null;
+  decide: (decision: ChangesetDecision) => void;
+}) {
+  const open = changeset.status === "pending" || changeset.status === "failed";
+  const undoable = changeset.status === "applied" && changeset.operations.some((op) => op.kind !== "action.run");
+  if (!open && !undoable) {
+    return null;
+  }
+
+  return (
+    <footer className="flex gap-2 px-3 pb-3">
       {open ? (
-        <div className="flex gap-2">
+        <>
           <Button size="small" loading={pending === "applications"} onClick={() => decide("applications")}>
             {changeset.status === "failed" ? "Try again" : "Apply"}
           </Button>
@@ -142,20 +184,18 @@ export function ChangesetCard({
           >
             Decline
           </Button>
-        </div>
-      ) : null}
-      {changeset.status === "applied" && changeset.operations.some((op) => op.kind !== "action.run") ? (
+        </>
+      ) : (
         <Button
           size="small"
           variant="secondary"
-          className="self-start"
           leadingIcon={RiArrowGoBackLine}
           loading={pending === "reversions"}
           onClick={() => decide("reversions")}
         >
           Undo
         </Button>
-      ) : null}
-    </section>
+      )}
+    </footer>
   );
 }

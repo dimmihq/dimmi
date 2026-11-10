@@ -9,7 +9,7 @@ import {
   RiSparklingLine,
   RiStopFill,
 } from "@remixicon/react";
-import { useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useRef, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { ComposerLoader } from "@/components/application/composer-loader/composer-loader";
 import { cx } from "@/utils/cx";
@@ -49,6 +49,10 @@ export interface AgentComposerProps {
   inputId?: string;
   /** Dimmi: the provider and message count line under the pill. */
   showStatus?: boolean;
+  /** Dimmi: the attachment button, left out where there is nothing to attach. */
+  attach?: boolean;
+  /** Dimmi: the line under the pill, in place of the provider and count. */
+  status?: ReactNode;
 }
 
 export function AgentComposer({
@@ -64,6 +68,8 @@ export function AgentComposer({
   placeholder = "Ask me anything",
   inputId = "agent-composer-input",
   showStatus = true,
+  attach = true,
+  status,
 }: AgentComposerProps) {
   const localize = useTemplateCopy();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +98,7 @@ export function AgentComposer({
           onSubmit={submit}
           className={cx(
             "flex h-[52px] w-full items-center gap-2.5 rounded-full p-2",
+            !attach && "ps-4",
             // ComposerLoader paints its own pill surface and runs the light
             // behind its children, so an opaque form would cover the light
             // entirely. While busy the form steps aside and lets it show.
@@ -104,6 +111,7 @@ export function AgentComposer({
               same control. They resolve one step lighter than the pill in dark
               and one step darker in light, which is why a single pair works for
               both themes without a dark: override. */}
+          {attach ? (
           <button
             type="button"
             aria-label="Add attachment"
@@ -111,6 +119,7 @@ export function AgentComposer({
           >
             <RiAttachment2 className="size-5" aria-hidden />
           </button>
+          ) : null}
 
           <label className="sr-only" htmlFor={inputId}>
             {placeholder}
@@ -163,7 +172,10 @@ export function AgentComposer({
         </form>
       </ComposerLoader>
 
-      <div className={cx("flex h-[26px] w-full items-center justify-between", !showStatus && "hidden")}>
+      {status ? (
+        <div className="flex h-[26px] w-full items-center justify-between gap-3 px-1">{status}</div>
+      ) : null}
+      <div className={cx("flex h-[26px] w-full items-center justify-between", (!showStatus || status) && "hidden")}>
         <div className="flex items-center gap-3">
           <StatusItem icon={RiInfinityLine} label={provider ?? "Not configured"} />
         </div>

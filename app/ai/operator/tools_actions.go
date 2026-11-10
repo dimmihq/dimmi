@@ -102,7 +102,7 @@ func (e *Engine) lookup(live actionkit.Live) handler {
 			return result{}, err
 		}
 		s.tainted = true
-		st := Step{Tool: actionPrefix + live.Spec.Name, Summary: "Looked up " + live.Spec.Title}
+		st := Step{Tool: actionPrefix + live.Spec.Name, Summary: live.Spec.Title}
 		return result{text: reply.Text, step: st}, nil
 	}
 }
