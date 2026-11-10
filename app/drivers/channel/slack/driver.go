@@ -153,13 +153,15 @@ type target struct {
 
 /*
 Send posts the reply into its thread, then its files, and remembers
-every part.
+each part as soon as Slack takes it. A send tried again after part of
+it was taken posts only what is still missing, so the customer never
+sees the text twice.
 */
 func (d *Driver) Send(ctx context.Context, conn models.ChannelConnection, msg contracts.OutboundMessage) (
 	contracts.SendResult, error,
 ) {
 	sent, err := d.Places.SentParts(ctx, conn, msg.MessageID)
-	if err != nil || len(sent) > 0 {
+	if err != nil || complete(sent, msg) {
 		return resultOf(sent), err
 	}
 
@@ -177,16 +179,37 @@ func (d *Driver) Send(ctx context.Context, conn models.ChannelConnection, msg co
 		return contracts.SendResult{}, err
 	}
 
-	parts, err := d.post(ctx, sending{conn: conn, token: token, to: to, msg: msg})
+	parts, err := d.post(ctx, sending{conn: conn, token: token, to: to, msg: msg}, sent)
 	if err != nil {
 		return contracts.SendResult{}, err
 	}
 
-	if err := d.Places.RecordParts(ctx, conn, msg.MessageID, parts); err != nil {
-		return contracts.SendResult{}, err
+	return resultOf(parts), nil
+}
+
+/*
+complete reports whether the parts already posted are the whole reply:
+its files when it has some, else its text.
+*/
+func complete(sent []Part, msg contracts.OutboundMessage) bool {
+	if len(sent) == 0 {
+		return false
 	}
 
-	return resultOf(parts), nil
+	return len(msg.Attachments) == 0 || hasKind(sent, "file")
+}
+
+/*
+hasKind reports whether one of the parts is of the kind.
+*/
+func hasKind(parts []Part, kind string) bool {
+	for _, part := range parts {
+		if part.Kind == kind {
+			return true
+		}
+	}
+
+	return false
 }
 
 /*
@@ -201,30 +224,41 @@ type sending struct {
 }
 
 /*
-post posts the text, then shares the files into the same thread.
+post posts the text unless it was already posted, then shares the
+files into the same thread, remembering each as soon as Slack takes it.
 */
-func (d *Driver) post(ctx context.Context, s sending) ([]Part, error) {
-	var parts []Part
+func (d *Driver) post(ctx context.Context, s sending, sent []Part) ([]Part, error) {
+	parts := sent
 
-	if s.msg.BodyMarkdown != "" || len(s.msg.Attachments) == 0 {
+	if (s.msg.BodyMarkdown != "" || len(s.msg.Attachments) == 0) && !hasKind(sent, "text") {
 		ts, err := d.postText(ctx, s)
 		if err != nil {
 			return nil, err
 		}
 
-		parts = append(parts, Part{ExternalID: MessageID(s.to.channel, ts), Kind: "text"})
+		text := []Part{{ExternalID: MessageID(s.to.channel, ts), Kind: "text"}}
+		if err := d.Places.RecordParts(ctx, s.conn, s.msg.MessageID, text); err != nil {
+			return nil, err
+		}
+
+		parts = append(parts, text...)
 	}
 
 	files, err := d.API(s.token).upload(ctx, s.to, s.msg.Attachments)
-	if err != nil {
+	if err != nil || len(files) == 0 {
+		return parts, err
+	}
+
+	shared := make([]Part, 0, len(files))
+	for _, file := range files {
+		shared = append(shared, Part{ExternalID: FileID(file), Index: len(parts) + len(shared), Kind: "file"})
+	}
+
+	if err := d.Places.RecordParts(ctx, s.conn, s.msg.MessageID, shared); err != nil {
 		return nil, err
 	}
 
-	for _, file := range files {
-		parts = append(parts, Part{ExternalID: FileID(file), Index: len(parts), Kind: "file"})
-	}
-
-	return parts, nil
+	return append(parts, shared...), nil
 }
 
 /*

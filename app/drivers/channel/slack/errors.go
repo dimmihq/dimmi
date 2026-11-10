@@ -18,6 +18,7 @@ package slack
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/slack-go/slack"
 
@@ -38,6 +39,12 @@ const (
 	CodeNoReaction      = "slack_no_reaction"
 	CodeMessageNotFound = "slack_message_not_found"
 )
+
+/*
+slowDownWait is how long a send waits when Slack answers that it is
+rate limited without naming a time.
+*/
+const slowDownWait = 30 * time.Second
 
 /*
 errorClass is what one of Slack's error codes means: the product's code,
@@ -73,6 +80,9 @@ func classOf(slackCode string) errorClass {
 			CodeRestricted, "A Slack admin policy blocks the app from posting here.",
 			contracts.ErrPermanent,
 		}
+	case "internal_error", "fatal_error", "service_unavailable", "request_timeout", "timeout",
+		"team_added_to_org":
+		return errorClass{"slack_" + slackCode, "Slack could not take the request just now (" + slackCode + ").", nil}
 	default:
 		return errorClass{
 			"slack_" + slackCode, "Slack refused the request (" + slackCode + ").", contracts.ErrPermanent,
@@ -83,8 +93,8 @@ func classOf(slackCode string) errorClass {
 /*
 MapError turns an error from the Slack SDK into the channel contract's
 errors: a rate limit to RateLimitedError, Slack's answers to a
-SendError with the product's code, and anything else to a transient
-error.
+SendError with the product's code, transient when Slack itself is
+having trouble, and anything else to a transient error.
 */
 func MapError(method string, err error) error {
 	if err == nil {
@@ -96,6 +106,10 @@ func MapError(method string, err error) error {
 	}
 
 	if answer, ok := errors.AsType[slack.SlackErrorResponse](err); ok {
+		if answer.Err == "ratelimited" {
+			return &contracts.RateLimitedError{RetryAfter: slowDownWait}
+		}
+
 		class := classOf(answer.Err)
 
 		return &contracts.SendError{Code: class.code, Message: class.message, Err: class.sentinel}
