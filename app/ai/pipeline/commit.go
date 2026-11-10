@@ -17,12 +17,14 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -220,21 +222,60 @@ func (r *Runner) writeHandoff(ctx context.Context, tx *database.Tx, st *run, d *
 }
 
 /*
-post writes the decision's reply as the agent.
+post writes the decision's reply as the agent and hands it to its
+channel: a channel that pushes, such as email or Slack, gets the reply
+queued in the same transaction, like a teammate's.
 */
 func (r *Runner) post(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
 	e := st.env
+	status, err := r.deliveryStatus(ctx, tx, e)
+	if err != nil {
+		return err
+	}
 	text := withConfirmation(r.reply(e, d), st, d)
 	msg, conv, err := r.agentWriter(tx, e).Append(ctx, e.Conversation, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: text, BodyFormat: new("markdown"),
-		Metadata: r.metadata(st, d), Automatic: !d.substantive,
+		Metadata: r.metadata(st, d), Automatic: !d.substantive, DeliveryStatus: status,
 	})
 	if err != nil {
 		return fmt.Errorf("post %s reply: %w", d.outcome, err)
 	}
 	e.Conversation = conv
 	d.answerID = &msg.ID
-	return nil
+	if r.Delivery == nil {
+		return nil
+	}
+	return r.Delivery.Dispatch(ctx, tx, msg)
+}
+
+/*
+deliveryStatus is how the reply starts on the conversation's channel,
+nil when the runner delivers nothing or the customer has no address
+there.
+*/
+func (r *Runner) deliveryStatus(ctx context.Context, tx *database.Tx, e *env) (*string, error) {
+	if r.Delivery == nil {
+		return nil, nil
+	}
+	q := models.New(tx)
+	conn, err := conversations.Connection(ctx, q, e.Conversation)
+	if err != nil {
+		return nil, err
+	}
+	contact, err := q.FindContact(ctx, models.FindContactParams{
+		WorkspaceID: e.Conversation.WorkspaceID, ID: e.Conversation.ContactID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("find contact: %w", err)
+	}
+	route, err := r.Delivery.Plan(conn, contact)
+	if errors.Is(err, exceptions.ErrContactUnreachable) || errors.Is(err, exceptions.ErrChannelUnsupported) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &route.Status, nil
 }
 
 /*

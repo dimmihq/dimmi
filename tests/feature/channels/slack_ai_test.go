@@ -141,6 +141,27 @@ func answer(llm *fake.LLM) {
 func TestSlackAgentControls(t *testing.T) {
 	t.Parallel()
 
+	t.Run("in an auto room the agent's answer is posted in the customer's thread", func(t *testing.T) {
+		t.Parallel()
+		sc, conv := triaged(t)
+		answer(withAgent(sc))
+
+		res := sc.runAgent(conv, false)
+		require.Equal(t, "answered", res.Outcome)
+		sc.Drain()
+
+		replies := sc.posted(supportRoom)
+		require.NotEmpty(t, replies)
+		assert.Equal(t, rootTS, replies[len(replies)-1].Form.Get("thread_ts"))
+
+		for _, m := range sc.messages(conv) {
+			if m.AuthorType == string(enums.AuthorTypeAgent) {
+				require.NotNil(t, m.DeliveryStatus)
+				assert.Equal(t, string(enums.DeliveryStatusSent), *m.DeliveryStatus)
+			}
+		}
+	})
+
 	t.Run("in a draft room the answer is a draft the teammate sends as themselves", func(t *testing.T) {
 		t.Parallel()
 		sc, conv := triaged(t)

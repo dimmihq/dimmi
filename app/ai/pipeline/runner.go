@@ -28,6 +28,7 @@ import (
 	fevents "github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -47,7 +48,7 @@ typing while it writes; Working, when set, hears the same on every other
 channel, so a chat app can show it. Drafts, when set, turns answers in
 places where the team reviews the agent into drafts for a teammate to
 send. Actions, when set, gives the agent the workspace's own actions as
-tools.
+tools. Delivery, when set, queues each reply on a channel that pushes.
 */
 type Runner struct {
 	DB            *database.DB
@@ -60,6 +61,7 @@ type Runner struct {
 	Publisher     appbroadcasting.Publisher
 	Working       contracts.AgentWorking
 	Drafts        contracts.AgentDrafts
+	Delivery      *conversations.Delivery
 	Actions       *actionkit.Kit
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool

@@ -314,7 +314,8 @@ func stopWords() map[string]bool {
 		is are was were be been being am do does did done have has had can could will would shall should
 		may might must i me my we our you your it its this that these those there here what which who whom
 		how when where why much many some any all no not so than then too very just also more most
-		please hi hello hey thanks thank get got want need know tell let use using one`) {
+		please hi hello hey thanks thank get got want need know tell let use using one quick question
+		find look looking wondering wonder`) {
 		words[w] = true
 	}
 	return words

@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -51,6 +52,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 	}
 	a.AI = runner
 	runner.Working = a.Actions.Slack.Channel
+	runner.Delivery = &conversations.Delivery{Channels: a.Channels, Queue: a.Queue}
 	runner.Drafts = a.Actions.Slack.Channel
 	cheap := &verdicts.Verdicts{DB: a.DB, Clock: a.Clock, LLM: a.LLM, Prices: runner.Prices}
 	a.Actions.Slack.Channel.Classifier = &verdicts.Requests{Verdicts: cheap}

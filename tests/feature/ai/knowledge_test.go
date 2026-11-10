@@ -42,12 +42,13 @@ func TestSeedKnowledge(t *testing.T) {
 	})
 
 	related := map[string]string{
-		"How much does the Pro plan cost per seat?":  "https://help.lovelace.test/plans-and-pricing",
-		"Can I get a refund on my annual plan?":      "https://help.lovelace.test/refunds",
-		"Do you support SAML single sign-on?":        "https://help.lovelace.test/sso-saml",
-		"Where is my data hosted?":                   "https://help.lovelace.test/export-and-data",
-		"What is the API rate limit?":                "https://help.lovelace.test/api-rate-limits",
-		"How do I invite teammates to my workspace?": "https://help.lovelace.test/invite-teammates",
+		"How much does the Pro plan cost per seat?":            "https://help.lovelace.test/plans-and-pricing",
+		"Can I get a refund on my annual plan?":                "https://help.lovelace.test/refunds",
+		"Do you support SAML single sign-on?":                  "https://help.lovelace.test/sso-saml",
+		"Where is my data hosted?":                             "https://help.lovelace.test/export-and-data",
+		"What is the API rate limit?":                          "https://help.lovelace.test/api-rate-limits",
+		"How do I invite teammates to my workspace?":           "https://help.lovelace.test/invite-teammates",
+		"Quick question: where can I find the API rate limit?": "https://help.lovelace.test/api-rate-limits",
 	}
 	for query, url := range related {
 		t.Run("finds the article for "+query, func(t *testing.T) {
