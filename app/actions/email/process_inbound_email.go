@@ -89,6 +89,7 @@ type ProcessInboundEmail struct {
 	Stamps   inbound.Stamps
 	Events   *events.Dispatcher
 	Receiver contracts.InboundReceiver
+	Replies  BroadcastReplies
 }
 
 /*

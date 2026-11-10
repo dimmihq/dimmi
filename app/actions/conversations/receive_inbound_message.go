@@ -197,6 +197,12 @@ func (run *ingestRun) deliver(
 		}
 	}
 
+	if created && run.msg.BeforeFirst != nil {
+		if err := run.msg.BeforeFirst(ctx, run.tx, conv); err != nil {
+			return contracts.InboundResult{}, err
+		}
+	}
+
 	wake := !run.quiet(contact) && !conv.Spam && conv.Status != string(enums.ConversationStatusOpen)
 	result := contracts.InboundResult{
 		ContactID: contact.ID, ConversationCreated: created, Spam: conv.Spam,

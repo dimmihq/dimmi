@@ -55,6 +55,7 @@ func memberPermissions() []string {
 		"knowledge:sync", "github:read", "ai:read", "ai:write", "ai_actions:read", "ai_action_calls:approve",
 		"changelog:read", "changelog:write", "feedback:read", "feedback:write", "engage:read", "engage:write",
 		"conversations:assign", "conversations:merge", "workflows:read", "workflows:run", "audiences:read",
+		"broadcasts:read", "broadcasts:write",
 	}
 }
 
@@ -73,7 +74,7 @@ func adminPermissions() []string {
 		"email_signatures:manage_any", "channels:manage", "channels:inspect", "notification_destinations:manage",
 		"notification_alerts:receive", "ai_runs:read_payloads", "ai_agent:manage", "ai:keys", "ai_actions:manage",
 		"help_centers:manage", "knowledge:manage", "github:manage", "docs_sync:manage", "oauth_grants:manage_any",
-		"agent_access:manage", "feedback:delete", "feedback:manage", "engage:manage", "imports:read",
+		"agent_access:manage", "feedback:delete", "feedback:manage", "engage:manage", "broadcasts:send", "imports:read",
 		"imports:manage", "imports:rollback", "webhooks:read", "webhooks:write", "billing:read", "billing:write",
 		"security_policy:manage", "roles:manage",
 		"conversations:export", "conversations:manage_notes", "contacts:export",

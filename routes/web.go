@@ -72,6 +72,7 @@ func Web(a *app.App) {
 		static.Handler(a.Frontend, static.Options{Immutable: true, Prefix: "/build"}))
 
 	browserFiles(a)
+	broadcastLinks(a)
 
 	a.Router.Group("", func(browser *routing.Router) {
 		browser.Middleware("csp", "session")
@@ -200,18 +201,19 @@ provider callbacks link to.
 */
 func authPages() map[string]string {
 	return map[string]string{
-		"login":            "/login",
-		"login.magic":      "/login/magic",
-		"login.two-factor": "/login/two-factor",
-		"signup":           "/signup",
-		"forgot-password":  "/forgot-password",
-		"reset-password":   "/reset-password",
-		"verify-email":     "/verify-email",
-		"email.confirm":    "/email/confirm",
-		"two-factor-reset": "/two-factor-reset",
-		"invitation":       "/invitation",
-		"onboarding":       "/onboarding",
-		"oauth.authorize":  "/oauth/authorize",
+		"login":             "/login",
+		"login.magic":       "/login/magic",
+		"login.two-factor":  "/login/two-factor",
+		"signup":            "/signup",
+		"forgot-password":   "/forgot-password",
+		"reset-password":    "/reset-password",
+		"verify-email":      "/verify-email",
+		"email.confirm":     "/email/confirm",
+		"two-factor-reset":  "/two-factor-reset",
+		"invitation":        "/invitation",
+		"onboarding":        "/onboarding",
+		"oauth.authorize":   "/oauth/authorize",
+		"email.preferences": "/email-preferences",
 	}
 }
 

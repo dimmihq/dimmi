@@ -40,6 +40,8 @@ func (s *Slack) Claim(r *Router) {
 	r.OnEvent("channel_unshared", onConnection(s.onShared))
 	r.OnEvent("app_uninstalled", s.onRevoked)
 	r.OnEvent("tokens_revoked", s.onRevoked)
+	r.OnEvent("reaction_added", onConnection(s.onBroadcastReaction))
+	r.OnEvent("reaction_removed", onConnection(s.onBroadcastReaction))
 	r.OnEvent("reaction_added", onConnection(s.onTriggerEmoji))
 	r.OnAction(slackdriver.ControlActionPrefix(), pressOnConnection(s.onControl))
 	r.OnShortcut(slackdriver.ShortcutCreate, pressOnConnection(s.onCreateShortcut))

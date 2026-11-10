@@ -34,6 +34,7 @@ Console declares the scheduled jobs.
 func Console(a *app.App) {
 	a.Schedule.Job(jobs.PurgeExpiredAuthRecordsArgs{}).Hourly()
 	a.Schedule.Job(jobs.CheckIntegrationHealthArgs{}).Hourly()
+	a.Schedule.Job(jobs.SweepBroadcastsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ScheduleWorkspacePurgesArgs{}).DailyAt("03:00")
 	a.Schedule.Job(jobs.PruneAuditLogsArgs{}).DailyAt("03:10")
 	a.Schedule.Job(jobs.PruneSecurityEventsArgs{}).DailyAt("03:20")

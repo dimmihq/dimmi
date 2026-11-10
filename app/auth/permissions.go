@@ -136,7 +136,7 @@ permissionGroups lists the permissions of each ability group. A group
 whose only permission is itself lists its own name.
 */
 func permissionGroups() map[string][]string {
-	return map[string][]string{
+	groups := map[string][]string{
 		"conversations:read": {"conversations:read", "conversations:export"},
 		"conversations:write": {
 			"conversations:write", "conversations:delete", "conversations:moderate", "saved_replies:manage_shared",
@@ -163,27 +163,42 @@ func permissionGroups() map[string][]string {
 		"webhooks:write":      {"webhooks:write"},
 		"notifications:read":  {"notifications:read", "notification_alerts:receive"},
 		"notifications:write": {"notifications:write"},
-		"ai:read":             {"ai:read", "ai_runs:read_payloads", "ai_actions:read"},
-		"ai:write":            {"ai:write", "ai_agent:manage", "ai_action_calls:approve"},
-		"ai:keys":             {"ai:keys"},
-		"ai:actions":          {"ai_actions:manage"},
-		"exports:read":        {"exports:read"},
-		"exports:write":       {"exports:write"},
-		"changelog:read":      {"changelog:read"},
-		"changelog:write":     {"changelog:write"},
-		"feedback:read":       {"feedback:read"},
-		"feedback:write":      {"feedback:write", "feedback:delete"},
-		"engage:read":         {"engage:read"},
-		"engage:write":        {"engage:write", "engage:manage"},
-		"workflows:read":      {"workflows:read"},
-		"workflows:write":     {"workflows:manage", "workflows:run"},
-		"audiences:read":      {"audiences:read"},
-		"audiences:write":     {"audiences:manage"},
-		"attributes:write":    {"attributes:manage"},
-		"billing:read":        {"billing:read"},
-		"billing:write":       {"billing:write", "billing:cap_unrestricted"},
-		"system:read":         {"system:read"},
-		"system:write":        {"system:write"},
+	}
+
+	maps.Copy(groups, featurePermissionGroups())
+
+	return groups
+}
+
+/*
+featurePermissionGroups lists the ability groups of the product's
+features beyond the inbox, contacts, members and settings.
+*/
+func featurePermissionGroups() map[string][]string {
+	return map[string][]string{
+		"ai:read":          {"ai:read", "ai_runs:read_payloads", "ai_actions:read"},
+		"ai:write":         {"ai:write", "ai_agent:manage", "ai_action_calls:approve"},
+		"ai:keys":          {"ai:keys"},
+		"ai:actions":       {"ai_actions:manage"},
+		"exports:read":     {"exports:read"},
+		"exports:write":    {"exports:write"},
+		"changelog:read":   {"changelog:read"},
+		"changelog:write":  {"changelog:write"},
+		"feedback:read":    {"feedback:read"},
+		"feedback:write":   {"feedback:write", "feedback:delete"},
+		"engage:read":      {"engage:read"},
+		"engage:write":     {"engage:write", "engage:manage"},
+		"workflows:read":   {"workflows:read"},
+		"workflows:write":  {"workflows:manage", "workflows:run"},
+		"audiences:read":   {"audiences:read"},
+		"audiences:write":  {"audiences:manage"},
+		"broadcasts:read":  {"broadcasts:read"},
+		"broadcasts:write": {"broadcasts:write", "broadcasts:send"},
+		"attributes:write": {"attributes:manage"},
+		"billing:read":     {"billing:read"},
+		"billing:write":    {"billing:write", "billing:cap_unrestricted"},
+		"system:read":      {"system:read"},
+		"system:write":     {"system:write"},
 	}
 }
 

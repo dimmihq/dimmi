@@ -409,5 +409,5 @@ func (run reportRun) record(ctx context.Context, o outcome) error {
 		return fmt.Errorf("record recipient status: %w", err)
 	}
 
-	return nil
+	return run.broadcastFailed(ctx, o)
 }

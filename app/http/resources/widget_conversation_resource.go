@@ -64,6 +64,16 @@ type WidgetMessage struct {
 	CreatedAt      time.Time          `json:"created_at"`
 	ReadAt         *time.Time         `json:"read_at"`
 	AI             *MessageAI         `json:"ai,omitempty"`
+	Broadcast      *WidgetBroadcast   `json:"broadcast,omitempty"`
+}
+
+/*
+WidgetBroadcast marks a message a broadcast sent: Display is message or
+post, and Title what a post card leads with.
+*/
+type WidgetBroadcast struct {
+	Display string `json:"display"`
+	Title   string `json:"title,omitempty"`
 }
 
 /*
@@ -173,7 +183,7 @@ func NewWidgetMessage(v widget.VisibleMessage) WidgetMessage {
 		ID: models.PublicID(models.PrefixMessage, m.ID), Object: "message",
 		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID), ClientID: clientID(m.Metadata),
 		Author: v.Author, Body: m.Body, Attachments: []WidgetAttachment{}, CreatedAt: m.CreatedAt.UTC(),
-		ReadAt: m.ReadAt, AI: customerAIOf(m.Metadata),
+		ReadAt: m.ReadAt, AI: customerAIOf(m.Metadata), Broadcast: broadcastOf(m.Metadata),
 	}
 
 	if m.DeletedAt != nil {
@@ -198,6 +208,25 @@ func NewWidgetAttachment(file widget.VisibleAttachment) WidgetAttachment {
 		Filename: file.Row.Filename, ContentType: file.Row.ContentType, SizeBytes: file.Row.SizeBytes,
 		URL: file.URL, Blocked: file.Blocked, Width: file.Row.Width, Height: file.Row.Height,
 	}
+}
+
+/*
+broadcastOf reads how a broadcast's message shows in the Messenger, nil
+for any other message.
+*/
+func broadcastOf(metadata json.RawMessage) *WidgetBroadcast {
+	var m struct {
+		Broadcast *struct {
+			Display string `json:"display"`
+			Subject string `json:"subject"`
+		} `json:"broadcast"`
+	}
+
+	if json.Unmarshal(metadata, &m) != nil || m.Broadcast == nil {
+		return nil
+	}
+
+	return &WidgetBroadcast{Display: m.Broadcast.Display, Title: m.Broadcast.Subject}
 }
 
 /*

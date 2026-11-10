@@ -93,7 +93,7 @@ func (a *ProcessInboundEmail) ingest(ctx context.Context, mail *received, insp i
 			return err
 		}
 
-		return a.deliver(ctx, models.New(tx), decision{mail: mail, insp: insp, who: who})
+		return a.deliver(ctx, models.New(tx), decision{mail: mail, insp: insp, who: who, tx: tx})
 	})
 }
 
@@ -111,6 +111,10 @@ func (a *ProcessInboundEmail) deliver(ctx context.Context, q *models.Queries, d 
 
 	d.hit, err = a.resolveThread(ctx, q, d.mail, d.contact)
 	if err != nil {
+		return err
+	}
+
+	if err := a.broadcastReply(ctx, &d); err != nil {
 		return err
 	}
 
@@ -167,6 +171,7 @@ type decision struct {
 	who     sender
 	contact *models.Contact
 	hit     threadHit
+	tx      *database.Tx
 }
 
 /*

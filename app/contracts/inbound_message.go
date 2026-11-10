@@ -79,6 +79,7 @@ type InboundMessage struct {
 	Echo                    *EchoAuthor
 	Metadata                map[string]any
 	AfterPersist            AfterPersist
+	BeforeFirst             BeforeFirst
 }
 
 /*
@@ -86,6 +87,13 @@ AfterPersist is a channel's hook into the inbox's transaction, called
 with the conversation and the stored message.
 */
 type AfterPersist func(ctx context.Context, tx *database.Tx, conv models.Conversation, msg models.Message) error
+
+/*
+BeforeFirst is a channel's hook into a conversation the message starts,
+called before the message is stored, so what the message answers, such
+as a broadcast the business posted, comes first.
+*/
+type BeforeFirst func(ctx context.Context, tx *database.Tx, conv models.Conversation) error
 
 /*
 InboundSender is who sent or took part in an inbound message: the

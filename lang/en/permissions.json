@@ -79,6 +79,18 @@
     "label": "Write the changelog",
     "description": "Create and publish changelog entries."
   },
+  "broadcasts:read": {
+    "label": "See broadcasts",
+    "description": "See broadcasts and their reports."
+  },
+  "broadcasts:send": {
+    "label": "Send broadcasts",
+    "description": "Send, pause, resume and stop broadcasts to customers."
+  },
+  "broadcasts:write": {
+    "label": "Write broadcasts",
+    "description": "Write broadcast drafts, topics and test sends."
+  },
   "channels:inspect": {
     "label": "Inspect channels",
     "description": "See connection details and delivery logs of channels."

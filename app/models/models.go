@@ -453,6 +453,98 @@ type AuditLog struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
+type Broadcast struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Channel           string          `json:"channel"`
+	Status            string          `json:"status"`
+	PauseReason       *string         `json:"pause_reason"`
+	AudienceID        *ids.UUID       `json:"audience_id"`
+	Rules             json.RawMessage `json:"rules"`
+	RoomIds           []ids.UUID      `json:"room_ids"`
+	TopicID           *ids.UUID       `json:"topic_id"`
+	Service           bool            `json:"service"`
+	Subject           string          `json:"subject"`
+	Preview           string          `json:"preview"`
+	Body              string          `json:"body"`
+	SenderMemberID    *ids.UUID       `json:"sender_member_id"`
+	EmailAddressID    *ids.UUID       `json:"email_address_id"`
+	SlackAs           string          `json:"slack_as"`
+	ReplyTeamID       *ids.UUID       `json:"reply_team_id"`
+	ReplyMemberID     *ids.UUID       `json:"reply_member_id"`
+	AiReplies         bool            `json:"ai_replies"`
+	TrackClicks       bool            `json:"track_clicks"`
+	SkipFrequencyCap  bool            `json:"skip_frequency_cap"`
+	ScheduleKind      string          `json:"schedule_kind"`
+	ScheduledAt       *time.Time      `json:"scheduled_at"`
+	Goal              json.RawMessage `json:"goal"`
+	Counts            json.RawMessage `json:"counts"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	SentByMemberID    *ids.UUID       `json:"sent_by_member_id"`
+	StartedAt         *time.Time      `json:"started_at"`
+	FinishedAt        *time.Time      `json:"finished_at"`
+	DeletedAt         *time.Time      `json:"deleted_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+type BroadcastLink struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	BroadcastID ids.UUID `json:"broadcast_id"`
+	N           int32    `json:"n"`
+	Url         string   `json:"url"`
+	Clicks      int32    `json:"clicks"`
+}
+
+type BroadcastOptOut struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	Source      string    `json:"source"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type BroadcastRecipient struct {
+	ID              ids.UUID   `json:"id"`
+	WorkspaceID     ids.UUID   `json:"workspace_id"`
+	BroadcastID     ids.UUID   `json:"broadcast_id"`
+	ContactID       *ids.UUID  `json:"contact_id"`
+	CompanyID       *ids.UUID  `json:"company_id"`
+	RoomID          *ids.UUID  `json:"room_id"`
+	Address         string     `json:"address"`
+	Status          string     `json:"status"`
+	Reason          *string    `json:"reason"`
+	ReplyToken      string     `json:"reply_token"`
+	MessageIDHeader *string    `json:"message_id_header"`
+	OutboundEmailID *ids.UUID  `json:"outbound_email_id"`
+	ExternalRef     *string    `json:"external_ref"`
+	ConversationID  *ids.UUID  `json:"conversation_id"`
+	Attempts        int32      `json:"attempts"`
+	DueAt           time.Time  `json:"due_at"`
+	SentAt          *time.Time `json:"sent_at"`
+	DeliveredAt     *time.Time `json:"delivered_at"`
+	OpenedAt        *time.Time `json:"opened_at"`
+	ClickedAt       *time.Time `json:"clicked_at"`
+	RepliedAt       *time.Time `json:"replied_at"`
+	ReactedAt       *time.Time `json:"reacted_at"`
+	Reactions       int32      `json:"reactions"`
+	UnsubscribedAt  *time.Time `json:"unsubscribed_at"`
+	ConvertedAt     *time.Time `json:"converted_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+type BroadcastTopic struct {
+	ID          ids.UUID   `json:"id"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Consent     string     `json:"consent"`
+	ArchivedAt  *time.Time `json:"archived_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 type CertmagicStorage struct {
 	Key      string    `json:"key"`
 	Value    []byte    `json:"value"`
@@ -776,6 +868,15 @@ type ContactTag struct {
 	CreatedByType string    `json:"created_by_type"`
 	CreatedByID   *ids.UUID `json:"created_by_id"`
 	CreatedAt     time.Time `json:"created_at"`
+}
+
+type ContactTopicSubscription struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	TopicID     ids.UUID  `json:"topic_id"`
+	Subscribed  bool      `json:"subscribed"`
+	Source      string    `json:"source"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Conversation struct {

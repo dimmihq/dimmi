@@ -146,7 +146,7 @@ func PublicIDCatalog() []PublicIDEntry {
 	return slices.Concat(
 		accountPublicIDs(), inboxPublicIDs(), channelPublicIDs(), assistantPublicIDs(), helpCenterPublicIDs(),
 		platformPublicIDs(), billingPublicIDs(), changelogPublicIDs(), feedbackPublicIDs(), engagePublicIDs(),
-		workflowPublicIDs(), reservedPublicIDs(),
+		workflowPublicIDs(), broadcastPublicIDs(), reservedPublicIDs(),
 	)
 }
 
@@ -447,6 +447,27 @@ func engagePublicIDs() []PublicIDEntry {
 		{"svr", "survey_responses"},
 		{"erc", "engage_receipts"},
 		{"eas", "engage_assets"},
+	}
+}
+
+/*
+The prefixes of broadcasts, their topics and their recipients.
+*/
+const (
+	PrefixBroadcast          Prefix = "bcst"
+	PrefixBroadcastTopic     Prefix = "bctp"
+	PrefixBroadcastRecipient Prefix = "bcrc"
+)
+
+/*
+broadcastPublicIDs lists the prefixes of broadcasts, the topics people
+subscribe to and each broadcast's recipients.
+*/
+func broadcastPublicIDs() []PublicIDEntry {
+	return []PublicIDEntry{
+		{PrefixBroadcast, "broadcasts"},
+		{PrefixBroadcastTopic, "broadcast_topics"},
+		{PrefixBroadcastRecipient, "broadcast_recipients"},
 	}
 }
 

@@ -74,7 +74,10 @@ func API(a *app.App) {
 	c := newControllers(a)
 
 	a.Router.API("/api/v1", "Dimmi API", a.Config.API.Version, func(api *routing.Router) {
-		api.Group("", func(guest *routing.Router) { guestRoutes(guest, c) })
+		api.Group("", func(guest *routing.Router) {
+			guestRoutes(guest, c)
+			broadcastPreferenceRoutes(guest, a)
+		})
 		api.Group("", func(user *routing.Router) { userRoutes(user, c) })
 
 		api.Group("", func(caller *routing.Router) {
@@ -92,6 +95,7 @@ func API(a *app.App) {
 			workflowRoutes(workspace, a)
 			procedureRoutes(workspace, a)
 			audienceRoutes(workspace, a)
+			broadcastRoutes(workspace, a)
 			attributeRoutes(workspace, a)
 			eventRoutes(workspace, a)
 			slackChannelRoutes(workspace, a)

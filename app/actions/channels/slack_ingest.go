@@ -59,6 +59,7 @@ type ingestion struct {
 	quiet     bool
 	echo      bool
 	test      bool
+	opening   contracts.BeforeFirst
 }
 
 /*
@@ -118,6 +119,8 @@ func (s *Slack) inbound(ctx context.Context, in ingestion) (contracts.InboundMes
 	if in.test {
 		msg.AfterPersist = markTest
 	}
+
+	msg.BeforeFirst = in.opening
 
 	return msg, nil
 }
