@@ -44,7 +44,8 @@ func TestOperatorTools(t *testing.T) {
 		k.llm.Script(
 			tools(call("list_conversations", map[string]any{}),
 				call("list_conversations", map[string]any{"assignee": "unassigned", "status": "open"}),
-				call("list_conversations", map[string]any{"ai": "handed_off"})),
+				call("list_conversations", map[string]any{"ai": "handed_off"}),
+				call("list_conversations", map[string]any{"waiting": true})),
 			reply("Two are open."),
 		)
 
@@ -53,11 +54,12 @@ func TestOperatorTools(t *testing.T) {
 		assert.Equal(t, "Listed 2 open conversations", res.String("data.message.steps.0.summary"))
 		assert.Equal(t, "Listed 2 open, unassigned conversations", res.String("data.message.steps.1.summary"))
 		assert.Equal(t, "Listed 0 open, handed_off conversations", res.String("data.message.steps.2.summary"))
+		assert.Equal(t, "Listed 2 open, waiting conversations", res.String("data.message.steps.3.summary"))
 		results := k.llm.Sent()[1].Messages
-		assert.Contains(t, results[len(results)-3].Parts[0].Text, "#1")
-		assert.Contains(t, results[len(results)-3].Parts[0].Text, "#2")
-		assert.Contains(t, results[len(results)-3].Parts[0].Text, "last from the customer")
-		assert.Contains(t, results[len(results)-1].Parts[0].Text, "No conversations match.")
+		assert.Contains(t, results[len(results)-4].Parts[0].Text, "#1")
+		assert.Contains(t, results[len(results)-4].Parts[0].Text, "#2")
+		assert.Contains(t, results[len(results)-4].Parts[0].Text, "last from the customer")
+		assert.Contains(t, results[len(results)-2].Parts[0].Text, "No conversations match.")
 	})
 
 	t.Run("reads knowledge, articles, procedures and the agent's runs", func(t *testing.T) {

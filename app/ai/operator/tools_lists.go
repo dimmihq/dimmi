@@ -38,6 +38,8 @@ const listSchema = `{"type":"object","properties":{` +
 	`"description":"Whose conversations. Defaults to anyone."},` +
 	`"ai":{"type":"string","enum":["any","handed_off","answered_by_ai"],` +
 	`"description":"Only those the AI agent handed to the team, or ones it is answering."},` +
+	`"waiting":{"type":"boolean","description":"Only those where the customer wrote last and is waiting ` +
+	`for the team."},` +
 	`"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many, at most 25. Defaults to 15."}}}`
 
 /*
@@ -47,6 +49,7 @@ type listArgs struct {
 	Status   string `json:"status"`
 	Assignee string `json:"assignee"`
 	AI       string `json:"ai"`
+	Waiting  bool   `json:"waiting"`
 	Limit    int    `json:"limit"`
 }
 
@@ -59,8 +62,9 @@ func (e *Engine) listTool() tool {
 		Name: "list_conversations",
 		Description: "List conversations by status, by who holds them and by the AI agent's part, newest " +
 			"activity first: open ones, ones waiting on the teammate, unassigned ones, ones the agent " +
-			"handed to the team. Use this for questions about what is open or waiting; use " +
-			"search_conversations only to find conversations by their words or a customer.",
+			"handed to the team, ones where the customer is waiting. Each line already says who wrote " +
+			"last and since when the customer has waited, so read a conversation only when a line is " +
+			"not enough. Use search_conversations only to find conversations by their words or a customer.",
 		Schema: schema(listSchema),
 	}, handle: e.listConversations}
 }
@@ -126,6 +130,8 @@ func filtersOf(in listArgs) conversations.Filters {
 		f.Unassigned = true
 	}
 
+	f.Waiting = in.Waiting
+
 	switch in.AI {
 	case "handed_off":
 		f.Ai = []string{"handed_off"}
@@ -158,6 +164,10 @@ func describe(in listArgs) string {
 
 	if in.AI != "" && in.AI != "any" {
 		parts = append(parts, in.AI)
+	}
+
+	if in.Waiting {
+		parts = append(parts, "waiting")
 	}
 
 	return strings.Join(parts, ", ")
