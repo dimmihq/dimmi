@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -199,8 +200,8 @@ func (s *Slack) onDraftAction(ctx context.Context, in SlackInteraction) (bool, e
 		return ok, err
 	}
 
-	who, linked, err := s.teammateOf(ctx, in)
-	if err != nil || !linked {
+	who, allowed, err := s.teammateFor(ctx, in, d.conv)
+	if err != nil || !allowed {
 		return true, err
 	}
 
@@ -210,6 +211,12 @@ func (s *Slack) onDraftAction(ctx context.Context, in SlackInteraction) (bool, e
 
 		return true, s.sendDraft(ctx, in, who, d)
 	case slackdriver.DraftEdit:
+		if utf8.RuneCountInString(*d.run.DraftBody) > slackdriver.DraftEditorLimit {
+			s.tell(ctx, in, "This draft is too long to edit in Slack. Edit it in dimmi, or send it as it is.")
+
+			return true, nil
+		}
+
 		api, err := s.api(ctx, in.Connection)
 		if err != nil {
 			return true, err
@@ -242,8 +249,8 @@ func (s *Slack) onDraftEdited(ctx context.Context, in SlackInteraction) (bool, e
 		return true, nil
 	}
 
-	who, linked, err := s.teammateOf(ctx, in)
-	if err != nil || !linked {
+	who, allowed, err := s.teammateFor(ctx, in, d.conv)
+	if err != nil || !allowed {
 		return true, err
 	}
 

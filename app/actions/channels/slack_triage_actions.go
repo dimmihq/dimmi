@@ -26,8 +26,6 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
-	"github.com/dimmihq/dimmi/app/auth"
-	"github.com/dimmihq/dimmi/app/auth/authz"
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
@@ -53,8 +51,8 @@ func (s *Slack) onTriageAction(ctx context.Context, in SlackInteraction) (bool, 
 		return ok, err
 	}
 
-	who, linked, err := s.teammateOf(ctx, in)
-	if err != nil || !linked {
+	who, allowed, err := s.teammateFor(ctx, in, conv)
+	if err != nil || !allowed {
 		return true, err
 	}
 
@@ -207,17 +205,12 @@ func (s *Slack) draftArticle(ctx context.Context, in SlackInteraction, who teamm
 	}
 
 	var (
-		m      authz.Membership
 		center models.HelpCenter
 		draft  articleText
 	)
 
 	err := s.read(ctx, func(q *models.Queries) error {
 		var err error
-
-		if m, err = membershipOf(ctx, q, conv, who); err != nil {
-			return err
-		}
 
 		if center, err = q.FindDefaultHelpCenter(ctx, conv.WorkspaceID); err != nil {
 			return err
@@ -234,7 +227,7 @@ func (s *Slack) draftArticle(ctx context.Context, in SlackInteraction, who teamm
 	}
 
 	_, err = s.Articles.Create(ctx, helpcenters.ArticleInput{
-		Membership: m, HelpCenterID: center.ID, Title: &draft.title, Body: &draft.body,
+		Membership: who.membership, HelpCenterID: center.ID, Title: &draft.title, Body: &draft.body,
 	})
 	if err != nil {
 		s.tell(ctx, in, "dimmi could not draft an article from this conversation.")
@@ -245,28 +238,6 @@ func (s *Slack) draftArticle(ctx context.Context, in SlackInteraction, who teamm
 	s.tell(ctx, in, "Drafted the help article “"+draft.title+"” for review in dimmi. Nothing is published yet.")
 
 	return nil
-}
-
-/*
-membershipOf is the teammate's membership, with their role's
-permissions.
-*/
-func membershipOf(ctx context.Context, q *models.Queries, conv models.Conversation, who teammate) (
-	authz.Membership, error,
-) {
-	ws, err := q.FindWorkspace(ctx, conv.WorkspaceID)
-	if err != nil {
-		return authz.Membership{}, err
-	}
-
-	member, err := q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{
-		WorkspaceID: conv.WorkspaceID, ID: who.memberID,
-	})
-	if err != nil {
-		return authz.Membership{}, err
-	}
-
-	return authz.NewMembership(ws, member, auth.RolePermissions(enums.Role(member.Role))), nil
 }
 
 /*

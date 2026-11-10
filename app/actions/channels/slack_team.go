@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
@@ -203,12 +204,14 @@ func (s *Slack) conversationByPublicID(ctx context.Context, conn models.ChannelC
 }
 
 /*
-teammate is a Slack user acting for the team, as their linked member.
+teammate is a Slack user acting for the team, as their linked member,
+with that member's membership once teammateFor checked it.
 */
 type teammate struct {
-	memberID ids.UUID
-	name     string
-	userID   string
+	memberID   ids.UUID
+	name       string
+	userID     string
+	membership authz.Membership
 }
 
 /*

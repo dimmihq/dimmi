@@ -11,6 +11,7 @@ import (
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/database/factories"
 )
 
 /*
@@ -152,6 +153,41 @@ func TestSlackTriage(t *testing.T) {
 		notices := sc.slack.called("chat.postEphemeral")
 		require.NotEmpty(t, notices)
 		assert.Contains(t, notices[len(notices)-1].Form.Get("text"), "Link your Slack account")
+	})
+
+	t.Run("a teammate whose role may not change conversations is refused, like in the app", func(t *testing.T) {
+		t.Parallel()
+		sc, conv := triaged(t)
+		take := slackdriver.TeamActionID(slackdriver.TriagePrefix(), models.PublicID(models.PrefixConversation, conv.ID),
+			slackdriver.TriageTake)
+		readOnly, err := factories.Role(t.Context(), sc.App, factories.RoleOf{
+			Workspace: sc.Workspace.Workspace, Name: "Read only", BaseRole: enums.RoleMember,
+			Permissions: []string{"members:read", "conversations:read"},
+		})
+		require.NoError(t, err)
+		_, err = factories.WithCustomRole(t.Context(), sc.App, sc.Workspace.Owner, readOnly)
+		require.NoError(t, err)
+
+		sc.interact(teamPress(take, "U0TEAMMATE", ""))
+
+		assert.Nil(t, sc.refreshed(conv).AssigneeMemberID)
+		notices := sc.slack.called("chat.postEphemeral")
+		require.NotEmpty(t, notices)
+		assert.Contains(t, notices[len(notices)-1].Form.Get("text"), "role does not let you")
+	})
+
+	t.Run("a teammate no longer active in the workspace changes nothing", func(t *testing.T) {
+		t.Parallel()
+		sc, conv := triaged(t)
+		take := slackdriver.TeamActionID(slackdriver.TriagePrefix(), models.PublicID(models.PrefixConversation, conv.ID),
+			slackdriver.TriageTake)
+		_, err := sc.Operator().Exec(t.Context(), "UPDATE workspace_members SET status = 'deactivated' WHERE id = $1",
+			sc.Workspace.Owner.ID)
+		require.NoError(t, err)
+
+		sc.interact(teamPress(take, "U0TEAMMATE", ""))
+
+		assert.Nil(t, sc.refreshed(conv).AssigneeMemberID)
 	})
 
 	t.Run("status, snooze, urgent and hand back act as the teammate", func(t *testing.T) {

@@ -225,7 +225,7 @@ func (s *Slack) onDiscussionStart(ctx context.Context, in SlackInteraction) (boo
 		return ok, err
 	}
 
-	if _, linked, err := s.teammateOf(ctx, in); err != nil || !linked {
+	if _, allowed, err := s.teammateFor(ctx, in, conv); err != nil || !allowed {
 		return true, err
 	}
 

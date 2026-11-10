@@ -16,6 +16,8 @@ package channels
 import (
 	"context"
 
+	"github.com/dimmihq/dimmi/framework/tenancy"
+
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -29,6 +31,8 @@ func (s *Slack) openedNow(ctx context.Context, r routed, in slackdriver.Interact
 	if !ok || r.suspended {
 		return false
 	}
+
+	ctx = tenancy.With(ctx, r.workspaceID.String())
 
 	conn, live, err := s.ownerConnection(ctx, models.ChannelInboundEvent{
 		WorkspaceID: r.workspaceID, ChannelConnectionID: connectionOf(r), IntegrationInstallationID: r.installationID,
