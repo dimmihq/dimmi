@@ -164,13 +164,14 @@ Permissions: register `integrations:manage` (group `settings:write`) in 00-accou
 
 ## Tasks
 
-- [ ] **`framework/oauthclient`.** Move socialite flow internals, manager, `generic` + `slack` drivers, fake, `drivertest` (local test provider server). 90% coverage.
-- [ ] **Tables, queries, factories, RLS.** `integration_installations`, `integration_member_grants`, 05 `channel_connections.integration_installation_id`; prefix registry rows.
-- [ ] **Scope registry + install/upgrade/callback flow.** Actions, controllers, audit, events. Tests: edge cases 1-6, 16.
-- [ ] **Token access + refresh + health.** `TokenFor`, `UserTokenFor`, single-flight refresh, daily health. Tests: 10-12, 15.
-- [ ] **Revocation + cascade.** `ApplyProviderRevocation`, member deactivation, workspace eraser. Tests: 7-9, 13.
-- [ ] **Member grants.** Flow, 05 member link write, revoke. Tests: 8, 16, 17.
-- [ ] **Settings UI.** `settings/integrations` page (BoardUI): provider cards, connect, features with scope state, consumers, member "Connect my Slack". e2e test light + dark.
-- [ ] **Marketplace submission checklist** in `docs/` (listing copy, retention, privacy), done at first staging deploy.
+- [x] **`framework/oauthclient`.** Move socialite flow internals, manager, `generic` + `slack` drivers, fake, `drivertest` (local test provider server). 90% coverage.
+- [x] **Tables, queries, factories, RLS.** `integration_installations`, `integration_member_grants`, 05 `channel_connections.integration_installation_id`; prefix registry rows.
+- [x] **Scope registry + install/upgrade/callback flow.** Actions, controllers, audit, events. Tests: edge cases 1-6, 16.
+- [x] **Token access + refresh + health.** `TokenFor`, `UserTokenFor`, single-flight refresh, daily health. Tests: 10-12, 15.
+- [x] **Revocation + cascade.** `ApplyProviderRevocation`, member deactivation, workspace eraser. Tests: 7-9, 13.
+- [x] **Member grants.** Flow, 05 member link write, revoke. Tests: 8, 16, 17.
+- [x] **Settings UI.** `settings/integrations` page (BoardUI): provider cards, connect, features with scope state, consumers, member "Connect my Slack". e2e test light + dark.
+- [x] **Marketplace submission checklist** in `docs/integrations/slack-marketplace.md` (listing copy, scope reasons, retention, privacy).
+- [ ] **Marketplace submission** itself, at the first staging deploy, following that checklist.
 
 Done when: one Slack install drives 05 channels, 06 notifications and 22 Operator; uninstall in Slack flips all three in under 5 s; no token in any log, resource or event (test).
