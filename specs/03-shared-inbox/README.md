@@ -152,7 +152,7 @@ Rows here need things unbuilt and no assigned gap implies them. Everything else 
 | Agent assist: draft, summarize | 07 later. Translation moved in (I-38) |
 | Agent send modes `drafts_only`/`direct` over REST, MCP, CLI | 09 (`agent-send-modes`). MCP reply still confirms in client. Composer drafts moved in (I-31) |
 | Reply via different channel than routing picks (manual channel switch) | post-MVP; no gap |
-| Semantic (vector) search over conversations | post-MVP; FTS + trigram only. Similar conversations uses FTS |
+| Semantic search over all conversation text | post-MVP. Launch: closed conversations embedded for Similar conversations (08 knowledge.md "Background embedding jobs"), hybrid with FTS |
 | Followers / watching conversations | post-MVP; mentions view covers it |
 | Reports beyond counts | post-MVP: reports |
 | later: message-edit | customer-visible reply edit, edit window, edit propagation (`ChannelEditor`, `apply_channel_edit`). Notes editable, replies delete only |

@@ -71,6 +71,20 @@ Dims policy: always request a dims value in `knowledge.embed.supported_dims` (38
 
 Model key string: `<provider>:<model>@<dims>` e.g. `openai:text-embedding-3-small@1024`. Key id not part of model key: rotating key or swapping to another key of same provider+model keeps vectors (same vector space).
 
+### System default embedder (owner decision 2026-11-10)
+
+- Every workspace gets semantic search with no setup: the built-in embedder is DeepInfra `Qwen/Qwen3-Embedding-8B` (OpenAI-compatible `POST https://api.deepinfra.com/v1/openai/embeddings`), its own key in config `ai.managed.embeddings.{api_key,base_url,model,dims}` (env `DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY`), separate from the managed LLM keys. Default dims 1024 (Matryoshka; renormalized), model key `dimmi:Qwen/Qwen3-Embedding-8B@1024`. Query inputs carry Qwen's instruction prefix (`Instruct: Given a customer support question, retrieve help articles that answer it\nQuery: `); documents none.
+- Without the managed key (self-host that sets none) the built-in embedder is absent and the old rules apply: first embeddings-capable workspace key, else FTS-only.
+- A workspace may pick another embedder (any embeddings-capable 07 key, or back to `dimmi`). The chosen provider + model + dims is bound in `knowledge_settings` (`active_model_key`, `pending_model_key`, `embedding_key_id` null for built-in): retrieval always embeds the query with the active model, never with whatever key is newest. Switching re-embeds in the background (section 6) and search stays on the old model until coverage is complete.
+- Embedding usage is recorded per workspace (tokens, model key) like LLM usage; billing stays out of scope.
+
+### Background embedding jobs
+
+- `EmbedKnowledgeChunks` (batches of 64 hashes, per model key): on article publish/update, source sync, and re-embed. Idempotent by `(workspace, model_key, embed_hash)`.
+- `ReembedWorkspaceKnowledge`: model switch or a missing-vector sweep.
+- Nightly `SweepKnowledgeEmbeddings`: retries failed hashes, embeds chunks missing a vector for the active model, purges vectors of models unused for 7 days.
+- Conversations (03 "Similar conversations"): a closed conversation's subject + first customer message + resolution summary is embedded with the workspace's active model (`EmbedConversation`, queued on `conversation.closed`, re-run when reopened and closed again); similar conversations and the agent's "solved before" lookup use hybrid search over them, members only, never shown to customers.
+
 ### Choosing model (KnowledgeSettings)
 
 - Workspace has no `knowledge_settings.embedding_key_id`: on first 07 key create (08 queued listener `SuggestEmbedderOnKeyChange` on `ai.provider_key_changed`; 07 never imports 08 package) pick first embeddings-capable key by priority openai, gemini, voyage, openrouter, bedrock, openai_compatible; set pending model; start re-embed. Anthropic-only: stays `none`.
