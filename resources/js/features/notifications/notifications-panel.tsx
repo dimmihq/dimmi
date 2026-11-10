@@ -1,8 +1,9 @@
 /*
- * The member's notifications on BoardUI's notification center: newest
- * change first, by tab, unread marked. Opening the page clears the
- * sidebar badge; opening a notification marks it read and goes to what
- * it is about. An action waiting for approval can be approved or
+ * The member's notifications on BoardUI's notification center, opened
+ * beside the sidebar rather than on a page of its own: newest change
+ * first, by tab, unread marked. Opening the center clears the sidebar
+ * badge; opening a notification marks it read, closes the center and
+ * goes to what it is about. An action waiting for approval can be approved or
  * declined right here; once someone decides, the buttons give way to
  * how it ended. Live updates arrive without a refresh.
  */
@@ -27,7 +28,7 @@ const tabs: { id: NotificationFilter; label: string }[] = [
   { id: "ai_action_approval_requested", label: "Approvals" },
 ];
 
-export function NotificationsPage() {
+export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const workspace = useAccount().workspace.id;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -73,6 +74,7 @@ export function NotificationsPage() {
     if (!n.read) {
       mark.mutate({ ids: [id], read: true });
     }
+    onClose();
     void navigate({ href: pathOf(n.link) });
   };
 
@@ -80,33 +82,31 @@ export function NotificationsPage() {
   const items = notifications.map((n) => centerItem(n, now, busy?.id === n.id ? busy.action : undefined));
 
   return (
-    <div className="flex min-h-0 flex-1 justify-center">
-      <NotificationCenter
-        className="h-full max-w-3xl"
-        notifications={items}
-        tab={filter}
-        onTabChange={(next) => setFilter(next as NotificationFilter)}
-        tabs={tabs.map((t) => ({ ...t, count: t.id === "unread" ? (meta?.unread_count ?? 0) : undefined }))}
-        unreadCount={meta?.unread_count ?? 0}
-        onMarkAllRead={() => mark.mutate({ read: true })}
-        onOpen={open}
-        onAction={(id, action) => void decide(id, action)}
-        emptyMessage={list.isPending ? "Loading…" : "You’re all caught up."}
-        footer={
-          list.hasNextPage ? (
-            <div className="flex justify-center pt-2">
-              <Button
-                variant="secondary"
-                size="small"
-                loading={list.isFetchingNextPage}
-                onClick={() => void list.fetchNextPage()}
-              >
-                Load more
-              </Button>
-            </div>
-          ) : null
-        }
-      />
-    </div>
+    <NotificationCenter
+      className="h-[min(680px,calc(100dvh-24px))] w-[420px] max-w-full"
+      notifications={items}
+      tab={filter}
+      onTabChange={(next) => setFilter(next as NotificationFilter)}
+      tabs={tabs.map((t) => ({ ...t, count: t.id === "unread" ? (meta?.unread_count ?? 0) : undefined }))}
+      unreadCount={meta?.unread_count ?? 0}
+      onMarkAllRead={() => mark.mutate({ read: true })}
+      onOpen={open}
+      onAction={(id, action) => void decide(id, action)}
+      emptyMessage={list.isPending ? "Loading…" : "You’re all caught up."}
+      footer={
+        list.hasNextPage ? (
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="secondary"
+              size="small"
+              loading={list.isFetchingNextPage}
+              onClick={() => void list.fetchNextPage()}
+            >
+              Load more
+            </Button>
+          </div>
+        ) : null
+      }
+    />
   );
 }

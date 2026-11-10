@@ -18,6 +18,7 @@ import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { Badge } from "@/components/base/badges/badge";
 import { CloseButton } from "@/components/base/buttons/close-button";
 import { Kbd } from "@/components/base/kbd/kbd";
+import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { cx } from "@/utils/cx";
 import { DashboardTeamMenu, type MenuGroup, type PresenceStatus } from "./dashboard-team-menu";
 import { type AvatarColor, DashboardUserMenu } from "./dashboard-user-menu";
@@ -105,6 +106,7 @@ function NavItem({
   const localize = useTemplateCopy();
   const sizes = density[useContext(DensityContext)];
   const Anchor = href.startsWith("/") && !onClick ? RouterAnchor : "a";
+  const sizesClass = rowClass(sizes, collapsed, isSelected);
   return localize((
     <Anchor
       href={href}
@@ -119,16 +121,43 @@ function NavItem({
       aria-current={isSelected ? "page" : undefined}
       aria-label={label}
       title={collapsed ? label : undefined}
-      className={cx(
-        "flex items-center justify-between overflow-hidden rounded-2lg",
-        sizes.row,
-        "transition-[width,background-color] duration-300 ease-in-out",
-        collapsed ? sizes.rail : "w-full",
-        isSelected
-          ? "bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected"
-          : "hover:bg-background-secondary-hover",
-      )}
+      className={sizesClass}
     >
+      <RowContent icon={Icon} label={label} badge={badge} isSelected={isSelected} collapsed={collapsed} />
+    </Anchor>
+  ));
+}
+
+/** The classes of a row, shared by links and rows that open a panel. */
+function rowClass(sizes: (typeof density)[SidebarDensity], collapsed: boolean, isSelected: boolean) {
+  return cx(
+    "flex items-center justify-between overflow-hidden rounded-2lg outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+    sizes.row,
+    "transition-[width,background-color] duration-300 ease-in-out",
+    collapsed ? sizes.rail : "w-full",
+    isSelected
+      ? "bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected"
+      : "hover:bg-background-secondary-hover",
+  );
+}
+
+/** A row's icon, label and badge. */
+function RowContent({
+  icon: Icon,
+  label,
+  badge,
+  isSelected,
+  collapsed,
+}: {
+  icon: IconComponent;
+  label: string;
+  badge?: ReactNode;
+  isSelected: boolean;
+  collapsed: boolean;
+}) {
+  const sizes = density[useContext(DensityContext)];
+  return (
+    <>
       <span className="flex min-w-0 items-center gap-2">
         <Icon
           className={cx(sizes.icon, "shrink-0", isSelected ? "text-white" : "text-foreground-icon-secondary")}
@@ -147,8 +176,63 @@ function NavItem({
         </Collapsible>
       </span>
       {badge && <Collapsible collapsed={collapsed}>{badge}</Collapsible>}
-    </Anchor>
-  ));
+    </>
+  );
+}
+
+/**
+ * A row that opens a panel beside the sidebar instead of a page, like a
+ * notification center. The row looks selected while its panel is open.
+ */
+function PanelNavItem({
+  icon,
+  label,
+  count,
+  collapsed,
+  panel,
+}: {
+  icon: IconComponent;
+  label: string;
+  count?: string | number;
+  collapsed: boolean;
+  panel: DashboardNavPanel;
+}) {
+  const sizes = density[useContext(DensityContext)];
+  const [uncontrolled, setUncontrolled] = useState(false);
+  const open = panel.isOpen ?? uncontrolled;
+  const setOpen = (next: boolean) => {
+    setUncontrolled(next);
+    panel.onOpenChange?.(next);
+  };
+  return (
+    <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        title={collapsed ? label : undefined}
+        className={cx(rowClass(sizes, collapsed, open), "cursor-pointer")}
+      >
+        <RowContent
+          icon={icon}
+          label={label}
+          badge={count !== undefined ? <Badge color={open ? "primary" : "neutral"}>{count}</Badge> : undefined}
+          isSelected={open}
+          collapsed={collapsed}
+        />
+      </button>
+      <Popover
+        placement="end top"
+        offset={20}
+        crossOffset={-8}
+        aria-label={label}
+        className="w-auto max-w-[calc(100vw-24px)] border-0 bg-transparent p-0 shadow-none"
+        dialogClassName="p-0"
+      >
+        {panel.content(() => setOpen(false))}
+      </Popover>
+    </PopoverTrigger>
+  );
 }
 
 /** An in-app link: the router navigates without reloading the page. */
@@ -163,6 +247,15 @@ export interface DashboardNavItem {
   icon: IconComponent;
   href?: string;
   badge?: string | number;
+  /** Opens this panel beside the sidebar instead of following `href`. */
+  panel?: DashboardNavPanel;
+}
+
+/** A panel a row opens beside the sidebar, open state optionally controlled. */
+export interface DashboardNavPanel {
+  content: (close: () => void) => ReactNode;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** Kept as a name for callers that typed their `selected` prop; any key works. */
@@ -255,6 +348,18 @@ function NavSections({
 function NavRows({ items, selected, collapsed }: { items: DashboardNavItem[]; selected: string; collapsed: boolean }) {
   return items.map((item) => {
       const isSelected = selected === item.key;
+      if (item.panel) {
+        return (
+          <PanelNavItem
+            key={item.key}
+            icon={item.icon}
+            label={item.label}
+            collapsed={collapsed}
+            panel={item.panel}
+            count={item.badge}
+          />
+        );
+      }
       return (
         <NavItem
           key={item.key}

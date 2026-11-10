@@ -53,7 +53,11 @@ import {
   RiWebhookLine,
 } from "@remixicon/react";
 
-import type { DashboardNavItem, DashboardNavSection } from "@/components/application/dashboard/dashboard-sidebar";
+import type {
+  DashboardNavItem,
+  DashboardNavPanel,
+  DashboardNavSection,
+} from "@/components/application/dashboard/dashboard-sidebar";
 
 /*
  * A page of the app: its address, its row in a sidebar, and the words it
@@ -443,13 +447,17 @@ export const inboxLink = page("inbox", "Inbox", RiInbox2Line, "/d/inbox", "Every
  * appSections lists the workspace's pages in the sidebar, the inbox
  * showing how many open conversations are assigned to the person.
  */
-export function appSections(inboxBadge?: number, notificationBadge?: number): DashboardNavSection[] {
+export function appSections(
+  inboxBadge?: number,
+  notificationBadge?: number,
+  notifications?: DashboardNavPanel,
+): DashboardNavSection[] {
   const unseen = notificationBadge && notificationBadge >= 100 ? "99+" : notificationBadge || undefined;
   return [
     {
       key: "you",
       items: [
-        { ...workspacePages.notifications, badge: unseen },
+        { ...workspacePages.notifications, href: undefined, badge: unseen, panel: notifications },
         { ...inboxLink, badge: inboxBadge || undefined },
       ],
     },
@@ -529,7 +537,10 @@ export function selectedKey(sections: DashboardNavSection[], extra: DashboardNav
   let best = { key: "", length: -1 };
 
   for (const item of [...sections.flatMap((section) => section.items), ...extra]) {
-    const href = item.href ?? "";
+    const href = item.href;
+    if (!href) {
+      continue;
+    }
     const holds = path === href || path.startsWith(`${href}/`);
     if (holds && href.length > best.length) {
       best = { key: item.key, length: href.length };

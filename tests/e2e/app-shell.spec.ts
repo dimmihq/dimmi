@@ -2,7 +2,6 @@ import { createAccount, expect, inbox, test as it, type Person, signIn } from ".
 import { pickView } from "./support/inbox";
 
 const pages = [
-  ["Notifications", "/d/notifications"],
   ["Workflows", "/d/workflows"],
   ["Procedures", "/d/procedures"],
   ["Agent", "/d/agent"],
@@ -42,8 +41,8 @@ it.describe("the app's frame", () => {
     await page.goto("/d/inbox/all");
     await expect(page).toHaveURL(/\/d\/acme-[^/]+\/inbox\/all$/);
     const shared = page.url();
-    await page.getByRole("link", { name: "Notifications" }).click();
-    await expect(page).toHaveURL(/\/d\/acme-[^/]+\/notifications$/);
+    await page.getByRole("link", { name: "Workflows" }).click();
+    await expect(page).toHaveURL(/\/d\/acme-[^/]+\/workflows$/);
 
     await page.goto(shared);
     await expect(page).toHaveURL(shared);
@@ -65,9 +64,21 @@ it.describe("the app's frame", () => {
       .click();
     await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/mentions$/);
 
-    await page.getByRole("link", { name: "Notifications" }).click();
+    await page.getByRole("link", { name: "Workflows" }).click();
     await page.getByRole("link", { name: "Inbox", exact: true }).click();
     await expect(page).toHaveURL(/\/d\/[^/]+\/inbox\/mentions$/);
+  });
+
+  it("opens notifications beside the sidebar, over the page it was opened on", async ({ page }) => {
+    const before = page.url();
+    await page.getByRole("button", { name: "Notifications" }).click();
+    const center = page.getByRole("dialog", { name: "Notifications" });
+    await expect(center).toBeVisible();
+    await expect(center.getByText("You’re all caught up.")).toBeVisible();
+    expect(page.url()).toBe(before);
+
+    await page.keyboard.press("Escape");
+    await expect(center).toBeHidden();
   });
 
   it("opens every page from the sidebar without reloading the app", async ({ page }) => {

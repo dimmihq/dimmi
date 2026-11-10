@@ -20,7 +20,7 @@ import {
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 
 import {
   type DashboardAccount,
@@ -37,6 +37,8 @@ import { Button } from "@/components/base/buttons/button";
 import { Drawer } from "@/components/base/drawer/drawer";
 import { Toaster } from "@/components/base/toast/toast";
 import { ActionProvider } from "@/features/inbox/actions/action-provider";
+import { OpenNotificationsContext } from "@/features/notifications/notification-center-context";
+import { NotificationsPanel } from "@/features/notifications/notifications-panel";
 import { useNotificationFocus } from "@/features/notifications/use-notification-focus";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
@@ -228,9 +230,15 @@ function SignedInShell({
     enabled: Boolean(workspace),
   });
   useNotificationFocus(workspace?.id ?? null, path);
+  const [bellOpen, setBellOpen] = useState(false);
+  const openBell = useCallback(() => setBellOpen(true), []);
   const sections = inSettings
     ? settingsSections(me.instance?.edition === "cloud")
-    : appSections(counts?.views.mine.open, bell?.unseen_count);
+    : appSections(counts?.views.mine.open, bell?.unseen_count, {
+        isOpen: bellOpen,
+        onOpenChange: setBellOpen,
+        content: (close) => <NotificationsPanel onClose={close} />,
+      });
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (
@@ -279,7 +287,9 @@ function SignedInShell({
         </Drawer>
 
         <main className="flex min-h-0 min-w-0 flex-1">
-          <ActionProvider>{children}</ActionProvider>
+          <OpenNotificationsContext.Provider value={openBell}>
+            <ActionProvider>{children}</ActionProvider>
+          </OpenNotificationsContext.Provider>
         </main>
       </div>
       <ConnectionIndicator className="fixed end-4 bottom-4 z-50" />
