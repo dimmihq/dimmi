@@ -22,7 +22,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 )
 
@@ -108,35 +107,6 @@ func (e *Engine) offers(s *session, t tool) bool {
 		}
 	}
 	return false
-}
-
-/*
-callTool runs one tool call, records it, streams its step and returns
-what the model reads, saying what went wrong when it failed.
-*/
-func (e *Engine) callTool(ctx context.Context, s *session, call contracts.ToolCall) (string, bool) {
-	started := e.Clock.Now()
-	s.toolCalls++
-	t, ok := e.registry(s)[call.Name]
-	var out result
-	err := errors.New("unknown tool " + call.Name)
-	if ok && e.offers(s, t) {
-		out, err = t.handle(ctx, s, call.Arguments)
-	}
-	if out.step.Tool == "" {
-		out.step = Step{Tool: call.Name, Summary: call.Name}
-	}
-	out.step.OK = err == nil
-	if err != nil {
-		out.text, out.step.Summary = refusal(err), out.step.Summary+": "+refusal(err)
-	}
-	s.steps = append(s.steps, out.step)
-	e.publishStep(ctx, s, out.step)
-	e.record(ctx, s, step{
-		kind: enums.AIRunStepKindToolCall, name: call.Name, started: started,
-		request: string(call.Arguments), response: out.text, err: err,
-	})
-	return out.text, err != nil
 }
 
 /*

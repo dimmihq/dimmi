@@ -71,13 +71,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 		p.messages = append(p.messages, contracts.ChatMessage{
 			Role: contracts.ChatRoleAssistant, Parts: textParts(out.text), ToolCalls: out.calls,
 		})
-		for _, call := range out.calls {
-			result, failed := e.callTool(ctx, s, call)
-			p.messages = append(p.messages, contracts.ChatMessage{
-				Role: contracts.ChatRoleTool, ToolCallID: call.ID, ToolError: failed,
-				Parts: []contracts.ContentPart{{Text: result}},
-			})
-		}
+		p.messages = append(p.messages, e.callTools(ctx, s, out.calls)...)
 		if ctx.Err() != nil {
 			return strings.TrimSpace(written.String()), statusOf(ctx.Err())
 		}
