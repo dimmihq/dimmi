@@ -147,7 +147,8 @@ goes to and CC who is copied. ReplyTo lists the channel ids of earlier
 messages of the thread, newest last. Options is the raw channel options
 of the request, nil when absent. Controls are the answer controls an
 agent's answer offers the customer, such as solved and handoff, which a
-chat app renders as buttons and other channels ignore.
+chat app renders as buttons and other channels ignore. Sources are the
+articles an agent's answer cites, which a chat app lists under it.
 */
 type OutboundMessage struct {
 	WorkspaceID        ids.UUID
@@ -167,6 +168,7 @@ type OutboundMessage struct {
 	ReplyTo            []string
 	Options            []byte
 	Controls           []string
+	Sources            []OutboundSource
 	IsTest             bool
 }
 

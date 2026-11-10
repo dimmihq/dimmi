@@ -152,7 +152,11 @@ func TestSlackAgentControls(t *testing.T) {
 
 		replies := sc.posted(supportRoom)
 		require.NotEmpty(t, replies)
-		assert.Equal(t, rootTS, replies[len(replies)-1].Form.Get("thread_ts"))
+		answered := replies[len(replies)-1]
+		assert.Equal(t, rootTS, answered.Form.Get("thread_ts"))
+		assert.Contains(t, answered.Form.Get("blocks"), `"value":"solved"`)
+		assert.Contains(t, answered.Form.Get("blocks"), `"value":"handoff"`)
+		assert.Contains(t, answered.Form.Get("blocks"), "plans-and-pricing|Plans and pricing")
 
 		for _, m := range sc.messages(conv) {
 			if m.AuthorType == string(enums.AuthorTypeAgent) {

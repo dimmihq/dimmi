@@ -16,7 +16,9 @@
 package slack
 
 import (
+	"cmp"
 	"context"
+	"strings"
 
 	"github.com/slack-go/slack"
 
@@ -32,10 +34,12 @@ func controlLabels() map[string]string {
 }
 
 /*
-controlBlocks returns the answer's Markdown as a block, with a button
-for each control it offers.
+controlBlocks returns the answer's Markdown as a block, the articles it
+cites as a line under it, and a button for each control it offers.
 */
-func controlBlocks(body, messagePublicID string, controls []string) []slack.Block {
+func controlBlocks(body, messagePublicID string, controls []string,
+	sources []contracts.OutboundSource,
+) []slack.Block {
 	labels := controlLabels()
 	buttons := make([]slack.BlockElement, 0, len(controls))
 
@@ -55,6 +59,9 @@ func controlBlocks(body, messagePublicID string, controls []string) []slack.Bloc
 	}
 
 	blocks := []slack.Block{slack.NewMarkdownBlock("", body)}
+	if cited := sourcesBlock(sources); cited != nil {
+		blocks = append(blocks, cited)
+	}
 	if len(buttons) > 0 {
 		blocks = append(blocks, slack.NewActionBlock("controls", buttons...))
 	}
@@ -79,4 +86,22 @@ func (d *Driver) ClearControls(ctx context.Context, conn models.ChannelConnectio
 	}
 
 	return d.API(token).Update(ctx, channel, ts, ToSlack(body))
+}
+
+/*
+sourcesBlock lists the cited articles as links, nil when there are none.
+*/
+func sourcesBlock(sources []contracts.OutboundSource) slack.Block {
+	if len(sources) == 0 {
+		return nil
+	}
+
+	links := make([]string, 0, len(sources))
+	for _, s := range sources {
+		links = append(links, LinkText(s.URL, cmp.Or(s.Title, s.URL)))
+	}
+
+	text := slack.NewTextBlockObject(slack.MarkdownType, "Sources: "+strings.Join(links, " · "), false, false)
+
+	return slack.NewContextBlock("sources", text)
 }

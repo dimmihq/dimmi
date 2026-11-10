@@ -287,11 +287,11 @@ func messageOptions(to target, msg contracts.OutboundMessage) []slack.MsgOption 
 	}
 
 	feedback := to.threadTS == "" && msg.Author.Type == enums.AuthorTypeAgent && msg.IdempotencyKey != ""
-	if len(msg.Controls) == 0 && !feedback {
+	if len(msg.Controls) == 0 && len(msg.Sources) == 0 && !feedback {
 		return append(opts, slack.MsgOptionMarkdownText(body))
 	}
 
-	blocks := controlBlocks(body, msg.IdempotencyKey, msg.Controls)
+	blocks := controlBlocks(body, msg.IdempotencyKey, msg.Controls, msg.Sources)
 	if feedback {
 		blocks = append(blocks, feedbackBlock(msg.IdempotencyKey))
 	}
