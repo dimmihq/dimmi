@@ -44,7 +44,7 @@ func bootErasures(a *app.App) error {
 
 	acts.EraseContact = &erasures.EraseContact{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Storage: a.Storage, Retention: a.Retention,
-		Erasers: a.ContactErasers,
+		Erasers: a.ContactErasers, Keys: a.Keys,
 	}
 	if err := queue.Register(a.Queue, &jobs.EraseContact{Erase: acts.EraseContact}); err != nil {
 		return fmt.Errorf("erase job: %w", err)

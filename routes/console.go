@@ -53,6 +53,7 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.ExpireDataExportsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
 	a.Schedule.Job(jobs.PruneAiTracesArgs{}).DailyAt("03:50")
+	a.Schedule.Job(jobs.PruneChannelInboundEventsArgs{}).DailyAt("03:45")
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")

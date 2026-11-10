@@ -80,6 +80,38 @@ func (q *Queries) CreateChannelInboundEvent(ctx context.Context, arg CreateChann
 	return i, err
 }
 
+const eraseChannelInboundEventsMentioning = `-- name: EraseChannelInboundEventsMentioning :execrows
+DELETE FROM channel_inbound_events AS e
+WHERE e.workspace_id = $1 AND e.provider = $2 AND e.received_at <= $3::timestamptz
+    AND EXISTS (
+        SELECT 1 FROM unnest($4::text[]) AS n(value)
+        WHERE n.value <> '' AND strpos(e.payload::text, to_jsonb(n.value)::text) > 0
+    )
+`
+
+type EraseChannelInboundEventsMentioningParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Provider    string    `json:"provider"`
+	Before      time.Time `json:"before"`
+	Needles     []string  `json:"needles"`
+}
+
+// EraseChannelInboundEventsMentioning deletes the workspace's deliveries
+// from the provider, received up to the time, whose payload holds one of
+// the values as a whole JSON string.
+func (q *Queries) EraseChannelInboundEventsMentioning(ctx context.Context, arg EraseChannelInboundEventsMentioningParams) (int64, error) {
+	result, err := q.db.Exec(ctx, eraseChannelInboundEventsMentioning,
+		arg.WorkspaceID,
+		arg.Provider,
+		arg.Before,
+		arg.Needles,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findChannelInboundEvent = `-- name: FindChannelInboundEvent :one
 SELECT id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at, integration_installation_id FROM channel_inbound_events WHERE workspace_id = $1 AND id = $2
 `
@@ -139,6 +171,82 @@ func (q *Queries) FinishChannelInboundEvent(ctx context.Context, arg FinishChann
 		arg.ID,
 	)
 	return err
+}
+
+const pruneChannelInboundEvents = `-- name: PruneChannelInboundEvents :execrows
+DELETE FROM channel_inbound_events WHERE id IN (
+    SELECT e.id FROM channel_inbound_events AS e
+    WHERE e.workspace_id = $1 AND e.status = ANY ($2::text[])
+        AND e.received_at < $3::timestamptz
+    ORDER BY e.received_at LIMIT $4::bigint
+)
+`
+
+type PruneChannelInboundEventsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Statuses    []string  `json:"statuses"`
+	Cutoff      time.Time `json:"cutoff"`
+	Batch       int64     `json:"batch"`
+}
+
+// PruneChannelInboundEvents deletes up to a batch of the workspace's
+// deliveries in one of the statuses received before the cutoff.
+func (q *Queries) PruneChannelInboundEvents(ctx context.Context, arg PruneChannelInboundEventsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneChannelInboundEvents,
+		arg.WorkspaceID,
+		arg.Statuses,
+		arg.Cutoff,
+		arg.Batch,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const releaseHeldChannelInboundEvents = `-- name: ReleaseHeldChannelInboundEvents :many
+WITH released AS (
+    UPDATE channel_inbound_events SET status = 'pending', updated_at = $1::timestamptz
+    WHERE id IN (
+        SELECT e.id FROM channel_inbound_events AS e
+        WHERE e.workspace_id = $2 AND e.status = 'held'
+            AND EXISTS (SELECT 1 FROM workspaces AS w WHERE w.id = $2 AND w.suspended_at IS NULL)
+        ORDER BY e.received_at, e.id LIMIT $3::bigint
+        FOR UPDATE
+    )
+    RETURNING id, received_at
+)
+SELECT id FROM released ORDER BY received_at, id
+`
+
+type ReleaseHeldChannelInboundEventsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Batch       int64     `json:"batch"`
+}
+
+// ReleaseHeldChannelInboundEvents sets up to a batch of the workspace's
+// held deliveries back to pending, oldest first, and returns their ids
+// in the order they were received. A workspace still suspended releases
+// nothing.
+func (q *Queries) ReleaseHeldChannelInboundEvents(ctx context.Context, arg ReleaseHeldChannelInboundEventsParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, releaseHeldChannelInboundEvents, arg.Now, arg.WorkspaceID, arg.Batch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const startChannelInboundEvent = `-- name: StartChannelInboundEvent :one

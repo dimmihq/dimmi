@@ -15,7 +15,6 @@ package erasures
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -125,7 +124,7 @@ func (a *CancelErasure) restore(ctx context.Context, q *models.Queries, row mode
 		return nil, fmt.Errorf("restore contact: %w", err)
 	}
 
-	stash, err := a.open(ctx, row)
+	stash, err := openStash(ctx, a.Keys, row)
 	if err != nil {
 		return nil, err
 	}
@@ -155,26 +154,4 @@ func (a *CancelErasure) restore(ctx context.Context, q *models.Queries, row mode
 	}
 
 	return conflicted, nil
-}
-
-/*
-open returns the identities sealed in the request, none when it holds
-no stash.
-*/
-func (a *CancelErasure) open(ctx context.Context, row models.ContactErasure) ([]stashedIdentity, error) {
-	if len(row.IdentitiesStash) == 0 {
-		return nil, nil
-	}
-
-	plain, err := a.Keys.Decrypt(ctx, row.IdentitiesStash, stashData(row.ContactID))
-	if err != nil {
-		return nil, fmt.Errorf("open identities: %w", err)
-	}
-
-	var stash []stashedIdentity
-	if err := json.Unmarshal(plain, &stash); err != nil {
-		return nil, fmt.Errorf("decode identities: %w", err)
-	}
-
-	return stash, nil
 }

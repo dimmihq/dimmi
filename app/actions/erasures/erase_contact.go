@@ -6,9 +6,10 @@
 | The wipe a request schedules. The retention guard is asked first: a
 | held customer stays hidden and untouched, and the request waits as
 | held until the job runs again. Otherwise every message of the
-| customer's conversations loses its text and files, every registered
-| eraser removes what its part kept, and the conversations are handed to
-| the workspace's placeholder before the contact itself is deleted. Each
+| customer's conversations loses its text and files, the chat app
+| deliveries that name them are deleted, every registered eraser
+| removes what its part kept, and the conversations are handed to the
+| workspace's placeholder before the contact itself is deleted. Each
 | step finds nothing to do when it already ran, so a failed attempt is
 | simply tried again.
 |
@@ -24,6 +25,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -59,6 +61,7 @@ type EraseContact struct {
 	Storage   *filesystem.Manager
 	Retention contracts.RetentionGuard
 	Erasers   *Erasers
+	Keys      encryption.KeyManager
 }
 
 /*
@@ -103,6 +106,10 @@ func (a *EraseContact) Handle(ctx context.Context, args EraseArgs) (Outcome, err
 
 	counts, err := a.wipe(ctx, row)
 	if err != nil {
+		return Done, err
+	}
+
+	if counts["channel_inbound_events"], err = a.eraseDeliveries(ctx, row); err != nil {
 		return Done, err
 	}
 

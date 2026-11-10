@@ -6,7 +6,8 @@
 | The operator of the server can freeze a workspace, for abuse or an
 | unpaid bill, and thaw it again. A suspended workspace can still be
 | read by its members but nothing in it can be changed, and its mail
-| waits as it was received. The reason is kept with the workspace so the
+| and its chat apps' deliveries wait as they were received; a thaw
+| queues the held deliveries for processing. The reason is kept with the workspace so the
 | next operator knows why, and both changes are written to the
 | workspace's audit log as done by the system at the command line.
 |
@@ -21,6 +22,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/audit"
@@ -72,8 +74,9 @@ func (a *SuspendWorkspace) Handle(ctx context.Context, slug, reason string) (mod
 
 /*
 UnsuspendWorkspace lets a suspended workspace be changed again, by
-slug. A workspace that is not suspended is answered as it is, and no
-entry is written.
+slug, and queues the release of the chat app deliveries held while it
+was suspended. A workspace that is not suspended is answered as it is,
+and no entry is written.
 
 Errors: [exceptions.ErrWorkspaceNotFound], or a wrapped error.
 */
@@ -81,6 +84,7 @@ type UnsuspendWorkspace struct {
 	DB    *database.DB
 	Clock clock.Clock
 	Audit *audit.RecordAuditLog
+	Queue *queue.Queue
 }
 
 /*
@@ -100,6 +104,10 @@ func (a *UnsuspendWorkspace) Handle(ctx context.Context, slug string) (models.Wo
 		thawed, err := q.UnsuspendWorkspace(ctx, models.UnsuspendWorkspaceParams{ID: w.ID, Now: a.Clock.Now()})
 		if err != nil {
 			return w, fmt.Errorf("unsuspend workspace: %w", err)
+		}
+
+		if err := a.Queue.PushTx(ctx, tx, ReleaseHeldInboundEventsArgs{WorkspaceID: w.ID}); err != nil {
+			return w, fmt.Errorf("queue held deliveries: %w", err)
 		}
 
 		return thawed, record(ctx, a.Audit, thawed, audit.Entry{

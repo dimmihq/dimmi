@@ -14,9 +14,11 @@
 package providers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
@@ -72,8 +74,10 @@ func bootWorkspaceLifecycle(a *app.App) {
 }
 
 /*
-registerWorkspaceJobs registers the workers of the workspace jobs; the
-console routes schedule the daily rounds.
+registerWorkspaceJobs registers the workers of the workspace jobs,
+among them the release of a thawed workspace's held chat deliveries
+and the daily prune of kept ones; the console routes schedule the
+daily rounds.
 */
 func registerWorkspaceJobs(a *app.App) error {
 	disk, err := a.Storage.Default()
@@ -84,9 +88,18 @@ func registerWorkspaceJobs(a *app.App) error {
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.PurgeWorkspace{
 			DB: a.DB, Clock: a.Clock, Disk: disk, Retention: a.Retention, Log: a.Log,
+			Revoke: func(ctx context.Context, workspaceID ids.UUID) error {
+				return a.Actions.Integrations.RevokeWorkspace.Handle(ctx, workspaceID)
+			},
 		}),
 		queue.Register(a.Queue, &jobs.ScheduleWorkspacePurges{DB: a.DB, Clock: a.Clock, Queue: a.Queue}),
 		queue.Register(a.Queue, &jobs.SendWorkspaceDeletionReminders{DB: a.DB, Clock: a.Clock, Mail: a.Mail}),
 		queue.Register(a.Queue, &jobs.CheckWorkspaceOwners{DB: a.DB, Ensure: a.Actions.EnsureWorkspaceHasOwner}),
+		queue.Register(a.Queue, &jobs.ReleaseHeldInboundEvents{DB: a.DB, Clock: a.Clock, Queue: a.Queue}),
+		queue.Register(a.Queue, &jobs.PruneChannelInboundEvents{
+			DB: a.DB, Clock: a.Clock, Retention: a.Retention,
+			ProcessedRetentionDays: a.Config.Channels.InboundEvents.ProcessedRetentionDays,
+			FailedRetentionDays:    a.Config.Channels.InboundEvents.FailedRetentionDays,
+		}),
 	)
 }

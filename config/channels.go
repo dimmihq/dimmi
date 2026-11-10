@@ -54,12 +54,13 @@ cloudInboundDomain is the domain the cloud receives mail on.
 const cloudInboundDomain = "inbound.trydimmi.com"
 
 /*
-ChannelsConfig configures the conversation channels: email, and the
-Slack chat app.
+ChannelsConfig configures the conversation channels: email, the Slack
+chat app, and how long deliveries from chat apps are kept.
 */
 type ChannelsConfig struct {
-	Email EmailConfig        `koanf:"email"`
-	Slack SlackChannelConfig `koanf:"slack"`
+	Email         EmailConfig                `koanf:"email"`
+	Slack         SlackChannelConfig         `koanf:"slack"`
+	InboundEvents ChannelInboundEventsConfig `koanf:"inbound_events"`
 }
 
 /*

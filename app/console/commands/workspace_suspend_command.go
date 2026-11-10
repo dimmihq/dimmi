@@ -119,7 +119,9 @@ Handle unsuspends the workspace.
 func (c WorkspaceUnsuspendCommand) Handle(
 	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
 ) error {
-	unsuspend := &workspaces.UnsuspendWorkspace{DB: c.App.DB, Clock: c.App.Clock, Audit: c.App.Actions.RecordAuditLog}
+	unsuspend := &workspaces.UnsuspendWorkspace{
+		DB: c.App.DB, Clock: c.App.Clock, Audit: c.App.Actions.RecordAuditLog, Queue: c.App.Queue,
+	}
 
 	w, err := unsuspend.Handle(ctx, in.Argument("slug"))
 	if err != nil {
