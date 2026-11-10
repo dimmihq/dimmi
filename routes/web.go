@@ -211,6 +211,7 @@ func authPages() map[string]string {
 		"two-factor-reset": "/two-factor-reset",
 		"invitation":       "/invitation",
 		"onboarding":       "/onboarding",
+		"oauth.authorize":  "/oauth/authorize",
 	}
 }
 

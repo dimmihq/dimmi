@@ -107,6 +107,7 @@ func API(a *app.App) {
 		api.Group("", func(setup *routing.Router) { onboardingRoutes(setup, a) })
 		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 		signInHelpRoutes(api, a)
+		oauthAppRoutes(api, a)
 	})
 }
 

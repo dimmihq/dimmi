@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/mail"
+	"github.com/dimmihq/dimmi/framework/oauth"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app/actions/contacts"
@@ -64,6 +65,7 @@ Providers finds the ones the install configured. Factors holds the auth
 factor drivers and knows which the install enables, sealing their
 secrets with Keys, the install's data keys. AppGrants
 ends the user's first-party app grants. Tokens, Devices, Cookies,
+Authorizer is the OAuth server agents and their apps sign in through.
 Lockout, SecurityLog, Secrets, Links and OAuthAttempts are the sign-in
 services providers build at boot, and Actions every business action.
 Channels holds the channel drivers replies go out through, and
@@ -126,6 +128,7 @@ type App struct {
 	Viewers  *appbroadcasting.Viewers
 
 	OAuthAttempts auth.OAuthAttempts
+	Authorizer    *oauth.Server
 	Frontend      fs.FS
 	Vite          *vite.Bundle
 	Widget        fs.FS

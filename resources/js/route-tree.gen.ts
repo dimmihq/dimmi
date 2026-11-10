@@ -34,6 +34,7 @@ import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
+import { Route as AuthOauthAuthorizeRouteImport } from './routes/_auth/oauth.authorize'
 import { Route as DChangelogIndexRouteImport } from './routes/d/changelog/index'
 import { Route as DChangelogEntryRouteImport } from './routes/d/changelog/$entry'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
@@ -188,6 +189,11 @@ const AuthLoginMagicRoute = AuthLoginMagicRouteImport.update({
 const AuthLoginTwoFactorRoute = AuthLoginTwoFactorRouteImport.update({
   id: '/login_/two-factor',
   path: '/login/two-factor',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthOauthAuthorizeRoute = AuthOauthAuthorizeRouteImport.update({
+  id: '/oauth/authorize',
+  path: '/oauth/authorize',
   getParentRoute: () => AuthRoute,
 } as any)
 const DChangelogIndexRoute = DChangelogIndexRouteImport.update({
@@ -379,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
+  '/oauth/authorize': typeof AuthOauthAuthorizeRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
@@ -431,6 +438,7 @@ export interface FileRoutesByTo {
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
+  '/oauth/authorize': typeof AuthOauthAuthorizeRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
@@ -488,6 +496,7 @@ export interface FileRoutesById {
   '/_auth/email/confirm': typeof AuthEmailConfirmRoute
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
+  '/_auth/oauth/authorize': typeof AuthOauthAuthorizeRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/_lists': typeof DCustomersListsRouteWithChildren
@@ -548,6 +557,7 @@ export interface FileRouteTypes {
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
+    | '/oauth/authorize'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/feedback/$post'
@@ -600,6 +610,7 @@ export interface FileRouteTypes {
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
+    | '/oauth/authorize'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/feedback/$post'
@@ -656,6 +667,7 @@ export interface FileRouteTypes {
     | '/_auth/email/confirm'
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
+    | '/_auth/oauth/authorize'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/customers/_lists'
@@ -870,6 +882,13 @@ declare module '@tanstack/react-router' {
       path: '/login/two-factor'
       fullPath: '/login/two-factor'
       preLoaderRoute: typeof AuthLoginTwoFactorRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/oauth/authorize': {
+      id: '/_auth/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof AuthOauthAuthorizeRouteImport
       parentRoute: typeof AuthRoute
     }
     '/d/changelog/': {
@@ -1256,6 +1275,7 @@ interface AuthRouteChildren {
   AuthEmailConfirmRoute: typeof AuthEmailConfirmRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
   AuthLoginTwoFactorRoute: typeof AuthLoginTwoFactorRoute
+  AuthOauthAuthorizeRoute: typeof AuthOauthAuthorizeRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -1269,6 +1289,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthEmailConfirmRoute: AuthEmailConfirmRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,
   AuthLoginTwoFactorRoute: AuthLoginTwoFactorRoute,
+  AuthOauthAuthorizeRoute: AuthOauthAuthorizeRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

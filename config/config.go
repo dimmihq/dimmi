@@ -36,6 +36,8 @@ type Config struct {
 	HTTP HTTPConfig `koanf:"http"`
 	Auth AuthConfig `koanf:"auth"`
 
+	OAuthServer OAuthServerConfig `koanf:"oauth_server"`
+
 	Workspaces  WorkspacesConfig  `koanf:"workspaces"`
 	Invitations InvitationsConfig `koanf:"invitations"`
 	Tokens      TokensConfig      `koanf:"tokens"`

@@ -14,6 +14,7 @@ import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pa
 import { AttributesSettings } from "./pages/attributes";
 import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectionsSettings } from "./pages/channels";
+import { ConnectedAppsSettings } from "./pages/connected-apps";
 import {
   ChangelogSettings,
   EngageSettings,
@@ -45,6 +46,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   notifications: NotificationsSettings,
   security: SecuritySettings,
   tokens: TokensSettings,
+  "connected-apps": ConnectedAppsSettings,
   exports: ExportsSettings,
   inboxes: InboxesSettings,
   tags: TagsSettings,

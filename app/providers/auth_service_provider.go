@@ -31,6 +31,7 @@ import (
 	fauth "github.com/dimmihq/dimmi/framework/auth"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/oauth"
 	"github.com/dimmihq/dimmi/framework/session"
 
 	"github.com/dimmihq/dimmi/app"
@@ -82,6 +83,10 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 
 	a.OAuthAttempts = appauth.OAuthAttempts{Encrypter: encrypter}
 
+	if a.Authorizer, err = authorizer(fa, a); err != nil {
+		return err
+	}
+
 	if a.Keys, err = fa.Crypt.Keys(&keysets.Store{DB: fa.DB}); err != nil {
 		return fmt.Errorf("data keys: %w", err)
 	}
@@ -90,13 +95,7 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 		return err
 	}
 
-	fa.Session.Configure(session.Config{
-		Cookie:      a.Config.Auth.Sessions.Cookie,
-		Insecure:    !a.SecureCookies(),
-		IdleTimeout: a.Config.Auth.Sessions.IdleLifetime,
-		Lifetime:    a.Config.Auth.Sessions.AbsoluteLifetime,
-		Errors:      fa.Errors,
-	})
+	configureSessions(fa, a)
 
 	if p.App.AccessPolicy == nil {
 		p.App.AccessPolicy = appauth.DefaultAccessPolicy(fa.Clock)
@@ -108,13 +107,27 @@ func (p AuthServiceProvider) Register(fa *foundation.Application) error {
 }
 
 /*
+configureSessions sets the session cookie and lifetimes from the config.
+*/
+func configureSessions(fa *foundation.Application, a *app.App) {
+	fa.Session.Configure(session.Config{
+		Cookie:      a.Config.Auth.Sessions.Cookie,
+		Insecure:    !a.SecureCookies(),
+		IdleTimeout: a.Config.Auth.Sessions.IdleLifetime,
+		Lifetime:    a.Config.Auth.Sessions.AbsoluteLifetime,
+		Errors:      fa.Errors,
+	})
+}
+
+/*
 registerGuards registers the bearer and session guards and names the
 kinds of caller routes accept.
 */
 func (p AuthServiceProvider) registerGuards(fa *foundation.Application) {
 	tokens := &appauth.TokenGuard{DB: fa.DB, Tokens: p.App.Tokens}
+	connected := &appauth.OAuthGuard{DB: fa.DB, Server: p.App.Authorizer.Resolver()}
 
-	fa.Guards.Register(appauth.KindToken, fauth.BearerGuard(tokens))
+	fa.Guards.Register(appauth.KindToken, fauth.BearerGuard(tokens, connected))
 	fa.Guards.Register(appauth.KindSession, &appauth.SessionGuard{DB: fa.DB})
 	fa.Guards.Define(appauth.KindSession, exceptions.ErrSessionRequired, appauth.KindSession)
 	fa.Guards.Define("user", exceptions.ErrFirstPartyOnly, appauth.KindSession, appauth.KindApp)
@@ -125,4 +138,24 @@ Boot has nothing to start.
 */
 func (p AuthServiceProvider) Boot(context.Context, *foundation.Application) error {
 	return nil
+}
+
+/*
+authorizer builds the OAuth server agents sign in through, at the
+application's address, offering every scope a person can grant.
+*/
+func authorizer(fa *foundation.Application, a *app.App) (*oauth.Server, error) {
+	cfg := a.Config.OAuthServer
+
+	server, err := oauth.New(fa.DB, fa.Clock, fa.Limiter, oauth.Options{
+		Issuer: fa.Config.App.URL, Prefix: appauth.OAuthTokenPrefix, Scopes: appauth.OAuthScopes(),
+		AuthorizationPath: appauth.AuthorizationPath, AccessTokenTTL: cfg.AccessTokenTTL,
+		RefreshTokenTTL: cfg.RefreshTokenTTL, Registration: oauth.Registration{Enabled: cfg.Registration},
+		Errors: fa.Errors,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("oauth server: %w", err)
+	}
+
+	return server, nil
 }

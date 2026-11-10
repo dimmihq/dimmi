@@ -207,6 +207,13 @@ export const settingsPages = {
     "/d/settings/tokens",
     "Tokens for scripts, the CLI and coding agents.",
   ),
+  "connected-apps": page(
+    "settings-connected-apps",
+    "Connected apps",
+    RiRobot2Line,
+    "/d/settings/connected-apps",
+    "Apps and AI agents you let work in dimmi as you.",
+  ),
   exports: page(
     "settings-exports",
     "Exports",
@@ -496,7 +503,15 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "account",
       label: "Account",
-      items: [pages.profile, pages.preferences, pages.notifications, pages.security, pages.tokens, pages.exports],
+      items: [
+        pages.profile,
+        pages.preferences,
+        pages.notifications,
+        pages.security,
+        pages.tokens,
+        pages["connected-apps"],
+        pages.exports,
+      ],
     },
     {
       key: "inbox",

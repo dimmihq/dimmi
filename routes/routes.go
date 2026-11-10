@@ -24,4 +24,5 @@ func Register(a *app.App) {
 	Webhooks(a)
 	Widget(a)
 	MCP(a)
+	OAuth(a)
 }

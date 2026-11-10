@@ -8,6 +8,15 @@ Implementation reuse (`research/build-vs-reuse.md` section 2): AS core custom (n
 
 Framework status (2026-11-02): `framework/oauth` is a full OAuth 2.1 AS with storage + migration (framework set: `oauth_clients`, `oauth_authorization_codes`, `oauth_grants`, `oauth_tokens` with `kind` access|refresh): clients (`CreateClient`, config clients), authorization code + PKCE S256 (`Approve`/`Deny`), rotating refresh tokens with reuse detection (family revoke), revocation (RFC 7009), metadata (RFC 8414), DCR (rate limited via `a.Limiter`), `ConfirmGrant`, bearer resolver for guards `token` (third party) and `app` (first party). Deferred in framework (09 builds on top or waits): RFC 8707 resource indicators/audiences (needed by MCP), CIMD client ID metadata documents, device grant (RFC 8628), consent-skip rules, last-use tracking. Product columns (device fields, `revoked_reason`, `auth_methods`, client kind/metadata) added by 09 app migrations with `ALTER TABLE` on framework tables.
 
+Product status (2026-11-10), stage one built:
+- `App.Authorizer` = `framework/oauth` server: issuer `APP_URL`, prefix `dmi_`, scopes = ability groups minus `system:*` plus `offline_access`, DCR on (`oauth_server.registration`), access 1h, refresh 90 days.
+- `/mcp` and `/api/v1` accept OAuth access tokens beside PATs (`BearerGuard(tokens, connected)`). `OAuthGuard` maps grant to member principal: kind token, grant workspace, granted scopes widened by hierarchy, role ceiling via `authz`. Member left or account deleted: token stops at once.
+- Discovery: PRM at `/.well-known/oauth-protected-resource/mcp` + root; 401 on `/mcp` carries `resource_metadata`.
+- Consent page `/oauth/authorize` (SPA, signed out: login then back). Stateless: no `oar_` row yet; SPA sends the original query, server validates it again on every call. `GET /api/v1/oauth/authorization?query=` reads it; `POST /api/v1/oauth/authorizations` `{query, decision: approve|deny, workspace_id, scopes}` returns `redirect_to`. Refusals: fault `oauth_<code>`, `redirect_to` when the client may hear of it.
+- Consent shows self-registered warning, loopback warning, redirect host, workspace choice, scope checkboxes.
+- Settings, Account, Connected apps: `GET /api/v1/user/connected-apps`, `DELETE /api/v1/user/connected-apps/{app}` (revokes grant and its tokens).
+- Not yet: stored authorization requests (`oar_`, transitions, expiry), RFC 8707 audiences, CIMD, device grant, auto-approve, per-workspace `agent_access` policy, first-party apps.
+
 | Fact (MCP 2026-07-28) | Our decision |
 |---|---|
 | MCP servers MUST implement RFC 9728 PRM; PRM MUST list `authorization_servers` | PRM at `/.well-known/oauth-protected-resource/mcp` + root; 401 `WWW-Authenticate` carries `resource_metadata` |
