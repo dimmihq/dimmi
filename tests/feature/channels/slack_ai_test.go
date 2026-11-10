@@ -270,6 +270,26 @@ func TestSlackAgentControls(t *testing.T) {
 		assert.Equal(t, kept, after, "the click is answered at once and never queued")
 	})
 
+	t.Run("a draft too long for Slack's editor is never opened cut short", func(t *testing.T) {
+		t.Parallel()
+		sc, conv := triaged(t)
+		answer(withAgent(sc))
+		sc.setSetting("agent_mode", "draft")
+		res := sc.runAgent(conv, false)
+		sc.Drain()
+		_, err := sc.Operator().Exec(t.Context(), "UPDATE ai_runs SET draft_body = repeat('a', 3001) WHERE id = $1",
+			res.RunID)
+		require.NoError(t, err)
+
+		sc.interact(teamPress(slackdriver.TeamActionID(slackdriver.DraftPrefix(),
+			models.PublicID(models.PrefixAiRun, res.RunID), slackdriver.DraftEdit), "U0TEAMMATE", ""))
+
+		assert.Empty(t, sc.slack.called("views.open"))
+		notices := sc.slack.called("chat.postEphemeral")
+		require.NotEmpty(t, notices)
+		assert.Contains(t, notices[len(notices)-1].Form.Get("text"), "too long to edit in Slack")
+	})
+
 	t.Run("a teammate answering during the room's delay skips the agent with that reason", func(t *testing.T) {
 		t.Parallel()
 		sc, conv := opened(t)

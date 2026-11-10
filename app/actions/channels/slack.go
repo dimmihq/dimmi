@@ -83,6 +83,7 @@ type Slack struct {
 	Revocations  *integrations.ApplyProviderRevocation
 	Scopes       *oauth.Registry
 	AppURL       string
+	Broadcasts   SlackBroadcasts
 }
 
 /*
@@ -166,4 +167,17 @@ conversationLink is the inbox address of a conversation.
 */
 func (s *Slack) conversationLink(conversationID ids.UUID) string {
 	return s.AppURL + "/d/inbox/all/" + models.PublicID(models.PrefixConversation, conversationID)
+}
+
+/*
+quietly logs a Slack call whose failure costs only polish, such as the
+working state or a hint to one teammate, so it never fails the work it
+decorates but still shows up when Slack keeps refusing it.
+*/
+func (s *Slack) quietly(ctx context.Context, what string, err error) {
+	if err == nil || s.Log == nil {
+		return
+	}
+
+	s.Log.WarnContext(ctx, "slack call failed", log.String("call", what), log.Err(err))
 }

@@ -110,7 +110,7 @@ func (s *Slack) startWorking(ctx context.Context, target workingTarget, conv mod
 	}
 
 	if how == workingReaction {
-		_ = s.Driver.StartWorking(ctx, target.conn, target.message)
+		s.quietly(ctx, "show slack working state", s.Driver.StartWorking(ctx, target.conn, target.message))
 	}
 
 	_ = s.Cache.Set(ctx, workingKey(channel, ts), []byte(how), workingFor)
@@ -127,14 +127,15 @@ func (s *Slack) stopWorking(ctx context.Context, target workingTarget, conv mode
 	if err == nil && string(how) == workingSession {
 		if thread, ok := threadOf(conv); ok && !thread.Direct() {
 			if api, err := s.api(ctx, target.conn); err == nil {
-				_ = api.SetSession(ctx, channel, thread.RootTS, slackdriver.SessionActive)
+				err := api.SetSession(ctx, channel, thread.RootTS, slackdriver.SessionActive)
+				s.quietly(ctx, "end slack agent session", err)
 			}
 		}
 
 		return
 	}
 
-	_ = s.Driver.StopWorking(ctx, target.conn, target.message)
+	s.quietly(ctx, "clear slack working state", s.Driver.StopWorking(ctx, target.conn, target.message))
 }
 
 /*
@@ -258,9 +259,9 @@ func (s *Slack) explainSilence(ctx context.Context, in ingestion) {
 	}
 
 	if api, err := s.api(ctx, in.conn); err == nil {
-		_ = api.Ephemeral(ctx, slackdriver.Notice{
+		s.quietly(ctx, "explain slack silence", api.Ephemeral(ctx, slackdriver.Notice{
 			Channel: in.ev.ChannelID(), User: in.author.user.ID, ThreadTS: in.ev.ThreadTS,
 			Text: "dimmi stayed quiet in this thread: " + why + ".",
-		})
+		}))
 	}
 }

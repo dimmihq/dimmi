@@ -153,6 +153,7 @@ func (s *Slack) onThreadReply(ctx context.Context, ev SlackEvent, room models.Ch
 	}
 
 	in.quiet = s.Pleasantries.Is(ev.Event.Text)
+	in.opening = s.broadcastOpening(room, ev.Event.ThreadTS)
 
 	result, ok, err := s.ingest(ctx, in)
 	if err != nil || !ok {
@@ -415,8 +416,8 @@ func (s *Slack) promptLink(ctx context.Context, conn models.ChannelConnection, e
 		return
 	}
 
-	_ = api.Ephemeral(ctx, slackdriver.Notice{
+	s.quietly(ctx, "ask slack teammate to link", api.Ephemeral(ctx, slackdriver.Notice{
 		Channel: ev.ChannelID(), User: a.user.ID, ThreadTS: ev.ThreadTS,
 		Text: "Link your Slack account in dimmi so your replies here are recorded on the conversation.",
-	})
+	}))
 }

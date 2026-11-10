@@ -21,6 +21,7 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -271,14 +272,24 @@ func (d *Driver) postText(ctx context.Context, s sending) (string, error) {
 
 	if user, ok := d.userToken(ctx, s); ok {
 		ts, err := d.API(user).postMessage(ctx, s.to.channel, opts...)
-		if err == nil {
-			return ts, nil
+		if err == nil || !refusedUser(err) {
+			return ts, err
 		}
 	}
 
 	opts = append(opts, authorOptions(s.msg.Author)...)
 
 	return d.API(s.token).postMessage(ctx, s.to.channel, opts...)
+}
+
+/*
+refusedUser reports whether Slack refused the teammate's own token for
+good, so the reply goes out from the app instead. A timeout or Slack's
+own trouble is not a refusal: the post may have landed, and sending it
+again from the app would show the customer the reply twice.
+*/
+func refusedUser(err error) bool {
+	return errors.Is(err, contracts.ErrConnectionBroken) || errors.Is(err, contracts.ErrPermanent)
 }
 
 /*

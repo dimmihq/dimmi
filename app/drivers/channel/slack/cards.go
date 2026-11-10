@@ -251,12 +251,18 @@ func homeBlocks(home Home) slack.Blocks {
 }
 
 /*
+DraftEditorLimit is the longest draft Slack's editor can hold; a longer
+one is edited in dimmi, so it is never sent cut short.
+*/
+const DraftEditorLimit = 3000
+
+/*
 draftEditor is the form that edits a draft before it is sent.
 */
 func draftEditor(runPublicID, text string) slack.ModalViewRequest {
 	input := slack.NewPlainTextInputBlockElement(label("Answer"), DraftEditorInput)
 	input.Multiline = true
-	input.InitialValue = Truncate(text, 3000)
+	input.InitialValue = Truncate(text, DraftEditorLimit)
 
 	return slack.ModalViewRequest{
 		Type: slack.VTModal, Title: label("Edit draft"), Submit: label("Send"), Close: label("Cancel"),
