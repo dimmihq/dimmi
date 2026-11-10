@@ -13,6 +13,7 @@ import { Route as Char91__gateChar93RouteImport } from './routes/[__gate]'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DRouteRouteImport } from './routes/d/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as AuthEmailPreferencesRouteImport } from './routes/_auth/email-preferences'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthInvitationRouteImport } from './routes/_auth/invitation'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -22,19 +23,19 @@ import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-facto
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
 import { Route as DAgentRouteImport } from './routes/d/agent'
-import { Route as DBroadcastsRouteImport } from './routes/d/broadcasts'
 import { Route as DChangelogRouteImport } from './routes/d/changelog'
 import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as DOperatorRouteImport } from './routes/d/operator'
-import { Route as DSeriesRouteImport } from './routes/d/series'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as AuthOauthAuthorizeRouteImport } from './routes/_auth/oauth.authorize'
+import { Route as DBroadcastsIndexRouteImport } from './routes/d/broadcasts/index'
+import { Route as DBroadcastsBroadcastRouteImport } from './routes/d/broadcasts/$broadcast'
 import { Route as DChangelogIndexRouteImport } from './routes/d/changelog/index'
 import { Route as DChangelogEntryRouteImport } from './routes/d/changelog/$entry'
 import { Route as DCustomersContactRouteImport } from './routes/d/customers/$contact'
@@ -47,6 +48,8 @@ import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
+import { Route as DSeriesIndexRouteImport } from './routes/d/series/index'
+import { Route as DSeriesSeriesRouteImport } from './routes/d/series/$series'
 import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
 import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$section'
 import { Route as DWorkflowsIndexRouteImport } from './routes/d/workflows/index'
@@ -86,6 +89,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthEmailPreferencesRoute = AuthEmailPreferencesRouteImport.update({
+  id: '/email-preferences',
+  path: '/email-preferences',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/forgot-password',
@@ -132,11 +140,6 @@ const DAgentRoute = DAgentRouteImport.update({
   path: '/agent',
   getParentRoute: () => DRouteRoute,
 } as any)
-const DBroadcastsRoute = DBroadcastsRouteImport.update({
-  id: '/broadcasts',
-  path: '/broadcasts',
-  getParentRoute: () => DRouteRoute,
-} as any)
 const DChangelogRoute = DChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
@@ -167,11 +170,6 @@ const DOperatorRoute = DOperatorRouteImport.update({
   path: '/operator',
   getParentRoute: () => DRouteRoute,
 } as any)
-const DSeriesRoute = DSeriesRouteImport.update({
-  id: '/series',
-  path: '/series',
-  getParentRoute: () => DRouteRoute,
-} as any)
 const DShortcutsRoute = DShortcutsRouteImport.update({
   id: '/shortcuts',
   path: '/shortcuts',
@@ -196,6 +194,16 @@ const AuthOauthAuthorizeRoute = AuthOauthAuthorizeRouteImport.update({
   id: '/oauth/authorize',
   path: '/oauth/authorize',
   getParentRoute: () => AuthRoute,
+} as any)
+const DBroadcastsIndexRoute = DBroadcastsIndexRouteImport.update({
+  id: '/broadcasts/',
+  path: '/broadcasts/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DBroadcastsBroadcastRoute = DBroadcastsBroadcastRouteImport.update({
+  id: '/broadcasts/$broadcast',
+  path: '/broadcasts/$broadcast',
+  getParentRoute: () => DRouteRoute,
 } as any)
 const DChangelogIndexRoute = DChangelogIndexRouteImport.update({
   id: '/',
@@ -254,6 +262,16 @@ const DProceduresIndexRoute = DProceduresIndexRouteImport.update({
 const DProceduresProcedureRoute = DProceduresProcedureRouteImport.update({
   id: '/procedures/$procedure',
   path: '/procedures/$procedure',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DSeriesIndexRoute = DSeriesIndexRouteImport.update({
+  id: '/series/',
+  path: '/series/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DSeriesSeriesRoute = DSeriesSeriesRouteImport.update({
+  id: '/series/$series',
+  path: '/series/$series',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DSettingsIndexRoute = DSettingsIndexRouteImport.update({
@@ -370,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/email-preferences': typeof AuthEmailPreferencesRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
   '/login': typeof AuthLoginRoute
@@ -378,14 +397,12 @@ export interface FileRoutesByFullPath {
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
-  '/d/broadcasts': typeof DBroadcastsRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
   '/d/operator': typeof DOperatorRoute
-  '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
@@ -393,18 +410,22 @@ export interface FileRoutesByFullPath {
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
+  '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
   '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
+  '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/customers/blocked': typeof DCustomersListsBlockedRoute
@@ -428,6 +449,7 @@ export interface FileRoutesByTo {
   '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/email-preferences': typeof AuthEmailPreferencesRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
   '/login': typeof AuthLoginRoute
@@ -436,29 +458,31 @@ export interface FileRoutesByTo {
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
-  '/d/broadcasts': typeof DBroadcastsRoute
   '/d/customers': typeof DCustomersListsIndexRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/operator': typeof DOperatorRoute
-  '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d': typeof DIndexRoute
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
+  '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/broadcasts': typeof DBroadcastsIndexRoute
   '/d/changelog': typeof DChangelogIndexRoute
   '/d/feedback': typeof DFeedbackIndexRoute
   '/d/help-center': typeof DHelpCenterIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
+  '/d/series': typeof DSeriesIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
   '/d/customers/blocked': typeof DCustomersListsBlockedRoute
@@ -483,6 +507,7 @@ export interface FileRoutesById {
   '/__gate': typeof Char91__gateChar93Route
   '/_auth': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/_auth/email-preferences': typeof AuthEmailPreferencesRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/invitation': typeof AuthInvitationRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -491,14 +516,12 @@ export interface FileRoutesById {
   '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/d/agent': typeof DAgentRoute
-  '/d/broadcasts': typeof DBroadcastsRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
   '/d/operator': typeof DOperatorRoute
-  '/d/series': typeof DSeriesRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
@@ -506,19 +529,23 @@ export interface FileRoutesById {
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/_auth/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/_lists': typeof DCustomersListsRouteWithChildren
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
+  '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
   '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
+  '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
   '/d/customers/_lists/blocked': typeof DCustomersListsBlockedRoute
@@ -545,6 +572,7 @@ export interface FileRouteTypes {
     | '/__gate'
     | '/'
     | '/onboarding'
+    | '/email-preferences'
     | '/forgot-password'
     | '/invitation'
     | '/login'
@@ -553,14 +581,12 @@ export interface FileRouteTypes {
     | '/two-factor-reset'
     | '/verify-email'
     | '/d/agent'
-    | '/d/broadcasts'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
     | '/d/notifications'
     | '/d/operator'
-    | '/d/series'
     | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
@@ -568,18 +594,22 @@ export interface FileRouteTypes {
     | '/login/magic'
     | '/login/two-factor'
     | '/oauth/authorize'
+    | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
+    | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
+    | '/d/broadcasts/'
     | '/d/changelog/'
     | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
+    | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
     | '/d/customers/blocked'
@@ -603,6 +633,7 @@ export interface FileRouteTypes {
     | '/__gate'
     | '/'
     | '/onboarding'
+    | '/email-preferences'
     | '/forgot-password'
     | '/invitation'
     | '/login'
@@ -611,29 +642,31 @@ export interface FileRouteTypes {
     | '/two-factor-reset'
     | '/verify-email'
     | '/d/agent'
-    | '/d/broadcasts'
     | '/d/customers'
     | '/d/notifications'
     | '/d/operator'
-    | '/d/series'
     | '/d/shortcuts'
     | '/d'
     | '/email/confirm'
     | '/login/magic'
     | '/login/two-factor'
     | '/oauth/authorize'
+    | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
+    | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
+    | '/d/broadcasts'
     | '/d/changelog'
     | '/d/feedback'
     | '/d/help-center'
     | '/d/inbox'
     | '/d/procedures'
+    | '/d/series'
     | '/d/settings'
     | '/d/workflows'
     | '/d/customers/blocked'
@@ -657,6 +690,7 @@ export interface FileRouteTypes {
     | '/__gate'
     | '/_auth'
     | '/onboarding'
+    | '/_auth/email-preferences'
     | '/_auth/forgot-password'
     | '/_auth/invitation'
     | '/_auth/login'
@@ -665,14 +699,12 @@ export interface FileRouteTypes {
     | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
     | '/d/agent'
-    | '/d/broadcasts'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
     | '/d/notifications'
     | '/d/operator'
-    | '/d/series'
     | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
@@ -680,19 +712,23 @@ export interface FileRouteTypes {
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
     | '/_auth/oauth/authorize'
+    | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/customers/_lists'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
+    | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/workflows/$workflow'
+    | '/d/broadcasts/'
     | '/d/changelog/'
     | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
+    | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
     | '/d/customers/_lists/blocked'
@@ -749,6 +785,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_auth/email-preferences': {
+      id: '/_auth/email-preferences'
+      path: '/email-preferences'
+      fullPath: '/email-preferences'
+      preLoaderRoute: typeof AuthEmailPreferencesRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/forgot-password': {
       id: '/_auth/forgot-password'
@@ -813,13 +856,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DAgentRouteImport
       parentRoute: typeof DRouteRoute
     }
-    '/d/broadcasts': {
-      id: '/d/broadcasts'
-      path: '/broadcasts'
-      fullPath: '/d/broadcasts'
-      preLoaderRoute: typeof DBroadcastsRouteImport
-      parentRoute: typeof DRouteRoute
-    }
     '/d/changelog': {
       id: '/d/changelog'
       path: '/changelog'
@@ -862,13 +898,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DOperatorRouteImport
       parentRoute: typeof DRouteRoute
     }
-    '/d/series': {
-      id: '/d/series'
-      path: '/series'
-      fullPath: '/d/series'
-      preLoaderRoute: typeof DSeriesRouteImport
-      parentRoute: typeof DRouteRoute
-    }
     '/d/shortcuts': {
       id: '/d/shortcuts'
       path: '/shortcuts'
@@ -903,6 +932,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/oauth/authorize'
       preLoaderRoute: typeof AuthOauthAuthorizeRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/d/broadcasts/': {
+      id: '/d/broadcasts/'
+      path: '/broadcasts'
+      fullPath: '/d/broadcasts/'
+      preLoaderRoute: typeof DBroadcastsIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/broadcasts/$broadcast': {
+      id: '/d/broadcasts/$broadcast'
+      path: '/broadcasts/$broadcast'
+      fullPath: '/d/broadcasts/$broadcast'
+      preLoaderRoute: typeof DBroadcastsBroadcastRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/changelog/': {
       id: '/d/changelog/'
@@ -986,6 +1029,20 @@ declare module '@tanstack/react-router' {
       path: '/procedures/$procedure'
       fullPath: '/d/procedures/$procedure'
       preLoaderRoute: typeof DProceduresProcedureRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/series/': {
+      id: '/d/series/'
+      path: '/series'
+      fullPath: '/d/series/'
+      preLoaderRoute: typeof DSeriesIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/series/$series': {
+      id: '/d/series/$series'
+      path: '/series/$series'
+      fullPath: '/d/series/$series'
+      preLoaderRoute: typeof DSeriesSeriesRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/settings/': {
@@ -1227,22 +1284,24 @@ const DInboxViewRouteRouteWithChildren = DInboxViewRouteRoute._addFileChildren(
 
 interface DRouteRouteChildren {
   DAgentRoute: typeof DAgentRoute
-  DBroadcastsRoute: typeof DBroadcastsRoute
   DChangelogRoute: typeof DChangelogRouteWithChildren
   DCustomersRoute: typeof DCustomersRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRouteWithChildren
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
   DNotificationsRoute: typeof DNotificationsRoute
   DOperatorRoute: typeof DOperatorRoute
-  DSeriesRoute: typeof DSeriesRoute
   DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
+  DBroadcastsBroadcastRoute: typeof DBroadcastsBroadcastRoute
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
+  DSeriesSeriesRoute: typeof DSeriesSeriesRoute
   DSettingsSectionRoute: typeof DSettingsSectionRoute
   DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
+  DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
+  DSeriesIndexRoute: typeof DSeriesIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
   DSettingsActionsActionRoute: typeof DSettingsActionsActionRoute
@@ -1256,22 +1315,24 @@ interface DRouteRouteChildren {
 
 const DRouteRouteChildren: DRouteRouteChildren = {
   DAgentRoute: DAgentRoute,
-  DBroadcastsRoute: DBroadcastsRoute,
   DChangelogRoute: DChangelogRouteWithChildren,
   DCustomersRoute: DCustomersRouteWithChildren,
   DFeedbackRoute: DFeedbackRouteWithChildren,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
   DNotificationsRoute: DNotificationsRoute,
   DOperatorRoute: DOperatorRoute,
-  DSeriesRoute: DSeriesRoute,
   DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
+  DBroadcastsBroadcastRoute: DBroadcastsBroadcastRoute,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
+  DSeriesSeriesRoute: DSeriesSeriesRoute,
   DSettingsSectionRoute: DSettingsSectionRoute,
   DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
+  DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
+  DSeriesIndexRoute: DSeriesIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
   DSettingsActionsActionRoute: DSettingsActionsActionRoute,
@@ -1287,6 +1348,7 @@ const DRouteRouteWithChildren =
   DRouteRoute._addFileChildren(DRouteRouteChildren)
 
 interface AuthRouteChildren {
+  AuthEmailPreferencesRoute: typeof AuthEmailPreferencesRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthInvitationRoute: typeof AuthInvitationRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -1301,6 +1363,7 @@ interface AuthRouteChildren {
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthEmailPreferencesRoute: AuthEmailPreferencesRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthInvitationRoute: AuthInvitationRoute,
   AuthLoginRoute: AuthLoginRoute,
