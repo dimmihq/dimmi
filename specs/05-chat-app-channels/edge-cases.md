@@ -127,7 +127,7 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 ## H. Edits and deletes
 
 102. Teammate deletes sent Slack/Discord/Telegram reply in Dimmi. Local delete only (03); provider copy stays, no provider call (channel delete sync: later). Edit of sent reply: 422 `message_not_editable` (03).
-103. Customer edits or deletes message in Slack/Discord/Telegram (WhatsApp sends no webhook outside Coexistence). Provider event dropped before storage, metric `dimmi_channel_events_ignored_total{kind=edit|delete}`; Dimmi keeps first body; AI never re-answers.
+103. Customer edits or deletes message in Discord/Telegram (WhatsApp sends no webhook outside Coexistence). Provider event dropped before storage, metric `dimmi_channel_events_ignored_total{kind=edit|delete}`; Dimmi keeps first body; AI never re-answers. Slack: see S edge cases 200-203.
 
 ## I. Rate limits and provider outages
 
@@ -257,3 +257,29 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 197. Slack message shortcut used on a message already in a conversation. Ephemeral link to existing conversation; no duplicate.
 198. Slack Connect room linked to company, second external org joins (`channel_shared`). `company_id` cleared, audience guard back on for future runs, `channel.updated` warning to admins.
 199. Working indicator 👀 reaction left behind (worker crash between add and remove). Stop listener on `ai.run_completed` and hourly sweep for runs ended over 5 min ago remove it; `no_reaction` ignored.
+
+## S. Slack team work, one install, request detection (revision 2026-11-10)
+
+200. Customer edits Slack message after agent answered. Body updated, previous body kept in `metadata.edits[]`; agent does not re-answer; teammates see "edited" marker.
+201. Customer deletes message holding API key. Body and attachments redacted within 5 s of event; stub stays; search index entry removed (03 redaction path); agent context built after redaction never contains it.
+202. Customer deletes only message of conversation. Conversation closed reason `source_deleted`, removed from triage post (post updated "Deleted in Slack").
+203. Edit or delete event for message older than raw event retention or never stored. Ignored.
+204. `ai` trigger: classifier says chatter but customer replies in thread "anyone?". Thread reply by contact in untracked thread creates conversation keyed on root (existing thread rule); root fetched with one `conversations.replies` call.
+205. `ai` trigger with no 07 key or cap reached. Room falls back to `author_window`; setup page warns "Request detection paused".
+206. `ai` trigger: message mentions teammate by name ("@sam can you look"). Still request; `addressed_to_other` set, agent stands down, conversation assigned to Sam when linked.
+207. Triage post deleted by someone in Slack. Next update recreates post once; ref replaced.
+208. Triage room is private and bot not invited. Room setting rejected 422 `slack_not_in_channel` with "Invite @dimmi to #name".
+209. Teammate replies in triage thread without `>>`. Stored as note only; customer sees nothing. Ephemeral tip shown once per member per 7 days: "Start with >> to reply to the customer".
+210. Unlinked Slack user in own org presses Take it. Ephemeral "Link your Slack account" with grant link; no assignment.
+211. Two teammates press Take it at once. First wins (03 assign with expected assignee null), second gets ephemeral "Sam took it".
+212. ✅ by contact on own message. No action (contacts never act via emoji); Solved button is their path.
+213. ✅ removed by teammate after close. Reopen; removing reaction we added ourselves (state marker) by bot user never reopens.
+214. Member grant user not in channel. Bot posts with name + avatar; no error shown.
+215. Member grant revoked mid-send. One retry as bot; grant marked `error`; member notified once.
+216. Auto-reply scheduled, agent answers in 20 s. Auto-reply cancelled (reply exists).
+217. Auto-join rule matches channel shared from another org. Bot cannot join; channel listed under "Invite @dimmi" suggestions; no error.
+218. Auto-join rule matches 300 channels at scan. Joins paced at `conversations.join` tier (Tier 3), progress in setup, resumable job.
+219. Discussion thread started for conversation later merged. Thread follows surviving conversation (refs moved in 03 merge hook).
+220. Operator mentioned in `shared` or `community` room. Ignored silently (22 never answers where customers read); metric `kind=operator_refused`.
+221. Notification destination (06) and triage room are same channel. Allowed; 06 skips `new_conversation` posts for that channel (triage post covers it).
+

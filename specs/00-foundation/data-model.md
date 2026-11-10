@@ -166,6 +166,7 @@ One prefix per addressable table (pivots, stats, singletons, keyed-by-parent tab
 | scg_ | scim_group_links (21) | rol_ | roles (00-accounts) |
 | eig_ | email_ignored_addresses (04) | ets_ | email_trusted_senders (04) |
 | eat_ | email_address_tests (04) | emc_ | email_mailbox_connections (04) |
+| itg_ | integration_installations (23) | itu_ | integration_member_grants (23) |
 
 Reserved for later tables (do not reuse; `00-foundation/extensibility.md`): `brd_` brands, `lgh_` legal_holds, `ains_` app_installations, `dev_` user_devices. `encryption_keys` has no public id (internal). Prefix uniqueness checked over registry + reserved list (CI: `app/models/public_ids.go` test; 2026-11-02 final pass: zero collisions across registry + reserved list incl. 07 actions, 08 docs sync, 16 importers).
 

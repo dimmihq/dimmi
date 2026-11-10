@@ -18,7 +18,7 @@ provider -> /webhooks/... | socket/gateway/poller
   -> dedupe fast path: Valkey `SET NX EX` key `ch:dedupe:{provider}:{dedupe_key}` (window: Slack 1 h, Discord 1 h, Telegram 24 h, WhatsApp 7 d = provider retry horizon); hit -> 200, no DB write
   -> StoreInboundEvent (tx: insert channel_inbound_events ON CONFLICT DO NOTHING (durable backstop + audit) + InsertTx process job) -> 200
 process_channel_inbound_event (per-thread advisory lock)
-  -> driver.Normalize(event) -> []Op (message | status | lifecycle | room | ignore); provider edit/delete events -> ignore (later: message-edit)
+  -> driver.Normalize(event) -> []Op (message | status | lifecycle | room | ignore); provider edit/delete events -> ignore except Slack (edit -> 03 EditInboundMessage, delete -> 03 redaction; later: message-edit for others)
   -> classify author: bot/self -> ignore; teammate or helper in room thread -> InboundMessage with Echo (03 X2); teammate elsewhere -> ignore (DM: IsTest rules); contact -> trigger check (room `trigger`) -> pleasantry filter -> InboundMessage
      flags: `public_room`, `addressed_to_other` (reply-to / mention of non-bot person), `audience_company_id` (Slack Connect room with company link)
   -> interactions (buttons, shortcuts, slash commands, context menus) -> apply_channel_interaction (solved, handoff, create conversation, /ask)
@@ -39,10 +39,10 @@ Splitter: if rendered length over provider per-message limit, split at (in order
 ### Connect
 | Mode | Flow |
 |---|---|
-| shared (cloud, or self-host with `services.slack.*`) | `POST /channels/slack/installations` returns `https://slack.com/oauth/v2/authorize?client_id&scope&redirect_uri&state`. Callback: `oauth.v2.access` returns `access_token` (`xoxb-`), `team.id`, `team.name`, `bot_user_id`, `app_id`, `enterprise`, `is_enterprise_install`. `is_enterprise_install = true`: reject `enterprise_install_unsupported`. Create connection `external_id = app_id:team_id`, status `active`, enqueue `sync_channel_rooms`. Token rotation off |
-| custom (self-host default) | `POST /channels/slack` creates `pending` connection, returns manifest + `create_app_url = https://api.slack.com/apps?new_app=1&manifest_json=<urlencoded JSON>`. User creates app, installs to workspace, copies Bot User OAuth Token + Signing Secret (+ App-Level Token with `connections:write` for Socket Mode). `POST /channels/{chn}/credentials`: `auth.test` (gets `team_id`, `user_id`, `bot_id`), `apps.connections.open` when socket, scope check via `x-oauth-scopes` response header vs required list |
+| shared (cloud, or self-host with `services.slack.*`) | Runs through `23-integrations` (`framework/oauthclient` `slack` driver); scopes = 23 registry union for 05, 06, 22; result is `integration_installations` row, connection holds `integration_installation_id`, never own token copy. `POST /channels/slack/installations` delegates to 23 and returns `https://slack.com/oauth/v2/authorize?client_id&scope&redirect_uri&state`. Callback: `oauth.v2.access` returns `access_token` (`xoxb-`), `team.id`, `team.name`, `bot_user_id`, `app_id`, `enterprise`, `is_enterprise_install`. `is_enterprise_install = true`: reject `enterprise_install_unsupported`. On `integration.connected` (feature `channels`): create connection `external_id = app_id:team_id`, status `active`, enqueue `sync_channel_rooms`, run auto-join scan. Token rotation off |
+| custom (self-host default) | `POST /channels/slack` creates `pending` connection, returns manifest + `create_app_url = https://api.slack.com/apps?new_app=1&manifest_json=<urlencoded JSON>`. User creates app, installs to workspace, copies Bot User OAuth Token + Signing Secret (+ App-Level Token with `connections:write` for Socket Mode). `POST /channels/{chn}/credentials`: `auth.test` (gets `team_id`, `user_id`, `bot_id`), `apps.connections.open` when socket, scope check via `x-oauth-scopes` response header vs required list; stores tokens as 23 manual installation (`source = manual`) so 06 and 22 use same app. Reply-as-teammate on custom app: manifest also declares user scopes `chat:write`, `reactions:write` and redirect URL `{{ .AppURL }}/integrations/slack/callback`; member grant flow uses custom app's client id/secret (pasted, optional) |
 
-Slack Marketplace: not required for self-host or custom apps (single-workspace, not commercially distributed; rate-limit tiers unchanged). Shared cloud app is commercially distributed: Marketplace approval removes `conversations.history`/`conversations.replies` throttle (non-Marketplace distributed apps limited to 1 request/min, max 15 objects since 2025-05-29; Tier 3 for Marketplace and internal apps). 05 uses those methods only for gap backfill.
+Slack Marketplace: shared cloud app submitted at first staging deploy (`23-integrations` "Slack Marketplace"). Not required for self-host or custom apps (single-workspace, not commercially distributed; rate-limit tiers unchanged). Shared cloud app is commercially distributed: Marketplace approval removes `conversations.history`/`conversations.replies` throttle (non-Marketplace distributed apps limited to 1 request/min, max 15 objects since 2025-05-29; Tier 3 for Marketplace and internal apps). 05 uses those methods only for gap backfill.
 
 Generated manifest (`resources/stubs/slack_manifest.yaml.tmpl`, URL values from `app.url` and connection id):
 ```yaml
@@ -57,14 +57,18 @@ oauth_config:
   scopes:
     bot: [channels:history, groups:history, im:history, channels:read, groups:read, im:read, im:write,
           chat:write, chat:write.customize, files:read, files:write, users:read, users:read.email,
-          reactions:read, reactions:write, team:read, channels:join, app_mentions:read, commands]
+          reactions:read, reactions:write, team:read, channels:join, app_mentions:read, commands,
+          chat:write.public, assistant:write]
+    user: [chat:write, reactions:write]   # asked only in member grant flow (23)
+  redirect_urls: ["{{ .AppURL }}/integrations/slack/callback"]
 settings:
   event_subscriptions:
     request_url: "{{ .AppURL }}/webhooks/slack/events/{{ .ChannelID }}"   # omitted when socket mode
     bot_events: [message.channels, message.groups, message.im, app_uninstalled, tokens_revoked,
                  member_joined_channel, channel_left, group_left, channel_archive, group_archive,
                  channel_deleted, group_deleted, channel_rename, group_rename, channel_id_changed,
-                 channel_shared, channel_unshared, app_mention, reaction_added]
+                 channel_shared, channel_unshared, app_mention, reaction_added, reaction_removed,
+                 channel_created, assistant_thread_started]
   interactivity:
     is_enabled: true
     request_url: "{{ .AppURL }}/webhooks/slack/interactions/{{ .ChannelID }}"   # omitted when socket mode
@@ -87,7 +91,8 @@ Message events handled (`event.type = message`):
 | Subtype / shape | Behavior |
 |---|---|
 | none, `file_share`, `thread_broadcast`, `me_message` | message (thread_broadcast treated as thread reply) |
-| `message_changed`, `message_deleted` | ignore, metric `kind=edit|delete` (later: message-edit) |
+| `message_changed` | contact or echo message already stored (lookup `channel_message_refs` / `channel_message_id`): 03 `EditInboundMessage` (body replaced, previous in `metadata.edits[]`, `message.updated`); edit of message not stored: ignore. Edit never triggers agent, never reopens. Own bot edits: ignore |
+| `message_deleted` | stored message: 03 local redaction (`metadata.redacted_by = provider`), attachments deleted from storage, timeline stub "Message deleted in Slack"; conversation whose only messages are deleted: closed reason `source_deleted`. Not stored: ignore |
 | `bot_message`, any event with `bot_id` | ignore (own bot: confirms send; other bots: ignored unless room setting `allow_bot_authors`) |
 | `channel_join`, `channel_leave`, `channel_topic`, `channel_purpose`, `pinned_item`, others | ignore |
 
@@ -104,6 +109,9 @@ Room rules:
 - Message shortcut "Create dimmi conversation" (any member of Slack workspace with app): creates conversation from that message regardless of trigger; ephemeral confirmation with link for linked members.
 - Thread reply (`thread_ts != ts`): key `slack:r:{room}:{thread_ts}`. No conversation for that key (thread started by teammate or before connect): contact message in that thread creates conversation keyed on thread root; teammate message ignored.
 - Mode `shared`: author is teammate when `user_team`/`user_profile.team` equals installing team and user not `is_restricted`/`is_ultra_restricted` (guests are contacts). Mode `community`: teammate only when `channel_member_links` has user; everyone else contact.
+- Room mode `internal`: no conversations. Messages handled only as: triage thread replies (note, or customer reply with `>>` prefix), discussion thread messages (notes), `app_mention` (22 Operator), dimmi conversation link pasted (ephemeral "Start discussion"). Everything else ignored, never stored.
+- Room mode `helpdesk`: own-workspace channel. Author is teammate only when linked member of workspace; every other own-workspace user is contact (identity `slack_user`, profile email `verified = true` because same Slack org as installer). Triggers as other rooms. App Home tab (`app_home_opened`, `views.publish`) lists requester's open and recent conversations with links to threads.
+- Trigger `ai`: top-level contact message (after pleasantry filter) sent to 07 `ClassifyRequest` (cheap model, max 300 input tokens: message + last 3 room messages for context, untrusted-wrapped) returning `request|chatter|followup` + confidence. `request` above threshold (conservative 0.75, aggressive 0.45): new conversation. `followup` within 24 h of author's last conversation in room: append to it (reopens if closed and not sign-off). `chatter`: ignored, metric `kind=chatter`; teammate can still use shortcut or trigger emoji. Classifier error or timeout (3 s): fall back to `author_window`.
 - Teammate messages: top level ignored (metric `kind=teammate`). Inside thread of existing conversation: echo (03 X2) with `MemberID` when linked member, else ignored with room warning "Link your Slack account to record replies" (once per user per 7 days, ephemeral). Teammate @mentioned by customer in thread: agent stand-down (`human_replied`). Auto-link by email (Slack profile email equals active member's verified user email, `source=email_match`) feeds `community` classification.
 
 ### Outbound
@@ -115,6 +123,10 @@ Room rules:
 - Receipts: none; `sent` on `ok: true`.
 - State marker (`ChannelStateMarker`): closed `reactions.add` `white_check_mark` on thread root; reopen `reactions.remove`. Errors `already_reacted` / `no_reaction` ignored.
 - Working indicator: `reactions.add` `eyes` on triggering message at `ai.reply_started`, removed at commit/discard.
+- Reply as teammate: sender has active 23 member grant and that Slack user is member of channel (`conversations.members` cached 10 min): `chat.postMessage` with user token, no `username`/`icon_url`. `not_in_channel` or user token error: retry once with bot + name/avatar, mark grant `error` on auth errors. DMs to bot always bot token.
+- Emoji actions (inbound): `reaction_added` on conversation root by linked member: mapping (`white_check_mark` close, `eyes` assign reactor + open, `rotating_light` urgent); `reaction_removed` of `white_check_mark` reopens. Our own state-marker reactions (bot user) ignored. Contact reactions: no action.
+- Triage post: `chat.postMessage` to triage room (`chat:write.public` for public rooms without bot; private needs invite), blocks: header section, context (company, plan, SLA due), actions (Take it, status `static_select`, Snooze, Urgent, Open). Live update `chat.update` debounced 2 s per conversation; ts stored in `channel_message_refs` kind `triage`. Thread replies under triage post: notes; `>>` prefix or "Reply to customer" shortcut: customer reply via normal outbound as that member.
+- Auto-reply: `chat.postMessage` as bot in conversation thread after `delay_seconds` if no reply exists; `AutoGenerated`, no agent trigger.
 - Answer controls (X6): message sent with `blocks` instead of `markdown_text` when controls present: `markdown` block (same Markdown, 12,000 chars) + `actions` block with buttons `Solved` (`primary`) and `Talk to a human`; `action_id` = control id (`controls.go`). Click: interaction payload `block_actions`, verify clicker is thread participant contact (else ephemeral "Only the person who asked can mark this solved"); then `chat.update` removes actions block. `ClearControls` also on human reply.
 
 ### Formatting
@@ -133,8 +145,9 @@ Room rules:
 ### Lifecycle
 | Signal | Effect |
 |---|---|
-| `app_uninstalled` | status `disconnected` reason `uninstalled`; rooms `removed` |
-| `tokens_revoked` (bot) | status `disconnected` reason `token_revoked` |
+| `app_uninstalled` | 23 `ApplyProviderRevocation`: installation `disconnected`; connection `disconnected` reason `uninstalled`; rooms `removed`; 06 Slack destinations `error` |
+| `tokens_revoked` (bot) | status `disconnected` reason `token_revoked` (via 23) |
+| `tokens_revoked` (user ids listed) | 23 member grants for those users `revoked`; replies fall back to bot with name + avatar |
 | API `invalid_auth`, `account_inactive`, `token_revoked`, `token_expired`, `not_authed` | `ErrConnectionBroken`: status `error` code `slack_auth_failed` |
 | `not_in_channel` on send | room `error` "Invite @bot to #channel"; message failed `slack_not_in_channel` |
 | `channel_not_found`, `is_archived`, `channel_archive`, `channel_deleted`, `channel_left`/`group_left` | room `removed`; sends fail `slack_channel_gone` |

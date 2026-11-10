@@ -116,3 +116,11 @@ Style: caveman. Raw notes from spec writing (2026-11-01/02): what each writer re
 - Seen indicator: email shows provider delivery status only; no pixel (Never list).
 - Depguard additions requested for builders (new approved modules, the documented path): `codeberg.org/go-pdf/fpdf`, `github.com/emersion/go-imap/v2`, `github.com/russellhaering/gosaml2`, `github.com/russellhaering/goxmldsig`, `scim2/filter-parser/v2`.
 
+## Slack and integrations round (2026-11-10)
+- New `23-integrations`: dimmi as OAuth client. One `integration_installations` row per tool account shared by every feature; `integration_member_grants` for acting as a teammate. `framework/oauthclient` (x/oauth2) takes socialite's state + PKCE internals.
+- 05 and 06 each planned own Slack OAuth: merged into one 23 install. 06 drops `incoming-webhook` scope; pasted webhooks stay. `services.slack.*` owned by 23.
+- 05 Slack: `internal` and `helpdesk` room modes, `ai` request detection trigger, triage, discussions, emoji actions, reply as teammate, both-way edit/delete, auto-reply, auto-join all launch scope (were later).
+- 03 channel contract X7 (`EditInboundMessage`, `RedactInboundMessage`), X8 (`source.channel.trigger`).
+- 22 Operator gains Slack surface in internal rooms and DMs.
+- Prefixes `itg_`, `itu_`.
+

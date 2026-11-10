@@ -114,7 +114,7 @@ Multi-workspace users: prefix title with `[{workspace name}] ` on push, email su
 ### Workspace channel: incoming webhook
 
 - Pasted URL must match `https://hooks.slack.com/services/T.../B.../...` (also `hooks.slack-gov.com`). Stored encrypted.
-- Or from Slack app OAuth (`incoming-webhook` scope): `oauth.v2.access` response `incoming_webhook.url`, `channel`, `channel_id` stored as `slack_webhook` destination automatically.
+- Or with the workspace's Slack install (`23-integrations`, one app shared with 05 and 22): admin picks a channel; destination kind `slack_channel` posts with bot token via `chat.postMessage` (`chat:write.public` for public channels, invite for private). `incoming-webhook` scope never requested.
 - Channel, username, icon cannot be overridden on incoming webhooks (fixed by app config). Name destination by channel.
 - Message format (Block Kit, no interactive buttons: link buttons on apps without interactivity URL show warnings; use mrkdwn links):
 
@@ -134,13 +134,15 @@ Multi-workspace users: prefix title with `[{workspace name}] ` on push, email su
 - `text` fallback always set (notifications, accessibility). Escape `&` `<` `>` in all customer text. Never emit `<!here>`, `<!channel>`, `<@U...>` from customer content.
 - Rate: Slack documents roughly 1 message per second per incoming webhook with short bursts. Destination burst rule (10/min then digest) keeps far under. 429: honor `Retry-After`.
 
-### Slack app (bot) for DMs
+### Slack app (bot) for DMs and channels
 
-- OAuth v2 install by admin: scopes `incoming-webhook`, `chat:write`, `im:write`, `users:read`, `users:read.email`. Token `xoxb-` stored encrypted in `slack_app` destination.
+- Uses the workspace's 23 Slack installation (`config.integration_installation_id` on `slack_app` destination); no own OAuth, no own token. Scopes registered in 23 registry for feature `notifications`: `chat:write`, `chat:write.public`, `im:write`, `users:read`, `users:read.email`. Tokens only via `integrations.TokenFor`.
+- Bot posts (channel and DM) carry action buttons (interactivity on the shared app, handled by 05 interactions endpoint, routed to 06 `ApplyNotificationAction`): Take it (assign to clicker; linked member only), Snooze until tomorrow, Mark urgent, Open in dimmi. Message updated in place after action ("Taken by Sam"). Pasted incoming webhooks keep link-only format.
+- Slack digests (destination setting `digests`): `daily_standup` (each teammate's open queue), `daily_summary` (opened, closed, median first response, agent answered vs handed off, top unanswered question), `weekly_themes` (07 cheap model groups week's conversation titles into top 5 themes). Sent at destination `digest_time` in workspace timezone.
 - Member link (`slack_dm`): `users.lookupByEmail` with member account email; found: store `slack_user_id`. Not found: 422 `slack_user_not_found` (no manual user id; prevents DMing wrong person).
 - Send: `conversations.open` (users=U...) once, cache channel id in `config.slack_dm_channel_id`; then `chat.postMessage` with same blocks.
 - Web API errors: `ok:false` body. `invalid_auth`, `account_inactive`, `token_revoked`, `missing_scope`: mark `slack_app` `error`, all child `slack_dm` effectively paused, `system_alert` admins. `user_not_found`, `cannot_dm_bot`, `user_disabled`: mark that `slack_dm` `disabled`, in-app note to member. `ratelimited` (HTTP 429): honor `Retry-After`.
-- Uninstall: Slack `app_uninstalled` / `tokens_revoked` events arrive via 05's Slack events endpoint; 05 dispatches to 06 action `MarkDestinationErrored` for `slack_app` destinations matching team id.
+- Uninstall: Slack `app_uninstalled` / `tokens_revoked` reach 23 `ApplyProviderRevocation`; 06 listens to `integration.disconnected` and marks `slack_app` / `slack_channel` destinations of that installation `error`.
 
 ### Incoming webhook error mapping
 

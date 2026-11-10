@@ -130,6 +130,7 @@ first response and resolution time, AI runs by outcome, handoff reasons, top tag
   runs, runs by day, runs by purpose (ask, brief, triage), by teammate, by model, and the latest 25 runs.
 - Settings (`/d/{workspace}/settings/ai/operator`): the fields above plus memories.
 - Streaming: member channel, ephemeral `operator.delta` and `operator.step`; the POST answers with the stored message.
+- Slack (`23-integrations` install, events routed by 05): @dimmi in `internal` Slack rooms and DMs to the bot, plus Slack assistant threads (`assistant:write`). Asker must be a linked member (05 `channel_member_links`); others get an ephemeral "Link your Slack account to use dimmi" with grant link. Run borrows that member's identity exactly as in the app. Reply in thread, streamed with `chat.startStream`/`appendStream`/`stopStream` where Slack allows, else placeholder then `chat.update`; steps shown as context line. Changeset cards render as Block Kit with Apply / Decline / Undo buttons, approval checked against clicker's identity. Never answers in `shared`, `community` or `helpdesk` rooms (customers read there). Each Slack thread maps to one Operator thread (`operator_threads.metadata.slack {channel, thread_ts}`); a dimmi conversation link in the message scopes the run to that conversation.
 
 ## API
 

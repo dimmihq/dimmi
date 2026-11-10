@@ -15,6 +15,17 @@ Tags: [unverified] = single source or sources conflict. [3P] = third-party or co
 - Dimmi spec 05 biggest gaps vs table stakes: ignores teammate native replies (so AI and inbox both blind to humans answering in Slack), interactivity disabled (no buttons, modals, shortcuts, ephemeral prompts, CSAT), one ingestion mode only, inbound reactions ignored, no channel-to-company link or audience-aware AI, no triage/discussion thread. Streaming deferred is fine at launch if a working indicator exists.
 - Dimmi angle no one has: free Slack channel on all plans (Featurebase, Productlane, Plain cap/gate it), self-host as customer's own internal Slack app (exempt from Marketplace throttle, data never leaves their infra, sidesteps ToS third-party worries), BYOK agent, Socket Mode no public URL, open source manifest. Community (non-Connect) workspace support matters more for vibe-coder audience than for Pylon's enterprise buyers.
 
+## Update 2026-11-10 (Plain re-check)
+
+- Plain Customer Agent handoff writes internal note with reason, search terms and docs read; one clarifying question allowed; never resumes after handoff.
+- Sidekick (internal) works only in Discussion channels, creates `#ask-plain`, usable by anyone on company email domain without seat; tools Notion, Linear, Jira, Datadog, Sentry, GitHub, Stripe, own MCP; Confirm/Deny buttons for writes.
+- Auto-responses wait up to 15 min, cancelled if anyone replies first. Slack digests: daily standup, daily summary (incl. agent handled vs handed off, top knowledge gap), themes.
+- Slack delete wipes message content in Plain (audit stub). Unneeded Slack API data purged after 14 days.
+- Since 2025-06-30 Plain cannot ingest replies in threads started before bot joined (rate limits). Backfill only via support.
+- Thena runs real per-message request classifier (aggressive/conservative); Plain only groups messages.
+- No internal IT helpdesk or B2C positioning at Plain.
+- Sources: plain.com/docs/product/agents/ari/handoffs.md, plain.com/docs/product/agents/sidekick/in-slack.md, plain.com/docs/product/platform/auto-responses.md, plain.com/docs/product/channels/slack-digests.md, plain.com/docs/product/security/slack-data-retention.md, plain.com/changelog/slack-integration-update, help.thena.ai/docs/requests.
+
 ## Per-competitor
 
 ### Pylon (usepylon.com)

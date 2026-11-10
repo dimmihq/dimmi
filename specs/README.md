@@ -40,6 +40,8 @@ Counts: edge cases = numbered items in `edge-cases.md` (lettered items like `164
 | [19-cloud-staging](19-cloud-staging/README.md) | launch addition | real AWS staging (draft, awaiting owner) | none | see folder |
 | [20-native-sdks](20-native-sdks/README.md) | launch addition | React Native + Expo, iOS, Android, headless hooks on `/widget/v1` | see folder | see folder |
 | [21-enterprise-identity](21-enterprise-identity/README.md) | launch addition | sign-in rules, session length, SAML, OIDC, SCIM, IP allowlists | see folder | see folder |
+| [22-operator](22-operator/README.md) | launch addition | team's own agent: briefs, triage proposals, workspace questions, changesets; in app and Slack | none | none |
+| [23-integrations](23-integrations/README.md) | launch addition | OAuth client connections to other tools (Slack first; GitHub, Linear next): one install per tool account shared by every feature, member grants, scope registry | in README | in README |
 | | | **Total features** | **3,011** | **849** (+53 foundation) |
 
 No `15-status-page`: status page removed from product (PO); announcements/surveys folder renamed `16-` -> `15-announcements-surveys` (migration block `0015NN`).

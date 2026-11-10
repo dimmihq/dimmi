@@ -58,7 +58,7 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
 
 ## M3 Slack
 
-- [ ] **Slack shared install.** slack-go client; `POST /channels/slack/installations` (`S`: browser URL, callback needs session cookie) returns install URL with signed state (nonce single-use in Valkey), callback controller, `oauth.v2.access`, enterprise reject, scope check, reconnect reuse of disconnected row, room sync (`conversations.list` bot member), `channels:join` for chosen public channel.
+- [ ] **Slack shared install.** Needs 23 installation flow. slack-go client; `POST /channels/slack/installations` (`S`) delegates to 23 (`framework/oauthclient` slack driver, scope registry union), `integration.connected` listener creates connection with `integration_installation_id`, enterprise reject in 23, scope check, reconnect reuse of disconnected row, room sync (`conversations.list` bot member), `channels:join` for chosen public channel.
   - Tests: state tampering, user mismatch, cancel, duplicate team across workspaces; bearer token (PAT or first-party app) on `installations` 403 `session_required`.
 - [ ] **Slack custom app + manifest.** Manifest template, `create_app_url`, pending connection, url_verification for pending, credentials (`auth.test`, scopes header), Socket Mode token check.
   - Tests: manifest snapshot test; url_verification only path without secret.
@@ -70,6 +70,26 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
   - Tests: contract suite; format golden suite; mention injection tests (`<!channel>` never pings).
 - [ ] **Slack Socket Mode transport.** slack-go `socketmode` (`apps.connections.open`, envelope ack), reconnect on `disconnect`, lease, backfill after gap (`conversations.history`/`replies`, rate-aware).
   - Tests: fake socket server: ack within 3 s, refresh_requested reconnect, gap backfill dedupes.
+
+## M3b Slack team work
+
+- [ ] **Event router + internal rooms.** `router.go` dispatches shared endpoint to 05, 22 (`app_mention`, `message.im`, `assistant_thread_started`), 23 (revocations). Room mode `internal`, setup picker per room.
+  - Tests: edge 220; internal room message never stored; uninstall reaches 23.
+- [ ] **Inbound edit and delete.** 03 X7 actions, Slack `message_changed` / `message_deleted` mapping, redaction of attachments.
+  - Tests: edge 200-203; redacted text absent from search and agent context.
+- [ ] **AI request detection.** Trigger `ai`, 07 `ClassifyRequest` (fake LLM in tests), sensitivity thresholds, followup within 24 h, fallback.
+  - Accept: golden set of 200 labelled Slack messages (questions, bug reports, chatter, follow-ups) scores 0.9+ precision on `request` with recorded fake responses; real-model eval only on owner approval.
+  - Tests: edge 204-206; classifier timeout fallback.
+- [ ] **Triage room.** Post, debounced live update, buttons (Take it, status, snooze, urgent, open), thread replies as notes, `>>` and shortcut customer replies, dimmi notes echo into thread.
+  - Tests: edge 207-211, 221.
+- [ ] **Discussions.** "Discuss in Slack" action + API (`POST /conversations/{c}/slack-discussions`), link paste ephemeral, sync messages/reactions/files as notes, merge hook.
+  - Tests: edge 219; notes never reach customer thread.
+- [ ] **Emoji actions.** `reaction_added` / `reaction_removed` mapping, linked members only, own markers ignored, editable mapping.
+  - Tests: edge 212, 213.
+- [ ] **Reply as teammate.** 23 member grant use in outbound (`UserTokenFor`), membership cache, bot fallback, echo dedupe of own user-token posts.
+  - Tests: edge 214, 215; no duplicate echo.
+- [ ] **Auto-reply + auto-join.** Delayed cancellable job; auto-join rules on create/rename/shared + resumable scan.
+  - Tests: edge 216-218.
 
 ## M4 Discord
 

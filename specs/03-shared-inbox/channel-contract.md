@@ -360,7 +360,7 @@ Verified-claim takeover (`ResolveInboundContact`, requested by 14; also correct 
 - Used by 14 portal email sign-in (`IdentifyContact` / magic code), 04 inbound mail with DMARC-aligned pass (`IdentityClaim.Verified = true`), 02 JWT `email_verified: true`.
 - Metric `dimmi_contact_identity_takeovers_total{type}`; audit row (actor system, from/to contact).
 
-## 5. Additions for 05 (X1-X6)
+## 5. Additions for 05 (X1-X8)
 
 Requested by `05-chat-app-channels/README.md` ("Extensions 05 needs from 03"); canonical per `00-foundation/contracts.md` Channel section. 05 code assumes these names.
 
@@ -408,3 +408,17 @@ type ChannelWindowResolver interface {
 - 03 fills from `messages.metadata.ai.actions` of agent-authored messages (07 sets `["solved", "handoff"]` on answers in chat-app conversations; widget keeps own rendering).
 - Driver renders native buttons (Slack Block Kit, Discord components, Telegram inline keyboard, WhatsApp reply buttons when window open) or ignores (email). Click handling lives in 05 (`apply_channel_interaction`): `solved` calls 03 `CloseConversation` (actor system, `conversation.closed` payload `reason: contact_solved`, timeline event "Closed by customer"); `handoff` calls 07 `RequestHumanHandoff`.
 - `conversation.closed` gains optional `reason` (`manual` default, `contact_solved`), mirroring `reopened`; 15 CSAT rule unchanged.
+
+### X7. Provider edits and deletes of inbound messages
+```go
+// conversations.EditInboundMessage(ctx, EditInboundInput{ConnectionID, ChannelMessageID, Body, Attachments, EditedAt}) (EditResult, error)
+// conversations.RedactInboundMessage(ctx, RedactInboundInput{ConnectionID, ChannelMessageID, Reason}) (RedactResult, error)
+```
+- Called by 05 for Slack `message_changed` / `message_deleted` (other providers later). Lookup by `(connection, channel_message_id)` incl. X4 refs; miss: `ErrNotFound`, driver ignores.
+- Edit: body replaced, previous `{body, edited_at}` appended to `metadata.edits[]` (max 20, oldest dropped), `metadata.edited_at` set, `message.updated` emitted. Never changes `substantive`, never reopens, never triggers 07. Allowed for contact messages and echo (X2) messages only.
+- Redact: same path as moderator redaction (`api.md`, `safety.md` "Redaction") with `metadata.redacted_by = "provider"`, `reason` (`source_deleted`): body cleared, attachments deleted from filesystem, search entry removed, stub kept. No `conversations:moderate` check (provider is source of truth). Conversation with no unredacted contact message left and no workspace reply: closed `reason = source_deleted`.
+- `conversation.closed` reasons gain `source_deleted`.
+
+### X8. Conversation origin `ai_classified`
+- `conversations.source.channel.trigger` (jsonb, no migration) records 05 room trigger that created conversation (`author_window`, `ai`, `emoji`, `mention`, `shortcut`, ...), with `classifier_confidence` for `ai`. Reports read it; no behavior in 03.
+
