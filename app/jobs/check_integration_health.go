@@ -15,6 +15,7 @@ package jobs
 import (
 	"context"
 
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/actions/integrations"
@@ -58,4 +59,42 @@ Handle runs the sweep.
 */
 func (w *CheckIntegrationHealth) Handle(ctx context.Context, _ *queue.Job[CheckIntegrationHealthArgs]) error {
 	return w.Check.Due(ctx)
+}
+
+/*
+CheckInstallationArgs names one installation to check now, such as one
+whose token a provider just refused while sending.
+*/
+type CheckInstallationArgs struct {
+	WorkspaceID    ids.UUID `json:"workspace_id"`
+	InstallationID ids.UUID `json:"installation_id"`
+}
+
+/*
+Kind names the job.
+*/
+func (CheckInstallationArgs) Kind() string {
+	return "check_integration_installation"
+}
+
+/*
+Options try the job a few times, once per installation at a time.
+*/
+func (CheckInstallationArgs) Options() queue.Options {
+	return queue.Options{MaxAttempts: healthAttempts, Unique: queue.UniqueOpts{ByArgs: true}}
+}
+
+/*
+CheckInstallation checks one installation, so a refused token marks it
+broken and alerts the admins at once instead of at the next sweep.
+*/
+type CheckInstallation struct {
+	Check *integrations.CheckInstallationHealth
+}
+
+/*
+Handle checks the installation the job names.
+*/
+func (w *CheckInstallation) Handle(ctx context.Context, job *queue.Job[CheckInstallationArgs]) error {
+	return w.Check.Handle(ctx, job.Args.WorkspaceID, job.Args.InstallationID)
 }

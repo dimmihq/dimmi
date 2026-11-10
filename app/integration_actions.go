@@ -32,4 +32,5 @@ type IntegrationActions struct {
 	ApplyRevocation   *integrations.ApplyProviderRevocation
 	CheckHealth       *integrations.CheckInstallationHealth
 	RevokeDeparted    *integrations.RevokeDepartedMember
+	RevokeWorkspace   *integrations.RevokeWorkspace
 }

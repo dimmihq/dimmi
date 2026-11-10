@@ -149,6 +149,7 @@ func newSlackDesk(t *testing.T) *slackDesk {
 
 	tc := tests.New(t, tests.WithEnv(
 		"DIMMI_SERVICES__SLACK__CLIENT_ID=app-id", "DIMMI_SERVICES__SLACK__CLIENT_SECRET=app-secret",
+		"DIMMI_SERVICES__SLACK__SIGNING_SECRET=app-signing",
 	))
 	inbox, err := factories.DefaultInbox(t.Context(), tc.App, tc.Workspace.Workspace)
 	require.NoError(t, err)

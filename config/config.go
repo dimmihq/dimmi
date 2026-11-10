@@ -42,10 +42,11 @@ type Config struct {
 	Invitations InvitationsConfig `koanf:"invitations"`
 	Tokens      TokensConfig      `koanf:"tokens"`
 
-	Frontend FrontendConfig `koanf:"frontend"`
-	Widget   WidgetConfig   `koanf:"widget"`
-	Contacts ContactsConfig `koanf:"contacts"`
-	Identity IdentityConfig `koanf:"identity"`
+	Frontend   FrontendConfig   `koanf:"frontend"`
+	Widget     WidgetConfig     `koanf:"widget"`
+	Contacts   ContactsConfig   `koanf:"contacts"`
+	Broadcasts BroadcastsConfig `koanf:"broadcasts"`
+	Identity   IdentityConfig   `koanf:"identity"`
 
 	HelpCenters HelpCentersConfig `koanf:"help_centers"`
 
@@ -77,6 +78,10 @@ func (c *Config) Validate() error {
 	}
 
 	if err := c.Auth.check(); err != nil {
+		return err
+	}
+
+	if err := c.Services.Slack.check(); err != nil {
 		return err
 	}
 

@@ -40,6 +40,7 @@ func newSlackCase(t *testing.T) slackCase {
 
 	tc := tests.New(t, tests.WithEnv(
 		"DIMMI_SERVICES__SLACK__CLIENT_ID=app-id", "DIMMI_SERVICES__SLACK__CLIENT_SECRET=app-secret",
+		"DIMMI_SERVICES__SLACK__SIGNING_SECRET=app-signing",
 	))
 
 	return slackCase{tc: tc, fake: tc.App.OAuthClient.Fake(), owner: tc.In(tc.Owner)}

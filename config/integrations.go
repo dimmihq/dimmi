@@ -19,7 +19,10 @@
 
 package config
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 /*
 ServicesConfig holds the credentials of the apps dimmi has registered at
@@ -46,6 +49,19 @@ Configured reports whether the shared Slack app can install.
 */
 func (c SlackServiceConfig) Configured() bool {
 	return c.ClientID != "" && c.ClientSecret != ""
+}
+
+/*
+check refuses a shared app that could install but never receive: Slack
+signs every event, and without the signing secret each one is turned
+away.
+*/
+func (c SlackServiceConfig) check() error {
+	if c.Configured() && c.SigningSecret == "" {
+		return fmt.Errorf("%w: services.slack.signing_secret", ErrInvalid)
+	}
+
+	return nil
 }
 
 /*

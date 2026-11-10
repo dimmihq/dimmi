@@ -81,6 +81,7 @@ type SendChannelMessage struct {
 	Clock    clock.Clock
 	Events   *events.Dispatcher
 	Channels *channels.Manager
+	Queue    *queue.Queue
 	GIFs     bool
 	Disks    FileDisks
 }
@@ -141,10 +142,25 @@ func (w *SendChannelMessage) Handle(ctx context.Context, job *queue.Job[SendChan
 	}
 
 	if final {
-		return queue.Cancel(err)
+		return errors.Join(queue.Cancel(err), w.checkBroken(ctx, out.conn, err))
 	}
 
 	return fmt.Errorf("send message: %w", err)
+}
+
+/*
+checkBroken asks for the connection's installation to be checked now
+when the channel refused its token, so the installation is marked
+broken and the admins are told at once rather than at the next sweep.
+*/
+func (w *SendChannelMessage) checkBroken(ctx context.Context, conn models.ChannelConnection, err error) error {
+	if w.Queue == nil || conn.IntegrationInstallationID == nil || !errors.Is(err, contracts.ErrConnectionBroken) {
+		return nil
+	}
+
+	return w.Queue.Push(context.WithoutCancel(ctx), CheckInstallationArgs{
+		WorkspaceID: conn.WorkspaceID, InstallationID: *conn.IntegrationInstallationID,
+	})
 }
 
 /*

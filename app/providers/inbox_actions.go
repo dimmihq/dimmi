@@ -79,7 +79,7 @@ func bootInbox(a *app.App) error {
 		bootWorkbench(a),
 		bootErasures(a),
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
-			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels, Disks: a.Storage,
+			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels, Disks: a.Storage, Queue: a.Queue,
 			GIFs: a.Config.Inbox.GIF.GiphyAPIKey != "",
 		}),
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),

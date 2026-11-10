@@ -17,6 +17,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -55,6 +56,23 @@ func (s slackCase) ownerMembership() authz.Membership {
 
 func TestHealth(t *testing.T) {
 	t.Parallel()
+
+	t.Run("checks one installation at once when a send finds its token refused", func(t *testing.T) {
+		t.Parallel()
+		s := newSlackCase(t)
+		public := s.install(t, slackGrant("T1", s.allScopes()))
+		stubSlack(s, failure("invalid_auth"))
+		id, err := s.tc.App.IDs.Decode(string(models.PrefixIntegrationInstallation), public)
+		require.NoError(t, err)
+
+		require.NoError(t, s.tc.App.Queue.Push(t.Context(), jobs.CheckInstallationArgs{
+			WorkspaceID: s.tc.Workspace.Workspace.ID, InstallationID: id,
+		}))
+		s.tc.Drain()
+
+		s.owner.GetJSON("/api/v1/integrations/"+public).AssertOK().
+			AssertJSONPath("data.status", "error").AssertJSONPath("data.last_error_code", "slack_auth_failed")
+	})
 
 	t.Run("marks a refused installation broken once and brings it back", func(t *testing.T) {
 		t.Parallel()

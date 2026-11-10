@@ -85,7 +85,9 @@ func (PurgeWorkspaceArgs) Options() queue.Options {
 }
 
 /*
-PurgeWorkspace deletes a workspace in the trash for good.
+PurgeWorkspace deletes a workspace in the trash for good. Revoke, when
+set, gives the workspace's integration tokens back to their providers
+before any row goes.
 */
 type PurgeWorkspace struct {
 	DB        *database.DB
@@ -93,6 +95,7 @@ type PurgeWorkspace struct {
 	Disk      filesystem.Filesystem
 	Retention contracts.RetentionGuard
 	Log       log.Logger
+	Revoke    func(ctx context.Context, workspaceID ids.UUID) error
 }
 
 /*
@@ -106,6 +109,10 @@ func (w *PurgeWorkspace) Handle(ctx context.Context, job *queue.Job[PurgeWorkspa
 	due, err := w.begin(ctx, id)
 	if err != nil || !due {
 		return err
+	}
+
+	if err := w.revoke(ctx, id); err != nil {
+		return handOver(err)
 	}
 
 	deadline := w.Clock.Now().Add(purgeRunBudget)
@@ -136,6 +143,10 @@ func (w *PurgeWorkspace) Purge(ctx context.Context, id ids.UUID) (bool, error) {
 		return false, err
 	}
 
+	if err := w.revoke(ctx, id); err != nil {
+		return false, err
+	}
+
 	for _, step := range []func(context.Context, ids.UUID, time.Time) (bool, error){w.deleteFiles, w.deleteRows} {
 		for done := false; !done; {
 			done, err = step(ctx, id, w.Clock.Now().Add(purgeRunBudget))
@@ -146,6 +157,22 @@ func (w *PurgeWorkspace) Purge(ctx context.Context, id ids.UUID) (bool, error) {
 	}
 
 	return true, w.finish(ctx, id)
+}
+
+/*
+revoke gives the workspace's integration tokens back, when the purge
+was given a way to.
+*/
+func (w *PurgeWorkspace) revoke(ctx context.Context, id ids.UUID) error {
+	if w.Revoke == nil {
+		return nil
+	}
+
+	if err := w.Revoke(ctx, id); err != nil {
+		return fmt.Errorf("revoke integrations: %w", err)
+	}
+
+	return nil
 }
 
 /*

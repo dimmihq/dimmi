@@ -54,12 +54,17 @@ func bootIntegrations(a *app.App) error {
 		ApplyRevocation:   &integrations.ApplyProviderRevocation{Services: s},
 		CheckHealth:       &integrations.CheckInstallationHealth{Services: s},
 		RevokeDeparted:    &integrations.RevokeDepartedMember{Services: s},
+		RevokeWorkspace:   &integrations.RevokeWorkspace{Services: s},
 	}
 	a.Actions.Integrations = acts
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MemberDeactivated) error {
 		return acts.RevokeDeparted.Handle(context.WithoutCancel(ctx), e.WorkspaceID, e.MemberID)
 	})
+
+	if err := queue.Register(a.Queue, &jobs.CheckInstallation{Check: acts.CheckHealth}); err != nil {
+		return err
+	}
 
 	return queue.Register(a.Queue, &jobs.CheckIntegrationHealth{Check: acts.CheckHealth})
 }
