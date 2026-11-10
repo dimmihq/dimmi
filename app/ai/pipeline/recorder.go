@@ -120,6 +120,9 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 	if in.key != nil {
 		params.ProviderKeyID = &in.key.id
 	}
+	if in.llm != nil && in.model != "" {
+		params.Upstream = new(string(contracts.UpstreamOf(in.llm, in.model)))
+	}
 	if r.StorePayloads {
 		params.Request, params.Response = payload(in.request), payload(in.response)
 	}

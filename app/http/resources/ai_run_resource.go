@@ -100,10 +100,12 @@ type AiRunStep struct {
 	Seq          int32           `json:"seq"`
 	Kind         string          `json:"kind"`
 	Provider     *string         `json:"provider"`
+	Upstream     *string         `json:"upstream"`
 	Model        *string         `json:"model"`
 	Status       string          `json:"status"`
 	ErrorKind    *string         `json:"error_kind"`
 	LatencyMs    *int32          `json:"latency_ms"`
+	FirstTokenMs *int32          `json:"first_token_ms"`
 	InputTokens  int64           `json:"input_tokens"`
 	OutputTokens int64           `json:"output_tokens"`
 	CostMicros   int64           `json:"cost_micros"`
@@ -117,8 +119,8 @@ NewAiRunStep shapes a step for the API.
 func NewAiRunStep(s models.AiRunStep) AiRunStep {
 	return AiRunStep{
 		ID: models.PublicID(models.PrefixAiRunStep, s.ID), Seq: s.Seq, Kind: s.Kind,
-		Provider: s.Provider, Model: s.Model, Status: s.Status, ErrorKind: s.ErrorKind,
-		LatencyMs: s.LatencyMs, InputTokens: s.InputTokens, OutputTokens: s.OutputTokens,
+		Provider: s.Provider, Upstream: s.Upstream, Model: s.Model, Status: s.Status, ErrorKind: s.ErrorKind,
+		LatencyMs: s.LatencyMs, FirstTokenMs: s.FirstTokenMs, InputTokens: s.InputTokens, OutputTokens: s.OutputTokens,
 		CostMicros: s.CostMicros, Request: s.Request, Response: s.Response,
 	}
 }

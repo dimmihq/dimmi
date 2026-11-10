@@ -76,6 +76,30 @@ type LLM interface {
 }
 
 /*
+LLMRouter is an LLM that sends each model to another provider's host,
+such as the built-in provider.
+*/
+type LLMRouter interface {
+	/*
+		Upstream names the provider a model's calls actually reach.
+	*/
+	Upstream(model string) LLMProvider
+}
+
+/*
+UpstreamOf names the provider a model's calls on the connection reach:
+the routed host for a router, else the connection's own provider.
+*/
+func UpstreamOf(l LLM, model string) LLMProvider {
+	if r, ok := l.(LLMRouter); ok {
+		if up := r.Upstream(model); up != "" {
+			return up
+		}
+	}
+	return l.Provider()
+}
+
+/*
 ChatResponse is one finished completion.
 */
 type ChatResponse struct {

@@ -30,6 +30,17 @@ func TestManagedDriver(t *testing.T) {
 		assert.Equal(t, contracts.LLMProviderDimmi, drv.Provider())
 	})
 
+	t.Run("names the host each model reaches", func(t *testing.T) {
+		t.Parallel()
+		families := make(map[enums.AIModelFamily]contracts.LLM)
+		families[enums.AIModelFamilyOpenWeight] = fake.New(contracts.LLMProviderBaseten)
+		drv := managed.New(families, nil)
+
+		assert.Equal(t, contracts.LLMProviderBaseten, contracts.UpstreamOf(drv, "glm-5.3-flash"))
+		assert.Equal(t, contracts.LLMProviderDimmi, contracts.UpstreamOf(drv, "claude-sonnet-5-5"))
+		assert.Equal(t, contracts.LLMProviderEngy, contracts.UpstreamOf(fake.New(contracts.LLMProviderEngy), "glm-5.3"))
+	})
+
 	t.Run("refuses a model whose family has no upstream", func(t *testing.T) {
 		t.Parallel()
 		glm := fake.New(contracts.LLMProviderEngy)

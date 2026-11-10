@@ -36,6 +36,7 @@ func TestAiTurn(t *testing.T) {
 			"SELECT count(*) FROM ai_run_steps WHERE run_id = $1 AND created_at < now() - interval '1 year'",
 			res.RunID).Scan(&undated))
 		assert.Zero(t, undated, "every step is stamped with when it was written")
+		assert.Equal(t, "anthropic", str(s.steps[0].Upstream))
 		assert.Positive(t, s.run.CostMicros)
 		assert.Equal(t, "pro plan price per seat", str(s.run.QueryRewritten))
 		assert.Equal(t, int32(1), s.conv.AiReplyCount)

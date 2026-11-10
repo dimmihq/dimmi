@@ -137,10 +137,13 @@ export interface AiRunStep {
   seq: number;
   kind: string;
   provider: string | null;
+  /* The host that served the call when the provider routes, such as the built-in provider. */
+  upstream: string | null;
   model: string | null;
   status: string;
   error_kind: string | null;
   latency_ms: number | null;
+  first_token_ms: number | null;
   input_tokens: number;
   output_tokens: number;
   cost_micros: number;

@@ -46,6 +46,18 @@ Provider names the managed provider.
 func (d *Driver) Provider() contracts.LLMProvider { return contracts.LLMProviderDimmi }
 
 /*
+Upstream names the provider the model's family is served by, empty
+for a model no upstream serves.
+*/
+func (d *Driver) Upstream(model string) contracts.LLMProvider {
+	drv, err := d.forModel(model)
+	if err != nil {
+		return ""
+	}
+	return drv.Provider()
+}
+
+/*
 Chat routes the call to the model's family driver.
 */
 func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {

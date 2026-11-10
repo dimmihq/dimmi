@@ -5,13 +5,13 @@ INSERT INTO ai_run_steps (
     retry_of_step_id, status, error_kind, provider_error_code, http_status, provider_request_id,
     request, response, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens,
     reasoning_tokens, usage_estimated, cost_micros, latency_ms, first_token_ms,
-    started_at, completed_at, created_at
+    started_at, completed_at, upstream, created_at
 ) VALUES (
     @workspace_id, @run_id, @seq, @kind, @provider, @provider_key_id, @model, @response_model, @attempt,
     @retry_of_step_id, @status, @error_kind, @provider_error_code, @http_status, @provider_request_id,
     @request, @response, @input_tokens, @cached_input_tokens, @cache_write_tokens, @output_tokens,
     @reasoning_tokens, @usage_estimated, @cost_micros, @latency_ms, @first_token_ms,
-    @started_at, @completed_at, @now
+    @started_at, @completed_at, sqlc.narg('upstream'), @now
 )
 RETURNING *;
 
