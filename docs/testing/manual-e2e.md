@@ -1132,3 +1132,16 @@ Start the server with `DIMMI_API__LIMITS__TOKEN_PER_MINUTE=12`, `..._WORKSPACE_P
 | Vote for | Vote for a customer, pick them and Must have | the vote counts, marked added by the team, with Must have |
 | Merge | Merge into another request | votes move once per customer; the old page answers 301 to the kept one |
 | Order | Trending, Top and New on the portal and the dashboard, and search | the order follows votes, recent votes, and posting time; search narrows by title |
+
+## Connected apps
+
+An agent registers itself, the person approves it in the browser, and the agent acts as them over OAuth.
+
+| Flow | Do | Expect |
+|---|---|---|
+| Discovery | `curl -i -X POST $APP/mcp` with no token | 401, `WWW-Authenticate` names `resource_metadata` at `/.well-known/oauth-protected-resource/mcp` |
+| Register | `POST /oauth/register` with a name, a loopback `redirect_uris` and `token_endpoint_auth_method: none` | 201 with a `dmi_oci_` client id |
+| Consent | open `/oauth/authorize?...` with PKCE S256, signed out | sign-in first, then "Connect {name}" with the self-registered and loopback warnings, the workspace and one checkbox per scope |
+| Deny | Deny | back at the redirect with `error=access_denied` and the state |
+| Allow | untick one scope, Allow, then `POST /oauth/token` with the code and verifier | token `scope` lacks the unticked one; the API answers 403 for it and 200 for the rest |
+| Disconnect | Settings, Connected apps, Disconnect | the list empties; the access token answers 401 |
