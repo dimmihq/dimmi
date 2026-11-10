@@ -12,6 +12,8 @@ import type { ChipColor } from "@/components/base/badges/chip";
 import type { Broadcast, BroadcastStatus, Channel, PauseReason } from "@/lib/api/broadcasts";
 import { formatDateTime } from "@/lib/i18n/format";
 
+import { sendTimeOf } from "./schedule";
+
 /*
  * ChannelLook is a channel's name, icon and tint, and the line that
  * says where the message shows up.
@@ -101,11 +103,13 @@ export function percent(part: number, whole: number): string {
 /*
  * noteOf says, in a few words, when the broadcast went or will go out.
  */
-export function noteOf(broadcast: Broadcast): string {
+export function noteOf(broadcast: Broadcast, workspaceZone?: string): string {
   const at = (moment: string | null) => (moment ? formatDateTime(moment) : "");
   switch (broadcast.status) {
     case "scheduled":
-      return broadcast.scheduled_at ? `Goes out ${at(broadcast.scheduled_at)}` : "Scheduled";
+      return broadcast.scheduled_at
+        ? `Goes out ${sendTimeOf(broadcast.schedule_kind, broadcast.scheduled_at, workspaceZone)}`
+        : "Scheduled";
     case "sending":
       return `Started ${at(broadcast.started_at)}`;
     case "paused":

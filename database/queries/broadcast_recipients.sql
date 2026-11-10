@@ -51,8 +51,10 @@ WHERE workspace_id = @workspace_id AND id = @id AND status IN ('queued', 'sent',
 RETURNING *;
 
 -- name: RetryBroadcastRecipientAt :exec
--- RetryBroadcastRecipientAt puts a recipient back in the queue for later.
-UPDATE broadcast_recipients SET due_at = @due_at::timestamptz, reason = sqlc.narg(reason), updated_at = @now::timestamptz
+-- RetryBroadcastRecipientAt puts a recipient back in the queue for later,
+-- without spending an attempt, since waiting is not failing.
+UPDATE broadcast_recipients SET due_at = @due_at::timestamptz, reason = sqlc.narg(reason),
+    attempts = greatest(attempts - 1, 0), updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND status = 'queued';
 
 -- name: SkipQueuedBroadcastRecipients :execrows
@@ -317,3 +319,18 @@ WHERE r.workspace_id = @workspace_id AND r.broadcast_id = @broadcast_id AND r.co
 UPDATE conversations SET closed_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND status = 'closed'
 RETURNING *;
+
+-- name: BroadcastAddressUse :one
+-- BroadcastAddressUse returns when an address first sent a broadcast
+-- email and how many it sent since the time, for its warm-up.
+SELECT coalesce(min(created_at), @now::timestamptz)::timestamptz AS first_sent,
+    count(*) FILTER (WHERE created_at > @since::timestamptz) AS recent
+FROM outbound_emails
+WHERE workspace_id = @workspace_id AND email_address_id = @email_address_id AND kind = 'broadcast';
+
+-- name: CountPacedBroadcastRecipients :many
+-- CountPacedBroadcastRecipients counts the recipients still queued
+-- because sending is being held back, by why.
+SELECT coalesce(reason, '')::text AS reason, count(*) AS n FROM broadcast_recipients
+WHERE workspace_id = @workspace_id AND broadcast_id = @broadcast_id AND status = 'queued' AND reason IS NOT NULL
+GROUP BY reason;

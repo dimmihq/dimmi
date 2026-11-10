@@ -204,6 +204,10 @@ func (b *Broadcasts) failed(ctx context.Context, r models.BroadcastRecipient, er
 		return b.fail(ctx, r, refused)
 	}
 
+	if paced, ok := errors.AsType[*PacedError](err); ok {
+		return b.retryAt(ctx, r, paced.Until, paced.Reason)
+	}
+
 	if limited, ok := errors.AsType[*contracts.RateLimitedError](err); ok {
 		return b.retryAt(ctx, r, b.Clock.Now().Add(max(limited.RetryAfter, time.Second)), "rate_limited")
 	}

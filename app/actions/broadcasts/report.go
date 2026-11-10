@@ -25,7 +25,8 @@ import (
 
 /*
 Report is a broadcast's results: its counts, why recipients were left
-out, its links by clicks and each account's results.
+out, its links by clicks, each account's results and why recipients
+still queued are waiting.
 */
 type Report struct {
 	Broadcast models.Broadcast
@@ -33,6 +34,7 @@ type Report struct {
 	Reasons   []models.CountBroadcastSkipReasonsRow
 	Links     []models.BroadcastLink
 	Companies []models.BroadcastCompanyReportRow
+	Waiting   []models.CountPacedBroadcastRecipientsRow
 }
 
 /*
@@ -71,11 +73,17 @@ func (b *Broadcasts) Report(ctx context.Context, m authz.Membership, id ids.UUID
 			return wrap("list links", err)
 		}
 
-		out.Companies, err = q.BroadcastCompanyReport(ctx, models.BroadcastCompanyReportParams{
+		if out.Companies, err = q.BroadcastCompanyReport(ctx, models.BroadcastCompanyReportParams{
+			WorkspaceID: ws, BroadcastID: id,
+		}); err != nil {
+			return wrap("report companies", err)
+		}
+
+		out.Waiting, err = q.CountPacedBroadcastRecipients(ctx, models.CountPacedBroadcastRecipientsParams{
 			WorkspaceID: ws, BroadcastID: id,
 		})
 
-		return wrap("report companies", err)
+		return wrap("count waiting", err)
 	})
 
 	return out, err

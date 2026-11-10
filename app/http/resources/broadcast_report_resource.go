@@ -25,6 +25,7 @@ type BroadcastReport struct {
 	Reasons   []BroadcastReason                  `json:"reasons"`
 	Links     []BroadcastLink                    `json:"links"`
 	Companies []BroadcastCompany                 `json:"companies"`
+	Waiting   []BroadcastReason                  `json:"waiting"`
 }
 
 /*
@@ -66,6 +67,11 @@ func NewBroadcastReport(r broadcasts.Report) BroadcastReport {
 	out := BroadcastReport{
 		Object: "broadcast_report", Broadcast: NewBroadcast(r.Broadcast), Counts: r.Counts,
 		Reasons: []BroadcastReason{}, Links: []BroadcastLink{}, Companies: []BroadcastCompany{},
+		Waiting: []BroadcastReason{},
+	}
+
+	for _, w := range r.Waiting {
+		out.Waiting = append(out.Waiting, BroadcastReason{Reason: w.Reason, Count: w.N})
 	}
 
 	for _, reason := range r.Reasons {

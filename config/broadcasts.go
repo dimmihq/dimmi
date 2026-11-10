@@ -23,7 +23,10 @@ rates wait for, BounceRate and ComplaintRate the shares that pause a
 send. LeaseSeconds is how long a recipient handed to a sender stays
 out of the queue before it is tried again, and BatchSize how many
 recipients one dispatch hands out. DispatchSeconds is how often a
-sending broadcast hands out recipients.
+sending broadcast hands out recipients. WarmupFirstDay is how many
+broadcast emails a newly used address sends in its first day, doubling
+each day until WarmupUntil, after which it is not held back; zero turns
+the warm-up off.
 */
 type BroadcastsConfig struct {
 	EmailPerMinute     int     `default:"600"   koanf:"email_per_minute"`
@@ -36,4 +39,6 @@ type BroadcastsConfig struct {
 	LeaseSeconds       int     `default:"600"   koanf:"lease_seconds"`
 	BatchSize          int     `default:"200"   koanf:"batch_size"`
 	DispatchSeconds    int     `default:"10"    koanf:"dispatch_seconds"`
+	WarmupFirstDay     int     `default:"500"   koanf:"warmup_first_day"`
+	WarmupUntil        int     `default:"50000" koanf:"warmup_until"`
 }

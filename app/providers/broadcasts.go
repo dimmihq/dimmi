@@ -49,7 +49,9 @@ func bootBroadcasts(a *app.App) error {
 		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Events: a.Events, Audiences: a.Actions.Audiences,
 		Config: a.Config.Broadcasts, Links: links,
 		Senders: map[string]broadcasts.Sender{
-			broadcasts.ChannelEmail: &broadcasts.EmailSender{Links: links, Mailer: &email.SendBroadcastEmail{
+			broadcasts.ChannelEmail: &broadcasts.EmailSender{Links: links, Pacer: &broadcasts.Pacer{
+				DB: a.DB, Limiter: a.Limiter, Clock: a.Clock, Limits: cfg.Sending.Limits, Config: a.Config.Broadcasts,
+			}, Mailer: &email.SendBroadcastEmail{
 				DB: a.DB, Clock: a.Clock, Mail: a.Mail, Config: cfg, Senders: a.EmailDomains,
 				Stamps: inbound.NewStamps(a.DerivedKey(stampsKeyPurpose)), Transport: customerTransport(a),
 			}},

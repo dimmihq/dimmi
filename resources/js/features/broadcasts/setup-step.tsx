@@ -16,17 +16,20 @@ import { useState } from "react";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
 import { Row, Section } from "@/features/settings/layout";
+import type { AudienceRules } from "@/lib/api/audiences";
 import { type Broadcast, broadcastEstimateQuery } from "@/lib/api/broadcasts";
 import { formatNumber } from "@/lib/i18n/format";
 
 import { Flag, type Option, Pick } from "./controls";
 import type { Draft } from "./draft";
 import { channelLook, reachNoun, reasonName } from "./looks";
+import { RulesModal } from "./rules-modal";
 import { useAudiences, useCustomerRooms, useTopics } from "./sources";
 
 type Change = (change: Partial<Draft>) => void;
 
 const custom = "custom";
+const write = "write";
 
 function Reach({ workspace, broadcast, draft }: { workspace: string; broadcast: Broadcast; draft: Draft }) {
   const { data: estimate, isPending } = useQuery(broadcastEstimateQuery(workspace, broadcast.id));
@@ -35,7 +38,8 @@ function Reach({ workspace, broadcast, draft }: { workspace: string; broadcast: 
   }
   const noun = reachNoun(broadcast.channel, estimate.reach);
   const left = Object.entries(estimate.skipped).filter(([, count]) => count > 0);
-  const label = `${formatNumber(estimate.reach)}${estimate.capped ? "+" : ""} ${noun} get it right now`;
+  const verb = estimate.reach === 1 && !estimate.capped ? "gets" : "get";
+  const label = `${formatNumber(estimate.reach)}${estimate.capped ? "+" : ""} ${noun} ${verb} it right now`;
   const description = left.length
     ? left.map(([reason, count]) => `${reasonName(reason)}: ${formatNumber(count)}`).join(" · ")
     : "Unsubscribed, bounced and spam-reporting people are left out when it sends.";
@@ -57,11 +61,13 @@ function Reach({ workspace, broadcast, draft }: { workspace: string; broadcast: 
 }
 
 function audienceOptions(draft: Draft, audiences: Option[]): Option[] {
-  if (draft.audience_id === null && draft.rules !== null) {
-    return [{ id: custom, name: "Custom rules" }, ...audiences];
-  }
+  const own = draft.audience_id === null && draft.rules !== null;
 
-  return audiences;
+  return [
+    ...(own ? [{ id: custom, name: "Its own rule" }] : []),
+    ...audiences,
+    { id: write, name: own ? "Edit its rule…" : "Write a rule for this broadcast…" },
+  ];
 }
 
 function AudiencePick({
@@ -78,20 +84,36 @@ function AudiencePick({
   const audiences = useAudiences(workspace).map((audience) => ({ id: audience.id, name: audience.name }));
   const options = audienceOptions(draft, audiences);
   const value = draft.audience_id ?? (draft.rules !== null ? custom : null);
+  const [writing, setWriting] = useState(false);
 
   return (
-    <Pick
-      label="Audience"
-      options={options}
-      value={value}
-      placeholder={placeholder}
-      onChange={(id) => {
-        if (id === custom) {
-          return;
-        }
-        onChange({ audience_id: id, rules: null });
-      }}
-    />
+    <>
+      <Pick
+        label="Audience"
+        options={options}
+        value={value}
+        placeholder={placeholder}
+        onChange={(id) => {
+          if (id === write) {
+            setWriting(true);
+
+            return;
+          }
+          if (id === custom) {
+            return;
+          }
+          onChange({ audience_id: id, rules: null });
+        }}
+      />
+      {writing ? (
+        <RulesModal
+          workspace={workspace}
+          rules={draft.rules as AudienceRules | null}
+          onSave={(rules) => onChange({ audience_id: null, rules })}
+          onClose={() => setWriting(false)}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -110,7 +132,7 @@ function AudienceSection({
 
   return (
     <Section title="Audience" description="Who matches when it goes out. People who match later won't get it.">
-      <Row label="Send to" description="A saved audience from Customers.">
+      <Row label="Send to" description="A saved audience from Customers, or a rule for this broadcast alone.">
         <AudiencePick workspace={workspace} draft={draft} placeholder="Choose an audience" onChange={onChange} />
       </Row>
       <Reach workspace={workspace} broadcast={broadcast} draft={draft} />

@@ -35,6 +35,7 @@ export function useBroadcastActions(workspace: string, id: string) {
       }
       queryClient.setQueryData(broadcastQuery(workspace, id).queryKey, broadcast);
       void queryClient.invalidateQueries({ queryKey: broadcastReportQuery(workspace, id).queryKey });
+      void queryClient.invalidateQueries({ queryKey: [...broadcastsKey(workspace), "one", id, "recipients"] });
     },
   });
 

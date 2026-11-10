@@ -150,6 +150,7 @@ export interface BroadcastReport {
   reasons: BroadcastReason[] | null;
   links: BroadcastLink[] | null;
   companies: BroadcastCompany[] | null;
+  waiting: BroadcastReason[] | null;
 }
 
 export type RecipientStatus =
@@ -332,7 +333,7 @@ export function createBroadcastTopic(
 export function updateBroadcastTopic(
   workspace: string,
   id: string,
-  topic: { name: string; description?: string; consent?: BroadcastTopic["consent"] },
+  topic: { name: string; description?: string; archived?: boolean },
 ): Promise<BroadcastTopic> {
   return request<BroadcastTopic>("PATCH", `/broadcast-topics/${encodeURIComponent(id)}`, topic, { workspace });
 }

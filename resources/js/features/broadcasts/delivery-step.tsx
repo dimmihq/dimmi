@@ -12,6 +12,7 @@ import { DatePicker } from "@/components/base/date-picker/date-picker";
 import { TimeField } from "@/components/base/time-field/time-field";
 import { Row, Section } from "@/features/settings/layout";
 import type { Broadcast } from "@/lib/api/broadcasts";
+import type { EmailAddress } from "@/lib/api/email";
 import { workspaceQuery } from "@/lib/api/workspace";
 
 import { Flag, Pick } from "./controls";
@@ -28,11 +29,21 @@ interface StepProps {
   onChange: Change;
 }
 
+/*
+ * senderName labels an address in the picker, saying when its domain is
+ * not verified yet, since a broadcast cannot leave from it until it is.
+ */
+function senderName(address: EmailAddress): string {
+  const name = address.display_name ? `${address.display_name} <${address.address}>` : address.address;
+
+  return address.sending_identity.domain_status === "verified" ? name : `${name} · domain not verified`;
+}
+
 function SenderSection({ workspace, broadcast, draft, onChange }: StepProps) {
   const members = useActiveMembers(workspace).map((member) => ({ id: member.id, name: member.user.name }));
   const addresses = useEmailAddresses(workspace, broadcast.channel === "email").map((address) => ({
     id: address.id,
-    name: address.display_name ? `${address.display_name} <${address.address}>` : address.address,
+    name: senderName(address),
   }));
 
   return (

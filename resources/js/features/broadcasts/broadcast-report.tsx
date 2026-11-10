@@ -24,12 +24,14 @@ import {
   broadcastReportQuery,
   type BroadcastReport as Report,
 } from "@/lib/api/broadcasts";
-import { formatNumber } from "@/lib/i18n/format";
+import { formatNumber, formatTime } from "@/lib/i18n/format";
 import { useRealtime } from "@/lib/realtime/context";
 
 import { counted, pauseReasons, percent, reachNoun, reasonName } from "./looks";
 import { Stat } from "./parts";
 import { type Account, Recipients } from "./report-recipients";
+import { zoneFor } from "./schedule";
+import { useWorkspaceZone } from "./sources";
 
 type Step = [label: string, count: number, note: string];
 
@@ -239,6 +241,51 @@ function Headline({ broadcast, counts }: { broadcast: Broadcast; counts: Broadca
   );
 }
 
+const waitingReasons: Record<string, string> = {
+  warming_up:
+    "This address is new, so it sends a little more each day while mail providers learn to trust it. The rest wait their turn.",
+  provider_limit: "Your mail provider's sending limit is reached for now; the rest go out as it frees up.",
+  rate_limited: "The provider asked dimmi to slow down; the rest go out shortly.",
+};
+
+/*
+ * Waiting says why some recipients are still in the queue while the
+ * broadcast sends: each person's own time not reached yet, an address
+ * warming up, or the provider's limit.
+ */
+function Waiting({ workspace, report }: { workspace: string; report: Report }) {
+  const zone = useWorkspaceZone(workspace);
+  const { broadcast, counts } = report;
+  const held = (report.waiting ?? []).filter((w) => w.count > 0);
+  const theirTime = broadcast.schedule_kind === "local" && broadcast.scheduled_at !== null && counts.queued > 0;
+  if (broadcast.status !== "sending" || (held.length === 0 && !theirTime)) {
+    return null;
+  }
+
+  return (
+    <div
+      role="status"
+      className="flex flex-col gap-1 rounded-2xl border border-border-button-default bg-background-primary-default px-4 py-3"
+    >
+      <span className="text-body-medium text-text-primary">
+        {theirTime ? "Going out in each person's own time" : "Sending at a steady pace"}
+      </span>
+      {theirTime && broadcast.scheduled_at ? (
+        <span className="text-body-2-regular text-text-secondary">
+          Each person gets it at {formatTime(broadcast.scheduled_at, { timeZone: zoneFor("local", zone) })} where they
+          are, and people without a time zone at that time in the workspace's. Stop it to keep it from anyone still
+          waiting.
+        </span>
+      ) : null}
+      {held.map((w) => (
+        <span key={w.reason} className="text-body-2-regular text-text-secondary">
+          {waitingReasons[w.reason] ?? reasonName(w.reason)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function BroadcastReport({
   workspace,
   broadcast,
@@ -260,6 +307,7 @@ export function BroadcastReport({
   return (
     <div className="mx-auto flex w-full max-w-[960px] flex-col gap-8 px-4 pt-6 pb-16 sm:px-6">
       {broadcast.status === "paused" ? <Paused broadcast={broadcast} onAction={onAction} /> : null}
+      {report ? <Waiting workspace={workspace} report={report} /> : null}
       {counts ? <Headline broadcast={broadcast} counts={counts} /> : null}
       {counts ? <Funnel steps={stepsOf(broadcast, counts)} whole={Math.max(counts.sent, 1)} /> : null}
       {report ? <Problems report={report} /> : null}

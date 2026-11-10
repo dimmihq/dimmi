@@ -11,13 +11,16 @@
 import { RiCheckboxBlankCircleLine, RiCheckboxCircleFill, RiErrorWarningLine } from "@remixicon/react";
 
 import { Button } from "@/components/base/buttons/button";
+import { useWorkspace } from "@/features/customers/names";
 import { Row, Section } from "@/features/settings/layout";
 import type { Broadcast, BroadcastEstimate } from "@/lib/api/broadcasts";
-import { formatDateTime, formatNumber } from "@/lib/i18n/format";
+import { formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
 import type { Check, Draft, StepId } from "./draft";
 import { channelLook, reachNoun } from "./looks";
+import { sendTimeOf } from "./schedule";
+import { useWorkspaceZone } from "./sources";
 import { filled } from "./writer/variables";
 
 function Edit({ step, onStep }: { step: StepId; onStep?: (step: StepId) => void }) {
@@ -70,13 +73,12 @@ export function Refusal({ message }: { message: string }) {
   );
 }
 
-function whenOf(draft: Draft): string {
+function whenOf(draft: Draft, workspaceZone: string | undefined): string {
   if (draft.schedule_kind === "now" || !draft.scheduled_at) {
     return "Right away";
   }
-  const at = formatDateTime(draft.scheduled_at);
 
-  return draft.schedule_kind === "local" ? `${at}, in each person's time zone` : at;
+  return sendTimeOf(draft.schedule_kind, draft.scheduled_at, workspaceZone);
 }
 
 /*
@@ -104,6 +106,7 @@ export function ReviewStep({
   refusal: string | null;
   onStep?: (step: StepId) => void;
 }) {
+  const zone = useWorkspaceZone(useWorkspace());
   const channel = channelLook[broadcast.channel].name;
   const reach = estimate
     ? `${formatNumber(estimate.reach)}${estimate.capped ? "+" : ""} ${reachNoun(broadcast.channel, estimate.reach)}`
@@ -122,7 +125,7 @@ export function ReviewStep({
             <Edit step="write" onStep={onStep} />
           </Row>
         )}
-        <Row label={`From ${names.sender}`} description={whenOf(draft)}>
+        <Row label={`From ${names.sender}`} description={whenOf(draft, zone)}>
           <Edit step="delivery" onStep={onStep} />
         </Row>
       </Section>

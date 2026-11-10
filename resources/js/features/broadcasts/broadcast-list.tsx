@@ -7,7 +7,7 @@
  * broadcast starts by picking its channel, since the composer and the
  * numbers that matter follow from it.
  */
-import { RiAddLine, RiArrowRightSLine, RiStackLine } from "@remixicon/react";
+import { RiAddLine, RiArrowRightSLine, RiListCheck2, RiStackLine } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -40,6 +40,8 @@ import { cx } from "@/utils/cx";
 import { useLiveBroadcasts } from "./live";
 import { channelLook, channels, noteOf, percent, statuses, statusName } from "./looks";
 import { BroadcastStatusChip, ChannelMark, Stat } from "./parts";
+import { useWorkspaceZone } from "./sources";
+import { TopicsModal } from "./topics-modal";
 import { plainText } from "./writer/variables";
 
 type View = { kind: "all" } | { kind: "status"; status: BroadcastStatus } | { kind: "channel"; channel: Channel };
@@ -126,6 +128,8 @@ function Pick({
 
 function Views({ broadcasts, view, onView }: { broadcasts: Broadcast[]; view: View; onView: (view: View) => void }) {
   const current = keyOf(view);
+  const workspace = useWorkspace();
+  const [topics, setTopics] = useState(false);
   const count = (next: View) => broadcasts.filter((broadcast) => holds(next, broadcast)).length;
 
   return (
@@ -166,8 +170,13 @@ function Views({ broadcasts, view, onView }: { broadcasts: Broadcast[]; view: Vi
               />
             ))}
           </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="px-3 pb-1 text-caption-1-medium text-text-tertiary">Subscriptions</span>
+            <Pick label="Topics" icon={RiListCheck2} count={0} current={false} onPress={() => setTopics(true)} />
+          </div>
         </nav>
       </ScrollArea>
+      {topics ? <TopicsModal workspace={workspace} onClose={() => setTopics(false)} /> : null}
     </Panel>
   );
 }
@@ -231,7 +240,7 @@ function reachOf(broadcast: Broadcast): string {
   return `${formatNumber(total)} ${broadcast.channel === "slack" ? "channels" : "people"}`;
 }
 
-function columnsOf(audiences: Map<string, string>): ColumnDef<Broadcast>[] {
+function columnsOf(audiences: Map<string, string>, zone: string | undefined): ColumnDef<Broadcast>[] {
   return [
     { id: "broadcast", header: "Broadcast", cell: ({ row }) => <NameCell broadcast={row.original} /> },
     {
@@ -250,7 +259,7 @@ function columnsOf(audiences: Map<string, string>): ColumnDef<Broadcast>[] {
       cell: ({ row }) => (
         <span className="flex min-w-0 flex-col items-start gap-0.5">
           <BroadcastStatusChip status={row.original.status} />
-          <span className="truncate text-caption-1-regular text-text-tertiary">{noteOf(row.original)}</span>
+          <span className="truncate text-caption-1-regular text-text-tertiary">{noteOf(row.original, zone)}</span>
         </span>
       ),
     },
@@ -267,7 +276,7 @@ function audienceOf(broadcast: Broadcast, audiences: Map<string, string>): strin
     return named;
   }
 
-  return broadcast.rules ? "Custom rules" : "No audience yet";
+  return broadcast.rules ? "Its own rule" : "No audience yet";
 }
 
 const widths = { broadcast: "w-[36%]", audience: "w-[22%]", status: "w-[24%]", results: "w-[18%]" };
@@ -386,6 +395,7 @@ export function BroadcastList() {
   const { data: broadcasts = [], isPending } = useQuery(broadcastsQuery(workspace));
   const audienceList = useQuery(audiencesQuery(workspace)).data ?? [];
   const audiences = new Map(audienceList.map((audience) => [audience.id, audience.name]));
+  const zone = useWorkspaceZone(workspace);
   const navigate = useNavigate();
   const wide = useWide(1024);
   const [view, setView] = useState<View>({ kind: "all" });
@@ -428,7 +438,7 @@ export function BroadcastList() {
             <DataTable
               aria-label="Broadcasts"
               data={rows}
-              columns={columnsOf(audiences)}
+              columns={columnsOf(audiences, zone)}
               getRowId={(broadcast) => broadcast.id}
               total={`${formatNumber(rows.length)} ${rows.length === 1 ? "broadcast" : "broadcasts"}`}
               toolbar={

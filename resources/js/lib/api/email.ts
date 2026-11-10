@@ -34,7 +34,12 @@ export interface EmailAddress {
   inbox: { id: string; name: string };
   reply_to_mode: "token" | "none";
   from_name_style: "member_and_name" | "name_only";
-  sending_identity: { from: string; uses_default_sender: boolean; provider: string };
+  sending_identity: {
+    from: string;
+    domain_status: string;
+    uses_default_sender: boolean;
+    provider: string;
+  };
   settings: {
     quote_previous: boolean;
     bulk_mail_handling: "close" | "open" | "drop";

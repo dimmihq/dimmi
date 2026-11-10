@@ -29,7 +29,7 @@ import { useLiveBroadcasts } from "./live";
 import { channelLook, noteOf } from "./looks";
 import { Frame } from "./page-frame";
 import { ReviewStep } from "./review-step";
-import { useNames } from "./sources";
+import { useNames, useWorkspaceZone } from "./sources";
 import { useBroadcastActions } from "./use-actions";
 
 function Details({ broadcast, audience, sender }: { broadcast: Broadcast; audience: string; sender: string }) {
@@ -105,6 +105,7 @@ function SentActions({
 function OutPage({ workspace, broadcast }: { workspace: string; broadcast: Broadcast }) {
   const { act } = useBroadcastActions(workspace, broadcast.id);
   const names = useNames(workspace, broadcast.channel, broadcast);
+  const zone = useWorkspaceZone(workspace);
   const brand = useAccount().workspace.name;
   const scheduled = broadcast.status === "scheduled";
   const { data: estimate } = useQuery({ ...broadcastEstimateQuery(workspace, broadcast.id), enabled: scheduled });
@@ -115,7 +116,7 @@ function OutPage({ workspace, broadcast }: { workspace: string; broadcast: Broad
     <Frame
       name={broadcast.name}
       status={broadcast.status}
-      note={noteOf(broadcast)}
+      note={noteOf(broadcast, zone)}
       actions={<SentActions broadcast={broadcast} onAction={onAction} />}
       message={{ ...broadcast, sender: names.sender, brand }}
       details={scheduled ? null : <Details broadcast={broadcast} {...names} />}

@@ -24,12 +24,14 @@ import (
 )
 
 /*
-EmailSender sends broadcasts by email. Mailer sends each email and
-Links writes the unsubscribe links.
+EmailSender sends broadcasts by email. Mailer sends each email, Links
+writes the unsubscribe links and Pacer holds email back while the
+address warms up or the install's quota is spent.
 */
 type EmailSender struct {
 	Mailer *email.SendBroadcastEmail
 	Links  Links
+	Pacer  *Pacer
 }
 
 /*
@@ -47,6 +49,12 @@ func (s *EmailSender) Deliver(ctx context.Context, d Delivery) (Delivered, error
 	r := d.Recipient
 	if d.Broadcast.EmailAddressID == nil {
 		return Delivered{}, &UndeliverableError{Status: "failed", Reason: "no_sending_address"}
+	}
+
+	if s.Pacer != nil {
+		if err := s.Pacer.Email(ctx, r.WorkspaceID, *d.Broadcast.EmailAddressID); err != nil {
+			return Delivered{}, err
+		}
 	}
 
 	name := ""

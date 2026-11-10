@@ -18,6 +18,7 @@ import {
 } from "@internationalized/date";
 
 import type { ScheduleKind } from "@/lib/api/broadcasts";
+import { formatDateTime } from "@/lib/i18n/format";
 
 export interface WallTime {
   day: CalendarDate;
@@ -50,4 +51,18 @@ export function instantOf(wall: WallTime, zone: string): string {
   const local = new CalendarDateTime(day.year, day.month, day.day, time.hour, time.minute);
 
   return toZoned(local, zone).toAbsoluteString();
+}
+
+/*
+ * sendTimeOf writes when a scheduled broadcast goes out. A send in each
+ * person's zone shows its wall clock time, read in the workspace's zone
+ * as the server reads it, so nine in the morning reads as nine wherever
+ * the teammate is.
+ */
+export function sendTimeOf(kind: ScheduleKind, at: string, workspaceZone: string | undefined): string {
+  if (kind !== "local") {
+    return formatDateTime(at);
+  }
+
+  return `${formatDateTime(at, { timeZone: zoneFor(kind, workspaceZone) })}, in each person's time zone`;
 }

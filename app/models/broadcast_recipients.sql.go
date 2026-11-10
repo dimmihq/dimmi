@@ -59,6 +59,39 @@ func (q *Queries) AddBroadcastRecipients(ctx context.Context, arg AddBroadcastRe
 	return result.RowsAffected(), nil
 }
 
+const broadcastAddressUse = `-- name: BroadcastAddressUse :one
+SELECT coalesce(min(created_at), $1::timestamptz)::timestamptz AS first_sent,
+    count(*) FILTER (WHERE created_at > $2::timestamptz) AS recent
+FROM outbound_emails
+WHERE workspace_id = $3 AND email_address_id = $4 AND kind = 'broadcast'
+`
+
+type BroadcastAddressUseParams struct {
+	Now            time.Time `json:"now"`
+	Since          time.Time `json:"since"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	EmailAddressID *ids.UUID `json:"email_address_id"`
+}
+
+type BroadcastAddressUseRow struct {
+	FirstSent time.Time `json:"first_sent"`
+	Recent    int64     `json:"recent"`
+}
+
+// BroadcastAddressUse returns when an address first sent a broadcast
+// email and how many it sent since the time, for its warm-up.
+func (q *Queries) BroadcastAddressUse(ctx context.Context, arg BroadcastAddressUseParams) (BroadcastAddressUseRow, error) {
+	row := q.db.QueryRow(ctx, broadcastAddressUse,
+		arg.Now,
+		arg.Since,
+		arg.WorkspaceID,
+		arg.EmailAddressID,
+	)
+	var i BroadcastAddressUseRow
+	err := row.Scan(&i.FirstSent, &i.Recent)
+	return i, err
+}
+
 const broadcastCompanyReport = `-- name: BroadcastCompanyReport :many
 SELECT r.company_id, coalesce(co.name, '')::text AS company_name,
     count(*) AS total,
@@ -210,6 +243,44 @@ func (q *Queries) CountBroadcastSkipReasons(ctx context.Context, arg CountBroadc
 	var items []CountBroadcastSkipReasonsRow
 	for rows.Next() {
 		var i CountBroadcastSkipReasonsRow
+		if err := rows.Scan(&i.Reason, &i.N); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countPacedBroadcastRecipients = `-- name: CountPacedBroadcastRecipients :many
+SELECT coalesce(reason, '')::text AS reason, count(*) AS n FROM broadcast_recipients
+WHERE workspace_id = $1 AND broadcast_id = $2 AND status = 'queued' AND reason IS NOT NULL
+GROUP BY reason
+`
+
+type CountPacedBroadcastRecipientsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	BroadcastID ids.UUID `json:"broadcast_id"`
+}
+
+type CountPacedBroadcastRecipientsRow struct {
+	Reason string `json:"reason"`
+	N      int64  `json:"n"`
+}
+
+// CountPacedBroadcastRecipients counts the recipients still queued
+// because sending is being held back, by why.
+func (q *Queries) CountPacedBroadcastRecipients(ctx context.Context, arg CountPacedBroadcastRecipientsParams) ([]CountPacedBroadcastRecipientsRow, error) {
+	rows, err := q.db.Query(ctx, countPacedBroadcastRecipients, arg.WorkspaceID, arg.BroadcastID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountPacedBroadcastRecipientsRow
+	for rows.Next() {
+		var i CountPacedBroadcastRecipientsRow
 		if err := rows.Scan(&i.Reason, &i.N); err != nil {
 			return nil, err
 		}
@@ -1415,7 +1486,8 @@ func (q *Queries) OptedOutAmong(ctx context.Context, arg OptedOutAmongParams) ([
 }
 
 const retryBroadcastRecipientAt = `-- name: RetryBroadcastRecipientAt :exec
-UPDATE broadcast_recipients SET due_at = $1::timestamptz, reason = $2, updated_at = $3::timestamptz
+UPDATE broadcast_recipients SET due_at = $1::timestamptz, reason = $2,
+    attempts = greatest(attempts - 1, 0), updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND status = 'queued'
 `
 
@@ -1427,7 +1499,8 @@ type RetryBroadcastRecipientAtParams struct {
 	ID          ids.UUID  `json:"id"`
 }
 
-// RetryBroadcastRecipientAt puts a recipient back in the queue for later.
+// RetryBroadcastRecipientAt puts a recipient back in the queue for later,
+// without spending an attempt, since waiting is not failing.
 func (q *Queries) RetryBroadcastRecipientAt(ctx context.Context, arg RetryBroadcastRecipientAtParams) error {
 	_, err := q.db.Exec(ctx, retryBroadcastRecipientAt,
 		arg.DueAt,

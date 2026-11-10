@@ -15,7 +15,10 @@ package config
 EmailLimitsConfig holds sending caps. The daily and hourly ones are what a
 self-hosted install uses for the matching entitlements, zero meaning none.
 The two per-address ones protect recipients on every install, so zero
-there means the default.
+there means the default. ProviderPerMinute and ProviderPerDay are the
+sending quota the install's mail provider grants, such as an SES
+account's, zero meaning none; every broadcast of every workspace
+shares BroadcastSharePercent of it, so replies always keep room.
 */
 type EmailLimitsConfig struct {
 	VerifiedDaily                int `koanf:"verified_daily"`
@@ -24,6 +27,9 @@ type EmailLimitsConfig struct {
 	UnverifiedRelayWorkspaceDay  int `koanf:"unverified_relay_workspace_daily"`
 	UnverifiedRelayPerAddressDay int `koanf:"unverified_relay_per_address_daily"`
 	AutomatedPerRecipientHourly  int `koanf:"automated_per_recipient_hourly"`
+	ProviderPerMinute            int `koanf:"provider_per_minute"`
+	ProviderPerDay               int `koanf:"provider_per_day"`
+	BroadcastSharePercent        int `default:"80"                              koanf:"broadcast_share_percent"`
 }
 
 /*

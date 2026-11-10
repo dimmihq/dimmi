@@ -8,7 +8,7 @@
  * on Save. Members who may only read see the rule without controls.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -23,14 +23,14 @@ import {
   deleteAudience,
   freezeAudience,
 } from "@/lib/api/audiences";
-import { tagsQuery } from "@/lib/api/tags";
 import { formatNumber } from "@/lib/i18n/format";
 
-import { type Lookups, RuleGroups } from "./rule-groups";
+import { RuleGroups } from "./rule-groups";
 import { summary } from "./rules";
 import { listSummary } from "./tagging";
 import { TestPerson } from "./test-person";
 import { useAudienceDraft } from "./use-audience-draft";
+import { useLookups } from "./use-lookups";
 
 /*
  * modalHeight gives every audience modal the new workflow modal's
@@ -38,23 +38,6 @@ import { useAudienceDraft } from "./use-audience-draft";
  * between them never jumps.
  */
 const modalHeight = "h-[min(640px,calc(100dvh-3rem))]";
-
-/*
- * useLookups names the tags and other audiences a rule can pick.
- */
-function useLookups(workspace: string, own: string): { lookups: Lookups; names: Record<string, string> } {
-  const tags = useQuery(tagsQuery(workspace)).data ?? [];
-  const saved = useQuery(audiencesQuery(workspace)).data ?? [];
-
-  return useMemo(() => {
-    const lookups: Lookups = {
-      tags: tags.map((t): [string, string] => [t.id, t.name]),
-      audiences: saved.filter((a) => a.id !== own).map((a): [string, string] => [a.id, a.name]),
-    };
-
-    return { lookups, names: Object.fromEntries([...lookups.tags, ...lookups.audiences]) };
-  }, [tags, saved, own]);
-}
 
 function matchCount(preview: AudiencePreview | undefined, previewing: boolean): string {
   if (!preview) {

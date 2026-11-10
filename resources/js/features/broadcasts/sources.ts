@@ -14,7 +14,7 @@ import { emailAddressesQuery } from "@/lib/api/email";
 import { eventsQuery } from "@/lib/api/events";
 import { integrationsQuery, type SlackRoom, slackRoomsQuery } from "@/lib/api/integrations";
 import { teamsQuery } from "@/lib/api/teams";
-import { membersQuery } from "@/lib/api/workspace";
+import { membersQuery, workspaceQuery } from "@/lib/api/workspace";
 
 import type { Draft } from "./draft";
 import type { Names } from "./review-step";
@@ -100,5 +100,13 @@ function audienceName(
     return audience;
   }
 
-  return draft.rules ? "custom rules" : "no audience yet";
+  return draft.rules ? "people matching its own rule" : "no audience yet";
+}
+
+/*
+ * useWorkspaceZone is the workspace's time zone, which a send in each
+ * person's own zone is written in.
+ */
+export function useWorkspaceZone(workspace: string): string | undefined {
+  return useQuery(workspaceQuery(workspace)).data?.timezone;
 }
