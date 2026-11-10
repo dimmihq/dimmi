@@ -251,6 +251,7 @@ function SignedInShell({
       switcher={switcher}
       account={account}
       footer={inSettings ? null : <GetStarted />}
+      showThemeToggle={false}
       density="compact"
       collapsed={mobile ? false : collapsed}
       onCollapsedChange={mobile ? undefined : setCollapsed}

@@ -81,14 +81,13 @@ it.describe("the app's frame", () => {
     await expect(center).toBeHidden();
   });
 
-  it("switches the theme beside settings, and from the account menu", async ({ page, person }) => {
-    const sidebar = page.getByRole("complementary");
-    await sidebar.getByRole("group", { name: "Theme" }).getByRole("button", { name: "Use dark mode" }).click();
-    await expect(page.locator("html")).toHaveClass(/dark/);
+  it("switches the theme from the account menu only", async ({ page, person }) => {
+    await expect(page.getByRole("complementary").getByRole("group", { name: "Theme" })).toHaveCount(0);
 
     await page.getByRole("button", { name: person.name, exact: true }).click();
     const menu = page.getByRole("dialog", { name: `${person.name} menu` });
-    await expect(menu.getByText("Appearance")).toBeVisible();
+    await menu.getByRole("button", { name: "Use dark mode" }).click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
     await menu.getByRole("button", { name: "Use light mode" }).click();
     await expect(page.locator("html")).not.toHaveClass(/dark/);
   });
