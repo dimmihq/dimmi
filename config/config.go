@@ -54,6 +54,9 @@ type Config struct {
 	Channels       ChannelsConfig       `koanf:"channels"`
 	Inbox          InboxConfig          `koanf:"inbox"`
 	AI             AIConfig             `koanf:"ai"`
+
+	Services     ServicesConfig     `koanf:"services"`
+	Integrations IntegrationsConfig `koanf:"integrations"`
 }
 
 /*

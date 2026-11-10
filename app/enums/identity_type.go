@@ -24,4 +24,5 @@ const (
 	IdentityTypePhone         IdentityType = "phone"
 	IdentityTypeWidgetVisitor IdentityType = "widget_visitor"
 	IdentityTypeExternalID    IdentityType = "external_id"
+	IdentityTypeSlackUser     IdentityType = "slack_user"
 )

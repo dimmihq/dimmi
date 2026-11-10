@@ -40,11 +40,15 @@ EventName names the event.
 func (ConversationAssigned) EventName() string { return "conversation.assigned" }
 
 /*
-ConversationClosed is dispatched when a conversation is closed.
+ConversationClosed is dispatched when a conversation is closed. Reason
+is empty when a teammate closed it, else why it closed, such as
+contact_solved.
 */
 type ConversationClosed struct {
 	Base
 	ConversationRef
+
+	Reason string
 }
 
 /*

@@ -43,6 +43,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mailbox"
 	"github.com/dimmihq/dimmi/framework/malware"
 	"github.com/dimmihq/dimmi/framework/notifications"
+	"github.com/dimmihq/dimmi/framework/oauthclient"
 	"github.com/dimmihq/dimmi/framework/process"
 	"github.com/dimmihq/dimmi/framework/pubsub"
 	"github.com/dimmihq/dimmi/framework/queue"
@@ -103,6 +104,7 @@ type Application struct {
 	Gate         *auth.Gate
 	Session      *session.Manager
 	Social       *socialite.Manager
+	OAuthClient  *oauthclient.Manager
 	Domains      *customdomain.Manager
 	Idempotency  *idempotency.DatabaseStore
 	Maintenance  Maintenance

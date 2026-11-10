@@ -30,4 +30,5 @@ func Webhooks(a *app.App) {
 		fhttp.HandlerFunc(inbound.Store))
 
 	mailboxRoutes(a)
+	slackWebhookRoutes(a)
 }

@@ -14,7 +14,7 @@ import (
 )
 
 const channelConnectionsByIDs = `-- name: ChannelConnectionsByIDs :many
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at FROM channel_connections WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type ChannelConnectionsByIDsParams struct {
@@ -49,6 +49,7 @@ func (q *Queries) ChannelConnectionsByIDs(ctx context.Context, arg ChannelConnec
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IntegrationInstallationID,
 		); err != nil {
 			return nil, err
 		}
@@ -61,7 +62,7 @@ func (q *Queries) ChannelConnectionsByIDs(ctx context.Context, arg ChannelConnec
 }
 
 const findInboxAPIConnection = `-- name: FindInboxAPIConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections
 WHERE workspace_id = $1 AND inbox_id = $2 AND type = 'api' AND deleted_at IS NULL
 ORDER BY created_at, id
 LIMIT 1
@@ -93,6 +94,7 @@ func (q *Queries) FindInboxAPIConnection(ctx context.Context, arg FindInboxAPICo
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IntegrationInstallationID,
 	)
 	return i, err
 }

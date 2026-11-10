@@ -16,7 +16,7 @@ import (
 const createChannelConnection = `-- name: CreateChannelConnection :one
 INSERT INTO channel_connections (workspace_id, inbox_id, type, name, status, external_id, config, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id
 `
 
 type CreateChannelConnectionParams struct {
@@ -61,12 +61,13 @@ func (q *Queries) CreateChannelConnection(ctx context.Context, arg CreateChannel
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IntegrationInstallationID,
 	)
 	return i, err
 }
 
 const findChannelConnection = `-- name: FindChannelConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at FROM channel_connections WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections WHERE workspace_id = $1 AND id = $2
 `
 
 type FindChannelConnectionParams struct {
@@ -95,6 +96,7 @@ func (q *Queries) FindChannelConnection(ctx context.Context, arg FindChannelConn
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IntegrationInstallationID,
 	)
 	return i, err
 }

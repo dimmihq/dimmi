@@ -48,6 +48,9 @@ func unscopedQueries() map[string]string {
 		"ListWidgetConversationChanges":     "a widget visitor's own conversations: the customer asks, not a member",
 		"ListWidgetMessageChanges":          "a widget visitor's own messages: the customer asks, not a member",
 		"CountUnreadMentions":               "the member's own mentions: a mention lets them read the conversation",
+		"FindConversationChannelType":       "chat app routing: the system follows a change, no member is asking",
+		"FindThreadConversation":            "inbound routing: the chat thread decides the conversation",
+		"FindWindowConversation":            "inbound routing: the chat thread decides the conversation",
 	}
 }
 

@@ -20,7 +20,7 @@
  * Below the thread sits the composer; R and N open it for a reply or
  * a note from anywhere, and O opens or closes Operator.
  */
-import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
+import { RiDeleteBinLine, RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
@@ -46,6 +46,7 @@ import { ReactionChips } from "./thread/reactions";
 import { ThreadZone } from "./thread/thread-zone";
 import { useMessageMoves } from "./thread/use-message-moves";
 import { When } from "./thread/when";
+import { useFollowNewest } from "./use-follow-newest";
 import type { Report } from "./use-typing-report";
 
 type Said = Extract<ThreadEntry, { author: string }>;
@@ -96,6 +97,12 @@ function Tag({ entry }: { entry: Said }) {
         </span>
       ) : null}
       {entry.edited ? <span className="text-body-2-regular text-text-tertiary">Edited</span> : null}
+      {entry.deletedAtSource ? (
+        <span className="flex items-center gap-0.5 text-body-2-regular text-text-error-primary">
+          <RiDeleteBinLine aria-hidden className="size-3.5" />
+          {entry.kind === "customer" ? "Deleted by the customer" : "Deleted by its author"}
+        </span>
+      ) : null}
       {entry.held ? (
         <span className="flex items-center gap-0.5 text-body-2-regular text-text-tertiary">
           <RiTimeLine aria-hidden className="size-3.5" />
@@ -415,6 +422,9 @@ export function Thread({
 }) {
   const moves = useMessageMoves(conversation);
   const still = useReducedMotion();
+  const scroller = useRef<HTMLDivElement>(null);
+  const [list, setList] = useState<HTMLOListElement | null>(null);
+  const toNewest = useFollowNewest(scroller, list, conversation, !loading);
   const [mode, setMode] = useState<Mode | null>(null);
   const [incoming, setIncoming] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
@@ -439,13 +449,13 @@ export function Thread({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ScrollArea className="pt-2 pb-4">
+      <ScrollArea ref={scroller} className="pt-2 pb-4">
         {loading ? (
           <ThreadSkeleton />
         ) : (
           <ThreadZone.Provider value={zone}>
             <LinkPolicyProvider channelType={channelType}>
-              <ol key={conversation} className="mx-auto flex max-w-3xl flex-col gap-3">
+              <ol ref={setList} key={conversation} className="mx-auto flex max-w-3xl flex-col gap-3">
                 <AnimatePresence initial={false}>
                   {foldEvents(entries, hideEvents).map((entry) => (
                     <motion.li key={entry.id} initial={still ? false : arriving} animate={arrived} transition={arrival}>
@@ -483,7 +493,10 @@ export function Thread({
           onTyping={onTyping}
           incoming={incoming}
           onIncomingUsed={used}
-          onSent={() => setMode(null)}
+          onSent={() => {
+            setMode(null);
+            toNewest();
+          }}
         />
       </div>
     </div>

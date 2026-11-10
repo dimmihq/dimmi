@@ -18,7 +18,7 @@ provider -> /webhooks/... | socket/gateway/poller
   -> dedupe fast path: Valkey `SET NX EX` key `ch:dedupe:{provider}:{dedupe_key}` (window: Slack 1 h, Discord 1 h, Telegram 24 h, WhatsApp 7 d = provider retry horizon); hit -> 200, no DB write
   -> StoreInboundEvent (tx: insert channel_inbound_events ON CONFLICT DO NOTHING (durable backstop + audit) + InsertTx process job) -> 200
 process_channel_inbound_event (per-thread advisory lock)
-  -> driver.Normalize(event) -> []Op (message | status | lifecycle | room | ignore); provider edit/delete events -> ignore except Slack (edit -> 03 EditInboundMessage, delete -> 03 redaction; later: message-edit for others)
+  -> driver.Normalize(event) -> []Op (message | status | lifecycle | room | ignore); provider edit/delete events -> ignore except Slack (edit -> 03 EditInboundMessage, delete -> 03 MarkInboundMessageDeleted; later: message-edit for others)
   -> classify author: bot/self -> ignore; teammate or helper in room thread -> InboundMessage with Echo (03 X2); teammate elsewhere -> ignore (DM: IsTest rules); contact -> trigger check (room `trigger`) -> pleasantry filter -> InboundMessage
      flags: `public_room`, `addressed_to_other` (reply-to / mention of non-bot person), `audience_company_id` (Slack Connect room with company link)
   -> interactions (buttons, shortcuts, slash commands, context menus) -> apply_channel_interaction (solved, handoff, create conversation, /ask)
@@ -73,7 +73,7 @@ settings:
     is_enabled: true
     request_url: "{{ .AppURL }}/webhooks/slack/interactions/{{ .ChannelID }}"   # omitted when socket mode
   shortcuts:
-    - { name: "Create dimmi conversation", type: message, callback_id: dimmi_create_conversation, description: "Track this message as a support conversation" }
+    - { name: "Track in dimmi", type: message, callback_id: dimmi_create_conversation, description: "Track this message as a support conversation" }
   socket_mode_enabled: {{ .Socket }}
   token_rotation_enabled: false
   org_deploy_enabled: false
@@ -92,7 +92,7 @@ Message events handled (`event.type = message`):
 |---|---|
 | none, `file_share`, `thread_broadcast`, `me_message` | message (thread_broadcast treated as thread reply) |
 | `message_changed` | contact or echo message already stored (lookup `channel_message_refs` / `channel_message_id`): 03 `EditInboundMessage` (body replaced, previous in `metadata.edits[]`, `message.updated`); edit of message not stored: ignore. Edit never triggers agent, never reopens. Own bot edits: ignore |
-| `message_deleted` | stored message: 03 local redaction (`metadata.redacted_by = provider`), attachments deleted from storage, timeline stub "Message deleted in Slack"; conversation whose only messages are deleted: closed reason `source_deleted`. Not stored: ignore |
+| `message_deleted` | stored message: 03 mark deleted (`metadata.source_deleted = {by, reason, at}`); words, files, edit history kept; timeline shows message with "Deleted by the customer" label; unanswered conversation whose customer messages are all deleted: closed reason `source_deleted`. Not stored: ignore |
 | `bot_message`, any event with `bot_id` | ignore (own bot: confirms send; other bots: ignored unless room setting `allow_bot_authors`) |
 | `channel_join`, `channel_leave`, `channel_topic`, `channel_purpose`, `pinned_item`, others | ignore |
 
@@ -106,7 +106,7 @@ Room rules:
   - `emoji`: nothing at post time; `reaction_added` of `trigger_emoji` (default `ticket`) on a top-level message by anyone in room creates conversation from that message (fetch via `conversations.history` `latest=ts inclusive limit=1`; Marketplace throttle: 1 call per trigger is within limit). Later thread replies follow normal rules.
   - `off`: no new conversations; echo and state still tracked for existing ones.
   - Pleasantry filter runs before all modes: pleasantry top-level message never creates conversation.
-- Message shortcut "Create dimmi conversation" (any member of Slack workspace with app): creates conversation from that message regardless of trigger; ephemeral confirmation with link for linked members.
+- Message shortcut "Track in dimmi" (any member of Slack workspace with app): creates conversation from that message regardless of trigger; ephemeral confirmation with link for linked members.
 - Thread reply (`thread_ts != ts`): key `slack:r:{room}:{thread_ts}`. No conversation for that key (thread started by teammate or before connect): contact message in that thread creates conversation keyed on thread root; teammate message ignored.
 - Mode `shared`: author is teammate when `user_team`/`user_profile.team` equals installing team and user not `is_restricted`/`is_ultra_restricted` (guests are contacts). Mode `community`: teammate only when `channel_member_links` has user; everyone else contact.
 - Room mode `internal`: no conversations. Messages handled only as: triage thread replies (note, or customer reply with `>>` prefix), discussion thread messages (notes), `app_mention` (22 Operator), dimmi conversation link pasted (ephemeral "Start discussion"). Everything else ignored, never stored.

@@ -259,6 +259,10 @@
     "label": "Undo imports",
     "description": "Roll back an import."
   },
+  "integrations:manage": {
+    "label": "Manage integrations",
+    "description": "Connect, update and disconnect tools such as Slack."
+  },
   "inboxes:manage": {
     "label": "Manage inboxes",
     "description": "Create and change inboxes."

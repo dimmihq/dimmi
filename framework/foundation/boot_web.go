@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/i18n"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/oauthclient"
 	"github.com/dimmihq/dimmi/framework/routing"
 	"github.com/dimmihq/dimmi/framework/session"
 	"github.com/dimmihq/dimmi/framework/socialite"
@@ -98,6 +99,7 @@ func (a *Application) bootIdentity() {
 	a.Session = session.NewManager(session.NewPostgresStore(a.DB, session.DefaultTable), a.Clock, sessionConfig)
 
 	a.Social = socialite.NewManager(a.Config.Socialite, a.Cache)
+	a.OAuthClient = oauthclient.NewManager(a.Config.OAuthClient, a.Cache)
 	a.Domains = customdomain.NewManager(a.Config.CustomDomains)
 	a.Idempotency = idempotency.NewDatabaseStore(a.DB, a.Config.Idempotency, a.Clock)
 }

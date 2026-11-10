@@ -68,7 +68,9 @@ Transport says how replies travel and StartConversation whether the team
 may open a thread. MaxBodyChars bounds a formatted body, zero meaning no
 limit. The attachment limits use the global ones when zero. RetryWindow
 is how long a transient failure keeps being retried, the inbox default
-when zero.
+when zero. ThreadAddressed says replies reach the customer through the
+conversation's thread on the channel rather than an address, so a
+customer without an email can still be answered.
 */
 type ChannelCapabilities struct {
 	Transport               Transport
@@ -87,6 +89,7 @@ type ChannelCapabilities struct {
 	ParticipantsCC          bool
 	MessagingWindow         time.Duration
 	RetryWindow             time.Duration
+	ThreadAddressed         bool
 }
 
 /*
@@ -142,7 +145,9 @@ empty until the conversation has a thread on the channel. The body
 comes as Markdown, plain text and safe HTML. Recipient is who the reply
 goes to and CC who is copied. ReplyTo lists the channel ids of earlier
 messages of the thread, newest last. Options is the raw channel options
-of the request, nil when absent.
+of the request, nil when absent. Controls are the answer controls an
+agent's answer offers the customer, such as solved and handoff, which a
+chat app renders as buttons and other channels ignore.
 */
 type OutboundMessage struct {
 	WorkspaceID        ids.UUID
@@ -161,6 +166,7 @@ type OutboundMessage struct {
 	Attachments        []OutboundAttachment
 	ReplyTo            []string
 	Options            []byte
+	Controls           []string
 	IsTest             bool
 }
 

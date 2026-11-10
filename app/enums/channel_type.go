@@ -25,4 +25,5 @@ const (
 	ChannelTypeWidget ChannelType = "widget"
 	ChannelTypeEmail  ChannelType = "email"
 	ChannelTypeAPI    ChannelType = "api"
+	ChannelTypeSlack  ChannelType = "slack"
 )

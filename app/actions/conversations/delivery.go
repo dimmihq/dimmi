@@ -74,7 +74,7 @@ func (d Delivery) Plan(conn models.ChannelConnection, contact models.Contact) (R
 
 	switch route.Capabilities.Transport {
 	case contracts.TransportPush:
-		if contact.Email == nil {
+		if contact.Email == nil && !route.Capabilities.ThreadAddressed {
 			return route, exceptions.ErrContactUnreachable
 		}
 

@@ -162,6 +162,8 @@ export interface Message {
   reactions?: Reaction[];
   deleted_at: string | null;
   deleted_by?: { id: string; name: string } | null;
+  /* When the author deleted the message where they wrote it, such as in Slack. Its words stay. */
+  source_deleted_at?: string | null;
   created_at: string;
   redactions?: { rule: string; count: number }[];
   attachments?: Attachment[];

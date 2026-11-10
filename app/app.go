@@ -178,6 +178,7 @@ of the same name, see configureSocialLogin.
 */
 func (a *App) ConfigureFramework(cfg *foundation.Config) {
 	a.configureSocialLogin(cfg)
+	a.configureOAuthClient(cfg)
 
 	if cfg.Mail.From.Email == "" {
 		cfg.Mail.From = mail.Address{Name: cmp.Or(cfg.Mail.From.Name, "Dimmi"), Email: "no-reply@" + host(cfg.App.URL)}

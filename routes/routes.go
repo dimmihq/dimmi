@@ -25,4 +25,5 @@ func Register(a *app.App) {
 	Widget(a)
 	MCP(a)
 	OAuth(a)
+	Integrations(a)
 }

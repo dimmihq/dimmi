@@ -94,6 +94,7 @@ func API(a *app.App) {
 			audienceRoutes(workspace, a)
 			attributeRoutes(workspace, a)
 			eventRoutes(workspace, a)
+			slackChannelRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
@@ -108,6 +109,7 @@ func API(a *app.App) {
 		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 		signInHelpRoutes(api, a)
 		oauthAppRoutes(api, a)
+		integrationRoutes(api, a)
 	})
 }
 

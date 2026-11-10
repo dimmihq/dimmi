@@ -533,21 +533,100 @@ type ChangelogSubscriber struct {
 }
 
 type ChannelConnection struct {
-	ID                   ids.UUID          `json:"id"`
-	WorkspaceID          ids.UUID          `json:"workspace_id"`
-	InboxID              ids.UUID          `json:"inbox_id"`
-	Type                 string            `json:"type"`
-	Name                 string            `json:"name"`
-	Status               string            `json:"status"`
-	ExternalID           *string           `json:"external_id"`
-	Config               json.RawMessage   `json:"config"`
-	CredentialsEncrypted encryption.Sealed `json:"credentials_encrypted"`
-	LastError            *string           `json:"last_error"`
-	LastErrorAt          *time.Time        `json:"last_error_at"`
-	LastActivityAt       *time.Time        `json:"last_activity_at"`
-	DeletedAt            *time.Time        `json:"deleted_at"`
-	CreatedAt            time.Time         `json:"created_at"`
-	UpdatedAt            time.Time         `json:"updated_at"`
+	ID                        ids.UUID          `json:"id"`
+	WorkspaceID               ids.UUID          `json:"workspace_id"`
+	InboxID                   ids.UUID          `json:"inbox_id"`
+	Type                      string            `json:"type"`
+	Name                      string            `json:"name"`
+	Status                    string            `json:"status"`
+	ExternalID                *string           `json:"external_id"`
+	Config                    json.RawMessage   `json:"config"`
+	CredentialsEncrypted      encryption.Sealed `json:"credentials_encrypted"`
+	LastError                 *string           `json:"last_error"`
+	LastErrorAt               *time.Time        `json:"last_error_at"`
+	LastActivityAt            *time.Time        `json:"last_activity_at"`
+	DeletedAt                 *time.Time        `json:"deleted_at"`
+	CreatedAt                 time.Time         `json:"created_at"`
+	UpdatedAt                 time.Time         `json:"updated_at"`
+	IntegrationInstallationID *ids.UUID         `json:"integration_installation_id"`
+}
+
+type ChannelInboundEvent struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID ids.UUID        `json:"channel_connection_id"`
+	Provider            string          `json:"provider"`
+	Transport           string          `json:"transport"`
+	DedupeKey           string          `json:"dedupe_key"`
+	SerialKey           *string         `json:"serial_key"`
+	Kind                string          `json:"kind"`
+	Payload             json.RawMessage `json:"payload"`
+	Status              string          `json:"status"`
+	Attempts            int32           `json:"attempts"`
+	Error               *string         `json:"error"`
+	ReceivedAt          time.Time       `json:"received_at"`
+	ProcessedAt         *time.Time      `json:"processed_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type ChannelMemberLink struct {
+	ID                  ids.UUID  `json:"id"`
+	WorkspaceID         ids.UUID  `json:"workspace_id"`
+	ChannelConnectionID ids.UUID  `json:"channel_connection_id"`
+	WorkspaceMemberID   ids.UUID  `json:"workspace_member_id"`
+	ExternalUserID      string    `json:"external_user_id"`
+	Source              string    `json:"source"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
+type ChannelMessageRef struct {
+	ID                  ids.UUID  `json:"id"`
+	WorkspaceID         ids.UUID  `json:"workspace_id"`
+	MessageID           ids.UUID  `json:"message_id"`
+	ChannelConnectionID ids.UUID  `json:"channel_connection_id"`
+	ExternalMessageID   string    `json:"external_message_id"`
+	PartIndex           int16     `json:"part_index"`
+	Kind                string    `json:"kind"`
+	Status              string    `json:"status"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
+type ChannelRoom struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID ids.UUID        `json:"channel_connection_id"`
+	Kind                string          `json:"kind"`
+	ExternalID          string          `json:"external_id"`
+	Name                string          `json:"name"`
+	Status              string          `json:"status"`
+	Mode                string          `json:"mode"`
+	Trigger             string          `json:"trigger"`
+	AgentEnabled        bool            `json:"agent_enabled"`
+	CompanyID           *ids.UUID       `json:"company_id"`
+	Settings            json.RawMessage `json:"settings"`
+	IsSharedExternal    bool            `json:"is_shared_external"`
+	LastError           *string         `json:"last_error"`
+	LastSeenEventAt     *time.Time      `json:"last_seen_event_at"`
+	RemovedAt           *time.Time      `json:"removed_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type ChannelSocketSession struct {
+	ID             ids.UUID        `json:"id"`
+	Kind           string          `json:"kind"`
+	Key            string          `json:"key"`
+	Owner          *string         `json:"owner"`
+	LeaseExpiresAt *time.Time      `json:"lease_expires_at"`
+	State          json.RawMessage `json:"state"`
+	ConnectedAt    *time.Time      `json:"connected_at"`
+	LastEventAt    *time.Time      `json:"last_event_at"`
+	LastError      *string         `json:"last_error"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
 type Collection struct {
@@ -1157,6 +1236,43 @@ type InboxAccess struct {
 	TeamID      *ids.UUID `json:"team_id"`
 	MemberID    *ids.UUID `json:"member_id"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type IntegrationInstallation struct {
+	ID                   ids.UUID          `json:"id"`
+	WorkspaceID          ids.UUID          `json:"workspace_id"`
+	Provider             string            `json:"provider"`
+	ExternalAccountID    *string           `json:"external_account_id"`
+	ExternalAppID        *string           `json:"external_app_id"`
+	Name                 string            `json:"name"`
+	Source               string            `json:"source"`
+	Scopes               []string          `json:"scopes"`
+	CredentialsEncrypted encryption.Sealed `json:"credentials_encrypted"`
+	Status               string            `json:"status"`
+	LastErrorCode        *string           `json:"last_error_code"`
+	LastError            *string           `json:"last_error"`
+	Metadata             json.RawMessage   `json:"metadata"`
+	InstalledByMemberID  *ids.UUID         `json:"installed_by_member_id"`
+	InstalledAt          time.Time         `json:"installed_at"`
+	LastCheckedAt        *time.Time        `json:"last_checked_at"`
+	DisconnectedAt       *time.Time        `json:"disconnected_at"`
+	DeletedAt            *time.Time        `json:"deleted_at"`
+	CreatedAt            time.Time         `json:"created_at"`
+	UpdatedAt            time.Time         `json:"updated_at"`
+}
+
+type IntegrationMemberGrant struct {
+	ID                        ids.UUID          `json:"id"`
+	WorkspaceID               ids.UUID          `json:"workspace_id"`
+	IntegrationInstallationID ids.UUID          `json:"integration_installation_id"`
+	MemberID                  ids.UUID          `json:"member_id"`
+	ExternalUserID            string            `json:"external_user_id"`
+	Scopes                    []string          `json:"scopes"`
+	CredentialsEncrypted      encryption.Sealed `json:"credentials_encrypted"`
+	Status                    string            `json:"status"`
+	CreatedAt                 time.Time         `json:"created_at"`
+	UpdatedAt                 time.Time         `json:"updated_at"`
+	RevokedAt                 *time.Time        `json:"revoked_at"`
 }
 
 type Invitation struct {

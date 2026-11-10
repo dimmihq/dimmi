@@ -42,12 +42,15 @@ workspace itself sent from one of its own addresses outside the inbox:
 it is filed under Sender, the person it went to, as an internal note by
 dimmi rather than as their words. FromMemberID marks a teammate's
 answer by email on a conversation, FromMemberName naming them: it is
-filed as their internal note, with Sender the conversation's customer.
-Source describes the start of a new
-conversation. Metadata is kept on the message under the channel's type.
-AfterPersist, when set, runs in the same transaction right after the
-message is stored, so the channel writes its own rows atomically with
-it; its error undoes everything.
+filed as their internal note, with Sender the conversation's customer;
+an echo also names the teammate by FromMemberName. Source describes the
+start of a new conversation. Echo marks a teammate's own reply typed
+natively on a chat app inside a conversation's thread: it is stored as
+their reply, never sent anywhere, and never starts a conversation.
+Metadata is kept on the message under the channel's type. AfterPersist,
+when set, runs in the same transaction right after the message is
+stored, so the channel writes its own rows atomically with it; its
+error undoes everything.
 */
 type InboundMessage struct {
 	ConnectionID            ids.UUID
@@ -73,6 +76,7 @@ type InboundMessage struct {
 	SpamVerdict             enums.SpamVerdict
 	Source                  map[string]any
 	IsTest                  bool
+	Echo                    *EchoAuthor
 	Metadata                map[string]any
 	AfterPersist            AfterPersist
 }

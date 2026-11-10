@@ -412,11 +412,11 @@ type ChannelWindowResolver interface {
 ### X7. Provider edits and deletes of inbound messages
 ```go
 // conversations.EditInboundMessage(ctx, EditInboundInput{ConnectionID, ChannelMessageID, Body, Attachments, EditedAt}) (EditResult, error)
-// conversations.RedactInboundMessage(ctx, RedactInboundInput{ConnectionID, ChannelMessageID, Reason}) (RedactResult, error)
+// conversations.MarkInboundMessageDeleted(ctx, InboundDeletion{ConnectionID, ChannelMessageID, Reason}) (Message, error)
 ```
 - Called by 05 for Slack `message_changed` / `message_deleted` (other providers later). Lookup by `(connection, channel_message_id)` incl. X4 refs; miss: `ErrNotFound`, driver ignores.
 - Edit: body replaced, previous `{body, edited_at}` appended to `metadata.edits[]` (max 20, oldest dropped), `metadata.edited_at` set, `message.updated` emitted. Never changes `substantive`, never reopens, never triggers 07. Allowed for contact messages and echo (X2) messages only.
-- Redact: same path as moderator redaction (`api.md`, `safety.md` "Redaction") with `metadata.redacted_by = "provider"`, `reason` (`source_deleted`): body cleared, attachments deleted from filesystem, search entry removed, stub kept. No `conversations:moderate` check (provider is source of truth). Conversation with no unredacted contact message left and no workspace reply: closed `reason = source_deleted`.
+- Mark deleted: `metadata.source_deleted = {by: author type, reason: source_deleted, at}`; body, attachments, edit history and search entry kept; timeline entry `source_deleted_at` drives "Deleted by the customer" label. Removing words stays a teammate moderator redaction (`safety.md` "Redaction"). Conversation whose contact messages are all deleted and no workspace reply: closed `reason = source_deleted`.
 - `conversation.closed` reasons gain `source_deleted`.
 
 ### X8. Conversation origin `ai_classified`

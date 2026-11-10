@@ -64,7 +64,7 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
   - Tests: manifest snapshot test; url_verification only path without secret.
 - [ ] **Slack inbound.** Events endpoint (shared + per connection), retries/dedupe, message subtypes, rich_text + mrkdwn to Markdown, room rules (modes, triggers `author_window`/`every_message`/`mention`/`emoji`/`off`, threads, DMs), teammate classification (echo in threads for linked members, link prompt for unlinked; auto-link by email), edit/delete events dropped, `apps.event.authorizations.list` fan-out for multi-install shared channels, lifecycle events (uninstall, revoke, channel archive/rename/id change/shared).
   - Tests: Slack Connect external vs internal user classification, guest users, bot messages ignored, teammate echo vs top-level ignore, each trigger mode, emoji trigger dedupe (196), edit/delete events dropped (E103).
-- [ ] **Slack interactivity.** Interactions endpoint (shared + per connection, Socket Mode `interactive` envelopes), Block Kit answer controls, `chat.update` clear, message shortcut "Create dimmi conversation" (197), `eyes` working indicator, company link on Slack Connect room + clearing on share change (198).
+- [ ] **Slack interactivity.** Interactions endpoint (shared + per connection, Socket Mode `interactive` envelopes), Block Kit answer controls, `chat.update` clear, message shortcut "Track in dimmi" (197), `eyes` working indicator, company link on Slack Connect room + clearing on share change (198).
   - Tests: signature on form payload, 3 s ack, non-asker Solved ephemeral, shortcut on tracked message.
 - [ ] **Slack outbound driver.** `markdown_text`, escaping, `username`/`icon_url`, thread_ts, file upload external flow (+ refs), close marker reactions, error mapping, 429.
   - Tests: contract suite; format golden suite; mention injection tests (`<!channel>` never pings).
@@ -75,8 +75,8 @@ Style: caveman. Order matters. Each task about 1 day, merged with tests. Tests n
 
 - [ ] **Event router + internal rooms.** `router.go` dispatches shared endpoint to 05, 22 (`app_mention`, `message.im`, `assistant_thread_started`), 23 (revocations). Room mode `internal`, setup picker per room.
   - Tests: edge 220; internal room message never stored; uninstall reaches 23.
-- [ ] **Inbound edit and delete.** 03 X7 actions, Slack `message_changed` / `message_deleted` mapping, redaction of attachments.
-  - Tests: edge 200-203; redacted text absent from search and agent context.
+- [ ] **Inbound edit and delete.** 03 X7 actions, Slack `message_changed` / `message_deleted` mapping, deleted label in timeline.
+  - Tests: edge 200-203; deleted message keeps words, files and edits.
 - [ ] **AI request detection.** Trigger `ai`, 07 `ClassifyRequest` (fake LLM in tests), sensitivity thresholds, followup within 24 h, fallback.
   - Accept: golden set of 200 labelled Slack messages (questions, bug reports, chatter, follow-ups) scores 0.9+ precision on `request` with recorded fake responses; real-model eval only on owner approval.
   - Tests: edge 204-206; classifier timeout fallback.

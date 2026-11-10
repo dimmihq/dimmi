@@ -38,6 +38,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mailbox"
 	"github.com/dimmihq/dimmi/framework/malware"
 	"github.com/dimmihq/dimmi/framework/notifications"
+	"github.com/dimmihq/dimmi/framework/oauthclient"
 	"github.com/dimmihq/dimmi/framework/pubsub"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
@@ -84,6 +85,7 @@ type Config struct {
 	Languages     i18n.DetectorConfig  `koanf:"language_detection"`
 	Session       session.Config       `koanf:"session"`
 	Socialite     socialite.Config     `koanf:"socialite"`
+	OAuthClient   oauthclient.Config   `koanf:"oauth_client"`
 	CustomDomains customdomain.Config  `koanf:"custom_domains"`
 	Idempotency   idempotency.Config   `koanf:"idempotency"`
 	Maintenance   MaintenanceConfig    `koanf:"maintenance"`

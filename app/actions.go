@@ -51,6 +51,7 @@ Actions holds the business actions.
 */
 type Actions struct {
 	Widget                  *WidgetActions
+	Slack                   *SlackActions
 	CreateUser              *users.CreateUser
 	CreateFirstUser         *users.CreateFirstUser
 	OperatorAccounts        *users.OperatorAccounts
@@ -204,6 +205,7 @@ type Actions struct {
 	Inbox         *InboxActions
 	AI            *AIActions
 	OperatorAgent *OperatorAgentActions
+	Integrations  *IntegrationActions
 
 	Assignment       *assignment.Assigner
 	AssignmentStatus *assignment.ShowAssignmentStatus

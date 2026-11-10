@@ -160,6 +160,10 @@ func (run *ingestRun) receive(ctx context.Context) (contracts.InboundResult, err
 		return contracts.InboundResult{}, fmt.Errorf("find message by dedupe key: %w", err)
 	}
 
+	if run.msg.Echo != nil && run.msg.Echo.MemberID != nil {
+		return run.echo(ctx, conn)
+	}
+
 	contact, err := run.resolveContact(ctx, run.msg.Sender)
 	if err != nil {
 		return contracts.InboundResult{}, err

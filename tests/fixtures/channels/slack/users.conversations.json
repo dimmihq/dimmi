@@ -1,0 +1,1 @@
+{"ok": true, "channels": [{"id": "C0SUPPORT", "name": "acme-support", "is_channel": true, "is_private": false, "is_archived": false, "is_ext_shared": true, "is_member": true}, {"id": "C0COMMUNITY", "name": "community", "is_channel": true, "is_private": false, "is_archived": false, "is_ext_shared": false, "is_member": true}], "response_metadata": {"next_cursor": ""}}

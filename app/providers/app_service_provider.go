@@ -157,10 +157,14 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 }
 
 /*
-bootSurfaces starts every customer-facing piece in order: channels
-first, then the workflows that talk through them, the agent last.
+bootSurfaces starts every customer-facing piece in order: the
+integrations channels use, channels, then the workflows that talk
+through them, the agent last.
 */
 func bootSurfaces(ctx context.Context, a *app.App) error {
+	if err := bootIntegrations(a); err != nil {
+		return err
+	}
 	if err := bootChannels(ctx, a); err != nil {
 		return err
 	}
@@ -195,6 +199,10 @@ func bootChannels(ctx context.Context, a *app.App) error {
 	}
 
 	if err := bootEmail(a); err != nil {
+		return err
+	}
+
+	if err := bootSlack(ctx, a); err != nil {
 		return err
 	}
 

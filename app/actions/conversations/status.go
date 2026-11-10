@@ -63,6 +63,16 @@ const (
 )
 
 /*
+Reasons a conversation closes besides a teammate closing it: the
+customer pressed solved on a chat app, or deleted every message they
+wrote there.
+*/
+const (
+	ReasonContactSolved = "contact_solved"
+	ReasonSourceDeleted = "source_deleted"
+)
+
+/*
 StatusChange is a requested status: the status and, for a snooze, when
 it ends, or the reason for opening.
 */
@@ -113,8 +123,8 @@ a wake-up or a reopening.
 func (w *Writer) statusEvent(ctx context.Context, c models.Conversation, from string, to StatusChange) error {
 	switch {
 	case to.Status == string(enums.ConversationStatusClosed):
-		return w.emit(ctx, c, entry{"conversation.closed", nil}, appevents.ConversationClosed{
-			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c),
+		return w.emit(ctx, c, entry{"conversation.closed", closeData(to.Reason)}, appevents.ConversationClosed{
+			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Reason: to.Reason,
 		})
 	case to.Status == string(enums.ConversationStatusSnoozed):
 		return w.emit(ctx, c, entry{"conversation.snoozed", map[string]any{"until": to.Until}},
@@ -132,6 +142,18 @@ func (w *Writer) statusEvent(ctx context.Context, c models.Conversation, from st
 		appevents.ConversationReopened{
 			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Reason: to.reason(),
 		})
+}
+
+/*
+closeData is what the timeline keeps of a close: its reason, when it
+was not a teammate closing it by hand.
+*/
+func closeData(reason string) map[string]any {
+	if reason == "" {
+		return nil
+	}
+
+	return map[string]any{"reason": reason}
 }
 
 /*

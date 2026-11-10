@@ -100,6 +100,7 @@ func (c *Config) complete(opts Options) {
 	c.Mail.AllowFakes = fakes
 	c.Malware.AllowFakes = fakes
 	c.Socialite.AllowFakes = fakes
+	c.OAuthClient.AllowFakes = fakes
 	c.HTTPClient.AllowFakes = fakes
 	c.DNS.AllowFakes = fakes
 }

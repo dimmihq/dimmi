@@ -54,6 +54,8 @@ import (
 	notifydb "github.com/dimmihq/dimmi/framework/notifications/channels/database"
 	mailchannel "github.com/dimmihq/dimmi/framework/notifications/channels/mail"
 	"github.com/dimmihq/dimmi/framework/notifications/channels/webpush"
+	"github.com/dimmihq/dimmi/framework/oauthclient/drivers/generic"
+	"github.com/dimmihq/dimmi/framework/oauthclient/drivers/slack"
 	"github.com/dimmihq/dimmi/framework/socialite/drivers/github"
 	"github.com/dimmihq/dimmi/framework/socialite/drivers/google"
 	"github.com/dimmihq/dimmi/framework/socialite/drivers/oidc"
@@ -104,13 +106,15 @@ func (a *Application) registerDrivers(ctx context.Context) {
 }
 
 /*
-registerWebDrivers registers the drivers of social sign-in, custom
-domain certificates and language detection.
+registerWebDrivers registers the drivers of social sign-in, account
+connections, custom domain certificates and language detection.
 */
 func (a *Application) registerWebDrivers() {
 	a.Social.Extend("github", github.Factory(a.HTTP))
 	a.Social.Extend("google", google.Factory(a.HTTP, a.Clock))
 	a.Social.Extend("oidc", oidc.Factory(a.HTTP, a.Clock))
+	a.OAuthClient.Extend("generic", generic.Factory(a.HTTP))
+	a.OAuthClient.Extend("slack", slack.Factory(a.HTTP, a.Clock))
 
 	authorize := a.domainAuthorizer()
 	a.Domains.Extend("none", tlsnone.Factory(authorize))

@@ -35,7 +35,11 @@ type typingPayload struct {
 typing announces the agent typing and returns the call that stops it.
 */
 func (r *Runner) typing(ctx context.Context, e *env) func() {
-	if r.Publisher == nil || e.ChannelType != "widget" {
+	if e.ChannelType != "widget" {
+		return r.working(ctx, e)
+	}
+
+	if r.Publisher == nil {
 		return func() {}
 	}
 	r.publishTyping(ctx, e, "typing.started")
@@ -55,4 +59,19 @@ func (r *Runner) publishTyping(ctx context.Context, e *env, event string) {
 				Name:           e.Agent.Name,
 			},
 		})
+}
+
+/*
+working tells the channel the agent began answering the customer's
+message and returns the call that says it stopped.
+*/
+func (r *Runner) working(ctx context.Context, e *env) func() {
+	if r.Working == nil {
+		return func() {}
+	}
+
+	ws, conv, msg := e.Conversation.WorkspaceID, e.Conversation.ID, e.Trigger.ID
+	r.Working.Started(ctx, ws, conv, msg)
+
+	return func() { r.Working.Stopped(context.WithoutCancel(ctx), ws, conv, msg) }
 }

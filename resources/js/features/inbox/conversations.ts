@@ -100,6 +100,7 @@ export type ThreadEntry =
       held?: boolean;
       authorId?: string | null;
       edited?: boolean;
+      deletedAtSource?: boolean;
       mentions?: MentionRef[];
       reactions?: Reaction[];
       files: Attachment[];
@@ -211,6 +212,7 @@ export function toEntry(message: Message): ThreadEntry {
     truncated: message.truncated ?? false,
     failed: message.delivery_status === "failed" ? (message.delivery_error ?? "") : null,
     authorId: message.author.id,
+    deletedAtSource: Boolean(message.source_deleted_at),
     files: filesOf(message),
     ...(call ? { call } : {}),
   } as const;
@@ -236,7 +238,7 @@ function byAuthor(message: Message, said: SaidFields): ThreadEntry {
     };
   }
   if (message.author.type === "contact") {
-    return { kind: "customer", ...said };
+    return { kind: "customer", ...said, edited: Boolean(message.edited_at) };
   }
   if (message.author.type === "agent") {
     return { kind: "dimmi", ...said, seenAt: message.read_at ?? null };

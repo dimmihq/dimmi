@@ -261,7 +261,7 @@ Style: caveman. Format: "Case. Behavior." Every case decided. Provider facts in 
 ## S. Slack team work, one install, request detection (revision 2026-11-10)
 
 200. Customer edits Slack message after agent answered. Body updated, previous body kept in `metadata.edits[]`; agent does not re-answer; teammates see "edited" marker.
-201. Customer deletes message holding API key. Body and attachments redacted within 5 s of event; stub stays; search index entry removed (03 redaction path); agent context built after redaction never contains it.
+201. Customer deletes message holding API key. Message stays with "Deleted by the customer" label within 5 s of event; words kept for the team; teammate removes secret with 03 moderator redaction when needed.
 202. Customer deletes only message of conversation. Conversation closed reason `source_deleted`, removed from triage post (post updated "Deleted in Slack").
 203. Edit or delete event for message older than raw event retention or never stored. Ignored.
 204. `ai` trigger: classifier says chatter but customer replies in thread "anyone?". Thread reply by contact in untracked thread creates conversation keyed on root (existing thread rule); root fetched with one `conversations.replies` call.

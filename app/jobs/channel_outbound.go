@@ -8,7 +8,8 @@
 | safe HTML for channels that render one of those, the customer by the
 | address the channel reaches them at, everyone else on the thread as a
 | copy, the way a reply to all would, and the teammate who wrote it by
-| name. The driver never reads the database to learn any of it. Remote
+| name, with the answer controls an agent's answer offers. The driver
+never reads the database to learn any of it. Remote
 | pictures leave only when they are GIFs from GIPHY and GIF search is on.
 |
 */
@@ -17,6 +18,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -71,7 +73,7 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 	}
 
 	message, err := outboundMessage(c, msg, contact, w.remoteImages())
-	message.Author = author
+	message.Author, message.Controls = author, controlsOf(msg)
 	if err != nil {
 		return outbound{}, err
 	}
@@ -226,6 +228,28 @@ func authorOf(ctx context.Context, q *models.Queries, msg models.Message) (contr
 	}
 
 	return author, nil
+}
+
+/*
+controlsOf returns the answer controls an agent's answer offers, from
+the actions the agent listed on it; a teammate's reply offers none.
+*/
+func controlsOf(msg models.Message) []string {
+	if msg.AuthorType != string(enums.AuthorTypeAgent) {
+		return nil
+	}
+
+	var meta struct {
+		AI struct {
+			Actions []string `json:"actions"`
+		} `json:"ai"`
+	}
+
+	if json.Unmarshal(msg.Metadata, &meta) != nil {
+		return nil
+	}
+
+	return meta.AI.Actions
 }
 
 /*

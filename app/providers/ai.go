@@ -48,6 +48,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 		return err
 	}
 	a.AI = runner
+	runner.Working = a.Actions.Slack.Channel
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}

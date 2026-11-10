@@ -98,6 +98,15 @@ const (
 )
 
 /*
+The prefixes of the integrations' tables: an installation of a tool
+account and a member's own grant on it.
+*/
+const (
+	PrefixIntegrationInstallation Prefix = "itg"
+	PrefixIntegrationMemberGrant  Prefix = "itu"
+)
+
+/*
 PublicIDEntry is one row of the catalog: a prefix and the table it
 names. The table of a reserved prefix starts with "reserved: ".
 */
@@ -298,8 +307,8 @@ func helpCenterPublicIDs() []PublicIDEntry {
 }
 
 /*
-platformPublicIDs lists the prefixes of webhooks, self-hosting and
-importers.
+platformPublicIDs lists the prefixes of webhooks, self-hosting,
+importers and integrations.
 */
 func platformPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
@@ -312,6 +321,8 @@ func platformPublicIDs() []PublicIDEntry {
 		{"impr", "import_runs"},
 		{"impm", "import_mappings"},
 		{"impf", "import_files"},
+		{PrefixIntegrationInstallation, "integration_installations"},
+		{PrefixIntegrationMemberGrant, "integration_member_grants"},
 	}
 }
 

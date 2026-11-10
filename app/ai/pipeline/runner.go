@@ -43,8 +43,9 @@ import (
 Runner runs the agent for one conversation. Timeouts bound each
 provider call; StorePayloads keeps request and response text on the
 run's steps. Publisher, when set, shows the customer the agent is
-typing while it writes. Actions, when set, gives the agent the
-workspace's own actions as tools.
+typing while it writes; Working, when set, hears the same on every other
+channel, so a chat app can show it. Actions, when set, gives the agent
+the workspace's own actions as tools.
 */
 type Runner struct {
 	DB            *database.DB
@@ -55,6 +56,7 @@ type Runner struct {
 	Prices        *aiprices.Table
 	Events        *fevents.Dispatcher
 	Publisher     appbroadcasting.Publisher
+	Working       contracts.AgentWorking
 	Actions       *actionkit.Kit
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool

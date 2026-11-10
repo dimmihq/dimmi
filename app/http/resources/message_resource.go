@@ -38,7 +38,9 @@ const excerptLength = 140
 /*
 TimelineEntry is one entry of a conversation's timeline. ScheduledSendAt
 is set while a reply waits to leave and its writer may still undo it.
-DeletedBy names who deleted a deleted entry. Redactions names the
+DeletedBy names who deleted a deleted entry. SourceDeletedAt is when
+the author deleted the message where they wrote it, such as in Slack;
+its words stay so the team still sees what was said. Redactions names the
 redaction rules that changed it before it was stored and how often, and
 is left out when none did. ReadAt is when the customer saw a teammate's
 reply, known only on channels that report it, such as the messenger;
@@ -68,6 +70,7 @@ type TimelineEntry struct {
 	Reactions       []Reaction      `json:"reactions"`
 	DeletedAt       *time.Time      `json:"deleted_at"`
 	DeletedBy       *Remover        `json:"deleted_by"`
+	SourceDeletedAt *time.Time      `json:"source_deleted_at"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 	Attachments     []Attachment    `json:"attachments"`
@@ -82,6 +85,24 @@ Remover is the teammate who deleted an entry.
 type Remover struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+/*
+sourceDeletedAtOf reads when the author deleted the entry at the
+provider, nil when they did not.
+*/
+func sourceDeletedAtOf(metadata json.RawMessage) *time.Time {
+	var read struct {
+		SourceDeleted *struct {
+			At time.Time `json:"at"`
+		} `json:"source_deleted"`
+	}
+
+	if json.Unmarshal(metadata, &read) != nil || read.SourceDeleted == nil {
+		return nil
+	}
+
+	return &read.SourceDeleted.At
 }
 
 /*
@@ -180,7 +201,7 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 		out.Mentions, out.Reactions = mentionsOf(m.Metadata), reactionsOf(m.Metadata)
 	}
 
-	out.AI = teamAIOf(m.Metadata)
+	out.AI, out.SourceDeletedAt = teamAIOf(m.Metadata), sourceDeletedAtOf(m.Metadata)
 	if m.DeletedAt != nil {
 		out.Body, out.HasOriginal, out.Truncated, out.AI = nil, false, false, nil
 		out.DeletedBy = removerOf(m.Metadata)
