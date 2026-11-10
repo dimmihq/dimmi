@@ -100,3 +100,10 @@ WHERE workspace_id = @workspace_id AND id = @id;
 UPDATE channel_connections
 SET external_id = NULL, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: RouteRoomConnections :many
+-- RouteRoomConnections returns the provider keys of every live
+-- connection of the type watching the room, across every workspace,
+-- before any workspace is set.
+SELECT r.provider_key::text AS provider_key
+FROM channel_route_room_connections(@connection_type::text, @room_external_id::text) AS r;

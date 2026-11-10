@@ -434,6 +434,39 @@ func (q *Queries) RouteChannelConnectionID(ctx context.Context, arg RouteChannel
 	return i, err
 }
 
+const routeRoomConnections = `-- name: RouteRoomConnections :many
+SELECT r.provider_key::text AS provider_key
+FROM channel_route_room_connections($1::text, $2::text) AS r
+`
+
+type RouteRoomConnectionsParams struct {
+	ConnectionType string `json:"connection_type"`
+	RoomExternalID string `json:"room_external_id"`
+}
+
+// RouteRoomConnections returns the provider keys of every live
+// connection of the type watching the room, across every workspace,
+// before any workspace is set.
+func (q *Queries) RouteRoomConnections(ctx context.Context, arg RouteRoomConnectionsParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, routeRoomConnections, arg.ConnectionType, arg.RoomExternalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var provider_key string
+		if err := rows.Scan(&provider_key); err != nil {
+			return nil, err
+		}
+		items = append(items, provider_key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const touchChannelConnection = `-- name: TouchChannelConnection :exec
 UPDATE channel_connections SET last_activity_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3

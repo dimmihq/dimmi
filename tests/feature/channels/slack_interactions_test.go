@@ -50,6 +50,7 @@ func TestSlackInteractions(t *testing.T) {
 
 		assert.Equal(t, string(enums.ConversationStatusOpen), sc.conversations()[0].Status)
 		assert.Len(t, sc.slack.called("chat.postEphemeral"), 1)
+		assert.Empty(t, sc.slack.called("chat.update"), "the buttons stay for the person who asked")
 	})
 
 	t.Run("talk to a human hands the conversation to the team once", func(t *testing.T) {

@@ -59,15 +59,16 @@ func (s *Slack) onControl(ctx context.Context, in SlackInteraction) (bool, error
 
 	switch control {
 	case contracts.ControlSolved:
-		err = s.solve(ctx, in, found)
+		var asked bool
+		if asked, err = s.solve(ctx, in, found); !asked || err != nil {
+			return asked, err
+		}
 	case contracts.ControlHandoff:
-		err = s.handOff(ctx, found.conv)
+		if err := s.handOff(ctx, found.conv); err != nil {
+			return false, err
+		}
 	default:
 		return false, nil
-	}
-
-	if err != nil {
-		return false, err
 	}
 
 	if err := s.feedbackOn(ctx, found.message, controlFeedback(control)); err != nil {
@@ -119,28 +120,29 @@ func (s *Slack) answerOf(ctx context.Context, conn models.ChannelConnection, pub
 }
 
 /*
-solve closes the conversation for the person who asked, and tells
-anyone else only they can.
+solve closes the conversation for the person who asked and reports
+true. Anyone else is told only they can, and their click changes
+nothing: no feedback, and the buttons stay for the person who asked.
 */
-func (s *Slack) solve(ctx context.Context, in SlackInteraction, found answered) error {
+func (s *Slack) solve(ctx context.Context, in SlackInteraction, found answered) (bool, error) {
 	clicker := slackdriver.UserIdentity(in.Interaction.User.TeamID, in.Interaction.User.ID)
 
 	asked, err := s.askedBy(ctx, found.conv, clicker)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if !asked {
 		s.tell(ctx, in, "Only the person who asked can mark this solved.")
 
-		return nil
+		return false, nil
 	}
 
 	if found.conv.Status == string(enums.ConversationStatusClosed) {
-		return nil
+		return true, nil
 	}
 
-	return s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	return true, s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		w := &conversations.Writer{
 			Q: models.New(tx), Tx: tx, Events: s.Events, Now: s.Clock.Now(),
 			Actor: conversations.Actor{Type: string(enums.AuthorTypeSystem), ID: ids.Nil()},

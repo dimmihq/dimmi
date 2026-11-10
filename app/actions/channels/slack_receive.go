@@ -226,7 +226,12 @@ func (s *Slack) keepEvent(ctx context.Context, own *routed, d eventDelivery) err
 		return nil
 	}
 
-	targets, err := s.targets(ctx, own, env.APIAppID, teamsOf(env))
+	teams, err := s.teamsFor(ctx, own, env, ev)
+	if err != nil {
+		return err
+	}
+
+	targets, err := s.targets(ctx, own, env.APIAppID, teams)
 	if err != nil {
 		return err
 	}
@@ -253,6 +258,10 @@ func (s *Slack) keepInteraction(ctx context.Context, own *routed, in slackdriver
 	}
 
 	for _, target := range targets {
+		if s.openedNow(ctx, target, in) {
+			continue
+		}
+
 		err := s.keep(ctx, target, stored{
 			transport: "interaction", dedupeKey: in.DedupeKey(), kind: in.Type, payload: raw,
 		})
@@ -328,7 +337,8 @@ func teamsOf(env slackdriver.Envelope) []string {
 /*
 serialKeyOf returns the thread a message event belongs to, so events of
 one thread are processed one at a time, in order; empty for other
-events.
+events. An edit or a delete belongs to the thread of the message it
+changes, not to its own timestamp, so it waits for that message.
 */
 func serialKeyOf(ev slackdriver.Event) string {
 	if ev.Type != "message" {
@@ -336,8 +346,14 @@ func serialKeyOf(ev slackdriver.Event) string {
 	}
 
 	root := ev.RootTS()
-	if ev.Message != nil && ev.Message.ThreadTS != "" {
-		root = ev.Message.ThreadTS
+
+	switch {
+	case ev.Message != nil:
+		root = ev.Message.RootTS()
+	case ev.Previous != nil:
+		root = ev.Previous.RootTS()
+	case ev.DeletedTS != "":
+		root = ev.DeletedTS
 	}
 
 	return ev.ChannelID() + ":" + root

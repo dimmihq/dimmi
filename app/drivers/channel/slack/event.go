@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
+	"time"
 )
 
 /*
@@ -150,6 +152,20 @@ func (e Event) RootTS() string {
 	}
 
 	return e.TS
+}
+
+/*
+TimeOf reads a Slack timestamp, seconds since the epoch with the
+message's sequence after the dot, as a time; the zero time when it is
+not one.
+*/
+func TimeOf(ts string) time.Time {
+	seconds, err := strconv.ParseFloat(ts, 64)
+	if err != nil || seconds <= 0 {
+		return time.Time{}
+	}
+
+	return time.Unix(0, int64(seconds*float64(time.Second))).UTC()
 }
 
 /*

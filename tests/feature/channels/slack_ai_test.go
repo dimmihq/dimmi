@@ -247,6 +247,29 @@ func TestSlackAgentControls(t *testing.T) {
 		assert.NotNil(t, run.FeedbackAt)
 	})
 
+	t.Run("editing a draft opens the editor while Slack waits, not from the queue", func(t *testing.T) {
+		t.Parallel()
+		sc, conv := triaged(t)
+		answer(withAgent(sc))
+		sc.setSetting("agent_mode", "draft")
+		res := sc.runAgent(conv, false)
+		sc.Drain()
+
+		var kept int
+		require.NoError(t, sc.Operator().QueryRow(t.Context(),
+			"SELECT count(*) FROM channel_inbound_events WHERE kind = 'block_actions'").Scan(&kept))
+		sc.interact(teamPress(slackdriver.TeamActionID(slackdriver.DraftPrefix(),
+			models.PublicID(models.PrefixAiRun, res.RunID), slackdriver.DraftEdit), "U0TEAMMATE", ""))
+
+		opened := sc.slack.called("views.open")
+		require.Len(t, opened, 1)
+		assert.Contains(t, opened[0].Form.Get("trigger_id")+opened[0].Body, "trig-")
+		var after int
+		require.NoError(t, sc.Operator().QueryRow(t.Context(),
+			"SELECT count(*) FROM channel_inbound_events WHERE kind = 'block_actions'").Scan(&after))
+		assert.Equal(t, kept, after, "the click is answered at once and never queued")
+	})
+
 	t.Run("a teammate answering during the room's delay skips the agent with that reason", func(t *testing.T) {
 		t.Parallel()
 		sc, conv := opened(t)

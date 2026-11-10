@@ -16,10 +16,22 @@ package channels
 import (
 	"context"
 	"errors"
+	"time"
+
+	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
+)
+
+/*
+How long after a message was written an edit or delete of it waits for
+the message itself to arrive, and how often it looks again.
+*/
+const (
+	changeWait  = 2 * time.Minute
+	changeRetry = 3 * time.Second
 )
 
 /*
@@ -37,7 +49,7 @@ func (s *Slack) onEdited(ctx context.Context, ev SlackEvent) (bool, error) {
 		EditedAt: s.Clock.Now(),
 	})
 
-	return outcome(err)
+	return s.outcome(err, edited.TS)
 }
 
 /*
@@ -55,17 +67,22 @@ func (s *Slack) onDeleted(ctx context.Context, ev SlackEvent) (bool, error) {
 		Reason:           conversations.ReasonSourceDeleted,
 	})
 
-	return outcome(err)
+	return s.outcome(err, ev.Event.DeletedTS)
 }
 
 /*
-outcome reads a change's error: a message the inbox does not hold was
-simply not handled.
+outcome reads a change's error. A message the inbox does not hold was
+simply not handled, unless it was written moments ago: then it may
+still be on its way in, and the change is tried again shortly.
 */
-func outcome(err error) (bool, error) {
-	if errors.Is(err, conversations.ErrInboundMessageNotFound) {
-		return false, nil
+func (s *Slack) outcome(err error, ts string) (bool, error) {
+	if !errors.Is(err, conversations.ErrInboundMessageNotFound) {
+		return err == nil, err
 	}
 
-	return err == nil, err
+	if s.Clock.Now().Sub(slackdriver.TimeOf(ts)) < changeWait {
+		return false, queue.RetryAfter(changeRetry)
+	}
+
+	return false, nil
 }

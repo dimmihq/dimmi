@@ -2,10 +2,13 @@ package channels_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/enums"
 )
@@ -77,6 +80,25 @@ func TestSlackEditsAndDeletions(t *testing.T) {
 		assert.Contains(t, string(msgs[0].Metadata), `"edits"`)
 		assert.Contains(t, string(msgs[0].Metadata), `"source_deleted"`)
 		assert.Equal(t, string(enums.ConversationStatusOpen), conv.Status)
+	})
+
+	t.Run("an edit that overtakes its message waits for it, then applies", func(t *testing.T) {
+		t.Parallel()
+		sc := connectedCase(t)
+		ts := fmt.Sprintf("%d.000100", sc.Clock.Now().Unix())
+
+		sc.deliver(map[string]any{
+			"type": "message", "subtype": "message_changed", "channel": supportRoom, "channel_type": "channel",
+			"message": map[string]any{"user": "U0CUSTOMER", "ts": ts, "text": "The import fails"},
+		})
+		var workspace, event ids.UUID
+		require.NoError(t, sc.Operator().QueryRow(t.Context(),
+			"SELECT workspace_id, id FROM channel_inbound_events WHERE status = 'failed'").Scan(&workspace, &event))
+		sc.deliver(message(supportRoom, "U0CUSTOMER", ts, "The export fails"))
+		require.NoError(t, sc.App.Actions.Slack.Channel.Process(t.Context(), workspace, event))
+
+		msgs := sc.messages(sc.conversations()[0])
+		assert.Equal(t, "The import fails", body(msgs[0]))
 	})
 
 	t.Run("edits and deletions of messages the inbox never held change nothing", func(t *testing.T) {

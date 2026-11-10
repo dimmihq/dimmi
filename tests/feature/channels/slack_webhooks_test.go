@@ -95,6 +95,23 @@ func TestSlackWebhooks(t *testing.T) {
 		require.Len(t, sc.conversations(), 1)
 	})
 
+	t.Run("a shared channel's message reaches a watching team Slack did not name", func(t *testing.T) {
+		t.Parallel()
+		sc := connectedCase(t)
+		*sc.App.Actions.Slack.Channel.Shared = channels.SharedApp{AppID: appID, SigningSecret: "shared-secret"}
+
+		raw, err := json.Marshal(map[string]any{
+			"type": "event_callback", "team_id": "T0PARTNER", "api_app_id": appID, "event_id": "Ev1",
+			"is_ext_shared_channel": true, "authorizations": []map[string]any{{"team_id": "T0PARTNER"}},
+			"event": message(supportRoom, "U0CUSTOMER", "1793000000.000100", "The export fails"),
+		})
+		require.NoError(t, err)
+		sc.signed("/webhooks/slack/events", "shared-secret", "application/json", raw).AssertOK()
+		sc.Drain()
+
+		require.Len(t, sc.conversations(), 1)
+	})
+
 	t.Run("the shared app routes a message shortcut, which names no app, by its team", func(t *testing.T) {
 		t.Parallel()
 		sc := connectedCase(t)
