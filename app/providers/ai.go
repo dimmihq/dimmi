@@ -31,10 +31,12 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
+	"github.com/dimmihq/dimmi/app/ai/verdicts"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
+	"github.com/dimmihq/dimmi/app/support/officehours"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 	airesources "github.com/dimmihq/dimmi/resources/ai"
 )
@@ -49,6 +51,10 @@ func bootAI(ctx context.Context, a *app.App) error {
 	}
 	a.AI = runner
 	runner.Working = a.Actions.Slack.Channel
+	runner.Drafts = a.Actions.Slack.Channel
+	cheap := &verdicts.Verdicts{DB: a.DB, Clock: a.Clock, LLM: a.LLM, Prices: runner.Prices}
+	a.Actions.Slack.Channel.Classifier = &verdicts.Requests{Verdicts: cheap}
+	a.Actions.Slack.Channel.Judge = &verdicts.Judge{Verdicts: cheap}
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}
@@ -121,19 +127,50 @@ func enqueueAnswer(ctx context.Context, a *app.App, e appevents.MessageCreated) 
 		return nil
 	}
 
-	channel, eligible, err := answerable(ctx, a, e)
-	if err != nil || !eligible {
+	target, err := answerable(ctx, a, e)
+	if err != nil || !target.eligible {
 		return err
 	}
 
-	debounce := time.Duration(debounceFor(a, channel)) * time.Millisecond
+	debounce := time.Duration(debounceFor(a, target.channel)) * time.Millisecond
+	delay := agentDelay(ctx, a, e, target)
 	return a.Queue.Push(context.WithoutCancel(ctx), aijobs.AnswerWithAIArgs{
 		WorkspaceID:      e.WorkspaceID,
 		ConversationID:   e.ConversationID,
 		TriggerMessageID: e.MessageID,
 		RunKind:          "conversation",
 		QueuedAt:         a.Clock.Now().UnixMilli(),
-	}, queue.At(a.Clock.Now().Add(debounce)), queue.Unique(queue.UniqueOpts{ByArgs: true}))
+		Delayed:          delay > debounce,
+	}, queue.At(a.Clock.Now().Add(max(debounce, delay))), queue.Unique(queue.UniqueOpts{ByArgs: true}))
+}
+
+/*
+agentDelay is how long the conversation's place holds the agent back so
+a teammate can answer first, zero for none. A place that only holds it
+back inside office hours lets it answer at once outside them.
+*/
+func agentDelay(ctx context.Context, a *app.App, e appevents.MessageCreated, t answerTarget) time.Duration {
+	if t.channel != "slack" {
+		return 0
+	}
+	delay, insideHoursOnly := a.Actions.Slack.Channel.AgentDelay(ctx, e.WorkspaceID, e.ConversationID)
+	if delay <= 0 || !insideHoursOnly {
+		return delay
+	}
+	if within, err := officehours.Within(t.agent.OfficeHours, a.Clock.Now()); err != nil || !within {
+		return 0
+	}
+	return delay
+}
+
+/*
+answerTarget is what the cheap check found: the conversation's channel
+type, whether the agent may answer it, and the agent.
+*/
+type answerTarget struct {
+	channel  string
+	eligible bool
+	agent    models.AiAgent
 }
 
 /*
@@ -141,8 +178,8 @@ answerable is the cheap check before queueing: the workspace has an
 enabled agent and the conversation is live and not handed to the
 team. It returns the conversation's channel type for the debounce.
 */
-func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (string, bool, error) {
-	channel, eligible := "", false
+func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (answerTarget, error) {
+	var t answerTarget
 	ctx = tenancy.With(ctx, e.WorkspaceID.String())
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -160,18 +197,19 @@ func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (st
 		if err != nil {
 			return err
 		}
-		eligible = agent.Enabled && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
+		t.agent = agent
+		t.eligible = agent.Enabled && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
 		if conn, err := q.FindChannelConnection(ctx, models.FindChannelConnectionParams{
 			WorkspaceID: e.WorkspaceID, ID: conv.ChannelConnectionID,
 		}); err == nil {
-			channel = conn.Type
+			t.channel = conn.Type
 		}
 		return nil
 	})
 	if err != nil {
-		return "", false, fmt.Errorf("check answerable: %w", err)
+		return t, fmt.Errorf("check answerable: %w", err)
 	}
-	return channel, eligible, nil
+	return t, nil
 }
 
 /*

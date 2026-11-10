@@ -44,8 +44,10 @@ Runner runs the agent for one conversation. Timeouts bound each
 provider call; StorePayloads keeps request and response text on the
 run's steps. Publisher, when set, shows the customer the agent is
 typing while it writes; Working, when set, hears the same on every other
-channel, so a chat app can show it. Actions, when set, gives the agent
-the workspace's own actions as tools.
+channel, so a chat app can show it. Drafts, when set, turns answers in
+places where the team reviews the agent into drafts for a teammate to
+send. Actions, when set, gives the agent the workspace's own actions as
+tools.
 */
 type Runner struct {
 	DB            *database.DB
@@ -57,6 +59,7 @@ type Runner struct {
 	Events        *fevents.Dispatcher
 	Publisher     appbroadcasting.Publisher
 	Working       contracts.AgentWorking
+	Drafts        contracts.AgentDrafts
 	Actions       *actionkit.Kit
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
@@ -68,6 +71,8 @@ type Runner struct {
 /*
 Args is what one run needs: the conversation and the customer message
 that triggered it, or for a playground question the member asking.
+Delayed marks a run the channel held back so a teammate could answer
+first.
 */
 type Args struct {
 	WorkspaceID      ids.UUID
@@ -76,6 +81,7 @@ type Args struct {
 	MemberID         *ids.UUID
 	Kind             string
 	QueuedAt         time.Time
+	Delayed          bool
 }
 
 /*

@@ -116,6 +116,7 @@ type Actions struct {
 	IdentitySecrets            *identity.Secrets
 	NotificationCenter         *notifications.Center
 	NotificationPresence       *notifications.Presence
+	NotificationDestinations   *notifications.ManageDestinations
 	PushDevices                *notifications.Devices
 	IdentityVerifier           *identity.Verifier
 	IdentityKeySets            *identity.KeySets

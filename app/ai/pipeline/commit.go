@@ -30,6 +30,7 @@ import (
 close commits the decision and returns the run's result.
 */
 func (r *Runner) close(ctx context.Context, st *run, d *decision) (*Result, error) {
+	st.draft = d.outcome == outcomeAnswered && r.drafting(ctx, st.env)
 	err := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 		d, err = r.commit(ctx, tx, st, d)
@@ -126,6 +127,9 @@ func (r *Runner) write(ctx context.Context, tx *database.Tx, st *run, d *decisio
 	e := st.env
 	switch d.outcome {
 	case outcomeAnswered:
+		if st.draft {
+			return r.writeDraft(ctx, tx, st, d)
+		}
 		return r.writeAnswer(ctx, tx, st, d)
 	case outcomeGreeted, outcomeRefused:
 		return r.post(ctx, tx, st, d)

@@ -2,13 +2,18 @@ package channels_test
 
 import (
 	"context"
+	"encoding/json"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/actions/channels"
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 func TestSlackRouter(t *testing.T) {
@@ -92,4 +97,70 @@ func actions(actionIDs ...string) []slackdriver.BlockAction {
 	}
 
 	return out
+}
+
+func TestSlackInstallationOnlyRouting(t *testing.T) {
+	t.Parallel()
+
+	t.Run("an install without channels still hands its presses and messages to the features", func(t *testing.T) {
+		t.Parallel()
+		sc := newSlackCase(t)
+		sc.App.Actions.Slack.Channel.Secrets.Installations = grants{}
+		*sc.App.Actions.Slack.Channel.Shared = channels.SharedApp{AppID: appID, SigningSecret: "shared"}
+		ws := sc.Workspace.Workspace.ID
+
+		install := query(sc, func(ctx context.Context, q *models.Queries) (models.IntegrationInstallation, error) {
+			return q.CreateIntegrationInstallation(ctx, models.CreateIntegrationInstallationParams{
+				ID: ids.New(), WorkspaceID: ws, Provider: "slack", ExternalAccountID: new(installTeam),
+				ExternalAppID: new(appID), Name: "Acme", Source: "oauth", Scopes: []string{},
+				CredentialsEncrypted: []byte{1}, Metadata: json.RawMessage(`{"bot_user_id": "U0BOT"}`),
+				Now: sc.Clock.Now(),
+			})
+		})
+
+		var pressed []channels.SlackInteraction
+
+		var direct []channels.SlackEvent
+
+		router := sc.App.Actions.Slack.Router
+		router.OnAction("dimmi_notify:test:", func(_ context.Context, in channels.SlackInteraction) (bool, error) {
+			pressed = append(pressed, in)
+
+			return true, nil
+		})
+		router.OnEvent("message.im", func(_ context.Context, ev channels.SlackEvent) (bool, error) {
+			direct = append(direct, ev)
+
+			return true, nil
+		})
+
+		raw, err := json.Marshal(map[string]any{
+			"type": "block_actions", "api_app_id": appID, "trigger_id": "trig-1",
+			"team": map[string]any{"id": installTeam}, "user": map[string]any{"id": "U0TEAMMATE"},
+			"actions": []map[string]any{{"action_id": "dimmi_notify:test:open", "action_ts": "1793000100.000100"}},
+		})
+		require.NoError(t, err)
+		sc.signed("/webhooks/slack/interactions", "shared", "application/x-www-form-urlencoded",
+			[]byte(url.Values{"payload": {string(raw)}}.Encode())).AssertOK()
+
+		im := message("D0DIRECT", "U0TEAMMATE", rootTS, "hello Operator")
+		im["channel_type"] = "im"
+		sc.signed("/webhooks/slack/events", "shared", "application/json", envelope("Ev1", im)).AssertOK()
+		sc.Drain()
+
+		require.Len(t, pressed, 1)
+		assert.False(t, pressed[0].Connected())
+		assert.Equal(t, ws, pressed[0].WorkspaceID)
+		require.NotNil(t, pressed[0].InstallationID)
+		assert.Equal(t, install.ID, *pressed[0].InstallationID)
+		assert.Equal(t, botUser, channels.FactsOf(pressed[0].Connection).BotUserID)
+		require.Len(t, direct, 1)
+		assert.Equal(t, ws, direct[0].WorkspaceID)
+
+		var kept int
+		require.NoError(t, sc.Operator().QueryRow(t.Context(),
+			"SELECT count(*) FROM channel_inbound_events WHERE workspace_id = $1 AND channel_connection_id IS NULL "+
+				"AND integration_installation_id = $2", ws, install.ID).Scan(&kept))
+		assert.Equal(t, 2, kept)
+	})
 }

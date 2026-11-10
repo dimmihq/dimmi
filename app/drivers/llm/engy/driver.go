@@ -7,7 +7,9 @@
 | with a bearer key, a model list, usage in the final stream chunk and
 | both max-tokens fields. On top of the compatible mapping it adds two
 | provider facts: the context window of each hosted model, and the
-| real charge it reports per request.
+| real charge it reports per request. Engy passes response_format to
+| the model without validating the answer against it, so no Engy model
+| claims schema enforcement and a schema request is refused.
 |
 */
 
@@ -60,7 +62,7 @@ func New(o Options) *Driver {
 		HTTP: o.HTTP, Clock: o.Clock,
 		Config: openaicompat.Config{
 			MaxTokensField: "max_completion_tokens", SupportsTools: true,
-			SupportsStreamUsage: true, JSONMode: true,
+			SupportsStreamUsage: true,
 		},
 	})}
 }

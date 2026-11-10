@@ -8,7 +8,8 @@
 | someone else in a public thread cannot close another's question. Talk
 | to a human hands the conversation to the team, for anyone, once. A
 | click names the answer it came from; one naming an answer of another
-| connection, or of nothing, does nothing. Either way the buttons go.
+| connection, or of nothing, does nothing. Either way the buttons go,
+| and the press is kept on the run that wrote the answer.
 |
 | The message shortcut opens a conversation from any customer message,
 | whatever the room's trigger. Using it on a message already in one
@@ -66,6 +67,10 @@ func (s *Slack) onControl(ctx context.Context, in SlackInteraction) (bool, error
 	}
 
 	if err != nil {
+		return false, err
+	}
+
+	if err := s.feedbackOn(ctx, found.message, controlFeedback(control)); err != nil {
 		return false, err
 	}
 

@@ -95,3 +95,20 @@ describe("toEntry", () => {
     expect(asked).toMatchObject({ kind: "event", text: "dimmi asked to run Refund an invoice" });
   });
 });
+
+describe("closed events", () => {
+  const closed = (reason?: string) =>
+    toEntry(
+      reply({
+        type: "event",
+        body: null,
+        event: { name: "conversation.closed", actor: { type: "system", id: "", name: "" }, reason },
+      }),
+    );
+
+  it("say why dimmi closed the conversation for the customer", () => {
+    expect(closed("source_deleted")).toMatchObject({ text: "Closed: the customer deleted their message" });
+    expect(closed("contact_solved")).toMatchObject({ text: "Closed: the customer marked it solved" });
+    expect(closed()).toMatchObject({ text: "dimmi closed the conversation" });
+  });
+});

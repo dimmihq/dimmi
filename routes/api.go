@@ -95,6 +95,7 @@ func API(a *app.App) {
 			attributeRoutes(workspace, a)
 			eventRoutes(workspace, a)
 			slackChannelRoutes(workspace, a)
+			slackRoomRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })

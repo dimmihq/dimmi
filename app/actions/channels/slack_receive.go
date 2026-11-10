@@ -79,9 +79,10 @@ const (
 routed is a connection a delivery is for.
 */
 type routed struct {
-	workspaceID  ids.UUID
-	connectionID ids.UUID
-	suspended    bool
+	workspaceID    ids.UUID
+	connectionID   ids.UUID
+	installationID *ids.UUID
+	suspended      bool
 }
 
 /*
@@ -265,7 +266,8 @@ func (s *Slack) keepInteraction(ctx context.Context, own *routed, in slackdriver
 
 /*
 targets returns the connections a delivery is for: the address's own,
-or on the shared app every connected installation among the teams.
+or on the shared app every connected installation among the teams, by
+its installation alone when it has no channel connection.
 Message shortcuts arrive without the app's id; their signature already
 proves they come from the shared app, so the team alone routes them.
 */
@@ -287,6 +289,11 @@ func (s *Slack) targets(ctx context.Context, own *routed, appID string, teams []
 			ConnectionType: slackdriver.Type, ProviderKey: slackdriver.ExternalID(appID, team),
 		})
 		if errors.Is(err, database.ErrNotFound) {
+			out, err = s.routeInstallation(ctx, out, appID, team)
+			if err != nil {
+				return nil, err
+			}
+
 			continue
 		}
 

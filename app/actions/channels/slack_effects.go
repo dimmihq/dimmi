@@ -39,7 +39,8 @@ import (
 )
 
 /*
-Listen follows the inbox changes Slack shows.
+Listen follows the inbox changes Slack shows, in the customer's thread
+and in the team's places.
 */
 func (s *Slack) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.ConversationClosed) error {
@@ -58,6 +59,7 @@ func (s *Slack) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.MessageDeleted) error {
 		return s.follow(ctx, effectOf(e.WorkspaceID, e.ConversationID, &e.MessageID, jobs.SlackEffectDeleted))
 	})
+	s.listenTeam(d)
 }
 
 /*
@@ -160,7 +162,7 @@ func (s *Slack) applyOn(ctx context.Context, conn models.ChannelConnection, conv
 
 		return s.deleteSent(ctx, conn, *args.MessageID)
 	default:
-		return nil
+		return s.applyTeam(ctx, conn, conv, args)
 	}
 }
 
@@ -241,27 +243,29 @@ func teamSent(msg models.Message) bool {
 }
 
 /*
-Started puts the working sign on the customer's message when the agent
+Started shows the agent working on the customer's message when it
 begins answering it on Slack. A failure only costs the sign.
 */
 func (s *Slack) Started(ctx context.Context, workspaceID, conversationID, messageID ids.UUID) {
+	ctx = tenancy.With(ctx, workspaceID.String())
 	ref, ok := s.workingOn(ctx, workingRef{
 		workspaceID: workspaceID, conversationID: conversationID, messageID: messageID,
 	})
-	if ok {
-		_ = s.Driver.StartWorking(ctx, ref.conn, ref.message)
+	if conv, err := s.findConversation(ctx, workspaceID, conversationID); ok && err == nil {
+		s.startWorking(ctx, ref, conv)
 	}
 }
 
 /*
-Stopped takes the working sign off again.
+Stopped takes the working state off again.
 */
 func (s *Slack) Stopped(ctx context.Context, workspaceID, conversationID, messageID ids.UUID) {
+	ctx = tenancy.With(ctx, workspaceID.String())
 	ref, ok := s.workingOn(ctx, workingRef{
 		workspaceID: workspaceID, conversationID: conversationID, messageID: messageID,
 	})
-	if ok {
-		_ = s.Driver.StopWorking(ctx, ref.conn, ref.message)
+	if conv, err := s.findConversation(ctx, workspaceID, conversationID); ok && err == nil {
+		s.stopWorking(ctx, ref, conv)
 	}
 }
 

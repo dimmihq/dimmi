@@ -25,27 +25,54 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
-SlackEvent is one event on a connection, inside its envelope.
+SlackEvent is one event on a connection, inside its envelope, with the
+workspace and the installation it came through, nil for a workspace's
+own app. An installation made without channels has no connection of
+its own: Connection then has a zero id and only carries the
+installation's workspace, team, app and bot, so its token still opens,
+and Connected reports false.
 */
 type SlackEvent struct {
-	Connection models.ChannelConnection
-	Envelope   slackdriver.Envelope
-	Event      slackdriver.Event
+	Connection     models.ChannelConnection
+	WorkspaceID    ids.UUID
+	InstallationID *ids.UUID
+	Envelope       slackdriver.Envelope
+	Event          slackdriver.Event
 }
 
 /*
-SlackInteraction is one interaction on a connection. Action is the
-button or option it was claimed by, for a block action.
+Connected reports whether the event came on a channel connection.
+*/
+func (ev SlackEvent) Connected() bool {
+	return ev.Connection.ID != ids.Nil()
+}
+
+/*
+SlackInteraction is one interaction on a connection, with the workspace
+and installation as on an event, Connection likewise without an id for
+an installation made without channels. Action is the button or option
+it was claimed by, for a block action.
 */
 type SlackInteraction struct {
-	Connection  models.ChannelConnection
-	Interaction slackdriver.Interaction
-	Action      slackdriver.BlockAction
+	Connection     models.ChannelConnection
+	WorkspaceID    ids.UUID
+	InstallationID *ids.UUID
+	Interaction    slackdriver.Interaction
+	Action         slackdriver.BlockAction
+}
+
+/*
+Connected reports whether the interaction came on a channel connection.
+*/
+func (in SlackInteraction) Connected() bool {
+	return in.Connection.ID != ids.Nil()
 }
 
 /*

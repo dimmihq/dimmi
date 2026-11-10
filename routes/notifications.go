@@ -7,7 +7,8 @@
 | browsers their user enabled push on, which belong to the user and work
 | across workspaces. Tokens need notifications:read or :write; push
 | devices and the focus heartbeat come from the person's own browser
-| only, never a token.
+| only, never a token. Slack destinations post where the team picked
+| and to each teammate's own direct message.
 |
 */
 
@@ -55,6 +56,38 @@ func notificationRoutes(api *routing.Router, a *app.App) {
 	})
 
 	pushRoutes(api, a)
+	destinationRoutes(api, a)
+}
+
+/*
+destinationRoutes declares the routes of Slack destinations: the
+team's channels, which need notification_destinations:manage to change,
+and each teammate's own direct message.
+*/
+func destinationRoutes(api *routing.Router, a *app.App) {
+	if a.Actions.NotificationDestinations == nil {
+		return
+	}
+
+	d := &v1.NotificationDestinationController{Destinations: a.Actions.NotificationDestinations, IDs: a.IDs}
+	one := "/notification-destinations/{destination}"
+
+	api.Group("", func(r *routing.Router) {
+		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+
+		routing.Get(r, "/notification-destinations", "notification-destinations.index", d.Index).
+			Ability("notifications:read")
+		routing.Post(r, "/notification-destinations", "notification-destinations.store", d.Store).
+			Ability("notifications:write").Status(fhttp.StatusCreated)
+		routing.Get(r, one, "notification-destinations.show", d.Show).Ability("notifications:read")
+		routing.Patch(r, one, "notification-destinations.update", d.Update).Ability("notifications:write")
+		routing.Delete(r, one, "notification-destinations.destroy", d.Destroy).Ability("notifications:write").
+			Status(fhttp.StatusNoContent)
+		routing.Post(r, one+"/tests", "notification-destinations.tests.store", d.Test).
+			Ability("notifications:write").Status(fhttp.StatusCreated)
+		routing.Get(r, "/integrations/{integration}/slack-channels", "integrations.slack-channels.index",
+			d.SlackChannels).Ability("settings:read")
+	})
 }
 
 /*

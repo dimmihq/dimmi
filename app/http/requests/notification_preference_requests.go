@@ -15,7 +15,7 @@ PreferenceCellBody turns one trigger on one channel on or off.
 */
 type PreferenceCellBody struct {
 	Trigger string `json:"trigger" maxLength:"40"`
-	Channel string `json:"channel" enum:"in_app,email,push"`
+	Channel string `json:"channel" enum:"in_app,email,push,slack"`
 	Enabled bool   `json:"enabled"`
 }
 
@@ -45,6 +45,6 @@ NotificationTestRequest names the channel to test.
 */
 type NotificationTestRequest struct {
 	Body struct {
-		Channel string `json:"channel" enum:"in_app,email,push"`
+		Channel string `json:"channel" enum:"in_app,email,push,slack"`
 	}
 }

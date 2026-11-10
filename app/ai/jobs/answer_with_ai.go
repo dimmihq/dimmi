@@ -26,7 +26,8 @@ import (
 
 /*
 AnswerWithAIArgs is one trigger message to answer. Only the message id
-makes a job unique; QueuedAt is in Unix milliseconds.
+makes a job unique; QueuedAt is in Unix milliseconds. Delayed marks a
+job the channel held back so a teammate could answer first.
 */
 type AnswerWithAIArgs struct {
 	WorkspaceID      ids.UUID `json:"workspace_id"`
@@ -34,6 +35,7 @@ type AnswerWithAIArgs struct {
 	TriggerMessageID ids.UUID `json:"trigger_message_id" river:"unique"`
 	RunKind          string   `json:"run_kind"`
 	QueuedAt         int64    `json:"queued_at"`
+	Delayed          bool     `json:"delayed,omitempty"`
 }
 
 /*
@@ -60,6 +62,7 @@ func (w *AnswerWithAI) Handle(ctx context.Context, job *queue.Job[AnswerWithAIAr
 		TriggerMessageID: job.Args.TriggerMessageID,
 		Kind:             job.Args.RunKind,
 		QueuedAt:         time.UnixMilli(job.Args.QueuedAt),
+		Delayed:          job.Args.Delayed,
 	})
 	return err
 }

@@ -58,6 +58,9 @@ func (c *Checker) Allow(ctx context.Context, a *Alert, d fnotify.Delivery) (bool
 	if channel == ChannelInApp {
 		return true, nil
 	}
+	if _, ok := d.Notifiable.(Destination); ok {
+		return c.destinationStill(ctx, a)
+	}
 	r, ok := d.Notifiable.(Recipient)
 	if !ok {
 		return false, nil
@@ -203,10 +206,11 @@ func (c *Checker) unwatched(ctx context.Context, a *Alert, r Recipient, channel 
 	if err == nil && watching(a, string(focus)) {
 		return false, nil
 	}
-	if channel != ChannelPush {
+	if channel != ChannelPush && channel != ChannelSlack {
 		return true, nil
 	}
-	key := "ntf:cooldown:" + r.MemberID.String() + ":" + a.GroupKey(fnotify.Delivery{}) + ":" + a.TitleKey
+	key := "ntf:cooldown:" + r.MemberID.String() + ":" + a.GroupKey(fnotify.Delivery{}) + ":" + a.TitleKey + ":" +
+		channel
 	added, err := c.Cache.Add(ctx, key, []byte("1"), pushCooldown)
 	return added || err != nil, nil
 }
@@ -247,6 +251,35 @@ func appChannel(channel string) string {
 		return ChannelEmail
 	case "webpush":
 		return ChannelPush
+	case SlackChannelName:
+		return ChannelSlack
 	}
 	return ChannelInApp
+}
+
+/*
+destinationStill reports whether a post to a Slack channel still goes
+out: only a conversation gone or marked spam holds it back, since the
+channel keeps a log of what happened.
+*/
+func (c *Checker) destinationStill(ctx context.Context, a *Alert) (bool, error) {
+	if a.ConversationID == nil {
+		return true, nil
+	}
+	allowed := false
+	scoped := tenancy.With(ctx, a.WorkspaceID.String())
+	err := c.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		conv, err := models.New(tx).FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: a.WorkspaceID, ID: *a.ConversationID,
+		})
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("load conversation: %w", err)
+		}
+		allowed = conv.DeletedAt == nil && !conv.Spam
+		return nil
+	})
+	return allowed, err
 }

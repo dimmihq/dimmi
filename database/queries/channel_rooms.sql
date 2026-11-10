@@ -83,3 +83,13 @@ RETURNING *;
 -- gap in deliveries shows.
 UPDATE channel_rooms SET last_seen_event_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ChangeChannelRoomSettings :one
+-- ChangeChannelRoomSettings changes a room's mode and trigger, each kept
+-- when not given, and merges settings into its own: keys in set take the
+-- new value, keys in unset are dropped, every other key stays.
+UPDATE channel_rooms
+SET mode = coalesce(sqlc.narg(mode), mode), trigger = coalesce(sqlc.narg(trigger), trigger),
+    settings = (settings || @set::jsonb) - @unset::text[], updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND channel_connection_id = @channel_connection_id AND id = @id
+RETURNING *;

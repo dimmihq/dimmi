@@ -4,7 +4,7 @@
  * whose top edge softens once scrolled, and the empty state a page shows
  * when it has nothing to list, or until its feature is built.
  */
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, ReactNode, Ref } from "react";
 
 import { ScrollFade, useScrollFade } from "@/components/foundations/scroll-fade/scroll-fade";
 import { cx } from "@/utils/cx";
@@ -63,16 +63,22 @@ export function ScrollArea({
   ground = false,
   className,
   children,
+  ref,
 }: {
   ground?: boolean;
   className?: string;
   children: ReactNode;
+  ref?: Ref<HTMLDivElement>;
 }) {
   const fade = useScrollFade();
 
   return (
     <div className="relative min-h-0 flex-1">
-      <div onScroll={fade.onScroll} className={cx("relative h-full overflow-y-auto [scrollbar-width:none]", className)}>
+      <div
+        ref={ref}
+        onScroll={fade.onScroll}
+        className={cx("relative h-full overflow-y-auto [scrollbar-width:none]", className)}
+      >
         {children}
       </div>
       <ScrollFade

@@ -275,7 +275,8 @@ func (a *API) postMessage(ctx context.Context, channel string, opts ...slack.Msg
 
 /*
 messageOptions shapes the reply: its Markdown, as blocks with buttons
-when it offers answer controls, in its thread, without link previews.
+when it offers answer controls or asks a direct message's reader for
+feedback on the agent's answer, in its thread, without link previews.
 */
 func messageOptions(to target, msg contracts.OutboundMessage) []slack.MsgOption {
 	body := Truncate(ToSlack(msg.BodyMarkdown), MaxBodyChars)
@@ -285,12 +286,18 @@ func messageOptions(to target, msg contracts.OutboundMessage) []slack.MsgOption 
 		opts = append(opts, slack.MsgOptionTS(to.threadTS))
 	}
 
-	if len(msg.Controls) == 0 {
+	feedback := to.threadTS == "" && msg.Author.Type == enums.AuthorTypeAgent && msg.IdempotencyKey != ""
+	if len(msg.Controls) == 0 && !feedback {
 		return append(opts, slack.MsgOptionMarkdownText(body))
 	}
 
+	blocks := controlBlocks(body, msg.IdempotencyKey, msg.Controls)
+	if feedback {
+		blocks = append(blocks, feedbackBlock(msg.IdempotencyKey))
+	}
+
 	return append(opts, slack.MsgOptionText(Truncate(msg.BodyText, MaxBodyChars), false),
-		slack.MsgOptionBlocks(controlBlocks(body, msg.IdempotencyKey, msg.Controls)...))
+		slack.MsgOptionBlocks(blocks...))
 }
 
 /*

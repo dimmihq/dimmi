@@ -5,7 +5,8 @@
 |
 | A tool is a named function the model may call; the contract only
 | carries its description and the finished call — dispatch lives
-| with the caller.
+| with the caller. A response schema is the typed answer a caller
+| needs back, which the provider itself must enforce.
 |
 */
 
@@ -46,15 +47,14 @@ const (
 )
 
 /*
-ResponseFormat names the answer shape the caller needs.
+ResponseSchema asks for a typed answer. When a request carries one, the
+provider must return exactly one JSON object valid against Schema, and
+the response's Text holds it. Name labels the schema for providers that
+want one; it follows the tool naming rules. Schema is a JSON Schema
+object; strict providers also need every object to close with
+additionalProperties false and list each property as required.
 */
-type ResponseFormat string
-
-/*
-The answer shapes. JSON is used by the classifier; drivers map it to
-the native mode or a prompt suffix where none exists.
-*/
-const (
-	ResponseFormatText ResponseFormat = "text"
-	ResponseFormatJSON ResponseFormat = "json"
-)
+type ResponseSchema struct {
+	Name   string
+	Schema json.RawMessage
+}

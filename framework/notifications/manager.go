@@ -128,6 +128,16 @@ func (m *Manager) Extend(driver string, factory manager.Factory[Channel]) {
 }
 
 /*
+Add registers a channel the application builds itself under the name,
+replacing any channel of that name. It is for channels whose services
+only exist once the application has booted, so they cannot be built
+from configuration.
+*/
+func (m *Manager) Add(name string, channel Channel) {
+	m.channels.Swap(name, channel)
+}
+
+/*
 Channel returns the named channel, building it on first use.
 */
 func (m *Manager) Channel(name string) (Channel, error) {

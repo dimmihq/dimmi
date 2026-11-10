@@ -5,11 +5,11 @@
 |
 | Wires the Slack channel: its driver registered with the inbox, the
 | router every feature claims Slack's deliveries on, the channel's own
-| claims, the jobs that process deliveries and follow inbox changes, and
-| the listeners on the inbox and on the Slack installation. Replies keep
-| their files on the default disk. A worker process also holds the
-| sockets of apps without a public URL, under leases shared with every
-| other worker.
+| claims, the jobs that process deliveries, follow inbox changes and run
+| auto-join scans, and the listeners on the inbox and on the Slack
+| installation. Replies keep their files on the default disk. A worker
+| process also holds the sockets of apps without a public URL, under
+| leases shared with every other worker.
 |
 | The shared app is the install's own Slack app from the services
 | configuration; without it only workspaces' own apps connect. Tokens of
@@ -80,6 +80,7 @@ func bootSlack(ctx context.Context, a *app.App) error {
 		queue.Register(a.Queue, &jobs.ProcessChannelInboundEvent{Processor: slack}),
 		queue.Register(a.Queue, &jobs.ApplySlackEffect{Effects: slack}),
 		queue.Register(a.Queue, &jobs.SyncSlackRooms{Syncer: slack}),
+		queue.Register(a.Queue, &jobs.JoinSlackChannels{Joiner: slack}),
 	)
 }
 
@@ -107,7 +108,7 @@ func newSlack(a *app.App, driver *slackdriver.Driver, secrets *channels.SlackSec
 		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Cache: a.Cache, Events: a.Events, IDs: a.IDs, Log: a.Log,
 		Driver: driver, Secrets: secrets, Edits: edits, Pleasantries: pleasantries, Router: channels.NewRouter(),
 		Config: cfg, AppURL: a.Application.Config.App.URL, Revocations: a.Actions.Integrations.ApplyRevocation,
-		Scopes: a.Actions.Integrations.Registry,
+		Scopes: a.Actions.Integrations.Registry, Articles: a.Actions.Articles,
 		Shared: &channels.SharedApp{AppID: services.AppID, SigningSecret: services.SigningSecret},
 		Receiver: &conversations.ReceiveInboundMessage{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,

@@ -7,7 +7,10 @@
 | token: canned answers, streams, tool calls, errors and delays, and
 | afterwards they read back exactly what the pipeline sent. Outside a
 | test binary every call fails, so a fake wired in by mistake can
-| never answer a real customer with canned text.
+| never answer a real customer with canned text. A request with a
+| response schema is held to it as a real provider would: refused when
+| the fake's capabilities lack JSONSchema, and failed when the scripted
+| reply does not fit the schema.
 |
 */
 
@@ -16,8 +19,10 @@ package fake
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -59,7 +64,7 @@ New returns a fake for the given provider name.
 */
 func New(provider contracts.LLMProvider) *LLM {
 	return &LLM{provider: provider, caps: contracts.LLMCapabilities{
-		Tools: true, Streaming: true, SystemPrompt: true, JSONMode: true, PromptCache: true,
+		Tools: true, Streaming: true, SystemPrompt: true, JSONSchema: true, PromptCache: true,
 		ContextTokens: 200_000, MaxOutputTokens: 8_192,
 	}}
 }
@@ -126,6 +131,9 @@ func (l *LLM) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.C
 	if !testing.Testing() {
 		return nil, ErrOutsideTests
 	}
+	if err := l.supports(req); err != nil {
+		return nil, err
+	}
 	step := l.next(req)
 
 	if step.Delay > 0 {
@@ -136,6 +144,9 @@ func (l *LLM) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.C
 
 	if step.Err != nil {
 		return nil, step.Err
+	}
+	if err := answers(req, step.Text); err != nil {
+		return nil, err
 	}
 
 	usage := step.Usage
@@ -157,6 +168,9 @@ func (l *LLM) Stream(_ context.Context, req contracts.ChatRequest) (contracts.Ch
 	if !testing.Testing() {
 		return nil, ErrOutsideTests
 	}
+	if err := l.supports(req); err != nil {
+		return nil, err
+	}
 	step := l.next(req)
 
 	if step.Err != nil {
@@ -168,6 +182,9 @@ func (l *LLM) Stream(_ context.Context, req contracts.ChatRequest) (contracts.Ch
 
 	if len(deltas) == 0 && step.Text != "" {
 		deltas = []string{step.Text}
+	}
+	if err := answers(req, strings.Join(deltas, "")); err != nil {
+		return nil, err
 	}
 
 	for _, d := range deltas {
@@ -206,6 +223,31 @@ func (l *LLM) ListModels(_ context.Context) ([]contracts.LLMModel, error) {
 Capabilities serves the scripted capabilities.
 */
 func (l *LLM) Capabilities(_ string) contracts.LLMCapabilities { return l.caps }
+
+/*
+supports refuses a response schema the scripted capabilities cannot
+enforce, before the request is recorded, as a real driver refuses it
+before anything leaves.
+*/
+func (l *LLM) supports(req contracts.ChatRequest) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if req.Schema != nil && !l.caps.JSONSchema {
+		return fmt.Errorf("fake model %s: %w", req.Model, contracts.ErrSchemaUnsupported)
+	}
+	return nil
+}
+
+/*
+answers holds a scripted reply to the request's response schema, when
+there is one.
+*/
+func answers(req contracts.ChatRequest, text string) error {
+	if req.Schema == nil {
+		return nil
+	}
+	return checkAnswer(req.Schema, text)
+}
 
 /*
 next records the request and pops the next scripted step.

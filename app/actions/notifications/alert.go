@@ -188,7 +188,8 @@ func (a *Alert) ToWebPush(ctx context.Context, d fnotify.Delivery) (webpush.Mess
 }
 
 /*
-QueueOptions hold email and push until the trigger's wait is over.
+QueueOptions hold email, push and Slack until the trigger's wait is
+over; Slack waits as long as push.
 */
 func (a *Alert) QueueOptions(d fnotify.Delivery) []queue.Opt {
 	t, ok := FindTrigger(a.Trigger)
@@ -198,7 +199,7 @@ func (a *Alert) QueueOptions(d fnotify.Delivery) []queue.Opt {
 	switch d.Channel {
 	case "mail":
 		return []queue.Opt{queue.At(a.OccurredAt.Add(t.EmailDelay))}
-	case "webpush":
+	case "webpush", SlackChannelName:
 		return []queue.Opt{queue.At(a.OccurredAt.Add(t.PushDelay))}
 	}
 	return nil

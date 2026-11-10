@@ -64,8 +64,9 @@ func (s *Slack) keep(ctx context.Context, r routed, d stored) error {
 
 	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		row, err := models.New(tx).CreateChannelInboundEvent(ctx, models.CreateChannelInboundEventParams{
-			WorkspaceID: r.workspaceID, ChannelConnectionID: r.connectionID, Provider: slackdriver.Type,
-			Transport: d.transport, DedupeKey: d.dedupeKey, SerialKey: optional(d.serialKey), Kind: d.kind,
+			WorkspaceID: r.workspaceID, ChannelConnectionID: connectionOf(r),
+			IntegrationInstallationID: r.installationID, Provider: slackdriver.Type, Transport: d.transport,
+			DedupeKey: d.dedupeKey, SerialKey: optional(d.serialKey), Kind: d.kind,
 			Payload: json.RawMessage(d.payload), Status: string(status), Now: s.Clock.Now(),
 		})
 		if errors.Is(err, database.ErrNotFound) {
@@ -118,7 +119,7 @@ func (s *Slack) Process(ctx context.Context, workspaceID, eventID ids.UUID) erro
 	}
 
 	if row.SerialKey != nil {
-		held, release, err := s.Cache.Lock(ctx, "ch:serial:"+row.ChannelConnectionID.String()+":"+*row.SerialKey)
+		held, release, err := s.Cache.Lock(ctx, "ch:serial:"+ownerOf(row)+":"+*row.SerialKey)
 		if err != nil {
 			return err
 		}
@@ -133,16 +134,13 @@ func (s *Slack) Process(ctx context.Context, workspaceID, eventID ids.UUID) erro
 }
 
 /*
-dispatch hands the delivery to the router, on its live connection.
+dispatch hands the delivery to the router, on its live connection or
+installation.
 */
 func (s *Slack) dispatch(ctx context.Context, row models.ChannelInboundEvent) (bool, error) {
-	conn, err := s.connection(ctx, row.WorkspaceID, row.ChannelConnectionID)
-	if err != nil {
+	conn, live, err := s.ownerConnection(ctx, row)
+	if err != nil || !live {
 		return false, err
-	}
-
-	if conn.DeletedAt != nil || conn.Status == "disconnected" {
-		return false, nil
 	}
 
 	if row.Transport == "interaction" {
@@ -151,7 +149,10 @@ func (s *Slack) dispatch(ctx context.Context, row models.ChannelInboundEvent) (b
 			return false, nil
 		}
 
-		return s.Router.DispatchInteraction(ctx, SlackInteraction{Connection: conn, Interaction: in})
+		return s.Router.DispatchInteraction(ctx, SlackInteraction{
+			Connection: conn, WorkspaceID: conn.WorkspaceID, InstallationID: conn.IntegrationInstallationID,
+			Interaction: in,
+		})
 	}
 
 	env, ok := readEnvelope(row.Payload)
@@ -164,7 +165,10 @@ func (s *Slack) dispatch(ctx context.Context, row models.ChannelInboundEvent) (b
 		return false, nil
 	}
 
-	return s.Router.DispatchEvent(ctx, SlackEvent{Connection: conn, Envelope: env, Event: ev})
+	return s.Router.DispatchEvent(ctx, SlackEvent{
+		Connection: conn, WorkspaceID: conn.WorkspaceID, InstallationID: conn.IntegrationInstallationID,
+		Envelope: env, Event: ev,
+	})
 }
 
 /*

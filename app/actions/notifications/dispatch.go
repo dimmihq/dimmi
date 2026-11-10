@@ -8,9 +8,10 @@
 | the event names, else whoever holds the conversation, else the team
 | behind it, else everyone, always minus whoever acted and anyone who
 | may not see the conversation. Each recipient's bell row is written in
-| the job's transaction and goes live once it commits; their email and
-| push are queued in the same transaction to go out when the trigger's
-| wait is over, if they still matter then.
+| the job's transaction and goes live once it commits; their email, push
+| and Slack are queued in the same transaction to go out when the
+| trigger's wait is over, if they still matter then. Slack channels the
+| team picked for the trigger get their post queued the same way.
 |
 */
 
@@ -110,7 +111,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, ev Event) error {
 				return err
 			}
 		}
-		return nil
+		return d.post(ctx, round)
 	})
 }
 
@@ -166,6 +167,9 @@ func (d *Dispatcher) queuedChannels(t Trigger, c Choices, r Recipient) []string 
 	}
 	if c.Enabled(t, ChannelPush) && len(r.Push) > 0 {
 		out = append(out, "webpush")
+	}
+	if c.Enabled(t, ChannelSlack) && r.Slack != nil {
+		out = append(out, SlackChannelName)
 	}
 	return out
 }

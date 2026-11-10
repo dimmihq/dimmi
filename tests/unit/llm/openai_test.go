@@ -42,7 +42,6 @@ func TestOpenAIDriver(t *testing.T) {
 
 		req := request("gpt-6.1-sol")
 		req.MaxOutputTokens = 300
-		req.ResponseFormat = contracts.ResponseFormatJSON
 		req.Tools = []contracts.ToolSpec{{Name: "lookup", Description: "Finds", Schema: json.RawMessage(`{}`)}}
 		req.ToolChoice = contracts.ToolChoiceNone
 		res, err := drv.Chat(t.Context(), req)
@@ -57,7 +56,7 @@ func TestOpenAIDriver(t *testing.T) {
 		sent := body(t, fake.Sent()[0])
 		assert.InDelta(t, 300, sent["max_completion_tokens"], 0)
 		assert.NotContains(t, sent, "max_tokens")
-		assert.Equal(t, map[string]any{"type": "json_object"}, sent["response_format"])
+		assert.NotContains(t, sent, "response_format")
 		assert.Equal(t, "none", sent["tool_choice"])
 		assert.Equal(t, "Bearer sk-test", fake.Sent()[0].Header.Get("Authorization"))
 	})
@@ -161,19 +160,18 @@ func TestOpenAIDriver(t *testing.T) {
 		assert.Equal(t, contracts.LLMErrorRateLimited, llmError(t, drainErr(t, stream)).Kind)
 	})
 
-	t.Run("lets a compatible server read the legacy field without json mode", func(t *testing.T) {
+	t.Run("lets a compatible server read the legacy field without stream usage", func(t *testing.T) {
 		t.Parallel()
 		hc, fake := fakeHTTP(t)
 		fake.Stub("POST https://llm.example.test/v1/chat/completions", sse("", chunk("ok", "stop"), "", "[DONE]"))
 		cfg := openaicompat.DefaultConfig()
-		cfg.JSONMode, cfg.SupportsStreamUsage = false, false
+		cfg.SupportsStreamUsage = false
 		drv := openaicompat.New(openaicompat.Options{
 			BaseURL: "https://llm.example.test/v1", HTTP: hc.StdClient(), Config: cfg,
 		})
 
 		req := request("llama")
 		req.MaxOutputTokens = 50
-		req.ResponseFormat = contracts.ResponseFormatJSON
 		stream, err := drv.Stream(t.Context(), req)
 		require.NoError(t, err)
 		drain(t, stream)
@@ -184,7 +182,7 @@ func TestOpenAIDriver(t *testing.T) {
 		assert.NotContains(t, sent, "response_format")
 		assert.NotContains(t, sent, "stream_options")
 		assert.Equal(t, contracts.LLMProviderOpenAICompatible, drv.Provider())
-		assert.False(t, drv.Capabilities("llama").JSONMode)
+		assert.False(t, drv.Capabilities("llama").JSONSchema)
 	})
 
 	t.Run("reports a compatible server without a model list as unsupported", func(t *testing.T) {

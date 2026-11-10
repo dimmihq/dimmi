@@ -8,7 +8,8 @@
 | prompt tokens kept apart from fresh ones so nothing is billed twice.
 | The same mapping serves every OpenAI-shaped endpoint, so the quirks
 | a compatible server has — the max-tokens field it reads, whether it
-| reports usage in a stream, whether it has a JSON mode — are options.
+| reports usage in a stream, whether it enforces a response schema —
+| are options.
 |
 */
 
@@ -36,9 +37,9 @@ endpoint: a base URL, optional key and headers, and the HTTP client
 the app's egress guard built. Provider names the connection, OpenAI
 when empty. MaxTokensField is "max_tokens" for servers that ignore
 max_completion_tokens. NoStreamUsage stops asking for usage inside a
-stream; NoJSONMode replaces the native JSON mode with an instruction.
-Capabilities overrides the static table; ModelParams adds per-model
-request options.
+stream. Capabilities overrides the static table, and its JSONSchema
+answer decides whether a response schema is sent or refused;
+ModelParams adds per-model request options.
 */
 type Options struct {
 	Provider       contracts.LLMProvider
@@ -49,7 +50,6 @@ type Options struct {
 	Clock          clock.Clock
 	MaxTokensField string
 	NoStreamUsage  bool
-	NoJSONMode     bool
 	Capabilities   func(model string) contracts.LLMCapabilities
 	ModelParams    func(model string) []option.RequestOption
 }
@@ -58,11 +58,6 @@ type Options struct {
 MaxTokensLegacy is the field older and compatible servers read.
 */
 const MaxTokensLegacy = "max_tokens"
-
-/*
-jsonInstruction asks for JSON where a server has no JSON mode.
-*/
-const jsonInstruction = "Respond with a single JSON object and nothing else."
 
 /*
 Driver is a contracts.LLM over the OpenAI chat-completions surface.
@@ -197,10 +192,6 @@ func (d *Driver) completionParams(req contracts.ChatRequest) (oai.ChatCompletion
 	for _, block := range req.System {
 		params.Messages = append(params.Messages, oai.SystemMessage(block.Text))
 	}
-	jsonMode := req.ResponseFormat == contracts.ResponseFormatJSON
-	if jsonMode && d.options.NoJSONMode {
-		params.Messages = append(params.Messages, oai.SystemMessage(jsonInstruction))
-	}
 	for _, msg := range req.Messages {
 		params.Messages = append(params.Messages, mapMessage(msg))
 	}
@@ -226,10 +217,12 @@ func (d *Driver) completionParams(req contracts.ChatRequest) (oai.ChatCompletion
 	if len(req.StopSequences) > 0 {
 		params.Stop = oai.ChatCompletionNewParamsStopUnion{OfStringArray: req.StopSequences}
 	}
-	if jsonMode && !d.options.NoJSONMode {
-		params.ResponseFormat = oai.ChatCompletionNewParamsResponseFormatUnion{
-			OfJSONObject: &shared.ResponseFormatJSONObjectParam{},
+	if req.Schema != nil {
+		format, err := d.responseFormat(req)
+		if err != nil {
+			return params, err
 		}
+		params.ResponseFormat = format
 	}
 
 	return params, nil

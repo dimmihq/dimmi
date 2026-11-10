@@ -82,3 +82,10 @@ ErrLLMNotSupported marks a provider that has no model list endpoint;
 callers fall back to Probe.
 */
 var ErrLLMNotSupported = errors.New("llm: operation not supported by this provider")
+
+/*
+ErrSchemaUnsupported marks a request with a response schema the model
+or driver cannot enforce. Callers treat the model as unfit for typed
+answers; no driver ever falls back to asking for JSON in the prompt.
+*/
+var ErrSchemaUnsupported = errors.New("llm: response schema not supported by this model")

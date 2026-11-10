@@ -86,6 +86,19 @@ func TestSend(t *testing.T) {
 		require.ErrorIs(t, err, manager.ErrUnknownInstance)
 	})
 
+	t.Run("delivers on a channel the application added in code", func(t *testing.T) {
+		t.Parallel()
+		m, _ := newManager(t, nil)
+		added := newRecorder()
+		m.Add("carrier_pigeon", added)
+
+		require.NoError(t, m.Send(t.Context(), greeting{Channels: []string{"carrier_pigeon"}}, ada))
+
+		got := added.all()
+		require.Len(t, got, 1)
+		assert.Equal(t, "carrier_pigeon", got[0].Channel)
+	})
+
 	t.Run("reports a failed check before sending", func(t *testing.T) {
 		t.Parallel()
 		m, rec := newManager(t, nil)

@@ -48,11 +48,6 @@ the same budget, and a reply cut short is worse than a long one.
 const defaultMaxTokens = 16000
 
 /*
-jsonInstruction asks for JSON, which the API has no simple mode for.
-*/
-const jsonInstruction = "Respond with a single JSON object and nothing else."
-
-/*
 Driver is a contracts.LLM over the Messages API.
 */
 type Driver struct {
@@ -103,7 +98,11 @@ func (d *Driver) Chat(ctx context.Context, req contracts.ChatRequest) (*contract
 		return nil, MapError(err, d.clock.Now())
 	}
 
-	return mapResponse(res, d.clock.Since(started)), nil
+	out := mapResponse(res, d.clock.Since(started))
+	if answer := schemaName(req); answer != "" {
+		asAnswer(out, answer)
+	}
+	return out, nil
 }
 
 /*
@@ -116,7 +115,7 @@ func (d *Driver) Stream(ctx context.Context, req contracts.ChatRequest) (contrac
 		return nil, err
 	}
 
-	stream := newChatStream(d.client.Messages.NewStreaming(ctx, params), d.clock)
+	stream := newChatStream(d.client.Messages.NewStreaming(ctx, params), d.clock, schemaName(req))
 	if err := stream.prime(); err != nil {
 		_ = stream.Close()
 		return nil, err
@@ -150,7 +149,8 @@ func (d *Driver) Capabilities(model string) contracts.LLMCapabilities {
 }
 
 /*
-messageParams maps our request to the SDK's params.
+messageParams maps our request to the SDK's params; a response schema
+becomes one forced tool.
 */
 func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 	maxTokens := req.MaxOutputTokens
@@ -169,9 +169,6 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 		}
 		params.System = append(params.System, sys)
 	}
-	if req.ResponseFormat == contracts.ResponseFormatJSON {
-		params.System = append(params.System, anth.TextBlockParam{Text: jsonInstruction})
-	}
 
 	params.Messages = mapMessages(req.Messages)
 
@@ -182,6 +179,11 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 	params.Tools = tools
 	if len(tools) > 0 && req.ToolChoice == contracts.ToolChoiceNone {
 		params.ToolChoice = anth.ToolChoiceUnionParam{OfNone: &anth.ToolChoiceNoneParam{}}
+	}
+	if req.Schema != nil {
+		if err := applySchema(&params, req); err != nil {
+			return params, err
+		}
 	}
 
 	if req.Temperature != nil && acceptsSampling(req.Model) {

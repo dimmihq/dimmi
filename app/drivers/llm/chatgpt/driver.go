@@ -23,7 +23,6 @@ import (
 	oai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
-	"github.com/openai/openai-go/v3/shared"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/httpclient"
@@ -218,7 +217,7 @@ func (d *Driver) Capabilities(_ string) contracts.LLMCapabilities {
 		Tools:           true,
 		Streaming:       true,
 		SystemPrompt:    true,
-		JSONMode:        true,
+		JSONSchema:      true,
 		PromptCache:     true,
 		ContextTokens:   272_000,
 		MaxOutputTokens: 128_000,
@@ -228,7 +227,8 @@ func (d *Driver) Capabilities(_ string) contracts.LLMCapabilities {
 /*
 responseParams maps our request to the Responses API: system blocks
 join into instructions, messages and tool traffic into input items,
-store always off.
+store always off, and a response schema into a strict json_schema
+text format.
 */
 func responseParams(req contracts.ChatRequest) (responses.ResponseNewParams, error) {
 	params := responses.ResponseNewParams{
@@ -259,9 +259,15 @@ func responseParams(req contracts.ChatRequest) (responses.ResponseNewParams, err
 		params.ToolChoice = responses.ResponseNewParamsToolChoiceUnion{OfToolChoiceMode: oai.Opt(choice)}
 	}
 
-	if req.ResponseFormat == contracts.ResponseFormatJSON {
+	if req.Schema != nil {
+		schema, err := openai.StrictSchema(req.Schema)
+		if err != nil {
+			return params, err
+		}
 		params.Text = responses.ResponseTextConfigParam{Format: responses.ResponseFormatTextConfigUnionParam{
-			OfJSONObject: &shared.ResponseFormatJSONObjectParam{},
+			OfJSONSchema: &responses.ResponseFormatTextJSONSchemaConfigParam{
+				Name: req.Schema.Name, Schema: schema, Strict: oai.Bool(true),
+			},
 		}}
 	}
 

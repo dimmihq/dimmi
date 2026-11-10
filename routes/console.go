@@ -14,7 +14,8 @@
 | In the morning owners of workspaces about to be purged are reminded,
 | and owners of access tokens about to expire are warned. Every hour the
 | auth provider key sets visitors sign in with are fetched again when
-| their copy is six hours old.
+| their copy is six hours old. Every minute the Slack digests whose
+| time came are sent.
 |
 */
 
@@ -43,6 +44,7 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.RefreshSSOMetadataArgs{}).DailyAt("05:10")
 	a.Schedule.Job(jobs.WarnExpiringSSOCertificatesArgs{}).DailyAt("09:15")
 	a.Schedule.Job(jobs.SweepAssignmentQueuesArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.SendNotificationDigestsArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.RemindInvitersArgs{}).DailyAt("09:10")
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()

@@ -22,6 +22,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
@@ -145,4 +146,34 @@ type InboundDeletion struct {
 	ConnectionID     ids.UUID
 	ChannelMessageID string
 	Reason           string
+}
+
+/*
+AgentDrafts is a channel where the team may review the agent before
+the customer reads it. Where the place asks for drafts, the agent's
+answer is kept on its run and handed to the channel, which shows it to
+the team to send, edit or discard.
+*/
+type AgentDrafts interface {
+	/*
+		DraftsFor reports whether the agent drafts, rather than answers,
+		in the conversation.
+	*/
+	DraftsFor(ctx context.Context, workspaceID, conversationID ids.UUID) bool
+
+	/*
+		Drafted hands the channel the run's draft, in the transaction
+		that kept it, so the draft is shown once the run commits.
+	*/
+	Drafted(ctx context.Context, tx *database.Tx, d AgentDraft) error
+}
+
+/*
+AgentDraft names a draft the agent kept: its run and the conversation
+it answers.
+*/
+type AgentDraft struct {
+	WorkspaceID    ids.UUID
+	ConversationID ids.UUID
+	RunID          ids.UUID
 }

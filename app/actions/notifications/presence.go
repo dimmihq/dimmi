@@ -67,10 +67,11 @@ func (p *Presence) Focus(ctx context.Context, m authz.Membership, conversation *
 
 /*
 ErrNothingToReach refuses a test on a channel that cannot reach the
-member: no verified address, or no browser with push on.
+member: no verified address, no browser with push on, or no linked
+Slack user.
 */
 var ErrNothingToReach = fault.New(fault.Invalid, "channel_unreachable",
-	"Nothing can receive that yet: verify your email, or enable push on this browser first.")
+	"Nothing can receive that yet: verify your email, enable push on this browser, or connect Slack first.")
 
 /*
 Test sends the member a test on the channel now.
@@ -85,11 +86,13 @@ func (p *Presence) Test(ctx context.Context, m authz.Membership, channel string)
 	if err != nil || len(r) == 0 {
 		return err
 	}
-	name := map[string]string{ChannelInApp: "database", ChannelEmail: "mail", ChannelPush: "webpush"}[channel]
+	name := map[string]string{
+		ChannelInApp: "database", ChannelEmail: "mail", ChannelPush: "webpush", ChannelSlack: SlackChannelName,
+	}[channel]
 	if name == "" {
-		return fault.New(fault.Invalid, "channel_invalid", "Pick in_app, email or push.").OnField("channel")
+		return fault.New(fault.Invalid, "channel_invalid", "Pick in_app, email, push or slack.").OnField("channel")
 	}
-	if (name == "mail" && r[0].RouteFor(name) == nil) || (name == "webpush" && len(r[0].Push) == 0) {
+	if name != "database" && r[0].RouteFor(name) == nil || (name == "webpush" && len(r[0].Push) == 0) {
 		return ErrNothingToReach
 	}
 	a := &Alert{

@@ -30,6 +30,7 @@ const (
 /*
 Interaction is one button press, menu choice or shortcut. Container and
 Message say where it happened; ResponseURL answers the person who acted.
+View is the form submitted, for a form submission.
 */
 type Interaction struct {
 	Type        string        `json:"type"`
@@ -44,6 +45,7 @@ type Interaction struct {
 	Container   Container     `json:"container"`
 	Message     *Event        `json:"message"`
 	Actions     []BlockAction `json:"actions"`
+	View        *View         `json:"view"`
 }
 
 /*
@@ -74,13 +76,17 @@ type Container struct {
 }
 
 /*
-BlockAction is one pressed button or chosen option.
+BlockAction is one pressed button or chosen option. Selected is the
+option chosen from a menu.
 */
 type BlockAction struct {
 	ActionID string `json:"action_id"`
 	BlockID  string `json:"block_id"`
 	Value    string `json:"value"`
 	ActionTS string `json:"action_ts"`
+	Selected struct {
+		Value string `json:"value"`
+	} `json:"selected_option"`
 }
 
 /*
@@ -90,6 +96,10 @@ func ParseInteraction(raw []byte) (Interaction, error) {
 	var in Interaction
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return in, fmt.Errorf("read slack interaction: %w", err)
+	}
+
+	if in.CallbackID == "" && in.View != nil {
+		in.CallbackID = in.View.CallbackID
 	}
 
 	return in, nil

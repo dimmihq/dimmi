@@ -54,7 +54,7 @@ func BotEvents() []string {
 		"member_joined_channel", "channel_left", "group_left", "channel_archive", "group_archive",
 		"channel_deleted", "group_deleted", "channel_rename", "group_rename", "channel_id_changed",
 		"channel_shared", "channel_unshared", "app_mention", "reaction_added", "reaction_removed",
-		"channel_created", "assistant_thread_started",
+		"channel_created", "assistant_thread_started", "app_home_opened", "agent_session_stopped",
 	}
 }
 
@@ -101,7 +101,7 @@ func Manifest(opts ManifestOptions) map[string]any {
 		"display_information": map[string]any{"name": name, "description": "Customer support by dimmi"},
 		"features": map[string]any{
 			"app_home": map[string]any{
-				"home_tab_enabled": false, "messages_tab_enabled": true, "messages_tab_read_only_enabled": false,
+				"home_tab_enabled": true, "messages_tab_enabled": true, "messages_tab_read_only_enabled": false,
 			},
 			"bot_user": map[string]any{"display_name": cmp.Or(opts.BotName, name), "always_online": true},
 			"shortcuts": []map[string]any{{

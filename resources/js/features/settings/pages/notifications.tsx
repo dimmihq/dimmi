@@ -1,6 +1,6 @@
 /*
  * The member's notification settings: which notifications reach them in
- * the dashboard, by email and by push, this browser's push and the other
+ * the dashboard, by email, by push and in Slack, this browser's push and the other
  * devices it is on, quiet hours on their own clock, a pause, and whether
  * previews and conversations the agent is answering come through. Every
  * change saves at once. A cell that cannot be turned off says so.
@@ -33,8 +33,14 @@ import { enablePush, pushSupport } from "../../notifications/push";
 import { Action, Choice } from "../controls";
 import { Empty, Glyph, Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
+import { SlackDirectSection } from "./slack-direct";
 
-const channelLabels: Record<NotificationChannel, string> = { in_app: "In app", email: "Email", push: "Push" };
+const channelLabels: Record<NotificationChannel, string> = {
+  in_app: "In app",
+  email: "Email",
+  push: "Push",
+  slack: "Slack",
+};
 
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -76,12 +82,13 @@ export function NotificationsSettings() {
       ) : null}
       <Section
         title="What reaches you"
-        description="The bell in the dashboard, email, and push on the browsers you enable."
+        description="The bell in the dashboard, email, push on the browsers you enable, and your Slack DMs."
         action={<Action onPress={() => reset.mutate()}>Reset to defaults</Action>}
       >
         {isPending || !data ? <RowsSkeleton rows={4} /> : <Matrix data={data} onChange={(c) => cells.mutate(c)} />}
       </Section>
       <PushSection workspace={workspace} />
+      <SlackDirectSection workspace={workspace} />
       {data ? <QuietSection settings={data.settings} onChange={(c) => settings.mutate(c)} /> : null}
     </SettingsPage>
   );
@@ -212,7 +219,7 @@ function PushSection({ workspace }: { workspace: string }) {
       ))}
       <Row label="Send a test" description="Check each channel reaches you.">
         <div className="flex flex-wrap gap-2">
-          {(["in_app", "email", "push"] as const).map((channel) => (
+          {(["in_app", "email", "push", "slack"] as const).map((channel) => (
             <Action key={channel} size="xs" onPress={() => test.mutate(channel)}>
               {channelLabels[channel]}
             </Action>

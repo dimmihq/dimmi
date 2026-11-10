@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/integrations"
 	"github.com/dimmihq/dimmi/app/contracts"
 	slackdriver "github.com/dimmihq/dimmi/app/drivers/channel/slack"
@@ -51,42 +52,11 @@ type SharedApp struct {
 }
 
 /*
-RequestClassifier decides whether a top-level message in a room asks
-for support. Rooms whose trigger is ai ask it; without one, they fall
-back to grouping by author.
-*/
-type RequestClassifier interface {
-	/*
-		Classify returns the verdict on the message.
-	*/
-	Classify(ctx context.Context, in ClassifyInput) (RequestVerdict, error)
-}
-
-/*
-ClassifyInput is a message to classify: where it was written and what it
-says, as untrusted text, with how eagerly the room wants requests found.
-*/
-type ClassifyInput struct {
-	WorkspaceID  ids.UUID
-	ConnectionID ids.UUID
-	RoomID       ids.UUID
-	Text         string
-	Sensitivity  string
-}
-
-/*
-RequestVerdict is a classifier's verdict: request, chatter or followup,
-and how sure it is, from 0 to 1.
-*/
-type RequestVerdict struct {
-	Kind       string
-	Confidence float64
-}
-
-/*
 Slack runs the Slack channel. Shared is the install's shared app,
 Classifier the request classifier rooms with the ai trigger use, nil
-when none is set. Revocations reports an uninstall or revoked tokens of
+when none is set, and Judge the comparison of drafts with sent replies,
+nil when none is set. Articles drafts help articles from conversations
+the team solved. Revocations reports an uninstall or revoked tokens of
 a connection made through an installation to the integrations, and
 Scopes is the integrations' scope registry the manifest asks for. AppURL
 is the install's address, for links back.
@@ -108,6 +78,8 @@ type Slack struct {
 	Config       appconfig.SlackChannelConfig
 	Shared       *SharedApp
 	Classifier   RequestClassifier
+	Judge        DraftJudge
+	Articles     *helpcenters.Articles
 	Revocations  *integrations.ApplyProviderRevocation
 	Scopes       *oauth.Registry
 	AppURL       string

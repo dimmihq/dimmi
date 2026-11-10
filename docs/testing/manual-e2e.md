@@ -956,6 +956,18 @@ claims `{"sub":"SUB","iat":now,"exp":now+600}`, key the whole `dmi_idsec_` strin
 | Focus | keep the conversation open in a visible tab | no push or email about it |
 | Test | `POST $B/notification-tests {"channel":"email"}` | 204 and a test mail; push without a device: 422 `channel_unreachable` |
 
+## Slack rooms
+
+`a.jar` is the owner, `$CHN` a Slack connection with the app invited to two channels.
+
+| Flow | Command | Expect |
+|---|---|---|
+| List | `GET $B/channels/$CHN/rooms` | 200, rooms by name with `mode`, `trigger`, `status` and `settings`; a channel the app left stays with `status` `removed` |
+| Change | `PATCH $B/channels/$CHN/rooms/<chr_>` with `{"trigger":"ai","settings":{"agent_mode":"draft","agent_delay_seconds":60}}` | 200 with the new values; settings not sent are kept; `"triage_channel_id":null` drops that one |
+| Team only | `PATCH` with `{"mode":"internal"}` | 200 `trigger` `off`, and it stays `off` whatever trigger is sent later |
+| Bounds | `PATCH` with `{"settings":{"agent_delay_seconds":901}}` | 422 naming `settings.agent_delay_seconds` |
+| Page | `/d/settings/integrations`, Manage Slack, Settings on a channel | the channel's settings save; a removed channel asks to invite @dimmi again |
+
 ## Reporting
 
 Write down every response that differs from the table, with the command and the body. A difference is a bug in

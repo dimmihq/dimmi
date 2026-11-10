@@ -60,6 +60,7 @@ const (
 	PrefixIdentitySecret     Prefix = "isk"
 	PrefixNotification       Prefix = "ntf"
 	PrefixPushSubscription   Prefix = "psub"
+	PrefixDestination        Prefix = "ndst"
 )
 
 /*
@@ -68,6 +69,7 @@ The prefixes of the shared inbox's tables.
 const (
 	PrefixInbox             Prefix = "inbox"
 	PrefixChannelConnection Prefix = "chn"
+	PrefixChannelRoom       Prefix = "chr"
 	PrefixContact           Prefix = "ctc"
 	PrefixCompany           Prefix = "cmp"
 	PrefixConversation      Prefix = "conv"
@@ -219,13 +221,13 @@ func channelPublicIDs() []PublicIDEntry {
 		{PrefixOutboundEmail, "outbound_emails"},
 		{PrefixEmailSuppression, "email_suppressions"},
 		{PrefixEmailAddressTest, "email_address_tests"},
-		{"chr", "channel_rooms"},
+		{PrefixChannelRoom, "channel_rooms"},
 		{"cml", "channel_member_links"},
 		{"cie", "channel_inbound_events"},
 		{"wtp", "whatsapp_templates"},
 		{PrefixNotification, "notifications"},
 		{PrefixPushSubscription, "push_subscriptions"},
-		{"ndst", "notification_destinations"},
+		{PrefixDestination, "notification_destinations"},
 		{"ndlv", "notification_deliveries"},
 	}
 }

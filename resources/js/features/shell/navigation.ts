@@ -39,6 +39,7 @@ import {
   RiNotification3Line,
   RiPlugLine,
   RiPriceTag3Line,
+  RiPuzzle2Line,
   RiQuestionAnswerLine,
   RiRobot2Line,
   RiSettings4Line,
@@ -277,6 +278,13 @@ export const settingsPages = {
     RiPlugLine,
     "/d/settings/connections",
     "Slack, Discord, Telegram, WhatsApp and the other places customers write from.",
+  ),
+  integrations: page(
+    "settings-integrations",
+    "Integrations",
+    RiPuzzle2Line,
+    "/d/settings/integrations",
+    "The tools your team already uses, connected once for every feature.",
   ),
   agent: page(
     "settings-agent",
@@ -525,7 +533,11 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
         pages["conversation-safety"],
       ],
     },
-    { key: "channels", label: "Channels", items: [pages.messenger, pages.email, pages.connections] },
+    {
+      key: "channels",
+      label: "Channels",
+      items: [pages.messenger, pages.email, pages.connections, pages.integrations],
+    },
     { key: "ai", label: "AI", items: [pages.agent, pages.operator, pages.actions, pages["ai-providers"]] },
     {
       key: "content",

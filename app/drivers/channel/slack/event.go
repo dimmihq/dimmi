@@ -22,8 +22,8 @@ import (
 /*
 Event is one Slack event. Message is the new version of an edited
 message and Previous the old one; DeletedTS names a deleted message.
-Item is what a reaction was added to, and Tokens the tokens a
-revocation names.
+Item is what a reaction was added to and ItemUser who wrote it, Tokens
+the tokens a revocation names, and Tab the App Home tab a user opened.
 */
 type Event struct {
 	Type          string          `json:"type"`
@@ -51,6 +51,8 @@ type Event struct {
 	IsExtShared   bool            `json:"is_ext_shared"`
 	Tokens        RevokedTokens   `json:"tokens"`
 	ConnectedTeam string          `json:"connected_team_id"`
+	ItemUser      string          `json:"item_user"`
+	Tab           string          `json:"tab"`
 }
 
 /*

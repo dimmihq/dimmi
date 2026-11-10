@@ -176,8 +176,19 @@ function eventEntry(message: Message, event: TimelineEvent): ThreadEntry {
   if (decided) {
     return { kind: "call", id: message.id, at, iso: message.created_at, call: decided };
   }
+  const closedWhy: Record<string, string> = {
+    source_deleted: "Closed: the customer deleted their message",
+    contact_solved: "Closed: the customer marked it solved",
+  };
+  const closed = event.name === "conversation.closed" ? closedWhy[event.reason ?? ""] : undefined;
 
-  return { kind: "event", id: message.id, at, iso: message.created_at, text: callEventText(event) ?? eventText(event) };
+  return {
+    kind: "event",
+    id: message.id,
+    at,
+    iso: message.created_at,
+    text: closed ?? callEventText(event) ?? eventText(event),
+  };
 }
 
 /*

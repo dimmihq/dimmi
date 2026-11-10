@@ -172,6 +172,22 @@ func request(model string) contracts.ChatRequest {
 }
 
 /*
+verdictSchema is a strict response schema: a closed object with a
+required enum and a required string.
+*/
+func verdictSchema() *contracts.ResponseSchema {
+	return &contracts.ResponseSchema{Name: "verdict", Schema: json.RawMessage(`{
+		"type": "object",
+		"additionalProperties": false,
+		"required": ["label", "reason"],
+		"properties": {
+			"label": {"type": "string", "enum": ["spam", "ham"]},
+			"reason": {"type": "string"}
+		}
+	}`)}
+}
+
+/*
 canceled waits for the context to end, for scripted drivers.
 */
 func canceled(ctx context.Context) error {

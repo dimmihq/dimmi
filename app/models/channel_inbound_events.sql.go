@@ -15,36 +15,39 @@ import (
 
 const createChannelInboundEvent = `-- name: CreateChannelInboundEvent :one
 INSERT INTO channel_inbound_events (
-    workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status,
-    received_at, created_at, updated_at
+    workspace_id, channel_connection_id, integration_installation_id, provider, transport, dedupe_key, serial_key,
+    kind, payload, status, received_at, created_at, updated_at
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10::timestamptz, $10::timestamptz, $10::timestamptz
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11::timestamptz, $11::timestamptz, $11::timestamptz
 )
 ON CONFLICT (workspace_id, provider, dedupe_key) DO NOTHING
-RETURNING id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at
+RETURNING id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at, integration_installation_id
 `
 
 type CreateChannelInboundEventParams struct {
-	WorkspaceID         ids.UUID        `json:"workspace_id"`
-	ChannelConnectionID ids.UUID        `json:"channel_connection_id"`
-	Provider            string          `json:"provider"`
-	Transport           string          `json:"transport"`
-	DedupeKey           string          `json:"dedupe_key"`
-	SerialKey           *string         `json:"serial_key"`
-	Kind                string          `json:"kind"`
-	Payload             json.RawMessage `json:"payload"`
-	Status              string          `json:"status"`
-	Now                 time.Time       `json:"now"`
+	WorkspaceID               ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID       *ids.UUID       `json:"channel_connection_id"`
+	IntegrationInstallationID *ids.UUID       `json:"integration_installation_id"`
+	Provider                  string          `json:"provider"`
+	Transport                 string          `json:"transport"`
+	DedupeKey                 string          `json:"dedupe_key"`
+	SerialKey                 *string         `json:"serial_key"`
+	Kind                      string          `json:"kind"`
+	Payload                   json.RawMessage `json:"payload"`
+	Status                    string          `json:"status"`
+	Now                       time.Time       `json:"now"`
 }
 
-// CreateChannelInboundEvent keeps a verified delivery. One the provider
-// delivered before returns no row.
+// CreateChannelInboundEvent keeps a verified delivery, for its connection
+// or, without one, its installation. One the provider delivered before
+// returns no row.
 func (q *Queries) CreateChannelInboundEvent(ctx context.Context, arg CreateChannelInboundEventParams) (ChannelInboundEvent, error) {
 	row := q.db.QueryRow(ctx, createChannelInboundEvent,
 		arg.WorkspaceID,
 		arg.ChannelConnectionID,
+		arg.IntegrationInstallationID,
 		arg.Provider,
 		arg.Transport,
 		arg.DedupeKey,
@@ -72,12 +75,13 @@ func (q *Queries) CreateChannelInboundEvent(ctx context.Context, arg CreateChann
 		&i.ProcessedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IntegrationInstallationID,
 	)
 	return i, err
 }
 
 const findChannelInboundEvent = `-- name: FindChannelInboundEvent :one
-SELECT id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at FROM channel_inbound_events WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at, integration_installation_id FROM channel_inbound_events WHERE workspace_id = $1 AND id = $2
 `
 
 type FindChannelInboundEventParams struct {
@@ -106,6 +110,7 @@ func (q *Queries) FindChannelInboundEvent(ctx context.Context, arg FindChannelIn
 		&i.ProcessedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IntegrationInstallationID,
 	)
 	return i, err
 }
@@ -140,7 +145,7 @@ const startChannelInboundEvent = `-- name: StartChannelInboundEvent :one
 UPDATE channel_inbound_events
 SET attempts = attempts + 1, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND status IN ('pending', 'failed')
-RETURNING id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at
+RETURNING id, workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status, attempts, error, received_at, processed_at, created_at, updated_at, integration_installation_id
 `
 
 type StartChannelInboundEventParams struct {
@@ -171,6 +176,7 @@ func (q *Queries) StartChannelInboundEvent(ctx context.Context, arg StartChannel
 		&i.ProcessedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IntegrationInstallationID,
 	)
 	return i, err
 }

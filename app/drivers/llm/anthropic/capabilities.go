@@ -76,7 +76,7 @@ func Capabilities(id string) contracts.LLMCapabilities {
 		Tools:           true,
 		Streaming:       true,
 		SystemPrompt:    true,
-		JSONMode:        false,
+		JSONSchema:      true,
 		PromptCache:     true,
 		ContextTokens:   m.context,
 		MaxOutputTokens: m.maxOutput,

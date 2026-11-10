@@ -38,8 +38,8 @@ const RecipientType = "workspace_member"
 
 /*
 Recipient is a member a notification reaches, with their user's
-address, name, language and time zone, and the browsers they enabled
-push on.
+address, name, language and time zone, the browsers they enabled push
+on, and their Slack direct message when they linked their Slack user.
 */
 type Recipient struct {
 	WorkspaceID   ids.UUID
@@ -52,6 +52,7 @@ type Recipient struct {
 	Timezone      string
 	EmailVerified bool
 	Push          []webpush.Subscription
+	Slack         *SlackRoute
 }
 
 /*
@@ -71,8 +72,8 @@ func (r Recipient) Locale() string { return r.Language }
 
 /*
 RouteFor returns where each channel reaches the member: a verified
-address for mail, their browsers for push, their own channel for live
-updates.
+address for mail, their browsers for push, their Slack direct message,
+their own channel for live updates.
 */
 func (r Recipient) RouteFor(channel string) any {
 	switch channel {
@@ -83,6 +84,11 @@ func (r Recipient) RouteFor(channel string) any {
 		return r.Email
 	case "webpush":
 		return r.Push
+	case SlackChannelName:
+		if r.Slack == nil {
+			return nil
+		}
+		return r.Slack
 	case "broadcast":
 		return appbroadcasting.MemberChannel(r.MemberID)
 	}
@@ -148,7 +154,7 @@ func (r *Recipients) Resolve(ctx context.Context, key string) (fnotify.Notifiabl
 
 /*
 Load returns the active members among the ids, every active member when
-none are given, with their push subscriptions.
+none are given, with their push subscriptions and Slack direct message.
 */
 func (r *Recipients) Load(ctx context.Context, q *models.Queries, ws ids.UUID, memberIDs []ids.UUID,
 ) ([]Recipient, error) {
@@ -167,10 +173,14 @@ func (r *Recipients) Load(ctx context.Context, q *models.Queries, ws ids.UUID, m
 		if err != nil {
 			return nil, err
 		}
+		slack, _, err := memberSlack(ctx, q, row.WorkspaceID, row.ID)
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, Recipient{
 			WorkspaceID: row.WorkspaceID, MemberID: row.ID, UserID: row.UserID, Role: row.Role, Email: row.Email,
 			Name: row.Name, Language: deref(row.Locale), Timezone: deref(row.Timezone),
-			EmailVerified: row.EmailVerifiedAt != nil, Push: subs,
+			EmailVerified: row.EmailVerifiedAt != nil, Push: subs, Slack: slack,
 		})
 	}
 	return out, nil

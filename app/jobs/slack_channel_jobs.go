@@ -6,8 +6,9 @@
 | Work on Slack that follows something done in the inbox, run after the
 | change committed so the inbox never waits on Slack: the closed mark on
 | a thread, the buttons taken off an answer once a teammate replied, a
-| deleted reply deleted in Slack too. And the list of channels the bot
-| is in, refreshed when a connection is made or asked for.
+| deleted reply deleted in Slack too, the team's triage cards, drafts and
+| threads. And the list of channels the bot is in, refreshed when a
+| connection is made or asked for.
 |
 */
 
@@ -32,23 +33,33 @@ const (
 )
 
 /*
-The effects an inbox change has on Slack.
+The effects an inbox change has on Slack: the closed mark, buttons off
+answered answers, a deleted reply, the triage card brought up to date, a
+note echoed into the team's threads, a draft shown to the team, the
+delayed auto-reply and the comparison of a draft with the reply sent.
 */
 const (
-	SlackEffectClosed   = "closed"
-	SlackEffectReopened = "reopened"
-	SlackEffectAnswered = "answered"
-	SlackEffectDeleted  = "deleted"
+	SlackEffectClosed    = "closed"
+	SlackEffectReopened  = "reopened"
+	SlackEffectAnswered  = "answered"
+	SlackEffectDeleted   = "deleted"
+	SlackEffectTriage    = "triage"
+	SlackEffectNote      = "note"
+	SlackEffectDrafted   = "drafted"
+	SlackEffectAutoReply = "auto_reply"
+	SlackEffectJudge     = "judge"
 )
 
 /*
 ApplySlackEffectArgs names the change: what it does on Slack, the
-conversation, and the message it is about when it is about one.
+conversation, the message it is about when it is about one, and the
+agent's run for a draft.
 */
 type ApplySlackEffectArgs struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
 	ConversationID ids.UUID  `json:"conversation_id"`
 	MessageID      *ids.UUID `json:"message_id,omitempty"`
+	RunID          *ids.UUID `json:"run_id,omitempty"`
 	Effect         string    `json:"effect"`
 }
 

@@ -7,7 +7,8 @@
 | deltas pass straight through, a tool call is emitted when its block
 | closes and its input is whole, usage and the stop reason close the
 | stream. A stream the provider cuts before its stop event is an
-| error, never a silent end.
+| error, never a silent end. When the request asked for a typed
+| answer, the forced tool's input arrives as text, never as a call.
 |
 */
 
@@ -27,12 +28,15 @@ import (
 )
 
 /*
-chatStream replays Anthropic events as contract events.
+chatStream replays Anthropic events as contract events. Its answer
+field names the forced tool of a typed answer, empty when there is
+none.
 */
 type chatStream struct {
 	mu     sync.Mutex
 	stream *ssestream.Stream[anth.MessageStreamEventUnion]
 	clock  clock.Clock
+	answer string
 	msg    anth.Message
 	pend   []contracts.StreamEvent
 	done   bool
@@ -41,8 +45,10 @@ type chatStream struct {
 /*
 newChatStream wraps the SDK stream.
 */
-func newChatStream(stream *ssestream.Stream[anth.MessageStreamEventUnion], clk clock.Clock) *chatStream {
-	return &chatStream{stream: stream, clock: clk}
+func newChatStream(
+	stream *ssestream.Stream[anth.MessageStreamEventUnion], clk clock.Clock, answer string,
+) *chatStream {
+	return &chatStream{stream: stream, clock: clk, answer: answer}
 }
 
 /*
@@ -102,25 +108,42 @@ handle queues the contract events one SDK event carries.
 func (s *chatStream) handle(event anth.MessageStreamEventUnion) {
 	switch event.Type {
 	case "content_block_delta":
-		if event.Delta.Type == "text_delta" && event.Delta.Text != "" {
+		if event.Delta.Type == "text_delta" && event.Delta.Text != "" && s.answer == "" {
 			s.pend = append(s.pend, contracts.StreamEvent{
 				Kind: contracts.StreamEventTextDelta, Text: event.Delta.Text,
 			})
 		}
 	case "content_block_stop":
-		block := s.msg.Content[event.Index]
-		if block.Type == "tool_use" {
-			call := toolCall(block)
-			s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventToolCallDone, ToolCall: &call})
-		}
+		s.blockDone(s.msg.Content[event.Index])
 	case "message_stop":
 		usage := usageOf(s.msg.Usage)
+		stop := mapStop(s.msg.StopReason)
+		if s.answer != "" && stop == contracts.StopReasonToolUse {
+			stop = contracts.StopReasonEnd
+		}
 		s.pend = append(s.pend,
 			contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: &usage},
-			contracts.StreamEvent{Kind: contracts.StreamEventDone, StopReason: mapStop(s.msg.StopReason)},
+			contracts.StreamEvent{Kind: contracts.StreamEventDone, StopReason: stop},
 		)
 		s.done = true
 	}
+}
+
+/*
+blockDone queues a finished tool call, or for a typed answer the forced
+tool's input as text.
+*/
+func (s *chatStream) blockDone(block anth.ContentBlockUnion) {
+	if block.Type != "tool_use" {
+		return
+	}
+	call := toolCall(block)
+	if s.answer != "" {
+		text := string(call.Arguments)
+		s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventTextDelta, Text: text})
+		return
+	}
+	s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventToolCallDone, ToolCall: &call})
 }
 
 /*

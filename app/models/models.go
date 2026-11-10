@@ -248,6 +248,9 @@ type AiRun struct {
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
 	TriggerActionCallID *ids.UUID       `json:"trigger_action_call_id"`
+	DraftBody           *string         `json:"draft_body"`
+	FeedbackAt          *time.Time      `json:"feedback_at"`
+	ShadowAgreed        *bool           `json:"shadow_agreed"`
 }
 
 type AiRunStep struct {
@@ -551,23 +554,38 @@ type ChannelConnection struct {
 	IntegrationInstallationID *ids.UUID         `json:"integration_installation_id"`
 }
 
+type ChannelConversationPost struct {
+	ID                  ids.UUID  `json:"id"`
+	WorkspaceID         ids.UUID  `json:"workspace_id"`
+	ChannelConnectionID ids.UUID  `json:"channel_connection_id"`
+	ConversationID      ids.UUID  `json:"conversation_id"`
+	Kind                string    `json:"kind"`
+	ExternalChannel     string    `json:"external_channel"`
+	ExternalTs          string    `json:"external_ts"`
+	RunID               *ids.UUID `json:"run_id"`
+	Status              string    `json:"status"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
 type ChannelInboundEvent struct {
-	ID                  ids.UUID        `json:"id"`
-	WorkspaceID         ids.UUID        `json:"workspace_id"`
-	ChannelConnectionID ids.UUID        `json:"channel_connection_id"`
-	Provider            string          `json:"provider"`
-	Transport           string          `json:"transport"`
-	DedupeKey           string          `json:"dedupe_key"`
-	SerialKey           *string         `json:"serial_key"`
-	Kind                string          `json:"kind"`
-	Payload             json.RawMessage `json:"payload"`
-	Status              string          `json:"status"`
-	Attempts            int32           `json:"attempts"`
-	Error               *string         `json:"error"`
-	ReceivedAt          time.Time       `json:"received_at"`
-	ProcessedAt         *time.Time      `json:"processed_at"`
-	CreatedAt           time.Time       `json:"created_at"`
-	UpdatedAt           time.Time       `json:"updated_at"`
+	ID                        ids.UUID        `json:"id"`
+	WorkspaceID               ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID       *ids.UUID       `json:"channel_connection_id"`
+	Provider                  string          `json:"provider"`
+	Transport                 string          `json:"transport"`
+	DedupeKey                 string          `json:"dedupe_key"`
+	SerialKey                 *string         `json:"serial_key"`
+	Kind                      string          `json:"kind"`
+	Payload                   json.RawMessage `json:"payload"`
+	Status                    string          `json:"status"`
+	Attempts                  int32           `json:"attempts"`
+	Error                     *string         `json:"error"`
+	ReceivedAt                time.Time       `json:"received_at"`
+	ProcessedAt               *time.Time      `json:"processed_at"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+	IntegrationInstallationID *ids.UUID       `json:"integration_installation_id"`
 }
 
 type ChannelMemberLink struct {
@@ -1383,6 +1401,32 @@ type Notification struct {
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
+type NotificationDestination struct {
+	ID                        ids.UUID        `json:"id"`
+	WorkspaceID               ids.UUID        `json:"workspace_id"`
+	Scope                     string          `json:"scope"`
+	WorkspaceMemberID         *ids.UUID       `json:"workspace_member_id"`
+	Type                      string          `json:"type"`
+	IntegrationInstallationID ids.UUID        `json:"integration_installation_id"`
+	Name                      string          `json:"name"`
+	Config                    json.RawMessage `json:"config"`
+	Triggers                  []string        `json:"triggers"`
+	InboxIds                  []ids.UUID      `json:"inbox_ids"`
+	IncludeAiHandled          bool            `json:"include_ai_handled"`
+	ShowPreviews              bool            `json:"show_previews"`
+	Digests                   []string        `json:"digests"`
+	DigestTime                string          `json:"digest_time"`
+	NextDigestAt              *time.Time      `json:"next_digest_at"`
+	Status                    string          `json:"status"`
+	LastErrorCode             *string         `json:"last_error_code"`
+	LastError                 *string         `json:"last_error"`
+	LastErrorAt               *time.Time      `json:"last_error_at"`
+	LastDeliveredAt           *time.Time      `json:"last_delivered_at"`
+	CreatedByMemberID         *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+}
+
 type NotificationPreference struct {
 	ID                ids.UUID  `json:"id"`
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
@@ -1546,6 +1590,16 @@ type OperatorSetting struct {
 	Model           *string         `json:"model"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
+type OperatorSlackThread struct {
+	ID                  ids.UUID  `json:"id"`
+	WorkspaceID         ids.UUID  `json:"workspace_id"`
+	OperatorThreadID    ids.UUID  `json:"operator_thread_id"`
+	ChannelConnectionID ids.UUID  `json:"channel_connection_id"`
+	SlackChannel        string    `json:"slack_channel"`
+	ThreadTs            string    `json:"thread_ts"`
+	CreatedAt           time.Time `json:"created_at"`
 }
 
 type OperatorThread struct {

@@ -174,13 +174,14 @@ type LLMModel struct {
 
 /*
 LLMCapabilities says what a model supports, from the driver's static
-table plus connection overrides.
+table plus connection overrides. JSONSchema means the provider enforces
+a request's ResponseSchema, so the answer is typed.
 */
 type LLMCapabilities struct {
 	Tools           bool
 	Streaming       bool
 	SystemPrompt    bool
-	JSONMode        bool
+	JSONSchema      bool
 	PromptCache     bool
 	ContextTokens   int
 	MaxOutputTokens int

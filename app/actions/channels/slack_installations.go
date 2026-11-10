@@ -60,7 +60,8 @@ func (s *Slack) ListenToInstallations(d *events.Dispatcher) {
 
 /*
 Installed makes or brings back the Slack connection of an installation
-that connected for channels.
+that connected for channels, then reads its rooms and checks its
+channels against the auto-join rules.
 */
 func (s *Slack) Installed(ctx context.Context, e appevents.IntegrationConnected) error {
 	ctx = tenancy.With(ctx, e.WorkspaceID.String())
@@ -85,7 +86,13 @@ func (s *Slack) Installed(ctx context.Context, e appevents.IntegrationConnected)
 			return err
 		}
 
-		return s.Queue.PushTx(ctx, tx, jobs.SyncSlackRoomsArgs{WorkspaceID: conn.WorkspaceID, ConnectionID: conn.ID})
+		if err := s.Queue.PushTx(ctx, tx, jobs.SyncSlackRoomsArgs{
+			WorkspaceID: conn.WorkspaceID, ConnectionID: conn.ID,
+		}); err != nil {
+			return err
+		}
+
+		return s.Queue.PushTx(ctx, tx, jobs.JoinSlackChannelsArgs{WorkspaceID: conn.WorkspaceID, ConnectionID: conn.ID})
 	})
 }
 

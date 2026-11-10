@@ -1,0 +1,5 @@
+{"ok": true, "channels": [
+  {"id": "C0EXTACME", "name": "ext-acme", "is_channel": true, "is_private": false, "is_ext_shared": true, "is_member": false},
+  {"id": "C0EXTPRIV", "name": "ext-private", "is_channel": true, "is_private": true, "is_member": false},
+  {"id": "C0GENERAL", "name": "general", "is_channel": true, "is_private": false, "is_member": false}
+], "response_metadata": {"next_cursor": ""}}

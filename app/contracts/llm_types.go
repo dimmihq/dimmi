@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | The outbound side of the contract: a request is one system block
-| plus a transcript, optionally with tools, a response format and
+| plus a transcript, optionally with tools, a response schema and
 | per-call timeouts.
 |
 */
@@ -18,6 +18,9 @@ ChatRequest is one completion call. Static system blocks come first so
 providers that cache prompts can reuse them; dynamic context comes
 last. Effort asks a reasoning model to think less or more; empty
 leaves the provider's default, and models that do not reason ignore it.
+Schema, when set, makes the answer one JSON object the provider
+enforces; a driver that cannot enforce it refuses the call with
+ErrSchemaUnsupported and never falls back to asking in the prompt.
 */
 type ChatRequest struct {
 	Model           string
@@ -28,7 +31,7 @@ type ChatRequest struct {
 	MaxOutputTokens int
 	Temperature     *float64
 	StopSequences   []string
-	ResponseFormat  ResponseFormat
+	Schema          *ResponseSchema
 	CacheHint       bool
 	Metadata        map[string]string
 	Timeout         StepTimeouts

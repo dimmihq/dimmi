@@ -1,12 +1,13 @@
 -- name: CreateChannelInboundEvent :one
--- CreateChannelInboundEvent keeps a verified delivery. One the provider
--- delivered before returns no row.
+-- CreateChannelInboundEvent keeps a verified delivery, for its connection
+-- or, without one, its installation. One the provider delivered before
+-- returns no row.
 INSERT INTO channel_inbound_events (
-    workspace_id, channel_connection_id, provider, transport, dedupe_key, serial_key, kind, payload, status,
-    received_at, created_at, updated_at
+    workspace_id, channel_connection_id, integration_installation_id, provider, transport, dedupe_key, serial_key,
+    kind, payload, status, received_at, created_at, updated_at
 )
 VALUES (
-    @workspace_id, @channel_connection_id, @provider, @transport, @dedupe_key, sqlc.narg(serial_key), @kind,
+    @workspace_id, sqlc.narg(channel_connection_id), sqlc.narg(integration_installation_id), @provider, @transport, @dedupe_key, sqlc.narg(serial_key), @kind,
     @payload, @status, @now::timestamptz, @now::timestamptz, @now::timestamptz
 )
 ON CONFLICT (workspace_id, provider, dedupe_key) DO NOTHING

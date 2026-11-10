@@ -27,13 +27,24 @@ const (
 	ChannelInApp = "in_app"
 	ChannelEmail = "email"
 	ChannelPush  = "push"
+	ChannelSlack = "slack"
 )
 
 /*
-Channels lists the channels in the order the settings show them.
+Channels lists the channels in the order the settings show them. Slack
+only reaches a member who linked their Slack user.
 */
 func Channels() []string {
-	return []string{ChannelInApp, ChannelEmail, ChannelPush}
+	return []string{ChannelInApp, ChannelEmail, ChannelPush, ChannelSlack}
+}
+
+/*
+DestinationTriggers are the triggers a Slack channel can hear about.
+*/
+func DestinationTriggers() []string {
+	return []string{
+		TriggerNewConversation, TriggerCustomerReplied, TriggerAssigned, TriggerHandoff, TriggerSnoozeExpired,
+	}
 }
 
 /*
@@ -75,28 +86,28 @@ func Triggers() []Trigger {
 		{
 			Key: TriggerNewConversation, Label: "New conversations",
 			Description: "A customer starts a conversation you can see that nobody holds yet.",
-			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush), EmailDelay: time.Minute,
+			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush, ChannelSlack), EmailDelay: time.Minute,
 		},
 		{
 			Key: TriggerAssigned, Label: "Assigned to you",
 			Description: "Someone gives you a conversation.",
-			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush), EmailDelay: time.Minute,
+			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush, ChannelSlack), EmailDelay: time.Minute,
 		},
 		{
 			Key: TriggerCustomerReplied, Label: "Customer replies",
 			Description: "A customer writes again in a conversation you hold.",
-			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush), EmailDelay: 3 * time.Minute,
+			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush, ChannelSlack), EmailDelay: 3 * time.Minute,
 			PushDelay: 10 * time.Second,
 		},
 		{
 			Key: TriggerMentioned, Label: "Mentions",
 			Description: "A teammate mentions you in a note.",
-			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush), EmailDelay: time.Minute,
+			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush, ChannelSlack), EmailDelay: time.Minute,
 		},
 		{
 			Key: TriggerHandoff, Label: "Handed over by the agent",
 			Description: "The dimmi agent hands a conversation to the team.",
-			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush),
+			Defaults:    on(ChannelInApp, ChannelEmail, ChannelPush, ChannelSlack),
 		},
 		{
 			Key: TriggerApprovalRequired, Label: "Actions waiting for approval",

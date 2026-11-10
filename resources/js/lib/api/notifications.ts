@@ -9,7 +9,7 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { realtimeKeys } from "../realtime/keys";
 import { request, requestBody } from "./client";
 
-export type NotificationChannel = "in_app" | "email" | "push";
+export type NotificationChannel = "in_app" | "email" | "push" | "slack";
 
 export interface MemberNotification {
   id: string;

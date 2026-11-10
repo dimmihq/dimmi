@@ -134,7 +134,7 @@ type connectionConfig struct {
 	MaxTokensField      string `json:"max_tokens_field"`
 	SupportsTools       *bool  `json:"supports_tools"`
 	SupportsStreamUsage *bool  `json:"supports_stream_usage"`
-	JSONMode            *bool  `json:"json_mode"`
+	JSONSchema          *bool  `json:"json_schema"`
 	ContextTokens       int    `json:"context_tokens"`
 	MaxOutputTokens     int    `json:"max_output_tokens"`
 }
@@ -163,8 +163,8 @@ func (c connectionConfig) compat() openaicompat.Config {
 	if c.SupportsStreamUsage != nil {
 		out.SupportsStreamUsage = *c.SupportsStreamUsage
 	}
-	if c.JSONMode != nil {
-		out.JSONMode = *c.JSONMode
+	if c.JSONSchema != nil {
+		out.JSONSchema = *c.JSONSchema
 	}
 	out.ContextTokens = c.ContextTokens
 	out.MaxOutputTokens = c.MaxOutputTokens

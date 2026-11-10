@@ -13,6 +13,63 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const changeChannelRoomSettings = `-- name: ChangeChannelRoomSettings :one
+UPDATE channel_rooms
+SET mode = coalesce($1, mode), trigger = coalesce($2, trigger),
+    settings = (settings || $3::jsonb) - $4::text[], updated_at = $5::timestamptz
+WHERE workspace_id = $6 AND channel_connection_id = $7 AND id = $8
+RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at
+`
+
+type ChangeChannelRoomSettingsParams struct {
+	Mode                *string         `json:"mode"`
+	Trigger             *string         `json:"trigger"`
+	Set                 json.RawMessage `json:"set"`
+	Unset               []string        `json:"unset"`
+	Now                 time.Time       `json:"now"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID ids.UUID        `json:"channel_connection_id"`
+	ID                  ids.UUID        `json:"id"`
+}
+
+// ChangeChannelRoomSettings changes a room's mode and trigger, each kept
+// when not given, and merges settings into its own: keys in set take the
+// new value, keys in unset are dropped, every other key stays.
+func (q *Queries) ChangeChannelRoomSettings(ctx context.Context, arg ChangeChannelRoomSettingsParams) (ChannelRoom, error) {
+	row := q.db.QueryRow(ctx, changeChannelRoomSettings,
+		arg.Mode,
+		arg.Trigger,
+		arg.Set,
+		arg.Unset,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ChannelConnectionID,
+		arg.ID,
+	)
+	var i ChannelRoom
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ChannelConnectionID,
+		&i.Kind,
+		&i.ExternalID,
+		&i.Name,
+		&i.Status,
+		&i.Mode,
+		&i.Trigger,
+		&i.AgentEnabled,
+		&i.CompanyID,
+		&i.Settings,
+		&i.IsSharedExternal,
+		&i.LastError,
+		&i.LastSeenEventAt,
+		&i.RemovedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const findChannelRoom = `-- name: FindChannelRoom :one
 SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at FROM channel_rooms WHERE workspace_id = $1 AND id = $2
 `

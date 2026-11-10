@@ -7,7 +7,8 @@
 | or a hosted gateway — answers through this driver. It shares the
 | OpenAI mapping and only differs in what the connection supplies: a
 | base URL, an optional key, and the quirks the key's config notes,
-| such as the max-tokens field the server reads or a missing JSON mode.
+| such as the max-tokens field the server reads or whether it enforces
+| a response schema.
 |
 */
 
@@ -27,29 +28,28 @@ import (
 /*
 Config carries the connection's quirks: which max-tokens field the
 server honors ("max_tokens" or "max_completion_tokens"), whether
-tools work, whether usage arrives inside a stream, whether a native
-JSON mode exists, and the context window when the connection knows
-it.
+tools work, whether usage arrives inside a stream, whether the server
+enforces a strict json_schema response format, and the context window
+when the connection knows it.
 */
 type Config struct {
 	MaxTokensField      string
 	SupportsTools       bool
 	SupportsStreamUsage bool
-	JSONMode            bool
+	JSONSchema          bool
 	ContextTokens       int
 	MaxOutputTokens     int
 }
 
 /*
 DefaultConfig is what an unknown compatible server is assumed to do:
-the legacy max_tokens field every server reads, tools, stream usage
-and a JSON mode, each switchable from the connection's config.
+the legacy max_tokens field every server reads, tools and stream
+usage, each switchable from the connection's config. Schema
+enforcement is off until the connection declares it: many servers
+accept json_schema and never check the answer against it.
 */
 func DefaultConfig() Config {
-	return Config{
-		MaxTokensField: openai.MaxTokensLegacy, SupportsTools: true,
-		SupportsStreamUsage: true, JSONMode: true,
-	}
+	return Config{MaxTokensField: openai.MaxTokensLegacy, SupportsTools: true, SupportsStreamUsage: true}
 }
 
 /*
@@ -84,8 +84,8 @@ func New(o Options) *Driver {
 	return &Driver{Driver: openai.New(openai.Options{
 		Provider: o.Provider, BaseURL: o.BaseURL, APIKey: o.APIKey, Headers: o.Headers,
 		HTTP: o.HTTP, Clock: o.Clock, MaxTokensField: cfg.MaxTokensField,
-		NoStreamUsage: !cfg.SupportsStreamUsage, NoJSONMode: !cfg.JSONMode,
-		Capabilities: func(model string) contracts.LLMCapabilities { return capabilities(cfg, model) },
+		NoStreamUsage: !cfg.SupportsStreamUsage,
+		Capabilities:  func(model string) contracts.LLMCapabilities { return capabilities(cfg, model) },
 	})}
 }
 
@@ -110,7 +110,7 @@ base row.
 */
 func capabilities(cfg Config, _ string) contracts.LLMCapabilities {
 	caps := contracts.LLMCapabilities{
-		Tools: cfg.SupportsTools, Streaming: true, SystemPrompt: true, JSONMode: cfg.JSONMode,
+		Tools: cfg.SupportsTools, Streaming: true, SystemPrompt: true, JSONSchema: cfg.JSONSchema,
 		ContextTokens: 128_000, MaxOutputTokens: 8_192,
 	}
 	if cfg.ContextTokens > 0 {

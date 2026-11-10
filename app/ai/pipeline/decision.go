@@ -30,6 +30,7 @@ const (
 	outcomeSkipped    = "skipped"
 	outcomeSuperseded = "superseded"
 	outcomeError      = "error"
+	outcomeDrafted    = "drafted"
 )
 
 /*

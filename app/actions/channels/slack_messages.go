@@ -21,7 +21,9 @@
 | back too.
 |
 | A direct message with the app is one private conversation at a time,
-| and a teammate writing to their own app is a test.
+| and a teammate writing to their own app is a test. The team's own
+| places, its internal rooms and the threads under its triage cards and
+| discussions, follow their own rules.
 |
 */
 
@@ -85,8 +87,8 @@ func (s *Slack) onMessage(ctx context.Context, ev SlackEvent) (bool, error) {
 	}
 
 	room, ok, err := s.watchedRoom(ctx, ev.Connection, e.ChannelID())
-	if err != nil || !ok || room.Mode == string(enums.RoomModeInternal) {
-		return false, err
+	if handled, done, teamErr := s.teamMessage(ctx, ev, room); err != nil || done || teamErr != nil || !ok {
+		return handled, errors.Join(err, teamErr)
 	}
 
 	a, err := s.classify(ctx, ev.Connection, &room, e.User)
@@ -172,6 +174,7 @@ func (s *Slack) teammateReply(ctx context.Context, in ingestion) (bool, error) {
 	if in.author.memberID != nil {
 		in.echo = true
 		_, ok, err := s.ingest(ctx, in)
+		s.explainSilence(ctx, in)
 
 		return ok, err
 	}

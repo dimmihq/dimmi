@@ -69,7 +69,10 @@ func RegisterSlack(r *Registry, client *httpclient.Client) {
 		User: []string{"chat:write", "reactions:write"},
 	})
 	r.RegisterScopes(name, FeatureNotifications, Scopes{
-		Bot: []string{"chat:write", "chat:write.public", "im:write", "users:read", "users:read.email"},
+		Bot: []string{
+			"chat:write", "chat:write.public", "im:write", "users:read", "users:read.email", "channels:read",
+			"groups:read",
+		},
 	})
 	r.RegisterScopes(name, FeatureOperator, Scopes{
 		Bot: []string{"app_mentions:read", "im:history", "assistant:write"},

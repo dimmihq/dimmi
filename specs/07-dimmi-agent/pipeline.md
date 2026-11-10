@@ -270,6 +270,10 @@ Delta payload (`widget_contact:{ctc}` and `conversation:{conv}`):
 | email/chat full reply after inbound | 5 s | 20 s |
 Measured by `dimmi_ai_first_token_seconds`, `dimmi_ai_run_duration_seconds`. Provider latency dominates; budget enforced only on our stages in CI benchmark (fake LLM with zero latency: pipeline overhead p95 under 120 ms).
 
+## Structured answers
+
+Rule (owner decision 2026-11-10): any call that needs data back from a model (classify, request detection, judge, verdicts, triage labels) is a JSON Schema call the provider enforces: `ChatRequest.Schema` (strict `json_schema` on OpenAI-family and compatible providers, forced tool on Anthropic). Never free text, never plain JSON mode, never fence stripping or regex. Schemas: every property required, `additionalProperties: false`, enums for closed sets. A model without the `JSONSchema` capability is not asked: the caller falls back to rules. Verdict-style calls default to a GPT-family model on the built-in provider for schema reliability.
+
 ## Prompts as files
 
 - Location: `resources/prompts/agent/<version>/` with `system.md`, `classify.md`, `answer_user.md`, `verify.md`, `summarize_handoff.md`, `translate.md`, `tones/{friendly,professional,concise}.md`, `CHANGELOG.md`. Version = date string (`2026-11-01`). Embedded via `go:embed`.

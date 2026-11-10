@@ -72,7 +72,7 @@ func TestChatGPTDriver(t *testing.T) {
 		temp := 0.3
 		req := toolTurns(request("gpt-6.1-sol"))
 		req.Temperature, req.MaxOutputTokens = &temp, 500
-		req.ResponseFormat = contracts.ResponseFormatJSON
+		req.Schema = verdictSchema()
 		req.Metadata = map[string]string{"session_id": "conv_1"}
 		stream, err := drv.Stream(t.Context(), req)
 		require.NoError(t, err)
@@ -92,7 +92,11 @@ func TestChatGPTDriver(t *testing.T) {
 		assert.NotContains(t, sent, "max_output_tokens")
 		assert.NotContains(t, sent, "temperature")
 		assert.Equal(t, "auto", sent["tool_choice"])
-		assert.Equal(t, map[string]any{"format": map[string]any{"type": "json_object"}}, sent["text"])
+		format := object(object(sent["text"])["format"])
+		assert.Equal(t, "json_schema", format["type"])
+		assert.Equal(t, "verdict", format["name"])
+		assert.Equal(t, true, format["strict"])
+		assert.Equal(t, "object", object(format["schema"])["type"])
 		input := list(sent["input"])
 		require.Len(t, input, 3)
 		assert.Equal(t, "function_call", object(input[1])["type"])

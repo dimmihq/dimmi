@@ -49,6 +49,7 @@ type run struct {
 	changes  changeSet
 	actions  actionState
 	followed bool
+	draft    bool
 }
 
 /*
@@ -133,7 +134,7 @@ func (r *Runner) start(ctx context.Context, tx *database.Tx, st *run) (*run, *Re
 	}
 
 	st.rec = r.newRecorder(row)
-	st.gate = r.gate(e, st.settings)
+	st.gate = inDelay(r.gate(e, st.settings), st.args)
 
 	if st.gate != nil && st.gate.outcome == outcomeSkipped {
 		if err := r.finishRun(ctx, tx, st, st.gate); err != nil {
