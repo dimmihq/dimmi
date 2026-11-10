@@ -14,7 +14,7 @@ export const AI_SCHEDULES = ["always", "outside_office_hours", "inside_office_ho
 export const AI_ASSIGNED_BEHAVIORS = ["skip_when_human_active", "never_when_assigned", "always"] as const;
 export const AI_UNKNOWN_BEHAVIORS = ["offer_handoff", "handoff", "say_unknown"] as const;
 export const AI_CONTACT_CONTEXTS = ["none", "basic"] as const;
-export const AI_CHANNELS = ["widget", "email", "api"] as const;
+export const AI_CHANNELS = ["widget", "email", "api", "slack"] as const;
 export const AI_HANDOFF_MODES = ["full", "triage_only"] as const;
 
 export type AiTone = (typeof AI_TONES)[number];

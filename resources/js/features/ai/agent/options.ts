@@ -46,6 +46,7 @@ export const channels = choices<AiChannel>(AI_CHANNELS, {
   widget: ["Messenger", "The chat on your site and in your app."],
   email: ["Email", "Replies to mail sent to your support addresses."],
   api: ["API", "Conversations your own systems start."],
+  slack: ["Slack", "Threads in the Slack channels dimmi watches."],
 });
 
 export const schedules = choices<AiSchedule>(AI_SCHEDULES, {

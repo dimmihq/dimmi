@@ -135,6 +135,10 @@ func TestAiAgent(t *testing.T) {
 		for field, body := range cases {
 			d.Owner.PatchJSON("/api/v1/ai/agent", body).AssertValidationError(field)
 		}
+
+		res := d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"enabled_channels": []string{"fax"}})
+		assert.Contains(t, string(res.Body), "widget, email, api, slack")
+		assert.NotContains(t, string(res.Body), "{{")
 	})
 
 	t.Run("accepts every value the settings page offers", func(t *testing.T) {
@@ -148,7 +152,7 @@ func TestAiAgent(t *testing.T) {
 
 		res := d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{
 			"assigned_behavior": "always", "include_contact_context": "none", "unknown_behavior": "handoff",
-			"enabled_channels": []string{"widget", "email"}, "languages": []string{"en", "pt-BR"},
+			"enabled_channels": []string{"widget", "email", "slack"}, "languages": []string{"en", "pt-BR"},
 			"default_language": "de", "handoff_team_id": teamID, "raise_priority_on_handoff": true,
 			"max_ai_replies": 8, "tone": "concise", "schedule": "outside_office_hours",
 			"link_allowlist": []string{"help.acme.com", "*.Acme.io"},

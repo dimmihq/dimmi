@@ -18,6 +18,7 @@ import (
 	"context"
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/i18n"
 	"github.com/dimmihq/dimmi/framework/validation"
@@ -92,12 +93,12 @@ func (r *AIUpdateAgentRequest) Validate(ctx context.Context, _ *validation.Facto
 	}
 	for _, e := range enumsByField {
 		if e.value != nil && !slices.Contains(e.allowed, *e.value) {
-			return violation(ctx, e.field, "oneof", "validation.oneof")
+			return oneOfViolation(ctx, e.field, e.allowed)
 		}
 	}
 
 	if b.EnabledChannels != nil && !allIn(*b.EnabledChannels, AIChannels()) {
-		return violation(ctx, "enabled_channels", "oneof", "validation.oneof")
+		return oneOfViolation(ctx, "enabled_channels", AIChannels())
 	}
 	if b.LinkAllowlist != nil && !allHosts(*b.LinkAllowlist) {
 		return violation(ctx, "link_allowlist", "host", "validation.registered")
@@ -165,10 +166,24 @@ func AIContactContexts() []string {
 }
 
 /*
+oneOfViolation refuses a field whose value is not among the allowed
+ones, naming them so the message says what would be accepted.
+*/
+func oneOfViolation(ctx context.Context, field string, allowed []string) error {
+	return &validation.Error{Violations: []validation.Violation{{
+		Field: field, Rule: "oneof",
+		Message: i18n.T(ctx, "validation.oneof", i18n.Args{"field": field, "param": strings.Join(allowed, ", ")}),
+	}}}
+}
+
+/*
 AIChannels lists the channels the agent can answer on.
 */
 func AIChannels() []string {
-	return []string{string(enums.ChannelTypeWidget), string(enums.ChannelTypeEmail), string(enums.ChannelTypeAPI)}
+	return []string{
+		string(enums.ChannelTypeWidget), string(enums.ChannelTypeEmail), string(enums.ChannelTypeAPI),
+		string(enums.ChannelTypeSlack),
+	}
 }
 
 /*
