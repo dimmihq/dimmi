@@ -167,6 +167,10 @@ func newAuth(me auth.Me) Auth {
 credentialType names the credential the way clients see it.
 */
 func credentialType(p *appauth.Principal) string {
+	if p.Connected {
+		return "oauth_access_token"
+	}
+
 	if p.Kind == appauth.KindToken {
 		return "personal_access_token"
 	}

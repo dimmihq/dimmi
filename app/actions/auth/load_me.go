@@ -199,10 +199,10 @@ func findMember(
 
 /*
 loadToken reads the personal access token the request came with, if it
-came with one.
+came with one. A connected app's token is no personal token.
 */
 func loadToken(ctx context.Context, q *models.Queries, me *Me, workspaceID ids.UUID) error {
-	if me.Principal.Kind != appauth.KindToken {
+	if me.Principal.Kind != appauth.KindToken || me.Principal.Connected {
 		return nil
 	}
 

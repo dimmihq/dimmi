@@ -42,7 +42,8 @@ type LiveCredentials struct {
 /*
 Alive reports whether the principal's account and credential still
 work. A first-party app holds a grant the OAuth server keeps, which is
-checked there, so it counts as alive here.
+checked there, so it counts as alive here. A connected app's grant is
+checked there too; here only its person must still be an active member.
 */
 func (c *LiveCredentials) Alive(ctx context.Context, p *Principal) (bool, error) {
 	_, err := liveUser(ctx, c.DB, p.User.ID)
@@ -58,6 +59,10 @@ func (c *LiveCredentials) Alive(ctx context.Context, p *Principal) (bool, error)
 	case KindSession:
 		return c.sessionAlive(ctx, p)
 	case KindToken:
+		if p.Connected {
+			return c.connectedAlive(ctx, p)
+		}
+
 		return c.tokenAlive(ctx, p)
 	default:
 		return true, nil
@@ -74,6 +79,23 @@ func (c *LiveCredentials) sessionAlive(ctx context.Context, p *Principal) (bool,
 	}
 
 	return slices.ContainsFunc(live, func(r session.Record) bool { return r.ID == p.CredentialID }), nil
+}
+
+/*
+connectedAlive reports whether a connected app's person is still an
+active member of the workspace it was connected to.
+*/
+func (c *LiveCredentials) connectedAlive(ctx context.Context, p *Principal) (bool, error) {
+	_, err := grantMember(ctx, c.DB, p.WorkspaceID, p.User.ID)
+	if errors.Is(err, fauth.ErrInvalidToken) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 /*

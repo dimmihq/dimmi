@@ -56,6 +56,8 @@ user proved who they are; tokens carry neither. IP is the address the
 request came from. LastActivityAt is the last time the caller worked in
 a workspace, SSOConnectionID the connection a session signed in through,
 ids.Nil() when none, and AuthDomain the domain that vouched for it.
+Connected marks a token from an app the person connected through OAuth,
+whose CredentialID is then the grant rather than a personal token.
 */
 type Principal struct {
 	User            models.User
@@ -72,6 +74,7 @@ type Principal struct {
 	LastActivityAt  time.Time
 	SSOConnectionID ids.UUID
 	AuthDomain      string
+	Connected       bool
 }
 
 var _ fauth.Principal = (*Principal)(nil)

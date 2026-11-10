@@ -134,6 +134,18 @@ func TestConnectingAnApp(t *testing.T) {
 		agent.PostJSON("/api/v1/tags", testkit.JSON{"name": "vip"}).AssertForbidden()
 	})
 
+	t.Run("tells the app who it acts as", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		access, _ := register(t, tc).connect(t, "conversations:read offline_access")
+		agent := tc.Client().WithHeader("Authorization", "Bearer "+access)
+
+		agent.GetJSON("/api/v1/me").AssertOK().
+			AssertJSONPath("data.auth.type", "oauth_access_token").
+			AssertJSONPath("data.user.email", tc.Owner.Email).
+			AssertJSONMissing("data.auth.token")
+	})
+
 	t.Run("signs the app in to the MCP server with its token", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

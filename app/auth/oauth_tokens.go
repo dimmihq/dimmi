@@ -133,7 +133,7 @@ func (g *OAuthGuard) Resolve(r *fhttp.Request, plain string) (fauth.Principal, e
 
 	return &Principal{
 		User: user, Kind: KindToken, CredentialID: credential, WorkspaceID: workspaceID, MemberID: member.ID,
-		Granted: GrantedScopes(p.Abilities()), IP: ClientAddr(r),
+		Granted: GrantedScopes(p.Abilities()), IP: ClientAddr(r), Connected: true,
 	}, nil
 }
 

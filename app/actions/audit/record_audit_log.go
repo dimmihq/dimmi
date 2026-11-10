@@ -104,9 +104,9 @@ const (
 
 /*
 The kinds of actor and of the channel they acted through. A member acts
-through their browser session, their own app or an access token they
-minted; the system acts on its own, or for an operator at the command
-line.
+through their browser session, their own app, an access token they
+minted or an app they connected through OAuth; the system acts on its
+own, or for an operator at the command line.
 */
 const (
 	ActorMember      = "member"
@@ -114,6 +114,7 @@ const (
 	ViaSession       = "session"
 	ViaApp           = "app"
 	ViaPersonalToken = "personal_token"
+	ViaConnectedApp  = "oauth_client"
 	ViaCLI           = "cli"
 )
 
@@ -264,6 +265,12 @@ func (a *RecordAuditLog) actor(ctx context.Context, q *models.Queries, e Entry) 
 		return who, nil
 	}
 
+	if principal.Connected {
+		who.label = member.Name + " via a connected app"
+
+		return who, nil
+	}
+
 	token, err := q.FindAuditToken(ctx, principal.CredentialID)
 	if errors.Is(err, database.ErrNotFound) {
 		return who, nil
@@ -290,6 +297,10 @@ func via(p *appauth.Principal) (*string, *ids.UUID) {
 	kind, known := kinds[p.Kind]
 	if !known {
 		return nil, nil
+	}
+
+	if p.Connected {
+		kind = ViaConnectedApp
 	}
 
 	id := p.CredentialID
