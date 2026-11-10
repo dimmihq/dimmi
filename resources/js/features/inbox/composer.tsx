@@ -2,7 +2,7 @@
  * The reply and note composer, on BoardUI's composer panel. It rests as a
  * slim bar under the thread so the conversation keeps the room; choosing
  * Reply or Note (or pressing R or N) unfolds it into the full panel, which
- * stays open until the person leaves the conversation. The panel has the
+ * folds back into the bar once its message is sent. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
  * a field that grows with what is typed with formatting kept as
  * Markdown, and a toolbar with the add menu (help articles, saved replies,
@@ -38,7 +38,7 @@ import { type Mode, modes } from "./modes";
 import { AttachButton, ReplyFileChips } from "./reply-files";
 import { SendMenu } from "./send-menu";
 import { UndoToast } from "./undo/undo-toast";
-import { useHeld } from "./undo/use-held";
+import { type Held, useHeld } from "./undo/use-held";
 import { type ReplyFiles, useReplyFiles } from "./use-reply-files";
 import type { Report } from "./use-typing-report";
 
@@ -70,6 +70,7 @@ export function Composer({
   onTyping,
   incoming = null,
   onIncomingUsed,
+  onSent,
 }: {
   conversation: string;
   mode: Mode | null;
@@ -83,12 +84,36 @@ export function Composer({
   onTyping: Report;
   incoming?: string | null;
   onIncomingUsed?: () => void;
+  onSent?: () => void;
 }) {
   const still = useReducedMotion();
+  const { workspace } = useInbox();
+  const [restored, setRestored] = useState<string | null>(null);
+  const held = useHeld(workspace, conversation, (body) => {
+    setRestored(body);
+    onOpen("reply");
+  });
+  const taken = () => {
+    setRestored(null);
+    onIncomingUsed?.();
+  };
   useEffect(preloadEditor, []);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+      <AnimatePresence initial={false}>
+        {held.message || held.failure ? (
+          <motion.div
+            key="held"
+            initial={still ? false : { opacity: 0, height: 0, y: 4, filter: "blur(6px)" }}
+            animate={{ opacity: 1, height: "auto", y: 0, filter: "blur(0px)" }}
+            exit={still ? { opacity: 0 } : { opacity: 0, height: 0, filter: "blur(6px)" }}
+            transition={{ duration: 0.38, ease: settle }}
+          >
+            <UndoToast held={held} />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <AnimatePresence initial={false} mode="wait">
         {mode ? (
           <motion.div
@@ -109,8 +134,10 @@ export function Composer({
               onModeChange={onOpen}
               onAskOperator={onAskOperator}
               onTyping={onTyping}
-              incoming={incoming}
-              onIncomingUsed={onIncomingUsed}
+              incoming={restored ?? incoming}
+              onIncomingUsed={taken}
+              held={held}
+              onSent={onSent}
             />
           </motion.div>
         ) : (
@@ -170,7 +197,7 @@ function useSend({
   mode: Mode;
   draft: ReturnType<typeof useDraft>;
   files: ReplyFiles;
-  held: ReturnType<typeof useHeld>;
+  held: Held;
   onSend: Send;
   onTyping: Report;
   onSent: (text: string) => void;
@@ -220,6 +247,8 @@ function Panel({
   onTyping,
   incoming,
   onIncomingUsed,
+  held,
+  onSent,
 }: {
   conversation: string;
   mode: Mode;
@@ -233,15 +262,13 @@ function Panel({
   onTyping: Report;
   incoming: string | null;
   onIncomingUsed?: () => void;
+  held: Held;
+  onSent?: () => void;
 }) {
   const { workspace, userId } = useInbox();
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
   const draft = drafts[mode];
   const note = mode === "note";
-  const held = useHeld(workspace, conversation, (body) => {
-    drafts.reply.edit(body);
-    onModeChange("reply");
-  });
   const insert = (text: string) => draft.edit(draft.body ? `${draft.body}\n\n${text}` : text);
   const takeIncoming = drafts.reply.edit;
   useEffect(() => {
@@ -254,7 +281,18 @@ function Panel({
   const gifs = useGifs(workspace, userId, insert);
   const files = useReplyFiles(workspace);
   const attachable = !note && canAttach;
-  const { send, sending, failure, ready } = useSend({ mode, draft, files, held, onSend, onTyping, onSent: gifs.sent });
+  const { send, sending, failure, ready } = useSend({
+    mode,
+    draft,
+    files,
+    held,
+    onSend,
+    onTyping,
+    onSent: (text) => {
+      gifs.sent(text);
+      onSent?.();
+    },
+  });
 
   return (
     <div>
@@ -285,7 +323,6 @@ function Panel({
         className={cx(surface, "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150")}
       >
         <div className="flex flex-col gap-3 px-1.5">
-          <UndoToast held={held} />
           <DraftConflict draft={draft} />
           <ComposerField
             value={draft.body}

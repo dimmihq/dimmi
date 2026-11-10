@@ -7,6 +7,7 @@
  * tried again.
  */
 import {
+  RiArrowDownSLine,
   RiArrowGoBackLine,
   RiCheckLine,
   RiCloseLine,
@@ -18,6 +19,7 @@ import { useState } from "react";
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { MessageBody } from "@/features/inbox/message-body";
+import { Unfold } from "@/features/shell/reveal";
 import type { ChangesetDecision, ChangesetStatus, OperatorChangeset } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
 
@@ -45,23 +47,56 @@ const outcomeLabels: Record<string, string> = {
 };
 
 /*
- * FullText shows what an operation writes, folded until asked for:
- * Markdown as the reader will see it, a procedure as its JSON.
+ * asJSON gives the text as indented JSON when it is JSON, such as an
+ * action's arguments or a procedure, or null when it is prose.
  */
-function FullText({ kind, text }: { kind: string; text: string }) {
+function asJSON(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+    return null;
+  }
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2);
+  } catch {
+    return null;
+  }
+}
+
+/*
+ * FullText shows what an operation writes, folded until asked for and
+ * unfolding in place: Markdown as the reader will see it, and JSON, such
+ * as an action's arguments or a procedure, as highlighted code.
+ */
+function FullText({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const json = asJSON(text);
+
   return (
-    <details>
-      <summary className="cursor-pointer list-none text-caption-1-medium text-text-tertiary outline-none hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
-        Show the text
-      </summary>
-      <div className="mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-separator-border bg-background-secondary-default p-2.5">
-        {kind.startsWith("procedure.") ? (
-          <pre className="text-caption-1-regular whitespace-pre-wrap text-text-secondary">{text}</pre>
-        ) : (
-          <MessageBody text={text} className="text-body-2-regular text-text-primary" />
-        )}
-      </div>
-    </details>
+    <div className="flex flex-col">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-fit cursor-pointer items-center gap-0.5 rounded-md text-caption-1-medium text-text-tertiary outline-none transition-colors duration-150 hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        {open ? "Hide the text" : "Show the text"}
+        <RiArrowDownSLine
+          aria-hidden
+          className={cx("size-3.5 transition-transform duration-300 ease", open && "rotate-180")}
+        />
+      </button>
+      <Unfold open={open}>
+        <div className="pt-1.5">
+          {json ? (
+            <MessageBody text={`\`\`\`json\n${json}\n\`\`\``} className="text-caption-1-regular" />
+          ) : (
+            <div className="max-h-72 overflow-y-auto rounded-xl border border-separator-border bg-background-secondary-default p-2.5">
+              <MessageBody text={text} className="text-body-2-regular text-text-primary" />
+            </div>
+          )}
+        </div>
+      </Unfold>
+    </div>
   );
 }
 
@@ -140,7 +175,7 @@ function Operations({ changeset }: { changeset: OperatorChangeset }) {
                 <span className="text-text-tertiary"> · {outcomeLabels[operation.outcome]}</span>
               ) : null}
             </span>
-            {operation.text ? <FullText kind={operation.kind} text={operation.text} /> : null}
+            {operation.text ? <FullText text={operation.text} /> : null}
           </span>
         </li>
       ))}

@@ -13,6 +13,7 @@ import { Button } from "@/components/base/buttons/button";
 import { useCompose } from "@/features/inbox/compose-bridge-context";
 import { MessageBody } from "@/features/inbox/message-body";
 import { ScrollArea } from "@/features/shell/page";
+import { Reveal } from "@/features/shell/reveal";
 import type { OperatorChangeset, OperatorMessage, OperatorStep, OperatorThreadView } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
 
@@ -139,10 +140,12 @@ function Answer({
   message,
   changesets,
   onDecide,
+  fresh,
 }: {
   message: OperatorMessage;
   changesets: OperatorChangeset[];
   onDecide: Chat["decide"];
+  fresh: boolean;
 }) {
   return (
     <div className="group/answer flex flex-col gap-3">
@@ -153,7 +156,9 @@ function Answer({
           className={cx("text-body-regular text-text-primary", message.status === "failed" && "text-text-tertiary")}
         />
       ) : null}
-      <Extras steps={message.steps} changesets={changesets} onDecide={onDecide} />
+      <Reveal animate={fresh} className="flex flex-col gap-3">
+        <Extras steps={message.steps} changesets={changesets} onDecide={onDecide} />
+      </Reveal>
       <Actions message={message} />
     </div>
   );
@@ -162,13 +167,32 @@ function Answer({
 function Working({ live }: { live: Live }) {
   return (
     <>
-      {live.question ? <Question text={live.question} /> : null}
+      {live.question ? (
+        <Reveal>
+          <Question text={live.question} />
+        </Reveal>
+      ) : null}
       <div className="flex flex-col gap-3">
         <ActivityLog steps={live.steps.filter((s) => !s.draft && !s.changeset_id)} working={live.text === ""} />
         {live.text ? <MessageBody text={live.text} className="text-body-regular text-text-primary" /> : null}
       </div>
     </>
   );
+}
+
+/*
+ * useFresh tells what arrived in the thread after it was first shown, so
+ * new cards land with motion while the history shows at once.
+ */
+function useFresh(thread: OperatorThreadView | undefined) {
+  const [known, setKnown] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (thread && known === null) {
+      setKnown(new Set([...thread.messages.map((m) => m.id), ...thread.changesets.map((c) => c.id)]));
+    }
+  }, [thread, known]);
+
+  return (id: string) => known !== null && !known.has(id);
 }
 
 /*
@@ -220,7 +244,9 @@ export function OperatorChat({
   wide?: boolean;
 }) {
   const [draft, setDraft] = useState("");
+  const isFresh = useFresh(thread);
   const messages = thread?.messages ?? [];
+  const lastQuestion = messages.filter((message) => message.role === "user").at(-1)?.body;
   const changesets = thread?.changesets ?? [];
   const own = changesets.filter((changeset) => changeset.proposed_to === null);
   const end = useStickToBottom(`${messages.length}:${chat.live?.text.length ?? 0}:${chat.live?.steps.length ?? 0}`);
@@ -245,7 +271,9 @@ export function OperatorChat({
           {own.map((changeset) => (
             <li key={changeset.id} className="flex flex-col gap-1.5">
               <span className="text-caption-1-semibold text-text-tertiary">Proposed when it arrived</span>
-              <ChangesetCard changeset={changeset} onDecide={chat.decide} />
+              <Reveal animate={isFresh(changeset.id)}>
+                <ChangesetCard changeset={changeset} onDecide={chat.decide} />
+              </Reveal>
             </li>
           ))}
           {messages.length === 0 && !chat.live ? <li>{empty}</li> : null}
@@ -254,13 +282,18 @@ export function OperatorChat({
               {message.role === "user" ? (
                 <Question text={message.body} />
               ) : (
-                <Answer message={message} changesets={changesets} onDecide={chat.decide} />
+                <Answer message={message} changesets={changesets} onDecide={chat.decide} fresh={isFresh(message.id)} />
               )}
             </li>
           ))}
           {chat.live ? (
             <li className="flex flex-col gap-5">
               <Working live={chat.live} />
+            </li>
+          ) : null}
+          {chat.unsent && lastQuestion !== chat.unsent ? (
+            <li>
+              <Question text={chat.unsent} />
             </li>
           ) : null}
           {chat.failure ? (

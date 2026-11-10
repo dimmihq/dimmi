@@ -19,33 +19,36 @@ import { OperatorChat } from "@/features/operator/operator-chat";
 import { conversationScope } from "@/features/operator/scope";
 import { useOperatorChat } from "@/features/operator/use-operator-chat";
 import { Panel } from "@/features/shell/page";
+import { Reveal } from "@/features/shell/reveal";
 import { briefConversation, conversationThreadQuery, operatorKeys, operatorSettingsQuery } from "@/lib/api/operator";
 
 const starters = ["Draft a reply", "Suggest tags and an owner", "Has this customer written before?"];
 
 function Starting({ onBrief, onAsk, busy }: { onBrief: () => void; onAsk: (q: string) => void; busy: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-4 py-4 text-center">
-      <span className="flex size-10 items-center justify-center rounded-full bg-background-primary-default shadow-card">
-        <RiSparkling2Line aria-hidden className="size-5 text-foreground-icon-secondary" />
-      </span>
-      <div className="flex flex-col gap-1">
-        <h3 className="text-body-medium text-text-primary">Catch up on this conversation</h3>
-        <p className="text-body-2-regular text-text-secondary">
-          Operator reads it and briefs you, drafts replies and proposes changes for you to apply.
-        </p>
+    <Reveal>
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <span className="flex size-10 items-center justify-center rounded-full bg-background-primary-default shadow-card">
+          <RiSparkling2Line aria-hidden className="size-5 text-foreground-icon-secondary" />
+        </span>
+        <div className="flex flex-col gap-1">
+          <h3 className="text-body-medium text-text-primary">Catch up on this conversation</h3>
+          <p className="text-body-2-regular text-text-secondary">
+            Operator reads it and briefs you, drafts replies and proposes changes for you to apply.
+          </p>
+        </div>
+        <Button size="small" leadingIcon={RiSparkling2Line} disabled={busy} onClick={onBrief}>
+          Brief me
+        </Button>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {starters.map((starter) => (
+            <Button key={starter} size="small" variant="secondary" disabled={busy} onClick={() => onAsk(starter)}>
+              {starter}
+            </Button>
+          ))}
+        </div>
       </div>
-      <Button size="small" leadingIcon={RiSparkling2Line} disabled={busy} onClick={onBrief}>
-        Brief me
-      </Button>
-      <div className="flex flex-wrap justify-center gap-1.5">
-        {starters.map((starter) => (
-          <Button key={starter} size="small" variant="secondary" disabled={busy} onClick={() => onAsk(starter)}>
-            {starter}
-          </Button>
-        ))}
-      </div>
-    </div>
+    </Reveal>
   );
 }
 

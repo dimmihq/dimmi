@@ -17,6 +17,7 @@ import { IconButton } from "@/components/base/buttons/icon-button";
 import { waitedFor } from "@/features/inbox/conversations";
 import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { Reveal } from "@/features/shell/reveal";
 import {
   type ChangesetDecision,
   decideChangeset,
@@ -102,24 +103,26 @@ function Threads({
  */
 function Welcome({ onAsk }: { onAsk: (question: string) => void }) {
   return (
-    <div className="flex flex-col items-center gap-5 py-6 text-center">
-      <span className="flex size-11 items-center justify-center rounded-full bg-background-primary-default shadow-card">
-        <RiSparkling2Line aria-hidden className="size-5 text-foreground-icon-secondary" />
-      </span>
-      <div className="flex max-w-md flex-col gap-1">
-        <h2 className="text-title-3-semibold text-text-primary">What should we look into?</h2>
-        <p className="text-body-regular text-text-secondary">
-          Ask about your workspace. Operator reads what you can see, and proposes changes for you to approve.
-        </p>
+    <Reveal>
+      <div className="flex flex-col items-center gap-5 py-6 text-center">
+        <span className="flex size-11 items-center justify-center rounded-full bg-background-primary-default shadow-card">
+          <RiSparkling2Line aria-hidden className="size-5 text-foreground-icon-secondary" />
+        </span>
+        <div className="flex max-w-md flex-col gap-1">
+          <h2 className="text-title-3-semibold text-text-primary">What should we look into?</h2>
+          <p className="text-body-regular text-text-secondary">
+            Ask about your workspace. Operator reads what you can see, and proposes changes for you to approve.
+          </p>
+        </div>
+        <div className="flex max-w-xl flex-wrap justify-center gap-2">
+          {starters.map((starter) => (
+            <Button key={starter} size="small" variant="secondary" onClick={() => onAsk(starter)}>
+              {starter}
+            </Button>
+          ))}
+        </div>
       </div>
-      <div className="flex max-w-xl flex-wrap justify-center gap-2">
-        {starters.map((starter) => (
-          <Button key={starter} size="small" variant="secondary" onClick={() => onAsk(starter)}>
-            {starter}
-          </Button>
-        ))}
-      </div>
-    </div>
+    </Reveal>
   );
 }
 

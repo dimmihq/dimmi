@@ -4,7 +4,8 @@
  * teammate's own channel and grow in place, and once the request answers
  * the thread is read again with the stored answer and the changes it
  * proposed. Stop cancels the request, which stops Operator; what it had
- * written is kept. Another tab's answer refreshes the thread too.
+ * written is kept. A question Operator could not take stays in view with
+ * the reason. Another tab's answer refreshes the thread too.
  */
 import { type QueryKey, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -56,6 +57,7 @@ export function useOperatorChat(workspace: string, thread: OperatorThreadView | 
   const member = caller?.member?.id ?? null;
   const [live, setLive] = useState<Live | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [unsent, setUnsent] = useState<string | null>(null);
   const running = useRef<AbortController | null>(null);
   const refresh = () =>
     Promise.all([
@@ -83,12 +85,14 @@ export function useOperatorChat(workspace: string, thread: OperatorThreadView | 
     const controller = new AbortController();
     running.current = controller;
     setFailure(null);
+    setUnsent(null);
     setLive({ question, text: "", steps: [] });
     try {
       await call(controller.signal);
     } catch (error) {
       if (!controller.signal.aborted) {
         setFailure(failureText(error));
+        setUnsent(question);
       }
     } finally {
       running.current = null;
@@ -112,6 +116,7 @@ export function useOperatorChat(workspace: string, thread: OperatorThreadView | 
   return {
     live,
     failure,
+    unsent,
     busy: live !== null,
     ask,
     run,

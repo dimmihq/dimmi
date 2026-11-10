@@ -59,6 +59,8 @@ it.describe("drafts", () => {
 
     await page.getByRole("button", { name: "Send", exact: true }).click();
     await expect(page.getByText("Hi Emily, resetting it now")).toBeVisible();
+    await expect(reply).toHaveCount(0);
+    await openComposer(page, /Reply to Emily Johnson/);
     await expect(reply).toHaveText("");
     await page.reload();
     await openComposer(page, /Reply to Emily Johnson/);

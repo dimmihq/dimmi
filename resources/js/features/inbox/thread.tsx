@@ -21,6 +21,7 @@
  * a note from anywhere, and O opens or closes Operator.
  */
 import { RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -135,6 +136,15 @@ function OperatorCard({ entry, customer }: { entry: Said; customer: string }) {
 
 type Moves = ReturnType<typeof useMessageMoves>;
 
+/*
+ * A message that arrives or is sent while the thread is open softens in
+ * from a blur and grows into place, the way an agent's line lands, so
+ * the thread moves instead of jumping. What was there when the thread
+ * opened shows at once.
+ */
+const arriving = { opacity: 0, height: 0, y: 4, filter: "blur(6px)" };
+const arrived = { opacity: 1, height: "auto", y: 0, filter: "blur(0px)" };
+const arrival = { duration: 0.42, ease: [0.22, 1, 0.36, 1] } as const;
 /*
  * Follow-ups are what a message offers below it: its full original, and
  * sending it again when it was not delivered.
@@ -404,6 +414,7 @@ export function Thread({
   hideEvents?: boolean;
 }) {
   const moves = useMessageMoves(conversation);
+  const still = useReducedMotion();
   const [mode, setMode] = useState<Mode | null>(null);
   const [incoming, setIncoming] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
@@ -434,22 +445,24 @@ export function Thread({
         ) : (
           <ThreadZone.Provider value={zone}>
             <LinkPolicyProvider channelType={channelType}>
-              <ol className="mx-auto flex max-w-3xl flex-col gap-3">
-                {foldEvents(entries, hideEvents).map((entry) => (
-                  <li key={entry.id}>
-                    {entry.kind === "folded" ? (
-                      <Pill>{foldedText(entry.count)}</Pill>
-                    ) : (
-                      <Entry
-                        entry={entry}
-                        conversation={conversation}
-                        customer={customer}
-                        moves={moves}
-                        follow={{ onOpenOriginal, onRetry }}
-                      />
-                    )}
-                  </li>
-                ))}
+              <ol key={conversation} className="mx-auto flex max-w-3xl flex-col gap-3">
+                <AnimatePresence initial={false}>
+                  {foldEvents(entries, hideEvents).map((entry) => (
+                    <motion.li key={entry.id} initial={still ? false : arriving} animate={arrived} transition={arrival}>
+                      {entry.kind === "folded" ? (
+                        <Pill>{foldedText(entry.count)}</Pill>
+                      ) : (
+                        <Entry
+                          entry={entry}
+                          conversation={conversation}
+                          customer={customer}
+                          moves={moves}
+                          follow={{ onOpenOriginal, onRetry }}
+                        />
+                      )}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
               </ol>
             </LinkPolicyProvider>
           </ThreadZone.Provider>
@@ -470,6 +483,7 @@ export function Thread({
           onTyping={onTyping}
           incoming={incoming}
           onIncomingUsed={used}
+          onSent={() => setMode(null)}
         />
       </div>
     </div>

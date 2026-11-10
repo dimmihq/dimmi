@@ -60,7 +60,8 @@ it.describe("the inbox", () => {
     await expect(page.getByRole("article", { name: `Message from ${person.name}` })).toContainText(
       "Try a sign-in code instead.",
     );
-    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveText("");
+    await expect(page.getByRole("textbox", { name: "Reply to Emily Johnson" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Reply to Emily Johnson/ })).toBeVisible();
     await expect(page.getByRole("region", { name: "Details" }).getByRole("button", { name: /Assignee/ })).toContainText(
       person.name,
     );
@@ -263,7 +264,7 @@ it.describe("the inbox", () => {
     await page.getByRole("button", { name: "Operator", exact: true }).click();
 
     const drawer = page.getByRole("dialog", { name: "Operator" });
-    await expect(drawer).toContainText("Operator connects later");
+    await expect(drawer).toContainText("Catch up on this conversation");
     await drawer.getByRole("button", { name: "Close Operator" }).click();
     await expect(drawer).toBeHidden();
   });
