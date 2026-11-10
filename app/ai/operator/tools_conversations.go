@@ -56,6 +56,7 @@ func (e *Engine) conversationTools() []tool {
 			Description: "Read one conversation: its details, tags, assignee, customer, and its latest " +
 				"messages and internal notes, oldest first.",
 		}, handle: e.getConversation},
+		e.listTool(),
 		{spec: contracts.ToolSpec{
 			Name: "search_conversations",
 			Description: "Search conversations and contacts by words, a customer's name or email, or " +

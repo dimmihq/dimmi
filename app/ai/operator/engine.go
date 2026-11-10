@@ -54,6 +54,7 @@ type Services struct {
 	Knowledge  contracts.Knowledge
 	Show       *conversations.ShowConversation
 	Search     *conversations.Search
+	List       *conversations.ListConversations
 	Context    *conversations.ShowContext
 	Messages   *messages.ListMessages
 	Runs       *ai.ListConversationRuns

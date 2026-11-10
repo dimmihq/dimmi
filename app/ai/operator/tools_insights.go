@@ -51,8 +51,9 @@ func (e *Engine) insightTools() []tool {
 		}, handle: e.workspaceReport},
 		{spec: contracts.ToolSpec{
 			Name: "agent_runs", Schema: schema(numberSchema),
-			Description: "Show what the AI agent did in a conversation: each run's outcome, handoff reason, " +
-				"what it searched for and what it cost, newest first.",
+			Description: "Show what the AI agent did in one conversation: each run's outcome, handoff reason, " +
+				"what it searched for and what it cost, newest first. Needs the conversation's number " +
+				"unless this thread is about one; for the agent across the workspace use workspace_report.",
 		}, handle: e.agentRuns},
 	}
 }

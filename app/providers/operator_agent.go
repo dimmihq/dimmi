@@ -65,7 +65,8 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 		DB: a.DB, IDs: a.IDs, Clock: a.Clock, LLM: a.LLM, Prices: a.AI.Prices, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
 		Services: operator.Services{
-			Knowledge: a.Knowledge, Show: inbox.ShowConversation, Search: inbox.Search, Context: inbox.ShowContext,
+			Knowledge: a.Knowledge, Show: inbox.ShowConversation, Search: inbox.Search, List: inbox.ListConversations,
+			Context:  inbox.ShowContext,
 			Messages: inbox.ListMessages, Runs: a.Actions.AI.ListRuns, Change: inbox.ApplyChanges,
 			Note: inbox.AddNote, Delete: inbox.DeleteMessage, Contacts: inbox.UpdateContact,
 			Articles: a.Actions.Articles, Procedures: a.Actions.Procedures, Audit: a.Actions.RecordAuditLog,
