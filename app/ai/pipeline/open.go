@@ -34,22 +34,23 @@ changes the tools asked for, the workspace actions it offered and
 called, and whether it followed one of the team's procedures.
 */
 type run struct {
-	env      *env
-	rec      *Recorder
-	args     Args
-	settings *TurnSettings
-	gate     *decision
-	loop     *loop
-	sources  []source
-	flags    []string
-	query    string
-	searched bool
-	searches int
-	handoff  *handoffRequest
-	changes  changeSet
-	actions  actionState
-	followed bool
-	draft    bool
+	env        *env
+	rec        *Recorder
+	args       Args
+	settings   *TurnSettings
+	gate       *decision
+	loop       *loop
+	sources    []source
+	flags      []string
+	query      string
+	searched   bool
+	searches   int
+	lastSearch searchTrace
+	handoff    *handoffRequest
+	changes    changeSet
+	actions    actionState
+	followed   bool
+	draft      bool
 }
 
 /*

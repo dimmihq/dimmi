@@ -117,12 +117,36 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 
 	r.step(ctx, st, stepRecord{
 		kind: enums.AIRunStepKindToolCall, model: call.Name, started: started,
-		request: r.redactFor(st.env, string(call.Arguments)), response: result, err: err,
+		request: r.redactFor(st.env, string(call.Arguments)), response: withTrace(st, call.Name, result), err: err,
 	})
 	if err != nil {
 		return "error: " + err.Error(), true
 	}
 	return result, false
+}
+
+/*
+withTrace adds to a search's recorded result how the search went, so
+the trace shows when it answered from keywords alone and why; the model
+reads the result without it.
+*/
+func withTrace(st *run, tool, result string) string {
+	if tool != toolSearchKnowledge {
+		return result
+	}
+
+	var body map[string]any
+	if json.Unmarshal([]byte(result), &body) != nil {
+		return result
+	}
+
+	body["trace"] = st.lastSearch
+	out, err := json.Marshal(body)
+	if err != nil {
+		return result
+	}
+
+	return string(out)
 }
 
 /*

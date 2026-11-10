@@ -235,8 +235,21 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 		n := st.sourceFor(ch)
 		results = append(results, result{ID: n, Title: ch.Title, URL: ch.URL, Text: ch.Text})
 	}
+	st.lastSearch = searchTrace{Mode: res.Mode, Degraded: res.Degraded, Found: len(res.Chunks), Kept: len(results)}
 	out, err := json.Marshal(map[string]any{"results": results})
 	return string(out), err
+}
+
+/*
+searchTrace is how the last search went, for the run's trace: how it
+searched, why it went without vectors, and how many passages it found
+and kept.
+*/
+type searchTrace struct {
+	Mode     string `json:"mode"`
+	Degraded string `json:"degraded,omitempty"`
+	Found    int    `json:"found"`
+	Kept     int    `json:"kept"`
 }
 
 /*

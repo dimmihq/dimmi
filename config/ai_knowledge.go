@@ -28,9 +28,11 @@ type AIManagedEmbeddings struct {
 /*
 AIKnowledgeConfig bounds retrieval: how long a search waits for the
 query's vector and for the vector query before it answers from
-keywords alone.
+keywords alone. Hosted embedders answer a short query in one to five
+seconds, so the wait leaves room for that; a vector found once is
+cached and later searches for the same words wait for nothing.
 */
 type AIKnowledgeConfig struct {
-	QueryEmbedTimeoutMS int `default:"1500" koanf:"query_embed_timeout_ms"`
+	QueryEmbedTimeoutMS int `default:"4000" koanf:"query_embed_timeout_ms"`
 	VectorTimeoutMS     int `default:"250"  koanf:"vector_timeout_ms"`
 }
