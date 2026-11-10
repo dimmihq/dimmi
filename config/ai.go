@@ -65,10 +65,13 @@ type AIManagedConfig struct {
 
 /*
 AIManagedUpstream is one upstream the built-in provider routes to.
+Provider picks the host of the open-weight models, engy by default or
+baseten; the other families have one host each and ignore it.
 */
 type AIManagedUpstream struct {
-	APIKey  string `koanf:"api_key"`
-	BaseURL string `koanf:"base_url"`
+	APIKey   string `koanf:"api_key"`
+	BaseURL  string `koanf:"base_url"`
+	Provider string `koanf:"provider"`
 }
 
 /*

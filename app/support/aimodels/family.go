@@ -38,7 +38,7 @@ func FamilyOf(provider enums.AIProvider, model string) enums.AIModelFamily {
 		return enums.AIModelFamilyOpenAI
 	case enums.AIProviderDimmi:
 		return familyOfManaged(model)
-	case enums.AIProviderEngy, enums.AIProviderOpenAICompatible:
+	case enums.AIProviderEngy, enums.AIProviderBaseten, enums.AIProviderOpenAICompatible:
 		return familyOfManaged(model)
 	}
 	return enums.AIModelFamilyOpenWeight

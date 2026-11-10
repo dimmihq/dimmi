@@ -26,6 +26,7 @@ const (
 	AIProviderOpenAI           AIProvider = "openai"
 	AIProviderChatGPT          AIProvider = "chatgpt"
 	AIProviderEngy             AIProvider = "engy"
+	AIProviderBaseten          AIProvider = "baseten"
 	AIProviderOpenAICompatible AIProvider = "openai_compatible"
 )
 
@@ -34,7 +35,7 @@ AIProviders returns every provider, in display order.
 */
 func AIProviders() []AIProvider {
 	return []AIProvider{
-		AIProviderDimmi, AIProviderAnthropic, AIProviderOpenAI, AIProviderChatGPT, AIProviderEngy,
+		AIProviderDimmi, AIProviderAnthropic, AIProviderOpenAI, AIProviderChatGPT, AIProviderEngy, AIProviderBaseten,
 		AIProviderOpenAICompatible,
 	}
 }

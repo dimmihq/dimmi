@@ -11,6 +11,7 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/drivers/llm/baseten"
 	"github.com/dimmihq/dimmi/app/drivers/llm/engy"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openaicompat"
@@ -209,5 +210,26 @@ func TestOpenAIDriver(t *testing.T) {
 		assert.Equal(t, contracts.LLMProviderEngy, drv.Provider())
 		assert.Equal(t, 327_680, drv.Capabilities("glm-5.3-flash").ContextTokens)
 		assert.Equal(t, "Bearer sk-engy", fake.Sent()[0].Header.Get("Authorization"))
+	})
+
+	t.Run("sends baseten calls to its endpoint with the model under baseten's name", func(t *testing.T) {
+		t.Parallel()
+		hc, fake := fakeHTTP(t)
+		fake.Stub("POST https://inference.baseten.co/v1/chat/completions", sse("", chunk("ok", "stop"), "", "[DONE]"))
+		drv := baseten.New(baseten.Options{APIKey: "bt-key", HTTP: hc.StdClient()})
+
+		stream, err := drv.Stream(t.Context(), request("glm-5.3-flash"))
+		require.NoError(t, err)
+		drain(t, stream)
+
+		var sent struct {
+			Model string `json:"model"`
+		}
+		require.NoError(t, json.Unmarshal(fake.Sent()[0].Body, &sent))
+		assert.Equal(t, "zai-org/GLM-5.3-Flash", sent.Model)
+		assert.Equal(t, contracts.LLMProviderBaseten, drv.Provider())
+		assert.Equal(t, 327_680, drv.Capabilities("glm-5.3-flash").ContextTokens)
+		assert.Equal(t, "Bearer bt-key", fake.Sent()[0].Header.Get("Authorization"))
+		assert.Equal(t, "moonshotai/Kimi-K3.1-Pro", baseten.ModelID("moonshotai/Kimi-K3.1-Pro"))
 	})
 }

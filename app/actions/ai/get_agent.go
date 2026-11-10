@@ -335,6 +335,10 @@ func providers(cfg config.AIConfig) []ProviderDescriptor {
 			AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://engy.ai",
 		},
 		{
+			ID: enums.AIProviderBaseten, Name: "Baseten (open weight)",
+			AuthType: "api_key", KeyRequired: true, Available: true, DocsURL: "https://www.baseten.co",
+		},
+		{
 			ID: enums.AIProviderOpenAICompatible, Name: "OpenAI-compatible",
 			AuthType: "api_key", Available: true,
 		},

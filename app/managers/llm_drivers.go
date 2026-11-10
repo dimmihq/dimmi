@@ -22,6 +22,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/anthropic"
+	"github.com/dimmihq/dimmi/app/drivers/llm/baseten"
 	"github.com/dimmihq/dimmi/app/drivers/llm/chatgpt"
 	"github.com/dimmihq/dimmi/app/drivers/llm/engy"
 	"github.com/dimmihq/dimmi/app/drivers/llm/managed"
@@ -53,13 +54,7 @@ func (m *LLMManager) registerBuiltins() {
 		}), nil
 	})
 
-	m.Extend(enums.AIProviderEngy, func(
-		_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, hc *httpclient.Client,
-	) (contracts.LLM, error) {
-		return engy.New(engy.Options{
-			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
-		}), nil
-	})
+	m.registerOpenWeight()
 
 	m.Extend(enums.AIProviderOpenAICompatible, func(
 		_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, hc *httpclient.Client,
@@ -87,6 +82,28 @@ func (m *LLMManager) registerBuiltins() {
 }
 
 /*
+registerOpenWeight registers the hosts of the open-weight models that
+take a workspace's own key.
+*/
+func (m *LLMManager) registerOpenWeight() {
+	m.Extend(enums.AIProviderEngy, func(
+		_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, hc *httpclient.Client,
+	) (contracts.LLM, error) {
+		return engy.New(engy.Options{
+			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
+		}), nil
+	})
+
+	m.Extend(enums.AIProviderBaseten, func(
+		_ context.Context, m *LLMManager, key models.AiProviderKey, creds Credentials, hc *httpclient.Client,
+	) (contracts.LLM, error) {
+		return baseten.New(baseten.Options{
+			BaseURL: str(key.BaseUrl), APIKey: creds.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
+		}), nil
+	})
+}
+
+/*
 managedDriver builds the multiplexer from the instance's managed
 credentials, offering only the models of the configured families.
 */
@@ -105,9 +122,7 @@ func (m *LLMManager) managedDriver(hc *httpclient.Client) (contracts.LLM, error)
 		})
 	}
 	if cfg.OpenWeight.APIKey != "" {
-		families[enums.AIModelFamilyOpenWeight] = engy.New(engy.Options{
-			BaseURL: cfg.OpenWeight.BaseURL, APIKey: cfg.OpenWeight.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
-		})
+		families[enums.AIModelFamilyOpenWeight] = m.openWeightHost(hc)
 	}
 
 	if len(families) == 0 {
@@ -122,6 +137,21 @@ func (m *LLMManager) managedDriver(hc *httpclient.Client) (contracts.LLM, error)
 	}
 
 	return managed.New(families, offered), nil
+}
+
+/*
+openWeightHost is the host the built-in provider sends the open-weight
+models to: Baseten when the install picked it, Engy otherwise.
+*/
+func (m *LLMManager) openWeightHost(hc *httpclient.Client) contracts.LLM {
+	cfg := m.config.Managed.OpenWeight
+	if cfg.Provider == string(enums.AIProviderBaseten) {
+		return baseten.New(baseten.Options{
+			BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
+		})
+	}
+
+	return engy.New(engy.Options{BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, HTTP: hc.StdClient(), Clock: m.clock})
 }
 
 /*

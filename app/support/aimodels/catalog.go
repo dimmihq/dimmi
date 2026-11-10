@@ -138,7 +138,7 @@ func Supported(provider enums.AIProvider) ([]Entry, bool) {
 		return Anthropic(), true
 	case enums.AIProviderOpenAI:
 		return OpenAI(), true
-	case enums.AIProviderEngy:
+	case enums.AIProviderEngy, enums.AIProviderBaseten:
 		return Engy(), true
 	case enums.AIProviderChatGPT:
 		return ChatGPT(), true

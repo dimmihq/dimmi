@@ -45,6 +45,12 @@ export const providerInfo: Record<string, ProviderInfo> = {
     keyLabel: "API key",
     keyPlaceholder: "engy-…",
   },
+  baseten: {
+    name: "Baseten",
+    blurb: "Open-weight models such as GLM and Kimi on Baseten, with your own API key.",
+    keyLabel: "API key",
+    keyPlaceholder: "Your Baseten API key",
+  },
   openai_compatible: {
     name: "OpenAI-compatible",
     blurb: "Ollama, vLLM, LiteLLM or any server that speaks OpenAI.",
