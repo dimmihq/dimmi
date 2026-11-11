@@ -58,7 +58,8 @@ it.describe("Connected apps", () => {
     await page.goto(authorize(denied.challenge));
     await expect(page.getByRole("heading", { name: "Connect Agent Tester" })).toBeVisible();
     await page.getByRole("button", { name: "Deny" }).click();
-    await expect.poll(() => answers.length).toBe(1);
+    await page.waitForURL((url) => url.href.startsWith(callback) && url.searchParams.has("error"));
+    expect(answers).toHaveLength(1);
     expect(answers[0]?.searchParams.get("error")).toBe("access_denied");
 
     const { verifier, challenge } = pkce();
@@ -70,8 +71,8 @@ it.describe("Connected apps", () => {
     await page.getByText("Contacts: read", { exact: true }).click();
     await expect(page.getByRole("checkbox", { name: "Contacts: read" })).not.toBeChecked();
     await page.getByRole("button", { name: "Allow" }).click();
-
-    await expect.poll(() => answers.length).toBe(2);
+    await page.waitForURL((url) => url.href.startsWith(callback) && url.searchParams.has("code"));
+    expect(answers).toHaveLength(2);
     const answer = answers[1];
     expect(answer?.searchParams.get("state")).toBe("xyz");
     const code = answer?.searchParams.get("code") ?? "";

@@ -3,7 +3,9 @@
  * and every status list in the app show them. A member who may change
  * settings drags a row by its handle, with the pointer or the keyboard,
  * and the new order saves on drop. The list moves at once and goes back,
- * with a note, when the save fails.
+ * with a note, when the save fails. The drag hooks are always handed to
+ * the list and only disabled without the permission, since the list may
+ * not gain or lose them between renders.
  */
 import { RiDraggable } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -51,6 +53,7 @@ export function FeedbackStatusesSection({ action }: { action?: React.ReactNode }
   const canChange = usePermission(workspace, "settings:write");
   const reorder = useReorder(workspace);
   const { dragAndDropHooks } = useDragAndDrop({
+    isDisabled: !canChange,
     getItems: (keys) => [...keys].map((key) => ({ "text/plain": String(key) })),
     onReorder: (event) => {
       const order = moved(
@@ -74,7 +77,7 @@ export function FeedbackStatusesSection({ action }: { action?: React.ReactNode }
       <GridList
         aria-label="Statuses"
         items={list}
-        dragAndDropHooks={canChange ? dragAndDropHooks : undefined}
+        dragAndDropHooks={dragAndDropHooks}
         className="flex flex-col outline-none"
       >
         {(status) => (

@@ -49,6 +49,8 @@ it.describe("operator", () => {
     const pane = page.getByRole("region", { name: "Operator" });
     await expect(pane.getByRole("button", { name: "Past chats" })).toBeDisabled();
     await pane.getByRole("button", { name: "Brief me" }).click();
-    await expect(pane.getByRole("alert")).toHaveText("Operator needs an AI connection. Connect one in Settings, AI.");
+    await expect(pane.getByRole("list", { name: "Operator chat" }).getByRole("listitem")).toHaveText(
+      "Something went wrong while I was working on this. Try again in a moment.",
+    );
   });
 });

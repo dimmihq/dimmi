@@ -64,18 +64,12 @@ it.describe("email signatures", () => {
     const preview = page.getByTitle("Your signature preview");
     await expect(preview).toHaveAttribute("srcdoc", new RegExp(person.name));
     await expect(preview).toHaveAttribute("srcdoc", /refund is on its way/);
-    await page.screenshot({
-      path: `/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/399eb82f-22ea-4927-85de-f0db611ad43f/scratchpad/page-${it.info().project.name}.png`,
-    });
 
     await page.getByRole("button", { name: "Save signature" }).click();
     await expect(page).toHaveURL(/\/settings\/profile#signature$/);
     await expect(page.getByRole("switch", { name: "Use your signature" })).toBeChecked();
     await expect(page.getByTitle("Your signature preview")).toHaveAttribute("srcdoc", new RegExp(person.name));
     expect(await storedBodies(page, "filter[member]=me")).toEqual(["Thanks,\n{{member_name}}\n{{member_title}}"]);
-    await page.screenshot({
-      path: `/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/399eb82f-22ea-4927-85de-f0db611ad43f/scratchpad/card-${it.info().project.name}.png`,
-    });
 
     await page.getByRole("link", { name: "Edit your signature" }).click();
     await writer.click();

@@ -294,7 +294,8 @@ const asks = {
 /*
  * Actions are the header's buttons, as the series' status allows them.
  * Trying, pausing and archiving ask first; resuming does not, since it
- * only lets the series carry on.
+ * only lets the series carry on. The question keeps its words while it
+ * closes, so a dialog fading out never turns into a different one.
  */
 function Actions({
   series,
@@ -312,6 +313,11 @@ function Actions({
   onPublish: () => void;
 }) {
   const [asked, setAsked] = useState<Asked | null>(null);
+  const [worded, setWorded] = useState<Asked>("pause");
+  const ask = (next: Asked) => {
+    setWorded(next);
+    setAsked(next);
+  };
   const ran = series.live_version_id !== null;
   const live = series.status === "live";
   const editable = series.status !== "archived";
@@ -324,12 +330,12 @@ function Actions({
         onOpenChange={(open) => (open ? undefined : setAsked(null))}
         isDismissable
         onConfirm={confirm}
-        {...asks[asked ?? "pause"]}
+        {...asks[worded]}
       />
-      {live ? <Tip label="Try it on me" icon={RiTestTubeLine} busy={trying} onPress={() => setAsked("try")} /> : null}
-      {live ? <Tip label="Pause" icon={RiPauseLine} onPress={() => setAsked("pause")} /> : null}
+      {live ? <Tip label="Try it on me" icon={RiTestTubeLine} busy={trying} onPress={() => ask("try")} /> : null}
+      {live ? <Tip label="Pause" icon={RiPauseLine} onPress={() => ask("pause")} /> : null}
       {series.status === "paused" ? <Tip label="Resume" icon={RiPlayLine} onPress={() => onAct("resume")} /> : null}
-      {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => setAsked("archive")} /> : null}
+      {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => ask("archive")} /> : null}
       {editable ? (
         <Button
           size="small"

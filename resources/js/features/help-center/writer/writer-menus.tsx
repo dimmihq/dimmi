@@ -23,7 +23,7 @@ import {
 } from "@remixicon/react";
 import { type Editor, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Input } from "@/components/base/input/input";
 import { applyLink } from "@/features/inbox/composer/editor-helpers";
@@ -268,12 +268,39 @@ function emptyLineAt(editor: Editor): number | null {
 }
 
 /*
+ * useMounted tells whether the editor has its view in the page yet. Until
+ * then the document has no lines to measure, and asking for them throws.
+ * A slow render can even outlive the editor it started with, since an
+ * editor nobody mounted in time is destroyed, so the flag starts from
+ * the editor and only turns on once it has been created in the page.
+ */
+function useMounted(editor: Editor): boolean {
+  const [mounted, setMounted] = useState(editor.isInitialized);
+
+  useEffect(() => {
+    const mount = () => setMounted(true);
+    if (editor.isInitialized) {
+      mount();
+    }
+    editor.on("create", mount);
+
+    return () => {
+      editor.off("create", mount);
+    };
+  }, [editor]);
+
+  return mounted;
+}
+
+/*
  * BlockPlus is the plus in the margin beside an empty line; it opens the
- * block menu by typing the slash for the writer.
+ * block menu by typing the slash for the writer. It waits for the editor
+ * to be in the page, since it sits beside a line it measures there.
  */
 export function BlockPlus({ editor }: { editor: Editor }) {
+  const mounted = useMounted(editor);
   const at = useEditorState({ editor, selector: ({ editor: e }) => emptyLineAt(e) });
-  const line = at === null ? null : (editor.view.nodeDOM(at) as HTMLElement | null);
+  const line = !mounted || at === null ? null : (editor.view.nodeDOM(at) as HTMLElement | null);
   if (!line) {
     return null;
   }
