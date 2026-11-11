@@ -1,0 +1,18 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+KnowledgeSourceFailing tells an owner or admin that a knowledge source
+stopped syncing, what went wrong, and where to fix it, since the agent
+keeps answering from the last copy until someone does.
+*/
+
+templ KnowledgeSourceFailing(name, workspace, source, problem, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.knowledge_source_failing.subject", i18n.Args{"source": source})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.knowledge_source_failing.intro", i18n.Args{"source": source, "workspace": workspace}) }</p>
+		<p>{ i18n.T(ctx, "mail.knowledge_source_failing.error", i18n.Args{"error": problem}) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.knowledge_source_failing.action", nil))
+	}
+}

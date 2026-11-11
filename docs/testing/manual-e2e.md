@@ -1181,3 +1181,23 @@ Run `broadcasts:demo`, then `series:demo --workspace $WS --member $MEM --address
 | Pause | Pause, wait past a wait's end, Resume | nothing moves while paused; on resume they move on |
 | Try it on me | add yourself as a contact, Try it on me, Skip the wait | the test journey runs every step, messages reach you, the report counts nothing; trying again replaces it |
 | Builder | Series, New series, add steps with the plus, Set live, Results | cards show what each step did; the inspector lists people on a step and lets you take them off |
+
+## Knowledge sources
+
+Serve a small docs site on this machine (`python3 -m http.server` in a folder of HTML pages, a `robots.txt` and a
+`sitemap.xml`) and start the server with `DIMMI_HTTP_CLIENT__ALLOW_PRIVATE_NETWORKS=true` and
+`DIMMI_AI__KNOWLEDGE__CRAWL_INTERVAL_MS=0`; without them the crawler refuses local addresses and reads one page a
+second.
+
+| Flow | Do | Expect |
+|---|---|---|
+| Add a website | Settings, Knowledge, Add source, Website, the site's address, Connect, Continue, Continue, Add and sync | the source page opens; Sync history shows First sync Succeeded with "N new"; Documents, Live lists every page by its title; `GET $B/knowledge/sources/$S/documents?status=active` returns them |
+| Sync now, cancel | Sync now, then Cancel sync while it runs | `POST .../syncs` 202 then `DELETE .../syncs/$R` 200; the run ends Canceled, documents already read stay live, the source is no longer syncing |
+| Exclude, include | Exclude on a live document, then Include under Excluded | it moves to Excluded with "Excluded by a teammate" and leaves search; a new sync does not bring it back; Include returns it to Live after its next read |
+| Turn into articles | Turn into articles on a synced source, pick a help center | `POST .../imports` 202; the help center gets one article per document, published unless a draft at the source, in collections from the source; the source becomes an import |
+| Failing source | break the source (stop the site, or a revoked token), Sync now | the run fails; Settings, Knowledge shows the "stopped syncing" banner with the error; Mailpit has "Knowledge source <name> stopped syncing" to each admin, once |
+| Connected services | Run behind a public tunnel (`DIMMI_APP__URL` set to it) with `DIMMI_SERVICES__{NOTION,INTERCOM,ZENDESK,GITHUB}__CLIENT_ID/_SECRET` and each app's redirect at `/integrations/<provider>/callback`; Add source, Notion (or Intercom, or Zendesk with its subdomain), Connect, consent | the browser comes back to the add flow with the account picked; Connect shows the pages, collections or sections as a tree; a just-shared Notion page may take a minute to appear |
+| Choose content | tick one branch of the tree, Continue, Add and sync; then on the source page tick another branch, Save and sync | the review step says how many items are chosen; only the ticked branch is read; saving new ticks starts a sync that reads the new branch and marks the old one Removed |
+| Help center import | Add source, Intercom or Zendesk, connect, Help center articles, pick a help center | the chosen collections and articles arrive, drafts staying drafts, with redirects from the old addresses |
+| GitHub repository | Add source, GitHub, Connect GitHub, consent; pick a repository and a branch, Connect, tick a folder, Continue, Add and sync | repositories and branches come from the account, the default branch is preselected; only Markdown files under the ticked folder become documents |
+| Cloudflare crawler | start with `DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN`, add a public website | the first sync waits on the Cloudflare crawl (minutes), then pages arrive as Markdown; a crawl past 15 minutes stops and keeps what it read |

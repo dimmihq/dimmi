@@ -1,6 +1,7 @@
 /*
  * Where and when the agent answers: the channels it takes, the hours it
- * works, and what it does once a teammate holds the conversation. At
+ * works, read from each inbox's office hours, and what it does once a
+ * teammate holds the conversation. At
  * least one channel stays chosen, since an agent on no channel never
  * answers anyone.
  */
@@ -23,8 +24,6 @@ export function WhereSection({
   canWrite: boolean;
   save: (change: AgentChange) => void;
 }) {
-  const officeHoursMissing = agent.schedule !== "always" && !agent.office_hours;
-
   return (
     <Section title="Where & when" description="The conversations it takes and the hours it works.">
       <StackedRow label="Channels" description="It answers new conversations on the channels you tick.">
@@ -51,9 +50,7 @@ export function WhereSection({
       </StackedRow>
       <StackedRow
         label="Hours"
-        description={
-          officeHoursMissing ? "No office hours are set for the agent yet, so it answers at any hour." : undefined
-        }
+        description="It follows the office hours of each conversation's inbox, set on the inbox's page."
       >
         <RadioGroup
           aria-label="Hours"

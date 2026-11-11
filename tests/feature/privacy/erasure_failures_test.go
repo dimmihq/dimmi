@@ -178,6 +178,9 @@ func TestErasureFailures(t *testing.T) {
 		"handing over conversations": {"conversations", "UPDATE"},
 		"deleting the contact":       {"contacts", "DELETE"},
 		"closing the request":        {"contact_erasures", "UPDATE"},
+		"forgetting rating notes":    {"article_ratings", "UPDATE"},
+		"deleting subscriptions":     {"changelog_subscribers", "DELETE"},
+		"forgetting addresses":       {"broadcast_recipients", "UPDATE"},
 	} {
 		t.Run("retries the erasure when "+name+" fails", func(t *testing.T) {
 			t.Parallel()

@@ -22,6 +22,9 @@ ErrInvalidDomain refuses a name that is no registrable domain, or one the
 install uses itself. ErrPublicMailboxDomain refuses a free mailbox domain.
 ErrDomainExists refuses a domain the workspace already added.
 ErrDomainInUse refuses removing a domain addresses still send from.
+ErrDomainSending refuses removing a domain that scheduled or sending
+broadcasts, or live or paused series, still send from; removing it anyway
+would quietly move their mail to another address.
 ErrDomainCheckThrottled refuses a check asked for too soon after the last.
 ErrDKIMRotationUnsupported refuses rotating a key the install does not
 hold. ErrEmailProviderUnavailable reports a provider that did not answer.
@@ -39,6 +42,9 @@ var (
 		"This domain is already added to the workspace.").OnField("domain")
 	ErrDomainInUse = fault.New(fault.Conflict, "domain_in_use",
 		"Addresses still send from this domain. Remove it anyway to send them from your dimmi address.")
+	ErrDomainSending = fault.New(fault.Conflict, "domain_sending",
+		"Broadcasts or series still send from this domain. Stop or archive them, or move them to another "+
+			"address, then remove the domain.")
 	ErrDomainCheckThrottled = fault.New(fault.RateLimited, "domain_check_throttled",
 		"The domain was just checked. Try again in a few seconds.")
 	ErrDKIMRotationUnsupported = fault.New(fault.Invalid, "dkim_rotation_unsupported",

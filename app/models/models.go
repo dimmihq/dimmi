@@ -1219,6 +1219,12 @@ type FeedbackPost struct {
 	TitleTrgm        *string    `json:"title_trgm"`
 }
 
+type FeedbackStatusPosition struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Status      string   `json:"status"`
+	Position    int16    `json:"position"`
+}
+
 type FeedbackVote struct {
 	PostID      ids.UUID  `json:"post_id"`
 	ContactID   ids.UUID  `json:"contact_id"`
@@ -1354,6 +1360,7 @@ type Inbox struct {
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 	Access        string          `json:"access"`
+	ScheduleID    *ids.UUID       `json:"schedule_id"`
 }
 
 type InboxAccess struct {
@@ -1448,6 +1455,51 @@ type KnowledgeConversation struct {
 	UpdatedAt      time.Time               `json:"updated_at"`
 }
 
+type KnowledgeDocument struct {
+	ID              ids.UUID                `json:"id"`
+	WorkspaceID     ids.UUID                `json:"workspace_id"`
+	SourceID        ids.UUID                `json:"source_id"`
+	ExternalID      string                  `json:"external_id"`
+	Url             *string                 `json:"url"`
+	Path            string                  `json:"path"`
+	Title           string                  `json:"title"`
+	Locale          string                  `json:"locale"`
+	TranslationOf   *string                 `json:"translation_of"`
+	Collection      json.RawMessage         `json:"collection"`
+	Version         string                  `json:"version"`
+	ContentMarkdown string                  `json:"content_markdown"`
+	ContentHash     string                  `json:"content_hash"`
+	Visibility      string                  `json:"visibility"`
+	Draft           bool                    `json:"draft"`
+	Status          string                  `json:"status"`
+	ExcludedBy      *string                 `json:"excluded_by"`
+	ErrorCode       *string                 `json:"error_code"`
+	Error           *string                 `json:"error"`
+	Assets          json.RawMessage         `json:"assets"`
+	Search          database.SearchDocument `json:"search"`
+	LinkedArticleID *ids.UUID               `json:"linked_article_id"`
+	ImportedHash    *string                 `json:"imported_hash"`
+	LastSeenRunID   *ids.UUID               `json:"last_seen_run_id"`
+	FetchedAt       *time.Time              `json:"fetched_at"`
+	IndexedAt       *time.Time              `json:"indexed_at"`
+	CreatedAt       time.Time               `json:"created_at"`
+	UpdatedAt       time.Time               `json:"updated_at"`
+}
+
+type KnowledgeDocumentChunk struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	DocumentID  ids.UUID  `json:"document_id"`
+	SourceID    ids.UUID  `json:"source_id"`
+	Ordinal     int32     `json:"ordinal"`
+	Title       string    `json:"title"`
+	HeadingPath []string  `json:"heading_path"`
+	Body        string    `json:"body"`
+	Visibility  string    `json:"visibility"`
+	EmbedHash   string    `json:"embed_hash"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type KnowledgeEmbedding struct {
 	WorkspaceID ids.UUID            `json:"workspace_id"`
 	ModelKey    string              `json:"model_key"`
@@ -1482,6 +1534,66 @@ type KnowledgeSetting struct {
 	SwitchedAt       *time.Time `json:"switched_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+type KnowledgeSource struct {
+	ID                   ids.UUID          `json:"id"`
+	WorkspaceID          ids.UUID          `json:"workspace_id"`
+	Type                 string            `json:"type"`
+	Name                 string            `json:"name"`
+	Mode                 string            `json:"mode"`
+	Targets              []string          `json:"targets"`
+	HelpCenterID         *ids.UUID         `json:"help_center_id"`
+	Config               json.RawMessage   `json:"config"`
+	Include              []string          `json:"include"`
+	Exclude              []string          `json:"exclude"`
+	CredentialsEncrypted encryption.Sealed `json:"credentials_encrypted"`
+	Status               string            `json:"status"`
+	Schedule             string            `json:"schedule"`
+	NextSyncAt           *time.Time        `json:"next_sync_at"`
+	LastSyncedAt         *time.Time        `json:"last_synced_at"`
+	LastSuccessAt        *time.Time        `json:"last_success_at"`
+	LastErrorCode        *string           `json:"last_error_code"`
+	LastError            *string           `json:"last_error"`
+	DocumentCount        int32             `json:"document_count"`
+	CreatedByMemberID    *ids.UUID         `json:"created_by_member_id"`
+	CreatedAt            time.Time         `json:"created_at"`
+	UpdatedAt            time.Time         `json:"updated_at"`
+}
+
+type KnowledgeSyncRun struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	SourceID    ids.UUID        `json:"source_id"`
+	Trigger     string          `json:"trigger"`
+	Status      string          `json:"status"`
+	FullRun     bool            `json:"full_run"`
+	Discovered  bool            `json:"discovered"`
+	Pending     int32           `json:"pending"`
+	Stats       json.RawMessage `json:"stats"`
+	ErrorCode   *string         `json:"error_code"`
+	Error       *string         `json:"error"`
+	StartedAt   *time.Time      `json:"started_at"`
+	FinishedAt  *time.Time      `json:"finished_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+type KnowledgeUsagePeriod struct {
+	ID              ids.UUID    `json:"id"`
+	WorkspaceID     ids.UUID    `json:"workspace_id"`
+	PeriodStart     pgtype.Date `json:"period_start"`
+	SourceID        *ids.UUID   `json:"source_id"`
+	Kind            string      `json:"kind"`
+	ModelKey        string      `json:"model_key"`
+	InputTokens     int64       `json:"input_tokens"`
+	EstimatedTokens int64       `json:"estimated_tokens"`
+	BrowserMs       int64       `json:"browser_ms"`
+	Requests        int32       `json:"requests"`
+	CostMicros      int64       `json:"cost_micros"`
+	Unpriced        bool        `json:"unpriced"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
 }
 
 type Maintenance struct {
@@ -2170,6 +2282,75 @@ type UserAuthFactor struct {
 	LastUsedAt      *time.Time        `json:"last_used_at"`
 	CreatedAt       time.Time         `json:"created_at"`
 	UpdatedAt       time.Time         `json:"updated_at"`
+}
+
+type WebhookDelivery struct {
+	ID                 ids.UUID   `json:"id"`
+	WorkspaceID        ids.UUID   `json:"workspace_id"`
+	EndpointID         ids.UUID   `json:"endpoint_id"`
+	EventID            ids.UUID   `json:"event_id"`
+	EventType          string     `json:"event_type"`
+	Sequence           int64      `json:"sequence"`
+	ObjectID           *ids.UUID  `json:"object_id"`
+	ContactID          *ids.UUID  `json:"contact_id"`
+	Payload            []byte     `json:"payload"`
+	PayloadBytes       int32      `json:"payload_bytes"`
+	Thin               bool       `json:"thin"`
+	Test               bool       `json:"test"`
+	Note               bool       `json:"note"`
+	Status             string     `json:"status"`
+	AttemptCount       int32      `json:"attempt_count"`
+	NextAttemptAt      *time.Time `json:"next_attempt_at"`
+	FirstAttemptAt     *time.Time `json:"first_attempt_at"`
+	LastAttemptAt      *time.Time `json:"last_attempt_at"`
+	SucceededAt        *time.Time `json:"succeeded_at"`
+	LastResponseStatus *int32     `json:"last_response_status"`
+	LastErrorCode      *string    `json:"last_error_code"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+type WebhookDeliveryAttempt struct {
+	ID              ids.UUID        `json:"id"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	DeliveryID      ids.UUID        `json:"delivery_id"`
+	Number          int32           `json:"number"`
+	Trigger         string          `json:"trigger"`
+	RequestedAt     time.Time       `json:"requested_at"`
+	DurationMs      *int32          `json:"duration_ms"`
+	RequestHeaders  json.RawMessage `json:"request_headers"`
+	ResponseStatus  *int32          `json:"response_status"`
+	ResponseHeaders json.RawMessage `json:"response_headers"`
+	ResponseBody    *string         `json:"response_body"`
+	ErrorCode       *string         `json:"error_code"`
+	ErrorMessage    *string         `json:"error_message"`
+	CreatedAt       time.Time       `json:"created_at"`
+}
+
+type WebhookEndpoint struct {
+	ID                      ids.UUID          `json:"id"`
+	WorkspaceID             ids.UUID          `json:"workspace_id"`
+	Url                     string            `json:"url"`
+	Description             string            `json:"description"`
+	EventTypes              []string          `json:"event_types"`
+	IncludeNotes            bool              `json:"include_notes"`
+	InboxIds                []ids.UUID        `json:"inbox_ids"`
+	ApiVersion              string            `json:"api_version"`
+	Enabled                 bool              `json:"enabled"`
+	DisabledReason          *string           `json:"disabled_reason"`
+	DisabledAt              *time.Time        `json:"disabled_at"`
+	SecretEncrypted         encryption.Sealed `json:"secret_encrypted"`
+	PreviousSecretEncrypted encryption.Sealed `json:"previous_secret_encrypted"`
+	PreviousSecretExpiresAt *time.Time        `json:"previous_secret_expires_at"`
+	Health                  string            `json:"health"`
+	FailingSince            *time.Time        `json:"failing_since"`
+	FailingNotifiedAt       *time.Time        `json:"failing_notified_at"`
+	LastSuccessAt           *time.Time        `json:"last_success_at"`
+	LastFailureAt           *time.Time        `json:"last_failure_at"`
+	Metadata                json.RawMessage   `json:"metadata"`
+	CreatedByMemberID       *ids.UUID         `json:"created_by_member_id"`
+	CreatedAt               time.Time         `json:"created_at"`
+	UpdatedAt               time.Time         `json:"updated_at"`
 }
 
 type WidgetSession struct {

@@ -7,7 +7,7 @@
 | its credentials into a driver: the key-driven providers read the
 | row's endpoint and config, the subscription source refreshes its own
 | bearer, and the built-in provider fronts whichever upstreams the
-| install configured.
+| install configured, the open-weight models on two hosts in turn.
 |
 */
 
@@ -25,11 +25,13 @@ import (
 	"github.com/dimmihq/dimmi/app/drivers/llm/baseten"
 	"github.com/dimmihq/dimmi/app/drivers/llm/chatgpt"
 	"github.com/dimmihq/dimmi/app/drivers/llm/engy"
+	"github.com/dimmihq/dimmi/app/drivers/llm/failover"
 	"github.com/dimmihq/dimmi/app/drivers/llm/managed"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openaicompat"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/llmretry"
 )
 
 /*
@@ -121,8 +123,8 @@ func (m *LLMManager) managedDriver(hc *httpclient.Client) (contracts.LLM, error)
 			BaseURL: cfg.OpenAI.BaseURL, APIKey: cfg.OpenAI.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
 		})
 	}
-	if cfg.OpenWeight.APIKey != "" {
-		families[enums.AIModelFamilyOpenWeight] = m.openWeightHost(hc)
+	if cfg.OpenWeight.Configured() {
+		families[enums.AIModelFamilyOpenWeight] = m.openWeightHosts(hc)
 	}
 
 	if len(families) == 0 {
@@ -140,18 +142,33 @@ func (m *LLMManager) managedDriver(hc *httpclient.Client) (contracts.LLM, error)
 }
 
 /*
-openWeightHost is the host the built-in provider sends the open-weight
-models to: Baseten when the install picked it, Engy otherwise.
+openWeightHosts fronts the hosts the built-in provider sends the
+open-weight models to: Baseten first and Engy when Baseten cannot
+serve, or whichever of the two the install has a key for. Each host
+has its own breaker per model, so a host that keeps failing is
+skipped until it recovers.
 */
-func (m *LLMManager) openWeightHost(hc *httpclient.Client) contracts.LLM {
+func (m *LLMManager) openWeightHosts(hc *httpclient.Client) contracts.LLM {
 	cfg := m.config.Managed.OpenWeight
-	if cfg.Provider == string(enums.AIProviderBaseten) {
-		return baseten.New(baseten.Options{
-			BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
-		})
+	var hosts []contracts.LLM
+
+	if cfg.Baseten.APIKey != "" {
+		hosts = append(hosts, baseten.New(baseten.Options{
+			BaseURL: cfg.Baseten.BaseURL, APIKey: cfg.Baseten.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
+		}))
+	}
+	if cfg.Engy.APIKey != "" {
+		hosts = append(hosts, engy.New(engy.Options{
+			BaseURL: cfg.Engy.BaseURL, APIKey: cfg.Engy.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
+		}))
 	}
 
-	return engy.New(engy.Options{BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, HTTP: hc.StdClient(), Clock: m.clock})
+	return failover.New(failover.Options{
+		Hosts: hosts,
+		BreakerFor: func(host contracts.LLMProvider, model string) *llmretry.Breaker {
+			return m.breakers.For("managed:" + string(host) + ":" + model)
+		},
+	})
 }
 
 /*

@@ -7,16 +7,20 @@
  * edits the default schedule, which every workflow uses unless it names
  * another; changes apply to waits that start after saving.
  */
+import { type CalendarDate, parseTime } from "@internationalized/date";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
+import { Checkbox } from "@/components/base/checkbox/checkbox";
+import { DatePicker } from "@/components/base/date-picker/date-picker";
+import { TimeField } from "@/components/base/time-field/time-field";
 import { Action, Danger, Field, Toggle } from "@/features/settings/controls";
 import { usePermission } from "@/features/settings/inboxes";
 import type { Holiday, Schedule, Weekday } from "@/lib/api/schedules";
 import { schedulesQuery, updateSchedule } from "@/lib/api/schedules";
 import { Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
-import { sameWeek, statusLine, withDay } from "../office-hours";
+import { holidayWhen, sameWeek, statusLine, withDay } from "../office-hours";
 import { ZonePicker } from "../preferences/zone-picker";
 import { useAccount } from "../use-account";
 
@@ -29,6 +33,36 @@ const days: [Weekday, string][] = [
   ["sat", "Saturday"],
   ["sun", "Sunday"],
 ];
+
+/*
+ * Clock is one opening or closing time, typed hour and minute on a
+ * 24-hour clock and kept as "HH:MM", the way the schedule stores it.
+ */
+function Clock({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <TimeField
+      aria-label={label}
+      size="small"
+      icon={null}
+      hourCycle={24}
+      shouldForceLeadingZeros
+      className="w-20"
+      value={parseTime(value)}
+      isDisabled={disabled}
+      onChange={(time) => (time ? onChange(time.toString().slice(0, 5)) : undefined)}
+    />
+  );
+}
 
 function DayRow({
   label,
@@ -47,21 +81,9 @@ function DayRow({
     <Row label={label} description={range ? undefined : "Closed"}>
       {range ? (
         <span className="flex items-center gap-2">
-          <Field
-            label={`${label} opens`}
-            value={start}
-            width="w-20"
-            disabled={readOnly}
-            onChange={(v) => onChange([v, end])}
-          />
+          <Clock label={`${label} opens`} value={start} disabled={readOnly} onChange={(v) => onChange([v, end])} />
           <span className="text-body-2-regular text-text-tertiary">to</span>
-          <Field
-            label={`${label} closes`}
-            value={end}
-            width="w-20"
-            disabled={readOnly}
-            onChange={(v) => onChange([start, v])}
-          />
+          <Clock label={`${label} closes`} value={end} disabled={readOnly} onChange={(v) => onChange([start, v])} />
         </span>
       ) : null}
       <Toggle
@@ -74,6 +96,11 @@ function DayRow({
   );
 }
 
+/*
+ * Holidays lists the days closed whole and adds one. A new holiday
+ * repeats every year unless unticked, since most closures such as
+ * Christmas fall on the same day; moving ones such as Easter are dated.
+ */
 function Holidays({
   holidays,
   readOnly,
@@ -83,32 +110,57 @@ function Holidays({
   readOnly: boolean;
   onChange: (holidays: Holiday[]) => void;
 }) {
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<CalendarDate | null>(null);
   const [name, setName] = useState("");
+  const [yearly, setYearly] = useState(true);
+  const [added, setAdded] = useState(0);
+
+  const add = () => {
+    if (!date) {
+      return;
+    }
+
+    const day = date.toString();
+    if (!holidays.some((h) => h.date === day && Boolean(h.yearly) === yearly)) {
+      onChange([...holidays, { date: day, name: name.trim() || undefined, yearly }]);
+    }
+
+    setDate(null);
+    setName("");
+    setYearly(true);
+    setAdded((count) => count + 1);
+  };
 
   return (
     <Section title="Holidays" description="Closed the whole day, every workflow included.">
-      {holidays.map((h) => (
-        <Item key={h.date} mark={null} title={h.name || "Holiday"} detail={h.date}>
+      {holidays.map((h, index) => (
+        <Item
+          key={`${h.date}-${h.yearly ? "yearly" : "once"}`}
+          mark={null}
+          title={h.name || "Holiday"}
+          detail={holidayWhen(h)}
+        >
           {readOnly ? null : (
-            <Danger onPress={() => onChange(holidays.filter((other) => other.date !== h.date))}>Remove</Danger>
+            <Danger onPress={() => onChange(holidays.filter((_, other) => other !== index))}>Remove</Danger>
           )}
         </Item>
       ))}
       {readOnly ? null : (
         <Row label="Add a holiday">
-          <span className="flex items-center gap-2">
-            <Field label="Holiday date" placeholder="2026-12-25" value={date} width="w-28" onChange={setDate} />
-            <Field label="Holiday name" placeholder="Christmas" value={name} width="w-32" onChange={setName} />
-            <Action
-              onPress={() => {
-                if (date.trim()) {
-                  onChange([...holidays, { date: date.trim(), name: name.trim() || undefined }]);
-                }
-              }}
-            >
-              Add
-            </Action>
+          <span className="flex items-center gap-3">
+            <DatePicker aria-label="Holiday date" value={date} onChange={setDate} />
+            <Field
+              key={added}
+              label="Holiday name"
+              placeholder="Christmas"
+              value={name}
+              width="w-32"
+              onChange={setName}
+            />
+            <Checkbox size="sm" isSelected={yearly} onChange={setYearly}>
+              <span className="whitespace-nowrap">Repeats every year</span>
+            </Checkbox>
+            <Action onPress={add}>Add</Action>
           </span>
         </Row>
       )}

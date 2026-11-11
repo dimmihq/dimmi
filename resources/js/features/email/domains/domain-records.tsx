@@ -1,6 +1,6 @@
 /*
  * The records a domain needs, one block each: what it is for, whether
- * the last check found it, and its type, name and value to copy. Names
+ * the last check found it, its type, and its name and value to copy. Names
  * are shown the way the customer's DNS host wants them typed. Values are
  * DNS text, so they sit in a left-to-right region whatever the page's
  * direction, and a value found that differs is shown beside the one
@@ -9,7 +9,7 @@
 import { Row, Section } from "@/features/settings/layout";
 import type { DomainRecord } from "@/lib/api/email-domains";
 
-import { CopyButton } from "../setup/copy-button";
+import { CopyIconButton } from "../setup/copy-button";
 import { RecordStatusChip } from "./domain-status";
 
 const purposeLabels: Record<string, string> = {
@@ -23,16 +23,17 @@ const purposeLabels: Record<string, string> = {
 };
 
 /*
- * Value is one copyable piece of a record.
+ * Value is one piece of a record, copyable unless it is short enough to
+ * type, like the record's type.
  */
-function Value({ label, value }: { label: string; value: string }) {
+function Value({ label, value, copyable = true }: { label: string; value: string; copyable?: boolean }) {
   return (
     <div className="flex min-w-0 items-start gap-2">
       <span className="w-12 shrink-0 pt-1 text-caption-1-regular text-text-tertiary">{label}</span>
       <code dir="ltr" className="min-w-0 flex-1 break-all pt-0.5 font-mono text-body-2-regular text-text-primary">
         {value}
       </code>
-      <CopyButton value={value} label={`Copy ${label.toLowerCase()}`} />
+      {copyable ? <CopyIconButton value={value} label={`Copy ${label.toLowerCase()}`} /> : null}
     </div>
   );
 }
@@ -56,7 +57,11 @@ function RecordBlock({ record }: { record: DomainRecord }) {
         </span>
         <RecordStatusChip status={record.status} />
       </div>
-      <Value label="Type" value={record.priority ? `${record.type} ${record.priority}` : record.type} />
+      <Value
+        label="Type"
+        value={record.priority ? `${record.type} ${record.priority}` : record.type}
+        copyable={false}
+      />
       <Value label="Name" value={record.host} />
       {record.value ? (
         <Value label="Value" value={record.value} />

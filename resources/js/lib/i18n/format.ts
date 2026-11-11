@@ -73,6 +73,14 @@ export function formatDate(value: Moment, options: FormatOptions = {}): string {
 }
 
 /*
+ * formatMonthDay writes the month and day of a moment without its year,
+ * such as "Dec 25", for dates that come back every year.
+ */
+export function formatMonthDay(value: Moment, options: FormatOptions = {}): string {
+  return moment(value, options, { month: "short", day: "numeric" });
+}
+
+/*
  * formatTime writes the time of day of a moment, such as "3:04 PM".
  */
 export function formatTime(value: Moment, options: FormatOptions = {}): string {

@@ -1,9 +1,10 @@
 /*
  * How office hours read and change on the settings page: whether the
  * team is in now and when that changes, in the schedule's own time
- * zone, and one weekday's hours set or closed.
+ * zone, one weekday's hours set or closed, and when a holiday falls.
  */
-import type { Schedule, Weekday, Weekly } from "@/lib/api/schedules";
+import type { Holiday, Schedule, Weekday, Weekly } from "@/lib/api/schedules";
+import { formatDate, formatMonthDay } from "@/lib/i18n/format";
 
 /*
  * statusLine says whether the team is in now and when that changes, in
@@ -48,4 +49,17 @@ export function sameWeek(a: Weekly, b: Weekly): boolean {
   const days: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
   return days.every((day) => JSON.stringify(a[day] ?? []) === JSON.stringify(b[day] ?? []));
+}
+
+/*
+ * holidayWhen says when a holiday falls, such as "Dec 25, every year"
+ * or "Mar 3, 2027". The date has no time of day, so it is read in UTC
+ * to keep the reader's own zone from moving it a day.
+ */
+export function holidayWhen(holiday: Holiday): string {
+  if (holiday.yearly) {
+    return `${formatMonthDay(holiday.date, { timeZone: "UTC" })}, every year`;
+  }
+
+  return formatDate(holiday.date, { timeZone: "UTC" });
 }

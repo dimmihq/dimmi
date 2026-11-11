@@ -47,6 +47,7 @@ type Config struct {
 	Contacts   ContactsConfig   `koanf:"contacts"`
 	Broadcasts BroadcastsConfig `koanf:"broadcasts"`
 	Series     SeriesConfig     `koanf:"series"`
+	Webhooks   WebhooksConfig   `koanf:"webhooks"`
 	Identity   IdentityConfig   `koanf:"identity"`
 
 	HelpCenters HelpCentersConfig `koanf:"help_centers"`
@@ -73,6 +74,7 @@ func (c *Config) Validate() error {
 	c.Audit.settle(c.App.Edition)
 	c.Channels.settle(c.App.Edition)
 	c.HelpCenters.settle(c.App.Edition)
+	c.AI.Managed.OpenWeight.settle()
 
 	if *c.Audit.RetentionDays < 0 || c.SecurityEvents.RetentionDays < 0 || c.Inbox.Drafts.RetentionDays < 0 {
 		return fmt.Errorf("%w: retention_days", ErrInvalid)

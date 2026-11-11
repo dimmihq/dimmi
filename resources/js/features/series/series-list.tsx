@@ -10,7 +10,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
-
+import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { DataTable } from "@/components/application/data-table/data-table";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -20,7 +20,6 @@ import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
 import { toast } from "@/components/base/toast/toast";
 import { KindMark } from "@/features/automation/parts";
-import { Stat } from "@/features/broadcasts/parts";
 import { useWorkspace } from "@/features/customers/names";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { createSeries, type Series, type SeriesSubject, seriesListQuery } from "@/lib/api/series";
@@ -47,7 +46,7 @@ function NameCell({ series }: { series: Series }) {
 
 function Count({ value, ran }: { value: string; ran: boolean }) {
   return ran ? (
-    <span className="text-body-2-regular text-text-primary tabular-nums">{value}</span>
+    <span className="whitespace-nowrap text-body-2-regular text-text-primary tabular-nums">{value}</span>
   ) : (
     <span className="text-body-2-regular text-text-tertiary">–</span>
   );
@@ -65,7 +64,7 @@ const columns: ColumnDef<Series>[] = [
           <Chip variant="caption" color={look.tint}>
             {look.name}
           </Chip>
-          <span className="text-caption-1-regular text-text-tertiary">
+          <span className="whitespace-nowrap text-caption-1-regular text-text-tertiary">
             Edited {formatDate(row.original.updated_at)}
           </span>
         </span>
@@ -98,7 +97,13 @@ const columns: ColumnDef<Series>[] = [
   },
 ];
 
-const widths = { series: "w-[40%]", status: "w-[18%]", active: "w-[14%]", entered: "w-[14%]", goal: "w-[14%]" };
+const widths = {
+  series: "w-[320px]",
+  status: "w-[180px]",
+  active: "w-[130px]",
+  entered: "w-[130px]",
+  goal: "w-[140px]",
+};
 
 function Totals({ list }: { list: Series[] }) {
   const live = list.filter((series) => series.status === "live");
@@ -107,12 +112,36 @@ function Totals({ list }: { list: Series[] }) {
   const goal = sum((s) => s.totals?.goal ?? 0);
 
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-      <Stat label="Live series" value={live.length} note={`of ${list.length}`} />
-      <Stat label="On a series now" value={formatNumber(sum((s) => s.totals?.active ?? 0))} note="People mid-way" />
-      <Stat label="Entered" value={formatNumber(entered)} note="Since each went live" />
-      <Stat label="Reached the goal" value={percent(goal, entered)} note={`${formatNumber(goal)} journeys`} />
-    </div>
+    <StatCards
+      variant="compact"
+      className="gap-2"
+      stats={[
+        {
+          label: "Live series",
+          hint: "Series sending to people right now, out of all your series.",
+          value: formatNumber(live.length),
+          caption: `of ${list.length}`,
+        },
+        {
+          label: "On a series now",
+          hint: "People partway through a series: waiting for a step, or about to get a message.",
+          value: formatNumber(sum((s) => s.totals?.active ?? 0)),
+          caption: "People mid-way",
+        },
+        {
+          label: "Entered",
+          hint: "Journeys started across all series since each went live. Someone who enters twice counts twice. Test journeys are left out.",
+          value: formatNumber(entered),
+          caption: "Since each went live",
+        },
+        {
+          label: "Reached the goal",
+          hint: "Share of journeys that met the series goal before they ended.",
+          value: percent(goal, entered),
+          caption: `${formatNumber(goal)} journeys`,
+        },
+      ]}
+    />
   );
 }
 

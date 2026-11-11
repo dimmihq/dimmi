@@ -546,8 +546,10 @@ WHERE e.workspace_id = $1 AND e.series_id = $2
   AND (e.end_reason IS NULL OR e.end_reason <> 'already_matched')
   AND ($3::text IS NULL OR (e.node_id = $3::text AND e.status IN ('active', 'waiting')))
   AND ($4::text IS NULL OR e.status = $4::text)
+  AND ($5::text IS NULL OR ct.name ILIKE '%' || $5::text || '%'
+    OR ct.email::text ILIKE '%' || $5::text || '%' OR cm.name ILIKE '%' || $5::text || '%')
 ORDER BY e.entered_at DESC, e.id DESC
-LIMIT $6::bigint OFFSET $5::bigint
+LIMIT $7::bigint OFFSET $6::bigint
 `
 
 type ListSeriesEnrollmentPageParams struct {
@@ -555,6 +557,7 @@ type ListSeriesEnrollmentPageParams struct {
 	SeriesID    ids.UUID `json:"series_id"`
 	NodeID      *string  `json:"node_id"`
 	Status      *string  `json:"status"`
+	Query       *string  `json:"query"`
 	RowOffset   int64    `json:"row_offset"`
 	RowLimit    int64    `json:"row_limit"`
 }
@@ -589,13 +592,15 @@ type ListSeriesEnrollmentPageRow struct {
 }
 
 // ListSeriesEnrollmentPage returns a page of a series' enrollments with
-// who travels, newest first, narrowed by step and status.
+// who travels, newest first, narrowed by step, status and a search on
+// the person's name or email or the company's name.
 func (q *Queries) ListSeriesEnrollmentPage(ctx context.Context, arg ListSeriesEnrollmentPageParams) ([]ListSeriesEnrollmentPageRow, error) {
 	rows, err := q.db.Query(ctx, listSeriesEnrollmentPage,
 		arg.WorkspaceID,
 		arg.SeriesID,
 		arg.NodeID,
 		arg.Status,
+		arg.Query,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

@@ -8,16 +8,18 @@
  * changes.
  */
 import { RiCloseLine, RiDeleteBinLine } from "@remixicon/react";
+import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { AlertDialog } from "@/components/base/modal/modal";
 import { Section } from "@/features/settings/layout";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import type { NodeSettings, SeriesNode, SeriesProblem, SeriesReport, SeriesSpec } from "@/lib/api/series";
 
-import { EntrySettings, type Sending } from "./entry-settings";
+import { EntrySettings } from "./entry-settings";
 import { nodeLook } from "./looks";
-import { removeStep, setSettings } from "./model";
+import { removeStep, type Sending, setSettings } from "./model";
 import { Rise, Unfold } from "./motion";
 import { StepResults } from "./step-results";
 import { StepSettings } from "./step-settings";
@@ -75,6 +77,7 @@ export function SeriesInspector({
   const mine = problems.filter((p) =>
     node.kind === "entry" ? !p.node_id || p.node_id === "entry" : p.node_id === node.id,
   );
+  const [removing, setRemoving] = useState(false);
   const set = (settings: NodeSettings) => onSpec(setSettings(spec, node.id, settings));
 
   return (
@@ -122,13 +125,22 @@ export function SeriesInspector({
                   size="small"
                   variant="danger-secondary"
                   leadingIcon={RiDeleteBinLine}
-                  onClick={() => {
-                    onSpec(removeStep(spec, node.id));
-                    onSelect("entry");
-                  }}
+                  onClick={() => setRemoving(true)}
                 >
                   Remove this step
                 </Button>
+                <AlertDialog
+                  isOpen={removing}
+                  onOpenChange={setRemoving}
+                  isDismissable
+                  title="Remove this step?"
+                  description="What it holds, written messages included, is removed from the working copy. People on the series keep the published version until you publish."
+                  confirmLabel="Remove"
+                  onConfirm={() => {
+                    onSpec(removeStep(spec, node.id));
+                    onSelect("entry");
+                  }}
+                />
               </div>
             </Section>
           ) : null}

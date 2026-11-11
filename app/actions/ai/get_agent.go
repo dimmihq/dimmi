@@ -273,7 +273,7 @@ func managedFamily(cfg config.AIConfig) func(enums.AIModelFamily) bool {
 		case enums.AIModelFamilyOpenAI:
 			return m.OpenAI.APIKey != ""
 		case enums.AIModelFamilyOpenWeight:
-			return m.OpenWeight.APIKey != ""
+			return m.OpenWeight.Configured()
 		}
 		return false
 	}

@@ -13,7 +13,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type ComponentType, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
-
+import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { DataTable } from "@/components/application/data-table/data-table";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -39,7 +39,7 @@ import { cx } from "@/utils/cx";
 
 import { useLiveBroadcasts } from "./live";
 import { channelLook, channels, noteOf, percent, statuses, statusName } from "./looks";
-import { BroadcastStatusChip, ChannelMark, Stat } from "./parts";
+import { BroadcastStatusChip, ChannelMark } from "./parts";
 import { useWorkspaceZone } from "./sources";
 import { TopicsModal } from "./topics-modal";
 import { plainText } from "./writer/variables";
@@ -201,16 +201,16 @@ function NameCell({ broadcast }: { broadcast: Broadcast }) {
 function Results({ broadcast }: { broadcast: Broadcast }) {
   const counts = broadcast.counts;
   if (!counts || broadcast.status === "draft" || broadcast.status === "scheduled") {
-    return <span className="text-body-2-regular text-text-tertiary">Not sent yet</span>;
+    return <span className="whitespace-nowrap text-body-2-regular text-text-tertiary">Not sent yet</span>;
   }
   const base = counts.delivered;
   if (broadcast.channel === "slack") {
     return (
       <span className="flex min-w-0 flex-col">
-        <span className="text-body-2-medium text-text-primary tabular-nums">
+        <span className="whitespace-nowrap text-body-2-medium text-text-primary tabular-nums">
           {formatNumber(counts.reactions)} reactions
         </span>
-        <span className="text-caption-1-regular text-text-tertiary tabular-nums">
+        <span className="whitespace-nowrap text-caption-1-regular text-text-tertiary tabular-nums">
           {formatNumber(counts.replied)} replied
         </span>
       </span>
@@ -223,10 +223,10 @@ function Results({ broadcast }: { broadcast: Broadcast }) {
 
   return (
     <span className="flex min-w-0 flex-col">
-      <span className="text-body-2-medium text-text-primary tabular-nums">
+      <span className="whitespace-nowrap text-body-2-medium text-text-primary tabular-nums">
         {percent(counts.opened, base)} {broadcast.channel === "email" ? "opened" : "saw it"}
       </span>
-      <span className="text-caption-1-regular text-text-tertiary tabular-nums">{second}</span>
+      <span className="whitespace-nowrap text-caption-1-regular text-text-tertiary tabular-nums">{second}</span>
     </span>
   );
 }
@@ -248,8 +248,12 @@ function columnsOf(audiences: Map<string, string>, zone: string | undefined): Co
       header: "Audience",
       cell: ({ row }) => (
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-body-2-regular text-text-primary">{audienceOf(row.original, audiences)}</span>
-          <span className="text-caption-1-regular text-text-tertiary tabular-nums">{reachOf(row.original)}</span>
+          <span className="whitespace-nowrap text-body-2-regular text-text-primary">
+            {audienceOf(row.original, audiences)}
+          </span>
+          <span className="whitespace-nowrap text-caption-1-regular text-text-tertiary tabular-nums">
+            {reachOf(row.original)}
+          </span>
         </span>
       ),
     },
@@ -279,7 +283,7 @@ function audienceOf(broadcast: Broadcast, audiences: Map<string, string>): strin
   return broadcast.rules ? "Its own rule" : "No audience yet";
 }
 
-const widths = { broadcast: "w-[36%]", audience: "w-[22%]", status: "w-[24%]", results: "w-[18%]" };
+const widths = { broadcast: "w-[340px]", audience: "w-[200px]", status: "w-[300px]", results: "w-[160px]" };
 
 const month = 30 * 24 * 60 * 60 * 1000;
 
@@ -296,26 +300,42 @@ function MonthStats({ broadcasts }: { broadcasts: Broadcast[] }) {
   const delivered = sum((c) => c.delivered);
 
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-      <Stat label="Delivered" value={formatNumber(delivered)} note="Last 30 days" />
-      <Stat
-        label="Opened"
-        value={percent(
-          sum((c) => c.opened),
-          delivered,
-        )}
-        note="Email opens are estimated"
-      />
-      <Stat
-        label="Clicked"
-        value={percent(
-          sum((c) => c.clicked),
-          delivered,
-        )}
-        note="Of delivered"
-      />
-      <Stat label="Replies" value={formatNumber(sum((c) => c.replied))} note="Landed in the inbox" />
-    </div>
+    <StatCards
+      variant="compact"
+      className="gap-2"
+      stats={[
+        {
+          label: "Delivered",
+          hint: "Broadcast messages that reached someone in the last 30 days, across every channel.",
+          value: formatNumber(delivered),
+          caption: "Last 30 days",
+        },
+        {
+          label: "Opened",
+          hint: "Share of delivered email that was opened. Some mail apps open email on their own or block tracking, so this is an estimate.",
+          value: percent(
+            sum((c) => c.opened),
+            delivered,
+          ),
+          caption: "Email opens are estimated",
+        },
+        {
+          label: "Clicked",
+          hint: "Share of delivered messages where someone clicked a link.",
+          value: percent(
+            sum((c) => c.clicked),
+            delivered,
+          ),
+          caption: "Of delivered",
+        },
+        {
+          label: "Replies",
+          hint: "Replies to broadcasts. Each one opened a conversation in the inbox.",
+          value: formatNumber(sum((c) => c.replied)),
+          caption: "Landed in the inbox",
+        },
+      ]}
+    />
   );
 }
 

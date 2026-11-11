@@ -128,7 +128,8 @@ RETURNING id;
 
 -- name: ListSeriesEnrollmentPage :many
 -- ListSeriesEnrollmentPage returns a page of a series' enrollments with
--- who travels, newest first, narrowed by step and status.
+-- who travels, newest first, narrowed by step, status and a search on
+-- the person's name or email or the company's name.
 SELECT e.*, coalesce(ct.name, '')::text AS contact_name, coalesce(ct.email::text, '')::text AS contact_email,
     coalesce(cm.name, '')::text AS company_name
 FROM series_enrollments e
@@ -138,6 +139,8 @@ WHERE e.workspace_id = @workspace_id AND e.series_id = @series_id
   AND (e.end_reason IS NULL OR e.end_reason <> 'already_matched')
   AND (sqlc.narg(node_id)::text IS NULL OR (e.node_id = sqlc.narg(node_id)::text AND e.status IN ('active', 'waiting')))
   AND (sqlc.narg(status)::text IS NULL OR e.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(query)::text IS NULL OR ct.name ILIKE '%' || sqlc.narg(query)::text || '%'
+    OR ct.email::text ILIKE '%' || sqlc.narg(query)::text || '%' OR cm.name ILIKE '%' || sqlc.narg(query)::text || '%')
 ORDER BY e.entered_at DESC, e.id DESC
 LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
 

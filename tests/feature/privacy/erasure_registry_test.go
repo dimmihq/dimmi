@@ -17,16 +17,24 @@ have an eraser registered for it.
 */
 func erasedBy() map[string]string {
 	return map[string]string{
-		"conversations":             "handed to the placeholder, messages and files wiped",
-		"contact_identities":        "freed on request, deleted with the contact",
-		"conversation_participants": "deleted with the contact",
-		"contact_tag":               "deleted with the contact",
-		"contact_event_summaries":   "deleted with the contact, details included",
-		"widget_sessions":           "deleted with the contact",
-		"contact_erasures":          "the request itself, holding no personal data once done",
-		"contact_exports":           "zips deleted by the wipe, rows deleted with the contact",
-		"ai_action_calls":           "inputs, results and notes scrubbed by an eraser, rows kept",
-		"workflow_runs":             "variables and trigger data scrubbed by an eraser, rows kept",
+		"conversations":               "handed to the placeholder, messages and files wiped",
+		"contact_identities":          "freed on request, deleted with the contact",
+		"conversation_participants":   "deleted with the contact",
+		"contact_tag":                 "deleted with the contact",
+		"contact_event_summaries":     "deleted with the contact, details included",
+		"widget_sessions":             "deleted with the contact",
+		"contact_erasures":            "the request itself, holding no personal data once done",
+		"contact_exports":             "zips deleted by the wipe, rows deleted with the contact",
+		"ai_action_calls":             "inputs, results and notes scrubbed by an eraser, rows kept",
+		"workflow_runs":               "variables and trigger data scrubbed by an eraser, rows kept",
+		"webhook_deliveries":          "stored payloads deleted by an eraser",
+		"article_ratings":             "notes scrubbed by an eraser, answers kept under a hash that names nobody",
+		"changelog_subscribers":       "deleted by an eraser, those under the customer's address included",
+		"feedback_votes":              "deleted with the contact",
+		"broadcast_recipients":        "address and delivery details scrubbed by an eraser, rows kept",
+		"broadcast_opt_outs":          "deleted with the contact",
+		"contact_topic_subscriptions": "deleted with the contact",
+		"series_enrollments":          "deleted with the contact",
 	}
 }
 

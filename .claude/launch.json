@@ -43,7 +43,15 @@
     {
       "name": "anatomy-figures",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8099", "--bind", "127.0.0.1", "--directory", "tmp/anatomy"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8099",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "tmp/anatomy"
+      ],
       "port": 8099,
       "autoPort": false
     },
@@ -55,6 +63,43 @@
       ],
       "port": 8080,
       "url": "http://localhost:8080"
+    },
+    {
+      "name": "dimmi-slack",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "tmp/dev-slack.sh"
+      ],
+      "port": 8091,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-series",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/2fb32cae-f78f-404c-abaf-6be3a5a0103a/scratchpad/series-preview.sh",
+        "serve"
+      ],
+      "port": 8098,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-series-watch",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/2fb32cae-f78f-404c-abaf-6be3a5a0103a/scratchpad/series-watch.sh"
+      ],
+      "port": 8098,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-knowledge",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/5f0a7b0a-3143-49ba-b451-e5eceaccbf98/scratchpad/knowledge-preview.sh"
+      ],
+      "port": 8094,
+      "autoPort": false
     }
   ]
 }

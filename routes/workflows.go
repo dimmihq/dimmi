@@ -50,7 +50,8 @@ func workflowRoutes(workspace *routing.Router, a *app.App) {
 /*
 scheduleRoutes declares the office hours workflows count with. Every
 member may read them; changing them takes the workflows:write ability,
-and the actions check the member may manage schedules.
+and the actions check the member may manage schedules. Choosing whether
+an inbox keeps hours of its own is an inbox setting, settings:write.
 */
 func scheduleRoutes(workspace *routing.Router, a *app.App) {
 	if a.Actions.Schedules == nil {
@@ -67,4 +68,6 @@ func scheduleRoutes(workspace *routing.Router, a *app.App) {
 	routing.Patch(workspace, one, "schedules.update", sc.Update).Ability("workflows:write")
 	routing.Delete(workspace, one, "schedules.destroy", sc.Destroy).
 		Ability("workflows:write").Status(fhttp.StatusNoContent)
+	routing.Patch(workspace, "/inboxes/{inbox}/hours", "inboxes.hours.update", sc.UpdateInboxHours).
+		Ability("settings:write")
 }

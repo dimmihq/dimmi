@@ -32,6 +32,7 @@ bootIntegrations builds the integrations' actions, listener and job.
 func bootIntegrations(a *app.App) error {
 	registry := oauth.NewRegistry()
 	oauth.RegisterSlack(registry, a.HTTP)
+	oauth.RegisterKnowledgeServices(registry, a.HTTP)
 
 	s := &integrations.Services{
 		DB: a.DB, Keys: a.Keys, Clock: a.Clock, Events: a.Events, OAuth: a.OAuthClient, Cache: a.Cache,

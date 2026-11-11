@@ -27,7 +27,14 @@ The keys of the catalog.
 const (
 	KeyWidgetMaxPerWorkspace = "widget.max_per_workspace"
 	KeyBillingTestModeCap    = "billing.test_mode_cap"
+	KeyWebhookEndpoints      = "webhooks.http_endpoints"
 )
+
+/*
+defaultWebhookEndpoints is how many webhook endpoints a workspace may
+have unless the install or an override says otherwise.
+*/
+const defaultWebhookEndpoints = 20
 
 /*
 ErrUnknownKey means the code asked about a key the catalog does not list.
@@ -53,14 +60,19 @@ func SelfHost(maxWidgets int64) Catalog {
 		maxWidgets = Unlimited
 	}
 
-	return Catalog{KeyWidgetMaxPerWorkspace: maxWidgets, KeyBillingTestModeCap: Unlimited}
+	return Catalog{
+		KeyWidgetMaxPerWorkspace: maxWidgets, KeyBillingTestModeCap: Unlimited,
+		KeyWebhookEndpoints: defaultWebhookEndpoints,
+	}
 }
 
 /*
 Cloud returns the catalog of the cloud.
 */
 func Cloud() Catalog {
-	return Catalog{KeyWidgetMaxPerWorkspace: 10, KeyBillingTestModeCap: 1000}
+	return Catalog{
+		KeyWidgetMaxPerWorkspace: 10, KeyBillingTestModeCap: 1000, KeyWebhookEndpoints: defaultWebhookEndpoints,
+	}
 }
 
 /*

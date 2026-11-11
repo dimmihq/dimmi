@@ -137,7 +137,25 @@ it.describe("automation", () => {
     await expect(page.getByRole("button", { name: "Save hours" })).toBeDisabled();
 
     await page.reload();
-    await expect(page.getByRole("textbox", { name: "Saturday opens" })).toHaveValue("09:00");
+    await expect(page.getByRole("group", { name: "Saturday opens" })).toHaveText(/09\D*00/);
+  });
+
+  it("adds a yearly holiday and a one-off one in office hours and keeps both", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1400 });
+    await page.goto("/d/settings/office-hours");
+    await expect(page.getByText(/Open now|Closed now/)).toBeVisible();
+
+    await addHoliday(page, "25/12/2026", "Christmas");
+    await expect(page.getByText("Dec 25, every year")).toBeVisible();
+
+    await addHoliday(page, "03/03/2027", "Offsite", { once: true });
+    await expect(page.getByText("Mar 3, 2027")).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByText("Christmas")).toBeVisible();
+    await expect(page.getByText("Dec 25, every year")).toBeVisible();
+    await expect(page.getByText("Offsite")).toBeVisible();
+    await expect(page.getByText("Mar 3, 2027")).toBeVisible();
   });
 
   it("fits a workflow on screen and keeps a new step in view", async ({ page }) => {
@@ -214,3 +232,29 @@ it.describe("automation", () => {
     await expect(page.getByRole("link", { name: /Untitled procedure/ })).toContainText("Live");
   });
 });
+
+/*
+ * addHoliday picks a day in the holiday date picker, types the date as
+ * "DD/MM/YYYY", names it and adds it, yearly unless asked for once.
+ */
+async function addHoliday(page: Page, date: string, name: string, options: { once?: boolean } = {}) {
+  await page.getByRole("button", { name: "Select date" }).click();
+  const picker = page.getByRole("dialog", { name: "Holiday date" });
+  await picker
+    .getByRole("button", { name: /\b15\b/ })
+    .first()
+    .click();
+  await picker.getByRole("textbox", { name: "Date" }).fill(date);
+  await picker.getByRole("textbox", { name: "Date" }).press("Enter");
+  await picker.getByRole("button", { name: "Apply" }).click();
+  await expect(picker).toBeHidden();
+  await page.getByRole("textbox", { name: "Holiday name" }).fill(name);
+  const yearly = page.getByRole("checkbox", { name: "Repeats every year" });
+  await expect(yearly).toBeChecked();
+  if (options.once) {
+    await page.getByText("Repeats every year").click();
+  }
+  await expect(yearly).toBeChecked({ checked: !options.once });
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Select date" })).toBeVisible();
+}

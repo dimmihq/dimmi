@@ -13,6 +13,7 @@ import { RiPauseCircleLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { type Stat, StatCards } from "@/components/application/dashboard/stat-cards";
 import { Button } from "@/components/base/buttons/button";
 import { ProgressTrack } from "@/components/base/progress/progress";
 import { Row, Section } from "@/features/settings/layout";
@@ -28,7 +29,6 @@ import { formatNumber, formatTime } from "@/lib/i18n/format";
 import { useRealtime } from "@/lib/realtime/context";
 
 import { counted, pauseReasons, percent, reachNoun, reasonName } from "./looks";
-import { Stat } from "./parts";
 import { type Account, Recipients } from "./report-recipients";
 import { zoneFor } from "./schedule";
 import { useWorkspaceZone } from "./sources";
@@ -208,36 +208,56 @@ function Paused({ broadcast, onAction }: { broadcast: Broadcast; onAction: (acti
 
 function Headline({ broadcast, counts }: { broadcast: Broadcast; counts: BroadcastCounts }) {
   const whole = counts.delivered;
-  const last =
-    broadcast.channel === "slack" ? (
-      <Stat
-        label="Reactions"
-        value={formatNumber(counts.reactions)}
-        note={counted(counts.reacted, "channel", "channels")}
-      />
-    ) : (
-      <Stat
-        label="Clicked"
-        value={percent(counts.clicked, whole)}
-        note={`${formatNumber(counts.clicked)} ${reachNoun(broadcast.channel, counts.clicked)}`}
-      />
-    );
+  const third: Stat =
+    broadcast.channel === "email"
+      ? {
+          label: "Opened",
+          hint: "Share of delivered email that was opened. Some mail apps open email on their own or block tracking, so this is an estimate.",
+          value: percent(counts.opened, whole),
+          caption: "Estimated",
+        }
+      : {
+          label: "Replied",
+          hint: "Share of delivered messages that got a reply. Each reply is a conversation in the inbox.",
+          value: percent(counts.replied, whole),
+          caption: counted(counts.replied, "reply", "replies"),
+        };
+  const last: Stat =
+    broadcast.channel === "slack"
+      ? {
+          label: "Reactions",
+          hint: "Emoji reactions on the posts, across every Slack channel it went to.",
+          value: formatNumber(counts.reactions),
+          caption: counted(counts.reacted, "channel", "channels"),
+        }
+      : {
+          label: "Clicked",
+          hint: "Share of delivered messages where someone clicked a link.",
+          value: percent(counts.clicked, whole),
+          caption: `${formatNumber(counts.clicked)} ${reachNoun(broadcast.channel, counts.clicked)}`,
+        };
 
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-      <Stat label="Recipients" value={formatNumber(counts.total)} note={`${formatNumber(counts.queued)} waiting`} />
-      <Stat label="Delivered" value={percent(counts.delivered, counts.sent)} note={formatNumber(whole)} />
-      {broadcast.channel === "email" ? (
-        <Stat label="Opened" value={percent(counts.opened, whole)} note="Estimated" />
-      ) : (
-        <Stat
-          label="Replied"
-          value={percent(counts.replied, whole)}
-          note={counted(counts.replied, "reply", "replies")}
-        />
-      )}
-      {last}
-    </div>
+    <StatCards
+      variant="compact"
+      className="gap-2"
+      stats={[
+        {
+          label: "Recipients",
+          hint: "Everyone this broadcast is for, including those still waiting to be sent to.",
+          value: formatNumber(counts.total),
+          caption: `${formatNumber(counts.queued)} waiting`,
+        },
+        {
+          label: "Delivered",
+          hint: "Share of sent messages that reached the person. The number under it is how many.",
+          value: percent(counts.delivered, counts.sent),
+          caption: formatNumber(whole),
+        },
+        third,
+        last,
+      ]}
+    />
   );
 }
 

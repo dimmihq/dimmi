@@ -14,13 +14,13 @@ function open(markdown: string): Editor {
   return editor;
 }
 
-describe("article markdown", () => {
-  afterEach(() => {
-    for (const editor of editors.splice(0)) {
-      editor.destroy();
-    }
-  });
+afterEach(() => {
+  for (const editor of editors.splice(0)) {
+    editor.destroy();
+  }
+});
 
+describe("article markdown", () => {
   it.each([
     ["heading", "## Getting started"],
     ["small heading", "### Install"],
@@ -67,12 +67,6 @@ describe("article markdown", () => {
 });
 
 describe("slash commands", () => {
-  afterEach(() => {
-    for (const editor of editors.splice(0)) {
-      editor.destroy();
-    }
-  });
-
   it("finds commands by name, those starting with it first", () => {
     expect(findCommands("not").map((c) => c.id)).toEqual(["note"]);
     expect(findCommands("list").map((c) => c.id)).toEqual(["bullets", "numbers"]);

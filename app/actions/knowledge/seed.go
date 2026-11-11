@@ -37,7 +37,9 @@ import (
 Article is one document to index: a title, its public URL and Markdown.
 Documents from a help center also carry their article, the published
 version the chunks are cut from, help center and who may see them;
-seed documents leave those empty and are public.
+seed documents leave those empty and are public. Documents of a
+knowledge source carry the source and its type instead of an article,
+and their language.
 */
 type Article struct {
 	Title        string
@@ -47,6 +49,9 @@ type Article struct {
 	VersionID    ids.UUID
 	ArticleID    *ids.UUID
 	HelpCenterID *ids.UUID
+	SourceID     *ids.UUID
+	SourceType   string
+	Locale       string
 	Visibility   contracts.KnowledgeVisibility
 	UpdatedAt    time.Time
 }

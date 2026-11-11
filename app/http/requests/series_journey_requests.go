@@ -10,12 +10,14 @@
 package requests
 
 /*
-SeriesEnrollmentsRequest narrows a series' journeys by step and status.
+SeriesEnrollmentsRequest narrows a series' journeys by step, status and a
+search on who travels.
 */
 type SeriesEnrollmentsRequest struct {
 	Series string `path:"series"`
 	Node   string `query:"node"`
 	Status string `query:"status" enum:"active,waiting,finished,exited,"`
+	Query  string `query:"q" maxLength:"100"`
 	Limit  int    `query:"limit"`
 	Offset int    `query:"offset"`
 }

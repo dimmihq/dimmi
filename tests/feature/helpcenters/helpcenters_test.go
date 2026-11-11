@@ -1,6 +1,7 @@
 package helpcenters_test
 
 import (
+	"cmp"
 	"strings"
 	"testing"
 
@@ -42,10 +43,44 @@ func (c center) article(t *testing.T, body testkit.JSON) *testkit.Response {
 }
 
 /*
+link is how the help center names one of its pages: on its own host
+when the instance gives help centers a domain, as the cloud edition
+does, and under the application's /hc path otherwise.
+*/
+func (c center) link(path string) string {
+	if domain := c.d.TC.App.Config.HelpCenters.BaseDomain; domain != "" {
+		return c.subdomain + "." + domain + path
+	}
+	return "/hc/" + c.subdomain + path
+}
+
+/*
+local is the path a page of the help center redirects to on the host
+it is served from.
+*/
+func (c center) local(path string) string {
+	if c.d.TC.App.Config.HelpCenters.BaseDomain != "" {
+		return cmp.Or(path, "/")
+	}
+	return "/hc/" + c.subdomain + path
+}
+
+/*
+address is where a reader's browser asks for a page of the help center:
+its own host when it has one, else the application's /hc path.
+*/
+func (c center) address(path string) string {
+	if c.d.TC.App.Config.HelpCenters.BaseDomain != "" {
+		return "https://" + c.link(path)
+	}
+	return c.link(path)
+}
+
+/*
 page opens a public page of the help center.
 */
 func (c center) page(path string) *testkit.Response {
-	return c.d.TC.Client().WithHeader("Accept", "text/html").Send("GET", "/hc/"+c.subdomain+path, nil)
+	return c.d.TC.Client().WithHeader("Accept", "text/html").Send("GET", c.address(path), nil)
 }
 
 func TestHelpCenters(t *testing.T) {
@@ -115,7 +150,7 @@ func TestHelpCenters(t *testing.T) {
 		c.page("/articles/invite-your-team").AssertOK()
 		c.d.Owner.PostJSON("/api/v1/articles/"+id+"/publications", nil).AssertOK()
 		c.page("/articles/invite-your-team").AssertStatus(fhttp.StatusMovedPermanently).
-			AssertHeader("Location", "/hc/"+c.subdomain+"/articles/invite-teammates")
+			AssertHeader("Location", c.local("/articles/invite-teammates"))
 		c.d.Owner.GetJSON("/api/v1/articles/"+id+"/versions").AssertOK().AssertJSONPath("data.0.number", float64(2))
 	})
 
@@ -203,7 +238,7 @@ func TestHelpCenters(t *testing.T) {
 		}
 		assert.Contains(t, titles, "Refund approvals")
 		assert.Equal(t, "Refund policy", res.Chunks[0].Title)
-		assert.Contains(t, res.Chunks[0].URL, "/hc/"+c.subdomain+"/articles/refund-policy")
+		assert.Contains(t, res.Chunks[0].URL, c.link("/articles/refund-policy"))
 
 		public, err := c.d.TC.App.Knowledge.Search(t.Context(), ws, "refunds manager",
 			contracts.KnowledgeSearchOptions{Visibility: []contracts.KnowledgeVisibility{"public"}})

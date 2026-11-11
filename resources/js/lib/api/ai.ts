@@ -55,7 +55,6 @@ export interface AiAgent {
   guidance: string;
   enabled_channels: string[];
   schedule: AiSchedule;
-  office_hours: Record<string, unknown> | null;
   assigned_behavior: AiAssignedBehavior;
   answer_key_id: string | null;
   answer_model: string | null;

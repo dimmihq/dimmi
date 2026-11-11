@@ -108,6 +108,26 @@ func TestEmailBroadcasts(t *testing.T) {
 			AssertJSONPath("data.reasons.0.reason", "unsubscribed")
 	})
 
+	t.Run("lets the person read and save their choices from the link, leaving them out next time", func(t *testing.T) {
+		t.Parallel()
+		d := newDesk(t)
+		ada := unique("ada")
+		d.contact(ada, "Ada", "pro")
+		d.send(d.emailBroadcast("First", testkit.JSON{"skip_frequency_cap": true}))
+		page := "/api/v1/broadcast-preferences/" + tokenOf(t, ada)
+
+		d.tc.Client().GetJSON(page).AssertOK().AssertJSONPath("data.unsubscribed_all", false)
+		d.tc.Client().PatchJSON(page, testkit.JSON{"topics": []string{}, "unsubscribe_all": true}).AssertOK().
+			AssertJSONPath("data.unsubscribed_all", true)
+		d.tc.Client().GetJSON(page).AssertOK().AssertJSONPath("data.unsubscribed_all", true)
+		d.tc.Client().GetJSON("/api/v1/broadcast-preferences/not-a-token").AssertNotFound()
+
+		next := d.emailBroadcast("Second", testkit.JSON{"skip_frequency_cap": true})
+		d.send(next)
+		d.report(next).AssertJSONPath("data.counts.sent", float64(0)).
+			AssertJSONPath("data.reasons.0.reason", "unsubscribed")
+	})
+
 	t.Run("leaves out someone who got a broadcast too recently", func(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)

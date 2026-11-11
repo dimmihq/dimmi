@@ -50,7 +50,7 @@ func (c center) signIn(token, next string) *testkit.Response {
 	form := url.Values{"token": {token}, "next": {next}}
 
 	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		Send("POST", "/hc/"+c.subdomain+"/sso", form.Encode())
+		Send("POST", c.address("/sso"), form.Encode())
 }
 
 /*
@@ -58,7 +58,7 @@ as opens a page as the reader the cookie remembers.
 */
 func (c center) as(cookie *fhttp.Cookie, path string) *testkit.Response {
 	return c.d.TC.Client().WithHeader("Accept", "text/html").WithCookie(cookie).
-		Send("GET", "/hc/"+c.subdomain+path, nil)
+		Send("GET", c.address(path), nil)
 }
 
 func TestHelpCenterReaders(t *testing.T) {
@@ -73,12 +73,12 @@ func TestHelpCenterReaders(t *testing.T) {
 			"settings": testkit.JSON{"login_url": "https://app.acme.dev/login"},
 		}).AssertOK().AssertJSONPath("data.settings.login_url", "https://app.acme.dev/login")
 		body := string(c.page("/articles/anything").Body)
-		assert.Contains(t, body, "/hc/"+c.subdomain+"/sso/sign-in?next=")
+		assert.Contains(t, body, c.local("/sso/sign-in?next="))
 
 		form := string(c.page("/sso/sign-in?next=/hc/" + c.subdomain + "/articles/x").AssertOK().Body)
 		assert.Contains(t, form, "Continue with your account")
 		assert.Contains(t, form, "https://app.acme.dev/login?return_to=")
-		assert.Contains(t, form, url.QueryEscape("/hc/"+c.subdomain+"/sso?next="))
+		assert.Contains(t, form, url.QueryEscape(c.local("/sso?next=")))
 
 		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id, testkit.JSON{
 			"settings": testkit.JSON{"login_url": "https://app.acme.dev/login", "email_sign_in": false},
@@ -101,7 +101,7 @@ func TestHelpCenterReaders(t *testing.T) {
 		c.d.Owner.PatchJSON("/api/v1/articles/"+id+"/audience", testkit.JSON{"audience_id": pro}).AssertOK()
 		c.page("/articles/priority-support").AssertNotFound()
 
-		next := "/hc/" + c.subdomain + "/articles/priority-support"
+		next := c.local("/articles/priority-support")
 		res := c.signIn(c.token(t, "user_9", map[string]any{"plan": "pro"}), next)
 		res.AssertStatus(fhttp.StatusSeeOther).AssertHeader("Location", next)
 		cookie := res.Cookie("dimmi_help_reader")
@@ -146,6 +146,6 @@ func TestHelpCenterReaders(t *testing.T) {
 
 		c.signIn("not-a-token", "").AssertStatus(401)
 		c.signIn(c.token(t, "user_1", nil), "https://evil.example/").
-			AssertStatus(fhttp.StatusSeeOther).AssertHeader("Location", "/hc/"+c.subdomain)
+			AssertStatus(fhttp.StatusSeeOther).AssertHeader("Location", c.local(""))
 	})
 }

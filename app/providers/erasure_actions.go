@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/retention"
+	"github.com/dimmihq/dimmi/app/actions/webhooks"
 	"github.com/dimmihq/dimmi/app/jobs"
 )
 
@@ -46,6 +47,8 @@ func bootErasures(a *app.App) error {
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Storage: a.Storage, Retention: a.Retention,
 		Erasers: a.ContactErasers, Keys: a.Keys,
 	}
+	a.ContactErasers.Register(&erasures.TraceEraser{DB: a.DB, Clock: a.Clock})
+	a.ContactErasers.Register(webhooks.ContactEraser{Webhooks: &webhooks.Webhooks{DB: a.DB, Clock: a.Clock}})
 	if err := queue.Register(a.Queue, &jobs.EraseContact{Erase: acts.EraseContact}); err != nil {
 		return fmt.Errorf("erase job: %w", err)
 	}

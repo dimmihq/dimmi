@@ -9,7 +9,7 @@ export function Failure({ error }: { error: Error | null }) {
   }
 
   return (
-    <p role="alert" className="px-3 text-body-2-regular text-text-error-primary">
+    <p role="alert" className="py-3 text-body-2-regular text-text-error-primary">
       {error instanceof ApiError ? (Object.values(error.fields)[0] ?? error.message) : error.message}
     </p>
   );

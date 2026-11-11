@@ -5,7 +5,15 @@
  * the step before it to the step after it. Step and path ids are made
  * once and never change, so people already on the journey follow edits.
  */
-import type { NodeKind, NodeSettings, SeriesEdge, SeriesNode, SeriesSpec, SeriesSubject } from "@/lib/api/series";
+import type {
+  NodeKind,
+  NodeSettings,
+  Series,
+  SeriesEdge,
+  SeriesNode,
+  SeriesSpec,
+  SeriesSubject,
+} from "@/lib/api/series";
 
 export const messageKinds: NodeKind[] = ["email", "chat", "post", "slack"];
 
@@ -379,4 +387,33 @@ export function templateSpec(id: string): SeriesSpec {
   }
 
   return spec;
+}
+
+/*
+ * Sending is how a series' messages go out, kept on the series beside
+ * its definition.
+ */
+export interface Sending {
+  email_address_id?: string;
+  sender_id?: string;
+  reply_member_id?: string;
+  reply_team_id?: string;
+  topic_id?: string;
+  service?: boolean;
+  ai_replies?: boolean;
+}
+
+/*
+ * sendingOf reads how a series' messages go out.
+ */
+export function sendingOf(series: Series): Sending {
+  return {
+    email_address_id: series.email_address_id ?? undefined,
+    sender_id: series.sender_id ?? undefined,
+    reply_member_id: series.reply_member_id ?? undefined,
+    reply_team_id: series.reply_team_id ?? undefined,
+    topic_id: series.topic_id ?? undefined,
+    service: series.service,
+    ai_replies: series.ai_replies,
+  };
 }

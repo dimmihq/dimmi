@@ -36,12 +36,12 @@ func seriesRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, one, "series.show", sc.Show).Ability("series:read")
 	routing.Patch(workspace, one, "series.update", sc.Update).Ability("series:write")
 	routing.Delete(workspace, one, "series.destroy", sc.Destroy).Ability("series:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, one+"/check", "series.check", sc.Check).Ability("series:read").Status(fhttp.StatusOK)
+	routing.Post(workspace, one+"/check", "series.check.store", sc.Check).Ability("series:read").Status(fhttp.StatusOK)
 	routing.Get(workspace, one+"/versions", "series.versions.index", sc.Versions).Ability("series:read")
-	routing.Post(workspace, one+"/versions/{version}/restore", "series.versions.restore", sc.Restore).
+	routing.Post(workspace, one+"/versions/{version}/restore", "series.versions.restore.store", sc.Restore).
 		Ability("series:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, one+"/report", "series.report.show", sc.Report).Ability("series:read")
-	routing.Post(workspace, one+"/nodes/{node}/winner", "series.winner", sc.Winner).
+	routing.Post(workspace, one+"/nodes/{node}/winner", "series.nodes.winner.store", sc.Winner).
 		Ability("series:write").Status(fhttp.StatusOK)
 
 	seriesActionRoutes(workspace, sc, one)
@@ -59,10 +59,12 @@ seriesActionRoutes declares what can be done to one series.
 func seriesActionRoutes(workspace *routing.Router, sc *v1.SeriesController, one string) {
 	routing.Post(workspace, one+"/publications", "series.publications.store", sc.Publish).
 		Ability("series:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/pause", "series.pause", sc.Pause).Ability("series:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/resume", "series.resume", sc.Resume).Ability("series:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/archive", "series.archive", sc.Archive).Ability("series:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/duplicate", "series.duplicate", sc.Duplicate).
+	routing.Post(workspace, one+"/pause", "series.pause.store", sc.Pause).Ability("series:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, one+"/resume", "series.resume.store", sc.Resume).
+		Ability("series:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, one+"/archive", "series.archive.store", sc.Archive).
+		Ability("series:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, one+"/duplicate", "series.duplicate.store", sc.Duplicate).
 		Ability("series:write").Status(fhttp.StatusCreated)
 }
 
@@ -78,7 +80,7 @@ func seriesJourneyRoutes(workspace *routing.Router, sc *v1.SeriesController, one
 	routing.Get(workspace, journey, "series.enrollments.show", sc.Trace).Ability("series:read")
 	routing.Delete(workspace, journey, "series.enrollments.destroy", sc.Remove).
 		Ability("series:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, journey+"/skip", "series.enrollments.skip", sc.Skip).
+	routing.Post(workspace, journey+"/skip", "series.enrollments.skip.store", sc.Skip).
 		Ability("series:write").Status(fhttp.StatusNoContent)
 	routing.Post(workspace, one+"/tests", "series.tests.store", sc.Try).
 		Ability("series:write").Status(fhttp.StatusCreated)

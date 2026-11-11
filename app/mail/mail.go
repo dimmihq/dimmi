@@ -44,7 +44,7 @@ func Register(m *mail.Manager) {
 	mail.Register[TwoFactorDisabledMail](m, "two_factor_disabled")
 	mail.Register[RecoveryCodeUsedMail](m, "recovery_code_used")
 	mail.Register[TwoFactorRequiredMail](m, "two_factor_required")
-	mail.Register[AccessPolicyChangedMail](m, "access_policy_changed")
+	registerSecurityNotices(m)
 	registerSSO(m)
 	mail.Register[WorkspaceDeletionScheduledMail](m, "workspace_deletion_scheduled")
 	mail.Register[WorkspaceDeletionReminderMail](m, "workspace_deletion_reminder")

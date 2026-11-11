@@ -6,6 +6,13 @@ SET name = @name, default_team_id = sqlc.narg(default_team_id), settings = @sett
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
+-- name: SetInboxSchedule :one
+-- SetInboxSchedule names the schedule the inbox keeps its office hours
+-- in, or none to follow the workspace's default.
+UPDATE inboxes SET schedule_id = sqlc.narg(schedule_id), updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id
+RETURNING *;
+
 -- name: CountInboxConversations :one
 -- CountInboxConversations counts every conversation the inbox holds,
 -- in the trash or not.

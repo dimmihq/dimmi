@@ -25,10 +25,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/officehours"
 )
 
 /*
@@ -118,7 +118,16 @@ func (s *Slack) autoReplyDue(ctx context.Context, conv models.Conversation, room
 		return true, nil
 	}
 
-	within, err := officehours.Within(agent.OfficeHours, s.Clock.Now())
+	var within bool
+
+	err = s.read(ctx, func(q *models.Queries) error {
+		var err error
+
+		place := schedules.Place{Workspace: conv.WorkspaceID, Inbox: conv.InboxID}
+		within, err = schedules.OpenAt(ctx, q, place, s.Clock)
+
+		return err
+	})
 
 	return err == nil && !within, nil
 }

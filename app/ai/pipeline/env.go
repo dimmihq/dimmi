@@ -27,9 +27,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/officehours"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
 )
 
@@ -244,7 +244,8 @@ func (r *Runner) loadFacts(ctx context.Context, q *models.Queries, e *env) error
 		return fmt.Errorf("count online members: %w", err)
 	}
 	e.Facts.onlineMembers = online
-	e.Facts.withinHours, e.Facts.hoursErr = officehours.Within(e.Agent.OfficeHours, e.now)
+	place := schedules.Place{Workspace: wsID, Inbox: e.Conversation.InboxID}
+	e.Facts.withinHours, e.Facts.hoursErr = schedules.OpenAt(ctx, q, place, r.Clock)
 	e.Triage, err = loadTriage(ctx, q, e)
 	return err
 }

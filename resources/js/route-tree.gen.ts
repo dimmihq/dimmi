@@ -64,7 +64,9 @@ import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$vi
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
+import { Route as DSettingsKnowledgeSourceRouteImport } from './routes/d/settings/knowledge.$source'
 import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
+import { Route as DSettingsSignaturesScopeRouteImport } from './routes/d/settings/signatures.$scope'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
@@ -348,10 +350,22 @@ const DSettingsIntegrationsIntegrationRoute =
     path: '/settings/integrations/$integration',
     getParentRoute: () => DRouteRoute,
   } as any)
+const DSettingsKnowledgeSourceRoute =
+  DSettingsKnowledgeSourceRouteImport.update({
+    id: '/settings/knowledge/$source',
+    path: '/settings/knowledge/$source',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsMessengerWidgetRoute =
   DSettingsMessengerWidgetRouteImport.update({
     id: '/settings/messenger/$widget',
     path: '/settings/messenger/$widget',
+    getParentRoute: () => DRouteRoute,
+  } as any)
+const DSettingsSignaturesScopeRoute =
+  DSettingsSignaturesScopeRouteImport.update({
+    id: '/settings/signatures/$scope',
+    path: '/settings/signatures/$scope',
     getParentRoute: () => DRouteRoute,
   } as any)
 const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
@@ -443,7 +457,9 @@ export interface FileRoutesByFullPath {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
+  '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
@@ -501,7 +517,9 @@ export interface FileRoutesByTo {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
+  '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
@@ -565,7 +583,9 @@ export interface FileRoutesById {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
+  '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
@@ -630,7 +650,9 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
+    | '/d/settings/signatures/$scope'
     | '/d/settings/teams/$team'
     | '/d/customers/'
     | '/d/inbox/$view/'
@@ -688,7 +710,9 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
+    | '/d/settings/signatures/$scope'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view'
     | '/d/series/$series/compose/$step'
@@ -751,7 +775,9 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
+    | '/d/settings/signatures/$scope'
     | '/d/settings/teams/$team'
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
@@ -1156,11 +1182,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsIntegrationsIntegrationRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/knowledge/$source': {
+      id: '/d/settings/knowledge/$source'
+      path: '/settings/knowledge/$source'
+      fullPath: '/d/settings/knowledge/$source'
+      preLoaderRoute: typeof DSettingsKnowledgeSourceRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/messenger/$widget': {
       id: '/d/settings/messenger/$widget'
       path: '/settings/messenger/$widget'
       fullPath: '/d/settings/messenger/$widget'
       preLoaderRoute: typeof DSettingsMessengerWidgetRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/signatures/$scope': {
+      id: '/d/settings/signatures/$scope'
+      path: '/settings/signatures/$scope'
+      fullPath: '/d/settings/signatures/$scope'
+      preLoaderRoute: typeof DSettingsSignaturesScopeRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/settings/teams/$team': {
@@ -1327,7 +1367,9 @@ interface DRouteRouteChildren {
   DSettingsActionsActionRoute: typeof DSettingsActionsActionRoute
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsIntegrationsIntegrationRoute: typeof DSettingsIntegrationsIntegrationRoute
+  DSettingsKnowledgeSourceRoute: typeof DSettingsKnowledgeSourceRoute
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
+  DSettingsSignaturesScopeRoute: typeof DSettingsSignaturesScopeRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
@@ -1359,7 +1401,9 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsActionsActionRoute: DSettingsActionsActionRoute,
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsIntegrationsIntegrationRoute: DSettingsIntegrationsIntegrationRoute,
+  DSettingsKnowledgeSourceRoute: DSettingsKnowledgeSourceRoute,
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
+  DSettingsSignaturesScopeRoute: DSettingsSignaturesScopeRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,

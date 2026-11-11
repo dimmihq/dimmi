@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | Workflows read the team's hours from a schedule: the one a definition
-| names, or the workspace's default when it names none. Whether the
+| names, or else the office hours of the conversation's inbox, which are
+| the workspace's default unless the inbox keeps its own. Whether the
 | team is around is answered at the moment of the event or the step,
 | in the schedule's own timezone. A schedule that cannot be read counts
 | as closed, so a workflow restricted to open hours never runs on a
@@ -21,7 +22,6 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/models"
@@ -42,12 +42,13 @@ var errScheduleMissing = errors.New("schedule not found")
 
 /*
 hours returns the schedule the definition names by public id, or the
-workspace's default for none.
+office hours of the conversation's inbox for none.
 */
-func (e *Engine) hours(ctx context.Context, q *models.Queries, workspace ids.UUID, public string,
+func (e *Engine) hours(ctx context.Context, q *models.Queries, place schedules.Place, public string,
 ) (*officehours.Schedule, error) {
+	workspace := place.Workspace
 	if public == "" {
-		row, err := schedules.Default(ctx, q, workspace, e.Clock)
+		row, err := schedules.ForInbox(ctx, q, place, e.Clock)
 		if err != nil {
 			return nil, err
 		}
@@ -83,12 +84,12 @@ func scheduleProblem(err error) bool {
 }
 
 /*
-withHours gives the subject the workspace's default schedule, which
-the office hours condition and the weekday read; with an unreadable
-schedule both stay unknown.
+withHours gives the subject its inbox's office hours, which the office
+hours condition and the weekday read; with an unreadable schedule both
+stay unknown.
 */
 func (e *Engine) withHours(ctx context.Context, q *models.Queries, s *subject) error {
-	sched, err := e.hours(ctx, q, s.conversation.WorkspaceID, "")
+	sched, err := e.hours(ctx, q, placeOf(s.conversation), "")
 	if scheduleProblem(err) {
 		return nil
 	}
@@ -112,7 +113,7 @@ func (e *Engine) scheduleReason(ctx context.Context, q *models.Queries, m *match
 		return "", nil
 	}
 
-	sched, err := e.hours(ctx, q, m.conv.WorkspaceID, c.spec.Schedule.ScheduleID)
+	sched, err := e.hours(ctx, q, placeOf(m.conv), c.spec.Schedule.ScheduleID)
 	if scheduleProblem(err) {
 		return SkipSchedule, nil
 	}
@@ -133,10 +134,17 @@ nextOpen is when the schedule a wait or snooze names next opens: now
 when it is open.
 */
 func (st *state) nextOpen(ctx context.Context, u *workflowspec.WaitUntil) (time.Time, error) {
-	sched, err := st.e.hours(ctx, st.q, st.conv.WorkspaceID, u.ScheduleID)
+	sched, err := st.e.hours(ctx, st.q, placeOf(st.conv), u.ScheduleID)
 	if err != nil {
 		return time.Time{}, err
 	}
 
 	return sched.NextOpen(st.now())
+}
+
+/*
+placeOf is the inbox whose office hours a conversation follows.
+*/
+func placeOf(c models.Conversation) schedules.Place {
+	return schedules.Place{Workspace: c.WorkspaceID, Inbox: c.InboxID}
 }

@@ -81,7 +81,11 @@ func (p *Posts) Read(ctx context.Context, in BoardRequest) (Board, error) {
 			out.List, err = p.listed(ctx, q, in, nil)
 			return err
 		}
-		for _, s := range Statuses() {
+		statuses, err := ordered(ctx, q, in.Center.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		for _, s := range statuses {
 			if s.Key == "closed" {
 				continue
 			}

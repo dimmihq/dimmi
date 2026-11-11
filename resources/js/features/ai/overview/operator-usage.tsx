@@ -9,6 +9,7 @@ import { RiArrowRightSLine, RiChat3Line, RiFileList3Line, RiInboxArchiveLine, Ri
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
+import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
 import { StatusDot } from "@/components/base/badges/status-dot";
@@ -29,7 +30,6 @@ import {
 
 import { modelsFor, operatorModel, usableKeys, usd } from "../format";
 import { ModelLogo } from "../logos";
-import { Stat } from "./stat";
 
 const purposes: Record<OperatorPurpose, { label: string; icon: typeof RiChat3Line }> = {
   ask: { label: "Questions from teammates", icon: RiChat3Line },
@@ -110,7 +110,7 @@ function MonthStats({ usage }: { usage: OperatorUsage | undefined }) {
     return (
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {["runs", "spend", "changes", "failed"].map((id) => (
-          <Skeleton key={id} className="h-[92px] rounded-2xl" />
+          <Skeleton key={id} className="h-[100px] rounded-2xl" />
         ))}
       </div>
     );
@@ -120,20 +120,37 @@ function MonthStats({ usage }: { usage: OperatorUsage | undefined }) {
   const cap = usage.monthly_spend_cap_micros;
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <Stat label="Runs" value={usage.runs_count.toLocaleString()} />
-      <Stat
-        label="Spend"
-        value={usd(usage.cost_micros)}
-        note={
-          cap === null
-            ? `${share(usage.cost_micros, usage.agent_cost_micros)} of the agent's spend`
-            : `${share(usage.cost_micros, cap)} of the ${usd(cap)} cap`
-        }
-      />
-      <Stat label="Changes applied" value={count("applied").toLocaleString()} note={`of ${proposed} proposed`} />
-      <Stat label="Failed runs" value={usage.failed_count.toLocaleString()} />
-    </div>
+    <StatCards
+      variant="compact"
+      className="gap-2"
+      stats={[
+        {
+          label: "Runs",
+          hint: "Times Operator was asked to do something this month.",
+          value: usage.runs_count.toLocaleString(),
+        },
+        {
+          label: "Spend",
+          hint: "What the AI provider charged this month for Operator's runs, in US dollars.",
+          value: usd(usage.cost_micros),
+          caption:
+            cap === null
+              ? `${share(usage.cost_micros, usage.agent_cost_micros)} of agent spend`
+              : `${share(usage.cost_micros, cap)} of ${usd(cap)} cap`,
+        },
+        {
+          label: "Changes applied",
+          hint: "Changes Operator proposed this month that a teammate accepted.",
+          value: count("applied").toLocaleString(),
+          caption: `of ${proposed} proposed`,
+        },
+        {
+          label: "Failed runs",
+          hint: "Runs this month that stopped with an error before finishing.",
+          value: usage.failed_count.toLocaleString(),
+        },
+      ]}
+    />
   );
 }
 

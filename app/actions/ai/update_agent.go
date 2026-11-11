@@ -341,7 +341,7 @@ func updateParams(agent *models.AiAgent, now time.Time) models.UpdateAgentParams
 		Name: agent.Name, AvatarAttachmentID: agent.AvatarAttachmentID, Enabled: agent.Enabled,
 		ProductName: agent.ProductName, Tone: agent.Tone, Guidance: agent.Guidance,
 		EnabledChannels: agent.EnabledChannels, ExcludedChannelConnectionIds: agent.ExcludedChannelConnectionIds,
-		Schedule: agent.Schedule, OfficeHours: agent.OfficeHours, AssignedBehavior: agent.AssignedBehavior,
+		Schedule: agent.Schedule, AssignedBehavior: agent.AssignedBehavior,
 		AnswerKeyID: agent.AnswerKeyID, AnswerModel: agent.AnswerModel,
 		ClassifierKeyID: agent.ClassifierKeyID, ClassifierModel: agent.ClassifierModel,
 		FallbackKeyID: agent.FallbackKeyID, FallbackModel: agent.FallbackModel,

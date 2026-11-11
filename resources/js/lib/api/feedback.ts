@@ -84,13 +84,23 @@ export interface StatusChange {
 export const postsPerPage = 25;
 
 /*
- * statuses are the stages a request moves through, in roadmap order,
- * with the names and colors the portal shows.
+ * FeedbackStatus is a stage a request moves through, with the name and
+ * color the portal shows.
  */
-export const statuses: { id: PostStatus; name: string; color: string }[] = [
-  { id: "under_review", name: "Under consideration", color: "#a1a1aa" },
-  { id: "planned", name: "Planned", color: "#3b82f6" },
+export interface FeedbackStatus {
+  id: PostStatus;
+  name: string;
+  color: string;
+}
+
+/*
+ * statuses are the stages in the built-in order, which a workspace keeps
+ * until it saves its own and the app shows while that order loads.
+ */
+export const statuses: FeedbackStatus[] = [
   { id: "in_progress", name: "In progress", color: "#f59e0b" },
+  { id: "planned", name: "Planned", color: "#3b82f6" },
+  { id: "under_review", name: "Under consideration", color: "#a1a1aa" },
   { id: "shipped", name: "Shipped", color: "#16a34a" },
   { id: "closed", name: "Closed", color: "#71717a" },
 ];
@@ -104,7 +114,26 @@ export const priorities: { id: Priority; name: string }[] = [
 export const feedbackKeys = {
   posts: (workspace: string, helpCenter: string) => ["feedback", workspace, helpCenter, "posts"] as const,
   post: (workspace: string, id: string) => ["feedback", workspace, "post", id] as const,
+  statuses: (workspace: string) => ["feedback", workspace, "statuses"] as const,
 };
+
+/*
+ * statusesQuery reads the workspace's statuses in the order it chose.
+ */
+export function statusesQuery(workspace: string) {
+  return queryOptions({
+    queryKey: feedbackKeys.statuses(workspace),
+    queryFn: () => request<FeedbackStatus[]>("GET", "/feedback-statuses", undefined, { workspace }),
+    enabled: workspace !== "",
+  });
+}
+
+/*
+ * reorderStatuses saves every status in its new order, first to last.
+ */
+export function reorderStatuses(workspace: string, order: PostStatus[]): Promise<FeedbackStatus[]> {
+  return request<FeedbackStatus[]>("PATCH", "/feedback-statuses", { statuses: order }, { workspace });
+}
 
 export function postsQuery(workspace: string, helpCenter: string, f: PostFilter) {
   const params = new URLSearchParams({ sort: f.sort, page: String(f.page) });

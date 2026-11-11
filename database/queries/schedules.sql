@@ -48,11 +48,25 @@ SELECT EXISTS (
 )::boolean;
 
 -- name: ScheduleInUse :one
--- ScheduleInUse reports whether a workflow that is not archived names
--- the schedule, live or in its working copy.
-SELECT EXISTS (
-    SELECT 1 FROM workflows w
-    LEFT JOIN workflow_versions v ON v.id = w.live_version_id
-    WHERE w.workspace_id = @workspace_id AND w.deleted_at IS NULL
-      AND (strpos(w.draft::text, @public_id::text) > 0 OR strpos(coalesce(v.spec::text, ''), @public_id::text) > 0)
+-- ScheduleInUse reports whether a live inbox keeps its office hours in
+-- the schedule, or a workflow that is not archived names it, live or in
+-- its working copy.
+SELECT (
+    EXISTS (
+        SELECT 1 FROM inboxes i
+        WHERE i.workspace_id = @workspace_id AND i.schedule_id = @id::uuid AND i.deleted_at IS NULL
+    )
+    OR EXISTS (
+        SELECT 1 FROM workflows w
+        LEFT JOIN workflow_versions v ON v.id = w.live_version_id
+        WHERE w.workspace_id = @workspace_id AND w.deleted_at IS NULL
+          AND (strpos(w.draft::text, @public_id::text) > 0 OR strpos(coalesce(v.spec::text, ''), @public_id::text) > 0)
+    )
 )::boolean;
+
+-- name: FindInboxSchedule :one
+-- FindInboxSchedule returns the schedule an inbox keeps its own office
+-- hours in; none when it follows the workspace's default.
+SELECT s.* FROM inboxes i
+JOIN schedules s ON s.workspace_id = i.workspace_id AND s.id = i.schedule_id AND s.deleted_at IS NULL
+WHERE i.workspace_id = @workspace_id AND i.id = @inbox_id;

@@ -16,6 +16,7 @@
 package knowledge
 
 import (
+	"cmp"
 	"math"
 	"net/url"
 	"slices"
@@ -156,9 +157,9 @@ func newChunk(a Article, heading, text string) contracts.KnowledgeChunk {
 		visibility = contracts.KnowledgeVisibilityPublic
 	}
 	return contracts.KnowledgeChunk{
-		ID: ids.New(), SourceType: "article", Title: a.Title, HeadingPath: path, ArticleID: a.ArticleID,
-		HelpCenterID: a.HelpCenterID, URL: a.URL, Text: text, Visibility: visibility, Locale: "en",
-		UpdatedAt: a.UpdatedAt,
+		ID: ids.New(), SourceType: cmp.Or(a.SourceType, "article"), Title: a.Title, HeadingPath: path,
+		ArticleID: a.ArticleID, HelpCenterID: a.HelpCenterID, SourceID: a.SourceID, URL: a.URL, Text: text,
+		Visibility: visibility, Locale: cmp.Or(a.Locale, "en"), UpdatedAt: a.UpdatedAt,
 	}
 }
 

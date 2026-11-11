@@ -208,7 +208,7 @@ func (m *LLMManager) managedFamily(family enums.AIModelFamily) bool {
 	case enums.AIModelFamilyOpenAI:
 		return cfg.OpenAI.APIKey != ""
 	case enums.AIModelFamilyOpenWeight:
-		return cfg.OpenWeight.APIKey != ""
+		return cfg.OpenWeight.Configured()
 	}
 	return false
 }

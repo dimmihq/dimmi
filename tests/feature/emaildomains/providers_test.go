@@ -135,6 +135,32 @@ func TestRemovingDomains(t *testing.T) {
 		assert.Equal(t, 0, linkedAddressCount(tc))
 	})
 
+	t.Run("refuses a domain a running series sends from, even when told to go ahead", func(t *testing.T) {
+		t.Parallel()
+		tc, zone := domainCase(t, relayEnv(t))
+		address := tc.ActingAsOwner().PostJSON("/api/v1/email-addresses", map[string]any{"address": "news@acme.test"}).
+			AssertCreated().String("data.id")
+		owner, created := verifiedRelayDomain(tc, zone)
+		series := owner.PostJSON("/api/v1/series", map[string]any{
+			"name": "Welcome", "subject": "contact",
+			"spec": map[string]any{"nodes": []map[string]any{{"id": "entry", "kind": "entry"}}},
+		}).AssertCreated()
+		owner.PatchJSON("/api/v1/series/"+series.String("data.id"), map[string]any{
+			"lock_version": 1, "name": "Welcome", "email_address_id": address,
+		}).AssertOK()
+		_, err := tc.Operator().Exec(t.Context(), "UPDATE series SET status = 'live' WHERE workspace_id = $1",
+			tc.Workspace.Workspace.ID)
+		require.NoError(t, err)
+
+		owner.Delete("/api/v1/email-domains/"+created.Data.ID+"?force=true").
+			AssertStatus(409).AssertJSONPath("code", "domain_sending").AssertJSONPath("senders.0", "series: Welcome")
+
+		_, err = tc.Operator().Exec(t.Context(), "UPDATE series SET status = 'archived' WHERE workspace_id = $1",
+			tc.Workspace.Workspace.ID)
+		require.NoError(t, err)
+		owner.Delete("/api/v1/email-domains/" + created.Data.ID + "?force=true").AssertNoContent()
+	})
+
 	t.Run("removes a domain nothing sends from at once", func(t *testing.T) {
 		t.Parallel()
 		tc, _ := domainCase(t, relayEnv(t))

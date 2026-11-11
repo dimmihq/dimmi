@@ -48,17 +48,27 @@ type VectorChunk struct {
 }
 
 /*
-VectorSearch is what the vector arm found, the model and key the query
-was embedded with, what embedding it cost and, when it found nothing
-on purpose, why.
+VectorDocumentChunk is one chunk of a source document the vector arm
+found.
+*/
+type VectorDocumentChunk struct {
+	Row        models.SearchKnowledgeDocumentChunksVectorRow
+	Similarity float64
+}
+
+/*
+VectorSearch is what the vector arm found, among articles and among
+source documents, the model and key the query was embedded with, what
+embedding it cost and, when it found nothing on purpose, why.
 */
 type VectorSearch struct {
-	Chunks   []VectorChunk
-	Model    string
-	KeyID    *ids.UUID
-	Usage    *contracts.LLMUsage
-	Degraded string
-	Timings  map[string]time.Duration
+	Chunks    []VectorChunk
+	Documents []VectorDocumentChunk
+	Model     string
+	KeyID     *ids.UUID
+	Usage     *contracts.LLMUsage
+	Degraded  string
+	Timings   map[string]time.Duration
 }
 
 /*
@@ -81,7 +91,7 @@ func (v *Vectors) SearchChunks(ctx context.Context, ws ids.UUID, query string,
 	}
 	out.Model, out.KeyID, out.Usage = qv.model, qv.keyID, qv.usage
 	started = v.Clock.Now()
-	rows, err := v.nearest(ctx, ws, qv, opts.Visibility)
+	rows, docs, err := v.nearest(ctx, ws, qv, opts)
 	out.Timings["vector"] = v.Clock.Now().Sub(started)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -93,16 +103,20 @@ func (v *Vectors) SearchChunks(ctx context.Context, ws ids.UUID, query string,
 	for _, r := range rows {
 		out.Chunks = append(out.Chunks, VectorChunk{Row: r, Similarity: 1 - r.Distance})
 	}
+	for _, r := range docs {
+		out.Documents = append(out.Documents, VectorDocumentChunk{Row: r, Similarity: 1 - r.Distance})
+	}
 	return out, nil
 }
 
 /*
-nearest runs the vector query under its own statement timeout.
+nearest runs the vector queries, over articles and over source
+documents, under their own statement timeout.
 */
-func (v *Vectors) nearest(ctx context.Context, ws ids.UUID, qv queryVector,
-	visibility []contracts.KnowledgeVisibility,
-) ([]models.SearchKnowledgeChunksVectorRow, error) {
+func (v *Vectors) nearest(ctx context.Context, ws ids.UUID, qv queryVector, opts contracts.KnowledgeSearchOptions,
+) ([]models.SearchKnowledgeChunksVectorRow, []models.SearchKnowledgeDocumentChunksVectorRow, error) {
 	var rows []models.SearchKnowledgeChunksVectorRow
+	var docs []models.SearchKnowledgeDocumentChunksVectorRow
 	embedding := database.NewHalfVector(qv.vector)
 	err := v.inWorkspace(ctx, ws, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
 		ms := v.vectorTimeout().Milliseconds()
@@ -114,12 +128,16 @@ func (v *Vectors) nearest(ctx context.Context, ws ids.UUID, qv queryVector,
 			return err
 		}
 		rows, err = q.SearchKnowledgeChunksVector(ctx, models.SearchKnowledgeChunksVectorParams{
-			Embedding: embedding, ModelKey: qv.model, WorkspaceID: ws, Visibilities: visibilityNames(visibility),
+			Embedding: embedding, ModelKey: qv.model, WorkspaceID: ws, Visibilities: visibilityNames(opts.Visibility),
 			Hashes: hashes, RowLimit: vectorCandidates,
 		})
+		if err != nil {
+			return err
+		}
+		docs, err = nearestDocuments(ctx, q, nearby{ws: ws, qv: qv, opts: opts, hashes: hashes})
 		return err
 	})
-	return rows, err
+	return rows, docs, err
 }
 
 /*

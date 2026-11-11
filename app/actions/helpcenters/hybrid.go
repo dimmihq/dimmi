@@ -15,6 +15,7 @@
 package helpcenters
 
 import (
+	"cmp"
 	"context"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -66,7 +67,7 @@ func (k *Knowledge) hybrid(ctx context.Context, s search, keyword contracts.Know
 		return keyword, nil
 	}
 	started := k.Vectors.Clock.Now()
-	chunks := k.vectorChunks(s, vec.Chunks)
+	chunks := append(k.vectorChunks(s, vec.Chunks), documentChunks(vec.Documents)...)
 	limit, perDoc := s.opts.Limit, s.opts.MaxPerDocument
 	if limit <= 0 {
 		limit = 8
@@ -103,6 +104,31 @@ func (k *Knowledge) vectorChunks(s search, rows []knowledge.VectorChunk) []contr
 			SourceType: "article", Title: r.Title, HeadingPath: r.HeadingPath, URL: doc.URL, Text: r.Body,
 			Similarity: &similarity, MatchedBy: []string{"vector"},
 			Visibility: contracts.KnowledgeVisibility(r.Visibility), Locale: "en", UpdatedAt: r.CreatedAt,
+		}
+		out = append(out, chunk)
+	}
+	return out
+}
+
+/*
+documentChunks turns the vector arm's source document rows into
+chunks; only a public document carries its address.
+*/
+func documentChunks(rows []knowledge.VectorDocumentChunk) []contracts.KnowledgeChunk {
+	out := make([]contracts.KnowledgeChunk, 0, len(rows))
+	for _, v := range rows {
+		r := v.Row
+		similarity := v.Similarity
+		chunk := contracts.KnowledgeChunk{
+			ID: r.ID, DocumentID: r.DocumentID, SourceID: &r.SourceID, SourceType: r.SourceType, Title: r.Title,
+			HeadingPath: r.HeadingPath, Text: r.Body, Similarity: &similarity, MatchedBy: []string{"vector"},
+			Visibility: contracts.KnowledgeVisibility(r.Visibility), Locale: cmp.Or(r.Locale, "en"),
+		}
+		if r.Url != nil && chunk.Visibility == contracts.KnowledgeVisibilityPublic {
+			chunk.URL = *r.Url
+		}
+		if r.IndexedAt != nil {
+			chunk.UpdatedAt = *r.IndexedAt
 		}
 		out = append(out, chunk)
 	}

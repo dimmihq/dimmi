@@ -12,7 +12,8 @@
 | by the queue, and a failing key marks the workspace degraded. After
 | each batch the pending model's progress is counted, and the model is
 | switched in once its coverage is complete; batches finishing at once
-| may each try, and only the first switch changes anything.
+| may each try, and only the first switch changes anything. What each
+| batch cost is added to the month's usage of the sources it served.
 |
 */
 
@@ -51,12 +52,13 @@ type batchPlan struct {
 }
 
 /*
-embedded is a batch's outcome: a vector per stored hash and the hashes
-the provider refused.
+embedded is a batch's outcome: a vector per stored hash, the hashes the
+provider refused, and the tokens every call used.
 */
 type embedded struct {
 	vectors map[string][]float32
 	refused map[string]string
+	usage   contracts.EmbedUsage
 }
 
 /*
@@ -92,7 +94,7 @@ func (v *Vectors) EmbedBatch(ctx context.Context, args jobs.EmbedKnowledgeChunks
 			v.noteProviderFailure(ctx, args.WorkspaceID, err)
 			return fmt.Errorf("embed knowledge batch: %w", err)
 		}
-		if err := v.storeBatch(ctx, args, plan.binding.model.Dims, out); err != nil {
+		if err := v.storeBatch(ctx, args, plan, out); err != nil {
 			return err
 		}
 	}
@@ -191,8 +193,10 @@ embedPlan calls the provider for the whole batch, and one input at a
 time when it refuses the batch.
 */
 func (v *Vectors) embedPlan(ctx context.Context, plan *batchPlan) (embedded, error) {
-	out := embedded{vectors: map[string][]float32{}, refused: map[string]string{}}
-	vectors, err := v.embedDocuments(ctx, plan, plan.inputs)
+	out := embedded{vectors: map[string][]float32{}, refused: map[string]string{}, usage: contracts.EmbedUsage{
+		Reported: true,
+	}}
+	vectors, err := v.embedDocuments(ctx, plan, plan.inputs, &out.usage)
 	if err == nil {
 		for i, h := range plan.hashes {
 			out.vectors[h] = vectors[i]
@@ -203,7 +207,7 @@ func (v *Vectors) embedPlan(ctx context.Context, plan *batchPlan) (embedded, err
 		return out, err
 	}
 	for i, h := range plan.hashes {
-		vectors, err := v.embedDocuments(ctx, plan, plan.inputs[i:i+1])
+		vectors, err := v.embedDocuments(ctx, plan, plan.inputs[i:i+1], &out.usage)
 		switch {
 		case err == nil:
 			out.vectors[h] = vectors[0]
@@ -217,9 +221,12 @@ func (v *Vectors) embedPlan(ctx context.Context, plan *batchPlan) (embedded, err
 }
 
 /*
-embedDocuments embeds document inputs with the plan's model.
+embedDocuments embeds document inputs with the plan's model and adds
+the tokens the call used to used.
 */
-func (v *Vectors) embedDocuments(ctx context.Context, plan *batchPlan, inputs []string) ([][]float32, error) {
+func (v *Vectors) embedDocuments(ctx context.Context, plan *batchPlan, inputs []string,
+	used *contracts.EmbedUsage,
+) ([][]float32, error) {
 	resp, err := plan.driver.Embed(ctx, contracts.EmbedRequest{
 		Model: plan.binding.model.Model, Inputs: inputs, Dimensions: int(plan.binding.model.Dims),
 		InputType: contracts.EmbedInputDocument,
@@ -227,16 +234,18 @@ func (v *Vectors) embedDocuments(ctx context.Context, plan *batchPlan, inputs []
 	if err != nil {
 		return nil, err
 	}
+	used.InputTokens += resp.Usage.InputTokens
+	used.Reported = used.Reported && resp.Usage.Reported
 	return resp.Vectors, nil
 }
 
 /*
 storeBatch stores the vectors and remembers the refused inputs.
 */
-func (v *Vectors) storeBatch(ctx context.Context, args jobs.EmbedKnowledgeChunksArgs, dims int32,
+func (v *Vectors) storeBatch(ctx context.Context, args jobs.EmbedKnowledgeChunksArgs, plan *batchPlan,
 	out embedded,
 ) error {
-	ws, now := args.WorkspaceID, v.Clock.Now()
+	ws, now, dims := args.WorkspaceID, v.Clock.Now(), plan.binding.model.Dims
 	return v.inWorkspace(ctx, ws, func(ctx context.Context, _ *database.Tx, q *models.Queries) error {
 		var stored []string
 		for h, vec := range out.vectors {
@@ -260,7 +269,7 @@ func (v *Vectors) storeBatch(ctx context.Context, args jobs.EmbedKnowledgeChunks
 				return fmt.Errorf("record embedding failure: %w", err)
 			}
 		}
-		return nil
+		return v.recordEmbedUsage(ctx, q, usageOf(ws, plan, out), now)
 	})
 }
 

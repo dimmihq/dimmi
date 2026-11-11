@@ -40,7 +40,11 @@ SELECT count(*)::int AS total,
         SELECT 1 FROM knowledge_embedding_failures f
         WHERE f.workspace_id = $1 AND f.model_key = $2 AND f.embed_hash = h.embed_hash
     ))::int AS failed
-FROM (SELECT DISTINCT embed_hash FROM knowledge_chunks WHERE workspace_id = $1) h
+FROM (
+    SELECT embed_hash FROM knowledge_chunks WHERE workspace_id = $1
+    UNION
+    SELECT embed_hash FROM knowledge_document_chunks WHERE workspace_id = $1
+) h
 `
 
 type CountEmbeddingCoverageParams struct {
@@ -64,15 +68,17 @@ func (q *Queries) CountEmbeddingCoverage(ctx context.Context, arg CountEmbedding
 }
 
 const countKnowledgeChunks = `-- name: CountKnowledgeChunks :one
-SELECT count(*) FROM knowledge_chunks WHERE workspace_id = $1
+SELECT (SELECT count(*) FROM knowledge_chunks c WHERE c.workspace_id = $1)
+    + (SELECT count(*) FROM knowledge_document_chunks d WHERE d.workspace_id = $1)
 `
 
-// CountKnowledgeChunks counts the workspace's chunks.
-func (q *Queries) CountKnowledgeChunks(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+// CountKnowledgeChunks counts the workspace's chunks, of articles and
+// of source documents.
+func (q *Queries) CountKnowledgeChunks(ctx context.Context, workspaceID ids.UUID) (int32, error) {
 	row := q.db.QueryRow(ctx, countKnowledgeChunks, workspaceID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const countKnowledgeChunksForVersion = `-- name: CountKnowledgeChunksForVersion :one
@@ -391,8 +397,15 @@ func (q *Queries) ListArticleEmbedHashes(ctx context.Context, arg ListArticleEmb
 }
 
 const listChunkEmbedInputs = `-- name: ListChunkEmbedInputs :many
-SELECT DISTINCT ON (embed_hash) embed_hash, title, heading_path, body FROM knowledge_chunks
-WHERE workspace_id = $1 AND embed_hash = ANY ($2::text[])
+SELECT DISTINCT ON (embed_hash) embed_hash::text AS embed_hash, title::text AS title,
+    heading_path::text[] AS heading_path, body::text AS body
+FROM (
+    SELECT a.embed_hash, a.title, a.heading_path, a.body, a.id FROM knowledge_chunks a
+    WHERE a.workspace_id = $1 AND a.embed_hash = ANY ($2::text[])
+    UNION ALL
+    SELECT b.embed_hash, b.title, b.heading_path, b.body, b.id FROM knowledge_document_chunks b
+    WHERE b.workspace_id = $1 AND b.embed_hash = ANY ($2::text[])
+) c
 ORDER BY embed_hash, id
 `
 
@@ -547,6 +560,8 @@ func (q *Queries) ListFailedEmbedHashes(ctx context.Context, arg ListFailedEmbed
 const listMissingEmbedHashes = `-- name: ListMissingEmbedHashes :many
 SELECT DISTINCT s.embed_hash::text AS embed_hash FROM (
     SELECT c.embed_hash FROM knowledge_chunks c WHERE c.workspace_id = $1
+    UNION
+    SELECT dc.embed_hash FROM knowledge_document_chunks dc WHERE dc.workspace_id = $1
     UNION
     SELECT k.embed_hash FROM knowledge_conversations k WHERE k.workspace_id = $1
 ) s

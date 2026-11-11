@@ -125,12 +125,17 @@ func changelogRoutes(workspace *routing.Router, a *app.App) {
 
 /*
 feedbackRoutes declares the feature requests API: a help center's
-requests, their votes, comments and internal notes.
+requests, their votes, comments and internal notes, and the order of
+the statuses, which only members who change settings may save.
 */
 func feedbackRoutes(workspace *routing.Router, a *app.App) {
 	fb := &v1.FeedbackController{Posts: a.Actions.Feedback, IDs: a.IDs}
 	ex := &v1.FeedbackExtrasController{Posts: a.Actions.Feedback, IDs: a.IDs}
 	one, post := "/help-centers/{help_center}", "/feedback-posts/{post}"
+	st := &v1.FeedbackStatusController{Posts: a.Actions.Feedback}
+
+	routing.Get(workspace, "/feedback-statuses", "feedback-statuses.index", st.Index).Ability("feedback:read")
+	routing.Patch(workspace, "/feedback-statuses", "feedback-statuses.update", st.Reorder).Ability("settings:write")
 
 	routing.Get(workspace, one+"/feedback-posts", "help-centers.feedback-posts.index", fb.Index).
 		Ability("feedback:read").Query(numberedPageQuery())

@@ -181,10 +181,8 @@ func TestAiHandoffs(t *testing.T) {
 
 	t.Run("hands off outside the schedule while serving the customer", func(t *testing.T) {
 		t.Parallel()
-		h := newHarness(t, func(p *models.UpdateAgentParams) {
-			p.Schedule = "inside_office_hours"
-			p.OfficeHours = json.RawMessage(`{"timezone":"UTC","days":{"sun":{"open":"00:00","close":"00:01"}}}`)
-		})
+		h := newHarness(t, func(p *models.UpdateAgentParams) { p.Schedule = "inside_office_hours" })
+		h.defaultHours(closedWeek())
 
 		conv, trigger := h.conversation("How much is Pro?")
 		h.operator("UPDATE conversations SET ai_state = 'active' WHERE id = $1", conv)

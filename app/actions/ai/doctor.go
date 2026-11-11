@@ -72,7 +72,7 @@ provider.
 */
 func (d *Doctor) managedCheck() Check {
 	m := d.Config.Managed
-	if m.Anthropic.APIKey != "" || m.OpenAI.APIKey != "" || m.OpenWeight.APIKey != "" {
+	if m.Anthropic.APIKey != "" || m.OpenAI.APIKey != "" || m.OpenWeight.Configured() {
 		return Check{ID: "ai.managed", Status: CheckPass, Message: "the built-in provider has an upstream"}
 	}
 	return Check{

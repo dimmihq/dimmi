@@ -1,0 +1,46 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+WebhookEndpointAdded tells an owner an endpoint now receives the
+workspace's events, which host it is and who added it, so data sent
+somewhere nobody meant never goes unnoticed.
+*/
+
+templ WebhookEndpointAdded(name, workspace, host, actor, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.webhook_endpoint_added.subject", i18n.Args{"host": host})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.webhook_endpoint_added.intro", i18n.Args{"host": host, "workspace": workspace, "actor": actor}) }</p>
+		<p>{ i18n.T(ctx, "mail.webhook_endpoint_added.unknown", nil) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.webhook_endpoint_added.action", nil))
+	}
+}
+
+/*
+WebhookEndpointFailing warns an owner or admin that an endpoint has
+failed every request for a day, before it is turned off.
+*/
+
+templ WebhookEndpointFailing(name, workspace, host, lastError, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.webhook_endpoint_failing.subject", i18n.Args{"host": host})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.webhook_endpoint_failing.intro", i18n.Args{"host": host, "workspace": workspace}) }</p>
+		<p>{ i18n.T(ctx, "mail.webhook_endpoint_failing.last_error", i18n.Args{"error": lastError}) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.webhook_endpoint_failing.action", nil))
+	}
+}
+
+/*
+WebhookEndpointDisabled tells an owner or admin an endpoint was turned
+off and why, and that missed deliveries wait in the log.
+*/
+
+templ WebhookEndpointDisabled(name, workspace, host, reason, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.webhook_endpoint_disabled.subject", i18n.Args{"host": host})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.webhook_endpoint_disabled.intro_" + reason, i18n.Args{"host": host, "workspace": workspace}) }</p>
+		<p>{ i18n.T(ctx, "mail.webhook_endpoint_disabled.recover", nil) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.webhook_endpoint_disabled.action", nil))
+	}
+}

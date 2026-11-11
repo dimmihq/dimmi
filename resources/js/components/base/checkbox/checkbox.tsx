@@ -24,6 +24,9 @@ import type { CheckboxSize } from "./checkbox-glyph";
  *                  white 2px rounded stroke glyph; on hover the gradient
  *                  lightens to blue/400 → blue/500
  *
+ * With a label, the box sits on the label's first line, so a label that
+ * runs to a description underneath keeps the box at its top.
+ *
  * Built on react-aria Checkbox: keyboard toggling, aria-checked="mixed" for
  * indeterminate, label association when `children` is passed.
  */
@@ -36,6 +39,7 @@ export interface CheckboxProps extends Omit<AriaCheckboxProps, "children"> {
 
 export function Checkbox({ className, children, size = "md", ref, ...props }: CheckboxProps) {
   const s = checkboxSizes[size];
+  const hasLabel = children !== undefined && children !== null;
 
   return (
     <AriaCheckbox
@@ -43,7 +47,7 @@ export function Checkbox({ className, children, size = "md", ref, ...props }: Ch
       {...props}
       className={(state) =>
         cx(
-          "group inline-flex items-center select-none",
+          "group inline-flex items-start select-none",
           s.gap,
           state.isDisabled ? "cursor-not-allowed" : "cursor-pointer",
           typeof className === "function" ? className(state) : className,
@@ -52,10 +56,10 @@ export function Checkbox({ className, children, size = "md", ref, ...props }: Ch
     >
       {(state) => (
         <>
-          <CheckboxGlyph state={state} size={size} />
-          {children !== undefined && children !== null && (
-            <span className={cx(s.label, "text-text-primary")}>{children}</span>
-          )}
+          <span className={cx("flex shrink-0", hasLabel && "mt-0.5")}>
+            <CheckboxGlyph state={state} size={size} />
+          </span>
+          {hasLabel && <span className={cx(s.label, "text-text-primary")}>{children}</span>}
         </>
       )}
     </AriaCheckbox>

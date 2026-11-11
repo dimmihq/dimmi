@@ -8,6 +8,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 func TestOperatorUsage(t *testing.T) {
@@ -30,6 +31,27 @@ func TestOperatorUsage(t *testing.T) {
 		assert.Equal(t, "ask", res.String("data.recent.0.purpose"))
 		assert.NotEmpty(t, res.String("data.recent.0.thread_title"))
 		assert.NotEmpty(t, res.String("data.recent.0.conversation_number"))
+	})
+
+	t.Run("counts a run about a conversation the teammate may not see, without naming it", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		conv := k.conversation("Where is my refund?")
+		k.llm.Script(reply("Brief."))
+		k.d.Owner.PostJSON("/api/v1/conversations/"+conv+"/operator/brief", testkit.JSON{}).AssertOK()
+		member, row := k.d.Join(t, enums.RoleMember)
+		k.d.Owner.PatchJSON("/api/v1/members/"+models.PublicID(models.PrefixMember, row.ID), testkit.JSON{
+			"conversation_access": "assigned",
+		}).AssertOK()
+
+		res := member.GetJSON("/api/v1/operator/usage").AssertOK()
+
+		assert.Equal(t, "1", res.String("data.runs_count"))
+		assert.Equal(t, "brief", res.String("data.recent.0.purpose"))
+		assert.Empty(t, res.String("data.recent.0.conversation_number"))
+		assert.Empty(t, res.String("data.recent.0.conversation_id"))
+		owner := k.d.Owner.GetJSON("/api/v1/operator/usage").AssertOK()
+		assert.NotEmpty(t, owner.String("data.recent.0.conversation_number"))
 	})
 
 	t.Run("answers an empty month with zeros", func(t *testing.T) {

@@ -221,5 +221,30 @@
     "update": "Read what shipped",
     "action": "See the request",
     "why": "You get this because you asked for this or voted for it on {{.help_center}}."
+  },
+  "webhook_endpoint_added": {
+    "subject": "A webhook endpoint was added: {{.host}}",
+    "intro": "{{.actor}} added a webhook endpoint at {{.host}} to {{.workspace}}. It now receives the events it subscribes to, which can include customer data.",
+    "unknown": "If you did not expect this, delete the endpoint now.",
+    "action": "Review webhooks"
+  },
+  "webhook_endpoint_failing": {
+    "subject": "Webhook endpoint {{.host}} has been failing for a day",
+    "intro": "Every request dimmi sent to {{.host}} for {{.workspace}} in the last 24 hours failed. Deliveries keep retrying, and the endpoint is turned off if it keeps failing for 3 days.",
+    "last_error": "Last error: {{.error}}",
+    "action": "Open the delivery log"
+  },
+  "webhook_endpoint_disabled": {
+    "subject": "Webhook endpoint {{.host}} was turned off",
+    "intro_auto_failure": "dimmi turned off the webhook endpoint {{.host}} of {{.workspace}} after 3 days of failed requests.",
+    "intro_gone": "The webhook endpoint {{.host}} of {{.workspace}} answered 410 Gone, so dimmi turned it off.",
+    "recover": "Turn it back on once it works, then redeliver what it missed from the delivery log.",
+    "action": "Open the endpoint"
+  },
+  "knowledge_source_failing": {
+    "subject": "Knowledge source {{.source}} stopped syncing",
+    "intro": "dimmi could not sync {{.source}} in {{.workspace}}. The agent keeps answering from the last copy until it syncs again.",
+    "error": "What went wrong: {{.error}}",
+    "action": "Open the source"
   }
 }

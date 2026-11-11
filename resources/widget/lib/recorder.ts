@@ -4,7 +4,8 @@
  * MP4 in Safari. The microphone is asked for only when the visitor starts
  * recording, and let go as soon as they finish or throw the note away,
  * so the browser's recording light never stays on. A level reading lets
- * the recording bar move with the visitor's voice.
+ * the recording bar move with the visitor's voice. It loads only when a
+ * visitor starts recording, so it never weighs on the widget's core.
  */
 
 const formats = [
@@ -13,21 +14,6 @@ const formats = [
   { type: "audio/ogg;codecs=opus", extension: "ogg" },
   { type: "audio/webm", extension: "webm" },
 ];
-
-/*
- * maxSeconds is the longest voice note; the recording finishes itself
- * there.
- */
-export const maxSeconds = 300;
-
-/*
- * canRecord reports whether this page may record: the browser can, and
- * the page is served securely, since browsers keep the microphone from
- * any other.
- */
-export function canRecord(win: Window = window): boolean {
-  return Boolean(win.isSecureContext && "mediaDevices" in win.navigator && "MediaRecorder" in win);
-}
 
 function format(): { type: string; extension: string } {
   const found = formats.find((f) => MediaRecorder.isTypeSupported(f.type));

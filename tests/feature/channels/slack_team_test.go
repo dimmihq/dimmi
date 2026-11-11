@@ -158,7 +158,8 @@ func TestSlackTriage(t *testing.T) {
 	t.Run("a teammate whose role may not change conversations is refused, like in the app", func(t *testing.T) {
 		t.Parallel()
 		sc, conv := triaged(t)
-		take := slackdriver.TeamActionID(slackdriver.TriagePrefix(), models.PublicID(models.PrefixConversation, conv.ID),
+		take := slackdriver.TeamActionID(slackdriver.TriagePrefix(),
+			models.PublicID(models.PrefixConversation, conv.ID),
 			slackdriver.TriageTake)
 		readOnly, err := factories.Role(t.Context(), sc.App, factories.RoleOf{
 			Workspace: sc.Workspace.Workspace, Name: "Read only", BaseRole: enums.RoleMember,
@@ -179,7 +180,8 @@ func TestSlackTriage(t *testing.T) {
 	t.Run("a teammate no longer active in the workspace changes nothing", func(t *testing.T) {
 		t.Parallel()
 		sc, conv := triaged(t)
-		take := slackdriver.TeamActionID(slackdriver.TriagePrefix(), models.PublicID(models.PrefixConversation, conv.ID),
+		take := slackdriver.TeamActionID(slackdriver.TriagePrefix(),
+			models.PublicID(models.PrefixConversation, conv.ID),
 			slackdriver.TriageTake)
 		_, err := sc.Operator().Exec(t.Context(), "UPDATE workspace_members SET status = 'deactivated' WHERE id = $1",
 			sc.Workspace.Owner.ID)

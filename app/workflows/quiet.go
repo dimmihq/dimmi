@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
+	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
@@ -61,7 +62,8 @@ func (e *Engine) ArmQuiet(ctx context.Context, a jobs.ArmQuietTriggersArgs) erro
 		}
 
 		for _, c := range found {
-			if err := e.armOne(ctx, tx, quietArm{args: a, workflow: c, anchor: anchor}); err != nil {
+			arm := quietArm{args: a, workflow: c, anchor: anchor, place: placeOf(conv)}
+			if err := e.armOne(ctx, tx, arm); err != nil {
 				return err
 			}
 		}
@@ -88,12 +90,14 @@ func quietAnchor(a jobs.ArmQuietTriggersArgs, conv models.Conversation, now time
 
 /*
 quietArm is one timer to arm: the message that may start the silence,
-the workflow listening for it, and when the silence starts.
+the workflow listening for it, when the silence starts, and the inbox
+whose office hours business time counts by.
 */
 type quietArm struct {
 	args     jobs.ArmQuietTriggersArgs
 	workflow candidate
 	anchor   time.Time
+	place    schedules.Place
 }
 
 /*
@@ -107,7 +111,7 @@ func (e *Engine) armOne(ctx context.Context, tx *database.Tx, arm quietArm) erro
 		return nil
 	}
 
-	due, err := e.quietDue(ctx, models.New(tx), a.WorkspaceID, quietWait{settings: settings, anchor: anchor})
+	due, err := e.quietDue(ctx, models.New(tx), arm.place, quietWait{settings: settings, anchor: anchor})
 	if scheduleProblem(err) {
 		return nil
 	}
@@ -160,7 +164,7 @@ quietDue is when a silence started at the anchor has lasted the
 workflow's wait, counting only open hours when it counts business
 time.
 */
-func (e *Engine) quietDue(ctx context.Context, q *models.Queries, workspace ids.UUID, w quietWait,
+func (e *Engine) quietDue(ctx context.Context, q *models.Queries, place schedules.Place, w quietWait,
 ) (time.Time, error) {
 	s, anchor := w.settings, w.anchor
 	d, err := workflowspec.ParseDuration(s.After)
@@ -172,7 +176,7 @@ func (e *Engine) quietDue(ctx context.Context, q *models.Queries, workspace ids.
 		return anchor.Add(d), nil
 	}
 
-	sched, err := e.hours(ctx, q, workspace, s.ScheduleID)
+	sched, err := e.hours(ctx, q, place, s.ScheduleID)
 	if err != nil {
 		return time.Time{}, err
 	}

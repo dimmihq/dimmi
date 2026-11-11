@@ -7,7 +7,9 @@
  * no config file waits. Playwright starts it and stops it. E2E_DATABASE
  * and E2E_PORT let several checkouts run their suites side by side.
  * Google sign-in points at a local provider started here on a free port,
- * which the binary is allowed to reach and nothing else is. It serves
+ * which the binary is allowed to reach. The website crawler reads docs
+ * sites the tests serve on this machine, so private addresses are let
+ * through and the crawl is not paced. It serves
  * the pseudo locale en-XA beside English, so the language tests can
  * switch to a language whose every word looks different. Like every cloud
  * install it has built-in model credentials, pointed at a closed local
@@ -92,6 +94,8 @@ const env = {
   DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET: provider.clientSecret,
   DIMMI_SOCIALITE__PROVIDERS__GOOGLE__ISSUER: provider.issuer,
   DIMMI_HTTP_CLIENT__ALLOW_HOSTS: new URL(provider.issuer).host,
+  DIMMI_HTTP_CLIENT__ALLOW_PRIVATE_NETWORKS: "true",
+  DIMMI_AI__KNOWLEDGE__CRAWL_INTERVAL_MS: "0",
   DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS: resolver,
 };
 

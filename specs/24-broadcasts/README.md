@@ -63,7 +63,7 @@ Competitors: Intercom Outbound (email, chat, post; goals; subscription types), P
 - `GET/POST /broadcast-topics`, `PATCH /broadcast-topics/{btp}`
 - Public: `GET /b/u/{token}` (preference page), `POST /b/u/{token}/one-click` (RFC 8058), `GET /b/o/{token}.gif` (open), `GET /b/c/{token}` (click)
 - Widget: broadcasts are delivered as conversations; the first message carries `metadata.broadcast` with `display` `message` or `post`.
-- Preference page: `/b/u/{token}` opens `/email-preferences?t={token}` in the app, which reads and saves through `GET/PUT /api/v1/broadcast-preferences/{token}`; mail apps post `/b/u/{token}/one-click`.
+- Preference page: `/b/u/{token}` opens `/email-preferences?t={token}` in the app, which reads and saves through `GET/PATCH /api/v1/broadcast-preferences/{token}`; mail apps post `/b/u/{token}/one-click`.
 
 ## Done means
 

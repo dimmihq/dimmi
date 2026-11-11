@@ -62,17 +62,17 @@ func broadcastRoutes(workspace *routing.Router, a *app.App) {
 broadcastActionRoutes declares what can be done to one broadcast.
 */
 func broadcastActionRoutes(workspace *routing.Router, bc *v1.BroadcastController, one string) {
-	routing.Post(workspace, one+"/send", "broadcasts.send", bc.Send).
+	routing.Post(workspace, one+"/send", "broadcasts.send.store", bc.Send).
 		Ability("broadcasts:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/pause", "broadcasts.pause", bc.Pause).
+	routing.Post(workspace, one+"/pause", "broadcasts.pause.store", bc.Pause).
 		Ability("broadcasts:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/resume", "broadcasts.resume", bc.Resume).
+	routing.Post(workspace, one+"/resume", "broadcasts.resume.store", bc.Resume).
 		Ability("broadcasts:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/stop", "broadcasts.stop", bc.Stop).
+	routing.Post(workspace, one+"/stop", "broadcasts.stop.store", bc.Stop).
 		Ability("broadcasts:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/cancel", "broadcasts.cancel", bc.Cancel).
+	routing.Post(workspace, one+"/cancel", "broadcasts.cancel.store", bc.Cancel).
 		Ability("broadcasts:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, one+"/duplicate", "broadcasts.duplicate", bc.Duplicate).
+	routing.Post(workspace, one+"/duplicate", "broadcasts.duplicate.store", bc.Duplicate).
 		Ability("broadcasts:write").Status(fhttp.StatusCreated)
 }
 
@@ -88,7 +88,7 @@ func broadcastPreferenceRoutes(guest *routing.Router, a *app.App) {
 	pc := &v1.BroadcastPreferencesController{Broadcasts: a.Actions.Broadcasts, IDs: a.IDs}
 
 	routing.Get(guest, "/broadcast-preferences/{token}", "broadcast-preferences.show", pc.Show)
-	routing.Put(guest, "/broadcast-preferences/{token}", "broadcast-preferences.update", pc.Update)
+	routing.Patch(guest, "/broadcast-preferences/{token}", "broadcast-preferences.update", pc.Update)
 }
 
 /*

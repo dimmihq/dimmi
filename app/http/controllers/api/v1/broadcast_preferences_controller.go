@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | GET /broadcast-preferences/{token} reads one person's choices from the
-| signed link in a broadcast email; PUT saves them. Nobody signs in: the
+| signed link in a broadcast email; PATCH saves them. Nobody signs in: the
 | link is the proof, and it names only its own recipient.
 |
 */

@@ -104,6 +104,19 @@ SELECT address::text FROM email_addresses
 WHERE workspace_id = @workspace_id AND email_domain_id = @email_domain_id AND deleted_at IS NULL
 ORDER BY address;
 
+-- name: ListEmailDomainSenders :many
+-- ListEmailDomainSenders returns the broadcasts still due to send and the
+-- series still running from the domain's addresses, by kind and name.
+SELECT 'broadcast'::text AS kind, b.name::text AS name FROM broadcasts b
+JOIN email_addresses a ON a.id = b.email_address_id
+WHERE b.workspace_id = @workspace_id AND a.email_domain_id = @email_domain_id AND b.deleted_at IS NULL
+  AND b.kind = 'one_off' AND b.status IN ('scheduled', 'sending', 'paused')
+UNION ALL
+SELECT 'series'::text AS kind, s.name::text AS name FROM series s
+JOIN email_addresses a ON a.id = s.email_address_id
+WHERE s.workspace_id = @workspace_id AND a.email_domain_id = @email_domain_id AND s.status IN ('live', 'paused')
+ORDER BY kind, name;
+
 -- name: RequestEmailDomainCheck :one
 -- RequestEmailDomainCheck starts or keeps verifying the domain after
 -- someone asked. A pending or failed domain starts a fresh window.

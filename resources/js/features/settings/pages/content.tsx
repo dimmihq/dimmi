@@ -3,44 +3,14 @@
  * knowledge Dimmi reads, the changelog, the feedback portal, and how
  * often announcements and surveys may interrupt customers.
  */
-import { RiFileTextLine, RiGitRepositoryLine, RiGlobalLine } from "@remixicon/react";
-
 import { Chip } from "@/components/base/badges/chip";
 
 import { Action, Choice, Field, Toggle } from "../controls";
-import { Glyph, Item, Row, Section, SettingsPage } from "../layout";
+import { FeedbackStatusesSection } from "../feedback-statuses";
+import { Row, Section, SettingsPage } from "../layout";
 
+export { KnowledgeSettings } from "@/features/knowledge/source-list";
 export { HelpCentersSettings } from "../help-center-settings";
-
-export function KnowledgeSettings() {
-  return (
-    <SettingsPage title="Knowledge" description="What dimmi reads to answer customers, besides your help center.">
-      <Section title="Sources" action={<Action>Add source</Action>}>
-        <Item mark={<Glyph icon={RiGlobalLine} />} title="acme.com/docs" detail="Website · Synced daily · 214 pages">
-          <Action>Sync now</Action>
-        </Item>
-        <Item mark={<Glyph icon={RiFileTextLine} />} title="Refund policy.pdf" detail="Upload · 1 document">
-          <Action>Edit</Action>
-        </Item>
-        <Item
-          mark={<Glyph icon={RiGitRepositoryLine} />}
-          title="acme/handbook"
-          detail="GitHub · Synced hourly · 38 files"
-        >
-          <Action>Sync now</Action>
-        </Item>
-      </Section>
-      <Section title="Docs sync" description="Draft article updates when code changes in a repository.">
-        <Row label="How eager" description="How small a change still deserves a docs suggestion.">
-          <Choice label="How eager" options={["Balanced", "Strict", "Eager"]} />
-        </Row>
-        <Row label="Allow new articles" description="Suggest whole new articles, not only edits.">
-          <Toggle label="Allow new articles" on />
-        </Row>
-      </Section>
-    </SettingsPage>
-  );
-}
 
 export function ChangelogSettings() {
   return (
@@ -130,11 +100,7 @@ export function FeedbackSettings() {
           <Action>Edit</Action>
         </Row>
       </Section>
-      <Section title="Statuses" action={<Action>New status</Action>}>
-        {["Open", "Under review", "Planned", "In progress", "Shipped", "Declined"].map((status) => (
-          <Row key={status} label={status} />
-        ))}
-      </Section>
+      <FeedbackStatusesSection action={<Action>New status</Action>} />
       <Section title="AI">
         <Row label="Spot duplicates" description="Suggest merging posts that ask for the same thing.">
           <Toggle label="Spot duplicates" on />

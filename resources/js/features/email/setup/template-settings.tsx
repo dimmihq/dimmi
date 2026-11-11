@@ -23,6 +23,17 @@ import { Failure } from "./failure";
 
 const fallbackColor = "#171717";
 
+/*
+ * framed gives a plain reply room inside the preview, the margin a mail
+ * client puts around a message, without changing the email itself.
+ */
+function framed(html: string): string {
+  const room = "<style>body{margin:0;padding:20px 24px}</style>";
+  const doctype = /^\s*<!doctype[^>]*>/i.exec(html)?.[0] ?? "";
+
+  return doctype + room + html.slice(doctype.length);
+}
+
 const styleLabels: Record<ReplyStyle["template"], string> = { plain: "Plain", branded: "Branded" };
 
 /*
@@ -117,7 +128,7 @@ export function TemplateSettings({ workspace, address }: { workspace: string; ad
           <iframe
             title={`Reply preview for ${address.address}`}
             sandbox="allow-scripts"
-            srcDoc={preview.data.html}
+            srcDoc={style.template === "plain" ? framed(preview.data.html) : preview.data.html}
             className="h-80 w-full rounded-xl border border-border-button-default bg-background-primary-default"
           />
         </div>

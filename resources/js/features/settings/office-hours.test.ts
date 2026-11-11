@@ -1,6 +1,6 @@
 import type { Schedule } from "@/lib/api/schedules";
 
-import { sameWeek, statusLine, withDay } from "./office-hours";
+import { holidayWhen, sameWeek, statusLine, withDay } from "./office-hours";
 
 const schedule = (status: Schedule["status"]): Schedule => ({
   id: "sch_1",
@@ -62,5 +62,16 @@ describe("sameWeek", () => {
       ),
     ).toBe(true);
     expect(sameWeek({ mon: [["09:00", "17:00"]] }, {})).toBe(false);
+  });
+});
+
+describe("holidayWhen", () => {
+  it("says a yearly holiday comes back every year", () => {
+    expect(holidayWhen({ date: "2026-12-25", name: "Christmas", yearly: true })).toBe("Dec 25, every year");
+  });
+
+  it("dates a one-off holiday, and one stored without the flag", () => {
+    expect(holidayWhen({ date: "2027-03-03", name: "Offsite", yearly: false })).toBe("Mar 3, 2027");
+    expect(holidayWhen({ date: "2026-01-01" })).toBe("Jan 1, 2026");
   });
 });

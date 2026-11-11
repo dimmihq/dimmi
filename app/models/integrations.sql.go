@@ -370,7 +370,8 @@ func (q *Queries) FindIntegrationInstallation(ctx context.Context, arg FindInteg
 
 const findIntegrationInstallationByAccount = `-- name: FindIntegrationInstallationByAccount :one
 SELECT id, workspace_id, provider, external_account_id, external_app_id, name, source, scopes, credentials_encrypted, status, last_error_code, last_error, metadata, installed_by_member_id, installed_at, last_checked_at, disconnected_at, deleted_at, created_at, updated_at FROM integration_installations
-WHERE workspace_id = $1 AND provider = $2 AND external_app_id = $3
+WHERE workspace_id = $1 AND provider = $2
+  AND external_app_id IS NOT DISTINCT FROM $3::text
   AND external_account_id = $4 AND deleted_at IS NULL
 ORDER BY (status = 'disconnected'), updated_at DESC, id DESC
 LIMIT 1
@@ -385,7 +386,8 @@ type FindIntegrationInstallationByAccountParams struct {
 
 // FindIntegrationInstallationByAccount returns the workspace's
 // installation of the provider account through the app, a live one
-// before a disconnected one, the latest first.
+// before a disconnected one, the latest first. A provider without apps
+// leaves the app empty, and an empty app matches an empty app.
 func (q *Queries) FindIntegrationInstallationByAccount(ctx context.Context, arg FindIntegrationInstallationByAccountParams) (IntegrationInstallation, error) {
 	row := q.db.QueryRow(ctx, findIntegrationInstallationByAccount,
 		arg.WorkspaceID,

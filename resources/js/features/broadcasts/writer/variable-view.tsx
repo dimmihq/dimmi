@@ -36,6 +36,7 @@ export function VariableView({ node, updateAttributes, editor, selected }: NodeV
             <Input
               label="If they don't have one"
               placeholder="Leave it out"
+              fieldClassName="bg-background-secondary-default"
               defaultValue={fallback}
               onChange={(next) => updateAttributes({ fallback: next })}
             />

@@ -39,6 +39,7 @@ import { cx } from "@/utils/cx";
 
 import { NewRequestDialog } from "./new-request";
 import { StatusChip, StatusDot } from "./status-chip";
+import { useStatuses } from "./use-statuses";
 
 const pane = { group: "dimmi:feedback", side: "views", list: "requests" } as const;
 const visible = { overflow: "visible" } as const;
@@ -216,7 +217,8 @@ function FeedbackViews({
   counts: PostList["counts"] | undefined;
   onView: (view: string | undefined) => void;
 }) {
-  const all = statuses.reduce((sum, s) => sum + (counts?.[s.id] ?? 0), 0);
+  const ordered = useStatuses(workspace);
+  const all = ordered.reduce((sum, s) => sum + (counts?.[s.id] ?? 0), 0);
 
   return (
     <Panel label="Feedback views" className="h-full w-full">
@@ -232,7 +234,7 @@ function FeedbackViews({
             current={view.kind === "all"}
             onPress={() => onView(undefined)}
           />
-          {statuses.map((s) => (
+          {ordered.map((s) => (
             <Pick
               key={s.id}
               label={s.name}

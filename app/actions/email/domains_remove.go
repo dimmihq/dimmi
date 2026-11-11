@@ -5,7 +5,9 @@
 |
 | Removing a domain addresses still send from would quietly move their
 | mail to the default sender, so it is refused with the list of those
-| addresses until the admin says to go ahead. The row stays, soft
+| addresses until the admin says to go ahead. A domain that broadcasts
+| still due to send or running series use is refused outright: those
+| must stop or move to another address first. The row stays, soft
 | deleted, for the record; the provider's copy is removed, and a provider
 | that fails to answer never keeps the domain in the workspace.
 |
@@ -48,8 +50,11 @@ Rules:
   - The caller needs email:manage.
   - A verified domain addresses still send from is only removed with
     Force; its addresses then send from the default sender.
+  - A verified domain that scheduled, sending or paused broadcasts, or
+    live or paused series, send from is never removed, Force or not.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
+[exceptions.ErrDomainSending] listing the broadcasts and series,
 [exceptions.ErrDomainInUse] listing the addresses, or a wrapped
 database error.
 */
@@ -76,6 +81,10 @@ func (a *DeleteEmailDomain) Handle(ctx context.Context, in DeleteEmailDomainInpu
 
 		row, err = findDomain(ctx, q, ws, in.ID)
 		if err != nil {
+			return err
+		}
+
+		if err := a.refuseSending(ctx, q, row); err != nil {
 			return err
 		}
 
@@ -121,6 +130,34 @@ func (a *DeleteEmailDomain) refuseInUse(ctx context.Context, q *models.Queries, 
 	}
 
 	return nil
+}
+
+/*
+refuseSending refuses removing a verified domain that broadcasts or
+series still send from, even when told to go ahead.
+*/
+func (a *DeleteEmailDomain) refuseSending(ctx context.Context, q *models.Queries, row models.EmailDomain) error {
+	if row.Status != DomainVerified {
+		return nil
+	}
+
+	senders, err := q.ListEmailDomainSenders(ctx, models.ListEmailDomainSendersParams{
+		WorkspaceID: row.WorkspaceID, EmailDomainID: &row.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("list email domain senders: %w", err)
+	}
+
+	if len(senders) == 0 {
+		return nil
+	}
+
+	names := make([]string, len(senders))
+	for i, s := range senders {
+		names[i] = s.Kind + ": " + s.Name
+	}
+
+	return exceptions.ErrDomainSending.With("senders", names)
 }
 
 /*

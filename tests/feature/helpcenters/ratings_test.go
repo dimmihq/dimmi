@@ -16,7 +16,7 @@ scripts does, and returns where the portal sends them.
 */
 func (c center) answer(path string, form url.Values) string {
 	res := c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		WithHeader("Accept", "text/html").Send("POST", "/hc/"+c.subdomain+path, form.Encode())
+		WithHeader("Accept", "text/html").Send("POST", c.address(path), form.Encode())
 	return res.Header.Get("Location")
 }
 
@@ -26,7 +26,7 @@ the background, and returns the status it gets.
 */
 func (c center) sendInPlace(path string, form url.Values) int {
 	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		WithHeader("Accept", "application/json").Send("POST", "/hc/"+c.subdomain+path, form.Encode()).Status
+		WithHeader("Accept", "application/json").Send("POST", c.address(path), form.Encode()).Status
 }
 
 /*

@@ -1,6 +1,7 @@
 package web_test
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -48,6 +49,21 @@ func withDevServer(t *testing.T) tests.Option {
 }
 
 /*
+ownPolicy reads the page's policy without the application's own origin,
+which the cloud edition lists so help center pages on other hosts can
+load the messenger. On the application's own pages it allows nothing
+'self' does not already allow.
+*/
+func ownPolicy(t *testing.T, tc *tests.TestCase, policy string) string {
+	t.Helper()
+
+	own, err := url.Parse(tc.App.Application.Config.App.URL)
+	require.NoError(t, err)
+
+	return strings.ReplaceAll(policy, " "+own.Scheme+"://"+own.Host, "")
+}
+
+/*
 nonceOf returns the nonce the policy allows scripts with.
 */
 func nonceOf(t *testing.T, policy string) string {
@@ -68,7 +84,7 @@ func TestAppPage(t *testing.T) {
 
 		res := tc.Client().WithHeader("Accept", "text/html").Send(fhttp.MethodGet, "/d", nil).AssertOK()
 
-		policy := res.Header.Get("Content-Security-Policy")
+		policy := ownPolicy(t, tc, res.Header.Get("Content-Security-Policy"))
 		nonce := nonceOf(t, policy)
 		body := string(res.Body)
 		assert.Contains(t, body, `<script nonce="`+nonce+`" type="module" src="/build/assets/app-4f2a.js"></script>`)
@@ -119,11 +135,13 @@ func TestAppPage(t *testing.T) {
 			"DIMMI_AUTH__CAPTCHA__SECRET_KEY=secret",
 		))
 
-		policy := strict.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK().Header.Get("Content-Security-Policy")
+		policy := ownPolicy(t, strict,
+			strict.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK().Header.Get("Content-Security-Policy"))
 		assert.NotContains(t, policy, "cloudflare")
 		assert.Contains(t, policy, "frame-src 'self';")
 
-		policy = captcha.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK().Header.Get("Content-Security-Policy")
+		policy = ownPolicy(t, captcha,
+			captcha.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK().Header.Get("Content-Security-Policy"))
 		assert.Regexp(t, `script-src 'self' 'nonce-[^']+' https://challenges\.cloudflare\.com;`, policy)
 		assert.Contains(t, policy, "frame-src 'self' https://challenges.cloudflare.com;")
 		assert.Contains(t, policy, "connect-src 'self';")
@@ -153,7 +171,8 @@ func TestAppPage(t *testing.T) {
 		assert.NotContains(t, off.Client().Send(fhttp.MethodGet, "/d", nil).Header.Get("Content-Security-Policy"),
 			"giphy")
 
-		policy := on.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy")
+		policy := ownPolicy(t, on,
+			on.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy"))
 		assert.Contains(t, policy, "img-src 'self' data: blob: https://*.giphy.com;")
 		assert.Contains(t, policy, "connect-src 'self' https://api.giphy.com;")
 		assert.NotContains(t, on.Client().Send(fhttp.MethodGet, "/login", nil).Header.Get("Content-Security-Policy"),

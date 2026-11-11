@@ -265,13 +265,15 @@ Journey is one enrollment with who travels it.
 type Journey = models.ListSeriesEnrollmentPageRow
 
 /*
-JourneysInput narrows the journeys of a series.
+JourneysInput narrows the journeys of a series. Query searches the
+person's name or email and the company's name.
 */
 type JourneysInput struct {
 	Membership authz.Membership
 	ID         ids.UUID
 	NodeID     *string
 	Status     *string
+	Query      *string
 	Limit      int
 	Offset     int
 }
@@ -295,7 +297,7 @@ func (s *Series) Journeys(ctx context.Context, in JourneysInput) ([]Journey, err
 
 		var err error
 		out, err = q.ListSeriesEnrollmentPage(ctx, models.ListSeriesEnrollmentPageParams{
-			WorkspaceID: ws, SeriesID: in.ID, NodeID: in.NodeID, Status: in.Status,
+			WorkspaceID: ws, SeriesID: in.ID, NodeID: in.NodeID, Status: in.Status, Query: in.Query,
 			RowLimit: int64(max(min(in.Limit, 100), 1)), RowOffset: int64(max(in.Offset, 0)),
 		})
 

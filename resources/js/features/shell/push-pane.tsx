@@ -20,6 +20,17 @@ import { useWide } from "./use-wide";
 const visible = { overflow: "visible" } as const;
 
 /*
+ * openingSize is how much of the group, in percent, the side takes when
+ * it opens: the width last chosen, or width in pixels the first time,
+ * always leaving the main pane some room.
+ */
+function openingSize(name: string, room: number, chosen: number | undefined, width: number) {
+  const total = document.getElementById(name)?.clientWidth ?? 0;
+
+  return Math.min(chosen ?? (width / Math.max(total, 1)) * 100, room - 30);
+}
+
+/*
  * PushPane lays main and side out side by side, remembering the width
  * under name. open says whether side is out; onOpenChange hears when the
  * teammate drags it shut or closes the drawer. width is the side's
@@ -69,9 +80,8 @@ export function PushPane({
       return;
     }
     asked.current = open;
-    const total = document.getElementById(name)?.clientWidth ?? 0;
     const room = (layout[ids.main] ?? 0) + (layout[ids.side] ?? 0);
-    const opening = open ? Math.min(last.current ?? (width / Math.max(total, 1)) * 100, room - 30) : 0;
+    const opening = open ? openingSize(name, room, last.current ?? undefined, width) : 0;
     layout[ids.main] = room - opening;
     layout[ids.side] = opening;
     ease(() => handle.setLayout(layout));

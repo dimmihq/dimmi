@@ -120,7 +120,7 @@ func (st *state) waitEnd(ctx context.Context, w workflowspec.WaitSettings) (time
 		return now.Add(d), nil
 	}
 
-	sched, err := st.e.hours(ctx, st.q, st.conv.WorkspaceID, w.ScheduleID)
+	sched, err := st.e.hours(ctx, st.q, placeOf(st.conv), w.ScheduleID)
 	if err != nil {
 		return time.Time{}, err
 	}

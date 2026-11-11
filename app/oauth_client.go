@@ -19,15 +19,24 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/foundation"
+
+	appconfig "github.com/dimmihq/dimmi/config"
 )
 
 /*
 configureOAuthClient hands the framework's account connections the
-shared Slack app, when its credentials are set.
+shared Slack app and the knowledge services' clients, when their
+credentials are set.
 */
 func (a *App) configureOAuthClient(cfg *foundation.Config) {
 	if cfg.OAuthClient.Providers == nil {
 		cfg.OAuthClient.Providers = map[string]config.Section{}
+	}
+
+	for name, section := range knowledgeClients(a.Config.Services) {
+		section["redirect_url"] = IntegrationCallbackURL(cfg.App.URL, name)
+		maps.Copy(section, cfg.OAuthClient.Providers[name])
+		cfg.OAuthClient.Providers[name] = section
 	}
 
 	slack := a.Config.Services.Slack
@@ -43,6 +52,68 @@ func (a *App) configureOAuthClient(cfg *foundation.Config) {
 	}
 	maps.Copy(section, cfg.OAuthClient.Providers["slack"])
 	cfg.OAuthClient.Providers["slack"] = section
+}
+
+/*
+knowledgeClients are the OAuth clients of the services knowledge
+sources read, those with credentials set: Notion, Intercom and GitHub
+follow the standard, Zendesk lives on each customer's own subdomain.
+*/
+func knowledgeClients(s appconfig.ServicesConfig) map[string]config.Section {
+	out := map[string]config.Section{}
+
+	if c := s.Notion; c.ClientID != "" && c.ClientSecret != "" {
+		out["notion"] = oauthSection("generic", c, endpoints{
+			authorize: "https://api.notion.com/v1/oauth/authorize",
+			exchange:  "https://api.notion.com/v1/oauth/token",
+		})
+		out["notion"]["header_auth"] = true
+		out["notion"]["pkce"] = false
+	}
+
+	if c := s.Intercom; c.ClientID != "" && c.ClientSecret != "" {
+		out["intercom"] = oauthSection("generic", c, endpoints{
+			authorize: "https://app.intercom.com/oauth",
+			exchange:  "https://api.intercom.io/auth/eagle/token",
+		})
+		out["intercom"]["pkce"] = false
+	}
+
+	if c := s.GitHub; c.ClientID != "" && c.ClientSecret != "" {
+		out["github"] = oauthSection("generic", c, endpoints{
+			authorize: "https://github.com/login/oauth/authorize",
+			exchange:  "https://github.com/login/oauth/access_token",
+		})
+	}
+
+	if c := s.Zendesk; c.ClientID != "" {
+		out["zendesk"] = oauthSection("hosted", c, endpoints{
+			authorize: "https://{account}.zendesk.com/oauth/authorizations/new",
+			exchange:  "https://{account}.zendesk.com/oauth/tokens",
+		})
+		out["zendesk"]["scopes"] = []string{"read"}
+	}
+
+	return out
+}
+
+/*
+endpoints are where a service asks the person to allow access and where
+the code it hands back is exchanged.
+*/
+type endpoints struct {
+	authorize string
+	exchange  string
+}
+
+/*
+oauthSection is the provider config of a service's OAuth client.
+*/
+func oauthSection(driver string, c appconfig.OAuthServiceConfig, e endpoints) config.Section {
+	return config.Section{
+		"driver": driver, "client_id": c.ClientID, "client_secret": c.ClientSecret,
+		"auth_url": e.authorize, "token_url": e.exchange,
+	}
 }
 
 /*

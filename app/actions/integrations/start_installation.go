@@ -17,6 +17,7 @@ package integrations
 
 import (
 	"context"
+	"maps"
 	"net/url"
 	"slices"
 	"strings"
@@ -51,6 +52,7 @@ type StartInstallationInput struct {
 	Features   []string
 	ReturnTo   string
 	Binding    string
+	Account    string
 }
 
 /*
@@ -91,19 +93,21 @@ func (a *StartInstallation) Handle(ctx context.Context, in StartInstallationInpu
 	features := a.Registry.FeatureNames(in.Provider, in.Features)
 	scopes := a.Registry.BotScopes(in.Provider, nil)
 
+	p, _ := a.Registry.Provider(in.Provider)
+
 	covering, err := a.covering(ctx, in, scopes)
 	if err != nil {
 		return "", err
 	}
 
-	if covering != nil {
+	if covering != nil && !p.Separate {
 		in.Features, in.ReturnTo = features, returnTo
 
 		return a.addFeatures(ctx, in, *covering)
 	}
 
 	authURL, _, err := a.OAuth.Redirect(ctx, in.Provider, oauthclient.Request{
-		Scopes: scopes, Binding: in.Binding,
+		Scopes: scopes, Binding: in.Binding, Extra: authParams(p, in.Account),
 		Payload: oauthclient.Payload{
 			"kind": kindInstall, "workspace_id": in.Membership.Workspace.ID.String(),
 			"member_id": in.Membership.Member.ID.String(), "return_to": returnTo,
@@ -173,4 +177,21 @@ func deref(s *string) string {
 	}
 
 	return *s
+}
+
+/*
+authParams are the provider's own authorization parameters, with the
+account to connect when the person named one, such as a subdomain.
+*/
+func authParams(p oauth.Provider, account string) map[string]string {
+	out := maps.Clone(p.AuthParams)
+	if out == nil {
+		out = map[string]string{}
+	}
+
+	if account != "" {
+		out["account"] = account
+	}
+
+	return out
 }

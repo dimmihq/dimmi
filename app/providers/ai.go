@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
+	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
@@ -37,7 +38,6 @@ import (
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
-	"github.com/dimmihq/dimmi/app/support/officehours"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 	airesources "github.com/dimmihq/dimmi/resources/ai"
 )
@@ -162,7 +162,7 @@ func agentDelay(ctx context.Context, a *app.App, e appevents.MessageCreated, t a
 	if delay <= 0 || !insideHoursOnly {
 		return delay
 	}
-	if within, err := officehours.Within(t.agent.OfficeHours, a.Clock.Now()); err != nil || !within {
+	if !t.open {
 		return 0
 	}
 	return delay
@@ -170,11 +170,13 @@ func agentDelay(ctx context.Context, a *app.App, e appevents.MessageCreated, t a
 
 /*
 answerTarget is what the cheap check found: the conversation's channel
-type, whether the agent may answer it, and the agent.
+type, whether the agent may answer it, the agent, and for Slack whether
+the conversation's inbox is inside its office hours now.
 */
 type answerTarget struct {
 	channel  string
 	eligible bool
+	open     bool
 	agent    models.AiAgent
 }
 
@@ -208,6 +210,10 @@ func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (an
 			WorkspaceID: e.WorkspaceID, ID: conv.ChannelConnectionID,
 		}); err == nil {
 			t.channel = conn.Type
+		}
+		if t.channel == "slack" {
+			place := schedules.Place{Workspace: e.WorkspaceID, Inbox: conv.InboxID}
+			t.open, _ = schedules.OpenAt(ctx, q, place, a.Clock)
 		}
 		return nil
 	})

@@ -49,7 +49,6 @@ const agent: AiAgent = {
   monthly_spend_cap_micros: 25_000_000,
   actions_enabled: true,
   include_contact_context: "basic",
-  office_hours: null,
   updated_at: "2026-11-01T00:00:00Z",
 };
 

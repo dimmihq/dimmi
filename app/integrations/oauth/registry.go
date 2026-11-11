@@ -70,15 +70,22 @@ returns ErrAuthFailed when it does not. Metadata picks the facts worth
 keeping from a fresh grant, and Validate refuses a grant the product
 cannot use, such as an install it does not support. Hint adds
 parameters to a teammate's authorization URL that keep them on the
-installation's account.
+installation's account. Identify names the account of a grant whose
+token response does not, by asking the provider with the token.
+AuthParams are added to every authorization URL. Separate providers
+connect each account through its own consent, so a workspace can hold
+several, such as two help desks, instead of reusing the one it has.
 */
 type Provider struct {
-	Name     string
-	Label    string
-	Check    func(ctx context.Context, token string) (Health, error)
-	Metadata func(grant oauthclient.Grant) map[string]any
-	Validate func(grant oauthclient.Grant) error
-	Hint     func(account string) map[string]string
+	Name       string
+	Label      string
+	Check      func(ctx context.Context, token string) (Health, error)
+	Metadata   func(grant oauthclient.Grant) map[string]any
+	Validate   func(grant oauthclient.Grant) error
+	Hint       func(account string) map[string]string
+	Identify   func(ctx context.Context, token string) (Health, error)
+	AuthParams map[string]string
+	Separate   bool
 }
 
 /*

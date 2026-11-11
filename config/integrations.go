@@ -26,10 +26,25 @@ import (
 
 /*
 ServicesConfig holds the credentials of the apps dimmi has registered at
-other services. Slack is the shared Slack app.
+other services. Slack is the shared Slack app; Notion, Intercom,
+Zendesk and GitHub are the OAuth clients knowledge sources connect
+through.
 */
 type ServicesConfig struct {
-	Slack SlackServiceConfig `koanf:"slack"`
+	Slack    SlackServiceConfig `koanf:"slack"`
+	Notion   OAuthServiceConfig `koanf:"notion"`
+	Intercom OAuthServiceConfig `koanf:"intercom"`
+	Zendesk  OAuthServiceConfig `koanf:"zendesk"`
+	GitHub   OAuthServiceConfig `koanf:"github"`
+}
+
+/*
+OAuthServiceConfig is an OAuth client registered at a service: its id
+and secret. Empty means the service cannot be connected.
+*/
+type OAuthServiceConfig struct {
+	ClientID     string `koanf:"client_id"`
+	ClientSecret string `koanf:"client_secret"`
 }
 
 /*
@@ -71,7 +86,7 @@ token is renewed, and HealthInterval how often each installation is
 checked.
 */
 type IntegrationsConfig struct {
-	Enabled        []string      `default:"[\"slack\"]" koanf:"enabled"`
+	Enabled        []string      `default:"[\"slack\",\"notion\",\"intercom\",\"zendesk\",\"github\"]" koanf:"enabled"`
 	RefreshSkew    time.Duration `default:"5m"          koanf:"refresh_skew"`
 	HealthInterval time.Duration `default:"24h"         koanf:"health_interval"`
 }

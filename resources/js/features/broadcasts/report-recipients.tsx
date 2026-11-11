@@ -134,7 +134,13 @@ const columns: ColumnDef<BroadcastRecipient>[] = [
   },
 ];
 
-const widths = { who: "w-[30%]", account: "w-[18%]", status: "w-[18%]", did: "w-[20%]", conversation: "w-[14%]" };
+const widths = {
+  who: "w-[260px]",
+  account: "w-[180px]",
+  status: "w-[150px]",
+  did: "w-[200px]",
+  conversation: "w-[150px]",
+};
 
 /*
  * Account is the account the list is narrowed to, with how many of its

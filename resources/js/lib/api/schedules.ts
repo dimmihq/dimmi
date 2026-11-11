@@ -17,9 +17,14 @@ export type Weekly = Partial<Record<Weekday, [string, string][]>>;
 
 export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
+/*
+ * Holiday is a day closed whole, as "YYYY-MM-DD". A yearly one closes
+ * that month and day every year; one stored without the flag is one-off.
+ */
 export interface Holiday {
   date: string;
   name?: string;
+  yearly?: boolean;
 }
 
 export interface Schedule {

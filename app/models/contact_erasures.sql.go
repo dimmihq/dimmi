@@ -217,6 +217,29 @@ func (q *Queries) DeleteContactIdentities(ctx context.Context, arg DeleteContact
 	return result.RowsAffected(), nil
 }
 
+const deleteErasedChangelogSubscriptions = `-- name: DeleteErasedChangelogSubscriptions :execrows
+DELETE FROM changelog_subscribers s
+USING contacts c
+WHERE s.workspace_id = $1 AND c.workspace_id = s.workspace_id AND c.id = $2
+  AND (s.contact_id = c.id OR (c.email IS NOT NULL AND s.email = c.email))
+`
+
+type DeleteErasedChangelogSubscriptionsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// DeleteErasedChangelogSubscriptions removes the customer's changelog
+// subscriptions, those made under their address before they were known
+// included, so no update is ever mailed to them again.
+func (q *Queries) DeleteErasedChangelogSubscriptions(ctx context.Context, arg DeleteErasedChangelogSubscriptionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteErasedChangelogSubscriptions, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteErasedContact = `-- name: DeleteErasedContact :execrows
 DELETE FROM contacts WHERE workspace_id = $1 AND id = $2 AND NOT placeholder
 `
@@ -521,6 +544,52 @@ type RestoreErasedContactParams struct {
 func (q *Queries) RestoreErasedContact(ctx context.Context, arg RestoreErasedContactParams) error {
 	_, err := q.db.Exec(ctx, restoreErasedContact, arg.Now, arg.WorkspaceID, arg.ID)
 	return err
+}
+
+const scrubErasedBroadcastRecipients = `-- name: ScrubErasedBroadcastRecipients :execrows
+UPDATE broadcast_recipients
+SET address = '', reason = NULL, external_ref = NULL, message_id_header = NULL, updated_at = $1
+WHERE workspace_id = $2 AND contact_id = $3
+  AND (address <> '' OR reason IS NOT NULL OR external_ref IS NOT NULL OR message_id_header IS NOT NULL)
+`
+
+type ScrubErasedBroadcastRecipientsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   *ids.UUID `json:"contact_id"`
+}
+
+// ScrubErasedBroadcastRecipients forgets the address and delivery details
+// broadcasts kept for the customer. The rows stay so a broadcast's counts
+// do not change.
+func (q *Queries) ScrubErasedBroadcastRecipients(ctx context.Context, arg ScrubErasedBroadcastRecipientsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, scrubErasedBroadcastRecipients, arg.Now, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const scrubErasedRatingComments = `-- name: ScrubErasedRatingComments :execrows
+UPDATE article_ratings SET comment = NULL, updated_at = $1
+WHERE workspace_id = $2 AND contact_id = $3 AND comment IS NOT NULL
+`
+
+type ScrubErasedRatingCommentsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   *ids.UUID `json:"contact_id"`
+}
+
+// ScrubErasedRatingComments forgets what an erased customer wrote about
+// articles. The answers stay, keyed by a hash that names nobody, so the
+// article's counts do not change.
+func (q *Queries) ScrubErasedRatingComments(ctx context.Context, arg ScrubErasedRatingCommentsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, scrubErasedRatingComments, arg.Now, arg.WorkspaceID, arg.ContactID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setContactErasureStatus = `-- name: SetContactErasureStatus :one

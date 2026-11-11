@@ -90,7 +90,10 @@ func (a *Usage) Handle(ctx context.Context, in UsageInput) (*UsageView, error) {
 	view := &UsageView{Start: start}
 	err = a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		r := month{workspace: in.Membership.Workspace.ID, since: start, until: start.AddDate(0, 1, 0)}
+		r := month{
+			workspace: in.Membership.Workspace.ID, since: start, until: start.AddDate(0, 1, 0),
+			scope: in.Membership.ConversationScope().Params(),
+		}
 		if err := r.totals(ctx, q, view); err != nil {
 			return err
 		}
@@ -119,11 +122,12 @@ func (a *Usage) monthStart(period string) (time.Time, error) {
 }
 
 /*
-month is the workspace and range one view reads.
+month is the workspace, range and conversation scope one view reads.
 */
 type month struct {
 	workspace    ids.UUID
 	since, until time.Time
+	scope        authz.VisibleParams
 }
 
 /*
@@ -181,6 +185,8 @@ func (r month) splits(ctx context.Context, q *models.Queries, view *UsageView) e
 	}
 	if view.Recent, err = q.ListRecentOperatorRuns(ctx, models.ListRecentOperatorRunsParams{
 		WorkspaceID: r.workspace, Since: r.since, Until: r.until, RowLimit: recentRuns,
+		AccessMode: r.scope.Mode, AccessViewer: r.scope.Viewer, AccessTeams: r.scope.Teams,
+		AccessUnassigned: r.scope.Unassigned, AccessHiddenInboxes: r.scope.HiddenInboxes,
 	}); err != nil {
 		return fmt.Errorf("list recent operator runs: %w", err)
 	}

@@ -107,3 +107,28 @@ DELETE FROM contacts WHERE workspace_id = @workspace_id AND id = @id AND NOT pla
 -- ListErasedExportFiles returns the zips of the contact's exports.
 SELECT id, disk, path FROM contact_exports
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND disk IS NOT NULL AND path IS NOT NULL;
+
+-- name: ScrubErasedRatingComments :execrows
+-- ScrubErasedRatingComments forgets what an erased customer wrote about
+-- articles. The answers stay, keyed by a hash that names nobody, so the
+-- article's counts do not change.
+UPDATE article_ratings SET comment = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND comment IS NOT NULL;
+
+-- name: DeleteErasedChangelogSubscriptions :execrows
+-- DeleteErasedChangelogSubscriptions removes the customer's changelog
+-- subscriptions, those made under their address before they were known
+-- included, so no update is ever mailed to them again.
+DELETE FROM changelog_subscribers s
+USING contacts c
+WHERE s.workspace_id = @workspace_id AND c.workspace_id = s.workspace_id AND c.id = @contact_id
+  AND (s.contact_id = c.id OR (c.email IS NOT NULL AND s.email = c.email));
+
+-- name: ScrubErasedBroadcastRecipients :execrows
+-- ScrubErasedBroadcastRecipients forgets the address and delivery details
+-- broadcasts kept for the customer. The rows stay so a broadcast's counts
+-- do not change.
+UPDATE broadcast_recipients
+SET address = '', reason = NULL, external_ref = NULL, message_id_header = NULL, updated_at = @now
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id
+  AND (address <> '' OR reason IS NOT NULL OR external_ref IS NOT NULL OR message_id_header IS NOT NULL);

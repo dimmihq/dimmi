@@ -16,7 +16,7 @@ import (
 const createInbox = `-- name: CreateInbox :one
 INSERT INTO inboxes (workspace_id, name, default_team_id, settings, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
-RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access
+RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id
 `
 
 type CreateInboxParams struct {
@@ -47,12 +47,13 @@ func (q *Queries) CreateInbox(ctx context.Context, arg CreateInboxParams) (Inbox
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Access,
+		&i.ScheduleID,
 	)
 	return i, err
 }
 
 const findDefaultInbox = `-- name: FindDefaultInbox :one
-SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at, i.access FROM inboxes AS i
+SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at, i.access, i.schedule_id FROM inboxes AS i
 JOIN workspaces AS w ON w.id = i.workspace_id
 WHERE i.workspace_id = $1
   AND i.deleted_at IS NULL
@@ -75,12 +76,13 @@ func (q *Queries) FindDefaultInbox(ctx context.Context, workspaceID ids.UUID) (I
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Access,
+		&i.ScheduleID,
 	)
 	return i, err
 }
 
 const findInbox = `-- name: FindInbox :one
-SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access FROM inboxes WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id FROM inboxes WHERE workspace_id = $1 AND id = $2
 `
 
 type FindInboxParams struct {
@@ -103,12 +105,13 @@ func (q *Queries) FindInbox(ctx context.Context, arg FindInboxParams) (Inbox, er
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Access,
+		&i.ScheduleID,
 	)
 	return i, err
 }
 
 const listInboxes = `-- name: ListInboxes :many
-SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access FROM inboxes WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at, id
+SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id FROM inboxes WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at, id
 `
 
 // ListInboxes returns the workspace's live inboxes, oldest first.
@@ -131,6 +134,7 @@ func (q *Queries) ListInboxes(ctx context.Context, workspaceID ids.UUID) ([]Inbo
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Access,
+			&i.ScheduleID,
 		); err != nil {
 			return nil, err
 		}

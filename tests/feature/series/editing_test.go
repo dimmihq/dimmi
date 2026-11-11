@@ -202,6 +202,27 @@ func TestEditingLiveSeries(t *testing.T) {
 		d.journeys(id).AssertJSONPath("data.0.status", "finished")
 	})
 
+	t.Run("the people on a step can be found by name or email", func(t *testing.T) {
+		t.Parallel()
+		d := newDesk(t)
+		id := d.series("Find", "contact", testkit.JSON{
+			"nodes": []testkit.JSON{{"id": "entry", "kind": "entry"}, waitDays("wait", 3)},
+			"edges": []testkit.JSON{edge("entry", "", "wait")},
+		})
+		d.publish(id)
+		ada := unique("ada")
+		d.enroll(id, d.contact(ada, "Ada Lovelace", testkit.JSON{}))
+		d.enroll(id, d.contact(unique("grace"), "Grace Hopper", testkit.JSON{}))
+		d.drain()
+
+		list := "/api/v1/series/" + id + "/enrollments?node=wait&q="
+		d.owner.GetJSON(list+"hopp").AssertOK().AssertJSONPath("data.0.contact_name", "Grace Hopper").
+			AssertJSONMissing("data.1")
+		d.owner.GetJSON(list+ada[:8]).AssertOK().AssertJSONPath("data.0.contact_name", "Ada Lovelace").
+			AssertJSONMissing("data.1")
+		d.owner.GetJSON(list + "nobody").AssertOK().AssertJSONMissing("data.0")
+	})
+
 	t.Run("archiving ends every journey and keeps the report", func(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)

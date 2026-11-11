@@ -78,7 +78,7 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 		return result{}, fmt.Errorf("%w: knowledge is not available", errBadArguments)
 	}
 	found, err := e.Services.Knowledge.Search(ctx, s.m.Workspace.ID, in.Query, contracts.KnowledgeSearchOptions{
-		Limit: 8, Visibility: []contracts.KnowledgeVisibility{
+		Limit: 8, Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
 			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
 		},
 	})

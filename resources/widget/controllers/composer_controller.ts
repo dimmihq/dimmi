@@ -18,7 +18,8 @@
 
 import { Chip } from "../components/composer";
 import { Controller } from "../lib/controller";
-import { canRecord, maxSeconds, Recorder } from "../lib/recorder";
+import { canRecord, maxSeconds } from "../lib/microphone";
+import type { Recorder } from "../lib/recorder";
 
 /*
  * typingEvery is the shortest time between two typing notices.
@@ -113,8 +114,10 @@ export class ComposerController extends Controller {
   async record(): Promise<void> {
     this.#say("");
     if (this.#live) {
-      const recorder = new Recorder();
+      let recorder: Recorder;
       try {
+        const { Recorder } = await import("../lib/recorder");
+        recorder = new Recorder();
         await recorder.start();
       } catch {
         this.#say("Allow the microphone to record a voice note.");

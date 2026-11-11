@@ -107,12 +107,30 @@ function useDomainChanges(workspace: string, domain: string) {
   };
 }
 
+/*
+ * sendersOf reads which broadcasts and series still send from a domain
+ * out of the refusal to remove it, as "Broadcast: name" lines.
+ */
+function sendersOf(failure: ApiError): string[] {
+  const senders = failure.details.senders;
+  if (!Array.isArray(senders)) {
+    return [];
+  }
+
+  return senders.map((line) => {
+    const text = String(line);
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  });
+}
+
 function DomainView({ domain, permissions }: { domain: EmailDomain; permissions: string[] }) {
   const workspace = useAccount().workspace.id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const changes = useDomainChanges(workspace, domain.id);
   const [removing, setRemoving] = useState<"ask" | "force" | null>(null);
+  const [blocked, setBlocked] = useState<string[] | null>(null);
+  const [rotating, setRotating] = useState(false);
   const manage = permissions.includes("email:manage");
   const applied = useCallback(() => changes.check.mutate(), [changes.check.mutate]);
   const error = changes.check.error ?? changes.rotate.error ?? changes.host.error ?? changes.remove.error;
@@ -123,6 +141,10 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
     } catch (failure) {
       if (failure instanceof ApiError && failure.code === "domain_in_use") {
         setRemoving("force");
+      }
+      if (failure instanceof ApiError && failure.code === "domain_sending") {
+        setRemoving(null);
+        setBlocked(sendersOf(failure));
       }
       return;
     }
@@ -162,7 +184,7 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
                 variant="secondary"
                 size="small"
                 loading={changes.rotate.isPending}
-                onClick={() => changes.rotate.mutate()}
+                onClick={() => setRotating(true)}
               >
                 Rotate key
               </Button>
@@ -185,6 +207,34 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
         confirmLabel={removing === "force" ? "Remove anyway" : "Remove domain"}
         onConfirm={() => remove(removing === "force")}
       />
+      <AlertDialog
+        isOpen={rotating}
+        onOpenChange={setRotating}
+        variant="default"
+        title="Rotate the signing key?"
+        description={
+          "A new key record appears below. Add it at your DNS host. The current key keeps signing until " +
+          "the new one is found, so nothing bounces meanwhile."
+        }
+        confirmLabel="Rotate key"
+        onConfirm={() => changes.rotate.mutateAsync()}
+      />
+      <AlertDialog
+        isOpen={blocked !== null}
+        onOpenChange={(open) => (open ? undefined : setBlocked(null))}
+        isDismissable
+        title={`${domain.domain} is still sending`}
+        description="Stop or archive these, or move them to another address, then remove the domain."
+        confirmLabel="Got it"
+        cancelLabel="Close"
+        onConfirm={() => setBlocked(null)}
+      >
+        <ul className="flex list-disc flex-col gap-1 ps-5 text-body-2-regular text-text-primary">
+          {(blocked ?? []).map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+        </ul>
+      </AlertDialog>
     </SettingsPage>
   );
 }

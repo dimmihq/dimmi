@@ -104,6 +104,42 @@
       "input_per_mtok": "0.135",
       "cached_input_per_mtok": "0.027",
       "output_per_mtok": "0.45"
+    },
+    {
+      "provider": "dimmi",
+      "match": "exact",
+      "model": "Qwen/Qwen3-Embedding-8B",
+      "input_per_mtok": "0.01",
+      "cached_input_per_mtok": "",
+      "cache_write_per_mtok": "",
+      "output_per_mtok": "",
+      "roles": [
+        "embed"
+      ]
+    },
+    {
+      "provider": "openai",
+      "match": "exact",
+      "model": "text-embedding-3-small",
+      "input_per_mtok": "0.02",
+      "cached_input_per_mtok": "",
+      "cache_write_per_mtok": "",
+      "output_per_mtok": "",
+      "roles": [
+        "embed"
+      ]
+    },
+    {
+      "provider": "openai",
+      "match": "exact",
+      "model": "text-embedding-3-large",
+      "input_per_mtok": "0.13",
+      "cached_input_per_mtok": "",
+      "cache_write_per_mtok": "",
+      "output_per_mtok": "",
+      "roles": [
+        "embed"
+      ]
     }
   ]
 }

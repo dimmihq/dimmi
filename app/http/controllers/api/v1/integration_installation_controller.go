@@ -45,7 +45,7 @@ func (c *IntegrationInstallationController) Store(ctx context.Context,
 ) (*IntegrationAuthorizationOutput, error) {
 	authURL, err := c.Start.Handle(ctx, integrations.StartInstallationInput{
 		Membership: membership(ctx), Provider: in.Provider, Features: in.Body.Features,
-		ReturnTo: in.Body.ReturnTo, Binding: sessionBinding(ctx),
+		ReturnTo: in.Body.ReturnTo, Binding: sessionBinding(ctx), Account: in.Body.Account,
 	})
 	if err != nil {
 		return nil, err

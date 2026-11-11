@@ -28,11 +28,14 @@ import (
 
 /*
 The limits of a schedule: ranges per day and how far ahead an answer
-is looked for, past every holiday a year can hold.
+is looked for, past every holiday a year can hold, yearly ones
+included, so a schedule closed every day of the year still ends the
+search. Yearly holidays are matched by month and day alone.
 */
 const (
 	MaxRanges  = 4
 	searchDays = 400
+	monthDay   = "01-02"
 )
 
 /*
@@ -47,11 +50,15 @@ end as "HH:MM".
 type Weekly map[string][][2]string
 
 /*
-Holiday is a date, "2006-01-02", closed all day, with its name.
+Holiday is a date, "2006-01-02", closed all day, with its name. A
+yearly holiday closes the same month and day every year from any
+year, so Christmas is entered once; a yearly February 29 closes only
+in leap years. Holidays stored before the flag existed stay one-off.
 */
 type Holiday struct {
-	Date string `json:"date"`
-	Name string `json:"name,omitempty"`
+	Date   string `json:"date"`
+	Name   string `json:"name,omitempty"`
+	Yearly bool   `json:"yearly,omitempty"`
 }
 
 /*
@@ -61,6 +68,7 @@ type Schedule struct {
 	loc      *time.Location
 	days     map[time.Weekday][]window
 	holidays map[string]bool
+	yearly   map[string]bool
 }
 
 /*
@@ -74,7 +82,12 @@ func ParseSchedule(timezone string, weekly Weekly, holidays []Holiday) (*Schedul
 		return nil, fmt.Errorf("%w: timezone %q", ErrInvalid, timezone)
 	}
 
-	s := &Schedule{loc: loc, days: make(map[time.Weekday][]window, len(weekly)), holidays: map[string]bool{}}
+	s := &Schedule{
+		loc:      loc,
+		days:     make(map[time.Weekday][]window, len(weekly)),
+		holidays: map[string]bool{},
+		yearly:   map[string]bool{},
+	}
 	for key, ranges := range weekly {
 		day, ok := weekdays()[key]
 		if !ok {
@@ -90,8 +103,15 @@ func ParseSchedule(timezone string, weekly Weekly, holidays []Holiday) (*Schedul
 	}
 
 	for _, h := range holidays {
-		if _, err := time.Parse(time.DateOnly, h.Date); err != nil {
+		date, err := time.Parse(time.DateOnly, h.Date)
+		if err != nil {
 			return nil, fmt.Errorf("%w: holiday %q", ErrInvalid, h.Date)
+		}
+
+		if h.Yearly {
+			s.yearly[date.Format(monthDay)] = true
+
+			continue
 		}
 
 		s.holidays[h.Date] = true
@@ -270,10 +290,11 @@ func (s *Schedule) rangeAt(t time.Time) (time.Time, bool) {
 }
 
 /*
-windowsOn returns the ranges of a local day, none on a holiday.
+windowsOn returns the ranges of a local day, none on a holiday, dated
+or yearly.
 */
 func (s *Schedule) windowsOn(day time.Time) []window {
-	if s.holidays[day.Format(time.DateOnly)] {
+	if s.holidays[day.Format(time.DateOnly)] || s.yearly[day.Format(monthDay)] {
 		return nil
 	}
 

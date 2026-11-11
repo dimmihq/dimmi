@@ -249,7 +249,7 @@ func (s *Schedules) Delete(ctx context.Context, m authz.Membership, id ids.UUID)
 		}
 
 		used, err := q.ScheduleInUse(ctx, models.ScheduleInUseParams{
-			WorkspaceID: m.Workspace.ID, PublicID: models.PublicID(models.PrefixSchedule, id),
+			WorkspaceID: m.Workspace.ID, ID: id, PublicID: models.PublicID(models.PrefixSchedule, id),
 		})
 		if err != nil {
 			return fmt.Errorf("check schedule use: %w", err)

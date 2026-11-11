@@ -100,6 +100,7 @@ export function TagPicker({
           <Input
             aria-label="Find or create a tag"
             size="small"
+            fieldClassName="bg-background-secondary-default"
             autoFocus
             value={text}
             onChange={setText}

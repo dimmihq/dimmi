@@ -10,7 +10,7 @@ import { useAccount } from "@/features/settings/use-account";
 import { mySignaturesQuery } from "@/lib/api/email-signatures";
 import { callerQuery } from "@/lib/api/workspace";
 
-import { SignatureEditor } from "./signature-editor";
+import { SignatureCard } from "./signature-card";
 
 export function PersonalSignature() {
   const workspace = useAccount().workspace.id;
@@ -31,13 +31,7 @@ export function PersonalSignature() {
       title="Email signature"
       description="Closes your email replies. Without one, replies use the signature of the address they come from."
     >
-      <SignatureEditor
-        key={general?.id ?? "new"}
-        workspace={workspace}
-        label="Your signature"
-        signature={general}
-        scope={{ kind: "personal" }}
-      />
+      <SignatureCard workspace={workspace} label="Your signature" signature={general} scope="mine" />
     </Section>
   );
 }

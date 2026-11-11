@@ -81,39 +81,38 @@ HandoffMode is full or triage_only; AlwaysHandoffTagIDs are the tags
 that always send a conversation to the team.
 */
 type AIAgent struct {
-	ID                    string          `json:"id"`
-	Object                string          `json:"object"`
-	Name                  string          `json:"name"`
-	Enabled               bool            `json:"enabled"`
-	ProductName           *string         `json:"product_name"`
-	Tone                  string          `json:"tone"`
-	Guidance              string          `json:"guidance"`
-	EnabledChannels       []string        `json:"enabled_channels"`
-	Schedule              string          `json:"schedule"`
-	OfficeHours           json.RawMessage `json:"office_hours"`
-	AssignedBehavior      string          `json:"assigned_behavior"`
-	AnswerKeyID           *string         `json:"answer_key_id"`
-	AnswerModel           *string         `json:"answer_model"`
-	FallbackKeyID         *string         `json:"fallback_key_id"`
-	FallbackModel         *string         `json:"fallback_model"`
-	MaxOutputTokens       int             `json:"max_output_tokens"`
-	MaxAiReplies          int             `json:"max_ai_replies"`
-	UnknownBehavior       string          `json:"unknown_behavior"`
-	GroundingMode         string          `json:"grounding_mode"`
-	RequireCitations      bool            `json:"require_citations"`
-	Languages             []string        `json:"languages"`
-	DefaultLanguage       string          `json:"default_language"`
-	Streaming             bool            `json:"streaming"`
-	IncludeContactContext string          `json:"include_contact_context"`
-	PiiRedaction          bool            `json:"pii_redaction"`
-	LinkAllowlist         []string        `json:"link_allowlist"`
-	HandoffTeamID         *string         `json:"handoff_team_id"`
-	RaisePriority         bool            `json:"raise_priority_on_handoff"`
-	HandoffMode           string          `json:"handoff_mode"`
-	AlwaysHandoffTagIDs   []string        `json:"always_handoff_tag_ids"`
-	MonthlySpendCapMicros *int64          `json:"monthly_spend_cap_micros"`
-	ActionsEnabled        bool            `json:"actions_enabled"`
-	UpdatedAt             time.Time       `json:"updated_at"`
+	ID                    string    `json:"id"`
+	Object                string    `json:"object"`
+	Name                  string    `json:"name"`
+	Enabled               bool      `json:"enabled"`
+	ProductName           *string   `json:"product_name"`
+	Tone                  string    `json:"tone"`
+	Guidance              string    `json:"guidance"`
+	EnabledChannels       []string  `json:"enabled_channels"`
+	Schedule              string    `json:"schedule"`
+	AssignedBehavior      string    `json:"assigned_behavior"`
+	AnswerKeyID           *string   `json:"answer_key_id"`
+	AnswerModel           *string   `json:"answer_model"`
+	FallbackKeyID         *string   `json:"fallback_key_id"`
+	FallbackModel         *string   `json:"fallback_model"`
+	MaxOutputTokens       int       `json:"max_output_tokens"`
+	MaxAiReplies          int       `json:"max_ai_replies"`
+	UnknownBehavior       string    `json:"unknown_behavior"`
+	GroundingMode         string    `json:"grounding_mode"`
+	RequireCitations      bool      `json:"require_citations"`
+	Languages             []string  `json:"languages"`
+	DefaultLanguage       string    `json:"default_language"`
+	Streaming             bool      `json:"streaming"`
+	IncludeContactContext string    `json:"include_contact_context"`
+	PiiRedaction          bool      `json:"pii_redaction"`
+	LinkAllowlist         []string  `json:"link_allowlist"`
+	HandoffTeamID         *string   `json:"handoff_team_id"`
+	RaisePriority         bool      `json:"raise_priority_on_handoff"`
+	HandoffMode           string    `json:"handoff_mode"`
+	AlwaysHandoffTagIDs   []string  `json:"always_handoff_tag_ids"`
+	MonthlySpendCapMicros *int64    `json:"monthly_spend_cap_micros"`
+	ActionsEnabled        bool      `json:"actions_enabled"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 /*
@@ -126,7 +125,7 @@ func NewAIAgent(a models.AiAgent) AIAgent {
 		ID: models.PublicID(models.PrefixAiAgent, a.ID), Object: "ai_agent",
 		Name: a.Name, Enabled: a.Enabled, ProductName: a.ProductName,
 		Tone: a.Tone, Guidance: a.Guidance, EnabledChannels: orEmpty(a.EnabledChannels),
-		Schedule: a.Schedule, OfficeHours: a.OfficeHours, AssignedBehavior: a.AssignedBehavior,
+		Schedule: a.Schedule, AssignedBehavior: a.AssignedBehavior,
 		AnswerKeyID: publicPtr(models.PrefixAiProviderKey, a.AnswerKeyID), AnswerModel: a.AnswerModel,
 		FallbackKeyID: publicPtr(models.PrefixAiProviderKey, a.FallbackKeyID), FallbackModel: a.FallbackModel,
 		MaxOutputTokens: int(a.MaxOutputTokens), MaxAiReplies: int(a.MaxAiReplies),

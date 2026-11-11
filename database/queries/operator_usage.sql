@@ -67,8 +67,9 @@ GROUP BY status ORDER BY status;
 -- name: ListRecentOperatorRuns :many
 -- ListRecentOperatorRuns returns Operator's latest runs in a range,
 -- newest first, with why each ran, who it ran for, the thread it
--- answered on and the conversation it was about.
-SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, r.conversation_id,
+-- answered on and the conversation it was about. A run about a
+-- conversation the viewer may not see still counts, but names none.
+SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, c.id AS conversation_id,
     COALESCE(r.config_snapshot->>'purpose', 'ask')::text AS purpose,
     COALESCE(u.name, '')::text AS member_name,
     COALESCE(t.title, '')::text AS thread_title,
@@ -83,6 +84,11 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) t ON true
 LEFT JOIN conversations c ON c.id = r.conversation_id AND c.workspace_id = r.workspace_id
+    AND c.deleted_at IS NULL AND dimmi_conversation_visible(
+        c.assignee_member_id, c.assignee_team_id, c.inbox_id, @access_mode::text,
+        sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
+        @access_hidden_inboxes::uuid[]
+    )
 WHERE r.workspace_id = @workspace_id AND r.kind = 'task' AND r.created_at >= @since AND r.created_at < @until
 ORDER BY r.created_at DESC
 LIMIT @row_limit;

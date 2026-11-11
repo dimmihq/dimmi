@@ -87,6 +87,15 @@
           },
           "text": {
             "type": "string"
+          },
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/Token"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -174,6 +183,10 @@
               "string",
               "null"
             ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -229,6 +242,10 @@
               "string",
               "null"
             ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -1554,6 +1571,21 @@
         ],
         "type": "object"
       },
+      "Token": {
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
       "UpdateItem": {
         "additionalProperties": false,
         "properties": {
@@ -1576,6 +1608,10 @@
         "additionalProperties": false,
         "properties": {
           "status": {
+            "enum": [
+              "confirmed",
+              "canceled"
+            ],
             "type": "string"
           }
         },
@@ -1763,6 +1799,21 @@
         ],
         "type": "object"
       },
+      "WidgetBroadcast": {
+        "additionalProperties": false,
+        "properties": {
+          "display": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display"
+        ],
+        "type": "object"
+      },
       "WidgetContact": {
         "additionalProperties": false,
         "properties": {
@@ -1946,6 +1997,9 @@
               "string",
               "null"
             ]
+          },
+          "broadcast": {
+            "$ref": "#/components/schemas/WidgetBroadcast"
           },
           "client_id": {
             "type": [

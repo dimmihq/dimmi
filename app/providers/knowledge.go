@@ -39,10 +39,12 @@ func bootKnowledge(a *app.App) {
 	}
 	a.Vectors = &knowledge.Vectors{
 		DB: a.DB, Embeddings: a.Embeddings, Cache: a.Cache, Clock: a.Clock, Queue: a.Queue, Config: a.Config.AI,
+		Prices: loadPrices(a),
 	}
 	a.Actions.Articles.Index = a.Vectors
 	a.Actions.KnowledgeSettings = &knowledge.Settings{Vectors: a.Vectors}
 	a.WorkspaceInitializers.Register(&knowledge.EnsureKnowledgeSettings{Vectors: a.Vectors})
+	bootKnowledgeSources(a)
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.ConversationClosed) error {
 		return a.Queue.Push(context.WithoutCancel(ctx), jobs.EmbedConversationArgs{
@@ -60,5 +62,6 @@ func registerKnowledgeJobs(a *app.App) error {
 		queue.Register(a.Queue, &knowledge.ReembedWorkspaceKnowledge{Vectors: a.Vectors}),
 		queue.Register(a.Queue, &knowledge.SweepKnowledgeEmbeddings{Vectors: a.Vectors}),
 		queue.Register(a.Queue, &knowledge.EmbedConversation{Vectors: a.Vectors}),
+		registerKnowledgeSourceJobs(a),
 	)
 }

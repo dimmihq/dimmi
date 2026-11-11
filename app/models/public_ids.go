@@ -100,6 +100,16 @@ const (
 )
 
 /*
+The prefixes of outbound webhooks and of the events they carry.
+*/
+const (
+	PrefixWebhookEndpoint Prefix = "whk"
+	PrefixWebhookDelivery Prefix = "whd"
+	PrefixWebhookAttempt  Prefix = "wha"
+	PrefixWebhookEvent    Prefix = "evt"
+)
+
+/*
 The prefixes of the integrations' tables: an installation of a tool
 account and a member's own grant on it.
 */
@@ -201,7 +211,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixDraft, "conversation_drafts"},
 		{PrefixContactExport, "contact_exports"},
 		{PrefixDataExport, "data_exports"},
-		{"evt", "events"},
+		{PrefixWebhookEvent, "events"},
 	}
 }
 
@@ -314,9 +324,9 @@ importers and integrations.
 */
 func platformPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
-		{"whk", "webhook_endpoints"},
-		{"whd", "webhook_deliveries"},
-		{"wha", "webhook_delivery_attempts"},
+		{PrefixWebhookEndpoint, "webhook_endpoints"},
+		{PrefixWebhookDelivery, "webhook_deliveries"},
+		{PrefixWebhookAttempt, "webhook_delivery_attempts"},
 		{"bak", "backups"},
 		{"iex", "data_exports"},
 		{"imp", "imports"},

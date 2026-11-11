@@ -9,6 +9,7 @@ import { RiArrowRightSLine, RiSettings3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
+import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { Button } from "@/components/base/buttons/button";
@@ -28,7 +29,6 @@ import { modelsFor, readiness, usableKeys, usd } from "../format";
 import { ModelLogo } from "../logos";
 import { useAgent } from "../use-agent";
 import { OperatorUsageTab } from "./operator-usage";
-import { Stat } from "./stat";
 
 /*
  * StatusCard says whether the agent answers, and with what.
@@ -89,19 +89,40 @@ function MonthStats({ usage, cap }: { usage: AiUsage | undefined; cap: number | 
     return (
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {["answered", "handed", "unknown", "spend"].map((id) => (
-          <Skeleton key={id} className="h-[92px] rounded-2xl" />
+          <Skeleton key={id} className="h-[100px] rounded-2xl" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <Stat label="Answered" value={usage.answered_count.toLocaleString()} />
-      <Stat label="Handed over" value={usage.handoff_count.toLocaleString()} />
-      <Stat label="Didn't know" value={usage.unknown_count.toLocaleString()} />
-      <Stat label="Spend" value={usd(usage.cost_micros)} note={cap === null ? "No cap" : `of ${usd(cap)} cap`} />
-    </div>
+    <StatCards
+      variant="compact"
+      className="gap-2"
+      stats={[
+        {
+          label: "Answered",
+          hint: "Conversations this month that the agent answered without handing them to a teammate.",
+          value: usage.answered_count.toLocaleString(),
+        },
+        {
+          label: "Handed over",
+          hint: "Conversations this month the agent passed to a teammate.",
+          value: usage.handoff_count.toLocaleString(),
+        },
+        {
+          label: "Didn't know",
+          hint: "Questions this month the agent could not answer from what it knows.",
+          value: usage.unknown_count.toLocaleString(),
+        },
+        {
+          label: "Spend",
+          hint: "What the AI provider charged this month for the agent's answers, in US dollars.",
+          value: usd(usage.cost_micros),
+          caption: cap === null ? "No cap" : `of ${usd(cap)} cap`,
+        },
+      ]}
+    />
   );
 }
 

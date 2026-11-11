@@ -36,6 +36,7 @@ import (
 	"github.com/dimmihq/dimmi/app/drivers/embeddings/dimmi"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/config"
 )
 
@@ -59,7 +60,8 @@ const queryVectorTTL = 24 * time.Hour
 Vectors is the workspace's vector index: it binds models, embeds
 content and queries, and searches by meaning. DB holds the vectors,
 Embeddings builds drivers, Cache keeps query vectors, Queue runs the
-embedding jobs and Config bounds the waits.
+embedding jobs, Config bounds the waits and Prices prices what the
+embeddings cost.
 */
 type Vectors struct {
 	DB         *database.DB
@@ -68,6 +70,7 @@ type Vectors struct {
 	Clock      clock.Clock
 	Queue      *queue.Queue
 	Config     config.AIConfig
+	Prices     *aiprices.Table
 }
 
 /*

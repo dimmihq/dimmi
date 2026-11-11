@@ -145,4 +145,38 @@ it.describe("feature requests", () => {
     await expect(page.getByText("Merged into #1")).toBeVisible();
     await expect(page.getByText("1 vote", { exact: true })).toBeVisible();
   });
+
+  it("reorders statuses from the keyboard and keeps the order after a reload", async ({ page }) => {
+    await page.goto("/d/settings/feedback");
+    const list = page.getByRole("grid", { name: "Statuses" });
+    const names = () => list.getByRole("row").allInnerTexts();
+    await expect(list.getByRole("row")).toHaveText([
+      "In progress",
+      "Planned",
+      "Under consideration",
+      "Shipped",
+      "Closed",
+    ]);
+
+    const saved = page.waitForResponse(
+      (r) => r.url().endsWith("/feedback-statuses") && r.request().method() === "PATCH",
+    );
+    await list.getByRole("button", { name: "Move In progress" }).focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    expect((await saved).ok()).toBe(true);
+    const moved = await names();
+    expect(moved[0]).toBe("Planned");
+    expect(moved.indexOf("In progress")).toBeGreaterThan(0);
+
+    await page.reload();
+    await expect(list.getByRole("row")).toHaveText(moved);
+
+    await page.goto("/d/feedback");
+    const views = page.getByRole("navigation", { name: "Feedback views" });
+    await expect(views.getByRole("button").nth(1)).toContainText("Planned");
+  });
 });

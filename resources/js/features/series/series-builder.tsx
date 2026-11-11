@@ -26,7 +26,7 @@ import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
-import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { toast } from "@/components/base/toast/toast";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
@@ -49,9 +49,8 @@ import {
   trySeries,
 } from "@/lib/api/series";
 
-import { type Sending, sendingOf } from "./entry-settings";
 import { addGroups, nodeLook, statusLook } from "./looks";
-import { addStep } from "./model";
+import { addStep, type Sending, sendingOf } from "./model";
 import { SeriesCanvas } from "./series-canvas";
 import { SeriesInspector } from "./series-inspector";
 import { TryPanel } from "./try-panel";
@@ -257,8 +256,45 @@ function Tip({
   );
 }
 
+type Asked = "try" | "pause" | "archive";
+
+/*
+ * asks words each question the header puts before acting: what trying
+ * the series on yourself does, and what pausing or archiving does to
+ * the people on it.
+ */
+const asks = {
+  try: {
+    title: "Try this series on yourself?",
+    description:
+      "You enter the published version as a test journey, under the contact with your email. Its messages really " +
+      "go out, to you. Rules, quiet hours and the daily cap do not hold you back, you can skip each wait, and the " +
+      "report never counts you.",
+    confirmLabel: "Start test",
+    variant: "default",
+  },
+  pause: {
+    title: "Pause this series?",
+    description:
+      "No message goes out and nobody moves on until you resume. Everyone keeps their place, and waits that end " +
+      "meanwhile carry on once it resumes.",
+    confirmLabel: "Pause",
+    variant: "default",
+  },
+  archive: {
+    title: "Archive this series?",
+    description:
+      "Every journey on it ends now and messages not sent yet are held back. It cannot go live again. Its report " +
+      "stays.",
+    confirmLabel: "Archive",
+    variant: "danger",
+  },
+} as const;
+
 /*
  * Actions are the header's buttons, as the series' status allows them.
+ * Trying, pausing and archiving ask first; resuming does not, since it
+ * only lets the series carry on.
  */
 function Actions({
   series,
@@ -275,21 +311,25 @@ function Actions({
   onAct: (action: SeriesAction) => void;
   onPublish: () => void;
 }) {
+  const [asked, setAsked] = useState<Asked | null>(null);
   const ran = series.live_version_id !== null;
   const live = series.status === "live";
   const editable = series.status !== "archived";
+  const confirm = () => (asked === "try" ? onTry() : asked ? onAct(asked) : undefined);
 
   return (
     <>
-      {live ? <Tip label="Try it on me" icon={RiTestTubeLine} busy={trying} onPress={onTry} /> : null}
-      {live || series.status === "paused" ? (
-        <Tip
-          label={live ? "Pause" : "Resume"}
-          icon={live ? RiPauseLine : RiPlayLine}
-          onPress={() => onAct(live ? "pause" : "resume")}
-        />
-      ) : null}
-      {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => onAct("archive")} /> : null}
+      <AlertDialog
+        isOpen={asked !== null}
+        onOpenChange={(open) => (open ? undefined : setAsked(null))}
+        isDismissable
+        onConfirm={confirm}
+        {...asks[asked ?? "pause"]}
+      />
+      {live ? <Tip label="Try it on me" icon={RiTestTubeLine} busy={trying} onPress={() => setAsked("try")} /> : null}
+      {live ? <Tip label="Pause" icon={RiPauseLine} onPress={() => setAsked("pause")} /> : null}
+      {series.status === "paused" ? <Tip label="Resume" icon={RiPlayLine} onPress={() => onAct("resume")} /> : null}
+      {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => setAsked("archive")} /> : null}
       {editable ? (
         <Button
           size="small"

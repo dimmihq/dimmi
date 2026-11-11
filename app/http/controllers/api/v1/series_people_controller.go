@@ -15,6 +15,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
@@ -65,6 +66,7 @@ func (c *SeriesController) Enrollments(ctx context.Context, in *requests.SeriesE
 
 	rows, err := c.Series.Journeys(ctx, series.JourneysInput{
 		Membership: membership(ctx), ID: id, NodeID: textOrNil(in.Node), Status: textOrNil(in.Status),
+		Query: textOrNil(strings.TrimSpace(in.Query)),
 		Limit: limit, Offset: in.Offset,
 	})
 	if err != nil {

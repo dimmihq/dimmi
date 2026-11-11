@@ -115,6 +115,37 @@ func (q *Queries) FindDefaultSchedule(ctx context.Context, workspaceID ids.UUID)
 	return i, err
 }
 
+const findInboxSchedule = `-- name: FindInboxSchedule :one
+SELECT s.id, s.workspace_id, s.name, s.timezone, s.weekly, s.holidays, s.is_default, s.deleted_at, s.created_at, s.updated_at FROM inboxes i
+JOIN schedules s ON s.workspace_id = i.workspace_id AND s.id = i.schedule_id AND s.deleted_at IS NULL
+WHERE i.workspace_id = $1 AND i.id = $2
+`
+
+type FindInboxScheduleParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	InboxID     ids.UUID `json:"inbox_id"`
+}
+
+// FindInboxSchedule returns the schedule an inbox keeps its own office
+// hours in; none when it follows the workspace's default.
+func (q *Queries) FindInboxSchedule(ctx context.Context, arg FindInboxScheduleParams) (Schedule, error) {
+	row := q.db.QueryRow(ctx, findInboxSchedule, arg.WorkspaceID, arg.InboxID)
+	var i Schedule
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Timezone,
+		&i.Weekly,
+		&i.Holidays,
+		&i.IsDefault,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const findSchedule = `-- name: FindSchedule :one
 SELECT id, workspace_id, name, timezone, weekly, holidays, is_default, deleted_at, created_at, updated_at FROM schedules WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
@@ -199,23 +230,31 @@ func (q *Queries) MarkDefaultSchedule(ctx context.Context, arg MarkDefaultSchedu
 }
 
 const scheduleInUse = `-- name: ScheduleInUse :one
-SELECT EXISTS (
-    SELECT 1 FROM workflows w
-    LEFT JOIN workflow_versions v ON v.id = w.live_version_id
-    WHERE w.workspace_id = $1 AND w.deleted_at IS NULL
-      AND (strpos(w.draft::text, $2::text) > 0 OR strpos(coalesce(v.spec::text, ''), $2::text) > 0)
+SELECT (
+    EXISTS (
+        SELECT 1 FROM inboxes i
+        WHERE i.workspace_id = $1 AND i.schedule_id = $2::uuid AND i.deleted_at IS NULL
+    )
+    OR EXISTS (
+        SELECT 1 FROM workflows w
+        LEFT JOIN workflow_versions v ON v.id = w.live_version_id
+        WHERE w.workspace_id = $1 AND w.deleted_at IS NULL
+          AND (strpos(w.draft::text, $3::text) > 0 OR strpos(coalesce(v.spec::text, ''), $3::text) > 0)
+    )
 )::boolean
 `
 
 type ScheduleInUseParams struct {
 	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
 	PublicID    string   `json:"public_id"`
 }
 
-// ScheduleInUse reports whether a workflow that is not archived names
-// the schedule, live or in its working copy.
+// ScheduleInUse reports whether a live inbox keeps its office hours in
+// the schedule, or a workflow that is not archived names it, live or in
+// its working copy.
 func (q *Queries) ScheduleInUse(ctx context.Context, arg ScheduleInUseParams) (bool, error) {
-	row := q.db.QueryRow(ctx, scheduleInUse, arg.WorkspaceID, arg.PublicID)
+	row := q.db.QueryRow(ctx, scheduleInUse, arg.WorkspaceID, arg.ID, arg.PublicID)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err

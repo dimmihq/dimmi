@@ -77,7 +77,25 @@ function detailOf(connection: AiProviderKey): string {
 }
 
 /*
- * BuiltInRow is dimmi's own models, ready without a key.
+ * NoOptions takes the place of a connection's options menu on the
+ * built-in rows, disabled since the install, not the team, manages them,
+ * so every row lines up the same.
+ */
+function NoOptions() {
+  return (
+    <button
+      type="button"
+      disabled
+      aria-label="dimmi options"
+      className="flex size-8 cursor-not-allowed items-center justify-center rounded-lg opacity-50"
+    >
+      <RiMore2Line aria-hidden className="size-4 text-foreground-icon-secondary" />
+    </button>
+  );
+}
+
+/*
+ * BuiltInRow is dimmi's own models, connected without a key.
  */
 export function BuiltInRow({ connection }: { connection: AiProviderKey }) {
   return (
@@ -87,8 +105,9 @@ export function BuiltInRow({ connection }: { connection: AiProviderKey }) {
       detail={`Included with dimmi · no key needed · ${modelCount(connection)}`}
     >
       <Chip variant="caption" color="lime">
-        Ready
+        Connected
       </Chip>
+      <NoOptions />
     </Item>
   );
 }
@@ -106,6 +125,7 @@ export function BuiltInOffRow() {
       detail="Not set up on this install. Add your own provider, or ask whoever runs dimmi to add built-in credentials."
     >
       <Chip variant="caption">Unavailable</Chip>
+      <NoOptions />
     </Item>
   );
 }

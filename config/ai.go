@@ -56,22 +56,62 @@ subset. On Dimmi Cloud these are Dimmi's own keys; on self-host the
 operator's, and absent means the built-in provider is hidden.
 */
 type AIManagedConfig struct {
-	Anthropic  AIManagedUpstream `koanf:"anthropic"`
-	OpenAI     AIManagedUpstream `koanf:"openai"`
-	OpenWeight AIManagedUpstream `koanf:"openweight"`
+	Anthropic  AIManagedUpstream   `koanf:"anthropic"`
+	OpenAI     AIManagedUpstream   `koanf:"openai"`
+	OpenWeight AIManagedOpenWeight `koanf:"openweight"`
 
 	Embeddings AIManagedEmbeddings `koanf:"embeddings"`
 }
 
 /*
-AIManagedUpstream is one upstream the built-in provider routes to.
-Provider picks the host of the open-weight models, engy by default or
-baseten; the other families have one host each and ignore it.
+AIManagedUpstream is one upstream the built-in provider routes to: its
+key and, when it is not the host's public endpoint, its address.
 */
 type AIManagedUpstream struct {
+	APIKey  string `koanf:"api_key"`
+	BaseURL string `koanf:"base_url"`
+}
+
+/*
+AIManagedOpenWeight holds the two hosts that serve the open-weight
+models under the same names. Baseten answers first and Engy takes over
+whenever Baseten cannot serve; with only one host set, that host serves
+alone. APIKey, BaseURL and Provider are the older single-host settings:
+settle moves them onto the host Provider names, Engy unless it says
+baseten, so an install configured that way keeps working.
+*/
+type AIManagedOpenWeight struct {
+	Baseten AIManagedUpstream `koanf:"baseten"`
+	Engy    AIManagedUpstream `koanf:"engy"`
+
 	APIKey   string `koanf:"api_key"`
 	BaseURL  string `koanf:"base_url"`
 	Provider string `koanf:"provider"`
+}
+
+/*
+Configured reports whether any open-weight host has a key.
+*/
+func (o *AIManagedOpenWeight) Configured() bool {
+	return o.Baseten.APIKey != "" || o.Engy.APIKey != ""
+}
+
+/*
+settle moves the older single-host key onto the host it named, unless
+that host already has a key of its own.
+*/
+func (o *AIManagedOpenWeight) settle() {
+	if o.APIKey == "" {
+		return
+	}
+
+	host := &o.Engy
+	if o.Provider == "baseten" {
+		host = &o.Baseten
+	}
+	if host.APIKey == "" {
+		*host = AIManagedUpstream{APIKey: o.APIKey, BaseURL: o.BaseURL}
+	}
 }
 
 /*

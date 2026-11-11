@@ -24,7 +24,8 @@ type Status struct {
 }
 
 /*
-Statuses returns every status in roadmap order.
+Statuses returns every status in the built-in order a workspace starts
+with.
 */
 func Statuses() []Status {
 	return []Status{

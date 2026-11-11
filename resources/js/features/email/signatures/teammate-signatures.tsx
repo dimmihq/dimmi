@@ -1,8 +1,10 @@
 /*
  * Every teammate's own signatures, for whoever may change everyone's:
  * an admin can fix a teammate's signature, turn it off or remove it, and
- * the teammate's next reply carries the change. A teammate is shown by
- * name when the members list is readable, else plainly as a teammate.
+ * the teammate's next reply carries the change. Each opens on the
+ * signature page and returns here, at that signature. A teammate is
+ * shown by name when the members list is readable, else plainly as a
+ * teammate.
  */
 import { useQuery } from "@tanstack/react-query";
 
@@ -11,7 +13,7 @@ import type { EmailAddress } from "@/lib/api/email";
 import { personalSignaturesQuery } from "@/lib/api/email-signatures";
 import { membersQuery } from "@/lib/api/workspace";
 
-import { SignatureEditor } from "./signature-editor";
+import { SignatureCard } from "./signature-card";
 
 export function TeammateSignatures({
   workspace,
@@ -41,12 +43,13 @@ export function TeammateSignatures({
         const address = addresses.find((a) => a.id === signature.email_address_id)?.address;
 
         return (
-          <SignatureEditor
+          <SignatureCard
             key={signature.id}
             workspace={workspace}
             label={address ? `Signature of ${name} for ${address}` : `Signature of ${name}`}
             signature={signature}
-            scope={{ kind: "personal" }}
+            scope="teammate"
+            search={{ signature: signature.id }}
           />
         );
       })}

@@ -377,5 +377,5 @@ export function saveEmailPreferences(
   token: string,
   choice: { topics: string[]; unsubscribe_all: boolean },
 ): Promise<EmailPreferences> {
-  return request<EmailPreferences>("PUT", preferencesPath(token), choice);
+  return request<EmailPreferences>("PATCH", preferencesPath(token), choice);
 }

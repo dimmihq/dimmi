@@ -14,7 +14,7 @@ import (
 )
 
 const listRecentOperatorRuns = `-- name: ListRecentOperatorRuns :many
-SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, r.conversation_id,
+SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, c.id AS conversation_id,
     COALESCE(r.config_snapshot->>'purpose', 'ask')::text AS purpose,
     COALESCE(u.name, '')::text AS member_name,
     COALESCE(t.title, '')::text AS thread_title,
@@ -29,16 +29,26 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) t ON true
 LEFT JOIN conversations c ON c.id = r.conversation_id AND c.workspace_id = r.workspace_id
-WHERE r.workspace_id = $1 AND r.kind = 'task' AND r.created_at >= $2 AND r.created_at < $3
+    AND c.deleted_at IS NULL AND dimmi_conversation_visible(
+        c.assignee_member_id, c.assignee_team_id, c.inbox_id, $1::text,
+        $2::uuid, $3::uuid[], $4::boolean,
+        $5::uuid[]
+    )
+WHERE r.workspace_id = $6 AND r.kind = 'task' AND r.created_at >= $7 AND r.created_at < $8
 ORDER BY r.created_at DESC
-LIMIT $4
+LIMIT $9
 `
 
 type ListRecentOperatorRunsParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	Since       time.Time `json:"since"`
-	Until       time.Time `json:"until"`
-	RowLimit    int32     `json:"row_limit"`
+	AccessMode          string     `json:"access_mode"`
+	AccessViewer        *ids.UUID  `json:"access_viewer"`
+	AccessTeams         []ids.UUID `json:"access_teams"`
+	AccessUnassigned    bool       `json:"access_unassigned"`
+	AccessHiddenInboxes []ids.UUID `json:"access_hidden_inboxes"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	Since               time.Time  `json:"since"`
+	Until               time.Time  `json:"until"`
+	RowLimit            int32      `json:"row_limit"`
 }
 
 type ListRecentOperatorRunsRow struct {
@@ -56,9 +66,15 @@ type ListRecentOperatorRunsRow struct {
 
 // ListRecentOperatorRuns returns Operator's latest runs in a range,
 // newest first, with why each ran, who it ran for, the thread it
-// answered on and the conversation it was about.
+// answered on and the conversation it was about. A run about a
+// conversation the viewer may not see still counts, but names none.
 func (q *Queries) ListRecentOperatorRuns(ctx context.Context, arg ListRecentOperatorRunsParams) ([]ListRecentOperatorRunsRow, error) {
 	rows, err := q.db.Query(ctx, listRecentOperatorRuns,
+		arg.AccessMode,
+		arg.AccessViewer,
+		arg.AccessTeams,
+		arg.AccessUnassigned,
+		arg.AccessHiddenInboxes,
 		arg.WorkspaceID,
 		arg.Since,
 		arg.Until,

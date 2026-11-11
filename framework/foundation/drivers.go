@@ -55,6 +55,7 @@ import (
 	mailchannel "github.com/dimmihq/dimmi/framework/notifications/channels/mail"
 	"github.com/dimmihq/dimmi/framework/notifications/channels/webpush"
 	"github.com/dimmihq/dimmi/framework/oauthclient/drivers/generic"
+	"github.com/dimmihq/dimmi/framework/oauthclient/drivers/hosted"
 	"github.com/dimmihq/dimmi/framework/oauthclient/drivers/slack"
 	"github.com/dimmihq/dimmi/framework/socialite/drivers/github"
 	"github.com/dimmihq/dimmi/framework/socialite/drivers/google"
@@ -115,6 +116,7 @@ func (a *Application) registerWebDrivers() {
 	a.Social.Extend("oidc", oidc.Factory(a.HTTP, a.Clock))
 	a.OAuthClient.Extend("generic", generic.Factory(a.HTTP))
 	a.OAuthClient.Extend("slack", slack.Factory(a.HTTP, a.Clock))
+	a.OAuthClient.Extend("hosted", hosted.Factory(a.HTTP))
 
 	authorize := a.domainAuthorizer()
 	a.Domains.Extend("none", tlsnone.Factory(authorize))

@@ -94,14 +94,51 @@ Model key string: `<provider>:<model>@<dims>` e.g. `openai:text-embedding-3-smal
 ## 3. Ingestion pipeline
 
 ```
-source sync start (`POST /knowledge/sources/{ks}/syncs`, scheduler, webhook, create) -> run row `knowledge_sync_runs` (queued); cancel: `DELETE /knowledge/sources/{ks}/syncs/{ksr}`
-  website: CrawlKnowledgeSource -> robots + sitemap discovery -> documents (pending) -> FetchKnowledgePage xN
-  git:     SyncGitKnowledgeSource -> commit SHA check -> tarball stream -> filter paths -> documents
-  upload:  IngestKnowledgeUpload -> safe unzip stream -> filter -> documents
-each changed doc -> IndexKnowledgeDocument (normalize, chunk, tsvector) -> EmbedKnowledgeChunks (missing embed_hash only)
-run end (FinishKnowledgeSync) -> removals (docs not seen in successful full run -> removed) -> stats -> event
-import mode -> CreateImportSuggestions (changed docs -> article suggestions)
+source sync start (`POST /knowledge/sources/{ks}/syncs`, scheduler every 5 min, create, selection change) -> run row `knowledge_sync_runs` (queued); cancel: `DELETE /knowledge/sources/{ks}/syncs/{ksr}`
+  DiscoverKnowledgeSource (one job per listing page, cursor in args) -> driver.List -> documents seen this run (pending)
+  FetchKnowledgeDocument xN (one per changed ref; refs carrying their Document inline skip the fetch) -> driver.Fetch
+  sync mode: store markdown -> knowledge_document_chunks rows in same tx -> EmbedKnowledgeChunks (missing embed_hash only)
+  FinishKnowledgeSync -> removals (docs not seen in a successful full run -> removed) -> stats -> event + failure mail
+  import mode -> ImportKnowledgeSource (batches of 25) writes help center articles + collections + redirects
 ```
+
+Built shape (2026-11-11):
+- Driver contract `app/integrations/knowledge/sources`: `Driver{Describe, Check, List(cursor), Fetch(ref)}`; optional `Browser{Tree}` for services with structure. Registry built in provider, no `init`. Conformance suite `tests/sourcetest` (replays recorded fixtures from `tests/fixtures/sources` through `httpclienttest`; `Record` re-records against dummy accounts with `DIMMI_RECORD_SOURCES=1`). Contributor guide `docs/knowledge-sources.md`.
+- Types shipped: `website`, `notion`, `intercom_help_center`, `zendesk_help_center`, `github`, `markdown_upload`.
+- Settings form = driver JSON schema. Extensions: `x-secret` (sealed in `credentials_encrypted`, never returned), `x-integration` (connected account picker), `x-account` (per-customer host asked before consent, Zendesk subdomain), `x-choice` + `x-depends` (value picked from a list the service returns, `POST /knowledge/sources/options`; driver implements `Chooser`), `x-tree` (selection, not rendered as a field).
+- Rule: no pasted keys or typed ids for a connected service. Account via OAuth, everything else picked from data pulled from it.
+- Document chunks live in own table `knowledge_document_chunks` (article chunks table keeps `article_id NOT NULL`; dropping it is contract-phase). Keyword + vector search union both tables.
+- Run status spelling `canceled` (lint dictionary), not `cancelled`.
+- Last 50 runs kept per source. Failure mail to admins only when `last_error_code` changes.
+- Pacing: framework `ratelimit` local, non-blocking; over budget -> job snoozed (`RateLimitError`). Interval `DIMMI_AI__KNOWLEDGE__CRAWL_INTERVAL_MS` (default 1000).
+
+### Usage and cost (built 2026-11-11)
+
+- Table `knowledge_usage_periods`: one row per (workspace, month, kind `embedding|crawl`, model or service key, source or null). Columns: input_tokens, estimated_tokens, browser_ms, requests, cost_micros, unpriced. No FK to the source, so a removed source keeps its history.
+- Embedding: each `EmbedKnowledgeChunks` batch adds the provider's token count, split across the sources whose chunks it embedded by input length; articles and conversations go to source null. Provider silent on tokens: estimated from text (chars/4) and counted in `estimated_tokens`. Cost from `resources/ai/prices.json` (embedding entries added: dimmi Qwen3-Embedding-8B $0.01, openai text-embedding-3-small $0.02, -large $0.13 per Mtok). Model without a price: `unpriced`, never free.
+- Crawl: Cloudflare reports `browserSecondsUsed` per crawl job; recorded once per job, priced by `DIMMI_AI__KNOWLEDGE__CLOUDFLARE_BROWSER_HOUR_MICROS` (default 90,000 = $0.09/h). Single-page `/markdown` reads are not timed yet.
+- Separate from the agent's `ai_spend_periods` and its cap (owner decision 2026-11-11). Knowledge spend is never capped: syncs and embeddings never stop for cost; usage is only recorded and shown.
+- `GET /knowledge/usage`: this month's lines, costliest first, with total; Settings → Knowledge shows it as "This month".
+
+### Connected services (OAuth)
+
+- Notion, Intercom, Zendesk, GitHub read through `integration_installations` (OAuth 2, feature `knowledge`, one installation per connected account, `Separate` so several can coexist). API tokens not accepted: Zendesk retires them 2027-04-30; Intercom and Notion tokens are per-workspace secrets the customer would have to paste.
+- Engine injects `access_token` + `account` from the installation at read time (`Integrations.Tokens`); source config stores only the installation id.
+- Notion: public connection, `owner=user`, identify via `/users/me`. Intercom: app OAuth, identify via `/me`. GitHub: OAuth app, scopes `repo read:user` (only scope reaching private repos; read only in practice), identify via `/user`. Zendesk: framework `oauthclient` driver `hosted` (`https://{account}.zendesk.com/oauth/...`, confidential client, PKCE, scope `read`); access tokens expire, refresh token stored as `<subdomain> <token>` so a refresh reaches the right host.
+- GitHub source: repository (from `/user/repos`) and branch (default preselected) are `x-choice`; files ticked in a folder/file tree (`dir:<path>` ids). No access-token field, no public-address template (files cite their GitHub address, `agent_only`).
+- App credentials: `DIMMI_SERVICES__{NOTION,INTERCOM,ZENDESK,GITHUB}__CLIENT_ID/_SECRET`. Redirect `{app_url}/integrations/{provider}/callback`. Add flow returns to `?add=<type>` with new account picked.
+- Notion search is eventually consistent: pages just shared may show in the tree a minute later, at the top level until their parents are indexed.
+
+### Choosing content (tree)
+
+- Notion pages, Intercom collections + articles, Zendesk categories + sections + articles, GitHub folders + Markdown files shown as tree (`POST /knowledge/sources/trees` before create, `GET /knowledge/sources/{ks}/tree` after). Node `{id, title, kind, children}`; Zendesk ids prefixed `category:` / `section:`.
+- Ticked ids stored in setting `selected`. Doc read when it or any ancestor ticked; nothing ticked = everything. Ticking container includes items added later.
+- Saving different ticks starts a sync (trigger `manual`): new items pulled, unticked ones `removed`.
+
+### Website crawler providers
+
+- `website` driver wraps `Crawler{List, Fetch}`. Built-in crawler (robots, sitemaps, link following) default. Cloudflare Browser Run (`/crawl` async job, `/markdown`, `/links`) used when `DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN` set (account id optional, resolved from `/accounts`). Check always uses built-in (fast).
+- Cloudflare job waits by snoozing discovery (`wait:<job>:<started>` cursor); after `MaxWait` (default 15 min) job is deleted and partial results kept. Include/exclude patterns passed to Cloudflare so page budget is not spent on excluded paths. Slower than built-in (12-page cap took ~15 min live), accepted.
 
 Articles path: `PublishArticle` action, in same transaction: upsert knowledge_document (article_id), rechunk, write tsvector; queue `EmbedKnowledgeChunks` for new embed hashes. Unpublish/archive/delete/agent_only<->public switch: update or delete document in same tx. FTS consistent at commit.
 
@@ -135,6 +172,7 @@ Git:
   "sync_on_push": true
 }
 ```
+- Built 2026-11-11: shared GitHub layer not built yet; `github` driver reads through the workspace's GitHub OAuth installation (repo + branch picked, files ticked). Docs sync should reuse that installation. Push webhook deferred. Target below stays.
 - Repo + credentials: shared GitHub layer ([docs-sync.md](docs-sync.md) section 4). Source references `github_repositories` row (`knowledge_sources.github_repository_id`, required for type `git`); token lives once on `github_connections` (fine-grained PAT, Contents read + Metadata read for this consumer). Public repo may use repository row without connection (60 requests/hour unauthenticated limit per IP; cloud shares IP, so decided: unauthenticated repos limited to daily schedule). Create body may send `{full_name, connection_id?}` instead of `github_repository_id`: action calls `github.AddRepository` first (same validation).
 - GitHub REST through shared adapter `app/services/github` (google/go-github/v93 v93.0.0, SDK retries off; client from `github.ClientFor`, 13 and docs sync reuse). Change check: `GET /repos/{owner}/{repo}/commits/{ref}` with `Accept: application/vnd.github.sha` (returns SHA only). Same as `last_commit_sha` -> run `succeeded` with `unchanged` stat, no download.
 - Download: `GET /repos/{owner}/{repo}/tarball/{ref}` returns 302 to codeload; via `app/services/github` (go-github v93 on `a.HTTP.StdClient()`; allow redirect to `codeload.github.com`; private links expire after 5 minutes so download starts immediately). Stream gzip+tar, never write full tarball to disk; skip entries not matching paths; cap total, files, per-file size.

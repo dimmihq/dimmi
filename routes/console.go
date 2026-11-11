@@ -12,7 +12,8 @@
 | their payloads and old runs, all a few minutes apart so they never
 | compete, every workspace is checked for an active owner, and the
 | knowledge vectors are swept: refused inputs retried, missing ones
-| filled and models out of use for a week deleted.
+| filled and models out of use for a week deleted. Every five minutes the
+| knowledge sources whose sync is due are started.
 | In the morning owners of workspaces about to be purged are reminded,
 | and owners of access tokens about to expire are warned. Every hour the
 | auth provider key sets visitors sign in with are fetched again when
@@ -59,4 +60,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
+	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 }

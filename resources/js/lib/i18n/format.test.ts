@@ -1,5 +1,13 @@
 import { i18n } from ".";
-import { formatDate, formatDateTime, formatList, formatNumber, formatRelative, formatTime } from "./format";
+import {
+  formatDate,
+  formatDateTime,
+  formatList,
+  formatMonthDay,
+  formatNumber,
+  formatRelative,
+  formatTime,
+} from "./format";
 
 const moment = "2026-11-10T15:04:00Z";
 const now = Date.parse("2026-11-03T12:00:00Z");
@@ -23,6 +31,13 @@ describe("formatDate", () => {
 
   it("writes nothing for a moment that is not one", () => {
     expect(formatDate("soon", { locale: "en-US" })).toBe("");
+  });
+});
+
+describe("formatMonthDay", () => {
+  it("writes the month and day without the year", () => {
+    expect(formatMonthDay("2026-12-25", { locale: "en-US", timeZone: "UTC" })).toBe("Dec 25");
+    expect(formatMonthDay("2026-12-25", { locale: "de", timeZone: "UTC" })).toBe("25. Dez.");
   });
 });
 

@@ -248,14 +248,17 @@ export function seriesReportQuery(workspace: string, id: string, live: boolean) 
   });
 }
 
-export function seriesJourneysQuery(workspace: string, id: string, node?: string) {
+export function seriesJourneysQuery(workspace: string, id: string, node?: string, search = "") {
   const query = new URLSearchParams({ limit: "50" });
   if (node) {
     query.set("node", node);
   }
+  if (search) {
+    query.set("q", search);
+  }
 
   return queryOptions({
-    queryKey: [...seriesKey(workspace), "one", id, "journeys", node ?? "all"] as const,
+    queryKey: [...seriesKey(workspace), "one", id, "journeys", node ?? "all", search] as const,
     queryFn: () => request<SeriesJourney[]>("GET", `${path(id)}/enrollments?${query}`, undefined, { workspace }),
     placeholderData: keepPreviousData,
   });

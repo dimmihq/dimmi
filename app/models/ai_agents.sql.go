@@ -139,21 +139,21 @@ UPDATE ai_agents SET
     name = $1, avatar_attachment_id = $2, enabled = $3,
     product_name = $4, tone = $5, guidance = $6,
     enabled_channels = $7, excluded_channel_connection_ids = $8,
-    schedule = $9, office_hours = $10, assigned_behavior = $11,
-    answer_key_id = $12, answer_model = $13,
-    classifier_key_id = $14, classifier_model = $15,
-    fallback_key_id = $16, fallback_model = $17,
-    temperature = $18, max_output_tokens = $19, max_ai_replies = $20,
-    unknown_behavior = $21, grounding_mode = $22,
-    require_citations = $23, min_similarity = $24,
-    languages = $25, default_language = $26, streaming = $27,
-    include_contact_context = $28,
-    contact_attribute_allowlist = $29,
-    pii_redaction = $30, link_allowlist = $31,
-    handoff = $32, messages = $33, prompt_version = $34,
-    monthly_spend_cap_micros = $35, actions_enabled = $36,
-    updated_at = $37
-WHERE workspace_id = $38 AND id = $39 AND deleted_at IS NULL
+    schedule = $9, assigned_behavior = $10,
+    answer_key_id = $11, answer_model = $12,
+    classifier_key_id = $13, classifier_model = $14,
+    fallback_key_id = $15, fallback_model = $16,
+    temperature = $17, max_output_tokens = $18, max_ai_replies = $19,
+    unknown_behavior = $20, grounding_mode = $21,
+    require_citations = $22, min_similarity = $23,
+    languages = $24, default_language = $25, streaming = $26,
+    include_contact_context = $27,
+    contact_attribute_allowlist = $28,
+    pii_redaction = $29, link_allowlist = $30,
+    handoff = $31, messages = $32, prompt_version = $33,
+    monthly_spend_cap_micros = $34, actions_enabled = $35,
+    updated_at = $36
+WHERE workspace_id = $37 AND id = $38 AND deleted_at IS NULL
 RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity
 `
 
@@ -167,7 +167,6 @@ type UpdateAgentParams struct {
 	EnabledChannels              []string        `json:"enabled_channels"`
 	ExcludedChannelConnectionIds []ids.UUID      `json:"excluded_channel_connection_ids"`
 	Schedule                     string          `json:"schedule"`
-	OfficeHours                  json.RawMessage `json:"office_hours"`
 	AssignedBehavior             string          `json:"assigned_behavior"`
 	AnswerKeyID                  *ids.UUID       `json:"answer_key_id"`
 	AnswerModel                  *string         `json:"answer_model"`
@@ -211,7 +210,6 @@ func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAge
 		arg.EnabledChannels,
 		arg.ExcludedChannelConnectionIds,
 		arg.Schedule,
-		arg.OfficeHours,
 		arg.AssignedBehavior,
 		arg.AnswerKeyID,
 		arg.AnswerModel,

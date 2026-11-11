@@ -32,7 +32,6 @@ import {
   postQuery,
   priorities,
   removeVote,
-  statuses,
   updatePost,
   voteFor,
   votersQuery,
@@ -43,6 +42,7 @@ import { cx } from "@/utils/cx";
 
 import { MergeDialog, StatusDialog, VoteDialog } from "./post-dialogs";
 import { StatusChip, StatusDot } from "./status-chip";
+import { useStatuses } from "./use-statuses";
 
 type Open = { kind: "status"; status: PostStatus } | { kind: "vote" } | { kind: "merge" } | { kind: "delete" } | null;
 
@@ -210,6 +210,8 @@ function Side({
   onOpen: (open: Open) => void;
   onModerate: (moderation: "approved" | "spam") => void;
 }) {
+  const ordered = useStatuses(workspace);
+
   return (
     <aside className="flex w-full shrink-0 flex-col gap-5 rounded-3xl border border-border-button-default bg-background-secondary-default p-4 lg:w-80">
       {post.moderation === "pending" ? (
@@ -234,7 +236,7 @@ function Side({
           key && key !== post.status ? onOpen({ kind: "status", status: key as PostStatus }) : undefined
         }
       >
-        {statuses.map((s) => (
+        {ordered.map((s) => (
           <SelectItem key={s.id} id={s.id} textValue={s.name}>
             <span className="flex items-center gap-2">
               <StatusDot color={s.color} />

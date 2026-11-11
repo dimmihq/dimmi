@@ -8,7 +8,6 @@
  * straight into the working copy.
  */
 import { RiAddLine, RiDeleteBinLine, RiQuillPenLine } from "@remixicon/react";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/base/buttons/button";
@@ -16,11 +15,11 @@ import { IconButton } from "@/components/base/buttons/icon-button";
 import { useEvents, useTopics } from "@/features/broadcasts/sources";
 import { Row, Section } from "@/features/settings/layout";
 import type { NodeSettings, SeriesNode, SeriesSpec } from "@/lib/api/series";
-import { tagsQuery } from "@/lib/api/tags";
 
 import { Amount, Body, Field, Flag, Pick, Rules, Text } from "./inputs";
 import { nodeLook } from "./looks";
 import { isMessage, newID } from "./model";
+import { TagField } from "./tag-field";
 
 export interface StepProps {
   workspace: string;
@@ -89,12 +88,7 @@ function Written({ series, node, editable }: { series: string; node: SeriesNode;
         </span>
       </button>
       <span>
-        <Button
-          size="small"
-          variant={editable ? "primary" : "secondary"}
-          leadingIcon={RiQuillPenLine}
-          onClick={compose}
-        >
+        <Button size="small" variant="secondary" leadingIcon={RiQuillPenLine} onClick={compose}>
           {editable ? "Compose" : "Read the message"}
         </Button>
       </span>
@@ -466,21 +460,17 @@ function AIPathStep({ node, spec, editable, set }: StepProps) {
 
 function ActionStep({ workspace, node, editable, set }: StepProps) {
   const s = node.settings ?? {};
-  const tags = useQuery({ ...tagsQuery(workspace), enabled: node.kind === "tag" || node.kind === "untag" }).data ?? [];
   const topics = useTopics(workspace);
 
   if (node.kind === "tag" || node.kind === "untag") {
     return (
-      <Section title={node.kind === "tag" ? "Add the tag" : "Remove the tag"}>
-        <Row label="Tag">
-          <Pick
-            label="Tag"
-            value={s.tag_ids?.[0]}
-            options={tags.map((t): [string, string] => [t.id, t.name])}
-            onChange={(id) => set({ ...s, tag_ids: [id] })}
-            disabled={!editable}
-          />
-        </Row>
+      <Section title={node.kind === "tag" ? "Add tags" : "Remove tags"}>
+        <TagField
+          workspace={workspace}
+          ids={s.tag_ids ?? []}
+          editable={editable}
+          onChange={(ids) => set({ ...s, tag_ids: ids })}
+        />
       </Section>
     );
   }

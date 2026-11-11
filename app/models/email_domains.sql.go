@@ -549,6 +549,50 @@ func (q *Queries) ListEmailDomainClaims(ctx context.Context, name string) ([]Lis
 	return items, nil
 }
 
+const listEmailDomainSenders = `-- name: ListEmailDomainSenders :many
+SELECT 'broadcast'::text AS kind, b.name::text AS name FROM broadcasts b
+JOIN email_addresses a ON a.id = b.email_address_id
+WHERE b.workspace_id = $1 AND a.email_domain_id = $2 AND b.deleted_at IS NULL
+  AND b.kind = 'one_off' AND b.status IN ('scheduled', 'sending', 'paused')
+UNION ALL
+SELECT 'series'::text AS kind, s.name::text AS name FROM series s
+JOIN email_addresses a ON a.id = s.email_address_id
+WHERE s.workspace_id = $1 AND a.email_domain_id = $2 AND s.status IN ('live', 'paused')
+ORDER BY kind, name
+`
+
+type ListEmailDomainSendersParams struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	EmailDomainID *ids.UUID `json:"email_domain_id"`
+}
+
+type ListEmailDomainSendersRow struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+}
+
+// ListEmailDomainSenders returns the broadcasts still due to send and the
+// series still running from the domain's addresses, by kind and name.
+func (q *Queries) ListEmailDomainSenders(ctx context.Context, arg ListEmailDomainSendersParams) ([]ListEmailDomainSendersRow, error) {
+	rows, err := q.db.Query(ctx, listEmailDomainSenders, arg.WorkspaceID, arg.EmailDomainID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEmailDomainSendersRow
+	for rows.Next() {
+		var i ListEmailDomainSendersRow
+		if err := rows.Scan(&i.Kind, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEmailDomainStates = `-- name: ListEmailDomainStates :many
 SELECT domain::text AS domain, status FROM email_domains
 WHERE workspace_id = $1 AND deleted_at IS NULL

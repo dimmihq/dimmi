@@ -18,7 +18,7 @@ import { IconButton } from "@/components/base/buttons/icon-button";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
-import { ModelSelect } from "@/features/ai/agent/model-section";
+import { ModelSelect, NoConnection } from "@/features/ai/agent/model-section";
 import { modelsFor, operatorModel, usableKeys } from "@/features/ai/format";
 import { agentQuery } from "@/lib/api/ai";
 import {
@@ -91,7 +91,8 @@ function Policy({
 
 /*
  * ModelRow picks the model Operator answers with, among those the
- * agent's connection offers, each with its price.
+ * agent's connection offers, each with its price. Without a connection
+ * it says where models come from instead of an empty picker.
  */
 function ModelRow({
   workspace,
@@ -108,6 +109,10 @@ function ModelRow({
   const key = view ? usableKeys(view.keys).find((k) => k.id === view.agent.answer_key_id) : undefined;
   const models = view ? modelsFor(key, view.catalog) : [];
   const value = operatorModel(settings.model, models, view?.agent.answer_model ?? null);
+
+  if (view && models.length === 0) {
+    return <NoConnection />;
+  }
 
   return (
     <Row

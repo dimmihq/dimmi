@@ -60,7 +60,7 @@ func installedConversation(t *testing.T) (*slackCase, models.Conversation) {
 func TestSlackTeammateToken(t *testing.T) {
 	t.Parallel()
 
-	t.Run("slack's trouble with a teammate's own post is retried as them, never sent again by the app", func(t *testing.T) {
+	t.Run("slack's trouble with a teammate's post is retried as them, never sent by the app", func(t *testing.T) {
 		t.Parallel()
 		sc, conv := installedConversation(t)
 		sc.slack.answer("chat.postMessage", slackAnswer{status: 200, body: `{"ok": false, "error": "internal_error"}`})

@@ -20,9 +20,8 @@ import { Panel, ScrollArea } from "@/features/shell/page";
 import type { Channel } from "@/lib/api/broadcasts";
 import { type Series, saveSeries, seriesQuery } from "@/lib/api/series";
 
-import { sendingOf } from "./entry-settings";
 import { nodeLook } from "./looks";
-import { isMessage, setSettings } from "./model";
+import { isMessage, sendingOf, setSettings } from "./model";
 
 /*
  * useWrittenSave saves what is written into the step's settings a moment

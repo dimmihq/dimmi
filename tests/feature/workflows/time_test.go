@@ -57,6 +57,25 @@ func TestSchedules(t *testing.T) {
 			AssertJSONPath("data.1.is_default", false)
 	})
 
+	t.Run("keeps a yearly holiday and closes on it every year", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		week := testkit.JSON{"mon": [][]string{{"08:00", "17:00"}}, "tue": [][]string{{"08:00", "17:00"}}}
+
+		res := d.Owner.PostJSON("/api/v1/schedules", testkit.JSON{
+			"name": "Yearly", "timezone": "UTC", "weekly": week,
+			"holidays": []testkit.JSON{{"date": "2020-11-02", "name": "Founding day", "yearly": true}},
+		}).AssertCreated()
+		res.AssertJSONPath("data.holidays.0.yearly", true).AssertJSONPath("data.holidays.0.name", "Founding day").
+			AssertJSONPath("data.status.open", false)
+		assert.Equal(t, "2026-11-03T08:00:00Z", res.String("data.status.next_open"))
+
+		id := res.String("data.id")
+		d.Owner.PatchJSON("/api/v1/schedules/"+id, testkit.JSON{
+			"holidays": []testkit.JSON{{"date": "2020-11-02", "name": "Founding day"}},
+		}).AssertOK().AssertJSONPath("data.status.open", true).AssertJSONMissing("data.holidays.0.yearly")
+	})
+
 	t.Run("refuses hours that cannot be read", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)

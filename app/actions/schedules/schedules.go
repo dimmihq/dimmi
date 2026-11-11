@@ -45,7 +45,7 @@ var (
 	ErrInvalid     = fault.New(fault.Invalid, "schedule_invalid", "These office hours cannot be read.")
 	ErrDefault     = fault.New(fault.Conflict, "schedule_default",
 		"This is the default schedule. Make another the default first.")
-	ErrInUse = fault.New(fault.Conflict, "schedule_in_use", "A workflow still uses this schedule.")
+	ErrInUse = fault.New(fault.Conflict, "schedule_in_use", "An inbox or a workflow still uses this schedule.")
 )
 
 /*

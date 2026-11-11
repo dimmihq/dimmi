@@ -82,6 +82,14 @@ func (i *Images) Store(ctx context.Context, m authz.Membership, upload io.Reader
 		return "", exceptions.ErrForbidden
 	}
 
+	return i.Keep(ctx, upload)
+}
+
+/*
+Keep redraws a picture and keeps it, returning the address it is served
+at, for callers that checked who asked, such as an import.
+*/
+func (i *Images) Keep(ctx context.Context, upload io.Reader) (string, error) {
 	picture, cfg, err := image.Reencode(upload, image.Options{
 		Limits: image.Limits{MaxBytes: MaxImageBytes, MaxPixels: maxImagePixels},
 	})

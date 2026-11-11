@@ -119,13 +119,14 @@ it.describe("the app's frame", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("folds the sidebar to a rail and opens it again", async ({ page }) => {
-    await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  it("folds the sidebar on pages with a side panel of their own, and opens it by hand", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Help center" }).click();
-    await expect(page).toHaveURL(/\/d\/[^/]+\/help-center$/);
+    await page.getByRole("link", { name: "Agent" }).click();
+    await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
 
+    await page.getByRole("link", { name: "Broadcasts" }).click();
+    await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
     await page.getByRole("button", { name: "Expand sidebar" }).click();
     await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
   });

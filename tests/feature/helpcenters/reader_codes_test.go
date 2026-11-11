@@ -21,7 +21,7 @@ form posts a sign-in form of the help center.
 */
 func (c center) form(path string, values url.Values) *testkit.Response {
 	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		WithHeader("Accept", "text/html").Send("POST", "/hc/"+c.subdomain+path, values.Encode())
+		WithHeader("Accept", "text/html").Send("POST", c.address(path), values.Encode())
 }
 
 /*
@@ -36,7 +36,7 @@ func (c center) proPage(t *testing.T) string {
 	id := c.published(t, testkit.JSON{"title": "Priority support", "body_markdown": "Call us any time."})
 	c.d.Owner.PatchJSON("/api/v1/articles/"+id+"/audience", testkit.JSON{"audience_id": pro}).AssertOK()
 
-	return "/hc/" + c.subdomain + "/articles/priority-support"
+	return c.local("/articles/priority-support")
 }
 
 /*
@@ -81,7 +81,7 @@ func TestHelpCenterEmailSignIn(t *testing.T) {
 		c := newCenter(t)
 		next := c.proPage(t)
 		c.customer(t, "user_ada", "ada@example.com")
-		assert.Contains(t, string(c.page("").AssertOK().Body), "/hc/"+c.subdomain+"/sso/sign-in?next=")
+		assert.Contains(t, string(c.page("").AssertOK().Body), c.local("/sso/sign-in?next="))
 		form := string(c.page("/sso/sign-in?next=" + url.QueryEscape(next)).AssertOK().Body)
 		assert.Contains(t, form, "Email me a code")
 		assert.NotContains(t, form, "Continue with your account")
@@ -217,7 +217,7 @@ func TestHelpCenterMessengerPass(t *testing.T) {
 
 		mine := visitor.GetJSON("/widget/v1/help").AssertOK()
 		assert.Contains(t, string(mine.Body), "Call us any time.")
-		assert.Contains(t, mine.String("data.url"), "/hc/"+c.subdomain)
+		assert.Contains(t, mine.String("data.url"), c.link(""))
 		public := c.d.TC.Client().GetJSON("/widget/v1/apps/" + c.app() + "/help").AssertOK()
 		assert.NotContains(t, string(public.Body), "Call us any time.")
 
@@ -245,7 +245,7 @@ func TestHelpCenterMessengerPass(t *testing.T) {
 		visitor := c.d.TC.Client().WithHeader("Authorization", "Bearer "+started.String("data.token"))
 
 		plain := visitor.PostJSON("/widget/v1/help-passes", testkit.JSON{"article": "priority-support"}).AssertCreated()
-		assert.True(t, strings.HasSuffix(plain.String("data.url"), "/hc/"+c.subdomain+"/articles/priority-support"))
+		assert.True(t, strings.HasSuffix(plain.String("data.url"), c.link("/articles/priority-support")))
 		assert.NotContains(t, plain.String("data.url"), "#pass=")
 
 		fake := c.d.TC.Mail()

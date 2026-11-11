@@ -26,9 +26,11 @@ FOR UPDATE;
 -- name: FindIntegrationInstallationByAccount :one
 -- FindIntegrationInstallationByAccount returns the workspace's
 -- installation of the provider account through the app, a live one
--- before a disconnected one, the latest first.
+-- before a disconnected one, the latest first. A provider without apps
+-- leaves the app empty, and an empty app matches an empty app.
 SELECT * FROM integration_installations
-WHERE workspace_id = @workspace_id AND provider = @provider AND external_app_id = @external_app_id
+WHERE workspace_id = @workspace_id AND provider = @provider
+  AND external_app_id IS NOT DISTINCT FROM sqlc.narg('external_app_id')::text
   AND external_account_id = @external_account_id AND deleted_at IS NULL
 ORDER BY (status = 'disconnected'), updated_at DESC, id DESC
 LIMIT 1;

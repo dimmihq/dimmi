@@ -33,7 +33,7 @@ func (c center) messengerPass(cookie *fhttp.Cookie) *testkit.Response {
 	if cookie != nil {
 		client = client.WithCookie(cookie)
 	}
-	return client.GetJSON("/hc/" + c.subdomain + "/messenger-identity").AssertOK()
+	return client.GetJSON(c.address("/messenger-identity")).AssertOK()
 }
 
 func TestHelpCenterMessengerSignIn(t *testing.T) {
@@ -48,7 +48,7 @@ func TestHelpCenterMessengerSignIn(t *testing.T) {
 		c.messengerPass(nil).AssertJSONPath("token", nil)
 		pass := c.messengerPass(cookie).String("token")
 		require.NotEmpty(t, pass)
-		assert.Contains(t, string(c.as(cookie, "").Body), `data-identity-url="/hc/`+c.subdomain+`/messenger-identity"`)
+		assert.Contains(t, string(c.as(cookie, "").Body), `data-identity-url="`+c.local("/messenger-identity")+`"`)
 
 		started := c.d.TC.Client().PostJSON("/widget/v1/sessions", testkit.JSON{"app_id": app, "user_jwt": pass}).
 			AssertCreated()

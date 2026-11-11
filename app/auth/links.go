@@ -115,6 +115,18 @@ func (l Links) Tokens() string {
 	return l.page("/d/settings/tokens")
 }
 
+/*
+WebhookEndpoint is the page of one webhook endpoint and its delivery
+log, by the endpoint's public id; empty, the page listing them all.
+*/
+func (l Links) WebhookEndpoint(publicID string) string {
+	if publicID == "" {
+		return l.page("/d/settings/webhooks")
+	}
+
+	return l.page("/d/settings/webhooks/" + publicID)
+}
+
 func (l Links) page(path string) string {
 	return strings.TrimRight(l.Base, "/") + path
 }

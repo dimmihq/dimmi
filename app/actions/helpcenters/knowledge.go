@@ -20,7 +20,9 @@
 package helpcenters
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -60,7 +62,8 @@ type Knowledge struct {
 }
 
 /*
-Search returns the best passages of the workspace's published articles.
+Search returns the best passages of the workspace's published articles
+and of the sources feeding the search's surface.
 */
 func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
 ) (contracts.KnowledgeSearchResult, error) {
@@ -68,49 +71,157 @@ func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts 
 	if terms == "" {
 		return contracts.KnowledgeSearchResult{Mode: "keyword"}, nil
 	}
-	var rows []models.SearchWorkspaceArticlesRow
-	var count int64
-	var restrictions *audiences.Restrictions
-	err := k.inWorkspace(ctx, ws, func(ctx context.Context, q *models.Queries) error {
-		var err error
-		if count, err = q.CountWorkspaceArticles(ctx, ws); err != nil || count == 0 {
-			return err
-		}
-		rows, err = q.SearchWorkspaceArticles(ctx, models.SearchWorkspaceArticlesParams{
-			Query: terms, WorkspaceID: ws, Visibilities: visibilities(opts.Visibility), RowLimit: candidates,
-		})
-		if err != nil || !opts.AudienceFiltered {
-			return err
-		}
-		r, err := audiences.LoadRestrictions(ctx, q, ws)
-		if err != nil {
-			return err
-		}
-		restrictions = &r
-		rows = slices.DeleteFunc(rows, func(row models.SearchWorkspaceArticlesRow) bool {
-			return !r.Article(row.ID, opts.AllowedAudienceIDs)
-		})
-		return nil
-	})
+	found, err := k.candidates(ctx, ws, terms, opts)
 	if err != nil {
 		return contracts.KnowledgeSearchResult{}, fmt.Errorf("search articles: %w", err)
 	}
-	if count == 0 && k.Fallback != nil {
+	if found.count == 0 && k.Fallback != nil {
 		return k.Fallback.Search(ctx, ws, query, opts)
 	}
-	docs := make([]knowledge.Article, len(rows))
-	for i, r := range rows {
-		docs[i] = k.articleOf(models.FindWorkspaceArticleDocumentRow{
+	docs := make([]knowledge.Article, 0, len(found.articles)+len(found.documents))
+	for _, r := range found.articles {
+		doc := k.articleOf(models.FindWorkspaceArticleDocumentRow{
 			ID: r.ID, HelpCenterID: r.HelpCenterID, Subdomain: r.Subdomain, Title: r.Title, Slug: r.Slug,
 			BodyMarkdown: r.BodyMarkdown, Visibility: r.Visibility, CreatedAt: r.CreatedAt,
 		})
-		docs[i].VersionID = r.VersionID
+		doc.VersionID = r.VersionID
+		docs = append(docs, doc)
+	}
+	for _, r := range found.documents {
+		docs = append(docs, sourceDocumentOf(r))
 	}
 	res, err := knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
 	if err != nil || k.Vectors == nil || opts.Mode == "keyword" {
 		return res, err
 	}
-	return k.hybrid(ctx, search{ws: ws, query: query, opts: opts, restrictions: restrictions}, res)
+	return k.hybrid(ctx, search{ws: ws, query: query, opts: opts, restrictions: found.restrictions}, res)
+}
+
+/*
+found is what the keyword arm loads: the matching articles the
+audience rule lets through, the matching source documents, how much
+content the workspace has at all, and the audience restrictions, nil
+when the search is not filtered by audience.
+*/
+type found struct {
+	articles     []models.SearchWorkspaceArticlesRow
+	documents    []models.SearchKnowledgeSourceDocumentsRow
+	count        int64
+	restrictions *audiences.Restrictions
+}
+
+/*
+candidates loads the articles and source documents sharing words with
+the query.
+*/
+func (k *Knowledge) candidates(ctx context.Context, ws ids.UUID, terms string, opts contracts.KnowledgeSearchOptions,
+) (found, error) {
+	var out found
+	err := k.inWorkspace(ctx, ws, func(ctx context.Context, q *models.Queries) error {
+		articles, err := q.CountWorkspaceArticles(ctx, ws)
+		if err != nil {
+			return err
+		}
+		sources, err := q.CountKnowledgeSourceDocuments(ctx, models.CountKnowledgeSourceDocumentsParams{
+			WorkspaceID: ws, Target: knowledge.Target(opts.Surface),
+		})
+		if err != nil {
+			return err
+		}
+		if out.count = articles + sources; out.count == 0 {
+			return nil
+		}
+		if out.documents, err = sourceCandidates(ctx, q, asked{ws: ws, terms: terms, opts: opts}); err != nil {
+			return err
+		}
+		if opts.ExcludeArticles || articles == 0 {
+			return nil
+		}
+		return articleCandidates(ctx, q, asked{ws: ws, terms: terms, opts: opts}, &out)
+	})
+	return out, err
+}
+
+/*
+asked is what a keyword search looks for: the workspace, the query's
+words and the search's options.
+*/
+type asked struct {
+	ws    ids.UUID
+	terms string
+	opts  contracts.KnowledgeSearchOptions
+}
+
+/*
+articleCandidates loads the matching articles, dropping those the
+audience rule hides.
+*/
+func articleCandidates(ctx context.Context, q *models.Queries, a asked, out *found) error {
+	ws, terms, opts := a.ws, a.terms, a.opts
+
+	rows, err := q.SearchWorkspaceArticles(ctx, models.SearchWorkspaceArticlesParams{
+		Query: terms, WorkspaceID: ws, Visibilities: visibilities(opts.Visibility), RowLimit: candidates,
+	})
+	if err != nil || !opts.AudienceFiltered {
+		out.articles = rows
+		return err
+	}
+	r, err := audiences.LoadRestrictions(ctx, q, ws)
+	if err != nil {
+		return err
+	}
+	out.restrictions = &r
+	out.articles = slices.DeleteFunc(rows, func(row models.SearchWorkspaceArticlesRow) bool {
+		return !r.Article(row.ID, opts.AllowedAudienceIDs)
+	})
+	return nil
+}
+
+/*
+sourceCandidates loads the matching documents of the sources feeding
+the search's surface, unless the search leaves sources out.
+*/
+func sourceCandidates(ctx context.Context, q *models.Queries, a asked,
+) ([]models.SearchKnowledgeSourceDocumentsRow, error) {
+	ws, terms, opts := a.ws, a.terms, a.opts
+
+	if opts.ExcludeSources {
+		return nil, nil
+	}
+	return q.SearchKnowledgeSourceDocuments(ctx, models.SearchKnowledgeSourceDocumentsParams{
+		Query: terms, WorkspaceID: ws, Target: knowledge.Target(opts.Surface),
+		Visibilities: visibilities(opts.Visibility), SourceIds: orNone(opts.SourceIDs), RowLimit: candidates,
+	})
+}
+
+/*
+sourceDocumentOf is one source document as the index chunks it. Only a
+public document carries its address, so the agent never links one
+meant for its eyes only.
+*/
+func sourceDocumentOf(r models.SearchKnowledgeSourceDocumentsRow) knowledge.Article {
+	doc := knowledge.Article{
+		Title: r.Title, Body: r.ContentMarkdown, DocumentID: r.ID, SourceID: &r.SourceID, SourceType: r.SourceType,
+		VersionID: knowledge.DocumentVersion(r.ID, r.ContentHash), Locale: r.Locale,
+		Visibility: contracts.KnowledgeVisibility(r.Visibility),
+	}
+	if r.Url != nil && r.Visibility == string(contracts.KnowledgeVisibilityPublic) {
+		doc.URL = *r.Url
+	}
+	if r.IndexedAt != nil {
+		doc.UpdatedAt = *r.IndexedAt
+	}
+	return doc
+}
+
+/*
+orNone is the list, or an empty one for none.
+*/
+func orNone(list []ids.UUID) []ids.UUID {
+	if list == nil {
+		return []ids.UUID{}
+	}
+	return list
 }
 
 /*
@@ -133,9 +244,41 @@ func (k *Knowledge) Document(ctx context.Context, ws, documentID ids.UUID, vis [
 		}
 		return nil
 	})
+	if errors.Is(err, database.ErrNotFound) {
+		out, err = k.sourceDocument(ctx, ws, documentID, vis)
+	}
 	if err != nil && k.Fallback != nil {
 		return k.Fallback.Document(ctx, ws, documentID, vis)
 	}
+	return out, err
+}
+
+/*
+sourceDocument returns one live document of a synced source, its
+address only when it is public.
+*/
+func (k *Knowledge) sourceDocument(ctx context.Context, ws, documentID ids.UUID, vis []contracts.KnowledgeVisibility,
+) (contracts.KnowledgeDocument, error) {
+	var out contracts.KnowledgeDocument
+	err := k.inWorkspace(ctx, ws, func(ctx context.Context, q *models.Queries) error {
+		r, err := q.FindKnowledgeSourceDocumentForReading(ctx, models.FindKnowledgeSourceDocumentForReadingParams{
+			WorkspaceID: ws, ID: documentID, Visibilities: visibilities(vis),
+		})
+		if err != nil {
+			return err
+		}
+		out = contracts.KnowledgeDocument{
+			ID: r.ID, SourceType: r.SourceType, Title: r.Title, Text: r.ContentMarkdown,
+			Visibility: contracts.KnowledgeVisibility(r.Visibility), Locale: cmp.Or(r.Locale, "en"),
+		}
+		if r.Url != nil && out.Visibility == contracts.KnowledgeVisibilityPublic {
+			out.URL = *r.Url
+		}
+		if r.IndexedAt != nil {
+			out.UpdatedAt = *r.IndexedAt
+		}
+		return nil
+	})
 	return out, err
 }
 
@@ -146,8 +289,14 @@ the fallback has.
 func (k *Knowledge) Status(ctx context.Context, ws ids.UUID) (contracts.KnowledgeStatus, error) {
 	var count int64
 	err := k.inWorkspace(ctx, ws, func(ctx context.Context, q *models.Queries) error {
-		var err error
-		count, err = q.CountWorkspaceArticles(ctx, ws)
+		articles, err := q.CountWorkspaceArticles(ctx, ws)
+		if err != nil {
+			return err
+		}
+		sources, err := q.CountKnowledgeSourceDocuments(ctx, models.CountKnowledgeSourceDocumentsParams{
+			WorkspaceID: ws, Target: knowledge.Target("agent"),
+		})
+		count = articles + sources
 		return err
 	})
 	if err != nil {

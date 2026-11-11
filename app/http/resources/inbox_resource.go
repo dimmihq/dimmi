@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | An inbox as the API shows it: its name, whether it is the default
-| inbox, its default team and its settings with their defaults filled
-| in. Teams appear by their public ids, never by internal ones.
+| inbox, its default team, the schedule its office hours are kept in
+| and its settings with their defaults filled in. Teams and schedules
+| appear by their public ids, never by internal ones.
 |
 */
 
@@ -23,7 +24,8 @@ import (
 /*
 Inbox is one inbox of the workspace. Default marks the inbox where
 conversations land when nothing routes them elsewhere; Access says who
-may open it.
+may open it; ScheduleID names the schedule of its own office hours,
+null when it follows the workspace's default.
 */
 type Inbox struct {
 	ID            string        `json:"id"`
@@ -31,6 +33,7 @@ type Inbox struct {
 	Name          string        `json:"name"`
 	Default       bool          `json:"default"`
 	DefaultTeamID *string       `json:"default_team_id"`
+	ScheduleID    *string       `json:"schedule_id"`
 	Access        InboxAccess   `json:"access"`
 	Settings      InboxSettings `json:"settings"`
 	CreatedAt     time.Time     `json:"created_at"`
@@ -81,7 +84,8 @@ func NewInbox(i inboxes.Inbox) Inbox {
 
 	return Inbox{
 		ID: models.PublicID(models.PrefixInbox, i.ID), Object: "inbox", Name: i.Name, Default: i.Default,
-		DefaultTeamID: teamID(i.DefaultTeamID), CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt,
+		DefaultTeamID: teamID(i.DefaultTeamID), ScheduleID: scheduleID(i.ScheduleID),
+		CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt,
 		Access: InboxAccess{
 			Mode: i.Access.Mode, Teams: publicIDs(models.PrefixTeam, i.Access.Teams),
 			Members: publicIDs(models.PrefixMember, i.Access.Members),
@@ -118,4 +122,15 @@ func teamID(id *ids.UUID) *string {
 	}
 
 	return new(models.PublicID(models.PrefixTeam, *id))
+}
+
+/*
+scheduleID returns a schedule's public id, nil for none.
+*/
+func scheduleID(id *ids.UUID) *string {
+	if id == nil {
+		return nil
+	}
+
+	return new(models.PublicID(models.PrefixSchedule, *id))
 }

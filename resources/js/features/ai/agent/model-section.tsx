@@ -53,6 +53,28 @@ function ConnectionSelect({
 }
 
 /*
+ * NoConnection stands in for the model pickers while the workspace has
+ * no connection: built-in models show up on their own once the install
+ * offers them, and until then a provider of the team's own does.
+ */
+export function NoConnection() {
+  return (
+    <Row
+      label="No models yet"
+      description="Add a provider of your own, or ask whoever runs dimmi to turn on its built-in models. They show up here."
+    >
+      <Link
+        to="/d/settings/$section"
+        params={{ section: "ai-providers" }}
+        className="shrink-0 rounded-md text-body-2-medium text-text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        Add a provider
+      </Link>
+    </Row>
+  );
+}
+
+/*
  * ModelSelect picks a model, each shown with its price per million
  * tokens and how much it reads at once.
  */
@@ -125,15 +147,7 @@ export function ModelSection({
   if (keys.length === 0) {
     return (
       <Section title="Model" description="The model that writes the agent's answers.">
-        <Row label="No connection yet" description="Connect a provider to choose the model the agent answers with.">
-          <Link
-            to="/d/settings/$section"
-            params={{ section: "ai-providers" }}
-            className="rounded-md text-body-2-medium text-text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-          >
-            Add a provider
-          </Link>
-        </Row>
+        <NoConnection />
       </Section>
     );
   }

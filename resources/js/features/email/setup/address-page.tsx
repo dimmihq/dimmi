@@ -1,7 +1,7 @@
 /*
  * One email address on a page of its own: its forwarding setup, the mail
- * that arrived and its settings, reached from the list of addresses on
- * the email settings page.
+ * that arrived, its settings and the team's signature for it, reached
+ * from the list of addresses on the email settings page.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { useAccount } from "@/features/settings/use-account";
 import { emailAddressesQuery } from "@/lib/api/email";
 import { callerQuery } from "@/lib/api/workspace";
 
+import { TeamSignature } from "../signatures/team-signatures";
 import { AddressCard } from "./address-card";
 
 function BackToEmail() {
@@ -60,6 +61,9 @@ export function AddressPage({ address }: { address: string }) {
         manage={permissions.includes("email:manage")}
         readRaw={permissions.includes("email:read_raw")}
       />
+      {permissions.includes("email_signatures:manage_any") ? (
+        <TeamSignature workspace={me.workspace.id} address={found} />
+      ) : null}
     </SettingsPage>
   );
 }

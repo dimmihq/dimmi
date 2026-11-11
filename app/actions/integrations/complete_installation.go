@@ -203,6 +203,12 @@ func (a *CompleteCallback) install(ctx context.Context, m authz.Membership, at a
 		return ids.Nil(), err
 	}
 
+	if at.grant.Account == "" && p.Identify != nil && at.grant.Access != nil {
+		if health, err := p.Identify(ctx, at.grant.Access.Value); err == nil {
+			at.grant.Account, at.grant.AccountName = health.Account, health.AccountName
+		}
+	}
+
 	if err := validate(p, at.grant); err != nil {
 		a.revokeQuietly(ctx, at.provider, value(at.grant.Access))
 
@@ -252,7 +258,7 @@ nil when it is new.
 func (a *CompleteCallback) save(ctx context.Context, q *models.Queries, workspaceID ids.UUID, install installation,
 ) (models.IntegrationInstallation, *models.IntegrationInstallation, error) {
 	existing, err := q.FindIntegrationInstallationByAccount(ctx, models.FindIntegrationInstallationByAccountParams{
-		WorkspaceID: workspaceID, Provider: install.provider, ExternalAppID: &install.app,
+		WorkspaceID: workspaceID, Provider: install.provider, ExternalAppID: optional(install.app),
 		ExternalAccountID: &install.account,
 	})
 	if err != nil && !errors.Is(err, database.ErrNotFound) {

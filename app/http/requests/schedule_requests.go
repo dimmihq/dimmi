@@ -4,8 +4,10 @@
 |--------------------------------------------------------------------------
 |
 | The inputs of schedules: a name, a timezone, the open ranges of each
-| weekday and the holidays closed all day. A save may change any of
-| them, and may make the schedule the workspace's default.
+| weekday and the holidays closed all day, each either one date or the
+| same day every year. A save may change any of
+| them, and may make the schedule the workspace's default. An inbox
+| either keeps hours of its own or follows the default.
 |
 */
 
@@ -45,5 +47,17 @@ type UpdateScheduleRequest struct {
 		Weekly    officehours.Weekly    `json:"weekly,omitempty"`
 		Holidays  []officehours.Holiday `json:"holidays,omitempty"   maxItems:"100"`
 		IsDefault bool                  `json:"is_default,omitempty"`
+	}
+}
+
+/*
+InboxHoursRequest is the input of PUT /inboxes/{inbox}/hours: Own true
+gives the inbox hours of its own, false makes it follow the workspace's
+default.
+*/
+type InboxHoursRequest struct {
+	Inbox string `path:"inbox"`
+	Body  struct {
+		Own bool `json:"own"`
 	}
 }

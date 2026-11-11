@@ -13,7 +13,6 @@ import { DomainList } from "@/features/email/domains/domain-list";
 import { AddAddress } from "@/features/email/setup/add-address";
 import { AddressStatus } from "@/features/email/setup/address-status";
 import { Failure } from "@/features/email/setup/failure";
-import { TeamSignatures } from "@/features/email/signatures/team-signatures";
 import { TeammateSignatures } from "@/features/email/signatures/teammate-signatures";
 import { emailAddressesQuery } from "@/lib/api/email";
 import { callerQuery } from "@/lib/api/workspace";
@@ -51,10 +50,7 @@ export function EmailSettings() {
       {manage && addresses ? <AddAddress /> : null}
       <DomainList manage={manage} />
       {addresses && permissions.includes("email_signatures:manage_any") ? (
-        <>
-          <TeamSignatures workspace={me.workspace.id} addresses={addresses} />
-          <TeammateSignatures workspace={me.workspace.id} email={me.email} addresses={addresses} />
-        </>
+        <TeammateSignatures workspace={me.workspace.id} email={me.email} addresses={addresses} />
       ) : null}
       <Failure error={error} />
     </SettingsPage>

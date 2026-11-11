@@ -51,15 +51,18 @@ import { GetStarted } from "./get-started";
 import { appSections, selectedKey, settingsLink, settingsPages, settingsSections } from "./navigation";
 import { useCurrentWorkspace } from "./workspace";
 
-const focusedPath = /^\/d\/(inbox\/[^/]+|workflows|procedures)\/[^/]+$/;
+const paneledPath =
+  /^\/d\/((inbox|broadcasts|customers|help-center|changelog|feedback)(\/.*)?|(series|workflows|procedures)\/.+)$/;
 
 /*
- * useRailCollapse folds the sidebar while a conversation, workflow or
- * procedure is open. A choice made by hand wins until the page switches
- * between one of those and anything else.
+ * useRailCollapse folds the sidebar on pages that bring a second side
+ * panel of their own, such as the inbox, broadcasts, customers and an
+ * open series or workflow, so the page keeps room for its own columns.
+ * A choice made by hand wins until the page switches between one of
+ * those and anything else.
  */
 function useRailCollapse(path: string) {
-  const reading = focusedPath.test(path);
+  const reading = paneledPath.test(path);
   const [choice, setChoice] = useState<{ reading: boolean; collapsed: boolean } | null>(null);
   const collapsed = choice?.reading === reading ? choice.collapsed : reading;
 

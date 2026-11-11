@@ -2,27 +2,23 @@
  * What a step did since the series went live: how many reached it and
  * wait on it now, how many left by each path, what its message did, and
  * for a split each variant's goal with a button that sends everyone
- * down the winner. Below, the people standing on the step right now,
- * each of whom a teammate can take off the series. On the entry step,
- * the series' own totals and why people left.
+ * down the winner. On the entry step, the series' own totals and why
+ * people left. While anyone is there, a button opens a search to take
+ * someone off the series.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RiUserUnfollowLine } from "@remixicon/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
 import { Row, Section } from "@/features/settings/layout";
-import {
-  pickSeriesWinner,
-  removeFromSeries,
-  type SeriesNode,
-  type SeriesReport,
-  seriesJourneysQuery,
-  seriesKey,
-} from "@/lib/api/series";
-import { formatNumber, formatRelative } from "@/lib/i18n/format";
+import { pickSeriesWinner, type SeriesNode, type SeriesReport, seriesKey } from "@/lib/api/series";
+import { formatNumber } from "@/lib/i18n/format";
 
 import { endReasonName, percent } from "./looks";
 import { isMessage, pathsOf } from "./model";
+import { TakeOff } from "./take-off";
 
 function Value({ children }: { children: string }) {
   return <span className="text-body-2-medium text-text-primary tabular-nums">{children}</span>;
@@ -101,31 +97,45 @@ function Variants({
   );
 }
 
-function PeopleHere({ workspace, series, node }: { workspace: string; series: string; node: SeriesNode }) {
-  const client = useQueryClient();
-  const journeys = useQuery(seriesJourneysQuery(workspace, series, node.id)).data ?? [];
-  const remove = useMutation({
-    mutationFn: (journey: string) => removeFromSeries(workspace, series, journey),
-    onSuccess: () => void client.invalidateQueries({ queryKey: seriesKey(workspace) }),
-  });
-  if (journeys.length === 0) {
-    return null;
-  }
+/*
+ * TakeSomeoneOff is the row that opens the search for taking a person off
+ * the series, on one step or, from the entry, anywhere on it.
+ */
+function TakeSomeoneOff({ workspace, series, node }: { workspace: string; series: string; node?: string }) {
+  const [open, setOpen] = useState(false);
 
   return (
-    <Section title="Here now">
-      {journeys.map((j) => (
-        <Row
-          key={j.id}
-          label={j.contact_name || j.company_name || j.contact_email || "Someone"}
-          description={j.wake_at ? `Moves on ${formatRelative(j.wake_at)}` : `Entered ${formatRelative(j.entered_at)}`}
-        >
-          <Button size="xs" variant="secondary" loading={remove.isPending} onClick={() => remove.mutate(j.id)}>
-            Take off
-          </Button>
-        </Row>
-      ))}
+    <Section title="People">
+      <Row label="Take someone off" description="Find a person and end their journey.">
+        <Button size="xs" variant="secondary" leadingIcon={RiUserUnfollowLine} onClick={() => setOpen(true)}>
+          Find
+        </Button>
+      </Row>
+      {open ? <TakeOff workspace={workspace} series={series} node={node} onClose={() => setOpen(false)} /> : null}
     </Section>
+  );
+}
+
+type Message = NonNullable<SeriesReport["steps"][string]["message"]>;
+
+function MessageRows({ email, message }: { email: boolean; message: Message }) {
+  const sent = message.sent ?? 0;
+
+  return (
+    <>
+      <Row label="Sent">
+        <Value>{formatNumber(sent)}</Value>
+      </Row>
+      <Row label="Opened" description={email ? "Email opens are estimated." : undefined}>
+        <Value>{percent(message.opened ?? 0, sent)}</Value>
+      </Row>
+      <Row label="Clicked">
+        <Value>{percent(message.clicked ?? 0, sent)}</Value>
+      </Row>
+      <Row label="Replied">
+        <Value>{formatNumber(message.replied ?? 0)}</Value>
+      </Row>
+    </>
   );
 }
 
@@ -144,12 +154,16 @@ export function StepResults({
     return null;
   }
   if (node.kind === "entry") {
-    return <Totals report={report} />;
+    return (
+      <>
+        <Totals report={report} />
+        {report.active > 0 ? <TakeSomeoneOff workspace={workspace} series={series} /> : null}
+      </>
+    );
   }
   const step = report.steps[node.id];
   const labels = new Map(pathsOf(node).map((p) => [p.id, p.label || "Went on"]));
   labels.set("failed", "Could not send");
-  const sent = step?.message?.sent ?? 0;
 
   return (
     <>
@@ -161,20 +175,7 @@ export function StepResults({
           <Value>{formatNumber(step?.waiting ?? 0)}</Value>
         </Row>
         {isMessage(node.kind) && step?.message ? (
-          <>
-            <Row label="Sent">
-              <Value>{formatNumber(sent)}</Value>
-            </Row>
-            <Row label="Opened" description={node.kind === "email" ? "Email opens are estimated." : undefined}>
-              <Value>{percent(step.message.opened ?? 0, sent)}</Value>
-            </Row>
-            <Row label="Clicked">
-              <Value>{percent(step.message.clicked ?? 0, sent)}</Value>
-            </Row>
-            <Row label="Replied">
-              <Value>{formatNumber(step.message.replied ?? 0)}</Value>
-            </Row>
-          </>
+          <MessageRows email={node.kind === "email"} message={step.message} />
         ) : null}
         {Object.entries(step?.paths ?? {})
           .filter(([path]) => path !== "next")
@@ -185,7 +186,7 @@ export function StepResults({
           ))}
       </Section>
       {node.kind === "split" ? <Variants workspace={workspace} series={series} node={node} report={report} /> : null}
-      <PeopleHere workspace={workspace} series={series} node={node} />
+      {(step?.waiting ?? 0) > 0 ? <TakeSomeoneOff workspace={workspace} series={series} node={node.id} /> : null}
     </>
   );
 }

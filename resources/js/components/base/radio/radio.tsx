@@ -150,6 +150,7 @@ export interface RadioProps extends Omit<AriaRadioProps, "children"> {
 
 export function Radio({ className, children, size = "md", ref, ...props }: RadioProps) {
   const s = dotStyles[size];
+  const hasLabel = children !== undefined && children !== null;
 
   return (
     <AriaRadio
@@ -157,7 +158,7 @@ export function Radio({ className, children, size = "md", ref, ...props }: Radio
       {...props}
       className={(state) =>
         cx(
-          "group inline-flex items-center select-none",
+          "group inline-flex items-start select-none",
           s.gap,
           state.isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
           typeof className === "function" ? className(state) : className,
@@ -166,10 +167,13 @@ export function Radio({ className, children, size = "md", ref, ...props }: Radio
     >
       {(state) => (
         <>
-          <RadioDot selected={state.isSelected} size={size} focusVisible={state.isFocusVisible} />
-          {children !== undefined && children !== null && (
-            <span className={cx(s.label, "text-text-primary")}>{children}</span>
-          )}
+          <RadioDot
+            selected={state.isSelected}
+            size={size}
+            focusVisible={state.isFocusVisible}
+            className={hasLabel ? "mt-0.5" : undefined}
+          />
+          {hasLabel && <span className={cx(s.label, "text-text-primary")}>{children}</span>}
         </>
       )}
     </AriaRadio>

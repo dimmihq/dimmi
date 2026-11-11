@@ -90,6 +90,8 @@ LIMIT @row_limit;
 SELECT DISTINCT s.embed_hash::text AS embed_hash FROM (
     SELECT c.embed_hash FROM knowledge_chunks c WHERE c.workspace_id = @workspace_id
     UNION
+    SELECT dc.embed_hash FROM knowledge_document_chunks dc WHERE dc.workspace_id = @workspace_id
+    UNION
     SELECT k.embed_hash FROM knowledge_conversations k WHERE k.workspace_id = @workspace_id
 ) s
 WHERE NOT EXISTS (
@@ -125,12 +127,23 @@ SELECT count(*)::int AS total,
         SELECT 1 FROM knowledge_embedding_failures f
         WHERE f.workspace_id = @workspace_id AND f.model_key = @model_key AND f.embed_hash = h.embed_hash
     ))::int AS failed
-FROM (SELECT DISTINCT embed_hash FROM knowledge_chunks WHERE workspace_id = @workspace_id) h;
+FROM (
+    SELECT embed_hash FROM knowledge_chunks WHERE workspace_id = @workspace_id
+    UNION
+    SELECT embed_hash FROM knowledge_document_chunks WHERE workspace_id = @workspace_id
+) h;
 
 -- name: ListChunkEmbedInputs :many
 -- ListChunkEmbedInputs returns one chunk per hash, to build its input.
-SELECT DISTINCT ON (embed_hash) embed_hash, title, heading_path, body FROM knowledge_chunks
-WHERE workspace_id = @workspace_id AND embed_hash = ANY (@hashes::text[])
+SELECT DISTINCT ON (embed_hash) embed_hash::text AS embed_hash, title::text AS title,
+    heading_path::text[] AS heading_path, body::text AS body
+FROM (
+    SELECT a.embed_hash, a.title, a.heading_path, a.body, a.id FROM knowledge_chunks a
+    WHERE a.workspace_id = @workspace_id AND a.embed_hash = ANY (@hashes::text[])
+    UNION ALL
+    SELECT b.embed_hash, b.title, b.heading_path, b.body, b.id FROM knowledge_document_chunks b
+    WHERE b.workspace_id = @workspace_id AND b.embed_hash = ANY (@hashes::text[])
+) c
 ORDER BY embed_hash, id;
 
 -- name: ListConversationEmbedInputs :many
@@ -187,8 +200,10 @@ WHERE d.workspace_id = @workspace_id AND (d.model_key, d.embed_hash) IN (
 DELETE FROM knowledge_embedding_failures WHERE workspace_id = @workspace_id AND model_key <> ALL (@keep::text[]);
 
 -- name: CountKnowledgeChunks :one
--- CountKnowledgeChunks counts the workspace's chunks.
-SELECT count(*) FROM knowledge_chunks WHERE workspace_id = @workspace_id;
+-- CountKnowledgeChunks counts the workspace's chunks, of articles and
+-- of source documents.
+SELECT (SELECT count(*) FROM knowledge_chunks c WHERE c.workspace_id = @workspace_id)
+    + (SELECT count(*) FROM knowledge_document_chunks d WHERE d.workspace_id = @workspace_id);
 
 -- name: SearchKnowledgeChunksVector :many
 -- SearchKnowledgeChunksVector ranks the live chunks by cosine distance

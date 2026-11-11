@@ -5,8 +5,9 @@
 |
 | GET /schedules lists the workspace's office hours, the default first;
 | POST adds a schedule; PATCH changes one or makes it the default;
-| DELETE removes one nothing uses. Every schedule answers with whether
-| it is open right now.
+| DELETE removes one nothing uses. PUT /inboxes/{inbox}/hours gives an
+| inbox hours of its own or makes it follow the default. Every schedule
+| answers with whether it is open right now.
 |
 */
 
@@ -117,6 +118,25 @@ func (c *ScheduleController) Destroy(ctx context.Context, in *requests.ScheduleR
 	}
 
 	return &EmptyOutput{}, c.Schedules.Delete(ctx, membership(ctx), id)
+}
+
+/*
+UpdateInboxHours gives an inbox hours of its own or makes it follow
+the workspace's default, and answers the schedule it now uses.
+*/
+func (c *ScheduleController) UpdateInboxHours(
+	ctx context.Context, in *requests.InboxHoursRequest,
+) (*ScheduleOutput, error) {
+	inbox, err := c.IDs.Decode(string(models.PrefixInbox), in.Inbox)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	s, err := c.Schedules.SetInboxHours(ctx, schedules.InboxHoursInput{
+		Membership: membership(ctx), InboxID: inbox, Own: in.Body.Own,
+	})
+
+	return c.output(s, err)
 }
 
 func (c *ScheduleController) output(s models.Schedule, err error) (*ScheduleOutput, error) {

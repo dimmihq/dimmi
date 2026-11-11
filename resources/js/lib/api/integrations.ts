@@ -130,7 +130,7 @@ export function integrationQuery(workspace: string, id: string) {
 export function startInstallation(
   workspace: string,
   provider: string,
-  body: { features?: string[]; return_to: string },
+  body: { features?: string[]; return_to: string; account?: string },
 ): Promise<{ authorize_url: string }> {
   return request("POST", `/integrations/${encodeURIComponent(provider)}/installations`, body, { workspace });
 }
