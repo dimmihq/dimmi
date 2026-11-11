@@ -307,14 +307,15 @@ func back(w fhttp.ResponseWriter, to string) {
 
 /*
 redirectTarget is where a help center redirect sends the reader. A path
-is a page of the help center, kept under its base even when it starts
-with more than one slash, so it never reads as another host; a full
-address is followed as written.
+is a page of the help center, kept under its base however many slashes
+or backslashes it starts with, so it never reads as another host; a
+full address is followed as written.
 */
 func redirectTarget(base, to string) string {
-	if !strings.HasPrefix(to, "/") {
+	page := strings.TrimLeft(to, "/\\")
+	if page == to {
 		return to
 	}
 
-	return base + "/" + strings.TrimLeft(to, "/\\")
+	return base + "/" + page
 }
