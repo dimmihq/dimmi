@@ -39,7 +39,7 @@ func NewBucket(tb testing.TB) string {
 		tb.Fatalf("create test bucket: %v", err)
 	}
 
-	tb.Cleanup(func() { removeBucket(context.WithoutCancel(tb.Context()), client, name) })
+	Cleanup(tb, func() { removeBucket(context.WithoutCancel(tb.Context()), client, name) })
 
 	return name
 }

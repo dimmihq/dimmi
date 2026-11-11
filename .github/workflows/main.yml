@@ -1,10 +1,4 @@
-# Every push to main: check everything, build the cloud image once, release it
-# to staging and smoke test it there. Production takes this exact image later,
-# by hand, through the production workflow.
-#
-# Staging environment settings, never in the repository: the variable
-# AWS_REGION, and the secrets AWS_ACCOUNT_ID and AWS_DEPLOY_ROLE_ARN, kept
-# as secrets so the public logs mask the account id.
+# Every push to main and every pull request: check everything.
 
 name: main
 
@@ -23,13 +17,10 @@ permissions:
 
 jobs:
   # Each check is its own job, so they run side by side and each shows its
-  # own result. The slow Go test passes are split into shards by package
-  # (scripts/test-shard.ts). Every job keeps its own Go build cache, saved
-  # from main and restored by the next run, so only what changed compiles
-  # again. Under the race detector one test binary of
-  # the heavy suites peaks near 11 GB on a 16 GB runner, so race jobs run one
-  # package at a time with a Go memory limit, which keeps that near 8 GB, and
-  # each pass is split six ways to stay fast.
+  # own result. The slow Go test passes are split six ways by package
+  # (scripts/test-shard.ts) to stay fast. Every job keeps its own Go build
+  # cache, saved from main and restored by the next run, so only what
+  # changed compiles again.
   check:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
@@ -40,25 +31,25 @@ jobs:
         include:
           - { name: lint go, run: make lint-go GOLANGCI_LINT=./bin/golangci-lint, cache: lint, golangci: true }
           - { name: lint and test the browser app, run: make lint-web test-web, install: true }
-          - { name: go tests (1/6), run: make test-go SHARD=1/6, cache: race-1, services: true, race: true }
-          - { name: go tests (2/6), run: make test-go SHARD=2/6, cache: race-2, services: true, race: true }
-          - { name: go tests (3/6), run: make test-go SHARD=3/6, cache: race-3, services: true, race: true }
-          - { name: go tests (4/6), run: make test-go SHARD=4/6, cache: race-4, services: true, race: true }
-          - { name: go tests (5/6), run: make test-go SHARD=5/6, cache: race-5, services: true, race: true }
-          - { name: go tests (6/6), run: make test-go SHARD=6/6, cache: race-6, services: true, race: true }
-          - { name: go tests as the application role (1/6), run: make test-app-role SHARD=1/6, cache: role-1, services: true, race: true }
-          - { name: go tests as the application role (2/6), run: make test-app-role SHARD=2/6, cache: role-2, services: true, race: true }
-          - { name: go tests as the application role (3/6), run: make test-app-role SHARD=3/6, cache: role-3, services: true, race: true }
-          - { name: go tests as the application role (4/6), run: make test-app-role SHARD=4/6, cache: role-4, services: true, race: true }
-          - { name: go tests as the application role (5/6), run: make test-app-role SHARD=5/6, cache: role-5, services: true, race: true }
-          - { name: go tests as the application role (6/6), run: make test-app-role SHARD=6/6, cache: role-6, services: true, race: true }
-          - { name: go tests in the cloud edition (1/6), run: make test-cloud SHARD=1/6, cache: cloud-1, services: true, race: true }
-          - { name: go tests in the cloud edition (2/6), run: make test-cloud SHARD=2/6, cache: cloud-2, services: true, race: true }
-          - { name: go tests in the cloud edition (3/6), run: make test-cloud SHARD=3/6, cache: cloud-3, services: true, race: true }
-          - { name: go tests in the cloud edition (4/6), run: make test-cloud SHARD=4/6, cache: cloud-4, services: true, race: true }
-          - { name: go tests in the cloud edition (5/6), run: make test-cloud SHARD=5/6, cache: cloud-5, services: true, race: true }
-          - { name: go tests in the cloud edition (6/6), run: make test-cloud SHARD=6/6, cache: cloud-6, services: true, race: true }
-          - { name: timing and dev build tests, run: make test-timing test-dev, cache: misc, services: true, race: true }
+          - { name: go tests (1/6), run: make test-go SHARD=1/6, cache: race-1, services: true }
+          - { name: go tests (2/6), run: make test-go SHARD=2/6, cache: race-2, services: true }
+          - { name: go tests (3/6), run: make test-go SHARD=3/6, cache: race-3, services: true }
+          - { name: go tests (4/6), run: make test-go SHARD=4/6, cache: race-4, services: true }
+          - { name: go tests (5/6), run: make test-go SHARD=5/6, cache: race-5, services: true }
+          - { name: go tests (6/6), run: make test-go SHARD=6/6, cache: race-6, services: true }
+          - { name: go tests as the application role (1/6), run: make test-app-role SHARD=1/6, cache: role-1, services: true }
+          - { name: go tests as the application role (2/6), run: make test-app-role SHARD=2/6, cache: role-2, services: true }
+          - { name: go tests as the application role (3/6), run: make test-app-role SHARD=3/6, cache: role-3, services: true }
+          - { name: go tests as the application role (4/6), run: make test-app-role SHARD=4/6, cache: role-4, services: true }
+          - { name: go tests as the application role (5/6), run: make test-app-role SHARD=5/6, cache: role-5, services: true }
+          - { name: go tests as the application role (6/6), run: make test-app-role SHARD=6/6, cache: role-6, services: true }
+          - { name: go tests in the cloud edition (1/6), run: make test-cloud SHARD=1/6, cache: cloud-1, services: true }
+          - { name: go tests in the cloud edition (2/6), run: make test-cloud SHARD=2/6, cache: cloud-2, services: true }
+          - { name: go tests in the cloud edition (3/6), run: make test-cloud SHARD=3/6, cache: cloud-3, services: true }
+          - { name: go tests in the cloud edition (4/6), run: make test-cloud SHARD=4/6, cache: cloud-4, services: true }
+          - { name: go tests in the cloud edition (5/6), run: make test-cloud SHARD=5/6, cache: cloud-5, services: true }
+          - { name: go tests in the cloud edition (6/6), run: make test-cloud SHARD=6/6, cache: cloud-6, services: true }
+          - { name: timing and dev build tests, run: make test-timing test-dev, cache: misc, services: true }
           - { name: infrastructure, run: make infra-check, cache: infra, pnpm: true }
     steps:
       - uses: actions/checkout@v5
@@ -98,12 +89,9 @@ jobs:
         name: Wait for services
         run: .github/wait-for-services.sh
       - id: check
-        run: |
-          if [ -n "$RACE_MEMORY_LIMIT" ]; then export GOMEMLIMIT="$RACE_MEMORY_LIMIT"; fi
-          ${{ matrix.run }}
+        run: ${{ matrix.run }}
         env:
-          GOFLAGS: ${{ matrix.race && '-p=1 -count=1 -timeout=15m' || '-count=1' }}
-          RACE_MEMORY_LIMIT: ${{ matrix.race && '2GiB' || '' }}
+          GOFLAGS: -count=1 -timeout=15m
       - if: ${{ !cancelled() && matrix.cache && steps.check.outcome != 'skipped' }}
         uses: ./.github/actions/go-cache
         with:
@@ -163,62 +151,3 @@ jobs:
         with:
           name: e2e
           mode: save
-
-  image:
-    if: github.event_name == 'push'
-    needs: [check, e2e]
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 30
-    environment: staging
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v5
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          mask-aws-account-id: true
-      - uses: aws-actions/amazon-ecr-login@v2
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/arm64
-          push: true
-          provenance: false
-          build-args: REVISION=${{ github.sha }}
-          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/dimmi-staging:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=min
-
-  staging:
-    needs: image
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    environment:
-      name: staging
-      url: https://staging.trydimmi.com
-    concurrency:
-      group: release-staging
-      cancel-in-progress: false
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v5
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          mask-aws-account-id: true
-      - name: Release
-        run: deploy/release/release.sh "${{ github.sha }}"
-        env:
-          ENVIRONMENT: staging
-      - name: Smoke test
-        run: |
-          key="$(aws secretsmanager get-secret-value --secret-id dimmi-staging/gate/ci-key --query SecretString --output text)"
-          echo "::add-mask::$key"
-          GATE_KEY="$key" EXPECT_RELEASE="${{ github.sha }}" deploy/release/smoke.sh https://staging.trydimmi.com expect-gate

@@ -77,7 +77,7 @@ func createDatabase(tb testing.TB, template string) Database {
 		tb.Fatalf("connect to postgres: %v", err)
 	}
 
-	tb.Cleanup(func() {
+	Cleanup(tb, func() {
 		ctx := context.WithoutCancel(tb.Context())
 		_, _ = admin.Exec(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %s WITH (FORCE)", name))
 		_, _ = admin.Exec(ctx, "DROP ROLE IF EXISTS "+name)
@@ -124,7 +124,7 @@ func (d Database) NewRole(tb testing.TB, grants ...string) Role {
 		tb.Fatalf("connect to %s: %v", d.Name, err)
 	}
 
-	tb.Cleanup(func() {
+	Cleanup(tb, func() {
 		ctx := context.WithoutCancel(tb.Context())
 		_, _ = admin.Exec(ctx, "DROP OWNED BY "+name)
 		_, _ = admin.Exec(ctx, "DROP ROLE IF EXISTS "+name)

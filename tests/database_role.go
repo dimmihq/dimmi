@@ -79,7 +79,7 @@ func (tc *TestCase) Operator() *database.DB {
 			URL: tc.Database.URL, MaxConns: 1, PoolMode: database.PoolModeSession, TenantSetting: "app.tenant_id",
 		})
 		require.NoError(tc.T, err)
-		tc.T.Cleanup(db.Close)
+		testkit.Cleanup(tc.T, db.Close)
 		tc.operator = db
 	})
 

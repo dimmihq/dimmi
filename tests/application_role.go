@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/testkit"
 )
 
 /*
@@ -51,7 +52,7 @@ func (tc *TestCase) openApplicationRole() *database.DB {
 		URL: role.URL, MaxConns: 1, PoolMode: database.PoolModeSession, TenantSetting: "app.tenant_id",
 	})
 	require.NoError(tc.T, err)
-	tc.T.Cleanup(db.Close)
+	testkit.Cleanup(tc.T, db.Close)
 
 	return db
 }

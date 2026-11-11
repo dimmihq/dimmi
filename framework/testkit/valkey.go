@@ -44,7 +44,7 @@ func NewValkey(tb testing.TB) *redis.Client {
 		tb.Fatalf("open valkey: %v", err)
 	}
 
-	tb.Cleanup(client.Close)
+	Cleanup(tb, client.Close)
 
 	return client
 }

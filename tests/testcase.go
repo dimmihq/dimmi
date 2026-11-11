@@ -209,6 +209,7 @@ func start(tb testing.TB, o *options) (booted, error) {
 	tb.Helper()
 
 	application, foundationOptions := bootstrap.Application()
+	application.Frontend = Frontend()
 	for _, fn := range o.before {
 		fn(application)
 	}
@@ -233,7 +234,7 @@ func start(tb testing.TB, o *options) (booted, error) {
 		return booted{}, err
 	}
 
-	tb.Cleanup(func() { require.NoError(tb, fa.Shutdown(context.WithoutCancel(tb.Context()))) })
+	testkit.Cleanup(tb, func() { require.NoError(tb, fa.Shutdown(context.WithoutCancel(tb.Context()))) })
 
 	return booted{app: application, clock: fake, database: db, environ: foundationOptions.Environ}, nil
 }

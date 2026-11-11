@@ -48,7 +48,7 @@ func Serve(tb testing.TB, handler http.Handler) string {
 	tb.Helper()
 
 	srv := httptest.NewServer(handler)
-	tb.Cleanup(srv.Close)
+	Cleanup(tb, srv.Close)
 
 	return srv.URL
 }
@@ -119,7 +119,7 @@ func DialRealtime(tb testing.TB, baseURL string, opts RealtimeOptions) (*Realtim
 	}
 
 	require.NoError(tb, err)
-	tb.Cleanup(func() { _ = conn.CloseNow() })
+	Cleanup(tb, func() { _ = conn.CloseNow() })
 
 	c := &Realtime{tb: tb, conn: conn}
 	reply := c.command(map[string]any{"connect": map[string]any{"token": opts.Token}})
