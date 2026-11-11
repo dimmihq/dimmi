@@ -223,7 +223,7 @@ func (a *RotateEmailDomainKey) Handle(
 		return row, nil
 	}
 
-	key, err := a.newRelayKey(ctx, row.WorkspaceID, row.Domain, a.Clock.Now().Format("200601"))
+	key, err := a.newRelayKey(ctx, row)
 	if err != nil {
 		return models.EmailDomain{}, err
 	}

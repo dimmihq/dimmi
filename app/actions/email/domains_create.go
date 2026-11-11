@@ -185,7 +185,7 @@ func (d *Domains) setUp(ctx context.Context, row models.EmailDomain, subdomain s
 
 	switch {
 	case d.Driver == dns.DriverSMTP:
-		key, err := d.newRelayKey(ctx, row.WorkspaceID, row.Domain, d.Clock.Now().Format("200601"))
+		key, err := d.newRelayKey(ctx, row)
 		if err != nil {
 			return row, err
 		}
@@ -263,23 +263,40 @@ type relayKey struct {
 }
 
 /*
-newRelayKey makes a signing key for a relay's mail, its selector named
-after the month it was made in.
+newRelayKey makes a signing key for a relay's mail on the domain. Its
+selector is named after the month it was made in and never repeats the
+domain's current one, so a rotation always publishes a record of its
+own beside the key still signing.
 */
-func (d *Domains) newRelayKey(ctx context.Context, ws ids.UUID, domain, month string) (relayKey, error) {
+func (d *Domains) newRelayKey(ctx context.Context, row models.EmailDomain) (relayKey, error) {
 	key, err := dkim.GenerateKey()
 	if err != nil {
 		return relayKey{}, fmt.Errorf("generate signing key: %w", err)
 	}
 
-	selector := d.Config.Sending.SelectorPrefix + month + strings.ToLower(str.Random(2))
+	selector := d.newSelector(row.DkimSelector)
 
-	sealed, err := encryption.Seal(ctx, d.Keys, keySlot(ws, domain, selector), key.PrivatePEM)
+	sealed, err := encryption.Seal(ctx, d.Keys, keySlot(row.WorkspaceID, row.Domain, selector), key.PrivatePEM)
 	if err != nil {
 		return relayKey{}, fmt.Errorf("seal signing key: %w", err)
 	}
 
 	return relayKey{selector: selector, public: key.Public, sealed: sealed}, nil
+}
+
+/*
+newSelector names a signing key after this month, with a random suffix
+that tells it apart from the current selector.
+*/
+func (d *Domains) newSelector(current *string) string {
+	month := d.Config.Sending.SelectorPrefix + d.Clock.Now().Format("200601")
+
+	for {
+		selector := month + strings.ToLower(str.Random(2))
+		if current == nil || selector != *current {
+			return selector
+		}
+	}
 }
 
 /*
