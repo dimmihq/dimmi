@@ -21,7 +21,7 @@ rebuild it without deploying:
 
 ```sh
 cd deploy/dns
-for stack in app mail; do
+for stack in mail; do
   aws cloudformation describe-stacks --region us-east-2 --stack-name "dimmi-staging-$stack" \
     --query 'Stacks[0].{n:StackName,o:Outputs}' --output json
 done | node -e '
@@ -63,9 +63,9 @@ site's or other teams', are never touched.
 
 ## Why A records
 
-The host gets one A record per load balancer Elastic IP. Production's host is the zone apex, where a CNAME is not allowed.
-Vercel offers ALIAS records that would follow the load balancer's name, but the Elastic IPs never change while the load
-balancer exists, so plain A records work at the apex and everywhere else with nothing to resolve on Vercel's side.
+The host gets one A record per address in the environment's `ingressAddresses`, the Hetzner load balancer's public IPv4.
+Production's host is the zone apex, where a CNAME is not allowed. The address never changes while the load balancer
+exists, so plain A records work at the apex and everywhere else.
 
 ## Certificates after DNS
 

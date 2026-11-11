@@ -99,7 +99,7 @@ export async function run(argv: string[], deps: Dependencies): Promise<number> {
 async function desiredFromFile(deps: Dependencies, path: string, config: EnvironmentConfig): Promise<DnsRecord[]> {
   const outputs = JSON.parse(await deps.readFile(path)) as OutputsFile;
 
-  return desiredRecords(config, factsFromOutputs(outputs, config.name));
+  return desiredRecords(config, factsFromOutputs(outputs, config));
 }
 
 /**

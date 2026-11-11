@@ -2,7 +2,7 @@ import type { StackProps } from "aws-cdk-lib";
 import { CfnOutput, Duration, Fn, Stack } from "aws-cdk-lib";
 import { Alarm, ComparisonOperator, Metric, TreatMissingData } from "aws-cdk-lib/aws-cloudwatch";
 import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
-import { ManagedPolicy, PolicyStatement, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { ManagedPolicy, PolicyStatement, ServicePrincipal, User } from "aws-cdk-lib/aws-iam";
 import { BlockPublicAccess, Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
 import type { IReceiptRuleAction, ReceiptRuleActionConfig } from "aws-cdk-lib/aws-ses";
 import {
@@ -59,15 +59,17 @@ const SENDING_EVENTS = [
  * the application, and sends from customer addresses. The system domain sends
  * sign-up and notification mail; replies to it are kept under `system/`.
  *
- * Webhooks point at the environment's host, and the application's
- * permissions are a managed policy the task roles attach. The stack writes no
- * DNS: every record it needs is the `DnsRecords` output, which the DNS script
- * reads.
+ * Webhooks point at the environment's host. The application runs outside
+ * AWS, so its permissions are a managed policy attached to one IAM user whose
+ * access key a person creates and stores in the cluster; no key ever passes
+ * through CloudFormation. The stack writes no DNS: every record it needs is
+ * the `DnsRecords` output, which the DNS script reads.
  */
 export class MailStack extends Stack {
   readonly inboundBucket: Bucket;
   readonly inboundTopic: Topic;
   readonly applicationPolicy: ManagedPolicy;
+  readonly applicationUser: User;
   readonly systemConfigurationSetName: string;
   readonly customerConfigurationSetName: string;
 
@@ -95,6 +97,10 @@ export class MailStack extends Stack {
     this.configurationSets(setNames, eventsTopic);
 
     this.applicationPolicy = this.policy(name("mail-application"), setNames, this.inboundBucket);
+    this.applicationUser = new User(this, "ApplicationUser", {
+      userName: name("application"),
+      managedPolicies: [this.applicationPolicy],
+    });
 
     this.alarms(name, props.alarms, { bucket: this.inboundBucket, topics: [this.inboundTopic, eventsTopic] });
 
@@ -111,6 +117,7 @@ export class MailStack extends Stack {
     new CfnOutput(this, "SystemConfigurationSetName", { value: setNames[0] });
     new CfnOutput(this, "CustomerConfigurationSetName", { value: setNames[1] });
     new CfnOutput(this, "MailApplicationPolicyArn", { value: this.applicationPolicy.managedPolicyArn });
+    new CfnOutput(this, "ApplicationUserName", { value: this.applicationUser.userName });
   }
 
   private ruleSetArn(ruleSetName: string): string {
@@ -266,9 +273,9 @@ export class MailStack extends Stack {
   }
 
   /**
-   * What the running application may do. It is a customer-managed policy, not
-   * a role, because whatever runs the application owns its own role and attaches
-   * this. Raw mail can be read and erased, never written: only SES writes it.
+   * What the running application may do, as a customer-managed policy the
+   * application user carries. Raw mail can be read and erased, never written:
+   * only SES writes it.
    */
   private policy(managedPolicyName: string, setNames: string[], bucket: Bucket): ManagedPolicy {
     const ses = (resource: string, resourceName: string) => this.formatArn({ service: "ses", resource, resourceName });

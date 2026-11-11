@@ -19,9 +19,7 @@ describe("environment isolation", () => {
     it(`${name} resources never take ${other}'s names`, () => {
       for (const [role, template] of Object.entries(stacks)) {
         const text = JSON.stringify(template.toJSON());
-        const allowed = role === "ci" && name === "production" ? text.replace(/dimmi-staging"/g, "") : text;
-
-        expect(allowed, `${role} names ${other}`).not.toMatch(new RegExp(`dimmi-${other}\\b`));
+        expect(text, `${role} names ${other}`).not.toMatch(new RegExp(`dimmi-${other}\\b`));
       }
     });
   }

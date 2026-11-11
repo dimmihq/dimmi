@@ -18,7 +18,7 @@ export type DnsRecord = {
 
 /** What a deployed environment tells the script, read from its stack outputs. */
 export type StackFacts = {
-  /** The load balancer's Elastic IPs. */
+  /** The load balancer's public addresses. */
   addresses: string[];
   /** Every mail record, as the mail stack computed it. */
   mail: { type: "MX" | "CNAME" | "TXT"; name: string; value: string; priority?: number }[];
@@ -35,7 +35,7 @@ const TTL = 300;
  */
 export function desiredRecords(config: EnvironmentConfig, facts: StackFacts): DnsRecord[] {
   if (facts.addresses.length === 0) {
-    throw new Error("the app stack reported no load balancer addresses");
+    throw new Error("the environment lists no load balancer addresses");
   }
 
   const host = facts.addresses.map((value): DnsRecord => ({ type: "A", name: config.host, value, ttl: TTL }));

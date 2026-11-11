@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { environments } from "../../cdk/lib/config/environments.ts";
 import { factsFromOutputs } from "../src/outputs.ts";
 import { formatPlan, ownerComment, plan } from "../src/plan.ts";
 import { desiredRecords } from "../src/records.ts";
-import { live, STAGING_OUTPUTS } from "./fixtures.ts";
+import { live, STAGING, STAGING_OUTPUTS } from "./fixtures.ts";
 
-const desired = desiredRecords(environments.staging, factsFromOutputs(STAGING_OUTPUTS, "staging"));
+const desired = desiredRecords(STAGING, factsFromOutputs(STAGING_OUTPUTS, STAGING));
 const mine = ownerComment("staging");
 
 describe("plan", () => {

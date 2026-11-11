@@ -1,0 +1,15 @@
+# /etc/rancher/k3s/config.yaml. The cluster talks over the private network;
+# the public address only answers SSH and the Kubernetes API.
+node-name: dimmi-1
+node-ip: 10.10.1.2
+node-external-ip: SERVER_PUBLIC_IP
+advertise-address: 10.10.1.2
+flannel-iface: vlan4000
+tls-san:
+  - SERVER_PUBLIC_IP
+  - 10.10.1.2
+  - dimmi-1
+write-kubeconfig-mode: "0600"
+secrets-encryption: true
+kubelet-arg:
+  - "max-pods=250"

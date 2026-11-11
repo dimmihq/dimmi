@@ -2,77 +2,32 @@ import type { EnvironmentConfig } from "./environment.ts";
 import { validate } from "./environment.ts";
 
 /**
- * The repository as GitHub names it in its identity tokens. The repository
- * uses immutable subjects, which carry the owner's and the repository's
- * numeric ids, so a renamed or recreated repository of the same name can
- * never deploy.
+ * The Hetzner load balancer in front of the k3s server. Staging and
+ * production share it: Traefik on the server routes each host to its own
+ * namespace.
  */
-const REPOSITORY = "dimmihq@352342433/dimmi@1445376064";
-const LETS_ENCRYPT = "https://acme-v02.api.letsencrypt.org/directory";
+const INGRESS = ["46.224.169.155"];
 
-/**
- * Staging is production in miniature: the same services on the smallest
- * sizes, one task running every role, and data that can be thrown away.
- */
 const staging: EnvironmentConfig = {
   name: "staging",
   region: "us-east-2",
   host: "staging.trydimmi.com",
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.staging.trydimmi.com", system: "mail.staging.trydimmi.com" },
+  ingressAddresses: INGRESS,
   alarmEmail: "ops@trydimmi.com",
-  acmeDirectory: LETS_ENCRYPT,
-  gate: true,
-  github: { repository: REPOSITORY, environment: "staging" },
-  network: { maxAzs: 2, natGateways: 0 },
-  database: {
-    instanceType: "t4g.micro",
-    allocatedStorageGiB: 20,
-    maxAllocatedStorageGiB: 50,
-    multiAz: false,
-    backupRetentionDays: 1,
-    poolSize: 5,
-  },
-  cache: { nodeType: "cache.t4g.micro", replicas: 0 },
-  services: {
-    web: { roles: ["web", "worker", "scheduler"], cpu: 256, memoryMiB: 1024, desiredCount: 1 },
-  },
-  protectData: false,
-  budgetUsd: 100,
+  budgetUsd: 20,
 };
 
-/**
- * Production runs several web tasks across zones and a separate worker
- * service, so a slow job never holds up a request and either side scales
- * alone.
- */
 const production: EnvironmentConfig = {
   name: "production",
   region: "us-east-1",
   host: "trydimmi.com",
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.trydimmi.com", system: "mail.trydimmi.com" },
+  ingressAddresses: INGRESS,
   alarmEmail: "ops@trydimmi.com",
-  acmeDirectory: LETS_ENCRYPT,
-  gate: false,
-  promotesFrom: "staging",
-  github: { repository: REPOSITORY, environment: "production" },
-  network: { maxAzs: 2, natGateways: 0 },
-  database: {
-    instanceType: "t4g.medium",
-    allocatedStorageGiB: 50,
-    maxAllocatedStorageGiB: 500,
-    multiAz: true,
-    backupRetentionDays: 14,
-    poolSize: 10,
-  },
-  cache: { nodeType: "cache.t4g.small", replicas: 1 },
-  services: {
-    web: { roles: ["web"], cpu: 512, memoryMiB: 1024, desiredCount: 2 },
-    worker: { roles: ["worker", "scheduler"], cpu: 512, memoryMiB: 2048, desiredCount: 2 },
-  },
-  protectData: true,
-  budgetUsd: 600,
+  budgetUsd: 50,
 };
 
 /** Every environment this app can deploy, by name. */

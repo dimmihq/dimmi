@@ -6,28 +6,13 @@ import { environmentNamed, environments } from "../lib/config/environments.ts";
 describe("environment config", () => {
   const staging = environments.staging;
 
-  it("staging and production live in different regions", () => {
-    expect(environments.staging.region).not.toBe(environments.production.region);
+  it("staging and production keep their mail in different regions", () => {
     expect(environments.staging.region).toBe("us-east-2");
     expect(environments.production.region).toBe("us-east-1");
   });
 
-  it("staging is one small task running every role", () => {
-    expect(staging.services.web.roles).toEqual(["web", "worker", "scheduler"]);
-    expect(staging.services.web.desiredCount).toBe(1);
-    expect(staging.services.worker).toBe(undefined);
-    expect(staging.database.instanceType).toBe("t4g.micro");
-    expect(staging.cache.nodeType).toBe("cache.t4g.micro");
-  });
-
-  it("production splits web from worker and protects its data", () => {
-    const production = environments.production;
-
-    expect(production.services.web.desiredCount > 1).toBeTruthy();
-    expect(production.services.worker?.roles).toEqual(["worker", "scheduler"]);
-    expect(production.protectData).toBe(true);
-    expect(production.gate).toBe(false);
-    expect(production.promotesFrom).toBe("staging");
+  it("both environments sit behind the same load balancer", () => {
+    expect(environments.staging.ingressAddresses).toEqual(environments.production.ingressAddresses);
   });
 
   it("an unknown environment names the ones that exist", () => {
@@ -41,20 +26,13 @@ describe("environment config", () => {
       name: "Bad Name",
       host: "https://staging.trydimmi.com",
       mail: { inbound: "mail.example.com", system: "mail.example.com" },
-      network: { maxAzs: 1, natGateways: 0 },
-      services: { web: { ...staging.services.web, roles: ["web"] } },
+      ingressAddresses: ["300.1.1.1"],
     };
 
-    for (const problem of [
-      "name Bad Name",
-      "host https://",
-      "must differ",
-      "maxAzs",
-      "worker role",
-      "scheduler role",
-    ]) {
+    for (const problem of ["name Bad Name", "host https://", "must differ", "ingress address 300.1.1.1"]) {
       expect(() => validate(broken)).toThrow(problem);
     }
+    expect(() => validate({ ...staging, ingressAddresses: [] })).toThrow("at least one address");
   });
 
   it("adding an environment is one valid entry", () => {

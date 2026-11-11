@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { environments } from "../../cdk/lib/config/environments.ts";
 import { factsFromOutputs } from "../src/outputs.ts";
 import { desiredRecords } from "../src/records.ts";
-import { STAGING_OUTPUTS } from "./fixtures.ts";
+import { STAGING, STAGING_OUTPUTS } from "./fixtures.ts";
 
 describe("desired records", () => {
   it("points the host at every load balancer address and adds the mail records", () => {
-    const records = desiredRecords(environments.staging, factsFromOutputs(STAGING_OUTPUTS, "staging"));
+    const records = desiredRecords(STAGING, factsFromOutputs(STAGING_OUTPUTS, STAGING));
 
     expect(records.map((record) => `${record.type} ${record.name}`)).toEqual([
       "A staging.trydimmi.com",
@@ -18,17 +18,15 @@ describe("desired records", () => {
   });
 
   it("uses a records at the apex for production, where a cname is not allowed", () => {
-    const outputs = {
-      "dimmi-production-app": { LoadBalancerAddresses: "192.0.2.20" },
-      "dimmi-production-mail": { DnsRecords: "[]" },
-    };
-    const records = desiredRecords(environments.production, factsFromOutputs(outputs, "production"));
+    const production = { ...environments.production, ingressAddresses: ["192.0.2.20"] };
+    const outputs = { "dimmi-production-mail": { DnsRecords: "[]" } };
+    const records = desiredRecords(production, factsFromOutputs(outputs, production));
 
     expect(records).toEqual([{ type: "A", name: "trydimmi.com", value: "192.0.2.20", ttl: 300 }]);
   });
 
   it("refuses outputs that are missing, rather than planning to delete live records", () => {
-    expect(() => factsFromOutputs({}, "staging")).toThrow(/LoadBalancerAddresses of dimmi-staging-app is missing/);
+    expect(() => factsFromOutputs({}, STAGING)).toThrow(/DnsRecords of dimmi-staging-mail is missing/);
   });
 
   it("refuses a record outside the zone", () => {

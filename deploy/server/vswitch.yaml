@@ -1,0 +1,14 @@
+# The private network: VLAN 4000 on the Hetzner vSwitch "dimmi", linked to the
+# Cloud network 10.10.0.0/16. Copy to /etc/netplan/60-vswitch.yaml (mode 600)
+# and run `netplan apply`. The vSwitch carries at most 1400 bytes per frame.
+network:
+  version: 2
+  vlans:
+    vlan4000:
+      id: 4000
+      link: eno1
+      mtu: 1400
+      addresses: [10.10.1.2/24]
+      routes:
+        - to: 10.10.0.0/16
+          via: 10.10.1.1

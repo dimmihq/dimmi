@@ -185,7 +185,14 @@ describe("mail stack", () => {
     );
     expect(actions, "only SES writes raw mail").not.toContain("s3:PutObject");
     expect(policy.Properties.ManagedPolicyName).toBe("dimmi-staging-mail-application");
-    expect(() => template.resourceCountIs("AWS::IAM::User", 0)).not.toThrow();
+  });
+
+  it("one application user carries the policy and no access key is ever made here", () => {
+    const user = only(template, "AWS::IAM::User");
+
+    expect(user.Properties.UserName).toBe("dimmi-staging-application");
+    expect((user.Properties.ManagedPolicyArns as unknown[]).length).toBe(1);
+    expect(() => template.resourceCountIs("AWS::IAM::AccessKey", 0)).not.toThrow();
   });
 
   it("every alarm notifies the ops topic", () => {
