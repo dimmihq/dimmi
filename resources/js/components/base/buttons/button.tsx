@@ -46,9 +46,10 @@ import { directionalIconClass } from "@/utils/directional-icon";
  * For icon-only buttons:
  *   <Button iconOnly leadingIcon={RiAddLine} aria-label="Add" />
  *
- * While work it started is running, pass `loading`: the button disables
- * itself, says it is busy, and shows a spinner in the leading icon's
- * place (or before the label), keeping its label so its width holds.
+ * While work it started is running, pass `loading`: the button refuses
+ * presses, says it is busy, and shows a spinner in the leading icon's
+ * place (or before the label), keeping its label so its width holds. It
+ * stays focusable, so focus never drops out of a dialog mid-request.
  *   <Button loading={save.isPending}>Save</Button>
  *
  * The HTML `type` prop is preserved; Figma's "Type" enum is renamed to
@@ -176,6 +177,7 @@ export function Button({
   className,
   type = "button",
   disabled,
+  onClick,
   ref,
   ...props
 }: ButtonProps) {
@@ -183,8 +185,10 @@ export function Button({
     <button
       ref={ref}
       type={type}
-      disabled={disabled || loading}
+      disabled={disabled}
+      aria-disabled={loading || undefined}
       aria-busy={loading || undefined}
+      onClick={loading ? (event) => event.preventDefault() : onClick}
       className={cx(
         styles.base,
         styles.size[size],

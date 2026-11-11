@@ -255,6 +255,10 @@ async function addHoliday(page: Page, date: string, name: string, options: { onc
     await page.getByText("Repeats every year").click();
   }
   await expect(yearly).toBeChecked({ checked: !options.once });
+  const saved = page.waitForResponse(
+    (r) => r.url().includes("/schedules/") && r.request().method() === "PATCH" && r.ok(),
+  );
   await page.getByRole("button", { name: "Add", exact: true }).click();
+  await saved;
   await expect(page.getByRole("button", { name: "Select date" })).toBeVisible();
 }
