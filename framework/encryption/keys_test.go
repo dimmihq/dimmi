@@ -96,6 +96,14 @@ func TestKeys(t *testing.T) {
 	})
 }
 
+/*
+sealedBy returns the id of the key that sealed a ciphertext of tenant
+"1": the four bytes after the ten byte header and Tink's prefix byte.
+*/
+func sealedBy(ciphertext []byte) []byte {
+	return ciphertext[11:15]
+}
+
 func TestRotation(t *testing.T) {
 	t.Parallel()
 
@@ -118,7 +126,7 @@ func TestRotation(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, want, string(plaintext))
 		}
-		assert.NotEqual(t, before[:12], after[:12])
+		assert.NotEqual(t, sealedBy(before), sealedBy(after))
 
 		again, err := second.MAC(t.Context(), tenant("1"), []byte("a@example.com"))
 		require.NoError(t, err)
