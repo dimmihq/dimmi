@@ -27,6 +27,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/dimmihq/dimmi/framework/customdomain/drivers/caddyask"
 	"github.com/dimmihq/dimmi/framework/health"
 	"github.com/dimmihq/dimmi/framework/log"
 )
@@ -278,11 +279,19 @@ func (a *Application) behindProxies(next http.Handler) http.Handler {
 }
 
 /*
-adminHandler serves health and metrics.
+adminHandler serves health and metrics, and the question a TLS proxy in
+front asks before it obtains a certificate, when the default custom
+domain driver answers one.
 */
 func (a *Application) adminHandler() http.Handler {
 	mux := a.healthMux()
 	mux.Handle(PathMetrics, a.Telemetry.MetricsHandler())
+
+	if setup, err := a.Domains.Default(); err == nil {
+		if asker, ok := setup.(interface{ AskHandler() http.Handler }); ok {
+			mux.Handle(caddyask.AskPath, asker.AskHandler())
+		}
+	}
 
 	return mux
 }

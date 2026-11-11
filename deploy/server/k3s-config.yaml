@@ -1,5 +1,8 @@
 # /etc/rancher/k3s/config.yaml. The cluster talks over the private network;
-# the public address only answers SSH and the Kubernetes API.
+# the public address only answers SSH and the Kubernetes API. Each
+# environment's Caddy edge is a NodePort behind its own Hetzner load
+# balancer, so the bundled Traefik and service load balancer are off, and
+# node ports answer on the private address only.
 node-name: dimmi-1
 node-ip: 10.10.1.2
 node-external-ip: SERVER_PUBLIC_IP
@@ -13,3 +16,8 @@ write-kubeconfig-mode: "0600"
 secrets-encryption: true
 kubelet-arg:
   - "max-pods=250"
+disable:
+  - traefik
+  - servicelb
+kube-proxy-arg:
+  - "nodeport-addresses=10.10.1.0/24"

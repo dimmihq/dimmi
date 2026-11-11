@@ -2,11 +2,13 @@ import type { EnvironmentConfig } from "./environment.ts";
 import { validate } from "./environment.ts";
 
 /**
- * The Hetzner load balancer in front of the k3s server. Staging and
- * production share it: Traefik on the server routes each host to its own
- * namespace.
+ * The Hetzner load balancers in front of the k3s server. Each environment
+ * has its own, forwarding to its own Caddy edge, so a customer domain that
+ * reaches a balancer belongs to that environment. Production points at
+ * staging's until its own balancer exists.
  */
-const INGRESS = ["46.224.169.155"];
+const STAGING_INGRESS = ["46.224.169.155"];
+const PRODUCTION_INGRESS = STAGING_INGRESS;
 
 const staging: EnvironmentConfig = {
   name: "staging",
@@ -14,7 +16,7 @@ const staging: EnvironmentConfig = {
   host: "staging.trydimmi.com",
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.staging.trydimmi.com", system: "mail.staging.trydimmi.com" },
-  ingressAddresses: INGRESS,
+  ingressAddresses: STAGING_INGRESS,
   alarmEmail: "ops@trydimmi.com",
   budgetUsd: 20,
 };
@@ -25,7 +27,7 @@ const production: EnvironmentConfig = {
   host: "trydimmi.com",
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.trydimmi.com", system: "mail.trydimmi.com" },
-  ingressAddresses: INGRESS,
+  ingressAddresses: PRODUCTION_INGRESS,
   alarmEmail: "ops@trydimmi.com",
   budgetUsd: 50,
 };

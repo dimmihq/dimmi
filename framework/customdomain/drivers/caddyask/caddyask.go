@@ -9,7 +9,7 @@
 | application over HTTP whether the hostname is allowed:
 |
 |   on_demand_tls {
-|       ask http://app:9000/internal/tls/ask
+|       ask http://app:9090/internal/tls/ask
 |   }
 |
 | The ask endpoint answers from the same authorizer every driver uses:
@@ -29,6 +29,11 @@ import (
 	"github.com/dimmihq/dimmi/framework/customdomain"
 	"github.com/dimmihq/dimmi/framework/manager"
 )
+
+/*
+AskPath is where the admin listener answers Caddy's questions.
+*/
+const AskPath = "/internal/tls/ask"
 
 /*
 Driver leaves TLS to Caddy and answers its questions.

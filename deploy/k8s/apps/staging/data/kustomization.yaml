@@ -1,0 +1,76 @@
+# Staging is production in miniature: the same services, a gate in front,
+# mail through the staging SES stack in us-east-2. Values that name AWS
+# resources or hold keys live in dimmi-secrets, never here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-staging
+resources:
+  - ../../base/data
+patches:
+  - target:
+      kind: ConfigMap
+      name: dimmi-config
+    patch: |
+      - op: add
+        path: /data/DIMMI_APP__URL
+        value: https://staging.trydimmi.com
+      - op: add
+        path: /data/DIMMI_TELEMETRY__ENVIRONMENT
+        value: staging
+      - op: add
+        path: /data/DIMMI_HTTP__TRUSTED_PROXIES
+        value: 10.42.0.0/16
+      - op: add
+        path: /data/DIMMI_GATE__ENABLED
+        value: "true"
+      - op: add
+        path: /data/DIMMI_CUSTOM_DOMAINS__DEFAULT
+        value: edge
+      - op: add
+        path: /data/DIMMI_CUSTOM_DOMAINS__TLS__EDGE__DRIVER
+        value: caddyask
+      - op: add
+        path: /data/DIMMI_MAIL__DEFAULT
+        value: system
+      - op: add
+        path: /data/DIMMI_MAIL__FROM__EMAIL
+        value: no-reply@mail.staging.trydimmi.com
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__DRIVER
+        value: ses
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__REGION
+        value: us-east-2
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__CONFIGURATION_SET
+        value: dimmi-system-staging
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__DRIVER
+        value: ses
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__REGION
+        value: us-east-2
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__CONFIGURATION_SET
+        value: dimmi-customer-staging
+      - op: add
+        path: /data/DIMMI_MAILBOX__DEFAULT
+        value: ses
+      - op: add
+        path: /data/DIMMI_MAILBOX__SOURCES__SES__DRIVER
+        value: ses
+      - op: add
+        path: /data/DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN
+        value: inbound.staging.trydimmi.com
+      - op: add
+        path: /data/DIMMI_CHANNELS__EMAIL__DEFAULT_SENDER_DOMAIN
+        value: inbound.staging.trydimmi.com
+      - op: add
+        path: /data/DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS
+        value: ses
+      - op: add
+        path: /data/DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__DRIVER
+        value: s3
+      - op: add
+        path: /data/DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__REGION
+        value: us-east-2

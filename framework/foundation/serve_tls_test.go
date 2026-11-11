@@ -21,6 +21,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/customdomain"
+	"github.com/dimmihq/dimmi/framework/customdomain/drivers/caddyask"
 	"github.com/dimmihq/dimmi/framework/foundation"
 )
 
@@ -286,5 +287,37 @@ func TestDomainAuthorizer(t *testing.T) {
 		require.NoError(t, app.Domains.Ensure(t.Context(), "staging.example.com"))
 		require.NoError(t, app.Domains.Ensure(t.Context(), "help.customer.example"))
 		require.ErrorIs(t, app.Domains.Ensure(t.Context(), "other.example.com"), customdomain.ErrNotAuthorized)
+	})
+}
+
+func TestCaddyAsk(t *testing.T) {
+	t.Parallel()
+
+	t.Run("the admin listener tells caddy which hosts may have a certificate", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t,
+			"APP_APP__ROLES=web",
+			"APP_APP__URL=https://staging.example.com",
+			"APP_CUSTOM_DOMAINS__DEFAULT=edge",
+			"APP_CUSTOM_DOMAINS__TLS__EDGE__DRIVER=caddyask",
+		)))
+		require.NoError(t, app.Start(t.Context()))
+		ask := func(base, host string) int {
+			return mustGet(t, "http://"+base+caddyask.AskPath+"?domain="+host).Status
+		}
+
+		assert.Equal(t, http.StatusOK, ask(app.AdminAddr(), "staging.example.com"))
+		assert.Equal(t, http.StatusNotFound, ask(app.AdminAddr(), "other.example.com"))
+		assert.Equal(t, http.StatusNotFound, ask(app.Addr(), "staging.example.com"))
+	})
+
+	t.Run("no ask endpoint when the application terminates no tls for a proxy", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t, "APP_APP__ROLES=web", "APP_APP__URL=https://staging.example.com")))
+		require.NoError(t, app.Start(t.Context()))
+
+		resp := mustGet(t, "http://"+app.AdminAddr()+caddyask.AskPath+"?domain=staging.example.com")
+
+		assert.Equal(t, http.StatusNotFound, resp.Status)
 	})
 }

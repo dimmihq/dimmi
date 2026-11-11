@@ -1,0 +1,85 @@
+# Caddy terminates TLS for one environment and proxies plain HTTP to its
+# web pods. Each environment has its own edge on its own node ports, behind
+# its own load balancer, so a customer domain that reaches an edge belongs
+# to that environment. Certificates live on a volume, so a restart never
+# orders them again.
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: edge
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: https
+      port: 443
+      targetPort: https
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: edge-data
+  labels:
+    dimmi.com/protected: "true"
+spec:
+  storageClassName: data-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: edge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: edge
+    spec:
+      containers:
+        - name: caddy
+          image: caddy:2.10.2-alpine
+          args: [caddy, run, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
+          envFrom:
+            - configMapRef:
+                name: edge
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+          readinessProbe:
+            tcpSocket:
+              port: https
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy
+              readOnly: true
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: caddy
+        - name: data
+          persistentVolumeClaim:
+            claimName: edge-data

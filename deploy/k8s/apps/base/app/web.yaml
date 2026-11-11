@@ -1,6 +1,8 @@
 # The web role serves the dashboard, the API, the widget and realtime
 # sockets. New pods start and pass /ready before old ones stop, so a deploy
 # never drops capacity, and each pod gets time to drain its sockets on stop.
+# The admin port answers the edge's question before it orders a certificate
+# for a customer's domain.
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,6 +15,9 @@ spec:
     - name: http
       port: 8080
       targetPort: http
+    - name: admin
+      port: 9090
+      targetPort: admin
 ---
 apiVersion: apps/v1
 kind: Deployment

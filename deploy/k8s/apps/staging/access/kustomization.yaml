@@ -1,0 +1,9 @@
+# Applied once by a cluster admin: the namespace and the account CI deploys
+# with. The account can change what a release changes in this namespace and
+# nothing else; it cannot read secrets or touch other namespaces.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-staging
+resources:
+  - namespace.yaml
+  - ../../base/access
