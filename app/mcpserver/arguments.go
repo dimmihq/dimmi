@@ -34,6 +34,7 @@ the ids of records and the arguments every list shares.
 func argumentGuide() map[string]string {
 	out := listArguments()
 	maps.Copy(out, idArguments())
+	maps.Copy(out, featureIDArguments())
 
 	return out
 }
@@ -103,5 +104,24 @@ func idArguments() map[string]string {
 		"secret":          idArgument("identity verification secret", "isk", "dimmi_identity_secrets_list"),
 		"redaction_rule":  idArgument("redaction rule", "rxr", "dimmi_redaction_rules_list"),
 		"widget":          idArgument("messenger", "wgt", "dimmi_widget_settings_list"),
+	}
+}
+
+/*
+featureIDArguments explains the ids of broadcasts, series, knowledge
+sources and integrations.
+*/
+func featureIDArguments() map[string]string {
+	return map[string]string{
+		"broadcast":   idArgument("broadcast", "bcst", "dimmi_broadcasts_list"),
+		"topic":       idArgument("broadcast topic", "bctp", "dimmi_broadcast_topics_list"),
+		"series":      idArgument("series", "srs", "dimmi_series_list"),
+		"enrollment":  idArgument("journey on a series", "sren", "dimmi_series_enrollments_list"),
+		"source":      idArgument("knowledge source", "ks", "dimmi_knowledge_sources_list"),
+		"document":    idArgument("knowledge source document", "kd", "dimmi_knowledge_sources_documents_list"),
+		"destination": idArgument("notification destination", "ndst", "dimmi_notification_destinations_list"),
+		"integration": idArgument("connected integration", "itg", "dimmi_integrations_list"),
+		"channel":     idArgument("Slack connection", "chn", "dimmi_integrations_get (its channel_ids)"),
+		"room":        idArgument("Slack channel a connection watches", "chr", "dimmi_channels_rooms_list"),
 	}
 }

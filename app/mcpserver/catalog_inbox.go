@@ -23,7 +23,7 @@ func inboxDocs() map[string]Doc {
 	for _, part := range []map[string]Doc{
 		conversationListDocs(), conversationDocs(), conversationChangeDocs(), conversationStateDocs(),
 		timelineDocs(), writingDocs(), messageChangeDocs(), collaborationDocs(), viewDocs(), preferenceDocs(),
-		draftDocs(), snoozeDocs(), tagDocs(), inboxSetupDocs(), inboxAccessDocs(), inboxAIDocs(),
+		draftDocs(), snoozeDocs(), tagDocs(), inboxSetupDocs(), inboxHoursDocs(), inboxAccessDocs(), inboxAIDocs(),
 	} {
 		maps.Copy(out, part)
 	}

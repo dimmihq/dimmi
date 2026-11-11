@@ -25,6 +25,7 @@ func knowledgeDocs2() map[string]Doc {
 		feedbackDocs1(),
 		feedbackDocs2(),
 		feedbackDocs3(),
+		feedbackStatusDocs(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -294,6 +295,30 @@ func feedbackDocs3() map[string]Doc {
 		"feedback-comments.destroy": {
 			Title: "Delete a feature request comment",
 			Use:   "Deletes a comment or internal note on a request.",
+		},
+	}
+}
+
+/*
+feedbackStatusDocs returns the entries for the statuses feature
+requests move through.
+*/
+func feedbackStatusDocs() map[string]Doc {
+	return map[string]Doc{
+		"feedback-statuses.index": {
+			Title:   "List feature request statuses",
+			Use:     "Lists the statuses feature requests move through, in the order the portal and the app show them.",
+			Returns: "the statuses with their key, name and color, in order.",
+		},
+		"feedback-statuses.update": {
+			Title:   "Reorder feature request statuses",
+			Use:     "Sets the order the portal and the app show the statuses in.",
+			Returns: "the statuses in their new order.",
+			Risk:    new(RiskReach),
+			Params: map[string]string{
+				"statuses": "Every status key, such as planned or under_review, once each in the new order. " +
+					"Find them with dimmi_feedback_statuses_list.",
+			},
 		},
 	}
 }

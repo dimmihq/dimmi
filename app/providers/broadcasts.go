@@ -15,10 +15,12 @@ package providers
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/queue"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/broadcasts"
@@ -91,12 +93,14 @@ func listenForBroadcastReplies(a *app.App, b *broadcasts.Broadcasts) {
 			return nil
 		}
 
-		return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		scoped := tenancy.With(ctx, e.WorkspaceID.String())
+
+		return a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 			c, err := models.New(tx).FindConversation(ctx, models.FindConversationParams{
 				WorkspaceID: e.WorkspaceID, ID: e.ConversationID,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("find replied conversation: %w", err)
 			}
 
 			return b.MessengerReplied(ctx, tx, c)

@@ -138,6 +138,26 @@ func inboxSetupDocs() map[string]Doc {
 }
 
 /*
+inboxHoursDocs returns the entry for an inbox's office hours.
+*/
+func inboxHoursDocs() map[string]Doc {
+	return map[string]Doc{
+		"inboxes.hours.update": {
+			Title: "Set an inbox's office hours",
+			Use: "Gives an inbox office hours of its own, as a copy of the default named after it, or makes it " +
+				"follow the workspace's default again. The AI agent, the Slack auto-reply and workflows read " +
+				"an inbox's hours from here.",
+			Returns: "the schedule the inbox now uses.",
+			Next:    []string{"dimmi_schedules_update: change the hours of its own schedule"},
+			Params: map[string]string{
+				"own": "true gives it its own hours; false follows the default and removes its own schedule " +
+					"unless a workflow still names it.",
+			},
+		},
+	}
+}
+
+/*
 inboxAccessDocs returns the entries for who may open an inbox and how
 it assigns.
 */
