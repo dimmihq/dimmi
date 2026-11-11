@@ -204,10 +204,7 @@ func (c *HelpCenterController) missing(w fhttp.ResponseWriter, r *fhttp.Request,
 	if s, ok := lib.(*site); ok {
 		rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
 		if to, found := c.Public.Redirect(r.Context(), s.snap.HelpCenter, rest); found {
-			if strings.HasPrefix(to, "/") {
-				to = center.Base + to
-			}
-			w.Header().Set("Location", to)
+			w.Header().Set("Location", redirectTarget(center.Base, to))
 			w.WriteHeader(fhttp.StatusMovedPermanently)
 			return
 		}
@@ -306,4 +303,18 @@ posts the form again.
 func back(w fhttp.ResponseWriter, to string) {
 	w.Header().Set("Location", to)
 	w.WriteHeader(fhttp.StatusSeeOther)
+}
+
+/*
+redirectTarget is where a help center redirect sends the reader. A path
+is a page of the help center, kept under its base even when it starts
+with more than one slash, so it never reads as another host; a full
+address is followed as written.
+*/
+func redirectTarget(base, to string) string {
+	if !strings.HasPrefix(to, "/") {
+		return to
+	}
+
+	return base + "/" + strings.TrimLeft(to, "/\\")
 }

@@ -219,7 +219,7 @@ otherwise, so the form never sends anyone elsewhere.
 func localPath(target string) string {
 	parsed, err := url.Parse(target)
 	if err != nil || parsed.IsAbs() || parsed.Host != "" || !strings.HasPrefix(target, "/") ||
-		strings.HasPrefix(target, "//") || strings.Contains(target, "\\") {
+		len(target) > 1 && (target[1] == '/' || target[1] == '\\') || strings.Contains(target, "\\") {
 		return "/"
 	}
 

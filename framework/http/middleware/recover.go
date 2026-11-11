@@ -21,8 +21,8 @@ import (
 )
 
 /*
-Recover answers a panicking request with a 500 and hands the panic and
-its stack to the renderer to log and report. A deliberate abort of the
+Recover answers a panicking request with a bare 500 and logs and
+reports the panic with its stack. A deliberate abort of the
 response is passed on, as the server expects.
 */
 func Recover(errs fhttp.Errors) fhttp.Middleware {
@@ -38,7 +38,7 @@ func Recover(errs fhttp.Errors) fhttp.Middleware {
 					panic(p)
 				}
 
-				errs.Render(w, r, fmt.Errorf("panic: %v\n%s", p, debug.Stack()))
+				errs.RenderBug(w, r, fmt.Errorf("panic: %v\n%s", p, debug.Stack()))
 			}()
 
 			next.ServeHTTP(w, r)

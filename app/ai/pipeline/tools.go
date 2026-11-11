@@ -175,15 +175,15 @@ func handoffReasons() []string {
 handoffSpec describes handoff.
 */
 func handoffSpec() contracts.ToolSpec {
-	reasons, _ := json.Marshal(handoffReasons())
 	return contracts.ToolSpec{
 		Name: toolHandoff,
 		Description: "Hand the conversation to a human teammate. Returns the handoff mode (available, later or " +
 			"unavailable) so your last sentence to the customer matches it.",
-		Schema: json.RawMessage(`{"type":"object","properties":{"reason":{"type":"string","enum":` +
-			string(reasons) + `},"note_for_team":{"type":"string","description":"The note the teammate reads ` +
-			`first, four lines: Wants: ..., Tried: ..., Mood: ..., Handed off because: ..."}},` +
-			`"required":["reason","note_for_team"],"additionalProperties":false}`),
+		Schema: objectSchema(map[string]any{
+			"reason": enumProperty(handoffReasons()),
+			"note_for_team": textProperty("The note the teammate reads first, four lines: " +
+				"Wants: ..., Tried: ..., Mood: ..., Handed off because: ..."),
+		}, "reason", "note_for_team"),
 	}
 }
 

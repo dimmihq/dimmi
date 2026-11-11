@@ -167,19 +167,33 @@ func (f *Factory) Register(rule Rule) error {
 }
 
 /*
+typeName names the type of a value, as %T would, without the value
+itself ever reaching an error message, since validated values include
+passwords and tokens.
+*/
+func typeName(value any) string {
+	if value == nil {
+		return "<nil>"
+	}
+
+	return reflect.TypeOf(value).String()
+}
+
+/*
 Struct checks every field of the struct, nested structs and collection
 items included. It returns nil when all rules pass and an *Error listing
 each broken rule otherwise.
 */
 func (f *Factory) Struct(ctx context.Context, value any) error {
+	name := typeName(value)
 	v, given := follow(reflect.ValueOf(value))
 	if !given || v.Kind() != reflect.Struct {
-		return fmt.Errorf("validate %T: %w", value, ErrNotStruct)
+		return fmt.Errorf("validate %s: %w", name, ErrNotStruct)
 	}
 
 	w := &walker{factory: f}
 	if err := w.walkStruct(ctx, v, ""); err != nil {
-		return fmt.Errorf("validate %T: %w", value, err)
+		return fmt.Errorf("validate %s: %w", name, err)
 	}
 
 	if len(w.broken) == 0 {

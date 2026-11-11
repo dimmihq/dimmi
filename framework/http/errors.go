@@ -181,13 +181,30 @@ func (e Errors) Resolve(ctx context.Context, err error) *ResponseError {
 		return localize(ctx, StatusError(http.StatusRequestEntityTooLarge))
 	}
 
+	e.fail(ctx, err)
+
+	return localize(ctx, StatusError(http.StatusInternalServerError))
+}
+
+/*
+RenderBug logs and reports an error that can only be a bug, such as a
+panic with its stack, and answers with a bare 500. The error itself
+never reaches the response.
+*/
+func (e Errors) RenderBug(w ResponseWriter, r *Request, err error) {
+	e.fail(r.Context(), err)
+	e.Render(w, r, StatusError(http.StatusInternalServerError))
+}
+
+/*
+fail logs an error that is not a fault and hands it to Report.
+*/
+func (e Errors) fail(ctx context.Context, err error) {
 	log.From(ctx).ErrorContext(ctx, "request failed", log.Err(err))
 
 	if e.Report != nil {
 		e.Report(ctx, err)
 	}
-
-	return localize(ctx, StatusError(http.StatusInternalServerError))
 }
 
 /*

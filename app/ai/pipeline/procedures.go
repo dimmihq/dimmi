@@ -81,15 +81,12 @@ func procedureSpec(e *env) contracts.ToolSpec {
 		list.WriteString("\n- " + p.publicID() + ": " + p.row.Name + ". Use when: " + p.def.Description)
 	}
 
-	enum, _ := json.Marshal(ids)
-
 	return contracts.ToolSpec{
 		Name: toolProcedure,
 		Description: "Get the steps your team wrote for a kind of request. When the customer's request matches " +
 			"one of these, call this before answering, then do what the steps say, in order; call it again on " +
 			"later turns while you are still following it. Procedures:" + list.String(),
-		Schema: json.RawMessage(`{"type":"object","properties":{"procedure_id":{"type":"string","enum":` +
-			string(enum) + `}},"required":["procedure_id"],"additionalProperties":false}`),
+		Schema: objectSchema(map[string]any{"procedure_id": enumProperty(ids)}, "procedure_id"),
 	}
 }
 
