@@ -80,6 +80,13 @@ type Store struct {
 }
 
 /*
+lockAttempt is how long taking a lock waits on one of its keys. The
+library's 20ms is less than a busy server sometimes takes to answer,
+which made taking a free lock fail instead of succeed.
+*/
+const lockAttempt = 500 * time.Millisecond
+
+/*
 Open returns the store for a keyspace on the given client. Close it when
 done to release its dedicated connections.
 */
@@ -92,6 +99,7 @@ func Open(client *redis.Client, opts Options) (*Store, error) {
 	locker, err := rueidislock.NewLocker(rueidislock.LockerOption{
 		ClientOption: client.Option(),
 		KeyPrefix:    client.Prefix(opts.Keyspace) + "lock",
+		TryNextAfter: lockAttempt,
 	})
 	if err != nil {
 		aside.Close()
