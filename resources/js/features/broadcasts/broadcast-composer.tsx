@@ -141,7 +141,15 @@ export function BroadcastComposer(props: ComposerProps) {
   const shared = { workspace, broadcast, draft, onChange };
   const views: Record<StepId, ReactNode> = {
     setup: <SetupStep {...shared} />,
-    write: <WriteStep sender={names.sender} {...shared} />,
+    write: (
+      <WriteStep
+        workspace={workspace}
+        channel={broadcast.channel}
+        draft={draft}
+        sender={names.sender}
+        onChange={onChange}
+      />
+    ),
     delivery: <DeliveryStep {...shared} />,
     review: (
       <ReviewStep

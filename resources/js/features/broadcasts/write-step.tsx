@@ -12,7 +12,7 @@ import { TextArea, TextField } from "react-aria-components";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { EditorSkeleton } from "@/features/shell/table-skeleton";
-import type { Broadcast } from "@/lib/api/broadcasts";
+import type { Channel } from "@/lib/api/broadcasts";
 import { cx } from "@/utils/cx";
 
 import type { Draft } from "./draft";
@@ -37,43 +37,48 @@ function initials(name: string): string {
     .slice(0, 2);
 }
 
-function titleOf(channel: Broadcast["channel"]): string {
+function titleOf(channel: Channel): string {
   return { email: "Subject", post: "Title", slack: "Headline", chat: "" }[channel];
 }
 
-function placeholderOf(channel: Broadcast["channel"]): string {
+function placeholderOf(channel: Channel): string {
   return { email: "Subject", post: "Untitled post", slack: "Headline, optional", chat: "" }[channel];
 }
 
+/*
+ * Written is the part of a message the writer changes.
+ */
+export type Written = Pick<Draft, "subject" | "preview" | "body">;
+
 export function WriteStep({
   workspace,
-  broadcast,
+  channel,
   draft,
   sender,
   onChange,
 }: {
   workspace: string;
-  broadcast: Broadcast;
-  draft: Draft;
+  channel: Channel;
+  draft: Written;
   sender: string;
-  onChange: (change: Partial<Draft>) => void;
+  onChange: (change: Partial<Written>) => void;
 }) {
   const page = useRef<HTMLElement | null>(null);
   const focus = (selector: string) => page.current?.querySelector<HTMLElement>(selector)?.focus();
-  const email = broadcast.channel === "email";
+  const email = channel === "email";
 
   return (
     <article ref={page} className="flex w-full flex-col">
-      {broadcast.channel === "chat" ? null : (
+      {channel === "chat" ? null : (
         <TextField
-          aria-label={titleOf(broadcast.channel)}
+          aria-label={titleOf(channel)}
           value={draft.subject}
           onChange={(subject) => onChange({ subject })}
           maxLength={150}
         >
           <TextArea
             rows={1}
-            placeholder={placeholderOf(broadcast.channel)}
+            placeholder={placeholderOf(channel)}
             onKeyDown={(event) => nextOnEnter(event, () => focus(email ? "textarea[data-summary]" : ".ProseMirror"))}
             className={cx(bareField, "text-display-4-medium tracking-tight text-balance text-text-primary")}
           />

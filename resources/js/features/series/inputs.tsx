@@ -5,7 +5,7 @@
  * how many conditions the rule holds. Each reports every change, so the
  * builder saves as the teammate types.
  */
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -20,29 +20,47 @@ export function Pick<T extends string>({
   value,
   options,
   onChange,
+  placeholder = "Choose…",
   disabled = false,
 }: {
   label: string;
   value: T | undefined;
   options: [T, string][];
   onChange: (value: T) => void;
+  placeholder?: string;
   disabled?: boolean;
 }) {
+  const listed = value && !options.some(([id]) => id === value) ? [...options, [value, value] as [T, string]] : options;
+
   return (
     <Select
       aria-label={label}
       size="sm"
       isDisabled={disabled}
+      placeholder={placeholder}
       selectedKey={value ?? null}
       onSelectionChange={(key) => (key === null ? undefined : onChange(String(key) as T))}
       popoverClassName="w-60"
     >
-      {options.map(([id, name]) => (
+      {listed.map(([id, name]) => (
         <SelectItem key={id} id={id} textValue={name}>
           {name}
         </SelectItem>
       ))}
     </Select>
+  );
+}
+
+/*
+ * Field puts a label above a control that needs the panel's full width.
+ */
+export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5 py-3">
+      <span className="text-body-2-medium text-text-secondary">{label}</span>
+      {children}
+      {hint ? <span className="text-caption-1-regular text-text-tertiary">{hint}</span> : null}
+    </div>
   );
 }
 

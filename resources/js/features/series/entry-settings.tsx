@@ -16,7 +16,7 @@ import {
   useTopics,
 } from "@/features/broadcasts/sources";
 import { Row, Section } from "@/features/settings/layout";
-import type { SeriesSpec } from "@/lib/api/series";
+import type { Series, SeriesSpec } from "@/lib/api/series";
 
 import { Amount, Flag, Pick, Rules } from "./inputs";
 
@@ -32,6 +32,21 @@ export interface Sending {
   topic_id?: string;
   service?: boolean;
   ai_replies?: boolean;
+}
+
+/*
+ * sendingOf reads how a series' messages go out.
+ */
+export function sendingOf(series: Series): Sending {
+  return {
+    email_address_id: series.email_address_id ?? undefined,
+    sender_id: series.sender_id ?? undefined,
+    reply_member_id: series.reply_member_id ?? undefined,
+    reply_team_id: series.reply_team_id ?? undefined,
+    topic_id: series.topic_id ?? undefined,
+    service: series.service,
+    ai_replies: series.ai_replies,
+  };
 }
 
 type Trigger = "rules" | "audience" | "event" | "manual";

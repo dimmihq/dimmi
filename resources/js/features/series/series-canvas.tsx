@@ -21,7 +21,6 @@ import {
   Panel as FlowPanel,
   getSmoothStepPath,
   Handle,
-  MiniMap,
   type Node,
   type NodeProps,
   Position,
@@ -30,11 +29,10 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import { hierarchy, tree } from "d3-hierarchy";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { KindMark } from "@/features/automation/parts";
-import { useWide } from "@/features/shell/use-wide";
 import type { SeriesNode, SeriesProblem, SeriesReport, SeriesSpec } from "@/lib/api/series";
 import { formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
@@ -311,13 +309,76 @@ function Zoom() {
   );
 }
 
+/*
+ * useReveal pans the canvas, at its zoom, until the picked card is fully
+ * on screen once the settings pane has finished pushing the canvas
+ * aside, and leaves it alone when it already is.
+ */
+function useReveal(frame: RefObject<HTMLDivElement | null>, selected: string) {
+  const flow = useReactFlow();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const node = flow.getNode(selected);
+      const box = frame.current?.getBoundingClientRect();
+      if (!node || !box) {
+        return;
+      }
+      const { x, y, zoom } = flow.getViewport();
+      const width = node.measured?.width ?? cardWidth;
+      const height = node.measured?.height ?? 120;
+      const left = node.position.x * zoom + x;
+      const top = node.position.y * zoom + y;
+      if (left >= 0 && top >= 0 && left + width * zoom <= box.width && top + height * zoom <= box.height) {
+        return;
+      }
+      void flow.setCenter(node.position.x + width / 2, node.position.y + height / 2, { zoom, duration: 300 });
+    }, 360);
+
+    return () => window.clearTimeout(timer);
+  }, [flow, frame, selected]);
+}
+
+/*
+ * useFit keeps the whole series in view while the canvas changes size,
+ * as it does while the settings pane pushes it aside, until the
+ * teammate first pans or zooms it themselves.
+ */
+function useFit(frame: RefObject<HTMLDivElement | null>) {
+  const flow = useReactFlow();
+  const moved = useRef(false);
+
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      if (!moved.current) {
+        void flow.fitView({ padding: 0.15, maxZoom: 0.9 });
+      }
+    });
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [flow, frame]);
+
+  return (event: MouseEvent | TouchEvent | null) => {
+    if (event) {
+      moved.current = true;
+    }
+  };
+}
+
 function Flow({ moves }: { moves: Moves }) {
   const { nodes, edges } = useGraph(moves.spec);
-  const overview = useWide(768);
+  const frame = useRef<HTMLDivElement>(null);
+  const onMoveStart = useFit(frame);
+  useReveal(frame, moves.selected);
 
   return (
     <MovesContext.Provider value={moves}>
-      <div className="relative min-h-0 flex-1">
+      <div ref={frame} className="relative min-h-0 flex-1">
         <ReactFlow
           aria-label="Series canvas"
           nodes={nodes}
@@ -325,6 +386,7 @@ function Flow({ moves }: { moves: Moves }) {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onInit={(flow) => void flow.fitView({ padding: 0.15, maxZoom: 0.9 })}
+          onMoveStart={onMoveStart}
           nodesDraggable={false}
           nodesConnectable={false}
           nodesFocusable={false}
@@ -340,7 +402,6 @@ function Flow({ moves }: { moves: Moves }) {
           <FlowPanel position="bottom-left">
             <Zoom />
           </FlowPanel>
-          {overview ? <MiniMap pannable zoomable ariaLabel="Series overview" className="rounded-2xl" /> : null}
         </ReactFlow>
       </div>
     </MovesContext.Provider>

@@ -9,17 +9,27 @@
  * pushes its settings out from the right, in a pane that drags to any
  * width; on screens too narrow for both, they open in a drawer.
  */
-import { RiArrowLeftSLine, RiPlayLine } from "@remixicon/react";
+import {
+  type RemixiconComponentType,
+  RiArchiveLine,
+  RiArrowLeftSLine,
+  RiPauseLine,
+  RiPlayLine,
+  RiTestTubeLine,
+} from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { Focusable } from "react-aria-components";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { toast } from "@/components/base/toast/toast";
+import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { KindMark } from "@/features/automation/parts";
 import { useWorkspace } from "@/features/customers/names";
 import { Panel } from "@/features/shell/page";
@@ -39,7 +49,7 @@ import {
   trySeries,
 } from "@/lib/api/series";
 
-import type { Sending } from "./entry-settings";
+import { type Sending, sendingOf } from "./entry-settings";
 import { addGroups, nodeLook, statusLook } from "./looks";
 import { addStep } from "./model";
 import { SeriesCanvas } from "./series-canvas";
@@ -65,18 +75,6 @@ function Mode({ results, onChange }: { results: boolean; onChange: (results: boo
       ))}
     </SegmentedControl>
   );
-}
-
-function sendingOf(series: Series): Sending {
-  return {
-    email_address_id: series.email_address_id ?? undefined,
-    sender_id: series.sender_id ?? undefined,
-    reply_member_id: series.reply_member_id ?? undefined,
-    reply_team_id: series.reply_team_id ?? undefined,
-    topic_id: series.topic_id ?? undefined,
-    service: series.service,
-    ai_replies: series.ai_replies,
-  };
 }
 
 /*
@@ -172,6 +170,7 @@ function useAutosave(workspace: string, series: Series) {
   const [sending, setSending] = useState<Sending>(sendingOf(series));
   const [dirty, setDirty] = useState(false);
   const lock = useRef(series.lock_version);
+  const pending = useRef<{ spec: SeriesSpec; sending: Sending } | null>(null);
   const save = useMutation({
     mutationFn: (next: { spec: SeriesSpec; sending: Sending }) =>
       saveSeries(workspace, series.id, {
@@ -192,13 +191,24 @@ function useAutosave(workspace: string, series: Series) {
     if (!dirty) {
       return;
     }
+    pending.current = { spec, sending };
     const timer = setTimeout(() => {
       setDirty(false);
+      pending.current = null;
       mutate({ spec, sending });
     }, 700);
 
     return () => clearTimeout(timer);
   }, [dirty, spec, sending, mutate]);
+
+  useEffect(
+    () => () => {
+      if (pending.current) {
+        mutate(pending.current);
+      }
+    },
+    [mutate],
+  );
 
   return {
     spec,
@@ -221,6 +231,30 @@ function saveLine(saving: boolean, problems: number): string {
   }
 
   return problems > 0 ? `${problems} to fix before going live` : "Saved";
+}
+
+/*
+ * Tip is an icon button that names itself in a tooltip.
+ */
+function Tip({
+  label,
+  icon,
+  busy = false,
+  onPress,
+}: {
+  label: string;
+  icon: RemixiconComponentType;
+  busy?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TooltipTrigger delay={200}>
+      <Focusable>
+        <IconButton size="small" icon={icon} aria-label={label} disabled={busy} onClick={onPress} />
+      </Focusable>
+      <Tooltip size="md">{label}</Tooltip>
+    </TooltipTrigger>
+  );
 }
 
 /*
@@ -247,21 +281,15 @@ function Actions({
 
   return (
     <>
-      {live ? (
-        <Button variant="secondary" size="small" leadingIcon={RiPlayLine} loading={trying} onClick={onTry}>
-          Try it on me
-        </Button>
-      ) : null}
+      {live ? <Tip label="Try it on me" icon={RiTestTubeLine} busy={trying} onPress={onTry} /> : null}
       {live || series.status === "paused" ? (
-        <Button variant="secondary" size="small" onClick={() => onAct(live ? "pause" : "resume")}>
-          {live ? "Pause" : "Resume"}
-        </Button>
+        <Tip
+          label={live ? "Pause" : "Resume"}
+          icon={live ? RiPauseLine : RiPlayLine}
+          onPress={() => onAct(live ? "pause" : "resume")}
+        />
       ) : null}
-      {ran && editable ? (
-        <Button variant="secondary" size="small" onClick={() => onAct("archive")}>
-          Archive
-        </Button>
-      ) : null}
+      {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => onAct("archive")} /> : null}
       {editable ? (
         <Button
           size="small"
@@ -275,15 +303,16 @@ function Actions({
   );
 }
 
-function Builder({ workspace, series }: { workspace: string; series: Series }) {
+function Builder({ workspace, series, step }: { workspace: string; series: Series; step?: string }) {
   const client = useQueryClient();
   const draft = useAutosave(workspace, series);
   const ran = series.live_version_id !== null;
   const editable = series.status !== "archived";
   const report = useQuery({ ...seriesReportQuery(workspace, series.id, series.status === "live"), enabled: ran }).data;
-  const [selected, setSelected] = useState("entry");
+  const [selected, setSelected] = useState(step ?? "entry");
   const [results, setResults] = useState(ran);
-  const [inspecting, setInspecting] = useState(useWide(1280));
+  const wide = useWide(1280);
+  const [inspecting, setInspecting] = useState(step !== undefined || wide);
   const [adding, setAdding] = useState<{ from: string; path: string } | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [journey, setJourney] = useState<string | null>(null);
@@ -430,7 +459,7 @@ function Builder({ workspace, series }: { workspace: string; series: Series }) {
   );
 }
 
-export function SeriesBuilder({ id }: { id: string }) {
+export function SeriesBuilder({ id, step }: { id: string; step?: string }) {
   const workspace = useWorkspace();
   const series = useQuery(seriesQuery(workspace, id));
 
@@ -444,5 +473,5 @@ export function SeriesBuilder({ id }: { id: string }) {
     );
   }
 
-  return <Builder key={series.data.id} workspace={workspace} series={series.data} />;
+  return <Builder key={series.data.id} workspace={workspace} series={series.data} step={step} />;
 }

@@ -7,8 +7,9 @@
  * the paths it picks from; actions what they change. Every change goes
  * straight into the working copy.
  */
-import { RiAddLine, RiDeleteBinLine } from "@remixicon/react";
+import { RiAddLine, RiDeleteBinLine, RiQuillPenLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
@@ -17,12 +18,13 @@ import { Row, Section } from "@/features/settings/layout";
 import type { NodeSettings, SeriesNode, SeriesSpec } from "@/lib/api/series";
 import { tagsQuery } from "@/lib/api/tags";
 
-import { Amount, Body, Flag, Pick, Rules, Text } from "./inputs";
+import { Amount, Body, Field, Flag, Pick, Rules, Text } from "./inputs";
 import { nodeLook } from "./looks";
 import { isMessage, newID } from "./model";
 
 export interface StepProps {
   workspace: string;
+  series: string;
   node: SeriesNode;
   spec: SeriesSpec;
   account: boolean;
@@ -37,41 +39,76 @@ const unitOptions: ["minutes" | "hours" | "days" | "weeks", string][] = [
   ["weeks", "Weeks"],
 ];
 
-function MessageStep({ workspace, node, account, editable, set }: StepProps) {
+/*
+ * plainLines turns the start of a Markdown message into plain text for
+ * the summary.
+ */
+function plainLines(markdown: string | undefined): string {
+  return (markdown ?? "")
+    .replace(/\{\{\s*[a-z]+\.([a-z_]+)[^}]*\}\}/g, (_, key: string) => `[${key.replaceAll("_", " ")}]`)
+    .replace(/[*`#>]|\]\([^)]*\)/g, "")
+    .replace(/\[(?=[^\]]*$)/g, "")
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .slice(0, 3)
+    .join(" ");
+}
+
+/*
+ * Written shows what the message says, and opens the composer to write
+ * it.
+ */
+function Written({ series, node, editable }: { series: string; node: SeriesNode; editable: boolean }) {
+  const navigate = useNavigate();
+  const s = node.settings ?? {};
+  const compose = () => void navigate({ to: "/d/series/$series/compose/$step", params: { series, step: node.id } });
+  const heading = node.kind === "chat" ? "" : s.subject;
+  const body = plainLines(s.body);
+
+  return (
+    <div className="flex flex-col gap-3 py-3">
+      <button
+        type="button"
+        onClick={compose}
+        className="flex w-full cursor-pointer flex-col gap-1 rounded-xl border border-border-button-default bg-background-primary-default p-3 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        {node.kind === "chat" ? null : (
+          <span className={heading ? "text-body-medium text-text-primary" : "text-body-medium text-text-placeholder"}>
+            {heading || (node.kind === "email" ? "No subject yet" : "No title yet")}
+          </span>
+        )}
+        {node.kind === "email" && s.preview ? (
+          <span className="truncate text-body-2-regular text-text-secondary">{s.preview}</span>
+        ) : null}
+        <span
+          className={
+            body ? "line-clamp-3 text-body-2-regular text-text-secondary" : "text-body-2-regular text-text-placeholder"
+          }
+        >
+          {body || "Nothing written yet"}
+        </span>
+      </button>
+      <span>
+        <Button
+          size="small"
+          variant={editable ? "primary" : "secondary"}
+          leadingIcon={RiQuillPenLine}
+          onClick={compose}
+        >
+          {editable ? "Compose" : "Read the message"}
+        </Button>
+      </span>
+    </div>
+  );
+}
+
+function MessageStep({ workspace, series, node, account, editable, set }: StepProps) {
   const s = node.settings ?? {};
   const patch = (change: Partial<NodeSettings>) => set({ ...s, ...change });
 
   return (
     <Section title="Message" description={node.kind === "slack" ? "Posts in the account's Slack channel." : undefined}>
-      {node.kind === "email" || node.kind === "post" ? (
-        <Row label={node.kind === "email" ? "Subject" : "Title"}>
-          <Text
-            label="Subject"
-            value={s.subject}
-            onChange={(subject) => patch({ subject })}
-            width="w-64"
-            disabled={!editable}
-          />
-        </Row>
-      ) : null}
-      {node.kind === "email" ? (
-        <Row label="Preview line">
-          <Text
-            label="Preview"
-            value={s.preview}
-            onChange={(preview) => patch({ preview })}
-            width="w-64"
-            disabled={!editable}
-          />
-        </Row>
-      ) : null}
-      <div className="flex flex-col gap-2 py-3">
-        <span className="text-body-2-medium text-text-secondary">Message</span>
-        <Body label="Message" value={s.body} onChange={(body) => patch({ body })} rows={8} disabled={!editable} />
-        <span className="text-caption-1-regular text-text-tertiary">
-          {"Markdown. Use {{ contact.first_name }}, {{ company.name }} or {{ sender.first_name }}."}
-        </span>
-      </div>
+      <Written series={series} node={node} editable={editable} />
       {node.kind === "email" ? (
         <Row label="Track clicks">
           <Flag
@@ -389,22 +426,37 @@ function AIPathStep({ node, spec, editable, set }: StepProps) {
         }
       >
         {paths.map((p, i) => (
-          <div key={p.id} className="flex flex-col gap-2 py-3">
-            <Text
-              label="Path name"
-              value={p.label}
-              onChange={(label) => setPaths(paths.map((q, j) => (i === j ? { ...q, label } : q)))}
-              width="w-full"
-              disabled={!editable}
-            />
-            <Text
-              label="When to pick it"
-              value={p.description}
-              placeholder="When to pick it"
-              onChange={(description) => setPaths(paths.map((q, j) => (i === j ? { ...q, description } : q)))}
-              width="w-full"
-              disabled={!editable}
-            />
+          <div key={p.id} className="flex flex-col gap-1 py-2">
+            <Field label={`Path ${i + 1}`}>
+              <Text
+                label="Path name"
+                value={p.label}
+                placeholder="Name"
+                onChange={(label) => setPaths(paths.map((q, j) => (i === j ? { ...q, label } : q)))}
+                width="w-full"
+                disabled={!editable}
+              />
+              <Text
+                label="When to pick it"
+                value={p.description}
+                placeholder="When to pick it"
+                onChange={(description) => setPaths(paths.map((q, j) => (i === j ? { ...q, description } : q)))}
+                width="w-full"
+                disabled={!editable}
+              />
+              {editable && paths.length > 2 ? (
+                <span>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    leadingIcon={RiDeleteBinLine}
+                    onClick={() => setPaths(paths.filter((_, j) => j !== i))}
+                  >
+                    Remove path
+                  </Button>
+                </span>
+              ) : null}
+            </Field>
           </div>
         ))}
       </Section>

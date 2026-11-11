@@ -4,7 +4,8 @@
  * when asked, the main pane giving up the room, and the gap between them
  * drags to resize it; each browser remembers the width chosen. Dragging
  * it shut closes it. On screens too narrow for two panes, it opens in a
- * drawer over the page instead.
+ * drawer over the page instead. The group reaches into the page's
+ * margin so the panels' shadows are not cut off at its edges.
  */
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type Layout, Panel as Pane, useGroupRef } from "react-resizable-panels";
@@ -44,7 +45,7 @@ export function PushPane({
   const sideBySide = useWide(1024);
   const group = useGroupRef();
   const last = useRef<number | null>(null);
-  const wasOut = useRef(open);
+  const wasOut = useRef(false);
   const asked = useRef<boolean | null>(null);
   const [shown, setShown] = useState(open);
   const [easing, ease] = useEasing();
@@ -73,8 +74,10 @@ export function PushPane({
     const opening = open ? Math.min(last.current ?? (width / Math.max(total, 1)) * 100, room - 30) : 0;
     layout[ids.main] = room - opening;
     layout[ids.side] = opening;
-    wasOut.current = open;
     ease(() => handle.setLayout(layout));
+    window.setTimeout(() => {
+      asked.current = null;
+    }, 400);
     setShown(open);
   });
 
@@ -90,7 +93,7 @@ export function PushPane({
   }
 
   return (
-    <PaneGroup id={name} panelIds={[ids.main, ids.side]} easing={easing} groupRef={group}>
+    <PaneGroup id={name} panelIds={[ids.main, ids.side]} easing={easing} groupRef={group} className="-m-3 p-3">
       <Pane id={ids.main} minSize={420} style={visible} className="flex h-full">
         {main}
       </Pane>
@@ -108,7 +111,7 @@ export function PushPane({
             last.current = size.asPercentage;
           }
           setShown(out);
-          if (wasOut.current && !out && open) {
+          if (asked.current === null && wasOut.current && !out && open) {
             onOpenChange(false);
           }
           wasOut.current = out;

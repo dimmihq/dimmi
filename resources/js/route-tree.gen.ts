@@ -68,6 +68,7 @@ import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/setting
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
+import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
 
@@ -370,6 +371,12 @@ const DCustomersListsCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => DCustomersListsRoute,
   } as any)
+const DSeriesSeriesComposeStepRoute =
+  DSeriesSeriesComposeStepRouteImport.update({
+    id: '/series/$series_/compose/$step',
+    path: '/series/$series/compose/$step',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsEmailAddressesAddressRoute =
   DSettingsEmailAddressesAddressRouteImport.update({
     id: '/settings/email/addresses/$address',
@@ -440,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
   '/d/customers/audiences/': typeof DCustomersListsAudiencesIndexRoute
@@ -496,6 +504,7 @@ export interface FileRoutesByTo {
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
   '/d/customers/audiences': typeof DCustomersListsAudiencesIndexRoute
@@ -560,6 +569,7 @@ export interface FileRoutesById {
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
   '/d/customers/_lists/audiences/': typeof DCustomersListsAudiencesIndexRoute
@@ -624,6 +634,7 @@ export interface FileRouteTypes {
     | '/d/settings/teams/$team'
     | '/d/customers/'
     | '/d/inbox/$view/'
+    | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
     | '/d/customers/audiences/'
@@ -680,6 +691,7 @@ export interface FileRouteTypes {
     | '/d/settings/messenger/$widget'
     | '/d/settings/teams/$team'
     | '/d/inbox/$view'
+    | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
     | '/d/customers/audiences'
@@ -743,6 +755,7 @@ export interface FileRouteTypes {
     | '/d/settings/teams/$team'
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
+    | '/d/series/$series_/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
     | '/d/customers/_lists/audiences/'
@@ -1171,6 +1184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersListsCompaniesIndexRouteImport
       parentRoute: typeof DCustomersListsRoute
     }
+    '/d/series/$series_/compose/$step': {
+      id: '/d/series/$series_/compose/$step'
+      path: '/series/$series/compose/$step'
+      fullPath: '/d/series/$series/compose/$step'
+      preLoaderRoute: typeof DSeriesSeriesComposeStepRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/email/addresses/$address': {
       id: '/d/settings/email/addresses/$address'
       path: '/settings/email/addresses/$address'
@@ -1309,6 +1329,7 @@ interface DRouteRouteChildren {
   DSettingsIntegrationsIntegrationRoute: typeof DSettingsIntegrationsIntegrationRoute
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
 }
@@ -1340,6 +1361,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsIntegrationsIntegrationRoute: DSettingsIntegrationsIntegrationRoute,
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
 }

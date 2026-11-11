@@ -106,6 +106,7 @@ export function SeriesInspector({
             ) : (
               <StepSettings
                 workspace={workspace}
+                series={series}
                 node={node}
                 spec={spec}
                 account={account}

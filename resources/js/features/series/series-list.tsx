@@ -5,7 +5,7 @@
  * sit on top. A new series starts from a template, for contacts or for
  * whole accounts, and opens in its builder.
  */
-import { RiAddLine, RiArrowRightSLine, RiBuilding2Line, RiFlowChart, RiUser3Line } from "@remixicon/react";
+import { RiAddLine, RiBuilding2Line, RiFlowChart, RiUser3Line } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -16,14 +16,15 @@ import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { RadioGroup } from "@/components/base/radio/radio";
+import { RadioCard } from "@/components/base/radio/radio-card";
 import { toast } from "@/components/base/toast/toast";
 import { KindMark } from "@/features/automation/parts";
 import { Stat } from "@/features/broadcasts/parts";
 import { useWorkspace } from "@/features/customers/names";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
-import { createSeries, type Series, seriesListQuery } from "@/lib/api/series";
+import { createSeries, type Series, type SeriesSubject, seriesListQuery } from "@/lib/api/series";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
-import { cx } from "@/utils/cx";
 
 import { percent, statusLook } from "./looks";
 import { summary, templateSpec, templates } from "./model";
@@ -122,13 +123,13 @@ function NewSeries({ workspace, onClose }: { workspace: string; onClose: () => v
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [template, setTemplate] = useState("blank");
-  const [subject, setSubject] = useState<"contact" | "company">("contact");
+  const [subject, setSubject] = useState<SeriesSubject>("contact");
   const create = useMutation({
     mutationFn: () => {
       const picked = templates.find((t) => t.id === template);
       return createSeries(workspace, {
         name: name.trim() || picked?.name || "New series",
-        subject: template === "blank" ? subject : (picked?.subject ?? subject),
+        subject,
         spec: templateSpec(template),
       });
     },
@@ -141,48 +142,32 @@ function NewSeries({ workspace, onClose }: { workspace: string; onClose: () => v
       <ModalHeader title="New series" description="A journey people or accounts travel on their own, step by step." />
       <ModalBody className="flex flex-col gap-4">
         <Input label="Name" placeholder="Onboarding" value={name} onChange={setName} autoFocus />
-        <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">
-          {templates.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={template === t.id}
-              onClick={() => setTemplate(t.id)}
-              className={cx(
-                "flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
-                template === t.id && "bg-background-primary-default",
-              )}
-            >
-              <KindMark icon={t.subject === "company" ? RiBuilding2Line : RiUser3Line} tint="purple" />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-body-regular text-text-primary">{t.name}</span>
-                <span className="text-body-2-regular text-text-secondary">{t.description}</span>
-              </span>
-              <RiArrowRightSLine
-                aria-hidden
-                className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
-              />
-            </button>
-          ))}
-        </div>
-        {template === "blank" ? (
-          <div className="flex gap-2">
-            <Button
-              size="small"
-              variant={subject === "contact" ? "primary" : "secondary"}
-              onClick={() => setSubject("contact")}
-            >
-              For people
-            </Button>
-            <Button
-              size="small"
-              variant={subject === "company" ? "primary" : "secondary"}
-              onClick={() => setSubject("company")}
-            >
-              For accounts
-            </Button>
-          </div>
-        ) : null}
+        <span className="-mb-2 text-body-2-medium text-text-secondary">Who travels it</span>
+        <RadioGroup
+          aria-label="Who travels it"
+          value={subject}
+          onChange={(next) => {
+            setSubject(next as SeriesSubject);
+            setTemplate("blank");
+          }}
+          className="grid grid-cols-2 gap-2"
+        >
+          <RadioCard value="contact" icon={RiUser3Line} title="People" description="Each person travels it." />
+          <RadioCard
+            value="company"
+            icon={RiBuilding2Line}
+            title="Accounts"
+            description="A whole company travels it once."
+          />
+        </RadioGroup>
+        <span className="-mb-2 text-body-2-medium text-text-secondary">Start from</span>
+        <RadioGroup aria-label="Start from" value={template} onChange={setTemplate} className="flex flex-col gap-2">
+          {templates
+            .filter((t) => t.id === "blank" || t.subject === subject)
+            .map((t) => (
+              <RadioCard key={t.id} value={t.id} title={t.name} description={t.description} />
+            ))}
+        </RadioGroup>
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" size="small" onClick={onClose}>
