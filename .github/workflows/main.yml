@@ -124,18 +124,13 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - id: browsers
-        uses: actions/cache@v4
+      # The runner image already carries Chrome's system libraries, so only
+      # the browser itself is installed, never anything through apt.
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install chromium
-      # The runner image already carries Chrome's system libraries, so apt,
-      # whose mirror sometimes takes ten minutes, runs only when the browser
-      # itself had to be downloaded.
-      - if: steps.browsers.outputs.cache-hit != 'true'
-        timeout-minutes: 10
-        run: pnpm exec playwright install-deps chromium
       - name: Wait for services
         run: .github/wait-for-services.sh
       - id: check
